@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  autoads:
+    image: autoads:single
+    container_name: autoads
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      # 数据库连接（请根据实际情况修改）
+      DATABASE_URL: ${DATABASE_URL:-postgresql://autoads:password@postgres:5432/autoads}
+
+      # Google Ads API 凭证
+      GOOGLE_ADS_DEVELOPER_TOKEN: ${GOOGLE_ADS_DEVELOPER_TOKEN}
+      GOOGLE_ADS_CLIENT_ID: ${GOOGLE_ADS_CLIENT_ID}
+      GOOGLE_ADS_CLIENT_SECRET: ${GOOGLE_ADS_CLIENT_SECRET}
+      GOOGLE_ADS_REFRESH_TOKEN: ${GOOGLE_ADS_REFRESH_TOKEN}
+
+      # Google AI API Key
+      GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY}
+
+      # JWT 密钥（至少32个字符）
+      JWT_SECRET: ${JWT_SECRET}
+
+      # 时区设置
+      TZ: Asia/Shanghai
+
+      # Next.js 环境
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      REDIS_URL: ${REDIS_URL}
+      QUEUE_SPLIT_BACKGROUND: "true"
+      # Node.js 内存（容器 8C16G 推荐起点，可按压测微调）
+      NODE_MAX_OLD_SPACE_SIZE_WEB: 5120
+      NODE_MAX_OLD_SPACE_SIZE_SCHEDULER: 2048
+      NODE_MAX_OLD_SPACE_SIZE_BACKGROUND_WORKER: 4096
+      NODE_MAX_OLD_SPACE_SIZE_OPENCLAW: 1536
+
+      # 队列并发（8C16G 推荐）
+      QUEUE_GLOBAL_CONCURRENCY: 64
+      QUEUE_PER_USER_CONCURRENCY: 16
+      QUEUE_CLICK_FARM_CONCURRENCY: 120
+      QUEUE_URL_SWAP_CONCURRENCY: 8
+      CLICK_FARM_MAX_INFLIGHT: 120
+      CLICK_FARM_HEAP_PRESSURE_PCT: 88
+      CLICK_FARM_REQUIRE_REDIS_IN_PRODUCTION: "true"
+    volumes:
+      # 数据备份持久化
+      - autoads_backups:/app/data/backups
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - autoads_network
+    depends_on:
+      - postgres
+
+  # PostgreSQL 数据库（可选）
+  # 如果使用外部数据库，可以注释掉此服务
+  postgres:
+    image: postgres:16-alpine
+    container_name: autoads_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-autoads}
+      POSTGRES_USER: ${POSTGRES_USER:-autoads}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - autoads_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-autoads}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  # 备份文件存储
+  autoads_backups:
+    driver: local
+
+  # PostgreSQL 数据存储
+  postgres_data:
+    driver: local
+
+networks:
+  autoads_network:
+    driver: bridge

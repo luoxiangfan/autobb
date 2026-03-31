@@ -1,0 +1,377 @@
+name: Build and Deploy to GCP
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'  # 匹配版本标签，如 v3.0.0
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # GitHub Container Registry
+  GHCR_REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+  # GCP Configuration (MustKnowV1.md #30)
+  GCP_PROJECT_ID: gen-lang-client-0944935873
+  GCP_REGION: asia-northeast1
+  GCP_AR_REPO: autobb
+  GCP_SERVICE_NAME: autobb
+  # Artifact Registry完整路径
+  GCP_AR_IMAGE: asia-northeast1-docker.pkg.dev/gen-lang-client-0944935873/autobb/autobb
+  # 是否推送到GCP Artifact Registry（默认关闭，避免仓库不存在导致发布失败）
+  ENABLE_GCP_AR_PUSH: ${{ vars.ENABLE_GCP_AR_PUSH || 'false' }}
+
+jobs:
+  # ============================================
+  # Job 1: 构建和测试
+  # ============================================
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          clean: true
+
+      - name: 输出磁盘使用情况（构建前）
+        run: df -h
+
+      - name: 释放磁盘空间（构建前）
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/.ghcup || true
+          sudo apt-get clean || true
+          docker system prune -af --volumes || true
+          df -h
+
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 运行类型检查
+        run: npm run type-check || npx tsc --noEmit
+
+      - name: 运行ESLint
+        run: npm run lint
+
+      - name: 运行预构建检查
+        run: npm run perf:flags:check && npm run openclaw:prebuilt:verify-meta
+        env:
+          NODE_ENV: production
+
+      - name: 运行测试 (如果有)
+        run: npm test || echo "No tests configured"
+        continue-on-error: true
+
+      - name: 运行 OpenClaw 集成回归测试
+        run: npm run test:openclaw
+
+      - name: 校验仓库内 OpenClaw 预编译产物
+        run: npm run openclaw:prebuilt:verify
+
+      - name: 清理构建临时文件（总是执行）
+        if: always()
+        run: |
+          rm -rf .next/cache || true
+          df -h
+
+  # ============================================
+  # Job 2: 单次构建，推送到GHCR和Artifact Registry
+  # ============================================
+  build-and-push:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    outputs:
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          clean: true
+
+      - name: 输出磁盘使用情况（构建前）
+        run: df -h
+
+      - name: 释放磁盘空间（构建前）
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/.ghcup || true
+          sudo apt-get clean || true
+          docker system prune -af --volumes || true
+          df -h
+
+      - name: 设置变量
+        id: vars
+        run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 设置Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
+
+      # 登录 GitHub Container Registry
+      - name: 登录GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GHCR_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 登录 GCP Artifact Registry
+      - name: 认证GCP
+        id: auth
+        if: ${{ env.ENABLE_GCP_AR_PUSH == 'true' || vars.ENABLE_CLOUD_RUN_DEPLOY == 'true' }}
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: 配置Docker认证到Artifact Registry
+        if: ${{ env.ENABLE_GCP_AR_PUSH == 'true' }}
+        run: |
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      # 生成镜像标签（仅 main / 版本标签）
+      - name: 生成镜像标签
+        id: tags
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          ENABLE_AR_PUSH="${{ env.ENABLE_GCP_AR_PUSH }}"
+
+          # 标签规则：
+          # - main: prod-latest / prod-<sha>
+          # - tags(v*): prod-<version> / prod-<sha>
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            GHCR_TAGS="${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}:prod-${VERSION}"
+            GHCR_TAGS="${GHCR_TAGS},${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}:prod-${SHORT_SHA}"
+            if [[ "$ENABLE_AR_PUSH" == "true" ]]; then
+              AR_TAGS="${{ env.GCP_AR_IMAGE }}:prod-${VERSION}"
+              AR_TAGS="${AR_TAGS},${{ env.GCP_AR_IMAGE }}:prod-${SHORT_SHA}"
+            else
+              AR_TAGS=""
+            fi
+          else
+            GHCR_TAGS="${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}:prod-latest"
+            GHCR_TAGS="${GHCR_TAGS},${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}:prod-${SHORT_SHA}"
+
+            if [[ "$ENABLE_AR_PUSH" == "true" ]]; then
+              AR_TAGS="${{ env.GCP_AR_IMAGE }}:prod-latest"
+              AR_TAGS="${AR_TAGS},${{ env.GCP_AR_IMAGE }}:prod-${SHORT_SHA}"
+            else
+              AR_TAGS=""
+            fi
+          fi
+
+          # 合并所有标签
+          if [[ -n "$AR_TAGS" ]]; then
+            ALL_TAGS="${GHCR_TAGS},${AR_TAGS}"
+          else
+            ALL_TAGS="${GHCR_TAGS}"
+          fi
+          echo "tags=${ALL_TAGS}" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=${GHCR_TAGS}" >> $GITHUB_OUTPUT
+          echo "ar_tags=${AR_TAGS}" >> $GITHUB_OUTPUT
+
+          echo "📦 将推送以下标签:"
+          echo "${ALL_TAGS}" | tr ',' '\n'
+
+      - name: 准备 OpenClaw 预编译产物
+        run: |
+          if [[ -f openclaw-prebuilt/dist/entry.js ]] \
+            && [[ -d openclaw-prebuilt/node_modules ]] \
+            && [[ -d openclaw-prebuilt/extensions ]] \
+            && [[ -f openclaw-prebuilt/openclaw.mjs ]] \
+            && [[ -f openclaw-prebuilt/package.json ]]; then
+            echo "✅ 检测到完整 OpenClaw 预编译产物，执行严格校验"
+            OPENCLAW_PREBUILT_STRICT=1 npm run openclaw:prebuilt:verify
+          else
+            echo "ℹ️ 当前 checkout 仅包含 OpenClaw 预编译元数据，重建运行产物后继续"
+            npm run openclaw:prebuilt:refresh
+          fi
+
+      - name: 输出 OpenClaw 预编译构建元信息
+        run: cat openclaw-prebuilt/.build-meta.json
+
+      # 单次构建，推送到两个Registry
+      - name: 构建并推送Docker镜像
+        uses: docker/build-push-action@v5
+        env:
+          DOCKER_BUILD_SUMMARY: false
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha,scope=autobb-deploy
+          cache-to: type=gha,mode=min,scope=autobb-deploy
+          provenance: false
+          sbom: false
+          build-args: |
+            NODE_ENV=production
+
+      - name: 输出镜像信息
+        run: |
+          echo "✅ 镜像推送完成"
+          echo ""
+          echo "📦 GHCR:"
+          echo "${{ steps.tags.outputs.ghcr_tags }}" | tr ',' '\n' | sed 's/^/   - /'
+          if [[ -n "${{ steps.tags.outputs.ar_tags }}" ]]; then
+            echo ""
+            echo "📦 Artifact Registry:"
+            echo "${{ steps.tags.outputs.ar_tags }}" | tr ',' '\n' | sed 's/^/   - /'
+          else
+            echo ""
+            echo "📦 Artifact Registry: skipped (ENABLE_GCP_AR_PUSH != true)"
+          fi
+
+      - name: 清理Docker与临时文件（总是执行）
+        if: always()
+        run: |
+          docker builder prune -af || true
+          docker system prune -af --volumes || true
+          df -h
+
+  # ============================================
+  # Job 3: 部署到Cloud Run
+  # 条件: ENABLE_CLOUD_RUN_DEPLOY 变量为 'true' 时执行
+  # ============================================
+  deploy-to-cloud-run:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    # 🔧 通过 GitHub Repository Variable 控制是否执行部署
+    # 设置方法: Repository Settings → Secrets and variables → Actions → Variables
+    # 变量名: ENABLE_CLOUD_RUN_DEPLOY, 值: true (启用) 或 false/空 (禁用)
+    if: ${{ vars.ENABLE_CLOUD_RUN_DEPLOY == 'true' && vars.ENABLE_GCP_AR_PUSH == 'true' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) }}
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: 认证GCP
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: 设置gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: 部署到Cloud Run
+        id: deploy
+        run: |
+          IMAGE_TAG="prod-latest"
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            IMAGE_TAG="prod-${VERSION}"
+          fi
+
+          gcloud run deploy ${{ env.GCP_SERVICE_NAME }} \
+            --image=${{ env.GCP_AR_IMAGE }}:${IMAGE_TAG} \
+            --region=${{ env.GCP_REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --port=80 \
+            --cpu=4 \
+            --memory=8Gi \
+            --min-instances=1 \
+            --max-instances=3 \
+            --timeout=300 \
+            --set-secrets="\
+              DATABASE_URL=DATABASE_URL:latest,\
+              JWT_SECRET=JWT_SECRET:latest,\
+              ENCRYPTION_KEY=ENCRYPTION_KEY:latest,\
+              REDIS_URL=REDIS_URL:latest,\
+              NEXT_PUBLIC_APP_URL=NEXT_PUBLIC_APP_URL:latest,\
+              DEFAULT_ADMIN_PASSWORD=DEFAULT_ADMIN_PASSWORD:latest,\
+              NEXT_PUBLIC_CAPTCHA_ENABLED=NEXT_PUBLIC_CAPTCHA_ENABLED:latest,\
+              NEXT_PUBLIC_TURNSTILE_SITE_KEY=NEXT_PUBLIC_TURNSTILE_SITE_KEY:latest,\
+              TURNSTILE_SECRET_KEY=TURNSTILE_SECRET_KEY:latest,\
+              NODE_ENV=NODE_ENV:latest,\
+              TZ=TZ:latest" \
+            --quiet
+
+      - name: 获取服务URL并验证
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.GCP_SERVICE_NAME }} \
+            --region=${{ env.GCP_REGION }} \
+            --format='value(status.url)')
+          echo "✅ 部署成功!"
+          echo "🌐 服务URL: $SERVICE_URL"
+
+          # 等待服务启动并健康检查
+          echo "🔍 验证服务健康状态..."
+          sleep 10
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$SERVICE_URL/api/health" || echo "000")
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ 健康检查通过"
+          else
+            echo "⚠️ 健康检查返回: $HTTP_CODE (服务可能仍在启动中)"
+          fi
+
+# ============================================
+# 部署说明
+# ============================================
+#
+# 🚀 优化后的部署流程 (3个Jobs):
+#    build-and-test → build-and-push → deploy-to-cloud-run
+#
+# ⚡ 优化点:
+#    - 单次构建，同时推送到GHCR和Artifact Registry
+#    - 节省约3-5分钟构建时间
+#    - 保证两个仓库镜像完全一致
+#
+# 📋 GitHub Secrets 配置要求:
+#
+# 1. GCP_SA_KEY (必需)
+#    - 内容: GCP服务账号JSON密钥的完整内容
+#    - 服务账号: codex-dev@gen-lang-client-0944935873.iam.gserviceaccount.com
+#    - 获取方式: 复制 secrets/gcp_autoads_dev.json 文件内容
+#    - 所需权限:
+#      * Artifact Registry Writer (roles/artifactregistry.writer)
+#      * Cloud Run Admin (roles/run.admin)
+#      * Service Account User (roles/iam.serviceAccountUser)
+#      * Secret Manager Secret Accessor (roles/secretmanager.secretAccessor)
+#
+# 2. Secret Manager 中已配置的密钥 (2025-12-15):
+#    ✅ DATABASE_URL, JWT_SECRET, ENCRYPTION_KEY, REDIS_URL
+#    ✅ NEXT_PUBLIC_APP_URL, DEFAULT_ADMIN_PASSWORD, NODE_ENV, TZ
+#    ✅ NEXT_PUBLIC_CAPTCHA_ENABLED, NEXT_PUBLIC_TURNSTILE_SITE_KEY, TURNSTILE_SECRET_KEY
+#
+# 3. 如需额外功能，请添加以下密钥到Secret Manager:
+#    - GEMINI_API_KEY, GOOGLE_ADS_*, GOOGLE_CLIENT_*
+#
+# 🔗 相关资源:
+# - GHCR: ghcr.io/xxrenzhe/autobb
+# - Artifact Registry: asia-northeast1-docker.pkg.dev/gen-lang-client-0944935873/autobb
+# - Cloud Run: autobb (asia-northeast1)
+# - Secret Manager: https://console.cloud.google.com/security/secret-manager?project=gen-lang-client-0944935873

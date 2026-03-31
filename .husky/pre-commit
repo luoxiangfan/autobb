@@ -1,0 +1,100 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit checks..."
+
+# 1. 检查是否有敏感文件被添加
+echo "📁 Checking for sensitive files..."
+
+SENSITIVE_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(db|sqlite|backup|dump|key|pem|p12|env)$' || true)
+
+if [ -n "$SENSITIVE_FILES" ]; then
+  echo "❌ ERROR: Attempting to commit sensitive files:"
+  echo "$SENSITIVE_FILES"
+  echo ""
+  echo "These file types should not be committed. Please:"
+  echo "1. Remove them from the commit: git reset HEAD <file>"
+  echo "2. Add them to .gitignore"
+  echo "3. Use environment variables or Secret Manager instead"
+  exit 1
+fi
+
+# 2. 检查新增内容中的硬编码密钥和凭据
+echo "🔑 Scanning added lines for hardcoded secrets..."
+
+# 只扫描新增行，避免在“删除旧密钥”时被误拦截
+ADDED_LINES=$(git diff --cached --unified=0 --no-color | grep -E '^\+' | grep -vE '^\+\+\+' || true)
+
+API_KEY_PATTERN='(AIza[0-9A-Za-z_-]{35}|ya29\.[0-9A-Za-z._-]+|sk-[A-Za-z0-9]{20,}|xox[baprs]-[0-9]{10,}-[0-9]{10,}-[0-9A-Za-z]{20,}|ghp_[A-Za-z0-9]{20,}|glpat-[A-Za-z0-9_-]{20,})'
+PASSWORD_ASSIGN_PATTERN="(password|passwd|pwd)[^[:alnum:]]{0,4}[:=][[:space:]]*['\"][^'\"<]{6,}['\"]"
+PRIVATE_KEY_PATTERN='-----BEGIN (RSA|OPENSSH|DSA|EC|PGP|PRIVATE) KEY-----'
+CONNECTION_CRED_PATTERN='((postgres|postgresql|mysql|redis|mongodb):\/\/[A-Za-z0-9._%+-]{2,}:[A-Za-z0-9._%+-]{4,}@)'
+SENSITIVE_HOST_PATTERN='dbprovider\.sg-members-1\.clawcloudrun\.com'
+
+if [ -n "$ADDED_LINES" ]; then
+  if echo "$ADDED_LINES" | grep -E "$API_KEY_PATTERN|$PASSWORD_ASSIGN_PATTERN|$PRIVATE_KEY_PATTERN|$CONNECTION_CRED_PATTERN|$SENSITIVE_HOST_PATTERN" > /dev/null; then
+    echo "❌ ERROR: Potential secrets detected in staged additions!"
+    echo ""
+    echo "Matched patterns include:"
+    echo "- API keys / access tokens"
+    echo "- Hardcoded password assignments"
+    echo "- Private key blocks"
+    echo "- Connection URLs with embedded credentials"
+    echo "- Known sensitive production hostnames"
+    echo ""
+    echo "Please remove or mask sensitive values, then commit again."
+    echo "If this is a false positive, adjust the content to placeholders."
+    echo ""
+    echo "To bypass this check (NOT RECOMMENDED):"
+    echo "git commit --no-verify"
+    exit 1
+  fi
+fi
+
+# 3. 检查.env文件是否被添加
+echo "🔐 Checking for .env files..."
+
+ENV_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.env' || true)
+
+if [ -n "$ENV_FILES" ]; then
+  echo "⚠️  WARNING: Attempting to commit .env files:"
+  echo "$ENV_FILES"
+  echo ""
+  echo "Environment files should NOT be committed."
+  echo "Please:"
+  echo "1. Remove them: git reset HEAD $ENV_FILES"
+  echo "2. Verify .gitignore includes .env patterns"
+  echo "3. Create .env.example with placeholder values instead"
+  exit 1
+fi
+
+# 4. 检查大文件
+echo "📦 Checking for large files..."
+
+LARGE_FILES=$(git diff --cached --name-only --diff-filter=ACM | while read file; do
+  SIZE=$(git cat-file -s ":0:$file" 2>/dev/null || echo 0)
+  if [ "$SIZE" -gt 1048576 ]; then  # 1MB
+    echo "$file ($(($SIZE / 1024))KB)"
+  fi
+done)
+
+if [ -n "$LARGE_FILES" ]; then
+  echo "⚠️  WARNING: Large files detected:"
+  echo "$LARGE_FILES"
+  echo ""
+  echo "Consider using Git LFS for files >1MB"
+  echo "To proceed anyway: git commit --no-verify"
+fi
+
+# 5. 运行代码检查（如果配置了）
+if [ -f "package.json" ] && grep -q "lint" package.json; then
+  echo "🔍 Running linter..."
+  npm run lint --silent || {
+    echo "❌ Linter found issues. Please fix them before committing."
+    echo "To bypass: git commit --no-verify"
+    exit 1
+  }
+fi
+
+echo "✅ All pre-commit checks passed!"
+exit 0

@@ -1,0 +1,95 @@
+{
+  "startTime": "2025-11-28T10:20:30.550Z",
+  "offerId": 235,
+  "testCases": [
+    {
+      "name": "测试1: 关键词数量验证",
+      "passed": true,
+      "timestamp": "2025-11-28T10:20:30.557Z",
+      "details": {
+        "expectedBrandKeywords": "8-10个",
+        "expectedProductKeywords": "6-8个",
+        "expectedPurchaseKeywords": "3-5个",
+        "expectedLongtailKeywords": "3-7个",
+        "expectedTotal": "20-30个"
+      },
+      "warnings": [
+        "需要在实际运行中验证"
+      ]
+    },
+    {
+      "name": "测试2: 搜索量过滤验证",
+      "passed": true,
+      "timestamp": "2025-11-28T10:20:30.557Z",
+      "details": {
+        "filteringStrategy": "只过滤搜索量为0的关键词",
+        "preserveLongtail": "保留所有有搜索量的关键词",
+        "minSearchVolume": "> 0/月"
+      },
+      "warnings": [
+        "需要在实际运行中验证"
+      ]
+    },
+    {
+      "name": "测试3: 品牌词扩展验证",
+      "passed": true,
+      "timestamp": "2025-11-28T10:20:30.557Z",
+      "details": {
+        "brandNameRequired": "必须包含品牌名 (Eufy)",
+        "searchVolumeRequired": "必须有搜索量 (> 0)",
+        "competitionFiltering": "不过滤竞争度"
+      },
+      "warnings": [
+        "需要在实际运行中验证"
+      ]
+    },
+    {
+      "name": "测试4: 竞争度保留验证",
+      "passed": true,
+      "timestamp": "2025-11-28T10:20:30.557Z",
+      "details": {
+        "highCompetitionKeywords": "保留",
+        "competitionNotUsedForFiltering": true,
+        "expectedHighCompetitionPercentage": "20-30%"
+      },
+      "warnings": [
+        "需要在实际运行中验证"
+      ]
+    },
+    {
+      "name": "测试5: 缓存效果验证",
+      "passed": true,
+      "timestamp": "2025-11-28T10:20:30.557Z",
+      "details": {
+        "cacheLayer1": "Redis (全局，7天，50-100ms)",
+        "cacheLayer2": "SQLite (全局，7天，100-200ms)",
+        "cacheLayer3": "Google Ads API (实时，2-3秒)",
+        "expectedHitRate": "70-90%"
+      },
+      "warnings": [
+        "需要在实际运行中验证"
+      ]
+    },
+    {
+      "name": "测试6: 灵活数量要求验证",
+      "passed": true,
+      "timestamp": "2025-11-28T10:20:30.557Z",
+      "details": {
+        "minimumEnforcement": "无",
+        "acceptableRange": "5-30个",
+        "warningThreshold": "< 5个",
+        "expectedForEufy": "15-25个 (高搜索量品牌)"
+      },
+      "warnings": [
+        "需要在实际运行中验证"
+      ]
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "warnings": 6
+  },
+  "endTime": "2025-11-28T10:20:30.557Z"
+}

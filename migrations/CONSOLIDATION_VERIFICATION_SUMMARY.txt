@@ -1,0 +1,205 @@
+ARCHIVED MIGRATIONS 064-080 COMPREHENSIVE REVIEW
+================================================
+
+SCOPE: All 16 migration files reviewed and documented
+
+KEY STATISTICS:
+- Total Migration Files: 16
+- Date Range: 2025-12-09 to 2025-12-14 (6 days)
+- Total Size: ~140 KB
+
+PROMPT VERSIONS CREATED: 17 total
+=========================================
+1. product_analysis_single v3.2 (064)
+2. brand_analysis_store v3.2 (064) → v3.3 (071)
+3. ad_creative_generation:
+   - v4.1 (064)
+   - v4.2 (066)
+   - v4.4 (069)
+   - v4.5 (071)
+   - v4.6 (073)
+   - v4.7 (077)
+   - v4.8 (079, activated in 080)
+4. ad_elements_headlines:
+   - v3.2 (064)
+   - v3.3 (073)
+5. ad_elements_descriptions:
+   - v3.2 (064)
+   - v3.3 (073)
+6. launch_score_evaluation v3.2 (066)
+7. keywords_generation v3.2 (077)
+8. store_highlights_synthesis v1.0 (075)
+9. review_analysis v3.2 (074 - UPDATE)
+10. competitor_analysis v3.2 (074 - UPDATE)
+
+SCHEMA OBJECTS CREATED/MODIFIED: 22 total
+========================================
+
+New Tables (3):
+- creative_tasks (065) - Task queue for ad creative generation
+- upload_records (070) - File upload tracking
+- audit_logs (070) - Security audit logging
+
+Modified Tables (5):
+- google_ads_accounts (067) - Added status column
+- ad_creatives (068, 077) - Added ad_strength_data, path1, path2
+- scraped_products (069) - Added sales_volume, discount, delivery_info
+- offers (072) - Added product_name
+- launch_scores (077) - Added 8 new columns (4 scores + 4 data JSON fields)
+
+Indexes Created: 12 total
+- 4 on creative_tasks
+- 3 on upload_records  
+- 4 on audit_logs
+- 1 on scraped_products
+
+Triggers Created: 2
+- Both on upload_records for auto-update and success_rate calculation
+
+PROMPT ACTIVATION SEQUENCE
+==========================
+This reveals the evolution of ad_creative_generation:
+
+Day 1 (Dec 9):  v4.1 activated (core deep data enhancement)
+Day 2 (Dec 10): v4.2 activated (competitive positioning enhancements)
+Day 3 (Dec 10): v4.4 activated (product features + sales momentum)
+Day 4 (Dec 11): v4.5 activated (store data integration)
+Day 5 (Dec 12): v4.6 activated (CTR optimization: emotional triggers, questions, structured descriptions)
+Day 6 (Dec 13): v4.7 activated (RSA Display Path support)
+Day 6 (Dec 14): v4.8 activated (keyword embedding rate enforcement: 27% → 53%+)
+
+CONSOLIDATION VERIFICATION CHECKLIST
+====================================
+
+For consolidated 064/065/066 files:
+
+[✓] Schema Operations:
+    - creative_tasks table (065)
+    - google_ads_accounts.status column (067)
+    - ad_creatives.ad_strength_data column (068)
+    - scraped_products extensions (069)
+    - upload_records & audit_logs tables (070)
+    - offers.product_name column (072)
+    - launch_scores dimension columns (077)
+    - ad_creatives.path1/path2 columns (077)
+
+[✓] Prompt Versions (064 consolidation should include):
+    - product_analysis_single v3.2
+    - brand_analysis_store v3.2
+    - ad_creative_generation v4.1
+    - ad_elements_headlines v3.2
+    - ad_elements_descriptions v3.2
+    - launch_score_evaluation v3.2
+    - ad_creative_generation v4.2
+
+[✓] Activation States:
+    - All v3.2 versions activated (is_active = 1)
+    - v4.1 and v4.2 activated in sequence
+    - Previous versions deactivated properly
+
+[✓] Category Unification:
+    - All ad_creative* prompts use "广告创意生成" category
+    - Consistent across 064 and 066
+
+CRITICAL NOTES FOR CONSOLIDATION
+================================
+
+1. File 074 contains UPDATE operations (not INSERT):
+   - review_analysis and competitor_analysis versions updated
+   - These are not new versions but enhancements to existing ones
+   - Should be included in consolidated file if continuing those prompts
+
+2. File 079 is SPECIAL:
+   - Creates v4.8 with is_active = 0 (not activated)
+   - File 080 activates it
+   - These two should stay separate to preserve the activation logic
+
+3. Cascading Version Sequence:
+   - ad_creative_generation v4.1 → v4.2 → v4.4 → v4.5 → v4.6 → v4.7 → v4.8
+   - Each subsequent version deactivates previous ones
+   - This pattern is important for backward compatibility testing
+
+4. Supporting Prompt Updates:
+   - File 073 creates v3.3 versions for:
+     * ad_elements_headlines
+     * ad_elements_descriptions
+     * ad_creative_generation (v4.6)
+   - These are interdependent and should stay grouped
+
+5. Store Data Enhancements:
+   - File 075 adds store_highlights_synthesis v1.0
+   - Complements store data features in v4.4/v4.5
+   - Independent but logically grouped
+
+6. Database Structure Evolution:
+   - Files 065, 067, 068, 069, 070, 072, 077 add schema changes
+   - These accumulate, not override
+   - All must be applied in sequence for data model to work
+
+VERIFICATION QUERIES
+===================
+
+To verify completeness of consolidation, run these queries:
+
+1. Check all prompt versions:
+   SELECT prompt_id, version, is_active, COUNT(*) 
+   FROM prompt_versions 
+   WHERE prompt_id IN ('ad_creative_generation', 'ad_elements_headlines', 'ad_elements_descriptions', 
+                       'brand_analysis_store', 'product_analysis_single', 'launch_score_evaluation',
+                       'keywords_generation', 'store_highlights_synthesis')
+   GROUP BY prompt_id, version, is_active;
+
+2. Check schema changes:
+   PRAGMA table_info(ad_creatives);    -- Should have ad_strength_data, path1, path2
+   PRAGMA table_info(launch_scores);   -- Should have 8 new columns
+   PRAGMA table_info(scraped_products); -- Should have sales_volume, discount, delivery_info
+   PRAGMA table_info(offers);          -- Should have product_name
+   PRAGMA table_info(google_ads_accounts); -- Should have status
+
+3. Check new tables:
+   SELECT name FROM sqlite_master WHERE type='table' AND name IN ('creative_tasks', 'upload_records', 'audit_logs');
+
+4. Check indexes and triggers:
+   SELECT name, tbl_name FROM sqlite_master WHERE type IN ('index', 'trigger') AND tbl_name IN ('creative_tasks', 'upload_records', 'audit_logs', 'scraped_products');
+
+DEPENDENCY GRAPH
+================
+
+Prompts:
+  - ad_creative_generation v4.1 (base)
+    - Depends on: product features, brand analysis data
+  - ad_creative_generation v4.2 (extends v4.1)
+    - Adds: competitive positioning enhancements
+  - ad_creative_generation v4.4 (extends v4.2)
+    - Adds: product features and sales momentum data
+    - Requires: scraped_products schema (069)
+  - ad_creative_generation v4.5 (extends v4.4)
+    - Adds: store analysis data integration
+    - Requires: brand_analysis_store v3.3
+  - ad_creative_generation v4.6 (extends v4.5)
+    - Adds: CTR optimization strategies
+    - Requires: ad_elements_headlines v3.3, ad_elements_descriptions v3.3
+  - ad_creative_generation v4.7 (extends v4.6)
+    - Adds: RSA Display Path support
+    - Requires: ad_creatives.path1/path2 columns (077)
+  - ad_creative_generation v4.8 (extends v4.7)
+    - Adds: Keyword embedding rate enforcement
+    - Requires: keywords_generation v3.2
+
+Schema:
+  - creative_tasks (065) - standalone new table
+  - upload_records (070) - requires batch_tasks table
+  - audit_logs (070) - requires users table
+  - google_ads_accounts.status (067) - enhancement
+  - ad_creatives extensions (068, 077) - enhancements
+  - scraped_products extensions (069) - enhancements
+  - offers.product_name (072) - enhancement
+  - launch_scores extensions (077) - enhancements
+
+END OF REVIEW
+=============
+
+Complete detailed documentation available in:
+/Users/jason/Documents/Kiro/autobb/migrations/ARCHIVED_MIGRATIONS_064_080_CHECKLIST.md
+
+This file should be used to verify completeness of any consolidated migration files.

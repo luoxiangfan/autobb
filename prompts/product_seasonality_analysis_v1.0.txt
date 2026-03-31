@@ -1,0 +1,28 @@
+分析以下商品标题,判断其季节性和节日相关性:
+
+商品标题: {{product_name}}
+当前月份: {{current_month}}月
+
+请识别:
+1. 季节性: 春季/夏季/秋季/冬季/全年通用
+2. 节日相关: 圣诞节/情人节/万圣节/感恩节/黑色星期五/网络星期一/母亲节/父亲节/复活节/新年/其他
+3. 是否处于促销旺季
+4. 距离下一个旺季还有几个月
+
+返回JSON格式:
+{
+  "seasonality": "winter" | "summer" | "spring" | "fall" | "all-year",
+  "holidays": ["christmas", "new-year"],
+  "isPeakSeason": true | false,
+  "monthsUntilPeak": 0-12,
+  "reasoning": "简短说明(中文)"
+}
+
+注意:
+- seasonality必须是以下之一: winter, summer, spring, fall, all-year
+- holidays是数组,可以包含多个节日,如果无节日相关则为空数组[]
+- isPeakSeason表示当前是否处于该商品的促销旺季
+- monthsUntilPeak表示距离下一个旺季还有几个月(0表示当前就是旺季)
+- reasoning用中文简短说明判断依据
+
+只返回JSON,不要其他文字。

@@ -1,0 +1,204 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# ============================================
+# MustKnowV1：敏感/本地目录（禁止上传到 GitHub）
+# - docs/、secrets/ 及其子文件：不提交
+# ============================================
+
+docs/
+claudedocs/
+oldcode/
+
+# keep OpenClaw runtime workspace templates tracked
+openclaw/*
+!openclaw/docs/
+openclaw/docs/*
+!openclaw/docs/reference/
+openclaw/docs/reference/*
+!openclaw/docs/reference/templates/
+!openclaw/docs/reference/templates/**
+
+secrets/
+.secrets/
+
+# dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# testing
+coverage/
+
+# next.js
+.next/
+out/
+
+# production
+build/
+dist/
+
+# local AI/agent tooling
+.claude/
+.openclaw/
+
+# legacy OpenClaw snapshot (do not upload)
+openclaw-v1/
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env（敏感信息，额外保护）
+*.env*
+!.env.example
+!.env.production.example
+!.env.production.template
+
+# vercel
+.vercel
+
+# IDEs/editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# caches
+.eslintcache
+.stylelintcache
+.turbo/
+.cache/
+.pnpm-store/
+.direnv/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# database files (SQLite) - 所有位置的数据库文件
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-shm
+*.sqlite3-wal
+/backups/
+/data/backups/
+# 注意：不要使用 backups/ 因为会忽略 src/app/(app)/admin/backups/ 页面
+*.db.bak
+
+# sqlite backup files created by rebuild scripts
+data/*.db.bak-*
+data/*.db-wal.bak-*
+data/*.db-shm.bak-*
+
+# database backups and dumps - 防止敏感数据泄露
+*.db.backup*
+*.sqlite.backup*
+*.backup
+*.dump
+*.sql.gz
+data/*.backup*
+data/*.dump
+
+# 临时文件和日志
+*.log
+*.swp
+*.swo
+*.pid
+*.sock
+tmp/
+temp/
+
+# 安全相关 - 额外保护
+*.key
+*.pem
+*.p12
+*.pfx
+*.p7b
+credentials.json
+service-account.json
+api_keys.txt
+passwords.txt
+
+# SSH keys
+id_rsa
+id_dsa
+id_ed25519
+*.ppk
+
+# 云服务凭证
+gcp-credentials.json
+aws-credentials
+.aws/
+.gcloud/
+.azure/
+
+# 临时测试和调试文件
+test_cookies.txt
+debug_*.log
+temp_*.sh
+temp_*.ts
+
+# python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+python-service/.venv/
+
+# storage目录 - 包含调试文件、测试脚本、临时数据
+storage/
+!storage/.gitkeep
+
+# playwright
+playwright-report/
+test-results/
+blob-report/
+
+# misc
+.DS_Store
+/.worktrees/
+
+# openclaw-prebuilt generated artifacts (built in CI / pre-deploy)
+.openclaw-prebuilt-tmp/
+openclaw-prebuilt/dist/
+openclaw-prebuilt/node_modules/
+openclaw-prebuilt/extensions/
+openclaw-prebuilt/openclaw.mjs
+openclaw-prebuilt/package.json
+openclaw/.git/
+
+# 临时分析报告文件
+ANALYSIS_SUMMARY.md
+COMPETITOR_ANALYSIS_CODE_REFERENCE.md
+COMPETITOR_ANALYSIS_MISSING_ISSUE.md
+DATABASE_AUDIT_INDEX.md
+DATABASE_FIELD_CONSISTENCY_REPORT.md
+FIELD_INCONSISTENCY_DETAILS.csv
+FIELD_INCONSISTENCY_SUMMARY.txt
+FRONTEND_HOOKS_ANALYSIS.md
+OFFER_257_MISSING_ANALYSIS.md
+*.backup-before-v3-refactor
+*.bak
+.gitnexus
+
+# Dolt database files (added by bd init)
+.dolt/

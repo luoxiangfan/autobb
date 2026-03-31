@@ -1,0 +1,19 @@
+prompt_id                version  is_active  name        notes                                                       
+-----------------------  -------  ---------  ----------  ------------------------------------------------------------
+brand_analysis_store     v3.2     1          品牌店铺分析v3.2  P1优化: 添加HOT-SELLING INSIGHTS和PRODUCT CATEGORIES的明确使用指导，包括质量评
+                                                         估规则（avgRating ≥ 4.3 ...                                     
+
+brand_analysis_store     v3.1     0          品牌店铺分析v3.1                                                              
+                                                         v3.1 更新内容:                                                  
+                                                         1. 批量更新所有Prompt到v3.1                                        
+                                                         2. 从开发环境数据库导出最新Prompt内容                                     
+                                                         ...                                                         
+
+product_analysis_single  v3.2     1          单品产品分析v3.2  P1优化: 添加Category、Rating、ReviewCount字段的明确使用指导，包括评分质量评估（Rating
+                                                          ≥ 4.5 = Highly Rate...                                     
+
+product_analysis_single  v3.1     0          单品产品分析v3.1                                                              
+                                                         v3.1 更新内容:                                                  
+                                                         1. 批量更新所有Prompt到v3.1                                        
+                                                         2. 从开发环境数据库导出最新Prompt内容                                     
+                                                         ...                                                         

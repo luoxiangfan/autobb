@@ -1,0 +1,244 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Premium Tech Palette - Light Mode */
+    --background: 210 40% 98%;
+    /* Soft cool gray/blue background */
+    --foreground: 222 47% 11%;
+    /* Deep navy for text */
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 221 83% 53%;
+    /* Vibrant Tech Blue */
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+
+    --radius: 0.75rem;
+
+    /* Marketing tokens */
+    --marketing-primary: 221 83% 53%;
+    --marketing-secondary: 217 91% 60%;
+    --marketing-accent: 21 90% 48%;
+    --marketing-ink: 222 47% 11%;
+    --marketing-muted: 215 16% 47%;
+  }
+
+  .dark {
+    /* Premium Tech Palette - Dark Mode */
+    --background: 222 47% 11%;
+    /* Deep Navy Background */
+    --foreground: 210 40% 98%;
+
+    --card: 217 33% 17%;
+    /* Slightly lighter navy for cards */
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 60%;
+    /* Lighter, glowing blue */
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 224 76% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-body), "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+}
+
+@layer utilities {
+  .font-body {
+    font-family: var(--font-body), "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+
+  .font-display {
+    font-family: var(--font-body), "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+
+  .glass {
+    @apply bg-white/70 backdrop-blur-lg border border-white/20 shadow-sm;
+  }
+
+  .glass-dark {
+    @apply bg-slate-900/70 backdrop-blur-lg border border-white/10 shadow-sm;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  }
+
+  /* ============================================
+     统一字体大小规范系统
+     ============================================ */
+
+  /* 标题层级 - Headers */
+  .text-display {
+    @apply text-5xl font-bold tracking-tight;
+    /* 48px - 超大展示标题，用于Landing页面 */
+  }
+
+  .text-h1 {
+    @apply text-3xl font-bold tracking-tight;
+    /* 30px - 页面主标题 */
+  }
+
+  .text-h2 {
+    @apply text-2xl font-semibold tracking-tight;
+    /* 24px - 二级标题/区块标题 */
+  }
+
+  .text-h3 {
+    @apply text-xl font-semibold;
+    /* 20px - 三级标题/卡片标题 */
+  }
+
+  .text-h4 {
+    @apply text-lg font-medium;
+    /* 18px - 四级标题/小节标题 */
+  }
+
+  .text-h5 {
+    @apply text-base font-medium;
+    /* 16px - 五级标题 */
+  }
+
+  /* 正文层级 - Body Text */
+  .text-body-lg {
+    @apply text-lg;
+    /* 18px - 大正文，强调内容 */
+  }
+
+  .text-body {
+    @apply text-base;
+    /* 16px - 标准正文，默认大小 */
+  }
+
+  .text-body-sm {
+    @apply text-sm;
+    /* 14px - 小正文，次要信息 */
+  }
+
+  /* 辅助文本层级 - Supporting Text */
+  .text-caption {
+    @apply text-xs;
+    /* 12px - 注释/标签/帮助文本 */
+  }
+
+  .text-overline {
+    @apply text-[10px] uppercase tracking-wider;
+    /* 10px - 超小标签/分类标识 */
+  }
+
+  /* 组合样式 - Combined Styles */
+  .page-title {
+    @apply text-h1 text-foreground mb-2;
+  }
+
+  .page-subtitle {
+    @apply text-body text-muted-foreground;
+  }
+
+  .section-title {
+    @apply text-h2 text-foreground mb-4;
+  }
+
+  .card-title {
+    @apply text-h3 text-foreground mb-2;
+  }
+
+  .label-text {
+    @apply text-body-sm font-medium text-foreground;
+  }
+
+  .helper-text {
+    @apply text-caption text-muted-foreground;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-shell *,
+  .marketing-shell *::before,
+  .marketing-shell *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.marketing-shell section[id] {
+  scroll-margin-top: 5rem;
+}
+
+@keyframes hero-tag-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+.hero-tag-float {
+  animation: hero-tag-float 4.8s ease-in-out infinite;
+}
+
+.hero-tag-float-delay {
+  animation-delay: 0.7s;
+}
+
+.hero-tag-float-delay-2 {
+  animation-delay: 1.4s;
+}

@@ -1,0 +1,214 @@
+-- ============================================
+-- Google Ads 广告创意生成 v5.3
+-- KISS-3类型：A(品牌意图) + B(商品型号意图) + D(商品需求意图)
+-- 强制证据约束 + 仅Headline#1品牌DKI + 多单品卖点混合
+-- v5.0: Intent-driven sections 通过代码动态注入
+-- v5.1: 新增 structured keywordCandidates / evidenceProducts / cannotGenerateReason 审计元信息
+-- v5.2: 新增 Headline #2-#4 的 Title 优先抽取规则（含品牌、长度、语义去重、About/Features fallback）
+-- v5.3: Headline #1-#4 保护不动，retained keyword headlines 后移到 #5-#9，并要求与前4条保持多样性；低质量/无语义关键词不得强制落位
+-- ============================================
+
+## 任务
+为 Google Ads 生成高质量的广告创意（Responsive Search Ads）。
+
+## ⚠️ 字符限制（CRITICAL - 必须严格遵守）
+生成时必须控制长度，不得依赖后端截断：
+- Headlines：每个≤30字符（含空格、标点）
+- Descriptions：每个≤90字符（含空格、标点）
+- Callouts：每个≤25字符
+- Sitelink text：每个≤25字符
+- Sitelink description：每个≤35字符
+
+## 基本要求
+1. 所有内容必须使用目标语言：{{target_language}}
+2. 固定数量：15个标题，4个描述，6个Callouts，6个Sitelinks；关键词10-20个
+3. 所有创意元素必须与单品/店铺链接类型一致
+4. 每个元素必须语义完整，不得因字符限制而截断句子
+
+## 语言指令
+{{language_instruction}}
+
+## 产品/店铺信息
+{{link_type_section}}
+{{store_creative_instructions}}
+
+PRODUCT: {{product_description}}
+USPs: {{unique_selling_points}}
+AUDIENCE: {{target_audience}}
+COUNTRY: {{target_country}} | LANGUAGE: {{target_language}}
+
+{{enhanced_features_section}}
+{{localization_section}}
+{{brand_analysis_section}}
+{{extras_data}}
+
+## 🧩 补充单品优先级（仅当存在补充单品信息）
+如果在 EXTRAS DATA 或 VERIFIED FACTS 中出现以下前缀信息（如 `SUPPLEMENTAL PICKS` / `SUPPLEMENTAL HOOKS` / `STORE HOT FEATURES` / `STORE USER VOICES` / `STORE CATEGORIES` / `STORE PRICE RANGE`）：
+- 必须优先使用这些补充单品卖点与名称，作为主要创意素材
+- 需要“多单品卖点混合”：至少覆盖 2 个不同单品的卖点
+- 至少 2 个标题 + 1 个描述 + 1 个 Sitelink/Callout 需要引用补充单品信息（在不超字符限制的前提下）
+- 价格/评分等数字必须来自 VERIFIED FACTS，严禁编造
+**仅适用于店铺页(Store Page)**：产品页(Product Page)不做多单品混合，必须聚焦单一产品。
+
+{{verified_facts_section}}
+
+{{promotion_section}}
+{{theme_section}}
+{{reference_performance_section}}
+{{extracted_elements_section}}
+
+## 🎯 Amazon Title + About this item 利用增强（CRITICAL）
+当 EXTRACTED ELEMENTS 中存在以下任一信号时，必须优先使用并保留其独特表达：
+- `EXTRACTED PRODUCT TITLE`
+- `TITLE CORE PHRASES`
+- `ABOUT THIS ITEM CORE CLAIMS`
+- `ABOUT-DERIVED CALLOUT IDEAS`
+- `ABOUT-DERIVED SITELINK IDEAS`
+
+**覆盖要求（在不超字符限制前提下）**：
+- 标题：至少 6/15 直接使用 TITLE/ABOUT 的词组或核心表达；其中至少 2 个来自 TITLE CORE PHRASES，至少 2 个来自 ABOUT THIS ITEM CORE CLAIMS
+- 描述：4/4 均需包含 TITLE/ABOUT 的核心词组（可轻微改写，不得丢失核心语义）
+- Callouts：至少 3/6 优先来自 ABOUT-DERIVED CALLOUT IDEAS 或 ABOUT 核心表达
+- Sitelinks：至少 3/6 优先来自 ABOUT-DERIVED SITELINK IDEAS 或 TITLE/ABOUT 核心表达
+- Keywords：至少 6 个关键词需来自 TITLE/ABOUT 语义种子（允许规范化复述）
+
+**措辞与证据约束（同时满足）**：
+- 可以压缩、同义替换、语序调整，但不得把 TITLE/ABOUT 的独有卖点改写成泛化空话
+- 涉及数字、时效、保障、折扣等可验证陈述时，仍必须遵守 VERIFIED FACTS / PROMOTION 证据边界
+- 若某类 TITLE/ABOUT 信号缺失，仅对“已提供的信号”执行强覆盖要求，不得编造未出现的信息
+
+## ✅ Evidence-Only Claims（CRITICAL）
+你必须严格遵守以下规则，避免虚假陈述：
+- 只能使用"VERIFIED FACTS"中出现过的数字、折扣、限时、保障/支持承诺、覆盖范围、速度/时长等可验证信息
+- 如果VERIFIED FACTS中没有对应信息：不得编造，不得"默认有"，改用不含数字/不含承诺的表述
+- 不得写"24/7""X分钟开通""覆盖X国""X%折扣""退款保证""终身"等，除非VERIFIED FACTS明确提供
+- 若 VERIFIED FACTS 为空：禁止出现任何数字/促销/运费/保障/时效承诺，只能用非数值、非承诺的价值型表述
+- 若 VERIFIED FACTS 中出现 `PRICE EVIDENCE BLOCKED`：禁止输出任何具体金额（包括当前价/原价/折扣额），仅可使用非金额价值表达
+- EXTRACTED 元素仅用于措辞参考，不得引入任何数字/承诺/限时/库存信息
+
+## 🚫 负向信号与低信任表达禁用（CRITICAL）
+以下表达禁止出现在 headline/description/sitelink/callout：
+- 弱势排名背书：如 `#18,696 Best Seller`、`#12,000 in Category`、`Top #xxxx`
+- 未经证据的排名/Best Seller：只有 VERIFIED FACTS 明确给出且排名 ≤ #1000 才可使用
+- 编造社会证明比例：如 `92% of women love it`、`87% users recommend`
+- 低信任俚语/口语：如 `cuz` / `gonna` / `kinda` / `awesome` / `ain't`
+- 强负向情绪施压：如 `panic` / `ashamed` / `humiliated` / `desperate` / `disaster` / `suffering`
+- 场景错配维修/工具词：如 `reliable fix for real projects`、`tackle repairs`、`repair`、`tool`、`workshop`（除非产品本身属于该类目）
+
+替代表达原则：
+- 使用中性、可验证、与商品强相关的价值表达（如 comfort/fit/breathable/supportive）
+- 痛点表达仅允许“轻痛点 + 解决方案”，禁止羞辱、恐惧、灾难化措辞
+
+## 关键词使用规则
+{{ai_keywords_section}}
+{{keyword_bucket_section}}
+{{bucket_info_section}}
+{{type_intent_guidance_section}}
+{{exclude_keywords_section}}
+
+## 最终保留词落位规则（CRITICAL）
+{{retained_keyword_slot_section}}
+
+**关键词嵌入规则**：
+- 8/15 (53%+) 标题必须包含关键词
+- 4/4 (100%) 描述必须包含关键词
+- 优先使用搜索量更高的关键词
+- 品牌词必须至少出现在2个标题中
+- Headline #1 是固定 DKI，Headline #2-#4 是固定 title/about headline，不得改写；当提供最终保留下来的非纯品牌词计划时，Headline #5-#9 与 Description #1-#2 必须优先遵守该计划
+- 如果保留下来的合格关键词不足 5 个，则所有合格关键词都必须进入 Headline #5-#9，并允许复用更高优先级的保留词补齐剩余 headline slot
+- 如果保留下来的合格关键词超过 5 个，则只把优先级与质量最好的 5 个放入 Headline #5-#9
+- 如果没有合格的保留词，禁止为了达标硬塞低质量、无语义或不自然的关键词
+**硬性要求**：如未达到8/15关键词嵌入率，必须重写标题直到达标
+
+## 标题规则（15个，≤30字符）
+
+### Headline #1（MANDATORY）
+- 必须是：{KeyWord:{{brand}}} Official（如超长则允许仅 {KeyWord:{{brand}}}）
+- 只允许使用品牌词作为默认文本（避免无关替换）
+
+### Headline #2-#4（TITLE PRIORITY, IMMUTABLE, CRITICAL）
+- 必须优先从 `EXTRACTED PRODUCT TITLE` / `TITLE CORE PHRASES` 提炼 3 条 headline 候选（对应 #2-#4）
+- 这 3 条 headline 为 title/about 保护槽位，不得被 retained keyword contract 覆盖或改写
+- 每条必须包含品牌词（完整品牌或可识别品牌 token），且必须 ≤30 字符
+- 3 条 headline 必须语义去重（不能仅换词序/近义词微调）
+- 若 TITLE 已能产出 3 条高质量候选：不得混入 ABOUT/FEATURES
+- 仅当 TITLE 候选不足 3 条时，才允许从 `ABOUT THIS ITEM CORE CLAIMS` / `PRODUCT FEATURES` 补齐
+
+### Headline #5-#9（RETAINED KEYWORD SLOTS, CRITICAL）
+- 这些 headline 是最终保留下来的非纯品牌词落位区，必须优先遵守 `FINAL RETAINED NON-BRAND KEYWORD` / `RETAINED KEYWORD SLOT PLAN`
+- 每条 headline 必须自然完整、≤30 字符，并优先围绕对应保留词组织表达
+- 必须与 Headline #1-#4 保持明显差异，禁止对 DKI headline 或 title/about headline 做近似复写、轻改写或轻度词序调整
+- TITLE / ABOUT / FEATURES 只能帮助润色和补证据，不能覆盖已给出的 retained keyword slot contract
+- 若某个保留词无法自然融入 headline 且会明显破坏文案质量，不要生造、截断或输出无语义短语
+- 若未提供安全的 retained keyword plan，则回退到高质量自然 headline，不强制硬塞关键词
+
+### DKI使用限制（CRITICAL）
+- 仅Headline #1 允许使用 {KeyWord:...}
+- 其他标题禁止使用DKI格式
+
+### 标题类型分布（保持多样性）
+使用以下指导生成剩余标题，避免重复表达：
+{{headline_brand_guidance}}
+{{headline_feature_guidance}}
+{{headline_promo_guidance}}
+{{headline_cta_guidance}}
+{{headline_urgency_guidance}}
+**紧迫感规则（CRITICAL）**：
+- 只有在 VERIFIED FACTS 或 PROMOTION 中存在明确“库存/截止时间/限时”证据时，才允许使用紧迫感标题
+- 若无证据，禁止使用任何限时/库存暗示
+
+**问题型标题（必需）**：
+- 至少2个标题为问题句（以?结尾），用于刺痛/共鸣（但不得编造事实）
+
+## 描述规则（4个，≤90字符）
+要求：每条描述都必须包含关键词，并以“目标语言的CTA”结尾（不得混语言）。
+**CTA硬性要求**：至少2条描述必须包含明确CTA词。
+- 若目标语言为 English：CTA必须包含以下动词之一（确保被识别）：Shop Now / Buy Now / Learn More / Get / Order / Start / Try / Sign Up
+- 若目标语言非 English：使用等价CTA动词（不得混语言）
+**单品页限制**：产品页不得使用“explore our collection/store”等店铺引导措辞
+
+### Description #1-#2（RETAINED KEYWORD SLOTS, CRITICAL）
+- 当提供 retained keyword slot plan 时，Description #1-#2 必须优先覆盖这些最终保留词
+- 优先使用尚未被 Headline #5-#9 覆盖的 retained keyword；若都已覆盖，可复用优先级更高的 retained keyword
+- 描述必须自然、完整、以 CTA 结尾，不得为了塞词而输出不通顺或无语义的句子
+
+### 描述结构（必须覆盖）
+{{description_1_guidance}}
+{{description_2_guidance}}
+{{description_3_guidance}}
+{{description_4_guidance}}
+
+**Pain → Solution（必需）**：
+- 至少1条描述必须按：痛点短句 → 解决方案 →（若有）证据点 → CTA
+- 证据点只能来自 VERIFIED FACTS / PROMOTION（EXTRACTED 仅作措辞参考）
+
+## Callouts（6个，≤25字符）
+{{callout_guidance}}
+
+## 桶类型适配（KISS-3类型）
+根据 {{bucket_type}} 调整创意角度：
+
+### 桶A（品牌/信任）
+- 强调官方、正品、可信、保障（仅限证据内）
+- 品牌词覆盖更高，但避免标题重复
+
+### 桶B（场景+功能）
+- 用“场景/痛点”开头，再用“功能/卖点”给出解决方案
+- 避免机械重复品牌词，保持场景/功能多样性
+
+### 桶D（转化/价值）
+- 优先突出可验证的优惠/价值点 + 强行动号召
+- 若无证据，不写折扣/限时/数字，只写“价值/省心/替代方案”类表述
+
+## 输出（JSON only）
+{{output_format_section}}
+
+## Structured Evidence Metadata (recommended)
+- In addition to RSA assets, also return structured evidence metadata whenever it is available.
+- evidenceProducts: only verified current product names or verified hot product names actually used in copy.
+- keywordCandidates: optional audit metadata only; include text plus sourceType / sourceField / anchorType / evidence / suggestedMatchType / confidence / qualityReason / rejectionReason when available.
+- cannotGenerateReason: if verified product or model evidence is insufficient, return a concise reason instead of inventing unsupported models, series, functions, or product lines.
+- Never fabricate evidenceProducts, keywordCandidates, or cannotGenerateReason.
+**TYPE RULES（CRITICAL）**：
+- headlines[].type 与 descriptions[].type 必须是单一值
+- 禁止使用“|”拼接多个类型

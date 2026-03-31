@@ -1,0 +1,83 @@
+-- Migration: 添加competitor_analysis字段到offers表
+-- Date: 2025-11-20
+-- Description: P0高级优化 - 存储竞品对比分析结果
+
+-- 添加competitor_analysis字段（TEXT类型存储JSON）
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'offers' AND column_name = 'competitor_analysis') THEN
+    ALTER TABLE offers ADD COLUMN competitor_analysis TEXT;
+    RAISE NOTICE '✅ 添加 competitor_analysis 字段到 offers';
+  ELSE
+    RAISE NOTICE '⏭️  competitor_analysis 字段已存在于 offers';
+  END IF;
+END $$;
+
+-- 说明：competitor_analysis字段存储CompetitorAnalysisResult的JSON格式数据
+-- 包含：竞品列表、价格竞争力、评分竞争力、功能对比、独特卖点、竞品优势
+--
+-- 字段结构示例：
+-- {
+--   "competitors": [
+--     {
+--       "asin": "B08ABC123",
+--       "name": "Competitor Product",
+--       "brand": "Competitor Brand",
+--       "price": 29.99,
+--       "rating": 4.3,
+--       "reviewCount": 1200,
+--       "source": "amazon_compare",
+--       "features": ["feature1", "feature2"]
+--     }
+--   ],
+--   "totalCompetitors": 8,
+--   "pricePosition": {
+--     "ourPrice": 24.99,
+--     "avgCompetitorPrice": 32.50,
+--     "percentile": 25,
+--     "advantage": "lowest",
+--     "savingsPercent": 23
+--   },
+--   "ratingPosition": {
+--     "ourRating": 4.7,
+--     "avgCompetitorRating": 4.2,
+--     "percentile": 87,
+--     "advantage": "top_rated"
+--   },
+--   "featureComparison": [
+--     {
+--       "feature": "Waterproof IP68",
+--       "weHave": true,
+--       "competitorsHave": 5,
+--       "competitorsTotal": 8,
+--       "adoptionRate": 0.625,
+--       "advantage": "common"
+--     }
+--   ],
+--   "uniqueSellingPoints": [
+--     {
+--       "feature": "Built-in GPS",
+--       "weHave": true,
+--       "competitorsHave": 2,
+--       "uniquenessScore": 0.75,
+--       "marketingValue": "high"
+--     }
+--   ],
+--   "competitorAdvantages": [
+--     {
+--       "advantage": "Longer battery life (30h vs our 20h)",
+--       "competitorsWithAdvantage": 4,
+--       "severity": "moderate",
+--       "counterStrategy": "Emphasize faster charging and portability"
+--     }
+--   ],
+--   "overallCompetitiveness": 78,
+--   "analyzedAt": "2025-11-20T10:30:00Z"
+-- }
+
+
+-- 记录迁移历史
+INSERT INTO migration_history (migration_name)
+VALUES ('014_add_competitor_analysis_field.pg')
+ON CONFLICT (migration_name) DO NOTHING;

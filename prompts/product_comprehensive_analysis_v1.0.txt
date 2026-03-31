@@ -1,0 +1,37 @@
+分析以下商品的详细信息，提供全面的商品特征分析：
+
+商品标题: {{product_name}}
+商品品牌: {{brand}}
+价格: {{price}}
+
+请分析以下维度：
+
+1. **商品类别** (category)
+   - 从以下类别中选择最合适的一个：
+   - electronics（电子产品）, clothing（服装）, home（家居）, sports（运动）, beauty（美妆）, toys（玩具）, books（图书）, food（食品）, automotive（汽车用品）, health（健康）, other（其他）
+
+2. **目标受众** (targetAudience)
+   - 可以选择多个：male（男性）, female（女性）, kids（儿童）, elderly（老人）, unisex（通用）
+
+3. **价格定位感知** (pricePositioning)
+   - 基于商品名称和品牌的感知，不是实际价格
+   - 选择一个：luxury（奢侈品）, premium（高端）, mid-range（中端）, budget（经济型）
+
+4. **使用场景** (useScenario)
+   - 可以选择多个：indoor（室内）, outdoor（户外）, sports（运动）, office（办公）, travel（旅行）, daily（日常）, party（聚会）, professional（专业）
+
+5. **商品特点** (productFeatures)
+   - 可以选择多个：portable（便携）, durable（耐用）, fashionable（时尚）, practical（实用）, innovative（创新）, eco-friendly（环保）, smart（智能）, luxury（奢华）
+
+6. **分析理由** (reasoning)
+   - 用中文简短说明你的分析依据（1-2句话）
+
+返回JSON格式：
+{
+  "category": "electronics",
+  "targetAudience": ["male", "unisex"],
+  "pricePositioning": "premium",
+  "useScenario": ["daily", "office"],
+  "productFeatures": ["portable", "innovative", "smart"],
+  "reasoning": "这是一款高端电子产品，适合日常和办公使用，具有便携和创新特点"
+}

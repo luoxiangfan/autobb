@@ -1,0 +1,38 @@
+-- Migration: 添加review_analysis字段到offers表
+-- Date: 2025-11-20
+-- Description: P0高级优化 - 存储用户评论深度分析结果
+
+-- 添加review_analysis字段（TEXT类型存储JSON）
+ALTER TABLE offers ADD COLUMN review_analysis TEXT;
+
+-- 说明：review_analysis字段存储ReviewAnalysisResult的JSON格式数据
+-- 包含：情感分布、高频关键词、真实使用场景、购买动机、用户画像、痛点分析
+--
+-- 字段结构示例：
+-- {
+--   "totalReviews": 150,
+--   "averageRating": 4.6,
+--   "sentimentDistribution": {
+--     "positive": 75,
+--     "neutral": 15,
+--     "negative": 10
+--   },
+--   "topPositiveKeywords": [
+--     {"keyword": "easy setup", "frequency": 15, "sentiment": "positive", "context": "..."}
+--   ],
+--   "topNegativeKeywords": [...],
+--   "realUseCases": [
+--     {"scenario": "home security", "mentions": 35, "examples": ["..."]}
+--   ],
+--   "purchaseReasons": [
+--     {"reason": "upgrade from old camera", "frequency": 18}
+--   ],
+--   "userProfiles": [
+--     {"profile": "tech-savvy homeowner", "indicators": ["..."]}
+--   ],
+--   "commonPainPoints": [
+--     {"issue": "app crashes", "severity": "moderate", "affectedUsers": 12, "workarounds": ["..."]}
+--   ],
+--   "analyzedReviewCount": 50,
+--   "verifiedReviewCount": 42
+-- }

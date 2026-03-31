@@ -1,0 +1,35 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      args:
+        - NODE_ENV=production
+    image: autoads:latest
+    container_name: autoads-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:./autoads.db
+      - NEXT_TELEMETRY_DISABLED=1
+      - REDIS_URL=${REDIS_URL}
+      - QUEUE_SPLIT_BACKGROUND=true
+    volumes:
+      # 持久化数据库（如果使用 SQLite）
+      - ./autoads.db:/app/autoads.db
+      - ./scripts:/app/scripts:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - autoads-network
+networks:
+  autoads-network:
+    driver: bridge
