@@ -1,5 +1,6 @@
 import { getDatabase } from './db'
 import { containsPureBrand, getPureBrandKeywords } from './brand-keyword-utils'
+import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 
 export interface SearchTermFeedbackHints {
   hardNegativeTerms: string[]
@@ -44,7 +45,6 @@ interface AdaptiveThresholds {
   dominantCurrency: string
 }
 
-const DEFAULT_LOOKBACK_DAYS = 14
 const DEFAULT_MAX_TERMS = 24
 
 // 负向反馈阈值
@@ -87,6 +87,10 @@ const DEFAULT_FALLBACK_CPC_BY_CURRENCY: Record<string, number> = {
   TRY: 32,
   RUB: 90,
   ZAR: 16
+}
+
+const BRAND_PRODUCT_FAMILY_ALIAS_MAP: Record<string, string[]> = {
+  'our place': ['always pan', 'always pan 2.0', 'wonder oven', 'dream cooker'],
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -215,7 +219,27 @@ function isUsableSearchTerm(term: string): boolean {
 
 function isBrandRelatedSearchTerm(term: string, pureBrandKeywords: string[]): boolean {
   if (!pureBrandKeywords.length) return true
-  return containsPureBrand(term, pureBrandKeywords)
+  if (containsPureBrand(term, pureBrandKeywords)) return true
+
+  const normalizedTerm = normalizeGoogleAdsKeyword(term)
+  if (!normalizedTerm) return false
+  const normalizedTermCompact = normalizedTerm.replace(/\s+/g, '')
+  const haystack = ` ${normalizedTerm} `
+
+  for (const pureBrand of pureBrandKeywords) {
+    const brandKey = normalizeGoogleAdsKeyword(pureBrand)
+    if (!brandKey) continue
+    const aliases = BRAND_PRODUCT_FAMILY_ALIAS_MAP[brandKey] || []
+    for (const alias of aliases) {
+      const normalizedAlias = normalizeGoogleAdsKeyword(alias)
+      if (!normalizedAlias) continue
+      if (haystack.includes(` ${normalizedAlias} `)) return true
+      const compactAlias = normalizedAlias.replace(/\s+/g, '')
+      if (compactAlias && normalizedTermCompact.includes(compactAlias)) return true
+    }
+  }
+
+  return false
 }
 
 function filterBrandRelatedTerms(terms: string[], pureBrandKeywords: string[], maxTerms?: number): string[] {
@@ -366,16 +390,13 @@ async function getUserBrandLevelHighPerformingTerms(params: {
   brandName: string
   excludeOfferId: number
   targetCountry?: string
-  lookbackDays?: number
   maxTerms?: number
 }): Promise<string[]> {
   const db = await getDatabase()
-  const lookbackDays = Math.max(3, Math.min(60, params.lookbackDays ?? DEFAULT_LOOKBACK_DAYS))
   const maxTerms = Math.max(5, Math.min(20, params.maxTerms ?? 10))
   const pureBrandKeywords = getPureBrandKeywords(params.brandName)
 
   const isDeletedCondition = db.type === 'postgres' ? 'COALESCE(c.is_deleted, FALSE) = FALSE' : 'COALESCE(c.is_deleted, 0) = 0'
-  const dateExpr = `date('now', '-${lookbackDays} days')`
 
   const rows = await db.query<SearchTermFeedbackAggregateRow>(
     `SELECT
@@ -392,7 +413,6 @@ async function getUserBrandLevelHighPerformingTerms(params: {
        AND o.id != ?
        AND o.target_country = COALESCE(?, o.target_country)
        AND ${isDeletedCondition}
-       AND str.date >= ${dateExpr}
      GROUP BY str.search_term
      HAVING SUM(str.clicks) >= ${HIGH_PERFORMING_MIN_CLICKS}
      ORDER BY SUM(str.clicks) DESC`,
@@ -430,7 +450,6 @@ async function getUserBrandLevelHighPerformingTerms(params: {
 async function getGlobalBrandLevelHighPerformingTerms(params: {
   brandName: string
   targetCountry?: string
-  lookbackDays?: number
   maxTerms?: number
   minUsers?: number
 }): Promise<Array<{
@@ -440,13 +459,11 @@ async function getGlobalBrandLevelHighPerformingTerms(params: {
   totalClicks: number
 }>> {
   const db = await getDatabase()
-  const lookbackDays = Math.max(3, Math.min(60, params.lookbackDays ?? DEFAULT_LOOKBACK_DAYS))
   const maxTerms = Math.max(5, Math.min(20, params.maxTerms ?? 10))
   const minUsers = Math.max(2, params.minUsers ?? 2) // k-匿名性：至少2个用户
   const pureBrandKeywords = getPureBrandKeywords(params.brandName)
 
   const isDeletedCondition = db.type === 'postgres' ? 'COALESCE(c.is_deleted, FALSE) = FALSE' : 'COALESCE(c.is_deleted, 0) = 0'
-  const dateExpr = `date('now', '-${lookbackDays} days')`
 
   // 聚合查询：计算平均 CTR 和用户数
   const avgCtrExpr = db.type === 'postgres'
@@ -472,7 +489,6 @@ async function getGlobalBrandLevelHighPerformingTerms(params: {
      WHERE o.brand = ?
        AND o.target_country = COALESCE(?, o.target_country)
        AND ${isDeletedCondition}
-       AND str.date >= ${dateExpr}
      GROUP BY str.search_term
      HAVING COUNT(DISTINCT str.user_id) >= ?
        AND SUM(str.clicks) >= 15
@@ -508,11 +524,11 @@ export async function getSearchTermFeedbackHints(params: {
   maxTerms?: number
 }): Promise<SearchTermFeedbackHints> {
   const db = await getDatabase()
-  const lookbackDays = Math.max(3, Math.min(60, params.lookbackDays ?? DEFAULT_LOOKBACK_DAYS))
+  // 不做时间窗口过滤：全历史可用（0 表示 all-time，仅用于返回给上层展示）
+  const lookbackDays = 0
   const maxTerms = Math.max(5, Math.min(100, params.maxTerms ?? DEFAULT_MAX_TERMS))
 
   const isDeletedCondition = db.type === 'postgres' ? 'COALESCE(c.is_deleted, FALSE) = FALSE' : 'COALESCE(c.is_deleted, 0) = 0'
-  const dateExpr = `date('now', '-${lookbackDays} days')`
 
   // 获取 Offer 信息（用于品牌级别回退）
   const offer = await db.queryOne<{ brand: string; target_country: string }>(
@@ -552,7 +568,6 @@ export async function getSearchTermFeedbackHints(params: {
      WHERE str.user_id = ?
        AND c.offer_id = ?
        AND ${isDeletedCondition}
-       AND str.date >= ${dateExpr}
      GROUP BY str.search_term
      HAVING SUM(str.clicks) > 0
      ORDER BY SUM(str.cost) DESC`,
@@ -580,7 +595,6 @@ export async function getSearchTermFeedbackHints(params: {
         brandName: offer.brand,
         excludeOfferId: params.offerId,
         targetCountry: offer.target_country,
-        lookbackDays,
         maxTerms: maxTerms
       }),
       pureBrandKeywords
@@ -605,7 +619,6 @@ export async function getSearchTermFeedbackHints(params: {
         await getGlobalBrandLevelHighPerformingTerms({
           brandName: offer.brand,
           targetCountry: offer.target_country,
-          lookbackDays,
           maxTerms: maxTerms,
           minUsers: 2 // k-匿名性：至少2个用户
         })

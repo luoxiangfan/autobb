@@ -15,6 +15,10 @@ const generatorFns = vi.hoisted(() => ({
   generateAdCreative: vi.fn(),
 }))
 
+const feedbackFns = vi.hoisted(() => ({
+  getSearchTermFeedbackHints: vi.fn(),
+}))
+
 const builderFns = vi.hoisted(() => ({
   buildCreativeKeywordSet: vi.fn(),
 }))
@@ -50,6 +54,10 @@ vi.mock('@/lib/offers', () => ({
 
 vi.mock('@/lib/ad-creative-gen', () => ({
   generateAdCreative: generatorFns.generateAdCreative,
+}))
+
+vi.mock('@/lib/search-term-feedback-hints', () => ({
+  getSearchTermFeedbackHints: feedbackFns.getSearchTermFeedbackHints,
 }))
 
 vi.mock('@/lib/creative-keyword-set-builder', () => ({
@@ -145,6 +153,13 @@ describe('executeAdCreativeGeneration', () => {
       theme: '商品型号/产品族意图',
       explanation: 'Focus on the verified model.',
       ai_model: 'gemini-test',
+    })
+    feedbackFns.getSearchTermFeedbackHints.mockResolvedValue({
+      hardNegativeTerms: [],
+      softSuppressTerms: [],
+      highPerformingTerms: [],
+      lookbackDays: 0,
+      sourceRows: 0,
     })
 
     builderFns.buildCreativeKeywordSet
@@ -279,6 +294,11 @@ describe('executeAdCreativeGeneration', () => {
       96,
       1,
       expect.objectContaining({
+        searchTermFeedbackHints: {
+          hardNegativeTerms: [],
+          softSuppressTerms: [],
+          highPerformingTerms: [],
+        },
         precomputedKeywordSet: expect.objectContaining({
           executableKeywords: ['brandx x200 replacement filter'],
           promptKeywords: ['brandx x200 replacement filter'],
@@ -300,6 +320,43 @@ describe('executeAdCreativeGeneration', () => {
     expect(result.adStrength.audit).toMatchObject({
       totalKeywords: 1,
     })
+  })
+
+  it('passes queue-level search term feedback hints into creative generation', async () => {
+    feedbackFns.getSearchTermFeedbackHints.mockResolvedValueOnce({
+      hardNegativeTerms: ['bad keyword'],
+      softSuppressTerms: ['weak keyword'],
+      highPerformingTerms: ['brandx x200 vacuum'],
+      lookbackDays: 0,
+      sourceRows: 12,
+    })
+
+    const { executeAdCreativeGeneration } = await import('./ad-creative-executor')
+
+    await executeAdCreativeGeneration({
+      id: 507,
+      userId: 1,
+      data: {
+        offerId: 96,
+        bucket: 'B',
+      },
+    } as any)
+
+    expect(feedbackFns.getSearchTermFeedbackHints).toHaveBeenCalledWith({
+      offerId: 96,
+      userId: 1,
+    })
+    expect(generatorFns.generateAdCreative).toHaveBeenCalledWith(
+      96,
+      1,
+      expect.objectContaining({
+        searchTermFeedbackHints: {
+          hardNegativeTerms: ['bad keyword'],
+          softSuppressTerms: ['weak keyword'],
+          highPerformingTerms: ['brandx x200 vacuum'],
+        },
+      })
+    )
   })
 
   it('backfills rescue pure-brand keyword volume from keyword pool hints', async () => {

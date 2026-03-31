@@ -963,6 +963,41 @@ function buildExistingKeywordNormSet(lists: PoolKeywordData[][]): Set<string> {
   return set
 }
 
+export function resolveBrandCoreKeywordSourceMeta(sourceMask: string | null | undefined): Pick<
+  PoolKeywordData,
+  'source' | 'sourceType' | 'sourceSubtype' | 'rawSource' | 'derivedTags'
+> {
+  const normalizedTokens = new Set(
+    String(sourceMask || '')
+      .split('|')
+      .map(token => token.trim().toLowerCase())
+      .filter(Boolean)
+  )
+
+  const hasSearchTerm = normalizedTokens.has('search_term')
+  const hasKeywordPerf = normalizedTokens.has('keyword_perf')
+
+  if (hasSearchTerm) {
+    return {
+      source: 'SEARCH_TERM',
+      sourceType: 'SEARCH_TERM',
+      sourceSubtype: 'SEARCH_TERM',
+      rawSource: 'SEARCH_TERM',
+      derivedTags: hasKeywordPerf
+        ? ['BRAND_CORE', 'KEYWORD_PERF', 'GLOBAL_CORE']
+        : ['BRAND_CORE', 'GLOBAL_CORE'],
+    }
+  }
+
+  return {
+    source: 'GLOBAL_CORE',
+    sourceType: 'GLOBAL_CORE',
+    sourceSubtype: 'GLOBAL_CORE',
+    rawSource: 'GLOBAL_KEYWORDS',
+    derivedTags: hasKeywordPerf ? ['BRAND_CORE', 'KEYWORD_PERF'] : ['BRAND_CORE'],
+  }
+}
+
 function selectBucketForProduct(keyword: string): 'A' | 'B' | 'C' | 'D' {
   if (GLOBAL_CORE_PROMO_PRICE_PATTERNS.test(keyword)) return 'D'
   if (GLOBAL_CORE_MODEL_PATTERNS.test(keyword)) return 'A'
@@ -1116,10 +1151,15 @@ async function injectGlobalCoreKeywordsForProduct(params: {
     if (candidateNormSet.has(keywordNorm)) continue
     candidateNormSet.add(keywordNorm)
 
+    const sourceMeta = resolveBrandCoreKeywordSourceMeta(core.sourceMask)
     coreCandidates.push({
       keyword: keywordText,
       searchVolume: Number(core.searchVolume || 0),
-      source: 'GLOBAL_CORE',
+      source: sourceMeta.source,
+      sourceType: sourceMeta.sourceType,
+      sourceSubtype: sourceMeta.sourceSubtype,
+      rawSource: sourceMeta.rawSource,
+      derivedTags: sourceMeta.derivedTags,
       matchType: 'PHRASE',
     })
   }
@@ -1225,10 +1265,15 @@ async function injectGlobalCoreKeywordsForStore(params: {
     if (candidateNormSet.has(keywordNorm)) continue
     candidateNormSet.add(keywordNorm)
 
+    const sourceMeta = resolveBrandCoreKeywordSourceMeta(core.sourceMask)
     coreCandidates.push({
       keyword: keywordText,
       searchVolume: Number(core.searchVolume || 0),
-      source: 'GLOBAL_CORE',
+      source: sourceMeta.source,
+      sourceType: sourceMeta.sourceType,
+      sourceSubtype: sourceMeta.sourceSubtype,
+      rawSource: sourceMeta.rawSource,
+      derivedTags: sourceMeta.derivedTags,
       matchType: 'PHRASE',
     })
   }

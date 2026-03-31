@@ -10,7 +10,7 @@ claudedocs/
 oldcode/
 
 # keep OpenClaw runtime workspace templates tracked
-openclaw/*
+# openclaw/*
 !openclaw/docs/
 openclaw/docs/*
 !openclaw/docs/reference/

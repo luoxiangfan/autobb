@@ -46,6 +46,7 @@ import {
 } from '@/lib/offer-keyword-pool'
 import { getCreativeTypeForBucketSlot } from '@/lib/creative-type'
 import { normalizeCreativeTaskError } from '@/lib/creative-task-error'
+import { getSearchTermFeedbackHints } from '@/lib/search-term-feedback-hints'
 
 /**
  * 验证URL是否为有效的URL
@@ -323,6 +324,28 @@ export async function executeAdCreativeGeneration(
 
     if (offer.scrape_status === 'failed') {
       throw new Error('Offer信息抓取失败，请重新抓取')
+    }
+
+    let searchTermFeedbackHints: {
+      hardNegativeTerms?: string[]
+      softSuppressTerms?: string[]
+      highPerformingTerms?: string[]
+    } | undefined
+    try {
+      const hints = await getSearchTermFeedbackHints({
+        offerId,
+        userId: task.userId,
+      })
+      searchTermFeedbackHints = {
+        hardNegativeTerms: hints.hardNegativeTerms,
+        softSuppressTerms: hints.softSuppressTerms,
+        highPerformingTerms: hints.highPerformingTerms,
+      }
+      console.log(
+        `🔁 队列搜索词反馈已加载: high=${hints.highPerformingTerms.length}, hard=${hints.hardNegativeTerms.length}, soft=${hints.softSuppressTerms.length}, rows=${hints.sourceRows}`
+      )
+    } catch (hintError: any) {
+      console.warn(`⚠️ 队列搜索词反馈读取失败，继续默认生成: ${hintError?.message || 'unknown error'}`)
     }
 
     // 🆕 v4.10: 获取或创建关键词池（复用已有数据，避免重复AI调用）
@@ -604,6 +627,7 @@ export async function executeAdCreativeGeneration(
               retryFailureType,
               keywordPool: keywordPool || undefined,
               bucket: selectedBucket || undefined,
+              searchTermFeedbackHints,
               bucketKeywords: currentBucketInfo.keywords.map((kw) => typeof kw === 'string' ? kw : kw.keyword),
               bucketIntent: currentBucketInfo.intent,
               bucketIntentEn: currentBucketInfo.intentEn,

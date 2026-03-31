@@ -10,11 +10,13 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
   let offer2Id: number
   let offer3Id: number
   let recentDate: string
+  let oldDate: string
 
   beforeEach(async () => {
     db = await getDatabase()
     const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     recentDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    oldDate = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
     // 创建测试用户
     const userResult = await db.query(
@@ -282,5 +284,58 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
 
     expect(result.highPerformingTerms).toContain('solarbrand best garden lights')
     expect(result.highPerformingTerms).not.toContain('best garden pathway lights')
+  })
+
+  it('should include historical high-performing terms without lookback window filtering', async () => {
+    const campaignResult = await db.query(
+      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
+       VALUES (?, ?, ?, ?, ?) RETURNING id`,
+      [userId, offer1Id, 'Historical Campaign', 100, 'ENABLED']
+    )
+    const campaignId = campaignResult[0].id
+
+    await db.exec(
+      `INSERT INTO search_term_reports
+       (user_id, campaign_id, search_term, match_type, impressions, clicks, conversions, cost, date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, campaignId, 'solarbrand historical lights', 'BROAD', 1200, 40, 4, 30, oldDate]
+    )
+
+    const result = await getSearchTermFeedbackHints({
+      offerId: offer1Id,
+      userId
+    })
+
+    expect(result.highPerformingTerms).toContain('solarbrand historical lights')
+  })
+
+  it('should keep brand product-family aliases as brand-related terms', async () => {
+    const offerResult = await db.query(
+      `INSERT INTO offers (user_id, url, brand, product_name, target_country, target_language)
+       VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
+      [userId, 'https://example.com/our-place', 'Our Place', 'Always Pan 2.0', 'US', 'en']
+    )
+    const ourPlaceOfferId = offerResult[0].id
+
+    const campaignResult = await db.query(
+      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
+       VALUES (?, ?, ?, ?, ?) RETURNING id`,
+      [userId, ourPlaceOfferId, 'Our Place Campaign', 100, 'ENABLED']
+    )
+    const campaignId = campaignResult[0].id
+
+    await db.exec(
+      `INSERT INTO search_term_reports
+       (user_id, campaign_id, search_term, match_type, impressions, clicks, conversions, cost, date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, campaignId, 'always pan 2.0', 'BROAD', 1000, 50, 5, 25, recentDate]
+    )
+
+    const result = await getSearchTermFeedbackHints({
+      offerId: ourPlaceOfferId,
+      userId
+    })
+
+    expect(result.highPerformingTerms).toContain('always pan 2.0')
   })
 })

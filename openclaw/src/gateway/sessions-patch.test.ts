@@ -1,0 +1,247 @@
+import { describe, expect, test } from "vitest";
+import type { OpenClawConfig } from "../config/config.js";
+import type { SessionEntry } from "../config/sessions.js";
+import { applySessionsPatchToStore } from "./sessions-patch.js";
+
+describe("gateway sessions patch", () => {
+  test("persists thinkingLevel=off (does not clear)", async () => {
+    const store: Record<string, SessionEntry> = {};
+    const res = await applySessionsPatchToStore({
+      cfg: {} as OpenClawConfig,
+      store,
+      storeKey: "agent:main:main",
+      patch: { thinkingLevel: "off" },
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) {
+      return;
+    }
+    expect(res.entry.thinkingLevel).toBe("off");
+  });
+
+  test("clears thinkingLevel when patch sets null", async () => {
+    const store: Record<string, SessionEntry> = {
+      "agent:main:main": { thinkingLevel: "low" } as SessionEntry,
+    };
+    const res = await applySessionsPatchToStore({
+      cfg: {} as OpenClawConfig,
+      store,
+      storeKey: "agent:main:main",
+      patch: { thinkingLevel: null },
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) {
+      return;
+    }
+    expect(res.entry.thinkingLevel).toBeUndefined();
+  });
+
+  test("persists elevatedLevel=off (does not clear)", async () => {
+    const store: Record<string, SessionEntry> = {};
+    const res = await applySessionsPatchToStore({
+      cfg: {} as OpenClawConfig,
+      store,
+      storeKey: "agent:main:main",
+      patch: { elevatedLevel: "off" },
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) {
+      return;
+    }
+    expect(res.entry.elevatedLevel).toBe("off");
+  });
+
+  test("persists elevatedLevel=on", async () => {
+    const store: Record<string, SessionEntry> = {};
+    const res = await applySessionsPatchToStore({
+      cfg: {} as OpenClawConfig,
+      store,
+      storeKey: "agent:main:main",
+      patch: { elevatedLevel: "on" },
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) {
+      return;
+    }
+    expect(res.entry.elevatedLevel).toBe("on");
+  });
+
+  test("clears elevatedLevel when patch sets null", async () => {
+    const store: Record<string, SessionEntry> = {
+      "agent:main:main": { elevatedLevel: "off" } as SessionEntry,
+    };
+    const res = await applySessionsPatchToStore({
+      cfg: {} as OpenClawConfig,
+      store,
+      storeKey: "agent:main:main",
+      patch: { elevatedLevel: null },
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) {
+      return;
+    }
+    expect(res.entry.elevatedLevel).toBeUndefined();
+  });
+
+  test("rejects invalid elevatedLevel values", async () => {
+    const store: Record<string, SessionEntry> = {};
+    const res = await applySessionsPatchToStore({
+      cfg: {} as OpenClawConfig,
+      store,
+      storeKey: "agent:main:main",
+      patch: { elevatedLevel: "maybe" },
+    });
+    expect(res.ok).toBe(false);
+    if (res.ok) {
+      return;
+    }
+    expect(res.error.message).toContain("invalid elevatedLevel");
+  });
+
+  test("clears auth overrides when model patch changes", async () => {
+    const store: Record<string, SessionEntry> = {
+      "agent:main:main": {
+        sessionId: "sess",
+        updatedAt: 1,
+        providerOverride: "anthropic",
+        modelOverride: "claude-opus-4-5",
+        authProfileOverride: "anthropic:default",
+        authProfileOverrideSource: "user",
+        authProfileOverrideCompactionCount: 3,
+      } as SessionEntry,
+    };
+    const res = await applySessionsPatchToStore({
+      cfg: {} as OpenClawConfig,
+      store,
+      storeKey: "agent:main:main",
+      patch: { model: "openai/gpt-5.2" },
+      loadGatewayModelCatalog: async () => [{ provider: "openai", id: "gpt-5.2" }],
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) {
+      return;
+    }
+    expect(res.entry.providerOverride).toBe("openai");
+    expect(res.entry.modelOverride).toBe("gpt-5.2");
+    expect(res.entry.authProfileOverride).toBeUndefined();
+    expect(res.entry.authProfileOverrideSource).toBeUndefined();
+    expect(res.entry.authProfileOverrideCompactionCount).toBeUndefined();
+  });
+
+  test("allows target agent own model for subagent session when global allowlist omits it", async () => {
+    const store: Record<string, SessionEntry> = {};
+    const cfg: OpenClawConfig = {
+      agents: {
+        defaults: {
+          model: { primary: "anthropic/claude-sonnet-4-6" },
+          models: {
+            "anthropic/claude-sonnet-4-6": { alias: "default" },
+          },
+        },
+        list: [
+          {
+            id: "kimi",
+            model: { primary: "synthetic/hf:moonshotai/Kimi-K2.5" },
+          },
+        ],
+      },
+    } as OpenClawConfig;
+
+    const res = await applySessionsPatchToStore({
+      cfg,
+      store,
+      storeKey: "agent:kimi:subagent:child",
+      patch: {
+        model: "synthetic/hf:moonshotai/Kimi-K2.5",
+      },
+      loadGatewayModelCatalog: async () => [
+        { provider: "anthropic", id: "claude-sonnet-4-6", name: "sonnet" },
+        { provider: "synthetic", id: "hf:moonshotai/Kimi-K2.5", name: "kimi" },
+      ],
+    });
+
+    expect(res.ok).toBe(true);
+    if (!res.ok) {
+      return;
+    }
+    expect(res.entry.providerOverride).toBeUndefined();
+    expect(res.entry.modelOverride).toBeUndefined();
+  });
+
+  test("allows target agent subagents.model for subagent session when global allowlist omits it", async () => {
+    const store: Record<string, SessionEntry> = {};
+    const cfg: OpenClawConfig = {
+      agents: {
+        defaults: {
+          model: { primary: "anthropic/claude-sonnet-4-6" },
+          models: {
+            "anthropic/claude-sonnet-4-6": { alias: "default" },
+          },
+        },
+        list: [
+          {
+            id: "kimi",
+            model: { primary: "anthropic/claude-sonnet-4-6" },
+            subagents: { model: "synthetic/hf:moonshotai/Kimi-K2.5" },
+          },
+        ],
+      },
+    } as OpenClawConfig;
+
+    const res = await applySessionsPatchToStore({
+      cfg,
+      store,
+      storeKey: "agent:kimi:subagent:child",
+      patch: {
+        model: "synthetic/hf:moonshotai/Kimi-K2.5",
+      },
+      loadGatewayModelCatalog: async () => [
+        { provider: "anthropic", id: "claude-sonnet-4-6", name: "sonnet" },
+        { provider: "synthetic", id: "hf:moonshotai/Kimi-K2.5", name: "kimi" },
+      ],
+    });
+
+    expect(res.ok).toBe(true);
+    if (!res.ok) {
+      return;
+    }
+    expect(res.entry.providerOverride).toBe("synthetic");
+    expect(res.entry.modelOverride).toBe("hf:moonshotai/Kimi-K2.5");
+  });
+
+  test("allows global defaults.subagents.model for subagent session when global allowlist omits it", async () => {
+    const store: Record<string, SessionEntry> = {};
+    const cfg: OpenClawConfig = {
+      agents: {
+        defaults: {
+          model: { primary: "anthropic/claude-sonnet-4-6" },
+          subagents: { model: "synthetic/hf:moonshotai/Kimi-K2.5" },
+          models: {
+            "anthropic/claude-sonnet-4-6": { alias: "default" },
+          },
+        },
+        list: [{ id: "kimi", model: { primary: "anthropic/claude-sonnet-4-6" } }],
+      },
+    } as OpenClawConfig;
+
+    const res = await applySessionsPatchToStore({
+      cfg,
+      store,
+      storeKey: "agent:kimi:subagent:child",
+      patch: {
+        model: "synthetic/hf:moonshotai/Kimi-K2.5",
+      },
+      loadGatewayModelCatalog: async () => [
+        { provider: "anthropic", id: "claude-sonnet-4-6", name: "sonnet" },
+        { provider: "synthetic", id: "hf:moonshotai/Kimi-K2.5", name: "kimi" },
+      ],
+    });
+
+    expect(res.ok).toBe(true);
+    if (!res.ok) {
+      return;
+    }
+    expect(res.entry.providerOverride).toBe("synthetic");
+    expect(res.entry.modelOverride).toBe("hf:moonshotai/Kimi-K2.5");
+  });
+});
