@@ -28,13 +28,20 @@ export async function scheduleProductScoreCalculation(
   options?: {
     productIds?: number[]
     forceRecalculate?: boolean
+    allowWhenPaused?: boolean
     batchSize?: number
     includeSeasonalityAnalysis?: boolean
     trigger?: 'manual' | 'schedule' | 'sync-complete'
     priority?: 'high' | 'normal' | 'low'
   }
 ): Promise<string> {
-  if (await isProductScoreCalculationPaused(userId)) {
+  const paused = await isProductScoreCalculationPaused(userId)
+  const canBypassPause = paused
+    && options?.allowWhenPaused === true
+    && Array.isArray(options?.productIds)
+    && options.productIds.length > 0
+
+  if (paused && !canBypassPause) {
     throw new ProductScoreCalculationPausedError('推荐指数计算已暂停，暂不接收新任务')
   }
 
@@ -43,6 +50,7 @@ export async function scheduleProductScoreCalculation(
     userId,
     productIds: options?.productIds,
     forceRecalculate: options?.forceRecalculate ?? false,
+    allowWhenPaused: canBypassPause,
     batchSize: options?.batchSize ?? 100,
     includeSeasonalityAnalysis: options?.includeSeasonalityAnalysis ?? true,
     trigger: options?.trigger ?? 'manual'
@@ -54,6 +62,7 @@ export async function scheduleProductScoreCalculation(
       await markProductScoreRequeueNeeded(userId, {
         includeSeasonalityAnalysis: taskData.includeSeasonalityAnalysis,
         forceRecalculate: taskData.forceRecalculate,
+        allowWhenPaused: taskData.allowWhenPaused,
         trigger: taskData.trigger,
         productIds: taskData.productIds,
       })

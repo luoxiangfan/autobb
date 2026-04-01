@@ -42,6 +42,18 @@ describe('creative-keyword-source-priority', () => {
     )
   })
 
+  it('recognizes store-pool extracted/suggest/ai sources for ranking and raw-source audit', () => {
+    expect(getKeywordSourcePriority('OFFER_EXTRACTED_KEYWORDS').tier).toBe('T2')
+    expect(getKeywordSourcePriorityScore('OFFER_EXTRACTED_KEYWORDS')).toBeGreaterThan(
+      getKeywordSourcePriorityScore('AI_GENERATED')
+    )
+    expect(getKeywordSourcePriority('GOOGLE_SUGGEST').tier).toBe('T3B')
+
+    expect(inferKeywordRawSource({ source: 'OFFER_EXTRACTED_KEYWORDS' })).toBe('PAGE_EXTRACT')
+    expect(inferKeywordRawSource({ source: 'GOOGLE_SUGGEST' })).toBe('GAP_ANALYSIS')
+    expect(inferKeywordRawSource({ source: 'OFFER_AI_KEYWORDS' })).toBe('AI')
+  })
+
   it('preserves raw canonical provenance for priority while keeping canonical derived tags', () => {
     const input = {
       source: 'GLOBAL_KEYWORDS',

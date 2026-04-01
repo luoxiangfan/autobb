@@ -167,6 +167,7 @@ export type ProductListOptions = {
   commissionAmountMax?: number
   recommendationScoreMin?: number
   recommendationScoreMax?: number
+  recommendationScoreFreshOnly?: boolean
   createdAtFrom?: string
   createdAtTo?: string
   status?: AffiliateProductStatusFilter
@@ -296,6 +297,9 @@ export type BatchOfflineAffiliateProductsResult = {
     error?: string
   }>
 }
+
+const PRODUCT_SCORE_VALIDITY_DAYS = 30
+const PRODUCT_SCORE_VALIDITY_WINDOW_MS = PRODUCT_SCORE_VALIDITY_DAYS * 24 * 60 * 60 * 1000
 
 export class ConfigRequiredError extends Error {
   code = 'CONFIG_REQUIRED' as const
@@ -6232,7 +6236,7 @@ function resolveLifecycleStatusFromRowForList(
 export async function listAffiliateProducts(userId: number, options: ProductListOptions = {}): Promise<ProductListResult> {
   const db = await getDatabase()
   const page = Math.max(1, options.page || 1)
-  const pageSize = Math.min(100, Math.max(10, options.pageSize || 20))
+  const pageSize = Math.min(1000, Math.max(10, options.pageSize || 20))
   const skipItems = options.skipItems === true
   const skipInvalidSummary = options.skipInvalidSummary === true
   const fastSummary = options.fastSummary === true
@@ -6294,6 +6298,9 @@ export async function listAffiliateProducts(userId: number, options: ProductList
     partnerboost: toPlatformStats(accumulator.partnerboost),
   })
   const confirmedInvalidStatusSql = buildConfirmedInvalidSql()
+  const recommendationScoreFreshSql = db.type === 'postgres'
+    ? `(p.score_calculated_at >= (NOW() - INTERVAL '${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
+    : `(datetime(p.score_calculated_at) >= datetime('now', '-${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
   const fullSyncBaselineCteSql = `
     WITH latest_platform_full_sync AS (
       SELECT ranked.platform, ranked.baseline_started_at
@@ -6434,6 +6441,12 @@ export async function listAffiliateProducts(userId: number, options: ProductList
     min: options.recommendationScoreMin,
     max: options.recommendationScoreMax,
   })
+
+  if (options.recommendationScoreFreshOnly === true) {
+    whereConditions.push('p.recommendation_score IS NOT NULL')
+    whereConditions.push('p.score_calculated_at IS NOT NULL')
+    whereConditions.push(recommendationScoreFreshSql)
+  }
 
   const createdAtRange = normalizeDateRangeBounds({
     from: options.createdAtFrom,
@@ -7165,6 +7178,11 @@ function mapAffiliateProductRow(
     return defaultMerchantId || null
   })()
 
+  const recommendationScoreCalculatedAtMs = parseDateToTimestamp(row.score_calculated_at || null)
+  const recommendationScoreIsFresh = Number.isFinite(Number(row.recommendation_score))
+    && recommendationScoreCalculatedAtMs !== null
+    && (Date.now() - recommendationScoreCalculatedAtMs <= PRODUCT_SCORE_VALIDITY_WINDOW_MS)
+
   return {
     id: normalizedId,
     serial: resolvedSerial,
@@ -7192,8 +7210,10 @@ function mapAffiliateProductRow(
     historicalOfferCount: Number(row.historical_offer_count || 0),
     relatedOfferCount: Number(row.related_offer_count || 0),
     isBlacklisted: toBool(row.is_blacklisted),
-    recommendationScore: row.recommendation_score || null,
-    recommendationReasons: row.recommendation_reasons ? JSON.parse(row.recommendation_reasons) : null,
+    recommendationScore: recommendationScoreIsFresh ? (row.recommendation_score || null) : null,
+    recommendationReasons: recommendationScoreIsFresh && row.recommendation_reasons
+      ? JSON.parse(row.recommendation_reasons)
+      : null,
     seasonalityScore: row.seasonality_score || null,
     productAnalysis: row.product_analysis ? JSON.parse(row.product_analysis) : null,
     lastSyncedAt: row.last_synced_at,

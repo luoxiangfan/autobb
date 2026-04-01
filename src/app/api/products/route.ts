@@ -71,6 +71,8 @@ function parseBooleanParam(value: string | null): boolean {
 }
 
 export const dynamic = 'force-dynamic'
+const PRODUCT_PAGE_SIZE_MIN = 10
+const PRODUCT_PAGE_SIZE_MAX = 1000
 
 export async function GET(request: NextRequest) {
   try {
@@ -90,7 +92,10 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams
     const page = Math.max(1, Number(searchParams.get('page') || 1))
-    const pageSize = Math.min(100, Math.max(10, Number(searchParams.get('pageSize') || 20)))
+    const pageSize = Math.min(
+      PRODUCT_PAGE_SIZE_MAX,
+      Math.max(PRODUCT_PAGE_SIZE_MIN, Number(searchParams.get('pageSize') || 20))
+    )
     const search = (searchParams.get('search') || '').trim()
     const mid = (searchParams.get('mid') || '').trim()
     const sortByRaw = (searchParams.get('sortBy') || 'serial') as ProductSortField

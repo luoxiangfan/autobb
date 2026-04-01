@@ -324,6 +324,36 @@ function normalizeMatchTypeRank(matchType: string | undefined): number {
   return 0
 }
 
+function escapeRegex(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function normalizeCompactedBrandKeyword(keyword: string, brandName: string | undefined): string {
+  const rawKeyword = String(keyword || '').trim()
+  if (!rawKeyword) return ''
+
+  const normalizedKeyword = normalizeGoogleAdsKeyword(rawKeyword)
+  if (!normalizedKeyword) return rawKeyword
+
+  const normalizedBrand = normalizeGoogleAdsKeyword(brandName || '')
+  if (!normalizedBrand) return rawKeyword
+
+  const brandTokens = normalizedBrand.split(/\s+/).filter(Boolean)
+  if (brandTokens.length < 2) return rawKeyword
+
+  const compactBrand = brandTokens.join('')
+  if (!compactBrand || compactBrand === normalizedBrand) return rawKeyword
+
+  const compactBrandPattern = new RegExp(`\\b${escapeRegex(compactBrand)}\\b`, 'g')
+  if (!compactBrandPattern.test(normalizedKeyword)) return rawKeyword
+  compactBrandPattern.lastIndex = 0
+
+  return normalizedKeyword
+    .replace(compactBrandPattern, normalizedBrand)
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function isSearchVolumeUnavailableReason(reason: unknown): boolean {
   const normalized = String(reason || '').trim().toUpperCase()
   return normalized.startsWith('DEV_TOKEN_')
@@ -1956,6 +1986,25 @@ function compareRankedCandidates(a: RankedCandidate, b: RankedCandidate): number
   return a.originalIndex - b.originalIndex
 }
 
+function preferNonAiTwinCandidate(
+  candidate: RankedCandidate,
+  existing: RankedCandidate,
+  creativeType: CanonicalCreativeType | null
+): RankedCandidate {
+  if (creativeType !== 'model_intent') {
+    return compareRankedCandidates(candidate, existing) < 0 ? candidate : existing
+  }
+
+  const candidateClass = classifyCandidateSource(candidate)
+  const existingClass = classifyCandidateSource(existing)
+
+  if (candidateClass.ai !== existingClass.ai) {
+    return candidateClass.ai ? existing : candidate
+  }
+
+  return compareRankedCandidates(candidate, existing) < 0 ? candidate : existing
+}
+
 function resolveSourceQuotaConfig(params: {
   maxKeywords: number
   fallbackMode: boolean
@@ -2231,13 +2280,16 @@ function applySourceQuotaOnSelectedCandidates(input: {
   selectedList: RankedCandidate[]
   audit: CreativeKeywordSourceQuotaAudit
 } {
+  const targetCount = Math.min(input.maxKeywords, input.selectedList.length)
+  const quotaSizingMaxKeywords = targetCount > 0
+    ? targetCount
+    : input.maxKeywords
   const quota = resolveSourceQuotaConfig({
-    maxKeywords: input.maxKeywords,
+    maxKeywords: quotaSizingMaxKeywords,
     fallbackMode: input.fallbackMode,
     creativeType: input.creativeType,
     rankedCandidates: input.selectedList,
   })
-  const targetCount = Math.min(input.maxKeywords, input.selectedList.length)
   if (targetCount <= 0) {
     return {
       selectedList: [],
@@ -2449,6 +2501,75 @@ function reconcileSourceQuotaAuditWithFinalOutput(input: {
       aiLlmRaw: acceptedAiLlmRawCount,
     },
   }
+}
+
+function enforceModelIntentAiCapOnFinalOutput(params: {
+  outputCandidates: RankedCandidate[]
+  rankedCandidates: RankedCandidate[]
+  quota: SourceQuotaConfig
+  brandName: string | undefined
+}): RankedCandidate[] {
+  const outputCandidates = Array.isArray(params.outputCandidates)
+    ? [...params.outputCandidates]
+    : []
+  if (outputCandidates.length === 0) return outputCandidates
+
+  const aiCap = Math.max(0, Math.floor(Number(params.quota.aiCap || 0)))
+  let aiCount = outputCandidates.reduce((count, candidate) => (
+    classifyCandidateSource(candidate).ai ? count + 1 : count
+  ), 0)
+  if (aiCount <= aiCap) return outputCandidates
+
+  const selectedNormalized = new Set(outputCandidates.map((candidate) => candidate.normalized))
+  const selectedPermutationKeys = new Set(
+    outputCandidates.map((candidate) => candidate.permutationKey || candidate.normalized)
+  )
+  const replacementPool = [...params.rankedCandidates]
+    .sort(compareRankedCandidates)
+    .filter((candidate) => !selectedNormalized.has(candidate.normalized))
+    .filter((candidate) => !classifyCandidateSource(candidate).ai)
+    .filter((candidate) => {
+      if (isModelIntentQualifiedCandidate(candidate, params.brandName)) return true
+      if (!candidate.isPreferredBucket) return false
+      const profile = candidate.evidenceProfile
+      return (
+        profile.sourceTrustScore >= 5.5
+        && (
+          profile.hasSpecificDemandTail
+          || profile.compactTrustedSoftFamily
+          || profile.trustedSoftFamily
+        )
+      )
+    })
+
+  let replacementCursor = 0
+  for (let index = outputCandidates.length - 1; index >= 0 && aiCount > aiCap; index -= 1) {
+    const current = outputCandidates[index]
+    if (!classifyCandidateSource(current).ai) continue
+
+    let replacement: RankedCandidate | null = null
+    while (replacementCursor < replacementPool.length) {
+      const next = replacementPool[replacementCursor++]
+      const nextPermutationKey = next.permutationKey || next.normalized
+      if (selectedNormalized.has(next.normalized)) continue
+      if (selectedPermutationKeys.has(nextPermutationKey)) continue
+      replacement = next
+      break
+    }
+    if (!replacement) break
+
+    const currentPermutationKey = current.permutationKey || current.normalized
+    selectedNormalized.delete(current.normalized)
+    selectedPermutationKeys.delete(currentPermutationKey)
+
+    outputCandidates[index] = replacement
+
+    selectedNormalized.add(replacement.normalized)
+    selectedPermutationKeys.add(replacement.permutationKey || replacement.normalized)
+    aiCount -= 1
+  }
+
+  return outputCandidates.sort(compareRankedCandidates)
 }
 
 function dedupeRankedCandidatePool(candidates: RankedCandidate[]): RankedCandidate[] {
@@ -3667,7 +3788,10 @@ function toRankedCandidates(
   const dedupedByNormalized = new Map<string, RankedCandidate>()
   for (let i = 0; i < merged.length; i += 1) {
     const candidate = merged[i]
-    const keyword = String(candidate.keyword || '').trim()
+    const rawKeyword = String(candidate.keyword || '').trim()
+    if (!rawKeyword) continue
+
+    const keyword = normalizeCompactedBrandKeyword(rawKeyword, input.brandName)
     if (!keyword) continue
 
     const normalized = normalizeGoogleAdsKeyword(keyword)
@@ -3708,18 +3832,28 @@ function toRankedCandidates(
     }
 
     const existing = dedupedByNormalized.get(normalized)
-    if (!existing || compareRankedCandidates(ranked, existing) < 0) {
+    if (!existing) {
       dedupedByNormalized.set(normalized, ranked)
+      continue
     }
+    dedupedByNormalized.set(
+      normalized,
+      preferNonAiTwinCandidate(ranked, existing, input.creativeType || null)
+    )
   }
 
   const dedupedByPermutation = new Map<string, RankedCandidate>()
   for (const candidate of dedupedByNormalized.values()) {
     const permutationKey = candidate.permutationKey || candidate.normalized
     const existing = dedupedByPermutation.get(permutationKey)
-    if (!existing || compareRankedCandidates(candidate, existing) < 0) {
+    if (!existing) {
       dedupedByPermutation.set(permutationKey, candidate)
+      continue
     }
+    dedupedByPermutation.set(
+      permutationKey,
+      preferNonAiTwinCandidate(candidate, existing, input.creativeType || null)
+    )
   }
 
   return compactDemandSemanticDuplicates({
@@ -4391,6 +4525,14 @@ export function selectCreativeKeywords(input: SelectCreativeKeywordsInput): Sele
         brandOnly: enforceBrandOnly,
       })
     }
+  }
+  if (creativeType === 'model_intent' && outputCandidates.length > 0) {
+    outputCandidates = enforceModelIntentAiCapOnFinalOutput({
+      outputCandidates,
+      rankedCandidates,
+      quota: sourceQuotaApplied.audit.quota,
+      brandName: input.brandName,
+    })
   }
   const contractRoleMap = buildKeywordContractRoleMap({
     selectedList: outputCandidates,

@@ -366,7 +366,7 @@ export default function CampaignsClientPage({
   const [offlineAccountIssueMessage, setOfflineAccountIssueMessage] = useState<string | null>(null)
   const [offlineAccountIssueStatus, setOfflineAccountIssueStatus] = useState<string | null>(null)
 
-   // 补点击任务Modal
+  // 补点击任务Modal
   const [isClickFarmModalOpen, setIsClickFarmModalOpen] = useState(false)
   const [selectedOfferForClickFarm, setSelectedOfferForClickFarm] = useState<Campaign | null>(null)
   const [editTaskIdForClickFarm, setEditTaskIdForClickFarm] = useState<string | number | undefined>(undefined)
@@ -2707,14 +2707,14 @@ export default function CampaignsClientPage({
                     </TableRow>
                   </TableHeader>
                 <TableBody>
-                    {paginatedCampaigns.map((campaign) => {
-                      // 🔧 检查是否已删除 (兼容PostgreSQL的boolean和SQLite的number)
-                      const isDeleted = isCampaignDeleted(campaign)
-                      const offerDeleted = isOfferDeleted(campaign)
-                      const googleCampaignId = getCampaignGoogleId(campaign)
-                      const isStatusUpdating = statusUpdatingIds.has(campaign.id)
-                      const budgetCurrency = campaign.adsAccountCurrency || defaultCurrency
-                      const performanceCurrency = campaign.performanceCurrency || campaign.adsAccountCurrency || defaultCurrency
+	                  {paginatedCampaigns.map((campaign) => {
+	                    // 🔧 检查是否已删除 (兼容PostgreSQL的boolean和SQLite的number)
+	                    const isDeleted = isCampaignDeleted(campaign)
+	                    const offerDeleted = isOfferDeleted(campaign)
+	                    const googleCampaignId = getCampaignGoogleId(campaign)
+	                    const isStatusUpdating = statusUpdatingIds.has(campaign.id)
+	                    const budgetCurrency = campaign.adsAccountCurrency || defaultCurrency
+	                    const performanceCurrency = campaign.performanceCurrency || campaign.adsAccountCurrency || defaultCurrency
                         const adsAccountName = String(campaign.adsAccountName || '').trim()
                         const adsAccountCustomerId = String(campaign.adsAccountCustomerId || '').trim()
                         const shouldHideAdsAccount = isDeleted
@@ -2730,73 +2730,73 @@ export default function CampaignsClientPage({
                               : '')
                           )
 
-                          const canAdjustCpc = Boolean(googleCampaignId) && !isDeleted && !offerDeleted && campaign.adsAccountAvailable !== false
-                          const adjustCpcDisabledReason = !googleCampaignId
-                            ? '该广告系列尚未发布到Google Ads，无法调整CPC'
-                            : campaign.adsAccountAvailable === false
-                              ? 'Ads账号已解绑，无法调整CPC'
-                              : isDeleted
-                                ? '该广告系列已删除，无法调整CPC'
-                                : offerDeleted
-                                  ? '关联Offer已删除，无法调整CPC'
-                                  : '调整CPC出价'
-                          const canAdjustBudget = Boolean(googleCampaignId) && !isDeleted && !offerDeleted && campaign.adsAccountAvailable !== false
-                          const adjustBudgetDisabledReason = !googleCampaignId
-                            ? '该广告系列尚未发布到Google Ads，无法调整每日预算'
-                            : campaign.adsAccountAvailable === false
-                              ? 'Ads账号已解绑，无法调整每日预算'
-                              : isDeleted
-                                ? '该广告系列已删除，无法调整每日预算'
-                                : offerDeleted
-                                  ? '关联Offer已删除，无法调整每日预算'
-                                  : '调整每日预算'
+			                    const canAdjustCpc = Boolean(googleCampaignId) && !isDeleted && !offerDeleted && campaign.adsAccountAvailable !== false
+			                    const adjustCpcDisabledReason = !googleCampaignId
+			                      ? '该广告系列尚未发布到Google Ads，无法调整CPC'
+			                      : campaign.adsAccountAvailable === false
+			                        ? 'Ads账号已解绑，无法调整CPC'
+			                        : isDeleted
+			                          ? '该广告系列已删除，无法调整CPC'
+			                          : offerDeleted
+			                            ? '关联Offer已删除，无法调整CPC'
+			                            : '调整CPC出价'
+			                    const canAdjustBudget = Boolean(googleCampaignId) && !isDeleted && !offerDeleted && campaign.adsAccountAvailable !== false
+			                    const adjustBudgetDisabledReason = !googleCampaignId
+			                      ? '该广告系列尚未发布到Google Ads，无法调整每日预算'
+			                      : campaign.adsAccountAvailable === false
+			                        ? 'Ads账号已解绑，无法调整每日预算'
+			                        : isDeleted
+			                          ? '该广告系列已删除，无法调整每日预算'
+			                          : offerDeleted
+			                            ? '关联Offer已删除，无法调整每日预算'
+			                            : '调整每日预算'
 
-                        const canToggleStatus = !isStatusUpdating && Boolean(googleCampaignId) && !isDeleted && !offerDeleted && campaign.adsAccountAvailable !== false && (campaign.status === 'ENABLED' || campaign.status === 'PAUSED')
-                        const toggleLabel = campaign.status === 'ENABLED' ? '暂停广告系列' : '启用广告系列'
-                        const toggleDisabledReason = isStatusUpdating
-                          ? '操作中...'
-                          : !googleCampaignId
-                            ? '该广告系列尚未发布到Google Ads，无法暂停/启用'
-                            : campaign.adsAccountAvailable === false
-                              ? 'Ads账号已解绑，无法暂停/启用'
-                              : isDeleted
-                                ? '该广告系列已删除，无法暂停/启用'
-                                : offerDeleted
-                                  ? '关联Offer已删除，无法暂停/启用'
-                                  : (campaign.status !== 'ENABLED' && campaign.status !== 'PAUSED')
-                                    ? `当前状态(${campaign.status})不支持暂停/启用`
-                                    : toggleLabel
+		                    const canToggleStatus = !isStatusUpdating && Boolean(googleCampaignId) && !isDeleted && !offerDeleted && campaign.adsAccountAvailable !== false && (campaign.status === 'ENABLED' || campaign.status === 'PAUSED')
+		                    const toggleLabel = campaign.status === 'ENABLED' ? '暂停广告系列' : '启用广告系列'
+		                    const toggleDisabledReason = isStatusUpdating
+		                      ? '操作中...'
+		                      : !googleCampaignId
+		                        ? '该广告系列尚未发布到Google Ads，无法暂停/启用'
+		                        : campaign.adsAccountAvailable === false
+		                          ? 'Ads账号已解绑，无法暂停/启用'
+		                          : isDeleted
+		                            ? '该广告系列已删除，无法暂停/启用'
+		                            : offerDeleted
+		                              ? '关联Offer已删除，无法暂停/启用'
+		                              : (campaign.status !== 'ENABLED' && campaign.status !== 'PAUSED')
+		                                ? `当前状态(${campaign.status})不支持暂停/启用`
+		                                : toggleLabel
 
-                        const normalizedCreationStatus = String(campaign.creationStatus || '').toLowerCase()
-                        const canOfflineWithoutGoogleCampaign = normalizedCreationStatus === 'pending' || normalizedCreationStatus === 'failed'
-                        const canOffline = !offlineSubmitting
-                          && !isDeleted
-                          && !offerDeleted
-                          && String(campaign.status || '').toUpperCase() !== 'REMOVED'
-                          && (Boolean(googleCampaignId) || canOfflineWithoutGoogleCampaign)
-                          && (googleCampaignId ? campaign.adsAccountAvailable !== false : true)
-                        const offlineDisabledReason = isDeleted
-                          ? '该广告系列已删除，无法下线'
-                          : offerDeleted
-                            ? '关联Offer已删除，无法下线'
-                            : String(campaign.status || '').toUpperCase() === 'REMOVED'
-                              ? '该广告系列已下线'
-                              : (!googleCampaignId && !canOfflineWithoutGoogleCampaign)
-                                ? '该广告系列尚未发布到Google Ads，且不在可下线状态（pending/failed）'
-                                : (googleCampaignId && campaign.adsAccountAvailable === false)
-                                  ? 'Ads账号已解绑，无法下线'
-                                  : '下线广告系列（不可恢复）'
+		                    const normalizedCreationStatus = String(campaign.creationStatus || '').toLowerCase()
+		                    const canOfflineWithoutGoogleCampaign = normalizedCreationStatus === 'pending' || normalizedCreationStatus === 'failed'
+		                    const canOffline = !offlineSubmitting
+		                      && !isDeleted
+		                      && !offerDeleted
+		                      && String(campaign.status || '').toUpperCase() !== 'REMOVED'
+		                      && (Boolean(googleCampaignId) || canOfflineWithoutGoogleCampaign)
+		                      && (googleCampaignId ? campaign.adsAccountAvailable !== false : true)
+		                    const offlineDisabledReason = isDeleted
+		                      ? '该广告系列已删除，无法下线'
+		                      : offerDeleted
+		                        ? '关联Offer已删除，无法下线'
+		                        : String(campaign.status || '').toUpperCase() === 'REMOVED'
+		                          ? '该广告系列已下线'
+		                          : (!googleCampaignId && !canOfflineWithoutGoogleCampaign)
+		                            ? '该广告系列尚未发布到Google Ads，且不在可下线状态（pending/failed）'
+		                            : (googleCampaignId && campaign.adsAccountAvailable === false)
+		                              ? 'Ads账号已解绑，无法下线'
+		                              : '下线广告系列（不可恢复）'
 
-                        const canDeleteDraft = campaign.creationStatus === 'draft'
-                        const canDeleteDraftAction = canDeleteDraft && !deleteDraftSubmitting
-                        const isRemovedStatus = String(campaign.status || '').toUpperCase() === 'REMOVED'
-                        const canDeleteRemovedAction = (isRemovedStatus || campaign.adsAccountAvailable === false) && !deleteRemovedSubmitting
+		                    const canDeleteDraft = campaign.creationStatus === 'draft'
+		                    const canDeleteDraftAction = canDeleteDraft && !deleteDraftSubmitting
+		                    const isRemovedStatus = String(campaign.status || '').toUpperCase() === 'REMOVED'
+		                    const canDeleteRemovedAction = (isRemovedStatus || campaign.adsAccountAvailable === false) && !deleteRemovedSubmitting
                         const campaignRoas = formatCampaignRoas(campaign)
                         const configuredMaxCpc = Number(campaign.configuredMaxCpc)
                         const hasConfiguredMaxCpc = Number.isFinite(configuredMaxCpc) && configuredMaxCpc > 0
 
 
-                        return (
+		                    return (
                     <TableRow
                       key={campaign.id}
                       className={`hover:bg-gray-50/50 ${isDeleted || offerDeleted ? 'bg-gray-50' : ''}`}
@@ -2930,31 +2930,31 @@ export default function CampaignsClientPage({
                               <span>查看关联Offer</span>
                             </DropdownMenuItem>
 
-                              <DropdownMenuItem
-                                className="gap-2"
-                                onClick={() => {
-                                  if (!googleCampaignId) return
-                                  if (campaign.adsAccountAvailable === false) return
-                                  setAdjustBudgetTarget({
-                                    googleCampaignId,
-                                    campaignName: campaign.campaignName,
-                                    currentBudget: Number(campaign.budgetAmount) || 0,
-                                    currentBudgetType: String(campaign.budgetType || 'DAILY'),
-                                    currency: budgetCurrency,
-                                  })
-                                  setAdjustBudgetOpen(true)
-                                }}
-                                disabled={!canAdjustBudget}
-                                title={adjustBudgetDisabledReason}
-                              >
-                                <Wallet className="w-4 h-4 text-emerald-600" />
-                                <span>调整每日预算</span>
-                              </DropdownMenuItem>
+	                            <DropdownMenuItem
+	                              className="gap-2"
+	                              onClick={() => {
+	                                if (!googleCampaignId) return
+	                                if (campaign.adsAccountAvailable === false) return
+	                                setAdjustBudgetTarget({
+	                                  googleCampaignId,
+	                                  campaignName: campaign.campaignName,
+	                                  currentBudget: Number(campaign.budgetAmount) || 0,
+	                                  currentBudgetType: String(campaign.budgetType || 'DAILY'),
+	                                  currency: budgetCurrency,
+	                                })
+	                                setAdjustBudgetOpen(true)
+	                              }}
+	                              disabled={!canAdjustBudget}
+	                              title={adjustBudgetDisabledReason}
+	                            >
+	                              <Wallet className="w-4 h-4 text-emerald-600" />
+	                              <span>调整每日预算</span>
+	                            </DropdownMenuItem>
 
-                              <DropdownMenuItem
-                                className="gap-2"
-                                onClick={() => {
-                                  if (!googleCampaignId) return
+	                            <DropdownMenuItem
+	                              className="gap-2"
+	                              onClick={() => {
+	                                if (!googleCampaignId) return
                                 if (campaign.adsAccountAvailable === false) return
                                 setAdjustCpcTarget({ googleCampaignId, campaignName: campaign.campaignName })
                                 setAdjustCpcOpen(true)
@@ -3104,38 +3104,38 @@ export default function CampaignsClientPage({
             </CardContent>
           </Card>
         )}
-        </main>
+	      </main>
 
-        {/* Adjust Budget Dialog */}
-        {adjustBudgetTarget && (
-          <AdjustCampaignBudgetDialog
-            open={adjustBudgetOpen}
-            onOpenChange={(nextOpen: boolean) => {
-              setAdjustBudgetOpen(nextOpen)
-              if (!nextOpen) setAdjustBudgetTarget(null)
-            }}
-            googleCampaignId={adjustBudgetTarget.googleCampaignId}
-            campaignName={adjustBudgetTarget.campaignName}
-            currentBudget={adjustBudgetTarget.currentBudget}
-            currentBudgetType={adjustBudgetTarget.currentBudgetType}
-            currency={adjustBudgetTarget.currency}
-            onSaved={handleBudgetAdjusted}
-          />
-        )}
+	      {/* Adjust Budget Dialog */}
+	      {adjustBudgetTarget && (
+	        <AdjustCampaignBudgetDialog
+	          open={adjustBudgetOpen}
+	          onOpenChange={(nextOpen: boolean) => {
+	            setAdjustBudgetOpen(nextOpen)
+	            if (!nextOpen) setAdjustBudgetTarget(null)
+	          }}
+	          googleCampaignId={adjustBudgetTarget.googleCampaignId}
+	          campaignName={adjustBudgetTarget.campaignName}
+	          currentBudget={adjustBudgetTarget.currentBudget}
+	          currentBudgetType={adjustBudgetTarget.currentBudgetType}
+	          currency={adjustBudgetTarget.currency}
+	          onSaved={handleBudgetAdjusted}
+	        />
+	      )}
 
-        {/* Adjust CPC Dialog */}
-        {adjustCpcTarget && (
-          <AdjustCampaignCpcDialog
-            open={adjustCpcOpen}
-            onOpenChange={(nextOpen: boolean) => {
-              setAdjustCpcOpen(nextOpen)
-              if (!nextOpen) setAdjustCpcTarget(null)
-            }}
-            googleCampaignId={adjustCpcTarget.googleCampaignId}
-            campaignName={adjustCpcTarget.campaignName}
+	      {/* Adjust CPC Dialog */}
+	      {adjustCpcTarget && (
+	        <AdjustCampaignCpcDialog
+	          open={adjustCpcOpen}
+	          onOpenChange={(nextOpen: boolean) => {
+	            setAdjustCpcOpen(nextOpen)
+	            if (!nextOpen) setAdjustCpcTarget(null)
+	          }}
+	          googleCampaignId={adjustCpcTarget.googleCampaignId}
+	          campaignName={adjustCpcTarget.campaignName}
             onSaved={handleCpcAdjusted}
-          />
-        )}
+	        />
+	      )}
 
       {/* Trend Expand Dialog */}
       <Dialog

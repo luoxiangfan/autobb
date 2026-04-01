@@ -210,6 +210,87 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     })
   })
 
+  it('does not forward duplicated plain keywords when structured candidates are provided', async () => {
+    const selectedKeywords = [
+      {
+        keyword: 'brandx x200 vacuum',
+        searchVolume: 1600,
+        source: 'OFFER_EXTRACTED_KEYWORDS',
+        sourceType: 'OFFER_EXTRACTED_KEYWORDS',
+        sourceSubtype: 'OFFER_EXTRACTED_KEYWORDS',
+        rawSource: 'PAGE_EXTRACT',
+        sourceField: 'offer_extracted',
+      },
+    ]
+
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(({ keywordsWithVolume }: any) =>
+      contextFilterResult(keywordsWithVolume)
+    )
+    mocks.selectCreativeKeywords.mockReturnValue({
+      keywords: selectedKeywords.map((item) => item.keyword),
+      keywordsWithVolume: selectedKeywords,
+      truncated: false,
+      sourceQuotaAudit: {
+        enabled: true,
+        fallbackMode: false,
+        targetCount: 1,
+        requiredBrandCount: 0,
+        acceptedBrandCount: 1,
+        acceptedCount: 1,
+        deferredCount: 0,
+        deferredRefillCount: 0,
+        deferredRefillTriggered: false,
+        underfillBeforeRefill: 0,
+        quota: {
+          combinedLowTrustCap: 0,
+          aiCap: 0,
+          aiLlmRawCap: 0,
+        },
+        acceptedByClass: {
+          lowTrust: 0,
+          ai: 0,
+          aiLlmRaw: 0,
+        },
+        blockedByCap: {
+          lowTrust: 0,
+          ai: 0,
+          aiLlmRaw: 0,
+        },
+      },
+    })
+    mocks.applyKeywordSupplementationOnce.mockResolvedValue({
+      keywordsWithVolume: selectedKeywords,
+      keywordSupplementation: {
+        triggered: false,
+        beforeCount: 1,
+        afterCount: 1,
+        addedKeywords: [],
+        supplementCapApplied: false,
+      },
+    })
+
+    await buildCreativeKeywordSet({
+      offer: { brand: 'BrandX' },
+      userId: 1,
+      brandName: 'BrandX',
+      targetLanguage: 'en',
+      creativeType: 'model_intent',
+      scopeLabel: 'unit-test-no-dup-ai-shadow',
+      keywordsWithVolume: selectedKeywords as any,
+      keywords: selectedKeywords.map((item) => item.keyword),
+      enableSupplementation: false,
+      fallbackMode: false,
+    })
+
+    expect(mocks.selectCreativeKeywords).toHaveBeenCalled()
+    for (const call of mocks.selectCreativeKeywords.mock.calls) {
+      const selectInput = call?.[0]
+      expect(selectInput.keywords).toEqual([])
+      expect(Array.isArray(selectInput.keywordsWithVolume)).toBe(true)
+    }
+  })
+
   it('tracks context mismatch removals in context filter stats', async () => {
     const selectedKeywords = [
       {
@@ -948,6 +1029,86 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     expect(result.audit.creativeAffinityByLabel).toMatchObject({
       MIXED: { count: 1, ratio: 1 },
     })
+  })
+
+  it('prevents AI subtype/raw-source leakage when trusted seed candidate wins by source priority', async () => {
+    const primaryCandidates = [
+      {
+        keyword: 'our place wonder oven',
+        searchVolume: 0,
+        source: 'AI_GENERATED',
+        sourceType: 'AI_GENERATED',
+        sourceSubtype: 'AI_GENERATED',
+        rawSource: 'AI',
+        sourceField: 'ai',
+      },
+    ]
+    const seedCandidates = [
+      {
+        keyword: 'our place wonder oven',
+        searchVolume: 0,
+        source: 'OFFER_EXTRACTED_KEYWORDS',
+        sourceType: 'CANONICAL_BUCKET_VIEW',
+      },
+    ]
+
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(({ keywordsWithVolume }: any) =>
+      contextFilterResult(keywordsWithVolume)
+    )
+    mocks.selectCreativeKeywords.mockImplementation(({ keywordsWithVolume }: any) => ({
+      keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
+      keywordsWithVolume: keywordsWithVolume || [],
+      truncated: false,
+      sourceQuotaAudit: {
+        enabled: true,
+        fallbackMode: false,
+        targetCount: 1,
+        requiredBrandCount: 0,
+        acceptedBrandCount: 1,
+        acceptedCount: 1,
+        deferredCount: 0,
+        deferredRefillCount: 0,
+        deferredRefillTriggered: false,
+        underfillBeforeRefill: 0,
+        quota: { combinedLowTrustCap: 1, aiCap: 1, aiLlmRawCap: 1 },
+        acceptedByClass: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
+        blockedByCap: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
+      },
+    }))
+    mocks.applyKeywordSupplementationOnce.mockResolvedValue({
+      keywordsWithVolume: seedCandidates,
+      keywordSupplementation: {
+        triggered: false,
+        beforeCount: 1,
+        afterCount: 1,
+        addedKeywords: [],
+        supplementCapApplied: false,
+      },
+    })
+
+    const result = await buildCreativeKeywordSet({
+      offer: { brand: 'Our Place' },
+      userId: 1,
+      brandName: 'Our Place',
+      targetLanguage: 'en',
+      creativeType: 'model_intent',
+      bucket: 'B',
+      scopeLabel: 'unit-source-leak-guard',
+      keywordsWithVolume: primaryCandidates as any,
+      seedCandidates: seedCandidates as any,
+      enableSupplementation: false,
+    })
+
+    expect(result.keywordsWithVolume).toHaveLength(1)
+    expect(result.keywordsWithVolume[0]).toMatchObject({
+      keyword: 'our place wonder oven',
+      source: 'OFFER_EXTRACTED_KEYWORDS',
+      sourceType: 'CANONICAL_BUCKET_VIEW',
+      sourceSubtype: 'OFFER_EXTRACTED_KEYWORDS',
+      rawSource: 'PAGE_EXTRACT',
+    })
+    expect(result.keywordsWithVolume[0].sourceField).toBeUndefined()
   })
 
   it('normalizes raw bucket seed candidates inside builder', async () => {

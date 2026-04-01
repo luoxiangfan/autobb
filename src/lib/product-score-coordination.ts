@@ -9,6 +9,7 @@ export type ProductScoreTrigger = 'manual' | 'schedule' | 'sync-complete'
 export interface ProductScoreRequeueRequest {
   includeSeasonalityAnalysis: boolean
   forceFullRescore: boolean
+  allowWhenPaused: boolean
   trigger: ProductScoreTrigger
   updatedAt: string
 }
@@ -62,6 +63,7 @@ function parseRequeueRequest(raw: string | null): ProductScoreRequeueRequest | n
     return {
       includeSeasonalityAnalysis: parsed.includeSeasonalityAnalysis !== false,
       forceFullRescore: Boolean(parsed.forceFullRescore),
+      allowWhenPaused: Boolean(parsed.allowWhenPaused),
       trigger: normalizeTrigger(parsed.trigger),
       updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : new Date().toISOString(),
     }
@@ -102,6 +104,7 @@ export async function markProductScoreRequeueNeeded(
   params: {
     includeSeasonalityAnalysis?: boolean
     forceRecalculate?: boolean
+    allowWhenPaused?: boolean
     trigger?: ProductScoreTrigger
     productIds?: number[]
   } = {}
@@ -121,6 +124,7 @@ export async function markProductScoreRequeueNeeded(
       existing?.includeSeasonalityAnalysis || params.includeSeasonalityAnalysis
     ),
     forceFullRescore: shouldForceFullRescore,
+    allowWhenPaused: Boolean(existing?.allowWhenPaused || params.allowWhenPaused),
     trigger: mergeTrigger(existing?.trigger, params.trigger),
     updatedAt: new Date().toISOString(),
   }

@@ -313,6 +313,29 @@ function pushUniqueText(target: string[], value: unknown, limit: number): void {
   target.push(normalized)
 }
 
+function collectPrioritizedTextGroups(
+  groups: unknown[],
+  limit: number
+): string[] {
+  const output: string[] = []
+
+  for (const group of groups) {
+    if (output.length >= limit) break
+
+    const items = Array.isArray(group) ? group : [group]
+    for (const item of items) {
+      pushUniqueText(output, item, limit)
+      if (output.length >= limit) break
+    }
+  }
+
+  return output
+}
+
+function isLikelyUrlText(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim())
+}
+
 function collectSimpleTextList(value: unknown, limit = 12): string[] {
   const output: string[] = []
 
@@ -683,46 +706,49 @@ export function extractVerifiedKeywordSourcePool(offer: OfferData): VerifiedKeyw
     normalizeSourceText(scrapedData?.title),
   ].filter(Boolean))).slice(0, 8)
 
-  const aboutTexts = Array.from(new Set([
+  const aboutTexts = collectPrioritizedTextGroups([
     normalizeSourceText(offer.productFeatures),
-    ...collectSimpleTextList(scrapedData?.rawAboutThisItem),
-    ...collectSimpleTextList(scrapedData?.aboutThisItem),
-    ...collectSimpleTextList(scrapedData?.features),
-    ...collectSimpleTextList(scrapedData?.highlights),
-    ...collectSimpleTextList(scrapedData?.productHighlights),
-    ...collectProductFeatureTextList(scrapedData?.deepScrapeResults?.topProducts),
-    ...collectProductFeatureTextList(scrapedData?.products),
-    ...collectProductFeatureTextList(scrapedData?.supplementalProducts),
-    ...collectProductFeatureTextList(brandAnalysis?.hotProducts),
-  ].filter(Boolean))).slice(0, 12)
+    collectSimpleTextList(scrapedData?.rawAboutThisItem),
+    collectSimpleTextList(scrapedData?.aboutThisItem),
+    collectSimpleTextList(scrapedData?.features),
+    collectSimpleTextList(scrapedData?.highlights),
+    collectSimpleTextList(scrapedData?.productHighlights),
+    collectProductFeatureTextList(scrapedData?.supplementalProducts),
+    collectProductFeatureTextList(scrapedData?.deepScrapeResults?.topProducts),
+    collectProductFeatureTextList(brandAnalysis?.hotProducts),
+    collectProductFeatureTextList(scrapedData?.products),
+  ], 12)
 
-  const paramTexts = Array.from(new Set([
-    ...collectRecordTextList(scrapedData?.specifications),
-    ...collectRecordTextList(scrapedData?.specs),
-    ...collectRecordTextList(scrapedData?.attributes),
-    ...collectRecordTextList(scrapedData?.technicalDetails),
-    ...collectModelIdentifierTextList(scrapedData, 8),
-    ...collectVariantTextList(scrapedData?.variants),
-    ...collectVariantTextList(scrapedData?.productVariants),
-    ...collectVariantTextList(scrapedData?.options),
-    ...collectProductParamTextList(scrapedData?.deepScrapeResults?.topProducts),
-    ...collectProductParamTextList(scrapedData?.products),
-    ...collectProductParamTextList(scrapedData?.supplementalProducts),
-    ...collectProductParamTextList(brandAnalysis?.hotProducts),
-  ].filter(Boolean))).slice(0, 12)
+  const paramTexts = collectPrioritizedTextGroups([
+    collectRecordTextList(scrapedData?.specifications),
+    collectRecordTextList(scrapedData?.specs),
+    collectRecordTextList(scrapedData?.attributes),
+    collectRecordTextList(scrapedData?.technicalDetails),
+    collectModelIdentifierTextList(scrapedData, 8),
+    collectVariantTextList(scrapedData?.variants),
+    collectVariantTextList(scrapedData?.productVariants),
+    collectVariantTextList(scrapedData?.options),
+    collectProductParamTextList(scrapedData?.supplementalProducts),
+    collectProductParamTextList(scrapedData?.deepScrapeResults?.topProducts),
+    collectProductParamTextList(brandAnalysis?.hotProducts),
+    collectProductParamTextList(scrapedData?.products),
+  ], 12)
 
   const pageTexts = Array.from(new Set([
     ...collectReviewAnalysisTexts(reviewAnalysis),
     ...collectBrandAnalysisTexts(brandAnalysis),
   ].filter(Boolean))).slice(0, 12)
 
-  const hotProductNames = Array.from(new Set([
-    ...(offer.storeProductNames || []).map(item => normalizeSourceText(item)).filter(Boolean),
-    ...collectProductNameList(scrapedData?.deepScrapeResults?.topProducts),
-    ...collectProductNameList(brandAnalysis?.hotProducts),
-    ...collectProductNameList(scrapedData?.products),
-    ...collectProductNameList(scrapedData?.supplementalProducts),
-  ].filter(Boolean))).slice(0, 10)
+  const hotProductNames = collectPrioritizedTextGroups([
+    (offer.storeProductNames || [])
+      .map(item => normalizeSourceText(item))
+      .filter(Boolean)
+      .filter(item => !isLikelyUrlText(item)),
+    collectProductNameList(scrapedData?.supplementalProducts),
+    collectProductNameList(scrapedData?.deepScrapeResults?.topProducts),
+    collectProductNameList(brandAnalysis?.hotProducts),
+    collectProductNameList(scrapedData?.products),
+  ], 10)
 
   const evidenceTerms = new Set<string>()
   const titleKeywords = new Set<string>()

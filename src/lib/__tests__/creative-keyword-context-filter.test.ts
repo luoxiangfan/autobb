@@ -201,6 +201,45 @@ describe('creative-keyword-context-filter', () => {
     expect(keywords).toContain('brandx x200 vacuum cleaner')
   })
 
+  it('uses supplemental store products to preserve model_intent family terms from deep product links', () => {
+    const offer = {
+      brand: 'Our Place',
+      category: 'Cookware',
+      product_name: '',
+      page_type: 'store',
+      target_country: 'US',
+      target_language: 'en',
+      scraped_data: JSON.stringify({
+        products: [
+          { name: 'Our Place Titanium Pro Cookware Set' },
+        ],
+        supplementalProducts: [
+          { productName: 'Our Place Wonder Oven Pro Air Fryer Oven' },
+        ],
+        deepScrapeResults: {
+          summary: '8-in-1 air fryer and countertop oven',
+        },
+      }),
+    }
+
+    const result = filterCreativeKeywordsByOfferContextDetailed({
+      offer,
+      creativeType: 'model_intent',
+      scopeLabel: 'unit-store-supplemental-products-context',
+      keywordsWithVolume: [
+        kw('our place air fryer', 0),
+        kw('our place wonder oven pro', 0),
+        kw('our place cookware set', 0),
+        kw('our place shopify theme', 0),
+      ],
+    })
+
+    const keywords = result.keywords.map((item) => item.keyword)
+    expect(keywords).toContain('our place air fryer')
+    expect(keywords).toContain('our place wonder oven pro')
+    expect(keywords).not.toContain('our place shopify theme')
+  })
+
   it('deduplicates permutation-equivalent soft fallback keywords', () => {
     const offer = {
       brand: 'BrandX',

@@ -12,7 +12,11 @@ import {
 import { resolveCreativeKeywordMinimumOutputCount } from './creative-keyword-output-floor'
 import { logKeywordSourceAudit } from './creative-keyword-audit-log'
 import type { CanonicalCreativeType } from './creative-type'
-import { getKeywordSourcePriorityScoreFromInput } from './creative-keyword-source-priority'
+import {
+  getKeywordSourcePriorityScoreFromInput,
+  inferKeywordRawSource,
+  normalizeKeywordSourceSubtype,
+} from './creative-keyword-source-priority'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { KEYWORD_POLICY } from './keyword-policy'
@@ -829,17 +833,47 @@ function mergeKeywordCandidateRecords(existing: PoolKeywordData, incoming: PoolK
     ...((incoming as any)?.provenance || []),
     normalizeCandidateProvenance(incoming),
   ])
+  const mergedSource = String((preferred as any)?.source || (secondary as any)?.source || '').trim() || 'KEYWORD_POOL'
+  const preferredSourceType = String((preferred as any)?.sourceType || '').trim()
+  const preferredSourceSubtype = String((preferred as any)?.sourceSubtype || '').trim()
+  const resolvedSourceSubtype = (
+    preferredSourceSubtype
+    || normalizeKeywordSourceSubtype({
+      source: mergedSource,
+      sourceType: preferredSourceType || undefined,
+    })
+    || undefined
+  )
+  const resolvedSourceType = preferredSourceType || resolvedSourceSubtype || undefined
+  const resolvedRawSource = (
+    String((preferred as any)?.rawSource || '').trim()
+    || inferKeywordRawSource({
+      source: mergedSource,
+      sourceType: resolvedSourceSubtype || resolvedSourceType,
+    })
+    || undefined
+  )
+  const preferredSourceField = String((preferred as any)?.sourceField || '').trim()
+  const secondarySourceField = String((secondary as any)?.sourceField || '').trim()
+  const canReuseSecondarySourceField = (
+    !preferredSourceField
+    && String((preferred as any)?.source || '').trim().toUpperCase()
+      === String((secondary as any)?.source || '').trim().toUpperCase()
+  )
+  const resolvedSourceField = preferredSourceField
+    || (canReuseSecondarySourceField ? secondarySourceField : '')
+    || undefined
 
   return {
     ...secondary,
     ...preferred,
     keyword: String((existing as any)?.keyword || (incoming as any)?.keyword || '').trim(),
     searchVolume: Math.max(existingVolume, incomingVolume),
-    source: String((preferred as any)?.source || (secondary as any)?.source || '').trim() || 'KEYWORD_POOL',
-    sourceType: String((preferred as any)?.sourceType || (secondary as any)?.sourceType || '').trim() || undefined,
-    sourceSubtype: String((preferred as any)?.sourceSubtype || (secondary as any)?.sourceSubtype || '').trim() || undefined,
-    rawSource: String((preferred as any)?.rawSource || (secondary as any)?.rawSource || '').trim() || undefined,
-    sourceField: String((preferred as any)?.sourceField || (secondary as any)?.sourceField || '').trim() || undefined,
+    source: mergedSource,
+    sourceType: resolvedSourceType,
+    sourceSubtype: resolvedSourceSubtype,
+    rawSource: resolvedRawSource,
+    sourceField: resolvedSourceField,
     derivedTags: normalizeStringList([
       ...((existing as any)?.derivedTags || []),
       ...((incoming as any)?.derivedTags || []),
@@ -2413,7 +2447,9 @@ export async function buildCreativeKeywordSet(
 
   const selectFromCandidates = (selectionCandidates: PoolKeywordData[], preferredBucketKeywords: string[]) =>
     selectCreativeKeywords({
-      keywords: selectionCandidates.map((item) => item.keyword),
+      // Avoid duplicating the same pool candidates into `keywords` (which are treated as AI fallback-only inputs).
+      // Pass structured candidates only, so source provenance remains stable for dedupe/quota.
+      keywords: [],
       keywordsWithVolume: selectionCandidates as any,
       brandName: input.brandName,
       targetLanguage: input.targetLanguage,

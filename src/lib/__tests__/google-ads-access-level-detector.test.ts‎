@@ -1,0 +1,88 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+let mockDb: any
+const mockListAccessibleCustomers = vi.fn()
+const mockGenerateKeywordHistoricalMetrics = vi.fn()
+
+vi.mock('../db', () => ({
+  getDatabase: () => mockDb,
+}))
+
+vi.mock('../google-ads-api', () => ({
+  getGoogleAdsClient: () => ({
+    listAccessibleCustomers: (...args: any[]) => mockListAccessibleCustomers(...args),
+    Customer: () => ({
+      keywordPlanIdeas: {
+        generateKeywordHistoricalMetrics: (...args: any[]) => mockGenerateKeywordHistoricalMetrics(...args),
+      },
+    }),
+  }),
+}))
+
+describe('google-ads-access-level-detector', () => {
+  beforeEach(() => {
+    mockDb = {
+      queryOne: vi.fn(),
+    }
+    mockListAccessibleCustomers.mockReset()
+    mockGenerateKeywordHistoricalMetrics.mockReset()
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('upgrades explorer to basic when keyword planner probe succeeds', async () => {
+    const { detectApiAccessLevel } = await import('../google-ads-access-level-detector')
+
+    mockDb.queryOne.mockResolvedValue({
+      client_id: 'cid',
+      client_secret: 'secret',
+      developer_token: 'token',
+      refresh_token: 'refresh',
+      login_customer_id: '2872703913',
+      api_access_level: 'explorer',
+    })
+
+    mockListAccessibleCustomers.mockResolvedValue({
+      resource_names: ['customers/2872703913'],
+    })
+    mockGenerateKeywordHistoricalMetrics.mockResolvedValue({ results: [] })
+
+    const result = await detectApiAccessLevel(71)
+
+    expect(result.level).toBe('basic')
+    expect(result.method).toBe('api_call')
+    expect(mockGenerateKeywordHistoricalMetrics).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns test when probe fails with test-only developer token error', async () => {
+    const { detectApiAccessLevel } = await import('../google-ads-access-level-detector')
+
+    mockDb.queryOne.mockResolvedValue({
+      client_id: 'cid',
+      client_secret: 'secret',
+      developer_token: 'token',
+      refresh_token: 'refresh',
+      login_customer_id: '2872703913',
+      api_access_level: 'explorer',
+    })
+
+    mockListAccessibleCustomers.mockResolvedValue({
+      resource_names: ['customers/2872703913'],
+    })
+    mockGenerateKeywordHistoricalMetrics.mockRejectedValue({
+      errors: [
+        {
+          message:
+            'The developer token is only approved for use with test accounts. To access non-test accounts, apply for Basic or Standard access.',
+        },
+      ],
+    })
+
+    const result = await detectApiAccessLevel(71)
+
+    expect(result.level).toBe('test')
+    expect(result.method).toBe('error_pattern')
+  })
+})

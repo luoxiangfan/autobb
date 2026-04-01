@@ -18,6 +18,22 @@ describe('offer-keyword-pool store_product_links fallback', () => {
     expect(names).toContain('X10 Pro Omni')
   })
 
+  it('filters router-noise path segments from affiliate-style store links', () => {
+    const names = __testOnly.extractStoreProductNamesFromLinks(JSON.stringify([
+      'https://yeahpromos.com/index/index/openurlproduct?track=abc&pid=998877',
+      'https://example.com/products/our-place-wonder-oven',
+      {
+        productUrl: 'https://example.com/index/openurlproduct?title=our%20place%20titanium%20pan',
+      },
+    ]))
+
+    expect(names).toContain('our place wonder oven')
+    expect(names).toContain('our place titanium pan')
+    expect(names).not.toContain('openurlproduct')
+    expect(names).not.toContain('index')
+    expect(names.some((name) => /^https?:\/\//i.test(name))).toBe(false)
+  })
+
   it('wires store_product_links names into verified hot-product keyword extraction', async () => {
     const offer = {
       brand: 'Eufy',

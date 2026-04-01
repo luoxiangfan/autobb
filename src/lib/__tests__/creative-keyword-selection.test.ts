@@ -1903,4 +1903,167 @@ describe('creative-keyword-selection', () => {
     expect(generated.length).toBeGreaterThanOrEqual(3)
     expect(generated.every((item) => item.searchVolume === 0)).toBe(true)
   })
+
+  it('scales AI quota with effective target count instead of static maxKeywords in model_intent', () => {
+    const trusted = [
+      'our place titanium pro',
+      'our place wonder oven pro',
+      'our place air fryer oven',
+      'our place titanium always pan pro',
+      'our place toaster oven pro',
+      'our place frying pans',
+    ].map((keyword, index) => ({
+      keyword,
+      searchVolume: 5200 - index * 120,
+      source: index % 2 === 0 ? 'HOT_PRODUCT_AGGREGATE' as any : 'GLOBAL_CORE' as any,
+      sourceType: index % 2 === 0 ? 'HOT_PRODUCT_AGGREGATE' as any : 'GLOBAL_CORE' as any,
+      matchType: 'PHRASE' as const,
+    }))
+    const aiNoisy = [
+      'our place mini always pan',
+      'our place large always pan',
+      'our place wonder oven',
+      'our place titanium pan',
+      'our place toaster oven air fryer',
+      'ourplace wonder oven',
+      'our place oven pro',
+      'our place cookware set',
+      'ourplace pans',
+      'our place always pan 2 0',
+    ].map((keyword, index) => ({
+      keyword,
+      searchVolume: 1800 - index * 30,
+      source: 'AI_GENERATED' as any,
+      sourceType: 'AI_LLM_RAW' as any,
+      sourceSubtype: 'AI_GENERATED' as any,
+      matchType: 'PHRASE' as const,
+    }))
+
+    const result = selectCreativeKeywords({
+      keywordsWithVolume: [...trusted, ...aiNoisy],
+      preferredBucketKeywords: [...trusted, ...aiNoisy].map((item) => item.keyword),
+      brandName: 'Our Place',
+      creativeType: 'model_intent',
+      bucket: 'B',
+      maxKeywords: 50,
+      minBrandKeywords: 0,
+      brandReserve: 0,
+    })
+
+    expect(result.sourceQuotaAudit.targetCount).toBeGreaterThan(0)
+    expect(result.sourceQuotaAudit.quota.aiCap).toBeLessThanOrEqual(
+      Math.floor(result.sourceQuotaAudit.targetCount * 0.5)
+    )
+    expect(result.sourceQuotaAudit.quota.aiCap).toBeLessThan(10)
+    const finalAiCount = result.keywordsWithVolume.filter((item) =>
+      ['AI_GENERATED', 'AI_LLM_RAW'].includes(
+        String(item.sourceSubtype || item.sourceType || '').trim().toUpperCase()
+      )
+    ).length
+    expect(finalAiCount).toBeLessThan(result.keywordsWithVolume.length)
+  })
+
+  it('prefers non-ai provenance for duplicate model_intent keywords with same normalized text', () => {
+    const result = selectCreativeKeywords({
+      keywordsWithVolume: [
+        {
+          keyword: 'our place wonder oven',
+          searchVolume: 6400,
+          source: 'AI_GENERATED' as any,
+          sourceType: 'AI_LLM_RAW' as any,
+          sourceSubtype: 'AI_GENERATED' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'our place wonder oven',
+          searchVolume: 120,
+          source: 'OFFER_EXTRACTED_KEYWORDS' as any,
+          sourceType: 'OFFER_EXTRACTED_KEYWORDS' as any,
+          sourceSubtype: 'OFFER_EXTRACTED_KEYWORDS' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'our place always pan',
+          searchVolume: 3200,
+          source: 'HOT_PRODUCT_AGGREGATE' as any,
+          sourceType: 'HOT_PRODUCT_AGGREGATE' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'our place titanium pan',
+          searchVolume: 2800,
+          source: 'OFFER_EXTRACTED_KEYWORDS' as any,
+          sourceType: 'OFFER_EXTRACTED_KEYWORDS' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'our place pressure cooker',
+          searchVolume: 2400,
+          source: 'GLOBAL_CORE' as any,
+          sourceType: 'GLOBAL_CORE' as any,
+          matchType: 'PHRASE' as const,
+        },
+      ],
+      preferredBucketKeywords: [
+        'our place wonder oven',
+        'our place always pan',
+        'our place titanium pan',
+      ],
+      brandName: 'Our Place',
+      creativeType: 'model_intent',
+      bucket: 'B',
+      maxKeywords: 10,
+      minBrandKeywords: 0,
+      brandReserve: 0,
+    })
+
+    const wonderOven = result.keywordsWithVolume.find((item) => item.keyword === 'our place wonder oven')
+    expect(wonderOven).toBeDefined()
+    expect(String(wonderOven?.sourceSubtype || wonderOven?.sourceType || '').trim().toUpperCase()).toBe(
+      'OFFER_EXTRACTED_KEYWORDS'
+    )
+  })
+
+  it('normalizes compacted multi-word brand tokens to avoid noisy ourplace variants', () => {
+    const result = selectCreativeKeywords({
+      keywordsWithVolume: [
+        {
+          keyword: 'ourplace wonder oven',
+          searchVolume: 1800,
+          source: 'AI_GENERATED' as any,
+          sourceType: 'AI_LLM_RAW' as any,
+          sourceSubtype: 'AI_GENERATED' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'our place wonder oven',
+          searchVolume: 4200,
+          source: 'HOT_PRODUCT_AGGREGATE' as any,
+          sourceType: 'HOT_PRODUCT_AGGREGATE' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'our place titanium pro',
+          searchVolume: 3900,
+          source: 'GLOBAL_CORE' as any,
+          sourceType: 'GLOBAL_CORE' as any,
+          matchType: 'PHRASE' as const,
+        },
+      ],
+      preferredBucketKeywords: [
+        'ourplace wonder oven',
+        'our place wonder oven',
+        'our place titanium pro',
+      ],
+      brandName: 'Our Place',
+      creativeType: 'model_intent',
+      bucket: 'B',
+      maxKeywords: 10,
+      minBrandKeywords: 0,
+      brandReserve: 0,
+    })
+
+    expect(result.keywords).toContain('our place wonder oven')
+    expect(result.keywords).not.toContain('ourplace wonder oven')
+  })
 })

@@ -15,6 +15,30 @@ interface AccessLevelDetectionResult {
   details?: string
 }
 
+function extractGoogleAdsErrorMessage(error: any): string {
+  if (!error) {
+    return ''
+  }
+
+  if (typeof error.message === 'string' && error.message.trim()) {
+    return error.message
+  }
+
+  if (Array.isArray(error.errors) && error.errors.length > 0) {
+    const firstError = error.errors[0]
+    if (typeof firstError?.message === 'string' && firstError.message.trim()) {
+      return firstError.message
+    }
+  }
+
+  return String(error)
+}
+
+function normalizeCustomerId(value: unknown): string | null {
+  const normalized = String(value ?? '').replace(/\D/g, '')
+  return normalized ? normalized : null
+}
+
 /**
  * 从错误消息中检测访问级别
  */
@@ -66,9 +90,10 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
       client_secret: string
       developer_token: string
       refresh_token: string
+      login_customer_id?: string
       api_access_level?: string
     }>(`
-      SELECT client_id, client_secret, developer_token, refresh_token, api_access_level
+      SELECT client_id, client_secret, developer_token, refresh_token, login_customer_id, api_access_level
       FROM google_ads_credentials
       WHERE user_id = ?
     `, [userId])
@@ -90,31 +115,79 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
       const response = await client.listAccessibleCustomers(credentials.refresh_token)
 
       // listAccessibleCustomers 返回 { resource_names: ['customers/123', ...] }
-      const resourceNames = response.resource_names || []
+      const resourceNames = Array.isArray(response.resource_names) ? response.resource_names : []
+      const storedLevel = String(credentials.api_access_level || '').toLowerCase()
+      const storedLevelResolved: ApiAccessLevel | null =
+        storedLevel === 'test' || storedLevel === 'explorer' || storedLevel === 'basic' || storedLevel === 'standard'
+          ? storedLevel
+          : null
 
-      // 如果能成功调用，说明至少有Explorer权限
-      // 注意：我们无法直接从API响应中获取确切的访问级别
-      // 但可以通过后续的API调用来推断
+      // 第二阶段探测：调用需要 Basic/Standard 的 Historical Metrics。
+      // 只要调用成功即可判定“至少 Basic”。若此前已标记 standard，则保留 standard。
+      const candidateCustomerIds: string[] = []
+      const loginCustomerId = normalizeCustomerId(credentials.login_customer_id)
+      if (loginCustomerId) {
+        candidateCustomerIds.push(loginCustomerId)
+      }
+      for (const resourceName of resourceNames.slice(0, 3)) {
+        const id = normalizeCustomerId(resourceName)
+        if (id && !candidateCustomerIds.includes(id)) {
+          candidateCustomerIds.push(id)
+        }
+      }
 
-      // 默认假设是Explorer（最常见的情况）
-      // 如果用户有Basic权限，通常不会有问题
-      // 如果是Test权限，后续的API调用会失败并被检测到
+      let lastProbeError = ''
+      for (const customerId of candidateCustomerIds) {
+        try {
+          const customer = client.Customer({
+            customer_id: customerId,
+            login_customer_id: loginCustomerId || customerId,
+            refresh_token: credentials.refresh_token,
+          })
+          const keywordPlanIdeas = (customer as any).keywordPlanIdeas
+          await keywordPlanIdeas.generateKeywordHistoricalMetrics({
+            customer_id: customerId,
+            keywords: ['test'],
+            language: 'languageConstants/1000',
+            geo_target_constants: ['geoTargetConstants/2840'],
+          } as any)
 
-      const currentLevel = String(credentials.api_access_level || '').toLowerCase()
-      const level: ApiAccessLevel =
-        currentLevel === 'basic' || currentLevel === 'standard'
-          ? currentLevel
+          const upgradedLevel: ApiAccessLevel = storedLevelResolved === 'standard' ? 'standard' : 'basic'
+          return {
+            level: upgradedLevel,
+            detectedAt: now,
+            method: 'api_call',
+            details: `Successfully listed ${resourceNames.length} accessible customers and keyword planner probe succeeded on ${customerId}`,
+          }
+        } catch (probeError: any) {
+          const probeErrorMessage = extractGoogleAdsErrorMessage(probeError)
+          const detectedFromProbe = detectLevelFromError(probeErrorMessage)
+          if (detectedFromProbe) {
+            return {
+              level: detectedFromProbe,
+              detectedAt: now,
+              method: 'error_pattern',
+              details: probeErrorMessage
+            }
+          }
+          lastProbeError = probeErrorMessage
+        }
+      }
+
+      const fallbackLevel: ApiAccessLevel =
+        storedLevelResolved === 'basic' || storedLevelResolved === 'standard'
+          ? storedLevelResolved
           : 'explorer'
 
       return {
-        level,
+        level: fallbackLevel,
         detectedAt: now,
-        method: 'api_call',
-        details: `Successfully listed ${resourceNames.length} accessible customers (resolved as ${level})`
+        method: 'default',
+        details: `Listed ${resourceNames.length} accessible customers; keyword planner probe inconclusive${lastProbeError ? `: ${lastProbeError}` : ''}`
       }
     } catch (apiError: any) {
       // 从错误消息中检测访问级别
-      const errorMessage = apiError.message || String(apiError)
+      const errorMessage = extractGoogleAdsErrorMessage(apiError)
       const detectedLevel = detectLevelFromError(errorMessage)
 
       if (detectedLevel) {
@@ -139,7 +212,7 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
     console.error('检测API访问级别失败:', error)
 
     // 尝试从错误中检测
-    const errorMessage = error.message || String(error)
+    const errorMessage = extractGoogleAdsErrorMessage(error)
     const detectedLevel = detectLevelFromError(errorMessage)
 
     if (detectedLevel) {

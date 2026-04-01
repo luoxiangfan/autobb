@@ -3773,6 +3773,21 @@ const STORE_PRODUCT_LINK_QUERY_NAME_KEYS = new Set([
   'sku',
 ])
 
+const STORE_PRODUCT_LINK_NOISE_SEGMENTS = new Set([
+  'index',
+  'openurl',
+  'openurlproduct',
+  'redirect',
+  'go',
+  'click',
+  'track',
+  'tracking',
+  'router',
+  'landing',
+  'jump',
+  'visit',
+])
+
 function safeDecodeUriComponent(value: string): string {
   try {
     return decodeURIComponent(value)
@@ -3836,13 +3851,18 @@ function extractStoreProductNameCandidatesFromUrl(urlLike: string): string[] {
     for (let i = pathSegments.length - 1; i >= 0; i -= 1) {
       const segment = pathSegments[i]
       if (/^(p|dp|gp|product|products|item|items|store|shop)$/i.test(segment)) continue
+      if (STORE_PRODUCT_LINK_NOISE_SEGMENTS.has(segment.toLowerCase())) continue
+      if (/^openurl[a-z0-9_]*$/i.test(segment)) continue
       pushCandidate(segment)
       break
     }
 
     for (const [key, value] of parsed.searchParams.entries()) {
       if (!STORE_PRODUCT_LINK_QUERY_NAME_KEYS.has(key.toLowerCase())) continue
-      pushCandidate(safeDecodeUriComponent(value))
+      const decodedValue = safeDecodeUriComponent(value)
+      if (STORE_PRODUCT_LINK_NOISE_SEGMENTS.has(decodedValue.toLowerCase())) continue
+      if (/^openurl[a-z0-9_]*$/i.test(decodedValue)) continue
+      pushCandidate(decodedValue)
     }
   } catch {
     if (!/^https?:\/\//i.test(trimmed)) {
@@ -3866,11 +3886,13 @@ function extractStoreProductNamesFromLinks(storeProductLinks: unknown): string[]
   const items = normalizeStoreProductLinksInput(storeProductLinks)
   for (const item of items) {
     if (typeof item === 'string') {
-      const urlCandidates = extractStoreProductNameCandidatesFromUrl(item)
+      const trimmedItem = item.trim()
+      if (!trimmedItem) continue
+      const urlCandidates = extractStoreProductNameCandidatesFromUrl(trimmedItem)
       if (urlCandidates.length > 0) {
         for (const candidate of urlCandidates) pushCandidate(candidate)
-      } else {
-        pushCandidate(item)
+      } else if (!/^https?:\/\//i.test(trimmedItem)) {
+        pushCandidate(trimmedItem)
       }
       continue
     }
@@ -4139,6 +4161,55 @@ function appendVerifiedKeywordsToBucket(params: {
  * 🆕 解析关键词数组（向后兼容）
  * 处理新格式 PoolKeywordData[] 和旧格式 string[]
  */
+function normalizeParsedPoolKeywordItem(raw: unknown): PoolKeywordData | null {
+  if (!raw || typeof raw !== 'object') return null
+  const item = raw as Record<string, unknown>
+  const partialItem = item as Partial<PoolKeywordData>
+  const keyword = String(item.keyword || '').trim()
+  if (!keyword) return null
+
+  const rawSource = String(item.source || '').trim()
+  const rawSourceType = String(item.sourceType || '').trim()
+  const rawSourceSubtype = String(item.sourceSubtype || '').trim()
+  const numericSearchVolume = Number(item.searchVolume || 0)
+  const searchVolume = Number.isFinite(numericSearchVolume) ? numericSearchVolume : 0
+  const matchType = String(item.matchType || '').trim().toUpperCase()
+  const normalizedMatchType = (
+    matchType === 'EXACT' || matchType === 'PHRASE' || matchType === 'BROAD'
+  )
+    ? matchType as 'EXACT' | 'PHRASE' | 'BROAD'
+    : 'PHRASE'
+  const hasExplicitSourceMetadata = Boolean(rawSource || rawSourceType || rawSourceSubtype)
+  if (hasExplicitSourceMetadata) {
+    const source = rawSource || 'KEYWORD_POOL'
+    const sourceType = rawSourceType || rawSourceSubtype || source
+    const sourceSubtype = rawSourceSubtype || rawSourceType || sourceType
+    return {
+      ...partialItem,
+      keyword,
+      searchVolume,
+      source,
+      sourceType,
+      sourceSubtype,
+      matchType: normalizedMatchType,
+    }
+  }
+
+  const source = 'KEYWORD_POOL'
+  const sourceType = 'KEYWORD_POOL'
+  const sourceSubtype = 'KEYWORD_POOL'
+
+  return {
+    ...partialItem,
+    keyword,
+    searchVolume,
+    source,
+    sourceType,
+    sourceSubtype,
+    matchType: normalizedMatchType,
+  }
+}
+
 function parseKeywordArray(data: unknown): PoolKeywordData[] {
   const parsed = parseKeywordArrayFromDb(data)
 
@@ -4146,7 +4217,9 @@ function parseKeywordArray(data: unknown): PoolKeywordData[] {
 
   // 新格式：PoolKeywordData[]
   if (typeof parsed[0] === 'object' && parsed[0] !== null && 'keyword' in parsed[0]) {
-    return parsed as PoolKeywordData[]
+    return parsed
+      .map((item) => normalizeParsedPoolKeywordItem(item))
+      .filter((item): item is PoolKeywordData => Boolean(item))
   }
 
   // 旧格式：string[] - 转换为 PoolKeywordData[]
@@ -5576,7 +5649,7 @@ const CANONICAL_PROMO_PATTERN = /\b(discount|coupon|cheap|sale|deal|offer|promo|
 const CANONICAL_REPEATED_ACTION_PATTERN = /\b(buy|shop|purchase|order)\b.*\b\1\b/i
 const CANONICAL_BRAND_SLOGAN_PATTERN = /\b(a\s+cozy\s+home\s+made\s+simple|home\s+made\s+simple)\b/i
 const CANONICAL_GEO_ADMIN_PATTERN = /\b(kabupaten|kecamatan|kelurahan)\b/i
-const CANONICAL_GARBAGE_TOKEN_PATTERN = /\b(rng)\b/i
+const CANONICAL_GARBAGE_TOKEN_PATTERN = /\b(rng|openurlproduct)\b/i
 const CANONICAL_QUESTION_PREFIX_PATTERN =
   /^(?:what|why|how|when|where|who|which|is|are|do|does|did|can|could|should|would)\b/i
 const CANONICAL_SOFT_MODEL_SIZE_PATTERN = /\b(california king|cal king|king size|queen size|twin xl|twin|queen|king|full)\b/gi
@@ -5653,6 +5726,7 @@ const CANONICAL_PRIMARY_SOURCES = new Set([
   'KEYWORD_PLANNER_BRAND',
   'KEYWORD_PLANNER',
   'HOT_PRODUCT_AGGREGATE',
+  'OFFER_EXTRACTED_KEYWORDS',
   'PARAM_EXTRACT',
   'TITLE_EXTRACT',
   'ABOUT_EXTRACT',
@@ -5681,6 +5755,52 @@ const CANONICAL_FILTER_RELAXED_TOP_SOURCES = new Set([
   'PARAM_EXTRACT',
   'TITLE_EXTRACT',
   'ABOUT_EXTRACT',
+])
+const STORE_MODEL_INTENT_RELAXED_SOURCES = new Set([
+  'SEARCH_TERM_HIGH_PERFORMING',
+  'SEARCH_TERM',
+  'HOT_PRODUCT_AGGREGATE',
+  'OFFER_EXTRACTED_KEYWORDS',
+  'KEYWORD_PLANNER_BRAND',
+  'KEYWORD_PLANNER',
+  'PARAM_EXTRACT',
+  'TITLE_EXTRACT',
+  'ABOUT_EXTRACT',
+  'PAGE_EXTRACT',
+  'ENHANCED_EXTRACT',
+])
+const PRODUCT_MODEL_INTENT_RELAXED_SOURCES = new Set([
+  'SEARCH_TERM_HIGH_PERFORMING',
+  'SEARCH_TERM',
+  'HOT_PRODUCT_AGGREGATE',
+  'OFFER_EXTRACTED_KEYWORDS',
+  'KEYWORD_PLANNER_BRAND',
+  'KEYWORD_PLANNER',
+  'PARAM_EXTRACT',
+  'TITLE_EXTRACT',
+  'ABOUT_EXTRACT',
+  'PAGE_EXTRACT',
+  'ENHANCED_EXTRACT',
+])
+const STORE_MODEL_INTENT_WEAK_DEMAND_TOKENS = new Set([
+  'always',
+  'large',
+  'small',
+  'mini',
+  'medium',
+  'extra',
+  'xl',
+  'xxl',
+])
+const PRODUCT_MODEL_INTENT_WEAK_DEMAND_TOKENS = new Set([
+  'always',
+  'large',
+  'small',
+  'mini',
+  'medium',
+  'extra',
+  'xl',
+  'xxl',
 ])
 
 function getPoolPureBrandKeywords(pool: OfferKeywordPool): string[] {
@@ -6018,10 +6138,68 @@ function isPureBrandPoolKeyword(item: PoolKeywordData, pureBrandKeywords: string
   return Boolean(item.isPureBrand) || isPureBrandKeywordInternal(item.keyword, pureBrandKeywords)
 }
 
+function hasStoreModelIntentFamilyRescueSignal(
+  item: PoolKeywordData,
+  pureBrandKeywords: string[]
+): boolean {
+  if (isPureBrandPoolKeyword(item, pureBrandKeywords)) return false
+  if (!containsPureBrand(item.keyword, pureBrandKeywords)) return false
+  if (!hasDemandAnchorInCanonicalBucket(item.keyword, pureBrandKeywords)) return false
+
+  const labels = getCanonicalSourceLabels(item)
+  if (!labels.some((label) => STORE_MODEL_INTENT_RELAXED_SOURCES.has(label))) return false
+
+  const normalizedKeyword = normalizeGoogleAdsKeyword(item.keyword) || ''
+  if (!normalizedKeyword) return false
+  const keywordTokens = normalizedKeyword.split(/\s+/).filter(Boolean)
+  if (keywordTokens.length < 3) return false
+
+  const demandTokens = extractCanonicalDemandTokens(item.keyword, pureBrandKeywords)
+    .filter((token) => token.length >= 3)
+  if (demandTokens.length === 0) return false
+
+  return demandTokens.some((token) => !STORE_MODEL_INTENT_WEAK_DEMAND_TOKENS.has(token))
+}
+
+function hasProductModelIntentFamilyRescueSignal(
+  item: PoolKeywordData,
+  pureBrandKeywords: string[]
+): boolean {
+  if (isPureBrandPoolKeyword(item, pureBrandKeywords)) return false
+  if (!containsPureBrand(item.keyword, pureBrandKeywords)) return false
+  if (!hasDemandAnchorInCanonicalBucket(item.keyword, pureBrandKeywords)) return false
+
+  const labels = getCanonicalSourceLabels(item)
+  if (!labels.some((label) => PRODUCT_MODEL_INTENT_RELAXED_SOURCES.has(label))) return false
+
+  const normalizedKeyword = normalizeGoogleAdsKeyword(item.keyword) || ''
+  if (!normalizedKeyword) return false
+  const keywordTokens = normalizedKeyword.split(/\s+/).filter(Boolean)
+  if (keywordTokens.length < 3) return false
+
+  const demandTokens = extractCanonicalDemandTokens(item.keyword, pureBrandKeywords)
+    .filter((token) => token.length >= 3)
+  if (demandTokens.length < 2) return false
+
+  return demandTokens.some((token) => !PRODUCT_MODEL_INTENT_WEAK_DEMAND_TOKENS.has(token))
+}
+
+function hasLinkTypeModelIntentFamilyRescueSignal(
+  item: PoolKeywordData,
+  pureBrandKeywords: string[],
+  linkType: 'product' | 'store'
+): boolean {
+  if (linkType === 'store') {
+    return hasStoreModelIntentFamilyRescueSignal(item, pureBrandKeywords)
+  }
+  return hasProductModelIntentFamilyRescueSignal(item, pureBrandKeywords)
+}
+
 function shouldDropCanonicalKeyword(
   item: PoolKeywordData,
   creativeType: CanonicalCreativeType,
-  pureBrandKeywords: string[]
+  pureBrandKeywords: string[],
+  linkType: 'product' | 'store' = 'product'
 ): boolean {
   const keyword = item.keyword
   if (!keyword) return true
@@ -6037,6 +6215,7 @@ function shouldDropCanonicalKeyword(
   const isPureBrand = isPureBrandPoolKeyword(item, pureBrandKeywords)
   const hasModelAnchor = hasModelAnchorEvidence({ keywords: [keyword] })
   const hasSoftModelFamilySignal = hasSoftModelFamilySignalInCanonicalBucket(keyword, pureBrandKeywords)
+  const hasModelFamilyRescueSignal = hasLinkTypeModelIntentFamilyRescueSignal(item, pureBrandKeywords, linkType)
   const canRelaxByHighPrioritySource = isHighPriorityCanonicalSource(item)
     && (hasDemandAnchor || hasModelAnchor || hasSoftModelFamilySignal)
   if (CANONICAL_GEO_ADMIN_PATTERN.test(normalizedKeyword) && !hasModelAnchor) return true
@@ -6055,6 +6234,7 @@ function shouldDropCanonicalKeyword(
     creativeType === 'model_intent'
     && !hasModelAnchor
     && !hasSoftModelFamilySignal
+    && !hasModelFamilyRescueSignal
   ) return true
   if (creativeType === 'model_intent' && isPureBrand) return true
   if (creativeType === 'product_intent' && hasModelAnchor && !hasDemandAnchor) return true
@@ -6065,7 +6245,8 @@ function shouldDropCanonicalKeyword(
 function scoreCanonicalKeyword(
   item: PoolKeywordData,
   creativeType: CanonicalCreativeType,
-  pureBrandKeywords: string[]
+  pureBrandKeywords: string[],
+  linkType: 'product' | 'store' = 'product'
 ): number {
   const keyword = item.keyword
   const isPureBrand = isPureBrandPoolKeyword(item, pureBrandKeywords)
@@ -6073,6 +6254,7 @@ function scoreCanonicalKeyword(
   const hasModelAnchor = hasModelAnchorEvidence({ keywords: [keyword] })
   const hasDemandAnchor = hasDemandAnchorInCanonicalBucket(keyword, pureBrandKeywords)
   const hasSoftModelFamilySignal = hasSoftModelFamilySignalInCanonicalBucket(keyword, pureBrandKeywords)
+  const hasModelFamilyRescueSignal = hasLinkTypeModelIntentFamilyRescueSignal(item, pureBrandKeywords, linkType)
   const intent = classifyKeywordIntent(keyword).intent
 
   if (creativeType === 'brand_intent') {
@@ -6088,12 +6270,15 @@ function scoreCanonicalKeyword(
     let score = 0
     if (hasModelAnchor) score += 10
     if (hasSoftModelFamilySignal) score += 7
+    if (hasModelFamilyRescueSignal) score += 5
     if (hasDemandAnchor) score += 1
     if (hasBrand) score += 1
     score += getModelIntentCanonicalSourceAdjustment(item)
     score += getModelIntentCanonicalVolumeAdjustment(item)
     score -= getModelIntentCanonicalShapePenalty(keyword, pureBrandKeywords)
-    if (!hasModelAnchor && !hasSoftModelFamilySignal) score -= 10
+    if (!hasModelAnchor && !hasSoftModelFamilySignal) {
+      score -= hasModelFamilyRescueSignal ? 2 : 10
+    }
     return score
   }
 
@@ -6109,12 +6294,15 @@ function scoreCanonicalKeyword(
 function sortCanonicalKeywords(
   keywords: PoolKeywordData[],
   creativeType: CanonicalCreativeType,
-  pureBrandKeywords: string[]
+  pureBrandKeywords: string[],
+  linkType: 'product' | 'store' = 'product'
 ): PoolKeywordData[] {
-  const filtered = keywords.filter((item) => !shouldDropCanonicalKeyword(item, creativeType, pureBrandKeywords))
+  const filtered = keywords.filter(
+    (item) => !shouldDropCanonicalKeyword(item, creativeType, pureBrandKeywords, linkType)
+  )
   const ranked = [...filtered].sort((a, b) => {
-    const scoreDiff = scoreCanonicalKeyword(b, creativeType, pureBrandKeywords)
-      - scoreCanonicalKeyword(a, creativeType, pureBrandKeywords)
+    const scoreDiff = scoreCanonicalKeyword(b, creativeType, pureBrandKeywords, linkType)
+      - scoreCanonicalKeyword(a, creativeType, pureBrandKeywords, linkType)
     if (scoreDiff !== 0) return scoreDiff
 
     const sourceRankDiff =
@@ -6157,7 +6345,8 @@ function isPrimaryCanonicalSource(source: string | undefined): boolean {
 
 function getCanonicalBucketTargets(
   item: PoolKeywordData,
-  pureBrandKeywords: string[]
+  pureBrandKeywords: string[],
+  linkType: 'product' | 'store' = 'product'
 ): Array<'A' | 'B' | 'D'> {
   const keyword = item.keyword
   if (!keyword) return []
@@ -6167,12 +6356,13 @@ function getCanonicalBucketTargets(
   const hasModelAnchor = hasModelAnchorEvidence({ keywords: [keyword] })
   const hasDemandAnchor = hasDemandAnchorInCanonicalBucket(keyword, pureBrandKeywords)
   const hasSoftModelFamilySignal = hasSoftModelFamilySignalInCanonicalBucket(keyword, pureBrandKeywords)
+  const hasModelFamilyRescueSignal = hasLinkTypeModelIntentFamilyRescueSignal(item, pureBrandKeywords, linkType)
   const targets: Array<'A' | 'B' | 'D'> = []
 
   if (isPureBrand || (hasBrand && (hasDemandAnchor || hasModelAnchor))) {
     targets.push('A')
   }
-  if (hasModelAnchor || hasSoftModelFamilySignal) {
+  if (hasModelAnchor || hasSoftModelFamilySignal || hasModelFamilyRescueSignal) {
     targets.push('B')
   }
   if (hasDemandAnchor) {
@@ -6198,7 +6388,7 @@ function buildCanonicalSourceFirstBucketKeywords(
   }
 
   for (const item of getComprehensiveKeywordsForPool(pool, linkType)) {
-    const targets = getCanonicalBucketTargets(item, pureBrandKeywords)
+    const targets = getCanonicalBucketTargets(item, pureBrandKeywords, linkType)
     if (targets.length === 0) continue
 
     const sourceTier = isPrimaryCanonicalSource(item.source)
@@ -6216,14 +6406,14 @@ function buildCanonicalSourceFirstBucketKeywords(
   ])
 
   if (bucket === 'A') {
-    return sortCanonicalKeywords(merged, 'brand_intent', pureBrandKeywords)
+    return sortCanonicalKeywords(merged, 'brand_intent', pureBrandKeywords, linkType)
   }
 
   if (bucket === 'B') {
-    return sortCanonicalKeywords(merged, 'model_intent', pureBrandKeywords)
+    return sortCanonicalKeywords(merged, 'model_intent', pureBrandKeywords, linkType)
   }
 
-  return sortCanonicalKeywords(merged, 'product_intent', pureBrandKeywords)
+  return sortCanonicalKeywords(merged, 'product_intent', pureBrandKeywords, linkType)
 }
 
 function buildLegacyProjectedCanonicalBucketKeywords(
@@ -6242,7 +6432,8 @@ function buildLegacyProjectedCanonicalBucketKeywords(
         isStore ? pool.storeBucketCKeywords : [],
       ]),
       'brand_intent',
-      pureBrandKeywords
+      pureBrandKeywords,
+      linkType
     )
   }
 
@@ -6257,14 +6448,16 @@ function buildLegacyProjectedCanonicalBucketKeywords(
     const modelAnchored = merged.filter((item) =>
       hasModelAnchorEvidence({ keywords: [item.keyword] })
       || hasSoftModelFamilySignalInCanonicalBucket(item.keyword, pureBrandKeywords)
+      || hasLinkTypeModelIntentFamilyRescueSignal(item, pureBrandKeywords, linkType)
     )
-    return sortCanonicalKeywords(modelAnchored, 'model_intent', pureBrandKeywords)
+    return sortCanonicalKeywords(modelAnchored, 'model_intent', pureBrandKeywords, linkType)
   }
 
   return sortCanonicalKeywords(
     getComprehensiveKeywordsForPool(pool, linkType),
     'product_intent',
-    pureBrandKeywords
+    pureBrandKeywords,
+    linkType
   )
 }
 

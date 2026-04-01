@@ -441,6 +441,102 @@ describe('OfferKeywordPool', () => {
       expect(keywords).not.toContain('brandx official store')
       expect(keywords).not.toContain('brandx coupon')
     })
+
+    it('should allow trusted store hot-product family terms into canonical bucket B without hard model anchors', () => {
+      const info = getBucketInfo({
+        ...mockKeywordPool,
+        brandKeywords: [
+          { keyword: 'our place', searchVolume: 900, source: 'BRAND', matchType: 'EXACT', isPureBrand: true },
+        ],
+        bucketAKeywords: [],
+        bucketBKeywords: [],
+        bucketCKeywords: [],
+        bucketDKeywords: [],
+        storeBucketAKeywords: [
+          { keyword: 'our place cookware', searchVolume: 1200, source: 'TITLE_EXTRACT', matchType: 'PHRASE' },
+        ],
+        storeBucketBKeywords: [],
+        storeBucketCKeywords: [
+          { keyword: 'our place wonder oven', searchVolume: 800, source: 'HOT_PRODUCT_AGGREGATE', matchType: 'PHRASE' },
+          { keyword: 'our place titanium pan', searchVolume: 780, source: 'HOT_PRODUCT_AGGREGATE', matchType: 'PHRASE' },
+        ],
+        storeBucketDKeywords: [
+          { keyword: 'our place official store', searchVolume: 260, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
+        ],
+        storeBucketSKeywords: [],
+        linkType: 'store',
+      } as any, 'B')
+      const keywords = getKeywordTexts(info.keywords)
+
+      expect(keywords).toContain('our place wonder oven')
+      expect(keywords).toContain('our place titanium pan')
+      expect(keywords).not.toContain('our place')
+      expect(keywords).not.toContain('our place official store')
+    })
+
+    it('should admit offer-extracted store family terms while filtering weak-size and router-noise tokens', () => {
+      const info = getBucketInfo({
+        ...mockKeywordPool,
+        brandKeywords: [
+          { keyword: 'our place', searchVolume: 900, source: 'BRAND', matchType: 'EXACT', isPureBrand: true },
+        ],
+        bucketAKeywords: [],
+        bucketBKeywords: [],
+        bucketCKeywords: [],
+        bucketDKeywords: [],
+        storeBucketAKeywords: [],
+        storeBucketBKeywords: [
+          { keyword: 'our place wonder oven', searchVolume: 0, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
+          { keyword: 'our place large always pan', searchVolume: 0, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
+          { keyword: 'our place always pan', searchVolume: 0, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
+          { keyword: 'our place always', searchVolume: 0, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
+          { keyword: 'our place large', searchVolume: 0, source: 'HOT_PRODUCT_AGGREGATE', matchType: 'PHRASE' },
+          { keyword: 'our place openurlproduct', searchVolume: 0, source: 'HOT_PRODUCT_AGGREGATE', matchType: 'PHRASE' },
+        ],
+        storeBucketCKeywords: [],
+        storeBucketDKeywords: [],
+        storeBucketSKeywords: [],
+        linkType: 'store',
+      } as any, 'B')
+      const keywords = getKeywordTexts(info.keywords)
+
+      expect(keywords).toContain('our place wonder oven')
+      expect(keywords).toContain('our place large always pan')
+      expect(keywords).toContain('our place always pan')
+      expect(keywords).not.toContain('our place always')
+      expect(keywords).not.toContain('our place large')
+      expect(keywords).not.toContain('our place openurlproduct')
+    })
+
+    it('should admit trusted product family terms into canonical bucket B without requiring hard model anchors', () => {
+      const info = getBucketInfo({
+        ...mockKeywordPool,
+        brandKeywords: [
+          { keyword: 'our place', searchVolume: 900, source: 'BRAND', matchType: 'EXACT', isPureBrand: true },
+        ],
+        bucketAKeywords: [],
+        bucketBKeywords: [
+          { keyword: 'our place air fryer oven', searchVolume: 520, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
+          { keyword: 'our place always', searchVolume: 0, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
+          { keyword: 'our place openurlproduct', searchVolume: 0, source: 'HOT_PRODUCT_AGGREGATE', matchType: 'PHRASE' },
+          { keyword: 'our place official store', searchVolume: 200, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
+        ],
+        bucketCKeywords: [],
+        bucketDKeywords: [],
+        storeBucketAKeywords: [],
+        storeBucketBKeywords: [],
+        storeBucketCKeywords: [],
+        storeBucketDKeywords: [],
+        storeBucketSKeywords: [],
+        linkType: 'product',
+      } as any, 'B')
+      const keywords = getKeywordTexts(info.keywords)
+
+      expect(keywords).toContain('our place air fryer oven')
+      expect(keywords).not.toContain('our place always')
+      expect(keywords).not.toContain('our place openurlproduct')
+      expect(keywords).not.toContain('our place official store')
+    })
   })
 
   describe('calculateKeywordOverlapRate', () => {

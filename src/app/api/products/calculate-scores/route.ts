@@ -28,14 +28,26 @@ export async function POST(request: NextRequest) {
     const {
       productIds,
       forceRecalculate = false,
+      allowWhenPaused = false,
       batchSize = 100,
       includeSeasonalityAnalysis = true
     } = body
+
+    if (allowWhenPaused === true) {
+      const hasSelectedProductIds = Array.isArray(productIds) && productIds.length > 0
+      if (!hasSelectedProductIds) {
+        return NextResponse.json(
+          { error: '全局暂停时仅支持选择指定商品计算', code: 'PAUSED_REQUIRES_SELECTED_PRODUCTS' },
+          { status: 400 }
+        )
+      }
+    }
 
     // 调度任务到队列系统
     const taskId = await scheduleProductScoreCalculation(userId, {
       productIds,
       forceRecalculate,
+      allowWhenPaused,
       batchSize,
       includeSeasonalityAnalysis,
       trigger: 'manual',

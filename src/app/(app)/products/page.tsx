@@ -203,6 +203,10 @@ type ProductSummaryResponse = {
   syncMissingProductsCount: number
   unknownProductsCount: number
   blacklistedCount: number
+  recommendationScoreSummary?: {
+    effectiveCount: number
+    lastCalculatedAt: string | null
+  }
   platformStats?: Record<ProductPlatform, {
     total: number
     visibleCount: number
@@ -261,6 +265,11 @@ type LandingPageStats = {
   productCount: number
   storeCount: number
   unknownCount: number
+}
+
+type RecommendationScoreSummary = {
+  effectiveCount: number
+  lastCalculatedAt: string | null
 }
 
 type SyncRunItem = {
@@ -433,6 +442,13 @@ function createEmptyLandingPageStats(): LandingPageStats {
   }
 }
 
+function createEmptyRecommendationScoreSummary(): RecommendationScoreSummary {
+  return {
+    effectiveCount: 0,
+    lastCalculatedAt: null,
+  }
+}
+
 function createEmptyPlatformStatsMap(): PlatformStatsMap {
   return {
     yeahpromos: createEmptyPlatformStatsItem(),
@@ -506,6 +522,19 @@ function normalizeLandingPageStats(value: unknown): LandingPageStats {
     productCount: toSafeCount(record.productCount),
     storeCount: toSafeCount(record.storeCount),
     unknownCount: toSafeCount(record.unknownCount),
+  }
+}
+
+function normalizeRecommendationScoreSummary(value: unknown): RecommendationScoreSummary {
+  if (!value || typeof value !== 'object') return createEmptyRecommendationScoreSummary()
+  const record = value as Record<string, unknown>
+  const lastCalculatedAt = typeof record.lastCalculatedAt === 'string'
+    ? record.lastCalculatedAt
+    : null
+
+  return {
+    effectiveCount: toSafeCount(record.effectiveCount),
+    lastCalculatedAt,
   }
 }
 
@@ -754,6 +783,7 @@ export default function ProductsPage() {
   const productsRequestSeqRef = useRef(0)
   const productsAbortControllerRef = useRef<AbortController | null>(null)
   const summaryAbortControllerRef = useRef<AbortController | null>(null)
+  const summaryRequestKeyRef = useRef<string | null>(null)
   const foregroundProductsRequestSeqRef = useRef<number | null>(null)
   const syncRunsInFlightRef = useRef(false)
   const periodicRefreshInFlightRef = useRef(false)
@@ -762,6 +792,9 @@ export default function ProductsPage() {
   const [total, setTotal] = useState(0)
   const [landingPageStats, setLandingPageStats] = useState<LandingPageStats>(() => createEmptyLandingPageStats())
   const [platformStats, setPlatformStats] = useState<PlatformStatsMap>(() => createEmptyPlatformStatsMap())
+  const [recommendationScoreSummary, setRecommendationScoreSummary] = useState<RecommendationScoreSummary>(
+    () => createEmptyRecommendationScoreSummary()
+  )
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [searchText, setSearchText] = useState('')
@@ -822,6 +855,13 @@ export default function ProductsPage() {
     const selected = new Set(selectedProductIds)
     return items.filter((item) => selected.has(item.id))
   }, [items, selectedProductIds])
+
+  const recommendationScoreCoveragePercent = useMemo(() => {
+    if (total <= 0) return 0
+    const ratio = (recommendationScoreSummary.effectiveCount / total) * 100
+    if (!Number.isFinite(ratio) || ratio < 0) return 0
+    return Math.min(100, ratio)
+  }, [recommendationScoreSummary.effectiveCount, total])
 
   const creatableSelectedProducts = useMemo(
     () => selectedProducts.filter((item) => !item.isBlacklisted),
@@ -964,6 +1004,7 @@ export default function ProductsPage() {
     suppressErrorToast?: boolean
   } = {}) => {
     const { forceNoCache = false, silent = false, suppressErrorToast = false } = options
+    const shouldRefreshSummary = !silent
     // 后台静默刷新不应打断前台显式加载（筛选/排序/分页），否则会导致 loading 无法收敛。
     if (silent && foregroundProductsRequestSeqRef.current !== null) {
       return
@@ -972,10 +1013,15 @@ export default function ProductsPage() {
     const requestSeq = productsRequestSeqRef.current + 1
     productsRequestSeqRef.current = requestSeq
     productsAbortControllerRef.current?.abort()
-    summaryAbortControllerRef.current?.abort()
+    if (shouldRefreshSummary) {
+      summaryAbortControllerRef.current?.abort()
+      summaryRequestKeyRef.current = null
+    }
     const controller = new AbortController()
     productsAbortControllerRef.current = controller
-    summaryAbortControllerRef.current = null
+    if (shouldRefreshSummary) {
+      summaryAbortControllerRef.current = null
+    }
 
     if (!silent) {
       foregroundProductsRequestSeqRef.current = requestSeq
@@ -1062,12 +1108,14 @@ export default function ProductsPage() {
         return next
       })
 
-      if (shouldBackfillLandingSummary) {
+      if (shouldRefreshSummary) {
+        const summaryRequestKey = params.toString()
         const summaryController = new AbortController()
         summaryAbortControllerRef.current = summaryController
+        summaryRequestKeyRef.current = summaryRequestKey
         void (async () => {
           try {
-            const summaryResponse = await fetch(`/api/products/summary?${params.toString()}`, {
+            const summaryResponse = await fetch(`/api/products/summary?${summaryRequestKey}`, {
               credentials: 'include',
               cache: 'no-store',
               signal: summaryController.signal,
@@ -1080,8 +1128,9 @@ export default function ProductsPage() {
 
             const summaryData = await summaryResponse.json() as ProductSummaryResponse
             if (!summaryResponse.ok || !summaryData.success) return
-            if (requestSeq !== productsRequestSeqRef.current) return
+            if (summaryRequestKeyRef.current !== summaryRequestKey) return
 
+            setRecommendationScoreSummary(normalizeRecommendationScoreSummary(summaryData.recommendationScoreSummary))
             setLandingPageStats(normalizeLandingPageStats(summaryData.landingPageStats))
             setPlatformStats(normalizePlatformStatsMap(summaryData.platformStats))
           } catch (summaryError: any) {
@@ -1482,24 +1531,26 @@ export default function ProductsPage() {
 
   const handleCalculateScores = async () => {
     if (calculatingScores) return
-    if (scoreCalculationPaused) {
-      showError('已暂停计算', '推荐指数计算当前已暂停，请先恢复后再提交任务')
-      return
-    }
-
     const selectedIds = selectedProducts
       .map((item) => Number(item.id))
       .filter((id) => Number.isFinite(id) && id > 0)
+
+    if (scoreCalculationPaused && selectedIds.length === 0) {
+      showError('已暂停计算', '全局暂停时请先勾选要重算的商品（不支持全量提交）')
+      return
+    }
 
     setCalculatingScores(true)
     try {
       const payload: {
         productIds?: number[]
         forceRecalculate: boolean
+        allowWhenPaused: boolean
         batchSize: number
         includeSeasonalityAnalysis: boolean
       } = {
         forceRecalculate: false,
+        allowWhenPaused: scoreCalculationPaused,
         batchSize: 200,
         includeSeasonalityAnalysis: true,
       }
@@ -1523,7 +1574,12 @@ export default function ProductsPage() {
       }
 
       if (selectedIds.length > 0) {
-        showSuccess('任务已提交', `已提交 ${selectedIds.length} 个商品的推荐指数计算（默认跳过已算分且未过期商品）`)
+        showSuccess(
+          '任务已提交',
+          scoreCalculationPaused
+            ? `已提交 ${selectedIds.length} 个商品的手动重算（全局暂停中，不影响自动调度状态）`
+            : `已提交 ${selectedIds.length} 个商品的推荐指数计算（默认跳过已算分且未过期商品）`
+        )
       } else {
         showSuccess('任务已提交', '已提交增量推荐指数计算（默认跳过已算分且未过期商品）')
       }
@@ -2276,7 +2332,7 @@ export default function ProductsPage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardContent className="px-4 pb-4 pt-4">
               <div className="text-xs text-muted-foreground">当前筛选条目</div>
@@ -2306,6 +2362,21 @@ export default function ProductsPage() {
               </Card>
             )
           })}
+          <Card>
+            <CardContent className="px-4 pb-4 pt-4">
+              <div className="text-xs text-muted-foreground">推荐指数</div>
+              <div className="mt-1 flex items-center gap-2">
+                <Star className="h-4 w-4 text-amber-500" />
+                <span className="text-xl font-semibold">{recommendationScoreSummary.effectiveCount}</span>
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                占总商品 {recommendationScoreCoveragePercent.toFixed(1)}%
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                最后计算 {formatMonthDayTime(recommendationScoreSummary.lastCalculatedAt)}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {latestRuns.length > 0 && (
@@ -2530,8 +2601,10 @@ export default function ProductsPage() {
                 <Button
                   variant="outline"
                   onClick={() => setCalculateScoresConfirmOpen(true)}
-                  disabled={calculatingScores || scorePauseUpdating || scoreCalculationPaused}
-                  title={scoreCalculationPaused ? '推荐指数计算已暂停，请先恢复全局计算' : undefined}
+                  disabled={calculatingScores || scorePauseUpdating || (scoreCalculationPaused && selectedProducts.length === 0)}
+                  title={scoreCalculationPaused
+                    ? (selectedProducts.length > 0 ? '全局暂停中：支持对选中商品手动重算' : '全局暂停中：请先勾选要重算的商品')
+                    : undefined}
                 >
                   {calculatingScores ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -2752,7 +2825,7 @@ export default function ProductsPage() {
                 setPageSize(size)
                 setPage(1)
               }}
-              pageSizeOptions={[10, 20, 50, 100]}
+              pageSizeOptions={[10, 20, 50, 100, 500, 1000]}
             />
           </CardContent>
         </Card>
@@ -3006,6 +3079,11 @@ export default function ProductsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>确认计算推荐指数？</AlertDialogTitle>
             <AlertDialogDescription>
+              {scoreCalculationPaused && (
+                <span className="mb-2 block text-amber-600">
+                  全局计算已暂停：仅支持对已选中商品手动计算，不支持全量提交。
+                </span>
+              )}
               {selectedProducts.length > 0 ? (
                 <>
                   已选择 <strong className="text-foreground">{selectedProducts.length}</strong> 个商品，将仅计算选中商品。
@@ -3024,7 +3102,7 @@ export default function ProductsPage() {
               onClick={() => {
                 void handleCalculateScores()
               }}
-              disabled={calculatingScores || scoreCalculationPaused}
+              disabled={calculatingScores || (scoreCalculationPaused && selectedProducts.length === 0)}
             >
               {calculatingScores ? '提交中...' : '确认计算'}
             </AlertDialogAction>

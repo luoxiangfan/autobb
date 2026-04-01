@@ -4,7 +4,9 @@ import {
   normalizeAffiliateLandingPageTypeFilter,
   normalizeAffiliatePlatform,
   normalizeAffiliateProductStatusFilter,
+  type ProductListOptions,
 } from '@/lib/affiliate-products'
+import { getDatabase } from '@/lib/db'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 
 function parseNumericFilter(searchParams: URLSearchParams, key: string): number | null {
@@ -38,6 +40,9 @@ function parseCountryFilter(searchParams: URLSearchParams, key: string): string 
 }
 
 export const dynamic = 'force-dynamic'
+const PRODUCT_SCORE_VALIDITY_DAYS = 30
+const POSTGRES_RECOMMENDATION_COUNT_STATEMENT_TIMEOUT_MS = 15000
+const POSTGRES_RECOMMENDATION_COUNT_MAX_PARALLEL = 8
 
 export async function GET(request: NextRequest) {
   try {
@@ -76,7 +81,7 @@ export async function GET(request: NextRequest) {
     const createdAtFrom = parseDateFilter(searchParams, 'createdAtFrom')
     const createdAtTo = parseDateFilter(searchParams, 'createdAtTo')
 
-    const result = await listAffiliateProducts(userId, {
+    const baseListOptions: ProductListOptions = {
       page: 1,
       pageSize: 10,
       search,
@@ -100,7 +105,82 @@ export async function GET(request: NextRequest) {
       skipItems: true,
       // summary 仅用于页面头部统计，优先快速返回，避免重统计阻塞首屏体验。
       fastSummary: true,
-    })
+      // summary 场景优先稳定与可用性，避免 URL 模式分类聚合导致慢查询。
+      lightweightSummary: true,
+    }
+    const effectiveRecommendationScoreMin = recommendationScoreMin === null
+      ? 1
+      : Math.max(1, recommendationScoreMin)
+    const db = await getDatabase()
+    const scoreStillValidSql = db.type === 'postgres'
+      ? `(p.score_calculated_at >= (NOW() - INTERVAL '${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
+      : `(datetime(p.score_calculated_at) >= datetime('now', '-${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
+
+    const hasScopedFilters = (
+      search.length > 0
+      || mid.length > 0
+      || platform !== 'all'
+      || landingPageType !== 'all'
+      || targetCountry !== 'all'
+      || status !== 'all'
+      || reviewCountMin !== null
+      || reviewCountMax !== null
+      || priceAmountMin !== null
+      || priceAmountMax !== null
+      || commissionRateMin !== null
+      || commissionRateMax !== null
+      || commissionAmountMin !== null
+      || commissionAmountMax !== null
+      || recommendationScoreMin !== null
+      || recommendationScoreMax !== null
+      || createdAtFrom !== null
+      || createdAtTo !== null
+    )
+
+    const recommendationEffectiveCountPromise: Promise<number> = (() => {
+      if (db.type === 'postgres' && !hasScopedFilters) {
+        return db.queryOne<{ effective_count: number }>(
+          `
+            WITH __cfg AS (
+              SELECT
+                set_config('enable_seqscan', 'off', true) AS enable_seqscan_cfg,
+                set_config('max_parallel_workers_per_gather', '${POSTGRES_RECOMMENDATION_COUNT_MAX_PARALLEL}', true) AS parallel_cfg,
+                set_config('statement_timeout', '${POSTGRES_RECOMMENDATION_COUNT_STATEMENT_TIMEOUT_MS}', true) AS statement_timeout_cfg
+            )
+            SELECT COUNT(*) AS effective_count
+            FROM affiliate_products p
+            CROSS JOIN __cfg
+            WHERE p.user_id = ?
+              AND p.recommendation_score IS NOT NULL
+              AND p.recommendation_score >= ?
+              AND p.score_calculated_at IS NOT NULL
+              AND ${scoreStillValidSql}
+          `,
+          [userId, effectiveRecommendationScoreMin]
+        ).then((row) => Number(row?.effective_count || 0))
+      }
+
+      return listAffiliateProducts(userId, {
+        ...baseListOptions,
+        recommendationScoreMin: effectiveRecommendationScoreMin,
+        recommendationScoreFreshOnly: true,
+      }).then((recommendationScoreResult) => Number(recommendationScoreResult.total || 0))
+    })()
+
+    const [result, recommendationEffectiveCount, recommendationScoreTimestampRow] = await Promise.all([
+      listAffiliateProducts(userId, baseListOptions),
+      recommendationEffectiveCountPromise,
+      db.queryOne<{ last_score_calculated_at: string | null }>(
+        `
+          SELECT MAX(p.score_calculated_at) AS last_score_calculated_at
+          FROM affiliate_products p
+          WHERE p.user_id = ?
+            AND p.recommendation_score IS NOT NULL
+            AND p.score_calculated_at IS NOT NULL
+        `,
+        [userId]
+      ),
+    ])
 
     return NextResponse.json({
       success: true,
@@ -113,6 +193,10 @@ export async function GET(request: NextRequest) {
       unknownProductsCount: result.unknownProductsCount,
       blacklistedCount: result.blacklistedCount,
       platformStats: result.platformStats,
+      recommendationScoreSummary: {
+        effectiveCount: recommendationEffectiveCount,
+        lastCalculatedAt: recommendationScoreTimestampRow?.last_score_calculated_at || null,
+      },
     })
   } catch (error: any) {
     console.error('[GET /api/products/summary] failed:', error)

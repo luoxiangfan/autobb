@@ -159,4 +159,34 @@ describe('GET /api/products', () => {
       })
     )
   })
+
+  it('supports larger pageSize options and clamps to 1000', async () => {
+    const oversizedReq = new NextRequest(
+      'http://localhost/api/products?pageSize=5000',
+      { headers: { 'x-user-id': '7' } }
+    )
+    const oversizedRes = await GET(oversizedReq)
+    expect(oversizedRes.status).toBe(200)
+    expect(productsFns.listAffiliateProducts).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({
+        pageSize: 1000,
+      })
+    )
+
+    productsFns.listAffiliateProducts.mockClear()
+
+    const requestedReq = new NextRequest(
+      'http://localhost/api/products?pageSize=500',
+      { headers: { 'x-user-id': '7' } }
+    )
+    const requestedRes = await GET(requestedReq)
+    expect(requestedRes.status).toBe(200)
+    expect(productsFns.listAffiliateProducts).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({
+        pageSize: 500,
+      })
+    )
+  })
 })

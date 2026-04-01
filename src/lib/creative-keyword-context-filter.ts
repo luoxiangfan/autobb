@@ -447,6 +447,10 @@ function extractStoreSignalsForKeywordQualityContext(scrapedData: string | null 
     collectKeywordContextStructuredTexts((parsed as any).productCategory, collected, 'productCategory')
     collectKeywordContextStructuredTexts((parsed as any).rawProductTitle, collected, 'rawProductTitle')
     collectKeywordContextStructuredTexts((parsed as any).rawAboutThisItem, collected, 'rawAboutThisItem')
+    collectKeywordContextStructuredTexts((parsed as any).supplementalProducts, collected, 'supplementalProducts')
+    collectKeywordContextStructuredTexts((parsed as any).deepScrapeResults, collected, 'deepScrapeResults')
+    collectKeywordContextStructuredTexts((parsed as any).supplementalSummary, collected, 'supplementalSummary')
+    collectKeywordContextStructuredTexts((parsed as any).hotInsights, collected, 'hotInsights')
     collectKeywordContextStructuredTexts((parsed as any).products, collected, 'products')
 
     return Array.from(new Set(collected))
@@ -467,7 +471,8 @@ function buildKeywordQualityProductContext(
   ].filter(Boolean)
 
   if (texts.length === 0) return undefined
-  return Array.from(new Set(texts)).slice(0, 12).join(' | ')
+  const contextLimit = pageType === 'store' ? 24 : 12
+  return Array.from(new Set(texts)).slice(0, contextLimit).join(' | ')
 }
 
 function normalizeContextToken(token: string): string {

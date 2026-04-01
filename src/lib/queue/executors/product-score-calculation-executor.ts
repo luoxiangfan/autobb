@@ -33,6 +33,7 @@ export type ProductScoreCalculationTaskData = {
   userId: number
   productIds?: number[] // 指定商品ID列表(可选)
   forceRecalculate?: boolean // 强制重新计算
+  allowWhenPaused?: boolean // 全局暂停时允许执行（仅限带productIds的手动任务）
   batchSize?: number // 批次大小
   includeSeasonalityAnalysis?: boolean // 是否包含季节性分析
   trigger?: 'manual' | 'schedule' | 'sync-complete' // 触发来源
@@ -40,6 +41,7 @@ export type ProductScoreCalculationTaskData = {
 
 const PRODUCT_SCORE_AI_RERANK_TOP_K_MANUAL_DEFAULT = 10
 const PRODUCT_SCORE_AI_RERANK_TOP_K_BACKGROUND_DEFAULT = 3
+const PRODUCT_SCORE_VALIDITY_DAYS = 30
 
 function parsePositiveIntEnv(name: string, fallback: number): number {
   const raw = process.env[name]
@@ -137,6 +139,7 @@ export async function executeProductScoreCalculation(
     userId,
     productIds,
     forceRecalculate = false,
+    allowWhenPaused = false,
     batchSize = 100,
     includeSeasonalityAnalysis = true,
     trigger = 'manual'
@@ -159,6 +162,7 @@ export async function executeProductScoreCalculation(
     await markProductScoreRequeueNeeded(userId, {
       includeSeasonalityAnalysis,
       forceRecalculate,
+      allowWhenPaused,
       trigger,
       productIds,
     })
@@ -180,7 +184,7 @@ export async function executeProductScoreCalculation(
 
   try {
     const paused = await isProductScoreCalculationPaused(userId)
-    if (paused) {
+    if (paused && !allowWhenPaused) {
       console.log(`[ProductScoreCalculation] 用户${userId}已暂停推荐指数计算，任务 ${task.id} 直接结束`)
       return
     }
@@ -203,25 +207,19 @@ export async function executeProductScoreCalculation(
         AND COALESCE(recommendation_reasons, '') LIKE '%非Amazon落地页,信任度相对较低%'
       )`
 
-      // 默认仅计算未算分或“同步后算分已过期”的商品，避免重复计算
+      // 默认仅计算未算分或“上次计算已超过30天”的商品，避免重复计算
       if (db.type === 'postgres') {
         whereClause += ` AND (
           recommendation_score IS NULL
           OR score_calculated_at IS NULL
-          OR (
-            last_synced_at IS NOT NULL
-            AND score_calculated_at < (last_synced_at AT TIME ZONE 'UTC')
-          )
+          OR score_calculated_at < (NOW() - INTERVAL '${PRODUCT_SCORE_VALIDITY_DAYS} days')
           OR ${legacyAmazonMisclassifiedWhere}
         )`
       } else {
         whereClause += ` AND (
           recommendation_score IS NULL
           OR score_calculated_at IS NULL
-          OR (
-            last_synced_at IS NOT NULL
-            AND datetime(score_calculated_at) < datetime(last_synced_at)
-          )
+          OR datetime(score_calculated_at) < datetime('now', '-${PRODUCT_SCORE_VALIDITY_DAYS} days')
           OR ${legacyAmazonMisclassifiedWhere}
         )`
       }
@@ -434,7 +432,10 @@ export async function executeProductScoreCalculation(
       && successCount > 0
 
     const deferredRequest = await consumeProductScoreRequeueRequest(userId)
-    const pausedBeforeFollowUp = await isProductScoreCalculationPaused(userId)
+    const followUpAllowWhenPaused = allowWhenPaused || Boolean(deferredRequest?.allowWhenPaused)
+    const pausedBeforeFollowUp = followUpAllowWhenPaused
+      ? false
+      : await isProductScoreCalculationPaused(userId)
     const shouldScheduleFollowUp = shouldScheduleContinuation || !!deferredRequest
 
     if (shouldScheduleFollowUp && !pausedBeforeFollowUp) {
@@ -450,6 +451,7 @@ export async function executeProductScoreCalculation(
             {
               userId,
               forceRecalculate: deferredRequest?.forceFullRescore ?? false,
+              allowWhenPaused: followUpAllowWhenPaused,
               batchSize,
               includeSeasonalityAnalysis:
                 includeSeasonalityAnalysis || Boolean(deferredRequest?.includeSeasonalityAnalysis),
@@ -467,6 +469,7 @@ export async function executeProductScoreCalculation(
           includeSeasonalityAnalysis:
             includeSeasonalityAnalysis || Boolean(deferredRequest?.includeSeasonalityAnalysis),
           forceRecalculate: deferredRequest?.forceFullRescore ?? false,
+          allowWhenPaused: followUpAllowWhenPaused,
           trigger: deferredRequest?.trigger || trigger,
         }).catch(() => {})
         console.warn(

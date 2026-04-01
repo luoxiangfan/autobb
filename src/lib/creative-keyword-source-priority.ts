@@ -29,6 +29,7 @@ const EXACT_SOURCE_PRIORITY: Record<string, SourcePriorityRule> = {
   PLANNER: { score: 90, tier: 'T1' },
 
   HOT_PRODUCT_AGGREGATE: { score: 80, tier: 'T2' },
+  OFFER_EXTRACTED_KEYWORDS: { score: 78, tier: 'T2' },
   PARAM_EXTRACT: { score: 80, tier: 'T2' },
   TITLE_EXTRACT: { score: 75, tier: 'T2' },
   ABOUT_EXTRACT: { score: 75, tier: 'T2' },
@@ -40,6 +41,7 @@ const EXACT_SOURCE_PRIORITY: Record<string, SourcePriorityRule> = {
   GLOBAL_CORE_BRANDED: { score: 65, tier: 'T3A' },
   GLOBAL_CATEGORY_BRANDED: { score: 65, tier: 'T3A' },
   SCORING_SUGGESTION: { score: 60, tier: 'T3B' },
+  GOOGLE_SUGGEST: { score: 54, tier: 'T3B' },
   BRANDED_INDUSTRY_TERM: { score: 58, tier: 'T3B' },
   GAP_INDUSTRY_BRANDED: { score: 56, tier: 'T3B' },
 
@@ -47,6 +49,7 @@ const EXACT_SOURCE_PRIORITY: Record<string, SourcePriorityRule> = {
   AI_ENHANCED_PERSISTED: { score: 50, tier: 'T4A' },
 
   AI_TITLE_ABOUT_SUPPLEMENT: { score: 40, tier: 'T4B' },
+  OFFER_AI_KEYWORDS: { score: 40, tier: 'T4B' },
   AI_LLM_RAW: { score: 40, tier: 'T4B' },
   AI_FALLBACK_PLACEHOLDER: { score: 40, tier: 'T4B' },
   AI_GENERATED: { score: 40, tier: 'T4B' },
@@ -77,8 +80,11 @@ const LEGACY_EXACT_SOURCE_PRIORITY: Record<string, SourcePriorityRule> = {
   SEARCH_TERM: { score: 75, tier: 'T0' },
   KEYWORD_PLANNER: { score: 70, tier: 'T1' },
   KEYWORD_PLANNER_BRAND: { score: 70, tier: 'T1' },
+  OFFER_EXTRACTED_KEYWORDS: { score: 68, tier: 'T2' },
   GLOBAL_KEYWORD: { score: 65, tier: 'T3A' },
   GLOBAL_KEYWORDS: { score: 65, tier: 'T3A' },
+  GOOGLE_SUGGEST: { score: 58, tier: 'T3B' },
+  OFFER_AI_KEYWORDS: { score: 40, tier: 'T4B' },
   AI_ENHANCED: { score: 50, tier: 'T4A' },
   AI_ENHANCED_PERSISTED: { score: 50, tier: 'T4A' },
   AI_GENERATED: { score: 40, tier: 'T4B' },
@@ -207,6 +213,7 @@ export function inferKeywordRawSource(input: {
 
   if (
     subtype === 'HOT_PRODUCT_AGGREGATE'
+    || subtype === 'OFFER_EXTRACTED_KEYWORDS'
     || subtype === 'PARAM_EXTRACT'
     || subtype === 'TITLE_EXTRACT'
     || subtype === 'ABOUT_EXTRACT'
@@ -218,13 +225,14 @@ export function inferKeywordRawSource(input: {
   if (
     subtype.startsWith('GLOBAL_')
     || subtype === 'SCORING_SUGGESTION'
+    || subtype === 'GOOGLE_SUGGEST'
     || subtype === 'BRANDED_INDUSTRY_TERM'
     || subtype === 'GAP_INDUSTRY_BRANDED'
   ) {
     return 'GAP_ANALYSIS'
   }
 
-  if (subtype.startsWith('AI_') || subtype === 'KEYWORD_EXPANSION') return 'AI'
+  if (subtype.startsWith('AI_') || subtype === 'KEYWORD_EXPANSION' || subtype === 'OFFER_AI_KEYWORDS') return 'AI'
 
   if (
     subtype === 'KEYWORD_POOL'

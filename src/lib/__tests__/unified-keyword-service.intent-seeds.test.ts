@@ -108,4 +108,39 @@ describe('buildIntentAwareSeedPool', () => {
 
     expect(sourcePool.paramKeywords.some((keyword) => /m01035|namm10kwv12/i.test(keyword))).toBe(false)
   })
+
+  it('prioritizes supplemental store product links ahead of generic store products when building hot product names', () => {
+    const sourcePool = extractVerifiedKeywordSourcePool({
+      brand: 'Our Place',
+      category: 'Cookware',
+      storeProductNames: [
+        'https://yeahpromos.com/index/index/openurlproduct?track=abc&pid=946480',
+      ],
+      scrapedData: JSON.stringify({
+        products: [
+          { name: 'Our Place Always Pan 2.0' },
+          { name: 'Our Place Mini Always Pan' },
+          { name: 'Our Place Perfect Pot' },
+          { name: 'Our Place Baking Sheet' },
+          { name: 'Our Place Cookware Set' },
+          { name: 'Our Place Ceramic Pan' },
+          { name: 'Our Place Nonstick Pan' },
+          { name: 'Our Place Pan Set' },
+          { name: 'Our Place Kitchen Set' },
+          { name: 'Our Place Home Set' },
+        ],
+        supplementalProducts: [
+          { productName: 'Our Place Titanium Always Pan Pro 10.6' },
+          { productName: 'Our Place Wonder Oven Pro 8-in-1' },
+          { productName: 'Our Place Air Fryer Basket Set' },
+        ],
+      }),
+    })
+
+    expect(sourcePool.hotProductNames).toContain('Our Place Titanium Always Pan Pro 10.6')
+    expect(sourcePool.hotProductNames).toContain('Our Place Wonder Oven Pro 8-in-1')
+    expect(sourcePool.hotProductNames).toContain('Our Place Air Fryer Basket Set')
+    expect(sourcePool.hotProductNames.some((item) => /^https?:\/\//i.test(item))).toBe(false)
+    expect(sourcePool.hotProductNames.length).toBeLessThanOrEqual(10)
+  })
 })
