@@ -25,6 +25,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // 🔒 管理员权限检查
+    if (authResult.user.role !== 'admin') {
+      return NextResponse.json(
+        { error: '需要管理员权限' },
+        { status: 403 }
+      )
+    }
+
     const userId = authResult.user.userId
 
     console.log(`🔐 [OAuth Start] 用户ID: ${userId}`)

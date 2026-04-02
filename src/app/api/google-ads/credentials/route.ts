@@ -25,6 +25,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 🔒 管理员权限检查
+    if (authResult.user.role !== 'admin') {
+      return NextResponse.json(
+        { error: '需要管理员权限' },
+        { status: 403 }
+      )
+    }
+
     // 解析请求参数
     const body = await request.json()
     const {
@@ -98,6 +106,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: '未授权访问' },
         { status: 401 }
+      )
+    }
+
+    // 🔒 管理员权限检查
+    if (authResult.user.role !== 'admin') {
+      return NextResponse.json(
+        { error: '需要管理员权限' },
+        { status: 403 }
       )
     }
 
@@ -206,6 +222,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { error: '未授权访问' },
         { status: 401 }
+      )
+    }
+
+    // 🔒 管理员权限检查
+    if (authResult.user.role !== 'admin') {
+      return NextResponse.json(
+        { error: '需要管理员权限' },
+        { status: 403 }
       )
     }
 
