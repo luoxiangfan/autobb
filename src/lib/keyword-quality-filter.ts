@@ -36,6 +36,11 @@ import {
 
 export { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword }
 
+const BRAND_CONNECTOR_TOKENS = new Set([
+  'and',
+  'plus',
+])
+
 /**
  * 判断是否为“品牌拼接词”（无空格直接拼接）
  * 例如: swansonvitamin / drmercola
@@ -86,7 +91,37 @@ export function isBrandConcatenation(keyword: string, brandName: string): boolea
  * shouldKeepByBrand("security camera", ["reolink"]) → false
  */
 export function shouldKeepByBrand(keyword: string, pureBrandKeywords: string[]): boolean {
-  return containsPureBrand(keyword, pureBrandKeywords)
+  if (containsPureBrand(keyword, pureBrandKeywords)) return true
+
+  const normalizedKeyword = normalizeGoogleAdsKeyword(keyword)
+  if (!normalizedKeyword) return false
+  const keywordTokens = normalizedKeyword.split(/\s+/).filter(Boolean)
+  if (keywordTokens.length < 3) return false
+
+  for (const brand of pureBrandKeywords) {
+    const brandTokens = normalizeGoogleAdsKeyword(brand || '').split(/\s+/).filter(Boolean)
+    if (brandTokens.length < 2) continue
+
+    for (let start = 0; start < keywordTokens.length; start += 1) {
+      if (keywordTokens[start] !== brandTokens[0]) continue
+      let cursor = start + 1
+      let matched = 1
+
+      while (matched < brandTokens.length && cursor < keywordTokens.length) {
+        while (cursor < keywordTokens.length && BRAND_CONNECTOR_TOKENS.has(keywordTokens[cursor])) {
+          cursor += 1
+        }
+        if (cursor >= keywordTokens.length) break
+        if (keywordTokens[cursor] !== brandTokens[matched]) break
+        matched += 1
+        cursor += 1
+      }
+
+      if (matched === brandTokens.length) return true
+    }
+  }
+
+  return false
 }
 
 /**
@@ -973,6 +1008,16 @@ const COMMERCIAL_CONTEXT_SIGNAL_TOKENS = new Set([
   'camera',
   'timer',
   'controller',
+  'furniture',
+  'mattress',
+  'desk',
+  'chair',
+  'table',
+  'sofa',
+  'dresser',
+  'frame',
+  'trundle',
+  'bunk',
 ])
 
 const CONTEXT_PLACEHOLDER_PHRASES = new Set([
@@ -1011,6 +1056,40 @@ const BROAD_CONTEXT_MATCH_TOKENS = new Set([
   'room',
   'rooms',
 ])
+
+const CONTEXT_MATCH_BRIDGE_RULES: Array<{
+  targetToken: string
+  contextFamily: Set<string>
+}> = [
+  {
+    targetToken: 'furniture',
+    contextFamily: new Set([
+      'bed',
+      'beds',
+      'frame',
+      'frames',
+      'bunk',
+      'trundle',
+      'loft',
+      'furniture',
+    ]),
+  },
+]
+
+function applyContextMatchBridgeRules(params: {
+  keywordTokens: string[]
+  usableContext: string[]
+  matchedTokenSet: Set<string>
+}): void {
+  const { keywordTokens, usableContext, matchedTokenSet } = params
+  if (keywordTokens.length === 0 || usableContext.length === 0) return
+
+  for (const rule of CONTEXT_MATCH_BRIDGE_RULES) {
+    if (!keywordTokens.includes(rule.targetToken)) continue
+    if (!usableContext.some(token => rule.contextFamily.has(token))) continue
+    matchedTokenSet.add(rule.targetToken)
+  }
+}
 
 function sanitizeContextInput(input?: string): string {
   if (!input) return ''
@@ -1295,6 +1374,22 @@ function getSourceTrustScore(source?: string): number {
   return 5
 }
 
+function resolveKeywordDataSourceTrustScore(keywordData: PoolKeywordData): number {
+  const signals = [
+    keywordData.sourceSubtype,
+    keywordData.sourceType,
+    keywordData.source,
+    keywordData.rawSource,
+  ]
+
+  let bestScore = 0
+  for (const signal of signals) {
+    bestScore = Math.max(bestScore, getSourceTrustScore(signal))
+  }
+
+  return bestScore
+}
+
 function computeContextMatchCount(params: {
   keywordTokens: string[]
   pureBrandKeywords: string[]
@@ -1338,7 +1433,13 @@ function computeContextMatchDetails(params: {
   }
 
   const contextSet = new Set(usableContext)
-  const matchedTokens = keywordTokens.filter(t => contextSet.has(t))
+  const matchedTokenSet = new Set(keywordTokens.filter(t => contextSet.has(t)))
+  applyContextMatchBridgeRules({
+    keywordTokens,
+    usableContext,
+    matchedTokenSet,
+  })
+  const matchedTokens = Array.from(matchedTokenSet)
   const specificMatchedTokens = matchedTokens.filter(t => !BROAD_CONTEXT_MATCH_TOKENS.has(t))
 
   return {
@@ -1788,6 +1889,7 @@ export function filterKeywordQuality(
   }
 
   if (contextMismatchMode === 'hard' && minContextTokenMatches > 0) {
+    let contextMismatchSafetyRestoreApplied = false
     const keptContextCandidates = filtered.filter(item =>
       shouldKeepByBrand(item.keyword, pureBrandKeywords) && !isPureBrandKeyword(item.keyword, pureBrandKeywords)
     )
@@ -1831,6 +1933,73 @@ export function filterKeywordQuality(
         filtered.push(restoredKeyword)
 
         const index = removed.indexOf(item)
+        if (index >= 0) removed.splice(index, 1)
+      }
+      if (restoreCandidates.length > 0) {
+        contextMismatchSafetyRestoreApplied = true
+      }
+    }
+
+    const contextRemovedAllCandidates = removed.filter(item => item.reason.includes('与商品无关'))
+    const contextRemovedAllRatio = (
+      contextRemovedAllCandidates.length + filtered.length > 0
+        ? contextRemovedAllCandidates.length / (contextRemovedAllCandidates.length + filtered.length)
+        : 0
+    )
+    if (
+      !contextMismatchSafetyRestoreApplied
+      &&
+      contextRemovedAllCandidates.length >= 3
+      && contextRemovedAllRatio >= 0.6
+    ) {
+      const existingFilteredKeys = new Set(
+        filtered.map(item => normalizeGoogleAdsKeyword(item.keyword) || item.keyword.toLowerCase().trim())
+      )
+      const trustedContextRestoreCandidates = contextRemovedAllCandidates
+        .map((item) => {
+          const keywordData = typeof item.keyword === 'string'
+            ? { keyword: item.keyword, searchVolume: 0, source: 'FILTERED' } as PoolKeywordData
+            : item.keyword
+          const text = keywordData.keyword
+          if (shouldBlockContextRestore(text)) return null
+          if (!hasCommercialContextSignal(text)) return null
+          if (isPureBrandKeyword(text, pureBrandKeywords)) return null
+
+          const sourceTrustScore = resolveKeywordDataSourceTrustScore(keywordData)
+          if (sourceTrustScore < 12) return null
+
+          return {
+            item,
+            keywordData,
+            sourceTrustScore,
+          }
+        })
+        .filter((entry): entry is {
+          item: { keyword: PoolKeywordData; reason: string }
+          keywordData: PoolKeywordData
+          sourceTrustScore: number
+        } => entry !== null)
+        .sort((a, b) => {
+          const trustDiff = b.sourceTrustScore - a.sourceTrustScore
+          if (trustDiff !== 0) return trustDiff
+          const aVol = Number(a.keywordData.searchVolume || 0)
+          const bVol = Number(b.keywordData.searchVolume || 0)
+          return bVol - aVol
+        })
+
+      const restoreLimit = Math.min(
+        3,
+        Math.max(1, Math.floor(trustedContextRestoreCandidates.length * 0.3))
+      )
+      for (const restoreCandidate of trustedContextRestoreCandidates.slice(0, restoreLimit)) {
+        const restoreKey = normalizeGoogleAdsKeyword(restoreCandidate.keywordData.keyword)
+          || restoreCandidate.keywordData.keyword.toLowerCase().trim()
+        if (!restoreKey || existingFilteredKeys.has(restoreKey)) continue
+
+        filtered.push(restoreCandidate.keywordData)
+        existingFilteredKeys.add(restoreKey)
+
+        const index = removed.indexOf(restoreCandidate.item)
         if (index >= 0) removed.splice(index, 1)
       }
     }

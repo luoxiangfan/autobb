@@ -4,6 +4,7 @@ import { getRedisClient } from '@/lib/redis'
 
 const LIST_TTL_SECONDS = 300
 const SUMMARY_TTL_SECONDS = 300
+const SUMMARY_ROUTE_TTL_SECONDS = 45
 const LIST_INDEX_TTL_SECONDS = 24 * 60 * 60
 const LAST_QUERY_TTL_SECONDS = 24 * 60 * 60
 const MAX_INVALIDATE_SCAN_ROUNDS = 20
@@ -30,6 +31,18 @@ function getSummaryPattern(userId: number): string {
 
 function getSummaryIndexKey(userId: number): string {
   return `${REDIS_PREFIX_CONFIG.cache}products:user:${userId}:summary:index`
+}
+
+function getSummaryRouteKey(userId: number, hash: string): string {
+  return `${REDIS_PREFIX_CONFIG.cache}products:user:${userId}:summary-route:${hash}`
+}
+
+function getSummaryRoutePattern(userId: number): string {
+  return `${REDIS_PREFIX_CONFIG.cache}products:user:${userId}:summary-route:*`
+}
+
+function getSummaryRouteIndexKey(userId: number): string {
+  return `${REDIS_PREFIX_CONFIG.cache}products:user:${userId}:summary-route:index`
 }
 
 function getLatestQueryKey(userId: number): string {
@@ -91,6 +104,12 @@ export type ProductSummaryCachePayload = {
 }
 
 export function buildProductSummaryCacheHash(payload: ProductSummaryCachePayload): string {
+  return crypto.createHash('md5').update(JSON.stringify(payload)).digest('hex')
+}
+
+export type ProductSummaryRouteCachePayload = ProductSummaryCachePayload
+
+export function buildProductSummaryRouteCacheHash(payload: ProductSummaryRouteCachePayload): string {
   return crypto.createHash('md5').update(JSON.stringify(payload)).digest('hex')
 }
 
@@ -270,6 +289,35 @@ export async function setCachedProductSummary(userId: number, hash: string, valu
   }
 }
 
+export async function getCachedProductSummaryRoute<T>(userId: number, hash: string): Promise<T | null> {
+  try {
+    const redis = getRedisClient()
+    const raw = await redis.get(getSummaryRouteKey(userId, hash))
+    if (!raw) return null
+    return JSON.parse(raw) as T
+  } catch {
+    return null
+  }
+}
+
+export async function setCachedProductSummaryRoute(userId: number, hash: string, value: unknown): Promise<void> {
+  try {
+    const redis = getRedisClient()
+    const summaryRouteKey = getSummaryRouteKey(userId, hash)
+    const summaryRouteIndexKey = getSummaryRouteIndexKey(userId)
+    const payload = JSON.stringify(value)
+
+    await redis
+      .multi()
+      .setex(summaryRouteKey, SUMMARY_ROUTE_TTL_SECONDS, payload)
+      .sadd(summaryRouteIndexKey, summaryRouteKey)
+      .expire(summaryRouteIndexKey, LIST_INDEX_TTL_SECONDS)
+      .exec()
+  } catch {
+    // ignore cache write failure
+  }
+}
+
 export async function setLatestProductListQuery(userId: number, payload: ProductListCachePayload): Promise<void> {
   try {
     const normalized = normalizeProductListCachePayload(payload)
@@ -308,6 +356,7 @@ export async function invalidateProductListCache(userId: number): Promise<void> 
     const targets = [
       { indexKey: getListIndexKey(userId), pattern: getListPattern(userId) },
       { indexKey: getSummaryIndexKey(userId), pattern: getSummaryPattern(userId) },
+      { indexKey: getSummaryRouteIndexKey(userId), pattern: getSummaryRoutePattern(userId) },
     ]
 
     for (const target of targets) {

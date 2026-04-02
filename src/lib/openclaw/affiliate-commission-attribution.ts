@@ -31,6 +31,16 @@ export type AffiliateCommissionAttributionResult = {
   writtenRows: number
 }
 
+function normalizeAffiliatePlatforms(platforms: Array<AffiliatePlatform | null | undefined> | undefined): AffiliatePlatform[] {
+  const result = new Set<AffiliatePlatform>()
+  for (const platform of platforms || []) {
+    if (platform === 'partnerboost' || platform === 'yeahpromos') {
+      result.add(platform)
+    }
+  }
+  return Array.from(result)
+}
+
 type CampaignWeightRow = {
   campaign_id: number
   offer_id: number
@@ -575,7 +585,10 @@ async function queryExistingAttributionSummary(params: {
   userId: number
   reportDate: string
   totalCommission: number
+  platforms?: AffiliatePlatform[]
 }): Promise<AffiliateCommissionAttributionResult | null> {
+  const platforms = normalizeAffiliatePlatforms(params.platforms)
+  const hasPlatformFilter = platforms.length > 0
   const row = await params.db.queryOne<ExistingAttributionSummaryRow>(
     `
       SELECT
@@ -585,8 +598,11 @@ async function queryExistingAttributionSummary(params: {
         COUNT(DISTINCT campaign_id) AS attributed_campaigns
       FROM affiliate_commission_attributions
       WHERE user_id = ? AND report_date = ?
+        ${hasPlatformFilter ? `AND platform IN (${platforms.map(() => '?').join(', ')})` : ''}
     `,
-    [params.userId, params.reportDate]
+    hasPlatformFilter
+      ? [params.userId, params.reportDate, ...platforms]
+      : [params.userId, params.reportDate]
   )
 
   const writtenRows = Number(row?.written_rows) || 0
@@ -1159,13 +1175,19 @@ async function queryHistoricalCampaignFallbackMaps(params: {
 async function queryExistingEventOutcomes(params: {
   db: DatabaseAdapter
   userId: number
+  reportDate: string
   eventIds: string[]
+  excludePlatforms?: AffiliatePlatform[]
 }): Promise<Map<string, ExistingEventOutcome>> {
   const result = new Map<string, ExistingEventOutcome>()
   if (params.eventIds.length === 0) return result
 
   const eventIdExpr = getStoredEventIdSql(params.db.type)
   const queryEventIds = expandEventIds(params.eventIds)
+  const excludedPlatforms = normalizeAffiliatePlatforms(params.excludePlatforms)
+  const excludePlatformSql = excludedPlatforms.length > 0
+    ? `AND COALESCE(platform, '') NOT IN (${excludedPlatforms.map(() => '?').join(', ')})`
+    : ''
 
   for (const eventIdChunk of chunkArray(queryEventIds, 100)) {
     const placeholders = eventIdChunk.map(() => '?').join(', ')
@@ -1185,9 +1207,11 @@ async function queryExistingEventOutcomes(params: {
           commission_amount
         FROM affiliate_commission_attributions
         WHERE user_id = ?
+          AND report_date = ?
           AND ${eventIdExpr} IN (${placeholders})
+          ${excludePlatformSql}
       `,
-      [params.userId, ...eventIdChunk]
+      [params.userId, params.reportDate, ...eventIdChunk, ...excludedPlatforms]
     )
 
     for (const row of attributedRows) {
@@ -1224,9 +1248,11 @@ async function queryExistingEventOutcomes(params: {
             commission_amount
           FROM openclaw_affiliate_attribution_failures
           WHERE user_id = ?
+            AND report_date = ?
             AND ${eventIdExpr} IN (${placeholders})
+            ${excludePlatformSql}
         `,
-        [params.userId, ...eventIdChunk]
+        [params.userId, params.reportDate, ...eventIdChunk, ...excludedPlatforms]
       )
 
       for (const row of failureRows) {
@@ -1251,6 +1277,51 @@ async function queryExistingEventOutcomes(params: {
   }
 
   return result
+}
+
+async function deleteExistingAttributionSnapshot(params: {
+  db: DatabaseAdapter
+  userId: number
+  reportDate: string
+  platforms: AffiliatePlatform[]
+}): Promise<void> {
+  const platforms = normalizeAffiliatePlatforms(params.platforms)
+  if (platforms.length === 0) return
+
+  const placeholders = platforms.map(() => '?').join(', ')
+
+  await params.db.exec(
+    `
+      DELETE FROM affiliate_commission_attributions
+      WHERE user_id = ?
+        AND report_date = ?
+        AND platform IN (${placeholders})
+    `,
+    [params.userId, params.reportDate, ...platforms]
+  )
+
+  try {
+    await params.db.exec(
+      `
+        DELETE FROM openclaw_affiliate_attribution_failures
+        WHERE user_id = ?
+          AND report_date = ?
+          AND platform IN (${placeholders})
+      `,
+      [params.userId, params.reportDate, ...platforms]
+    )
+  } catch (error: any) {
+    const message = String(error?.message || '')
+    if (!/openclaw_affiliate_attribution_failures/i.test(message) || !/(no such table|does not exist)/i.test(message)) {
+      throw error
+    }
+  }
+}
+
+function isStatementTimeoutError(error: unknown): boolean {
+  const message = String((error as { message?: unknown })?.message || '')
+  if (!message) return false
+  return /(statement timeout|query read timeout|canceling statement due to statement timeout)/i.test(message)
 }
 
 /**
@@ -1445,6 +1516,7 @@ export async function persistAffiliateCommissionAttributions(params: {
   entries: AffiliateCommissionRawEntry[]
   replaceExisting: boolean
   lockHistorical?: boolean
+  replacePlatforms?: AffiliatePlatform[]
 }): Promise<AffiliateCommissionAttributionResult> {
   const db = await getDatabase()
 
@@ -1497,13 +1569,19 @@ export async function persistAffiliateCommissionAttributions(params: {
   const totalCommission = roundTo(
     normalizedEntries.reduce((sum, entry) => sum + entry.commission, 0)
   )
+  const incomingPlatforms = normalizeAffiliatePlatforms(normalizedEntries.map((entry) => entry.platform))
+  const replacePlatforms = normalizeAffiliatePlatforms(params.replacePlatforms)
+  const shouldResetHistoricalSnapshot = params.replaceExisting
+    && replacePlatforms.length > 0
+    && isHistoricalReportDate(params.reportDate)
 
-  if (params.lockHistorical && isHistoricalReportDate(params.reportDate)) {
+  if (params.lockHistorical && isHistoricalReportDate(params.reportDate) && !shouldResetHistoricalSnapshot) {
     const existingSummary = await queryExistingAttributionSummary({
       db,
       userId: params.userId,
       reportDate: params.reportDate,
       totalCommission,
+      platforms: incomingPlatforms,
     })
 
     if (existingSummary) {
@@ -1529,6 +1607,17 @@ export async function persistAffiliateCommissionAttributions(params: {
   }
 
   if (normalizedEntries.length === 0) {
+    if (shouldResetHistoricalSnapshot) {
+      await db.transaction(async () => {
+        await deleteExistingAttributionSnapshot({
+          db,
+          userId: params.userId,
+          reportDate: params.reportDate,
+          platforms: replacePlatforms,
+        })
+      })
+    }
+
     return {
       reportDate: params.reportDate,
       totalCommission: 0,
@@ -1540,11 +1629,24 @@ export async function persistAffiliateCommissionAttributions(params: {
     }
   }
 
-  const existingOutcomes = await queryExistingEventOutcomes({
-    db,
-    userId: params.userId,
-    eventIds: normalizedEntries.map((entry) => entry.eventId),
-  })
+  let existingOutcomes = new Map<string, ExistingEventOutcome>()
+  try {
+    existingOutcomes = await queryExistingEventOutcomes({
+      db,
+      userId: params.userId,
+      reportDate: params.reportDate,
+      eventIds: normalizedEntries.map((entry) => entry.eventId),
+      excludePlatforms: shouldResetHistoricalSnapshot ? replacePlatforms : undefined,
+    })
+  } catch (error: any) {
+    if (!isStatementTimeoutError(error)) {
+      throw error
+    }
+    // Prefer best-effort attribution over full fallback when dedupe lookup times out.
+    console.warn(
+      `[affiliate-attribution] existing event lookup timed out on ${params.reportDate}, continue without dedupe`
+    )
+  }
 
   const freshEntries: NormalizedCommissionEntry[] = []
   const attributedOfferIds = new Set<number>()
@@ -1840,6 +1942,15 @@ export async function persistAffiliateCommissionAttributions(params: {
   }
 
   await db.transaction(async () => {
+    if (shouldResetHistoricalSnapshot) {
+      await deleteExistingAttributionSnapshot({
+        db,
+        userId: params.userId,
+        reportDate: params.reportDate,
+        platforms: replacePlatforms,
+      })
+    }
+
     for (const row of rowsToInsert) {
       await db.exec(
         `
@@ -1906,6 +2017,18 @@ export async function persistAffiliateCommissionAttributions(params: {
   const newUnattributedCommission = roundTo(
     failureRows.reduce((sum, row) => sum + (Number(row.commissionAmount) || 0), 0)
   )
+
+  if (shouldResetHistoricalSnapshot) {
+    return {
+      reportDate: params.reportDate,
+      totalCommission,
+      attributedCommission: newAttributedCommission,
+      unattributedCommission: newUnattributedCommission,
+      attributedOffers: attributedOfferIds.size,
+      attributedCampaigns: attributedCampaignIds.size,
+      writtenRows: rowsToInsert.length,
+    }
+  }
 
   return {
     reportDate: params.reportDate,

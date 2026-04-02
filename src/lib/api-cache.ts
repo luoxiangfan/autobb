@@ -2,6 +2,7 @@
  * API响应缓存工具
  * 使用内存缓存减少重复计算和数据库查询
  */
+import { invalidateCampaignReadCache } from '@/lib/campaigns-read-cache'
 
 interface CacheEntry<T> {
   data: T
@@ -244,6 +245,7 @@ export function invalidateOfferCache(userId: number, offerId?: number): void {
     apiCache.deleteByPrefix(`offer:${offerId}`)
   }
   apiCache.deleteByPrefix(`offers:user:${userId}`)
+  void invalidateCampaignReadCache(userId)
   invalidateDashboardCache(userId)
 }
 
@@ -267,4 +269,5 @@ export function invalidateDashboardCache(userId: number): void {
   apiCache.deleteByPrefix(`kpis:user:${userId}`)
   apiCache.deleteByPrefix(`trends:user:${userId}`)
   apiCache.deleteByPrefix(`insights:user:${userId}`)
+  void invalidateCampaignReadCache(userId)
 }

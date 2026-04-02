@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,29 +8,21 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   ArrowLeft,
   Clock,
   TrendingUp,
-  Calendar,
-  BarChart3,
   CheckCircle,
-  XCircle,
   Activity,
-  Globe,
   Play,
   Square,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import ClickFarmDistributionChart from '@/components/ClickFarmDistributionChart';
 import { getDateInTimezone } from '@/lib/timezone-utils';
+
+const TaskDetailAnalyticsSection = dynamic(() => import('./TaskDetailAnalyticsSection'), {
+  ssr: false,
+  loading: () => <TaskDetailAnalyticsSectionSkeleton />,
+});
 
 interface TaskDetails {
   task: any;
@@ -51,6 +44,34 @@ interface TaskDetails {
   };
 }
 
+function TaskDetailAnalyticsSectionSkeleton() {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="pt-6">
+          <div className="animate-pulse space-y-3">
+            <div className="h-5 w-52 rounded bg-gray-100" />
+            <div className="h-[300px] rounded bg-gray-100" />
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <div className="h-6 w-40 rounded bg-gray-100" />
+        </CardHeader>
+        <CardContent>
+          <div className="animate-pulse space-y-3">
+            <div className="h-10 rounded bg-gray-100" />
+            <div className="h-10 rounded bg-gray-100" />
+            <div className="h-10 rounded bg-gray-100" />
+            <div className="h-10 rounded bg-gray-100" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function TaskDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -58,6 +79,7 @@ export default function TaskDetailPage() {
 
   const [details, setDetails] = useState<TaskDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [analyticsSectionMounted, setAnalyticsSectionMounted] = useState(false);
 
   const getTodayProgressInfo = (task: any): { percent: number; actual: number; target: number } | null => {
     try {
@@ -79,6 +101,16 @@ export default function TaskDetailPage() {
   useEffect(() => {
     loadTaskDetails();
   }, [taskId]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setAnalyticsSectionMounted(true);
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   const loadTaskDetails = async () => {
     try {
@@ -445,94 +477,15 @@ export default function TaskDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Time Distribution Chart */}
-      <ClickFarmDistributionChart
-        data={distributionData}
-        title="时间分布（配置 vs 最近执行）"
-      />
-
-      {/* Daily History */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            每日执行记录
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {task.daily_history.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">暂无执行记录</p>
-          ) : (
-            <Table className="[&_thead_th]:bg-white">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>日期</TableHead>
-                  <TableHead className="text-right">目标</TableHead>
-                  <TableHead className="text-right">实际</TableHead>
-                  <TableHead className="text-right">成功</TableHead>
-                  <TableHead className="text-right">失败</TableHead>
-                  <TableHead className="text-right">完成率</TableHead>
-                  <TableHead className="text-right">成功率</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {task.daily_history
-                  .slice()
-                  .reverse()
-                  .map((day: any) => {
-                    const completionRate = day.target > 0 ? (day.actual / day.target) * 100 : 0;
-                    const daySuccessRate = day.actual > 0 ? (day.success / day.actual) * 100 : 0;
-
-                    return (
-                      <TableRow key={day.date}>
-                        <TableCell className="font-medium">{day.date}</TableCell>
-                        <TableCell className="text-right">{day.target}</TableCell>
-                        <TableCell className="text-right font-medium">{day.actual}</TableCell>
-                        <TableCell className="text-right text-green-600">{day.success}</TableCell>
-                        <TableCell className="text-right text-red-600">{day.failed}</TableCell>
-                        <TableCell className="text-right">
-                          <span className={completionRate >= 90 ? 'text-green-600 font-medium' : ''}>
-                            {completionRate.toFixed(1)}%
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <span className={daySuccessRate >= 95 ? 'text-green-600 font-medium' : ''}>
-                            {daySuccessRate.toFixed(1)}%
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-              </TableBody>
-            </Table>
-          )}
-
-          {statistics.avg_daily_clicks > 0 && (
-            <div className="mt-4 pt-4 border-t grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">平均每日点击</p>
-                <p className="font-medium text-lg">{statistics.avg_daily_clicks}</p>
-              </div>
-              {statistics.best_day && (
-                <div>
-                  <p className="text-muted-foreground">最佳表现</p>
-                  <p className="font-medium text-lg text-green-600">
-                    {statistics.best_day.actual} ({statistics.best_day.date})
-                  </p>
-                </div>
-              )}
-              {statistics.worst_day && (
-                <div>
-                  <p className="text-muted-foreground">最低表现</p>
-                  <p className="font-medium text-lg text-orange-600">
-                    {statistics.worst_day.actual} ({statistics.worst_day.date})
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {analyticsSectionMounted ? (
+        <TaskDetailAnalyticsSection
+          task={task}
+          statistics={statistics}
+          distributionData={distributionData}
+        />
+      ) : (
+        <TaskDetailAnalyticsSectionSkeleton />
+      )}
       </main>
     </div>
   );

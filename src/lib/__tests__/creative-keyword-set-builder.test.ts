@@ -2485,9 +2485,12 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
         'brandx air conditioner',
       ])
     )
-    expect(
-      result.audit.pipeline.finalInvariantTriggered || result.audit.pipeline.nonEmptyRescueTriggered
-    ).toBe(true)
+    expect(result.audit.pipeline.finalInvariantTriggered).toBe(false)
+    expect(result.audit.pipeline.nonEmptyRescueTriggered).toBe(false)
+    expect(result.executableKeywords).toEqual(expect.arrayContaining([
+      'brandx portable ac',
+      'brandx smart ac unit',
+    ]))
   })
 
   it('recovers bucket A floor for mixed-language inputs using localized and neutral rescue candidates', async () => {
@@ -2840,5 +2843,235 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     expect(result.executableKeywords).not.toContain('lenovo 3 1')
     expect(result.candidatePool.map((item) => item.keyword)).toContain('lenovo 3 15')
     expect(result.candidatePool.map((item) => item.keyword)).not.toContain('lenovo 3 1')
+  })
+
+  it('tops up underfilled selection with context-filtered candidates before triggering non-empty rescue', async () => {
+    const candidates = [
+      {
+        keyword: 'max lily trundle bed',
+        searchVolume: 1200,
+        source: 'SEARCH_TERM',
+        sourceType: 'SEARCH_TERM',
+        sourceSubtype: 'SEARCH_TERM',
+      },
+      {
+        keyword: 'max and lily furniture',
+        searchVolume: 900,
+        source: 'KEYWORD_PLANNER_BRAND',
+        sourceType: 'KEYWORD_PLANNER_BRAND',
+        sourceSubtype: 'KEYWORD_PLANNER_BRAND',
+      },
+      {
+        keyword: 'max lily wood bed frame',
+        searchVolume: 700,
+        source: 'GLOBAL_KEYWORDS',
+        sourceType: 'GLOBAL_KEYWORDS',
+        sourceSubtype: 'GLOBAL_KEYWORDS',
+      },
+      {
+        keyword: 'max & lily twin bed',
+        searchVolume: 620,
+        source: 'TITLE_EXTRACT',
+        sourceType: 'TITLE_EXTRACT',
+        sourceSubtype: 'TITLE_EXTRACT',
+      },
+    ]
+
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(candidates as any))
+    mocks.selectCreativeKeywords.mockReturnValue({
+      keywords: [candidates[0].keyword],
+      keywordsWithVolume: [candidates[0]] as any,
+      truncated: false,
+      sourceQuotaAudit: {
+        enabled: true,
+        fallbackMode: false,
+        targetCount: 1,
+        requiredBrandCount: 0,
+        acceptedBrandCount: 0,
+        acceptedCount: 1,
+        deferredCount: 0,
+        deferredRefillCount: 0,
+        deferredRefillTriggered: false,
+        underfillBeforeRefill: 0,
+        quota: { combinedLowTrustCap: 1, aiCap: 1, aiLlmRawCap: 1 },
+        acceptedByClass: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
+        blockedByCap: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
+      },
+    })
+
+    const result = await buildCreativeKeywordSet({
+      offer: {
+        brand: 'Max & Lily',
+        product_name: 'Max & Lily Twin Bed',
+        target_country: 'US',
+        target_language: 'English',
+      },
+      userId: 1,
+      brandName: 'Max & Lily',
+      targetLanguage: 'English',
+      creativeType: 'brand_intent',
+      scopeLabel: 'unit-context-topup-before-rescue',
+      maxKeywords: 10,
+      keywordsWithVolume: candidates as any,
+      keywords: candidates.map((item) => item.keyword),
+      enableSupplementation: false,
+      fallbackMode: false,
+    })
+
+    expect(result.executableKeywords).toEqual(expect.arrayContaining([
+      'max lily trundle bed',
+      'max and lily furniture',
+      'max lily wood bed frame',
+    ]))
+    expect(result.keywordSourceAudit.pipeline.nonEmptyRescueTriggered).toBe(false)
+    expect(
+      result.keywordsWithVolume.some((item) =>
+        String((item as any).sourceSubtype || '').toUpperCase() === 'BUILDER_NON_EMPTY_RESCUE'
+      )
+    ).toBe(false)
+  })
+
+  it('falls back to context-filtered candidates before non-empty rescue when selector returns empty', async () => {
+    const candidates = [
+      {
+        keyword: 'max lily trundle bed',
+        searchVolume: 1200,
+        source: 'SEARCH_TERM',
+        sourceType: 'SEARCH_TERM',
+        sourceSubtype: 'SEARCH_TERM',
+      },
+      {
+        keyword: 'max and lily furniture',
+        searchVolume: 800,
+        source: 'KEYWORD_PLANNER_BRAND',
+        sourceType: 'KEYWORD_PLANNER_BRAND',
+        sourceSubtype: 'KEYWORD_PLANNER_BRAND',
+      },
+      {
+        keyword: 'max lily wood bed frame',
+        searchVolume: 620,
+        source: 'OFFER_EXTRACTED_KEYWORDS',
+        sourceType: 'OFFER_EXTRACTED_KEYWORDS',
+        sourceSubtype: 'OFFER_EXTRACTED_KEYWORDS',
+      },
+      {
+        keyword: 'max & lily twin bed',
+        searchVolume: 540,
+        source: 'TITLE_EXTRACT',
+        sourceType: 'TITLE_EXTRACT',
+        sourceSubtype: 'TITLE_EXTRACT',
+      },
+    ]
+
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(candidates as any))
+    mocks.selectCreativeKeywords.mockReturnValue({
+      keywords: [],
+      keywordsWithVolume: [],
+      truncated: false,
+      sourceQuotaAudit: {
+        enabled: true,
+        fallbackMode: false,
+        targetCount: 0,
+        requiredBrandCount: 0,
+        acceptedBrandCount: 0,
+        acceptedCount: 0,
+        deferredCount: 0,
+        deferredRefillCount: 0,
+        deferredRefillTriggered: false,
+        underfillBeforeRefill: 0,
+        quota: { combinedLowTrustCap: 0, aiCap: 0, aiLlmRawCap: 0 },
+        acceptedByClass: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
+        blockedByCap: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
+      },
+    })
+
+    const result = await buildCreativeKeywordSet({
+      offer: {
+        brand: 'Max & Lily',
+        product_name: 'Max & Lily Twin Bed',
+        target_country: 'US',
+        target_language: 'English',
+      },
+      userId: 1,
+      brandName: 'Max & Lily',
+      targetLanguage: 'English',
+      creativeType: 'brand_intent',
+      scopeLabel: 'unit-selection-empty-context-fallback',
+      maxKeywords: 10,
+      keywordsWithVolume: candidates as any,
+      keywords: candidates.map((item) => item.keyword),
+      enableSupplementation: false,
+      fallbackMode: false,
+    })
+
+    expect(result.executableKeywords).toEqual(expect.arrayContaining([
+      'max lily trundle bed',
+      'max and lily furniture',
+      'max lily wood bed frame',
+    ]))
+    expect(result.keywordSourceAudit.contextFallbackStrategy).toBe('filtered')
+    expect(result.keywordSourceAudit.pipeline.nonEmptyRescueTriggered).toBe(false)
+    expect(
+      result.keywordsWithVolume.some((item) =>
+        String((item as any).sourceSubtype || '').toUpperCase() === 'BUILDER_NON_EMPTY_RESCUE'
+      )
+    ).toBe(false)
+  })
+
+  it('injects ampersand brand rescue variants and rejects adjacent short numeric fragments', async () => {
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult([], {
+      keywords: [],
+      contextMismatchRemovedCount: 8,
+      intentTighteningRemovedCount: 6,
+    }))
+    mocks.selectCreativeKeywords.mockReturnValue({
+      keywords: [],
+      keywordsWithVolume: [],
+      truncated: false,
+      sourceQuotaAudit: {
+        enabled: true,
+        fallbackMode: false,
+        targetCount: 0,
+        requiredBrandCount: 0,
+        acceptedBrandCount: 0,
+        acceptedCount: 0,
+        deferredCount: 0,
+        deferredRefillCount: 0,
+        deferredRefillTriggered: false,
+        underfillBeforeRefill: 0,
+        quota: { combinedLowTrustCap: 0, aiCap: 0, aiLlmRawCap: 0 },
+        acceptedByClass: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
+        blockedByCap: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
+      },
+    })
+
+    const result = await buildCreativeKeywordSet({
+      offer: {
+        brand: 'Max & Lily',
+        product_name: 'Max & Lily Twin Bed Furniture 4.2 Star',
+        extracted_headlines: ['Max & Lily 4.2-star furniture'],
+        target_country: 'US',
+        target_language: 'English',
+      },
+      userId: 1,
+      brandName: 'Max & Lily',
+      targetLanguage: 'English',
+      creativeType: 'product_intent',
+      bucket: 'D',
+      scopeLabel: 'unit-ampersand-rescue-variants',
+      maxKeywords: 12,
+      keywordsWithVolume: [] as any,
+      keywords: [],
+      enableSupplementation: false,
+      fallbackMode: false,
+    })
+
+    expect(result.executableKeywords).toContain('max & lily')
+    expect(result.executableKeywords).toContain('maxandlily')
+    expect(result.executableKeywords.some((keyword) => keyword.includes('max and lily furniture'))).toBe(true)
+    expect(result.executableKeywords.some((keyword) => /\b4 2\b/.test(keyword))).toBe(false)
   })
 })

@@ -252,6 +252,74 @@ describe('keyword-quality-filter', () => {
       expect(result.removed).toHaveLength(0)
     })
 
+    it('should treat connector-separated brand tokens as valid brand match', () => {
+      const input = [
+        { keyword: 'max and lily furniture', searchVolume: 1800, source: 'KEYWORD_PLANNER_BRAND' as const },
+      ]
+
+      const result = filterKeywordQuality(input, {
+        brandName: 'Max & Lily',
+        category: 'Kids Bed Frames',
+        productName: 'Max & Lily Solid Wood Bed Frame',
+        mustContainBrand: true,
+        minContextTokenMatches: 1,
+      })
+
+      expect(result.filtered.map(k => k.keyword)).toEqual([
+        'max and lily furniture',
+      ])
+      expect(result.removed).toHaveLength(0)
+    })
+
+    it('should keep furniture-family bridge keywords for non-specific brands', () => {
+      const input = [
+        { keyword: 'kidkraft furniture', searchVolume: 1400, source: 'KEYWORD_PLANNER_BRAND' as const },
+      ]
+
+      const result = filterKeywordQuality(input, {
+        brandName: 'KidKraft',
+        category: 'Kids Bed Frames',
+        productName: 'KidKraft Solid Wood Bed Frame',
+        mustContainBrand: true,
+        minContextTokenMatches: 1,
+      })
+
+      expect(result.filtered.map(k => k.keyword)).toEqual([
+        'kidkraft furniture',
+      ])
+      expect(result.removed).toHaveLength(0)
+    })
+
+    it('should restore limited trusted commercial context-mismatch keywords when hard context gate over-prunes', () => {
+      const input = [
+        { keyword: 'acme', searchVolume: 9000, source: 'KEYWORD_PLANNER' as const },
+        { keyword: 'acme battery station', searchVolume: 2400, source: 'KEYWORD_PLANNER' as const },
+        { keyword: 'acme furniture', searchVolume: 2200, source: 'KEYWORD_PLANNER' as const },
+        { keyword: 'acme chair', searchVolume: 2000, source: 'KEYWORD_PLANNER' as const },
+        { keyword: 'acme desk', searchVolume: 1800, source: 'KEYWORD_PLANNER' as const },
+        { keyword: 'acme cafe', searchVolume: 1600, source: 'KEYWORD_PLANNER' as const },
+      ]
+
+      const result = filterKeywordQuality(input, {
+        brandName: 'Acme',
+        category: 'Portable Power Stations',
+        productName: 'Acme Home Battery Station',
+        mustContainBrand: true,
+        minContextTokenMatches: 1,
+      })
+
+      expect(result.filtered.map(k => k.keyword)).toEqual([
+        'acme',
+        'acme battery station',
+        'acme furniture',
+      ])
+      expect(result.removed.map(r => r.keyword.keyword)).toEqual([
+        'acme chair',
+        'acme desk',
+        'acme cafe',
+      ])
+    })
+
     it('filters split brand distortions using lexical integrity anchors', () => {
       const input = [
         { keyword: 'waterdrop', searchVolume: 1200, source: 'KEYWORD_PLANNER' as const },

@@ -10,7 +10,9 @@ import {
 } from '@/lib/affiliate-products'
 import {
   buildProductListCacheHash,
+  buildProductSummaryCacheHash,
   getCachedProductList,
+  setCachedProductSummary,
   setLatestProductListQuery,
   setCachedProductList,
 } from '@/lib/products-cache'
@@ -151,6 +153,26 @@ export async function GET(request: NextRequest) {
       createdAtTo,
     }
     const cacheHash = buildProductListCacheHash(cachePayload)
+    const summaryCacheHash = buildProductSummaryCacheHash({
+      search: search.toLowerCase(),
+      mid: mid.toLowerCase(),
+      platform,
+      targetCountry,
+      landingPageType,
+      status,
+      reviewCountMin,
+      reviewCountMax,
+      priceAmountMin,
+      priceAmountMax,
+      commissionRateMin,
+      commissionRateMax,
+      commissionAmountMin,
+      commissionAmountMax,
+      recommendationScoreMin,
+      recommendationScoreMax,
+      createdAtFrom,
+      createdAtTo,
+    })
     await setLatestProductListQuery(userId, cachePayload)
 
     if (!shouldBypassReadCache) {
@@ -215,14 +237,13 @@ export async function GET(request: NextRequest) {
       .map((item: any) => Number(item?.id))
       .filter((id): id is number => Number.isInteger(id) && id > 0)
     if (listedProductIds.length > 0) {
-      try {
-        await repairOfferAffiliateLinksFromProducts({
-          userId,
-          productIds: listedProductIds,
-        })
-      } catch (repairError: any) {
+      // 修复任务不影响本次列表展示，放到后台执行，避免阻塞筛选加载。
+      void repairOfferAffiliateLinksFromProducts({
+        userId,
+        productIds: listedProductIds,
+      }).catch((repairError: any) => {
         console.warn(`[GET /api/products] affiliate link repair skipped: ${repairError?.message || repairError}`)
-      }
+      })
     }
 
     const responsePayload = {
@@ -242,7 +263,20 @@ export async function GET(request: NextRequest) {
     }
 
     if (shouldWriteCache) {
-      await setCachedProductList(userId, cacheHash, responsePayload)
+      await Promise.all([
+        setCachedProductList(userId, cacheHash, responsePayload),
+        setCachedProductSummary(userId, summaryCacheHash, {
+          total: result.total,
+          productsWithLinkCount: result.productsWithLinkCount,
+          activeProductsCount: result.activeProductsCount,
+          invalidProductsCount: result.invalidProductsCount,
+          syncMissingProductsCount: result.syncMissingProductsCount,
+          unknownProductsCount: result.unknownProductsCount,
+          blacklistedCount: result.blacklistedCount,
+          landingPageStats: result.landingPageStats,
+          platformStats: result.platformStats,
+        }),
+      ])
     }
 
     return NextResponse.json(responsePayload)

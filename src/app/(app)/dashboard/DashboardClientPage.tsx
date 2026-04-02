@@ -190,7 +190,7 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
           cache: 'no-store',
           signal: abortController.signal,
         }),
-        fetch('/api/risk-alerts?limit=3', {
+        fetch('/api/risk-alerts?limit=3&includeStatistics=false', {
           credentials: 'include',
           cache: 'no-store',
           signal: abortController.signal,

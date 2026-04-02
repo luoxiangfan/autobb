@@ -123,6 +123,10 @@ class PostgresAdapter implements DatabaseAdapter {
   constructor(connectionString: string) {
     // 移除postgres.js不支持的连接参数
     const cleanedUrl = connectionString.replace(/[?&]directConnection=[^&]*/g, '')
+    const statementTimeoutRaw = Number(process.env.POSTGRES_STATEMENT_TIMEOUT_MS || '60000')
+    const statementTimeoutMs = Number.isFinite(statementTimeoutRaw) && statementTimeoutRaw >= 0
+      ? Math.floor(statementTimeoutRaw)
+      : 60000
 
     this.sql = postgres(cleanedUrl, {
       max: 10, // 最大连接数
@@ -131,7 +135,7 @@ class PostgresAdapter implements DatabaseAdapter {
       connect_timeout: 10, // 连接超时（秒）
       // 🔧 连接参数：设置合理的语句超时，防止长时间运行的查询阻塞连接池
       connection: {
-        statement_timeout: 60000, // 60秒语句超时（毫秒），与idle_timeout保持一致
+        statement_timeout: statementTimeoutMs, // 默认 60 秒，可通过 POSTGRES_STATEMENT_TIMEOUT_MS 临时覆盖
       },
       // 🔧 关键修复：postgres.js 默认将 timestamp/date 解析为本地时区 Date，
       // 这会在生产环境设置 TZ=Asia/Shanghai 等情况下导致固定时差偏移（例如 -8h）。

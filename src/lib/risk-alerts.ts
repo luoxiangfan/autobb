@@ -254,9 +254,11 @@ export async function createRiskAlert(
  */
 export async function getUserRiskAlerts(
   userId: number,
-  status?: 'active' | 'acknowledged' | 'resolved'
+  status?: 'active' | 'acknowledged' | 'resolved',
+  limit?: number
 ): Promise<RiskAlert[]> {
   const db = await getDatabase()
+  const normalizedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(Number(limit), 50)) : null
 
   let query = `
     SELECT * FROM risk_alerts
@@ -278,6 +280,11 @@ export async function getUserRiskAlerts(
     END,
     created_at DESC
   `
+
+  if (normalizedLimit !== null) {
+    query += ` LIMIT ?`
+    params.push(normalizedLimit)
+  }
 
   const alerts = await db.query(query, params) as any[]
 

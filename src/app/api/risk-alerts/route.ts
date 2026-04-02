@@ -31,6 +31,8 @@ async function get(request: NextRequest) {
     const status = searchParams.get('status') as any
     const limitRaw = searchParams.get('limit')
     const limit = limitRaw ? parseInt(limitRaw, 10) : undefined
+    const includeStatistics = searchParams.get('includeStatistics') !== 'false'
+    const normalizedLimit = limit && Number.isFinite(limit) ? Math.max(1, Math.min(limit, 50)) : undefined
 
     // 验证status参数
     if (status && !['active', 'acknowledged', 'resolved'].includes(status)) {
@@ -40,16 +42,15 @@ async function get(request: NextRequest) {
       )
     }
 
-    const [alerts, statistics] = await Promise.all([
-      getUserRiskAlerts(userId, status),
-      getRiskStatistics(userId),
-    ])
+    const alertsPromise = getUserRiskAlerts(userId, status, normalizedLimit)
+    const statisticsPromise = includeStatistics
+      ? getRiskStatistics(userId)
+      : Promise.resolve(undefined)
 
-    const normalizedLimit = limit && Number.isFinite(limit) ? Math.max(1, Math.min(limit, 50)) : undefined
-    const limitedAlerts = normalizedLimit ? alerts.slice(0, normalizedLimit) : alerts
+    const [alerts, statistics] = await Promise.all([alertsPromise, statisticsPromise])
 
     return NextResponse.json({
-      alerts: limitedAlerts,
+      alerts,
       statistics
     })
 

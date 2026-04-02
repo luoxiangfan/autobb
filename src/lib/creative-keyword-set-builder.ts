@@ -615,6 +615,54 @@ function compareRelaxedFilteringCandidates(a: PoolKeywordData, b: PoolKeywordDat
   return String((a as any)?.keyword || '').localeCompare(String((b as any)?.keyword || ''))
 }
 
+const CONTEXT_RECOVERY_SOURCE_BONUSES: Array<{ pattern: RegExp; bonus: number }> = [
+  { pattern: /^SEARCH_TERM_HIGH_PERFORMING$/i, bonus: 28 },
+  { pattern: /^SEARCH_TERM_/i, bonus: 24 },
+  { pattern: /^KEYWORD_PLANNER/i, bonus: 22 },
+  { pattern: /^GLOBAL_CORE_BRANDED$/i, bonus: 20 },
+  { pattern: /^GLOBAL_CATEGORY_BRANDED$/i, bonus: 20 },
+  { pattern: /^GLOBAL_CORE$/i, bonus: 18 },
+  { pattern: /^GLOBAL_KEYWORDS?$/i, bonus: 18 },
+  { pattern: /^OFFER_EXTRACTED_KEYWORDS$/i, bonus: 14 },
+  { pattern: /^HOT_PRODUCT_AGGREGATE$/i, bonus: 14 },
+  { pattern: /^PARAM_EXTRACT$/i, bonus: 10 },
+]
+
+function getContextRecoverySourceBonus(item: PoolKeywordData): number {
+  const signals = [
+    String((item as any)?.sourceSubtype || (item as any)?.sourceType || '').trim(),
+    String((item as any)?.source || '').trim(),
+    String((item as any)?.rawSource || '').trim(),
+  ]
+    .map(signal => signal.toUpperCase())
+    .filter(Boolean)
+
+  for (const signal of signals) {
+    for (const rule of CONTEXT_RECOVERY_SOURCE_BONUSES) {
+      if (rule.pattern.test(signal)) return rule.bonus
+    }
+  }
+
+  return 0
+}
+
+function compareContextRecoveryCandidates(a: PoolKeywordData, b: PoolKeywordData): number {
+  const aPriority = getKeywordSourcePriorityScoreFromInput({
+    source: String((a as any)?.source || ''),
+    sourceType: String((a as any)?.sourceSubtype || (a as any)?.sourceType || ''),
+  }) + getContextRecoverySourceBonus(a)
+  const bPriority = getKeywordSourcePriorityScoreFromInput({
+    source: String((b as any)?.source || ''),
+    sourceType: String((b as any)?.sourceSubtype || (b as any)?.sourceType || ''),
+  }) + getContextRecoverySourceBonus(b)
+  if (bPriority !== aPriority) return bPriority - aPriority
+
+  const volumeDiff = Number((b as any)?.searchVolume || 0) - Number((a as any)?.searchVolume || 0)
+  if (volumeDiff !== 0) return volumeDiff
+
+  return String((a as any)?.keyword || '').localeCompare(String((b as any)?.keyword || ''))
+}
+
 function filterLanguageCompatibleCandidates(params: {
   candidates: PoolKeywordData[]
   targetLanguage?: string | null
@@ -1593,10 +1641,20 @@ function buildKeywordSourceAudit(input: {
   }
 }
 
-function normalizeRescueKeywordPhrase(text: unknown, maxTokens: number): string | null {
+function normalizeRescueKeywordPhrase(
+  text: unknown,
+  maxTokens: number,
+  options?: {
+    preserveAndToken?: boolean
+  }
+): string | null {
   const normalized = normalizeGoogleAdsKeyword(String(text || ''))
   if (!normalized) return null
-  const tokens = compactRescueTokens(normalized.split(/\s+/).filter(Boolean), maxTokens)
+  const tokens = compactRescueTokens(
+    normalized.split(/\s+/).filter(Boolean),
+    maxTokens,
+    options
+  )
   return tokens.length > 0 ? tokens.join(' ') : null
 }
 
@@ -1640,6 +1698,50 @@ function normalizeRescueNumericSeparators(text: string): string {
     normalized = normalized.replace(/(\d)[,\.\u00A0\u202F'\s](?=\d{3}\b)/g, '$1')
   }
   return normalized
+}
+
+function normalizeAmpersandBrandPhrase(brandName: string): string | null {
+  const raw = String(brandName || '').trim()
+  if (!raw || !/[&＋+]/u.test(raw)) return null
+  return raw
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/\s*[&＋+]\s*/gu, ' & ')
+    .replace(/\s+/g, ' ')
+    .trim() || null
+}
+
+function buildRescueBrandKeywordVariants(input: {
+  brandName: string
+  normalizedBrand: string | null
+}): {
+  prefixes: string[]
+  pure: string[]
+} {
+  const canonical = input.normalizedBrand || null
+  const ampersandPhrase = normalizeAmpersandBrandPhrase(input.brandName)
+  const andPhrase = normalizeRescueKeywordPhrase(
+    String(input.brandName || '').replace(/\s*[&＋+]\s*/gu, ' and '),
+    4,
+    { preserveAndToken: true }
+  )
+  const compactCanonical = canonical ? canonical.replace(/\s+/g, '').trim() : null
+  const compactAnd = andPhrase ? andPhrase.replace(/\s+/g, '').trim() : null
+  const isConnectorBrand = Boolean(ampersandPhrase)
+
+  const prefixes = dedupeRescuePhrases(
+    isConnectorBrand
+      ? [ampersandPhrase, andPhrase, canonical]
+      : [canonical, andPhrase, ampersandPhrase]
+  ).slice(0, 3)
+
+  const pure = dedupeRescuePhrases(
+    isConnectorBrand
+      ? [ampersandPhrase, andPhrase, compactAnd, canonical, compactCanonical]
+      : [canonical, andPhrase, ampersandPhrase, compactAnd, compactCanonical]
+  ).slice(0, 6)
+
+  return { prefixes, pure }
 }
 
 function extractRescuePhraseCandidates(
@@ -1776,7 +1878,13 @@ function hasShortRescueBridgeToken(phrase: string): boolean {
   return /^[a-z]{1,2}$/i.test(lastToken)
 }
 
-function composeRescueKeyword(parts: Array<string | null | undefined>, maxTokens: number): string | null {
+function composeRescueKeyword(
+  parts: Array<string | null | undefined>,
+  maxTokens: number,
+  options?: {
+    preserveAndToken?: boolean
+  }
+): string | null {
   const normalized = normalizeGoogleAdsKeyword(
     parts
       .map((part) => String(part || '').trim())
@@ -1785,11 +1893,21 @@ function composeRescueKeyword(parts: Array<string | null | undefined>, maxTokens
   )
   if (!normalized) return null
 
-  const tokens = compactRescueTokens(normalized.split(/\s+/).filter(Boolean), maxTokens)
+  const tokens = compactRescueTokens(
+    normalized.split(/\s+/).filter(Boolean),
+    maxTokens,
+    options
+  )
   return tokens.length > 0 ? tokens.join(' ') : null
 }
 
-function compactRescueTokens(tokens: string[], maxTokens: number): string[] {
+function compactRescueTokens(
+  tokens: string[],
+  maxTokens: number,
+  options?: {
+    preserveAndToken?: boolean
+  }
+): string[] {
   const compacted: string[] = []
   const seen = new Set<string>()
   for (let index = 0; index < tokens.length; index += 1) {
@@ -1821,7 +1939,11 @@ function compactRescueTokens(tokens: string[], maxTokens: number): string[] {
       continue
     }
     if (compacted.length === 0 && RESCUE_PREFIX_NOISE_TOKENS.has(dedupeKey)) continue
-    if (RESCUE_INLINE_SKIP_TOKENS.has(dedupeKey)) continue
+    if (RESCUE_INLINE_SKIP_TOKENS.has(dedupeKey)) {
+      if (!(options?.preserveAndToken && dedupeKey === 'and')) {
+        continue
+      }
+    }
     if (compacted.length > 0 && RESCUE_BREAK_TOKENS.has(dedupeKey)) break
     if (!isNumeric && seen.has(dedupeKey)) continue
     compacted.push(token)
@@ -1843,6 +1965,14 @@ function getNonEmptyRescueCandidateRejectionReason(params: {
 
   if (tokens.some(token => /^0{3,}\d*$/.test(token))) {
     return 'numeric_fragment'
+  }
+
+  for (let index = 0; index < tokens.length - 1; index += 1) {
+    const current = tokens[index]
+    const next = tokens[index + 1]
+    if (/^\d{1,2}$/.test(current) && /^\d{1,2}$/.test(next)) {
+      return 'adjacent_short_numeric_pair'
+    }
   }
 
   const lastToken = tokens[tokens.length - 1] || ''
@@ -1961,15 +2091,25 @@ function buildNonEmptyRescueCandidates(input: BuildCreativeKeywordSetInput): Poo
     : creativeType === 'product_intent'
       ? RESCUE_CONTEXT_DETAIL_MAX_CANDIDATES.product_intent
       : RESCUE_CONTEXT_DETAIL_MAX_CANDIDATES.brand_intent
+  const rawBrandName = input.brandName || input.offer.brand || ''
   const normalizedBrand = normalizeRescueKeywordPhrase(
-    input.brandName || input.offer.brand || '',
+    rawBrandName,
     3
   )
-  const pureBrandKeyword = getPureBrandKeywords(input.brandName || input.offer.brand || '')[0]
+  const brandKeywordVariants = buildRescueBrandKeywordVariants({
+    brandName: rawBrandName,
+    normalizedBrand,
+  })
+  const pureBrandKeyword = brandKeywordVariants.pure[0]
+    || getPureBrandKeywords(rawBrandName)[0]
     || normalizedBrand
     || null
   const brandLeadingTokens = new Set(
-    dedupeRescuePhrases([normalizedBrand, pureBrandKeyword])
+    dedupeRescuePhrases([
+      ...brandKeywordVariants.prefixes,
+      ...brandKeywordVariants.pure,
+      pureBrandKeyword,
+    ])
       .map((keyword) => normalizeGoogleAdsKeyword(keyword) || '')
       .map((keyword) => keyword.split(/\s+/).filter(Boolean)[0] || '')
       .filter(Boolean)
@@ -2010,6 +2150,17 @@ function buildNonEmptyRescueCandidates(input: BuildCreativeKeywordSetInput): Poo
     ...productSegmentCandidates.filter((_, index) => !shortBridgeSegmentIndexes.has(index)),
     ...contextDetailCandidates,
   ]).slice(0, Math.max(6, contextMaxCandidates))
+  const productTailCandidates = dedupeRescuePhrases(
+    productDetailCandidates
+      .map((candidate) => {
+        const tokens = normalizeGoogleAdsKeyword(candidate).split(/\s+/).filter(Boolean)
+        if (tokens.length < 2) return null
+        const tail = tokens[tokens.length - 1] || ''
+        if (!/^[a-z]{4,}$/i.test(tail)) return null
+        if (RESCUE_PREFIX_NOISE_TOKENS.has(tail) || RESCUE_INLINE_SKIP_TOKENS.has(tail)) return null
+        return tail
+      })
+  ).slice(0, 3)
   const categoryDetailCandidates = extractRescuePhraseCandidates(
     input.offer.category || '',
     normalizedBrand || undefined,
@@ -2041,12 +2192,18 @@ function buildNonEmptyRescueCandidates(input: BuildCreativeKeywordSetInput): Poo
     detailKeyword: string | null,
     evidence: string[]
   ) => {
-    if (!normalizedBrand) return
+    if (brandKeywordVariants.prefixes.length === 0) return
     if (creativeType === 'model_intent' && !detailKeyword) return
-    pushCandidate(
-      composeRescueKeyword([normalizedBrand, detailKeyword], combinedTokenLimit),
-      evidence
-    )
+    for (const prefix of brandKeywordVariants.prefixes) {
+      pushCandidate(
+        composeRescueKeyword(
+          [prefix, detailKeyword],
+          combinedTokenLimit,
+          { preserveAndToken: true }
+        ),
+        evidence
+      )
+    }
   }
   const pushBrandedRescueCandidates = (
     detailKeywords: string[],
@@ -2060,7 +2217,7 @@ function buildNonEmptyRescueCandidates(input: BuildCreativeKeywordSetInput): Poo
     detailKeyword: string | null,
     evidence: string[]
   ) => {
-    if (normalizedBrand) {
+    if (brandKeywordVariants.prefixes.length > 0) {
       pushBrandedRescueCandidate(detailKeyword, evidence)
       return
     }
@@ -2068,18 +2225,26 @@ function buildNonEmptyRescueCandidates(input: BuildCreativeKeywordSetInput): Poo
   }
 
   if (creativeType === 'brand_intent' || creativeType === 'product_intent') {
-    pushCandidate(pureBrandKeyword, ['pure_brand_floor'])
+    for (const keyword of dedupeRescuePhrases([
+      pureBrandKeyword,
+      ...brandKeywordVariants.pure,
+    ])) {
+      pushCandidate(keyword, ['pure_brand_floor'])
+    }
   }
 
-  if (normalizedBrand) {
+  if (brandKeywordVariants.prefixes.length > 0) {
     if (creativeType === 'brand_intent' || creativeType === 'product_intent' || !creativeType) {
-      pushBrandedRescueCandidates(languageBrandSuffixCandidates, ['localized_brand_suffix'])
+      pushBrandedRescueCandidates(productTailCandidates, ['offer_product_tail'])
     }
-    pushBrandedRescueCandidates(neutralDetailCandidates, ['offer_neutral_specs'])
     pushBrandedRescueCandidates(productDetailCandidates, ['offer_product_name'])
     pushBrandedRescueCandidates(contextDetailCandidates, ['offer_context'])
     if (creativeType !== 'model_intent' || productDetailCandidates.length === 0) {
       pushBrandedRescueCandidates(categoryDetailCandidates, ['offer_category'])
+    }
+    pushBrandedRescueCandidates(neutralDetailCandidates, ['offer_neutral_specs'])
+    if (creativeType === 'brand_intent' || creativeType === 'product_intent' || !creativeType) {
+      pushBrandedRescueCandidates(languageBrandSuffixCandidates, ['localized_brand_suffix'])
     }
   }
 
@@ -2089,12 +2254,12 @@ function buildNonEmptyRescueCandidates(input: BuildCreativeKeywordSetInput): Poo
       .slice(0, 4)
     const productHasModelAnchor = productModelDetailCandidates.length > 0
     const categoryHasModelAnchor = Boolean(categoryCore && BUILDER_MODEL_ANCHOR_PATTERN.test(categoryCore))
-    if (!normalizedBrand || productHasModelAnchor) {
+    if (brandKeywordVariants.prefixes.length === 0 || productHasModelAnchor) {
       for (const candidate of productModelDetailCandidates) {
         pushRescueCandidatePreferBranded(candidate, ['offer_product_name'])
       }
     }
-    if (!normalizedBrand || categoryHasModelAnchor) {
+    if (brandKeywordVariants.prefixes.length === 0 || categoryHasModelAnchor) {
       pushRescueCandidatePreferBranded(categoryCore, ['offer_category'])
     }
     for (const neutralCandidate of neutralDetailCandidates) {
@@ -2529,6 +2694,85 @@ export async function buildCreativeKeywordSet(
   }
 
   normalizeSelectedStandaloneModelTokens()
+
+  if (
+    selected.keywords.length > 0
+    && selected.keywords.length < minimumSelectedKeywordCount
+    && contextFilteredCandidates.length > selected.keywords.length
+  ) {
+    const existingSelectedKeywordKeys = new Set(
+      ((selected.keywordsWithVolume as PoolKeywordData[]) || [])
+        .map((item) => normalizeCandidateKey((item as any)?.keyword))
+        .filter(Boolean)
+    )
+    const contextTopUpLimit = Math.max(
+      0,
+      Math.min(maxKeywords, minimumSelectedKeywordCount) - selected.keywords.length
+    )
+    const prioritizedContextTopUp = [...contextFilteredCandidates]
+      .filter((item) => {
+        const key = normalizeCandidateKey((item as any)?.keyword)
+        return Boolean(key) && !existingSelectedKeywordKeys.has(key)
+      })
+      .sort(compareContextRecoveryCandidates)
+      .slice(0, contextTopUpLimit)
+
+    if (prioritizedContextTopUp.length > 0) {
+      const mergedKeywordsWithVolume = mergeSeedCandidates({
+        primaryCandidates: (selected.keywordsWithVolume as PoolKeywordData[]) || [],
+        seedCandidates: prioritizedContextTopUp as PoolKeywordData[],
+      })
+      selected = {
+        ...selected,
+        keywords: mergedKeywordsWithVolume.map((item) => item.keyword),
+        keywordsWithVolume: mergedKeywordsWithVolume as any,
+        truncated: false,
+        sourceQuotaAudit: augmentSourceQuotaAuditWithRescue({
+          audit: selected.sourceQuotaAudit || buildNonEmptyRescueSourceQuotaAudit({
+            fallbackMode: Boolean(input.fallbackMode),
+            keywordCount: mergedKeywordsWithVolume.length,
+          }),
+          keywordsWithVolume: mergedKeywordsWithVolume,
+          brandName: input.brandName,
+        }),
+      }
+      normalizeSelectedStandaloneModelTokens()
+    }
+  }
+
+  if (selected.keywords.length === 0 && contextFilteredCandidates.length > 0) {
+    const selectionFallbackLimit = Math.min(
+      maxKeywords,
+      Math.max(
+        minimumSelectedKeywordCount,
+        Math.min(12, contextFilteredCandidates.length)
+      )
+    )
+    const prioritizedContextFallback = [...contextFilteredCandidates]
+      .sort(compareContextRecoveryCandidates)
+      .slice(0, selectionFallbackLimit)
+
+    if (prioritizedContextFallback.length > 0) {
+      selected = {
+        keywords: prioritizedContextFallback.map((item) => item.keyword),
+        keywordsWithVolume: prioritizedContextFallback as any,
+        truncated: false,
+        sourceQuotaAudit: augmentSourceQuotaAuditWithRescue({
+          audit: buildNonEmptyRescueSourceQuotaAudit({
+            fallbackMode: Boolean(input.fallbackMode),
+            keywordCount: prioritizedContextFallback.length,
+          }),
+          keywordsWithVolume: prioritizedContextFallback,
+          brandName: input.brandName,
+        }),
+      }
+      selectionStrategy = 'filtered'
+      if (selectionFallbackReason === 'none') {
+        selectionFallbackReason = 'selection_empty'
+      }
+      normalizeSelectedStandaloneModelTokens()
+    }
+  }
 
   if (selected.keywords.length < minimumSelectedKeywordCount) {
     const nonEmptyRescueCandidates = applyLanguageGate(

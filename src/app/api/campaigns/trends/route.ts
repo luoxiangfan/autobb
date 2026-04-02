@@ -3,6 +3,11 @@ import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { convertCurrency } from '@/lib/currency'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
+import {
+  buildCampaignTrendsCacheHash,
+  getCachedCampaignTrends,
+  setCachedCampaignTrends,
+} from '@/lib/campaigns-read-cache'
 
 function normalizeCurrency(value: unknown): string {
   const normalized = String(value ?? '').trim().toUpperCase()
@@ -41,6 +46,12 @@ function diffDaysInclusive(startYmd: string, endYmd: string): number {
   const endTs = Date.parse(`${endYmd}T00:00:00Z`)
   if (!Number.isFinite(startTs) || !Number.isFinite(endTs)) return 1
   return Math.max(1, Math.floor((endTs - startTs) / (24 * 60 * 60 * 1000)) + 1)
+}
+
+function parseOptionalBoolean(value: string | null): boolean {
+  if (value === null) return false
+  const normalized = String(value).trim().toLowerCase()
+  return normalized === 'true' || normalized === '1'
 }
 
 function roundTo2(value: number): number {
@@ -111,8 +122,10 @@ export async function GET(request: NextRequest) {
     }
     const requestedCurrencyRaw = searchParams.get('currency')
     const requestedCurrency = requestedCurrencyRaw ? normalizeCurrency(requestedCurrencyRaw) : null
-
-    const db = await getDatabase()
+    const refresh = parseOptionalBoolean(searchParams.get('refresh'))
+    const noCache = parseOptionalBoolean(searchParams.get('noCache'))
+    const shouldBypassReadCache = refresh || noCache
+    const shouldWriteCache = !noCache
 
     let startDateStr = startDateQuery || ''
     let endDateStr = endDateQuery || ''
@@ -127,6 +140,21 @@ export async function GET(request: NextRequest) {
     } else {
       rangeDays = diffDaysInclusive(startDateStr, endDateStr)
     }
+
+    const cacheHash = buildCampaignTrendsCacheHash({
+      startDate: startDateStr,
+      endDate: endDateStr,
+      currency: requestedCurrency,
+    })
+
+    if (!shouldBypassReadCache) {
+      const cached = await getCachedCampaignTrends<any>(userId, cacheHash)
+      if (cached) {
+        return NextResponse.json(cached)
+      }
+    }
+
+    const db = await getDatabase()
 
     const currencyRows = await db.query<any>(
       `
@@ -367,7 +395,7 @@ export async function GET(request: NextRequest) {
     const totalCpcBase = totalClicks > 0 ? totalCostBase / totalClicks : 0
     const totalRoasBase = totalCostBase > 0 ? totalCommissionBase / totalCostBase : 0
 
-    return NextResponse.json({
+    const responsePayload = {
       success: true,
       trends: formattedTrends,
       dateRange: {
@@ -391,7 +419,13 @@ export async function GET(request: NextRequest) {
         costsByCurrency,
         commissionsByCurrency,
       },
-    })
+    }
+
+    if (shouldWriteCache) {
+      await setCachedCampaignTrends(userId, cacheHash, responsePayload)
+    }
+
+    return NextResponse.json(responsePayload)
   } catch (error: any) {
     console.error('Get campaigns trends error:', error)
     return NextResponse.json(

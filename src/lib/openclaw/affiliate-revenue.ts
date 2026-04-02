@@ -924,6 +924,7 @@ export async function fetchAffiliateCommissionRevenue(params: {
       entries: attributionEntries,
       replaceExisting: shouldReplaceAttribution,
       lockHistorical: true,
+      replacePlatforms: queriedPlatforms,
     })
 
     attribution = {

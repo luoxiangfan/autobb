@@ -10,12 +10,24 @@ const dbFns = vi.hoisted(() => ({
   getDatabase: vi.fn(),
 }))
 
+const campaignCacheFns = vi.hoisted(() => ({
+  buildCampaignTrendsCacheHash: vi.fn(),
+  getCachedCampaignTrends: vi.fn(),
+  setCachedCampaignTrends: vi.fn(),
+}))
+
 vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
 
 vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
+}))
+
+vi.mock('@/lib/campaigns-read-cache', () => ({
+  buildCampaignTrendsCacheHash: campaignCacheFns.buildCampaignTrendsCacheHash,
+  getCachedCampaignTrends: campaignCacheFns.getCachedCampaignTrends,
+  setCachedCampaignTrends: campaignCacheFns.setCachedCampaignTrends,
 }))
 
 describe('GET /api/campaigns/trends', () => {
@@ -25,6 +37,9 @@ describe('GET /api/campaigns/trends', () => {
       authenticated: true,
       user: { userId: 1 },
     })
+    campaignCacheFns.buildCampaignTrendsCacheHash.mockReturnValue('campaign-trends-hash')
+    campaignCacheFns.getCachedCampaignTrends.mockResolvedValue(null)
+    campaignCacheFns.setCachedCampaignTrends.mockResolvedValue(undefined)
   })
 
   it('returns 401 when unauthorized', async () => {
@@ -34,6 +49,67 @@ describe('GET /api/campaigns/trends', () => {
     const res = await GET(req)
 
     expect(res.status).toBe(401)
+  })
+
+  it('returns cached payload without querying the database', async () => {
+    const cachedPayload = {
+      success: true,
+      trends: [{ date: '2026-02-24', commission: 5 }],
+      dateRange: { start: '2026-02-18', end: '2026-02-24', days: 7 },
+      summary: {
+        currency: 'USD',
+        currencies: ['USD'],
+        hasMixedCurrency: false,
+      },
+    }
+    campaignCacheFns.getCachedCampaignTrends.mockResolvedValue(cachedPayload)
+
+    const req = new NextRequest('http://localhost/api/campaigns/trends?daysBack=7')
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data).toEqual(cachedPayload)
+    expect(campaignCacheFns.getCachedCampaignTrends).toHaveBeenCalledWith(1, 'campaign-trends-hash')
+    expect(dbFns.getDatabase).not.toHaveBeenCalled()
+    expect(campaignCacheFns.setCachedCampaignTrends).not.toHaveBeenCalled()
+  })
+
+  it('refresh=true bypasses read cache and writes fresh trends payload', async () => {
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
+        return [{ currency: 'USD', cost: 5 }]
+      }
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(date), COALESCE(currency')) {
+        return [{ date: '2026-02-24', currency: 'USD', impressions: 50, clicks: 10, cost: 5 }]
+      }
+      if (sql.includes('FROM affiliate_commission_attributions')) {
+        return [{ date: '2026-02-24', currency: 'USD', commission: 3 }]
+      }
+      if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
+        return []
+      }
+      throw new Error(`unexpected sql: ${sql}`)
+    })
+
+    dbFns.getDatabase.mockResolvedValue({ query })
+    campaignCacheFns.getCachedCampaignTrends.mockResolvedValue({
+      success: true,
+      trends: [{ date: 'cached' }],
+    })
+
+    const req = new NextRequest('http://localhost/api/campaigns/trends?daysBack=7&refresh=true')
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(campaignCacheFns.getCachedCampaignTrends).not.toHaveBeenCalled()
+    expect(campaignCacheFns.setCachedCampaignTrends).toHaveBeenCalledWith(
+      1,
+      'campaign-trends-hash',
+      expect.objectContaining({ success: true })
+    )
   })
 
   it('returns multi-currency stacked trend fields and merged commissions', async () => {

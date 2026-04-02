@@ -56,14 +56,17 @@ describe('upsertAffiliateProducts postgres two-phase upsert', () => {
       updatedCount: 0,
     })
 
-    expect(dbFns.exec).toHaveBeenCalledTimes(3)
+    expect(dbFns.exec).toHaveBeenCalledTimes(4)
 
-    const updateSql = String(dbFns.exec.mock.calls[0]?.[0] || '')
-    const updateParams = dbFns.exec.mock.calls[0]?.[1] || []
-    const touchSql = String(dbFns.exec.mock.calls[1]?.[0] || '')
-    const touchParams = dbFns.exec.mock.calls[1]?.[1] || []
-    const insertSql = String(dbFns.exec.mock.calls[2]?.[0] || '')
-    const insertParams = dbFns.exec.mock.calls[2]?.[1] || []
+    const timeoutSql = String(dbFns.exec.mock.calls[0]?.[0] || '')
+    const updateSql = String(dbFns.exec.mock.calls[1]?.[0] || '')
+    const updateParams = dbFns.exec.mock.calls[1]?.[1] || []
+    const touchSql = String(dbFns.exec.mock.calls[2]?.[0] || '')
+    const touchParams = dbFns.exec.mock.calls[2]?.[1] || []
+    const insertSql = String(dbFns.exec.mock.calls[3]?.[0] || '')
+    const insertParams = dbFns.exec.mock.calls[3]?.[1] || []
+
+    expect(timeoutSql).toContain('SET LOCAL statement_timeout')
 
     expect(updateSql).toContain('WITH incoming AS')
     expect(updateSql).toContain('FROM (VALUES')
@@ -102,5 +105,79 @@ describe('upsertAffiliateProducts postgres two-phase upsert', () => {
     expect(updateParams[0]).toBe(1)
     expect(typeof updateParams[0]).toBe('number')
     expect(updateParams[11]).toBe(19.99)
+  })
+
+  it('splits postgres upsert batch when statement timeout occurs', async () => {
+    const { upsertAffiliateProducts } = await import('@/lib/affiliate-products')
+
+    let timeoutInjected = false
+    dbFns.exec.mockImplementation(async (sql: string) => {
+      const text = String(sql || '')
+      if (text.includes('WITH incoming AS') && !timeoutInjected) {
+        timeoutInjected = true
+        const error: any = new Error('canceling statement due to statement timeout')
+        error.code = '57014'
+        throw error
+      }
+      return { changes: 1 }
+    })
+
+    const result = await upsertAffiliateProducts(1, 'partnerboost', [
+      {
+        platform: 'partnerboost',
+        mid: 'PB-MID-100',
+        asin: 'B000TIME01',
+        brand: 'BrandA',
+        productName: 'ProdA',
+        productUrl: 'https://example.com/a',
+        promoLink: 'https://example.com/a?promo=1',
+        shortPromoLink: null,
+        allowedCountries: ['US'],
+        priceAmount: 10,
+        priceCurrency: 'USD',
+        commissionRate: 8,
+        commissionAmount: 0.8,
+        commissionRateMode: 'percent',
+        reviewCount: 1,
+        isDeepLink: false,
+        isConfirmedInvalid: false,
+      },
+      {
+        platform: 'partnerboost',
+        mid: 'PB-MID-101',
+        asin: 'B000TIME02',
+        brand: 'BrandB',
+        productName: 'ProdB',
+        productUrl: 'https://example.com/b',
+        promoLink: 'https://example.com/b?promo=1',
+        shortPromoLink: null,
+        allowedCountries: ['US'],
+        priceAmount: 12,
+        priceCurrency: 'USD',
+        commissionRate: 9,
+        commissionAmount: 1.08,
+        commissionRateMode: 'percent',
+        reviewCount: 2,
+        isDeepLink: false,
+        isConfirmedInvalid: false,
+      },
+    ], { progressEvery: 1 })
+
+    expect(result).toMatchObject({
+      totalFetched: 2,
+      createdCount: 2,
+      updatedCount: 0,
+    })
+    expect(timeoutInjected).toBe(true)
+
+    const timeoutCalls = dbFns.exec.mock.calls
+      .map((call) => String(call[0] || ''))
+      .filter((sql) => sql.includes('SET LOCAL statement_timeout'))
+    expect(timeoutCalls.length).toBeGreaterThanOrEqual(2)
+
+    const upsertCalls = dbFns.exec.mock.calls
+      .map((call) => String(call[0] || ''))
+      .filter((sql) => sql.includes('WITH incoming AS'))
+    expect(upsertCalls.length).toBeGreaterThanOrEqual(3)
   })
 })

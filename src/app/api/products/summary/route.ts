@@ -7,6 +7,14 @@ import {
   type ProductListOptions,
 } from '@/lib/affiliate-products'
 import { getDatabase } from '@/lib/db'
+import {
+  buildProductSummaryCacheHash,
+  buildProductSummaryRouteCacheHash,
+  setCachedProductSummary,
+  getCachedProductSummaryRoute,
+  setCachedProductSummaryRoute,
+  type ProductSummaryRouteCachePayload,
+} from '@/lib/products-cache'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 
 function parseNumericFilter(searchParams: URLSearchParams, key: string): number | null {
@@ -39,10 +47,33 @@ function parseCountryFilter(searchParams: URLSearchParams, key: string): string 
   return raw
 }
 
+function parseBooleanParam(value: string | null): boolean {
+  if (value === null) return false
+  const normalized = String(value).trim().toLowerCase()
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on'
+}
+
 export const dynamic = 'force-dynamic'
 const PRODUCT_SCORE_VALIDITY_DAYS = 30
 const POSTGRES_RECOMMENDATION_COUNT_STATEMENT_TIMEOUT_MS = 15000
 const POSTGRES_RECOMMENDATION_COUNT_MAX_PARALLEL = 8
+
+type ProductSummaryResponsePayload = {
+  success: true
+  total: number
+  landingPageStats: unknown
+  productsWithLinkCount: number
+  activeProductsCount: number
+  invalidProductsCount: number
+  syncMissingProductsCount: number
+  unknownProductsCount: number
+  blacklistedCount: number
+  platformStats: unknown
+  recommendationScoreSummary: {
+    effectiveCount: number
+    lastCalculatedAt: string | null
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -80,6 +111,59 @@ export async function GET(request: NextRequest) {
     const recommendationScoreMax = parseNumericFilter(searchParams, 'recommendationScoreMax')
     const createdAtFrom = parseDateFilter(searchParams, 'createdAtFrom')
     const createdAtTo = parseDateFilter(searchParams, 'createdAtTo')
+    const refresh = parseBooleanParam(searchParams.get('refresh'))
+    const noCache = parseBooleanParam(searchParams.get('noCache'))
+    const shouldBypassReadCache = refresh || noCache
+    const shouldWriteCache = !noCache
+
+    const summaryRouteCachePayload: ProductSummaryRouteCachePayload = {
+      search,
+      mid,
+      platform,
+      targetCountry,
+      landingPageType,
+      status,
+      reviewCountMin,
+      reviewCountMax,
+      priceAmountMin,
+      priceAmountMax,
+      commissionRateMin,
+      commissionRateMax,
+      commissionAmountMin,
+      commissionAmountMax,
+      recommendationScoreMin,
+      recommendationScoreMax,
+      createdAtFrom,
+      createdAtTo,
+    }
+    const summaryRouteCacheHash = buildProductSummaryRouteCacheHash(summaryRouteCachePayload)
+    const summaryCacheHash = buildProductSummaryCacheHash({
+      search: search.toLowerCase(),
+      mid: mid.toLowerCase(),
+      platform,
+      targetCountry,
+      landingPageType,
+      status,
+      reviewCountMin,
+      reviewCountMax,
+      priceAmountMin,
+      priceAmountMax,
+      commissionRateMin,
+      commissionRateMax,
+      commissionAmountMin,
+      commissionAmountMax,
+      recommendationScoreMin,
+      recommendationScoreMax,
+      createdAtFrom,
+      createdAtTo,
+    })
+
+    if (!shouldBypassReadCache) {
+      const cached = await getCachedProductSummaryRoute<ProductSummaryResponsePayload>(userId, summaryRouteCacheHash)
+      if (cached) {
+        return NextResponse.json(cached)
+      }
+    }
 
     const baseListOptions: ProductListOptions = {
       page: 1,
@@ -182,7 +266,7 @@ export async function GET(request: NextRequest) {
       ),
     ])
 
-    return NextResponse.json({
+    const responsePayload: ProductSummaryResponsePayload = {
       success: true,
       total: result.total,
       productsWithLinkCount: result.productsWithLinkCount,
@@ -197,7 +281,26 @@ export async function GET(request: NextRequest) {
         effectiveCount: recommendationEffectiveCount,
         lastCalculatedAt: recommendationScoreTimestampRow?.last_score_calculated_at || null,
       },
-    })
+    }
+
+    if (shouldWriteCache) {
+      await Promise.all([
+        setCachedProductSummaryRoute(userId, summaryRouteCacheHash, responsePayload),
+        setCachedProductSummary(userId, summaryCacheHash, {
+          total: result.total,
+          productsWithLinkCount: result.productsWithLinkCount,
+          activeProductsCount: result.activeProductsCount,
+          invalidProductsCount: result.invalidProductsCount,
+          syncMissingProductsCount: result.syncMissingProductsCount,
+          unknownProductsCount: result.unknownProductsCount,
+          blacklistedCount: result.blacklistedCount,
+          landingPageStats: result.landingPageStats,
+          platformStats: result.platformStats,
+        }),
+      ])
+    }
+
+    return NextResponse.json(responsePayload)
   } catch (error: any) {
     console.error('[GET /api/products/summary] failed:', error)
     return NextResponse.json(

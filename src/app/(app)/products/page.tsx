@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -34,28 +35,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { SortableTableHead } from '@/components/SortableTableHead'
 import { ResponsivePagination } from '@/components/ui/responsive-pagination'
 import { NoDataState, NoResultsState } from '@/components/ui/empty-state'
-import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
+import type { DateRange } from '@/components/ui/date-range-picker'
 import { showError, showSuccess } from '@/lib/toast-utils'
 import {
   ArrowLeft,
@@ -80,6 +63,24 @@ import {
   Star,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+
+const ProductsSyncInsightsSection = dynamic(() => import('./ProductsSyncInsightsSection'), {
+  ssr: false,
+})
+
+const ProductsDateRangePicker = dynamic(
+  () => import('@/components/ui/date-range-picker').then((mod) => mod.DateRangePicker),
+  {
+    ssr: false,
+    loading: () => <div className="h-9 w-[190px] animate-pulse rounded-md bg-muted/50" />,
+  }
+)
+
+const loadProductsDialogsLayer = () => import('./ProductsDialogsLayer')
+const ProductsDialogsLayer = dynamic(loadProductsDialogsLayer, {
+  ssr: false,
+  loading: () => null,
+})
 
 type ProductPlatform = 'yeahpromos' | 'partnerboost'
 type PlatformSyncStrategy = 'light' | 'full'
@@ -784,6 +785,10 @@ export default function ProductsPage() {
   const productsAbortControllerRef = useRef<AbortController | null>(null)
   const summaryAbortControllerRef = useRef<AbortController | null>(null)
   const summaryRequestKeyRef = useRef<string | null>(null)
+  const loadedSummaryKeyRef = useRef<string | null>(null)
+  const auxiliaryBootstrapScheduledRef = useRef(false)
+  const auxiliaryBootstrapTimeoutRef = useRef<number | null>(null)
+  const auxiliaryBootstrapIdleRef = useRef<number | null>(null)
   const foregroundProductsRequestSeqRef = useRef<number | null>(null)
   const syncRunsInFlightRef = useRef(false)
   const periodicRefreshInFlightRef = useRef(false)
@@ -822,6 +827,7 @@ export default function ProductsPage() {
     strategy: PlatformSyncStrategy
     resumeFailedRun?: boolean
   } | null>(null)
+  const [syncInsightsMounted, setSyncInsightsMounted] = useState(false)
   const [latestRuns, setLatestRuns] = useState<SyncRunItem[]>([])
   const [ypSyncMonitor, setYpSyncMonitor] = useState<YeahPromosSyncMonitorItem>(() => createEmptyYeahPromosSyncMonitor())
   const [syncingProductId, setSyncingProductId] = useState<number | null>(null)
@@ -1004,7 +1010,6 @@ export default function ProductsPage() {
     suppressErrorToast?: boolean
   } = {}) => {
     const { forceNoCache = false, silent = false, suppressErrorToast = false } = options
-    const shouldRefreshSummary = !silent
     // 后台静默刷新不应打断前台显式加载（筛选/排序/分页），否则会导致 loading 无法收敛。
     if (silent && foregroundProductsRequestSeqRef.current !== null) {
       return
@@ -1013,34 +1018,23 @@ export default function ProductsPage() {
     const requestSeq = productsRequestSeqRef.current + 1
     productsRequestSeqRef.current = requestSeq
     productsAbortControllerRef.current?.abort()
-    if (shouldRefreshSummary) {
-      summaryAbortControllerRef.current?.abort()
-      summaryRequestKeyRef.current = null
-    }
     const controller = new AbortController()
     productsAbortControllerRef.current = controller
-    if (shouldRefreshSummary) {
-      summaryAbortControllerRef.current = null
-    }
 
     if (!silent) {
       foregroundProductsRequestSeqRef.current = requestSeq
       setLoading(true)
     }
     try {
-      const params = new URLSearchParams()
-      params.set('page', String(page))
-      params.set('pageSize', String(pageSize))
-      params.set('sortBy', sortBy)
-      params.set('sortOrder', sortOrder)
-      if (searchQuery) params.set('search', searchQuery)
-      if (midQuery) params.set('mid', midQuery)
-      if (platformFilter !== 'all') params.set('platform', platformFilter)
-      if (statusFilter !== 'all') params.set('status', statusFilter)
-      if (targetCountryFilter !== 'all') params.set('targetCountry', targetCountryFilter)
-      if (landingPageTypeFilter !== 'all') params.set('landingPageType', landingPageTypeFilter)
-      if (createdAtFrom) params.set('createdAtFrom', createdAtFrom)
-      if (createdAtTo) params.set('createdAtTo', createdAtTo)
+      const filterParams = new URLSearchParams()
+      if (searchQuery) filterParams.set('search', searchQuery)
+      if (midQuery) filterParams.set('mid', midQuery)
+      if (platformFilter !== 'all') filterParams.set('platform', platformFilter)
+      if (statusFilter !== 'all') filterParams.set('status', statusFilter)
+      if (targetCountryFilter !== 'all') filterParams.set('targetCountry', targetCountryFilter)
+      if (landingPageTypeFilter !== 'all') filterParams.set('landingPageType', landingPageTypeFilter)
+      if (createdAtFrom) filterParams.set('createdAtFrom', createdAtFrom)
+      if (createdAtTo) filterParams.set('createdAtTo', createdAtTo)
 
       const numericRangeParams: Array<[string, number | null]> = [
         ['reviewCountMin', numericRangeFilters.reviewCountMin],
@@ -1056,12 +1050,30 @@ export default function ProductsPage() {
       ]
       for (const [key, value] of numericRangeParams) {
         if (value === null) continue
-        params.set(key, String(value))
+        filterParams.set(key, String(value))
       }
 
-      if (forceNoCache) params.set('noCache', 'true')
+      const listParams = new URLSearchParams(filterParams)
+      listParams.set('page', String(page))
+      listParams.set('pageSize', String(pageSize))
+      listParams.set('sortBy', sortBy)
+      listParams.set('sortOrder', sortOrder)
+      if (forceNoCache) listParams.set('noCache', 'true')
 
-      const response = await fetch(`/api/products?${params.toString()}`, {
+      const summaryRequestKey = filterParams.toString()
+      const summaryParams = new URLSearchParams(filterParams)
+      if (forceNoCache) summaryParams.set('noCache', 'true')
+      const shouldRefreshSummary = !silent && (
+        forceNoCache || loadedSummaryKeyRef.current !== summaryRequestKey
+      )
+
+      if (shouldRefreshSummary) {
+        summaryAbortControllerRef.current?.abort()
+        summaryAbortControllerRef.current = null
+        summaryRequestKeyRef.current = null
+      }
+
+      const response = await fetch(`/api/products?${listParams.toString()}`, {
         credentials: 'include',
         cache: 'no-store',
         signal: controller.signal,
@@ -1107,15 +1119,15 @@ export default function ProductsPage() {
         })
         return next
       })
+      scheduleAuxiliaryBootstrap()
 
       if (shouldRefreshSummary) {
-        const summaryRequestKey = params.toString()
         const summaryController = new AbortController()
         summaryAbortControllerRef.current = summaryController
         summaryRequestKeyRef.current = summaryRequestKey
         void (async () => {
           try {
-            const summaryResponse = await fetch(`/api/products/summary?${summaryRequestKey}`, {
+            const summaryResponse = await fetch(`/api/products/summary?${summaryParams.toString()}`, {
               credentials: 'include',
               cache: 'no-store',
               signal: summaryController.signal,
@@ -1130,6 +1142,7 @@ export default function ProductsPage() {
             if (!summaryResponse.ok || !summaryData.success) return
             if (summaryRequestKeyRef.current !== summaryRequestKey) return
 
+            loadedSummaryKeyRef.current = summaryRequestKey
             setRecommendationScoreSummary(normalizeRecommendationScoreSummary(summaryData.recommendationScoreSummary))
             setLandingPageStats(normalizeLandingPageStats(summaryData.landingPageStats))
             setPlatformStats(normalizePlatformStatsMap(summaryData.platformStats))
@@ -1236,6 +1249,34 @@ export default function ProductsPage() {
     }
   }
 
+  const scheduleAuxiliaryBootstrap = () => {
+    if (auxiliaryBootstrapScheduledRef.current || typeof window === 'undefined') {
+      return
+    }
+
+    auxiliaryBootstrapScheduledRef.current = true
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+
+    const runBootstrap = () => {
+      auxiliaryBootstrapTimeoutRef.current = null
+      auxiliaryBootstrapIdleRef.current = null
+      void loadScoreCalculationPauseStatus()
+      void loadYeahPromosSessionStatus()
+    }
+
+    if (typeof idleWindow.requestIdleCallback === 'function') {
+      auxiliaryBootstrapIdleRef.current = idleWindow.requestIdleCallback(() => {
+        runBootstrap()
+      }, { timeout: 1200 })
+      return
+    }
+
+    auxiliaryBootstrapTimeoutRef.current = window.setTimeout(runBootstrap, 400)
+  }
+
   const handlePrepareYeahPromosCapture = async () => {
     if (ypPreparingCapture) return
     setYpPreparingCapture(true)
@@ -1317,8 +1358,28 @@ export default function ProductsPage() {
   }
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSyncInsightsMounted(true)
+    }, 250)
+
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
+    if (!syncInsightsMounted) return
+    void fetchSyncRuns()
+  }, [syncInsightsMounted])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadProductsDialogsLayer()
+    }, 1500)
+
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
     fetchProducts()
-    fetchSyncRuns()
   }, [page, pageSize, searchQuery, midQuery, platformFilter, statusFilter, targetCountryFilter, landingPageTypeFilter, numericRangeFilters, createdAtFrom, createdAtTo, sortBy, sortOrder])
 
   useEffect(() => {
@@ -1341,11 +1402,20 @@ export default function ProductsPage() {
   }, [hasActiveSyncRuns, hasFilters])
 
   useEffect(() => {
-    loadYeahPromosSessionStatus()
-  }, [])
+    return () => {
+      if (auxiliaryBootstrapTimeoutRef.current !== null) {
+        window.clearTimeout(auxiliaryBootstrapTimeoutRef.current)
+      }
 
-  useEffect(() => {
-    loadScoreCalculationPauseStatus()
+      if (typeof window !== 'undefined' && auxiliaryBootstrapIdleRef.current !== null) {
+        const idleWindow = window as Window & {
+          cancelIdleCallback?: (handle: number) => void
+        }
+        if (typeof idleWindow.cancelIdleCallback === 'function') {
+          idleWindow.cancelIdleCallback(auxiliaryBootstrapIdleRef.current)
+        }
+      }
+    }
   }, [])
 
   // 🔥 调试：监控Dialog状态变化
@@ -2159,6 +2229,15 @@ export default function ProductsPage() {
     </div>
   )
 
+  const hasSyncInsightsData = latestRuns.length > 0 || ypSyncMonitor.runId !== null || ypSyncMonitor.targetItems !== null
+  const shouldRenderProductsDialogsLayer = ypCaptureDialogOpen
+    || createOfferDialogOpen
+    || singleOfflineDialogOpen
+    || batchOfflineDialogOpen
+    || batchDialogOpen
+    || calculateScoresConfirmOpen
+    || clearAllConfirmOpen
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
@@ -2317,19 +2396,18 @@ export default function ProductsPage() {
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 space-y-6">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">联盟平台配置</CardTitle>
-            <CardDescription>联盟配置已迁移到设置页，商品管理页不再提供编辑入口。</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-              联盟平台凭证与佣金同步策略已迁移到 <span className="font-mono">/settings?category=affiliate_sync</span>。
-            </div>
-            <div className="mt-3 flex justify-end">
-              <Button variant="outline" onClick={() => router.push('/settings?category=affiliate_sync')}>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="text-base">联盟平台配置</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push('/settings?category=affiliate_sync')}
+              >
                 前往设置页配置
               </Button>
             </div>
-          </CardContent>
+            <CardDescription>联盟配置已迁移到设置页，商品管理页不再提供编辑入口。</CardDescription>
+          </CardHeader>
         </Card>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
@@ -2379,122 +2457,20 @@ export default function ProductsPage() {
           </Card>
         </div>
 
-        {latestRuns.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">最近同步任务</CardTitle>
-              <CardDescription>按同步模式分组展示历史任务（各最多 4 条）</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {syncHistoryRows.map((row) => (
-                  <div key={row.key} className="rounded-md border px-3 py-2 text-xs">
-                    <div className="mb-2 font-medium">{row.label}</div>
-                    {row.runs.length === 0 ? (
-                      <div className="text-muted-foreground">{row.emptyText}</div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {row.runs.map((run) => {
-                          const StatusIcon = getSyncRunStatusIcon(run.status)
-                          return (
-                            <div key={run.id} className="rounded-md border px-2 py-1">
-                              <div className="mb-1 flex items-center gap-2">
-                                <span className="font-medium">{PLATFORM_SHORT_LABEL[run.platform]} #{run.id}</span>
-                                <Badge variant={getSyncRunBadgeVariant(run.status)}>
-                                  <StatusIcon className="mr-1 h-3 w-3" />
-                                  {run.status}
-                                </Badge>
-                              </div>
-                              <div className="text-muted-foreground">{getSyncRunProgressText(run)}</div>
-                              <div className="text-muted-foreground">{getSyncRunMetricsText(run)}</div>
-                              <div className="text-muted-foreground">开始时间 {getSyncRunStartedAtText(run)}</div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {(ypSyncMonitor.runId !== null || ypSyncMonitor.targetItems !== null) && (
-          <Card>
-            <details>
-              <summary className="cursor-pointer px-6 py-4">
-                <span className="text-base font-semibold">YP 同步 ETA 监控</span>
-                <p className="mt-1 text-sm text-muted-foreground">基于每小时抓取快照估算完成时间，按跨天连续抓取模型计算。</p>
-              </summary>
-            <CardContent className="space-y-3 pt-0">
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-                <div className="rounded-md border p-2">
-                  <div className="text-[11px] text-muted-foreground">运行任务</div>
-                  <div className="mt-1 text-sm font-medium">
-                    {ypSyncMonitor.runId ? `#${ypSyncMonitor.runId}` : '-'}
-                    {ypSyncMonitor.runStatus ? ` · ${ypSyncMonitor.runStatus}` : ''}
-                  </div>
-                </div>
-                <div className="rounded-md border p-2">
-                  <div className="text-[11px] text-muted-foreground">目标商品量</div>
-                  <div className="mt-1 text-sm font-medium">{formatIntegerCount(ypSyncMonitor.targetItems)}</div>
-                </div>
-                <div className="rounded-md border p-2">
-                  <div className="text-[11px] text-muted-foreground">已抓取</div>
-                  <div className="mt-1 text-sm font-medium">{formatIntegerCount(ypSyncMonitor.fetchedItems)}</div>
-                </div>
-                <div className="rounded-md border p-2">
-                  <div className="text-[11px] text-muted-foreground">近小时均速</div>
-                  <div className="mt-1 text-sm font-medium">
-                    {ypSyncMonitor.avgItemsPerHour !== null
-                      ? `${formatIntegerCount(Math.round(ypSyncMonitor.avgItemsPerHour))} /小时`
-                      : '-'}
-                  </div>
-                </div>
-                <div className="rounded-md border p-2">
-                  <div className="text-[11px] text-muted-foreground">预计完成时间</div>
-                  <div className="mt-1 text-sm font-medium">{formatSyncRunDateTime(ypSyncMonitor.etaAt)}</div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span>剩余 {formatIntegerCount(ypSyncMonitor.remainingItems)}</span>
-                <span>数据更新时间 {formatSyncRunDateTime(ypSyncMonitor.statsUpdatedAt)}</span>
-              </div>
-
-              <div className="rounded-md border">
-                <div className="border-b px-3 py-2 text-xs font-medium">每小时抓取统计（最近 12 小时）</div>
-                {ypSyncMonitor.hourlyStats.length === 0 ? (
-                  <div className="px-3 py-3 text-xs text-muted-foreground">暂无小时级抓取快照，任务运行后会自动生成。</div>
-                ) : (
-                  <div className="max-h-64 overflow-auto px-3 py-2">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="text-left text-muted-foreground">
-                          <th className="py-1 pr-2 font-medium">小时</th>
-                          <th className="py-1 pr-2 font-medium">本小时新增</th>
-                          <th className="py-1 pr-2 font-medium">累计抓取</th>
-                          <th className="py-1 font-medium">采样点</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[...ypSyncMonitor.hourlyStats].slice(-12).reverse().map((stat) => (
-                          <tr key={stat.hourBucket} className="border-t">
-                            <td className="py-1 pr-2">{formatHourBucket(stat.hourBucket)}</td>
-                            <td className="py-1 pr-2">{formatIntegerCount(stat.fetchedCount)}</td>
-                            <td className="py-1 pr-2">{formatIntegerCount(stat.cumulativeFetched)}</td>
-                            <td className="py-1">{formatIntegerCount(stat.sampleCount)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-            </details>
-          </Card>
+        {syncInsightsMounted && hasSyncInsightsData && (
+          <ProductsSyncInsightsSection
+            syncHistoryRows={syncHistoryRows}
+            ypSyncMonitor={ypSyncMonitor}
+            platformShortLabels={PLATFORM_SHORT_LABEL}
+            getSyncRunBadgeVariant={getSyncRunBadgeVariant}
+            getSyncRunStatusIcon={getSyncRunStatusIcon}
+            getSyncRunProgressText={getSyncRunProgressText}
+            getSyncRunMetricsText={getSyncRunMetricsText}
+            getSyncRunStartedAtText={getSyncRunStartedAtText}
+            formatIntegerCount={formatIntegerCount}
+            formatSyncRunDateTime={formatSyncRunDateTime}
+            formatHourBucket={formatHourBucket}
+          />
         )}
 
         <Card>
@@ -2684,7 +2660,7 @@ export default function ProductsPage() {
                     </Button>
                   )
                 })}
-                <DateRangePicker
+                <ProductsDateRangePicker
                   value={createdDateRangeValue}
                   onChange={handleCreatedDateRangeChange}
                   placeholder="自定义"
@@ -2831,306 +2807,72 @@ export default function ProductsPage() {
         </Card>
       </main>
 
-      <Dialog
-        open={ypCaptureDialogOpen}
-        onOpenChange={(open) => {
-          setYpCaptureDialogOpen(open)
-          if (!open) {
-            setYpSessionStatusWhenDialogOpened(false) // 重置标志
-          }
-        }}
-      >
-        <DialogContent className="max-h-[85vh] w-[96vw] max-w-5xl overflow-hidden p-0">
-          <div className="flex max-h-[85vh] flex-col p-6">
-            <DialogHeader className="shrink-0">
-              <DialogTitle>YeahPromos 登录态采集</DialogTitle>
-              <DialogDescription>
-                使用浏览器扩展一键回传登录态
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="mt-3 flex-1 space-y-3 overflow-y-auto pr-1 text-sm">
-              <div className="rounded-md border bg-slate-50 p-3">
-                <div className="font-medium">使用步骤</div>
-                <div>1. 点击"下载扩展包"，解压后得到扩展目录。</div>
-                <div>2. Chrome 打开 chrome://extensions 或 Edge 打开 edge://extensions。</div>
-                <div>3. 打开"开发者模式"后，点"加载已解压的扩展程序"，选择解压后的目录。</div>
-                <div>4. 保持当前 AutoAds /products 页面已登录，再打开 yeahpromos.com 完成登录。</div>
-                <div>5. 切回 AutoAds /products 标签页，点击浏览器右上角扩展图标，执行"回传 YeahPromos 登录态"。</div>
-                <div>6. 回到本页点"刷新登录态"，状态变为"已就绪"后即可同步 YP。</div>
-              </div>
-
-              <div className="rounded-md border p-3">
-                <div className="text-xs text-muted-foreground">当前登录态</div>
-                <div className="mt-1">
-                  {ypSessionStatus.hasSession
-                    ? `已就绪（会话 ${ypSessionStatus.maskedPhpSessionId || '-'}，到期 ${ypSessionStatus.expiresAt ? formatMonthDayTime(ypSessionStatus.expiresAt) : '-'}）`
-                    : (ypSessionStatus.isExpired ? '已过期，请重新采集' : '未采集')}
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter className="mt-4 shrink-0 gap-2 sm:flex-row sm:flex-nowrap sm:justify-end">
-              <Button
-                variant="outline"
-                className="shrink-0 whitespace-nowrap border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
-                onClick={() => {
-                  window.open(YP_CAPTURE_EXTENSION_DOWNLOAD_PATH, '_blank', 'noopener,noreferrer')
-                }}
-              >
-                下载扩展包
-              </Button>
-              <Button
-                variant="outline"
-                className="shrink-0 whitespace-nowrap border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
-                onClick={() => void loadYeahPromosSessionStatus()}
-                disabled={ypSessionStatusLoading}
-              >
-                {ypSessionStatusLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                刷新登录态
-              </Button>
-            </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={createOfferDialogOpen}
-        onOpenChange={(open) => {
-          setCreateOfferDialogOpen(open)
-          if (!open && creatingOfferId === null) {
+      {shouldRenderProductsDialogsLayer && (
+        <ProductsDialogsLayer
+          ypCaptureDialogOpen={ypCaptureDialogOpen}
+          onYpCaptureOpenChange={(open) => {
+            setYpCaptureDialogOpen(open)
+            if (!open) {
+              setYpSessionStatusWhenDialogOpened(false)
+            }
+          }}
+          ypSessionStatus={ypSessionStatus}
+          ypSessionStatusLoading={ypSessionStatusLoading}
+          ypCaptureExtensionDownloadPath={YP_CAPTURE_EXTENSION_DOWNLOAD_PATH}
+          onRefreshYpSessionStatus={() => void loadYeahPromosSessionStatus()}
+          formatMonthDayTime={formatMonthDayTime}
+          createOfferDialogOpen={createOfferDialogOpen}
+          onCreateOfferOpenChange={(open) => {
+            setCreateOfferDialogOpen(open)
+            if (!open && creatingOfferId === null) {
+              setPendingCreateOfferProduct(null)
+            }
+          }}
+          pendingCreateOfferProduct={pendingCreateOfferProduct}
+          creatingOfferId={creatingOfferId}
+          onCreateOfferCancel={() => {
+            setCreateOfferDialogOpen(false)
             setPendingCreateOfferProduct(null)
-          }
-        }}
-      >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>确认创建 Offer</DialogTitle>
-            <DialogDescription>
-              确认为商品 <strong className="text-foreground">{pendingCreateOfferProduct?.mid || '-'}</strong> 创建 Offer？
-              系统将使用当前商品推广链接生成 Offer，创建后可在 Offer 页面继续编辑。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setCreateOfferDialogOpen(false)
-                setPendingCreateOfferProduct(null)
-              }}
-              disabled={creatingOfferId !== null}
-            >
-              取消
-            </Button>
-            <Button
-              onClick={submitCreateOffer}
-              disabled={!pendingCreateOfferProduct || creatingOfferId !== null}
-            >
-              {creatingOfferId !== null ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-              确认创建
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={singleOfflineDialogOpen}
-        onOpenChange={(open) => {
-          setSingleOfflineDialogOpen(open)
-          if (!open && offliningProductId === null) {
+          }}
+          onSubmitCreateOffer={() => void submitCreateOffer()}
+          singleOfflineDialogOpen={singleOfflineDialogOpen}
+          onSingleOfflineOpenChange={(open) => {
+            setSingleOfflineDialogOpen(open)
+            if (!open && offliningProductId === null) {
+              setOfflineProduct(null)
+            }
+          }}
+          offlineProduct={offlineProduct}
+          offliningProductId={offliningProductId}
+          onSingleOfflineCancel={() => {
+            setSingleOfflineDialogOpen(false)
             setOfflineProduct(null)
-          }
-        }}
-      >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>确认手动下线商品</DialogTitle>
-            <DialogDescription>
-              确认手动下线商品 <strong className="text-foreground">{offlineProduct?.mid || '-'}</strong>？
-              此操作不可撤销，系统会删除该商品所有关联Offer，并自动附带删除对应广告系列。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSingleOfflineDialogOpen(false)
-                setOfflineProduct(null)
-              }}
-              disabled={offliningProductId !== null}
-            >
-              取消
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={submitSingleOffline}
-              disabled={!offlineProduct || offliningProductId !== null}
-            >
-              {offliningProductId !== null ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PowerOff className="mr-2 h-4 w-4" />}
-              确认手动下线
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={batchOfflineDialogOpen} onOpenChange={setBatchOfflineDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>确认批量手动下线商品</DialogTitle>
-            <DialogDescription>
-              已选择 <strong className="text-foreground">{selectedProducts.length}</strong> 个商品。
-              确认后将手动下线这些商品并删除所有关联Offer，同时附带删除对应广告系列。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setBatchOfflineDialogOpen(false)}
-              disabled={batchOfflining}
-            >
-              取消
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={submitBatchOffline}
-              disabled={!canBatchOffline || batchOfflining}
-            >
-              {batchOfflining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PowerOff className="mr-2 h-4 w-4" />}
-              确认批量手动下线
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
-        <DialogContent className="w-[92vw] !max-w-[960px]">
-          <DialogHeader>
-            <DialogTitle>批量创建Offer</DialogTitle>
-            <DialogDescription>
-              已选择 {batchRows.length} 个商品。链接类型固定为“单品”，推广国家默认 US（可改）。
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="max-h-[60vh] overflow-auto rounded-md border">
-            <Table className="min-w-[720px] [&_thead_th]:bg-white">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[84px] whitespace-nowrap">链接类型</TableHead>
-                  <TableHead className="min-w-[260px] whitespace-nowrap">推广链接</TableHead>
-                  <TableHead className="w-[116px] whitespace-nowrap">推广国家</TableHead>
-                  <TableHead className="w-[108px] whitespace-nowrap">商品价格</TableHead>
-                  <TableHead className="w-[108px] whitespace-nowrap">佣金比例</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {batchRows.map((row) => {
-                  const hasCountries = row.availableCountries.length > 0
-                  const fallbackCountries = hasCountries ? row.availableCountries : ['US']
-                  const value = fallbackCountries.includes(row.targetCountry)
-                    ? row.targetCountry
-                    : fallbackCountries[0]
-
-                  return (
-                    <TableRow key={row.productId}>
-                      <TableCell>{row.linkType}</TableCell>
-                      <TableCell className="max-w-[240px] truncate" title={row.promoLink || '-'}>
-                        {row.promoLink || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={value}
-                          onValueChange={(country) => updateBatchRowCountry(row.productId, country)}
-                        >
-                          <SelectTrigger className="w-[104px]">
-                            <SelectValue placeholder="国家" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {fallbackCountries.map((country) => (
-                              <SelectItem key={country} value={country}>
-                                {country}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>{row.productPrice}</TableCell>
-                      <TableCell>{row.commissionRate}</TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBatchDialogOpen(false)} disabled={batchCreating}>
-              取消
-            </Button>
-            <Button onClick={submitBatchCreate} disabled={batchCreating || batchRows.length === 0}>
-              {batchCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-              确认批量创建
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={calculateScoresConfirmOpen} onOpenChange={setCalculateScoresConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认计算推荐指数？</AlertDialogTitle>
-            <AlertDialogDescription>
-              {scoreCalculationPaused && (
-                <span className="mb-2 block text-amber-600">
-                  全局计算已暂停：仅支持对已选中商品手动计算，不支持全量提交。
-                </span>
-              )}
-              {selectedProducts.length > 0 ? (
-                <>
-                  已选择 <strong className="text-foreground">{selectedProducts.length}</strong> 个商品，将仅计算选中商品。
-                  若不选择商品则会执行全量计算，全量计算耗时较长且会消耗 AI token。
-                </>
-              ) : (
-                <>
-                  当前未选择商品，确认后将执行全量推荐指数计算。全量计算耗时较长且会消耗 AI token，请确认继续。
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={calculatingScores}>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                void handleCalculateScores()
-              }}
-              disabled={calculatingScores || (scoreCalculationPaused && selectedProducts.length === 0)}
-            >
-              {calculatingScores ? '提交中...' : '确认计算'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={clearAllConfirmOpen} onOpenChange={setClearAllConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认清空全部商品？</AlertDialogTitle>
-            <AlertDialogDescription>
-              此操作会清空你在“商品管理”中已同步的全部商家/商品数据（共 <strong className="text-foreground">{total}</strong> 条）。
-              不会删除已经创建的 Offer。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={clearingAll}>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={submitClearAll}
-              disabled={clearingAll}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {clearingAll ? '清空中...' : '确认清空全部'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          }}
+          onSubmitSingleOffline={() => void submitSingleOffline()}
+          batchOfflineDialogOpen={batchOfflineDialogOpen}
+          onBatchOfflineOpenChange={setBatchOfflineDialogOpen}
+          selectedProductsCount={selectedProducts.length}
+          batchOfflining={batchOfflining}
+          canBatchOffline={canBatchOffline}
+          onSubmitBatchOffline={() => void submitBatchOffline()}
+          batchDialogOpen={batchDialogOpen}
+          onBatchDialogOpenChange={setBatchDialogOpen}
+          batchRows={batchRows}
+          batchCreating={batchCreating}
+          onUpdateBatchRowCountry={updateBatchRowCountry}
+          onSubmitBatchCreate={() => void submitBatchCreate()}
+          calculateScoresConfirmOpen={calculateScoresConfirmOpen}
+          onCalculateScoresConfirmOpenChange={setCalculateScoresConfirmOpen}
+          scoreCalculationPaused={scoreCalculationPaused}
+          calculatingScores={calculatingScores}
+          onHandleCalculateScores={() => void handleCalculateScores()}
+          clearAllConfirmOpen={clearAllConfirmOpen}
+          onClearAllConfirmOpenChange={setClearAllConfirmOpen}
+          clearingAll={clearingAll}
+          total={total}
+          onSubmitClearAll={() => void submitClearAll()}
+        />
+      )}
 
     </div>
   )

@@ -12,16 +12,62 @@
  */
 
 import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter, useParams } from 'next/navigation'
 import { Stepper, type Step } from '@/components/ui/stepper'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react'
 import { showError } from '@/lib/toast-utils'
-import Step1CreativeGeneration from './steps/Step1CreativeGeneration'
-import Step3CampaignConfig from './steps/Step3CampaignConfig'
-import Step2AccountLinking from './steps/Step2AccountLinking'
-import Step4PublishSummary from './steps/Step4PublishSummary'
+
+const loadStep1CreativeGeneration = () => import('./steps/Step1CreativeGeneration')
+const loadStep2AccountLinking = () => import('./steps/Step2AccountLinking')
+const loadStep3CampaignConfig = () => import('./steps/Step3CampaignConfig')
+const loadStep4PublishSummary = () => import('./steps/Step4PublishSummary')
+
+function StepContentSkeleton({ title, description }: { title: string; description: string }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-gray-500">{description}</p>
+        <div className="animate-pulse space-y-3">
+          <div className="h-10 rounded bg-gray-100" />
+          <div className="h-10 rounded bg-gray-100" />
+          <div className="h-28 rounded bg-gray-100" />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+const Step1CreativeGeneration = dynamic(loadStep1CreativeGeneration, {
+  ssr: false,
+  loading: () => <StepContentSkeleton title="生成创意" description="正在加载创意生成步骤..." />,
+})
+
+const Step2AccountLinking = dynamic(loadStep2AccountLinking, {
+  ssr: false,
+  loading: () => <StepContentSkeleton title="关联账号" description="正在加载账号绑定步骤..." />,
+})
+
+const Step3CampaignConfig = dynamic(loadStep3CampaignConfig, {
+  ssr: false,
+  loading: () => <StepContentSkeleton title="配置广告" description="正在加载广告配置步骤..." />,
+})
+
+const Step4PublishSummary = dynamic(loadStep4PublishSummary, {
+  ssr: false,
+  loading: () => <StepContentSkeleton title="发布上线" description="正在加载发布确认步骤..." />,
+})
+
+const STEP_PRELOADERS: Partial<Record<number, () => Promise<unknown>>> = {
+  2: loadStep2AccountLinking,
+  3: loadStep3CampaignConfig,
+  4: loadStep4PublishSummary,
+}
 
 // 定义步骤 - 🔧 修复(2025-12-13): 调整顺序，先绑定账号再配置预算
 const STEPS: Step[] = [
@@ -115,6 +161,12 @@ export default function LaunchAdPage() {
   useEffect(() => {
     fetchOffer()
   }, [offerId])
+
+  useEffect(() => {
+    const preloadNextStep = STEP_PRELOADERS[currentStep + 1]
+    if (!preloadNextStep) return
+    void preloadNextStep()
+  }, [currentStep])
 
   const fetchOffer = async () => {
     try {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter, useParams } from 'next/navigation'
 import { showSuccess, showError, showInfo } from '@/lib/toast-utils'
 import { Card, CardContent } from '@/components/ui/card'
@@ -35,9 +36,14 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { TrendingUp, DollarSign, Target, Activity, RefreshCcw } from 'lucide-react'
-import { TrendChart, TrendChartData, TrendChartMetric } from '@/components/charts/TrendChart'
 import { formatCurrency } from '@/lib/currency'
 import { getCommissionPerConversion, parseCommissionPayoutValue } from '@/lib/offer-monetization'
+import type { TrendChartData } from '@/components/charts/TrendChart'
+
+const OfferTrendsSection = dynamic(() => import('./OfferTrendsSection'), {
+  ssr: false,
+  loading: () => <OfferTrendsSectionSkeleton />,
+})
 
 interface Offer {
   id: number
@@ -114,6 +120,19 @@ interface ROIData {
   avgOrderValue: number
 }
 
+function OfferTrendsSectionSkeleton() {
+  return (
+    <Card className="mb-6">
+      <CardContent className="pt-6">
+        <div className="animate-pulse space-y-3">
+          <div className="h-5 w-32 rounded bg-gray-100" />
+          <div className="h-[280px] rounded bg-gray-100" />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 /**
  * 根据国家代码获取Amazon域名
  * 🔧 2025-12-11添加：用于前端生成正确的竞品链接
@@ -180,20 +199,32 @@ export default function OfferDetailPage() {
   const [avgOrderValue, setAvgOrderValue] = useState<string>('')
 
   // Trend data states
+  const [trendsSectionMounted, setTrendsSectionMounted] = useState(false)
   const [trendsData, setTrendsData] = useState<TrendChartData[]>([])
   const [trendsLoading, setTrendsLoading] = useState(false)
   const [trendsError, setTrendsError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchOffer()
-    fetchPerformance()
-    fetchTrends()
   }, [offerId])
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setTrendsSectionMounted(true)
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!offerId) return
     fetchPerformance()
-    fetchTrends()
-  }, [timeRange, avgOrderValue, reportCurrency])
+    if (trendsSectionMounted) {
+      fetchTrends()
+    }
+  }, [offerId, timeRange, avgOrderValue, reportCurrency, trendsSectionMounted])
 
   const fetchOffer = async () => {
     try {
@@ -792,44 +823,19 @@ export default function OfferDetailPage() {
                     </Card>
                   )}
 
-                  {/* Trends Chart */}
-                  <div className="mb-6">
-                    <TrendChart
-                      data={trendsData}
-                      metrics={[
-                        {
-                          key: 'impressions',
-                          label: '展示次数',
-                          color: '#3b82f6',  // blue-500
-                        },
-                        {
-                          key: 'clicks',
-                          label: '点击次数',
-                          color: '#10b981',  // emerald-500
-                        },
-                        {
-                          key: 'commission',
-                          label: '佣金',
-                          color: '#8b5cf6',  // violet-500
-                        },
-                        {
-                          key: 'costUsd',
-                          label: `花费 (${selectedCurrency})`,
-                          color: '#f59e0b',  // amber-500
-                          formatter: (value) => formatMoney(value),
-                          yAxisId: 'right',  // 花费使用右侧Y轴（与展示/点击的量级不同）
-                        },
-                      ]}
-                      title="投放趋势"
-                      description={`过去${timeRange}天的数据变化`}
-                      loading={trendsLoading}
-                      error={trendsError}
+                  {trendsSectionMounted ? (
+                    <OfferTrendsSection
+                      timeRange={timeRange}
+                      trendsData={trendsData}
+                      trendsLoading={trendsLoading}
+                      trendsError={trendsError}
+                      selectedCurrency={selectedCurrency}
                       onRetry={fetchTrends}
-                      height={280}
-                      hideTimeRangeSelector={true}
-                      dualYAxis={true}  // 启用双Y轴
+                      formatMoney={formatMoney}
                     />
-                  </div>
+                  ) : (
+                    <OfferTrendsSectionSkeleton />
+                  )}
 
                   {/* Campaign对比表格 */}
                   {campaigns.length > 0 && (

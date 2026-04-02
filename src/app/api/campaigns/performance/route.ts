@@ -4,6 +4,11 @@ import { getDatabase } from '@/lib/db'
 import { convertCurrency } from '@/lib/currency'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
 import { isPerformanceReleaseEnabled } from '@/lib/feature-flags'
+import {
+  buildCampaignPerformanceCacheHash,
+  getCachedCampaignPerformance,
+  setCachedCampaignPerformance,
+} from '@/lib/campaigns-read-cache'
 
 function formatAsYmd(value: unknown): string | null {
   if (value === null || value === undefined) return null
@@ -128,6 +133,70 @@ function sumAmountsInCurrency(
   for (const [currency, amount] of amountsByCurrency.entries()) {
     total += convertAmountToCurrency(amount, currency, targetCurrency)
   }
+  return total
+}
+
+function summarizeAggByCurrency(params: {
+  byCampaign: Map<number, Map<string, Agg>>
+  reportingCurrency: string | null
+}): Agg {
+  let impressions = 0
+  let clicks = 0
+  let cost = 0
+
+  for (const byCurrency of params.byCampaign.values()) {
+    for (const [currency, agg] of byCurrency.entries()) {
+      const normalizedCurrency = normalizeCurrency(currency)
+      if (params.reportingCurrency && normalizedCurrency !== params.reportingCurrency) {
+        continue
+      }
+
+      const aggImpressions = Number(agg.impressions) || 0
+      const aggClicks = Number(agg.clicks) || 0
+      const aggCost = Number(agg.cost) || 0
+
+      impressions += aggImpressions
+      clicks += aggClicks
+      cost += params.reportingCurrency
+        ? aggCost
+        : convertToBase(aggCost, normalizedCurrency)
+    }
+  }
+
+  return { impressions, clicks, cost }
+}
+
+function summarizeCommissionByCurrency(
+  byCampaign: Map<number, Map<string, number>>
+): Array<{ currency: string; amount: number }> {
+  const totals = new Map<string, number>()
+
+  for (const byCurrency of byCampaign.values()) {
+    for (const [currency, amount] of byCurrency.entries()) {
+      const normalizedCurrency = normalizeCurrency(currency)
+      totals.set(normalizedCurrency, (totals.get(normalizedCurrency) || 0) + (Number(amount) || 0))
+    }
+  }
+
+  return Array.from(totals.entries())
+    .map(([currency, amount]) => ({
+      currency,
+      amount: roundTo2(amount),
+    }))
+    .filter((row) => row.amount > 0)
+}
+
+function sumCommissionByCampaign(
+  byCampaign: Map<number, Map<string, number>>
+): number {
+  let total = 0
+
+  for (const byCurrency of byCampaign.values()) {
+    for (const amount of byCurrency.values()) {
+      total += Number(amount) || 0
+    }
+  }
+
   return total
 }
 
@@ -257,6 +326,10 @@ export async function GET(request: NextRequest) {
     const statusFilterRaw = (searchParams.get('status') || '').trim().toUpperCase()
     const statusFilter = ['ENABLED', 'PAUSED', 'REMOVED', 'ALL'].includes(statusFilterRaw) ? statusFilterRaw : ''
     const showDeletedParam = parseOptionalBoolean(searchParams.get('showDeleted'))
+    const refresh = parseOptionalBoolean(searchParams.get('refresh')) === true
+    const noCache = parseOptionalBoolean(searchParams.get('noCache')) === true
+    const shouldBypassReadCache = refresh || noCache
+    const shouldWriteCache = !noCache
     const sortByParam = (searchParams.get('sortBy') || '').trim()
     const sortOrderParam = (searchParams.get('sortOrder') || '').trim().toLowerCase()
     const sortBy = CAMPAIGN_SORT_FIELDS.has(sortByParam) ? sortByParam : ''
@@ -267,10 +340,6 @@ export async function GET(request: NextRequest) {
         .map((id) => Number.parseInt(id.trim(), 10))
         .filter((id) => Number.isFinite(id) && id > 0)
       : []
-    const campaignsParallelEnabled = isPerformanceReleaseEnabled('campaignsParallel')
-
-    const db = await getDatabase()
-
     let startDateStr = startDateQuery || ''
     let endDateStr = endDateQuery || ''
     let rangeDays = daysBack
@@ -289,6 +358,29 @@ export async function GET(request: NextRequest) {
 
     const prevEndDateStr = shiftYmd(startDateStr, -1)
     const prevStartDateStr = shiftYmd(prevEndDateStr, -(rangeDays - 1))
+    const cacheHash = buildCampaignPerformanceCacheHash({
+      startDate: startDateStr,
+      endDate: endDateStr,
+      currency: requestedCurrency,
+      limit,
+      offset,
+      search: searchQuery,
+      status: statusFilter || 'ALL',
+      showDeleted: showDeletedParam,
+      sortBy,
+      sortOrder,
+      ids: idsFilter,
+    })
+
+    if (!shouldBypassReadCache) {
+      const cached = await getCachedCampaignPerformance<any>(userId, cacheHash)
+      if (cached) {
+        return NextResponse.json(cached)
+      }
+    }
+
+    const campaignsParallelEnabled = isPerformanceReleaseEnabled('campaignsParallel')
+    const db = await getDatabase()
 
     const currencyRows = await db.query<any>(
       `
@@ -854,38 +946,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const queryCommissionTotalsByCurrency = async (params: {
-      start: string
-      end: string
-      currency?: string
-    }): Promise<Array<{ currency: string; amount: number }>> => {
-      const hasCurrencyFilter = Boolean(params.currency)
-      const rows = await db.query<{ currency: string; total_commission: number }>(
-        `
-          SELECT
-            COALESCE(currency, 'USD') as currency,
-            COALESCE(SUM(commission_amount), 0) AS total_commission
-          FROM affiliate_commission_attributions
-          WHERE user_id = ?
-            AND report_date >= ?
-            AND report_date <= ?
-            ${hasCurrencyFilter ? 'AND COALESCE(currency, \'USD\') = ?' : ''}
-          GROUP BY COALESCE(currency, \'USD\')
-          ORDER BY COALESCE(currency, \'USD\') ASC
-        `,
-        hasCurrencyFilter
-          ? [userId, params.start, params.end, String(params.currency)]
-          : [userId, params.start, params.end]
-      )
-
-      return rows
-        .map((row) => ({
-          currency: normalizeCurrency(row.currency),
-          amount: roundTo2(Number(row.total_commission) || 0),
-        }))
-        .filter((row) => row.amount > 0)
-    }
-
     const queryUnattributedCommissionTotalsByCurrency = async (params: {
       start: string
       end: string
@@ -937,6 +997,12 @@ export async function GET(request: NextRequest) {
 
 
     const isFilteredByCurrency = Boolean(reportingCurrency)
+    const currentTotalsDerived = summarizeAggByCurrency({
+      byCampaign: currentAggByCampaign,
+      reportingCurrency,
+    })
+    const currentAttributedCommissionByCurrencyDerived = summarizeCommissionByCurrency(currentCommissionByCampaign)
+    const currentAttributedCommissionTotalDerived = sumCommissionByCampaign(currentCommissionByCampaign)
 
     let currentTotals: Agg
     let prevTotals: Agg
@@ -948,17 +1014,6 @@ export async function GET(request: NextRequest) {
     let currentUnattributedCommissionByCurrency: Array<{ currency: string; amount: number }>
 
     if (campaignsParallelEnabled) {
-      const currentTotalsPromise = isFilteredByCurrency
-        ? queryTotals({
-            start: startDateStr,
-            end: endDateStr,
-            currency: String(reportingCurrency),
-          })
-        : queryTotalsAll({
-            start: startDateStr,
-            end: endDateStr,
-          })
-
       const prevTotalsPromise = isFilteredByCurrency
         ? queryTotals({
             start: prevStartDateStr,
@@ -971,23 +1026,14 @@ export async function GET(request: NextRequest) {
           })
 
       ;[
-        currentTotals,
         prevTotals,
-        currentAttributedCommissionTotal,
         prevAttributedCommissionTotal,
         currentUnattributedCommissionTotal,
         prevUnattributedCommissionTotal,
-        currentAttributedCommissionByCurrency,
         currentUnattributedCommissionByCurrency,
       ] = await Promise.all([
-        currentTotalsPromise,
         prevTotalsPromise,
         queryCommissionTotals({
-          start: startDateStr,
-          end: endDateStr,
-          currency: reportingCurrency || undefined,
-        }),
-        queryCommissionTotals({
           start: prevStartDateStr,
           end: prevEndDateStr,
           currency: reportingCurrency || undefined,
@@ -1002,13 +1048,6 @@ export async function GET(request: NextRequest) {
           end: prevEndDateStr,
           currency: reportingCurrency || undefined,
         }),
-        !isFilteredByCurrency
-          ? queryCommissionTotalsByCurrency({
-              start: startDateStr,
-              end: endDateStr,
-              currency: reportingCurrency || undefined,
-            })
-          : Promise.resolve([]),
         !isFilteredByCurrency
           ? queryUnattributedCommissionTotalsByCurrency({
               start: startDateStr,
@@ -1017,17 +1056,14 @@ export async function GET(request: NextRequest) {
             })
           : Promise.resolve([]),
       ])
+
+      currentTotals = currentTotalsDerived
+      currentAttributedCommissionTotal = currentAttributedCommissionTotalDerived
+      currentAttributedCommissionByCurrency = isFilteredByCurrency
+        ? []
+        : currentAttributedCommissionByCurrencyDerived
     } else {
-      currentTotals = isFilteredByCurrency
-        ? await queryTotals({
-            start: startDateStr,
-            end: endDateStr,
-            currency: String(reportingCurrency),
-          })
-        : await queryTotalsAll({
-            start: startDateStr,
-            end: endDateStr,
-          })
+      currentTotals = currentTotalsDerived
 
       prevTotals = isFilteredByCurrency
         ? await queryTotals({
@@ -1040,11 +1076,7 @@ export async function GET(request: NextRequest) {
             end: prevEndDateStr,
           })
 
-      currentAttributedCommissionTotal = await queryCommissionTotals({
-        start: startDateStr,
-        end: endDateStr,
-        currency: reportingCurrency || undefined,
-      })
+      currentAttributedCommissionTotal = currentAttributedCommissionTotalDerived
       prevAttributedCommissionTotal = await queryCommissionTotals({
         start: prevStartDateStr,
         end: prevEndDateStr,
@@ -1060,13 +1092,9 @@ export async function GET(request: NextRequest) {
         end: prevEndDateStr,
         currency: reportingCurrency || undefined,
       })
-      currentAttributedCommissionByCurrency = !isFilteredByCurrency
-        ? await queryCommissionTotalsByCurrency({
-            start: startDateStr,
-            end: endDateStr,
-            currency: reportingCurrency || undefined,
-          })
-        : []
+      currentAttributedCommissionByCurrency = isFilteredByCurrency
+        ? []
+        : currentAttributedCommissionByCurrencyDerived
       currentUnattributedCommissionByCurrency = !isFilteredByCurrency
         ? await queryUnattributedCommissionTotalsByCurrency({
             start: startDateStr,
@@ -1134,7 +1162,7 @@ export async function GET(request: NextRequest) {
       total: formattedCampaigns.length,
     }
 
-    return NextResponse.json({
+    const responsePayload = {
       success: true,
       campaigns: listCampaigns,
       total: listTotal,
@@ -1172,7 +1200,13 @@ export async function GET(request: NextRequest) {
           previous: { start: prevStartDateStr, end: prevEndDateStr }
         }
       }
-    })
+    }
+
+    if (shouldWriteCache) {
+      await setCachedCampaignPerformance(userId, cacheHash, responsePayload)
+    }
+
+    return NextResponse.json(responsePayload)
 
   } catch (error: any) {
     console.error('Get campaigns performance error:', error)

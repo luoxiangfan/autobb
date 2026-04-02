@@ -142,10 +142,10 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
     ]))
   })
 
-  it('uses ASIN product fallback in lightweightSummary mode without URL landing breakdown scans', async () => {
+  it('uses hybrid lightweight classification: PartnerBoost uses URL rules while other platforms keep ASIN fallback', async () => {
     dbFns.query.mockResolvedValueOnce([
-      { platform: 'yeahpromos', total_count: 63074, asin_product_count: 61000 },
-      { platform: 'partnerboost', total_count: 182650, asin_product_count: 120000 },
+      { platform: 'yeahpromos', total_count: 63074, lightweight_product_count: 61000, lightweight_store_count: 0 },
+      { platform: 'partnerboost', total_count: 182650, lightweight_product_count: 140000, lightweight_store_count: 5000 },
     ])
 
     const { listAffiliateProducts } = await import('@/lib/affiliate-products')
@@ -160,19 +160,55 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
 
     expect(result.total).toBe(245724)
     expect(result.landingPageStats).toEqual({
-      productCount: 181000,
-      storeCount: 0,
-      unknownCount: 64724,
+      productCount: 201000,
+      storeCount: 5000,
+      unknownCount: 39724,
     })
     expect(result.platformStats.yeahpromos.productCount).toBe(61000)
-    expect(result.platformStats.partnerboost.productCount).toBe(120000)
-    expect(result.platformStats.partnerboost.storeCount).toBe(0)
+    expect(result.platformStats.partnerboost.productCount).toBe(140000)
+    expect(result.platformStats.partnerboost.storeCount).toBe(5000)
 
     expect(dbFns.query).toHaveBeenCalledTimes(1)
     const [sql] = dbFns.query.mock.calls[0]
     expect(String(sql)).toContain('asin')
-    expect(String(sql)).not.toContain('%amazon.%/dp/%')
-    expect(String(sql)).not.toContain('%/products/%')
+    expect(String(sql)).toContain("p.platform = 'partnerboost'")
+    expect(String(sql)).toContain('%/products/%')
     expect(cacheFns.setCachedProductSummary).not.toHaveBeenCalled()
+  })
+
+  it('applies lightweight partnerboost URL classification on visible rows when status is filtered', async () => {
+    dbFns.query
+      .mockResolvedValueOnce([
+        { platform: 'yeahpromos', total_count: 100, lightweight_product_count: 90, lightweight_store_count: 0 },
+        { platform: 'partnerboost', total_count: 200, lightweight_product_count: 120, lightweight_store_count: 30 },
+      ])
+      .mockResolvedValueOnce([
+        { platform: 'yeahpromos', visible_count: 40, lightweight_product_count: 35, lightweight_store_count: 0 },
+        { platform: 'partnerboost', visible_count: 80, lightweight_product_count: 45, lightweight_store_count: 10 },
+      ])
+
+    const { listAffiliateProducts } = await import('@/lib/affiliate-products')
+    const result = await listAffiliateProducts(1, {
+      page: 1,
+      pageSize: 20,
+      status: 'active',
+      fastSummary: true,
+      lightweightSummary: true,
+      skipItems: true,
+    })
+
+    expect(result.total).toBe(120)
+    expect(result.activeProductsCount).toBe(120)
+    expect(result.landingPageStats).toEqual({
+      productCount: 80,
+      storeCount: 10,
+      unknownCount: 30,
+    })
+    expect(result.platformStats.yeahpromos.total).toBe(100)
+    expect(result.platformStats.yeahpromos.visibleCount).toBe(40)
+    expect(result.platformStats.partnerboost.total).toBe(200)
+    expect(result.platformStats.partnerboost.visibleCount).toBe(80)
+    expect(result.platformStats.partnerboost.productCount).toBe(45)
+    expect(result.platformStats.partnerboost.storeCount).toBe(10)
   })
 })

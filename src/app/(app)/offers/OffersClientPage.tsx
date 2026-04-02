@@ -250,7 +250,7 @@ export default function OffersClientPage({
     }
 
     const params = new URLSearchParams()
-    if (options?.noCache !== false) {
+    if (options?.noCache) {
       params.set('noCache', 'true')
     }
 
@@ -281,7 +281,7 @@ export default function OffersClientPage({
     serverSortOrder,
   ])
 
-  const fetchOffers = useCallback(async (options?: { forceCompatFullList?: boolean }) => {
+  const fetchOffers = useCallback(async (options?: { forceCompatFullList?: boolean; noCache?: boolean }) => {
     const requestSeq = offersFetchSeqRef.current + 1
     offersFetchSeqRef.current = requestSeq
     offersFetchAbortRef.current?.abort()
@@ -290,7 +290,7 @@ export default function OffersClientPage({
 
     try {
       const requestUrl = buildOffersListUrl({
-        noCache: true,
+        noCache: options?.noCache,
         forceCompatFullList: options?.forceCompatFullList,
       })
       const response = await fetch(requestUrl, {
@@ -772,7 +772,7 @@ export default function OffersClientPage({
       }
 
       applyLocalOfferDeletion([offerToDelete.id])
-      void fetchOffers()
+      void fetchOffers({ noCache: true })
 
       // 关闭所有对话框
       setIsDeleteDialogOpen(false)
@@ -854,7 +854,7 @@ export default function OffersClientPage({
 
       if (successIds.length > 0) {
         applyLocalOfferDeletion(successIds)
-        void fetchOffers()
+        void fetchOffers({ noCache: true })
       }
 
       if (errors.length > 0) {
@@ -985,7 +985,7 @@ export default function OffersClientPage({
 
       // 3秒后刷新列表
       setTimeout(() => {
-        fetchOffers()
+        fetchOffers({ noCache: true })
       }, 3000)
     } catch (err: any) {
       showError('批量重建失败', err?.message || '网络错误')
@@ -1039,7 +1039,7 @@ export default function OffersClientPage({
       }
 
       applyLocalOfferUnlink(offerToUnlink.offer.id, offerToUnlink.accountId)
-      void fetchOffers()
+      void fetchOffers({ noCache: true })
 
       // 关闭对话框
       setIsUnlinkDialogOpen(false)
@@ -1070,7 +1070,7 @@ export default function OffersClientPage({
       }
 
       applyLocalOfferBlacklist(offerToBlacklist.id, !offerToBlacklist.isBlacklisted)
-      void fetchOffers()
+      void fetchOffers({ noCache: true })
 
       // 关闭对话框
       setIsBlacklistDialogOpen(false)

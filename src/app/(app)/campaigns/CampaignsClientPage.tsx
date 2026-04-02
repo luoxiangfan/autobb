@@ -32,7 +32,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ResponsivePagination } from '@/components/ui/responsive-pagination'
 import {
@@ -42,22 +41,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Search, Trash2, ExternalLink, AlertCircle, CheckCircle2, PlayCircle, PauseCircle, XCircle, TrendingUp, Coins, Wallet, ArrowUpDown, ArrowUp, ArrowDown, Package, Loader2, MoreHorizontal, Maximize2, CalendarDays } from 'lucide-react'
+import { Search, Trash2, ExternalLink, AlertCircle, CheckCircle2, PlayCircle, PauseCircle, XCircle, TrendingUp, Coins, Wallet, ArrowUpDown, ArrowUp, ArrowDown, Package, Loader2, MoreHorizontal } from 'lucide-react'
 import type { TrendChartData, TrendChartMetric } from '@/components/charts/TrendChart'
-import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
+import type { DateRange } from '@/components/ui/date-range-picker'
 import {
   getCampaignStatusLabel,
 } from '@/lib/i18n-constants'
 import { convertCurrency, formatCurrency } from '@/lib/currency'
 import { formatCurrency as formatCurrencyDashboard, formatMultiCurrency } from '@/lib/utils'
 
-const TrendChart = dynamic(
-  () => import('@/components/charts/TrendChart').then((mod) => mod.TrendChart),
-  {
-    ssr: false,
-    loading: () => <div className="h-[260px] w-full animate-pulse rounded-md bg-muted/50" />,
-  }
-)
+const CampaignsTrendsSection = dynamic(() => import('./CampaignsTrendsSection'), {
+  ssr: false,
+  loading: () => <CampaignsTrendsSectionSkeleton />,
+})
 const AdjustCampaignCpcDialog = dynamic(() => import('@/components/AdjustCampaignCpcDialog'), { ssr: false })
 const AdjustCampaignBudgetDialog = dynamic(() => import('@/components/AdjustCampaignBudgetDialog'), { ssr: false })
 const ClickFarmTaskModal = dynamic(() => import('@/components/ClickFarmTaskModal'), { ssr: false })
@@ -249,6 +245,58 @@ type SelectedCampaignSnapshot = {
   status: string
 }
 
+function CampaignsTrendsSectionSkeleton() {
+  return (
+    <div className="mb-6">
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div className="h-8 w-32 rounded bg-gray-100" />
+        <div className="h-9 w-72 rounded bg-gray-100" />
+      </div>
+      <div className="mb-3 h-4 w-64 rounded bg-gray-100" />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+        <Card className="lg:col-span-2">
+          <CardContent className="pt-6">
+            <div className="animate-pulse space-y-3">
+              <div className="h-5 w-24 rounded bg-gray-100" />
+              <div className="h-[220px] rounded bg-gray-100" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="lg:col-span-2">
+          <CardContent className="pt-6">
+            <div className="animate-pulse space-y-3">
+              <div className="h-5 w-24 rounded bg-gray-100" />
+              <div className="h-[220px] rounded bg-gray-100" />
+            </div>
+          </CardContent>
+        </Card>
+        <div className="flex flex-col gap-4">
+          <Card>
+            <CardContent className="pt-4 pb-4">
+              <div className="animate-pulse space-y-2">
+                <div className="h-4 w-20 rounded bg-gray-100" />
+                <div className="h-3 w-full rounded bg-gray-100" />
+                <div className="h-3 w-5/6 rounded bg-gray-100" />
+                <div className="h-3 w-4/6 rounded bg-gray-100" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4 pb-4">
+              <div className="animate-pulse space-y-2">
+                <div className="h-4 w-20 rounded bg-gray-100" />
+                <div className="h-3 w-full rounded bg-gray-100" />
+                <div className="h-3 w-5/6 rounded bg-gray-100" />
+                <div className="h-3 w-4/6 rounded bg-gray-100" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const MAX_SELECTED_CAMPAIGNS = 500
 const BATCH_OPERATION_CHUNK_SIZE = 100
 
@@ -313,6 +361,7 @@ export default function CampaignsClientPage({
   const [trendsCommissionsByCurrency, setTrendsCommissionsByCurrency] = useState<Array<{ currency: string; amount: number }>>([])
   const [expandedTrendChart, setExpandedTrendChart] = useState<'traffic' | 'cost' | null>(null)
   const expandedTrendChartHeight = 380
+  const [trendsSectionMounted, setTrendsSectionMounted] = useState(false)
 
   // Batch offline states
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<Set<number>>(new Set())
@@ -737,8 +786,19 @@ export default function CampaignsClientPage({
   }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey])
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setTrendsSectionMounted(true)
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!trendsSectionMounted) return
     fetchTrends()
-  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate])
+  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, trendsSectionMounted])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -746,10 +806,11 @@ export default function CampaignsClientPage({
       if (periodicRefreshInFlightRef.current) return
 
       periodicRefreshInFlightRef.current = true
-      Promise.all([
-        fetchCampaigns({ silent: true }),
-        fetchTrends(),
-      ]).finally(() => {
+      const tasks: Array<Promise<void>> = [fetchCampaigns({ silent: true })]
+      if (trendsSectionMounted) {
+        tasks.push(fetchTrends())
+      }
+      Promise.all(tasks).finally(() => {
         periodicRefreshInFlightRef.current = false
       })
     }, 60_000)
@@ -757,7 +818,7 @@ export default function CampaignsClientPage({
     return () => {
       window.clearInterval(timer)
     }
-  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey])
+  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey, trendsSectionMounted])
 
   useEffect(() => {
     upsertSelectedCampaignSnapshots(campaigns)
@@ -1097,6 +1158,9 @@ export default function CampaignsClientPage({
         if (err?.name === 'AbortError') {
           return
         }
+        setTrendsTotalsConverted(null)
+        setTrendsCostsByCurrency([])
+        setTrendsCommissionsByCurrency([])
         setTrendsError(err.message || '加载趋势数据失败')
       } finally {
         if (requestSeq === trendsFetchSeqRef.current) {
@@ -2413,182 +2477,49 @@ export default function CampaignsClientPage({
           </div>
         )}
 
-        {/* Trends Charts - 分组展示 */}
-        <div className="mb-6">
-          {/* 统一的时间范围选择器 */}
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">性能趋势</h3>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">时间范围:</span>
-              <div className="flex gap-1">
-                {(['7', '14', '30'] as const).map((days) => (
-                  <Button
-                    key={days}
-                    size="sm"
-                    variant={timeRange === days ? 'default' : 'ghost'}
-                    className={`h-8 px-3 text-sm ${timeRange === days ? '' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                    onClick={() => selectPresetTimeRange(days)}
-                    aria-label={`${days}天`}
-                  >
-                    <span className="sm:hidden">{days}</span>
-                    <span className="hidden sm:inline">{days}天</span>
-                  </Button>
-                ))}
-                <DateRangePicker
-                  value={dateRange}
-                  onChange={handleDateRangeChange}
-                  placeholder={customRangeLabel}
-                  variant={timeRange === 'custom' ? 'default' : 'ghost'}
-                  size="sm"
-                  maxDate={new Date()}
-                  showPresets={false}
-                  showClearButton={true}
-                  compact={true}
-                  className="max-w-[190px]"
-                />
-              </div>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 mb-3">
-            {trendsOverviewDescription}
-          </p>
-
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
-            {/* 流量趋势 - 2/5 (柱状图，双Y轴：展示在左轴，点击/佣金在右轴) */}
-            <div className="lg:col-span-2">
-              <TrendChart
-                data={trendsData}
-                metrics={trafficTrendMetrics}
-                title="流量趋势"
-                description={trafficTrendDescription}
-                loading={trendsLoading}
-                error={trendsError}
-                onRetry={() => void fetchTrends()}
-                height={220}
-                hideTimeRangeSelector={true}
-                chartType="bar"
-                dualYAxis={true}
-                headerActions={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setExpandedTrendChart('traffic')}
-                    title="放大趋势图"
-                    aria-label="放大流量趋势图"
-                  >
-                    <Maximize2 className="h-4 w-4" />
-                  </Button>
-                }
-              />
-            </div>
-
-            {/* 成本趋势 - 2/5 (柱状+折线：花费/佣金在左轴，CPC/ROAS在右轴) */}
-            <div className="lg:col-span-2">
-              <TrendChart
-                data={trendsData}
-                metrics={costTrendMetrics}
-                title="成本趋势"
-                description={costTrendDescription}
-                loading={trendsLoading}
-                error={trendsError}
-                onRetry={() => void fetchTrends()}
-                height={220}
-                hideTimeRangeSelector={true}
-                chartType="mixed"
-                dualYAxis={true}
-                headerActions={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setExpandedTrendChart('cost')}
-                    title="放大趋势图"
-                    aria-label="放大成本趋势图"
-                  >
-                    <Maximize2 className="h-4 w-4" />
-                  </Button>
-                }
-              />
-            </div>
-
-            {/* 效率指标卡片 + 状态分布卡片 - 1/5 */}
-            <div className="lg:col-span-1 flex flex-col gap-4">
-              {/* 效率指标卡片 */}
-              <Card>
-                <CardContent className="pt-4 pb-4">
-                  <h4 className="text-sm font-medium text-gray-600 mb-3">效率指标</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">平均CTR</span>
-                      <span className="text-sm font-semibold text-gray-900">
-                        {trendsData.length > 0
-                          ? `${(trendsData.reduce((sum, d) => sum + ((d.ctr as number) || 0), 0) / trendsData.length).toFixed(2)}%`
-                          : '0.00%'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">平均CPC({trendsCurrencyValue})</span>
-                      <span className="text-sm font-semibold text-gray-900">
-                        {trendsData.length > 0
-                          ? formatTrendsMoney(Number(trendsTotalsConverted?.cpc ?? 0))
-                          : formatTrendsMoney(0)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">平均ROAS</span>
-                      <span className="text-sm font-semibold text-gray-900">
-                        {trendsData.length > 0
-                          ? `${Number(trendsTotalsConverted?.roas ?? 0).toFixed(2)}x`
-                          : '0.00x'}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* 状态分布卡片 */}
-              <Card>
-                <CardContent className="pt-4 pb-4">
-                  <h4 className="text-sm font-medium text-gray-600 mb-3">广告系列状态</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
-                        <span className="text-xs text-gray-600">投放中</span>
-                      </div>
-                      <span className="text-sm font-semibold text-gray-900">
-                        {enabledCampaignCount}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
-                        <span className="text-xs text-gray-600">已暂停</span>
-                      </div>
-                      <span className="text-sm font-semibold text-gray-900">
-                        {pausedCampaignCount}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
-                        <span className="text-xs text-gray-600">已移除</span>
-                      </div>
-                      <span className="text-sm font-semibold text-gray-900">
-                        {removedCampaignCount}
-                      </span>
-                    </div>
-                    <div className="border-t pt-2 mt-2 flex justify-between items-center">
-                      <span className="text-xs font-medium text-gray-700">总计</span>
-                      <span className="text-sm font-bold text-gray-900">{totalCampaignCount}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
+        {trendsSectionMounted ? (
+          <CampaignsTrendsSection
+            timeRange={timeRange}
+            dateRange={dateRange}
+            customRangeLabel={customRangeLabel}
+            trendsOverviewDescription={trendsOverviewDescription}
+            trendsData={trendsData}
+            trendsLoading={trendsLoading}
+            trendsError={trendsError}
+            trafficTrendMetrics={trafficTrendMetrics}
+            costTrendMetrics={costTrendMetrics}
+            trafficTrendDescription={trafficTrendDescription}
+            costTrendDescription={costTrendDescription}
+            averageCtrText={
+              trendsData.length > 0
+                ? `${(trendsData.reduce((sum, d) => sum + ((d.ctr as number) || 0), 0) / trendsData.length).toFixed(2)}%`
+                : '0.00%'
+            }
+            averageCpcText={
+              trendsData.length > 0
+                ? formatTrendsMoney(Number(trendsTotalsConverted?.cpc ?? 0))
+                : formatTrendsMoney(0)
+            }
+            averageRoasText={
+              trendsData.length > 0
+                ? `${Number(trendsTotalsConverted?.roas ?? 0).toFixed(2)}x`
+                : '0.00x'
+            }
+            trendsCurrencyValue={trendsCurrencyValue}
+            enabledCampaignCount={enabledCampaignCount}
+            pausedCampaignCount={pausedCampaignCount}
+            removedCampaignCount={removedCampaignCount}
+            totalCampaignCount={totalCampaignCount}
+            expandedTrendChart={expandedTrendChart}
+            expandedTrendChartHeight={expandedTrendChartHeight}
+            onSelectPresetTimeRange={selectPresetTimeRange}
+            onDateRangeChange={handleDateRangeChange}
+            onRetry={() => void fetchTrends()}
+            onExpandedTrendChartChange={setExpandedTrendChart}
+          />
+        ) : (
+          <CampaignsTrendsSectionSkeleton />
+        )}
 
         {/* Filters */}
         <Card className="mb-6">
@@ -3136,51 +3067,6 @@ export default function CampaignsClientPage({
             onSaved={handleCpcAdjusted}
 	        />
 	      )}
-
-      {/* Trend Expand Dialog */}
-      <Dialog
-        open={expandedTrendChart !== null}
-        onOpenChange={(open) => {
-          if (!open) setExpandedTrendChart(null)
-        }}
-      >
-        <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-[96vw] lg:max-w-[1280px] xl:max-w-[1440px] max-h-[88vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{expandedTrendChart === 'traffic' ? '流量趋势（放大）' : '成本趋势（放大）'}</DialogTitle>
-          </DialogHeader>
-          {expandedTrendChart === 'traffic' && (
-            <TrendChart
-              data={trendsData}
-              metrics={trafficTrendMetrics}
-              title="流量趋势"
-              description={trafficTrendDescription}
-              loading={trendsLoading}
-              error={trendsError}
-              onRetry={() => void fetchTrends()}
-              height={expandedTrendChartHeight}
-              hideTimeRangeSelector={true}
-              chartType="bar"
-              dualYAxis={true}
-            />
-          )}
-          {expandedTrendChart === 'cost' && (
-            <TrendChart
-              data={trendsData}
-              metrics={costTrendMetrics}
-              title="成本趋势"
-              description={costTrendDescription}
-              loading={trendsLoading}
-              error={trendsError}
-              onRetry={() => void fetchTrends()}
-              height={expandedTrendChartHeight}
-              hideTimeRangeSelector={true}
-              chartType="mixed"
-              dualYAxis={true}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
         {/* Toggle Status Confirmation Dialog */}
         <AlertDialog
           open={isToggleStatusDialogOpen}

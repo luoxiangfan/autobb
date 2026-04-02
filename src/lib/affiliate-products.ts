@@ -353,6 +353,9 @@ const DEFAULT_YP_STREAM_WINDOW_PAGES = 3
 const MAX_YP_STREAM_WINDOW_PAGES = 20
 const DEFAULT_UPSERT_BATCH_SIZE_POSTGRES = 800
 const DEFAULT_UPSERT_BATCH_SIZE_SQLITE = 40
+const DEFAULT_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS = 5 * 60 * 1000
+const MIN_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS = 60 * 1000
+const MAX_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS = 30 * 60 * 1000
 const DEFAULT_YP_REQUEST_DELAY_MS = 120
 const MAX_YP_REQUEST_DELAY_MS = 5000
 const DEFAULT_YP_RATE_LIMIT_MAX_RETRIES = 5
@@ -4924,6 +4927,39 @@ function getAffiliateProductsUpsertBatchSize(dbType: 'sqlite' | 'postgres'): num
     : DEFAULT_UPSERT_BATCH_SIZE_SQLITE
 }
 
+function resolveAffiliateProductsUpsertStatementTimeoutMs(): number {
+  return parseIntegerInRange(
+    process.env.AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS
+      || String(DEFAULT_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS),
+    DEFAULT_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS,
+    MIN_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS,
+    MAX_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS
+  )
+}
+
+function isPostgresStatementTimeoutError(error: unknown): boolean {
+  const code = String((error as any)?.code || '').trim().toUpperCase()
+  if (code === '57014') return true
+  const message = String((error as any)?.message || '').toLowerCase()
+  return message.includes('statement timeout')
+}
+
+async function runAffiliateProductsPostgresUpsertWithTimeout(params: {
+  db: DatabaseAdapter
+  operation: () => Promise<void>
+}): Promise<void> {
+  if (params.db.type !== 'postgres') {
+    await params.operation()
+    return
+  }
+
+  const statementTimeoutMs = resolveAffiliateProductsUpsertStatementTimeoutMs()
+  await params.db.transaction(async () => {
+    await params.db.exec(`SET LOCAL statement_timeout = '${statementTimeoutMs}ms'`)
+    await params.operation()
+  })
+}
+
 function buildAffiliateProductsUpsertValues(params: {
   userId: number
   platform: AffiliatePlatform
@@ -5233,223 +5269,228 @@ async function upsertAffiliateProductsChunkPostgresTwoPhase(params: {
     dbType: 'postgres',
   })
 
-  await params.db.exec(`
-    ${incomingCte}
-    UPDATE affiliate_products p
-    SET
-      merchant_id = incoming.merchant_id,
-      asin = incoming.asin,
-      brand = incoming.brand,
-      product_name = incoming.product_name,
-      product_url = incoming.product_url,
-      promo_link = incoming.promo_link,
-      short_promo_link = incoming.short_promo_link,
-      allowed_countries_json = incoming.allowed_countries_json,
-      price_amount = COALESCE(incoming.price_amount, p.price_amount),
-      price_currency = COALESCE(incoming.price_currency, p.price_currency),
-      commission_rate = incoming.commission_rate,
-      commission_amount = incoming.commission_amount,
-      commission_rate_mode = incoming.commission_rate_mode,
-      review_count = incoming.review_count,
-      is_deeplink = incoming.is_deeplink,
-      is_confirmed_invalid = incoming.is_confirmed_invalid,
-      last_synced_at = incoming.last_synced_at,
-      last_seen_at = incoming.last_seen_at,
-      updated_at = incoming.updated_at
-    FROM incoming
-    WHERE p.user_id = incoming.user_id
-      AND p.platform = incoming.platform
-      AND p.mid = incoming.mid
-      AND (
-        ${businessChangedSql}
-      )
-  `, values)
+  await runAffiliateProductsPostgresUpsertWithTimeout({
+    db: params.db,
+    operation: async () => {
+      await params.db.exec(`
+        ${incomingCte}
+        UPDATE affiliate_products p
+        SET
+          merchant_id = incoming.merchant_id,
+          asin = incoming.asin,
+          brand = incoming.brand,
+          product_name = incoming.product_name,
+          product_url = incoming.product_url,
+          promo_link = incoming.promo_link,
+          short_promo_link = incoming.short_promo_link,
+          allowed_countries_json = incoming.allowed_countries_json,
+          price_amount = COALESCE(incoming.price_amount, p.price_amount),
+          price_currency = COALESCE(incoming.price_currency, p.price_currency),
+          commission_rate = incoming.commission_rate,
+          commission_amount = incoming.commission_amount,
+          commission_rate_mode = incoming.commission_rate_mode,
+          review_count = incoming.review_count,
+          is_deeplink = incoming.is_deeplink,
+          is_confirmed_invalid = incoming.is_confirmed_invalid,
+          last_synced_at = incoming.last_synced_at,
+          last_seen_at = incoming.last_seen_at,
+          updated_at = incoming.updated_at
+        FROM incoming
+        WHERE p.user_id = incoming.user_id
+          AND p.platform = incoming.platform
+          AND p.mid = incoming.mid
+          AND (
+            ${businessChangedSql}
+          )
+      `, values)
 
-  await params.db.exec(`
-    ${incomingCte}
-    UPDATE affiliate_products p
-    SET
-      last_synced_at = incoming.last_synced_at,
-      last_seen_at = incoming.last_seen_at
-    FROM incoming
-    WHERE p.user_id = incoming.user_id
-      AND p.platform = incoming.platform
-      AND p.mid = incoming.mid
-      AND NOT (
-        ${businessChangedSql}
-      )
-      AND (
-        p.last_synced_at IS DISTINCT FROM incoming.last_synced_at
-        OR p.last_seen_at IS DISTINCT FROM incoming.last_seen_at
-      )
-  `, values)
+      await params.db.exec(`
+        ${incomingCte}
+        UPDATE affiliate_products p
+        SET
+          last_synced_at = incoming.last_synced_at,
+          last_seen_at = incoming.last_seen_at
+        FROM incoming
+        WHERE p.user_id = incoming.user_id
+          AND p.platform = incoming.platform
+          AND p.mid = incoming.mid
+          AND NOT (
+            ${businessChangedSql}
+          )
+          AND (
+            p.last_synced_at IS DISTINCT FROM incoming.last_synced_at
+            OR p.last_seen_at IS DISTINCT FROM incoming.last_seen_at
+          )
+      `, values)
 
-  await params.db.exec(`
-    ${incomingCte}
-    INSERT INTO affiliate_products (
-      user_id,
-      platform,
-      mid,
-      merchant_id,
-      asin,
-      brand,
-      product_name,
-      product_url,
-      promo_link,
-      short_promo_link,
-      allowed_countries_json,
-      price_amount,
-      price_currency,
-      commission_rate,
-      commission_amount,
-      commission_rate_mode,
-      review_count,
-      is_deeplink,
-      is_confirmed_invalid,
-      last_synced_at,
-      last_seen_at,
-      updated_at
-    )
-    SELECT
-      incoming.user_id,
-      incoming.platform,
-      incoming.mid,
-      incoming.merchant_id,
-      incoming.asin,
-      incoming.brand,
-      incoming.product_name,
-      incoming.product_url,
-      incoming.promo_link,
-      incoming.short_promo_link,
-      incoming.allowed_countries_json,
-      incoming.price_amount,
-      incoming.price_currency,
-      incoming.commission_rate,
-      incoming.commission_amount,
-      incoming.commission_rate_mode,
-      incoming.review_count,
-      incoming.is_deeplink,
-      incoming.is_confirmed_invalid,
-      incoming.last_synced_at,
-      incoming.last_seen_at,
-      incoming.updated_at
-    FROM incoming
-    LEFT JOIN affiliate_products p
-      ON p.user_id = incoming.user_id
-      AND p.platform = incoming.platform
-      AND p.mid = incoming.mid
-    WHERE p.id IS NULL
-    ON CONFLICT (user_id, platform, mid) DO UPDATE SET
-      merchant_id = CASE
-        WHEN (
+      await params.db.exec(`
+        ${incomingCte}
+        INSERT INTO affiliate_products (
+          user_id,
+          platform,
+          mid,
+          merchant_id,
+          asin,
+          brand,
+          product_name,
+          product_url,
+          promo_link,
+          short_promo_link,
+          allowed_countries_json,
+          price_amount,
+          price_currency,
+          commission_rate,
+          commission_amount,
+          commission_rate_mode,
+          review_count,
+          is_deeplink,
+          is_confirmed_invalid,
+          last_synced_at,
+          last_seen_at,
+          updated_at
+        )
+        SELECT
+          incoming.user_id,
+          incoming.platform,
+          incoming.mid,
+          incoming.merchant_id,
+          incoming.asin,
+          incoming.brand,
+          incoming.product_name,
+          incoming.product_url,
+          incoming.promo_link,
+          incoming.short_promo_link,
+          incoming.allowed_countries_json,
+          incoming.price_amount,
+          incoming.price_currency,
+          incoming.commission_rate,
+          incoming.commission_amount,
+          incoming.commission_rate_mode,
+          incoming.review_count,
+          incoming.is_deeplink,
+          incoming.is_confirmed_invalid,
+          incoming.last_synced_at,
+          incoming.last_seen_at,
+          incoming.updated_at
+        FROM incoming
+        LEFT JOIN affiliate_products p
+          ON p.user_id = incoming.user_id
+          AND p.platform = incoming.platform
+          AND p.mid = incoming.mid
+        WHERE p.id IS NULL
+        ON CONFLICT (user_id, platform, mid) DO UPDATE SET
+          merchant_id = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN EXCLUDED.merchant_id
+            ELSE affiliate_products.merchant_id
+          END,
+          asin = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN EXCLUDED.asin
+            ELSE affiliate_products.asin
+          END,
+          brand = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN EXCLUDED.brand
+            ELSE affiliate_products.brand
+          END,
+          product_name = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN EXCLUDED.product_name
+            ELSE affiliate_products.product_name
+          END,
+          product_url = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN EXCLUDED.product_url
+            ELSE affiliate_products.product_url
+          END,
+          promo_link = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN EXCLUDED.promo_link
+            ELSE affiliate_products.promo_link
+          END,
+          short_promo_link = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN EXCLUDED.short_promo_link
+            ELSE affiliate_products.short_promo_link
+          END,
+          allowed_countries_json = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN EXCLUDED.allowed_countries_json
+            ELSE affiliate_products.allowed_countries_json
+          END,
+          price_amount = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN COALESCE(EXCLUDED.price_amount, affiliate_products.price_amount)
+            ELSE affiliate_products.price_amount
+          END,
+          price_currency = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN COALESCE(EXCLUDED.price_currency, affiliate_products.price_currency)
+            ELSE affiliate_products.price_currency
+          END,
+          commission_rate = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN EXCLUDED.commission_rate
+            ELSE affiliate_products.commission_rate
+          END,
+          commission_amount = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN EXCLUDED.commission_amount
+            ELSE affiliate_products.commission_amount
+          END,
+          commission_rate_mode = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN EXCLUDED.commission_rate_mode
+            ELSE affiliate_products.commission_rate_mode
+          END,
+          review_count = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN EXCLUDED.review_count
+            ELSE affiliate_products.review_count
+          END,
+          is_deeplink = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN EXCLUDED.is_deeplink
+            ELSE affiliate_products.is_deeplink
+          END,
+          is_confirmed_invalid = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN EXCLUDED.is_confirmed_invalid
+            ELSE affiliate_products.is_confirmed_invalid
+          END,
+          last_synced_at = EXCLUDED.last_synced_at,
+          last_seen_at = EXCLUDED.last_seen_at,
+          updated_at = CASE
+            WHEN (
+              ${conflictBusinessChangedSql}
+            ) THEN EXCLUDED.updated_at
+            ELSE affiliate_products.updated_at
+          END
+        WHERE (
           ${conflictBusinessChangedSql}
-        ) THEN EXCLUDED.merchant_id
-        ELSE affiliate_products.merchant_id
-      END,
-      asin = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN EXCLUDED.asin
-        ELSE affiliate_products.asin
-      END,
-      brand = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN EXCLUDED.brand
-        ELSE affiliate_products.brand
-      END,
-      product_name = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN EXCLUDED.product_name
-        ELSE affiliate_products.product_name
-      END,
-      product_url = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN EXCLUDED.product_url
-        ELSE affiliate_products.product_url
-      END,
-      promo_link = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN EXCLUDED.promo_link
-        ELSE affiliate_products.promo_link
-      END,
-      short_promo_link = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN EXCLUDED.short_promo_link
-        ELSE affiliate_products.short_promo_link
-      END,
-      allowed_countries_json = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN EXCLUDED.allowed_countries_json
-        ELSE affiliate_products.allowed_countries_json
-      END,
-      price_amount = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN COALESCE(EXCLUDED.price_amount, affiliate_products.price_amount)
-        ELSE affiliate_products.price_amount
-      END,
-      price_currency = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN COALESCE(EXCLUDED.price_currency, affiliate_products.price_currency)
-        ELSE affiliate_products.price_currency
-      END,
-      commission_rate = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN EXCLUDED.commission_rate
-        ELSE affiliate_products.commission_rate
-      END,
-      commission_amount = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN EXCLUDED.commission_amount
-        ELSE affiliate_products.commission_amount
-      END,
-      commission_rate_mode = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN EXCLUDED.commission_rate_mode
-        ELSE affiliate_products.commission_rate_mode
-      END,
-      review_count = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN EXCLUDED.review_count
-        ELSE affiliate_products.review_count
-      END,
-      is_deeplink = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN EXCLUDED.is_deeplink
-        ELSE affiliate_products.is_deeplink
-      END,
-      is_confirmed_invalid = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN EXCLUDED.is_confirmed_invalid
-        ELSE affiliate_products.is_confirmed_invalid
-      END,
-      last_synced_at = EXCLUDED.last_synced_at,
-      last_seen_at = EXCLUDED.last_seen_at,
-      updated_at = CASE
-        WHEN (
-          ${conflictBusinessChangedSql}
-        ) THEN EXCLUDED.updated_at
-        ELSE affiliate_products.updated_at
-      END
-    WHERE (
-      ${conflictBusinessChangedSql}
-    )
-      OR affiliate_products.last_synced_at IS DISTINCT FROM EXCLUDED.last_synced_at
-      OR affiliate_products.last_seen_at IS DISTINCT FROM EXCLUDED.last_seen_at
-  `, values)
+        )
+          OR affiliate_products.last_synced_at IS DISTINCT FROM EXCLUDED.last_synced_at
+          OR affiliate_products.last_seen_at IS DISTINCT FROM EXCLUDED.last_seen_at
+      `, values)
+    },
+  })
 }
 
 async function upsertAffiliateProductsChunk(params: {
@@ -5464,6 +5505,95 @@ async function upsertAffiliateProductsChunk(params: {
     return
   }
   await upsertAffiliateProductsChunkOnConflict(params)
+}
+
+type UpsertAffiliateProductsBatchStats = {
+  createdCount: number
+  updatedCount: number
+  processedCount: number
+}
+
+async function upsertAffiliateProductsBatchWithAdaptiveRetry(params: {
+  db: DatabaseAdapter
+  userId: number
+  platform: AffiliatePlatform
+  batch: NormalizedAffiliateProduct[]
+  nowIso: string
+  recursionDepth?: number
+}): Promise<UpsertAffiliateProductsBatchStats> {
+  const recursionDepth = Number(params.recursionDepth || 0)
+  const batch = params.batch
+  if (batch.length === 0) {
+    return {
+      createdCount: 0,
+      updatedCount: 0,
+      processedCount: 0,
+    }
+  }
+
+  try {
+    const existingMidSet = await loadExistingMidSet(
+      params.userId,
+      params.platform,
+      batch.map((item) => item.mid)
+    )
+
+    let createdCount = 0
+    let updatedCount = 0
+    for (const item of batch) {
+      if (existingMidSet.has(item.mid)) {
+        updatedCount += 1
+      } else {
+        createdCount += 1
+      }
+    }
+
+    await upsertAffiliateProductsChunk({
+      db: params.db,
+      userId: params.userId,
+      platform: params.platform,
+      items: batch,
+      nowIso: params.nowIso,
+    })
+
+    return {
+      createdCount,
+      updatedCount,
+      processedCount: batch.length,
+    }
+  } catch (error: any) {
+    const canSplitAndRetry = params.db.type === 'postgres'
+      && isPostgresStatementTimeoutError(error)
+      && batch.length > 1
+    if (!canSplitAndRetry) {
+      throw error
+    }
+
+    const leftSize = Math.max(1, Math.floor(batch.length / 2))
+    const rightSize = batch.length - leftSize
+    console.warn(
+      `[affiliate-products] PostgreSQL upsert timed out for user=${params.userId}, platform=${params.platform}, batch=${batch.length}; split retry ${leftSize}+${rightSize} (depth=${recursionDepth})`
+    )
+
+    const leftBatch = batch.slice(0, leftSize)
+    const rightBatch = batch.slice(leftSize)
+    const leftResult = await upsertAffiliateProductsBatchWithAdaptiveRetry({
+      ...params,
+      batch: leftBatch,
+      recursionDepth: recursionDepth + 1,
+    })
+    const rightResult = await upsertAffiliateProductsBatchWithAdaptiveRetry({
+      ...params,
+      batch: rightBatch,
+      recursionDepth: recursionDepth + 1,
+    })
+
+    return {
+      createdCount: leftResult.createdCount + rightResult.createdCount,
+      updatedCount: leftResult.updatedCount + rightResult.updatedCount,
+      processedCount: leftResult.processedCount + rightResult.processedCount,
+    }
+  }
 }
 
 export async function upsertAffiliateProducts(
@@ -5525,29 +5655,17 @@ export async function upsertAffiliateProducts(
 
   for (let index = 0; index < deduped.length; index += upsertBatchSize) {
     const batch = deduped.slice(index, index + upsertBatchSize)
-    const existingMidSet = await loadExistingMidSet(
-      userId,
-      platform,
-      batch.map((item) => item.mid)
-    )
-
-    for (const item of batch) {
-      if (existingMidSet.has(item.mid)) {
-        updatedCount += 1
-      } else {
-        createdCount += 1
-      }
-    }
-
-    await upsertAffiliateProductsChunk({
+    const batchStats = await upsertAffiliateProductsBatchWithAdaptiveRetry({
       db,
       userId,
       platform,
-      items: batch,
       nowIso,
+      batch,
     })
 
-    processedCount += batch.length
+    createdCount += batchStats.createdCount
+    updatedCount += batchStats.updatedCount
+    processedCount += batchStats.processedCount
     if (
       processedCount - lastEmittedProcessed >= progressEvery
       || processedCount === totalFetched
@@ -6504,50 +6622,101 @@ export async function listAffiliateProducts(userId: number, options: ProductList
     product_status?: AffiliateProductLifecycleStatus
     baseline_started_at?: string | null
   }
+  const shouldScopeLinkCountsToPagedRows = sortBy !== 'relatedOfferCount'
+  const orderBySqlForPagedRows = orderBySql.replace(/\bp\./g, 'pp.')
 
   const rowsPromise: Promise<ProductRowWithDerived[]> = skipItems
     ? Promise.resolve([])
-    : db.query<ProductRowWithDerived>(
-      `
-        ${fullSyncBaselineCteSql}
-        SELECT
-          p.*,
-          ${productStatusSelectSql},
-          baseline.baseline_started_at AS baseline_started_at,
-          COALESCE(link_counts.active_offer_count, 0) AS active_offer_count,
-          COALESCE(link_counts.historical_offer_count, 0) AS historical_offer_count,
-          COALESCE(link_counts.historical_offer_count, 0) AS related_offer_count
-        FROM affiliate_products p
-        LEFT JOIN latest_platform_full_sync baseline ON baseline.platform = p.platform
-        LEFT JOIN (
+    : shouldScopeLinkCountsToPagedRows
+      ? db.query<ProductRowWithDerived>(
+        `
+          ${fullSyncBaselineCteSql},
+          paged_products AS (
+            SELECT
+              p.*,
+              ${productStatusSelectSql},
+              baseline.baseline_started_at AS baseline_started_at
+            FROM affiliate_products p
+            LEFT JOIN latest_platform_full_sync baseline ON baseline.platform = p.platform
+            WHERE ${filteredWhereSql}
+            ORDER BY ${orderBySql}
+            LIMIT ?
+            OFFSET ?
+          )
           SELECT
-            link.product_id,
-            COUNT(DISTINCT CASE
-              WHEN c.status = 'ENABLED' AND COALESCE(c.is_deleted, FALSE) = FALSE THEN link.offer_id
-              ELSE NULL
-            END) AS active_offer_count,
-            COUNT(DISTINCT CASE
-              WHEN COALESCE(c.google_campaign_id, '') <> '' THEN link.offer_id
-              ELSE NULL
-            END) AS historical_offer_count
-          FROM affiliate_product_offer_links link
-          INNER JOIN offers o
-            ON o.user_id = link.user_id
-            AND o.id = link.offer_id
-            AND ${offerNotDeletedCondition}
-          LEFT JOIN campaigns c
-            ON c.user_id = link.user_id
-            AND c.offer_id = link.offer_id
-          WHERE link.user_id = ?
-          GROUP BY link.product_id
-        ) link_counts ON link_counts.product_id = p.id
-        WHERE ${filteredWhereSql}
-        ORDER BY ${orderBySql}
-        LIMIT ?
-        OFFSET ?
-      `,
-      [userId, userId, ...filteredWhereParams, pageSize, offset]
-    )
+            pp.*,
+            COALESCE(link_counts.active_offer_count, 0) AS active_offer_count,
+            COALESCE(link_counts.historical_offer_count, 0) AS historical_offer_count,
+            COALESCE(link_counts.historical_offer_count, 0) AS related_offer_count
+          FROM paged_products pp
+          LEFT JOIN (
+            SELECT
+              link.product_id,
+              COUNT(DISTINCT CASE
+                WHEN c.status = 'ENABLED' AND COALESCE(c.is_deleted, FALSE) = FALSE THEN link.offer_id
+                ELSE NULL
+              END) AS active_offer_count,
+              COUNT(DISTINCT CASE
+                WHEN COALESCE(c.google_campaign_id, '') <> '' THEN link.offer_id
+                ELSE NULL
+              END) AS historical_offer_count
+            FROM affiliate_product_offer_links link
+            INNER JOIN paged_products pp2 ON pp2.id = link.product_id
+            INNER JOIN offers o
+              ON o.user_id = link.user_id
+              AND o.id = link.offer_id
+              AND ${offerNotDeletedCondition}
+            LEFT JOIN campaigns c
+              ON c.user_id = link.user_id
+              AND c.offer_id = link.offer_id
+            WHERE link.user_id = ?
+            GROUP BY link.product_id
+          ) link_counts ON link_counts.product_id = pp.id
+          ORDER BY ${orderBySqlForPagedRows}
+        `,
+        [userId, ...filteredWhereParams, pageSize, offset, userId]
+      )
+      : db.query<ProductRowWithDerived>(
+        `
+          ${fullSyncBaselineCteSql}
+          SELECT
+            p.*,
+            ${productStatusSelectSql},
+            baseline.baseline_started_at AS baseline_started_at,
+            COALESCE(link_counts.active_offer_count, 0) AS active_offer_count,
+            COALESCE(link_counts.historical_offer_count, 0) AS historical_offer_count,
+            COALESCE(link_counts.historical_offer_count, 0) AS related_offer_count
+          FROM affiliate_products p
+          LEFT JOIN latest_platform_full_sync baseline ON baseline.platform = p.platform
+          LEFT JOIN (
+            SELECT
+              link.product_id,
+              COUNT(DISTINCT CASE
+                WHEN c.status = 'ENABLED' AND COALESCE(c.is_deleted, FALSE) = FALSE THEN link.offer_id
+                ELSE NULL
+              END) AS active_offer_count,
+              COUNT(DISTINCT CASE
+                WHEN COALESCE(c.google_campaign_id, '') <> '' THEN link.offer_id
+                ELSE NULL
+              END) AS historical_offer_count
+            FROM affiliate_product_offer_links link
+            INNER JOIN offers o
+              ON o.user_id = link.user_id
+              AND o.id = link.offer_id
+              AND ${offerNotDeletedCondition}
+            LEFT JOIN campaigns c
+              ON c.user_id = link.user_id
+              AND c.offer_id = link.offer_id
+            WHERE link.user_id = ?
+            GROUP BY link.product_id
+          ) link_counts ON link_counts.product_id = p.id
+          WHERE ${filteredWhereSql}
+          ORDER BY ${orderBySql}
+          LIMIT ?
+          OFFSET ?
+        `,
+        [userId, userId, ...filteredWhereParams, pageSize, offset]
+      )
   const summaryCachePayload: ProductSummaryCachePayload = {
     search,
     mid,
@@ -6610,15 +6779,19 @@ export async function listAffiliateProducts(userId: number, options: ProductList
       return cachedLandingStats
     }
 
-    // lightweightSummary 下不再做昂贵的 URL 分类聚合；优先使用 ASIN 信号兜底避免“商品/店铺全 0”。
+    // lightweightSummary 下沿用已聚合的平台计数兜底，避免额外重查询。
     const inferredProductCount = Math.max(
       0,
       platformStatsAccumulator.yeahpromos.productCount + platformStatsAccumulator.partnerboost.productCount
     )
+    const inferredStoreCount = Math.max(
+      0,
+      platformStatsAccumulator.yeahpromos.storeCount + platformStatsAccumulator.partnerboost.storeCount
+    )
     return {
       productCount: inferredProductCount,
-      storeCount: 0,
-      unknownCount: Math.max(0, resolvedTotal - inferredProductCount),
+      storeCount: inferredStoreCount,
+      unknownCount: Math.max(0, resolvedTotal - inferredProductCount - inferredStoreCount),
     }
   }
 
@@ -6680,13 +6853,31 @@ export async function listAffiliateProducts(userId: number, options: ProductList
       ? await db.query<{
         platform: string
         total_count: number
-        asin_product_count: number
+        lightweight_product_count: number
+        lightweight_store_count: number
       }>(
         `
           SELECT
             p.platform AS platform,
             COUNT(*) AS total_count,
-            SUM(CASE WHEN ${asinPresentConditionSql} THEN 1 ELSE 0 END) AS asin_product_count
+            SUM(
+              CASE
+                WHEN (
+                  (p.platform = 'partnerboost' AND ${landingTypeSql.productCondition})
+                  OR (p.platform <> 'partnerboost' AND ${asinPresentConditionSql})
+                ) THEN 1
+                ELSE 0
+              END
+            ) AS lightweight_product_count,
+            SUM(
+              CASE
+                WHEN (
+                  p.platform = 'partnerboost'
+                  AND ${landingTypeSql.storeCondition}
+                ) THEN 1
+                ELSE 0
+              END
+            ) AS lightweight_store_count
           FROM affiliate_products p
           WHERE ${baseWhereSql}
           GROUP BY p.platform
@@ -6717,8 +6908,8 @@ export async function listAffiliateProducts(userId: number, options: ProductList
       if (!platformKey) continue
       platformStatsAccumulator[platformKey].total = toSafeCount(row.total_count)
       if (lightweightSummary) {
-        platformStatsAccumulator[platformKey].productCount = toSafeCount((row as any).asin_product_count)
-        platformStatsAccumulator[platformKey].storeCount = 0
+        platformStatsAccumulator[platformKey].productCount = toSafeCount((row as any).lightweight_product_count)
+        platformStatsAccumulator[platformKey].storeCount = toSafeCount((row as any).lightweight_store_count)
       } else {
         platformStatsAccumulator[platformKey].productCount = toSafeCount((row as any).product_count)
         platformStatsAccumulator[platformKey].storeCount = toSafeCount((row as any).store_count)
@@ -6744,14 +6935,32 @@ export async function listAffiliateProducts(userId: number, options: ProductList
         ? await db.query<{
           platform: string
           visible_count: number
-          asin_product_count: number
+          lightweight_product_count: number
+          lightweight_store_count: number
         }>(
           `
             ${fullSyncBaselineCteSql}
             SELECT
               p.platform AS platform,
               COUNT(*) AS visible_count,
-              SUM(CASE WHEN ${asinPresentConditionSql} THEN 1 ELSE 0 END) AS asin_product_count
+              SUM(
+                CASE
+                  WHEN (
+                    (p.platform = 'partnerboost' AND ${landingTypeSql.productCondition})
+                    OR (p.platform <> 'partnerboost' AND ${asinPresentConditionSql})
+                  ) THEN 1
+                  ELSE 0
+                END
+              ) AS lightweight_product_count,
+              SUM(
+                CASE
+                  WHEN (
+                    p.platform = 'partnerboost'
+                    AND ${landingTypeSql.storeCondition}
+                  ) THEN 1
+                  ELSE 0
+                END
+              ) AS lightweight_store_count
             FROM affiliate_products p
             LEFT JOIN latest_platform_full_sync baseline ON baseline.platform = p.platform
             WHERE ${filteredWhereSql}
@@ -6792,8 +7001,8 @@ export async function listAffiliateProducts(userId: number, options: ProductList
         const visibleCount = toSafeCount(row.visible_count)
         visibleTotal += visibleCount
         if (lightweightSummary) {
-          platformStatsAccumulator[platformKey].productCount = toSafeCount((row as any).asin_product_count)
-          platformStatsAccumulator[platformKey].storeCount = 0
+          platformStatsAccumulator[platformKey].productCount = toSafeCount((row as any).lightweight_product_count)
+          platformStatsAccumulator[platformKey].storeCount = toSafeCount((row as any).lightweight_store_count)
         } else {
           platformStatsAccumulator[platformKey].productCount = toSafeCount((row as any).product_count)
           platformStatsAccumulator[platformKey].storeCount = toSafeCount((row as any).store_count)

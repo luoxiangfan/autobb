@@ -107,6 +107,98 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
     })
   })
 
+  it('rebuilds historical platform snapshot when fetched commission is lower', async () => {
+    query.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('AS event_id')) return []
+      if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes('AS event_id')) return []
+      if (sql.includes('FROM offers')) {
+        return [
+          { id: 2401, brand: 'Novilla', url: 'https://www.amazon.com/dp/B0HISTLOW1', final_url: null, affiliate_link: null },
+        ]
+      }
+      if (sql.includes('FROM affiliate_product_offer_links apol')) return []
+      if (sql.includes('FROM campaigns c')) {
+        return [
+          { campaign_id: 3401, offer_id: 2401, brand: 'Novilla', created_at: '2000-01-01T00:00:00.000Z', cost: 10, clicks: 5 },
+        ]
+      }
+      return []
+    })
+
+    const result = await persistAffiliateCommissionAttributions({
+      userId: 7,
+      reportDate: '2000-01-01',
+      entries: [
+        {
+          platform: 'partnerboost',
+          reportDate: '2000-01-01',
+          commission: 5,
+          sourceAsin: 'B0HISTLOW1',
+          raw: { id: 'evt-hist-lower-1', advert_name: 'Novilla' },
+        },
+      ],
+      replaceExisting: true,
+      lockHistorical: true,
+      replacePlatforms: ['partnerboost'],
+    })
+
+    expect(result).toEqual({
+      reportDate: '2000-01-01',
+      totalCommission: 5,
+      attributedCommission: 5,
+      unattributedCommission: 0,
+      attributedOffers: 1,
+      attributedCampaigns: 1,
+      writtenRows: 1,
+    })
+
+    expect(queryOne).not.toHaveBeenCalled()
+
+    const deleteCalls = exec.mock.calls.filter(([sql]) =>
+      typeof sql === 'string' && sql.includes('DELETE FROM affiliate_commission_attributions')
+    )
+    expect(deleteCalls).toHaveLength(1)
+    expect(deleteCalls[0]?.[1]).toEqual([7, '2000-01-01', 'partnerboost'])
+
+    const insertCalls = exec.mock.calls.filter(([sql]) =>
+      typeof sql === 'string' && sql.includes('INSERT INTO affiliate_commission_attributions')
+    )
+    expect(insertCalls).toHaveLength(1)
+    expect((insertCalls[0]?.[1] as any[])[8]).toBe(5)
+  })
+
+  it('clears historical platform snapshot when queried platform returns no commission rows', async () => {
+    const result = await persistAffiliateCommissionAttributions({
+      userId: 7,
+      reportDate: '2000-01-01',
+      entries: [],
+      replaceExisting: true,
+      lockHistorical: true,
+      replacePlatforms: ['yeahpromos'],
+    })
+
+    expect(result).toEqual({
+      reportDate: '2000-01-01',
+      totalCommission: 0,
+      attributedCommission: 0,
+      unattributedCommission: 0,
+      attributedOffers: 0,
+      attributedCampaigns: 0,
+      writtenRows: 0,
+    })
+
+    const deleteCalls = exec.mock.calls.filter(([sql]) =>
+      typeof sql === 'string' && sql.includes('DELETE FROM affiliate_commission_attributions')
+    )
+    expect(deleteCalls).toHaveLength(1)
+    expect(deleteCalls[0]?.[1]).toEqual([7, '2000-01-01', 'yeahpromos'])
+
+    const insertCalls = exec.mock.calls.filter(([sql]) =>
+      typeof sql === 'string' && sql.includes('INSERT INTO affiliate_commission_attributions')
+    )
+    expect(insertCalls).toHaveLength(0)
+  })
+
   it('does not apply historical lock on current date', async () => {
     const today = formatLocalYmd(new Date())
 
@@ -344,6 +436,62 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
     })
 
     expect(exec).not.toHaveBeenCalled()
+  })
+
+  it('continues attribution when existing-event lookup times out', async () => {
+    const today = formatLocalYmd(new Date())
+
+    query.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('AS event_id')) {
+        throw new Error('canceling statement due to statement timeout')
+      }
+      if (sql.includes('FROM offers')) {
+        return [
+          { id: 2301, brand: 'Novilla', url: 'https://www.amazon.com/dp/B0TIMEOUT1', final_url: null, affiliate_link: null },
+        ]
+      }
+      if (sql.includes('FROM affiliate_product_offer_links apol')) return []
+      if (sql.includes('FROM campaigns c')) {
+        return [
+          { campaign_id: 3301, offer_id: 2301, brand: 'Novilla', created_at: `${today}T00:00:00.000Z`, cost: 10, clicks: 5 },
+        ]
+      }
+      return []
+    })
+
+    const result = await persistAffiliateCommissionAttributions({
+      userId: 9,
+      reportDate: today,
+      entries: [
+        {
+          platform: 'yeahpromos',
+          reportDate: today,
+          commission: 8,
+          sourceAsin: 'B0TIMEOUT1',
+          raw: { id: 'evt-timeout-1', advert_name: 'Novilla' },
+        },
+      ],
+      replaceExisting: true,
+      lockHistorical: false,
+    })
+
+    expect(result).toEqual({
+      reportDate: today,
+      totalCommission: 8,
+      attributedCommission: 8,
+      unattributedCommission: 0,
+      attributedOffers: 1,
+      attributedCampaigns: 1,
+      writtenRows: 1,
+    })
+
+    const eventLookupCall = query.mock.calls.find(([sql]) =>
+      typeof sql === 'string'
+      && sql.includes('FROM affiliate_commission_attributions')
+      && sql.includes('AS event_id')
+    )
+    expect(eventLookupCall).toBeTruthy()
+    expect((eventLookupCall?.[1] as any[])[1]).toBe(today)
   })
 
   it('marks commission unattributed when neither ASIN nor brand can map to campaigns', async () => {

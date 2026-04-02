@@ -11,12 +11,24 @@ const dbFns = vi.hoisted(() => ({
   getDatabase: vi.fn(),
 }))
 
+const campaignCacheFns = vi.hoisted(() => ({
+  buildCampaignPerformanceCacheHash: vi.fn(),
+  getCachedCampaignPerformance: vi.fn(),
+  setCachedCampaignPerformance: vi.fn(),
+}))
+
 vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
 
 vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
+}))
+
+vi.mock('@/lib/campaigns-read-cache', () => ({
+  buildCampaignPerformanceCacheHash: campaignCacheFns.buildCampaignPerformanceCacheHash,
+  getCachedCampaignPerformance: campaignCacheFns.getCachedCampaignPerformance,
+  setCachedCampaignPerformance: campaignCacheFns.setCachedCampaignPerformance,
 }))
 
 describe('GET /api/campaigns/performance', () => {
@@ -26,6 +38,9 @@ describe('GET /api/campaigns/performance', () => {
       authenticated: true,
       user: { userId: 1 },
     })
+    campaignCacheFns.buildCampaignPerformanceCacheHash.mockReturnValue('campaign-performance-hash')
+    campaignCacheFns.getCachedCampaignPerformance.mockResolvedValue(null)
+    campaignCacheFns.setCachedCampaignPerformance.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -39,6 +54,205 @@ describe('GET /api/campaigns/performance', () => {
     const res = await GET(req)
 
     expect(res.status).toBe(401)
+  })
+
+  it('returns cached payload without touching the database', async () => {
+    const cachedPayload = {
+      success: true,
+      campaigns: [{ id: 1, campaignName: 'Cached Campaign' }],
+      total: 1,
+      limit: null,
+      offset: 0,
+      summary: {
+        totalCampaigns: 1,
+        activeCampaigns: 1,
+      },
+    }
+    campaignCacheFns.getCachedCampaignPerformance.mockResolvedValue(cachedPayload)
+
+    const req = new NextRequest('http://localhost/api/campaigns/performance?daysBack=7')
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data).toEqual(cachedPayload)
+    expect(campaignCacheFns.getCachedCampaignPerformance).toHaveBeenCalledWith(1, 'campaign-performance-hash')
+    expect(dbFns.getDatabase).not.toHaveBeenCalled()
+    expect(campaignCacheFns.setCachedCampaignPerformance).not.toHaveBeenCalled()
+  })
+
+  it('refresh=true bypasses read cache and writes fresh payload back', async () => {
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
+        return []
+      }
+      if (sql.includes('FROM campaigns c')) {
+        return []
+      }
+      if (sql.includes('GROUP BY currency')) {
+        return []
+      }
+      if (sql.includes('GROUP BY COALESCE(currency, \'USD\')')) {
+        return []
+      }
+      return []
+    })
+    const queryOne = vi.fn(async (sql: string) => {
+      if (sql.includes('FROM sync_logs')) {
+        return { latest_sync_at: null }
+      }
+      return { impressions: 0, clicks: 0, cost: 0, total_commission: 0 }
+    })
+
+    dbFns.getDatabase.mockResolvedValue({
+      type: 'sqlite',
+      query,
+      queryOne,
+    })
+    campaignCacheFns.getCachedCampaignPerformance.mockResolvedValue({
+      success: true,
+      campaigns: [{ id: 99 }],
+    })
+
+    const req = new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&refresh=true')
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(campaignCacheFns.getCachedCampaignPerformance).not.toHaveBeenCalled()
+    expect(campaignCacheFns.setCachedCampaignPerformance).toHaveBeenCalledWith(
+      1,
+      'campaign-performance-hash',
+      expect.objectContaining({ success: true })
+    )
+  })
+
+  it('reuses current filtered aggregates instead of issuing extra current summary queries', async () => {
+    let currentTotalsQueryCount = 0
+    let currentAttributedTotalsQueryCount = 0
+    let prevTotalsQueryCount = 0
+    let prevAttributedTotalsQueryCount = 0
+
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
+        return [{ currency: 'USD', total_cost: 12 }]
+      }
+
+      if (sql.includes('FROM campaigns c')) {
+        return [
+          {
+            id: 1,
+            campaign_id: 'cmp_1',
+            campaign_name: 'Campaign 1',
+            offer_id: 11,
+            offer_brand: 'Brand A',
+            offer_url: 'https://example.com',
+            status: 'ENABLED',
+            google_campaign_id: 'g_1',
+            google_ads_account_id: 99,
+            budget_amount: 20,
+            budget_type: 'DAILY',
+            creation_status: 'SUCCESS',
+            creation_error: null,
+            last_sync_at: '2026-02-25T00:00:00.000Z',
+            created_at: '2026-02-20T00:00:00.000Z',
+            published_at: '2026-02-20T00:00:00.000Z',
+            is_deleted: 0,
+            deleted_at: null,
+            ads_account_id: 99,
+            ads_account_customer_id: '123456',
+            ads_account_name: 'USD Account',
+            ads_account_is_active: 1,
+            ads_account_is_deleted: 0,
+            ads_account_currency: 'USD',
+            offer_is_deleted: 0,
+          },
+        ]
+      }
+
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+        return [
+          {
+            campaign_id: 1,
+            currency: 'USD',
+            impressions: 100,
+            clicks: 20,
+            cost: 12,
+          },
+        ]
+      }
+
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id')) {
+        return [{ campaign_id: 1, currency: 'USD', commission: 5 }]
+      }
+
+      throw new Error(`unexpected query sql: ${sql}`)
+    })
+
+    const queryOne = vi.fn(async (sql: string, params: any[] = []) => {
+      if (sql.includes('FROM campaign_performance') && sql.includes('COALESCE(SUM(impressions), 0) as impressions')) {
+        const start = String(params?.[1] || '')
+        if (start === '2026-02-19') {
+          currentTotalsQueryCount += 1
+          return { impressions: 999, clicks: 999, cost: 999 }
+        }
+        prevTotalsQueryCount += 1
+        return { impressions: 40, clicks: 8, cost: 4 }
+      }
+
+      if (sql.includes('FROM affiliate_commission_attributions')) {
+        const start = String(params?.[1] || '')
+        if (start === '2026-02-19') {
+          currentAttributedTotalsQueryCount += 1
+          return { total_commission: 999 }
+        }
+        prevAttributedTotalsQueryCount += 1
+        return { total_commission: 2 }
+      }
+
+      if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
+        const start = String(params?.[1] || '')
+        if (start === '2026-02-19') {
+          return { total_commission: 1 }
+        }
+        return { total_commission: 0 }
+      }
+
+      if (sql.includes('FROM sync_logs')) {
+        return { latest_sync_at: null }
+      }
+
+      throw new Error(`unexpected queryOne sql: ${sql}`)
+    })
+
+    dbFns.getDatabase.mockResolvedValue({
+      type: 'sqlite',
+      query,
+      queryOne,
+    })
+
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-02-25T04:00:00.000Z'))
+
+      const req = new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&currency=USD')
+      const res = await GET(req)
+      const data = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(data.summary?.totalImpressions).toBe(100)
+      expect(data.summary?.totalClicks).toBe(20)
+      expect(data.summary?.attributedCommission).toBe(5)
+      expect(data.summary?.unattributedCommission).toBe(1)
+      expect(data.summary?.totalCommission).toBe(6)
+      expect(currentTotalsQueryCount).toBe(0)
+      expect(currentAttributedTotalsQueryCount).toBe(0)
+      expect(prevTotalsQueryCount).toBe(1)
+      expect(prevAttributedTotalsQueryCount).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('treats daysBack as an inclusive date window (daysBack=7 => today + previous 6 days)', async () => {
