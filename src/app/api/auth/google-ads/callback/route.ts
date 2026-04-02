@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCodeForTokens, getGoogleAdsCredentialsFromDB } from '@/lib/google-ads-api'
-import { createGoogleAdsAccount, findGoogleAdsAccountByCustomerId } from '@/lib/google-ads-accounts'
+import { createGoogleAdsAccount } from '@/lib/google-ads-accounts'
+import { getDatabase } from '@/lib/db'
+import { encrypt } from '@/lib/crypto'
 
-// 强制动态渲染（OAuth回调必须动态处理）
+// 强制动态渲染（OAuth 回调必须动态处理）
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/auth/google-ads/callback
- * Google Ads OAuth回调处理
+ * Google Ads OAuth 回调处理（支持共享配置和用户自配置）
  */
 export async function GET(request: NextRequest) {
   try {
@@ -30,7 +32,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 从中间件注入的请求头中获取用户ID
+    // 从中间件注入的请求头中获取用户 ID
     const userId = request.headers.get('x-user-id')
     if (!userId) {
       return NextResponse.redirect(
@@ -38,10 +40,64 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 获取用户的 Google Ads 凭证
-    const credentials = await getGoogleAdsCredentialsFromDB(parseInt(userId, 10))
+    const userIdInt = parseInt(userId, 10)
+    const db = await getDatabase()
 
-    // 交换authorization code获取tokens
+    // 🆕 检查 state 中是否包含 binding_id（共享配置模式）
+    let bindingId: string | null = null
+    let customerId: string | null = null
+    let isSharedConfig = false
+
+    if (state) {
+      try {
+        const stateData = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'))
+        bindingId = stateData.binding_id || null
+        customerId = stateData.customerId || null
+        isSharedConfig = !!stateData.binding_id
+      } catch (e) {
+        // state 解析失败，忽略
+      }
+    }
+
+    // 获取 OAuth 凭证
+    let credentials: any
+    if (isSharedConfig && bindingId) {
+      // 共享配置模式：从共享配置表获取凭证
+      const bindingData = await db.queryOne(`
+        SELECT c.client_id, c.client_secret, c.login_customer_id
+        FROM google_ads_user_oauth_bindings b
+        INNER JOIN google_ads_shared_oauth_configs c ON b.oauth_config_id = c.id
+        WHERE b.id = ? AND b.user_id = ? AND b.is_active = 1
+      `, [bindingId, userIdInt])
+
+      if (!bindingData) {
+        return NextResponse.redirect(
+          `${process.env.NEXT_PUBLIC_APP_URL}/settings?error=invalid_binding`
+        )
+      }
+
+      credentials = {
+        client_id: (bindingData as any).client_id,
+        client_secret: (bindingData as any).client_secret,
+        login_customer_id: (bindingData as any).login_customer_id
+      }
+
+      // 解密 client_secret
+      const { decrypt } = await import('@/lib/crypto')
+      credentials.client_secret = decrypt(credentials.client_secret)
+
+    } else {
+      // 用户自配置模式：从 settings 表获取凭证
+      credentials = await getGoogleAdsCredentialsFromDB(userIdInt)
+    }
+
+    if (!credentials || !credentials.client_id || !credentials.client_secret) {
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/settings?error=missing_credentials`
+      )
+    }
+
+    // 交换 authorization code 获取 tokens
     const tokens = await exchangeCodeForTokens(code, {
       client_id: credentials.client_id,
       client_secret: credentials.client_secret
@@ -53,49 +109,50 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 解析state参数（如果包含customer_id）
-    let customerId: string | null = null
-    if (state) {
-      try {
-        const stateData = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'))
-        customerId = stateData.customerId
-      } catch (e) {
-        // state解析失败，忽略
-      }
+    // 使用 login_customer_id 作为 customer_id（如果没有指定）
+    if (!customerId) {
+      customerId = credentials.login_customer_id
     }
 
-    // 如果没有customer_id，需要用户手动输入
     if (!customerId) {
-      // 将tokens临时存储在session或cookie中，让用户输入customer_id
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/google-ads/complete-setup?tokens=${encodeURIComponent(
-          JSON.stringify({
-            access_token: tokens.access_token,
-            refresh_token: tokens.refresh_token,
-            expires_in: tokens.expires_in,
-          })
-        )}`
+        `${process.env.NEXT_PUBLIC_APP_URL}/settings?error=missing_customer_id`
       )
     }
 
-    // 计算token过期时间
+    // 计算 token 过期时间
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
 
-    // 🔧 修复(2026-01-07): 改进去重逻辑，避免多次OAuth回调创建重复账户
-    // 检查账号是否已存在（包括已删除的账户）
-    const { getDatabase } = await import('@/lib/db')
-    const db = await getDatabase()
+    // 🆕 如果是共享配置模式，更新绑定表的 refresh_token
+    if (isSharedConfig && bindingId) {
+      const encryptedRefreshToken = encrypt(tokens.refresh_token)
+      const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+      
+      await db.exec(`
+        UPDATE google_ads_user_oauth_bindings 
+        SET refresh_token = ?, 
+            authorized_at = ${nowFunc},
+            needs_reauth = 0,
+            updated_at = ${nowFunc}
+        WHERE id = ? AND user_id = ?
+      `, [encryptedRefreshToken, bindingId, userIdInt])
 
+      console.log(`[OAuth Callback] 共享配置用户 ${userIdInt} 授权成功，Binding ID: ${bindingId}`)
+
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/settings?oauth_success=true`
+      )
+    }
+
+    // 用户自配置模式：更新或创建 Google Ads 账户
     const existingAccount = await db.queryOne(`
       SELECT id, is_deleted FROM google_ads_accounts
       WHERE user_id = ? AND customer_id = ?
-    `, [parseInt(userId, 10), customerId]) as { id: number; is_deleted: boolean } | undefined
+    `, [userIdInt, customerId]) as { id: number; is_deleted: boolean } | undefined
 
     if (existingAccount) {
-      // 账户已存在，更新tokens
       const { updateGoogleAdsAccount } = await import('@/lib/google-ads-accounts')
 
-      // 如果是已删除的账户，恢复它
       if (existingAccount.is_deleted) {
         const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
         await db.exec(`
@@ -109,17 +166,15 @@ export async function GET(request: NextRequest) {
           WHERE id = ?
         `, [tokens.access_token, tokens.refresh_token, expiresAt, existingAccount.id])
       } else {
-        // 正常更新tokens
-        await updateGoogleAdsAccount(existingAccount.id, parseInt(userId, 10), {
+        await updateGoogleAdsAccount(existingAccount.id, userIdInt, {
           accessToken: tokens.access_token,
           refreshToken: tokens.refresh_token,
           tokenExpiresAt: expiresAt,
         })
       }
     } else {
-      // 账户不存在，创建新账号
       await createGoogleAdsAccount({
-        userId: parseInt(userId, 10),
+        userId: userIdInt,
         customerId,
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
@@ -127,9 +182,8 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // 重定向到设置页面，显示成功消息
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/settings?success=google_ads_connected`
+      `${process.env.NEXT_PUBLIC_APP_URL}/settings?oauth_success=true`
     )
   } catch (error: any) {
     console.error('Google Ads OAuth callback error:', error)

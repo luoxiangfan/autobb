@@ -30,6 +30,7 @@ import {
 } from '@/lib/gemini-models'
 import { getGeminiEndpoint, type GeminiProvider } from '@/lib/gemini-config'
 import { ServiceAccountPermissionError } from '@/components/ServiceAccountPermissionError'
+import { GoogleAdsSharedConfig } from '@/components/google-ads/GoogleAdsSharedConfig'
 import {
   DEFAULT_AFFILIATE_SYNC_INTERVAL_HOURS,
   DEFAULT_PARTNERBOOST_BASE_URL,
@@ -1748,6 +1749,23 @@ export default function SettingsPage() {
                 {/* 特殊处理 Google Ads 配置分类 */}
                 {category === 'google_ads' ? (
                   <div className="space-y-6">
+                    {/* 🆕 共享配置模式检测 */}
+                    <GoogleAdsSharedConfig />
+
+                    {/* 分隔线 */}
+                    <div className="relative py-4">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-200"></div>
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-white text-gray-500">或</span>
+                      </div>
+                    </div>
+
+                    <p className="text-sm font-semibold text-gray-700 mb-4">
+                      自行配置模式（不推荐）
+                    </p>
+
                     {/* Google Ads 凭证状态 */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {googleAdsCredentialStatus?.hasCredentials ? (
