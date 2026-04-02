@@ -206,21 +206,6 @@ export async function PUT(request: NextRequest) {
 
     const { updates } = validationResult.data
 
-    // 🔒 检查是否有 Google Ads 配置的更新
-    const hasGoogleAdsUpdate = updates.some(u => u.category === 'google_ads')
-    if (hasGoogleAdsUpdate) {
-      // 获取当前用户信息
-      const { findUserById } = await import('@/lib/auth')
-      const user = userIdNum ? await findUserById(userIdNum) : null
-      
-      if (!user || user.role !== 'admin') {
-        return NextResponse.json(
-          { error: 'Google Ads API 配置需要管理员权限' },
-          { status: 403 }
-        )
-      }
-    }
-
     // 联盟同步配置必须是用户级，不允许无用户上下文写入
     const hasAffiliateSyncUpdate = updates.some((update) => update.category === 'affiliate_sync')
     if (hasAffiliateSyncUpdate && !userIdNum) {

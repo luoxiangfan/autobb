@@ -489,7 +489,6 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchSettings()
-    fetchCurrentUser()
   }, [])
 
   // 检查 OAuth 回调结果
@@ -850,33 +849,6 @@ export default function SettingsPage() {
       setLoadingGoogleAdsAccounts(false)
     }
   }
-
-  // 获取当前用户角色
-  const fetchCurrentUser = async () => {
-    try {
-      const response = await fetch('/api/auth/me', {
-        credentials: 'include',
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        const role = data.user?.role || 'user'
-        setCurrentUserRole(role)
-        setIsAdmin(role === 'admin')
-      } else {
-        setCurrentUserRole('user')
-        setIsAdmin(false)
-      }
-    } catch (err) {
-      console.error('Failed to fetch current user:', err)
-      setCurrentUserRole('user')
-      setIsAdmin(false)
-    } finally {
-      setLoadingUser(false)
-    }
-  }
-
-
 
   // 初始化时获取 Google Ads 凭证状态
   useEffect(() => {
@@ -2154,10 +2126,6 @@ export default function SettingsPage() {
                           ))}
                         </div>
                       </div>
-
-  </>
-)}
-
                     )}
 
                     {/* 可访问的账户列表 */}

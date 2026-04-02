@@ -16,11 +16,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // 🔒 管理员权限检查
-  if (user.role !== 'admin') {
-    return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
-  }
-
   try {
     const { name, mccCustomerId, developerToken, serviceAccountJson } = await req.json()
 
@@ -72,11 +67,6 @@ export async function DELETE(req: NextRequest) {
   const user = await getAuthenticatedUser(req)
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  // 🔒 管理员权限检查
-  if (user.role !== 'admin') {
-    return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
   }
 
   try {
