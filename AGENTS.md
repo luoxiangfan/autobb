@@ -17,6 +17,10 @@
 
 - 现在问题解决了，但请你重新Review一下今天的几轮修改，看看是不是补丁叠补丁的修改，如果是的话，重构成最优解。
 
+## 破坏性重构执行指令
+
+- 执行破坏性重构：彻底移除历史兼容补丁与逻辑兜底，在确保架构整洁的同时，通过内嵌防御性编程与优雅降级机制，优先保障系统的可用性与容错均衡。
+
 ## GitNexus 使用规范（本仓库）
 
 ### 何时必须使用
@@ -58,7 +62,7 @@ gitnexus impact evaluateAdStrength --depth 2
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **autobb** (10924 symbols, 30440 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **autobb** (10947 symbols, 30727 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

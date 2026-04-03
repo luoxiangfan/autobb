@@ -112,6 +112,8 @@ function normalizeDateKey(value: unknown): string {
 
 const openclawStrategySchedules = new Map<number, { cron: string; task: cron.ScheduledTask }>()
 let syncDataTaskRunning = false
+let isShuttingDown = false
+const schedulerShutdownGraceMs = parsePositiveInt(process.env.SCHEDULER_SHUTDOWN_GRACE_MS, 6000)
 
 async function getUsersWithActiveSyncTasks(): Promise<Set<number>> {
   const userIds = new Set<number>()
@@ -412,7 +414,7 @@ async function productScoreSchedulerTask() {
 
 /**
  * 任务1: 数据同步任务
- * 频率：根据用户在/settings页面配置的sync_interval_hours执行
+ * 频率：根据用户在/settings页面配置的数据同步间隔执行
  * 🔄 已迁移到统一队列系统，按用户配置执行
  */
 async function syncDataTask() {
@@ -420,6 +422,7 @@ async function syncDataTask() {
 
   const db = await getDatabase()
   const userEligibleCondition = buildUserExecutionEligibleSql({ dbType: db.type, userAlias: 'u' })
+  const DEFAULT_DATA_SYNC_INTERVAL_HOURS = 4
 
   try {
     // 获取所有活跃用户及其同步配置
@@ -453,7 +456,7 @@ async function syncDataTask() {
               AND ss_interval_legacy.key = 'sync_interval_hours'
             LIMIT 1
           ),
-          '6'
+          '${DEFAULT_DATA_SYNC_INTERVAL_HOURS}'
         ) as sync_interval_hours,
         (
           SELECT MAX(started_at)
@@ -494,11 +497,11 @@ async function syncDataTask() {
         continue
       }
 
-      // 获取用户配置的同步间隔（默认6小时）
-      const parsedInterval = parseInt(String(user.sync_interval_hours || '6'), 10)
+      // 获取用户配置的同步间隔（默认4小时）
+      const parsedInterval = parseInt(String(user.sync_interval_hours || DEFAULT_DATA_SYNC_INTERVAL_HOURS), 10)
       const syncIntervalHours = Number.isFinite(parsedInterval) && parsedInterval > 0
         ? parsedInterval
-        : 6
+        : DEFAULT_DATA_SYNC_INTERVAL_HOURS
 
       // 检查是否需要同步（距离上次同步超过配置的间隔）
       if (user.last_sync_at) {
@@ -1055,7 +1058,7 @@ function startScheduler() {
   log('  - 换链接任务: 每分钟 (* * * * *)')
   log('  - 联盟商品同步: 每10分钟 (*/10 * * * *)')
   log('  - 推荐指数自愈调度: 默认每小时 (20 * * * *)')
-  log('  - 数据同步: 每5分钟检查，按用户间隔触发（默认6小时）')
+  log('  - 数据同步: 每5分钟检查，按用户间隔触发（默认4小时）')
   log('  - 数据库备份: 每天凌晨2点')
   log('  - 链接和账号检查: 每天凌晨2点 (需求20优化)')
   log('  - 创意发布超时检查: 默认每30分钟')
@@ -1314,17 +1317,41 @@ function startScheduler() {
   }
 }
 
+function stopAllSchedulerTasks() {
+  for (const task of cron.getTasks().values()) {
+    try {
+      task.stop()
+    } catch (error) {
+      logError('⚠️ 停止 cron 任务失败:', error)
+    }
+  }
+
+  for (const [userId, schedule] of openclawStrategySchedules.entries()) {
+    try {
+      schedule.task.stop()
+    } catch (error) {
+      logError(`⚠️ 停止 OpenClaw 策略调度失败 (user=${userId}):`, error)
+    } finally {
+      openclawStrategySchedules.delete(userId)
+    }
+  }
+}
+
 /**
  * 优雅退出
  */
 function gracefulShutdown(signal: string) {
-  log(`📴 收到 ${signal} 信号，正在优雅退出...`)
+  if (isShuttingDown) return
+  isShuttingDown = true
 
-  // 给正在运行的任务最多30秒完成时间
-  setTimeout(() => {
+  log(`📴 收到 ${signal} 信号，正在优雅退出...`)
+  stopAllSchedulerTasks()
+
+  const shutdownTimer = setTimeout(() => {
     log('✅ 调度器已停止')
     process.exit(0)
-  }, 30000)
+  }, schedulerShutdownGraceMs)
+  shutdownTimer.unref?.()
 }
 
 // 监听退出信号

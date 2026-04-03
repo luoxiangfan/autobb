@@ -52,7 +52,7 @@ export default function SyncSettingsPage() {
 
   // Form state
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(false)
-  const [syncInterval, setSyncInterval] = useState(6)
+  const [syncInterval, setSyncInterval] = useState(4)
   const [maxRetries, setMaxRetries] = useState(3)
   const [retryDelay, setRetryDelay] = useState(15)
   const [notifySuccess, setNotifySuccess] = useState(false)
@@ -307,12 +307,13 @@ export default function SyncSettingsPage() {
                   <SelectContent>
                     <SelectItem value="1">每1小时</SelectItem>
                     <SelectItem value="3">每3小时</SelectItem>
+                    <SelectItem value="4">每4小时（默认）</SelectItem>
                     <SelectItem value="6">每6小时</SelectItem>
                     <SelectItem value="12">每12小时</SelectItem>
                     <SelectItem value="24">每24小时</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-sm text-gray-500">数据同步的频率</p>
+                <p className="text-sm text-gray-500">数据同步的频率（默认每4小时）</p>
               </div>
 
               {/* Max Retry Attempts */}

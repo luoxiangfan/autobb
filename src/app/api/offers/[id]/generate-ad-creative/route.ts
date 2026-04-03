@@ -93,6 +93,8 @@ function transformCreativeToApiResponse(creative: any) {
 }
 
 type CanonicalBucketSlot = 'A' | 'B' | 'D'
+const REQUIRED_RSA_HEADLINE_COUNT = 15
+const REQUIRED_RSA_DESCRIPTION_COUNT = 4
 
 function parseBooleanEnv(value: string | undefined, fallback: boolean): boolean {
   const normalized = String(value || '').trim().toLowerCase()
@@ -100,6 +102,20 @@ function parseBooleanEnv(value: string | undefined, fallback: boolean): boolean 
   if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true
   if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false
   return fallback
+}
+
+function hasRequiredRsaAssetCounts(creative: any): boolean {
+  const headlines = Array.isArray(creative?.headlines)
+    ? creative.headlines.filter((item: unknown) => typeof item === 'string' && item.trim().length > 0)
+    : []
+  const descriptions = Array.isArray(creative?.descriptions)
+    ? creative.descriptions.filter((item: unknown) => typeof item === 'string' && item.trim().length > 0)
+    : []
+
+  return (
+    headlines.length === REQUIRED_RSA_HEADLINE_COUNT &&
+    descriptions.length === REQUIRED_RSA_DESCRIPTION_COUNT
+  )
 }
 
 function createCreativeQualityGateError(params: {
@@ -767,9 +783,17 @@ export async function GET(
       generation_round: generationRound ? parseInt(generationRound) : undefined,
       is_selected: isSelected === 'true' ? true : isSelected === 'false' ? false : undefined
     })
+    const publishableCreatives = creatives.filter(hasRequiredRsaAssetCounts)
+    const filteredCreativeCount = creatives.length - publishableCreatives.length
+
+    if (filteredCreativeCount > 0) {
+      console.warn(
+        `[Launch Step1] 过滤掉${filteredCreativeCount}条非15/4创意 (offerId=${offerId}, userId=${authResult.user.userId})`
+      )
+    }
 
     // 🔧 修复(2025-12-24): 从创意列表实时聚合generatedBuckets，避免依赖可能过时的数据库字段
-    const transformedCreatives = creatives.map(transformCreativeToApiResponse)
+    const transformedCreatives = publishableCreatives.map(transformCreativeToApiResponse)
     const generatedBuckets = Array.from(
       new Set(
         transformedCreatives
@@ -791,7 +815,7 @@ export async function GET(
       creatives: transformedCreatives,
       // 🔧 修复(2025-12-24): 从创意列表实时聚合，而不是读取数据库字段
       generatedBuckets: generatedBuckets,
-      total: creatives.length
+      total: transformedCreatives.length
     })
 
   } catch (error: any) {

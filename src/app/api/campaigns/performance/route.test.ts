@@ -31,6 +31,46 @@ vi.mock('@/lib/campaigns-read-cache', () => ({
   setCachedCampaignPerformance: campaignCacheFns.setCachedCampaignPerformance,
 }))
 
+function buildPreviousSummaryRows(params: {
+  performance?: Array<{ currency?: string | null; impressions?: number; clicks?: number; cost?: number }>
+  attributed?: Array<{ currency?: string | null; amount?: number }>
+}) {
+  return [
+    ...(params.performance ?? []).map((row) => ({
+      summary_source: 'performance',
+      currency: row.currency ?? 'USD',
+      impressions: row.impressions ?? 0,
+      clicks: row.clicks ?? 0,
+      amount: row.cost ?? 0,
+    })),
+    ...(params.attributed ?? []).map((row) => ({
+      summary_source: 'attributed',
+      currency: row.currency ?? 'USD',
+      impressions: 0,
+      clicks: 0,
+      amount: row.amount ?? 0,
+    })),
+  ]
+}
+
+function buildUnattributedPeriodRows(params: {
+  current?: Array<{ currency?: string | null; amount?: number }>
+  previous?: Array<{ currency?: string | null; amount?: number }>
+}) {
+  return [
+    ...(params.current ?? []).map((row) => ({
+      period_label: 'current',
+      currency: row.currency ?? 'USD',
+      total_commission: row.amount ?? 0,
+    })),
+    ...(params.previous ?? []).map((row) => ({
+      period_label: 'previous',
+      currency: row.currency ?? 'USD',
+      total_commission: row.amount ?? 0,
+    })),
+  ]
+}
+
 describe('GET /api/campaigns/performance', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -82,7 +122,7 @@ describe('GET /api/campaigns/performance', () => {
   })
 
   it('refresh=true bypasses read cache and writes fresh payload back', async () => {
-    const query = vi.fn(async (sql: string) => {
+    const query = vi.fn(async (sql: string, params: any[] = []) => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
         return []
       }
@@ -129,13 +169,15 @@ describe('GET /api/campaigns/performance', () => {
   })
 
   it('reuses current filtered aggregates instead of issuing extra current summary queries', async () => {
+    let currentCurrencyRollupQueryCount = 0
     let currentTotalsQueryCount = 0
     let currentAttributedTotalsQueryCount = 0
     let prevTotalsQueryCount = 0
     let prevAttributedTotalsQueryCount = 0
 
-    const query = vi.fn(async (sql: string) => {
+    const query = vi.fn(async (sql: string, params: any[] = []) => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
+        currentCurrencyRollupQueryCount += 1
         return [{ currency: 'USD', total_cost: 12 }]
       }
 
@@ -185,6 +227,23 @@ describe('GET /api/campaigns/performance', () => {
 
       if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id')) {
         return [{ campaign_id: 1, currency: 'USD', commission: 5 }]
+      }
+
+      if (sql.includes('summary_source')) {
+        expect(params?.[3]).toBe('USD')
+        expect(params?.[7]).toBe('USD')
+        prevTotalsQueryCount += 1
+        prevAttributedTotalsQueryCount += 1
+        return buildPreviousSummaryRows({
+          performance: [{ currency: 'USD', impressions: 40, clicks: 8, cost: 4 }],
+          attributed: [{ currency: 'USD', amount: 2 }],
+        })
+      }
+
+      if (sql.includes('period_label')) {
+        return buildUnattributedPeriodRows({
+          current: [{ currency: 'USD', amount: 1 }],
+        })
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -246,6 +305,7 @@ describe('GET /api/campaigns/performance', () => {
       expect(data.summary?.attributedCommission).toBe(5)
       expect(data.summary?.unattributedCommission).toBe(1)
       expect(data.summary?.totalCommission).toBe(6)
+      expect(currentCurrencyRollupQueryCount).toBe(0)
       expect(currentTotalsQueryCount).toBe(0)
       expect(currentAttributedTotalsQueryCount).toBe(0)
       expect(prevTotalsQueryCount).toBe(1)
@@ -263,7 +323,7 @@ describe('GET /api/campaigns/performance', () => {
       let capturedRange: { start?: string; end?: string } = {}
 
       const query = vi.fn(async (sql: string, params: any[] = []) => {
-        if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
+        if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
           capturedRange = {
             start: String(params?.[1] || ''),
             end: String(params?.[2] || ''),
@@ -356,8 +416,30 @@ describe('GET /api/campaigns/performance', () => {
       }
 
       if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id')) {
-        expect(params?.[3]).toBe('CNY')
         return [{ campaign_id: 1, currency: 'CNY', commission: 7 }]
+      }
+
+      if (sql.includes('summary_source')) {
+        expect(params?.[3]).toBe('CNY')
+        expect(params?.[7]).toBe('CNY')
+        totalsCallCount += 1
+        attributedCallCount += 1
+        return buildPreviousSummaryRows({
+          performance: [{ currency: 'CNY', impressions: 50, clicks: 10, cost: 20 }],
+          attributed: [{ currency: 'CNY', amount: 4 }],
+        })
+      }
+
+      if (sql.includes('period_label')) {
+        expect(sql).toContain('1 = 1')
+        expect(sql).not.toContain("COALESCE(reason_code, '') <> ?")
+        expect(sql).not.toContain("COALESCE(reason_code, '') NOT IN")
+        expect(params?.[params.length - 1]).toBe('CNY')
+        unattributedCallCount += 1
+        return buildUnattributedPeriodRows({
+          current: [{ currency: 'CNY', amount: 3 }],
+          previous: [{ currency: 'CNY', amount: 1 }],
+        })
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -424,7 +506,7 @@ describe('GET /api/campaigns/performance', () => {
     expect(data.summary?.unattributedCommission).toBe(3)
     expect(data.campaigns?.[0]?.performance?.commission).toBe(7)
     expect(data.campaigns?.[0]?.performance?.conversions).toBe(7)
-    expect(unattributedCallCount).toBe(2)
+    expect(unattributedCallCount).toBe(1)
   })
 
   it('keeps ads account native currency for budget while using reporting currency for performance values', async () => {
@@ -485,8 +567,21 @@ describe('GET /api/campaigns/performance', () => {
       }
 
       if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id')) {
-        expect(params?.[3]).toBe('USD')
         return [{ campaign_id: 1, currency: 'USD', commission: 3 }]
+      }
+
+      if (sql.includes('summary_source')) {
+        expect(params?.[3]).toBe('USD')
+        expect(params?.[7]).toBe('USD')
+        return buildPreviousSummaryRows({
+          performance: [{ currency: 'USD', impressions: 120, clicks: 12, cost: 24 }],
+          attributed: [{ currency: 'USD', amount: 3 }],
+        })
+      }
+
+      if (sql.includes('period_label')) {
+        expect(params?.[params.length - 1]).toBe('USD')
+        return []
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -534,7 +629,7 @@ describe('GET /api/campaigns/performance', () => {
   })
 
   it('returns configured max CPC from local campaign config with max_cpc priority', async () => {
-    const query = vi.fn(async (sql: string) => {
+    const query = vi.fn(async (sql: string, params: any[] = []) => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
         return [{ currency: 'USD', total_cost: 24 }]
       }
@@ -589,6 +684,19 @@ describe('GET /api/campaigns/performance', () => {
         return [{ campaign_id: 1, currency: 'USD', commission: 3 }]
       }
 
+      if (sql.includes('summary_source')) {
+        expect(params?.[3]).toBe('USD')
+        expect(params?.[7]).toBe('USD')
+        return buildPreviousSummaryRows({
+          performance: [{ currency: 'USD', impressions: 120, clicks: 12, cost: 24 }],
+          attributed: [{ currency: 'USD', amount: 3 }],
+        })
+      }
+
+      if (sql.includes('period_label')) {
+        return []
+      }
+
       throw new Error(`unexpected query sql: ${sql}`)
     })
 
@@ -624,8 +732,11 @@ describe('GET /api/campaigns/performance', () => {
   })
 
   it('uses converted total commission in row performance currency for mixed-currency campaign rows', async () => {
+    let currentCurrencyRollupQueryCount = 0
+
     const query = vi.fn(async (sql: string) => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
+        currentCurrencyRollupQueryCount += 1
         return [
           { currency: 'USD', total_cost: 10 },
           { currency: 'CNY', total_cost: 30 },
@@ -711,6 +822,22 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
+      if (sql.includes('summary_source')) {
+        return buildPreviousSummaryRows({
+          performance: [{ currency: 'USD', impressions: 200, clicks: 20, cost: 40 }],
+          attributed: [{ currency: 'USD', amount: 13 }],
+        })
+      }
+
+      if (sql.includes('period_label')) {
+        return buildUnattributedPeriodRows({
+          current: [
+            { currency: 'USD', amount: 1.5 },
+            { currency: 'CNY', amount: 2.5 },
+          ],
+        })
+      }
+
       throw new Error(`unexpected query sql: ${sql}`)
     })
 
@@ -751,6 +878,7 @@ describe('GET /api/campaigns/performance', () => {
       { currency: 'USD', amount: 1.5 },
       { currency: 'CNY', amount: 2.5 },
     ])
+    expect(currentCurrencyRollupQueryCount).toBe(0)
     expect(data.campaigns?.[0]?.performanceCurrency).toBe('CNY')
     expect(data.campaigns?.[0]?.performance?.costLocal).toBe(30)
     expect(data.campaigns?.[0]?.performance?.cpcLocal).toBe(2)
@@ -832,6 +960,20 @@ describe('GET /api/campaigns/performance', () => {
 
       if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes('GROUP BY COALESCE(currency, \'USD\')')) {
         return [{ currency: 'USD', total_commission: 3 }]
+      }
+
+      if (sql.includes('summary_source')) {
+        return buildPreviousSummaryRows({
+          performance: [{ currency: 'CNY', impressions: 20, clicks: 2, cost: 8 }],
+          attributed: [{ currency: 'USD', amount: 2 }],
+        })
+      }
+
+      if (sql.includes('period_label')) {
+        return buildUnattributedPeriodRows({
+          current: [{ currency: 'USD', amount: 3 }],
+          previous: [{ currency: 'USD', amount: 1 }],
+        })
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -973,6 +1115,20 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
         return []
       }
+
+      if (sql.includes('summary_source')) {
+        return buildPreviousSummaryRows({
+          performance: [
+            { currency: 'USD', impressions: 100, clicks: 10, cost: 50 },
+            { currency: 'CNY', impressions: 100, clicks: 10, cost: 100 },
+          ],
+        })
+      }
+
+      if (sql.includes('period_label')) {
+        return []
+      }
+
       throw new Error(`unexpected query sql: ${sql}`)
     })
 
@@ -1094,6 +1250,17 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
         return []
       }
+
+      if (sql.includes('summary_source')) {
+        return buildPreviousSummaryRows({
+          performance: [{ currency: 'USD', impressions: 200, clicks: 20, cost: 20 }],
+        })
+      }
+
+      if (sql.includes('period_label')) {
+        return []
+      }
+
       throw new Error(`unexpected query sql: ${sql}`)
     })
 
@@ -1157,6 +1324,15 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
         return []
       }
+
+      if (sql.includes('summary_source')) {
+        return []
+      }
+
+      if (sql.includes('period_label')) {
+        return []
+      }
+
       throw new Error(`unexpected query sql: ${sql}`)
     })
 
@@ -1283,6 +1459,18 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
         return []
       }
+
+      if (sql.includes('summary_source')) {
+        return buildPreviousSummaryRows({
+          performance: [{ currency: 'USD', impressions: 110, clicks: 22, cost: 33 }],
+          attributed: [{ currency: 'USD', amount: 13 }],
+        })
+      }
+
+      if (sql.includes('period_label')) {
+        return []
+      }
+
       throw new Error(`unexpected query sql: ${sql}`)
     })
 
@@ -1449,6 +1637,18 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
         return []
       }
+
+      if (sql.includes('summary_source')) {
+        return buildPreviousSummaryRows({
+          performance: [{ currency: 'USD', impressions: 160, clicks: 32, cost: 48 }],
+          attributed: [{ currency: 'USD', amount: 19 }],
+        })
+      }
+
+      if (sql.includes('period_label')) {
+        return []
+      }
+
       throw new Error(`unexpected query sql: ${sql}`)
     })
 

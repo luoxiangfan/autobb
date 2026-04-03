@@ -1255,7 +1255,7 @@ export const DEFAULT_SETTINGS = [
   // 系统配置
   { category: 'system', key: 'currency', dataType: 'string', isSensitive: false, isRequired: true, defaultValue: 'CNY', description: '默认货币' },
   { category: 'system', key: 'language', dataType: 'string', isSensitive: false, isRequired: true, defaultValue: 'zh-CN', description: '系统语言' },
-  { category: 'system', key: 'sync_interval_hours', dataType: 'number', isSensitive: false, isRequired: true, defaultValue: '6', description: '数据同步间隔(小时)' },
+  { category: 'system', key: 'sync_interval_hours', dataType: 'number', isSensitive: false, isRequired: true, defaultValue: '4', description: '数据同步间隔(小时)' },
   { category: 'system', key: 'link_check_enabled', dataType: 'boolean', isSensitive: false, isRequired: true, defaultValue: 'true', description: '是否启用链接检查' },
   { category: 'system', key: 'link_check_time', dataType: 'string', isSensitive: false, isRequired: true, defaultValue: '02:00', description: '链接检查时间' },
 ]

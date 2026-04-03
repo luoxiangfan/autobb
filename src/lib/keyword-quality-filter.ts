@@ -1139,6 +1139,41 @@ const TRANSACTIONAL_MATRIX_TOKENS = new Set([
   'buy', 'purchase', 'order', 'shop', 'price', 'pricing', 'cost',
   'deal', 'deals', 'discount', 'sale', 'offer', 'coupon', 'promo', 'store'
 ])
+const AI_TEMPLATE_SENSITIVE_SOURCE_KEYS = new Set([
+  'AI_GENERATED',
+  'AI_LLM_RAW',
+  'KEYWORD_EXPANSION',
+  'AI_FALLBACK_PLACEHOLDER',
+  'CLUSTERED',
+])
+const AI_TEMPLATE_SPILLOVER_TOKENS = new Set([
+  'choice',
+  'choices',
+  'option',
+  'options',
+  'solution',
+  'solutions',
+  'premium',
+  'quality',
+  'value',
+  'daily',
+  'everyday',
+  'style',
+  'styles',
+  'performance',
+  'technology',
+  'system',
+  'systems',
+])
+const AI_TEMPLATE_PHRASE_PATTERNS = [
+  /\b(?:smart|premium|ultimate|best|top)\s+(?:choice|option|solution)s?\b/i,
+  /\b(?:daily|everyday)\s+(?:choice|option|solution|use)\b/i,
+  /\b(?:high|top|premium)\s+quality\b/i,
+  /\b(?:best|top)\s+value\b/i,
+  /\b(?:for|to)\s+every(?:one|day)\b/i,
+  /\b(?:lifestyle|home)\s+(?:essential|essentials|must\s*have)\b/i,
+]
+const AI_TEMPLATE_SAFE_SPEC_PATTERN = /\b\d+\s*(?:inch|in|oz|ml|l|pack|count|ct|pcs|piece|w|wh|mah|gb|tb|btu|doe|ashrae)\b/i
 
 const SOURCE_TRUST_SCORE_RULES: Array<{ pattern: RegExp; score: number }> = [
   { pattern: /^SEARCH_TERM_HIGH_PERFORMING$/i, score: 20 },
@@ -1252,9 +1287,21 @@ function getHighPerformingHardBlockReason(params: {
   pureBrandKeywords: string[]
   productUrl?: string
   targetLanguage?: string
+  source?: string
+  sourceType?: string
+  sourceSubtype?: string
 }): string | null {
-  const { keyword, brandName, pureBrandKeywords, productUrl, targetLanguage } = params
-  const templateGarbageReason = getTemplateGarbageReason(keyword)
+  const {
+    keyword,
+    brandName,
+    pureBrandKeywords,
+    productUrl,
+    targetLanguage,
+    source,
+    sourceType,
+    sourceSubtype,
+  } = params
+  const templateGarbageReason = getTemplateGarbageReason(keyword, { source, sourceType, sourceSubtype })
   if (templateGarbageReason) {
     return templateGarbageReason
   }
@@ -1313,7 +1360,39 @@ function getTransactionalModifierHits(words: string[]): string[] {
   return words.filter(word => TRANSACTIONAL_MATRIX_TOKENS.has(word))
 }
 
-export function getTemplateGarbageReason(keyword: string): string | null {
+function hasAiTemplateSensitiveSource(options?: {
+  source?: string
+  sourceType?: string
+  sourceSubtype?: string
+}): boolean {
+  if (!options) return false
+  const sourceHints = [
+    options.sourceSubtype,
+    options.sourceType,
+    options.source,
+  ]
+    .map((value) => String(value || '').trim().toUpperCase())
+    .filter(Boolean)
+
+  return sourceHints.some((hint) => hint.startsWith('AI_') || AI_TEMPLATE_SENSITIVE_SOURCE_KEYS.has(hint))
+}
+
+function getAiTemplatePhraseReason(keyword: string, words: string[]): string | null {
+  const spilloverHits = new Set(words.filter((word) => AI_TEMPLATE_SPILLOVER_TOKENS.has(word)))
+  const hasTemplatePhrase = AI_TEMPLATE_PHRASE_PATTERNS.some((pattern) => pattern.test(keyword))
+  const hasSpecSignal = AI_TEMPLATE_SAFE_SPEC_PATTERN.test(keyword)
+
+  if (hasSpecSignal && spilloverHits.size <= 1) return null
+  if (hasTemplatePhrase) return 'AI模版短语'
+  if (spilloverHits.size >= 2) return `AI泛化修饰词堆叠 (${Array.from(spilloverHits).join('+')})`
+  return null
+}
+
+export function getTemplateGarbageReason(keyword: string, options?: {
+  source?: string
+  sourceType?: string
+  sourceSubtype?: string
+}): string | null {
   const words = normalizeKeywordWords(keyword)
   if (words.length === 0) return null
 
@@ -1330,6 +1409,13 @@ export function getTemplateGarbageReason(keyword: string): string | null {
   const uniqueTransactionalHits = Array.from(new Set(transactionalHits))
   if (uniqueTransactionalHits.length >= 2) {
     return `模板垃圾词: 交易修饰词矩阵叠加 (${uniqueTransactionalHits.join('+')})`
+  }
+
+  if (hasAiTemplateSensitiveSource(options)) {
+    const aiTemplateReason = getAiTemplatePhraseReason(keyword, words)
+    if (aiTemplateReason) {
+      return `模板垃圾词: ${aiTemplateReason} "${keyword}"`
+    }
   }
 
   return null
@@ -1648,6 +1734,9 @@ export function filterKeywordQuality(
           pureBrandKeywords,
           productUrl,
           targetLanguage,
+          source: keywordData.source,
+          sourceType: keywordData.sourceType,
+          sourceSubtype: keywordData.sourceSubtype,
         })
         if (!hardBlockReason) {
           filtered.push({
@@ -1698,7 +1787,11 @@ export function filterKeywordQuality(
       }
     }
 
-    const templateGarbageReason = getTemplateGarbageReason(keyword)
+    const templateGarbageReason = getTemplateGarbageReason(keyword, {
+      source: keywordData.source,
+      sourceType: keywordData.sourceType,
+      sourceSubtype: keywordData.sourceSubtype,
+    })
     const geoMismatch = targetCountry
       ? resolveGeoMismatch({
         keyword,

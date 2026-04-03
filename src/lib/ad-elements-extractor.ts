@@ -18,7 +18,7 @@ import { getHighIntentKeywords } from './google-suggestions'
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
 import { getHeadlineLanguageInstructions, getDescriptionLanguageInstructions } from './ad-elements-language-instructions'
-import { loadPrompt } from './prompt-loader'
+import { loadPrompt, interpolateTemplate } from './prompt-loader'
 import { classifyKeywordIntent } from './keyword-intent'
 import { isInvalidKeyword } from './keyword-invalid-filter'
 import type { AmazonProductData, AmazonStoreData } from './stealth-scraper'
@@ -501,8 +501,8 @@ function containsSemanticKeyword(brandLower: string, keywords: string[]): boolea
 }
 
 /**
- * 🔥 P3优化：动态生成品牌变体关键词
- * 根据品牌流行度调整变体数量和类型
+ * 动态生成品牌变体关键词
+ * 仅保留品牌标准化结果，避免模板交易词（buy/reviews/store等）注入关键词池。
  *
  * @param brand - 品牌名
  * @param popularity - 品牌流行度 ('high' | 'medium' | 'low')
@@ -512,9 +512,8 @@ function generateDynamicBrandVariants(
   brand: string,
   popularity: 'high' | 'medium' | 'low'
 ): string[] {
-  // 🔥 P1.2优化3: 品牌名标准化
   const brandNormalized = normalizeBrandName(brand)
-  const brandLower = brandNormalized  // 已经是小写了
+  const brandLower = brandNormalized
 
   if (brandNormalized !== brand.toLowerCase()) {
     console.log(`  🔧 品牌名标准化: "${brand}" → "${brandNormalized}"`)
@@ -529,26 +528,8 @@ function generateDynamicBrandVariants(
     console.log(`  🌐 多语言检测: store=${containsStore}, official=${containsOfficial}, website=${containsWebsite}`)
   }
 
-  // 🔥 知名品牌（如Nike, Apple, Samsung）: 减少变体，避免与热门搜索词冲突
-  if (popularity === 'high') {
-    console.log(`  🏆 高知名度品牌 "${brand}" - 使用精简变体（1个）`)
-    return [brandLower]
-  }
-
-  // 🔥 中等知名度品牌: 标准变体
-  if (popularity === 'medium') {
-    console.log(`  ⭐ 中等知名度品牌 "${brand}" - 使用标准变体（2个）`)
-    const variants = [brandLower]
-    variants.push(`buy ${brandLower}`)
-    return variants
-  }
-
-  // 🔥 低知名度品牌: 扩展变体，增加曝光
-  console.log(`  📌 低知名度品牌 "${brand}" - 使用扩展变体（3个）`)
-  const variants = [brandLower]
-  variants.push(`buy ${brandLower}`)
-  variants.push(`${brandLower} reviews`)
-  return variants
+  console.log(`  ℹ️ 品牌流行度=${popularity}，品牌变体限制为证据安全模式（仅品牌词）`)
+  return [brandLower]
 }
 
 /**
@@ -869,12 +850,8 @@ async function extractFromStore(
   })
   console.log(`  ✓ 商品标题关键字: ${keywordCandidates.length}个`)
 
-  // 1.2 生成品牌变体关键字
-  const brandVariants = [
-    brand,
-    `buy ${brand}`,
-    `${brand} reviews`
-  ]
+  // 1.2 生成品牌变体关键字（证据安全：仅品牌词）
+  const brandVariants = [normalizeBrandName(brand)]
   keywordCandidates.push(...brandVariants)
   console.log(`  ✓ 品牌变体关键字: ${brandVariants.length}个`)
 
@@ -1222,258 +1199,120 @@ async function generateHeadlines(
   }
 }
 
-/**
- * 生成语言特定的提示词（Headline生成 - 多商品店铺）
- * 🔥 Enhanced to utilize deep analysis data: productInfo, reviewAnalysis, competitorAnalysis
- */
-function getMultipleProductHeadlinePrompt(
-  products: EnrichedStoreProduct[],  // 🔥 Changed from ProductInfo[] to access deep analysis
-  topKeywords: Array<{ keyword: string; searchVolume: number }>,
-  targetLanguage: string,
-  brand: string  // 🔥 New parameter for consistent brand reference
-): string {
-  const languageInstructions = {
-    'English': {
-      intro: 'You are a professional Google Ads copywriter. Based on the following store\'s TOP 5 best-selling products, generate 15 Google Search ad headlines.',
-      topProducts: 'TOP 5 Best-Selling Products:',
-      rating: 'rating',
-      reviews: 'reviews',
-      brand: 'Brand',
-      unknown: 'Unknown',
-      keywords: 'High-Volume Keywords:',
-      searchVolume: 'Search Volume',
-      requirements: 'Requirements:',
-      req1: '1. Generate 15 headlines, each with a maximum of 30 characters',
-      req2: '2. First 5 headlines should be based on the 5 best-selling products (brand name + product name)',
-      req3: '3. Middle 5 headlines should incorporate high-volume keywords',
-      req4: '4. Last 5 headlines should emphasize store advantages (official store, best-sellers, quality guarantee, etc.)',
-      req5: '5. Use high-intent purchase language',
-      req6: '6. Avoid using DKI dynamic insertion syntax',
-      outputFormat: 'Output Format (JSON):',
-      strictFormat: 'Please strictly follow JSON format and ensure 15 headlines.'
-    },
-    'German': {
-      intro: 'Sie sind ein professioneller Google Ads-Texter. Basierend auf den TOP 5 Bestsellern des Shops generieren Sie 15 Google-Suchanzeigen-Überschriften.',
-      topProducts: 'TOP 5 Bestseller:',
-      rating: 'Bewertung',
-      reviews: 'Bewertungen',
-      brand: 'Marke',
-      unknown: 'Unbekannt',
-      keywords: 'Hochvolumen-Keywords:',
-      searchVolume: 'Suchvolumen',
-      requirements: 'Anforderungen:',
-      req1: '1. Generieren Sie 15 Überschriften mit jeweils maximal 30 Zeichen',
-      req2: '2. Die ersten 5 Überschriften sollten auf den 5 Bestsellern basieren (Markenname + Produktname)',
-      req3: '3. Die mittleren 5 Überschriften sollten hochvolumige Keywords enthalten',
-      req4: '4. Die letzten 5 Überschriften sollten Shop-Vorteile betonen (offizieller Shop, Bestseller, Qualitätsgarantie usw.)',
-      req5: '5. Verwenden Sie kaufintensiven Wortschatz',
-      req6: '6. Vermeiden Sie die Verwendung von DKI-Dynamik-Syntax',
-      outputFormat: 'Ausgabeformat (JSON):',
-      strictFormat: 'Bitte halten Sie sich strikt an das JSON-Format und stellen Sie 15 Überschriften sicher.'
-    },
-    'Chinese': {
-      intro: '你是专业的Google Ads文案专家。请基于以下店铺的TOP 5热销商品，生成15个Google搜索广告标题（Headlines）。',
-      topProducts: 'TOP 5热销商品：',
-      rating: '评分',
-      reviews: '评论',
-      brand: '品牌',
-      unknown: '未知',
-      keywords: '高搜索量关键词：',
-      searchVolume: '搜索量',
-      requirements: '要求：',
-      req1: '1. 生成15个标题，每个最多30个字符',
-      req2: '2. 前5个标题分别基于5个热销商品（品牌名+商品名）',
-      req3: '3. 中间5个标题融入高搜索量关键词',
-      req4: '4. 后5个标题强调品牌店铺优势（官方旗舰店、热销爆品、品质保证等）',
-      req5: '5. 使用购买意图强烈的词汇',
-      req6: '6. 避免使用DKI动态插入语法',
-      outputFormat: '输出格式（JSON）：',
-      strictFormat: '请严格遵循JSON格式输出，确保15个标题。'
-    },
-    'Japanese': {
-      intro: 'あなたはプロのGoogle広告コピーライターです。以下のストアのTOP 5ベストセラー商品に基づいて、15個のGoogle検索広告の見出しを生成してください。',
-      topProducts: 'TOP 5ベストセラー商品：',
-      rating: '評価',
-      reviews: 'レビュー',
-      brand: 'ブランド',
-      unknown: '不明',
-      keywords: '高検索ボリュームキーワード：',
-      searchVolume: '検索ボリューム',
-      requirements: '要件：',
-      req1: '1. 15個の見出しを生成し、それぞれ最大30文字',
-      req2: '2. 最初の5つの見出しは5つのベストセラー商品に基づく（ブランド名+商品名）',
-      req3: '3. 中間の5つの見出しには高検索ボリュームキーワードを組み込む',
-      req4: '4. 最後の5つの見出しではストアの利点を強調（公式ストア、ベストセラー、品質保証など）',
-      req5: '5. 購買意欲の高い言葉を使用',
-      req6: '6. DKI動的挿入構文の使用を避ける',
-      outputFormat: '出力形式（JSON）：',
-      strictFormat: 'JSON形式に厳密に従い、15個の見出しを確保してください。'
-    },
-    'Italian': {
-      intro: 'Sei un copywriter professionista di Google Ads. In base ai TOP 5 prodotti più venduti del negozio, genera 15 titoli per gli annunci di ricerca di Google.',
-      topProducts: 'TOP 5 Prodotti più venduti：',
-      rating: 'Valutazione',
-      reviews: 'recensioni',
-      brand: 'Marca',
-      unknown: 'Sconosciuto',
-      keywords: 'Parole chiave ad alto volume：',
-      searchVolume: 'Volume di ricerca',
-      requirements: 'Requisiti：',
-      req1: '1. Genera 15 titoli, ciascuno con un massimo di 30 caratteri',
-      req2: '2. I primi 5 titoli dovrebbero essere basati sui 5 prodotti più venduti (nome del brand + nome del prodotto)',
-      req3: '3. I 5 titoli centrali dovrebbero incorporare parole chiave ad alto volume',
-      req4: '4. Gli ultimi 5 titoli dovrebbero enfatizzare i vantaggi del negozio (negozio ufficiale, best-seller, garanzia di qualità, ecc.)',
-      req5: '5. Utilizza un linguaggio ad alta intenzione d\'acquisto',
-      req6: '6. Evita di utilizzare la sintassi di inserimento dinamico DKI',
-      outputFormat: 'Formato di output (JSON)：',
-      strictFormat: 'Si prega di seguire rigorosamente il formato JSON e assicurarsi di avere 15 titoli.'
-    },
-    'Korean': {
-      intro: '당신은 전문 Google Ads 카피라이터입니다. 다음 스토어의 TOP 5 베스트셀러 제품을 기반으로 15개의 Google 검색 광고 헤드라인을 생성하세요.',
-      topProducts: 'TOP 5 베스트셀러 제품：',
-      rating: '평점',
-      reviews: '리뷰',
-      brand: '브랜드',
-      unknown: '알 수 없음',
-      keywords: '높은 검색량 키워드：',
-      searchVolume: '검색량',
-      requirements: '요구사항：',
-      req1: '1. 15개의 헤드라인을 생성하고, 각각 최대 30자',
-      req2: '2. 처음 5개의 헤드라인은 5개의 베스트셀러 제품을 기반으로 해야 합니다（브랜드명 + 제품명）',
-      req3: '3. 중간 5개의 헤드라인에는 높은 검색량 키워드를 포함해야 합니다',
-      req4: '4. 마지막 5개의 헤드라인은 스토어 장점을 강조해야 합니다（공식 스토어, 베스트셀러, 품질 보증 등）',
-      req5: '5. 구매 의도가 높은 언어 사용',
-      req6: '6. DKI 동적 삽입 구문 사용 피하기',
-      outputFormat: '출력 형식（JSON）：',
-      strictFormat: 'JSON 형식을 엄격히 따르고 15개의 헤드라인을 확보하세요.'
-    },
-    'French': {
-      intro: 'Vous êtes un rédacteur professionnel Google Ads. En vous basant sur les TOP 5 meilleures ventes du magasin, générez 15 titres d\'annonces de recherche Google.',
-      topProducts: 'TOP 5 Meilleures ventes：',
-      rating: 'Note',
-      reviews: 'avis',
-      brand: 'Marque',
-      unknown: 'Inconnu',
-      keywords: 'Mots-clés à fort volume：',
-      searchVolume: 'Volume de recherche',
-      requirements: 'Exigences：',
-      req1: '1. Générez 15 titres, chacun avec un maximum de 30 caractères',
-      req2: '2. Les 5 premiers titres doivent être basés sur les 5 meilleures ventes (nom de la marque + nom du produit)',
-      req3: '3. Les 5 titres du milieu doivent incorporer des mots-clés à fort volume',
-      req4: '4. Les 5 derniers titres doivent mettre en avant les avantages du magasin (magasin officiel, best-sellers, garantie de qualité, etc.)',
-      req5: '5. Utilisez un langage à forte intention d\'achat',
-      req6: '6. Évitez d\'utiliser la syntaxe d\'insertion dynamique DKI',
-      outputFormat: 'Format de sortie (JSON)：',
-      strictFormat: 'Veuillez suivre strictement le format JSON et assurer 15 titres.'
-    },
-    'Swedish': {
-      intro: 'Du är en professionell Google Ads-copywriter. Baserat på butikens TOP 5 bästsäljare, generera 15 Google sökannons-rubriker.',
-      topProducts: 'TOP 5 Bästsäljare：',
-      rating: 'Betyg',
-      reviews: 'recensioner',
-      brand: 'Varumärke',
-      unknown: 'Okänd',
-      keywords: 'Höga sökvolymer nyckelord：',
-      searchVolume: 'Sökvolym',
-      requirements: 'Krav：',
-      req1: '1. Generera 15 rubriker, var och en med maximalt 30 tecken',
-      req2: '2. De första 5 rubrikerna bör baseras på de 5 bästsäljarna (varumärkesnamn + produktnamn)',
-      req3: '3. De mittersta 5 rubrikerna bör inkorporera nyckelord med hög sökvolym',
-      req4: '4. De sista 5 rubrikerna bör betona butiksfördelar (officiell butik, bästsäljare, kvalitetsgaranti, etc.)',
-      req5: '5. Använd språk med hög köpintention',
-      req6: '6. Undvik att använda DKI dynamisk insättningssyntax',
-      outputFormat: 'Utdataformat (JSON)：',
-      strictFormat: 'Följ strikt JSON-formatet och säkerställ 15 rubriker.'
-    },
-    'Swiss German': {
-      intro: 'Sie sind ein professioneller Google Ads-Texter. Basierend auf den TOP 5 Bestsellern des Shops generieren Sie 15 Google-Suchanzeigen-Überschriften.',
-      topProducts: 'TOP 5 Bestseller：',
-      rating: 'Bewertung',
-      reviews: 'Bewertungen',
-      brand: 'Marke',
-      unknown: 'Unbekannt',
-      keywords: 'Hochvolumen-Keywords：',
-      searchVolume: 'Suchvolumen',
-      requirements: 'Anforderungen：',
-      req1: '1. Generieren Sie 15 Überschriften mit jeweils maximal 30 Zeichen',
-      req2: '2. Die ersten 5 Überschriften sollten auf den 5 Bestsellern basieren (Markenname + Produktname)',
-      req3: '3. Die mittleren 5 Überschriften sollten hochvolumige Keywords enthalten',
-      req4: '4. Die letzten 5 Überschriften sollten Shop-Vorteile betonen (offizieller Shop, Bestseller, Qualitätsgarantie usw.)',
-      req5: '5. Verwenden Sie kaufintensiven Wortschatz',
-      req6: '6. Vermeiden Sie die Verwendung von DKI-Dynamik-Syntax',
-      outputFormat: 'Ausgabeformat (JSON)：',
-      strictFormat: 'Bitte halten Sie sich strikt an das JSON-Format und stellen Sie 15 Überschriften sicher.'
+function parsePromptJsonObject(value: unknown): Record<string, any> | null {
+  if (!value) return null
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, any>
+  }
+  if (typeof value !== 'string') return null
+
+  try {
+    const parsed = JSON.parse(value)
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, any>
     }
+  } catch {
+    return null
   }
 
-  const lang = languageInstructions[targetLanguage as keyof typeof languageInstructions] || languageInstructions['English']
-
-  // 🔥 Build enriched product descriptions with deep analysis data
-  const enrichedProductDescriptions = products.map((p, i) => {
-    const parts = [
-      `${i + 1}. **${p.name}**`,
-      `   - ${lang.rating}: ${p.rating || 'N/A'}⭐ (${p.reviewCount || 'N/A'} ${lang.reviews})`
-    ]
-
-    // Add AI product analysis if available
-    if (p.productInfo) {
-      const info = typeof p.productInfo === 'string' ? JSON.parse(p.productInfo) : p.productInfo
-      if (info.uniqueSellingPoints) {
-        parts.push(`   - Unique Selling Points: ${info.uniqueSellingPoints}`)
-      }
-      if (info.targetAudience) {
-        parts.push(`   - Target Audience: ${info.targetAudience}`)
-      }
-    }
-
-    // Add review analysis insights if available
-    if (p.reviewAnalysis) {
-      const analysis = typeof p.reviewAnalysis === 'string' ? JSON.parse(p.reviewAnalysis) : p.reviewAnalysis
-      if (analysis.topPositiveKeywords && analysis.topPositiveKeywords.length > 0) {
-        parts.push(`   - Customer Praise: ${analysis.topPositiveKeywords.slice(0, 3).join(', ')}`)
-      }
-      if (analysis.realUseCases && analysis.realUseCases.length > 0) {
-        parts.push(`   - Use Cases: ${analysis.realUseCases.slice(0, 2).join(', ')}`)
-      }
-    }
-
-    // Add competitive advantages if available
-    if (p.competitorAnalysis) {
-      const compAnalysis = typeof p.competitorAnalysis === 'string' ? JSON.parse(p.competitorAnalysis) : p.competitorAnalysis
-      if (compAnalysis.uniqueSellingPoints && compAnalysis.uniqueSellingPoints.length > 0) {
-        parts.push(`   - Competitive Edge: ${compAnalysis.uniqueSellingPoints.slice(0, 2).join(', ')}`)
-      }
-    }
-
-    return parts.join('\n')
-  }).join('\n\n')
-
-  return `${lang.intro}
-
-**${lang.brand}:** ${brand}
-
-**${lang.topProducts}**
-${enrichedProductDescriptions}
-
-**${lang.keywords}**
-${topKeywords.map(k => `- ${k.keyword} (${lang.searchVolume}: ${k.searchVolume})`).join('\n')}
-
-**${lang.requirements}**
-${lang.req1}
-${lang.req2}
-${lang.req3}
-${lang.req4}
-${lang.req5}
-${lang.req6}
-
-**IMPORTANT**: Use the customer insights, use cases, and competitive advantages above to create compelling, relevant headlines that resonate with the target audience.
-
-**${lang.outputFormat}**
-{
-  "headlines": ["headline1", "headline2", ..., "headline15"]
+  return null
 }
 
-${lang.strictFormat}`
+function toPromptText(value: unknown, maxItems: number = 3): string | null {
+  if (Array.isArray(value)) {
+    const values = value
+      .map(item => String(item || '').trim())
+      .filter(Boolean)
+      .slice(0, maxItems)
+    return values.length > 0 ? values.join(', ') : null
+  }
+
+  const text = String(value || '').trim()
+  return text ? text : null
+}
+
+function buildStoreProductEvidence(
+  products: Array<{
+    name?: string
+    brand?: string
+    rating?: string | number | null
+    reviewCount?: string | number | null
+    productInfo?: unknown
+    reviewAnalysis?: unknown
+    competitorAnalysis?: unknown
+    features?: string[]
+    uniqueSellingPoints?: string
+    productHighlights?: string
+  }>
+): string {
+  return products.map((product, index) => {
+    const lines = [
+      `${index + 1}. Product: ${product.name || 'Unknown Product'}`,
+      `   - Brand: ${product.brand || 'Unknown'}`,
+      `   - Rating: ${product.rating ?? 'N/A'} (${product.reviewCount ?? 'N/A'} reviews)`,
+    ]
+
+    const features = toPromptText(product.features, 3)
+    if (features) {
+      lines.push(`   - Features: ${features}`)
+    }
+
+    const directSellingPoints = toPromptText(product.uniqueSellingPoints || product.productHighlights, 2)
+    if (directSellingPoints) {
+      lines.push(`   - Selling Points: ${directSellingPoints}`)
+    }
+
+    const productInfo = parsePromptJsonObject(product.productInfo)
+    const infoSellingPoints = toPromptText(productInfo?.uniqueSellingPoints, 2)
+    if (infoSellingPoints) {
+      lines.push(`   - Verified Selling Points: ${infoSellingPoints}`)
+    }
+    const targetAudience = toPromptText(productInfo?.targetAudience, 1)
+    if (targetAudience) {
+      lines.push(`   - Target Audience: ${targetAudience}`)
+    }
+
+    const reviewAnalysis = parsePromptJsonObject(product.reviewAnalysis)
+    const customerPraise = toPromptText(reviewAnalysis?.topPositiveKeywords, 3)
+    if (customerPraise) {
+      lines.push(`   - Customer Praise: ${customerPraise}`)
+    }
+    const realUseCases = toPromptText(reviewAnalysis?.realUseCases, 2)
+    if (realUseCases) {
+      lines.push(`   - Use Cases: ${realUseCases}`)
+    }
+
+    const competitorAnalysis = parsePromptJsonObject(product.competitorAnalysis)
+    const competitiveEdge = toPromptText(competitorAnalysis?.uniqueSellingPoints, 2)
+    if (competitiveEdge) {
+      lines.push(`   - Competitive Edge: ${competitiveEdge}`)
+    }
+
+    return lines.join('\n')
+  }).join('\n\n')
+}
+
+/**
+ * 生成提示词（Headline生成 - 多商品店铺，Prompt版本管理）
+ */
+async function getMultipleProductHeadlinePrompt(
+  products: EnrichedStoreProduct[],
+  topKeywords: Array<{ keyword: string; searchVolume: number }>,
+  targetLanguage: string,
+  brand: string
+): Promise<string> {
+  const promptTemplate = await loadPrompt('ad_elements_headlines_store')
+  const topProductsText = buildStoreProductEvidence(products)
+  const topKeywordsText = topKeywords.length > 0
+    ? topKeywords.map(k => `- ${k.keyword} (search volume: ${k.searchVolume})`).join('\n')
+    : '- none'
+
+  return interpolateTemplate(promptTemplate, {
+    targetLanguage,
+    brand,
+    topProducts: topProductsText,
+    topKeywords: topKeywordsText,
+  })
 }
 
 /**
@@ -1486,7 +1325,7 @@ async function generateHeadlinesFromMultipleProducts(
   userId: number,
   brand: string  // 🔥 New parameter for brand context
 ): Promise<string[]> {
-  const prompt = getMultipleProductHeadlinePrompt(products, topKeywords, targetLanguage, brand)
+  const prompt = await getMultipleProductHeadlinePrompt(products, topKeywords, targetLanguage, brand)
 
   // 🆕 Token优化：定义结构化JSON schema
   const responseSchema = {
@@ -1691,188 +1530,18 @@ async function generateDescriptions(
 }
 
 /**
- * 生成语言特定的提示词（Description生成 - 多商品店铺）
+ * 生成提示词（Description生成 - 多商品店铺，Prompt版本管理）
  */
-function getMultipleProductDescriptionPrompt(products: ProductInfo[], targetLanguage: string): string {
-  const languageInstructions = {
-    'English': {
-      intro: 'You are a professional Google Ads copywriter. Based on the following store\'s TOP 5 best-selling products, generate 4 Google Search ad descriptions.',
-      topProducts: 'TOP 5 Best-Selling Products:',
-      rating: 'rating',
-      reviews: 'reviews',
-      brand: 'Brand',
-      unknown: 'Unknown',
-      requirements: 'Requirements:',
-      req1: '1. Generate 4 descriptions, each with a maximum of 90 characters',
-      req2: '2. Description 1: Highlight brand store advantages and best-sellers',
-      req3: '3. Description 2: Emphasize diversified product line and quality assurance',
-      req4: '4. Description 3: Social proof (high ratings, many positive reviews, official flagship store)',
-      req5: '5. Description 4: Promotional information and call to action',
-      req6: '6. Express concisely, highlight purchase value',
-      outputFormat: 'Output Format (JSON):',
-      strictFormat: 'Please strictly follow JSON format.'
-    },
-    'German': {
-      intro: 'Sie sind ein professioneller Google Ads-Texter. Basierend auf den TOP 5 Bestsellern des Shops generieren Sie 4 Google-Suchanzeigen-Beschreibungen.',
-      topProducts: 'TOP 5 Bestseller:',
-      rating: 'Bewertung',
-      reviews: 'Bewertungen',
-      brand: 'Marke',
-      unknown: 'Unbekannt',
-      requirements: 'Anforderungen:',
-      req1: '1. Generieren Sie 4 Beschreibungen mit jeweils maximal 90 Zeichen',
-      req2: '2. Beschreibung 1: Shop-Vorteile und Bestseller hervorheben',
-      req3: '3. Beschreibung 2: Vielfältige Produktpalette und Qualitätsgarantie betonen',
-      req4: '4. Beschreibung 3: Social Proof (hohe Bewertungen, viele positive Bewertungen, offizieller Flagship-Shop)',
-      req5: '5. Beschreibung 4: Aktionsinformationen und Call-to-Action',
-      req6: '6. Prägnant ausdrücken, Kaufwert hervorheben',
-      outputFormat: 'Ausgabeformat (JSON):',
-      strictFormat: 'Bitte halten Sie sich strikt an das JSON-Format.'
-    },
-    'Chinese': {
-      intro: '你是专业的Google Ads文案专家。请基于以下店铺的TOP 5热销商品，生成4个Google搜索广告描述（Descriptions）。',
-      topProducts: 'TOP 5热销商品：',
-      rating: '评分',
-      reviews: '评论',
-      brand: '品牌',
-      unknown: '未知',
-      requirements: '要求：',
-      req1: '1. 生成4个描述，每个最多90个字符',
-      req2: '2. 第1个描述：突出品牌店铺优势和热销爆品',
-      req3: '3. 第2个描述：强调多样化产品线和品质保证',
-      req4: '4. 第3个描述：社会证明（高评分、大量好评、官方旗舰店）',
-      req5: '5. 第4个描述：促销信息和行动号召',
-      req6: '6. 精炼表达，突出购买价值',
-      outputFormat: '输出格式（JSON）：',
-      strictFormat: '请严格遵循JSON格式输出。'
-    },
-    'Japanese': {
-      intro: 'あなたはプロのGoogle広告コピーライターです。以下のストアのTOP 5ベストセラー商品に基づいて、4つのGoogle検索広告の説明文を生成してください。',
-      topProducts: 'TOP 5ベストセラー商品：',
-      rating: '評価',
-      reviews: 'レビュー',
-      brand: 'ブランド',
-      unknown: '不明',
-      requirements: '要件：',
-      req1: '1. 4つの説明文を生成し、それぞれ最大90文字',
-      req2: '2. 説明文1：ブランドストアの利点とベストセラーを強調',
-      req3: '3. 説明文2：多様な製品ラインと品質保証を強調',
-      req4: '4. 説明文3：社会的証明（高評価、多数の肯定的なレビュー、公式旗艦店）',
-      req5: '5. 説明文4：プロモーション情報と行動喚起',
-      req6: '6. 簡潔に表現し、購入価値を強調',
-      outputFormat: '出力形式（JSON）：',
-      strictFormat: 'JSON形式に厳密に従ってください。'
-    },
-    'Italian': {
-      intro: 'Sei un copywriter professionista di Google Ads. In base ai TOP 5 prodotti più venduti del negozio, genera 4 descrizioni per gli annunci di ricerca di Google.',
-      topProducts: 'TOP 5 Prodotti più venduti：',
-      rating: 'Valutazione',
-      reviews: 'recensioni',
-      brand: 'Marca',
-      unknown: 'Sconosciuto',
-      requirements: 'Requisiti：',
-      req1: '1. Genera 4 descrizioni, ciascuna con un massimo di 90 caratteri',
-      req2: '2. Descrizione 1: Evidenzia i vantaggi del negozio di marca e i best-seller',
-      req3: '3. Descrizione 2: Enfatizza la linea di prodotti diversificata e la garanzia di qualità',
-      req4: '4. Descrizione 3: Prova sociale (valutazioni elevate, molte recensioni positive, negozio ufficiale)',
-      req5: '5. Descrizione 4: Informazioni promozionali e chiamata all\'azione',
-      req6: '6. Esprimi in modo conciso, evidenzia il valore d\'acquisto',
-      outputFormat: 'Formato di output (JSON)：',
-      strictFormat: 'Si prega di seguire rigorosamente il formato JSON.'
-    },
-    'Korean': {
-      intro: '당신은 전문 Google Ads 카피라이터입니다. 다음 스토어의 TOP 5 베스트셀러 제품을 기반으로 4개의 Google 검색 광고 설명을 생성하세요.',
-      topProducts: 'TOP 5 베스트셀러 제품：',
-      rating: '평점',
-      reviews: '리뷰',
-      brand: '브랜드',
-      unknown: '알 수 없음',
-      requirements: '요구사항：',
-      req1: '1. 4개의 설명을 생성하고, 각각 최대 90자',
-      req2: '2. 설명 1: 브랜드 스토어 장점과 베스트셀러 강조',
-      req3: '3. 설명 2: 다양한 제품 라인과 품질 보증 강조',
-      req4: '4. 설명 3: 사회적 증거（높은 평점, 많은 긍정적 리뷰, 공식 플래그십 스토어）',
-      req5: '5. 설명 4: 프로모션 정보와 행동 유도',
-      req6: '6. 간결하게 표현하고 구매 가치 강조',
-      outputFormat: '출력 형식（JSON）：',
-      strictFormat: 'JSON 형식을 엄격히 따르세요.'
-    },
-    'French': {
-      intro: 'Vous êtes un rédacteur professionnel Google Ads. En vous basant sur les TOP 5 meilleures ventes du magasin, générez 4 descriptions d\'annonces de recherche Google.',
-      topProducts: 'TOP 5 Meilleures ventes：',
-      rating: 'Note',
-      reviews: 'avis',
-      brand: 'Marque',
-      unknown: 'Inconnu',
-      requirements: 'Exigences：',
-      req1: '1. Générez 4 descriptions, chacune avec un maximum de 90 caractères',
-      req2: '2. Description 1: Mettez en avant les avantages du magasin de marque et les meilleures ventes',
-      req3: '3. Description 2: Soulignez la gamme de produits diversifiée et la garantie de qualité',
-      req4: '4. Description 3: Preuve sociale (notes élevées, nombreux avis positifs, magasin officiel)',
-      req5: '5. Description 4: Informations promotionnelles et appel à l\'action',
-      req6: '6. Exprimez de manière concise, mettez en valeur la valeur d\'achat',
-      outputFormat: 'Format de sortie (JSON)：',
-      strictFormat: 'Veuillez suivre strictement le format JSON.'
-    },
-    'Swedish': {
-      intro: 'Du är en professionell Google Ads-copywriter. Baserat på butikens TOP 5 bästsäljare, generera 4 Google sökannons-beskrivningar.',
-      topProducts: 'TOP 5 Bästsäljare：',
-      rating: 'Betyg',
-      reviews: 'recensioner',
-      brand: 'Varumärke',
-      unknown: 'Okänd',
-      requirements: 'Krav：',
-      req1: '1. Generera 4 beskrivningar, var och en med maximalt 90 tecken',
-      req2: '2. Beskrivning 1: Lyft fram varumärkesbutiksfördelar och bästsäljare',
-      req3: '3. Beskrivning 2: Betona diversifierad produktlinje och kvalitetsgaranti',
-      req4: '4. Beskrivning 3: Socialt bevis (höga betyg, många positiva recensioner, officiell flaggskeppsbutik)',
-      req5: '5. Beskrivning 4: Kampanjinformation och uppmaning till handling',
-      req6: '6. Uttryck koncist, framhäv köpvärde',
-      outputFormat: 'Utdataformat (JSON)：',
-      strictFormat: 'Följ strikt JSON-formatet.'
-    },
-    'Swiss German': {
-      intro: 'Sie sind ein professioneller Google Ads-Texter. Basierend auf den TOP 5 Bestsellern des Shops generieren Sie 4 Google-Suchanzeigen-Beschreibungen.',
-      topProducts: 'TOP 5 Bestseller：',
-      rating: 'Bewertung',
-      reviews: 'Bewertungen',
-      brand: 'Marke',
-      unknown: 'Unbekannt',
-      requirements: 'Anforderungen：',
-      req1: '1. Generieren Sie 4 Beschreibungen mit jeweils maximal 90 Zeichen',
-      req2: '2. Beschreibung 1: Shop-Vorteile und Bestseller hervorheben',
-      req3: '3. Beschreibung 2: Vielfältige Produktpalette und Qualitätsgarantie betonen',
-      req4: '4. Beschreibung 3: Social Proof (hohe Bewertungen, viele positive Bewertungen, offizieller Flagship-Shop)',
-      req5: '5. Beschreibung 4: Aktionsinformationen und Call-to-Action',
-      req6: '6. Prägnant ausdrücken, Kaufwert hervorheben',
-      outputFormat: 'Ausgabeformat (JSON)：',
-      strictFormat: 'Bitte halten Sie sich strikt an das JSON-Format.'
-    }
-  }
+async function getMultipleProductDescriptionPrompt(products: ProductInfo[], targetLanguage: string): Promise<string> {
+  const promptTemplate = await loadPrompt('ad_elements_descriptions_store')
+  const topProductsText = buildStoreProductEvidence(products)
+  const brand = products[0]?.brand || 'Unknown'
 
-  const lang = languageInstructions[targetLanguage as keyof typeof languageInstructions] || languageInstructions['English']
-
-  return `${lang.intro}
-
-**${lang.topProducts}**
-${products.map((p, i) => `${i + 1}. ${p.name} (${lang.rating}${p.rating}, ${p.reviewCount}${lang.reviews})`).join('\n')}
-
-**${lang.brand}:** ${products[0]?.brand || lang.unknown}
-
-**${lang.requirements}**
-${lang.req1}
-${lang.req2}
-${lang.req3}
-${lang.req4}
-${lang.req5}
-${lang.req6}
-
-**${lang.outputFormat}**
-{
-  "descriptions": ["description1", "description2", "description3", "description4"]
-}
-
-${lang.strictFormat}`
+  return interpolateTemplate(promptTemplate, {
+    targetLanguage,
+    brand,
+    topProducts: topProductsText,
+  })
 }
 
 /**
@@ -1883,7 +1552,7 @@ async function generateDescriptionsFromMultipleProducts(
   targetLanguage: string,
   userId: number
 ): Promise<string[]> {
-  const prompt = getMultipleProductDescriptionPrompt(products, targetLanguage)
+  const prompt = await getMultipleProductDescriptionPrompt(products, targetLanguage)
 
   // 🆕 Token优化：定义结构化JSON schema
   const responseSchema = {
@@ -1951,6 +1620,47 @@ async function generateDescriptionsFromMultipleProducts(
 /**
  * 降级方案：手动生成基础标题（单商品）
  */
+function normalizeFallbackCopyText(text: string, maxLength: number): string | null {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim()
+  if (!normalized) return null
+  if (/\b(buy|shop|sale|discount|deal|coupon|promo|official|store|amazon)\b/i.test(normalized)) {
+    return null
+  }
+  return normalized.slice(0, maxLength)
+}
+
+function dedupeFallbackCopyTexts(candidates: string[], maxLength: number): string[] {
+  const seen = new Set<string>()
+  const output: string[] = []
+  for (const candidate of candidates) {
+    const normalized = normalizeFallbackCopyText(candidate, maxLength)
+    if (!normalized) continue
+    const key = normalized.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    output.push(normalized)
+  }
+  return output
+}
+
+function collectFallbackFeaturePhrases(values: Array<string | null | undefined>, limit: number): string[] {
+  const phrases: string[] = []
+  for (const raw of values) {
+    const normalized = normalizeGoogleAdsKeyword(raw || '')
+    if (!normalized) continue
+    const tokens = normalized
+      .split(/\s+/)
+      .filter(Boolean)
+      .filter((token) => token.length >= 3 || /\d/.test(token))
+      .filter((token) => !/^(buy|shop|sale|discount|deal|official|store|review|reviews|amazon|free|shipping)$/i.test(token))
+      .slice(0, 4)
+    if (tokens.length === 0) continue
+    phrases.push(tokens.join(' '))
+    if (phrases.length >= limit) break
+  }
+  return phrases
+}
+
 function generateFallbackHeadlines(
   product: ProductInfo,
   topKeywords: Array<{ keyword: string }>
@@ -1958,21 +1668,22 @@ function generateFallbackHeadlines(
   const brand = product.brand || 'Brand'
   const productName = product.name || 'Product'
   const brandProductName = extractBrandProductName(productName, brand)
-
-  const headlines = [
-    brandProductName.slice(0, 30),
-    `Buy ${brandProductName}`.slice(0, 30),
-    `${brand} Official Store`.slice(0, 30),
-    `Shop ${brand} Now`.slice(0, 30),
-    `${brand} Best Price`.slice(0, 30),
-    ...topKeywords.slice(0, 5).map(k => k.keyword.slice(0, 30)),
-    `${brand} Sale`.slice(0, 30),
-    `Free Shipping ${brand}`.slice(0, 30),
-    `${brand} Discount`.slice(0, 30),
-    `Top Rated ${brand}`.slice(0, 30),
-    `${brand} Amazon`.slice(0, 30)
+  const featureSource = product.aboutThisItem?.length ? product.aboutThisItem : product.features
+  const featurePhrases = collectFallbackFeaturePhrases(featureSource || [], 6)
+  const headlineCandidates = [
+    brandProductName,
+    ...topKeywords.slice(0, 8).map((item) => item.keyword),
+    ...featurePhrases.map((phrase) => `${brand} ${phrase}`),
+    brand,
   ]
 
+  const headlines = dedupeFallbackCopyTexts(headlineCandidates, 30)
+  if (headlines.length === 0) {
+    headlines.push((brandProductName || brand || 'Product').slice(0, 30))
+  }
+  while (headlines.length < 15) {
+    headlines.push(headlines[headlines.length % headlines.length])
+  }
   return headlines.slice(0, 15)
 }
 
@@ -1990,18 +1701,23 @@ function generateFallbackHeadlinesFromMultiple(
         : products[0].productInfo.brandDescription?.split(' ')[0]) || 'Brand'
     : 'Brand'
 
-  const headlines = [
-    ...products.slice(0, 5).map(p => extractBrandProductName(p.name, brand).slice(0, 30)),
-    `${brand} Official Store`.slice(0, 30),
-    `Shop ${brand} Products`.slice(0, 30),
-    ...topKeywords.slice(0, 3).map(k => k.keyword.slice(0, 30)),
-    `${brand} Best Sellers`.slice(0, 30),
-    `Buy ${brand} Online`.slice(0, 30),
-    `${brand} Sale`.slice(0, 30),
-    `Top Rated ${brand}`.slice(0, 30),
-    `${brand} Amazon Store`.slice(0, 30)
-  ]
+  const productHeadlineSeeds = products
+    .slice(0, 6)
+    .map((product) => extractBrandProductName(product.name, brand))
+  const headlines = dedupeFallbackCopyTexts([
+    ...productHeadlineSeeds,
+    ...topKeywords.slice(0, 6).map((item) => item.keyword),
+    `${brand} product lineup`,
+    `${brand} product details`,
+    brand,
+  ], 30)
 
+  if (headlines.length === 0) {
+    headlines.push((brand || 'Brand').slice(0, 30))
+  }
+  while (headlines.length < 15) {
+    headlines.push(headlines[headlines.length % headlines.length])
+  }
   return headlines.slice(0, 15)
 }
 
@@ -2010,16 +1726,28 @@ function generateFallbackHeadlinesFromMultiple(
  */
 function generateFallbackDescriptions(product: ProductInfo): string[] {
   const brand = product.brand || 'Brand'
-  // 优先使用 aboutThisItem (Amazon "About this item")，其次使用 features
+  const productName = extractBrandProductName(product.name || brand, brand)
   const featureSource = product.aboutThisItem?.length ? product.aboutThisItem : product.features
-  const features = featureSource?.slice(0, 3).join(', ') || 'high quality features'
+  const featurePhrases = collectFallbackFeaturePhrases(featureSource || [], 4)
+  const ratingSummary = product.rating
+    ? `${brand} rating ${product.rating}${product.reviewCount ? ` (${product.reviewCount} reviews)` : ''}`
+    : `${brand} listing data available`
 
-  return [
-    `Shop ${brand} with ${features}. Official store guaranteed quality.`.slice(0, 90),
-    `Buy ${brand} products online. Free shipping on qualified orders.`.slice(0, 90),
-    `Top rated ${brand} with ${product.reviewCount || 'thousands of'} reviews. Trusted by customers.`.slice(0, 90),
-    `Get ${brand} today. Limited time offer. Shop now on Amazon.`.slice(0, 90)
+  const descriptionCandidates = [
+    `${productName} ${featurePhrases[0] || 'detailed specifications available'}`,
+    `${brand} features: ${featurePhrases.slice(0, 2).join(', ') || 'see product details and compatibility'}`,
+    ratingSummary,
+    `${brand} model details and use scenarios are ready for review`,
   ]
+
+  const descriptions = dedupeFallbackCopyTexts(descriptionCandidates, 90)
+  if (descriptions.length === 0) {
+    descriptions.push(`${brand} product details available`.slice(0, 90))
+  }
+  while (descriptions.length < 4) {
+    descriptions.push(descriptions[descriptions.length % descriptions.length])
+  }
+  return descriptions.slice(0, 4)
 }
 
 /**
@@ -2027,13 +1755,32 @@ function generateFallbackDescriptions(product: ProductInfo): string[] {
  */
 function generateFallbackDescriptionsFromMultiple(products: ProductInfo[]): string[] {
   const brand = products[0]?.brand || 'Brand'
+  const topNames = products
+    .slice(0, 3)
+    .map((item) => extractBrandProductName(item.name || '', brand))
+    .filter(Boolean)
+    .join(', ')
 
-  return [
-    `${brand} official store with ${products.length} top-rated products. Shop bestsellers now.`.slice(0, 90),
-    `Buy ${brand} products online. Premium quality guaranteed. Free shipping available.`.slice(0, 90),
-    `Highly rated ${brand} store with thousands of satisfied customers. Trusted brand.`.slice(0, 90),
-    `Shop ${brand} today. Limited time deals on top products. Amazon exclusive offers.`.slice(0, 90)
+  const ratedProducts = products.filter((item) => typeof item.rating === 'number')
+  const avgRating = ratedProducts.length > 0
+    ? (ratedProducts.reduce((sum, item) => sum + Number(item.rating || 0), 0) / ratedProducts.length).toFixed(1)
+    : null
+
+  const descriptionCandidates = [
+    `${brand} includes ${products.length} listed products with structured details`,
+    topNames ? `Top products: ${topNames}` : `${brand} product lineup covers multiple models`,
+    avgRating ? `${brand} average rating ${avgRating} across sampled products` : `${brand} product metadata collected`,
+    `${brand} supports model comparison by features and compatibility`,
   ]
+
+  const descriptions = dedupeFallbackCopyTexts(descriptionCandidates, 90)
+  if (descriptions.length === 0) {
+    descriptions.push(`${brand} product details available`.slice(0, 90))
+  }
+  while (descriptions.length < 4) {
+    descriptions.push(descriptions[descriptions.length % descriptions.length])
+  }
+  return descriptions.slice(0, 4)
 }
 
 /**

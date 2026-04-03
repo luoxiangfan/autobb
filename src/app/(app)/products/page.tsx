@@ -1143,6 +1143,9 @@ export default function ProductsPage() {
             if (summaryRequestKeyRef.current !== summaryRequestKey) return
 
             loadedSummaryKeyRef.current = summaryRequestKey
+            if (typeof summaryData.total === 'number' && Number.isFinite(summaryData.total)) {
+              setTotal(Math.max(0, Number(summaryData.total)))
+            }
             setRecommendationScoreSummary(normalizeRecommendationScoreSummary(summaryData.recommendationScoreSummary))
             setLandingPageStats(normalizeLandingPageStats(summaryData.landingPageStats))
             setPlatformStats(normalizePlatformStatsMap(summaryData.platformStats))

@@ -29,13 +29,14 @@ import { normalizeSingleCreativeSelection } from '@/lib/creative-request-normali
 export const maxDuration = 60
 
 type NormalizedCreativeBucket = 'A' | 'B' | 'D'
-const BATCH_FORCE_GENERATE_ON_QUALITY_GATE = true
+const BATCH_FORCE_GENERATE_ON_QUALITY_GATE_DEFAULT = true
 const BATCH_QUALITY_GATE_BYPASS_REASON = 'offers_batch_auto_bypass_quality_gate'
 
 const requestSchema = z.object({
   offerIds: z.array(z.number().int().positive()).min(1).max(50),
   bucket: z.unknown().optional(),
   creativeType: z.unknown().optional(),
+  forceGenerateOnQualityGate: z.boolean().optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -64,6 +65,8 @@ export async function POST(request: NextRequest) {
     }
 
     const offerIds = Array.from(new Set(parsed.data.offerIds))
+    const forceGenerateOnQualityGate =
+      parsed.data.forceGenerateOnQualityGate ?? BATCH_FORCE_GENERATE_ON_QUALITY_GATE_DEFAULT
     const hasExplicitCreativeType = parsed.data.creativeType !== undefined
       && parsed.data.creativeType !== null
       && String(parsed.data.creativeType).trim() !== ''
@@ -293,8 +296,10 @@ export async function POST(request: NextRequest) {
           targetRating: 'GOOD',
           bucket: selectedBucket,
           synthetic: false,
-          forceGenerateOnQualityGate: BATCH_FORCE_GENERATE_ON_QUALITY_GATE,
-          qualityGateBypassReason: BATCH_QUALITY_GATE_BYPASS_REASON,
+          forceGenerateOnQualityGate,
+          ...(forceGenerateOnQualityGate
+            ? { qualityGateBypassReason: BATCH_QUALITY_GATE_BYPASS_REASON }
+            : {}),
         }
 
         await queue.enqueue('ad-creative', taskData, userIdNum, {

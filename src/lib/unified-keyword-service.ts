@@ -180,64 +180,8 @@ export function generateBrandVariants(brand: string): string[] {
 }
 
 // ============================================
-// 品类场景/功能词库（用于 raw seeds 生成）
+// 证据驱动词源策略（替代模板造词）
 // ============================================
-
-/**
- * 品类对应的常见使用场景词（legacy 桶B，对应商品需求场景）
- * - 这些词描述"在哪里用/为什么用"（Where/Why）
- * - 不包含技术规格或功能特性
- */
-const CATEGORY_SCENARIO_SEEDS: Record<string, string[]> = {
-  // 安防摄像头
-  'camera': ['home security', 'baby monitor', 'pet watching', 'garage security', 'driveway monitoring', 'backyard security', 'front door security', 'home protection', 'property surveillance'],
-  'security camera': ['home security system', 'house protection', 'apartment security', 'office security', 'small business security', 'remote monitoring', 'elderly care', 'nanny cam'],
-  'doorbell': ['front door security', 'package theft protection', 'visitor monitoring', 'home entrance security', 'delivery notification'],
-
-  // 智能家居
-  'smart home': ['home automation', 'voice control home', 'connected home', 'smart living'],
-  'vacuum': ['home cleaning', 'pet hair cleaning', 'floor cleaning', 'carpet cleaning', 'hardwood floor care'],
-  'robot vacuum': ['automatic cleaning', 'hands-free cleaning', 'scheduled cleaning', 'whole home cleaning'],
-
-  // 音频设备
-  'headphones': ['music listening', 'work from home', 'commute audio', 'gaming audio', 'workout music'],
-  'speaker': ['home audio', 'party music', 'outdoor entertainment', 'room audio'],
-
-  // 通用
-  'default': ['home use', 'office use', 'outdoor use', 'daily use', 'professional use']
-}
-
-/**
- * 品类对应的常见功能/规格词（legacy 桶C，对应功能规格特性）
- * - 这些词描述"要什么功能/什么规格"（What/How）
- * - 技术规格、功能特性、购买意图词
- */
-const CATEGORY_FEATURE_SEEDS: Record<string, string[]> = {
-  // 安防摄像头
-  'camera': ['wireless', 'night vision', '4k', '2k', '1080p', 'solar powered', 'battery powered', 'motion detection', 'two-way audio', 'cloud storage', 'local storage', 'waterproof', 'outdoor', 'indoor', 'ptz', '360 degree', 'color night vision'],
-  'security camera': ['no monthly fee', 'free cloud storage', 'continuous recording', 'ai detection', 'person detection', 'vehicle detection', 'package detection', 'smart alerts'],
-  'doorbell': ['video doorbell', 'wireless doorbell', 'battery doorbell', 'wired doorbell', 'smart doorbell', 'doorbell with camera'],
-
-  // 智能家居
-  'smart home': ['alexa compatible', 'google home', 'apple homekit', 'wifi', 'zigbee', 'matter', 'smart hub'],
-  'vacuum': ['powerful suction', 'quiet', 'self-emptying', 'mopping', 'lidar navigation', 'app control', 'scheduling'],
-  'robot vacuum': ['obstacle avoidance', 'auto empty', 'self cleaning', 'mapping', 'multi-floor'],
-
-  // 音频设备
-  'headphones': ['noise cancelling', 'wireless', 'bluetooth', 'over ear', 'in ear', 'long battery life', 'comfortable', 'hi-fi', 'anc'],
-  'speaker': ['portable', 'waterproof', 'bluetooth', 'wifi', 'bass', 'surround sound', 'multi-room'],
-
-  // 通用
-  'default': ['best', 'top rated', 'affordable', 'cheap', 'budget', 'premium', 'professional', 'high quality', 'durable', 'reliable']
-}
-
-/**
- * 需求扩展/比较词（适用于所有品类，legacy 桶C/D）
- */
-const PURCHASE_INTENT_WORDS = [
-  'best', 'top', 'review', 'vs', 'alternative', 'cheap', 'affordable',
-  'budget', 'premium', 'compare', 'which', 'recommendation'
-]
 
 // ============================================
 // 智能种子词构建
@@ -651,7 +595,7 @@ function addEvidenceTerms(target: Set<string>, seeds: Iterable<string>): void {
 function extractSourceKeywordsFromTexts(params: {
   texts: string[]
   brandName: string
-  includeScenario?: boolean
+  includeEvidencePhrases?: boolean
   allowModelAnchors?: boolean
   includePhraseFallback?: boolean
 }): string[] {
@@ -660,9 +604,9 @@ function extractSourceKeywordsFromTexts(params: {
   for (const text of params.texts) {
     extractFeatureSeeds(text, params.brandName).forEach(seed => pushUniqueSeed(seeds, seed))
 
-    if (params.includeScenario) {
-      extractScenarioFromFeatures(text).forEach((scenario) => {
-        pushUniqueSeed(seeds, `${params.brandName.toLowerCase()} ${scenario}`)
+    if (params.includeEvidencePhrases) {
+      extractEvidenceScenarioSeedsFromText(text, params.brandName).forEach((scenarioSeed) => {
+        pushUniqueSeed(seeds, scenarioSeed)
       })
     }
 
@@ -766,7 +710,7 @@ export function extractVerifiedKeywordSourcePool(offer: OfferData): VerifiedKeyw
   const aboutKeywords = extractSourceKeywordsFromTexts({
     texts: aboutTexts,
     brandName,
-    includeScenario: true,
+    includeEvidencePhrases: true,
     includePhraseFallback: true,
   })
   addEvidenceTerms(evidenceTerms, aboutKeywords)
@@ -797,7 +741,7 @@ export function extractVerifiedKeywordSourcePool(offer: OfferData): VerifiedKeyw
   const pageKeywords = extractSourceKeywordsFromTexts({
     texts: pageTexts,
     brandName,
-    includeScenario: true,
+    includeEvidencePhrases: true,
     includePhraseFallback: true,
   })
   addEvidenceTerms(evidenceTerms, pageKeywords)
@@ -898,47 +842,28 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
   // ==========================================
   const scenarioSeeds = new Set<string>()
 
-  // B1. 从品类词库获取场景词
-  const categoryKey = findCategoryKey(category, CATEGORY_SCENARIO_SEEDS)
-  const categoryScenarios = CATEGORY_SCENARIO_SEEDS[categoryKey] || CATEGORY_SCENARIO_SEEDS['default']
+  // B1. 仅基于证据文本提取（不再使用品类模板造词）
+  const scenarioEvidenceTexts = [
+    offer.productFeatures,
+    ...verifiedSourcePool.aboutKeywords,
+    ...verifiedSourcePool.pageKeywords,
+  ].filter((value): value is string => Boolean(String(value || '').trim()))
 
-  // B2. 添加场景词（不带品牌名，用于获取通用场景关键词）
-  categoryScenarios.slice(0, 8).forEach(scenario => {
-    scenarioSeeds.add(scenario)
-    // 也添加品牌+场景组合，捕获"eufy home security"这类搜索
-    scenarioSeeds.add(`${brandName.toLowerCase()} ${scenario}`)
-  })
-
-  // B3. 从产品特性中提取场景相关词
-  if (offer.productFeatures) {
-    const scenarioFromFeatures = extractScenarioFromFeatures(offer.productFeatures)
-    scenarioFromFeatures.forEach(s => scenarioSeeds.add(s))
+  for (const text of scenarioEvidenceTexts) {
+    extractEvidenceScenarioSeedsFromText(text, brandName, { includeUnbranded: true })
+      .forEach(seed => scenarioSeeds.add(seed))
   }
-  verifiedSourcePool.pageKeywords.forEach(seed => scenarioSeeds.add(seed))
+
+  // B2. 最小兜底：避免场景桶完全为空
+  if (scenarioSeeds.size === 0 && category) {
+    const categoryCore = String(category).split(/[\s&,]+/)[0]
+    if (categoryCore) scenarioSeeds.add(`${brandName.toLowerCase()} ${categoryCore}`)
+  }
 
   // ==========================================
   // legacy 桶C: 功能规格 / 需求扩展种子词
   // ==========================================
-  // C1. 从品类词库获取功能词
-  const featureCategoryKey = findCategoryKey(category, CATEGORY_FEATURE_SEEDS)
-  const categoryFeatures = CATEGORY_FEATURE_SEEDS[featureCategoryKey] || CATEGORY_FEATURE_SEEDS['default']
-
-  // C2. 添加功能词组合
-  categoryFeatures.slice(0, 10).forEach(feature => {
-    // 功能词 + 品类核心词
-    const categoryCore = category.split(/[\s&,]+/)[0] || 'product'
-    featureSeeds.add(`${feature} ${categoryCore}`)
-    // 品牌 + 功能词（捕获"eufy wireless camera"）
-    featureSeeds.add(`${brandName.toLowerCase()} ${feature}`)
-  })
-
-  // C3. 添加购买意图词
-  PURCHASE_INTENT_WORDS.slice(0, 5).forEach(intent => {
-    const categoryCore = category.split(/[\s&,]+/)[0] || 'product'
-    featureSeeds.add(`${intent} ${categoryCore}`)
-  })
-
-  // C4. 从产品特性提取功能相关词
+  // C1. 仅使用证据来源词，不再拼接模板功能词
   if (offer.productFeatures) {
     const featureFromDesc = extractFeatureSeeds(offer.productFeatures, brandName)
     featureFromDesc.forEach(s => featureSeeds.add(s))
@@ -947,6 +872,10 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
   verifiedSourcePool.paramKeywords.forEach(seed => featureSeeds.add(seed))
   verifiedSourcePool.hotProductKeywords.forEach(seed => featureSeeds.add(seed))
   verifiedSourcePool.pageKeywords.forEach(seed => featureSeeds.add(seed))
+  if (featureSeeds.size === 0 && category) {
+    const categoryCore = String(category).split(/[\s&,]+/)[0]
+    if (categoryCore) featureSeeds.add(`${brandName.toLowerCase()} ${categoryCore}`)
+  }
 
   // ==========================================
   // 合并去重
@@ -977,54 +906,67 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
 }
 
 /**
- * 查找匹配的品类键
+ * 从证据文本提取场景短语（替代模板造词）
  */
-function findCategoryKey(category: string, seedMap: Record<string, string[]>): string {
-  if (!category) return 'default'
+function extractEvidenceScenarioSeedsFromText(
+  text: string,
+  brandName: string,
+  options: { includeUnbranded?: boolean } = {}
+): string[] {
+  const includeUnbranded = Boolean(options.includeUnbranded)
+  const normalized = normalizeGoogleAdsKeyword(stripSourceTextLabel(text))
+  if (!normalized) return []
 
-  const categoryLower = category.toLowerCase()
+  const brandTokens = new Set(
+    normalizeGoogleAdsKeyword(brandName)
+      ?.split(/\s+/)
+      .filter(Boolean) || []
+  )
 
-  // 精确匹配
-  if (seedMap[categoryLower]) return categoryLower
+  const seeds = new Set<string>()
+  const fragments = normalized
+    .split(/[;,.|/]+/)
+    .map(fragment => fragment.trim())
+    .filter(Boolean)
 
-  // 部分匹配
-  for (const key of Object.keys(seedMap)) {
-    if (categoryLower.includes(key) || key.includes(categoryLower)) {
-      return key
+  const pushPhrase = (phraseTokens: string[]) => {
+    if (phraseTokens.length < 2) return
+    const phrase = phraseTokens.slice(0, 4).join(' ')
+    if (!phrase) return
+
+    if (includeUnbranded) seeds.add(phrase)
+    const branded = `${brandName.toLowerCase()} ${phrase}`.trim()
+    if (isOpaqueStandaloneIdentifierPhrase(branded, brandName)) return
+    seeds.add(branded)
+  }
+
+  for (const fragment of fragments) {
+    const tokens = fragment
+      .split(/\s+/)
+      .map(token => token.trim())
+      .filter(Boolean)
+      .filter(token => token.length >= 3 || /\d/.test(token))
+      .filter(token => !brandTokens.has(token))
+      .filter(token => !KEYWORD_SOURCE_STOPWORDS.has(token))
+      .filter(token => !/^\d+$/.test(token))
+      .slice(0, 6)
+
+    pushPhrase(tokens)
+  }
+
+  if (seeds.size === 0) {
+    const fallbackBranded = buildBrandedPhraseSeed(text, brandName, 4)
+    if (fallbackBranded) {
+      const fallbackNormalized = normalizeGoogleAdsKeyword(fallbackBranded) || fallbackBranded.toLowerCase()
+      const fallbackTokens = fallbackNormalized
+        .split(/\s+/)
+        .filter(Boolean)
+        .filter(token => !brandTokens.has(token))
+      pushPhrase(fallbackTokens)
     }
   }
 
-  return 'default'
-}
-
-/**
- * 从产品特性中提取场景相关词
- */
-function extractScenarioFromFeatures(features: string): string[] {
-  const scenarios: string[] = []
-  const featureLower = features.toLowerCase()
-
-  // 场景关键词映射
-  const scenarioPatterns: Record<string, string> = {
-    'baby': 'baby monitor',
-    'pet': 'pet watching',
-    'home': 'home security',
-    'outdoor': 'outdoor monitoring',
-    'indoor': 'indoor security',
-    'garage': 'garage security',
-    'front door': 'front door security',
-    'backyard': 'backyard monitoring',
-    'office': 'office security',
-    'business': 'business security'
-  }
-
-  for (const [pattern, scenario] of Object.entries(scenarioPatterns)) {
-    if (featureLower.includes(pattern)) {
-      scenarios.push(scenario)
-    }
-  }
-
-  return scenarios.slice(0, 5)
+  return Array.from(seeds).slice(0, 6)
 }
 
 /**
@@ -1330,45 +1272,38 @@ function aggregateStoreProductLineSeeds(
 function extractFeatureSeeds(features: string, brandName: string): string[] {
   if (!features || !brandName) return []
 
-  const seeds: string[] = []
-  const seenSeeds = new Set<string>()
+  const brandTokenSet = new Set(
+    normalizeGoogleAdsKeyword(brandName)
+      ?.split(/\s+/)
+      .filter(Boolean) || []
+  )
 
-  const highValueFeatures: Record<string, string> = {
-    '4k': '4K',
-    '1080p': 'HD',
-    'night vision': 'night vision',
-    'motion detection': 'motion detection',
-    'two-way audio': 'two-way audio',
-    'wireless': 'wireless',
-    'solar': 'solar',
-    'battery': 'battery',
-    'waterproof': 'waterproof',
-    'ptz': 'PTZ',
-    'smart': 'smart',
-    'alexa': 'Alexa',
-    'bluetooth': 'bluetooth',
-    'portable': 'portable',
-  }
-
+  const seeds = new Set<string>()
   const featureList = features
-    .split(/[;,]/)
-    .map(f => f.trim().toLowerCase())
-    .filter(f => f.length > 3)
+    .split(/[;\n,.|]+/)
+    .map((item) => normalizeGoogleAdsKeyword(stripSourceTextLabel(item)))
+    .filter((item): item is string => Boolean(item))
+    .slice(0, 12)
 
   for (const feature of featureList) {
-    for (const [pattern, seedWord] of Object.entries(highValueFeatures)) {
-      if (feature.includes(pattern)) {
-        const seed = `${brandName} ${seedWord}`
-        if (!seenSeeds.has(seed.toLowerCase())) {
-          seenSeeds.add(seed.toLowerCase())
-          seeds.push(seed)
-        }
-        break
-      }
-    }
+    const tokens = feature
+      .split(/\s+/)
+      .filter(Boolean)
+      .filter(token => token.length >= 3 || /\d/.test(token))
+      .filter(token => !brandTokenSet.has(token))
+      .filter(token => !KEYWORD_SOURCE_STOPWORDS.has(token))
+      .filter(token => !/^\d+$/.test(token))
+      .slice(0, 4)
+
+    if (tokens.length === 0) continue
+    const phrase = tokens.join(' ')
+    const seed = normalizeGoogleAdsKeyword(`${brandName} ${phrase}`) || ''
+    if (!seed) continue
+    if (isOpaqueStandaloneIdentifierPhrase(seed, brandName)) continue
+    seeds.add(seed)
   }
 
-  return seeds.slice(0, 5)
+  return Array.from(seeds).slice(0, 6)
 }
 // ============================================
 // 白名单过滤

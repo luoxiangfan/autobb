@@ -118,7 +118,7 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
     expect(dbFns.queryOne).not.toHaveBeenCalled()
   })
 
-  it('filters by targetCountry using allowedCountries containment with UK/GB alias', async () => {
+  it('filters by targetCountry using postgres jsonb containment with UK/GB alias', async () => {
     dbFns.query.mockResolvedValueOnce([
       { platform: 'partnerboost', total_count: 42 },
     ])
@@ -135,14 +135,40 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
 
     expect(dbFns.query).toHaveBeenCalledTimes(1)
     const [sql, params] = dbFns.query.mock.calls[0]
-    expect(String(sql)).toContain('allowed_countries_json')
+    expect(String(sql)).toContain("@> ?::jsonb")
+    expect(String(sql)).toContain(' OR ')
+    expect(String(sql)).not.toContain('jsonb_array_elements_text')
     expect(params).toEqual(expect.arrayContaining([
-      '%"uk"%',
-      '%"gb"%',
+      '["UK"]',
+      '["GB"]',
     ]))
   })
 
-  it('uses hybrid lightweight classification: PartnerBoost uses URL rules while other platforms keep ASIN fallback', async () => {
+  it('filters by landingPageType using boolean landing-type condition in postgres', async () => {
+    dbFns.query.mockResolvedValueOnce([
+      { platform: 'yeahpromos', total_count: 12, lightweight_product_count: 12, lightweight_store_count: 0 },
+    ])
+
+    const { listAffiliateProducts } = await import('@/lib/affiliate-products')
+    await listAffiliateProducts(1, {
+      page: 1,
+      pageSize: 20,
+      status: 'all',
+      landingPageType: 'amazon_product',
+      fastSummary: true,
+      lightweightSummary: true,
+      skipItems: true,
+    })
+
+    expect(dbFns.query).toHaveBeenCalledTimes(1)
+    const [sql, params] = dbFns.query.mock.calls[0]
+    const sqlText = String(sql)
+    expect(sqlText).toContain("TRIM(p.asin)")
+    expect(sqlText).not.toContain("THEN 'amazon_product'")
+    expect(params).toEqual(expect.arrayContaining([1]))
+  })
+
+  it('uses lightweight ASIN-based classification to avoid expensive URL pattern scans', async () => {
     dbFns.query.mockResolvedValueOnce([
       { platform: 'yeahpromos', total_count: 63074, lightweight_product_count: 61000, lightweight_store_count: 0 },
       { platform: 'partnerboost', total_count: 182650, lightweight_product_count: 140000, lightweight_store_count: 5000 },
@@ -172,11 +198,12 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
     const [sql] = dbFns.query.mock.calls[0]
     expect(String(sql)).toContain('asin')
     expect(String(sql)).toContain("p.platform = 'partnerboost'")
-    expect(String(sql)).toContain('%/products/%')
+    expect(String(sql)).not.toContain('%/products/%')
+    expect(String(sql)).not.toContain('%amazon.%/dp/%')
     expect(cacheFns.setCachedProductSummary).not.toHaveBeenCalled()
   })
 
-  it('applies lightweight partnerboost URL classification on visible rows when status is filtered', async () => {
+  it('applies lightweight ASIN-based classification on visible rows when status is filtered', async () => {
     dbFns.query
       .mockResolvedValueOnce([
         { platform: 'yeahpromos', total_count: 100, lightweight_product_count: 90, lightweight_store_count: 0 },
@@ -210,5 +237,25 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
     expect(result.platformStats.partnerboost.visibleCount).toBe(80)
     expect(result.platformStats.partnerboost.productCount).toBe(45)
     expect(result.platformStats.partnerboost.storeCount).toBe(10)
+  })
+
+  it('degrades gracefully when fast summary query hits postgres statement timeout', async () => {
+    const timeoutError = Object.assign(new Error('canceling statement due to statement timeout'), { code: '57014' })
+    dbFns.query.mockRejectedValueOnce(timeoutError)
+
+    const { listAffiliateProducts } = await import('@/lib/affiliate-products')
+    const result = await listAffiliateProducts(1, {
+      page: 1,
+      pageSize: 20,
+      status: 'all',
+      fastSummary: true,
+      lightweightSummary: true,
+      skipItems: true,
+    })
+
+    expect(result.items).toEqual([])
+    expect(result.total).toBe(0)
+    expect(result.platformStats.yeahpromos.total).toBe(0)
+    expect(result.platformStats.partnerboost.total).toBe(0)
   })
 })

@@ -267,9 +267,9 @@ export async function getGoogleSearchSuggestions(params: {
  * 批量获取Google搜索建议
  * 为品牌词生成多个查询变体
  *
- * 🔧 优化(2025-12-12): 增强查询变体策略
- * - 原来：4个固定模板（brand, brand official, brand store, buy brand）
- * - 现在：支持传入产品名和品类，生成更多精准变体
+ * 🔧 优化(2026-04-02): 证据驱动查询变体
+ * - 移除固定交易词模板（official/store/buy/price/sale/discount/shop）
+ * - 仅保留品牌、品牌+品类、品牌+产品核心词查询
  */
 export async function getBrandSearchSuggestions(params: {
   brand: string
@@ -281,37 +281,28 @@ export async function getBrandSearchSuggestions(params: {
 }): Promise<GoogleSuggestion[]> {
   const { brand, country, language, useProxy, productName, category } = params
 
-  // 🔧 优化(2025-12-12): 生成更多样化的查询变体
+  // 仅生成证据驱动查询，避免模板交易词污染
   const queries: string[] = [
-    // 基础品牌查询
-    brand,                          // 品牌名
-    `${brand} official`,            // 品牌官方
-    `${brand} store`,               // 品牌商店
-    `buy ${brand}`,                 // 购买品牌
-    // 🔧 新增：购买意图变体
-    `${brand} price`,               // 价格查询
-    `${brand} sale`,                // 促销查询
-    `${brand} discount`,            // 折扣查询
-    `${brand} amazon`,              // 电商渠道
-    `${brand} shop`,                // 购物查询
+    brand, // 品牌名
   ]
 
-  // 🔧 新增：品牌+品类组合（如 "Reolink camera"）
+  // 品牌+品类组合（如 "Reolink camera"）
   if (category) {
-    const categoryClean = category.replace(/[&,]/g, ' ').trim().split(' ')[0] // 取第一个词
+    const categoryClean = category.replace(/[&,]/g, ' ').trim().split(' ')[0]
     if (categoryClean && categoryClean.length > 2) {
       queries.push(`${brand} ${categoryClean}`)
-      queries.push(`${brand} ${categoryClean} price`)
-      queries.push(`best ${brand} ${categoryClean}`)
     }
   }
 
-  // 🔧 新增：从产品名提取核心词并组合
+  // 从产品名提取核心词并组合
   if (productName) {
-    // 提取产品名中的核心词（去除品牌名和规格参数）
     const coreWords = extractCoreProductWords(productName, brand)
-    for (const word of coreWords.slice(0, 2)) { // 最多取2个核心词
+    for (const word of coreWords.slice(0, 2)) {
       queries.push(`${brand} ${word}`)
+    }
+    const phrase = coreWords.slice(0, 2).join(' ').trim()
+    if (phrase) {
+      queries.push(`${brand} ${phrase}`)
     }
   }
 

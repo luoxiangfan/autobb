@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import { POST } from '@/app/api/offers/[id]/generate-ad-creative/route'
+import { GET, POST } from '@/app/api/offers/[id]/generate-ad-creative/route'
 
 const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
@@ -924,5 +924,108 @@ describe('POST /api/offers/:id/generate-ad-creative', () => {
     }))
     expect(adCreativeFns.createAdCreative).not.toHaveBeenCalled()
     expect(offerFns.markBucketGenerated).not.toHaveBeenCalled()
+  })
+})
+
+describe('GET /api/offers/:id/generate-ad-creative', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    authFns.verifyAuth.mockResolvedValue({
+      authenticated: true,
+      user: { userId: 1 },
+    })
+
+    offerFns.findOfferById.mockResolvedValue({
+      id: 96,
+      user_id: 1,
+      brand: 'Eufy',
+      category: 'robot vacuum',
+      scrape_status: 'completed',
+      page_type: 'store',
+      target_country: 'US',
+      target_language: 'en',
+      url: 'https://example.com/store',
+    })
+
+    creativeTypeFns.deriveCanonicalCreativeType.mockImplementation((payload: any) => {
+      const bucket = String(payload?.keywordBucket || '').trim().toUpperCase()
+      if (bucket === 'A') return 'brand_intent'
+      if (bucket === 'B' || bucket === 'C') return 'model_intent'
+      return 'product_intent'
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('returns only publishable creatives with exact 15 headlines and 4 descriptions', async () => {
+    const makeHeadlines = (prefix: string, count: number) =>
+      Array.from({ length: count }, (_, index) => `${prefix} H${index + 1}`)
+    const makeDescriptions = (prefix: string, count: number) =>
+      Array.from({ length: count }, (_, index) => `${prefix} D${index + 1}`)
+
+    adCreativeFns.listAdCreativesByOffer.mockResolvedValue([
+      {
+        id: 201,
+        offer_id: 96,
+        user_id: 1,
+        keyword_bucket: 'A',
+        headlines: makeHeadlines('A', 15),
+        descriptions: makeDescriptions('A', 4),
+        keywords: ['eufy store'],
+        score: 88,
+        created_at: '2026-04-02T09:00:00.000Z',
+        updated_at: '2026-04-02T09:00:00.000Z',
+      },
+      {
+        id: 202,
+        offer_id: 96,
+        user_id: 1,
+        keyword_bucket: 'B',
+        headlines: makeHeadlines('B', 3),
+        descriptions: makeDescriptions('B', 2),
+        keywords: ['eufy deals'],
+        score: 91,
+        created_at: '2026-04-02T09:01:00.000Z',
+        updated_at: '2026-04-02T09:01:00.000Z',
+      },
+      {
+        id: 203,
+        offer_id: 96,
+        user_id: 1,
+        keyword_bucket: 'D',
+        headlines: makeHeadlines('D', 15),
+        descriptions: makeDescriptions('D', 4),
+        keywords: ['robot vacuum'],
+        score: 80,
+        created_at: '2026-04-02T09:02:00.000Z',
+        updated_at: '2026-04-02T09:02:00.000Z',
+      },
+    ])
+
+    const req = new NextRequest('http://localhost/api/offers/96/generate-ad-creative')
+    const res = await GET(req, { params: { id: '96' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(adCreativeFns.listAdCreativesByOffer).toHaveBeenCalledWith(96, 1, {
+      generation_round: undefined,
+      is_selected: undefined,
+    })
+    expect(data.total).toBe(2)
+    expect(data.creatives).toHaveLength(2)
+    expect(data.generatedBuckets).toEqual(['A', 'D'])
+    expect(
+      data.creatives.every((creative: any) =>
+        Array.isArray(creative.headlines) &&
+        creative.headlines.length === 15 &&
+        Array.isArray(creative.descriptions) &&
+        creative.descriptions.length === 4
+      )
+    ).toBe(true)
   })
 })

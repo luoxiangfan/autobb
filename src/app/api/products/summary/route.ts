@@ -195,6 +195,9 @@ export async function GET(request: NextRequest) {
     const effectiveRecommendationScoreMin = recommendationScoreMin === null
       ? 1
       : Math.max(1, recommendationScoreMin)
+    const effectiveRecommendationScoreMax = recommendationScoreMax === null
+      ? null
+      : recommendationScoreMax
     const db = await getDatabase()
     const scoreStillValidSql = db.type === 'postgres'
       ? `(p.score_calculated_at >= (NOW() - INTERVAL '${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
@@ -222,6 +225,10 @@ export async function GET(request: NextRequest) {
     )
 
     const recommendationEffectiveCountPromise: Promise<number> = (() => {
+      if (effectiveRecommendationScoreMax !== null && effectiveRecommendationScoreMax < 1) {
+        return Promise.resolve(0)
+      }
+
       if (db.type === 'postgres' && !hasScopedFilters) {
         return db.queryOne<{ effective_count: number }>(
           `
@@ -247,6 +254,7 @@ export async function GET(request: NextRequest) {
       return listAffiliateProducts(userId, {
         ...baseListOptions,
         recommendationScoreMin: effectiveRecommendationScoreMin,
+        recommendationScoreMax: effectiveRecommendationScoreMax ?? undefined,
         recommendationScoreFreshOnly: true,
       }).then((recommendationScoreResult) => Number(recommendationScoreResult.total || 0))
     })()

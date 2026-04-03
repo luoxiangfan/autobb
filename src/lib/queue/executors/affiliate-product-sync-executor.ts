@@ -315,7 +315,7 @@ function normalizeOptionalDate(value: unknown): string | null {
 
 function normalizeWarmParams(payload: ProductListCachePayload): CacheWarmParams {
   const page = Math.max(1, Number(payload.page || 1))
-  const pageSize = Math.min(100, Math.max(10, Number(payload.pageSize || 20)))
+  const pageSize = Math.min(1000, Math.max(10, Number(payload.pageSize || 20)))
   const search = String(payload.search || '').trim()
   const mid = String(payload.mid || '').trim()
 

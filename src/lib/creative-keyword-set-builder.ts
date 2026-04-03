@@ -300,17 +300,20 @@ const RESCUE_INLINE_SKIP_TOKENS = new Set([
   'plus',
   's',
 ])
+const RESCUE_FORBIDDEN_TOPIC_TOKENS = new Set([
+  'bistro',
+  'menu',
+  'shopify',
+  'template',
+  'theme',
+  'wordpress',
+])
 const RESCUE_SEGMENT_SPLIT_PATTERN = /[,;:()\-–—|]+/
 const RESCUE_CONTEXT_TEXT_MAX_ITEMS = 16
 const RESCUE_CONTEXT_DETAIL_MAX_CANDIDATES: Record<'brand_intent' | 'model_intent' | 'product_intent', number> = {
-  brand_intent: 10,
+  brand_intent: 12,
   model_intent: 8,
   product_intent: 12,
-}
-const RESCUE_BRAND_SUFFIXES_BY_LANGUAGE: Record<string, string[]> = {
-  en: ['official', 'store', 'warranty', 'support', 'reviews', 'shop'],
-  de: ['offiziell', 'shop', 'garantie', 'support', 'bewertungen', 'kaufen'],
-  it: ['ufficiale', 'negozio', 'garanzia', 'supporto', 'recensioni', 'acquista'],
 }
 const RESCUE_NEUTRAL_MODEL_TOKEN_PATTERN = /\b[a-z]{1,10}\d[a-z0-9-]{0,10}\b/i
 const RESCUE_NEUTRAL_SPEC_TOKEN_PATTERN =
@@ -1963,6 +1966,10 @@ function getNonEmptyRescueCandidateRejectionReason(params: {
   const tokens = normalized.split(/\s+/).filter(Boolean)
   if (tokens.length === 0) return 'empty'
 
+  if (tokens.some((token) => RESCUE_FORBIDDEN_TOPIC_TOKENS.has(token))) {
+    return 'forbidden_topic_fragment'
+  }
+
   if (tokens.some(token => /^0{3,}\d*$/.test(token))) {
     return 'numeric_fragment'
   }
@@ -2004,6 +2011,19 @@ function getNonEmptyRescueCandidateRejectionReason(params: {
   return null
 }
 
+function isBuilderNonEmptyRescueCandidate(item: PoolKeywordData | null | undefined): boolean {
+  if (!item) return false
+  const sourceType = String((item as any)?.sourceType || '').trim().toUpperCase()
+  const sourceSubtype = String((item as any)?.sourceSubtype || '').trim().toUpperCase()
+  const source = String((item as any)?.source || '').trim().toUpperCase()
+
+  return (
+    sourceType === 'BUILDER_NON_EMPTY_RESCUE'
+    || sourceSubtype === 'BUILDER_NON_EMPTY_RESCUE'
+    || source === 'DERIVED_RESCUE'
+  )
+}
+
 function createNonEmptyRescueCandidate(keyword: string, evidence: string[]): PoolKeywordData {
   return {
     keyword,
@@ -2017,20 +2037,6 @@ function createNonEmptyRescueCandidate(keyword: string, evidence: string[]): Poo
     derivedTags: ['NON_EMPTY_RESCUE'],
     evidence,
   } as PoolKeywordData
-}
-
-function resolveRescueLanguageKey(targetLanguage: unknown): string {
-  return normalizeLanguageCode(String(targetLanguage || '').trim() || 'en')
-}
-
-function collectLanguageBrandSuffixCandidates(input: {
-  targetLanguage?: string | null
-  maxCandidates?: number
-}): string[] {
-  const languageKey = resolveRescueLanguageKey(input.targetLanguage)
-  const maxCandidates = Math.max(1, Math.floor(Number(input.maxCandidates) || 6))
-  const localized = RESCUE_BRAND_SUFFIXES_BY_LANGUAGE[languageKey] || RESCUE_BRAND_SUFFIXES_BY_LANGUAGE.en
-  return dedupeRescuePhrases(localized).slice(0, maxCandidates)
 }
 
 function collectNeutralRescueDetailCandidates(
@@ -2167,10 +2173,6 @@ function buildNonEmptyRescueCandidates(input: BuildCreativeKeywordSetInput): Poo
     3,
     { maxSegments: 3 }
   ).slice(0, 3)
-  const languageBrandSuffixCandidates = collectLanguageBrandSuffixCandidates({
-    targetLanguage: input.targetLanguage || input.offer.target_language,
-    maxCandidates: 6,
-  })
   const neutralDetailCandidates = collectNeutralRescueDetailCandidates(input, detailTokenLimit)
   const productCore = productDetailCandidates[0] || null
   const categoryCore = categoryDetailCandidates[0] || null
@@ -2243,9 +2245,6 @@ function buildNonEmptyRescueCandidates(input: BuildCreativeKeywordSetInput): Poo
       pushBrandedRescueCandidates(categoryDetailCandidates, ['offer_category'])
     }
     pushBrandedRescueCandidates(neutralDetailCandidates, ['offer_neutral_specs'])
-    if (creativeType === 'brand_intent' || creativeType === 'product_intent' || !creativeType) {
-      pushBrandedRescueCandidates(languageBrandSuffixCandidates, ['localized_brand_suffix'])
-    }
   }
 
   if (creativeType === 'model_intent') {
@@ -2523,12 +2522,13 @@ export async function buildCreativeKeywordSet(
     scopeLabel: `${input.scopeLabel}:fallback_candidate_pool`,
   }).keywordsWithVolume
   const maxKeywords = input.maxKeywords ?? CREATIVE_KEYWORD_MAX_COUNT
-  const minimumSelectedKeywordCount = resolveCreativeKeywordMinimumOutputCount({
+  const baseMinimumSelectedKeywordCount = resolveCreativeKeywordMinimumOutputCount({
     creativeType: input.creativeType || null,
     maxKeywords,
     bucket: input.bucket,
   })
-  const relaxedFilteringTargetCount = resolveBucketMinimumKeywordTarget({
+  let minimumSelectedKeywordCount = baseMinimumSelectedKeywordCount
+  let relaxedFilteringTargetCount = resolveBucketMinimumKeywordTarget({
     bucket: input.bucket,
     maxKeywords,
     fallbackMinimum: minimumSelectedKeywordCount,
@@ -2549,6 +2549,40 @@ export async function buildCreativeKeywordSet(
     1,
     contextIntentTighteningRemoved / contextIntentTighteningDenominator
   )
+  const hasPositiveVolumeCandidate = candidatePoolSource.some(
+    (item) => Number((item as any)?.searchVolume || 0) > 0
+  )
+  const allowAdaptiveNoVolumeFloor = (
+    input.creativeType === 'product_intent'
+    && (input.bucket === 'D' || input.bucket === 'S')
+  )
+  if (
+    allowAdaptiveNoVolumeFloor
+    && !hasPositiveVolumeCandidate
+    && contextFilteredCandidates.length > 0
+    && contextIntentTighteningRemovalRatio >= 0.9
+  ) {
+    const demandIntentMinimum = resolveCreativeKeywordMinimumOutputCount({
+      creativeType: input.creativeType || null,
+      maxKeywords,
+      bucket: null,
+    })
+    const adaptiveMinimumSelectedKeywordCount = Math.max(
+      demandIntentMinimum,
+      Math.min(baseMinimumSelectedKeywordCount, contextFilteredCandidates.length)
+    )
+    if (adaptiveMinimumSelectedKeywordCount < minimumSelectedKeywordCount) {
+      minimumSelectedKeywordCount = adaptiveMinimumSelectedKeywordCount
+      relaxedFilteringTargetCount = resolveBucketMinimumKeywordTarget({
+        bucket: input.bucket,
+        maxKeywords,
+        fallbackMinimum: minimumSelectedKeywordCount,
+      })
+      console.warn(
+        `[buildCreativeKeywordSet][monitor] ${input.scopeLabel}: sparse no-volume context lowered keyword floor ${baseMinimumSelectedKeywordCount}→${minimumSelectedKeywordCount}`
+      )
+    }
+  }
   relaxedFilteringPostFilterRatio = Math.min(
     1,
     Number((contextFilteredCandidates.length / contextIntentTighteningDenominator).toFixed(4))
@@ -2855,13 +2889,30 @@ export async function buildCreativeKeywordSet(
         .map((item) => normalizeCandidateKey((item as any)?.keyword))
         .filter(Boolean)
     )
-    const fallbackInvariantTopUpCandidates = candidatePoolSource
+    const fallbackNeed = Math.max(0, minimumSelectedKeywordCount - selected.keywords.length)
+    const buildEligibleTopUp = (preferNonRescue: boolean) => candidatePoolSource
       .filter((item) => {
         const key = normalizeCandidateKey((item as any)?.keyword)
-        return Boolean(key) && !existingKeywordKeys.has(key)
+        if (!key || existingKeywordKeys.has(key)) return false
+        return preferNonRescue ? !isBuilderNonEmptyRescueCandidate(item) : true
       })
       .sort(compareRelaxedFilteringCandidates)
-      .slice(0, Math.max(0, minimumSelectedKeywordCount - selected.keywords.length))
+
+    const preferredTopUp = buildEligibleTopUp(true).slice(0, fallbackNeed)
+    const fallbackInvariantTopUpCandidates = preferredTopUp.length >= fallbackNeed
+      ? preferredTopUp
+      : [
+        ...preferredTopUp,
+        ...buildEligibleTopUp(false)
+          .filter((item) => {
+            const key = normalizeCandidateKey((item as any)?.keyword)
+            if (!key) return false
+            return !preferredTopUp.some((candidate) =>
+              normalizeCandidateKey((candidate as any)?.keyword) === key
+            )
+          })
+          .slice(0, fallbackNeed - preferredTopUp.length),
+      ]
 
     if (fallbackInvariantTopUpCandidates.length > 0) {
       const mergedKeywordsWithVolume = mergeSeedCandidates({

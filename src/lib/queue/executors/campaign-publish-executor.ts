@@ -66,6 +66,75 @@ function parsePositiveIntEnv(value: string | undefined, fallback: number): numbe
   return parsed
 }
 
+const REQUIRED_RSA_HEADLINE_COUNT = 15
+const REQUIRED_RSA_DESCRIPTION_COUNT = 4
+const MIN_FORCE_PUBLISH_HEADLINE_COUNT = 3
+const MIN_FORCE_PUBLISH_DESCRIPTION_COUNT = 2
+
+function normalizeCreativeTextAssets(rawAssets: unknown): string[] {
+  if (!Array.isArray(rawAssets)) return []
+  return rawAssets
+    .map((asset) => String(asset || '').trim())
+    .filter((asset) => asset.length > 0)
+}
+
+function assertRequiredRsaAssetCounts(creative: CampaignPublishTaskData['creative']) {
+  const headlineCount = normalizeCreativeTextAssets(creative?.headlines).length
+  const descriptionCount = normalizeCreativeTextAssets(creative?.descriptions).length
+
+  if (headlineCount !== REQUIRED_RSA_HEADLINE_COUNT) {
+    throw new Error(
+      `Headlines必须正好${REQUIRED_RSA_HEADLINE_COUNT}个，当前提供了${headlineCount}个。如果从广告创意中获得的标题数量不足，请报错。`
+    )
+  }
+
+  if (descriptionCount !== REQUIRED_RSA_DESCRIPTION_COUNT) {
+    throw new Error(
+      `Descriptions必须正好${REQUIRED_RSA_DESCRIPTION_COUNT}个，当前提供了${descriptionCount}个。如果从广告创意中获得的描述数量不足，请报错。`
+    )
+  }
+}
+
+function resolvePublishRsaAssets(
+  assets: string[],
+  minimumCount: number,
+  requiredCount: number,
+  assetLabel: 'Headlines' | 'Descriptions',
+  forcePublish: boolean
+): string[] {
+  const normalized = normalizeCreativeTextAssets(assets)
+
+  if (!forcePublish) {
+    if (normalized.length !== requiredCount) {
+      throw new Error(
+        `${assetLabel}必须正好${requiredCount}个，当前提供了${normalized.length}个。如果从广告创意中获得的${assetLabel === 'Headlines' ? '标题' : '描述'}数量不足，请报错。`
+      )
+    }
+    return normalized
+  }
+
+  if (normalized.length < minimumCount) {
+    throw new Error(
+      `强制发布失败：${assetLabel === 'Headlines' ? `至少保留${minimumCount}个标题` : `至少保留${minimumCount}个描述`}，当前仅${normalized.length}个。`
+    )
+  }
+
+  if (normalized.length >= requiredCount) {
+    return normalized.slice(0, requiredCount)
+  }
+
+  const padded = [...normalized]
+  for (let index = 0; padded.length < requiredCount; index += 1) {
+    padded.push(normalized[index % normalized.length])
+  }
+
+  console.warn(
+    `[Publish] 强制发布资产补齐: ${assetLabel} ${normalized.length} -> ${requiredCount}`
+  )
+
+  return padded
+}
+
 /**
  * 广告系列发布任务数据接口
  */
@@ -128,6 +197,7 @@ export interface CampaignPublishTaskData {
   brandName: string
 
   // 可选标志
+  forcePublish?: boolean               // 是否强制发布（允许非15/4创意）
   enableCampaignImmediately?: boolean  // 是否立即启用Campaign
   pauseOldCampaigns?: boolean          // 是否暂停旧Campaign
 }
@@ -266,6 +336,7 @@ export async function executeCampaignPublish(
     campaignConfig,
     creative,
     brandName,
+    forcePublish = false,
     enableCampaignImmediately = false,
     pauseOldCampaigns = false
   } = task.data
@@ -408,6 +479,27 @@ export async function executeCampaignPublish(
       console.log(`⏭️ 跳过Campaign发布任务：campaign已下线或不存在（campaignId=${campaignId}, taskId=${task.id}）`)
       apiSuccess = true
       return { success: true }
+    }
+
+    console.log(
+      `[Publish] RSA资产数量校验: headlines=${Array.isArray(creative.headlines) ? creative.headlines.length : 0}, descriptions=${Array.isArray(creative.descriptions) ? creative.descriptions.length : 0}`
+    )
+    if (!forcePublish) {
+      assertRequiredRsaAssetCounts(creative)
+    } else {
+      const headlineCount = normalizeCreativeTextAssets(creative.headlines).length
+      const descriptionCount = normalizeCreativeTextAssets(creative.descriptions).length
+      if (
+        headlineCount < MIN_FORCE_PUBLISH_HEADLINE_COUNT
+        || descriptionCount < MIN_FORCE_PUBLISH_DESCRIPTION_COUNT
+      ) {
+        throw new Error(
+          `强制发布失败：Headlines=${headlineCount}，Descriptions=${descriptionCount}。至少需要${MIN_FORCE_PUBLISH_HEADLINE_COUNT}个标题和${MIN_FORCE_PUBLISH_DESCRIPTION_COUNT}个描述。`
+        )
+      }
+      console.warn(
+        `[Publish] 强制发布已开启，跳过15/4硬阻断（headlines=${headlineCount}, descriptions=${descriptionCount}）`
+      )
     }
 
     // 1. 获取Google Ads账号（包含currency信息）
@@ -931,7 +1023,7 @@ export async function executeCampaignPublish(
     // 12.3 创建Responsive Search Ad
     // 🔧 新增(2025-12-20): 优化标题，确保包含热门关键词
     console.log(`\n📝 优化广告标题，确保包含热门关键词...`)
-    const originalHeadlines = creative.headlines.slice(0, 15)
+    const originalHeadlines = normalizeCreativeTextAssets(creative.headlines).slice(0, REQUIRED_RSA_HEADLINE_COUNT)
     const keywordsForOptimization = (campaignConfig.keywords || [])
       .map((keyword: any) => typeof keyword === 'string' ? keyword : (keyword?.text || keyword?.keyword || ''))
       .map((keyword: any) => String(keyword ?? '').trim())
@@ -942,6 +1034,20 @@ export async function executeCampaignPublish(
       brandName,
       3  // 确保 Top 3 关键词被覆盖
     )
+    const headlinesForPublish = resolvePublishRsaAssets(
+      optimizedHeadlines,
+      MIN_FORCE_PUBLISH_HEADLINE_COUNT,
+      REQUIRED_RSA_HEADLINE_COUNT,
+      'Headlines',
+      forcePublish
+    )
+    const descriptionsForPublish = resolvePublishRsaAssets(
+      normalizeCreativeTextAssets(creative.descriptions),
+      MIN_FORCE_PUBLISH_DESCRIPTION_COUNT,
+      REQUIRED_RSA_DESCRIPTION_COUNT,
+      'Descriptions',
+      forcePublish
+    )
 
     totalApiOperations++
     const adResult = await runWithLoginCustomerFallbackAndHeartbeat(
@@ -950,8 +1056,8 @@ export async function executeCampaignPublish(
         customerId: adsAccount.customer_id,
         refreshToken: refreshToken,
         adGroupId: googleAdGroupId,
-        headlines: optimizedHeadlines,
-        descriptions: creative.descriptions.slice(0, 4),
+        headlines: headlinesForPublish,
+        descriptions: descriptionsForPublish,
         finalUrls: [creative.finalUrl],
         path1: creative.path1 || undefined,
         path2: creative.path2 || undefined,

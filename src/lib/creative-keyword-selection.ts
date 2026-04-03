@@ -213,6 +213,42 @@ const BRAND_SLOGAN_PATTERN = /\b(a\s+cozy\s+home\s+made\s+simple|home\s+made\s+s
 const URL_FRAGMENT_PATTERN = /\b(?:https?|www|com|dp)\b/i
 const COMPONENT_NOISE_PATTERN = /\b(?:included\s+components?|package\s+contents?|box\s+contents?|what\s+s?\s+in\s+the\s+box)\b/i
 const MODEL_INTENT_GENERIC_SPILLOVER_PATTERN = /\b(option|options|choice|choices|premium|quality|value|online|daily|everyday|results?|system|technology|performance|style|styles)\b/i
+const AI_TEMPLATE_SENSITIVE_SOURCE_SUBTYPES = new Set([
+  'AI_GENERATED',
+  'AI_LLM_RAW',
+  'KEYWORD_EXPANSION',
+  'AI_FALLBACK_PLACEHOLDER',
+  'CLUSTERED',
+])
+const AI_TEMPLATE_SPILLOVER_TOKENS = new Set([
+  'choice',
+  'choices',
+  'option',
+  'options',
+  'solution',
+  'solutions',
+  'premium',
+  'quality',
+  'value',
+  'daily',
+  'everyday',
+  'style',
+  'styles',
+  'performance',
+  'technology',
+  'system',
+  'systems',
+])
+const AI_TEMPLATE_NOISE_ONLY_TOKENS = new Set(['everyone', 'everybody', 'anyone'])
+const AI_TEMPLATE_PHRASE_PATTERNS = [
+  /\b(?:smart|premium|ultimate|best|top)\s+(?:choice|option|solution)s?\b/i,
+  /\b(?:daily|everyday)\s+(?:choice|option|solution|use)\b/i,
+  /\b(?:high|top|premium)\s+quality\b/i,
+  /\b(?:best|top)\s+value\b/i,
+  /\b(?:for|to)\s+every(?:one|day)\b/i,
+  /\b(?:lifestyle|home)\s+(?:essential|essentials|must\s*have)\b/i,
+]
+const AI_TEMPLATE_SAFE_SPEC_PATTERN = /\b\d+\s*(?:inch|in|oz|ml|l|pack|count|ct|pcs|piece|w|wh|mah|gb|tb|btu|doe|ashrae)\b/i
 const PROMO_PATTERN = /\b(discount|coupon|cheap|sale|deal|offer|promo|price|cost)\b/i
 const STORE_NAV_PATTERN = /\b(official\s+store|store\s+locator|near\s+me|shop\s+near\s+me)\b/i
 const FEATURE_SCENARIO_PATTERN = /\b(cordless|wireless|portable|smart|pet|outdoor|indoor|home|office|travel|waterproof|quiet|fast|compact|lightweight)\b/i
@@ -944,6 +980,55 @@ function isAiGeneratedCandidate(candidate: {
   return rawSource === 'AI' || isAiSubtype(sourceSubtype)
 }
 
+function isAiTemplateSensitiveCandidateSource(candidate: {
+  source?: string
+  sourceType?: string
+  sourceSubtype?: string
+}): boolean {
+  const normalizedSubtype = getNormalizedCandidateSourceSubtype(candidate)
+  if (normalizedSubtype) {
+    if (normalizedSubtype.startsWith('AI_')) return true
+    if (AI_TEMPLATE_SENSITIVE_SOURCE_SUBTYPES.has(normalizedSubtype)) return true
+  }
+  const normalizedSource = String(candidate.source || '').trim().toUpperCase()
+  return normalizedSource.startsWith('AI_') || AI_TEMPLATE_SENSITIVE_SOURCE_SUBTYPES.has(normalizedSource)
+}
+
+function hasAiTemplateLexicalNoise(params: {
+  keyword: string
+  brandName: string | undefined
+  creativeType: CanonicalCreativeType | null
+}): boolean {
+  const normalized = normalizeGoogleAdsKeyword(params.keyword)
+  if (!normalized) return false
+
+  const nonBrandTokens = getNonBrandKeywordTokens(normalized, params.brandName)
+  if (nonBrandTokens.length === 0) return false
+
+  const meaningfulDemandTokens = getMeaningfulDemandAnchorTokens(normalized, params.brandName)
+  const spilloverHits = new Set(
+    nonBrandTokens.filter((token) => AI_TEMPLATE_SPILLOVER_TOKENS.has(token))
+  )
+  const nonTemplateDemandTokens = meaningfulDemandTokens.filter((token) =>
+    !AI_TEMPLATE_SPILLOVER_TOKENS.has(token)
+    && !AI_TEMPLATE_NOISE_ONLY_TOKENS.has(token)
+  )
+  const hasTemplatePhrase = AI_TEMPLATE_PHRASE_PATTERNS.some((pattern) => pattern.test(normalized))
+  const hasSafeSpecSignal = AI_TEMPLATE_SAFE_SPEC_PATTERN.test(normalized)
+  const hasStrongDemandTail = meaningfulDemandTokens.length >= 2
+
+  if (hasSafeSpecSignal && hasStrongDemandTail) return false
+  if (hasTemplatePhrase && (meaningfulDemandTokens.length <= 1 || nonTemplateDemandTokens.length === 0)) {
+    return true
+  }
+  if (spilloverHits.size >= 2 && !hasStrongDemandTail) return true
+  if (params.creativeType === 'product_intent' && spilloverHits.size >= 1 && meaningfulDemandTokens.length === 0) {
+    return true
+  }
+
+  return false
+}
+
 function hasDerivedTag(candidate: {
   derivedTags?: string[]
 }, expectedTag: string): boolean {
@@ -1241,6 +1326,18 @@ function isLowQualityCandidate(candidate: {
   if (BRAND_SLOGAN_PATTERN.test(text)) return true
   if (URL_FRAGMENT_PATTERN.test(text)) return true
   if (COMPONENT_NOISE_PATTERN.test(text)) return true
+  if (
+    !candidate.isPureBrand
+    && !hasModelAnchor
+    && isAiTemplateSensitiveCandidateSource(candidate)
+    && hasAiTemplateLexicalNoise({
+      keyword: text,
+      brandName,
+      creativeType,
+    })
+  ) {
+    return true
+  }
   if (isLowSignalEvaluativeBrandQuery({
     keyword: text,
     creativeType,

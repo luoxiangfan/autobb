@@ -3020,6 +3020,228 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     ).toBe(false)
   })
 
+  it('prefers non-rescue candidates during final invariant top-up before using rescue candidates', async () => {
+    const selectedKeyword = {
+      keyword: 'portable ac primary',
+      searchVolume: 1000,
+      source: 'SEARCH_TERM',
+      sourceType: 'SEARCH_TERM',
+      sourceSubtype: 'SEARCH_TERM',
+    }
+    const nonRescueCandidateA = {
+      keyword: 'portable ac variant a',
+      searchVolume: 0,
+      source: 'FINAL_INVARIANT',
+      sourceType: 'FINAL_INVARIANT',
+      sourceSubtype: 'FINAL_INVARIANT',
+    }
+    const nonRescueCandidateB = {
+      keyword: 'portable ac variant b',
+      searchVolume: 0,
+      source: 'FINAL_INVARIANT',
+      sourceType: 'FINAL_INVARIANT',
+      sourceSubtype: 'FINAL_INVARIANT',
+    }
+    const rescueSeedCandidate = {
+      keyword: 'portable ac rescue seed',
+      searchVolume: 0,
+      source: 'DERIVED_RESCUE',
+      sourceType: 'BUILDER_NON_EMPTY_RESCUE',
+      sourceSubtype: 'BUILDER_NON_EMPTY_RESCUE',
+    }
+
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(() =>
+      contextFilterResult([selectedKeyword] as any)
+    )
+    mocks.selectCreativeKeywords.mockImplementation((input: any) => {
+      const keep = Array.isArray(input?.keywordsWithVolume)
+        ? input.keywordsWithVolume.filter((item: any) => item.keyword === selectedKeyword.keyword)
+        : []
+      return {
+        keywords: keep.map((item: any) => item.keyword),
+        keywordsWithVolume: keep,
+        truncated: false,
+        sourceQuotaAudit: {
+          enabled: true,
+          fallbackMode: false,
+          targetCount: Math.max(1, keep.length),
+          requiredBrandCount: 0,
+          acceptedBrandCount: keep.length,
+          acceptedCount: keep.length,
+          deferredCount: 0,
+          deferredRefillCount: 0,
+          deferredRefillTriggered: false,
+          underfillBeforeRefill: 0,
+          quota: { combinedLowTrustCap: 1, aiCap: 1, aiLlmRawCap: 1 },
+          acceptedByClass: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
+          blockedByCap: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
+        },
+      }
+    })
+
+    const result = await buildCreativeKeywordSet({
+      offer: {
+        brand: '',
+        product_name: '',
+        category: '',
+        target_country: 'US',
+        target_language: 'English',
+      },
+      userId: 1,
+      brandName: '',
+      targetLanguage: 'English',
+      creativeType: 'product_intent',
+      bucket: 'D',
+      scopeLabel: 'unit-final-invariant-prefer-non-rescue',
+      maxKeywords: 3,
+      keywordsWithVolume: [selectedKeyword] as any,
+      keywords: [selectedKeyword.keyword],
+      seedCandidates: [nonRescueCandidateA, nonRescueCandidateB, rescueSeedCandidate] as any,
+      enableSupplementation: false,
+      fallbackMode: false,
+      minBrandKeywords: 0,
+      brandReserve: 0,
+    })
+
+    expect(result.executableKeywords).toEqual(expect.arrayContaining([
+      selectedKeyword.keyword,
+      nonRescueCandidateA.keyword,
+      nonRescueCandidateB.keyword,
+    ]))
+    expect(result.executableKeywords).not.toContain(rescueSeedCandidate.keyword)
+  })
+
+  it('rejects forbidden topical fragments from non-empty rescue candidates', async () => {
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(() => contextFilterResult([]))
+    mocks.selectCreativeKeywords.mockReturnValue({
+      keywords: [],
+      keywordsWithVolume: [],
+      truncated: false,
+      sourceQuotaAudit: {
+        enabled: true,
+        fallbackMode: false,
+        targetCount: 0,
+        requiredBrandCount: 0,
+        acceptedBrandCount: 0,
+        acceptedCount: 0,
+        deferredCount: 0,
+        deferredRefillCount: 0,
+        deferredRefillTriggered: false,
+        underfillBeforeRefill: 0,
+        quota: { combinedLowTrustCap: 0, aiCap: 0, aiLlmRawCap: 0 },
+        acceptedByClass: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
+        blockedByCap: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
+      },
+    })
+
+    const result = await buildCreativeKeywordSet({
+      offer: {
+        brand: 'Our Place',
+        category: 'Cookware Sets',
+        product_name: 'Our Place Shopify Theme Bistro Menu 13 Piece Cookware Set',
+        extracted_keywords: JSON.stringify([
+          'our place shopify theme',
+          'our place bistro menu',
+          'our place cookware set',
+        ]),
+        target_country: 'US',
+        target_language: 'English',
+      },
+      userId: 1,
+      brandName: 'Our Place',
+      targetLanguage: 'English',
+      creativeType: 'product_intent',
+      bucket: 'D',
+      scopeLabel: 'unit-rescue-forbidden-topics',
+      maxKeywords: 6,
+      keywordsWithVolume: [] as any,
+      keywords: [],
+      enableSupplementation: false,
+      fallbackMode: false,
+      minBrandKeywords: 0,
+      brandReserve: 0,
+    })
+
+    expect(result.executableKeywords.length).toBeGreaterThan(0)
+    for (const keyword of result.executableKeywords) {
+      expect(keyword).not.toMatch(/\b(shopify|theme|bistro|menu)\b/i)
+    }
+  })
+
+  it('lowers D-bucket floor in sparse no-volume mode to avoid forced rescue expansion', async () => {
+    const initialCandidates = Array.from({ length: 60 }, (_, index) => ({
+      keyword: `our place candidate ${index + 1}`,
+      searchVolume: 0,
+      source: 'SEARCH_TERM',
+      sourceType: 'SEARCH_TERM',
+      sourceSubtype: 'SEARCH_TERM',
+    }))
+    const contextRetained = initialCandidates.slice(0, 6)
+    const retainedSet = new Set(contextRetained.map((item) => item.keyword))
+
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(() =>
+      contextFilterResult(contextRetained as any, {
+        contextMismatchRemovedCount: 27,
+        intentTighteningRemovedCount: 27,
+      })
+    )
+    mocks.selectCreativeKeywords.mockImplementation((input: any) => {
+      const keep = Array.isArray(input?.keywordsWithVolume)
+        ? input.keywordsWithVolume.filter((item: any) => retainedSet.has(item.keyword))
+        : []
+      return {
+        keywords: keep.map((item: any) => item.keyword),
+        keywordsWithVolume: keep,
+        truncated: false,
+        sourceQuotaAudit: {
+          enabled: true,
+          fallbackMode: false,
+          targetCount: Math.max(1, keep.length),
+          requiredBrandCount: 0,
+          acceptedBrandCount: keep.length,
+          acceptedCount: keep.length,
+          deferredCount: 0,
+          deferredRefillCount: 0,
+          deferredRefillTriggered: false,
+          underfillBeforeRefill: 0,
+          quota: { combinedLowTrustCap: 16, aiCap: 8, aiLlmRawCap: 5 },
+          acceptedByClass: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
+          blockedByCap: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
+        },
+      }
+    })
+
+    const result = await buildCreativeKeywordSet({
+      offer: {
+        brand: 'Our Place',
+        category: 'Cookware Sets',
+        product_name: 'Our Place 13 Piece Cookware Set',
+        target_country: 'US',
+        target_language: 'English',
+      },
+      userId: 1,
+      brandName: 'Our Place',
+      targetLanguage: 'English',
+      creativeType: 'product_intent',
+      bucket: 'D',
+      scopeLabel: 'unit-no-volume-adaptive-floor',
+      maxKeywords: 20,
+      keywordsWithVolume: initialCandidates as any,
+      keywords: initialCandidates.map((item) => item.keyword),
+      enableSupplementation: false,
+      fallbackMode: false,
+      minBrandKeywords: 0,
+      brandReserve: 0,
+    })
+
+    expect(result.executableKeywords.length).toBe(6)
+    expect(result.audit.pipeline.nonEmptyRescueTriggered).toBe(false)
+    expect(result.audit.pipeline.finalInvariantTriggered).toBe(false)
+  })
+
   it('injects ampersand brand rescue variants and rejects adjacent short numeric fragments', async () => {
     mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult([], {

@@ -32,6 +32,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ResponsivePagination } from '@/components/ui/responsive-pagination'
 import {
@@ -41,9 +49,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Search, Trash2, ExternalLink, AlertCircle, CheckCircle2, PlayCircle, PauseCircle, XCircle, TrendingUp, Coins, Wallet, ArrowUpDown, ArrowUp, ArrowDown, Package, Loader2, MoreHorizontal } from 'lucide-react'
+import { Search, Trash2, ExternalLink, AlertCircle, CheckCircle2, PlayCircle, PauseCircle, XCircle, TrendingUp, Coins, Wallet, ArrowUpDown, ArrowUp, ArrowDown, Package, Loader2, MoreHorizontal, BarChart3, Download } from 'lucide-react'
 import type { TrendChartData, TrendChartMetric } from '@/components/charts/TrendChart'
 import type { DateRange } from '@/components/ui/date-range-picker'
+import {
+  CartesianGrid,
+  Cell,
+  ComposedChart,
+  LabelList,
+  Line,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import {
   getCampaignStatusLabel,
 } from '@/lib/i18n-constants'
@@ -181,6 +202,8 @@ const formatDateInputValue = (date: Date): string => {
   return `${year}-${month}-${day}`
 }
 
+const roundTo2 = (value: number): number => Math.round(value * 100) / 100
+
 const getCampaignCommissionValue = (campaign: Campaign): number | null => {
   const raw = campaign.performance?.commission ?? campaign.performance?.conversions
   if (raw === null || raw === undefined) return null
@@ -243,6 +266,36 @@ type SelectedCampaignSnapshot = {
   id: number
   campaignName: string
   status: string
+}
+
+type CampaignRoasRankItem = {
+  id: number
+  campaignName: string
+  spend: number
+  commission: number
+  impressions: number
+  clicks: number
+  roas: number | null
+  actualCpc: number | null
+}
+
+type OverallRoasStatistics = {
+  generatedAt: string
+  timeRangeLabel: string
+  currency: string
+  campaignCount: number
+  totalSpend: number
+  totalCommission: number
+  totalRoas: number | null
+  avgActualCpc: number | null
+  highestActualCpc: CampaignRoasRankItem | null
+  lowestActualCpc: CampaignRoasRankItem | null
+  totalImpressions: number
+  totalClicks: number
+  averageCtr: number | null
+  campaigns: CampaignRoasRankItem[]
+  bestTop3: CampaignRoasRankItem[]
+  worstBottom3: CampaignRoasRankItem[]
 }
 
 function CampaignsTrendsSectionSkeleton() {
@@ -376,6 +429,12 @@ export default function CampaignsClientPage({
   const [batchOfflineRemoveGoogleAds, setBatchOfflineRemoveGoogleAds] = useState(false)
   const [batchDeleteSubmitting, setBatchDeleteSubmitting] = useState(false)
   const [isBatchDeleteDialogOpen, setIsBatchDeleteDialogOpen] = useState(false)
+  const [isOverallRoasDialogOpen, setIsOverallRoasDialogOpen] = useState(false)
+  const [overallRoasLoading, setOverallRoasLoading] = useState(false)
+  const [overallRoasDownloading, setOverallRoasDownloading] = useState(false)
+  const [overallRoasError, setOverallRoasError] = useState<string | null>(null)
+  const [overallRoasStats, setOverallRoasStats] = useState<OverallRoasStatistics | null>(null)
+  const [hideBrandNames, setHideBrandNames] = useState(false)
 
   // Adjust CPC dialog states
   const [adjustCpcOpen, setAdjustCpcOpen] = useState(false)
@@ -498,6 +557,118 @@ export default function CampaignsClientPage({
   }
   const visibleCampaignCount = totalItems
   const hasBatchOfflineSelection = selectedCampaignIds.size > 0
+  const hasMultipleCampaignSelection = selectedCampaignIds.size > 1
+  const overallRoasTimeRangeLabel = timeRange === 'custom'
+    ? (
+      appliedCustomRange
+        ? `${appliedCustomRange.startDate} ~ ${appliedCustomRange.endDate}`
+        : '自定义时间范围'
+    )
+    : `最近${timeRange}天`
+  const formatRoasNumber = (value: number | null): string => (
+    value === null || !Number.isFinite(value)
+      ? '--'
+      : `${value.toFixed(2)}x`
+  )
+  const formatPercentNumber = (value: number | null): string => (
+    value === null || !Number.isFinite(value)
+      ? '--'
+      : `${value.toFixed(2)}%`
+  )
+  const chartPalette = ['#2563eb', '#0ea5e9', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6']
+  const campaignAliasMap = useMemo(() => {
+    if (!overallRoasStats) return new Map<number, string>()
+
+    const orderedIds = Array.from(new Set(
+      overallRoasStats.campaigns
+        .map((item) => item.id)
+        .sort((a, b) => a - b)
+    ))
+
+    return new Map<number, string>(
+      orderedIds.map((id, index) => [id, `品牌${index + 1}`])
+    )
+  }, [overallRoasStats])
+  const getCampaignDisplayName = useCallback((campaign: CampaignRoasRankItem): string => {
+    if (!hideBrandNames) return campaign.campaignName
+    return campaignAliasMap.get(campaign.id) || `品牌${campaign.id}`
+  }, [campaignAliasMap, hideBrandNames])
+  const overallRoasRankTrendData = useMemo(() => {
+    if (!overallRoasStats) return []
+    return [...overallRoasStats.campaigns]
+      .filter((item) => item.roas !== null)
+      .sort((a, b) => Number(b.roas) - Number(a.roas))
+      .slice(0, 8)
+      .map((item, index) => ({
+        rank: `#${index + 1}`,
+        campaignName: getCampaignDisplayName(item),
+        roas: Number(item.roas || 0),
+        spend: roundTo2(item.spend),
+        commission: roundTo2(item.commission),
+      }))
+  }, [getCampaignDisplayName, overallRoasStats])
+  const overallRoasSpendShareData = useMemo(() => {
+    if (!overallRoasStats) return []
+    const sortedBySpend = [...overallRoasStats.campaigns].sort((a, b) => b.spend - a.spend)
+    const top = sortedBySpend.slice(0, 5).map((item) => ({
+      name: getCampaignDisplayName(item),
+      value: roundTo2(item.spend),
+    }))
+    const otherTotal = sortedBySpend.slice(5).reduce((sum, item) => sum + item.spend, 0)
+    if (otherTotal > 0) {
+      top.push({
+        name: hideBrandNames ? '其他品牌' : '其他广告系列',
+        value: roundTo2(otherTotal),
+      })
+    }
+    return top
+  }, [getCampaignDisplayName, hideBrandNames, overallRoasStats])
+  const overallRoasShareHeadline = (() => {
+    if (!overallRoasStats) return ''
+
+    const best = overallRoasStats.bestTop3[0]
+    const worst = overallRoasStats.worstBottom3[0]
+
+    if (best && best.roas !== null) {
+      const bestName = getCampaignDisplayName(best)
+      const bestRoas = formatRoasNumber(best.roas)
+      const totalRoas = formatRoasNumber(overallRoasStats.totalRoas)
+      const ctr = formatPercentNumber(overallRoasStats.averageCtr)
+      if (worst && worst.roas !== null) {
+        return `亮点：${bestName} ROAS 达 ${bestRoas}，显著领先尾部系列，拉动整体 ROAS 至 ${totalRoas}（平均点击率 ${ctr}）。`
+      }
+      return `亮点：${bestName} ROAS 达 ${bestRoas}，整体 ROAS 为 ${totalRoas}（平均点击率 ${ctr}）。`
+    }
+
+    return `本周期覆盖 ${overallRoasStats.campaignCount} 个广告系列，总花费 ${formatCurrencyDashboard(overallRoasStats.totalSpend, overallRoasStats.currency)}，建议补齐转化归因后再进行扩量决策。`
+  })()
+  const overallRoasMetricCards = useMemo(() => {
+    if (!overallRoasStats) return []
+
+    return [
+      { title: `总花费(${overallRoasStats.currency})`, value: formatCurrencyDashboard(overallRoasStats.totalSpend, overallRoasStats.currency) },
+      { title: `总佣金(${overallRoasStats.currency})`, value: formatCurrencyDashboard(overallRoasStats.totalCommission, overallRoasStats.currency) },
+      { title: '总 ROAS', value: formatRoasNumber(overallRoasStats.totalRoas) },
+      {
+        title: `平均实际 CPC(${overallRoasStats.currency})`,
+        value: overallRoasStats.avgActualCpc === null
+          ? '--'
+          : formatCurrencyDashboard(overallRoasStats.avgActualCpc, overallRoasStats.currency),
+      },
+      { title: '总展示', value: overallRoasStats.totalImpressions.toLocaleString('zh-CN') },
+      { title: '总点击', value: overallRoasStats.totalClicks.toLocaleString('zh-CN') },
+      { title: '平均点击率', value: formatPercentNumber(overallRoasStats.averageCtr) },
+      { title: '广告系列数量', value: `${overallRoasStats.campaignCount}` },
+    ]
+  }, [overallRoasStats])
+  const overallRoasSpendShareTotal = useMemo(
+    () => overallRoasSpendShareData.reduce((sum, entry) => sum + Number(entry.value || 0), 0),
+    [overallRoasSpendShareData]
+  )
+  const overallRoasPreviewPanelClass = 'rounded-2xl border border-[#dbeafe] bg-white shadow-sm'
+  const overallRoasPreviewPanelBodyClass = 'p-5 lg:p-6'
+  const overallRoasPreviewSectionTitleClass = 'text-sm font-semibold text-slate-800'
+  const overallRoasPreviewSectionHintClass = 'mt-1 text-xs text-slate-500'
   const selectedRemovedCampaignCount = useMemo(
     () => Object.values(selectedCampaignSnapshots).filter(
       (campaign) => String(campaign.status || '').toUpperCase() === 'REMOVED'
@@ -1461,6 +1632,507 @@ export default function CampaignsClientPage({
     return selected
   }
 
+  const normalizeMetricValue = (value: unknown): number => {
+    const normalized = Number(value ?? 0)
+    return Number.isFinite(normalized) ? normalized : 0
+  }
+
+  const buildOverallRoasStatistics = (selectedCampaigns: Campaign[]): OverallRoasStatistics => {
+    const campaignMetrics: CampaignRoasRankItem[] = selectedCampaigns.map((campaign) => {
+      const metricCurrency = String(campaign.performanceCurrency || campaign.adsAccountCurrency || summaryDisplayCurrency || 'USD').toUpperCase()
+      const rawSpend = normalizeMetricValue(campaign.performance?.costLocal ?? campaign.performance?.costUsd)
+      const rawCommission = normalizeMetricValue(campaign.performance?.commission ?? campaign.performance?.conversions)
+      const impressions = normalizeMetricValue(campaign.performance?.impressions)
+      const clicks = normalizeMetricValue(campaign.performance?.clicks)
+
+      const spend = normalizeMetricValue(convertAmountForDisplay(rawSpend, metricCurrency, summaryDisplayCurrency))
+      const commission = normalizeMetricValue(convertAmountForDisplay(rawCommission, metricCurrency, summaryDisplayCurrency))
+      const roas = spend > 0 ? commission / spend : null
+      const actualCpc = clicks > 0 ? spend / clicks : null
+
+      return {
+        id: campaign.id,
+        campaignName: campaign.campaignName,
+        spend,
+        commission,
+        impressions,
+        clicks,
+        roas,
+        actualCpc,
+      }
+    })
+
+    const totalSpend = campaignMetrics.reduce((sum, item) => sum + item.spend, 0)
+    const totalCommission = campaignMetrics.reduce((sum, item) => sum + item.commission, 0)
+    const totalImpressions = campaignMetrics.reduce((sum, item) => sum + item.impressions, 0)
+    const totalClicks = campaignMetrics.reduce((sum, item) => sum + item.clicks, 0)
+    const totalRoas = totalSpend > 0 ? totalCommission / totalSpend : null
+    const avgActualCpc = totalClicks > 0 ? totalSpend / totalClicks : null
+    const averageCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : null
+
+    const sortedByActualCpc = campaignMetrics
+      .filter((item) => item.actualCpc !== null)
+      .sort((a, b) => Number(a.actualCpc) - Number(b.actualCpc))
+    const lowestActualCpc = sortedByActualCpc[0] || null
+    const highestActualCpc = sortedByActualCpc.length > 0 ? sortedByActualCpc[sortedByActualCpc.length - 1] : null
+
+    const sortedByRoasDesc = campaignMetrics
+      .filter((item) => item.roas !== null)
+      .sort((a, b) => {
+        const roasGap = Number(b.roas) - Number(a.roas)
+        if (roasGap !== 0) return roasGap
+        return b.commission - a.commission
+      })
+    const sortedByRoasAsc = [...sortedByRoasDesc].reverse()
+
+    return {
+      generatedAt: new Date().toLocaleString('zh-CN', {
+        hour12: false,
+        timeZone: 'Asia/Shanghai',
+      }),
+      timeRangeLabel: overallRoasTimeRangeLabel,
+      currency: summaryDisplayCurrency,
+      campaignCount: selectedCampaigns.length,
+      totalSpend,
+      totalCommission,
+      totalRoas,
+      avgActualCpc,
+      highestActualCpc,
+      lowestActualCpc,
+      totalImpressions,
+      totalClicks,
+      averageCtr,
+      campaigns: campaignMetrics,
+      bestTop3: sortedByRoasDesc.slice(0, 3),
+      worstBottom3: sortedByRoasAsc.slice(0, 3),
+    }
+  }
+
+  const buildOverallRoasImageDataUrl = (
+    stats: OverallRoasStatistics,
+    options?: { hideBrandNames?: boolean; aliasMap?: Map<number, string> }
+  ): string => {
+    const canvasWidth = 1600
+    const canvasHeight = 2000
+    const canvas = document.createElement('canvas')
+    canvas.width = canvasWidth
+    canvas.height = canvasHeight
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      throw new Error('浏览器不支持 Canvas 导出')
+    }
+
+    const hideNames = options?.hideBrandNames === true
+    const aliasMap = options?.aliasMap ?? new Map<number, string>()
+    const getDisplayName = (item: CampaignRoasRankItem): string => {
+      if (!hideNames) return item.campaignName
+      return aliasMap.get(item.id) || `品牌${item.id}`
+    }
+
+    const trimToFit = (text: string, maxWidth: number): string => {
+      if (ctx.measureText(text).width <= maxWidth) return text
+      let next = text
+      while (next.length > 0 && ctx.measureText(`${next}...`).width > maxWidth) {
+        next = next.slice(0, -1)
+      }
+      return next ? `${next}...` : '...'
+    }
+
+    const drawWrappedText = (
+      text: string,
+      x: number,
+      startY: number,
+      maxWidth: number,
+      lineHeight: number,
+      maxLines: number
+    ) => {
+      const chunks = text.split('')
+      let current = ''
+      let line = 0
+      for (let i = 0; i < chunks.length; i += 1) {
+        const next = `${current}${chunks[i]}`
+        if (ctx.measureText(next).width <= maxWidth) {
+          current = next
+          continue
+        }
+
+        const render = line === maxLines - 1 ? `${current}...` : current
+        ctx.fillText(render, x, startY + line * lineHeight)
+        line += 1
+        if (line >= maxLines) return
+        current = chunks[i]
+      }
+
+      if (current && line < maxLines) {
+        ctx.fillText(current, x, startY + line * lineHeight)
+      }
+    }
+
+    const drawPanel = (x: number, y: number, width: number, height: number, title?: string) => {
+      ctx.fillStyle = '#ffffff'
+      ctx.strokeStyle = '#dbeafe'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.roundRect(x, y, width, height, 18)
+      ctx.fill()
+      ctx.stroke()
+
+      if (title) {
+        ctx.fillStyle = '#0f172a'
+        ctx.font = 'bold 28px "PingFang SC", "Microsoft YaHei", sans-serif'
+        ctx.fillText(title, x + 20, y + 42)
+      }
+    }
+
+    const shareHeadline = (() => {
+      const best = stats.bestTop3[0]
+      const worst = stats.worstBottom3[0]
+      if (best && best.roas !== null) {
+        const bestName = getDisplayName(best)
+        const bestRoas = formatRoasNumber(best.roas)
+        const totalRoas = formatRoasNumber(stats.totalRoas)
+        if (worst && worst.roas !== null) {
+          return `亮点：${bestName} ROAS 达 ${bestRoas}，显著领先尾部系列，拉动整体 ROAS 至 ${totalRoas}。`
+        }
+        return `亮点：${bestName} ROAS 达 ${bestRoas}，整体 ROAS 为 ${totalRoas}。`
+      }
+      return `本周期覆盖 ${stats.campaignCount} 个广告系列，总花费 ${formatCurrencyDashboard(stats.totalSpend, stats.currency)}。`
+    })()
+
+    const headerGradient = ctx.createLinearGradient(0, 0, canvasWidth, 0)
+    headerGradient.addColorStop(0, '#0b1220')
+    headerGradient.addColorStop(0.5, '#1d4ed8')
+    headerGradient.addColorStop(1, '#0369a1')
+    ctx.fillStyle = '#eef5ff'
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+    ctx.fillStyle = headerGradient
+    ctx.fillRect(0, 0, canvasWidth, 210)
+
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 58px "PingFang SC", "Microsoft YaHei", sans-serif'
+    ctx.fillText('广告系列整体 ROAS 社交战报', 48, 96)
+    ctx.font = '24px "PingFang SC", "Microsoft YaHei", sans-serif'
+    ctx.fillText(`${stats.timeRangeLabel} | ${stats.generatedAt}`, 48, 146)
+    ctx.fillText(`统计币种：${stats.currency}`, 48, 182)
+    if (hideNames) {
+      ctx.fillStyle = '#dbeafe'
+      ctx.font = 'bold 22px "PingFang SC", "Microsoft YaHei", sans-serif'
+      ctx.fillText('已隐藏品牌名', canvasWidth - 190, 182)
+    }
+
+    drawPanel(48, 236, 1504, 120)
+    ctx.fillStyle = '#1e3a8a'
+    ctx.font = 'bold 30px "PingFang SC", "Microsoft YaHei", sans-serif'
+    ctx.fillText('一句话结论', 78, 284)
+    ctx.fillStyle = '#334155'
+    ctx.font = '24px "PingFang SC", "Microsoft YaHei", sans-serif'
+    drawWrappedText(shareHeadline, 78, 324, 1440, 34, 2)
+
+    const metricCards = [
+      { title: `总花费(${stats.currency})`, value: formatCurrencyDashboard(stats.totalSpend, stats.currency) },
+      { title: `总佣金(${stats.currency})`, value: formatCurrencyDashboard(stats.totalCommission, stats.currency) },
+      { title: '总 ROAS', value: formatRoasNumber(stats.totalRoas) },
+      { title: `平均实际 CPC(${stats.currency})`, value: stats.avgActualCpc === null ? '--' : formatCurrencyDashboard(stats.avgActualCpc, stats.currency) },
+      { title: '总展示', value: stats.totalImpressions.toLocaleString('zh-CN') },
+      { title: '总点击', value: stats.totalClicks.toLocaleString('zh-CN') },
+      { title: '平均点击率', value: formatPercentNumber(stats.averageCtr) },
+      { title: '广告系列数量', value: `${stats.campaignCount}` },
+    ]
+    const metricsTop = 380
+    const metricsColumns = 4
+    const metricWidth = 364
+    const metricHeight = 116
+    const metricGapX = 16
+    const metricGapY = 16
+    metricCards.forEach((card, index) => {
+      const col = index % metricsColumns
+      const row = Math.floor(index / metricsColumns)
+      const x = 48 + col * (metricWidth + metricGapX)
+      const y = metricsTop + row * (metricHeight + metricGapY)
+      drawPanel(x, y, metricWidth, metricHeight)
+      ctx.fillStyle = '#64748b'
+      ctx.font = '20px "PingFang SC", "Microsoft YaHei", sans-serif'
+      ctx.fillText(card.title, x + 20, y + 42)
+      ctx.fillStyle = '#0f172a'
+      ctx.font = 'bold 31px "PingFang SC", "Microsoft YaHei", sans-serif'
+      ctx.fillText(card.value, x + 20, y + 86)
+    })
+
+    const trendPanelX = 48
+    const trendPanelY = 644
+    const trendPanelWidth = 1504
+    const trendPanelHeight = 376
+    drawPanel(trendPanelX, trendPanelY, trendPanelWidth, trendPanelHeight, 'ROAS 排名趋势（Top 8）')
+    const roasSeries = [...stats.campaigns]
+      .filter((item) => item.roas !== null)
+      .sort((a, b) => Number(b.roas) - Number(a.roas))
+      .slice(0, 8)
+
+    if (roasSeries.length > 0) {
+      const chartX = trendPanelX + 52
+      const chartY = trendPanelY + 102
+      const chartWidth = trendPanelWidth - 104
+      const chartHeight = 216
+      const maxRoas = Math.max(...roasSeries.map((item) => Number(item.roas || 0)), 1)
+      const minRoas = Math.min(...roasSeries.map((item) => Number(item.roas || 0)), 0)
+      const span = Math.max(0.2, maxRoas - minRoas)
+
+      ctx.strokeStyle = '#dbeafe'
+      ctx.lineWidth = 1
+      for (let i = 0; i <= 4; i += 1) {
+        const y = chartY + (chartHeight / 4) * i
+        ctx.beginPath()
+        ctx.moveTo(chartX, y)
+        ctx.lineTo(chartX + chartWidth, y)
+        ctx.stroke()
+      }
+
+      const points = roasSeries.map((item, index) => {
+        const x = chartX + (index * chartWidth) / Math.max(1, roasSeries.length - 1)
+        const roas = Number(item.roas || 0)
+        const y = chartY + chartHeight - ((roas - minRoas) / span) * chartHeight
+        return { x, y, roas, item, rank: index + 1 }
+      })
+
+      const gradient = ctx.createLinearGradient(chartX, chartY, chartX, chartY + chartHeight)
+      gradient.addColorStop(0, 'rgba(37, 99, 235, 0.24)')
+      gradient.addColorStop(1, 'rgba(37, 99, 235, 0.02)')
+      ctx.beginPath()
+      points.forEach((point, index) => {
+        if (index === 0) ctx.moveTo(point.x, point.y)
+        else ctx.lineTo(point.x, point.y)
+      })
+      ctx.lineTo(chartX + chartWidth, chartY + chartHeight)
+      ctx.lineTo(chartX, chartY + chartHeight)
+      ctx.closePath()
+      ctx.fillStyle = gradient
+      ctx.fill()
+
+      ctx.strokeStyle = '#1d4ed8'
+      ctx.lineWidth = 4
+      ctx.beginPath()
+      points.forEach((point, index) => {
+        if (index === 0) ctx.moveTo(point.x, point.y)
+        else ctx.lineTo(point.x, point.y)
+      })
+      ctx.stroke()
+
+      points.forEach((point) => {
+        ctx.fillStyle = '#ffffff'
+        ctx.beginPath()
+        ctx.arc(point.x, point.y, 7, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.strokeStyle = '#1d4ed8'
+        ctx.lineWidth = 3
+        ctx.stroke()
+
+        ctx.fillStyle = '#1e3a8a'
+        ctx.font = 'bold 18px "PingFang SC", "Microsoft YaHei", sans-serif'
+        const roasLabel = `${point.roas.toFixed(2)}x`
+        ctx.fillText(roasLabel, point.x - ctx.measureText(roasLabel).width / 2, point.y - 14)
+
+        ctx.fillStyle = '#475569'
+        ctx.font = '16px "PingFang SC", "Microsoft YaHei", sans-serif'
+        const rankLabel = `#${point.rank}`
+        ctx.fillText(rankLabel, point.x - ctx.measureText(rankLabel).width / 2, chartY + chartHeight + 26)
+      })
+    } else {
+      ctx.fillStyle = '#64748b'
+      ctx.font = '24px "PingFang SC", "Microsoft YaHei", sans-serif'
+      ctx.fillText('暂无可绘制的 ROAS 趋势数据', trendPanelX + 62, trendPanelY + 188)
+    }
+
+    const insightPanelY = 1044
+    const spendPanelX = 48
+    const spendPanelY = insightPanelY
+    const spendPanelWidth = 1018
+    const spendPanelHeight = 360
+    drawPanel(spendPanelX, spendPanelY, spendPanelWidth, spendPanelHeight, '花费占比结构（Top 5 + 其他）')
+    const spendSeries = [...stats.campaigns].sort((a, b) => b.spend - a.spend)
+    const spendEntries = spendSeries.slice(0, 5).map((item) => ({
+      name: getDisplayName(item),
+      value: item.spend,
+    }))
+    const spendOthers = spendSeries.slice(5).reduce((sum, item) => sum + item.spend, 0)
+    if (spendOthers > 0) {
+      spendEntries.push({
+        name: hideNames ? '其他品牌' : '其他广告系列',
+        value: spendOthers,
+      })
+    }
+
+    const pieCx = spendPanelX + 246
+    const pieCy = spendPanelY + 214
+    const pieOuter = 126
+    const pieInner = 72
+    const pieColors = ['#2563eb', '#0ea5e9', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6']
+    const pieTotal = spendEntries.reduce((sum, entry) => sum + entry.value, 0)
+    let pieAngle = -Math.PI / 2
+
+    if (pieTotal > 0) {
+      spendEntries.forEach((entry, index) => {
+        const ratio = entry.value / pieTotal
+        const next = pieAngle + Math.PI * 2 * ratio
+        ctx.beginPath()
+        ctx.moveTo(pieCx, pieCy)
+        ctx.arc(pieCx, pieCy, pieOuter, pieAngle, next)
+        ctx.closePath()
+        ctx.fillStyle = pieColors[index % pieColors.length]
+        ctx.fill()
+        pieAngle = next
+      })
+
+      ctx.beginPath()
+      ctx.arc(pieCx, pieCy, pieInner, 0, Math.PI * 2)
+      ctx.fillStyle = '#ffffff'
+      ctx.fill()
+    } else {
+      ctx.fillStyle = '#64748b'
+      ctx.font = '20px "PingFang SC", "Microsoft YaHei", sans-serif'
+      ctx.fillText('暂无花费占比数据', spendPanelX + 92, spendPanelY + 220)
+    }
+
+    spendEntries.forEach((entry, index) => {
+      const y = spendPanelY + 108 + index * 38
+      ctx.fillStyle = pieColors[index % pieColors.length]
+      ctx.fillRect(spendPanelX + 354, y - 14, 16, 16)
+      ctx.fillStyle = '#334155'
+      ctx.font = '18px "PingFang SC", "Microsoft YaHei", sans-serif'
+      const pct = pieTotal > 0 ? `${((entry.value / pieTotal) * 100).toFixed(1)}%` : '0%'
+      const label = trimToFit(entry.name, 420)
+      ctx.fillText(`${label} ${pct}`, spendPanelX + 382, y)
+    })
+
+    const cpcPanelX = 1088
+    const cpcPanelY = insightPanelY
+    const cpcPanelWidth = 464
+    const cpcPanelHeight = 360
+    drawPanel(cpcPanelX, cpcPanelY, cpcPanelWidth, cpcPanelHeight, 'CPC 极值洞察')
+    ctx.fillStyle = '#475569'
+    ctx.font = '20px "PingFang SC", "Microsoft YaHei", sans-serif'
+    ctx.fillText('最高实际 CPC', cpcPanelX + 32, cpcPanelY + 78)
+    ctx.fillStyle = '#0f172a'
+    ctx.font = 'bold 22px "PingFang SC", "Microsoft YaHei", sans-serif'
+    const highestName = stats.highestActualCpc ? trimToFit(getDisplayName(stats.highestActualCpc), 360) : '--'
+    ctx.fillText(highestName, cpcPanelX + 32, cpcPanelY + 116)
+    ctx.fillStyle = '#1d4ed8'
+    ctx.font = 'bold 24px "PingFang SC", "Microsoft YaHei", sans-serif'
+    ctx.fillText(
+      stats.highestActualCpc
+        ? formatCurrencyDashboard(Number(stats.highestActualCpc.actualCpc || 0), stats.currency)
+        : '--',
+      cpcPanelX + 32,
+      cpcPanelY + 150
+    )
+
+    ctx.fillStyle = '#475569'
+    ctx.font = '20px "PingFang SC", "Microsoft YaHei", sans-serif'
+    ctx.fillText('最低实际 CPC', cpcPanelX + 32, cpcPanelY + 214)
+    ctx.fillStyle = '#0f172a'
+    ctx.font = 'bold 22px "PingFang SC", "Microsoft YaHei", sans-serif'
+    const lowestName = stats.lowestActualCpc ? trimToFit(getDisplayName(stats.lowestActualCpc), 360) : '--'
+    ctx.fillText(lowestName, cpcPanelX + 32, cpcPanelY + 252)
+    ctx.fillStyle = '#059669'
+    ctx.font = 'bold 24px "PingFang SC", "Microsoft YaHei", sans-serif'
+    ctx.fillText(
+      stats.lowestActualCpc
+        ? formatCurrencyDashboard(Number(stats.lowestActualCpc.actualCpc || 0), stats.currency)
+        : '--',
+      cpcPanelX + 32,
+      cpcPanelY + 286
+    )
+
+    const drawCampaignList = (
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+      title: string,
+      list: CampaignRoasRankItem[]
+    ) => {
+      drawPanel(x, y, width, height, title)
+      if (list.length === 0) {
+        ctx.fillStyle = '#64748b'
+        ctx.font = '20px "PingFang SC", "Microsoft YaHei", sans-serif'
+        ctx.fillText('暂无可计算 ROAS 的广告系列', x + 22, y + 92)
+        return
+      }
+
+      list.forEach((item, index) => {
+        const rowY = y + 86 + index * 64
+        ctx.fillStyle = '#f8fafc'
+        ctx.fillRect(x + 18, rowY - 30, width - 36, 52)
+
+        ctx.fillStyle = '#334155'
+        ctx.font = 'bold 19px "PingFang SC", "Microsoft YaHei", sans-serif'
+        const titleText = `${index + 1}. ${trimToFit(getDisplayName(item), width - 320)}`
+        ctx.fillText(titleText, x + 28, rowY)
+
+        ctx.fillStyle = '#1d4ed8'
+        ctx.font = '18px "PingFang SC", "Microsoft YaHei", sans-serif'
+        const metricsText = `ROAS ${formatRoasNumber(item.roas)} | 花费 ${formatCurrencyDashboard(item.spend, stats.currency)}`
+        ctx.fillText(metricsText, x + 28, rowY + 26)
+      })
+    }
+
+    drawCampaignList(48, 1430, 742, 300, 'Top 3 优秀广告系列', stats.bestTop3)
+    drawCampaignList(810, 1430, 742, 300, 'Bottom 3 待优化广告系列', stats.worstBottom3)
+
+    ctx.fillStyle = '#64748b'
+    ctx.font = '18px "PingFang SC", "Microsoft YaHei", sans-serif'
+    ctx.fillText('提示：该战报用于分享决策参考，建议结合归因口径与预算目标复核。', 48, 1770)
+
+    return canvas.toDataURL('image/png')
+  }
+
+  const handleOpenOverallRoasDialog = async () => {
+    if (!hasMultipleCampaignSelection || overallRoasLoading) return
+
+    setIsOverallRoasDialogOpen(true)
+    setOverallRoasLoading(true)
+    setOverallRoasError(null)
+    setOverallRoasStats(null)
+
+    try {
+      const selectedCampaigns = await getSelectedCampaigns()
+      if (selectedCampaigns.length < 2) {
+        setOverallRoasError('至少选择 2 个广告系列后才能计算整体 ROAS。')
+        return
+      }
+
+      setOverallRoasStats(buildOverallRoasStatistics(selectedCampaigns))
+    } catch (err: any) {
+      if (err?.message === 'UNAUTHORIZED') return
+      setOverallRoasError(err?.message || '计算整体 ROAS 失败')
+    } finally {
+      setOverallRoasLoading(false)
+    }
+  }
+
+  const handleDownloadOverallRoasImage = () => {
+    if (!overallRoasStats || overallRoasDownloading) return
+
+    setOverallRoasDownloading(true)
+    try {
+      const dataUrl = buildOverallRoasImageDataUrl(overallRoasStats, {
+        hideBrandNames,
+        aliasMap: campaignAliasMap,
+      })
+      const link = document.createElement('a')
+      const filenameTs = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)
+      link.href = dataUrl
+      link.download = `campaigns-overall-roas-${filenameTs}.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      showSuccess('下载成功', '统计图片已保存')
+    } catch (err: any) {
+      showError('下载失败', err?.message || '生成图片失败')
+    } finally {
+      setOverallRoasDownloading(false)
+    }
+  }
+
   const getRemovedCampaigns = (list: Campaign[]) =>
     list.filter((campaign) => {
       const isRemovedStatus = String(campaign.status || '').toUpperCase() === 'REMOVED'
@@ -2317,6 +2989,20 @@ export default function CampaignsClientPage({
               <Button onClick={() => router.push('/offers')}>
                 创建广告系列
               </Button>
+              {hasMultipleCampaignSelection && (
+                <Button
+                  variant="outline"
+                  onClick={() => void handleOpenOverallRoasDialog()}
+                  disabled={overallRoasLoading}
+                >
+                  {overallRoasLoading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                  )}
+                  {overallRoasLoading ? '计算中...' : '计算整体ROAS'}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -3064,9 +3750,295 @@ export default function CampaignsClientPage({
 	          }}
 	          googleCampaignId={adjustCpcTarget.googleCampaignId}
 	          campaignName={adjustCpcTarget.campaignName}
-            onSaved={handleCpcAdjusted}
+	          onSaved={handleCpcAdjusted}
 	        />
 	      )}
+        <Dialog
+          open={isOverallRoasDialogOpen}
+          onOpenChange={(open) => {
+            setIsOverallRoasDialogOpen(open)
+            if (!open) {
+              setOverallRoasError(null)
+              setOverallRoasLoading(false)
+            }
+          }}
+        >
+          <DialogContent className="max-h-[94vh] w-[98vw] max-w-[1480px] overflow-y-auto p-0">
+            <DialogHeader className="gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:px-6 lg:px-8">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="space-y-1.5">
+                  <DialogTitle className="text-xl text-slate-900">广告系列整体 ROAS 社交战报</DialogTitle>
+                  <DialogDescription className="space-y-1 text-sm leading-6 text-slate-600">
+                    <span className="block">分析范围：{overallRoasTimeRangeLabel}，已选广告系列 {selectedCampaignIds.size} 个</span>
+                    {overallRoasStats && !overallRoasLoading && !overallRoasError ? (
+                      <span className="block">最近生成：{overallRoasStats.generatedAt}</span>
+                    ) : null}
+                  </DialogDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant={hideBrandNames ? 'default' : 'outline'}
+                  onClick={() => setHideBrandNames((prev) => !prev)}
+                >
+                  {hideBrandNames ? '显示品牌名' : '隐藏品牌名'}
+                </Button>
+              </div>
+            </DialogHeader>
+
+            {overallRoasLoading ? (
+              <div className="flex items-center justify-center py-16 text-sm text-gray-600">
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                正在汇总选中广告系列数据...
+              </div>
+            ) : overallRoasError ? (
+              <div className="m-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 sm:m-6 lg:m-8">
+                <p>{overallRoasError}</p>
+                <Button
+                  variant="outline"
+                  className="mt-3 border-red-200 bg-white hover:bg-red-100"
+                  onClick={() => void handleOpenOverallRoasDialog()}
+                >
+                  重新计算
+                </Button>
+              </div>
+            ) : overallRoasStats ? (
+              <div className="bg-slate-50 px-3 py-4 sm:px-5 sm:py-5 lg:px-8 lg:py-6">
+                <div className="mx-auto max-w-[1504px] overflow-hidden rounded-[24px] border border-blue-200 bg-[#eef5ff] shadow-[0_18px_48px_rgba(15,23,42,0.12)]">
+                  <div className="bg-gradient-to-r from-[#0b1220] via-[#1d4ed8] to-[#0369a1] px-5 py-6 text-white sm:px-8 lg:px-10 lg:py-9">
+                    <div className="flex min-h-[132px] flex-col justify-between gap-5 lg:min-h-[148px]">
+                      <div className="space-y-3">
+                        <h3 className="text-[30px] font-bold leading-tight tracking-tight sm:text-[38px] lg:text-[44px]">
+                          广告系列整体 ROAS 社交战报
+                        </h3>
+                        <div className="space-y-1 text-[13px] leading-6 text-blue-100 sm:text-sm">
+                          <p>{overallRoasTimeRangeLabel} | {overallRoasStats.generatedAt}</p>
+                          <p>统计币种：{overallRoasStats.currency}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-end justify-end">
+                        {hideBrandNames ? (
+                          <div className="rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-xs font-semibold tracking-[0.12em] text-blue-50">
+                            已隐藏品牌名
+                          </div>
+                        ) : <div />}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-5 px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
+                    <div className={`${overallRoasPreviewPanelClass} p-5`}>
+                      <p className="text-sm font-semibold text-[#1e3a8a]">一句话结论</p>
+                      <p className="mt-2 text-sm font-medium leading-7 text-slate-700 lg:text-base">{overallRoasShareHeadline}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+                      {overallRoasMetricCards.map((card) => (
+                        <div key={card.title} className={`${overallRoasPreviewPanelClass} min-h-[112px] px-5 py-4`}>
+                          <p className="text-sm text-slate-500">{card.title}</p>
+                          <p className="mt-2 text-[28px] font-semibold leading-none tracking-tight text-slate-950">{card.value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className={overallRoasPreviewPanelClass}>
+                      <div className={`${overallRoasPreviewPanelBodyClass} pb-4`}>
+                        <p className={overallRoasPreviewSectionTitleClass}>ROAS 排名趋势（Top 8）</p>
+                        <p className={overallRoasPreviewSectionHintClass}>预览结构与导出图保持一致，突出头部系列 ROAS 排名</p>
+                      </div>
+                      {overallRoasRankTrendData.length > 0 ? (
+                        <div className="h-[332px] px-2 pb-4 sm:px-4 lg:h-[356px] lg:px-5">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={overallRoasRankTrendData} margin={{ top: 32, right: 24, bottom: 16, left: 8 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" />
+                              <XAxis dataKey="rank" stroke="#64748b" tickLine={false} axisLine={false} />
+                              <YAxis
+                                stroke="#334155"
+                                tickLine={false}
+                                axisLine={false}
+                                tickFormatter={(value: number) => `${Number(value || 0).toFixed(1)}x`}
+                              />
+                              <RechartsTooltip
+                                contentStyle={{ borderRadius: 12, borderColor: '#dbeafe' }}
+                                formatter={(value: number) => [formatRoasNumber(Number(value)), 'ROAS']}
+                                labelFormatter={(_, payload: any[]) => payload?.[0]?.payload?.campaignName || '--'}
+                              />
+                              <Line type="monotone" dataKey="roas" stroke="#1d4ed8" strokeWidth={3} dot={{ r: 4, fill: '#ffffff', strokeWidth: 2 }} activeDot={{ r: 6 }}>
+                                <LabelList
+                                  dataKey="roas"
+                                  position="top"
+                                  offset={12}
+                                  formatter={(value: number) => `${Number(value || 0).toFixed(2)}x`}
+                                  className="fill-slate-700 text-[11px]"
+                                />
+                              </Line>
+                            </ComposedChart>
+                          </ResponsiveContainer>
+                        </div>
+                      ) : (
+                        <p className="py-20 text-center text-sm text-slate-500">暂无可绘制的 ROAS 趋势数据</p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_420px]">
+                      <div className={overallRoasPreviewPanelClass}>
+                        <div className={overallRoasPreviewPanelBodyClass}>
+                          <p className={overallRoasPreviewSectionTitleClass}>花费占比结构（Top 5 + 其他）</p>
+                          <p className={overallRoasPreviewSectionHintClass}>预览与导出图一致，强调主要花费集中度和构成</p>
+                        </div>
+                        {overallRoasSpendShareData.length > 0 ? (
+                          <div className="grid gap-6 px-4 pb-5 sm:px-5 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-center lg:px-6">
+                            <div className="h-[316px]">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie
+                                    data={overallRoasSpendShareData}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={78}
+                                    outerRadius={130}
+                                    paddingAngle={2}
+                                  >
+                                    {overallRoasSpendShareData.map((_, index) => (
+                                      <Cell key={`share-${index}`} fill={chartPalette[index % chartPalette.length]} />
+                                    ))}
+                                  </Pie>
+                                  <RechartsTooltip
+                                    formatter={(value: number) => formatCurrencyDashboard(Number(value), overallRoasStats.currency)}
+                                  />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            </div>
+                            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                              {overallRoasSpendShareData.map((entry, index) => (
+                                <div key={`legend-${entry.name}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-sm">
+                                  <div className="flex items-center gap-2 text-sm text-slate-700">
+                                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: chartPalette[index % chartPalette.length] }} />
+                                    <span className="min-w-0 flex-1 truncate">{entry.name}</span>
+                                  </div>
+                                  <div className="mt-1 flex items-center justify-between gap-3 text-xs">
+                                    <span className="text-slate-500">
+                                      {overallRoasSpendShareTotal > 0
+                                        ? `${((Number(entry.value) / overallRoasSpendShareTotal) * 100).toFixed(1)}%`
+                                        : '0%'}
+                                    </span>
+                                    <span className="font-semibold text-slate-900">
+                                      {formatCurrencyDashboard(Number(entry.value), overallRoasStats.currency)}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="py-20 text-center text-sm text-slate-500">暂无可绘制的花费占比数据</p>
+                        )}
+                      </div>
+
+                      <div className={`${overallRoasPreviewPanelClass} min-h-[356px] ${overallRoasPreviewPanelBodyClass}`}>
+                        <p className={overallRoasPreviewSectionTitleClass}>CPC 极值洞察</p>
+                        <div className="mt-5 space-y-6">
+                          <div>
+                            <p className="text-sm text-slate-500">最高实际 CPC</p>
+                            {overallRoasStats.highestActualCpc ? (
+                              <>
+                                <p className="mt-2 text-base font-semibold text-slate-900">{getCampaignDisplayName(overallRoasStats.highestActualCpc)}</p>
+                                <p className="mt-1 text-sm font-semibold text-indigo-600">
+                                  {formatCurrencyDashboard(Number(overallRoasStats.highestActualCpc.actualCpc || 0), overallRoasStats.currency)}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="mt-2 text-sm text-slate-500">暂无可计算的实际 CPC 数据</p>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm text-slate-500">最低实际 CPC</p>
+                            {overallRoasStats.lowestActualCpc ? (
+                              <>
+                                <p className="mt-2 text-base font-semibold text-slate-900">{getCampaignDisplayName(overallRoasStats.lowestActualCpc)}</p>
+                                <p className="mt-1 text-sm font-semibold text-emerald-600">
+                                  {formatCurrencyDashboard(Number(overallRoasStats.lowestActualCpc.actualCpc || 0), overallRoasStats.currency)}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="mt-2 text-sm text-slate-500">暂无可计算的实际 CPC 数据</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                      <div className={`${overallRoasPreviewPanelClass} min-h-[286px] ${overallRoasPreviewPanelBodyClass}`}>
+                        <p className={`mb-4 ${overallRoasPreviewSectionTitleClass}`}>Top 3 优秀广告系列</p>
+                        {overallRoasStats.bestTop3.length > 0 ? (
+                          <div className="space-y-3">
+                            {overallRoasStats.bestTop3.map((item, index) => (
+                              <div key={`best-${item.id}`} className="rounded-xl bg-slate-50 px-4 py-3">
+                                <p className="text-sm font-semibold text-slate-900">{index + 1}. {getCampaignDisplayName(item)}</p>
+                                <p className="mt-1 text-xs text-slate-600">
+                                  ROAS {formatRoasNumber(item.roas)} | 花费 {formatCurrencyDashboard(item.spend, overallRoasStats.currency)} | 佣金 {formatCurrencyDashboard(item.commission, overallRoasStats.currency)}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-500">暂无可计算 ROAS 的广告系列</p>
+                        )}
+                      </div>
+                      <div className={`${overallRoasPreviewPanelClass} min-h-[286px] ${overallRoasPreviewPanelBodyClass}`}>
+                        <p className={`mb-4 ${overallRoasPreviewSectionTitleClass}`}>Bottom 3 待优化广告系列</p>
+                        {overallRoasStats.worstBottom3.length > 0 ? (
+                          <div className="space-y-3">
+                            {overallRoasStats.worstBottom3.map((item, index) => (
+                              <div key={`worst-${item.id}`} className="rounded-xl bg-slate-50 px-4 py-3">
+                                <p className="text-sm font-semibold text-slate-900">{index + 1}. {getCampaignDisplayName(item)}</p>
+                                <p className="mt-1 text-xs text-slate-600">
+                                  ROAS {formatRoasNumber(item.roas)} | 花费 {formatCurrencyDashboard(item.spend, overallRoasStats.currency)} | 佣金 {formatCurrencyDashboard(item.commission, overallRoasStats.currency)}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-500">暂无可计算 ROAS 的广告系列</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="px-1 text-xs text-slate-500">
+                      提示：该战报用于分享决策参考，建议结合归因口径与预算目标复核。
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="px-5 py-10 text-center text-sm text-gray-500 sm:px-6 lg:px-8">
+                请点击“重新计算”生成统计数据。
+              </div>
+            )}
+
+            <DialogFooter className="gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:px-6 lg:px-8">
+              {overallRoasStats && !overallRoasLoading && !overallRoasError && (
+                <Button
+                  variant="outline"
+                  onClick={handleDownloadOverallRoasImage}
+                  disabled={overallRoasDownloading}
+                >
+                  {overallRoasDownloading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  {overallRoasDownloading ? '下载中...' : '下载统计图片'}
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => setIsOverallRoasDialogOpen(false)}>
+                关闭
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         {/* Toggle Status Confirmation Dialog */}
         <AlertDialog
           open={isToggleStatusDialogOpen}

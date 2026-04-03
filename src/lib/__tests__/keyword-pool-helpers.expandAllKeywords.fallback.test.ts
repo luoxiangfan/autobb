@@ -111,7 +111,12 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth fallback)', () => {
     expect(byKeyword.get('midland')).toBe('EXACT')
     expect(byKeyword.get('midland weather radio')).toBe('PHRASE')
     expect(byKeyword.get('midland emergency radio')).toBe('PHRASE')
-    expect(byKeyword.get('midland weather alert')).toBe('PHRASE')
     expect(byKeyword.get('midland all hazards radio')).toBe('PHRASE')
+
+    const nonPureBrandKeywords = out.filter(item => item.keyword.toLowerCase() !== 'midland')
+    expect(nonPureBrandKeywords.length).toBeGreaterThan(0)
+    for (const item of nonPureBrandKeywords) {
+      expect(item.matchType).toBe('PHRASE')
+    }
   })
 })

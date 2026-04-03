@@ -1187,6 +1187,58 @@ describe('creative-keyword-selection', () => {
     expect(result.sourceQuotaAudit.acceptedBrandCount).toBe(0)
   })
 
+  it('filters AI template phrases while keeping AI demand keywords with concrete product anchors', () => {
+    const result = selectCreativeKeywords({
+      keywordsWithVolume: [
+        {
+          keyword: 'brandx premium choice solution',
+          searchVolume: 900,
+          source: 'AI_GENERATED' as any,
+          sourceType: 'AI_LLM_RAW' as any,
+          sourceSubtype: 'AI_LLM_RAW' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'brandx everyday option for everyone',
+          searchVolume: 860,
+          source: 'AI_GENERATED' as any,
+          sourceType: 'AI_LLM_RAW' as any,
+          sourceSubtype: 'AI_LLM_RAW' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'brandx cordless stick vacuum for pet hair',
+          searchVolume: 1400,
+          source: 'AI_GENERATED' as any,
+          sourceType: 'AI_LLM_RAW' as any,
+          sourceSubtype: 'AI_LLM_RAW' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'brandx lightweight vacuum cleaner for apartment',
+          searchVolume: 1200,
+          source: 'AI_GENERATED' as any,
+          sourceType: 'AI_LLM_RAW' as any,
+          sourceSubtype: 'AI_LLM_RAW' as any,
+          matchType: 'PHRASE' as const,
+        },
+      ],
+      brandName: 'BrandX',
+      creativeType: 'product_intent',
+      maxKeywords: 4,
+      minBrandKeywords: 0,
+      brandReserve: 0,
+      fallbackMode: true,
+    })
+
+    expect(result.keywords).not.toContain('brandx premium choice solution')
+    expect(result.keywords).not.toContain('brandx everyday option for everyone')
+    expect(result.keywords.some((keyword) =>
+      keyword === 'brandx cordless stick vacuum for pet hair'
+      || keyword === 'brandx lightweight vacuum cleaner for apartment'
+    )).toBe(true)
+  })
+
   it('keeps A/D top20 overlap within 20%-35% under mixed brand + demand corpus', () => {
     const sharedBrandDemand = [
       'brandx robot vacuum for home',

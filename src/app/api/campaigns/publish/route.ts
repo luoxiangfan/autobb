@@ -1270,6 +1270,7 @@ export async function POST(request: NextRequest) {
                 : undefined
             },
             brandName: offer.brand,
+            forcePublish: _forcePublish,
             enableCampaignImmediately: _enableCampaignImmediately,
             pauseOldCampaigns: _pauseOldCampaigns
           }

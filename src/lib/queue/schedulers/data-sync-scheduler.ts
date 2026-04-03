@@ -45,6 +45,8 @@ interface UserSyncConfig {
   last_auto_sync_at: string | null
 }
 
+const DEFAULT_DATA_SYNC_INTERVAL_HOURS = 4
+
 export class DataSyncScheduler {
   private intervalHandle: NodeJS.Timeout | null = null
   private startupTimeoutHandle: NodeJS.Timeout | null = null
@@ -141,7 +143,7 @@ export class DataSyncScheduler {
           COALESCE(
             (SELECT value FROM system_settings
              WHERE user_id = u.id AND category = 'system' AND key = 'data_sync_interval_hours' LIMIT 1),
-            '6'
+            '${DEFAULT_DATA_SYNC_INTERVAL_HOURS}'
           ) AS data_sync_interval_hours,
           (
             SELECT started_at
@@ -179,7 +181,10 @@ export class DataSyncScheduler {
       let skippedCount = 0
       for (const config of configs) {
         const userId = config.user_id
-        const intervalHours = parseInt(String(config.data_sync_interval_hours)) || 6
+        const parsedInterval = parseInt(String(config.data_sync_interval_hours), 10)
+        const intervalHours = Number.isFinite(parsedInterval) && parsedInterval > 0
+          ? parsedInterval
+          : DEFAULT_DATA_SYNC_INTERVAL_HOURS
         const lastSyncAt = config.last_auto_sync_at ? new Date(config.last_auto_sync_at) : null
 
         // 计算距离上次同步的小时数

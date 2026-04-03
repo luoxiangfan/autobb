@@ -1083,19 +1083,49 @@ function filterGlobalCoreKeywordsByOfferContext(params: {
     mustContainBrand: enforceBrandContainment,
     minContextTokenMatches: effectiveMinContextTokenMatches,
   })
+  let finalFiltered = strictFiltered.filtered
+  let intentTighteningRemoved = 0
 
-  if (preFiltered.removed.length > 0 || strictFiltered.removed.length > 0 || adapted.stats.brandedFromNonBrand > 0) {
+  // 对 product scope 的 GLOBAL_CORE 词再走一层 product_intent 收紧，尽量在词池阶段就拦截跨品类品牌词。
+  if (scope === 'product' && finalFiltered.length > 0) {
+    const intentTightened = filterCreativeKeywordsByOfferContextDetailed({
+      offer: {
+        brand: offer.brand,
+        category: offer.category,
+        product_name: offer.product_name,
+        offer_name: offer.offer_name,
+        target_country: offer.target_country,
+        target_language: offer.target_language,
+        final_url: offer.final_url,
+        url: offer.url,
+        page_type: offer.page_type,
+        scraped_data: offer.scraped_data,
+      },
+      keywordsWithVolume: finalFiltered,
+      scopeLabel: `GLOBAL_CORE:${scope}:strict_intent`,
+      creativeType: 'product_intent',
+    })
+    intentTighteningRemoved = Math.max(0, finalFiltered.length - intentTightened.keywords.length)
+    finalFiltered = intentTightened.keywords
+  }
+
+  if (
+    preFiltered.removed.length > 0
+    || strictFiltered.removed.length > 0
+    || adapted.stats.brandedFromNonBrand > 0
+    || intentTighteningRemoved > 0
+  ) {
     const contextRemoved = strictFiltered.removed.filter(item => item.reason.includes('与商品无关')).length
     const brandRemoved = strictFiltered.removed.filter(item => item.reason.includes('不含纯品牌词')).length
     const preContextRemoved = preFiltered.removed.filter(item => item.reason.includes('与商品无关')).length
     console.log(
-      `🧹 GLOBAL_CORE(${scope}) 过滤链路: ${keywords.length} → 预过滤${preFiltered.filtered.length} → 改写${adapted.keywords.length} → 收口${strictFiltered.filtered.length} ` +
+      `🧹 GLOBAL_CORE(${scope}) 过滤链路: ${keywords.length} → 预过滤${preFiltered.filtered.length} → 改写${adapted.keywords.length} → 收口${strictFiltered.filtered.length} → 意图收紧${finalFiltered.length} ` +
       `(预过滤移除 ${preFiltered.removed.length}/上下文${preContextRemoved}; 改写 ${adapted.stats.brandedFromNonBrand} 条, 高量阈值 ${adapted.stats.highVolumeThreshold === -1 ? 'N/A' : adapted.stats.highVolumeThreshold}; ` +
-      `收口移除 ${strictFiltered.removed.length}/无品牌${brandRemoved}/上下文${contextRemoved})`
+      `收口移除 ${strictFiltered.removed.length}/无品牌${brandRemoved}/上下文${contextRemoved}; 意图收紧移除 ${intentTighteningRemoved})`
     )
   }
 
-  return strictFiltered.filtered
+  return finalFiltered
 }
 
 async function injectGlobalCoreKeywordsForProduct(params: {
@@ -7580,4 +7610,5 @@ export const __testOnly = {
   extractStoreProductNamesFromLinks,
   buildVerifiedSourceKeywordData,
   resolveOfferPageType,
+  filterGlobalCoreKeywordsByOfferContext,
 }

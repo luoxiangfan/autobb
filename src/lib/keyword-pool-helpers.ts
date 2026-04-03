@@ -408,7 +408,7 @@ async function getGlobalKeywordCandidates(params: {
   category?: string
   limit?: number
 }): Promise<PoolKeywordData[]> {
-  const { brandName, targetCountry, targetLanguage, category, limit = DEFAULTS.maxKeywords } = params
+  const { brandName, targetCountry, targetLanguage, limit = DEFAULTS.maxKeywords } = params
   const pureBrandKeywords = getPureBrandKeywords(brandName)
   if (!targetCountry || pureBrandKeywords.length === 0) return []
 
@@ -499,74 +499,6 @@ async function getGlobalKeywordCandidates(params: {
       }
     }
 
-    // 🔥 优化(2026-03-13): 补充品类核心词（自动前置品牌词）
-    // 解决问题：像 "rattan pendant light" 这样的高质量品类词因不含品牌词而被过滤
-    // 方案：查询品类相关的高搜索量关键词，自动前置品牌词后补充
-    if (category && candidates.size < 20) {
-      const categoryKeywords = extractCategoryKeywords(category)
-      if (categoryKeywords.length > 0) {
-        const categoryPatterns = categoryKeywords.map(kw => `%${kw.toLowerCase()}%`)
-        const categoryClauses = categoryPatterns.map(() => 'LOWER(keyword) LIKE ?').join(' OR ')
-
-        const categoryRows = await db.query(
-          `SELECT keyword, search_volume, competition_level, avg_cpc_micros
-           FROM global_keywords
-           WHERE country IN (${countryPlaceholders})
-             AND language IN (${languagePlaceholders})
-             AND (${categoryClauses})
-             AND search_volume >= 100
-           ORDER BY search_volume DESC
-           LIMIT 30`,
-          [...countryCandidates, ...languageCandidates, ...categoryPatterns]
-        ) as Array<{
-          keyword: string
-          search_volume: number | string | null
-          competition_level?: string | null
-          avg_cpc_micros?: number | string | null
-        }>
-
-        let brandedCategoryCount = 0
-        for (const row of categoryRows) {
-          const canonical = normalizeGoogleAdsKeyword(row.keyword)
-          if (!canonical) continue
-
-          // 跳过已包含品牌词的关键词（避免重复）
-          if (containsPureBrand(canonical, pureBrandKeywords)) continue
-
-          // 自动前置品牌词
-          const { composeGlobalCoreBrandedKeyword } = await import('./offer-keyword-pool')
-          const brandedKeyword = composeGlobalCoreBrandedKeyword(canonical, brandName, 5)
-          if (!brandedKeyword) continue
-
-          const brandedNorm = normalizeGoogleAdsKeyword(brandedKeyword)
-          if (!brandedNorm || candidates.has(brandedNorm)) continue
-
-          // 🐛 修复(2026-03-14): 品牌前置后的关键词不应继承原始品类词的搜索量
-          // 问题：将 "lighting" (90500) 前置品牌后变成 "handwovenlamp lighting"，
-          //      但错误地继承了 "lighting" 的搜索量，实际上组合词的搜索量可能为0
-          // 方案：品牌前置的关键词搜索量设为0，需要后续通过 Keyword Planner API 重新查询真实数据
-          const avgCpcMicros = Number(row.avg_cpc_micros) || 0
-
-          candidates.set(brandedNorm, {
-            keyword: brandedKeyword,
-            searchVolume: 0, // 品牌前置后的关键词需要重新查询真实搜索量
-            competition: row.competition_level || 'UNKNOWN',
-            competitionIndex: 0,
-            lowTopPageBid: avgCpcMicros / 1_000_000,
-            highTopPageBid: avgCpcMicros / 1_000_000,
-            source: 'GLOBAL_CATEGORY_BRANDED',
-            matchType: 'PHRASE',
-            isPureBrand: false
-          })
-          brandedCategoryCount++
-        }
-
-        if (brandedCategoryCount > 0) {
-          console.log(`   🎯 品类词补充(品牌前置): +${brandedCategoryCount} 个`)
-        }
-      }
-    }
-
     if (candidates.size > 0) {
       console.log(`   📦 全局关键词库命中: ${candidates.size} 个`)
     }
@@ -582,21 +514,6 @@ async function getGlobalKeywordCandidates(params: {
     console.warn(`   ⚠️ 全局关键词库查询失败: ${error.message}`)
     return []
   }
-}
-
-/**
- * 从品类名称中提取核心关键词
- * 例如: "Pendant Lighting" → ["pendant", "lighting"]
- */
-function extractCategoryKeywords(category: string): string[] {
-  if (!category) return []
-
-  const normalized = category.toLowerCase().trim()
-  const stopWords = new Set(['and', 'or', 'the', 'a', 'an', 'for', 'with', 'in', 'on', 'at'])
-
-  return normalized
-    .split(/[\s\-_&,]+/)
-    .filter(word => word.length >= 3 && !stopWords.has(word))
 }
 
 function mergeGlobalCandidates(params: {

@@ -231,6 +231,8 @@ export async function GET(request: NextRequest) {
       // 列表接口只做轻量统计，避免首屏被 landing page 分类重查询阻塞。
       fastSummary: true,
       lightweightSummary: true,
+      // /products 列表分页与统计需基于全量准确结果，避免只显示首屏 pageSize 的近似总量。
+      skipHeavySummary: false,
     })
 
     const listedProductIds = result.items

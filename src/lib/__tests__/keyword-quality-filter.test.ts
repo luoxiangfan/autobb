@@ -588,6 +588,37 @@ describe('keyword-quality-filter', () => {
       expect(result.removed.every(r => r.reason.includes('模板垃圾词'))).toBe(true)
     })
 
+    it('should remove AI template phrases but keep non-AI keywords with real demand structure', () => {
+      const input = [
+        {
+          keyword: 'novilla premium choice solution',
+          searchVolume: 0,
+          source: 'AI_GENERATED' as const,
+          sourceType: 'AI_LLM_RAW' as const,
+        },
+        {
+          keyword: 'novilla memory foam mattress cooling',
+          searchVolume: 1600,
+          source: 'KEYWORD_PLANNER' as const,
+        },
+      ]
+
+      const result = filterKeywordQuality(input, {
+        brandName: 'Novilla',
+        category: 'Mattresses',
+        productName: 'Novilla Memory Foam Mattress',
+        mustContainBrand: true,
+      })
+
+      expect(result.filtered.map(k => k.keyword)).toEqual([
+        'novilla memory foam mattress cooling',
+      ])
+      expect(result.removed.map(r => r.keyword.keyword)).toEqual([
+        'novilla premium choice solution',
+      ])
+      expect(result.removed[0]?.reason).toContain('AI模版短语')
+    })
+
     it('should filter rescue fragment keywords but keep allowed trailing bigrams', () => {
       const input = [
         { keyword: 'dreo 000 btu doe', searchVolume: 0, source: 'DERIVED_RESCUE' as const, sourceType: 'BUILDER_NON_EMPTY_RESCUE' },

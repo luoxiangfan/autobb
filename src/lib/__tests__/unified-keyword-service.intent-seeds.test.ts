@@ -51,6 +51,44 @@ describe('buildIntentAwareSeedPool', () => {
     expect(sourcePool.pageKeywords).toContain('Eufy pet hair cleaning')
   })
 
+  it('does not inject security scenarios for non-security products when about text only contains home/indoor wording', () => {
+    const sourcePool = extractVerifiedKeywordSourcePool({
+      brand: 'Max & Lily',
+      category: 'Kids Bed',
+      productTitle: 'Max & Lily Twin Low Loft Bed',
+      productFeatures: 'Safe for home use, indoor playrooms, low profile design with guardrails.',
+      scrapedData: JSON.stringify({
+        rawAboutThisItem: [
+          'Ideal for indoor playrooms and home bedrooms.',
+          'Designed with 14-inch guardrails for kids safety.',
+        ],
+      }),
+    })
+
+    expect(
+      sourcePool.aboutKeywords.some((keyword) => /home security|indoor security/i.test(keyword))
+    ).toBe(false)
+  })
+
+  it('keeps security scenarios when security context signals are present', () => {
+    const sourcePool = extractVerifiedKeywordSourcePool({
+      brand: 'Eufy',
+      category: 'Security Camera',
+      productTitle: 'Eufy Indoor Security Camera',
+      productFeatures: 'Indoor camera with home security monitoring and motion alerts.',
+      scrapedData: JSON.stringify({
+        rawAboutThisItem: [
+          'Indoor camera for home security monitoring.',
+          'Front door and garage monitoring alerts.',
+        ],
+      }),
+    })
+
+    expect(
+      sourcePool.aboutKeywords.some((keyword) => /home security|indoor security/i.test(keyword))
+    ).toBe(true)
+  })
+
   it('extracts model anchors from hot product specs even when hot product names are generic', () => {
     const sourcePool = extractVerifiedKeywordSourcePool({
       brand: 'Eufy',

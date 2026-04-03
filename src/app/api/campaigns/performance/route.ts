@@ -166,6 +166,24 @@ function summarizeAggByCurrency(params: {
   return { impressions, clicks, cost }
 }
 
+function summarizeCostsByCurrency(
+  byCampaign: Map<number, Map<string, Agg>>
+): Array<{ currency: string; amount: number }> {
+  const totals = new Map<string, number>()
+
+  for (const byCurrency of byCampaign.values()) {
+    for (const [currency, agg] of byCurrency.entries()) {
+      const normalizedCurrency = normalizeCurrency(currency)
+      totals.set(normalizedCurrency, (totals.get(normalizedCurrency) || 0) + (Number(agg.cost) || 0))
+    }
+  }
+
+  return Array.from(totals.entries())
+    .map(([currency, amount]) => ({ currency, amount }))
+    .filter((row) => row.amount > 0)
+    .sort((a, b) => (b.amount - a.amount) || a.currency.localeCompare(b.currency))
+}
+
 function summarizeCommissionByCurrency(
   byCampaign: Map<number, Map<string, number>>
 ): Array<{ currency: string; amount: number }> {
@@ -187,12 +205,16 @@ function summarizeCommissionByCurrency(
 }
 
 function sumCommissionByCampaign(
-  byCampaign: Map<number, Map<string, number>>
+  byCampaign: Map<number, Map<string, number>>,
+  currency?: string | null
 ): number {
   let total = 0
 
   for (const byCurrency of byCampaign.values()) {
-    for (const amount of byCurrency.values()) {
+    for (const [entryCurrency, amount] of byCurrency.entries()) {
+      if (currency && normalizeCurrency(entryCurrency) !== currency) {
+        continue
+      }
       total += Number(amount) || 0
     }
   }
@@ -382,39 +404,6 @@ export async function GET(request: NextRequest) {
     const campaignsParallelEnabled = isPerformanceReleaseEnabled('campaignsParallel')
     const db = await getDatabase()
 
-    const currencyRows = await db.query<any>(
-      `
-        SELECT
-          COALESCE(currency, 'USD') as currency,
-          COALESCE(SUM(cost), 0) as total_cost
-        FROM campaign_performance
-        WHERE user_id = ?
-          AND date >= ?
-          AND date <= ?
-        GROUP BY COALESCE(currency, \'USD\')
-        ORDER BY total_cost DESC
-      `,
-      [userId, startDateStr, endDateStr]
-    )
-
-    const costCurrencies = Array.from(
-      new Set(
-        (currencyRows || [])
-          .map((r: any) => normalizeCurrency(r.currency))
-          .filter(Boolean)
-      )
-    )
-    const reportingCurrency = requestedCurrency && costCurrencies.includes(requestedCurrency)
-      ? requestedCurrency
-      : null
-
-    const costs = (currencyRows || [])
-      .map((r: any) => ({
-        currency: normalizeCurrency(r.currency),
-        amount: Number(r.total_cost) || 0,
-      }))
-      .filter((c: any) => c.currency && Number.isFinite(c.amount))
-
     const queryCampaignRows = async (): Promise<any[]> => (
       await db.query(`
         SELECT
@@ -542,7 +531,6 @@ export async function GET(request: NextRequest) {
         queryCommissionByCampaignCurrency({
           start: startDateStr,
           end: endDateStr,
-          currency: reportingCurrency || undefined,
         }),
       ])
     } else {
@@ -554,9 +542,14 @@ export async function GET(request: NextRequest) {
       currentCommissionByCampaign = await queryCommissionByCampaignCurrency({
         start: startDateStr,
         end: endDateStr,
-        currency: reportingCurrency || undefined,
       })
     }
+    const costs = summarizeCostsByCurrency(currentAggByCampaign)
+    const costCurrencies = costs.map((row) => row.currency)
+    const reportingCurrency = requestedCurrency && costCurrencies.includes(requestedCurrency)
+      ? requestedCurrency
+      : null
+
     const pickCampaignCurrency = (params: {
       accountCurrency: string
       currentAgg?: Map<string, Agg>
@@ -602,7 +595,9 @@ export async function GET(request: NextRequest) {
       const cost = Number(selectedCurrent?.cost) || 0
 
       const commissionByCurrency = currentCommissionByCampaign.get(Number(c.id))
-      const commission = sumAmountsInCurrency(commissionByCurrency, selectedCurrency)
+      const commission = reportingCurrency
+        ? Number(commissionByCurrency?.get(selectedCurrency)) || 0
+        : sumAmountsInCurrency(commissionByCurrency, selectedCurrency)
       const commissionPerClick = clicks > 0 ? commission / clicks : 0
       const costBase = convertToBase(cost, selectedCurrency)
       const commissionBase = convertToBase(commission, selectedCurrency)
@@ -808,107 +803,111 @@ export async function GET(request: NextRequest) {
 
     const latestSyncAt = latestSyncFromLogsRow?.latest_sync_at || latestCampaignSyncFallback
 
-    const queryTotalsAll = async (params: {
-      start: string
-      end: string
-    }): Promise<Agg> => {
-      // 🔧 修复(2026-03-11): 多货币时需要按货币分组，转换为USD后再相加
-      const rows = await db.query<{
-        currency: string | null
-        impressions: number | null
-        clicks: number | null
-        cost: number | null
-      }>(
-        `
-          SELECT
-            currency,
-            COALESCE(SUM(impressions), 0) as impressions,
-            COALESCE(SUM(clicks), 0) as clicks,
-            COALESCE(SUM(cost), 0) as cost
-          FROM campaign_performance
-          WHERE user_id = ?
-            AND date >= ?
-            AND date <= ?
-          GROUP BY currency
-        `,
-        [userId, params.start, params.end]
-      )
-
-      let totalImpressions = 0
-      let totalClicks = 0
-      let totalCostUsd = 0
-
-      for (const row of rows) {
-        totalImpressions += Number(row.impressions) || 0
-        totalClicks += Number(row.clicks) || 0
-        const cost = Number(row.cost) || 0
-        const currency = normalizeCurrency(row.currency)
-        // 将每个货币的花费转换为USD
-        totalCostUsd += convertToBase(cost, currency)
-      }
-
-      return {
-        impressions: totalImpressions,
-        clicks: totalClicks,
-        cost: totalCostUsd,
-      }
-    }
-
-    const queryTotals = async (params: {
-      start: string
-      end: string
-      currency: string
-    }): Promise<Agg> => {
-      const row = await db.queryOne<any>(
-        `
-          SELECT
-            COALESCE(SUM(impressions), 0) as impressions,
-            COALESCE(SUM(clicks), 0) as clicks,
-            COALESCE(SUM(cost), 0) as cost
-          FROM campaign_performance
-          WHERE user_id = ?
-            AND date >= ?
-            AND date <= ?
-            AND COALESCE(currency, \'USD\') = ?
-        `,
-        [userId, params.start, params.end, params.currency]
-      )
-
-      return {
-        impressions: Number(row?.impressions) || 0,
-        clicks: Number(row?.clicks) || 0,
-        cost: Number(row?.cost) || 0,
-      }
-    }
-
-    const queryCommissionTotals = async (params: {
+    const queryPreviousSummary = async (params: {
       start: string
       end: string
       currency?: string
-    }): Promise<number> => {
+    }): Promise<{
+      totals: Agg
+      attributedCommissionTotal: number
+    }> => {
       const hasCurrencyFilter = Boolean(params.currency)
-      const row = await db.queryOne<{ total_commission: number }>(
+      const rows = await db.query<{
+        summary_source: string
+        currency: string | null
+        impressions: number | null
+        clicks: number | null
+        amount: number | null
+      }>(
         `
-          SELECT COALESCE(SUM(commission_amount), 0) AS total_commission
+          SELECT
+            'performance' AS summary_source,
+            COALESCE(currency, 'USD') AS currency,
+            COALESCE(SUM(impressions), 0) AS impressions,
+            COALESCE(SUM(clicks), 0) AS clicks,
+            COALESCE(SUM(cost), 0) AS amount
+          FROM campaign_performance
+          WHERE user_id = ?
+            AND date >= ?
+            AND date <= ?
+            ${hasCurrencyFilter ? 'AND COALESCE(currency, \'USD\') = ?' : ''}
+          GROUP BY 2
+          UNION ALL
+          SELECT
+            'attributed' AS summary_source,
+            COALESCE(currency, 'USD') AS currency,
+            0 AS impressions,
+            0 AS clicks,
+            COALESCE(SUM(commission_amount), 0) AS amount
           FROM affiliate_commission_attributions
           WHERE user_id = ?
             AND report_date >= ?
             AND report_date <= ?
             ${hasCurrencyFilter ? 'AND COALESCE(currency, \'USD\') = ?' : ''}
+          GROUP BY 2
         `,
         hasCurrencyFilter
-          ? [userId, params.start, params.end, String(params.currency)]
-          : [userId, params.start, params.end]
+          ? [
+              userId,
+              params.start,
+              params.end,
+              String(params.currency),
+              userId,
+              params.start,
+              params.end,
+              String(params.currency),
+            ]
+          : [
+              userId,
+              params.start,
+              params.end,
+              userId,
+              params.start,
+              params.end,
+            ]
       )
 
-      return Number(row?.total_commission) || 0
+      const totals: Agg = {
+        impressions: 0,
+        clicks: 0,
+        cost: 0,
+      }
+      let attributedCommissionTotal = 0
+
+      for (const row of rows) {
+        const amount = Number(row.amount) || 0
+        const currency = normalizeCurrency(row.currency)
+        if (row.summary_source === 'performance') {
+          totals.impressions += Number(row.impressions) || 0
+          totals.clicks += Number(row.clicks) || 0
+          totals.cost += hasCurrencyFilter
+            ? amount
+            : convertToBase(amount, currency)
+          continue
+        }
+
+        if (row.summary_source === 'attributed') {
+          attributedCommissionTotal += amount
+        }
+      }
+
+      return {
+        totals,
+        attributedCommissionTotal,
+      }
     }
 
-    const queryUnattributedCommissionTotals = async (params: {
-      start: string
-      end: string
+    const queryUnattributedCommissionPeriods = async (params: {
+      currentStart: string
+      currentEnd: string
+      previousStart: string
+      previousEnd: string
       currency?: string
-    }): Promise<number> => {
+    }): Promise<{
+      currentTotal: number
+      previousTotal: number
+      currentByCurrency: Array<{ currency: string; amount: number }>
+    }> => {
       const unattributedFailureFilter = buildAffiliateUnattributedFailureFilter({
         // Include all unattributed commissions (including campaign_mapping_miss)
         // to match affiliate backend totals
@@ -918,52 +917,37 @@ export async function GET(request: NextRequest) {
       const hasCurrencyFilter = Boolean(params.currency)
       try {
         const queryParams = hasCurrencyFilter
-          ? [userId, params.start, params.end, ...unattributedFailureFilter.values, String(params.currency)]
-          : [userId, params.start, params.end, ...unattributedFailureFilter.values]
-        const row = await db.queryOne<{ total_commission: number }>(
-          `
-            SELECT COALESCE(SUM(commission_amount), 0) AS total_commission
-            FROM openclaw_affiliate_attribution_failures
-            WHERE user_id = ?
-              AND report_date >= ?
-              AND report_date <= ?
-              AND ${unattributedFailureFilter.sql}
-              ${hasCurrencyFilter ? 'AND COALESCE(currency, \'USD\') = ?' : ''}
-          `,
-          queryParams
-        )
-
-        return Number(row?.total_commission) || 0
-      } catch (error: any) {
-        const message = String(error?.message || '')
-        if (
-          /openclaw_affiliate_attribution_failures/i.test(message)
-          && /(no such table|does not exist)/i.test(message)
-        ) {
-          return 0
-        }
-        throw error
-      }
-    }
-
-    const queryUnattributedCommissionTotalsByCurrency = async (params: {
-      start: string
-      end: string
-      currency?: string
-    }): Promise<Array<{ currency: string; amount: number }>> => {
-      const unattributedFailureFilter = buildAffiliateUnattributedFailureFilter({
-        includePendingWithinGrace: true,
-        includeAllFailures: true,
-      })
-      const hasCurrencyFilter = Boolean(params.currency)
-      try {
-        const queryParams = hasCurrencyFilter
-          ? [userId, params.start, params.end, ...unattributedFailureFilter.values, String(params.currency)]
-          : [userId, params.start, params.end, ...unattributedFailureFilter.values]
-        const rows = await db.query<{ currency: string; total_commission: number }>(
+          ? [
+              userId,
+              params.currentStart,
+              params.currentEnd,
+              ...unattributedFailureFilter.values,
+              String(params.currency),
+              userId,
+              params.previousStart,
+              params.previousEnd,
+              ...unattributedFailureFilter.values,
+              String(params.currency),
+            ]
+          : [
+              userId,
+              params.currentStart,
+              params.currentEnd,
+              ...unattributedFailureFilter.values,
+              userId,
+              params.previousStart,
+              params.previousEnd,
+              ...unattributedFailureFilter.values,
+            ]
+        const rows = await db.query<{
+          period_label: string
+          currency: string | null
+          total_commission: number | null
+        }>(
           `
             SELECT
-              COALESCE(currency, 'USD') as currency,
+              'current' AS period_label,
+              COALESCE(currency, 'USD') AS currency,
               COALESCE(SUM(commission_amount), 0) AS total_commission
             FROM openclaw_affiliate_attribution_failures
             WHERE user_id = ?
@@ -971,25 +955,62 @@ export async function GET(request: NextRequest) {
               AND report_date <= ?
               AND ${unattributedFailureFilter.sql}
               ${hasCurrencyFilter ? 'AND COALESCE(currency, \'USD\') = ?' : ''}
-            GROUP BY COALESCE(currency, \'USD\')
-            ORDER BY COALESCE(currency, \'USD\') ASC
+            GROUP BY 2
+            UNION ALL
+            SELECT
+              'previous' AS period_label,
+              COALESCE(currency, 'USD') AS currency,
+              COALESCE(SUM(commission_amount), 0) AS total_commission
+            FROM openclaw_affiliate_attribution_failures
+            WHERE user_id = ?
+              AND report_date >= ?
+              AND report_date <= ?
+              AND ${unattributedFailureFilter.sql}
+              ${hasCurrencyFilter ? 'AND COALESCE(currency, \'USD\') = ?' : ''}
+            GROUP BY 2
           `,
           queryParams
         )
 
-        return rows
-          .map((row) => ({
-            currency: normalizeCurrency(row.currency),
-            amount: roundTo2(Number(row.total_commission) || 0),
-          }))
-          .filter((row) => row.amount > 0)
+        let currentTotal = 0
+        let previousTotal = 0
+        const currentByCurrency: Array<{ currency: string; amount: number }> = []
+
+        for (const row of rows) {
+          const amount = Number(row.total_commission) || 0
+          const currency = normalizeCurrency(row.currency)
+          if (row.period_label === 'current') {
+            currentTotal += amount
+            if (!hasCurrencyFilter && amount > 0) {
+              currentByCurrency.push({
+                currency,
+                amount: roundTo2(amount),
+              })
+            }
+            continue
+          }
+
+          if (row.period_label === 'previous') {
+            previousTotal += amount
+          }
+        }
+
+        return {
+          currentTotal,
+          previousTotal,
+          currentByCurrency,
+        }
       } catch (error: any) {
         const message = String(error?.message || '')
         if (
           /openclaw_affiliate_attribution_failures/i.test(message)
           && /(no such table|does not exist)/i.test(message)
         ) {
-          return []
+          return {
+            currentTotal: 0,
+            previousTotal: 0,
+            currentByCurrency: [],
+          }
         }
         throw error
       }
@@ -1002,7 +1023,10 @@ export async function GET(request: NextRequest) {
       reportingCurrency,
     })
     const currentAttributedCommissionByCurrencyDerived = summarizeCommissionByCurrency(currentCommissionByCampaign)
-    const currentAttributedCommissionTotalDerived = sumCommissionByCampaign(currentCommissionByCampaign)
+    const currentAttributedCommissionTotalDerived = sumCommissionByCampaign(
+      currentCommissionByCampaign,
+      reportingCurrency
+    )
 
     let currentTotals: Agg
     let prevTotals: Agg
@@ -1012,95 +1036,66 @@ export async function GET(request: NextRequest) {
     let prevUnattributedCommissionTotal: number
     let currentAttributedCommissionByCurrency: Array<{ currency: string; amount: number }>
     let currentUnattributedCommissionByCurrency: Array<{ currency: string; amount: number }>
+    let prevSummary: { totals: Agg; attributedCommissionTotal: number }
+    let unattributedSummary: {
+      currentTotal: number
+      previousTotal: number
+      currentByCurrency: Array<{ currency: string; amount: number }>
+    }
 
     if (campaignsParallelEnabled) {
-      const prevTotalsPromise = isFilteredByCurrency
-        ? queryTotals({
-            start: prevStartDateStr,
-            end: prevEndDateStr,
-            currency: String(reportingCurrency),
-          })
-        : queryTotalsAll({
-            start: prevStartDateStr,
-            end: prevEndDateStr,
-          })
-
-      ;[
-        prevTotals,
-        prevAttributedCommissionTotal,
-        currentUnattributedCommissionTotal,
-        prevUnattributedCommissionTotal,
-        currentUnattributedCommissionByCurrency,
-      ] = await Promise.all([
-        prevTotalsPromise,
-        queryCommissionTotals({
+      ;[prevSummary, unattributedSummary] = await Promise.all([
+        queryPreviousSummary({
           start: prevStartDateStr,
           end: prevEndDateStr,
           currency: reportingCurrency || undefined,
         }),
-        queryUnattributedCommissionTotals({
-          start: startDateStr,
-          end: endDateStr,
+        queryUnattributedCommissionPeriods({
+          currentStart: startDateStr,
+          currentEnd: endDateStr,
+          previousStart: prevStartDateStr,
+          previousEnd: prevEndDateStr,
           currency: reportingCurrency || undefined,
         }),
-        queryUnattributedCommissionTotals({
-          start: prevStartDateStr,
-          end: prevEndDateStr,
-          currency: reportingCurrency || undefined,
-        }),
-        !isFilteredByCurrency
-          ? queryUnattributedCommissionTotalsByCurrency({
-              start: startDateStr,
-              end: endDateStr,
-              currency: reportingCurrency || undefined,
-            })
-          : Promise.resolve([]),
       ])
 
       currentTotals = currentTotalsDerived
+      prevTotals = prevSummary.totals
       currentAttributedCommissionTotal = currentAttributedCommissionTotalDerived
+      prevAttributedCommissionTotal = prevSummary.attributedCommissionTotal
+      currentUnattributedCommissionTotal = unattributedSummary.currentTotal
+      prevUnattributedCommissionTotal = unattributedSummary.previousTotal
       currentAttributedCommissionByCurrency = isFilteredByCurrency
         ? []
         : currentAttributedCommissionByCurrencyDerived
+      currentUnattributedCommissionByCurrency = isFilteredByCurrency
+        ? []
+        : unattributedSummary.currentByCurrency
     } else {
       currentTotals = currentTotalsDerived
 
-      prevTotals = isFilteredByCurrency
-        ? await queryTotals({
-            start: prevStartDateStr,
-            end: prevEndDateStr,
-            currency: String(reportingCurrency),
-          })
-        : await queryTotalsAll({
-            start: prevStartDateStr,
-            end: prevEndDateStr,
-          })
-
+      prevSummary = await queryPreviousSummary({
+        start: prevStartDateStr,
+        end: prevEndDateStr,
+        currency: reportingCurrency || undefined,
+      })
+      prevTotals = prevSummary.totals
       currentAttributedCommissionTotal = currentAttributedCommissionTotalDerived
-      prevAttributedCommissionTotal = await queryCommissionTotals({
-        start: prevStartDateStr,
-        end: prevEndDateStr,
+      prevAttributedCommissionTotal = prevSummary.attributedCommissionTotal
+      unattributedSummary = await queryUnattributedCommissionPeriods({
+        currentStart: startDateStr,
+        currentEnd: endDateStr,
+        previousStart: prevStartDateStr,
+        previousEnd: prevEndDateStr,
         currency: reportingCurrency || undefined,
       })
-      currentUnattributedCommissionTotal = await queryUnattributedCommissionTotals({
-        start: startDateStr,
-        end: endDateStr,
-        currency: reportingCurrency || undefined,
-      })
-      prevUnattributedCommissionTotal = await queryUnattributedCommissionTotals({
-        start: prevStartDateStr,
-        end: prevEndDateStr,
-        currency: reportingCurrency || undefined,
-      })
+      currentUnattributedCommissionTotal = unattributedSummary.currentTotal
+      prevUnattributedCommissionTotal = unattributedSummary.previousTotal
       currentAttributedCommissionByCurrency = isFilteredByCurrency
         ? []
         : currentAttributedCommissionByCurrencyDerived
       currentUnattributedCommissionByCurrency = !isFilteredByCurrency
-        ? await queryUnattributedCommissionTotalsByCurrency({
-            start: startDateStr,
-            end: endDateStr,
-            currency: reportingCurrency || undefined,
-          })
+        ? unattributedSummary.currentByCurrency
         : []
     }
     const commissionCurrencies = Array.from(new Set([

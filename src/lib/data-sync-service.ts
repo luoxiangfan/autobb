@@ -1819,11 +1819,11 @@ export class DataSyncService {
   }
 
   /**
-   * 计算下次同步时间（6小时后）
+   * 计算下次同步时间（4小时后）
    */
   private calculateNextSyncTime(): string {
     const nextSync = new Date()
-    nextSync.setHours(nextSync.getHours() + 6)
+    nextSync.setHours(nextSync.getHours() + 4)
     return nextSync.toISOString()
   }
 }

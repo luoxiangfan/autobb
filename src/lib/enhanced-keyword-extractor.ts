@@ -13,7 +13,6 @@
  * - 覆盖所有购买阶段
  */
 
-import { generateContent } from './gemini'
 import { getKeywordSearchVolumes } from './keyword-planner'
 import { getUserAuthType } from './google-ads-oauth'
 import { getHighIntentKeywords } from './google-suggestions'
@@ -45,6 +44,25 @@ export interface KeywordExtractionInput {
   competitors: string[]
   targetCountry: string
   targetLanguage: string
+}
+
+function normalizeEvidencePhrase(raw: string, maxTokens = 4): string | null {
+  const normalized = String(raw || '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s/-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!normalized) return null
+
+  const tokens = normalized
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((token) => token.length >= 2 || /\d/.test(token))
+    .filter((token) => !/^(with|for|and|the|a|an|in|on|of|to|by|from|new|best|top|sale|deal|discount|shop|buy)$/i.test(token))
+    .slice(0, maxTokens)
+
+  if (tokens.length === 0) return null
+  return tokens.join(' ')
 }
 
 /**
@@ -94,7 +112,8 @@ export async function extractKeywordsEnhanced(
     const intentKeywords = await extractIntentKeywords(
       category,
       targetCountry,
-      targetLanguage
+      targetLanguage,
+      brandName
     )
 
     // 第4层：长尾精准词（3-7个）
@@ -169,26 +188,29 @@ async function extractBrandKeywords(
   targetCountry: string,
   targetLanguage: string
 ): Promise<Partial<EnhancedKeyword>[]> {
-  return [
+  const normalizedBrand = normalizeEvidencePhrase(brandName, 3)
+  if (!normalizedBrand) return []
+
+  const output: Partial<EnhancedKeyword>[] = [
     {
-      keyword: brandName,
+      keyword: normalizedBrand,
       category: 'brand',
       source: 'brand_name',
       priority: 'HIGH',
     },
-    {
-      keyword: `${brandName} ${category}`,
+  ]
+
+  const categoryPhrase = normalizeEvidencePhrase(category, 3)
+  if (categoryPhrase && categoryPhrase !== normalizedBrand) {
+    output.push({
+      keyword: `${normalizedBrand} ${categoryPhrase}`,
       category: 'brand',
       source: 'brand_category',
       priority: 'HIGH',
-    },
-    {
-      keyword: `${brandName} sale`,
-      category: 'brand',
-      source: 'brand_sale',
-      priority: 'MEDIUM',
-    },
-  ]
+    })
+  }
+
+  return output
 }
 
 /**
@@ -201,27 +223,33 @@ async function extractCoreKeywords(
   targetCountry: string,
   targetLanguage: string
 ): Promise<Partial<EnhancedKeyword>[]> {
-  const keywords: Partial<EnhancedKeyword>[] = [
-    {
-      keyword: category,
+  const keywords: Partial<EnhancedKeyword>[] = []
+  const categoryPhrase = normalizeEvidencePhrase(category, 4)
+  if (categoryPhrase) {
+    keywords.push({
+      keyword: categoryPhrase,
       category: 'core',
       source: 'category',
       priority: 'HIGH',
-    },
-    {
-      keyword: productName,
+    })
+  }
+  const productPhrase = normalizeEvidencePhrase(productName, 5)
+  if (productPhrase) {
+    keywords.push({
+      keyword: productPhrase,
       category: 'core',
       source: 'product_name',
       priority: 'HIGH',
-    },
-  ]
+    })
+  }
 
-  // 添加特性相关的关键词
-  if (features && features.length > 0) {
+  // 仅从证据文本提取，不做模板拼接
+  const featurePhrase = normalizeEvidencePhrase(features?.[0] || '', 4)
+  if (featurePhrase) {
     keywords.push({
-      keyword: `${category} ${features[0]}`,
+      keyword: featurePhrase,
       category: 'core',
-      source: 'feature',
+      source: 'feature_phrase',
       priority: 'MEDIUM',
     })
   }
@@ -235,34 +263,49 @@ async function extractCoreKeywords(
 async function extractIntentKeywords(
   category: string,
   targetCountry: string,
-  targetLanguage: string
+  targetLanguage: string,
+  brandName?: string
 ): Promise<Partial<EnhancedKeyword>[]> {
-  return [
-    {
-      keyword: `buy ${category}`,
-      category: 'intent',
-      source: 'intent_buy',
-      priority: 'HIGH',
-    },
-    {
-      keyword: `best ${category}`,
-      category: 'intent',
-      source: 'intent_best',
-      priority: 'MEDIUM',
-    },
-    {
-      keyword: `cheap ${category}`,
-      category: 'intent',
-      source: 'intent_cheap',
-      priority: 'MEDIUM',
-    },
-    {
-      keyword: `${category} for sale`,
-      category: 'intent',
-      source: 'intent_sale',
-      priority: 'MEDIUM',
-    },
-  ]
+  const normalizedBrand = normalizeEvidencePhrase(brandName || '', 3)
+  if (!normalizedBrand) return []
+
+  const categoryTokens = new Set(
+    (normalizeEvidencePhrase(category, 3) || '')
+      .split(/\s+/)
+      .filter(Boolean)
+  )
+  const brandTokenSet = new Set(normalizedBrand.split(/\s+/).filter(Boolean))
+
+  try {
+    const candidates = await getHighIntentKeywords({
+      brand: normalizedBrand,
+      country: targetCountry,
+      language: targetLanguage,
+      useProxy: true,
+    })
+
+    const results = new Map<string, Partial<EnhancedKeyword>>()
+    for (const rawKeyword of candidates) {
+      const normalized = normalizeEvidencePhrase(rawKeyword, 6)
+      if (!normalized) continue
+      const tokens = normalized.split(/\s+/).filter(Boolean)
+      const hasBrandAnchor = tokens.some((token) => brandTokenSet.has(token))
+      const hasCategoryAnchor = tokens.some((token) => categoryTokens.has(token))
+      if (!hasBrandAnchor && !hasCategoryAnchor) continue
+
+      results.set(normalized, {
+        keyword: normalized,
+        category: 'intent',
+        source: 'intent_google_suggest',
+        priority: hasBrandAnchor ? 'HIGH' : 'MEDIUM',
+      })
+    }
+
+    return Array.from(results.values()).slice(0, 8)
+  } catch (error) {
+    console.warn('⚠️ 意图词扩展失败，跳过建议词:', error)
+    return []
+  }
 }
 
 /**
@@ -277,22 +320,32 @@ async function extractLongtailKeywords(
 ): Promise<Partial<EnhancedKeyword>[]> {
   const keywords: Partial<EnhancedKeyword>[] = []
 
-  // 从特性生成长尾词
-  if (features && features.length > 0) {
+  const featurePhrase = normalizeEvidencePhrase(features?.[0] || '', 5)
+  if (featurePhrase) {
     keywords.push({
-      keyword: `${features[0]} ${features[1] || 'product'}`,
+      keyword: featurePhrase,
       category: 'longtail',
-      source: 'feature_combination',
+      source: 'feature_longtail_phrase',
       priority: 'LOW',
     })
   }
 
-  // 从使用场景生成长尾词
-  if (useCases && useCases.length > 0) {
+  const useCasePhrase = normalizeEvidencePhrase(useCases?.[0] || '', 5)
+  if (useCasePhrase) {
     keywords.push({
-      keyword: `${useCases[0]} solution`,
+      keyword: useCasePhrase,
       category: 'longtail',
-      source: 'usecase',
+      source: 'usecase_phrase',
+      priority: 'LOW',
+    })
+  }
+
+  const audiencePhrase = normalizeEvidencePhrase(targetAudience || '', 5)
+  if (audiencePhrase) {
+    keywords.push({
+      keyword: audiencePhrase,
+      category: 'longtail',
+      source: 'audience_phrase',
       priority: 'LOW',
     })
   }
@@ -312,12 +365,16 @@ async function extractCompetitorKeywords(
     return []
   }
 
-  return competitors.slice(0, 3).map((competitor) => ({
-    keyword: `${competitor} alternative`,
-    category: 'competitor',
-    source: 'competitor_alternative',
-    priority: 'LOW',
-  }))
+  return competitors
+    .map((competitor) => normalizeEvidencePhrase(competitor, 4))
+    .filter((keyword): keyword is string => Boolean(keyword))
+    .slice(0, 3)
+    .map((keyword) => ({
+      keyword,
+      category: 'competitor' as const,
+      source: 'competitor_name',
+      priority: 'LOW' as const,
+    }))
 }
 
 /**

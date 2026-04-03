@@ -175,6 +175,8 @@ export type ProductListOptions = {
   skipInvalidSummary?: boolean
   fastSummary?: boolean
   lightweightSummary?: boolean
+  skipHeavySummary?: boolean
+  preferFastLandingTypeFilter?: boolean
 }
 
 export type PlatformProductStats = {
@@ -5817,6 +5819,7 @@ function buildAffiliateLandingTypeConditionSql(alias: string = 'p'): {
   byType: Record<AffiliateLandingPageType, string>
   productCondition: string
   storeCondition: string
+  classificationSql: string
 } {
   const asinPresent = `COALESCE(NULLIF(TRIM(${alias}.asin), ''), NULL) IS NOT NULL`
   const urlCandidates = [
@@ -5862,6 +5865,15 @@ function buildAffiliateLandingTypeConditionSql(alias: string = 'p'): {
   const productCondition = `((${amazonProduct}) OR (${independentProduct}))`
   const storeCondition = `(NOT (${productCondition}) AND ((${amazonStore}) OR (${independentStore})))`
   const unknownCondition = `(NOT (${productCondition}) AND NOT (${storeCondition}))`
+  const classificationSql = `
+    CASE
+      WHEN ${amazonProduct} THEN 'amazon_product'
+      WHEN ${amazonStore} THEN 'amazon_store'
+      WHEN ${independentProduct} THEN 'independent_product'
+      WHEN ${independentStore} THEN 'independent_store'
+      ELSE 'unknown'
+    END
+  `
 
   return {
     byType: {
@@ -5873,6 +5885,7 @@ function buildAffiliateLandingTypeConditionSql(alias: string = 'p'): {
     },
     productCondition,
     storeCondition,
+    classificationSql,
   }
 }
 
@@ -6358,6 +6371,7 @@ export async function listAffiliateProducts(userId: number, options: ProductList
   const skipItems = options.skipItems === true
   const skipInvalidSummary = options.skipInvalidSummary === true
   const fastSummary = options.fastSummary === true
+  const skipHeavySummary = fastSummary && options.skipHeavySummary === true
   const lightweightSummary = fastSummary && options.lightweightSummary === true
   const offset = (page - 1) * pageSize
   const sortBy = options.sortBy || 'serial'
@@ -6370,6 +6384,10 @@ export async function listAffiliateProducts(userId: number, options: ProductList
   const landingPageTypeFilter = normalizeAffiliateLandingPageTypeFilter(options.landingPageType)
   const landingTypeSql = buildAffiliateLandingTypeConditionSql('p')
   const asinPresentConditionSql = `COALESCE(NULLIF(TRIM(p.asin), ''), NULL) IS NOT NULL`
+  const preferFastLandingTypeFilter = db.type === 'postgres' && options.preferFastLandingTypeFilter === true
+  // lightweight 汇总只用于首屏快速统计；避免在大表上执行 URL LIKE 分类导致超时。
+  const lightweightProductConditionSql = asinPresentConditionSql
+  const lightweightStoreConditionSql = `(p.platform = 'partnerboost' AND NOT (${asinPresentConditionSql}))`
   type PlatformStatsAccumulator = Omit<PlatformProductStats, 'visibleCount'>
   const toSafeCount = (value: unknown): number => {
     const parsed = Number(value)
@@ -6507,17 +6525,37 @@ export async function listAffiliateProducts(userId: number, options: ProductList
 
   const targetCountryCandidates = resolveProductCountryFilterCandidates(options.targetCountry)
   if (targetCountryCandidates.length > 0) {
-    const countryLikeConditions = targetCountryCandidates
-      .map(() => `LOWER(p.allowed_countries_json) LIKE ?`)
-      .join(' OR ')
-    whereConditions.push(`(${countryLikeConditions})`)
-    for (const countryCode of targetCountryCandidates) {
-      whereParams.push(`%\"${countryCode.toLowerCase()}\"%`)
+    if (db.type === 'postgres') {
+      const normalizedCountriesJsonbSql = `COALESCE(NULLIF(BTRIM(p.allowed_countries_json), ''), '[]')::jsonb`
+      const postgresCountryContainsSql = targetCountryCandidates
+        .map(() => `${normalizedCountriesJsonbSql} @> ?::jsonb`)
+        .join(' OR ')
+      whereConditions.push(`(${postgresCountryContainsSql})`)
+      for (const countryCode of targetCountryCandidates) {
+        whereParams.push(JSON.stringify([countryCode]))
+      }
+    } else {
+      const countryLikeConditions = targetCountryCandidates
+        .map(() => `LOWER(p.allowed_countries_json) LIKE ?`)
+        .join(' OR ')
+      whereConditions.push(`(${countryLikeConditions})`)
+      for (const countryCode of targetCountryCandidates) {
+        whereParams.push(`%\"${countryCode.toLowerCase()}\"%`)
+      }
     }
   }
 
   if (landingPageTypeFilter !== 'all') {
-    whereConditions.push(landingTypeSql.byType[landingPageTypeFilter])
+    if (preferFastLandingTypeFilter && landingPageTypeFilter === 'amazon_product') {
+      // 首屏列表优先保证可用性：amazon_product 在快速模式下退化为 ASIN 存在判定。
+      whereConditions.push(asinPresentConditionSql)
+    } else if (preferFastLandingTypeFilter && landingPageTypeFilter === 'independent_store') {
+      // 首屏列表优先保证可用性：independent_store 在快速模式下退化为 partnerboost+无ASIN 判定。
+      whereConditions.push(lightweightStoreConditionSql)
+    } else {
+      // Postgres 下避免 CASE = ? 的超长表达式，直接复用按类型布尔条件，减少筛选 CPU 压力。
+      whereConditions.push(landingTypeSql.byType[landingPageTypeFilter])
+    }
   }
 
   appendNumericRangeWhere({
@@ -6800,54 +6838,71 @@ export async function listAffiliateProducts(userId: number, options: ProductList
     cachedPlatformStats
     && typeof cachedPlatformStats === 'object'
   )
+  let summaryComputationDegraded = false
 
-  if (cachedSummary && hasCachedPlatformStats) {
-    total = Number(cachedSummary.total || 0)
-    productsWithLinkCount = Number(cachedSummary.productsWithLinkCount || 0)
-    activeProductsCount = Number(cachedSummary.activeProductsCount || 0)
-    invalidProductsCount = Number(cachedSummary.invalidProductsCount || 0)
-    syncMissingProductsCount = Number(cachedSummary.syncMissingProductsCount || 0)
-    unknownProductsCount = Number(cachedSummary.unknownProductsCount || 0)
-    blacklistedCount = Number(cachedSummary.blacklistedCount || 0)
-
-    for (const platformKey of ['yeahpromos', 'partnerboost'] as const) {
-      const platformCached = cachedPlatformStats?.[platformKey]
-      if (!platformCached || typeof platformCached !== 'object') continue
-      platformStatsAccumulator[platformKey] = {
-        total: toSafeCount(platformCached.total),
-        productCount: toSafeCount(platformCached.productCount),
-        storeCount: toSafeCount(platformCached.storeCount),
-        productsWithLinkCount: toSafeCount(platformCached.productsWithLinkCount),
-        activeProductsCount: toSafeCount(platformCached.activeProductsCount),
-        invalidProductsCount: toSafeCount(platformCached.invalidProductsCount),
-        syncMissingProductsCount: toSafeCount(platformCached.syncMissingProductsCount),
-        unknownProductsCount: toSafeCount(platformCached.unknownProductsCount),
-        blacklistedCount: toSafeCount(platformCached.blacklistedCount),
-      }
-    }
-
-    platformStats = finalizePlatformStats(platformStatsAccumulator)
-    const cachedLanding = cachedSummary.landingPageStats
-    const productCount = toSafeCount(cachedLanding?.productCount)
-    const storeCount = toSafeCount(cachedLanding?.storeCount)
-    const fallbackProductCount = platformStats.yeahpromos.productCount + platformStats.partnerboost.productCount
-    const fallbackStoreCount = platformStats.yeahpromos.storeCount + platformStats.partnerboost.storeCount
-    const resolvedProductCount = productCount > 0 || storeCount > 0 ? productCount : fallbackProductCount
-    const resolvedStoreCount = productCount > 0 || storeCount > 0 ? storeCount : fallbackStoreCount
-    landingPageStats = {
-      productCount: resolvedProductCount,
-      storeCount: resolvedStoreCount,
-      unknownCount: Math.max(0, total - resolvedProductCount - resolvedStoreCount),
-    }
-  } else if (fastSummary) {
-    if (cachedSummary) {
+  try {
+    if (cachedSummary && hasCachedPlatformStats) {
+      total = Number(cachedSummary.total || 0)
       productsWithLinkCount = Number(cachedSummary.productsWithLinkCount || 0)
       activeProductsCount = Number(cachedSummary.activeProductsCount || 0)
       invalidProductsCount = Number(cachedSummary.invalidProductsCount || 0)
       syncMissingProductsCount = Number(cachedSummary.syncMissingProductsCount || 0)
       unknownProductsCount = Number(cachedSummary.unknownProductsCount || 0)
       blacklistedCount = Number(cachedSummary.blacklistedCount || 0)
-    }
+
+      for (const platformKey of ['yeahpromos', 'partnerboost'] as const) {
+        const platformCached = cachedPlatformStats?.[platformKey]
+        if (!platformCached || typeof platformCached !== 'object') continue
+        platformStatsAccumulator[platformKey] = {
+          total: toSafeCount(platformCached.total),
+          productCount: toSafeCount(platformCached.productCount),
+          storeCount: toSafeCount(platformCached.storeCount),
+          productsWithLinkCount: toSafeCount(platformCached.productsWithLinkCount),
+          activeProductsCount: toSafeCount(platformCached.activeProductsCount),
+          invalidProductsCount: toSafeCount(platformCached.invalidProductsCount),
+          syncMissingProductsCount: toSafeCount(platformCached.syncMissingProductsCount),
+          unknownProductsCount: toSafeCount(platformCached.unknownProductsCount),
+          blacklistedCount: toSafeCount(platformCached.blacklistedCount),
+        }
+      }
+
+      platformStats = finalizePlatformStats(platformStatsAccumulator)
+      const cachedLanding = cachedSummary.landingPageStats
+      const productCount = toSafeCount(cachedLanding?.productCount)
+      const storeCount = toSafeCount(cachedLanding?.storeCount)
+      const fallbackProductCount = platformStats.yeahpromos.productCount + platformStats.partnerboost.productCount
+      const fallbackStoreCount = platformStats.yeahpromos.storeCount + platformStats.partnerboost.storeCount
+      const resolvedProductCount = productCount > 0 || storeCount > 0 ? productCount : fallbackProductCount
+      const resolvedStoreCount = productCount > 0 || storeCount > 0 ? storeCount : fallbackStoreCount
+      landingPageStats = {
+        productCount: resolvedProductCount,
+        storeCount: resolvedStoreCount,
+        unknownCount: Math.max(0, total - resolvedProductCount - resolvedStoreCount),
+      }
+    } else if (skipHeavySummary) {
+      if (cachedSummary) {
+        total = Number(cachedSummary.total || 0)
+        productsWithLinkCount = Number(cachedSummary.productsWithLinkCount || 0)
+        activeProductsCount = Number(cachedSummary.activeProductsCount || 0)
+        invalidProductsCount = Number(cachedSummary.invalidProductsCount || 0)
+        syncMissingProductsCount = Number(cachedSummary.syncMissingProductsCount || 0)
+        unknownProductsCount = Number(cachedSummary.unknownProductsCount || 0)
+        blacklistedCount = Number(cachedSummary.blacklistedCount || 0)
+      } else {
+        total = 0
+      }
+      landingPageStats = resolveCachedLandingPageStats(total)
+      platformStats = finalizePlatformStats(platformStatsAccumulator)
+      summaryComputationDegraded = summaryComputationDegraded || total <= 0
+    } else if (fastSummary) {
+      if (cachedSummary) {
+        productsWithLinkCount = Number(cachedSummary.productsWithLinkCount || 0)
+        activeProductsCount = Number(cachedSummary.activeProductsCount || 0)
+        invalidProductsCount = Number(cachedSummary.invalidProductsCount || 0)
+        syncMissingProductsCount = Number(cachedSummary.syncMissingProductsCount || 0)
+        unknownProductsCount = Number(cachedSummary.unknownProductsCount || 0)
+        blacklistedCount = Number(cachedSummary.blacklistedCount || 0)
+      }
 
     const basePlatformRows = lightweightSummary
       ? await db.query<{
@@ -6863,8 +6918,7 @@ export async function listAffiliateProducts(userId: number, options: ProductList
             SUM(
               CASE
                 WHEN (
-                  (p.platform = 'partnerboost' AND ${landingTypeSql.productCondition})
-                  OR (p.platform <> 'partnerboost' AND ${asinPresentConditionSql})
+                  ${lightweightProductConditionSql}
                 ) THEN 1
                 ELSE 0
               END
@@ -6872,8 +6926,7 @@ export async function listAffiliateProducts(userId: number, options: ProductList
             SUM(
               CASE
                 WHEN (
-                  p.platform = 'partnerboost'
-                  AND ${landingTypeSql.storeCondition}
+                  ${lightweightStoreConditionSql}
                 ) THEN 1
                 ELSE 0
               END
@@ -6946,8 +6999,7 @@ export async function listAffiliateProducts(userId: number, options: ProductList
               SUM(
                 CASE
                   WHEN (
-                    (p.platform = 'partnerboost' AND ${landingTypeSql.productCondition})
-                    OR (p.platform <> 'partnerboost' AND ${asinPresentConditionSql})
+                    ${lightweightProductConditionSql}
                   ) THEN 1
                   ELSE 0
                 END
@@ -6955,8 +7007,7 @@ export async function listAffiliateProducts(userId: number, options: ProductList
               SUM(
                 CASE
                   WHEN (
-                    p.platform = 'partnerboost'
-                    AND ${landingTypeSql.storeCondition}
+                    ${lightweightStoreConditionSql}
                   ) THEN 1
                   ELSE 0
                 END
@@ -7048,21 +7099,21 @@ export async function listAffiliateProducts(userId: number, options: ProductList
         })()
     }
 
-    if (!lightweightSummary) {
-      await setCachedProductSummary(userId, summaryCacheHash, {
-        total,
-        productsWithLinkCount,
-        activeProductsCount,
-        invalidProductsCount,
-        syncMissingProductsCount,
-        unknownProductsCount,
-        blacklistedCount,
-        landingPageStats,
-        platformStats,
-      })
-    }
-  } else {
-    const summaryRow = await db.queryOne<{
+      if (!lightweightSummary) {
+        await setCachedProductSummary(userId, summaryCacheHash, {
+          total,
+          productsWithLinkCount,
+          activeProductsCount,
+          invalidProductsCount,
+          syncMissingProductsCount,
+          unknownProductsCount,
+          blacklistedCount,
+          landingPageStats,
+          platformStats,
+        })
+      }
+    } else {
+      const summaryRow = await db.queryOne<{
       total_count: number
       active_products_count: number
       sync_missing_products_count: number
@@ -7283,20 +7334,36 @@ export async function listAffiliateProducts(userId: number, options: ProductList
       unknownCount: Math.max(0, total - productCount - storeCount),
     }
 
-    await setCachedProductSummary(userId, summaryCacheHash, {
-      total,
-      productsWithLinkCount,
-      activeProductsCount,
-      invalidProductsCount,
-      syncMissingProductsCount,
-      unknownProductsCount,
-      blacklistedCount,
-      landingPageStats,
-      platformStats,
-    })
+      await setCachedProductSummary(userId, summaryCacheHash, {
+        total,
+        productsWithLinkCount,
+        activeProductsCount,
+        invalidProductsCount,
+        syncMissingProductsCount,
+        unknownProductsCount,
+        blacklistedCount,
+        landingPageStats,
+        platformStats,
+      })
+    }
+  } catch (error) {
+    if (fastSummary && isPostgresStatementTimeoutError(error)) {
+      summaryComputationDegraded = true
+      console.warn(
+        `[listAffiliateProducts] summary degraded due statement timeout (userId=${userId}, status=${statusFilter}, landingPageType=${landingPageTypeFilter}, targetCountry=${options.targetCountry || 'all'})`
+      )
+    } else {
+      // rowsPromise 已经启动；在抛出前吞掉其 reject，避免进程级 unhandled rejection。
+      await rowsPromise.catch(() => {})
+      throw error
+    }
   }
 
   const rows = await rowsPromise
+  if (summaryComputationDegraded && total <= 0) {
+    // 降级时优先保证列表可用；总量在下一次 summary 命中缓存后可恢复为精确值。
+    total = offset + rows.length
+  }
   if (!skipItems) {
     await hydratePartnerboostShortLinksForRows({
       db,

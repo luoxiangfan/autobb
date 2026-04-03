@@ -421,7 +421,7 @@ async function insertDefaultSystemSettings(): Promise<void> {
     // 系统配置
     { category: 'system', key: 'currency', dataType: 'string', isSensitive: false, isRequired: true, description: '默认货币', defaultValue: 'CNY' },
     { category: 'system', key: 'language', dataType: 'string', isSensitive: false, isRequired: true, description: '系统语言', defaultValue: 'zh-CN' },
-    { category: 'system', key: 'sync_interval_hours', dataType: 'number', isSensitive: false, isRequired: true, description: '数据同步间隔(小时)', defaultValue: '6' },
+    { category: 'system', key: 'sync_interval_hours', dataType: 'number', isSensitive: false, isRequired: true, description: '数据同步间隔(小时)', defaultValue: '4' },
     { category: 'system', key: 'link_check_enabled', dataType: 'boolean', isSensitive: false, isRequired: true, description: '是否启用链接检查', defaultValue: 'true' },
     { category: 'system', key: 'link_check_time', dataType: 'string', isSensitive: false, isRequired: true, description: '链接检查时间', defaultValue: '02:00' },
     { category: 'system', key: 'data_sync_mode', dataType: 'string', isSensitive: false, isRequired: false, description: '手动同步默认模式（incremental/full）', defaultValue: 'incremental' },

@@ -268,12 +268,6 @@ const SETTING_METADATA: Record<string, {
     ],
     defaultValue: 'zh-CN'
   },
-  'system.sync_interval_hours': {
-    label: '同步间隔',
-    description: '从Google Ads自动同步数据的时间间隔（小时）',
-    placeholder: '例如: 6',
-    defaultValue: '6'
-  },
   'system.link_check_enabled': {
     label: '启用链接检查',
     description: '是否每日自动检查Offer链接的有效性',
@@ -300,9 +294,9 @@ const SETTING_METADATA: Record<string, {
   },
   'system.data_sync_interval_hours': {
     label: '数据同步间隔（小时）',
-    description: '自动同步的时间间隔，建议6-24小时',
-    placeholder: '例如: 6',
-    defaultValue: '6'
+    description: '自动同步的时间间隔，默认4小时，建议4-24小时',
+    placeholder: '例如: 4',
+    defaultValue: '4'
   },
   'system.data_sync_mode': {
     label: '默认同步模式',
@@ -351,7 +345,6 @@ const CATEGORY_FIELDS: Record<string, {
   system: [
     { key: 'currency', dataType: 'string', isSensitive: false, isRequired: false },
     { key: 'language', dataType: 'string', isSensitive: false, isRequired: false },
-    { key: 'sync_interval_hours', dataType: 'number', isSensitive: false, isRequired: false },
     { key: 'link_check_enabled', dataType: 'boolean', isSensitive: false, isRequired: false },
     { key: 'link_check_time', dataType: 'string', isSensitive: false, isRequired: false },
     { key: 'data_sync_enabled', dataType: 'boolean', isSensitive: false, isRequired: false },

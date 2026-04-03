@@ -214,6 +214,46 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
     expect(data.enqueuedCount).toBe(1)
   })
 
+  it('allows explicitly disabling quality-gate bypass for a batch request', async () => {
+    dbFns.query
+      .mockResolvedValueOnce([
+        { id: 102, scrape_status: 'completed' },
+      ])
+      .mockResolvedValueOnce([])
+    dbFns.exec.mockResolvedValue(undefined)
+    keywordPoolFns.getAvailableBuckets.mockResolvedValueOnce(['A'])
+
+    const req = new NextRequest('http://localhost/api/offers/batch/generate-creatives-queue', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '1',
+      },
+      body: JSON.stringify({
+        offerIds: [102],
+        forceGenerateOnQualityGate: false,
+      }),
+    })
+
+    const res = await POST(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(queueFns.enqueue).toHaveBeenCalledWith(
+      'ad-creative',
+      expect.objectContaining({
+        offerId: 102,
+        bucket: 'A',
+        forceGenerateOnQualityGate: false,
+      }),
+      1,
+      expect.objectContaining({
+        taskId: 'task-102',
+      })
+    )
+    expect(data.enqueuedCount).toBe(1)
+  })
+
   it('rejects inconsistent creativeType and bucket combinations', async () => {
     const req = new NextRequest('http://localhost/api/offers/batch/generate-creatives-queue', {
       method: 'POST',

@@ -198,8 +198,25 @@ describe('GET /api/products', () => {
         recommendationScoreMin: 3.5,
         recommendationScoreMax: 4.8,
         lightweightSummary: true,
+        skipHeavySummary: false,
       })
     )
+  })
+
+  it('keeps landingPageType filter accurate (no fast approximate filter shortcut)', async () => {
+    const req = new NextRequest(
+      'http://localhost/api/products?landingPageType=amazon_product',
+      { headers: { 'x-user-id': '7' } }
+    )
+    const res = await GET(req)
+
+    expect(res.status).toBe(200)
+    const call = productsFns.listAffiliateProducts.mock.calls.at(-1)
+    expect(call?.[1]).toEqual(expect.objectContaining({
+      landingPageType: 'amazon_product',
+      skipHeavySummary: false,
+    }))
+    expect((call?.[1] as any)?.preferFastLandingTypeFilter).not.toBe(true)
   })
 
   it('supports larger pageSize options and clamps to 1000', async () => {

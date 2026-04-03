@@ -23,6 +23,8 @@ export interface SyncConfig {
   updatedAt: string
 }
 
+const DEFAULT_SYNC_INTERVAL_HOURS = 4
+
 /**
  * GET /api/sync/config
  *
@@ -70,9 +72,9 @@ export async function GET(request: NextRequest) {
             user_id, auto_sync_enabled, sync_interval_hours,
             max_retry_attempts, retry_delay_minutes,
             notify_on_success, notify_on_failure
-          ) VALUES (?, 0, 6, 3, 15, 0, 1)
+          ) VALUES (?, 0, ?, 3, 15, 0, 1)
         `,
-        [userId]
+        [userId, DEFAULT_SYNC_INTERVAL_HOURS]
       )
 
       const configId = getInsertedId(result, db.type)
@@ -200,7 +202,7 @@ export async function PUT(request: NextRequest) {
       // If enabling auto sync, calculate next sync time
       if (autoSyncEnabled) {
         const interval =
-          syncIntervalHours !== undefined ? syncIntervalHours : 6
+          syncIntervalHours !== undefined ? syncIntervalHours : DEFAULT_SYNC_INTERVAL_HOURS
         const nextSync = new Date()
         nextSync.setHours(nextSync.getHours() + interval)
 

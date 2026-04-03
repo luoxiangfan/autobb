@@ -187,7 +187,7 @@ function normalizeProductListCachePayload(input: unknown): ProductListCachePaylo
   if (!Number.isFinite(page) || page < 1) {
     return null
   }
-  if (!Number.isFinite(pageSize) || pageSize < 10 || pageSize > 100) {
+  if (!Number.isFinite(pageSize) || pageSize < 10 || pageSize > 1000) {
     return null
   }
   if (!sortBy) {

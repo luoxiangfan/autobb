@@ -115,4 +115,27 @@ describe('listAffiliateProducts link count query strategy', () => {
     expect(sqlText).toContain('link_counts ON link_counts.product_id = p.id')
     expect(params).toEqual([1, 1, 1, 20, 0])
   })
+
+  it('avoids postgres placeholder collisions when targetCountry is combined with other filters', async () => {
+    const { listAffiliateProducts } = await import('@/lib/affiliate-products')
+    await listAffiliateProducts(1, {
+      page: 1,
+      pageSize: 20,
+      sortBy: 'serial',
+      sortOrder: 'desc',
+      targetCountry: 'UK',
+      landingPageType: 'amazon_product',
+      reviewCountMin: 500,
+    })
+
+    expect(dbFns.query).toHaveBeenCalled()
+    const [sql, params] = dbFns.query.mock.calls[0]
+    const sqlText = String(sql)
+    expect(sqlText).toContain('@> ?::jsonb')
+    expect(sqlText).toContain(' OR ')
+    expect(sqlText).toContain('TRIM(p.asin)')
+    expect(sqlText).toContain('p.review_count >= ?')
+    expect(sqlText).not.toContain('jsonb_array_elements_text')
+    expect(params).toEqual([1, 1, '["UK"]', '["GB"]', 500, 20, 0, 1])
+  })
 })

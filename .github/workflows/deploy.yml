@@ -16,6 +16,18 @@ env:
   # GitHub Container Registry
   GHCR_REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # 是否执行可选测试（默认关闭以缩短 deploy 时长）
+  RUN_OPTIONAL_TESTS: ${{ vars.RUN_OPTIONAL_TESTS || 'false' }}
+  # build-and-test 是否启用重清理（默认关闭，减少重复耗时）
+  ENABLE_DISK_CLEANUP_BUILD_TEST: ${{ vars.ENABLE_DISK_CLEANUP_BUILD_TEST || 'false' }}
+  # build-and-test 触发重清理阈值（仅在 ENABLE_DISK_CLEANUP_BUILD_TEST=true 时生效）
+  DISK_CLEANUP_THRESHOLD_GB_BUILD_TEST: ${{ vars.DISK_CLEANUP_THRESHOLD_GB_BUILD_TEST || '10' }}
+  # build-and-push 触发重清理阈值（runner 磁盘低于该值才清理）
+  DISK_CLEANUP_THRESHOLD_GB_BUILD_PUSH: ${{ vars.DISK_CLEANUP_THRESHOLD_GB_BUILD_PUSH || '20' }}
+  # Docker 构建前最低可用磁盘（不足则执行紧急清理，不满足则快速失败）
+  DISK_SAFETY_MIN_GB_BEFORE_DOCKER: ${{ vars.DISK_SAFETY_MIN_GB_BEFORE_DOCKER || '20' }}
+  # 是否启用 BuildKit cache export（默认关闭，避免 sending cache export 大开销）
+  ENABLE_DOCKER_CACHE_EXPORT: ${{ vars.ENABLE_DOCKER_CACHE_EXPORT || 'false' }}
 
   # GCP Configuration (MustKnowV1.md #30)
   GCP_PROJECT_ID: gen-lang-client-0944935873
@@ -47,11 +59,24 @@ jobs:
       - name: 输出磁盘使用情况（构建前）
         run: df -h
 
-      - name: 释放磁盘空间（构建前）
+      - name: 按需释放磁盘空间（构建前）
         run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/.ghcup || true
-          sudo apt-get clean || true
-          docker system prune -af --volumes || true
+          if [[ "${ENABLE_DISK_CLEANUP_BUILD_TEST}" != "true" ]]; then
+            echo "✅ build-and-test 默认跳过重清理（ENABLE_DISK_CLEANUP_BUILD_TEST=${ENABLE_DISK_CLEANUP_BUILD_TEST}）"
+            df -h
+            exit 0
+          fi
+          FREE_GB=$(df -BG / | awk 'NR==2 {gsub("G","",$4); print $4}')
+          THRESHOLD_GB="${DISK_CLEANUP_THRESHOLD_GB_BUILD_TEST:-10}"
+          echo "当前剩余磁盘: ${FREE_GB}GB，清理阈值: ${THRESHOLD_GB}GB"
+          if [ "${FREE_GB}" -lt "${THRESHOLD_GB}" ]; then
+            echo "⚠️ 磁盘低于阈值，执行清理"
+            sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/.ghcup || true
+            sudo apt-get clean || true
+            docker system prune -af --volumes || true
+          else
+            echo "✅ 磁盘充足，跳过重清理"
+          fi
           df -h
 
       - name: 设置Node.js
@@ -75,6 +100,7 @@ jobs:
           NODE_ENV: production
 
       - name: 运行测试 (如果有)
+        if: ${{ env.RUN_OPTIONAL_TESTS == 'true' }}
         run: npm test || echo "No tests configured"
         continue-on-error: true
 
@@ -114,11 +140,19 @@ jobs:
       - name: 输出磁盘使用情况（构建前）
         run: df -h
 
-      - name: 释放磁盘空间（构建前）
+      - name: 按需释放磁盘空间（构建前）
         run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/.ghcup || true
-          sudo apt-get clean || true
-          docker system prune -af --volumes || true
+          FREE_GB=$(df -BG / | awk 'NR==2 {gsub("G","",$4); print $4}')
+          THRESHOLD_GB="${DISK_CLEANUP_THRESHOLD_GB_BUILD_PUSH:-20}"
+          echo "当前剩余磁盘: ${FREE_GB}GB，清理阈值: ${THRESHOLD_GB}GB"
+          if [ "${FREE_GB}" -lt "${THRESHOLD_GB}" ]; then
+            echo "⚠️ 磁盘低于阈值，执行清理"
+            sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/.ghcup || true
+            sudo apt-get clean || true
+            docker system prune -af --volumes || true
+          else
+            echo "✅ 磁盘充足，跳过重清理"
+          fi
           df -h
 
       - name: 设置变量
@@ -203,25 +237,106 @@ jobs:
           echo "📦 将推送以下标签:"
           echo "${ALL_TAGS}" | tr ',' '\n'
 
+      - name: 恢复 OpenClaw 预编译缓存
+        id: openclaw-prebuilt-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            openclaw-prebuilt/dist
+            openclaw-prebuilt/node_modules
+            openclaw-prebuilt/extensions
+            openclaw-prebuilt/skills
+            openclaw-prebuilt/workspace-templates
+            openclaw-prebuilt/docs/reference/templates
+            openclaw-prebuilt/openclaw.mjs
+            openclaw-prebuilt/package.json
+            openclaw-prebuilt/.build-meta.json
+          key: ${{ runner.os }}-openclaw-prebuilt-${{ hashFiles('openclaw/.source-commit', 'openclaw/package.json', 'openclaw/pnpm-lock.yaml', 'scripts/build-openclaw-prebuilt.sh', 'scripts/verify-openclaw-prebuilt.sh', 'skills/**') }}
+          restore-keys: |
+            ${{ runner.os }}-openclaw-prebuilt-
+
       - name: 准备 OpenClaw 预编译产物
         run: |
-          if [[ -f openclaw-prebuilt/dist/entry.js ]] \
-            && [[ -d openclaw-prebuilt/node_modules ]] \
-            && [[ -d openclaw-prebuilt/extensions ]] \
-            && [[ -f openclaw-prebuilt/openclaw.mjs ]] \
-            && [[ -f openclaw-prebuilt/package.json ]]; then
-            echo "✅ 检测到完整 OpenClaw 预编译产物，执行严格校验"
-            OPENCLAW_PREBUILT_STRICT=1 npm run openclaw:prebuilt:verify
+          set -euo pipefail
+          CACHE_HIT="${{ steps.openclaw-prebuilt-cache.outputs.cache-hit }}"
+          has_runtime_artifacts() {
+            [[ -f openclaw-prebuilt/dist/entry.js ]] \
+              && [[ -d openclaw-prebuilt/node_modules ]] \
+              && [[ -d openclaw-prebuilt/extensions ]] \
+              && [[ -f openclaw-prebuilt/openclaw.mjs ]] \
+              && [[ -f openclaw-prebuilt/package.json ]]
+          }
+
+          verify_or_refresh() {
+            local source_label="$1"
+            if OPENCLAW_PREBUILT_STRICT=1 npm run openclaw:prebuilt:verify; then
+              echo "✅ OpenClaw 预编译产物校验通过（来源: ${source_label}）"
+              return 0
+            fi
+
+            echo "⚠️ OpenClaw 预编译产物校验失败（来源: ${source_label}），回退为重建"
+            echo "ℹ️ 触发 OpenClaw 预编译产物重建"
+            npm run openclaw:prebuilt:refresh
+          }
+
+          if has_runtime_artifacts; then
+            if [[ "${CACHE_HIT}" == "true" ]]; then
+              echo "✅ 命中 OpenClaw 预编译缓存，执行严格校验"
+              verify_or_refresh "actions-cache(hit)"
+            else
+              echo "ℹ️ 未命中精确缓存，但检测到可用预编译产物，先校验再决定是否重建"
+              verify_or_refresh "workspace-or-restore-key"
+            fi
           else
-            echo "ℹ️ 当前 checkout 仅包含 OpenClaw 预编译元数据，重建运行产物后继续"
+            echo "ℹ️ 未检测到完整 OpenClaw 预编译产物，执行重建"
             npm run openclaw:prebuilt:refresh
           fi
 
       - name: 输出 OpenClaw 预编译构建元信息
         run: cat openclaw-prebuilt/.build-meta.json
 
-      # 单次构建，推送到两个Registry
-      - name: 构建并推送Docker镜像
+      - name: 构建前磁盘安全检查
+        run: |
+          FREE_GB=$(df -BG / | awk 'NR==2 {gsub("G","",$4); print $4}')
+          MIN_GB="${DISK_SAFETY_MIN_GB_BEFORE_DOCKER:-20}"
+          echo "Docker 构建前可用磁盘: ${FREE_GB}GB，安全下限: ${MIN_GB}GB"
+
+          if [ "${FREE_GB}" -lt "${MIN_GB}" ]; then
+            echo "⚠️ 可用磁盘不足，执行紧急清理"
+            docker builder prune -af || true
+            docker system prune -af --volumes || true
+            sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/.ghcup || true
+            sudo apt-get clean || true
+
+            FREE_GB_AFTER=$(df -BG / | awk 'NR==2 {gsub("G","",$4); print $4}')
+            echo "紧急清理后可用磁盘: ${FREE_GB_AFTER}GB"
+            if [ "${FREE_GB_AFTER}" -lt "${MIN_GB}" ]; then
+              echo "::error::磁盘不足（${FREE_GB_AFTER}GB < ${MIN_GB}GB），中止构建以避免 runner 崩溃"
+              exit 1
+            fi
+          fi
+
+          df -h
+
+      # 单次构建，推送到两个Registry（默认：禁用 cache export 以减少耗时）
+      - name: 构建并推送Docker镜像（禁用 cache export）
+        if: ${{ env.ENABLE_DOCKER_CACHE_EXPORT != 'true' }}
+        uses: docker/build-push-action@v5
+        env:
+          DOCKER_BUILD_SUMMARY: false
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha,scope=autobb-deploy
+          provenance: false
+          sbom: false
+          build-args: |
+            NODE_ENV=production
+
+      - name: 构建并推送Docker镜像（启用 cache export）
+        if: ${{ env.ENABLE_DOCKER_CACHE_EXPORT == 'true' }}
         uses: docker/build-push-action@v5
         env:
           DOCKER_BUILD_SUMMARY: false
