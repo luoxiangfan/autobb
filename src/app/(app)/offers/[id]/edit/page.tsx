@@ -33,6 +33,11 @@ export default function EditOfferPage() {
   const [commissionValue, setCommissionValue] = useState('')
   const [commissionCurrency, setCommissionCurrency] = useState('')
   const [offerNameSequence, setOfferNameSequence] = useState('01')
+  
+  // Google Ads 同步相关字段
+  const [googleAdsCampaignId, setGoogleAdsCampaignId] = useState<string | null>(null)
+  const [syncSource, setSyncSource] = useState<string | null>(null)
+  const [needsCompletion, setNeedsCompletion] = useState<boolean>(false)
 
   // 加载Offer数据
   useEffect(() => {
@@ -98,6 +103,11 @@ export default function EditOfferPage() {
           const sequence = parts.length >= 3 ? (parts[parts.length - 1] || '01') : '01'
           setOfferNameSequence(sequence)
         }
+        
+        // Google Ads 同步相关字段
+        setGoogleAdsCampaignId(offer.googleAdsCampaignId || null)
+        setSyncSource(offer.syncSource || null)
+        setNeedsCompletion(offer.needsCompletion ?? false)
       } catch (err: any) {
         setError(err.message || '加载Offer失败')
       } finally {
@@ -299,6 +309,39 @@ export default function EditOfferPage() {
 
       <main className="max-w-3xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
+          {/* Google Ads 同步提示 */}
+          {needsCompletion && syncSource === 'google_ads_sync' && (
+            <div className="mb-6 bg-orange-50 border-l-4 border-orange-500 p-4 rounded">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-orange-800">
+                    需要完善信息
+                  </h3>
+                  <div className="mt-2 text-sm text-orange-700">
+                    <p>
+                      此 Offer 是从 Google Ads 广告系列 <strong className="font-mono">{googleAdsCampaignId}</strong> 自动同步创建的。
+                      请完善以下必要信息以便投放广告：
+                    </p>
+                    <ul className="mt-2 list-disc list-inside space-y-1">
+                      <li>原始 URL（商品/店铺页面）</li>
+                      <li>联盟链接（Affiliate Link）</li>
+                      <li>品牌描述和卖点</li>
+                      <li>佣金信息</li>
+                    </ul>
+                    <p className="mt-2 text-xs text-orange-600">
+                      💡 提示：完善信息后，系统将自动标记为已完善，并可以开始投放广告。
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="mb-4 bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded">
               {error}
