@@ -121,6 +121,7 @@ export default function OffersClientPage({
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [countryFilter, setCountryFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [needsCompletionFilter, setNeedsCompletionFilter] = useState<string>('all') // 'all' | 'true' | 'false'
 
   // P2-5: 排序状态
   const [sortBy, setSortBy] = useState<string>('')
@@ -649,6 +650,12 @@ export default function OffersClientPage({
     // 状态筛选
     if (statusFilter !== 'all') {
       filtered = filtered.filter((offer) => offer.scrapeStatus === statusFilter)
+    }
+
+    // 按需要完善状态筛选
+    if (needsCompletionFilter !== 'all') {
+      const needsCompletion = needsCompletionFilter === 'true'
+      filtered = filtered.filter((offer) => (offer.needsCompletion ?? false) === needsCompletion)
     }
 
     // P2-5: 排序
@@ -1361,6 +1368,17 @@ export default function OffersClientPage({
                   <option value="completed">{getScrapeStatusLabel('completed')}</option>
                   <option value="failed">{getScrapeStatusLabel('failed')}</option>
                 </select>
+
+                {/* 需要完善筛选 */}
+                <select
+                  value={needsCompletionFilter}
+                  onChange={(event) => setNeedsCompletionFilter(event.target.value)}
+                  className="h-10 w-[140px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="all">所有完善状态</option>
+                  <option value="true">需要完善</option>
+                  <option value="false">已完善</option>
+                </select>
               </div>
             </div>
 
@@ -1541,6 +1559,24 @@ export default function OffersClientPage({
                         <TableCell className="whitespace-nowrap">
                           <div className={offer.isBlacklisted ? 'opacity-50' : ''}>
                             {getScrapeStatusBadge(offer.scrapeStatus)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <div className={offer.isBlacklisted ? 'opacity-50' : ''}>
+                            {offer.needsCompletion ? (
+                              <a
+                                href={`/offers/${offer.id}/edit`}
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 hover:bg-orange-200 transition-colors"
+                                title="点击完善信息"
+                              >
+                                <span>需要完善</span>
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                              </a>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>

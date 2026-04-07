@@ -25,6 +25,7 @@ import { buildUserExecutionEligibleSql } from './lib/user-execution-eligibility'
 // [已禁用] A/B测试功能当前未使用，暂时注释以避免无意义的定时任务执行
 // import { runABTestMonitor } from './scheduler/ab-test-monitor'
 import { detectAndFixZombieSyncTasks } from './lib/queue/affiliate-sync-zombie-detector'
+import { getGoogleAdsCampaignSyncScheduler } from './lib/queue/schedulers/google-ads-campaign-sync-scheduler'
 import fs from 'fs'
 import path from 'path'
 
@@ -112,6 +113,7 @@ function normalizeDateKey(value: unknown): string {
 
 const openclawStrategySchedules = new Map<number, { cron: string; task: cron.ScheduledTask }>()
 let syncDataTaskRunning = false
+let syncGoogleAdsTaskRunning = false
 let isShuttingDown = false
 const schedulerShutdownGraceMs = parsePositiveInt(process.env.SCHEDULER_SHUTDOWN_GRACE_MS, 6000)
 
@@ -554,6 +556,21 @@ async function runSyncDataTaskSafely(trigger: 'cron' | 'startup') {
     await syncDataTask()
   } finally {
     syncDataTaskRunning = false
+  }
+}
+
+async function runSyncGoogleAdsTaskSafely(trigger: 'cron' | 'startup') {
+  if (syncGoogleAdsTaskRunning) {
+    log(`⏭️ GoogleAds同步检查仍在执行，跳过本轮 (${trigger})`)
+    return
+  }
+
+  syncGoogleAdsTaskRunning = true
+  try {
+    const googleAdsSyncScheduler = getGoogleAdsCampaignSyncScheduler()
+    googleAdsSyncScheduler.start()
+  } finally {
+    syncGoogleAdsTaskRunning = false
   }
 }
 
@@ -1130,6 +1147,13 @@ function startScheduler() {
 
   // 任务2: 每天凌晨2点备份数据库
   cron.schedule('0 2 * * *', async () => {
+    await runSyncGoogleAdsTaskSafely('cron')
+  }, {
+    scheduled: true,
+    timezone: 'Asia/Shanghai'
+  })
+  // 任务2: 每天凌晨2点备份数据库
+  cron.schedule('0 2 * * *', async () => {
     await backupDatabaseTask()
   }, {
     scheduled: true,
@@ -1298,6 +1322,13 @@ function startScheduler() {
   if (process.env.RUN_SYNC_ON_START === 'true') {
     log('🔄 启动时立即执行数据同步...')
     runSyncDataTaskSafely('startup').catch((error) => {
+      logError('启动同步失败:', error)
+    })
+  }
+
+  if (process.env.RUN_SYNC_GOOGLE_ADS_ON_START === 'true') {
+    log('🔄 启动时立即执行数据同步...')
+    runSyncGoogleAdsTaskSafely('startup').catch((error) => {
       logError('启动同步失败:', error)
     })
   }

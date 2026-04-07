@@ -30,6 +30,9 @@ export interface OfferListItem {
   }>
   // 🔥 黑名单标记
   isBlacklisted?: boolean
+  googleAdsCampaignId?: string | null
+  syncSource?: string | null
+  needsCompletion?: boolean
 }
 
 export type SortField = 'brand' | 'targetCountry' | 'scrapeStatus' | 'createdAt' | ''  // 🔧 修复

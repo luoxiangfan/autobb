@@ -434,7 +434,11 @@ export async function GET(request: NextRequest) {
           gaa.currency as ads_account_currency,
           o.brand as offer_brand,
           o.url as offer_url,
-          o.is_deleted as offer_is_deleted
+          o.is_deleted as offer_is_deleted,
+          o.is_deleted as offer_is_deleted,
+          o.needs_completion as offer_needs_completion,
+          o.sync_source as offer_sync_source,
+          o.google_ads_campaign_id as offer_google_ads_campaign_id
         FROM campaigns c
         LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
         LEFT JOIN offers o ON c.offer_id = o.id
@@ -611,6 +615,9 @@ export async function GET(request: NextRequest) {
         offerId: c.offer_id,
         offerBrand: c.offer_brand,
         offerUrl: c.offer_url,
+        offerNeedsCompletion: c.offer_needs_completion,
+        offerSyncSource: c.offer_sync_source,
+        offerGoogleAdsCampaignId: c.offer_google_ads_campaign_id,
         status: c.status,
         googleCampaignId: c.google_campaign_id,
         googleAdsAccountId: c.google_ads_account_id,

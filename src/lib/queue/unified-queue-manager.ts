@@ -179,7 +179,8 @@ export class UnifiedQueueManager {
         'openclaw-command': 3,       // 🆕 OpenClaw 指令执行任务并发限制
         'openclaw-affiliate-sync': 2, // 🆕 OpenClaw 联盟佣金快照同步任务并发限制
         'openclaw-report-send': 2,    // 🆕 OpenClaw 报表投递任务并发限制
-        'product-score-calculation': 2 // 🆕 商品推荐指数计算任务并发限制（AI密集型）
+        'product-score-calculation': 2, // 🆕 商品推荐指数计算任务并发限制（AI密集型）
+        'google-ads-campaign-sync': 1, // 🆕 Google Ads广告系列同步任务并发限制
       },
       maxQueueSize: config.maxQueueSize || 1000,
       taskTimeout: config.taskTimeout || 900000,  // 15分钟超时（店铺深度抓取+竞品分析可能需要10-15分钟）
