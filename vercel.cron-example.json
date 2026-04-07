@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/sync-google-ads-campaigns",
+      "schedule": "0 */6 * * *"
+    }
+  ]
+}
