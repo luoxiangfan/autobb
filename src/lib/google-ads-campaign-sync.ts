@@ -468,7 +468,7 @@ export async function syncAllUsersCampaigns(): Promise<{
   const db = await getDatabase()
   
   // 获取所有活跃用户
-  const users = await db.all(
+  const users = await db.query(
     `SELECT id FROM users WHERE is_active = ${db.type === 'postgres' ? 'TRUE' : '1'}`
   )
 
