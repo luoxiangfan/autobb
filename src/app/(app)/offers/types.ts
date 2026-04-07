@@ -29,6 +29,10 @@ export interface OfferListItem {
   }>
   // 🔥 黑名单标记
   isBlacklisted?: boolean
+  // Google Ads 同步相关字段 (2026-04-07)
+  googleAdsCampaignId?: string | null
+  syncSource?: string | null
+  needsCompletion?: boolean
 }
 
 export type SortField = 'brand' | 'targetCountry' | 'scrapeStatus' | 'createdAt' | ''  // 🔧 修复

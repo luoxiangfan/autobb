@@ -121,6 +121,7 @@ export default function OffersClientPage({
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [countryFilter, setCountryFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [needsCompletionFilter, setNeedsCompletionFilter] = useState<string>('all') // 'all' | 'true' | 'false'
 
   // P2-5: 排序状态
   const [sortBy, setSortBy] = useState<string>('')
@@ -648,6 +649,12 @@ export default function OffersClientPage({
     // 状态筛选
     if (statusFilter !== 'all') {
       filtered = filtered.filter((offer) => offer.scrapeStatus === statusFilter)
+    }
+
+    // 按需要完善状态筛选
+    if (needsCompletionFilter !== 'all') {
+      const needsCompletion = needsCompletionFilter === 'true'
+      filtered = filtered.filter((offer) => (offer.needsCompletion ?? false) === needsCompletion)
     }
 
     // P2-5: 排序
@@ -1360,6 +1367,17 @@ export default function OffersClientPage({
                   <option value="completed">{getScrapeStatusLabel('completed')}</option>
                   <option value="failed">{getScrapeStatusLabel('failed')}</option>
                 </select>
+
+                {/* 需要完善筛选 */}
+                <select
+                  value={needsCompletionFilter}
+                  onChange={(event) => setNeedsCompletionFilter(event.target.value)}
+                  className="h-10 w-[140px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="all">所有完善状态</option>
+                  <option value="true">需要完善</option>
+                  <option value="false">已完善</option>
+                </select>
               </div>
             </div>
 
@@ -1540,6 +1558,17 @@ export default function OffersClientPage({
                         <TableCell className="whitespace-nowrap">
                           <div className={offer.isBlacklisted ? 'opacity-50' : ''}>
                             {getScrapeStatusBadge(offer.scrapeStatus)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <div className={offer.isBlacklisted ? 'opacity-50' : ''}>
+                            {offer.needsCompletion ? (
+                              <Badge variant="destructive" className="bg-orange-600 hover:bg-orange-700">
+                                需要完善
+                              </Badge>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>

@@ -317,6 +317,7 @@ export default function CampaignsClientPage({
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [needsOfferCompletionFilter, setNeedsOfferCompletionFilter] = useState<string>('all') // 'all' | 'true' | 'false'
   const [timeRange, setTimeRange] = useState<CampaignsTimeRange>('7')
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const [appliedCustomRange, setAppliedCustomRange] = useState<{ startDate: string; endDate: string } | null>(null)
@@ -872,6 +873,12 @@ export default function CampaignsClientPage({
     // Status filter
     if (statusFilter !== 'all') {
       result = result.filter((c) => c.status === statusFilter)
+    }
+
+    // 按需要完善 Offer 状态筛选
+    if (needsOfferCompletionFilter !== 'all') {
+      const needsCompletion = needsOfferCompletionFilter === 'true'
+      result = result.filter((c) => (c.needsOfferCompletion ?? false) === needsCompletion)
     }
 
     // Sorting
@@ -2564,6 +2571,28 @@ export default function CampaignsClientPage({
                 </Select>
               </div>
 
+              {/* 需要完善 Offer 筛选 */}
+              <div className="w-full sm:w-[220px] md:w-[200px]">
+                <Select
+                  value={needsOfferCompletionFilter}
+                  onValueChange={(value) => {
+                    setNeedsOfferCompletionFilter(value)
+                    if (isServerPagingMode && currentPage !== 1) {
+                      setCurrentPage(1)
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="完善状态" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">所有完善状态</SelectItem>
+                    <SelectItem value="true">需要完善</SelectItem>
+                    <SelectItem value="false">已完善</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="flex items-center px-3 py-2 border border-gray-200 rounded-md bg-gray-50 md:ml-auto">
                 <span className="text-xs text-gray-500 whitespace-nowrap mr-2">
                   数据同步时间（北京时间）
@@ -2633,6 +2662,7 @@ export default function CampaignsClientPage({
                       <SortableHeader field="cost" className="w-[94px] whitespace-nowrap !px-0.5">花费</SortableHeader>
                       <SortableHeader field="roas" className="w-[62px] whitespace-nowrap !px-0.5">ROAS</SortableHeader>
                       <SortableHeader field="status" className="w-[78px] whitespace-nowrap">投放状态</SortableHeader>
+                      <TableHead className="w-[100px] whitespace-nowrap">需要完善 Offer</TableHead>
                       <SortableHeader field="servingStartDate" className="w-[74px] whitespace-nowrap">投放日期</SortableHeader>
                       <TableHead className="w-[48px] whitespace-nowrap text-center">操作</TableHead>
                     </TableRow>
@@ -2833,6 +2863,15 @@ export default function CampaignsClientPage({
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {getStatusBadge(campaign.status, campaign.adsAccountAvailable)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {campaign.needsOfferCompletion ? (
+                          <Badge variant="destructive" className="bg-orange-600 hover:bg-orange-700">
+                            需要完善
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <span className="text-sm text-gray-900">
