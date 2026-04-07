@@ -265,14 +265,14 @@ async function saveCampaignToDatabase(params: {
   const db = await getDatabase()
 
   // 检查是否已存在
-  const existing = await db.get(
+  const existing = await db.queryOne(
     'SELECT id FROM campaigns WHERE campaign_id = ? AND user_id = ?',
     [campaign.campaign_id, userId]
   )
 
   if (existing) {
     // 更新现有广告系列
-    await db.run(
+    await db.exec(
       `UPDATE campaigns SET
         campaign_name = ?,
         budget_amount = ?,
@@ -296,7 +296,7 @@ async function saveCampaignToDatabase(params: {
   } else {
     // 创建新广告系列
     const campaignName = campaign.campaign_name
-    const result = await db.run(
+    const result = await db.exec(
       `INSERT INTO campaigns (
         user_id,
         google_ads_account_id,
@@ -323,7 +323,7 @@ async function saveCampaignToDatabase(params: {
         nowFunc(),
       ]
     )
-    return getInsertedId(result)
+    return getInsertedId(result, db.type)
   }
 }
 
@@ -343,7 +343,7 @@ async function createOrUpdateOfferForCampaign(params: {
   const db = await getDatabase()
 
   // 1. 首先检查广告系列是否已有关联的 offer_id
-  const campaignRecord = await db.get(
+  const campaignRecord = await db.queryOne(
     'SELECT offer_id FROM campaigns WHERE id = ? AND user_id = ?',
     [campaignId, userId]
   )
@@ -365,7 +365,7 @@ async function createOrUpdateOfferForCampaign(params: {
   }
 
   // 3. 检查是否已存在关联的 Offer（通过 google_ads_campaign_id）
-  const existingOffer = await db.get(
+  const existingOffer = await db.queryOne(
     'SELECT id FROM offers WHERE google_ads_campaign_id = ? AND user_id = ?',
     [campaign.campaign_id, userId]
   )
@@ -375,13 +375,13 @@ async function createOrUpdateOfferForCampaign(params: {
     console.log(`[GoogleAds Sync] Linking existing offer ${existingOffer.id} to campaign ${campaignId}`)
     
     // 更新 campaign 关联 offer_id
-    await db.run(
+    await db.exec(
       'UPDATE campaigns SET offer_id = ?, needs_offer_completion = FALSE WHERE id = ?',
       [existingOffer.id, campaignId]
     )
 
     // 更新 Offer 标记
-    await db.run(
+    await db.exec(
       `UPDATE offers SET
         sync_source = 'google_ads_sync',
         updated_at = ?
@@ -403,7 +403,7 @@ async function createOrUpdateOfferForCampaign(params: {
   // 生成唯一的 offer_name
   const offerName = `GA_${campaign.campaign_id}_${Date.now()}`
   
-  const result = await db.run(
+  const result = await db.exec(
     `INSERT INTO offers (
       user_id,
       url,
@@ -434,10 +434,10 @@ async function createOrUpdateOfferForCampaign(params: {
     ]
   )
 
-  const offerId = getInsertedId(result)
+  const offerId = getInsertedId(result, db.type)
 
   // 更新 campaign 关联 offer_id
-  await db.run(
+  await db.exec(
     'UPDATE campaigns SET offer_id = ?, needs_offer_completion = TRUE WHERE id = ?',
     [offerId, campaignId]
   )
