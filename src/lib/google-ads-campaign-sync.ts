@@ -279,7 +279,7 @@ async function saveCampaignToDatabase(params: {
         budget_type = ?,
         status = ?,
         google_ads_account_id = ?,
-        synced_from_google_ads = 1,
+        synced_from_google_ads = ${db.type === 'postgres' ? 'TRUE' : '1'},
         last_sync_at = ?
       WHERE id = ?`,
       [
@@ -310,7 +310,7 @@ async function saveCampaignToDatabase(params: {
         needs_offer_completion,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', TRUE, TRUE, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ${db.type === 'postgres' ? 'TRUE' : '1'}, ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?)`,
       [
         userId,
         googleAdsAccountId,
@@ -376,7 +376,7 @@ async function createOrUpdateOfferForCampaign(params: {
     
     // 更新 campaign 关联 offer_id
     await db.exec(
-      'UPDATE campaigns SET offer_id = ?, needs_offer_completion = 0 WHERE id = ?',
+      `UPDATE campaigns SET offer_id = ?, needs_offer_completion = ${db.type === 'postgres' ? 'FALSE' : '0'} WHERE id = ?`,
       [existingOffer.id, campaignId]
     )
 
@@ -418,7 +418,7 @@ async function createOrUpdateOfferForCampaign(params: {
       is_active,
       created_at,
       updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', TRUE, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?)`,
     [
       userId,
       '',  // URL 需要用户后续完善
@@ -438,7 +438,7 @@ async function createOrUpdateOfferForCampaign(params: {
 
   // 更新 campaign 关联 offer_id
   await db.exec(
-    'UPDATE campaigns SET offer_id = ?, needs_offer_completion = 1 WHERE id = ?',
+    `UPDATE campaigns SET offer_id = ?, needs_offer_completion = ${db.type === 'postgres' ? 'TRUE' : '1'} WHERE id = ?`,
     [offerId, campaignId]
   )
 
@@ -469,7 +469,7 @@ export async function syncAllUsersCampaigns(): Promise<{
   
   // 获取所有活跃用户
   const users = await db.all(
-    'SELECT id FROM users WHERE is_active = 1'
+    `SELECT id FROM users WHERE is_active = ${db.type === 'postgres' ? 'TRUE' : '1'}`
   )
 
   let totalSynced = 0
