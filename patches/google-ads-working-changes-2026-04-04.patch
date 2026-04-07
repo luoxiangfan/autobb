@@ -1,0 +1,72 @@
+diff --git a/src/app/api/admin/google-ads/oauth-config/[id]/route.ts b/src/app/api/admin/google-ads/oauth-config/[id]/route.ts
+index 1959432..f8a37b9 100644
+--- a/src/app/api/admin/google-ads/oauth-config/[id]/route.ts
++++ b/src/app/api/admin/google-ads/oauth-config/[id]/route.ts
+@@ -16,8 +16,11 @@ async function getAdminUser(request: NextRequest) {
+   if (!userId) return null
+   
+   const user = await findUserById(userId)
+-  // TODO: 添加管理员权限检查
+-  // if (!user?.is_admin) return null
++  
++  // 管理员权限检查
++  if (user.role !== 'admin') {
++    return null
++  }
+   
+   return user
+ }
+diff --git a/src/app/api/admin/google-ads/oauth-config/route.ts b/src/app/api/admin/google-ads/oauth-config/route.ts
+index a1f724d..2367f1f 100644
+--- a/src/app/api/admin/google-ads/oauth-config/route.ts
++++ b/src/app/api/admin/google-ads/oauth-config/route.ts
+@@ -17,8 +17,11 @@ async function getAdminUser(request: NextRequest) {
+   if (!userId) return null
+   
+   const user = await findUserById(userId)
+-  // TODO: 添加管理员权限检查
+-  // if (!user?.is_admin) return null
++  
++  // 管理员权限检查
++  if (user.role !== 'admin') {
++    return null
++  }
+   
+   return user
+ }
+diff --git a/src/app/api/admin/google-ads/service-account/[id]/route.ts b/src/app/api/admin/google-ads/service-account/[id]/route.ts
+index 5d0a9de..0b233ec 100644
+--- a/src/app/api/admin/google-ads/service-account/[id]/route.ts
++++ b/src/app/api/admin/google-ads/service-account/[id]/route.ts
+@@ -11,8 +11,11 @@ async function getAdminUser(request: NextRequest) {
+   if (!userId) return null
+   
+   const user = await findUserById(userId)
+-  // TODO: 添加管理员权限检查
+-  // if (!user?.is_admin) return null
++  
++  // 管理员权限检查
++  if (user.role !== 'admin') {
++    return null
++  }
+   
+   return user
+ }
+diff --git a/src/app/api/admin/google-ads/service-account/route.ts b/src/app/api/admin/google-ads/service-account/route.ts
+index 7e56ba0..00ff54f 100644
+--- a/src/app/api/admin/google-ads/service-account/route.ts
++++ b/src/app/api/admin/google-ads/service-account/route.ts
+@@ -18,8 +18,11 @@ async function getAdminUser(request: NextRequest) {
+   if (!userId) return null
+   
+   const user = await findUserById(userId)
+-  // TODO: 添加管理员权限检查
+-  // if (!user?.is_admin) return null
++  
++  // 管理员权限检查
++  if (user.role !== 'admin') {
++    return null
++  }
+   
+   return user
+ }

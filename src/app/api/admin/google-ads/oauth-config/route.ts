@@ -17,8 +17,11 @@ async function getAdminUser(request: NextRequest) {
   if (!userId) return null
   
   const user = await findUserById(userId)
-  // TODO: 添加管理员权限检查
-  // if (!user?.is_admin) return null
+  
+  // 管理员权限检查
+  if (user.role !== 'admin') {
+    return null
+  }
   
   return user
 }
