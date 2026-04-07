@@ -6,6 +6,7 @@
  */
 
 import { getDatabase } from '../../db'
+import type { Task } from '../types'
 import { syncCampaignsFromGoogleAds } from '../../google-ads-campaign-sync'
 import { createRiskAlert } from '../../risk-alerts'
 
@@ -23,8 +24,7 @@ export interface GoogleAdsCampaignSyncTaskData {
  * 执行 Google Ads 广告系列同步任务
  */
 export async function executeGoogleAdsCampaignSyncTask(
-  taskId: string,
-  taskData: GoogleAdsCampaignSyncTaskData
+  task: Task<GoogleAdsCampaignSyncTaskData>
 ): Promise<{
   success: boolean
   syncedCount: number
@@ -33,7 +33,8 @@ export async function executeGoogleAdsCampaignSyncTask(
   error?: string
 }> {
   const startTime = Date.now()
-  const { userId, syncType, customerId, dryRun } = taskData
+  const { id: taskId, data: taskData, userId } = task
+  const { syncType, customerId, dryRun } = taskData
 
   console.log(
     `▶️  [GoogleAdsSyncExecutor] 开始执行同步任务：${taskId}, 用户 #${userId}, 类型：${syncType}`

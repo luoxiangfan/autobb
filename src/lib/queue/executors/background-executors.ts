@@ -16,6 +16,7 @@ import { executeOpenclawCommandTask } from './openclaw-command-executor'
 import { executeOpenclawAffiliateSync } from './openclaw-affiliate-sync-executor'
 import { executeOpenclawReportSend } from './openclaw-report-send-executor'
 import { executeProductScoreCalculation } from './product-score-calculation-executor'
+import { executeGoogleAdsCampaignSyncTask } from './google-ads-campaign-sync-executor'
 
 export function registerBackgroundExecutors(queue: UnifiedQueueManager): void {
   queue.registerExecutor('click-farm-trigger', executeClickFarmTriggerTask)
@@ -28,4 +29,5 @@ export function registerBackgroundExecutors(queue: UnifiedQueueManager): void {
   queue.registerExecutor('openclaw-affiliate-sync', executeOpenclawAffiliateSync)
   queue.registerExecutor('openclaw-report-send', executeOpenclawReportSend)
   queue.registerExecutor('product-score-calculation', executeProductScoreCalculation)
+  queue.registerExecutor('google-ads-campaign-sync', executeGoogleAdsCampaignSyncTask)
 }
