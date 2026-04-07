@@ -7,9 +7,7 @@
 
 import { getDatabase } from '../../db'
 import { syncCampaignsFromGoogleAds } from '../../google-ads-campaign-sync'
-import { createSyncLog } from '../../data-sync-service'
 import { createRiskAlert } from '../../risk-alerts'
-import { nowFunc } from '../../db-helpers'
 
 /**
  * Google Ads 广告系列同步任务数据
@@ -41,6 +39,8 @@ export async function executeGoogleAdsCampaignSyncTask(
     `▶️  [GoogleAdsSyncExecutor] 开始执行同步任务：${taskId}, 用户 #${userId}, 类型：${syncType}`
   )
 
+  const db = await getDatabase()
+
   try {
     // 1. 执行同步
     const result = await syncCampaignsFromGoogleAds(userId, {
@@ -52,17 +52,12 @@ export async function executeGoogleAdsCampaignSyncTask(
 
     // 2. 记录同步日志
     try {
-      const syncLogData = {
-        syncType: 'google_ads_campaign_sync' as const,
-        status: result.errors.length > 0 ? 'partial' : 'success' as const,
-        recordCount: result.syncedCount,
-        durationMs: duration,
-        errorMessage: result.errors.length > 0 
-          ? `${result.errors.length} 个错误` 
-          : null,
-      }
-
-      await createSyncLog(syncLogData, userId)
+      await db.exec(
+        `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [userId, 'google_ads_campaign_sync', result.errors.length > 0 ? 'partial' : 'success', 
+         result.syncedCount, duration, new Date().toISOString(), new Date().toISOString()]
+      )
       console.log(`📝 [GoogleAdsSyncExecutor] 同步日志已记录：${taskId}`)
     } catch (logError) {
       console.error(`❌ [GoogleAdsSyncExecutor] 记录同步日志失败:`, logError)
@@ -121,15 +116,10 @@ export async function executeGoogleAdsCampaignSyncTask(
 
     // 记录失败日志
     try {
-      await createSyncLog(
-        {
-          syncType: 'google_ads_campaign_sync' as const,
-          status: 'failed' as const,
-          recordCount: 0,
-          durationMs: duration,
-          errorMessage,
-        },
-        userId
+      await db.exec(
+        `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [userId, 'google_ads_campaign_sync', 'failed', 0, duration, new Date().toISOString(), new Date().toISOString()]
       )
     } catch (logError) {
       console.error(`❌ [GoogleAdsSyncExecutor] 记录失败日志失败:`, logError)

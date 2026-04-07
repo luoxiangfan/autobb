@@ -279,7 +279,7 @@ async function saveCampaignToDatabase(params: {
         budget_type = ?,
         status = ?,
         google_ads_account_id = ?,
-        synced_from_google_ads = TRUE,
+        synced_from_google_ads = 1,
         last_sync_at = ?
       WHERE id = ?`,
       [
@@ -288,7 +288,7 @@ async function saveCampaignToDatabase(params: {
         campaign.budget_type,
         campaign.status,
         googleAdsAccountId,
-        nowFunc(),
+        nowFunc(db.type),
         existing.id,
       ]
     )
@@ -319,8 +319,8 @@ async function saveCampaignToDatabase(params: {
         campaign.budget_amount,
         campaign.budget_type,
         campaign.status,
-        nowFunc(),
-        nowFunc(),
+        nowFunc(db.type),
+        nowFunc(db.type),
       ]
     )
     return getInsertedId(result, db.type)
@@ -376,7 +376,7 @@ async function createOrUpdateOfferForCampaign(params: {
     
     // 更新 campaign 关联 offer_id
     await db.exec(
-      'UPDATE campaigns SET offer_id = ?, needs_offer_completion = FALSE WHERE id = ?',
+      'UPDATE campaigns SET offer_id = ?, needs_offer_completion = 0 WHERE id = ?',
       [existingOffer.id, campaignId]
     )
 
@@ -386,7 +386,7 @@ async function createOrUpdateOfferForCampaign(params: {
         sync_source = 'google_ads_sync',
         updated_at = ?
       WHERE id = ?`,
-      [nowFunc(), existingOffer.id]
+      [nowFunc(db.type), existingOffer.id]
     )
 
     return { 
@@ -429,8 +429,8 @@ async function createOrUpdateOfferForCampaign(params: {
       campaign.campaign_id,
       'google_ads_sync',
       TRUE,  // 新创建的 Offer 标记为需要完善
-      nowFunc(),
-      nowFunc(),
+      nowFunc(db.type),
+      nowFunc(db.type),
     ]
   )
 
@@ -438,7 +438,7 @@ async function createOrUpdateOfferForCampaign(params: {
 
   // 更新 campaign 关联 offer_id
   await db.exec(
-    'UPDATE campaigns SET offer_id = ?, needs_offer_completion = TRUE WHERE id = ?',
+    'UPDATE campaigns SET offer_id = ?, needs_offer_completion = 1 WHERE id = ?',
     [offerId, campaignId]
   )
 
@@ -469,7 +469,7 @@ export async function syncAllUsersCampaigns(): Promise<{
   
   // 获取所有活跃用户
   const users = await db.all(
-    'SELECT id FROM users WHERE is_active = TRUE'
+    'SELECT id FROM users WHERE is_active = 1'
   )
 
   let totalSynced = 0

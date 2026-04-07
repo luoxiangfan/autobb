@@ -46,6 +46,10 @@ export interface Offer {
   // 注意：PostgreSQL 返回 boolean，SQLite 返回 number (0/1)
   is_active: number | boolean
   industry_code: string | null  // 行业代码（数据库字段，之前遗漏）
+  // Google Ads 同步相关字段 (2026-04-07)
+  google_ads_campaign_id: string | null
+  sync_source: string | null
+  needs_completion: boolean | number
   // P0优化: 分析结果字段
   review_analysis: string | null
   competitor_analysis: string | null
@@ -123,6 +127,10 @@ export interface OfferListRow {
     campaignCount: number
   }>
   is_blacklisted?: boolean
+  // Google Ads 同步相关字段
+  google_ads_campaign_id?: string | null
+  sync_source?: string | null
+  needs_completion?: boolean | number
 }
 
 export interface CreateOfferInput {
@@ -485,6 +493,9 @@ export async function listOffers(
     'is_active',
     'created_at',
     'updated_at',
+    'google_ads_campaign_id',
+    'sync_source',
+    'needs_completion',
   ].join(', ')
 
   const sortableColumnMap: Record<string, string> = {
