@@ -71,22 +71,34 @@ export async function syncCampaignsFromGoogleAds(
   try {
     console.log(`[GoogleAds Sync] Starting sync for user ${userId}...`)
 
-    // 1. 获取用户的 Google Ads 账户凭证
+    // 1. 获取用户的 Google Ads 账户凭证（单个对象）
     const credentials = await getGoogleAdsCredentialsFromDB(userId)
-    if (!credentials || credentials.length === 0) {
-      result.warnings.push('用户未绑定 Google Ads 账户')
+    if (!credentials) {
+      result.warnings.push('用户未配置 Google Ads 凭证')
       return result
     }
 
-    // 2. 获取所有活跃的 Google Ads 账户
-    const activeAccounts = credentials.filter(acc => acc.is_active && acc.customer_id)
-    if (activeAccounts.length === 0) {
+    // 2. 获取该用户的所有活跃 Google Ads 账户（数组）
+    const isActiveCondition = db.type === 'postgres' ? 'is_active = TRUE' : 'is_active = 1'
+    const accounts = await db.query(
+      `SELECT id, customer_id, account_name, refresh_token FROM google_ads_accounts
+       WHERE user_id = ? AND ${isActiveCondition} AND customer_id IS NOT NULL AND customer_id != ''
+       ORDER BY id`,
+      [userId]
+    ) as Array<{
+      id: number
+      customer_id: string
+      account_name: string | null
+      refresh_token: string | null
+    }>
+
+    if (accounts.length === 0) {
       result.warnings.push('没有活跃的 Google Ads 账户')
       return result
     }
 
     // 3. 对每个账户执行同步
-    for (const account of activeAccounts) {
+    for (const account of accounts) {
       // 如果指定了 customerId，只同步该账户
       if (options?.customerId && account.customer_id !== options.customerId) {
         continue
@@ -100,10 +112,10 @@ export async function syncCampaignsFromGoogleAds(
           userId,
           customerId: account.customer_id,
           credentials: {
-            client_id: account.client_id || process.env.GOOGLE_ADS_CLIENT_ID || '',
-            client_secret: account.client_secret || process.env.GOOGLE_ADS_CLIENT_SECRET || '',
-            developer_token: account.developer_token || process.env.GOOGLE_ADS_DEVELOPER_TOKEN || '',
-            login_customer_id: credentials[0]?.login_customer_id,
+            client_id: credentials.client_id || process.env.GOOGLE_ADS_CLIENT_ID || '',
+            client_secret: credentials.client_secret || process.env.GOOGLE_ADS_CLIENT_SECRET || '',
+            developer_token: credentials.developer_token || process.env.GOOGLE_ADS_DEVELOPER_TOKEN || '',
+            login_customer_id: credentials.login_customer_id,
           },
           refreshToken: account.refresh_token || undefined,
         })
