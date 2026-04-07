@@ -16,8 +16,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getDatabase } from '@/lib/db'
 import { syncAllUsersCampaigns } from '@/lib/google-ads-campaign-sync'
-import { createSyncLog } from '@/lib/data-sync-service'
 
 /**
  * POST 请求处理 - 执行同步任务
@@ -56,13 +56,13 @@ export async function POST(request: NextRequest) {
 
     // 创建同步日志
     try {
-      await createSyncLog({
-        syncType: 'google_ads_campaign_sync',
-        status: result.totalErrors > 0 ? 'partial' : 'success',
-        recordCount: result.totalSynced,
-        durationMs: duration,
-        errorMessage: result.totalErrors > 0 ? `有 ${result.totalErrors} 个错误` : null,
-      })
+      const db = await getDatabase()
+      await db.exec(
+        `INSERT INTO sync_logs (sync_type, status, record_count, duration_ms, started_at, completed_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        ['google_ads_campaign_sync', result.totalErrors > 0 ? 'partial' : 'success',
+         result.totalSynced, duration, new Date().toISOString(), new Date().toISOString()]
+      )
     } catch (logError) {
       console.error('[Cron] Failed to create sync log:', logError)
     }
@@ -89,13 +89,12 @@ export async function POST(request: NextRequest) {
 
     // 记录错误日志
     try {
-      await createSyncLog({
-        syncType: 'google_ads_campaign_sync',
-        status: 'failed',
-        recordCount: 0,
-        durationMs: duration,
-        errorMessage: error.message || 'Unknown error',
-      })
+      const db = await getDatabase()
+      await db.exec(
+        `INSERT INTO sync_logs (sync_type, status, record_count, duration_ms, started_at, completed_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        ['google_ads_campaign_sync', 'failed', 0, duration, new Date().toISOString(), new Date().toISOString()]
+      )
     } catch (logError) {
       console.error('[Cron] Failed to create sync log:', logError)
     }
