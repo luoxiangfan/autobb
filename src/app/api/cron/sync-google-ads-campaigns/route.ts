@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
       totalUsers: result.totalUsers,
       totalSynced: result.totalSynced,
       totalCreated: result.totalCreated,
+      totalSkipped: result.totalSkipped,
       totalErrors: result.totalErrors,
     })
 
@@ -74,10 +75,11 @@ export async function POST(request: NextRequest) {
         totalUsers: result.totalUsers,
         totalSynced: result.totalSynced,
         totalCreated: result.totalCreated,
+        totalSkipped: result.totalSkipped,
         totalErrors: result.totalErrors,
       },
       message: result.totalErrors === 0
-        ? '同步完成，所有账户同步成功'
+        ? `同步完成，新建 ${result.totalCreated} 个 Offer，跳过 ${result.totalSkipped} 个已关联 Offer`
         : `同步完成，有 ${result.totalErrors} 个错误`,
     })
 

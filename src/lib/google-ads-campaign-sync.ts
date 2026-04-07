@@ -35,6 +35,7 @@ export interface SyncResult {
   syncedCount: number
   createdOffersCount: number
   updatedOffersCount: number
+  skippedOffersCount: number  // 已有关联 Offer，跳过创建/更新
   errors: Array<{
     campaignId: string
     campaignName: string
@@ -62,6 +63,7 @@ export async function syncCampaignsFromGoogleAds(
     syncedCount: 0,
     createdOffersCount: 0,
     updatedOffersCount: 0,
+    skippedOffersCount: 0,
     errors: [],
     warnings: [],
   }
@@ -136,9 +138,12 @@ export async function syncCampaignsFromGoogleAds(
               result.createdOffersCount++
             } else if (offerResult.updated) {
               result.updatedOffersCount++
+            } else if (offerResult.skipped) {
+              result.skippedOffersCount++
+              console.log(`[GoogleAds Sync] Skipped offer for campaign ${campaign.campaign_id} (already has offer_id=${offerResult.offerId})`)
             }
 
-            console.log(`[GoogleAds Sync] Synced campaign: ${campaign.campaign_name} (${campaign.campaign_id})`)
+            console.log(`[GoogleAds Sync] Synced campaign: ${campaign.campaign_name} (${campaign.campaign_id}), offer: ${offerResult.created ? 'created' : offerResult.skipped ? 'skipped' : 'linked'}`)
           } catch (error: any) {
             result.errors.push({
               campaignId: campaign.campaign_id,
@@ -324,78 +329,120 @@ async function saveCampaignToDatabase(params: {
 
 /**
  * 为广告系列创建或更新关联的 Offer
+ * 
+ * 优化逻辑：
+ * 1. 如果广告系列已有关联的 offer_id，则不创建或更新 Offer
+ * 2. 只有当广告系列没有关联 Offer 时，才创建新 Offer
  */
 async function createOrUpdateOfferForCampaign(params: {
   userId: number
   campaignId: number
   campaign: GoogleAdsCampaign
-}): Promise<{ created: boolean; updated: boolean; offerId?: number }> {
+}): Promise<{ created: boolean; updated: boolean; offerId?: number; skipped: boolean }> {
   const { userId, campaignId, campaign } = params
   const db = await getDatabase()
 
-  // 检查是否已存在关联的 Offer
+  // 1. 首先检查广告系列是否已有关联的 offer_id
+  const campaignRecord = await db.get(
+    'SELECT offer_id FROM campaigns WHERE id = ? AND user_id = ?',
+    [campaignId, userId]
+  )
+
+  if (!campaignRecord) {
+    console.warn(`[GoogleAds Sync] Campaign ${campaignId} not found for user ${userId}`)
+    return { created: false, updated: false, skipped: false }
+  }
+
+  // 2. 如果广告系列已有关联的 Offer，跳过创建/更新
+  if (campaignRecord.offer_id) {
+    console.log(`[GoogleAds Sync] Campaign ${campaignId} already has offer_id=${campaignRecord.offer_id}, skipping offer creation/update`)
+    return { 
+      created: false, 
+      updated: false, 
+      skipped: true,
+      offerId: campaignRecord.offer_id 
+    }
+  }
+
+  // 3. 检查是否已存在关联的 Offer（通过 google_ads_campaign_id）
   const existingOffer = await db.get(
     'SELECT id FROM offers WHERE google_ads_campaign_id = ? AND user_id = ?',
     [campaign.campaign_id, userId]
   )
 
   if (existingOffer) {
-    // 更新现有 Offer
+    // 4. 如果存在 Offer 但未关联到 campaign，建立关联
+    console.log(`[GoogleAds Sync] Linking existing offer ${existingOffer.id} to campaign ${campaignId}`)
+    
+    // 更新 campaign 关联 offer_id
+    await db.run(
+      'UPDATE campaigns SET offer_id = ?, needs_offer_completion = FALSE WHERE id = ?',
+      [existingOffer.id, campaignId]
+    )
+
+    // 更新 Offer 标记
     await db.run(
       `UPDATE offers SET
         sync_source = 'google_ads_sync',
-        needs_completion = TRUE,
         updated_at = ?
       WHERE id = ?`,
       [nowFunc(), existingOffer.id]
     )
-    return { created: false, updated: true, offerId: existingOffer.id }
-  } else {
-    // 创建新 Offer
-    // 生成唯一的 offer_name
-    const offerName = `GA_${campaign.campaign_id}_${Date.now()}`
-    
-    const result = await db.run(
-      `INSERT INTO offers (
-        user_id,
-        url,
-        brand,
-        target_country,
-        target_language,
-        offer_name,
-        google_ads_campaign_id,
-        sync_source,
-        needs_completion,
-        scrape_status,
-        is_active,
-        created_at,
-        updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', TRUE, ?, ?)`,
-      [
-        userId,
-        '',  // URL 需要用户后续完善
-        extractBrandFromCampaignName(campaign.campaign_name),  // 从广告系列名称提取品牌
-        'US',  // 默认国家，需要用户完善
-        'English',  // 默认语言
-        offerName,
-        campaign.campaign_id,
-        'google_ads_sync',
-        TRUE,
-        nowFunc(),
-        nowFunc(),
-      ]
-    )
 
-    const offerId = getInsertedId(result)
-
-    // 更新 campaign 关联 offer_id
-    await db.run(
-      'UPDATE campaigns SET offer_id = ?, needs_offer_completion = TRUE WHERE id = ?',
-      [offerId, campaignId]
-    )
-
-    return { created: true, updated: false, offerId }
+    return { 
+      created: false, 
+      updated: false,  // 不修改 needs_completion，保持用户设置的状态
+      skipped: false,
+      offerId: existingOffer.id 
+    }
   }
+
+  // 5. 创建新 Offer
+  console.log(`[GoogleAds Sync] Creating new offer for campaign ${campaignId}`)
+  
+  // 生成唯一的 offer_name
+  const offerName = `GA_${campaign.campaign_id}_${Date.now()}`
+  
+  const result = await db.run(
+    `INSERT INTO offers (
+      user_id,
+      url,
+      brand,
+      target_country,
+      target_language,
+      offer_name,
+      google_ads_campaign_id,
+      sync_source,
+      needs_completion,
+      scrape_status,
+      is_active,
+      created_at,
+      updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', TRUE, ?, ?)`,
+    [
+      userId,
+      '',  // URL 需要用户后续完善
+      extractBrandFromCampaignName(campaign.campaign_name),  // 从广告系列名称提取品牌
+      'US',  // 默认国家，需要用户完善
+      'English',  // 默认语言
+      offerName,
+      campaign.campaign_id,
+      'google_ads_sync',
+      TRUE,  // 新创建的 Offer 标记为需要完善
+      nowFunc(),
+      nowFunc(),
+    ]
+  )
+
+  const offerId = getInsertedId(result)
+
+  // 更新 campaign 关联 offer_id
+  await db.run(
+    'UPDATE campaigns SET offer_id = ?, needs_offer_completion = TRUE WHERE id = ?',
+    [offerId, campaignId]
+  )
+
+  return { created: true, updated: false, skipped: false, offerId }
 }
 
 /**
@@ -415,6 +462,7 @@ export async function syncAllUsersCampaigns(): Promise<{
   totalUsers: number
   totalSynced: number
   totalCreated: number
+  totalSkipped: number  // 已有关联 Offer，跳过创建/更新
   totalErrors: number
 }> {
   const db = await getDatabase()
@@ -426,6 +474,7 @@ export async function syncAllUsersCampaigns(): Promise<{
 
   let totalSynced = 0
   let totalCreated = 0
+  let totalSkipped = 0
   let totalErrors = 0
 
   for (const user of users) {
@@ -433,6 +482,7 @@ export async function syncAllUsersCampaigns(): Promise<{
       const result = await syncCampaignsFromGoogleAds(user.id)
       totalSynced += result.syncedCount
       totalCreated += result.createdOffersCount
+      totalSkipped += result.skippedOffersCount
       totalErrors += result.errors.length
     } catch (error: any) {
       console.error(`[GoogleAds Sync] Error syncing user ${user.id}:`, error)
@@ -444,6 +494,7 @@ export async function syncAllUsersCampaigns(): Promise<{
     totalUsers: users.length,
     totalSynced,
     totalCreated,
+    totalSkipped,
     totalErrors,
   }
 }
