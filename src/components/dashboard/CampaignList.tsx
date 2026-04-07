@@ -5,8 +5,8 @@
  * 使用shadcn/ui Table组件 + CSV导出
  */
 
-import { useEffect, useState } from 'react'
-import { ArrowUpDown, Search, Filter, Download } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { ArrowUpDown, Search, Download } from 'lucide-react'
 import { exportCampaigns, type CampaignExportData } from '@/lib/export-utils'
 import {
   Table,
@@ -50,7 +50,7 @@ export function CampaignList() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
 
-  const fetchCampaigns = async () => {
+  const fetchCampaigns = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams({
@@ -76,11 +76,11 @@ export function CampaignList() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, searchQuery, sortBy, sortOrder, statusFilter])
 
   useEffect(() => {
     fetchCampaigns()
-  }, [sortBy, sortOrder, searchQuery, statusFilter, page])
+  }, [fetchCampaigns])
 
   const handleSort = (field: string) => {
     if (sortBy === field) {
@@ -190,7 +190,7 @@ export function CampaignList() {
                     <TableHead className="text-right">CPC</TableHead>
                     <TableHead className="text-right cursor-pointer hover:bg-accent" onClick={() => handleSort('conversions')}>
                       <div className="flex items-center justify-end gap-1">
-                        转化量
+                        佣金
                         <ArrowUpDown className="h-4 w-4" />
                       </div>
                     </TableHead>
@@ -224,7 +224,7 @@ export function CampaignList() {
                         {formatCurrency(Number(campaign.cpc) || 0, campaign.currency || 'USD', 2)}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        {campaign.conversions}
+                        {formatCurrency(Number(campaign.conversions) || 0, campaign.currency || 'USD', 2)}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -201,6 +201,8 @@ describe('sendDailyReportToFeishu', () => {
                 overall: {
                   totalBudget: 123.33,
                   totalSpent: 41.21,
+                  totalSpentEnabledCampaigns: 41.21,
+                  totalSpentAllCampaigns: 41.21,
                   remaining: 82.12,
                 },
               },
@@ -220,7 +222,7 @@ describe('sendDailyReportToFeishu', () => {
     const message = String(hoisted.invokeOpenclawToolMock.mock.calls[0]?.[0]?.args?.message || '')
     expect(message).toContain('- 投放消耗：点击 185 次｜花费 41.21 USD')
     expect(message).toContain('- 当日表现：曝光 1707｜转化（Google Ads）38.52｜联盟佣金记录 0')
-    expect(message).toContain('- 预算概览：预算 123.33 USD｜已花费 41.21 USD｜剩余 82.12 USD')
+    expect(message).toContain('- 预算概览（启用中Campaign）：预算 123.33 USD｜已花费 41.21 USD｜剩余 82.12 USD')
     expect(message).not.toContain('转化/佣金笔数')
   })
 
@@ -268,6 +270,8 @@ describe('sendDailyReportToFeishu', () => {
                 overall: {
                   totalBudget: 130,
                   totalSpent: 0,
+                  totalSpentEnabledCampaigns: 0,
+                  totalSpentAllCampaigns: 0,
                   remaining: 130,
                 },
               },
@@ -276,12 +280,16 @@ describe('sendDailyReportToFeishu', () => {
                   currency: 'CNY',
                   totalBudget: 130,
                   totalSpent: 0,
+                  totalSpentEnabledCampaigns: 0,
+                  totalSpentAllCampaigns: 0,
                   remaining: 130,
                 },
                 {
                   currency: 'USD',
                   totalBudget: 75,
                   totalSpent: 15,
+                  totalSpentEnabledCampaigns: 15,
+                  totalSpentAllCampaigns: 15,
                   remaining: 60,
                 },
               ],
@@ -300,7 +308,7 @@ describe('sendDailyReportToFeishu', () => {
 
     const message = String(hoisted.invokeOpenclawToolMock.mock.calls[0]?.[0]?.args?.message || '')
     expect(message).toContain('- 投放消耗：点击 66 次｜花费 0 CNY｜15 USD')
-    expect(message).toContain('- 预算概览（多币种）：CNY：预算 130 CNY｜已花费 0 CNY｜剩余 130 CNY；USD：预算 75 USD｜已花费 15 USD｜剩余 60 USD')
+    expect(message).toContain('- 预算概览（启用中Campaign，多币种）：CNY：预算 130 CNY｜已花费 0 CNY｜剩余 130 CNY；USD：预算 75 USD｜已花费 15 USD｜剩余 60 USD')
   })
 
   it('expands cached mixed-currency roi summary by currency', async () => {
@@ -368,6 +376,8 @@ describe('sendDailyReportToFeishu', () => {
             overall: {
               totalBudget: 130,
               totalSpent: 0,
+              totalSpentEnabledCampaigns: 0,
+              totalSpentAllCampaigns: 0,
               remaining: 130,
             },
           },
@@ -380,6 +390,8 @@ describe('sendDailyReportToFeishu', () => {
             overall: {
               totalBudget: 75,
               totalSpent: 15,
+              totalSpentEnabledCampaigns: 15,
+              totalSpentAllCampaigns: 19,
               remaining: 60,
             },
           },
@@ -396,9 +408,9 @@ describe('sendDailyReportToFeishu', () => {
 
     const message = String(hoisted.invokeOpenclawToolMock.mock.calls[0]?.[0]?.args?.message || '')
     expect(hoisted.fetchAutoadsJsonMock).toHaveBeenCalledTimes(2)
-    expect(message).toContain('- ROI概览（多币种）：CNY：佣金 0 CNY｜花费 0 CNY｜利润 0 CNY；USD：佣金 25 USD｜花费 15 USD｜利润 10 USD')
-    expect(message).toContain('- 回报率（多币种）：CNY：ROAS 暂不可用｜ROI 暂不可用；USD：ROAS 1.67x｜ROI 66.67%')
-    expect(message).toContain('- 预算概览（多币种）：CNY：预算 130 CNY｜已花费 0 CNY｜剩余 130 CNY；USD：预算 75 USD｜已花费 15 USD｜剩余 60 USD')
+    expect(message).toContain('- ROI概览（多币种）：CNY：佣金 0 CNY｜花费 0 CNY｜利润 0 CNY；USD：佣金 25 USD｜花费 19 USD｜利润 6 USD')
+    expect(message).toContain('- 回报率（多币种）：CNY：ROAS 暂不可用｜ROI 暂不可用；USD：ROAS 1.32x｜ROI 31.58%')
+    expect(message).toContain('- 预算概览（启用中Campaign，多币种）：CNY：预算 130 CNY｜已花费 0 CNY｜剩余 130 CNY；USD：预算 75 USD｜已花费 15 USD｜剩余 60 USD')
     expect(message).not.toContain('- 佣金收入：25 MIXED')
   })
 

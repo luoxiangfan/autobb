@@ -19,6 +19,38 @@ import { getGoogleAdsGeoTargetId } from './language-country-codes'
 
 installGoogleAdsWarningFilter()
 
+function serializeGoogleAdsError(error: unknown): string {
+  const primaryMessage = String((error as any)?.message || '').trim()
+  const googleAdsErrors = Array.isArray((error as any)?.errors)
+    ? (error as any).errors
+    : []
+  const googleAdsDetail = googleAdsErrors
+    .map((item: any) => String(item?.message || '').trim())
+    .filter(Boolean)
+    .join(' | ')
+
+  if (primaryMessage && googleAdsDetail && !primaryMessage.includes(googleAdsDetail)) {
+    return `${primaryMessage} | ${googleAdsDetail}`.slice(0, 4000)
+  }
+  if (primaryMessage) {
+    return primaryMessage.slice(0, 4000)
+  }
+  if (googleAdsDetail) {
+    return googleAdsDetail.slice(0, 4000)
+  }
+
+  try {
+    const serialized = JSON.stringify(error)
+    if (serialized && serialized !== '{}') {
+      return serialized.slice(0, 4000)
+    }
+  } catch {
+    // ignore JSON serialization failure and fall back to string coercion
+  }
+
+  return String(error || 'Unknown Google Ads error').slice(0, 4000)
+}
+
 /**
  * 🔧 新增(2025-01-05): OAuth API 调用追踪包装器
  * 用于在 OAuth 模式下追踪 Google Ads API 调用
@@ -50,7 +82,7 @@ async function trackOAuthApiCall<T>(
       customerId,
       responseTimeMs: Date.now() - startTime,
       isSuccess: false,
-      errorMessage: error.message,
+      errorMessage: serializeGoogleAdsError(error),
     })
     throw error
   }

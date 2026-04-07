@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { showError, showSuccess } from '@/lib/toast-utils'
+import { parseJsonField } from '@/lib/json-field'
 
 interface RiskAlert {
   id: number
@@ -54,6 +55,29 @@ interface RiskAlert {
   details: string | null
   status: 'active' | 'acknowledged' | 'resolved'
   createdAt: string
+}
+
+interface RiskAlertDetails {
+  url?: string
+  statusCode?: number
+  errorMessage?: string
+  finalUrl?: string
+  actionUrl?: string
+  actionRequired?: string
+}
+
+function parseRiskAlertDetails(details: unknown): RiskAlertDetails | null {
+  const parsed = parseJsonField<Record<string, unknown> | null>(details, null)
+  if (!parsed) return null
+
+  return {
+    url: typeof parsed.url === 'string' ? parsed.url : undefined,
+    statusCode: typeof parsed.statusCode === 'number' ? parsed.statusCode : undefined,
+    errorMessage: typeof parsed.errorMessage === 'string' ? parsed.errorMessage : undefined,
+    finalUrl: typeof parsed.finalUrl === 'string' ? parsed.finalUrl : undefined,
+    actionUrl: typeof parsed.actionUrl === 'string' ? parsed.actionUrl : undefined,
+    actionRequired: typeof parsed.actionRequired === 'string' ? parsed.actionRequired : undefined,
+  }
 }
 
 interface Statistics {
@@ -342,9 +366,10 @@ export default function RiskAlertPanel() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {severityAlerts.map((alert) => {
-                  const details = alert.details ? JSON.parse(alert.details) : null
+                <div className="space-y-3">
+                  {severityAlerts.map((alert) => {
+                  const details = parseRiskAlertDetails(alert.details)
+                  const actionUrl = details?.actionUrl
                   const isExpanded = expandedAlert === alert.id
 
                   return (
@@ -431,11 +456,11 @@ export default function RiskAlertPanel() {
                               )}
 
                               {/* 🆕 快捷操作按钮 - OAuth token过期等需要立即处理的警报 */}
-                              {details?.actionUrl && (
+                              {actionUrl && (
                                 <Button
                                   size="sm"
                                   variant="default"
-                                  onClick={() => router.push(details.actionUrl)}
+                                  onClick={() => router.push(actionUrl)}
                                   className="w-full bg-blue-600 hover:bg-blue-700"
                                 >
                                   <ArrowRight className="mr-2 h-4 w-4" />

@@ -11,6 +11,7 @@ import {
   setCachedLaunchScore,
   clearCachedLaunchScore,
 } from '@/lib/launch-score-cache'
+import { parseJsonField } from '@/lib/json-field'
 import type {
   Creative,
   LaunchScoreData,
@@ -18,6 +19,17 @@ import type {
   CompareDataItem,
   PerformanceData,
 } from './types'
+
+function parseLaunchScorePayload(raw: any): LaunchScoreData {
+  return {
+    totalScore: raw.total_score,
+    launchViability: parseJsonField<LaunchScoreData['launchViability']>(raw.launch_viability_data, {} as LaunchScoreData['launchViability']),
+    adQuality: parseJsonField<LaunchScoreData['adQuality']>(raw.ad_quality_data, {} as LaunchScoreData['adQuality']),
+    keywordStrategy: parseJsonField<LaunchScoreData['keywordStrategy']>(raw.keyword_strategy_data, {} as LaunchScoreData['keywordStrategy']),
+    basicConfig: parseJsonField<LaunchScoreData['basicConfig']>(raw.basic_config_data, {} as LaunchScoreData['basicConfig']),
+    overallRecommendations: parseJsonField<string[]>(raw.recommendations, []),
+  }
+}
 
 interface UseLaunchScoreDataOptions {
   offerId: number
@@ -154,15 +166,7 @@ export function useLaunchScoreData({
       if (response.ok) {
         const data = await response.json()
         if (data.launchScore) {
-          // v4.0 - 4维度格式
-          const parsed: LaunchScoreData = {
-            totalScore: data.launchScore.total_score,
-            launchViability: JSON.parse(data.launchScore.launch_viability_data || '{}'),
-            adQuality: JSON.parse(data.launchScore.ad_quality_data || '{}'),
-            keywordStrategy: JSON.parse(data.launchScore.keyword_strategy_data || '{}'),
-            basicConfig: JSON.parse(data.launchScore.basic_config_data || '{}'),
-            overallRecommendations: JSON.parse(data.launchScore.recommendations || '[]'),
-          }
+          const parsed = parseLaunchScorePayload(data.launchScore)
           setScoreData(parsed)
           setCachedLaunchScore(offerId, selectedCreativeId, parsed)
           console.log('✅ Launch Score已缓存')

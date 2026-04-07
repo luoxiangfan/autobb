@@ -287,6 +287,92 @@ describe('openclaw strategy recommendations rules', () => {
     expect((expandRec?.data.keywordPlan || []).every((kw) => typeof kw.evidenceMetrics?.impressions === 'number')).toBe(true)
     expect((expandRec?.data.keywordPlan || []).every((kw) => kw.conflictCheck?.negativeConflict === false)).toBe(true)
     expect((expandRec?.data.keywordPlan || []).every((kw) => kw.conflictCheck?.duplicateConflict === false)).toBe(true)
+    expect((expandRec?.data.keywordPlan || []).every((kw) => kw.sourceLayer === 'recent_search_terms')).toBe(true)
+    expect((expandRec?.data.keywordPlan || []).every((kw) => Number.isFinite(Number(kw.selectionScore)))).toBe(true)
+    expect(expandRec?.data.keywordPlanDiagnostics?.candidateCountRecent).toBe(searchTerms.length)
+    expect(expandRec?.data.keywordPlanDiagnostics?.selectedFromRecent).toBe((expandRec?.data.keywordPlan || []).length)
+  })
+
+  it('uses historical search terms when recent pool is empty', () => {
+    const historicalTerms = Array.from({ length: 6 }, (_, index) => ({
+      searchTerm: `dreo portable ac historical ${index + 1}`,
+      impressions: 220 - index * 5,
+      clicks: 20 - index,
+      conversions: index < 2 ? 1 : 0,
+      cost: 10 - index * 0.2,
+      recentImpressions: index % 2 === 0 ? 20 : 0,
+      recentClicks: index % 2 === 0 ? 2 : 0,
+      recentConversions: index === 0 ? 1 : 0,
+      recentCost: index % 2 === 0 ? 1.5 : 0,
+      lastSeenDate: '2026-04-01',
+    }))
+
+    const drafts = __testUtils.buildRecommendationDrafts({
+      campaigns: [makeCampaign({
+        id: 116,
+        created_at: new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        published_at: new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      })],
+      perf7dByCampaign: new Map([[116, { impressions: 100, clicks: 8, cost: 7 }]]),
+      perfTotalByCampaign: new Map([[116, { impressions: 100, clicks: 8, cost: 7 }]]),
+      commissionByCampaign: new Map(),
+      keywordsByCampaign: new Map([[116, new Set(['dreo'])]]),
+      searchTermsByCampaign: new Map([[116, []]]),
+      historicalSearchTermsByCampaign: new Map([[116, historicalTerms]]),
+      creativeById: new Map(),
+    })
+
+    const expandRec = drafts.find((item) => item.recommendationType === 'expand_keywords')
+    expect(expandRec).toBeTruthy()
+    expect((expandRec?.data.keywordPlan || []).length).toBeGreaterThan(0)
+    expect((expandRec?.data.keywordPlan || []).every((kw) => kw.sourceLayer === 'historical_search_terms')).toBe(true)
+    expect(expandRec?.data.keywordPlanDiagnostics?.candidateCountRecent).toBe(0)
+    expect(expandRec?.data.keywordPlanDiagnostics?.candidateCountHistorical).toBe(historicalTerms.length)
+    expect(expandRec?.data.keywordPlanDiagnostics?.selectedFromHistorical).toBe((expandRec?.data.keywordPlan || []).length)
+  })
+
+  it('keeps recent priority and records excluded reasons in diagnostics', () => {
+    const recentTerms = [
+      { searchTerm: 'dreo portable ac pro', impressions: 140, clicks: 18, conversions: 2, cost: 12 },
+      { searchTerm: 'amazon dreo portable ac', impressions: 130, clicks: 15, conversions: 0, cost: 11 },
+    ]
+    const historicalTerms = [
+      {
+        searchTerm: 'dreo portable ac legacy',
+        impressions: 300,
+        clicks: 22,
+        conversions: 1,
+        cost: 15,
+        recentImpressions: 0,
+        recentClicks: 0,
+        recentConversions: 0,
+        recentCost: 0,
+        lastSeenDate: '2026-03-20',
+      },
+    ]
+
+    const drafts = __testUtils.buildRecommendationDrafts({
+      campaigns: [makeCampaign({
+        id: 117,
+        created_at: new Date(now - 6 * 24 * 60 * 60 * 1000).toISOString(),
+        published_at: new Date(now - 6 * 24 * 60 * 60 * 1000).toISOString(),
+      })],
+      perf7dByCampaign: new Map([[117, { impressions: 150, clicks: 12, cost: 9 }]]),
+      perfTotalByCampaign: new Map([[117, { impressions: 150, clicks: 12, cost: 9 }]]),
+      commissionByCampaign: new Map(),
+      keywordsByCampaign: new Map([[117, new Set(['dreo'])]]),
+      searchTermsByCampaign: new Map([[117, recentTerms]]),
+      historicalSearchTermsByCampaign: new Map([[117, historicalTerms]]),
+      creativeById: new Map(),
+    })
+
+    const expandRec = drafts.find((item) => item.recommendationType === 'expand_keywords')
+    expect(expandRec).toBeTruthy()
+    expect((expandRec?.data.keywordPlan || [])[0]?.sourceLayer).toBe('recent_search_terms')
+    expect((expandRec?.data.keywordPlan || []).some((kw) => kw.sourceLayer === 'historical_search_terms')).toBe(true)
+    expect(expandRec?.data.keywordPlanDiagnostics?.excludedReasonCounts?.platform_query).toBe(1)
+    expect(expandRec?.data.keywordPlanDiagnostics?.selectedFromRecent).toBeGreaterThan(0)
+    expect(expandRec?.data.keywordPlanDiagnostics?.selectedFromHistorical).toBeGreaterThan(0)
   })
 
   it('falls back to campaign_config keywords when keyword inventory is empty', () => {
@@ -529,6 +615,17 @@ describe('openclaw strategy recommendations rules', () => {
         failures: [{ keyword: 'bad keyword' }],
       },
     })).toThrow('执行存在失败项')
+  })
+
+  it('accepts keyword execution partial failures when some items were applied', () => {
+    expect(() => __testUtils.assertRecommendationActionResult({
+      recommendationType: 'expand_keywords',
+      response: {
+        success: true,
+        addedCount: 2,
+        failures: [{ keyword: 'bad keyword', message: 'Keyword policy violation' }],
+      },
+    })).not.toThrow()
   })
 
   it('treats offline queued response as incomplete execution', () => {

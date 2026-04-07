@@ -21,7 +21,7 @@ describe('listOffers search query', () => {
     dbFns.query.mockResolvedValue([])
   })
 
-  it('uses case-insensitive postgres search over id/brand/offer_name/url/category', async () => {
+  it('uses case-insensitive postgres search over id/brand/offer_name/url/final_url/category', async () => {
     dbFns.type = 'postgres'
     const { listOffers } = await import('@/lib/offers')
 
@@ -35,11 +35,13 @@ describe('listOffers search query', () => {
     expect(countSql).toContain('brand ILIKE ?')
     expect(countSql).toContain('offer_name ILIKE ?')
     expect(countSql).toContain('url ILIKE ?')
+    expect(countSql).toContain('final_url ILIKE ?')
     expect(countSql).toContain('category ILIKE ?')
     expect(listSql).toContain('CAST(id AS TEXT) ILIKE ?')
     expect(listSql).toContain('offer_name ILIKE ?')
     expect(countParams).toEqual([
       7,
+      '%roborock%',
       '%roborock%',
       '%roborock%',
       '%roborock%',
@@ -61,7 +63,8 @@ describe('listOffers search query', () => {
     expect(countSql).toContain('brand LIKE ?')
     expect(countSql).toContain('offer_name LIKE ?')
     expect(countSql).toContain('url LIKE ?')
+    expect(countSql).toContain('final_url LIKE ?')
     expect(countSql).toContain('category LIKE ?')
-    expect(countParams).toEqual([9, '%robo%', '%robo%', '%robo%', '%robo%', '%robo%'])
+    expect(countParams).toEqual([9, '%robo%', '%robo%', '%robo%', '%robo%', '%robo%', '%robo%'])
   })
 })

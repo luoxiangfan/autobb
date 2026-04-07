@@ -129,10 +129,10 @@ export function exportCampaigns(campaigns: CampaignExportData[]): void {
     impressions: '展示量',
     clicks: '点击量',
     cost: '花费(¥)',
-    conversions: '转化量',
+    conversions: '佣金',
     ctr: 'CTR(%)',
     cpc: 'CPC(¥)',
-    conversionRate: '转化率(%)',
+    conversionRate: '每次点击佣金',
   }
 
   exportToCSV(campaigns, 'campaigns', headers)

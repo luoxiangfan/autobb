@@ -14,6 +14,18 @@ import type {
   LaunchScoreData,
 } from "./launch-score/types";
 import { DIMENSION_CONFIG } from "./launch-score/types";
+import { parseJsonField } from "@/lib/json-field";
+
+function parseLaunchScorePayload(raw: any): LaunchScoreData {
+  return {
+    totalScore: raw.totalScore,
+    launchViability: parseJsonField<LaunchScoreData['launchViability']>(raw.launchViabilityData, {} as LaunchScoreData['launchViability']),
+    adQuality: parseJsonField<LaunchScoreData['adQuality']>(raw.adQualityData, {} as LaunchScoreData['adQuality']),
+    keywordStrategy: parseJsonField<LaunchScoreData['keywordStrategy']>(raw.keywordStrategyData, {} as LaunchScoreData['keywordStrategy']),
+    basicConfig: parseJsonField<LaunchScoreData['basicConfig']>(raw.basicConfigData, {} as LaunchScoreData['basicConfig']),
+    overallRecommendations: parseJsonField<string[]>(raw.recommendations, []),
+  };
+}
 
 export default function LaunchScoreModal({
   isOpen,
@@ -192,15 +204,7 @@ export default function LaunchScoreModal({
       if (response.ok) {
         const data = await response.json();
         if (data.launchScore) {
-          // v4.0 - 4维度数据
-          const scoreData: LaunchScoreData = {
-            totalScore: data.launchScore.totalScore,
-            launchViability: JSON.parse(data.launchScore.launchViabilityData || '{}'),
-            adQuality: JSON.parse(data.launchScore.adQualityData || '{}'),
-            keywordStrategy: JSON.parse(data.launchScore.keywordStrategyData || '{}'),
-            basicConfig: JSON.parse(data.launchScore.basicConfigData || '{}'),
-            overallRecommendations: JSON.parse(data.launchScore.recommendations || "[]"),
-          };
+          const scoreData = parseLaunchScorePayload(data.launchScore);
           setScoreData(scoreData);
           setCachedLaunchScore(offer.id, selectedCreativeId, scoreData);
           console.log("✅ Launch Score已缓存 (v4.0)");

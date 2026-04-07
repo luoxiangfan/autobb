@@ -8,11 +8,23 @@ import { verifyAuth } from '@/lib/auth'
 import { apiCache, generateCacheKey } from '@/lib/api-cache'
 import { getDatabase } from '@/lib/db'
 import { listOffers } from '@/lib/offers'
+import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
 
 function parseBooleanParam(value: string | null): boolean {
   if (value === null) return false
   const normalized = String(value).trim().toLowerCase()
   return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on'
+}
+
+function resolveStartDateYmd(days: number): string {
+  const startDate = new Date()
+  startDate.setDate(startDate.getDate() - days + 1)
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: process.env.TZ || 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(startDate)
 }
 
 // 从现有API导入逻辑
@@ -25,33 +37,58 @@ async function getKPIs(userId: number, days: number = 30) {
     ? "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
     : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
 
-  const startDate = new Date()
-  startDate.setDate(startDate.getDate() - days + 1)
-  const startDateStr = new Intl.DateTimeFormat('en-CA', {
-    timeZone: process.env.TZ || 'Asia/Shanghai',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(startDate)
+  const startDateStr = resolveStartDateYmd(days)
 
   // 获取基础KPI数据
   const result = await db.queryOne(`
     SELECT
-      COUNT(DISTINCT c.id) as total_campaigns,
-      COUNT(DISTINCT o.id) as total_offers,
+      COUNT(DISTINCT CASE WHEN c.status != 'REMOVED' THEN c.id END) as total_campaigns,
+      COUNT(DISTINCT CASE WHEN c.status != 'REMOVED' THEN o.id END) as total_offers,
       COALESCE(SUM(cp.clicks), 0) as total_clicks,
       COALESCE(SUM(cp.impressions), 0) as total_impressions,
       COALESCE(SUM(cp.cost), 0) as total_cost,
-      COALESCE(SUM(cp.conversions), 0) as total_conversions,
       COALESCE(AVG(CASE WHEN cp.clicks > 0 THEN (cp.cost / cp.clicks) ELSE 0 END), 0) as avg_cpc,
       COALESCE(AVG(CASE WHEN cp.impressions > 0 THEN (cp.clicks * 1.0 / cp.impressions) ELSE 0 END), 0) as avg_ctr
     FROM campaigns c
     LEFT JOIN campaign_performance cp ON c.id = cp.campaign_id AND cp.date >= ?
     LEFT JOIN offers o ON c.offer_id = o.id
     WHERE c.user_id = ?
-      AND c.status != 'REMOVED'
       AND ${notDeletedCondition}
   `, [startDateStr, userId]) as any
+
+  const unattributedFailureFilter = buildAffiliateUnattributedFailureFilter({
+    includePendingWithinGrace: true,
+    includeAllFailures: true,
+  })
+
+  const attributedRow = await db.queryOne(`
+    SELECT COALESCE(SUM(commission_amount), 0) as total_commission
+    FROM affiliate_commission_attributions
+    WHERE user_id = ?
+      AND report_date >= ?
+  `, [userId, startDateStr]) as any
+
+  let unattributedRow: any = { total_commission: 0 }
+  try {
+    unattributedRow = await db.queryOne(`
+      SELECT COALESCE(SUM(commission_amount), 0) as total_commission
+      FROM openclaw_affiliate_attribution_failures
+      WHERE user_id = ?
+        AND report_date >= ?
+        AND ${unattributedFailureFilter.sql}
+    `, [userId, startDateStr, ...unattributedFailureFilter.values]) as any
+  } catch (error: any) {
+    const message = String(error?.message || '')
+    if (
+      !/openclaw_affiliate_attribution_failures/i.test(message)
+      || !/(no such table|does not exist)/i.test(message)
+    ) {
+      throw error
+    }
+  }
+
+  const totalCommission = (Number(attributedRow?.total_commission) || 0)
+    + (Number(unattributedRow?.total_commission) || 0)
 
   return {
     totalCampaigns: result?.total_campaigns || 0,
@@ -59,7 +96,8 @@ async function getKPIs(userId: number, days: number = 30) {
     totalClicks: result?.total_clicks || 0,
     totalImpressions: result?.total_impressions || 0,
     totalCost: result?.total_cost || 0,
-    totalConversions: result?.total_conversions || 0,
+    totalConversions: totalCommission,
+    totalCommission,
     avgCPC: result?.avg_cpc || 0,
     avgCTR: result?.avg_ctr || 0,
     dateRange: days
@@ -68,6 +106,7 @@ async function getKPIs(userId: number, days: number = 30) {
 
 async function getRiskAlerts(userId: number, limit: number = 3) {
   const db = await getDatabase()
+  const startDateStr = resolveStartDateYmd(7)
 
   // 🔧 PostgreSQL兼容性：生产库中 is_deleted 可能仍是 INTEGER，需同时兼容 BOOLEAN/INTEGER
   const notDeletedCondition = db.type === 'postgres'
@@ -97,9 +136,8 @@ async function getRiskAlerts(userId: number, limit: number = 3) {
     INNER JOIN campaigns c ON cp.campaign_id = c.id
     INNER JOIN offers o ON c.offer_id = o.id
     WHERE c.user_id = ?
-      AND c.status != 'REMOVED'
       AND ${notDeletedCondition}
-      AND cp.date >= date('now', '-7 days')
+      AND cp.date >= ?
       AND (
         (cp.clicks > 0 AND (cp.clicks * 1.0 / cp.impressions) < 0.01)
         OR (cp.clicks > 0 AND (cp.cost / cp.clicks) > 5.0)
@@ -107,7 +145,7 @@ async function getRiskAlerts(userId: number, limit: number = 3) {
       )
     ORDER BY cp.date DESC, cp.cost DESC
     LIMIT ?
-  `, [userId, limit]) as any[]
+  `, [userId, startDateStr, limit]) as any[]
 
   return alerts.map(alert => ({
     campaignId: alert.campaign_id,

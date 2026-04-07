@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
+import { parseJsonField } from '@/lib/json-field'
 
 /**
  * GET /api/admin/audit-logs
@@ -92,7 +93,7 @@ export const GET = withAuth(
         eventType: record.event_type,
         ipAddress: record.ip_address,
         userAgent: record.user_agent,
-        details: record.details ? JSON.parse(record.details) : null,
+        details: parseJsonField(record.details, null),
         createdAt: record.created_at,
         operatorId: record.operator_id,
         operatorUsername: record.operator_username,

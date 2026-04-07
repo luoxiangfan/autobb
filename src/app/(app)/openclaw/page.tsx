@@ -2273,7 +2273,10 @@ export default function OpenClawPage() {
   const budgetOverall = report?.budget?.data?.overall || {}
   const budgetCurrency = reportBudgetCurrencyRaw || reportCostCurrency
   const budgetTotalValue = formatMoneyWithUnit(budgetOverall.totalBudget ?? 0, budgetCurrency)
-  const budgetSpentValue = formatMoneyWithUnit(budgetOverall.totalSpent ?? 0, budgetCurrency)
+  const budgetSpentValue = formatMoneyWithUnit(
+    budgetOverall.totalSpentAllCampaigns ?? budgetOverall.totalSpent ?? 0,
+    budgetCurrency
+  )
   const budgetRemainingValue = formatMoneyWithUnit(budgetOverall.remaining ?? 0, budgetCurrency)
   const reportRoiCostValue = formatMoneyWithUnit(totalCost, reportCostCurrency)
   const campaignRows = report?.roi?.data?.byCampaign || []
@@ -4816,13 +4819,13 @@ export default function OpenClawPage() {
           <Card>
             <CardHeader>
               <CardTitle>预算与消耗</CardTitle>
-              <CardDescription>基于当日预算统计</CardDescription>
+              <CardDescription>预算口径仅统计启用中 Campaign；花费口径覆盖全部有 performance 的 Campaign</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 md:auto-rows-fr md:grid-cols-5">
               <KpiCard title="总预算" value={budgetTotalValue} />
-              <KpiCard title="总花费" value={budgetSpentValue} />
-              <KpiCard title="剩余预算" value={budgetRemainingValue} />
-              <KpiCard title="预算使用率" value={`${budgetOverall.utilizationRate ?? 0}%`} />
+              <KpiCard title="全量花费" value={budgetSpentValue} />
+              <KpiCard title="启用中剩余预算" value={budgetRemainingValue} />
+              <KpiCard title="启用中预算使用率" value={`${budgetOverall.utilizationRate ?? 0}%`} />
               <KpiCard title="启用Campaign数" value={budgetOverall.activeCampaigns ?? 0} />
             </CardContent>
           </Card>

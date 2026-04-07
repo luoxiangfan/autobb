@@ -513,6 +513,7 @@ export async function executeAffiliateProductSync(task: Task<AffiliateProductSyn
         productId: data.productId,
         resumeFromPage,
         resumeFromScope,
+        fetchedItemsBeforeWindow: baseTotalItems,
         progressEvery: 20,
         onProgress: async (progress: AffiliateProductSyncProgress) => {
           await withRecoveryModeRetry({

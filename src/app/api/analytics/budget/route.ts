@@ -91,6 +91,9 @@ export async function GET(request: NextRequest) {
     const whereConditions = [...baseWhereConditions, 'cp.currency = ?']
     const params: any[] = [...baseParams, reportingCurrency]
 
+    const allCampaignSpendWhereConditions = [...baseWhereConditions, 'COALESCE(cp.currency, \'USD\') = ?']
+    const allCampaignSpendParams: any[] = [...baseParams, reportingCurrency]
+
     // 计算日期范围（天数）
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     const end = endDate ? new Date(endDate) : new Date()
@@ -111,10 +114,19 @@ export async function GET(request: NextRequest) {
         ${campaignId ? 'AND c.id = ?' : ''}
     `, [...params, userId, reportingCurrency, ...(campaignId ? [campaignId] : [])]) as any
 
+    const allCampaignSpend = await db.queryOne(`
+      SELECT
+        COALESCE(SUM(cp.cost), 0) as total_spent_all_campaigns
+      FROM campaign_performance cp
+      WHERE ${allCampaignSpendWhereConditions.join(' AND ')}
+    `, allCampaignSpendParams) as any
+
     const totalBudgetRaw = toNumber(overallBudget.total_budget)
     const totalSpentRaw = toNumber(overallBudget.total_spent)
+    const totalSpentAllCampaignsRaw = toNumber(allCampaignSpend.total_spent_all_campaigns)
     const totalBudget = roundTo2(totalBudgetRaw)
     const totalSpent = roundTo2(totalSpentRaw)
+    const totalSpentAllCampaigns = roundTo2(totalSpentAllCampaignsRaw)
     const activeCampaigns = toNumber(overallBudget.active_campaigns)
     const remaining = roundTo2(totalBudget - totalSpent)
     const utilizationRate = totalBudgetRaw > 0 ? (totalSpentRaw / totalBudgetRaw) * 100 : 0
@@ -329,6 +341,8 @@ export async function GET(request: NextRequest) {
         overall: {
           totalBudget,
           totalSpent,
+          totalSpentEnabledCampaigns: totalSpent,
+          totalSpentAllCampaigns,
           remaining,
           utilizationRate: roundTo2(utilizationRate),
           dailyAvgSpend: roundTo2(dailyAvgSpend),

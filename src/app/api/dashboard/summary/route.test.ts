@@ -14,6 +14,8 @@ const cacheFns = vi.hoisted(() => ({
 
 const dbFns = vi.hoisted(() => ({
   getDatabase: vi.fn(),
+  queryOne: vi.fn(),
+  query: vi.fn(),
 }))
 
 const offerFns = vi.hoisted(() => ({
@@ -50,18 +52,28 @@ describe('GET /api/dashboard/summary', () => {
     cacheFns.generateCacheKey.mockReturnValue('dashboard-summary:user:7:test')
     cacheFns.get.mockReturnValue(null)
 
-    dbFns.getDatabase.mockResolvedValue({
-      queryOne: vi.fn().mockResolvedValue({
+    dbFns.queryOne.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM affiliate_commission_attributions')) {
+        return { total_commission: 8 }
+      }
+      if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
+        return { total_commission: 2 }
+      }
+      return {
         total_campaigns: 2,
         total_offers: 3,
         total_clicks: 10,
         total_impressions: 100,
         total_cost: 5,
-        total_conversions: 1,
         avg_cpc: 0.5,
         avg_ctr: 0.1,
-      }),
-      query: vi.fn().mockResolvedValue([]),
+      }
+    })
+    dbFns.query.mockResolvedValue([])
+    dbFns.getDatabase.mockResolvedValue({
+      type: 'postgres',
+      queryOne: dbFns.queryOne,
+      query: dbFns.query,
     })
     offerFns.listOffers.mockResolvedValue({
       offers: [{ id: 11, brand: 'Demo' }],
@@ -131,5 +143,24 @@ describe('GET /api/dashboard/summary', () => {
     expect(data.cached).toBe(false)
     expect(cacheFns.get).not.toHaveBeenCalled()
     expect(cacheFns.set).not.toHaveBeenCalled()
+  })
+
+  it('does not exclude removed campaigns from performance aggregates or risk alerts', async () => {
+    const req = new NextRequest('http://localhost/api/dashboard/summary?days=30&refresh=true')
+    const res = await GET(req)
+
+    expect(res.status).toBe(200)
+    expect(String(dbFns.queryOne.mock.calls[0]?.[0] || '')).not.toContain("WHERE c.user_id = ?\n      AND c.status != 'REMOVED'")
+    expect(String(dbFns.query.mock.calls[0]?.[0] || '')).not.toContain("AND c.status != 'REMOVED'")
+  })
+
+  it('uses affiliate commission totals for KPI conversions', async () => {
+    const req = new NextRequest('http://localhost/api/dashboard/summary?days=30&refresh=true')
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.kpis?.totalConversions).toBe(10)
+    expect(data.kpis?.totalCommission).toBe(10)
   })
 })

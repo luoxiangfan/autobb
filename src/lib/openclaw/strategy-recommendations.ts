@@ -33,6 +33,8 @@ export type StrategyKeywordSuggestion = {
   text: string
   matchType: 'BROAD' | 'PHRASE' | 'EXACT'
   whySelected?: string
+  sourceLayer?: 'recent_search_terms' | 'historical_search_terms'
+  selectionScore?: number
   evidenceMetrics?: {
     impressions?: number
     clicks?: number
@@ -153,6 +155,13 @@ export type StrategyRecommendationData = {
     pauseUrlSwapTasks: boolean
   }
   keywordPlan?: StrategyKeywordSuggestion[]
+  keywordPlanDiagnostics?: {
+    candidateCountRecent: number
+    candidateCountHistorical: number
+    selectedFromRecent: number
+    selectedFromHistorical: number
+    excludedReasonCounts?: Record<string, number>
+  }
   negativeKeywordPlan?: StrategyNegativeKeywordSuggestion[]
   matchTypePlan?: StrategyMatchTypeSuggestion[]
   searchTermFeedback?: {
@@ -241,6 +250,11 @@ type SearchTermAgg = {
   clicks: number
   conversions: number
   cost: number
+  recentImpressions?: number
+  recentClicks?: number
+  recentConversions?: number
+  recentCost?: number
+  lastSeenDate?: string | null
 }
 
 type RecommendationDraft = {
@@ -770,6 +784,12 @@ function dedupeKeywordSuggestions(params: {
         duplicateConflict: normalizeBoolean(item.conflictCheck.duplicateConflict),
       }
       : undefined
+    const sourceLayer = item?.sourceLayer === 'recent_search_terms' || item?.sourceLayer === 'historical_search_terms'
+      ? item.sourceLayer
+      : undefined
+    const selectionScore = Number.isFinite(Number(item?.selectionScore))
+      ? roundTo2(Number(item?.selectionScore))
+      : undefined
     output.push({
       text,
       matchType:
@@ -780,6 +800,8 @@ function dedupeKeywordSuggestions(params: {
           intent,
         }),
       whySelected: whySelected || undefined,
+      sourceLayer,
+      selectionScore,
       evidenceMetrics,
       conflictCheck,
     })
@@ -798,14 +820,70 @@ function shouldGenerateExpandKeywordsRecommendation(params: {
   return params.runDays > 1 && lowKeywordCoverage && lowTraffic
 }
 
+type KeywordExpansionPlanResult = {
+  keywordPlan: StrategyKeywordSuggestion[]
+  diagnostics: {
+    candidateCountRecent: number
+    candidateCountHistorical: number
+    selectedFromRecent: number
+    selectedFromHistorical: number
+    excludedReasonCounts: Record<string, number>
+  }
+}
+
+function scoreSearchTermCandidate(
+  row: SearchTermAgg,
+  sourceLayer: 'recent_search_terms' | 'historical_search_terms'
+): number {
+  const totalImpressions = Math.max(0, toNumber(row.impressions, 0))
+  const totalClicks = Math.max(0, toNumber(row.clicks, 0))
+  const totalConversions = Math.max(0, toNumber(row.conversions, 0))
+  const totalCost = Math.max(0, toNumber(row.cost, 0))
+
+  const recentImpressions = Math.max(0, toNumber(row.recentImpressions, 0))
+  const recentClicks = Math.max(0, toNumber(row.recentClicks, 0))
+  const recentConversions = Math.max(0, toNumber(row.recentConversions, 0))
+  const recentCost = Math.max(0, toNumber(row.recentCost, 0))
+
+  const totalCtr = totalImpressions > 0 ? totalClicks / totalImpressions : 0
+  const recentCtr = recentImpressions > 0 ? recentClicks / recentImpressions : 0
+  const totalCvr = totalClicks > 0 ? totalConversions / totalClicks : 0
+  const recentCvr = recentClicks > 0 ? recentConversions / recentClicks : 0
+
+  // 以转化与点击质量为主，近期信号作为加分，而不是硬门槛。
+  let score =
+    totalConversions * 18 +
+    totalClicks * 0.28 +
+    totalCtr * 90 +
+    totalCvr * 110 +
+    recentConversions * 26 +
+    recentClicks * 0.55 +
+    recentCtr * 150 +
+    recentCvr * 180
+
+  if (totalConversions <= 0) {
+    score -= Math.min(12, totalCost * 0.15)
+    if (recentConversions <= 0) {
+      score -= Math.min(8, recentCost * 0.25)
+    }
+  }
+
+  if (sourceLayer === 'historical_search_terms') {
+    score -= 3
+  }
+
+  return roundTo2(Math.max(0, score))
+}
+
 function buildKeywordExpansionPlan(params: {
   brand: string | null
   category: string | null
   productName: string | null
   existing: Set<string>
   negativeTerms?: Set<string>
-  searchTerms?: SearchTermAgg[]
-}): StrategyKeywordSuggestion[] {
+  searchTermsRecent?: SearchTermAgg[]
+  searchTermsHistorical?: SearchTermAgg[]
+}): KeywordExpansionPlanResult {
   const brand = sanitizeKeyword(String(params.brand || ''))
   const category = sanitizeKeyword(String(params.category || ''))
   const productName = sanitizeKeyword(String(params.productName || ''))
@@ -827,17 +905,52 @@ function buildKeywordExpansionPlan(params: {
     }
   }
 
-  const rankedSearchTerms = Array.isArray(params.searchTerms)
-    ? [...params.searchTerms].sort((a, b) => {
+  const diagnostics = {
+    candidateCountRecent: 0,
+    candidateCountHistorical: 0,
+    selectedFromRecent: 0,
+    selectedFromHistorical: 0,
+    excludedReasonCounts: {} as Record<string, number>,
+  }
+
+  const incrementExcludedReason = (reason: string) => {
+    if (!reason) return
+    diagnostics.excludedReasonCounts[reason] = (diagnostics.excludedReasonCounts[reason] || 0) + 1
+  }
+
+  const buildRankedPool = (
+    rows: SearchTermAgg[] | undefined,
+    sourceLayer: 'recent_search_terms' | 'historical_search_terms'
+  ): SearchTermAgg[] => {
+    if (!Array.isArray(rows) || rows.length === 0) return []
+    const normalized: SearchTermAgg[] = []
+    const seen = new Set<string>()
+    for (const row of rows) {
+      const text = sanitizeKeyword(String(row?.searchTerm || ''))
+      const key = normalizeKeywordKey(text)
+      if (!text || !key) continue
+      if (seen.has(key)) continue
+      seen.add(key)
+      normalized.push({
+        ...row,
+        searchTerm: text,
+      })
+    }
+    return normalized.sort((a, b) => {
+      const scoreDiff = scoreSearchTermCandidate(b, sourceLayer) - scoreSearchTermCandidate(a, sourceLayer)
+      if (scoreDiff !== 0) return scoreDiff
       const convDiff = toNumber(b.conversions, 0) - toNumber(a.conversions, 0)
       if (convDiff !== 0) return convDiff
       const clickDiff = toNumber(b.clicks, 0) - toNumber(a.clicks, 0)
       if (clickDiff !== 0) return clickDiff
-      const impressionDiff = toNumber(b.impressions, 0) - toNumber(a.impressions, 0)
-      if (impressionDiff !== 0) return impressionDiff
-      return toNumber(b.cost, 0) - toNumber(a.cost, 0)
+      return toNumber(b.impressions, 0) - toNumber(a.impressions, 0)
     })
-    : []
+  }
+
+  const rankedRecentPool = buildRankedPool(params.searchTermsRecent, 'recent_search_terms')
+  const rankedHistoricalPool = buildRankedPool(params.searchTermsHistorical, 'historical_search_terms')
+  diagnostics.candidateCountRecent = rankedRecentPool.length
+  diagnostics.candidateCountHistorical = rankedHistoricalPool.length
 
   const desiredAdditionCount = Math.min(
     KEYWORD_EXPANSION_TARGET_MAX,
@@ -849,17 +962,42 @@ function buildKeywordExpansionPlan(params: {
 
   const selected: StrategyKeywordSuggestion[] = []
   const seen = new Set<string>(Array.from(existing))
-  for (const row of rankedSearchTerms) {
+  const appendCandidate = (
+    row: SearchTermAgg,
+    sourceLayer: 'recent_search_terms' | 'historical_search_terms'
+  ): boolean => {
     const text = sanitizeKeyword(String(row.searchTerm || ''))
     const normalized = normalizeKeywordKey(text)
     const duplicateConflict = seen.has(normalized)
-    if (!text || !normalized || duplicateConflict) continue
-    if (normalized.length < 2 || normalized.length > 80) continue
+    if (!text || !normalized) {
+      incrementExcludedReason('empty_or_invalid')
+      return false
+    }
+    if (duplicateConflict) {
+      incrementExcludedReason('duplicate_conflict')
+      return false
+    }
+    if (normalized.length < 2 || normalized.length > 80) {
+      incrementExcludedReason('length_out_of_range')
+      return false
+    }
     const negativeConflict = isKeywordConflictingWithNegativeTerms(text, negativeTerms)
-    if (negativeConflict) continue
-    if (/(amazon|walmart|ebay|etsy|aliexpress|temu)\b/i.test(text)) continue
-    if (/\b(what is|meaning|tutorial|guide|manual|how to|instructions?)\b/i.test(text)) continue
-    if (/\b(review|reviews|comparison|compare|vs)\b/i.test(text)) continue
+    if (negativeConflict) {
+      incrementExcludedReason('negative_conflict')
+      return false
+    }
+    if (/(amazon|walmart|ebay|etsy|aliexpress|temu)\b/i.test(text)) {
+      incrementExcludedReason('platform_query')
+      return false
+    }
+    if (/\b(what is|meaning|tutorial|guide|manual|how to|instructions?)\b/i.test(text)) {
+      incrementExcludedReason('informational_query')
+      return false
+    }
+    if (/\b(review|reviews|comparison|compare|vs)\b/i.test(text)) {
+      incrementExcludedReason('evaluative_query')
+      return false
+    }
 
     const hasBrand = pureBrandKeywords.length > 0
       ? containsPureBrand(text, pureBrandKeywords)
@@ -867,23 +1005,44 @@ function buildKeywordExpansionPlan(params: {
     const anchorMatches = tokenizeKeywordText(text)
       .filter((token) => relevanceAnchorTokens.has(token))
       .length
-    if (!hasBrand && anchorMatches < 2) continue
+    if (!hasBrand && anchorMatches < 2) {
+      incrementExcludedReason('weak_relevance_anchor')
+      return false
+    }
 
     const hasDemandAnchor = anchorMatches > 0
-    if (/\b(discount|coupon|cheap|sale|deal|offer|promo|price|cost)\b/i.test(text) && !hasDemandAnchor) continue
-    if (/\b(official store|store locator|near me)\b/i.test(text) && !hasDemandAnchor) continue
+    if (/\b(discount|coupon|cheap|sale|deal|offer|promo|price|cost)\b/i.test(text) && !hasDemandAnchor) {
+      incrementExcludedReason('low_intent_promo')
+      return false
+    }
+    if (/\b(official store|store locator|near me)\b/i.test(text) && !hasDemandAnchor) {
+      incrementExcludedReason('low_intent_navigational')
+      return false
+    }
 
     const impressions = toNumber(row.impressions, 0)
     const clicks = toNumber(row.clicks, 0)
     const conversions = toNumber(row.conversions, 0)
     const cost = roundTo2(toNumber(row.cost, 0))
+    const recentClicks = toNumber(row.recentClicks, 0)
+    const recentConversions = toNumber(row.recentConversions, 0)
+    const score = scoreSearchTermCandidate(row, sourceLayer)
     const whySelectedParts: string[] = []
+    if (sourceLayer === 'recent_search_terms') {
+      whySelectedParts.push('来源：近14天真实Search Terms')
+    } else {
+      whySelectedParts.push('来源：历史真实Search Terms（高表现）')
+    }
     if (conversions > 0) {
-      whySelectedParts.push(`近7天转化 ${roundTo2(conversions)}`)
+      whySelectedParts.push(`累计转化 ${roundTo2(conversions)}`)
     } else if (clicks > 0) {
-      whySelectedParts.push(`近7天点击 ${roundTo2(clicks)}`)
-    } else if (impressions > 0) {
-      whySelectedParts.push(`近7天曝光 ${roundTo2(impressions)}`)
+      whySelectedParts.push(`累计点击 ${roundTo2(clicks)}`)
+    }
+    if (sourceLayer === 'historical_search_terms' && recentClicks > 0) {
+      whySelectedParts.push(`近14天仍有点击 ${roundTo2(recentClicks)}`)
+    }
+    if (sourceLayer === 'historical_search_terms' && recentConversions > 0) {
+      whySelectedParts.push(`近14天转化 ${roundTo2(recentConversions)}`)
     }
     if (hasBrand) {
       whySelectedParts.push('命中纯品牌词')
@@ -891,6 +1050,7 @@ function buildKeywordExpansionPlan(params: {
     if (anchorMatches > 0) {
       whySelectedParts.push(`匹配 ${anchorMatches} 个相关锚点`)
     }
+    whySelectedParts.push(`综合得分 ${score.toFixed(1)}`)
 
     const intent = classifyKeywordIntent(text).intent
     selected.push({
@@ -900,7 +1060,9 @@ function buildKeywordExpansionPlan(params: {
         brandName: brand || undefined,
         intent,
       }),
-      whySelected: whySelectedParts.join('；') || '来源于近期 Search Terms 且通过相关性校验',
+      sourceLayer,
+      selectionScore: score,
+      whySelected: whySelectedParts.join('；') || '来源于真实 Search Terms 且通过相关性校验',
       evidenceMetrics: {
         impressions,
         clicks,
@@ -913,10 +1075,29 @@ function buildKeywordExpansionPlan(params: {
       },
     })
     seen.add(normalized)
-    if (selected.length >= desiredAdditionCount) break
+    if (sourceLayer === 'recent_search_terms') diagnostics.selectedFromRecent += 1
+    else diagnostics.selectedFromHistorical += 1
+    return true
   }
 
-  return selected
+  for (const row of rankedRecentPool) {
+    appendCandidate(row, 'recent_search_terms')
+    if (selected.length >= desiredAdditionCount) {
+      return { keywordPlan: selected, diagnostics }
+    }
+  }
+
+  for (const row of rankedHistoricalPool) {
+    appendCandidate(row, 'historical_search_terms')
+    if (selected.length >= desiredAdditionCount) {
+      break
+    }
+  }
+
+  return {
+    keywordPlan: selected,
+    diagnostics,
+  }
 }
 
 function buildExpandKeywordsSnapshotHash(params: {
@@ -1420,6 +1601,7 @@ function buildRecommendationDrafts(params: {
   keywordsByCampaign: Map<number, Set<string>>
   keywordInventoryByCampaign?: Map<number, CampaignKeywordInventory[]>
   searchTermsByCampaign?: Map<number, SearchTermAgg[]>
+  historicalSearchTermsByCampaign?: Map<number, SearchTermAgg[]>
   creativeById: Map<number, CreativeRow>
   cooldownUntilByKey?: Map<string, number>
   nowMs?: number
@@ -1498,6 +1680,7 @@ function buildRecommendationDrafts(params: {
       negativeKeywordSet.add(normalized)
     }
     const searchTermRows = params.searchTermsByCampaign?.get(campaignId) || []
+    const historicalSearchTermRows = params.historicalSearchTermsByCampaign?.get(campaignId) || searchTermRows
     const searchTermPerfByText = new Map<string, SearchTermAgg>()
     for (const row of searchTermRows) {
       const key = normalizeKeywordKey(row.searchTerm)
@@ -1992,14 +2175,16 @@ function buildRecommendationDrafts(params: {
         nowMs: params.nowMs,
       })
       if (!inCooldown) {
-        const keywordPlan = buildKeywordExpansionPlan({
+        const expansionPlan = buildKeywordExpansionPlan({
           brand: campaign.brand,
           category: campaign.category,
           productName: campaign.product_name,
           existing: keywordSet,
           negativeTerms: negativeKeywordSet,
-          searchTerms: searchTermRows,
+          searchTermsRecent: searchTermRows,
+          searchTermsHistorical: historicalSearchTermRows,
         })
+        const keywordPlan = expansionPlan.keywordPlan
 
         if (keywordPlan.length > 0) {
           const snapshotHash = buildExpandKeywordsSnapshotHash({
@@ -2043,7 +2228,7 @@ function buildRecommendationDrafts(params: {
             recommendationType: 'expand_keywords',
             title: '补充 Search Terms 关键词（含匹配类型）',
             summary: `当前关键词 ${keywordCoverageCount} 个，建议从 Search Terms 中补充 ${keywordPlan.length} 个关键词${targetHint}。`,
-            reason: `关键词覆盖不足（<${MIN_KEYWORD_COVERAGE_TARGET}）且流量偏低（曝光 ${perfTotal.impressions} / 点击 ${perfTotal.clicks}），因此仅从近期真实搜索词中补充高相关候选。`,
+            reason: `关键词覆盖不足（<${MIN_KEYWORD_COVERAGE_TARGET}）且流量偏低（曝光 ${perfTotal.impressions} / 点击 ${perfTotal.clicks}），因此仅从真实 Search Terms 中补充候选（近期优先、历史补充）。`,
             priorityScore,
             data: {
               ...applyImpactEstimation(baseData, {
@@ -2053,9 +2238,10 @@ function buildRecommendationDrafts(params: {
               }),
               snapshotHash,
               keywordPlan,
+              keywordPlanDiagnostics: expansionPlan.diagnostics,
               ruleCode: 'expand_keywords_low_coverage_low_traffic',
               impactEstimationSource,
-              analysisNote: `已仅基于 Search Terms 候选筛选新增关键词，并为其自动推荐匹配类型（EXACT/PHRASE/BROAD）。${formatImpactEstimationSource(impactEstimationSource)}。`,
+              analysisNote: `已仅基于真实 Search Terms 候选筛选新增关键词（近期优先、历史补充），并为其自动推荐匹配类型（EXACT/PHRASE/BROAD）。${formatImpactEstimationSource(impactEstimationSource)}。`,
             },
           })
         }
@@ -2507,7 +2693,7 @@ export async function refreshStrategyRecommendations(params: {
     const startDate7 = shiftIsoDate(endDate, -6)
     const startDateSearchTerm = shiftIsoDate(endDate, -(SEARCH_TERM_LOOKBACK_DAYS - 1))
 
-    const [perf7Rows, perfTotalRows, commissionRows, keywordRows, searchTermRows] = await Promise.all([
+    const [perf7Rows, perfTotalRows, commissionRows, keywordRows, searchTermRows, historicalSearchTermRows] = await Promise.all([
       db.query<{ campaign_id: number; impressions: number; clicks: number; cost: number }>(
         `
           SELECT
@@ -2587,6 +2773,40 @@ export async function refreshStrategyRecommendations(params: {
         `,
         [params.userId, startDateSearchTerm, endDate]
       ),
+      db.query<{
+        campaign_id: number
+        search_term: string
+        impressions_total: number
+        clicks_total: number
+        conversions_total: number
+        cost_total: number
+        impressions_recent: number
+        clicks_recent: number
+        conversions_recent: number
+        cost_recent: number
+        last_seen_date: string | null
+      }>(
+        `
+          SELECT
+            campaign_id,
+            search_term,
+            COALESCE(SUM(impressions), 0) AS impressions_total,
+            COALESCE(SUM(clicks), 0) AS clicks_total,
+            COALESCE(SUM(conversions), 0) AS conversions_total,
+            COALESCE(SUM(cost), 0) AS cost_total,
+            COALESCE(SUM(CASE WHEN date >= ? THEN impressions ELSE 0 END), 0) AS impressions_recent,
+            COALESCE(SUM(CASE WHEN date >= ? THEN clicks ELSE 0 END), 0) AS clicks_recent,
+            COALESCE(SUM(CASE WHEN date >= ? THEN conversions ELSE 0 END), 0) AS conversions_recent,
+            COALESCE(SUM(CASE WHEN date >= ? THEN cost ELSE 0 END), 0) AS cost_recent,
+            MAX(date) AS last_seen_date
+          FROM search_term_reports
+          WHERE user_id = ?
+            AND date <= ?
+          GROUP BY campaign_id, search_term
+          HAVING COALESCE(SUM(clicks), 0) > 0
+        `,
+        [startDateSearchTerm, startDateSearchTerm, startDateSearchTerm, startDateSearchTerm, params.userId, endDate]
+      ),
     ])
 
     const perf7dByCampaign = buildPerfMap(perf7Rows || [])
@@ -2636,6 +2856,27 @@ export async function refreshStrategyRecommendations(params: {
         cost: roundTo2(toNumber(row.cost, 0)),
       })
       searchTermsByCampaign.set(campaignId, bucket)
+    }
+
+    const historicalSearchTermsByCampaign = new Map<number, SearchTermAgg[]>()
+    for (const row of historicalSearchTermRows || []) {
+      const campaignId = Number(row.campaign_id)
+      const searchTerm = sanitizeKeyword(String(row.search_term || ''))
+      if (!Number.isFinite(campaignId) || !searchTerm) continue
+      const bucket = historicalSearchTermsByCampaign.get(campaignId) || []
+      bucket.push({
+        searchTerm,
+        impressions: toNumber(row.impressions_total, 0),
+        clicks: toNumber(row.clicks_total, 0),
+        conversions: toNumber(row.conversions_total, 0),
+        cost: roundTo2(toNumber(row.cost_total, 0)),
+        recentImpressions: toNumber(row.impressions_recent, 0),
+        recentClicks: toNumber(row.clicks_recent, 0),
+        recentConversions: toNumber(row.conversions_recent, 0),
+        recentCost: roundTo2(toNumber(row.cost_recent, 0)),
+        lastSeenDate: row.last_seen_date || null,
+      })
+      historicalSearchTermsByCampaign.set(campaignId, bucket)
     }
 
     const creativeIds = Array.from(
@@ -2700,6 +2941,7 @@ export async function refreshStrategyRecommendations(params: {
       keywordsByCampaign,
       keywordInventoryByCampaign,
       searchTermsByCampaign,
+      historicalSearchTermsByCampaign,
       creativeById,
       cooldownUntilByKey,
       nowMs: Date.now(),
@@ -3726,6 +3968,7 @@ function assertRecommendationActionResult(params: {
   }
 
   const failures = Array.isArray(payload.failures) ? payload.failures.filter(Boolean) : []
+  const addedCount = normalizeNonNegativeInt(payload.addedCount)
   if (
     (
       params.recommendationType === 'expand_keywords'
@@ -3733,8 +3976,15 @@ function assertRecommendationActionResult(params: {
       || params.recommendationType === 'optimize_match_type'
     )
     && failures.length > 0
+    && addedCount <= 0
   ) {
-    throw new Error(`执行存在失败项（${failures.length}条），请修复后重试`)
+    const firstFailure = safeParseObject(failures[0])
+    const firstMessage = String(firstFailure.message || '').trim()
+    throw new Error(
+      firstMessage
+        ? `执行存在失败项（${failures.length}条）：${firstMessage}`
+        : `执行存在失败项（${failures.length}条），请修复后重试`
+    )
   }
 
   if (params.recommendationType === 'offline_campaign') {

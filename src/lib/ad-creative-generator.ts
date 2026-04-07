@@ -9125,6 +9125,71 @@ export const AD_CREATIVE_RETRY_RESPONSE_SCHEMA: ResponseSchema = {
   required: ['headlines', 'descriptions', 'keywords']
 }
 
+export const AD_CREATIVE_EMERGENCY_RETRY_RESPONSE_SCHEMA: ResponseSchema = {
+  type: 'OBJECT',
+  properties: {
+    headlines: {
+      type: 'ARRAY',
+      minItems: 15,
+      maxItems: 15,
+      items: {
+        type: 'OBJECT',
+        properties: {
+          text: { type: 'STRING' },
+          type: {
+            type: 'STRING',
+            enum: ['brand', 'feature', 'promo', 'cta', 'urgency', 'social_proof', 'question', 'emotional']
+          },
+        },
+        required: ['text', 'type']
+      }
+    },
+    descriptions: {
+      type: 'ARRAY',
+      minItems: 4,
+      maxItems: 4,
+      items: {
+        type: 'OBJECT',
+        properties: {
+          text: { type: 'STRING' },
+          type: {
+            type: 'STRING',
+            enum: ['feature-benefit-cta', 'problem-solution-proof', 'offer-urgency-trust', 'usp-differentiation']
+          },
+        },
+        required: ['text', 'type']
+      }
+    },
+    keywords: {
+      type: 'ARRAY',
+      minItems: 10,
+      maxItems: 20,
+      items: { type: 'STRING' }
+    },
+    callouts: {
+      type: 'ARRAY',
+      minItems: 6,
+      maxItems: 6,
+      items: { type: 'STRING' }
+    },
+    sitelinks: {
+      type: 'ARRAY',
+      minItems: 6,
+      maxItems: 6,
+      items: {
+        type: 'OBJECT',
+        properties: {
+          text: { type: 'STRING' },
+          url: { type: 'STRING' },
+          description: { type: 'STRING' }
+        },
+        required: ['text', 'url']
+      }
+    },
+  },
+  required: ['headlines', 'descriptions', 'keywords', 'callouts', 'sitelinks']
+}
+
 const AD_CREATIVE_REQUIRED_COUNTS = {
   headlines: 15,
   descriptions: 4,
@@ -9135,6 +9200,13 @@ const AD_CREATIVE_REQUIRED_COUNTS = {
 } as const
 
 const AD_CREATIVE_SIMPLIFIED_RETRY_MAX_OUTPUT_TOKENS = 8192
+const AD_CREATIVE_EMERGENCY_RETRY_TEMPERATURE = 0.2
+
+type AdCreativeRetryMode = 'simplified' | 'emergency'
+type AdCreativeRetryPlan = {
+  mode: AdCreativeRetryMode
+  reason: string
+}
 
 function createAdCreativeBusinessLimitsError(details: string[]): Error {
   const error: any = new Error(`广告创意业务约束未满足: ${details.join(', ')}`)
@@ -9275,6 +9347,26 @@ function shouldRetryAdCreativeWithSimplifiedPrompt(error: any, alreadySimplified
   return false
 }
 
+export function resolveAdCreativeRetryPlan(error: any, alreadySimplified: boolean): AdCreativeRetryPlan | null {
+  if (alreadySimplified) return null
+
+  if (error?.code === 'MAX_TOKENS' && error?.isRunawayCandidate) {
+    return {
+      mode: 'emergency',
+      reason: 'max_tokens_runaway',
+    }
+  }
+
+  if (!shouldRetryAdCreativeWithSimplifiedPrompt(error, alreadySimplified)) {
+    return null
+  }
+
+  return {
+    mode: 'simplified',
+    reason: String(error?.code || 'fallback_retry').toLowerCase(),
+  }
+}
+
 export function buildSimplifiedAdCreativeRetryPrompt(prompt: string): string {
   const cutMarkers = [
     '## 输出（JSON only）',
@@ -9319,6 +9411,27 @@ Strict rules:
 - EXACTLY 6 sitelinks, text <= 25 chars, description <= 35 chars
 - Do NOT return copyAngle, keywordCandidates, evidenceProducts, cannotGenerateReason, explanation, quality_metrics, or any other metadata
 - No markdown, no prose, no comments
+- Stop immediately after the final closing brace`
+}
+
+export function buildEmergencyAdCreativeRetryPrompt(prompt: string): string {
+  const simplifiedPrompt = buildSimplifiedAdCreativeRetryPrompt(prompt)
+  return `${simplifiedPrompt}
+
+## EMERGENCY OUTPUT CONTRACT (CRITICAL)
+The previous attempt produced runaway output.
+Return ONLY the five required top-level fields:
+{
+  "headlines": [{"text": "...", "type": "..."}],
+  "descriptions": [{"text": "...", "type": "..."}],
+  "keywords": ["..."],
+  "callouts": ["..."],
+  "sitelinks": [{"text": "...", "url": "/", "description": "..."}]
+}
+
+Emergency rules:
+- Use only the required properties shown above; omit length, group, theme, path1, path2, explanation, and every audit field
+- Keep wording concise; do not restate instructions, verified facts, keyword plans, or reasoning
 - Stop immediately after the final closing brace`
 }
 
@@ -9939,24 +10052,35 @@ async function runAdCreativeModelAttempt(params: {
   userId: number
   prompt: string
   policyGuardMode: GoogleAdsPolicyGuardMode
-  simplified: boolean
+  retryMode?: AdCreativeRetryMode
   bucket: NormalizedCreativeBucket
 }): Promise<{
   aiResponse: Awaited<ReturnType<typeof generateContent>>
   result: GeneratedAdCreativeData
 }> {
+  const retryMode = params.retryMode
+  const isSimplified = retryMode === 'simplified'
+  const isEmergency = retryMode === 'emergency'
   const aiResponse = await generateContent({
     operationType: 'ad_creative_generation_main',
     prompt: params.prompt,
-    temperature: 0.7,
-    maxOutputTokens: params.simplified ? AD_CREATIVE_SIMPLIFIED_RETRY_MAX_OUTPUT_TOKENS : 16384,
-    responseSchema: params.simplified ? AD_CREATIVE_RETRY_RESPONSE_SCHEMA : AD_CREATIVE_RESPONSE_SCHEMA,
+    temperature: isEmergency ? AD_CREATIVE_EMERGENCY_RETRY_TEMPERATURE : 0.7,
+    maxOutputTokens: retryMode ? AD_CREATIVE_SIMPLIFIED_RETRY_MAX_OUTPUT_TOKENS : 16384,
+    responseSchema: isEmergency
+      ? AD_CREATIVE_EMERGENCY_RETRY_RESPONSE_SCHEMA
+      : isSimplified
+        ? AD_CREATIVE_RETRY_RESPONSE_SCHEMA
+        : AD_CREATIVE_RESPONSE_SCHEMA,
     responseMimeType: 'application/json'
   }, params.userId)
 
   await recordAdCreativeOperationTokenUsage({
     userId: params.userId,
-    operationType: params.simplified ? 'ad_creative_generation_retry_simplified' : 'ad_creative_generation_main',
+    operationType: isEmergency
+      ? 'ad_creative_generation_retry_emergency'
+      : isSimplified
+        ? 'ad_creative_generation_retry_simplified'
+        : 'ad_creative_generation_main',
     aiResponse
   })
 
@@ -10626,26 +10750,28 @@ export async function generateAdCreative(
         userId,
         prompt,
         policyGuardMode,
-        simplified: false,
         bucket: normalizedBucket,
       })
       aiResponse = attempt.aiResponse
       result = attempt.result
     } catch (error: any) {
-      if (!shouldRetryAdCreativeWithSimplifiedPrompt(error, false)) {
+      const retryPlan = resolveAdCreativeRetryPlan(error, false)
+      if (!retryPlan) {
         throw error
       }
 
       console.warn(
-        `[AdCreative] 标准尝试失败，开始 simplified retry: ` +
-        `${error?.code || 'UNKNOWN'} ${String(error?.message || '')}`
+        `[AdCreative] 标准尝试失败，开始 ${retryPlan.mode} retry: ` +
+        `${error?.code || 'UNKNOWN'} ${String(error?.message || '')} (reason=${retryPlan.reason})`
       )
-      const retryPrompt = buildSimplifiedAdCreativeRetryPrompt(prompt)
+      const retryPrompt = retryPlan.mode === 'emergency'
+        ? buildEmergencyAdCreativeRetryPrompt(prompt)
+        : buildSimplifiedAdCreativeRetryPrompt(prompt)
       const retryAttempt = await runAdCreativeModelAttempt({
         userId,
         prompt: retryPrompt,
         policyGuardMode,
-        simplified: true,
+        retryMode: retryPlan.mode,
         bucket: normalizedBucket,
       })
       aiResponse = retryAttempt.aiResponse

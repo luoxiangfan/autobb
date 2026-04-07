@@ -118,6 +118,14 @@ describe('resolveYeahPromosConsecutiveFailureStrategy', () => {
     })).toBe('fail-sync')
   })
 
+  it('allows page skip when run already has historical fetched items', () => {
+    expect(__testOnly.resolveYeahPromosConsecutiveFailureStrategy({
+      skipFailedPages: true,
+      fetchedItemsInWindow: 0,
+      fetchedItemsBeforeWindow: 120,
+    })).toBe('skip-page')
+  })
+
   it('allows page skip only when window already has fetched items', () => {
     expect(__testOnly.resolveYeahPromosConsecutiveFailureStrategy({
       skipFailedPages: true,

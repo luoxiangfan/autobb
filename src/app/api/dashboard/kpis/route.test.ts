@@ -111,6 +111,9 @@ describe('GET /api/dashboard/kpis', () => {
       if (sql.includes('SELECT DISTINCT currency') && sql.includes('FROM campaign_performance')) {
         return [{ currency: 'USD' }]
       }
+      if (sql.includes('GROUP BY COALESCE(currency, \'USD\')')) {
+        return [{ currency: 'USD', impressions: 800, clicks: 80, cost: 40 }]
+      }
 
       throw new Error(`unexpected query sql: ${sql}`)
     })
@@ -185,6 +188,9 @@ describe('GET /api/dashboard/kpis', () => {
       if (sql.includes('SELECT DISTINCT currency') && sql.includes('FROM campaign_performance')) {
         return [{ currency: 'USD' }]
       }
+      if (sql.includes('GROUP BY COALESCE(currency, \'USD\')')) {
+        return [{ currency: 'USD', impressions: 800, clicks: 80, cost: 40 }]
+      }
 
       throw new Error(`unexpected query sql: ${sql}`)
     })
@@ -235,5 +241,70 @@ describe('GET /api/dashboard/kpis', () => {
     expect(data.data?.current?.commission).toBe(10)
     expect(cacheFns.getOrSet).not.toHaveBeenCalled()
     expect(cacheFns.set).not.toHaveBeenCalled()
+  })
+
+  it('converts previous-period mixed currencies before calculating changes', async () => {
+    cacheFns.getOrSet.mockReset()
+
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes('SELECT DISTINCT currency') && sql.includes('FROM campaign_performance')) {
+        return [{ currency: 'USD' }]
+      }
+      if (sql.includes('GROUP BY COALESCE(currency, \'USD\')')) {
+        return [
+          { currency: 'USD', impressions: 50, clicks: 5, cost: 20 },
+          { currency: 'CNY', impressions: 50, clicks: 5, cost: 72 },
+        ]
+      }
+
+      throw new Error(`unexpected query sql: ${sql}`)
+    })
+
+    let currentPeriodCalled = false
+    let attributedCallCount = 0
+    let unattributedCallCount = 0
+
+    const queryOne = vi.fn(async (sql: string) => {
+      if (sql.includes('FROM campaign_performance') && sql.includes('SUM(impressions) as impressions')) {
+        if (!currentPeriodCalled) {
+          currentPeriodCalled = true
+          return { impressions: 1000, clicks: 100, cost: 50 }
+        }
+        throw new Error(`unexpected queryOne sql: ${sql}`)
+      }
+
+      if (sql.includes('FROM affiliate_commission_attributions')) {
+        attributedCallCount += 1
+        return attributedCallCount === 1
+          ? { total_commission: 10 }
+          : { total_commission: 5 }
+      }
+
+      if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
+        unattributedCallCount += 1
+        return unattributedCallCount === 1
+          ? { total_commission: 0 }
+          : { total_commission: 0 }
+      }
+
+      throw new Error(`unexpected queryOne sql: ${sql}`)
+    })
+
+    dbFns.getDatabase.mockResolvedValue({
+      query,
+      queryOne,
+    })
+
+    const req = new NextRequest('http://localhost/api/dashboard/kpis?days=7&refresh=true')
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(data.data?.previous?.cost).toBeGreaterThan(20)
+    expect(data.data?.previous?.cost).toBeLessThan(40)
+    expect(data.data?.previous?.cost).not.toBeCloseTo(92, 5)
+    expect(data.data?.changes?.cost).toBeGreaterThan(0)
+    expect(data.data?.changes?.cost).toBeLessThan(100)
   })
 })

@@ -1,17 +1,21 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  AD_CREATIVE_EMERGENCY_RETRY_RESPONSE_SCHEMA,
   AD_CREATIVE_RESPONSE_SCHEMA,
   AD_CREATIVE_RETRY_RESPONSE_SCHEMA,
+  buildEmergencyAdCreativeRetryPrompt,
   buildSimplifiedAdCreativeRetryPrompt,
-  parseAIResponse,
-  validateGeneratedAdCreativeBusinessLimits,
   filterModelIntentGeneratedKeywords,
+  parseAIResponse,
+  resolveAdCreativeRetryPlan,
+  validateGeneratedAdCreativeBusinessLimits,
 } from '../ad-creative-generator'
 
 describe('ad-creative-generator.parseAIResponse', () => {
   it('keeps Gemini transport schema within the conservative structured-output subset', () => {
     const schemaText = JSON.stringify(AD_CREATIVE_RESPONSE_SCHEMA)
     const retrySchemaText = JSON.stringify(AD_CREATIVE_RETRY_RESPONSE_SCHEMA)
+    const emergencySchemaText = JSON.stringify(AD_CREATIVE_EMERGENCY_RETRY_RESPONSE_SCHEMA)
 
     expect(schemaText).not.toContain('maxLength')
     expect(schemaText).not.toContain('minLength')
@@ -25,6 +29,10 @@ describe('ad-creative-generator.parseAIResponse', () => {
     expect(retrySchemaText).not.toContain('keywordCandidates')
     expect(retrySchemaText).not.toContain('evidenceProducts')
     expect(retrySchemaText).not.toContain('cannotGenerateReason')
+    expect(emergencySchemaText).not.toContain('maxLength')
+    expect(emergencySchemaText).not.toContain('keywordCandidates')
+    expect(emergencySchemaText).not.toContain('evidenceProducts')
+    expect(emergencySchemaText).not.toContain('cannotGenerateReason')
   })
 
   it('builds a simplified retry prompt that strips optional metadata instructions', () => {
@@ -35,6 +43,35 @@ describe('ad-creative-generator.parseAIResponse', () => {
     expect(retryPrompt).not.toContain('old output section')
     expect(retryPrompt).not.toContain('Structured Evidence Metadata')
     expect(retryPrompt).toContain('Do NOT return copyAngle, keywordCandidates, evidenceProducts')
+  })
+
+  it('builds an emergency retry prompt with the reduced output contract', () => {
+    const basePrompt = `header\n## 输出（JSON only）\nold output section`
+    const retryPrompt = buildEmergencyAdCreativeRetryPrompt(basePrompt)
+
+    expect(retryPrompt).toContain('## EMERGENCY OUTPUT CONTRACT (CRITICAL)')
+    expect(retryPrompt).toContain('Return ONLY the five required top-level fields')
+    expect(retryPrompt).toContain('omit length, group, theme, path1, path2, explanation')
+    expect(retryPrompt).not.toContain('old output section')
+  })
+
+  it('routes runaway MAX_TOKENS failures to the emergency retry path', () => {
+    expect(resolveAdCreativeRetryPlan({
+      code: 'MAX_TOKENS',
+      isRunawayCandidate: true,
+      message: 'Gemini API 输出达到token限制被截断。',
+    }, false)).toEqual({
+      mode: 'emergency',
+      reason: 'max_tokens_runaway',
+    })
+
+    expect(resolveAdCreativeRetryPlan({
+      code: 'MAX_TOKENS',
+      message: 'Gemini API 输出达到token限制被截断。',
+    }, false)).toEqual({
+      mode: 'simplified',
+      reason: 'max_tokens',
+    })
   })
 
   it('enforces exact business limits after parsing', () => {

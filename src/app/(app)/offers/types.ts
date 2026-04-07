@@ -5,6 +5,7 @@
 export interface OfferListItem {
   id: number
   url: string
+  finalUrl?: string | null
   brand: string
   category: string | null
   targetCountry: string

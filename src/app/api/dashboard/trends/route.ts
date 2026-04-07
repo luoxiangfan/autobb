@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
+import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
 
 function formatLocalYmd(date: Date): string {
   const year = date.getFullYear()
@@ -70,6 +71,10 @@ export async function GET(request: NextRequest) {
 
     // 获取数据库实例
     const db = await getDatabase()
+    const unattributedFailureFilter = buildAffiliateUnattributedFailureFilter({
+      includePendingWithinGrace: true,
+      includeAllFailures: true,
+    })
 
     // 查询货币分布：
     // - 先按最近有数据的日期排序，避免默认命中“高花费但已停更”的旧币种
@@ -105,14 +110,13 @@ export async function GET(request: NextRequest) {
       }))
       .filter((item: { currency: string; amount: number }) => Number.isFinite(item.amount))
 
-    // 查询每日表现数据
-    const query = `
+    // 查询每日广告表现数据
+    const performanceQuery = `
       SELECT
         DATE(date) as date,
         SUM(impressions) as impressions,
         SUM(clicks) as clicks,
-        SUM(cost) as cost,
-        SUM(conversions) as conversions
+        SUM(cost) as cost
       FROM campaign_performance
       WHERE user_id = ?
         AND date >= ?
@@ -121,7 +125,32 @@ export async function GET(request: NextRequest) {
       ORDER BY date ASC
     `
 
-    const rows = await db.query(query, [
+    const attributedCommissionQuery = `
+      SELECT
+        report_date as date,
+        COALESCE(SUM(commission_amount), 0) as commission
+      FROM affiliate_commission_attributions
+      WHERE user_id = ?
+        AND report_date >= ?
+        AND report_date <= ?
+      GROUP BY report_date
+      ORDER BY report_date ASC
+    `
+
+    const unattributedCommissionQuery = `
+      SELECT
+        report_date as date,
+        COALESCE(SUM(commission_amount), 0) as commission
+      FROM openclaw_affiliate_attribution_failures
+      WHERE user_id = ?
+        AND report_date >= ?
+        AND report_date <= ?
+        AND ${unattributedFailureFilter.sql}
+      GROUP BY report_date
+      ORDER BY report_date ASC
+    `
+
+    const performanceRows = await db.query(performanceQuery, [
       userId,
       startDateStr,
       endDateStr,
@@ -130,37 +159,79 @@ export async function GET(request: NextRequest) {
       impressions: number
       clicks: number
       cost: number
-      conversions: number
     }>
+
+    const attributedCommissionRows = await db.query(attributedCommissionQuery, [
+      userId,
+      startDateStr,
+      endDateStr,
+    ]) as Array<{
+      date: string
+      commission: number
+    }>
+
+    let unattributedCommissionRows: Array<{
+      date: string
+      commission: number
+    }> = []
+    try {
+      unattributedCommissionRows = await db.query(unattributedCommissionQuery, [
+        userId,
+        startDateStr,
+        endDateStr,
+        ...unattributedFailureFilter.values,
+      ]) as Array<{
+        date: string
+        commission: number
+      }>
+    } catch (error: any) {
+      const message = String(error?.message || '')
+      if (
+        !/openclaw_affiliate_attribution_failures/i.test(message)
+        || !/(no such table|does not exist)/i.test(message)
+      ) {
+        throw error
+      }
+    }
 
     // 按日期补齐空缺，避免“无消耗日”导致曲线提前截止。
     const rowsByDate = new Map<string, {
       impressions: number
       clicks: number
       cost: number
-      conversions: number
+      commission: number
     }>()
 
-    for (const row of rows) {
+    for (const row of performanceRows) {
       const date = normalizeDateToYmd(row.date)
       if (!date) continue
 
-      const current = rowsByDate.get(date) || { impressions: 0, clicks: 0, cost: 0, conversions: 0 }
+      const current = rowsByDate.get(date) || { impressions: 0, clicks: 0, cost: 0, commission: 0 }
       current.impressions += Number(row.impressions) || 0
       current.clicks += Number(row.clicks) || 0
       current.cost += Number(row.cost) || 0
-      current.conversions += Number(row.conversions) || 0
+      rowsByDate.set(date, current)
+    }
+
+    for (const row of [...attributedCommissionRows, ...unattributedCommissionRows]) {
+      const date = normalizeDateToYmd(row.date)
+      if (!date) continue
+
+      const current = rowsByDate.get(date) || { impressions: 0, clicks: 0, cost: 0, commission: 0 }
+      current.commission += Number(row.commission) || 0
       rowsByDate.set(date, current)
     }
 
     const trends = buildYmdDateRange(startDateStr, endDateStr).map((date) => {
-      const row = rowsByDate.get(date) || { impressions: 0, clicks: 0, cost: 0, conversions: 0 }
+      const row = rowsByDate.get(date) || { impressions: 0, clicks: 0, cost: 0, commission: 0 }
+      const commission = row.commission
       return {
         date,
         impressions: row.impressions,
         clicks: row.clicks,
         cost: row.cost,
-        conversions: row.conversions,
+        commission,
+        conversions: commission,
         ctr: row.impressions > 0 ? (row.clicks / row.impressions) * 100 : 0,
         cpc: row.clicks > 0 ? row.cost / row.clicks : 0,
       }
@@ -170,7 +241,8 @@ export async function GET(request: NextRequest) {
       totalImpressions: trends.reduce((sum, row) => sum + (Number(row.impressions) || 0), 0),
       totalClicks: trends.reduce((sum, row) => sum + (Number(row.clicks) || 0), 0),
       totalCost: trends.reduce((sum, row) => sum + (Number(row.cost) || 0), 0),
-      totalConversions: trends.reduce((sum, row) => sum + (Number(row.conversions) || 0), 0),
+      totalCommission: trends.reduce((sum, row) => sum + (Number(row.commission) || 0), 0),
+      totalConversions: trends.reduce((sum, row) => sum + (Number(row.commission) || 0), 0),
       avgCTR: 0,
       avgCPC: 0,
       currency: summaryCurrency,

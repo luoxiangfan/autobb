@@ -430,7 +430,7 @@ export async function listOffers(
     if (normalizedQuery) {
       // Keep server-side search behavior aligned with client-side filtering:
       // - case-insensitive matching
-      // - include id / brand / offer_name / url / category
+      // - include id / brand / offer_name / url / final_url / category
       const likeOperator = db.type === 'postgres' ? 'ILIKE' : 'LIKE'
       const searchPattern = `%${normalizedQuery}%`
       whereConditions.push(
@@ -439,10 +439,11 @@ export async function listOffers(
           OR brand ${likeOperator} ?
           OR offer_name ${likeOperator} ?
           OR url ${likeOperator} ?
+          OR final_url ${likeOperator} ?
           OR category ${likeOperator} ?
         )`
       )
-      params.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern)
+      params.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern)
     }
   }
 

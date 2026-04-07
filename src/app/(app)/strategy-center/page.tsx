@@ -142,7 +142,26 @@ type StrategyRecommendation = {
       level: 'high' | 'medium' | 'low'
     }
     analysisNote?: string
-    keywordPlan?: Array<{ text: string; matchType: 'BROAD' | 'PHRASE' | 'EXACT' }>
+    keywordPlan?: Array<{
+      text: string
+      matchType: 'BROAD' | 'PHRASE' | 'EXACT'
+      whySelected?: string
+      sourceLayer?: 'recent_search_terms' | 'historical_search_terms'
+      selectionScore?: number
+      evidenceMetrics?: {
+        impressions?: number
+        clicks?: number
+        conversions?: number
+        cost?: number
+      }
+    }>
+    keywordPlanDiagnostics?: {
+      candidateCountRecent?: number
+      candidateCountHistorical?: number
+      selectedFromRecent?: number
+      selectedFromHistorical?: number
+      excludedReasonCounts?: Record<string, number>
+    }
     negativeKeywordPlan?: Array<{ text: string; matchType: 'BROAD' | 'PHRASE' | 'EXACT'; reason?: string }>
     matchTypePlan?: Array<{
       text: string
@@ -1910,10 +1929,50 @@ export default function StrategyCenterPage() {
                         <div className="text-sm font-medium">
                           补充Search Terms关键词（{detailItem.data.keywordPlan.length}）
                         </div>
+                        {detailItem.data.keywordPlanDiagnostics && (
+                          <div className="rounded border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
+                            <div>
+                              候选来源：近14天 {formatNumber(detailItem.data.keywordPlanDiagnostics.candidateCountRecent, 0)} 条，
+                              历史 {formatNumber(detailItem.data.keywordPlanDiagnostics.candidateCountHistorical, 0)} 条；
+                              入选：近14天 {formatNumber(detailItem.data.keywordPlanDiagnostics.selectedFromRecent, 0)} 条，
+                              历史 {formatNumber(detailItem.data.keywordPlanDiagnostics.selectedFromHistorical, 0)} 条
+                            </div>
+                            {detailItem.data.keywordPlanDiagnostics.excludedReasonCounts
+                              && Object.keys(detailItem.data.keywordPlanDiagnostics.excludedReasonCounts).length > 0 && (
+                                <div>
+                                  过滤原因：
+                                  {Object.entries(detailItem.data.keywordPlanDiagnostics.excludedReasonCounts)
+                                    .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))
+                                    .slice(0, 6)
+                                    .map(([reason, count]) => `${reason}:${formatNumber(count, 0)}`)
+                                    .join('，')}
+                                </div>
+                              )}
+                          </div>
+                        )}
                         <div className="space-y-1 text-xs text-slate-600">
                           {detailItem.data.keywordPlan.slice(0, 30).map((kw, idx) => (
-                            <div key={`kw:${kw.text}:${idx}`}>
-                              {idx + 1}. {kw.text} [{kw.matchType}]
+                            <div key={`kw:${kw.text}:${idx}`} className="space-y-1">
+                              <div>
+                                {idx + 1}. {kw.text} [{kw.matchType}]
+                                {kw.sourceLayer === 'recent_search_terms' ? ' · 近14天' : ''}
+                                {kw.sourceLayer === 'historical_search_terms' ? ' · 历史高表现' : ''}
+                                {Number.isFinite(Number(kw.selectionScore)) ? ` · 评分 ${formatNumber(kw.selectionScore, 1)}` : ''}
+                                {Number.isFinite(Number(kw.evidenceMetrics?.clicks))
+                                  ? ` · 点击 ${formatNumber(kw.evidenceMetrics?.clicks, 0)}`
+                                  : ''}
+                                {Number.isFinite(Number(kw.evidenceMetrics?.conversions))
+                                  ? ` · 转化 ${formatNumber(kw.evidenceMetrics?.conversions, 2)}`
+                                  : ''}
+                                {Number.isFinite(Number(kw.evidenceMetrics?.cost))
+                                  ? ` · 花费 ${formatMoney(kw.evidenceMetrics?.cost, detailItem.data?.currency || detailItem.data?.searchTermFeedback?.dominantCurrency, 2)}`
+                                  : ''}
+                              </div>
+                              {kw.whySelected && (
+                                <div className="text-[11px] text-slate-500">
+                                  说明：{kw.whySelected}
+                                </div>
+                              )}
                             </div>
                           ))}
                           {detailItem.data.keywordPlan.length > 30 && (

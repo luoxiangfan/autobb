@@ -179,6 +179,7 @@ describe('affiliate-product-sync executor resume behavior', () => {
         mode: 'platform',
         resumeFromPage: 321,
         resumeFromScope: 'DE',
+        fetchedItemsBeforeWindow: 32000,
       })
     )
   })

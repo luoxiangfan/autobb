@@ -9,6 +9,7 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
   let offer1Id: number
   let offer2Id: number
   let offer3Id: number
+  let offer4Id: number
   let recentDate: string
   let oldDate: string
 
@@ -54,6 +55,13 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
       [user2Id, 'https://example.com/3', 'SolarBrand', 'Garden Lights', 'US', 'en']
     )
     offer3Id = offer3Result[0].id
+
+    const offer4Result = await db.query(
+      `INSERT INTO offers (user_id, url, brand, product_name, target_country, target_language)
+       VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
+      [user2Id, 'https://example.com/4', 'SolarBrand', 'Garden Lights', 'US', 'zh']
+    )
+    offer4Id = offer4Result[0].id
   })
 
   afterEach(async () => {
@@ -146,9 +154,7 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
       userId
     })
 
-    // 注意：全局品牌级别需要至少2个用户，这里只有1个用户，所以不会回退
-    // 这个测试需要更复杂的设置，暂时跳过
-    expect(result.highPerformingTerms.length).toBeGreaterThanOrEqual(0)
+    expect(result.highPerformingTerms).toContain('solarbrand outdoor lights')
   })
 
   it('should deduplicate terms across fallback levels', async () => {
@@ -256,6 +262,74 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
     expect(result.highPerformingTerms.length).toBeGreaterThanOrEqual(7)
   })
 
+  it('should prioritize global brand terms before offer/user brand layers', async () => {
+    const campaign1Result = await db.query(
+      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
+       VALUES (?, ?, ?, ?, ?) RETURNING id`,
+      [userId, offer1Id, 'Offer1 Priority Campaign', 100, 'ENABLED']
+    )
+    const campaign1Id = campaign1Result[0].id
+
+    const campaign2Result = await db.query(
+      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
+       VALUES (?, ?, ?, ?, ?) RETURNING id`,
+      [userId, offer2Id, 'Offer2 Priority Campaign', 100, 'ENABLED']
+    )
+    const campaign2Id = campaign2Result[0].id
+
+    const campaign3Result = await db.query(
+      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
+       VALUES (?, ?, ?, ?, ?) RETURNING id`,
+      [user2Id, offer3Id, 'Offer3 Priority Campaign', 100, 'ENABLED']
+    )
+    const campaign3Id = campaign3Result[0].id
+
+    // Offer层专属词
+    await db.exec(
+      `INSERT INTO search_term_reports
+       (user_id, campaign_id, search_term, match_type, impressions, clicks, conversions, cost, date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, campaign1Id, 'solarbrand offer layer phrase', 'BROAD', 1200, 60, 6, 30, recentDate]
+    )
+
+    // 用户品牌层专属词（同用户其它Offer）
+    await db.exec(
+      `INSERT INTO search_term_reports
+       (user_id, campaign_id, search_term, match_type, impressions, clicks, conversions, cost, date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, campaign2Id, 'solarbrand user brand phrase', 'BROAD', 1100, 55, 5, 28, recentDate]
+    )
+
+    // 全局层词（跨用户出现）
+    await db.exec(
+      `INSERT INTO search_term_reports
+       (user_id, campaign_id, search_term, match_type, impressions, clicks, conversions, cost, date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, campaign1Id, 'solarbrand global priority phrase', 'BROAD', 1300, 65, 6, 32, recentDate]
+    )
+    await db.exec(
+      `INSERT INTO search_term_reports
+       (user_id, campaign_id, search_term, match_type, impressions, clicks, conversions, cost, date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [user2Id, campaign3Id, 'solarbrand global priority phrase', 'BROAD', 1250, 62, 6, 31, recentDate]
+    )
+
+    const result = await getSearchTermFeedbackHints({
+      offerId: offer1Id,
+      userId
+    })
+
+    const globalIndex = result.highPerformingTerms.indexOf('solarbrand global priority phrase')
+    const offerIndex = result.highPerformingTerms.indexOf('solarbrand offer layer phrase')
+    const userIndex = result.highPerformingTerms.indexOf('solarbrand user brand phrase')
+
+    expect(globalIndex).toBeGreaterThanOrEqual(0)
+    expect(offerIndex).toBeGreaterThanOrEqual(0)
+    expect(userIndex).toBeGreaterThanOrEqual(0)
+    expect(globalIndex).toBeLessThan(offerIndex)
+    expect(globalIndex).toBeLessThan(userIndex)
+  })
+
   it('should keep only brand-related high-performing terms', async () => {
     const campaignResult = await db.query(
       `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
@@ -337,5 +411,28 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
     })
 
     expect(result.highPerformingTerms).toContain('always pan 2.0')
+  })
+
+  it('should not mix global brand terms across different target language', async () => {
+    const zhCampaignResult = await db.query(
+      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
+       VALUES (?, ?, ?, ?, ?) RETURNING id`,
+      [user2Id, offer4Id, 'ZH Campaign', 100, 'ENABLED']
+    )
+    const zhCampaignId = zhCampaignResult[0].id
+
+    await db.exec(
+      `INSERT INTO search_term_reports
+       (user_id, campaign_id, search_term, match_type, impressions, clicks, conversions, cost, date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [user2Id, zhCampaignId, 'solarbrand 中文 高转化词', 'BROAD', 1000, 50, 5, 25, recentDate]
+    )
+
+    const result = await getSearchTermFeedbackHints({
+      offerId: offer1Id,
+      userId
+    })
+
+    expect(result.highPerformingTerms).not.toContain('solarbrand 中文 高转化词')
   })
 })

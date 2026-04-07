@@ -66,4 +66,51 @@ describe('GET /api/dashboard/campaigns search operator', () => {
     expect(pageParams).toContain('%roborock%')
     expect(summaryParams).toContain('%roborock%')
   })
+
+  it('aggregates conversions from affiliate commission tables', async () => {
+    dbFns.query.mockResolvedValue([
+      {
+        campaignId: 101,
+        campaignName: 'Demo Campaign',
+        status: 'ENABLED',
+        offerBrand: 'Demo',
+        createdAt: '2026-04-01T00:00:00.000Z',
+        impressions: 1000,
+        clicks: 100,
+        cost: 50,
+        conversions: 12.34,
+        currency: 'USD',
+        ctr: 10,
+        cpc: 0.5,
+        conversionRate: 0.12,
+      },
+    ])
+    dbFns.queryOne.mockResolvedValue({
+      totalCampaigns: 1,
+      activeCampaigns: 1,
+      pausedCampaigns: 0,
+      totalImpressions: 1000,
+      totalClicks: 100,
+      totalCost: 50,
+      totalConversions: 12.34,
+    })
+
+    const req = new NextRequest('http://localhost/api/dashboard/campaigns')
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.data?.campaigns?.[0]?.conversions).toBe(12.34)
+    expect(data.data?.summary?.totalConversions).toBe(12.34)
+
+    const pageSql = String(dbFns.query.mock.calls[0]?.[0] || '')
+    const summarySql = String(dbFns.queryOne.mock.calls[0]?.[0] || '')
+
+    expect(pageSql).toContain('FROM affiliate_commission_attributions')
+    expect(pageSql).toContain('FROM openclaw_affiliate_attribution_failures')
+    expect(pageSql).not.toContain('SUM(cp.conversions)')
+    expect(summarySql).toContain('FROM affiliate_commission_attributions')
+    expect(summarySql).toContain('FROM openclaw_affiliate_attribution_failures')
+    expect(summarySql).not.toContain('SUM(conversions) as conversions')
+  })
 })

@@ -144,8 +144,40 @@ type BudgetCurrencyOverview = {
   currency: string
   totalBudget: number
   totalSpent: number
+  totalSpentEnabledCampaigns?: number
+  totalSpentAllCampaigns?: number
   remaining: number
   activeCampaigns: number
+}
+
+function toBudgetCurrencyOverview(value: unknown): BudgetCurrencyOverview | null {
+  const row = asObject(value)
+  const currency = normalizeCurrencyCode(row?.currency, '')
+  if (!currency) return null
+
+  const totalBudget = roundTo2(toNumber(row?.totalBudget, 0))
+  const totalSpentEnabledCampaigns = roundTo2(
+    toNumber(row?.totalSpentEnabledCampaigns, toNumber(row?.totalSpent, 0))
+  )
+  const totalSpentAllCampaigns = roundTo2(
+    toNumber(row?.totalSpentAllCampaigns, totalSpentEnabledCampaigns)
+  )
+
+  return {
+    currency,
+    totalBudget,
+    totalSpent: totalSpentEnabledCampaigns,
+    totalSpentEnabledCampaigns,
+    totalSpentAllCampaigns,
+    remaining: roundTo2(toNumber(row?.remaining, totalBudget - totalSpentEnabledCampaigns)),
+    activeCampaigns: Math.max(0, Math.round(toNumber(row?.activeCampaigns, 0))),
+  }
+}
+
+function isBudgetCurrencyOverview(
+  item: BudgetCurrencyOverview | null
+): item is BudgetCurrencyOverview {
+  return item !== null
 }
 
 type RoiCurrencyOverview = {
@@ -185,7 +217,13 @@ function buildRoiCurrencyOverview(params: {
     if (!currency) continue
 
     trackCurrency(currency)
-    costByCurrency.set(currency, roundTo2((costByCurrency.get(currency) || 0) + toNumber(item.totalSpent, 0)))
+    costByCurrency.set(
+      currency,
+      roundTo2(
+        (costByCurrency.get(currency) || 0)
+        + toNumber(item.totalSpentAllCampaigns, toNumber(item.totalSpentEnabledCampaigns, toNumber(item.totalSpent, 0)))
+      )
+    )
   }
 
   for (const item of params.affiliateBreakdown) {
@@ -1838,22 +1876,12 @@ async function enrichBudgetWithMultiCurrencyOverview(params: {
   const multiCurrencyOverall: BudgetCurrencyOverview[] = responses
     .map((response) => {
       const responseRoot = asObject(response)
-      const overall = asObject(responseRoot?.data?.overall)
-      const currency = normalizeCurrencyCode(responseRoot?.currency, '')
-      if (!overall || !currency) return null
-
-      const totalBudget = roundTo2(toNumber(overall.totalBudget, 0))
-      const totalSpent = roundTo2(toNumber(overall.totalSpent, 0))
-
-      return {
-        currency,
-        totalBudget,
-        totalSpent,
-        remaining: roundTo2(toNumber(overall.remaining, totalBudget - totalSpent)),
-        activeCampaigns: Math.max(0, Math.round(toNumber(overall.activeCampaigns, 0))),
-      }
+      return toBudgetCurrencyOverview({
+        ...asObject(responseRoot?.data?.overall),
+        currency: responseRoot?.currency,
+      })
     })
-    .filter((item): item is BudgetCurrencyOverview => item !== null)
+    .filter(isBudgetCurrencyOverview)
 
   if (multiCurrencyOverall.length <= 1) {
     return params.budget
@@ -2391,23 +2419,8 @@ function formatReportMessage(report: DailyReportPayload): string {
   const budgetCurrency = normalizeCurrencyCode(budgetRoot?.currency, roiCurrency)
   const multiCurrencyBudgetOverview = Array.isArray(budgetRoot?.multiCurrencyOverall)
     ? budgetRoot.multiCurrencyOverall
-      .map((item) => {
-        const row = asObject(item)
-        const currency = normalizeCurrencyCode(row?.currency, '')
-        if (!currency) return null
-
-        const totalBudget = roundTo2(toNumber(row?.totalBudget, 0))
-        const totalSpent = roundTo2(toNumber(row?.totalSpent, 0))
-
-        return {
-          currency,
-          totalBudget,
-          totalSpent,
-          remaining: roundTo2(toNumber(row?.remaining, totalBudget - totalSpent)),
-          activeCampaigns: Math.max(0, Math.round(toNumber(row?.activeCampaigns, 0))),
-        }
-      })
-      .filter((item): item is BudgetCurrencyOverview => item !== null)
+      .map((item) => toBudgetCurrencyOverview(item))
+      .filter(isBudgetCurrencyOverview)
     : []
   const affiliateCurrencies = affiliateBreakdown
     .map((item) => normalizeCurrencyCode(item.currency, ''))
@@ -2487,7 +2500,7 @@ function formatReportMessage(report: DailyReportPayload): string {
   }
   if (multiCurrencyBudgetOverview.length > 1) {
     const spentBreakdown = multiCurrencyBudgetOverview
-      .map((item) => formatMoney(item.totalSpent, item.currency))
+      .map((item) => formatMoney(item.totalSpentAllCampaigns ?? item.totalSpent, item.currency))
       .join('｜')
     lines.push(`- 投放消耗：点击 ${dailyClicks} 次｜花费 ${spentBreakdown}`)
   } else {
@@ -2579,19 +2592,21 @@ function formatReportMessage(report: DailyReportPayload): string {
   if (multiCurrencyBudgetOverview.length > 1) {
     const detail = multiCurrencyBudgetOverview
       .map((item) =>
-        `${item.currency}：预算 ${formatMoney(item.totalBudget, item.currency)}｜已花费 ${formatMoney(item.totalSpent, item.currency)}｜剩余 ${formatMoney(item.remaining, item.currency)}`
+        `${item.currency}：预算 ${formatMoney(item.totalBudget, item.currency)}｜已花费 ${formatMoney(item.totalSpentEnabledCampaigns ?? item.totalSpent, item.currency)}｜剩余 ${formatMoney(item.remaining, item.currency)}`
       )
       .join('；')
-    lines.push(`- 预算概览（多币种）：${detail}`)
+    lines.push(`- 预算概览（启用中Campaign，多币种）：${detail}`)
   } else if (report.budget?.data?.overall) {
     const overall = report.budget.data.overall
     const budgetTotal = roundTo2(toNumber(overall.totalBudget, 0))
-    const budgetSpent = roundTo2(toNumber(overall.totalSpent, 0))
+    const budgetSpent = roundTo2(
+      toNumber(overall.totalSpentEnabledCampaigns, toNumber(overall.totalSpent, 0))
+    )
     const budgetRemaining = roundTo2(
       toNumber(overall.remaining, budgetTotal - budgetSpent)
     )
     lines.push(
-      `- 预算概览：预算 ${formatMoney(budgetTotal, budgetCurrency)}｜已花费 ${formatMoney(budgetSpent, budgetCurrency)}｜剩余 ${formatMoney(budgetRemaining, budgetCurrency)}`
+      `- 预算概览（启用中Campaign）：预算 ${formatMoney(budgetTotal, budgetCurrency)}｜已花费 ${formatMoney(budgetSpent, budgetCurrency)}｜剩余 ${formatMoney(budgetRemaining, budgetCurrency)}`
     )
   }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
+import { parseJsonField } from '@/lib/json-field'
 
 /**
  * GET /api/admin/users/:id/login-history
@@ -96,7 +97,7 @@ export const GET = withAuth(
           eventType: log.event_type,
           ipAddress: log.ip_address,
           userAgent: log.user_agent,
-          details: log.details ? JSON.parse(log.details) : null,
+          details: parseJsonField(log.details, null),
           timestamp: log.created_at,
         }))
       ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())

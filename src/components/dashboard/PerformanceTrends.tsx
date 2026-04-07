@@ -6,8 +6,8 @@
  * 🔧 修复(2025-12-30): 支持多货币显示
  */
 
-import { useEffect, useState } from 'react'
-import { TrendingUp, Calendar } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -16,7 +16,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from 'recharts'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { safeToFixed, formatCurrency } from '@/lib/utils'
 import { CURRENCY_SYMBOLS } from '@/lib/currency'
@@ -26,6 +26,7 @@ interface TrendData {
   impressions: number
   clicks: number
   cost: number
+  commission?: number
   conversions: number
   ctr: number
   cpc: number
@@ -37,6 +38,7 @@ interface PerformanceTrendsData {
     totalImpressions: number
     totalClicks: number
     totalCost: number
+    totalCommission?: number
     totalConversions: number
     avgCTR: number
     avgCPC: number
@@ -57,8 +59,8 @@ const chartConfig = {
     label: '花费',
     color: 'hsl(var(--chart-3))',
   },
-  conversions: {
-    label: '转化量',
+  commission: {
+    label: '佣金',
     color: 'hsl(var(--chart-4))',
   },
   ctr: {
@@ -80,7 +82,7 @@ export function PerformanceTrends({ days }: PerformanceTrendsProps) {
   // P2-4: 移动端检测
   const isMobile = useIsMobile()
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     try {
       const response = await fetch(`/api/dashboard/trends?days=${days}`, {
@@ -98,11 +100,11 @@ export function PerformanceTrends({ days }: PerformanceTrendsProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [days])
 
   useEffect(() => {
     fetchData()
-  }, [days])
+  }, [fetchData])
 
   if (loading) {
     return (
@@ -143,12 +145,18 @@ export function PerformanceTrends({ days }: PerformanceTrendsProps) {
     return null
   }
 
+  const normalizedTrends = data.trends.map((row) => ({
+    ...row,
+    commission: Number(row.commission ?? row.conversions) || 0,
+  }))
+  const totalCommission = Number(data.summary.totalCommission ?? data.summary.totalConversions) || 0
+
   // 检测空数据场景
-  const hasNoData = data.trends.length === 0 || (
+  const hasNoData = normalizedTrends.length === 0 || (
     data.summary.totalImpressions === 0 &&
     data.summary.totalClicks === 0 &&
     data.summary.totalCost === 0 &&
-    data.summary.totalConversions === 0
+    totalCommission === 0
   )
 
   return (
@@ -218,7 +226,7 @@ export function PerformanceTrends({ days }: PerformanceTrendsProps) {
               className={isMobile ? 'h-[220px]' : 'h-[300px]'}
             >
               <LineChart
-                data={data.trends}
+                data={normalizedTrends}
                 margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -271,11 +279,12 @@ export function PerformanceTrends({ days }: PerformanceTrendsProps) {
                 />
                 <Line
                   type="monotone"
-                  dataKey="conversions"
-                  stroke="var(--color-conversions)"
+                  dataKey="commission"
+                  stroke="var(--color-commission)"
                   strokeWidth={2}
                   dot={{ r: 4 }}
                   activeDot={{ r: 6 }}
+                  name={`佣金 (${data.summary?.currency || 'USD'})`}
                 />
               </LineChart>
             </ChartContainer>
@@ -288,7 +297,7 @@ export function PerformanceTrends({ days }: PerformanceTrendsProps) {
               className={isMobile ? 'h-[220px]' : 'h-[300px]'}
             >
               <LineChart
-                data={data.trends}
+                data={normalizedTrends}
                 margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -365,9 +374,9 @@ export function PerformanceTrends({ days }: PerformanceTrendsProps) {
               </p>
             </div>
             <div className={`text-center ${isMobile ? 'p-2' : 'p-3'} bg-orange-50 rounded-lg`}>
-              <p className="text-xs text-muted-foreground mb-1">总转化量</p>
+              <p className="text-xs text-muted-foreground mb-1">总佣金</p>
               <p className={`${isMobile ? 'text-base' : 'text-lg'} font-bold text-orange-600`}>
-                {data.summary.totalConversions}
+                {formatCurrency(totalCommission, data.summary?.currency || 'USD', isMobile ? 0 : 2)}
               </p>
             </div>
             <div className={`text-center ${isMobile ? 'p-2' : 'p-3'} bg-indigo-50 rounded-lg`}>

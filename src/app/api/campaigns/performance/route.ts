@@ -4,6 +4,7 @@ import { getDatabase } from '@/lib/db'
 import { convertCurrency } from '@/lib/currency'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
 import { isPerformanceReleaseEnabled } from '@/lib/feature-flags'
+import { matchesCampaignSearch } from '@/lib/campaign-search'
 import {
   buildCampaignPerformanceCacheHash,
   getCachedCampaignPerformance,
@@ -668,11 +669,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (searchQuery) {
-      listCampaigns = listCampaigns.filter((campaign) => {
-        const name = String(campaign.campaignName || '').toLowerCase()
-        const id = String(campaign.campaignId || '').toLowerCase()
-        return name.includes(searchQuery) || id.includes(searchQuery)
-      })
+      listCampaigns = listCampaigns.filter((campaign) => matchesCampaignSearch(searchQuery, campaign))
     }
 
     if (statusFilter && statusFilter !== 'ALL') {

@@ -636,7 +636,8 @@ export default function OffersClientPage({
           String(offer.id).includes(normalizedQuery) ||
           offer.brand.toLowerCase().includes(normalizedQuery) ||
           offer.offerName?.toLowerCase().includes(normalizedQuery) ||
-          offer.url.toLowerCase().includes(normalizedQuery)
+          offer.url.toLowerCase().includes(normalizedQuery) ||
+          offer.finalUrl?.toLowerCase().includes(normalizedQuery)
       )
     }
 

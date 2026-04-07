@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { toNumber } from '@/lib/utils'
 import { withPerformanceMonitoring } from '@/lib/api-performance'
+import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
 
 /**
  * Campaign性能数据
@@ -83,6 +84,10 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
 
     const db = await getDatabase()
     const likeOperator = db.type === 'postgres' ? 'ILIKE' : 'LIKE'
+    const unattributedFailureFilter = buildAffiliateUnattributedFailureFilter({
+      includePendingWithinGrace: true,
+      includeAllFailures: true,
+    })
 
     // 构建查询条件
     const conditions: string[] = ['c.user_id = ?']
@@ -125,7 +130,7 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
         COALESCE(SUM(cp.impressions), 0) as impressions,
         COALESCE(SUM(cp.clicks), 0) as clicks,
         COALESCE(SUM(cp.cost), 0) as cost,
-        COALESCE(SUM(cp.conversions), 0) as conversions,
+        ROUND(COALESCE(MAX(acaAgg.commission), 0) + COALESCE(MAX(acfAgg.commission), 0), 2) as conversions,
         COALESCE(cpcur.currency, 'USD') as currency,
         ROUND(
           CASE
@@ -146,7 +151,7 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
         ROUND(
           CASE
             WHEN COALESCE(SUM(cp.clicks), 0) > 0
-              THEN COALESCE(SUM(cp.conversions), 0) * 1.0 / COALESCE(SUM(cp.clicks), 0) * 100
+              THEN (COALESCE(MAX(acaAgg.commission), 0) + COALESCE(MAX(acfAgg.commission), 0)) * 1.0 / COALESCE(SUM(cp.clicks), 0)
             ELSE 0
           END,
           2
@@ -166,6 +171,29 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
           AND date <= ?
         GROUP BY campaign_id
       ) cpcur ON cpcur.campaign_id = c.id
+      LEFT JOIN (
+        SELECT
+          campaign_id,
+          COALESCE(SUM(commission_amount), 0) as commission
+        FROM affiliate_commission_attributions
+        WHERE user_id = ?
+          AND report_date >= ?
+          AND report_date <= ?
+          AND campaign_id IS NOT NULL
+        GROUP BY campaign_id
+      ) acaAgg ON acaAgg.campaign_id = c.id
+      LEFT JOIN (
+        SELECT
+          campaign_id,
+          COALESCE(SUM(commission_amount), 0) as commission
+        FROM openclaw_affiliate_attribution_failures
+        WHERE user_id = ?
+          AND report_date >= ?
+          AND report_date <= ?
+          AND campaign_id IS NOT NULL
+          AND ${unattributedFailureFilter.sql}
+        GROUP BY campaign_id
+      ) acfAgg ON acfAgg.campaign_id = c.id
       WHERE ${whereClause}
       GROUP BY c.id, c.campaign_name, c.status, o.brand, c.created_at, cpcur.currency
       ORDER BY ${sortFieldSql} ${sortDirectionSql}
@@ -181,7 +209,7 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
         COALESCE(SUM(COALESCE(cpAgg.impressions, 0)), 0) as totalImpressions,
         COALESCE(SUM(COALESCE(cpAgg.clicks, 0)), 0) as totalClicks,
         COALESCE(SUM(COALESCE(cpAgg.cost, 0)), 0) as totalCost,
-        COALESCE(SUM(COALESCE(cpAgg.conversions, 0)), 0) as totalConversions
+        COALESCE(SUM(COALESCE(acaAgg.commission, 0) + COALESCE(acfAgg.commission, 0)), 0) as totalConversions
       FROM campaigns c
       LEFT JOIN offers o ON c.offer_id = o.id
       LEFT JOIN (
@@ -189,14 +217,36 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
           campaign_id,
           SUM(impressions) as impressions,
           SUM(clicks) as clicks,
-          SUM(cost) as cost,
-          SUM(conversions) as conversions
+          SUM(cost) as cost
         FROM campaign_performance
         WHERE user_id = ?
           AND date >= ?
           AND date <= ?
         GROUP BY campaign_id
       ) cpAgg ON cpAgg.campaign_id = c.id
+      LEFT JOIN (
+        SELECT
+          campaign_id,
+          COALESCE(SUM(commission_amount), 0) as commission
+        FROM affiliate_commission_attributions
+        WHERE user_id = ?
+          AND report_date >= ?
+          AND report_date <= ?
+          AND campaign_id IS NOT NULL
+        GROUP BY campaign_id
+      ) acaAgg ON acaAgg.campaign_id = c.id
+      LEFT JOIN (
+        SELECT
+          campaign_id,
+          COALESCE(SUM(commission_amount), 0) as commission
+        FROM openclaw_affiliate_attribution_failures
+        WHERE user_id = ?
+          AND report_date >= ?
+          AND report_date <= ?
+          AND campaign_id IS NOT NULL
+          AND ${unattributedFailureFilter.sql}
+        GROUP BY campaign_id
+      ) acfAgg ON acfAgg.campaign_id = c.id
       WHERE ${whereClause}
     `
 
@@ -207,6 +257,13 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
         userId,
         startDateStr,
         endDateStr,
+        userId,
+        startDateStr,
+        endDateStr,
+        userId,
+        startDateStr,
+        endDateStr,
+        ...unattributedFailureFilter.values,
         ...params,
         pageSize,
         offset,
@@ -231,6 +288,13 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
         userId,
         startDateStr,
         endDateStr,
+        userId,
+        startDateStr,
+        endDateStr,
+        userId,
+        startDateStr,
+        endDateStr,
+        ...unattributedFailureFilter.values,
         ...params,
       ]) as Promise<
         | {

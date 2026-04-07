@@ -68,6 +68,7 @@ import {
 import {
   getCampaignStatusLabel,
 } from '@/lib/i18n-constants'
+import { matchesCampaignSearch } from '@/lib/campaign-search'
 import { convertCurrency, formatCurrency } from '@/lib/currency'
 import { formatCurrency as formatCurrencyDashboard, formatMultiCurrency } from '@/lib/utils'
 
@@ -576,23 +577,17 @@ export default function CampaignsClientPage({
       : `${value.toFixed(2)}%`
   )
   const chartPalette = ['#2563eb', '#0ea5e9', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6']
-  const campaignAliasMap = useMemo(() => {
-    if (!overallRoasStats) return new Map<number, string>()
-
-    const orderedIds = Array.from(new Set(
-      overallRoasStats.campaigns
-        .map((item) => item.id)
-        .sort((a, b) => a - b)
-    ))
-
-    return new Map<number, string>(
-      orderedIds.map((id, index) => [id, `品牌${index + 1}`])
-    )
-  }, [overallRoasStats])
+  const anonymizeCampaignName = useCallback((campaignName: string): string => {
+    const normalized = String(campaignName || '').trim()
+    if (!normalized) return 'Unknown'
+    const firstUnderscore = normalized.indexOf('_')
+    if (firstUnderscore <= 0) return 'Unknown'
+    return `Unknown${normalized.slice(firstUnderscore)}`
+  }, [])
   const getCampaignDisplayName = useCallback((campaign: CampaignRoasRankItem): string => {
     if (!hideBrandNames) return campaign.campaignName
-    return campaignAliasMap.get(campaign.id) || `品牌${campaign.id}`
-  }, [campaignAliasMap, hideBrandNames])
+    return anonymizeCampaignName(campaign.campaignName)
+  }, [anonymizeCampaignName, hideBrandNames])
   const overallRoasRankTrendData = useMemo(() => {
     if (!overallRoasStats) return []
     return [...overallRoasStats.campaigns]
@@ -607,6 +602,7 @@ export default function CampaignsClientPage({
         commission: roundTo2(item.commission),
       }))
   }, [getCampaignDisplayName, overallRoasStats])
+
   const overallRoasSpendShareData = useMemo(() => {
     if (!overallRoasStats) return []
     const sortedBySpend = [...overallRoasStats.campaigns].sort((a, b) => b.spend - a.spend)
@@ -1033,11 +1029,7 @@ export default function CampaignsClientPage({
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
-      result = result.filter(
-        (c) =>
-          c.campaignName.toLowerCase().includes(query) ||
-          (c.campaignId && c.campaignId.includes(query))
-      )
+      result = result.filter((campaign) => matchesCampaignSearch(query, campaign))
     }
 
     // Status filter
@@ -1710,7 +1702,7 @@ export default function CampaignsClientPage({
 
   const buildOverallRoasImageDataUrl = (
     stats: OverallRoasStatistics,
-    options?: { hideBrandNames?: boolean; aliasMap?: Map<number, string> }
+    options?: { hideBrandNames?: boolean }
   ): string => {
     const canvasWidth = 1600
     const canvasHeight = 2000
@@ -1723,10 +1715,9 @@ export default function CampaignsClientPage({
     }
 
     const hideNames = options?.hideBrandNames === true
-    const aliasMap = options?.aliasMap ?? new Map<number, string>()
     const getDisplayName = (item: CampaignRoasRankItem): string => {
       if (!hideNames) return item.campaignName
-      return aliasMap.get(item.id) || `品牌${item.id}`
+      return anonymizeCampaignName(item.campaignName)
     }
 
     const trimToFit = (text: string, maxWidth: number): string => {
@@ -1967,6 +1958,10 @@ export default function CampaignsClientPage({
     const pieInner = 72
     const pieColors = ['#2563eb', '#0ea5e9', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6']
     const pieTotal = spendEntries.reduce((sum, entry) => sum + entry.value, 0)
+    const spendPanelRight = spendPanelX + spendPanelWidth
+    const legendDotX = Math.max(spendPanelX + 354, pieCx + pieOuter + 36)
+    const legendTextX = legendDotX + 28
+    const legendTextMaxWidth = Math.max(120, spendPanelRight - legendTextX - 24)
     let pieAngle = -Math.PI / 2
 
     if (pieTotal > 0) {
@@ -1995,12 +1990,12 @@ export default function CampaignsClientPage({
     spendEntries.forEach((entry, index) => {
       const y = spendPanelY + 108 + index * 38
       ctx.fillStyle = pieColors[index % pieColors.length]
-      ctx.fillRect(spendPanelX + 354, y - 14, 16, 16)
+      ctx.fillRect(legendDotX, y - 14, 16, 16)
       ctx.fillStyle = '#334155'
       ctx.font = '18px "PingFang SC", "Microsoft YaHei", sans-serif'
       const pct = pieTotal > 0 ? `${((entry.value / pieTotal) * 100).toFixed(1)}%` : '0%'
-      const label = trimToFit(entry.name, 420)
-      ctx.fillText(`${label} ${pct}`, spendPanelX + 382, y)
+      const label = trimToFit(entry.name, legendTextMaxWidth)
+      ctx.fillText(`${label} ${pct}`, legendTextX, y)
     })
 
     const cpcPanelX = 1088
@@ -2070,7 +2065,10 @@ export default function CampaignsClientPage({
 
         ctx.fillStyle = '#1d4ed8'
         ctx.font = '18px "PingFang SC", "Microsoft YaHei", sans-serif'
-        const metricsText = `ROAS ${formatRoasNumber(item.roas)} | 花费 ${formatCurrencyDashboard(item.spend, stats.currency)}`
+        const metricsText = trimToFit(
+          `ROAS ${formatRoasNumber(item.roas)} | 花费 ${formatCurrencyDashboard(item.spend, stats.currency)} | 佣金 ${formatCurrencyDashboard(item.commission, stats.currency)}`,
+          width - 56
+        )
         ctx.fillText(metricsText, x + 28, rowY + 26)
       })
     }
@@ -2116,7 +2114,6 @@ export default function CampaignsClientPage({
     try {
       const dataUrl = buildOverallRoasImageDataUrl(overallRoasStats, {
         hideBrandNames,
-        aliasMap: campaignAliasMap,
       })
       const link = document.createElement('a')
       const filenameTs = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)
@@ -3215,7 +3212,7 @@ export default function CampaignsClientPage({
               <div className="relative w-full md:flex-1 md:min-w-[300px]">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="搜索广告系列名称或ID..."
+                  placeholder="搜索广告系列、Ads账号名称或账号ID..."
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value)
@@ -3763,7 +3760,7 @@ export default function CampaignsClientPage({
             }
           }}
         >
-          <DialogContent className="max-h-[94vh] w-[98vw] max-w-[1480px] overflow-y-auto p-0">
+          <DialogContent size="wide" className="flex h-[96vh] max-h-[96vh] flex-col overflow-hidden">
             <DialogHeader className="gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:px-6 lg:px-8">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="space-y-1.5">
@@ -3785,238 +3782,240 @@ export default function CampaignsClientPage({
               </div>
             </DialogHeader>
 
-            {overallRoasLoading ? (
-              <div className="flex items-center justify-center py-16 text-sm text-gray-600">
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                正在汇总选中广告系列数据...
-              </div>
-            ) : overallRoasError ? (
-              <div className="m-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 sm:m-6 lg:m-8">
-                <p>{overallRoasError}</p>
-                <Button
-                  variant="outline"
-                  className="mt-3 border-red-200 bg-white hover:bg-red-100"
-                  onClick={() => void handleOpenOverallRoasDialog()}
-                >
-                  重新计算
-                </Button>
-              </div>
-            ) : overallRoasStats ? (
-              <div className="bg-slate-50 px-3 py-4 sm:px-5 sm:py-5 lg:px-8 lg:py-6">
-                <div className="mx-auto max-w-[1504px] overflow-hidden rounded-[24px] border border-blue-200 bg-[#eef5ff] shadow-[0_18px_48px_rgba(15,23,42,0.12)]">
-                  <div className="bg-gradient-to-r from-[#0b1220] via-[#1d4ed8] to-[#0369a1] px-5 py-6 text-white sm:px-8 lg:px-10 lg:py-9">
-                    <div className="flex min-h-[132px] flex-col justify-between gap-5 lg:min-h-[148px]">
-                      <div className="space-y-3">
-                        <h3 className="text-[30px] font-bold leading-tight tracking-tight sm:text-[38px] lg:text-[44px]">
-                          广告系列整体 ROAS 社交战报
-                        </h3>
-                        <div className="space-y-1 text-[13px] leading-6 text-blue-100 sm:text-sm">
-                          <p>{overallRoasTimeRangeLabel} | {overallRoasStats.generatedAt}</p>
-                          <p>统计币种：{overallRoasStats.currency}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-end justify-end">
-                        {hideBrandNames ? (
-                          <div className="rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-xs font-semibold tracking-[0.12em] text-blue-50">
-                            已隐藏品牌名
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {overallRoasLoading ? (
+                <div className="flex items-center justify-center py-16 text-sm text-gray-600">
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  正在汇总选中广告系列数据...
+                </div>
+              ) : overallRoasError ? (
+                <div className="m-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 sm:m-6 lg:m-8">
+                  <p>{overallRoasError}</p>
+                  <Button
+                    variant="outline"
+                    className="mt-3 border-red-200 bg-white hover:bg-red-100"
+                    onClick={() => void handleOpenOverallRoasDialog()}
+                  >
+                    重新计算
+                  </Button>
+                </div>
+              ) : overallRoasStats ? (
+                <div className="bg-slate-50 px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
+                  <div className="mx-auto max-w-[960px] overflow-hidden rounded-2xl border border-blue-200 bg-[#eef5ff] shadow-[0_12px_32px_rgba(15,23,42,0.10)]">
+                    <div className="bg-gradient-to-r from-[#0b1220] via-[#1d4ed8] to-[#0369a1] px-4 py-5 text-white sm:px-5 sm:py-6 lg:px-6 lg:py-7">
+                      <div className="flex min-h-[112px] flex-col justify-between gap-4 lg:min-h-[120px]">
+                        <div className="space-y-2">
+                          <h3 className="text-[24px] font-bold leading-tight tracking-tight sm:text-[28px] lg:text-[32px]">
+                            广告系列整体 ROAS 社交战报
+                          </h3>
+                          <div className="space-y-0.5 text-[12px] leading-5 text-blue-100 sm:text-[13px]">
+                            <p>{overallRoasTimeRangeLabel} | {overallRoasStats.generatedAt}</p>
+                            <p>统计币种：{overallRoasStats.currency}</p>
                           </div>
-                        ) : <div />}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-5 px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
-                    <div className={`${overallRoasPreviewPanelClass} p-5`}>
-                      <p className="text-sm font-semibold text-[#1e3a8a]">一句话结论</p>
-                      <p className="mt-2 text-sm font-medium leading-7 text-slate-700 lg:text-base">{overallRoasShareHeadline}</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
-                      {overallRoasMetricCards.map((card) => (
-                        <div key={card.title} className={`${overallRoasPreviewPanelClass} min-h-[112px] px-5 py-4`}>
-                          <p className="text-sm text-slate-500">{card.title}</p>
-                          <p className="mt-2 text-[28px] font-semibold leading-none tracking-tight text-slate-950">{card.value}</p>
                         </div>
-                      ))}
-                    </div>
-
-                    <div className={overallRoasPreviewPanelClass}>
-                      <div className={`${overallRoasPreviewPanelBodyClass} pb-4`}>
-                        <p className={overallRoasPreviewSectionTitleClass}>ROAS 排名趋势（Top 8）</p>
-                        <p className={overallRoasPreviewSectionHintClass}>预览结构与导出图保持一致，突出头部系列 ROAS 排名</p>
-                      </div>
-                      {overallRoasRankTrendData.length > 0 ? (
-                        <div className="h-[332px] px-2 pb-4 sm:px-4 lg:h-[356px] lg:px-5">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={overallRoasRankTrendData} margin={{ top: 32, right: 24, bottom: 16, left: 8 }}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" />
-                              <XAxis dataKey="rank" stroke="#64748b" tickLine={false} axisLine={false} />
-                              <YAxis
-                                stroke="#334155"
-                                tickLine={false}
-                                axisLine={false}
-                                tickFormatter={(value: number) => `${Number(value || 0).toFixed(1)}x`}
-                              />
-                              <RechartsTooltip
-                                contentStyle={{ borderRadius: 12, borderColor: '#dbeafe' }}
-                                formatter={(value: number) => [formatRoasNumber(Number(value)), 'ROAS']}
-                                labelFormatter={(_, payload: any[]) => payload?.[0]?.payload?.campaignName || '--'}
-                              />
-                              <Line type="monotone" dataKey="roas" stroke="#1d4ed8" strokeWidth={3} dot={{ r: 4, fill: '#ffffff', strokeWidth: 2 }} activeDot={{ r: 6 }}>
-                                <LabelList
-                                  dataKey="roas"
-                                  position="top"
-                                  offset={12}
-                                  formatter={(value: number) => `${Number(value || 0).toFixed(2)}x`}
-                                  className="fill-slate-700 text-[11px]"
-                                />
-                              </Line>
-                            </ComposedChart>
-                          </ResponsiveContainer>
-                        </div>
-                      ) : (
-                        <p className="py-20 text-center text-sm text-slate-500">暂无可绘制的 ROAS 趋势数据</p>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_420px]">
-                      <div className={overallRoasPreviewPanelClass}>
-                        <div className={overallRoasPreviewPanelBodyClass}>
-                          <p className={overallRoasPreviewSectionTitleClass}>花费占比结构（Top 5 + 其他）</p>
-                          <p className={overallRoasPreviewSectionHintClass}>预览与导出图一致，强调主要花费集中度和构成</p>
-                        </div>
-                        {overallRoasSpendShareData.length > 0 ? (
-                          <div className="grid gap-6 px-4 pb-5 sm:px-5 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-center lg:px-6">
-                            <div className="h-[316px]">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                  <Pie
-                                    data={overallRoasSpendShareData}
-                                    dataKey="value"
-                                    nameKey="name"
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={78}
-                                    outerRadius={130}
-                                    paddingAngle={2}
-                                  >
-                                    {overallRoasSpendShareData.map((_, index) => (
-                                      <Cell key={`share-${index}`} fill={chartPalette[index % chartPalette.length]} />
-                                    ))}
-                                  </Pie>
-                                  <RechartsTooltip
-                                    formatter={(value: number) => formatCurrencyDashboard(Number(value), overallRoasStats.currency)}
-                                  />
-                                </PieChart>
-                              </ResponsiveContainer>
+                        <div className="flex items-end justify-end">
+                          {hideBrandNames ? (
+                            <div className="rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold tracking-[0.12em] text-blue-50">
+                              已隐藏品牌名
                             </div>
-                            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-                              {overallRoasSpendShareData.map((entry, index) => (
-                                <div key={`legend-${entry.name}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-sm">
-                                  <div className="flex items-center gap-2 text-sm text-slate-700">
-                                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: chartPalette[index % chartPalette.length] }} />
-                                    <span className="min-w-0 flex-1 truncate">{entry.name}</span>
+                          ) : <div />}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
+                      <div className={`${overallRoasPreviewPanelClass} p-5`}>
+                        <p className="text-sm font-semibold text-[#1e3a8a]">一句话结论</p>
+                        <p className="mt-2 text-sm font-medium leading-7 text-slate-700 lg:text-base">{overallRoasShareHeadline}</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+                        {overallRoasMetricCards.map((card) => (
+                          <div key={card.title} className={`${overallRoasPreviewPanelClass} min-h-[100px] px-4 py-3`}>
+                            <p className="text-sm text-slate-500">{card.title}</p>
+                            <p className="mt-1.5 text-[24px] font-semibold leading-none tracking-tight text-slate-950">{card.value}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className={overallRoasPreviewPanelClass}>
+                        <div className={`${overallRoasPreviewPanelBodyClass} pb-4`}>
+                          <p className={overallRoasPreviewSectionTitleClass}>ROAS 排名趋势（Top 8）</p>
+                          <p className={overallRoasPreviewSectionHintClass}>预览结构与导出图保持一致，突出头部系列 ROAS 排名</p>
+                        </div>
+                        {overallRoasRankTrendData.length > 0 ? (
+                          <div className="h-[260px] px-2 pb-4 sm:px-4 lg:h-[280px] lg:px-5">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <ComposedChart data={overallRoasRankTrendData} margin={{ top: 32, right: 24, bottom: 16, left: 8 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" />
+                                <XAxis dataKey="rank" stroke="#64748b" tickLine={false} axisLine={false} />
+                                <YAxis
+                                  stroke="#334155"
+                                  tickLine={false}
+                                  axisLine={false}
+                                  tickFormatter={(value: number) => `${Number(value || 0).toFixed(1)}x`}
+                                />
+                                <RechartsTooltip
+                                  contentStyle={{ borderRadius: 12, borderColor: '#dbeafe' }}
+                                  formatter={(value: number) => [formatRoasNumber(Number(value)), 'ROAS']}
+                                  labelFormatter={(_, payload: any[]) => payload?.[0]?.payload?.campaignName || '--'}
+                                />
+                                <Line type="monotone" dataKey="roas" stroke="#1d4ed8" strokeWidth={3} dot={{ r: 4, fill: '#ffffff', strokeWidth: 2 }} activeDot={{ r: 6 }}>
+                                  <LabelList
+                                    dataKey="roas"
+                                    position="top"
+                                    offset={12}
+                                    formatter={(value: number) => `${Number(value || 0).toFixed(2)}x`}
+                                    className="fill-slate-700 text-[11px]"
+                                  />
+                                </Line>
+                              </ComposedChart>
+                            </ResponsiveContainer>
+                          </div>
+                        ) : (
+                          <p className="py-20 text-center text-sm text-slate-500">暂无可绘制的 ROAS 趋势数据</p>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_420px]">
+                        <div className={overallRoasPreviewPanelClass}>
+                          <div className={overallRoasPreviewPanelBodyClass}>
+                            <p className={overallRoasPreviewSectionTitleClass}>花费占比结构（Top 5 + 其他）</p>
+                            <p className={overallRoasPreviewSectionHintClass}>预览与导出图一致，强调主要花费集中度和构成</p>
+                          </div>
+                          {overallRoasSpendShareData.length > 0 ? (
+                            <div className="grid gap-4 px-4 pb-4 sm:px-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-center lg:px-5">
+                              <div className="h-[260px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <PieChart>
+                                    <Pie
+                                      data={overallRoasSpendShareData}
+                                      dataKey="value"
+                                      nameKey="name"
+                                      cx="50%"
+                                      cy="50%"
+                                      innerRadius={60}
+                                      outerRadius={100}
+                                      paddingAngle={2}
+                                    >
+                                      {overallRoasSpendShareData.map((_, index) => (
+                                        <Cell key={`share-${index}`} fill={chartPalette[index % chartPalette.length]} />
+                                      ))}
+                                    </Pie>
+                                    <RechartsTooltip
+                                      formatter={(value: number) => formatCurrencyDashboard(Number(value), overallRoasStats.currency)}
+                                    />
+                                  </PieChart>
+                                </ResponsiveContainer>
+                              </div>
+                              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                                {overallRoasSpendShareData.map((entry, index) => (
+                                  <div key={`legend-${entry.name}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-sm">
+                                    <div className="flex items-center gap-2 text-sm text-slate-700">
+                                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: chartPalette[index % chartPalette.length] }} />
+                                      <span className="min-w-0 flex-1 truncate">{entry.name}</span>
+                                    </div>
+                                    <div className="mt-1 flex items-center justify-between gap-3 text-xs">
+                                      <span className="text-slate-500">
+                                        {overallRoasSpendShareTotal > 0
+                                          ? `${((Number(entry.value) / overallRoasSpendShareTotal) * 100).toFixed(1)}%`
+                                          : '0%'}
+                                      </span>
+                                      <span className="font-semibold text-slate-900">
+                                        {formatCurrencyDashboard(Number(entry.value), overallRoasStats.currency)}
+                                      </span>
+                                    </div>
                                   </div>
-                                  <div className="mt-1 flex items-center justify-between gap-3 text-xs">
-                                    <span className="text-slate-500">
-                                      {overallRoasSpendShareTotal > 0
-                                        ? `${((Number(entry.value) / overallRoasSpendShareTotal) * 100).toFixed(1)}%`
-                                        : '0%'}
-                                    </span>
-                                    <span className="font-semibold text-slate-900">
-                                      {formatCurrencyDashboard(Number(entry.value), overallRoasStats.currency)}
-                                    </span>
-                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="py-20 text-center text-sm text-slate-500">暂无可绘制的花费占比数据</p>
+                          )}
+                        </div>
+
+                        <div className={`${overallRoasPreviewPanelClass} min-h-[280px] ${overallRoasPreviewPanelBodyClass}`}>
+                          <p className={overallRoasPreviewSectionTitleClass}>CPC 极值洞察</p>
+                          <div className="mt-4 space-y-4">
+                            <div>
+                              <p className="text-sm text-slate-500">最高实际 CPC</p>
+                              {overallRoasStats.highestActualCpc ? (
+                                <>
+                                  <p className="mt-2 text-base font-semibold text-slate-900">{getCampaignDisplayName(overallRoasStats.highestActualCpc)}</p>
+                                  <p className="mt-1 text-sm font-semibold text-indigo-600">
+                                    {formatCurrencyDashboard(Number(overallRoasStats.highestActualCpc.actualCpc || 0), overallRoasStats.currency)}
+                                  </p>
+                                </>
+                              ) : (
+                                <p className="mt-2 text-sm text-slate-500">暂无可计算的实际 CPC 数据</p>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm text-slate-500">最低实际 CPC</p>
+                              {overallRoasStats.lowestActualCpc ? (
+                                <>
+                                  <p className="mt-2 text-base font-semibold text-slate-900">{getCampaignDisplayName(overallRoasStats.lowestActualCpc)}</p>
+                                  <p className="mt-1 text-sm font-semibold text-emerald-600">
+                                    {formatCurrencyDashboard(Number(overallRoasStats.lowestActualCpc.actualCpc || 0), overallRoasStats.currency)}
+                                  </p>
+                                </>
+                              ) : (
+                                <p className="mt-2 text-sm text-slate-500">暂无可计算的实际 CPC 数据</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                        <div className={`${overallRoasPreviewPanelClass} min-h-[286px] ${overallRoasPreviewPanelBodyClass}`}>
+                          <p className={`mb-4 ${overallRoasPreviewSectionTitleClass}`}>Top 3 优秀广告系列</p>
+                          {overallRoasStats.bestTop3.length > 0 ? (
+                            <div className="space-y-3">
+                              {overallRoasStats.bestTop3.map((item, index) => (
+                                <div key={`best-${item.id}`} className="rounded-xl bg-slate-50 px-4 py-3">
+                                  <p className="text-sm font-semibold text-slate-900">{index + 1}. {getCampaignDisplayName(item)}</p>
+                                  <p className="mt-1 text-xs text-slate-600">
+                                    ROAS {formatRoasNumber(item.roas)} | 花费 {formatCurrencyDashboard(item.spend, overallRoasStats.currency)} | 佣金 {formatCurrencyDashboard(item.commission, overallRoasStats.currency)}
+                                  </p>
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        ) : (
-                          <p className="py-20 text-center text-sm text-slate-500">暂无可绘制的花费占比数据</p>
-                        )}
-                      </div>
-
-                      <div className={`${overallRoasPreviewPanelClass} min-h-[356px] ${overallRoasPreviewPanelBodyClass}`}>
-                        <p className={overallRoasPreviewSectionTitleClass}>CPC 极值洞察</p>
-                        <div className="mt-5 space-y-6">
-                          <div>
-                            <p className="text-sm text-slate-500">最高实际 CPC</p>
-                            {overallRoasStats.highestActualCpc ? (
-                              <>
-                                <p className="mt-2 text-base font-semibold text-slate-900">{getCampaignDisplayName(overallRoasStats.highestActualCpc)}</p>
-                                <p className="mt-1 text-sm font-semibold text-indigo-600">
-                                  {formatCurrencyDashboard(Number(overallRoasStats.highestActualCpc.actualCpc || 0), overallRoasStats.currency)}
-                                </p>
-                              </>
-                            ) : (
-                              <p className="mt-2 text-sm text-slate-500">暂无可计算的实际 CPC 数据</p>
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-sm text-slate-500">最低实际 CPC</p>
-                            {overallRoasStats.lowestActualCpc ? (
-                              <>
-                                <p className="mt-2 text-base font-semibold text-slate-900">{getCampaignDisplayName(overallRoasStats.lowestActualCpc)}</p>
-                                <p className="mt-1 text-sm font-semibold text-emerald-600">
-                                  {formatCurrencyDashboard(Number(overallRoasStats.lowestActualCpc.actualCpc || 0), overallRoasStats.currency)}
-                                </p>
-                              </>
-                            ) : (
-                              <p className="mt-2 text-sm text-slate-500">暂无可计算的实际 CPC 数据</p>
-                            )}
-                          </div>
+                          ) : (
+                            <p className="text-sm text-slate-500">暂无可计算 ROAS 的广告系列</p>
+                          )}
+                        </div>
+                        <div className={`${overallRoasPreviewPanelClass} min-h-[286px] ${overallRoasPreviewPanelBodyClass}`}>
+                          <p className={`mb-4 ${overallRoasPreviewSectionTitleClass}`}>Bottom 3 待优化广告系列</p>
+                          {overallRoasStats.worstBottom3.length > 0 ? (
+                            <div className="space-y-3">
+                              {overallRoasStats.worstBottom3.map((item, index) => (
+                                <div key={`worst-${item.id}`} className="rounded-xl bg-slate-50 px-4 py-3">
+                                  <p className="text-sm font-semibold text-slate-900">{index + 1}. {getCampaignDisplayName(item)}</p>
+                                  <p className="mt-1 text-xs text-slate-600">
+                                    ROAS {formatRoasNumber(item.roas)} | 花费 {formatCurrencyDashboard(item.spend, overallRoasStats.currency)} | 佣金 {formatCurrencyDashboard(item.commission, overallRoasStats.currency)}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-slate-500">暂无可计算 ROAS 的广告系列</p>
+                          )}
                         </div>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                      <div className={`${overallRoasPreviewPanelClass} min-h-[286px] ${overallRoasPreviewPanelBodyClass}`}>
-                        <p className={`mb-4 ${overallRoasPreviewSectionTitleClass}`}>Top 3 优秀广告系列</p>
-                        {overallRoasStats.bestTop3.length > 0 ? (
-                          <div className="space-y-3">
-                            {overallRoasStats.bestTop3.map((item, index) => (
-                              <div key={`best-${item.id}`} className="rounded-xl bg-slate-50 px-4 py-3">
-                                <p className="text-sm font-semibold text-slate-900">{index + 1}. {getCampaignDisplayName(item)}</p>
-                                <p className="mt-1 text-xs text-slate-600">
-                                  ROAS {formatRoasNumber(item.roas)} | 花费 {formatCurrencyDashboard(item.spend, overallRoasStats.currency)} | 佣金 {formatCurrencyDashboard(item.commission, overallRoasStats.currency)}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-slate-500">暂无可计算 ROAS 的广告系列</p>
-                        )}
+                      <div className="px-1 text-xs text-slate-500">
+                        提示：该战报用于分享决策参考，建议结合归因口径与预算目标复核。
                       </div>
-                      <div className={`${overallRoasPreviewPanelClass} min-h-[286px] ${overallRoasPreviewPanelBodyClass}`}>
-                        <p className={`mb-4 ${overallRoasPreviewSectionTitleClass}`}>Bottom 3 待优化广告系列</p>
-                        {overallRoasStats.worstBottom3.length > 0 ? (
-                          <div className="space-y-3">
-                            {overallRoasStats.worstBottom3.map((item, index) => (
-                              <div key={`worst-${item.id}`} className="rounded-xl bg-slate-50 px-4 py-3">
-                                <p className="text-sm font-semibold text-slate-900">{index + 1}. {getCampaignDisplayName(item)}</p>
-                                <p className="mt-1 text-xs text-slate-600">
-                                  ROAS {formatRoasNumber(item.roas)} | 花费 {formatCurrencyDashboard(item.spend, overallRoasStats.currency)} | 佣金 {formatCurrencyDashboard(item.commission, overallRoasStats.currency)}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-slate-500">暂无可计算 ROAS 的广告系列</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="px-1 text-xs text-slate-500">
-                      提示：该战报用于分享决策参考，建议结合归因口径与预算目标复核。
                     </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="px-5 py-10 text-center text-sm text-gray-500 sm:px-6 lg:px-8">
-                请点击“重新计算”生成统计数据。
-              </div>
-            )}
+              ) : (
+                <div className="px-5 py-10 text-center text-sm text-gray-500 sm:px-6 lg:px-8">
+                  请点击“重新计算”生成统计数据。
+                </div>
+              )}
+            </div>
 
             <DialogFooter className="gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:px-6 lg:px-8">
               {overallRoasStats && !overallRoasLoading && !overallRoasError && (

@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { convertCurrency } from '@/lib/currency'
+import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
 import { toNumber } from '@/lib/utils'
-import { getCommissionPerConversion as getOfferCommissionPerConversion } from '@/lib/offer-monetization'
+
+function normalizeCurrency(value: unknown): string {
+  const normalized = String(value ?? '').trim().toUpperCase()
+  return normalized || 'USD'
+}
 
 /**
  * GET /api/analytics/roi
  * 获取ROAS分析数据（广告支出回报率）
+ * 收入口径：联盟佣金（已归因 + 未归因失败表）
  */
 export const dynamic = 'force-dynamic'
 
@@ -38,42 +43,98 @@ export async function GET(request: NextRequest) {
 
     const db = await getDatabase()
     const userId = authResult.user.userId
+    const unattributedFailureFilter = buildAffiliateUnattributedFailureFilter({
+      includePendingWithinGrace: true,
+      includeAllFailures: true,
+    })
 
-    const baseWhereConditions: string[] = ['cp.user_id = ?']
-    const baseParams: any[] = [userId]
+    const performanceWhereConditions: string[] = ['cp.user_id = ?']
+    const performanceParams: any[] = [userId]
 
     if (startDate) {
-      baseWhereConditions.push('cp.date >= ?')
-      baseParams.push(startDate)
+      performanceWhereConditions.push('cp.date >= ?')
+      performanceParams.push(startDate)
     }
 
     if (endDate) {
-      baseWhereConditions.push('cp.date <= ?')
-      baseParams.push(endDate)
+      performanceWhereConditions.push('cp.date <= ?')
+      performanceParams.push(endDate)
     }
 
     if (campaignId) {
-      baseWhereConditions.push('cp.campaign_id = ?')
-      baseParams.push(campaignId)
+      performanceWhereConditions.push('cp.campaign_id = ?')
+      performanceParams.push(campaignId)
     }
 
     if (offerId) {
-      baseWhereConditions.push('c.offer_id = ?')
-      baseParams.push(offerId)
+      performanceWhereConditions.push('c.offer_id = ?')
+      performanceParams.push(offerId)
     }
 
-    // 获取可用币种（优先使用 performance 中出现的币种；无数据则回退到账号币种）
-    const currencyRows = await db.query<any>(`
-      SELECT DISTINCT cp.currency as currency
+    const commissionWhereConditions: string[] = ['user_id = ?']
+    const commissionParams: any[] = [userId]
+
+    if (startDate) {
+      commissionWhereConditions.push('report_date >= ?')
+      commissionParams.push(startDate)
+    }
+
+    if (endDate) {
+      commissionWhereConditions.push('report_date <= ?')
+      commissionParams.push(endDate)
+    }
+
+    if (campaignId) {
+      commissionWhereConditions.push('campaign_id = ?')
+      commissionParams.push(campaignId)
+    }
+
+    if (offerId) {
+      commissionWhereConditions.push('offer_id = ?')
+      commissionParams.push(offerId)
+    }
+
+    const performanceCurrencyRows = await db.query<any>(`
+      SELECT DISTINCT COALESCE(cp.currency, 'USD') as currency
       FROM campaign_performance cp
       INNER JOIN campaigns c ON cp.campaign_id = c.id
-      WHERE ${baseWhereConditions.join(' AND ')}
+      WHERE ${performanceWhereConditions.join(' AND ')}
       ORDER BY currency ASC
-    `, baseParams)
+    `, performanceParams)
+
+    const attributedCurrencyRows = await db.query<any>(`
+      SELECT DISTINCT COALESCE(currency, 'USD') as currency
+      FROM affiliate_commission_attributions
+      WHERE ${commissionWhereConditions.join(' AND ')}
+      ORDER BY currency ASC
+    `, commissionParams)
+
+    let unattributedCurrencyRows: any[] = []
+    try {
+      unattributedCurrencyRows = await db.query<any>(`
+        SELECT DISTINCT COALESCE(currency, 'USD') as currency
+        FROM openclaw_affiliate_attribution_failures
+        WHERE ${commissionWhereConditions.join(' AND ')}
+          AND ${unattributedFailureFilter.sql}
+        ORDER BY currency ASC
+      `, [...commissionParams, ...unattributedFailureFilter.values])
+    } catch (error: any) {
+      const message = String(error?.message || '')
+      if (
+        !/openclaw_affiliate_attribution_failures/i.test(message)
+        || !/(no such table|does not exist)/i.test(message)
+      ) {
+        throw error
+      }
+    }
 
     let currencies = Array.from(new Set(
-      (currencyRows || [])
-        .map((r: any) => String(r.currency || '').trim().toUpperCase())
+      [
+        ...(performanceCurrencyRows || []),
+        ...(attributedCurrencyRows || []),
+        ...(unattributedCurrencyRows || []),
+      ]
+        .map((row: any) => normalizeCurrency(row.currency))
         .filter(Boolean)
     ))
 
@@ -86,7 +147,7 @@ export async function GET(request: NextRequest) {
       `, [userId])
       currencies = Array.from(new Set(
         (accountCurrencyRows || [])
-          .map((r: any) => String(r.currency || '').trim().toUpperCase())
+          .map((row: any) => normalizeCurrency(row.currency))
           .filter(Boolean)
       ))
     }
@@ -97,232 +158,298 @@ export async function GET(request: NextRequest) {
       : defaultCurrency
     const hasMixedCurrency = currencies.length > 1
 
-    const whereConditions = [...baseWhereConditions, 'cp.currency = ?']
-    const params: any[] = [...baseParams, reportingCurrency]
+    const performanceCurrencyWhereConditions = [...performanceWhereConditions, "COALESCE(cp.currency, 'USD') = ?"]
+    const performanceCurrencyParams: any[] = [...performanceParams, reportingCurrency]
+    const commissionCurrencyWhereConditions = [...commissionWhereConditions, "COALESCE(currency, 'USD') = ?"]
+    const commissionCurrencyParams: any[] = [...commissionParams, reportingCurrency]
 
-    const getCommissionPerConversion = (productPrice: any, commissionPayout: any, targetCountry: any): number => {
-      const parsed = getOfferCommissionPerConversion({
-        productPrice: String(productPrice || ''),
-        commissionPayout: String(commissionPayout || ''),
-        targetCountry: String(targetCountry || ''),
-      })
-      if (!parsed || !(parsed.amount > 0)) return 0
+    const [
+      overallCostRow,
+      overallAttributedRevenueRow,
+      costTrendRows,
+      attributedTrendRows,
+      campaignCostRows,
+      campaignAttributedRevenueRows,
+      offerCostRows,
+      offerAttributedRevenueRows,
+    ] = await Promise.all([
+      db.queryOne<any>(`
+        SELECT COALESCE(SUM(cp.cost), 0) as total_cost
+        FROM campaign_performance cp
+        INNER JOIN campaigns c ON cp.campaign_id = c.id
+        WHERE ${performanceCurrencyWhereConditions.join(' AND ')}
+      `, performanceCurrencyParams),
+      db.queryOne<any>(`
+        SELECT
+          COALESCE(SUM(commission_amount), 0) as total_revenue,
+          COUNT(*) as total_records
+        FROM affiliate_commission_attributions
+        WHERE ${commissionCurrencyWhereConditions.join(' AND ')}
+      `, commissionCurrencyParams),
+      db.query<any>(`
+        SELECT
+          DATE(cp.date) as date,
+          COALESCE(SUM(cp.cost), 0) as cost
+        FROM campaign_performance cp
+        INNER JOIN campaigns c ON cp.campaign_id = c.id
+        WHERE ${performanceCurrencyWhereConditions.join(' AND ')}
+        GROUP BY DATE(cp.date)
+        ORDER BY date ASC
+      `, performanceCurrencyParams),
+      db.query<any>(`
+        SELECT
+          report_date as date,
+          COALESCE(SUM(commission_amount), 0) as revenue,
+          COUNT(*) as conversions
+        FROM affiliate_commission_attributions
+        WHERE ${commissionCurrencyWhereConditions.join(' AND ')}
+        GROUP BY report_date
+        ORDER BY report_date ASC
+      `, commissionCurrencyParams),
+      db.query<any>(`
+        SELECT
+          c.id as campaign_id,
+          c.campaign_name,
+          o.brand as offer_brand,
+          COALESCE(SUM(cp.cost), 0) as cost,
+          COALESCE(SUM(cp.impressions), 0) as impressions,
+          COALESCE(SUM(cp.clicks), 0) as clicks
+        FROM campaign_performance cp
+        INNER JOIN campaigns c ON cp.campaign_id = c.id
+        LEFT JOIN offers o ON c.offer_id = o.id
+        WHERE ${performanceCurrencyWhereConditions.join(' AND ')}
+        GROUP BY c.id, c.campaign_name, o.brand
+      `, performanceCurrencyParams),
+      db.query<any>(`
+        SELECT
+          campaign_id,
+          COALESCE(SUM(commission_amount), 0) as revenue,
+          COUNT(*) as conversions
+        FROM affiliate_commission_attributions
+        WHERE ${commissionCurrencyWhereConditions.join(' AND ')}
+          AND campaign_id IS NOT NULL
+        GROUP BY campaign_id
+      `, commissionCurrencyParams),
+      db.query<any>(`
+        SELECT
+          o.id as offer_id,
+          o.brand,
+          o.offer_name,
+          COUNT(DISTINCT c.id) as campaign_count,
+          COALESCE(SUM(cp.cost), 0) as cost
+        FROM campaign_performance cp
+        INNER JOIN campaigns c ON cp.campaign_id = c.id
+        LEFT JOIN offers o ON c.offer_id = o.id
+        WHERE ${performanceCurrencyWhereConditions.join(' AND ')}
+          AND o.id IS NOT NULL
+        GROUP BY o.id, o.brand, o.offer_name
+      `, performanceCurrencyParams),
+      db.query<any>(`
+        SELECT
+          offer_id,
+          COALESCE(SUM(commission_amount), 0) as revenue,
+          COUNT(*) as conversions
+        FROM affiliate_commission_attributions
+        WHERE ${commissionCurrencyWhereConditions.join(' AND ')}
+          AND offer_id IS NOT NULL
+        GROUP BY offer_id
+      `, commissionCurrencyParams),
+    ])
 
-      const sourceCurrency = String(parsed.currency || 'USD').trim().toUpperCase()
-      if (sourceCurrency === reportingCurrency) {
-        return parsed.amount
+    let overallUnattributedRevenueRow: any = { total_revenue: 0, total_records: 0 }
+    let unattributedTrendRows: any[] = []
+    let campaignUnattributedRevenueRows: any[] = []
+    let offerUnattributedRevenueRows: any[] = []
+
+    try {
+      ;[
+        overallUnattributedRevenueRow,
+        unattributedTrendRows,
+        campaignUnattributedRevenueRows,
+        offerUnattributedRevenueRows,
+      ] = await Promise.all([
+        db.queryOne<any>(`
+          SELECT
+            COALESCE(SUM(commission_amount), 0) as total_revenue,
+            COUNT(*) as total_records
+          FROM openclaw_affiliate_attribution_failures
+          WHERE ${commissionCurrencyWhereConditions.join(' AND ')}
+            AND ${unattributedFailureFilter.sql}
+        `, [...commissionCurrencyParams, ...unattributedFailureFilter.values]),
+        db.query<any>(`
+          SELECT
+            report_date as date,
+            COALESCE(SUM(commission_amount), 0) as revenue,
+            COUNT(*) as conversions
+          FROM openclaw_affiliate_attribution_failures
+          WHERE ${commissionCurrencyWhereConditions.join(' AND ')}
+            AND ${unattributedFailureFilter.sql}
+          GROUP BY report_date
+          ORDER BY report_date ASC
+        `, [...commissionCurrencyParams, ...unattributedFailureFilter.values]),
+        db.query<any>(`
+          SELECT
+            campaign_id,
+            COALESCE(SUM(commission_amount), 0) as revenue,
+            COUNT(*) as conversions
+          FROM openclaw_affiliate_attribution_failures
+          WHERE ${commissionCurrencyWhereConditions.join(' AND ')}
+            AND ${unattributedFailureFilter.sql}
+            AND campaign_id IS NOT NULL
+          GROUP BY campaign_id
+        `, [...commissionCurrencyParams, ...unattributedFailureFilter.values]),
+        db.query<any>(`
+          SELECT
+            offer_id,
+            COALESCE(SUM(commission_amount), 0) as revenue,
+            COUNT(*) as conversions
+          FROM openclaw_affiliate_attribution_failures
+          WHERE ${commissionCurrencyWhereConditions.join(' AND ')}
+            AND ${unattributedFailureFilter.sql}
+            AND offer_id IS NOT NULL
+          GROUP BY offer_id
+        `, [...commissionCurrencyParams, ...unattributedFailureFilter.values]),
+      ])
+    } catch (error: any) {
+      const message = String(error?.message || '')
+      if (
+        !/openclaw_affiliate_attribution_failures/i.test(message)
+        || !/(no such table|does not exist)/i.test(message)
+      ) {
+        throw error
       }
+    }
 
-      try {
-        return convertCurrency(parsed.amount, sourceCurrency, reportingCurrency)
-      } catch {
-        // 跨币种无法换算时，避免混币种：返回0（该Offer的收益将不计入报表）
-        return 0
+    const totalCost = toNumber(overallCostRow?.total_cost)
+    const totalRevenue = toNumber(overallAttributedRevenueRow?.total_revenue) + toNumber(overallUnattributedRevenueRow?.total_revenue)
+    const totalConversions = toNumber(overallAttributedRevenueRow?.total_records) + toNumber(overallUnattributedRevenueRow?.total_records)
+    const overallRoas = totalCost > 0 ? totalRevenue / totalCost : 0
+    const avgCommission = totalConversions > 0 ? totalRevenue / totalConversions : 0
+
+    const trendMap = new Map<string, { cost: number; revenue: number; conversions: number }>()
+    const appendTrendRows = (rows: any[]) => {
+      for (const row of rows || []) {
+        const date = String(row?.date || '').trim()
+        if (!date) continue
+        const current = trendMap.get(date) || { cost: 0, revenue: 0, conversions: 0 }
+        current.cost += toNumber(row.cost)
+        current.revenue += toNumber(row.revenue)
+        current.conversions += toNumber(row.conversions)
+        trendMap.set(date, current)
       }
     }
 
-    // 预计算 offerId → 单次转化佣金（报表币种）
-    const offerMetaRows = await db.query<any>(`
-      SELECT DISTINCT
-        o.id as offer_id,
-        o.target_country,
-        o.product_price,
-        o.commission_payout
-      FROM campaign_performance cp
-      INNER JOIN campaigns c ON cp.campaign_id = c.id
-      LEFT JOIN offers o ON c.offer_id = o.id
-      WHERE ${whereConditions.join(' AND ')} AND o.id IS NOT NULL
-    `, params)
+    appendTrendRows(costTrendRows)
+    appendTrendRows(attributedTrendRows)
+    appendTrendRows(unattributedTrendRows)
 
-    const commissionMap = new Map<number, number>()
-    for (const row of (offerMetaRows || [])) {
-      const id = Number(row.offer_id)
-      if (!Number.isFinite(id)) continue
-      commissionMap.set(id, getCommissionPerConversion(row.product_price, row.commission_payout, row.target_country))
-    }
-
-    // 1. 整体ROAS分析（按Offer汇总，避免SQL层混币种）
-    const totalsByOffer = await db.query<any>(`
-      SELECT
-        c.offer_id as offer_id,
-        SUM(cp.cost) as total_cost,
-        SUM(cp.conversions) as total_conversions
-      FROM campaign_performance cp
-      INNER JOIN campaigns c ON cp.campaign_id = c.id
-      WHERE ${whereConditions.join(' AND ')}
-      GROUP BY c.offer_id
-    `, params)
-
-    let totalCost = 0
-    let totalCommission = 0
-    let totalConversions = 0
-
-    for (const row of (totalsByOffer || [])) {
-      const cost = toNumber(row.total_cost)
-      const conversions = toNumber(row.total_conversions)
-      const offerIdKey = Number(row.offer_id)
-      const commission = commissionMap.get(offerIdKey) || 0
-
-      totalCost += cost
-      totalConversions += conversions
-      totalCommission += conversions * commission
-    }
-
-    const overallRoas = totalCost > 0 ? totalCommission / totalCost : 0
-    const avgCommission = totalConversions > 0 ? (totalCommission / totalConversions) : 0
-
-    // 2. 按日期的ROAS趋势（按日期+Offer汇总后在代码层计算佣金）
-    const roasTrendRaw = await db.query<any>(`
-      SELECT
-        DATE(cp.date) as date,
-        c.offer_id as offer_id,
-        SUM(cp.cost) as cost,
-        SUM(cp.conversions) as conversions
-      FROM campaign_performance cp
-      INNER JOIN campaigns c ON cp.campaign_id = c.id
-      WHERE ${whereConditions.join(' AND ')}
-      GROUP BY DATE(cp.date), c.offer_id
-      ORDER BY date ASC
-    `, params)
-
-    const trendMap = new Map<string, { cost: number; conversions: number; commission: number }>()
-    for (const row of (roasTrendRaw || [])) {
-      const date = String(row.date || '')
-      if (!date) continue
-
-      const cost = toNumber(row.cost)
-      const conversions = toNumber(row.conversions)
-      const offerIdKey = Number(row.offer_id)
-      const commissionPerConv = commissionMap.get(offerIdKey) || 0
-
-      const existing = trendMap.get(date) || { cost: 0, conversions: 0, commission: 0 }
-      existing.cost += cost
-      existing.conversions += conversions
-      existing.commission += conversions * commissionPerConv
-      trendMap.set(date, existing)
-    }
-
-    const roasTrendData = Array.from(trendMap.entries())
+    const trendData = Array.from(trendMap.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, agg]) => {
-        const cost = agg.cost
-        const commission = agg.commission
-        const conversions = agg.conversions
-        const roas = cost > 0 ? commission / cost : 0
-
+      .map(([date, metrics]) => {
+        const roas = metrics.cost > 0 ? metrics.revenue / metrics.cost : 0
         return {
           date,
-          cost: parseFloat(cost.toFixed(2)),
-          revenue: parseFloat(commission.toFixed(2)),
-          profit: parseFloat((commission - cost).toFixed(2)),
+          cost: parseFloat(metrics.cost.toFixed(2)),
+          revenue: parseFloat(metrics.revenue.toFixed(2)),
+          profit: parseFloat((metrics.revenue - metrics.cost).toFixed(2)),
           roi: parseFloat(roas.toFixed(2)),
-          conversions,
+          conversions: metrics.conversions,
         }
       })
 
-    // 3. 按Campaign的ROAS排名
-    const campaignRows = await db.query<any>(`
-      SELECT
-        c.id as campaign_id,
-        c.campaign_name,
-        c.offer_id as offer_id,
-        o.brand as offer_brand,
-        SUM(cp.cost) as cost,
-        SUM(cp.conversions) as conversions,
-        SUM(cp.impressions) as impressions,
-        SUM(cp.clicks) as clicks
-      FROM campaign_performance cp
-      INNER JOIN campaigns c ON cp.campaign_id = c.id
-      LEFT JOIN offers o ON c.offer_id = o.id
-      WHERE ${whereConditions.join(' AND ')}
-      GROUP BY c.id, c.campaign_name, c.offer_id, o.brand
-      HAVING SUM(cp.conversions) > 0
-    `, params)
+    const appendRevenueByKey = (
+      rows: any[],
+      keyName: 'campaign_id' | 'offer_id',
+      target: Map<number, { revenue: number; conversions: number }>
+    ) => {
+      for (const row of rows || []) {
+        const key = Number(row?.[keyName])
+        if (!Number.isFinite(key)) continue
+        const current = target.get(key) || { revenue: 0, conversions: 0 }
+        current.revenue += toNumber(row.revenue)
+        current.conversions += toNumber(row.conversions)
+        target.set(key, current)
+      }
+    }
 
-    const campaignRoasData = (campaignRows || [])
+    const campaignRevenueMap = new Map<number, { revenue: number; conversions: number }>()
+    appendRevenueByKey(campaignAttributedRevenueRows, 'campaign_id', campaignRevenueMap)
+    appendRevenueByKey(campaignUnattributedRevenueRows, 'campaign_id', campaignRevenueMap)
+
+    const byCampaign = (campaignCostRows || [])
       .map((row: any) => {
+        const campaignIdValue = Number(row.campaign_id)
+        if (!Number.isFinite(campaignIdValue)) return null
         const cost = toNumber(row.cost)
-        const conversions = toNumber(row.conversions)
         const impressions = toNumber(row.impressions)
         const clicks = toNumber(row.clicks)
-        const offerIdKey = Number(row.offer_id)
-        const commissionPerConv = commissionMap.get(offerIdKey) || 0
-        const commission = conversions * commissionPerConv
+        const revenueMetrics = campaignRevenueMap.get(campaignIdValue) || { revenue: 0, conversions: 0 }
+        if (revenueMetrics.revenue <= 0) return null
 
-        const roas = cost > 0 ? commission / cost : 0
+        const roas = cost > 0 ? revenueMetrics.revenue / cost : 0
         const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0
-        const conversionRate = clicks > 0 ? (conversions / clicks) * 100 : 0
+        const conversionRate = clicks > 0 ? (revenueMetrics.conversions / clicks) * 100 : 0
 
         return {
-          campaignId: Number(row.campaign_id),
+          campaignId: campaignIdValue,
           campaignName: row.campaign_name,
           offerBrand: row.offer_brand,
           cost: parseFloat(cost.toFixed(2)),
-          revenue: parseFloat(commission.toFixed(2)),
-          profit: parseFloat((commission - cost).toFixed(2)),
+          revenue: parseFloat(revenueMetrics.revenue.toFixed(2)),
+          profit: parseFloat((revenueMetrics.revenue - cost).toFixed(2)),
           roi: parseFloat(roas.toFixed(2)),
-          conversions,
+          conversions: revenueMetrics.conversions,
           ctr: parseFloat(ctr.toFixed(2)),
           conversionRate: parseFloat(conversionRate.toFixed(2)),
-          impressions,
-          clicks,
         }
       })
-      .sort((a: any, b: any) => (b.revenue || 0) - (a.revenue || 0))
+      .filter((row): row is NonNullable<typeof row> => row !== null)
+      .sort((a, b) => (b.revenue || 0) - (a.revenue || 0))
       .slice(0, 10)
 
-    // 4. 按Offer的ROAS分析
-    const offerRows = await db.query<any>(`
-      SELECT
-        o.id as offer_id,
-        o.brand,
-        o.offer_name,
-        COUNT(DISTINCT c.id) as campaign_count,
-        SUM(cp.cost) as cost,
-        SUM(cp.conversions) as conversions
-      FROM campaign_performance cp
-      INNER JOIN campaigns c ON cp.campaign_id = c.id
-      LEFT JOIN offers o ON c.offer_id = o.id
-      WHERE ${whereConditions.join(' AND ')} AND o.id IS NOT NULL
-      GROUP BY o.id, o.brand, o.offer_name
-      HAVING SUM(cp.conversions) > 0
-    `, params)
+    const offerRevenueMap = new Map<number, { revenue: number; conversions: number }>()
+    appendRevenueByKey(offerAttributedRevenueRows, 'offer_id', offerRevenueMap)
+    appendRevenueByKey(offerUnattributedRevenueRows, 'offer_id', offerRevenueMap)
 
-    const offerRoasData = (offerRows || [])
+    const byOffer = (offerCostRows || [])
       .map((row: any) => {
+        const offerIdValue = Number(row.offer_id)
+        if (!Number.isFinite(offerIdValue)) return null
         const cost = toNumber(row.cost)
-        const conversions = toNumber(row.conversions)
-        const offerIdKey = Number(row.offer_id)
-        const commissionAmount = commissionMap.get(offerIdKey) || 0
-        const commission = conversions * commissionAmount
-        const roas = cost > 0 ? commission / cost : 0
+        const revenueMetrics = offerRevenueMap.get(offerIdValue) || { revenue: 0, conversions: 0 }
+        if (revenueMetrics.revenue <= 0) return null
+
+        const roas = cost > 0 ? revenueMetrics.revenue / cost : 0
+        const commissionAmount = revenueMetrics.conversions > 0
+          ? revenueMetrics.revenue / revenueMetrics.conversions
+          : 0
 
         return {
-          offerId: offerIdKey,
+          offerId: offerIdValue,
           brand: row.brand,
           offerName: row.offer_name,
           commissionAmount: parseFloat(commissionAmount.toFixed(2)),
           campaignCount: toNumber(row.campaign_count),
           cost: parseFloat(cost.toFixed(2)),
-          revenue: parseFloat(commission.toFixed(2)),
-          profit: parseFloat((commission - cost).toFixed(2)),
+          revenue: parseFloat(revenueMetrics.revenue.toFixed(2)),
+          profit: parseFloat((revenueMetrics.revenue - cost).toFixed(2)),
           roi: parseFloat(roas.toFixed(2)),
-          conversions,
+          conversions: revenueMetrics.conversions,
         }
       })
-      .sort((a: any, b: any) => (b.revenue || 0) - (a.revenue || 0))
+      .filter((row): row is NonNullable<typeof row> => row !== null)
+      .sort((a, b) => (b.revenue || 0) - (a.revenue || 0))
       .slice(0, 10)
 
-    // 5. 投资回报效率指标
-    const efficiencyMetrics = {
+    const efficiency = {
       costPerConversion: totalConversions > 0
         ? parseFloat((totalCost / totalConversions).toFixed(2))
         : 0,
       revenuePerConversion: totalConversions > 0
-        ? parseFloat((totalCommission / totalConversions).toFixed(2))
+        ? parseFloat((totalRevenue / totalConversions).toFixed(2))
         : 0,
-      profitMargin: totalCommission > 0
-        ? parseFloat(((totalCommission - totalCost) / totalCommission * 100).toFixed(2))
+      profitMargin: totalRevenue > 0
+        ? parseFloat((((totalRevenue - totalCost) / totalRevenue) * 100).toFixed(2))
         : 0,
       breakEvenPoint: avgCommission > 0
         ? parseFloat((totalCost / avgCommission).toFixed(0))
@@ -337,16 +464,16 @@ export async function GET(request: NextRequest) {
       data: {
         overall: {
           totalCost: parseFloat(totalCost.toFixed(2)),
-          totalRevenue: parseFloat(totalCommission.toFixed(2)),
-          totalProfit: parseFloat((totalCommission - totalCost).toFixed(2)),
+          totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+          totalProfit: parseFloat((totalRevenue - totalCost).toFixed(2)),
           roi: parseFloat(overallRoas.toFixed(2)),
           conversions: totalConversions,
           avgCommission: parseFloat(avgCommission.toFixed(2)),
         },
-        trend: roasTrendData,
-        byCampaign: campaignRoasData,
-        byOffer: offerRoasData,
-        efficiency: efficiencyMetrics,
+        trend: trendData,
+        byCampaign,
+        byOffer,
+        efficiency,
       },
     })
   } catch (error: any) {

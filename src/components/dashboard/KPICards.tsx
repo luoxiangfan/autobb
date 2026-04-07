@@ -6,8 +6,8 @@
  * 🔧 修复(2025-12-30): 支持多货币显示
  */
 
-import { useEffect, useState } from 'react'
-import { TrendingUp, TrendingDown, Eye, MousePointerClick, DollarSign, Target } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { TrendingUp, TrendingDown, Eye, MousePointerClick, DollarSign, Coins } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { KPILoadingSkeleton } from '@/components/ui/loading-skeleton' // P2-6: 统一loading
@@ -18,6 +18,8 @@ interface KPIData {
     impressions: number
     clicks: number
     cost: number
+    commission?: number
+    commissionPerClick?: number
     conversions: number
     ctr: number
     cpc: number
@@ -29,6 +31,7 @@ interface KPIData {
     impressions: number
     clicks: number
     cost: number
+    commission?: number
     conversions: number
   }
 }
@@ -62,7 +65,7 @@ function KPICard({ title, value, change, icon, format = 'number', currency = 'US
     if (title === '展示量') return 'border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100/50'
     if (title === '点击量') return 'border-green-200 bg-gradient-to-br from-green-50 to-green-100/50'
     if (title === '总花费') return 'border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100/50'
-    if (title === '转化量') return 'border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100/50'
+    if (title === '总佣金') return 'border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100/50'
     return 'border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100/50'
   }
 
@@ -70,7 +73,7 @@ function KPICard({ title, value, change, icon, format = 'number', currency = 'US
     if (title === '展示量') return 'bg-blue-100'
     if (title === '点击量') return 'bg-green-100'
     if (title === '总花费') return 'bg-purple-100'
-    if (title === '转化量') return 'bg-orange-100'
+    if (title === '总佣金') return 'bg-orange-100'
     return 'bg-gray-100'
   }
 
@@ -78,7 +81,7 @@ function KPICard({ title, value, change, icon, format = 'number', currency = 'US
     if (title === '展示量') return 'text-blue-600'
     if (title === '点击量') return 'text-green-600'
     if (title === '总花费') return 'text-purple-600'
-    if (title === '转化量') return 'text-orange-600'
+    if (title === '总佣金') return 'text-orange-600'
     return 'text-gray-600'
   }
 
@@ -115,7 +118,7 @@ export function KPICards({ days }: KPICardsProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     try {
       const response = await fetch(`/api/dashboard/kpis?days=${days}`, {
@@ -133,11 +136,11 @@ export function KPICards({ days }: KPICardsProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [days])
 
   useEffect(() => {
     fetchData()
-  }, [days])
+  }, [fetchData])
 
   // P2-6: 使用统一的Loading Skeleton
   if (loading) {
@@ -171,7 +174,7 @@ export function KPICards({ days }: KPICardsProps) {
     data.current.impressions === 0 &&
     data.current.clicks === 0 &&
     data.current.cost === 0 &&
-    data.current.conversions === 0
+    (data.current.commission ?? data.current.conversions) === 0
 
   return (
     <div>
@@ -218,11 +221,12 @@ export function KPICards({ days }: KPICardsProps) {
             currency={data.current.currency || 'USD'}
           />
           <KPICard
-            title="转化量"
-            value={data.current.conversions}
-            change={data.changes.conversions}
-            icon={<Target className="h-6 w-6" />}
-            format="number"
+            title="总佣金"
+            value={data.current.commission ?? data.current.conversions}
+            change={data.changes.commission ?? data.changes.conversions}
+            icon={<Coins className="h-6 w-6" />}
+            format="currency"
+            currency={data.current.currency || 'USD'}
           />
         </div>
       )}
@@ -248,9 +252,9 @@ export function KPICards({ days }: KPICardsProps) {
           </Card>
           <Card className="border-gray-200 hover:shadow-md transition-shadow">
             <CardContent className="pt-6">
-              <p className="text-sm font-medium text-muted-foreground mb-2">转化率</p>
+              <p className="text-sm font-medium text-muted-foreground mb-2">每次点击佣金</p>
               <p className="text-2xl font-bold text-primary">
-                {safeToFixed((data.current?.conversionRate ?? 0) * 100, 2)}%
+                {formatCurrency(data.current?.commissionPerClick ?? data.current?.conversionRate ?? 0, data.current?.currency || 'USD')}
               </p>
             </CardContent>
           </Card>

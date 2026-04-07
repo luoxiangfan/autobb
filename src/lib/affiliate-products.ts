@@ -4200,9 +4200,12 @@ function resolveYeahPromosSyncSessionMinRemainingMs(params: {
 function resolveYeahPromosConsecutiveFailureStrategy(params: {
   skipFailedPages: boolean
   fetchedItemsInWindow: number
+  fetchedItemsBeforeWindow?: number
 }): 'skip-page' | 'fail-sync' {
+  const fetchedItemsBeforeWindow = Number(params.fetchedItemsBeforeWindow || 0)
+  const hasProgressInRun = params.fetchedItemsInWindow > 0 || fetchedItemsBeforeWindow > 0
   if (!params.skipFailedPages) return 'fail-sync'
-  if (params.fetchedItemsInWindow <= 0) return 'fail-sync'
+  if (!hasProgressInRun) return 'fail-sync'
   return 'skip-page'
 }
 
@@ -4210,6 +4213,7 @@ async function fetchYeahPromosPromotableProductsWithMeta(params: {
   userId: number
   startPage?: number
   startScope?: string
+  fetchedItemsBeforeWindow?: number
   maxPages?: number
   suppressMaxPagesWarning?: boolean
   templatesOverride?: YeahPromosMarketplaceTemplate[]
@@ -4359,6 +4363,7 @@ async function fetchYeahPromosPromotableProductsWithMeta(params: {
   let consecutiveScopeFailureCount = 0
   let consecutiveEmptyPagesInScope = 0  // 当前市场连续空页面计数
   const fetchedPagesByScope = new Map<string, number>()
+  const fetchedItemsBeforeWindow = Math.max(0, Number(params.fetchedItemsBeforeWindow || 0) || 0)
 
   const items: NormalizedAffiliateProduct[] = []
   let lastFetchProgressCount = 0
@@ -4465,6 +4470,7 @@ async function fetchYeahPromosPromotableProductsWithMeta(params: {
         if (resolveYeahPromosConsecutiveFailureStrategy({
           skipFailedPages,
           fetchedItemsInWindow: items.length,
+          fetchedItemsBeforeWindow,
         }) === 'skip-page') {
           // 跳过当前页面，继续下一页，避免因服务器端问题导致整个同步中止
           console.warn(
@@ -4473,7 +4479,8 @@ async function fetchYeahPromosPromotableProductsWithMeta(params: {
           page = currentPage + 1
           consecutiveScopeFailureCount = 0
         } else {
-          const noItemsWarning = items.length === 0 && skipFailedPages
+          const noItemsFetchedYet = items.length === 0 && fetchedItemsBeforeWindow <= 0
+          const noItemsWarning = noItemsFetchedYet && skipFailedPages
             ? '当前窗口尚未抓到任何商品，不允许静默跳页；'
             : ''
           // 避免静默跳过整个 scope 导致”completed 但漏抓大量页面”。
@@ -8958,6 +8965,7 @@ async function syncYeahPromosPlatformByWindow(params: {
   userId: number
   startPage?: number
   startScope?: string
+  fetchedItemsBeforeWindow?: number
   pageWindowSize?: number
   progressEvery?: number
   onProgress?: (progress: AffiliateProductSyncProgress) => Promise<void> | void
@@ -9024,6 +9032,7 @@ async function syncYeahPromosPlatformByWindow(params: {
     userId: params.userId,
     startPage: cursorPage,
     startScope: cursorScope || undefined,
+    fetchedItemsBeforeWindow: params.fetchedItemsBeforeWindow,
     maxPages: pageWindowSize,
     suppressMaxPagesWarning: true,
     onFetchProgress: async (fetchedCount) => {
@@ -9073,6 +9082,7 @@ export async function syncAffiliateProducts(params: {
   productId?: number
   resumeFromPage?: number
   resumeFromScope?: string
+  fetchedItemsBeforeWindow?: number
   pageWindowSize?: number
   progressEvery?: number
   onProgress?: (progress: AffiliateProductSyncProgress) => Promise<void> | void
@@ -9164,6 +9174,7 @@ export async function syncAffiliateProducts(params: {
       userId: params.userId,
       startPage: params.resumeFromPage,
       startScope: params.resumeFromScope,
+      fetchedItemsBeforeWindow: params.fetchedItemsBeforeWindow,
       pageWindowSize: params.pageWindowSize,
       progressEvery: params.progressEvery,
       onProgress: params.onProgress,

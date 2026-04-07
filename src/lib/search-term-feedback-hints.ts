@@ -390,6 +390,7 @@ async function getUserBrandLevelHighPerformingTerms(params: {
   brandName: string
   excludeOfferId: number
   targetCountry?: string
+  targetLanguage?: string
   maxTerms?: number
 }): Promise<string[]> {
   const db = await getDatabase()
@@ -412,11 +413,12 @@ async function getUserBrandLevelHighPerformingTerms(params: {
        AND o.brand = ?
        AND o.id != ?
        AND o.target_country = COALESCE(?, o.target_country)
+       AND o.target_language = COALESCE(?, o.target_language)
        AND ${isDeletedCondition}
      GROUP BY str.search_term
      HAVING SUM(str.clicks) >= ${HIGH_PERFORMING_MIN_CLICKS}
      ORDER BY SUM(str.clicks) DESC`,
-    [params.userId, params.brandName, params.excludeOfferId, params.targetCountry || null]
+    [params.userId, params.brandName, params.excludeOfferId, params.targetCountry || null, params.targetLanguage || null]
   )
 
   const terms: string[] = []
@@ -445,11 +447,12 @@ async function getUserBrandLevelHighPerformingTerms(params: {
 
 /**
  * 🆕 阶段2: 获取全局品牌级别高性能搜索词
- * 从所有用户的同品牌 Offer 中聚合高性能搜索词（k-匿名性保护）
+ * 从所有用户的同品牌 Offer 中聚合高性能搜索词（品牌全局优先）
  */
 async function getGlobalBrandLevelHighPerformingTerms(params: {
   brandName: string
   targetCountry?: string
+  targetLanguage?: string
   maxTerms?: number
   minUsers?: number
 }): Promise<Array<{
@@ -460,7 +463,7 @@ async function getGlobalBrandLevelHighPerformingTerms(params: {
 }>> {
   const db = await getDatabase()
   const maxTerms = Math.max(5, Math.min(20, params.maxTerms ?? 10))
-  const minUsers = Math.max(2, params.minUsers ?? 2) // k-匿名性：至少2个用户
+  const minUsers = Math.max(1, params.minUsers ?? 1)
   const pureBrandKeywords = getPureBrandKeywords(params.brandName)
 
   const isDeletedCondition = db.type === 'postgres' ? 'COALESCE(c.is_deleted, FALSE) = FALSE' : 'COALESCE(c.is_deleted, 0) = 0'
@@ -488,6 +491,7 @@ async function getGlobalBrandLevelHighPerformingTerms(params: {
      JOIN offers o ON o.id = c.offer_id
      WHERE o.brand = ?
        AND o.target_country = COALESCE(?, o.target_country)
+       AND o.target_language = COALESCE(?, o.target_language)
        AND ${isDeletedCondition}
      GROUP BY str.search_term
      HAVING COUNT(DISTINCT str.user_id) >= ?
@@ -495,7 +499,7 @@ async function getGlobalBrandLevelHighPerformingTerms(params: {
        AND ${avgCtrExpr} >= ${HIGH_PERFORMING_MIN_CTR}
      ORDER BY user_count DESC, avg_ctr DESC
      LIMIT ?`,
-    [params.brandName, params.targetCountry || null, minUsers, maxTerms]
+    [params.brandName, params.targetCountry || null, params.targetLanguage || null, minUsers, maxTerms]
   )
 
   return rows
@@ -512,7 +516,7 @@ async function getGlobalBrandLevelHighPerformingTerms(params: {
 /**
  * Build search term feedback hints from search term reports.
  * 🆕 Now includes high-performing terms for positive reinforcement.
- * 🆕 阶段1+2: 品牌聚合策略（Offer + 用户品牌 + 全局品牌）
+ * 🆕 分层策略（品牌全局优先）：全局品牌 + Offer + 用户品牌
  * - hardNegativeTerms: clear spend waste by clicks/cost + poor efficiency (CPC/CTR)
  * - softSuppressTerms: moderate inefficiency that should be deprioritized in copy
  * - highPerformingTerms: strong CTR/conversion signals for keyword expansion
@@ -531,8 +535,8 @@ export async function getSearchTermFeedbackHints(params: {
   const isDeletedCondition = db.type === 'postgres' ? 'COALESCE(c.is_deleted, FALSE) = FALSE' : 'COALESCE(c.is_deleted, 0) = 0'
 
   // 获取 Offer 信息（用于品牌级别回退）
-  const offer = await db.queryOne<{ brand: string; target_country: string }>(
-    'SELECT brand, target_country FROM offers WHERE id = ? AND user_id = ?',
+  const offer = await db.queryOne<{ brand: string; target_country: string; target_language: string | null }>(
+    'SELECT brand, target_country, target_language FROM offers WHERE id = ? AND user_id = ?',
     [params.offerId, params.userId]
   )
 
@@ -579,62 +583,69 @@ export async function getSearchTermFeedbackHints(params: {
   })
 
   const pureBrandKeywords = getPureBrandKeywords(offer.brand || '')
-  let highPerformingTerms = filterBrandRelatedTerms(
+  const offerLevelTerms = filterBrandRelatedTerms(
     classified.highPerformingTerms,
     pureBrandKeywords,
     maxTerms
   )
-  const offerLevelCount = highPerformingTerms.length
+  const offerLevelCount = offerLevelTerms.length
 
   // 🎯 阶段2: 用户品牌级别补充（同用户其他 Offer）
+  let userBrandTerms: string[] = []
   let userBrandLevelCount = 0
   try {
-    const userBrandTerms = filterBrandRelatedTerms(
+    userBrandTerms = filterBrandRelatedTerms(
       await getUserBrandLevelHighPerformingTerms({
         userId: params.userId,
         brandName: offer.brand,
         excludeOfferId: params.offerId,
         targetCountry: offer.target_country,
+        targetLanguage: offer.target_language || undefined,
         maxTerms: maxTerms
       }),
       pureBrandKeywords
     )
-
-    const merged = mergeTermsWithCap(highPerformingTerms, userBrandTerms, maxTerms)
-    highPerformingTerms = merged.merged
-    userBrandLevelCount = merged.addedCount
-
-    if (userBrandLevelCount > 0) {
-      console.log(`🔄 用户品牌级别补充: 添加 ${userBrandLevelCount} 个高性能词 (来自同用户其他 Offer)`)
-    }
   } catch (error) {
     console.warn('⚠️ 用户品牌级别补充失败:', error)
   }
 
-  // 🎯 阶段3: 全局品牌级别补充（所有用户聚合）
+  // 🎯 阶段3: 全局品牌级别补充（所有用户聚合，品牌全局优先）
+  let globalBrandTerms: string[] = []
   let globalBrandLevelCount = 0
   try {
-    const globalBrandTerms = filterBrandRelatedTerms(
+    globalBrandTerms = filterBrandRelatedTerms(
       (
         await getGlobalBrandLevelHighPerformingTerms({
           brandName: offer.brand,
           targetCountry: offer.target_country,
+          targetLanguage: offer.target_language || undefined,
           maxTerms: maxTerms,
-          minUsers: 2 // k-匿名性：至少2个用户
+          minUsers: 1 // 品牌全局优先：不按用户数做硬门槛
         })
       ).map(item => item.term),
-      pureBrandKeywords
+      pureBrandKeywords,
+      maxTerms
     )
-
-    const merged = mergeTermsWithCap(highPerformingTerms, globalBrandTerms, maxTerms)
-    highPerformingTerms = merged.merged
-    globalBrandLevelCount = merged.addedCount
-
-    if (globalBrandLevelCount > 0) {
-      console.log(`🌍 全局品牌级别补充: 添加 ${globalBrandLevelCount} 个高性能词 (跨用户聚合)`)
-    }
   } catch (error) {
     console.warn('⚠️ 全局品牌级别补充失败:', error)
+  }
+
+  const mergedWithOffer = mergeTermsWithCap(globalBrandTerms, offerLevelTerms, maxTerms)
+  const mergedWithUser = mergeTermsWithCap(mergedWithOffer.merged, userBrandTerms, maxTerms)
+  const highPerformingTerms = mergedWithUser.merged
+
+  globalBrandLevelCount = globalBrandTerms.length
+  const offerLevelAddedCount = mergedWithOffer.addedCount
+  userBrandLevelCount = mergedWithUser.addedCount
+
+  if (globalBrandLevelCount > 0) {
+    console.log(`🌍 全局品牌优先: 注入 ${globalBrandLevelCount} 个高性能词 (跨用户聚合)`)
+  }
+  if (offerLevelAddedCount > 0) {
+    console.log(`🎯 Offer级补充: 添加 ${offerLevelAddedCount} 个高性能词`)
+  }
+  if (userBrandLevelCount > 0) {
+    console.log(`🔄 用户品牌级补充: 添加 ${userBrandLevelCount} 个高性能词 (来自同用户其他 Offer)`)
   }
 
   // 输出统计信息

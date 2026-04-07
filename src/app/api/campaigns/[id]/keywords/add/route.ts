@@ -6,6 +6,7 @@ import { createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
 import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
 import { recommendMatchTypeForKeyword } from '@/lib/keyword-intent'
 import { patchCampaignConfigKeywords, type CampaignConfigKeyword } from '@/lib/campaign-config-keywords'
+import { promoteKeywordsToOfferKeywordPool } from '@/lib/offer-keyword-pool'
 
 type KeywordInput = string | {
   text?: string
@@ -27,6 +28,36 @@ type NormalizedKeyword = {
 type KeywordCreateFailure = {
   keywordText: string
   message: string
+}
+
+async function promoteAddedKeywordsToOfferPool(params: {
+  offerId: number | null
+  userId: number
+  keywords: Array<{ text: string; matchType: 'BROAD' | 'PHRASE' | 'EXACT' }>
+}) {
+  const offerId = Number(params.offerId)
+  if (!Number.isFinite(offerId) || offerId <= 0) return
+  if (!Array.isArray(params.keywords) || params.keywords.length === 0) return
+
+  try {
+    await promoteKeywordsToOfferKeywordPool({
+      offerId,
+      userId: params.userId,
+      source: 'SEARCH_TERM_HIGH_PERFORMING',
+      sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
+      sourceSubtype: 'SEARCH_TERM_HIGH_PERFORMING',
+      rawSource: 'SEARCH_TERM_HIGH_PERFORMING',
+      reason: 'campaign_keywords_add',
+      keywords: params.keywords.map((item) => ({
+        text: item.text,
+        matchType: item.matchType,
+      })),
+    })
+  } catch (error: any) {
+    console.warn(
+      `[keywords/add] 关键词池晋升失败: offer=${offerId}, user=${params.userId}, error=${error?.message || error}`
+    )
+  }
 }
 
 function normalizeKeywordText(value: unknown): string {
@@ -207,10 +238,9 @@ async function createKeywordsWithDuplicateTolerance(params: {
       })
     }
     return { created, duplicateKeywords, failures }
-  } catch (error: any) {
-    if (!isDuplicateKeywordError(error)) {
-      throw error
-    }
+  } catch {
+    // 批量写入在 Google Ads 侧是 all-or-nothing；任意一条异常都会让整批失败。
+    // 这里统一降级到逐条创建，以便保住可成功的关键词，并把真实失败项回传给上层。
   }
 
   for (const item of params.keywords) {
@@ -274,6 +304,7 @@ export async function POST(
 
     const campaign = await db.queryOne<{
       id: number
+      offer_id: number | null
       campaign_name: string
       status: string
       is_deleted: number | boolean
@@ -289,6 +320,7 @@ export async function POST(
       `
         SELECT
           c.id,
+          c.offer_id,
           c.campaign_name,
           c.status,
           c.is_deleted,
@@ -379,6 +411,15 @@ export async function POST(
     const skippedExistingKeywords = skippedExistingKeywordRows.map((item) => item.text)
 
     if (toCreate.length === 0) {
+      const existingKeywordRowsForPromotion = skippedExistingKeywordRows.map((item) => ({
+        text: item.text,
+        matchType: item.matchType,
+      }))
+      await promoteAddedKeywordsToOfferPool({
+        offerId: campaign.offer_id,
+        userId,
+        keywords: existingKeywordRowsForPromotion,
+      })
       await syncCampaignConfigKeywords(
         skippedExistingKeywordRows.map((item) => ({ text: item.text, matchType: item.matchType }))
       )
@@ -500,6 +541,16 @@ export async function POST(
       ...skippedExistingKeywordRows.map((item) => ({ text: item.text, matchType: item.matchType })),
       ...duplicateKeywordRows,
     ])
+
+    await promoteAddedKeywordsToOfferPool({
+      offerId: campaign.offer_id,
+      userId,
+      keywords: [
+        ...insertedKeywords.map((item) => ({ text: item.keywordText, matchType: item.matchType })),
+        ...skippedExistingKeywordRows.map((item) => ({ text: item.text, matchType: item.matchType })),
+        ...duplicateKeywordRows,
+      ],
+    })
 
     if (insertedKeywords.length === 0 && createResult.failures.length > 0) {
       return NextResponse.json(

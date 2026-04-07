@@ -1695,4 +1695,152 @@ describe('GET /api/campaigns/performance', () => {
       }),
     }))
   })
+
+  it('matches search against linked ads account name and ids', async () => {
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes('FROM campaigns c')) {
+        return [
+          {
+            id: 1,
+            campaign_id: 'cmp_alpha',
+            campaign_name: 'Alpha Campaign',
+            offer_id: 11,
+            offer_brand: 'Brand A',
+            offer_url: 'https://example.com/a',
+            status: 'ENABLED',
+            google_campaign_id: 'g_1',
+            google_ads_account_id: 424242,
+            budget_amount: 20,
+            budget_type: 'DAILY',
+            creation_status: 'SUCCESS',
+            creation_error: null,
+            last_sync_at: '2026-02-25T00:00:00.000Z',
+            created_at: '2026-02-20T00:00:00.000Z',
+            published_at: '2026-02-20T00:00:00.000Z',
+            is_deleted: 0,
+            deleted_at: null,
+            ads_account_id: 424242,
+            ads_account_customer_id: '1006966374',
+            ads_account_name: 'North Hub',
+            ads_account_is_active: 1,
+            ads_account_is_deleted: 0,
+            ads_account_currency: 'USD',
+            offer_is_deleted: 0,
+          },
+          {
+            id: 2,
+            campaign_id: 'cmp_beta',
+            campaign_name: 'Beta Campaign',
+            offer_id: 12,
+            offer_brand: 'Brand B',
+            offer_url: 'https://example.com/b',
+            status: 'PAUSED',
+            google_campaign_id: 'g_2',
+            google_ads_account_id: 515151,
+            budget_amount: 10,
+            budget_type: 'DAILY',
+            creation_status: 'SUCCESS',
+            creation_error: null,
+            last_sync_at: '2026-02-25T00:00:00.000Z',
+            created_at: '2026-02-19T00:00:00.000Z',
+            published_at: '2026-02-19T00:00:00.000Z',
+            is_deleted: 0,
+            deleted_at: null,
+            ads_account_id: 515151,
+            ads_account_customer_id: '2003004005',
+            ads_account_name: 'South Desk',
+            ads_account_is_active: 1,
+            ads_account_is_deleted: 0,
+            ads_account_currency: 'USD',
+            offer_is_deleted: 0,
+          },
+        ]
+      }
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+        return [
+          { campaign_id: 1, currency: 'USD', impressions: 100, clicks: 20, cost: 30 },
+          { campaign_id: 2, currency: 'USD', impressions: 50, clicks: 10, cost: 15 },
+        ]
+      }
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id')) {
+        return [
+          { campaign_id: 1, currency: 'USD', commission: 12 },
+          { campaign_id: 2, currency: 'USD', commission: 6 },
+        ]
+      }
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY currency')) {
+        return [{ currency: 'USD', impressions: 150, clicks: 30, cost: 45 }]
+      }
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
+        return [{ currency: 'USD', total_commission: 18 }]
+      }
+      if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
+        return []
+      }
+      if (sql.includes('summary_source')) {
+        return buildPreviousSummaryRows({
+          performance: [{ currency: 'USD', impressions: 120, clicks: 24, cost: 36 }],
+          attributed: [{ currency: 'USD', amount: 10 }],
+        })
+      }
+      if (sql.includes('period_label')) {
+        return []
+      }
+
+      throw new Error(`unexpected query sql: ${sql}`)
+    })
+
+    const queryOne = vi.fn(async (sql: string) => {
+      if (sql.includes('FROM sync_logs')) {
+        return { latest_sync_at: null }
+      }
+      if (sql.includes('FROM campaign_performance') && sql.includes('COALESCE(SUM(impressions), 0) as impressions')) {
+        return { impressions: 150, clicks: 30, cost: 45 }
+      }
+      if (sql.includes('FROM affiliate_commission_attributions')) {
+        return { total_commission: 18 }
+      }
+      if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
+        return { total_commission: 0 }
+      }
+
+      throw new Error(`unexpected queryOne sql: ${sql}`)
+    })
+
+    dbFns.getDatabase.mockResolvedValue({
+      type: 'sqlite',
+      query,
+      queryOne,
+    })
+
+    const nameRes = await GET(new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&search=north%20hub'))
+    const customerIdRes = await GET(new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&search=1006966374'))
+    const accountIdRes = await GET(new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&search=424242'))
+
+    const nameData = await nameRes.json()
+    const customerIdData = await customerIdRes.json()
+    const accountIdData = await accountIdRes.json()
+
+    expect(nameRes.status).toBe(200)
+    expect(customerIdRes.status).toBe(200)
+    expect(accountIdRes.status).toBe(200)
+
+    expect(nameData.campaigns).toHaveLength(1)
+    expect(nameData.campaigns[0]).toEqual(expect.objectContaining({
+      campaignName: 'Alpha Campaign',
+      adsAccountName: 'North Hub',
+    }))
+
+    expect(customerIdData.campaigns).toHaveLength(1)
+    expect(customerIdData.campaigns[0]).toEqual(expect.objectContaining({
+      campaignName: 'Alpha Campaign',
+      adsAccountCustomerId: '1006966374',
+    }))
+
+    expect(accountIdData.campaigns).toHaveLength(1)
+    expect(accountIdData.campaigns[0]).toEqual(expect.objectContaining({
+      campaignName: 'Alpha Campaign',
+      googleAdsAccountId: 424242,
+    }))
+  })
 })

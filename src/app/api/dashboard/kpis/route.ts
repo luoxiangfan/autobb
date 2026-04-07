@@ -252,6 +252,7 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
 
       const previousPeriodQuery = `
         SELECT
+          COALESCE(currency, 'USD') as currency,
           SUM(impressions) as impressions,
           SUM(clicks) as clicks,
           SUM(cost) as cost
@@ -259,20 +260,22 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
         WHERE user_id = ?
           AND date >= ?
           AND date <= ?
+        GROUP BY COALESCE(currency, 'USD')
       `
 
-      const previousData = await db.queryOne(
+      const previousData = await db.query(
         previousPeriodQuery,
         [
           userId,
           previousStartDate,
           previousEndDate
         ]
-      ) as {
+      ) as Array<{
+        currency?: string | null
         impressions: number | null
         clicks: number | null
         cost: number | null
-      } | undefined
+      }>
 
       const queryAttributedCommissionTotals = async (params: {
         start: string
@@ -389,9 +392,18 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
 
       const previousCommission = previousAttributedCommissionTotal + previousUnattributedCommissionTotal
       const previous = {
-        impressions: Number(previousData?.impressions) || 0,
-        clicks: Number(previousData?.clicks) || 0,
-        cost: Number(previousData?.cost) || 0,
+        impressions: previousData.reduce((sum, row) => sum + (Number(row?.impressions) || 0), 0),
+        clicks: previousData.reduce((sum, row) => sum + (Number(row?.clicks) || 0), 0),
+        cost: previousData.reduce((sum, row) => {
+          const cost = Number(row?.cost) || 0
+          const currency = row?.currency || 'USD'
+          try {
+            return sum + convertCurrency(cost, currency, 'USD')
+          } catch (error) {
+            console.warn(`历史花费货币转换失败: ${currency} -> USD, 使用原值`, error)
+            return sum + cost
+          }
+        }, 0),
         conversions: previousCommission,
         commission: previousCommission,
         roas: null as number | null,
