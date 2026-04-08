@@ -222,12 +222,12 @@ async function fetchCampaignsFromGoogleAds(params: {
       campaign.name,
       campaign_budget.amount_micros,
       campaign.target_spend.cpc_bid_ceiling_micros,
-      campaign.budget_type,
+      campaign_budget.type,
       campaign.status,
       customer_client.id,
       customer_client.descriptive_name
     FROM campaign
-    WHERE campaign.status NOT IN ('REMOVED')
+    WHERE campaign.status != 'REMOVED'
   `
 
   try {
@@ -261,7 +261,7 @@ async function fetchCampaignsFromGoogleAds(params: {
       campaign_name: row.campaign?.name || `Campaign_${row.campaign?.id}`,
       budget_amount: Number(row.campaign_budget?.amount_micros || 0) / 1000000, // 转换为元
       cpc_bid_ceiling_micros: Number(row.campaign?.target_spend?.cpc_bid_ceiling_micros || 0) / 1000000, // 转换为元
-      budget_type: (row.campaign?.budget_type || 'DAILY') as 'DAILY' | 'TOTAL',
+      budget_type: (row.campaign_budget?.type || 'DAILY') as 'DAILY' | 'TOTAL',
       status: (row.campaign?.status || 'PAUSED') as 'ENABLED' | 'PAUSED' | 'REMOVED',
       customer_id: customerId,
       account_name: row.customer_client?.descriptive_name,
