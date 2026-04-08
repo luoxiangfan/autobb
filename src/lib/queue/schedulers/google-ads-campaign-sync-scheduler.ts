@@ -13,7 +13,7 @@
  */
 
 import { getDatabase } from '../../db'
-import { getQueueManager } from '../unified-queue-manager'
+import { getQueueManagerForTaskType } from '../queue-routing'
 import { getUserAuthType, getGoogleAdsCredentials } from '../../google-ads-oauth'
 import { getServiceAccountConfig } from '../../google-ads-service-account'
 import { buildUserExecutionEligibleSql } from '../../user-execution-eligibility'
@@ -285,7 +285,9 @@ export class GoogleAdsCampaignSyncScheduler {
       dryRun?: boolean
     } = {}
   ): Promise<string> {
-    const queue = getQueueManager()
+    // 🆕 修复：使用 getQueueManagerForTaskType 确保任务被路由到正确的队列
+    // google-ads-campaign-sync 属于后台任务，应该入队到 background 队列
+    const queue = getQueueManagerForTaskType('google-ads-campaign-sync')
 
     const taskData: GoogleAdsCampaignSyncTaskData = {
       userId,
