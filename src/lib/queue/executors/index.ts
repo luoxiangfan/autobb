@@ -98,6 +98,8 @@ export function registerAllExecutors(queue: UnifiedQueueManager): void {
   // 当 split 模式下 background worker 离线时，可回退到 core 执行避免任务卡死。
   queue.registerExecutor('openclaw-command', executeOpenclawCommandTask)
 
+  queue.registerExecutor('google-ads-campaign-sync', executeGoogleAdsCampaignSyncTask)
+
   const backgroundDecision = shouldRegisterBackgroundExecutors()
   if (backgroundDecision.allowed) {
     // 🆕 注册 click-farm 执行器（补点击任务，带代理和超时控制）
