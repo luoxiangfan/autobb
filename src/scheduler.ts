@@ -1145,7 +1145,7 @@ function startScheduler() {
   })
   log(`✅ 数据同步检查任务已启动 (cron: ${dataSyncCheckCron})`)
 
-  // 任务2: 每天凌晨2点备份数据库
+  // 任务2: 每天凌晨2点执行 Google Ads 数据同步
   cron.schedule('0 2 * * *', async () => {
     await runSyncGoogleAdsTaskSafely('cron')
   }, {

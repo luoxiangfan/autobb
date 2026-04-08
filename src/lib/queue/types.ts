@@ -56,6 +56,7 @@ export const ALL_TASK_TYPES: TaskType[] = [
   'openclaw-affiliate-sync',
   'openclaw-report-send',
   'product-score-calculation',
+  'google-ads-campaign-sync',
 ]
 
 /**
