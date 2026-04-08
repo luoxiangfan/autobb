@@ -13,6 +13,7 @@ const BACKGROUND_TASK_TYPES: ReadonlySet<TaskType> = new Set([
   'openclaw-affiliate-sync',
   'openclaw-report-send',
   'product-score-calculation',
+  'google-ads-campaign-sync',
 ])
 
 export function isBackgroundTaskType(type: TaskType | string): boolean {
