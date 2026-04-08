@@ -159,6 +159,7 @@ export default function OffersClientPage({
   const serverSearchQuery = isServerPagingMode ? debouncedSearchQuery.trim() : ''
   const serverCountry = isServerPagingMode && countryFilter !== 'all' ? countryFilter : ''
   const serverScrapeStatus = isServerPagingMode && statusFilter !== 'all' ? statusFilter : ''
+  const serverNeedsCompletion = isServerPagingMode && needsCompletionFilter !== 'all' ? needsCompletionFilter : ''
   const serverSortBy = isServerPagingMode && sortBy && OFFERS_SERVER_SUPPORTED_SORTS.has(sortBy)
     ? sortBy
     : ''
@@ -263,6 +264,7 @@ export default function OffersClientPage({
       if (serverSearchQuery) params.set('search', serverSearchQuery)
       if (serverCountry) params.set('targetCountry', serverCountry)
       if (serverScrapeStatus) params.set('scrapeStatus', serverScrapeStatus)
+      if (serverNeedsCompletion) params.set('needsOfferCompletion', serverNeedsCompletion)
 
       if (serverSortBy) {
         params.set('sortBy', serverSortBy)
@@ -278,6 +280,7 @@ export default function OffersClientPage({
     serverSearchQuery,
     serverCountry,
     serverScrapeStatus,
+    serverNeedsCompletion,
     serverSortBy,
     serverSortOrder,
   ])
@@ -616,6 +619,7 @@ export default function OffersClientPage({
         searchQuery: debouncedSearchQuery,
         countryFilter,
         statusFilter,
+        needsCompletionFilter,
         sortBy,
         sortOrder,
       })
@@ -690,7 +694,7 @@ export default function OffersClientPage({
 
     setFilteredOffers(filtered)
 
-    const filterKey = JSON.stringify({ searchQuery, countryFilter, statusFilter, sortBy, sortOrder })
+    const filterKey = JSON.stringify({ searchQuery, countryFilter, statusFilter, sortBy, sortOrder, needsCompletionFilter })
     const filtersChanged = filterKeyRef.current !== filterKey
     filterKeyRef.current = filterKey
 
@@ -704,6 +708,7 @@ export default function OffersClientPage({
     debouncedSearchQuery,
     countryFilter,
     statusFilter,
+    needsCompletionFilter,
     sortBy,
     sortOrder,
     pageSize,
@@ -1110,7 +1115,7 @@ export default function OffersClientPage({
     return Array.from(values)
   }, [offers, countryFilter])
 
-  const hasActiveFilters = Boolean(searchQuery || countryFilter !== 'all' || statusFilter !== 'all')
+  const hasActiveFilters = Boolean(searchQuery || countryFilter !== 'all' || statusFilter !== 'all' || needsCompletionFilter !== 'all')
   useEffect(() => {
     if (manualCompatMode && !hasUnsupportedServerSort) {
       setManualCompatMode(false)
@@ -1395,6 +1400,7 @@ export default function OffersClientPage({
                     setSearchQuery('')
                     setCountryFilter('all')
                     setStatusFilter('all')
+                    setNeedsCompletionFilter('all')
                   }}
                 >
                   清除筛选
@@ -1491,6 +1497,7 @@ export default function OffersClientPage({
                       >
                         关联Ads账号
                       </SortableTableHead>
+                      <TableHead className="w-[80px] whitespace-nowrap">需要完善</TableHead>
                       <TableHead className="whitespace-nowrap">操作</TableHead>
                     </TableRow>
                   </TableHeader>

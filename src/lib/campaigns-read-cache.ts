@@ -21,6 +21,7 @@ export type CampaignPerformanceCachePayload = {
   sortBy: string
   sortOrder: 'asc' | 'desc' | null
   ids: number[]
+  needsOfferCompletion: string | null
 }
 
 export type CampaignTrendsCachePayload = {

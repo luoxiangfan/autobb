@@ -114,6 +114,7 @@ export interface OfferListRow {
   commission_value: string | null
   commission_currency: string | null
   scrape_status: string
+  needs_completion: boolean | number
   scrape_error: string | null
   scraped_at: string | null
   is_active: number | boolean
@@ -384,6 +385,7 @@ export async function listOffers(
     targetCountry?: string
     searchQuery?: string
     scrapeStatus?: string
+    needsCompletion?: boolean
     sortBy?: string
     sortOrder?: 'asc' | 'desc'
     includeDeleted?: boolean
@@ -455,6 +457,11 @@ export async function listOffers(
     params.push(options.scrapeStatus)
   }
 
+  if (options?.needsCompletion !== undefined) {
+    whereConditions.push('needs_completion = ?')
+    params.push(options.needsCompletion)
+  }
+
   const whereClause = whereConditions.join(' AND ')
 
   // 获取总数
@@ -500,6 +507,7 @@ export async function listOffers(
     targetCountry: 'target_country',
     targetLanguage: 'target_language',
     scrapeStatus: 'scrape_status',
+    needsCompletion: 'needs_completion',
     createdAt: 'created_at',
     updatedAt: 'updated_at',
   }

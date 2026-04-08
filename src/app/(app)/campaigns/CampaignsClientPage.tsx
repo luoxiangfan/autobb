@@ -772,6 +772,7 @@ export default function CampaignsClientPage({
         pageSize,
         searchQuery: debouncedSearchQuery.trim(),
         statusFilter,
+        needsOfferCompletionFilter,
         sortField,
         sortDirection,
         showDeletedCampaigns,
@@ -1184,6 +1185,10 @@ export default function CampaignsClientPage({
 
     if (statusFilter !== 'all') {
       params.set('status', statusFilter)
+    }
+
+    if (needsOfferCompletionFilter !== 'all') {
+      params.set('needsOfferCompletion', needsOfferCompletionFilter)
     }
 
     if (sortField && sortDirection) {
@@ -3347,8 +3352,8 @@ export default function CampaignsClientPage({
                       <SortableHeader field="cost" className="w-[94px] whitespace-nowrap !px-0.5">花费</SortableHeader>
                       <SortableHeader field="roas" className="w-[62px] whitespace-nowrap !px-0.5">ROAS</SortableHeader>
                       <SortableHeader field="status" className="w-[78px] whitespace-nowrap">投放状态</SortableHeader>
-                      <TableHead className="w-[100px] whitespace-nowrap">需要完善 Offer</TableHead>
                       <SortableHeader field="servingStartDate" className="w-[74px] whitespace-nowrap">投放日期</SortableHeader>
+                      <TableHead className="w-[100px] whitespace-nowrap">需要完善 Offer</TableHead>
                       <TableHead className="w-[48px] whitespace-nowrap text-center">操作</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -3550,6 +3555,11 @@ export default function CampaignsClientPage({
                         {getStatusBadge(campaign.status, campaign.adsAccountAvailable)}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
+                        <span className="text-sm text-gray-900">
+                          {campaign.servingStartDate || '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {campaign.needsOfferCompletion && campaign.offerSyncSource === 'google_ads_sync' ? (
                           <a
                             href={`/offers/${campaign.offerId}/edit`}
@@ -3568,11 +3578,6 @@ export default function CampaignsClientPage({
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <span className="text-sm text-gray-900">
-                          {campaign.servingStartDate || '-'}
-                        </span>
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-center">
                         <DropdownMenu>

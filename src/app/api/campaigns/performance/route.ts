@@ -348,6 +348,7 @@ export async function GET(request: NextRequest) {
     const searchQuery = (searchParams.get('search') || '').trim().toLowerCase()
     const statusFilterRaw = (searchParams.get('status') || '').trim().toUpperCase()
     const statusFilter = ['ENABLED', 'PAUSED', 'REMOVED', 'ALL'].includes(statusFilterRaw) ? statusFilterRaw : ''
+    const needsOfferCompletionFilter = (searchParams.get('needsOfferCompletion') || '').trim().toUpperCase()
     const showDeletedParam = parseOptionalBoolean(searchParams.get('showDeleted'))
     const refresh = parseOptionalBoolean(searchParams.get('refresh')) === true
     const noCache = parseOptionalBoolean(searchParams.get('noCache')) === true
@@ -389,6 +390,7 @@ export async function GET(request: NextRequest) {
       offset,
       search: searchQuery,
       status: statusFilter || 'ALL',
+      needsOfferCompletion: needsOfferCompletionFilter || 'ALL',
       showDeleted: showDeletedParam,
       sortBy,
       sortOrder,
@@ -680,6 +682,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (statusFilter && statusFilter !== 'ALL') {
+      listCampaigns = listCampaigns.filter((campaign) => String(campaign.status || '').toUpperCase() === statusFilter)
+    }
+    
+    if (needsOfferCompletionFilter && needsOfferCompletionFilter !== 'ALL') {
       listCampaigns = listCampaigns.filter((campaign) => String(campaign.status || '').toUpperCase() === statusFilter)
     }
 

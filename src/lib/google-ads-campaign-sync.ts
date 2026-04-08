@@ -27,6 +27,7 @@ export interface GoogleAdsCampaign {
   status: 'ENABLED' | 'PAUSED' | 'REMOVED'
   customer_id: string
   account_name?: string
+  cpcBidCeilingMicros?: number
 }
 
 /**
@@ -219,7 +220,8 @@ async function fetchCampaignsFromGoogleAds(params: {
     SELECT 
       campaign.id,
       campaign.name,
-      campaign.budget_amount_micros,
+      campaign_budget.amount_micros,
+      campaign.target_spend.cpc_bid_ceiling_micros,
       campaign.budget_type,
       campaign.status,
       customer_client.id,
@@ -257,7 +259,8 @@ async function fetchCampaignsFromGoogleAds(params: {
     return results.map((row: any) => ({
       campaign_id: String(row.campaign?.id || ''),
       campaign_name: row.campaign?.name || `Campaign_${row.campaign?.id}`,
-      budget_amount: Number(row.campaign?.budget_amount_micros || 0) / 1_000_000, // 转换为元
+      budget_amount: Number(row.campaign_budget?.amount_micros || 0) / 1000000, // 转换为元
+      cpc_bid_ceiling_micros: Number(row.campaign?.target_spend?.cpc_bid_ceiling_micros || 0) / 1000000, // 转换为元
       budget_type: (row.campaign?.budget_type || 'DAILY') as 'DAILY' | 'TOTAL',
       status: (row.campaign?.status || 'PAUSED') as 'ENABLED' | 'PAUSED' | 'REMOVED',
       customer_id: customerId,
@@ -291,6 +294,7 @@ async function saveCampaignToDatabase(params: {
     // 更新现有广告系列
     await db.exec(
       `UPDATE campaigns SET
+        max_cpc = ?,
         campaign_name = ?,
         budget_amount = ?,
         budget_type = ?,
@@ -300,6 +304,7 @@ async function saveCampaignToDatabase(params: {
         last_sync_at = ?
       WHERE id = ?`,
       [
+        campaign.cpcBidCeilingMicros || null,  // 🆕 可选的 max_cpc 字段
         campaign.campaign_name,
         campaign.budget_amount,
         campaign.budget_type,
@@ -327,7 +332,8 @@ async function saveCampaignToDatabase(params: {
         offer_id,
         needs_offer_completion,
         created_at,
-        updated_at
+        updated_at,
+        max_cpc
       ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?)`,
       [
         userId,
@@ -340,6 +346,7 @@ async function saveCampaignToDatabase(params: {
         offerId || null,  // 🆕 如果提供了 offerId，则关联
         nowFunc(db.type),
         nowFunc(db.type),
+        campaign.cpcBidCeilingMicros || null,  // 🆕 可选的 max_cpc 字段
       ]
     )
     return getInsertedId(result, db.type)
@@ -489,7 +496,8 @@ async function createOfferFirst(params: {
   console.log(`[GoogleAds Sync] Creating new offer for campaign ${campaign.campaign_id}`)
   
   // 生成唯一的 offer_name
-  const offerName = `GA_${campaign.campaign_id}_01`
+  // const offerName = `GA_${campaign.campaign_id}_01`
+  const offerName = `${campaign.campaign_name}_US_01`
   
   const result = await db.exec(
     `INSERT INTO offers (
@@ -510,7 +518,7 @@ async function createOfferFirst(params: {
     [
       userId,
       '',  // URL 需要用户后续完善
-      extractBrandFromCampaignName(campaign.campaign_name),  // 从广告系列名称提取品牌
+      campaign.campaign_name,
       'US',  // 默认国家，需要用户完善
       'English',  // 默认语言
       offerName,

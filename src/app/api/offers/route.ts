@@ -12,6 +12,7 @@ const OFFERS_SERVER_SUPPORTED_SORTS = new Set([
   'targetCountry',
   'targetLanguage',
   'scrapeStatus',
+  'needsCompletion',
   'createdAt',
   'updatedAt',
 ])
@@ -77,6 +78,7 @@ async function get(request: NextRequest) {
     const targetCountry = searchParams.get('targetCountry') || undefined
     const searchQuery = searchParams.get('search') || undefined
     const scrapeStatus = searchParams.get('scrapeStatus') || undefined
+    const needsCompletion = searchParams.get('needsCompletion') === 'true' ? true : searchParams.get('needsCompletion') === 'false' ? false : undefined
     const requestedSortBy = searchParams.get('sortBy') || undefined
     const sortByUnsupported = Boolean(requestedSortBy && !OFFERS_SERVER_SUPPORTED_SORTS.has(requestedSortBy))
     const sortBy = sortByUnsupported ? undefined : requestedSortBy
@@ -113,6 +115,7 @@ async function get(request: NextRequest) {
           id: offer.id,
           brand: offer.brand,
           scrapeStatus: offer.scrape_status,
+          needsCompletion: offer.needs_completion,
           scrapeError: offer.scrape_error,
           affiliateLink: offer.affiliate_link,
           targetCountry: offer.target_country,
@@ -165,6 +168,7 @@ async function get(request: NextRequest) {
       targetCountry,
       searchQuery,
       scrapeStatus,
+      needsCompletion,
       sortBy: requestedSortBy,
       sortOrder,
     })
@@ -177,6 +181,7 @@ async function get(request: NextRequest) {
         targetCountry,
         searchQuery,
         scrapeStatus,
+        needsCompletion,
         sortBy,
         sortOrder,
       })
@@ -198,6 +203,7 @@ async function get(request: NextRequest) {
           finalUrl: offer.final_url,
           finalUrlSuffix: offer.final_url_suffix,
           scrapeStatus: offer.scrape_status,
+          needsCompletion: offer.needs_completion,
           scrapeError: offer.scrape_error,
           scrapedAt: offer.scraped_at,
           isActive: offer.is_active === 1,
