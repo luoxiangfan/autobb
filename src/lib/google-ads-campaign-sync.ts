@@ -10,10 +10,11 @@
  */
 
 import { getDatabase } from './db'
-import { getGoogleAdsCredentialsFromDB } from './google-ads-api'
+import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB, trackOAuthApiCall } from './google-ads-api'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { getInsertedId, nowFunc } from './db-helpers'
 import { createRiskAlert } from './risk-alerts'
+import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 
 /**
  * Google Ads 广告系列数据
@@ -113,7 +114,9 @@ export async function syncCampaignsFromGoogleAds(
         const campaigns = await fetchCampaignsFromGoogleAds({
           userId,
           customerId: account.customer_id,
+          authType: account.auth_type || 'oauth',
           serviceAccountId: account.auth_type === 'service_account' ? account.service_account_id || undefined : undefined,
+          refreshToken: account.refresh_token,
         })
 
         console.log(`[GoogleAds Sync] Found ${campaigns.length} campaigns for account ${account.customer_id}`)
@@ -205,9 +208,11 @@ export async function syncCampaignsFromGoogleAds(
 async function fetchCampaignsFromGoogleAds(params: {
   userId: number
   customerId: string
-  serviceAccountId?: string
+  authType: string
+  serviceAccountId?: string,
+  refreshToken: string | null
 }): Promise<GoogleAdsCampaign[]> {
-  const { userId, customerId, serviceAccountId } = params
+  const { userId, customerId, authType, serviceAccountId, refreshToken } = params
 
   // 使用 GAQL 查询广告系列
   const query = `
@@ -224,20 +229,29 @@ async function fetchCampaignsFromGoogleAds(params: {
   `
 
   try {
-    const results = await executeGAQLQueryPython({
-      customerId,
-      query,
-      userId,
-      serviceAccountId
-    })
-    // ? await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query })
-    //       : await executeOAuthQueryWithTracking({
-    //         userId,
-    //         customerId,
-    //         customer,
-    //         query,
-    //         operationType: ApiOperationType.REPORT,
-    //       })
+    let results: any[] = []
+    if (authType === 'service_account') {
+      const result = await executeGAQLQueryPython({
+        userId,
+        serviceAccountId,
+        customerId,
+        query,
+      })
+      results = result.results || []
+    } else {
+      const customer = await getCustomerWithCredentials({
+        userId,
+        customerId,
+        refreshToken: refreshToken || undefined,
+      })
+      results = await trackOAuthApiCall(
+        userId,
+        customerId,
+        ApiOperationType.SEARCH,
+        '/api/google-ads/query',
+        () => customer.query(query)
+      )
+    }
 
     // 转换结果为结构化数据
     return results.map((row: any) => ({
