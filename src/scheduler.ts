@@ -567,8 +567,12 @@ async function runSyncGoogleAdsTaskSafely(trigger: 'cron' | 'startup') {
 
   syncGoogleAdsTaskRunning = true
   try {
-    const googleAdsSyncScheduler = getGoogleAdsCampaignSyncScheduler()
-    googleAdsSyncScheduler.start()
+    const { getGoogleAdsCampaignSyncScheduler } = await import('./lib/queue/schedulers/google-ads-campaign-sync-scheduler')
+    const scheduler = getGoogleAdsCampaignSyncScheduler()
+
+    // 调用内部检查方法（通过反射访问私有方法）
+    // @ts-ignore - 访问私有方法
+    await scheduler.checkAndScheduleSync()
   } finally {
     syncGoogleAdsTaskRunning = false
   }
@@ -1152,6 +1156,7 @@ function startScheduler() {
     scheduled: true,
     timezone: 'Asia/Shanghai'
   })
+  log('✅ Google Ads 数据同步检查任务已启动 (cron: 0 2 * * *)')
   // 任务2: 每天凌晨2点备份数据库
   cron.schedule('0 2 * * *', async () => {
     await backupDatabaseTask()
@@ -1327,7 +1332,7 @@ function startScheduler() {
   }
 
   if (process.env.RUN_SYNC_GOOGLE_ADS_ON_START === 'true') {
-    log('🔄 启动时立即执行数据同步...')
+    log('🔄 启动时立即执行Google Ads 数据同步...')
     runSyncGoogleAdsTaskSafely('startup').catch((error) => {
       logError('启动同步失败:', error)
     })

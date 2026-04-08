@@ -13,6 +13,7 @@ import { getDatabase } from '@/lib/db'
 import type { QueueConfig } from '@/lib/queue/types'
 import { getUrlSwapScheduler } from '@/lib/queue/schedulers/url-swap-scheduler'
 import { getAffiliateProductSyncScheduler } from '@/lib/queue/schedulers/affiliate-product-sync-scheduler'
+import { getGoogleAdsCampaignSyncScheduler } from '@/lib/queue/schedulers/google-ads-campaign-sync-scheduler'
 
 // 全局标记：队列是否已初始化
 let queueInitialized = false
@@ -99,6 +100,7 @@ async function ensureQueueInitialized(): Promise<{ success: boolean; message: st
       console.log('⏭️ Queue init API: 跳过内置数据同步调度器（由独立 scheduler 进程负责）')
       getUrlSwapScheduler().start()
       getAffiliateProductSyncScheduler().start()
+      getGoogleAdsCampaignSyncScheduler().start()
 
       queueInitialized = true
       console.log('✅ 统一队列系统初始化完成')
