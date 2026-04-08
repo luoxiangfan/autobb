@@ -27,6 +27,7 @@ import { executeOpenclawCommandTask } from './openclaw-command-executor'
 import { executeOpenclawAffiliateSync } from './openclaw-affiliate-sync-executor'
 import { executeOpenclawReportSend } from './openclaw-report-send-executor'
 import { executeProductScoreCalculation } from './product-score-calculation-executor'
+import { executeGoogleAdsCampaignSyncTask } from './google-ads-campaign-sync-executor'
 import { logger } from '@/lib/structured-logger'
 
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on'])
@@ -121,6 +122,9 @@ export function registerAllExecutors(queue: UnifiedQueueManager): void {
 
     // 🆕 注册 product-score-calculation 执行器（商品推荐指数计算）
     queue.registerExecutor('product-score-calculation', executeProductScoreCalculation)
+
+    // 🆕 注册 google-ads-campaign-sync 执行器（Google Ads广告系列同步）
+    queue.registerExecutor('google-ads-campaign-sync', executeGoogleAdsCampaignSyncTask)
   } else {
     logger.warn('queue_background_executors_skipped', {
       reason: backgroundDecision.reason,
@@ -147,6 +151,7 @@ export function registerBackgroundExecutors(queue: UnifiedQueueManager): void {
   queue.registerExecutor('openclaw-affiliate-sync', executeOpenclawAffiliateSync)
   queue.registerExecutor('openclaw-report-send', executeOpenclawReportSend)
   queue.registerExecutor('product-score-calculation', executeProductScoreCalculation)
+  queue.registerExecutor('google-ads-campaign-sync', executeGoogleAdsCampaignSyncTask)
 }
 
 export { createScrapeExecutor, convertPriorityToEnum } from './scrape-executor'
@@ -175,3 +180,4 @@ export type { OpenclawCommandTaskData } from './openclaw-command-executor'
 export type { OpenclawAffiliateSyncTaskData } from './openclaw-affiliate-sync-executor'
 export type { OpenclawReportSendTaskData } from './openclaw-report-send-executor'
 export type { ProductScoreCalculationTaskData } from './product-score-calculation-executor'
+export type { GoogleAdsCampaignSyncTaskData } from './google-ads-campaign-sync-executor'
