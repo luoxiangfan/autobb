@@ -264,7 +264,7 @@ export default function OffersClientPage({
       if (serverSearchQuery) params.set('search', serverSearchQuery)
       if (serverCountry) params.set('targetCountry', serverCountry)
       if (serverScrapeStatus) params.set('scrapeStatus', serverScrapeStatus)
-      if (serverNeedsCompletion) params.set('needsOfferCompletion', serverNeedsCompletion)
+      if (serverNeedsCompletion) params.set('needsCompletion', serverNeedsCompletion)
 
       if (serverSortBy) {
         params.set('sortBy', serverSortBy)
@@ -1568,24 +1568,6 @@ export default function OffersClientPage({
                             {getScrapeStatusBadge(offer.scrapeStatus)}
                           </div>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <div className={offer.isBlacklisted ? 'opacity-50' : ''}>
-                            {offer.needsCompletion ? (
-                              <a
-                                href={`/offers/${offer.id}/edit`}
-                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 hover:bg-orange-200 transition-colors"
-                                title="点击完善信息"
-                              >
-                                <span>需要完善</span>
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                </svg>
-                              </a>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </div>
-                        </TableCell>
                         <TableCell>
                           <div className={offer.isBlacklisted ? 'opacity-50' : ''}>
                             {/* P1-11: 显示关联的Google Ads账号（只显示非MCC账号） */}
@@ -1617,6 +1599,24 @@ export default function OffersClientPage({
                               </div>
                             ) : (
                               <span className="text-caption text-gray-300">-</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <div className={offer.isBlacklisted ? 'opacity-50' : ''}>
+                            {offer.needsCompletion ? (
+                              <a
+                                href={`/offers/${offer.id}/edit`}
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 hover:bg-orange-200 transition-colors"
+                                title="点击完善信息"
+                              >
+                                <span>需要完善</span>
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                              </a>
+                            ) : (
+                              <span className="text-gray-400">-</span>
                             )}
                           </div>
                         </TableCell>

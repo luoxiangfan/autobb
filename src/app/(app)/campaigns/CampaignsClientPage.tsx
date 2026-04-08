@@ -1133,7 +1133,7 @@ export default function CampaignsClientPage({
 
     setFilteredCampaigns(result)
 
-    const filterKey = JSON.stringify({ searchQuery, statusFilter, sortField, sortDirection, showDeletedCampaigns })
+    const filterKey = JSON.stringify({ searchQuery, statusFilter, sortField, sortDirection, showDeletedCampaigns, needsOfferCompletionFilter })
     const filtersChanged = filterKeyRef.current !== filterKey
     filterKeyRef.current = filterKey
 
@@ -1142,7 +1142,7 @@ export default function CampaignsClientPage({
       const nextPage = filtersChanged ? 1 : prev
       return nextPage > filteredTotalPages ? filteredTotalPages : nextPage
     })
-  }, [campaigns, searchQuery, statusFilter, sortField, sortDirection, pageSize, showDeletedCampaigns, isServerPagingMode, totalPages])
+  }, [campaigns, searchQuery, statusFilter, sortField, sortDirection, pageSize, showDeletedCampaigns, isServerPagingMode, totalPages, needsOfferCompletionFilter])
 
   const buildDateRangeParams = (): URLSearchParams => {
     const params = new URLSearchParams()
@@ -3273,12 +3273,12 @@ export default function CampaignsClientPage({
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="完善状态" />
+                    <SelectValue placeholder="Offer完善状态" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">所有完善状态</SelectItem>
-                    <SelectItem value="true">需要完善</SelectItem>
-                    <SelectItem value="false">已完善</SelectItem>
+                    <SelectItem value="all">Offer所有完善状态</SelectItem>
+                    <SelectItem value="true">Offer需要完善</SelectItem>
+                    <SelectItem value="false">Offer已完善</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
