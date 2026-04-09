@@ -15,7 +15,6 @@ import { executeGAQLQueryPython } from './python-ads-client'
 import { getInsertedId, nowFunc } from './db-helpers'
 import { createRiskAlert } from './risk-alerts'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
-import { getUserOnlySetting } from './settings'
 
 /**
  * Google Ads 广告系列数据
@@ -57,8 +56,7 @@ export interface SyncResult {
 export async function syncCampaignsFromGoogleAds(
   userId: number,
   options?: {
-    customerId?: string  // 指定同步特定账户（已废弃，使用 customerIds）
-    customerIds?: string[]  // 指定同步特定账户列表
+    customerId?: string  // 指定同步特定账户
     dryRun?: boolean     // 仅预览，不实际写入数据库
   }
 ): Promise<SyncResult> {
@@ -75,44 +73,28 @@ export async function syncCampaignsFromGoogleAds(
   try {
     console.log(`[GoogleAds Sync] Starting sync for user ${userId}...`)
 
-    // 🆕 支持用户指定要同步的 customerId 列表
-    // 1. 优先使用 options.customerIds
-    // 2. 兼容旧的 options.customerId
-    // 3. 如果都没有，从系统设置读取
-    let targetCustomerIds: string[] | null = null
-    
-    if (options?.customerIds && options.customerIds.length > 0) {
-      targetCustomerIds = options.customerIds
-      console.log(`[GoogleAds Sync] 指定同步 customerIds: ${targetCustomerIds.join(', ')}`)
-    } else if (options?.customerId) {
-      targetCustomerIds = [options.customerId]
-      console.log(`[GoogleAds Sync] 指定同步 customerId: ${options.customerId}`)
-    } else {
-      // 从系统设置读取用户配置的同步账户列表
-      targetCustomerIds = await getUserSyncCustomerIds(userId)
-      if (targetCustomerIds.length > 0) {
-        console.log(`[GoogleAds Sync] 使用系统设置中的 customerIds: ${targetCustomerIds.join(', ')}`)
-      } else {
-        console.log('[GoogleAds Sync] 未指定 customerId，将同步所有账户')
-        targetCustomerIds = null  // null 表示同步所有
-      }
-    }
+    // // 1. 获取用户的 Google Ads 账户凭证（单个对象）
+    // const credentials = await getGoogleAdsCredentialsFromDB(userId)
+    // if (!credentials) {
+    //   result.warnings.push('用户未配置 Google Ads 凭证')
+    //   return result
+    // }
 
     // 2. 获取该用户的所有活跃 Google Ads 账户（数组）
     const isActiveCondition = db.type === 'postgres' ? 'is_active = TRUE' : 'is_active = 1'
     const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = FALSE' : 'is_manager_account = 0'
-    
-    // 🆕 如果指定了 customerId，添加过滤条件
-    const customerIdFilter = targetCustomerIds
-      ? `AND customer_id IN (${targetCustomerIds.map(() => '?').join(',')})`
-      : ''
-    const customerIdParams = targetCustomerIds || []
-    
+    let customerIds: string = ','
+    if (userId == 2) {
+      customerIds = `'3647422686'`
+    }
+    if (userId == 3) {
+      customerIds = `'3087435596','8642496427','8623761154'`
+    }
     const accounts = await db.query(
       `SELECT id, customer_id, account_name, refresh_token, auth_type, service_account_id FROM google_ads_accounts
-       WHERE user_id = ? AND ${isActiveCondition} AND ${isManagerCondition} AND status = 'ENABLED' AND customer_id IS NOT NULL AND customer_id != '' ${customerIdFilter}
+       WHERE user_id = ? AND ${isActiveCondition} AND ${isManagerCondition} AND status = 'ENABLED' AND customer_id IS NOT NULL AND customer_id != '' AND customer_id in (${customerIds})
        ORDER BY id`,
-      [userId, ...customerIdParams]
+      [userId]
     ) as Array<{
       id: number
       customer_id: string
@@ -483,83 +465,4 @@ export async function syncAllUsersCampaigns(): Promise<{
     totalSkipped,
     totalErrors,
   }
-}
-
-/**
- * 🆕 获取用户配置的同步 customerId 列表
- * 
- * 从系统设置读取用户指定的要同步的 Google Ads 账户
- * 
- * @param userId - 用户 ID
- * @returns customerId 数组，空数组表示同步所有账户
- */
-async function getUserSyncCustomerIds(userId: number): Promise<string[]> {
-  const db = await getDatabase()
-  
-  try {
-    const setting = await db.queryOne(
-      `SELECT value FROM system_settings
-       WHERE user_id = ? AND category = 'google_ads' AND key = 'sync_customer_ids'
-       LIMIT 1`,
-      [userId]
-    )
-    
-    if (!setting?.value) {
-      return []  // 未配置，返回空数组表示同步所有
-    }
-    
-    // 解析 JSON 数组
-    const customerIds = JSON.parse(setting.value) as string[]
-    
-    if (!Array.isArray(customerIds)) {
-      console.warn(`[GoogleAds Sync] 用户 ${userId} 的 sync_customer_ids 配置不是数组`)
-      return []
-    }
-    
-    // 过滤掉空值
-    const validCustomerIds = customerIds.filter(id => String(id).trim() !== '')
-    
-    return validCustomerIds
-  } catch (error: any) {
-    console.error(`[GoogleAds Sync] 读取用户 ${userId} 的 sync_customer_ids 配置失败:`, error)
-    return []
-  }
-}
-
-/**
- * 🆕 设置用户要同步的 customerId 列表
- * 
- * @param userId - 用户 ID
- * @param customerIds - customerId 数组，空数组表示同步所有账户
- */
-export async function setUserSyncCustomerIds(
-  userId: number,
-  customerIds: string[]
-): Promise<void> {
-  const db = await getDatabase()
-  const now = nowFunc(db.type)
-  
-  if (!customerIds || customerIds.length === 0) {
-    // 空数组表示删除配置，同步所有账户
-    await db.exec(
-      `DELETE FROM system_settings
-       WHERE user_id = ? AND category = 'google_ads' AND key = 'sync_customer_ids'`,
-      [userId]
-    )
-    console.log(`[GoogleAds Sync] 已清除用户 ${userId} 的 customerId 配置，将同步所有账户`)
-    return
-  }
-  
-  // 保存为 JSON 数组
-  const jsonValue = JSON.stringify(customerIds)
-  
-  await db.exec(
-    `INSERT INTO system_settings (user_id, category, key, value, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ${now}, ${now})
-     ON CONFLICT (user_id, category, key) 
-     DO UPDATE SET value = ?, updated_at = ${now}`,
-    [userId, 'google_ads', 'sync_customer_ids', jsonValue, jsonValue]
-  )
-  
-  console.log(`[GoogleAds Sync] 已设置用户 ${userId} 的同步 customerId: ${customerIds.join(', ')}`)
 }
