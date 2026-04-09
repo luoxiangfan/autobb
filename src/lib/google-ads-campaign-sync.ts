@@ -27,7 +27,7 @@ export interface GoogleAdsCampaign {
   status: 'ENABLED' | 'PAUSED' | 'REMOVED'
   customer_id: string
   account_name?: string
-  cpcBidCeilingMicros?: number
+  cpc_bid_ceiling_micros?: number
 }
 
 /**
@@ -302,7 +302,7 @@ async function saveCampaignToDatabase(params: {
         synced_from_google_ads = ${db.type === 'postgres' ? 'TRUE' : '1'}
       WHERE id = ?`,
       [
-        campaign.cpcBidCeilingMicros || null,  // 🆕 可选的 max_cpc 字段
+        campaign.cpc_bid_ceiling_micros || null,  // 🆕 可选的 max_cpc 字段
         campaign.campaign_name,
         campaign.budget_amount,
         campaign.budget_type,
@@ -340,7 +340,7 @@ async function saveCampaignToDatabase(params: {
         campaign.budget_type,
         campaign.status,
         offerId || null,  // 🆕 如果提供了 offerId，则关联
-        campaign.cpcBidCeilingMicros || null,  // 🆕 可选的 max_cpc 字段
+        campaign.cpc_bid_ceiling_micros || null,  // 🆕 可选的 max_cpc 字段
         campaign.campaign_id,  // google_campaign_id
       ]
     )
