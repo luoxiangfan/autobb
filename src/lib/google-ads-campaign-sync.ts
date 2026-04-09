@@ -224,8 +224,8 @@ async function fetchCampaignsFromGoogleAds(params: {
       campaign.target_spend.cpc_bid_ceiling_micros,
       campaign_budget.type,
       campaign.status,
-      customer_client.id,
-      customer_client.descriptive_name
+      // customer_client.id,
+      // customer_client.descriptive_name
     FROM campaign
     WHERE campaign.status != 'REMOVED'
   `
@@ -264,7 +264,7 @@ async function fetchCampaignsFromGoogleAds(params: {
       budget_type: (row.campaign_budget?.type || 'DAILY') as 'DAILY' | 'TOTAL',
       status: (row.campaign?.status || 'PAUSED') as 'ENABLED' | 'PAUSED' | 'REMOVED',
       customer_id: customerId,
-      account_name: row.customer_client?.descriptive_name,
+      // account_name: row.customer_client?.descriptive_name,
     }))
   } catch (error: any) {
     console.error('[GoogleAds Sync] Failed to fetch campaigns:', error)
