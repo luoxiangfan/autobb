@@ -224,7 +224,7 @@ async function fetchCampaignsFromGoogleAds(params: {
       campaign_budget.amount_micros,
       campaign.target_spend.cpc_bid_ceiling_micros,
       campaign_budget.type,
-      campaign.status,
+      campaign.status
     FROM campaign
     WHERE campaign.status != 'REMOVED'
   `
