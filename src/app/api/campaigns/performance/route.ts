@@ -686,7 +686,7 @@ export async function GET(request: NextRequest) {
     }
     
     if (needsOfferCompletionFilter && needsOfferCompletionFilter !== 'ALL') {
-      listCampaigns = listCampaigns.filter((campaign) => String(campaign.status || '').toUpperCase() === statusFilter)
+      listCampaigns = listCampaigns.filter((campaign) => String(campaign.offerNeedsCompletion || '').toUpperCase() === needsOfferCompletionFilter)
     }
 
     if (sortBy && sortOrder) {
