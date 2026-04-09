@@ -322,6 +322,7 @@ async function saveCampaignToDatabase(params: {
     )
     return existing.id
   } else {
+    console.log(`[GoogleAds Sync] Creating Campaign ${campaign.campaign_id} for User ${userId}`)
     // 创建新广告系列
     const campaignName = campaign.campaign_name
     const result = await db.exec(
@@ -357,6 +358,7 @@ async function saveCampaignToDatabase(params: {
         new Date(),
       ]
     )
+    console.log(`[GoogleAds Sync] Created Campaign ${campaign.campaign_id} for User ${userId}`)
     return getInsertedId(result, db.type)
   }
 }
