@@ -285,7 +285,7 @@ async function saveCampaignToDatabase(params: {
 
   // 检查是否已存在
   const existing = await db.queryOne(
-    'SELECT id FROM campaigns WHERE campaign_id = ? AND user_id = ?',
+    'SELECT campaign_id FROM campaigns WHERE campaign_id = ? AND user_id = ?',
     [campaign.campaign_id, userId]
   )
 
@@ -301,7 +301,7 @@ async function saveCampaignToDatabase(params: {
         google_ads_account_id = ?,
         synced_from_google_ads = ${db.type === 'postgres' ? 'TRUE' : '1'},
         updated_at = ${new Date().toISOString()}
-      WHERE id = ?`,
+      WHERE campaign_id = ?`,
       [
         campaign.cpc_bid_ceiling_micros || null,  // 🆕 可选的 max_cpc 字段
         campaign.campaign_name,
@@ -309,7 +309,7 @@ async function saveCampaignToDatabase(params: {
         campaign.budget_type,
         campaign.status,
         googleAdsAccountId,
-        existing.id,
+        existing.campaign_id,
       ]
     )
     return existing.id
@@ -378,7 +378,6 @@ async function createOfferFirst(params: {
   console.log(`[GoogleAds Sync] Creating new offer for campaign ${campaign.campaign_id}`)
   
   // 生成唯一的 offer_name
-  // const offerName = `GA_${campaign.campaign_id}_01`
   const offerName = `${campaign.campaign_name}_US_01`
   
   const result = await db.exec(
@@ -394,7 +393,7 @@ async function createOfferFirst(params: {
       needs_completion,
       scrape_status,
       is_active
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ${db.type === 'postgres' ? 'TRUE' : '1'})`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?})`,
     [
       userId,
       '',  // URL 需要用户后续完善
@@ -405,6 +404,8 @@ async function createOfferFirst(params: {
       campaign.campaign_id,
       'google_ads_sync',
       db.type === 'postgres' ? 'TRUE' : '1',  // 新创建的 Offer 标记为需要完善
+      'pending',
+      db.type === 'postgres' ? 'TRUE' : '1',
     ]
   )
 
@@ -412,15 +413,6 @@ async function createOfferFirst(params: {
   console.log(`[GoogleAds Sync] Created offer ${offerId} for campaign ${campaign.campaign_id}`)
   
   return { offerId, created: true }
-}
-
-/**
- * 从广告系列名称提取品牌名称（简单启发式）
- */
-function extractBrandFromCampaignName(campaignName: string): string {
-  // 简单策略：取第一个单词或下划线前的部分
-  const parts = campaignName.split(/[_\s-]+/)
-  return parts[0] || 'Unknown_Brand'
 }
 
 /**
