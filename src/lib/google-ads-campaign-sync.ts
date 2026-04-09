@@ -225,8 +225,6 @@ async function fetchCampaignsFromGoogleAds(params: {
       campaign.target_spend.cpc_bid_ceiling_micros,
       campaign_budget.type,
       campaign.status,
-      // customer_client.id,
-      // customer_client.descriptive_name
     FROM campaign
     WHERE campaign.status != 'REMOVED'
   `
@@ -334,8 +332,9 @@ async function saveCampaignToDatabase(params: {
         needs_offer_completion,
         created_at,
         updated_at,
-        max_cpc
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?)`,
+        max_cpc,
+        google_campaign_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?, ?, ?)`,
       [
         userId,
         googleAdsAccountId,
@@ -348,6 +347,7 @@ async function saveCampaignToDatabase(params: {
         nowFunc(db.type),
         nowFunc(db.type),
         campaign.cpcBidCeilingMicros || null,  // 🆕 可选的 max_cpc 字段
+        campaign.campaign_id,  // google_campaign_id
       ]
     )
     return getInsertedId(result, db.type)
