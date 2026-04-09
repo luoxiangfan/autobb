@@ -82,9 +82,10 @@ export async function syncCampaignsFromGoogleAds(
 
     // 2. 获取该用户的所有活跃 Google Ads 账户（数组）
     const isActiveCondition = db.type === 'postgres' ? 'is_active = TRUE' : 'is_active = 1'
+    const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = FALSE' : 'is_manager_account = 0'
     const accounts = await db.query(
       `SELECT id, customer_id, account_name, refresh_token, auth_type, service_account_id FROM google_ads_accounts
-       WHERE user_id = ? AND ${isActiveCondition} AND customer_id IS NOT NULL AND customer_id != ''
+       WHERE user_id = ? AND ${isActiveCondition} AND ${isManagerCondition} AND status = 'ENABLED' AND customer_id IS NOT NULL AND customer_id != ''
        ORDER BY id`,
       [userId]
     ) as Array<{
