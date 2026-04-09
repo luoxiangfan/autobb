@@ -299,8 +299,7 @@ async function saveCampaignToDatabase(params: {
         budget_type = ?,
         status = ?,
         google_ads_account_id = ?,
-        synced_from_google_ads = ${db.type === 'postgres' ? 'TRUE' : '1'},
-        last_sync_at = ?
+        synced_from_google_ads = ${db.type === 'postgres' ? 'TRUE' : '1'}
       WHERE id = ?`,
       [
         campaign.cpcBidCeilingMicros || null,  // 🆕 可选的 max_cpc 字段
@@ -309,7 +308,6 @@ async function saveCampaignToDatabase(params: {
         campaign.budget_type,
         campaign.status,
         googleAdsAccountId,
-        nowFunc(db.type),
         existing.id,
       ]
     )
@@ -330,11 +328,9 @@ async function saveCampaignToDatabase(params: {
         synced_from_google_ads,
         offer_id,
         needs_offer_completion,
-        created_at,
-        updated_at,
         max_cpc,
         google_campaign_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?)`,
       [
         userId,
         googleAdsAccountId,
@@ -344,132 +340,12 @@ async function saveCampaignToDatabase(params: {
         campaign.budget_type,
         campaign.status,
         offerId || null,  // 🆕 如果提供了 offerId，则关联
-        nowFunc(db.type),
-        nowFunc(db.type),
         campaign.cpcBidCeilingMicros || null,  // 🆕 可选的 max_cpc 字段
         campaign.campaign_id,  // google_campaign_id
       ]
     )
     return getInsertedId(result, db.type)
   }
-}
-
-/**
- * 为广告系列创建或更新关联的 Offer
- * 
- * 优化逻辑：
- * 1. 如果广告系列已有关联的 offer_id，则不创建或更新 Offer
- * 2. 只有当广告系列没有关联 Offer 时，才创建新 Offer
- */
-async function createOrUpdateOfferForCampaign(params: {
-  userId: number
-  campaignId: number
-  campaign: GoogleAdsCampaign
-}): Promise<{ created: boolean; updated: boolean; offerId?: number; skipped: boolean }> {
-  const { userId, campaignId, campaign } = params
-  const db = await getDatabase()
-
-  // 1. 首先检查广告系列是否已有关联的 offer_id
-  const campaignRecord = await db.queryOne(
-    'SELECT offer_id FROM campaigns WHERE id = ? AND user_id = ?',
-    [campaignId, userId]
-  )
-
-  if (!campaignRecord) {
-    console.warn(`[GoogleAds Sync] Campaign ${campaignId} not found for user ${userId}`)
-    return { created: false, updated: false, skipped: false }
-  }
-
-  // 2. 如果广告系列已有关联的 Offer，跳过创建/更新
-  if (campaignRecord.offer_id) {
-    console.log(`[GoogleAds Sync] Campaign ${campaignId} already has offer_id=${campaignRecord.offer_id}, skipping offer creation/update`)
-    return { 
-      created: false, 
-      updated: false, 
-      skipped: true,
-      offerId: campaignRecord.offer_id 
-    }
-  }
-
-  // 3. 检查是否已存在关联的 Offer（通过 google_ads_campaign_id）
-  const existingOffer = await db.queryOne(
-    'SELECT id FROM offers WHERE google_ads_campaign_id = ? AND user_id = ?',
-    [campaign.campaign_id, userId]
-  )
-
-  if (existingOffer) {
-    // 4. 如果存在 Offer 但未关联到 campaign，建立关联
-    console.log(`[GoogleAds Sync] Linking existing offer ${existingOffer.id} to campaign ${campaignId}`)
-    
-    // 更新 campaign 关联 offer_id
-    await db.exec(
-      `UPDATE campaigns SET offer_id = ?, needs_offer_completion = ${db.type === 'postgres' ? 'FALSE' : '0'} WHERE id = ?`,
-      [existingOffer.id, campaignId]
-    )
-
-    // 更新 Offer 标记
-    await db.exec(
-      `UPDATE offers SET
-        sync_source = 'google_ads_sync',
-        updated_at = ?
-      WHERE id = ?`,
-      [nowFunc(db.type), existingOffer.id]
-    )
-
-    return { 
-      created: false, 
-      updated: false,  // 不修改 needs_completion，保持用户设置的状态
-      skipped: false,
-      offerId: existingOffer.id 
-    }
-  }
-
-  // 5. 创建新 Offer
-  console.log(`[GoogleAds Sync] Creating new offer for campaign ${campaignId}`)
-  
-  // 生成唯一的 offer_name
-  const offerName = `GA_${campaign.campaign_id}_01`
-  
-  const result = await db.exec(
-    `INSERT INTO offers (
-      user_id,
-      url,
-      brand,
-      target_country,
-      target_language,
-      offer_name,
-      google_ads_campaign_id,
-      sync_source,
-      needs_completion,
-      scrape_status,
-      is_active,
-      created_at,
-      updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?)`,
-    [
-      userId,
-      '',  // URL 需要用户后续完善
-      extractBrandFromCampaignName(campaign.campaign_name),  // 从广告系列名称提取品牌
-      'US',  // 默认国家，需要用户完善
-      'English',  // 默认语言
-      offerName,
-      campaign.campaign_id,
-      'google_ads_sync',
-      db.type === 'postgres' ? 'TRUE' : '1',  // 新创建的 Offer 标记为需要完善
-      nowFunc(db.type),
-      nowFunc(db.type),
-    ]
-  )
-
-  const offerId = getInsertedId(result, db.type)
-
-  // 更新 campaign 关联 offer_id
-  await db.exec(
-    `UPDATE campaigns SET offer_id = ?, needs_offer_completion = ${db.type === 'postgres' ? 'TRUE' : '1'} WHERE id = ?`,
-    [offerId, campaignId]
-  )
-
-  return { created: true, updated: false, skipped: false, offerId }
 }
 
 /**
@@ -513,9 +389,7 @@ async function createOfferFirst(params: {
       needs_completion,
       scrape_status,
       is_active,
-      created_at,
-      updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ${db.type === 'postgres' ? 'TRUE' : '1'})`,
     [
       userId,
       '',  // URL 需要用户后续完善
@@ -526,8 +400,6 @@ async function createOfferFirst(params: {
       campaign.campaign_id,
       'google_ads_sync',
       db.type === 'postgres' ? 'TRUE' : '1',  // 新创建的 Offer 标记为需要完善
-      nowFunc(db.type),
-      nowFunc(db.type),
     ]
   )
 
