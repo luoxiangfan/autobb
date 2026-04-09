@@ -400,7 +400,7 @@ async function createOfferFirst(params: {
       needs_completion,
       scrape_status,
       is_active
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?})`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       userId,
       '',  // URL 需要用户后续完善

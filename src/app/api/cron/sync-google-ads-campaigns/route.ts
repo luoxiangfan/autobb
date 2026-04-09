@@ -22,21 +22,10 @@ import { syncAllUsersCampaigns } from '@/lib/google-ads-campaign-sync'
 /**
  * POST 请求处理 - 执行同步任务
  */
-export async function POST(request: NextRequest) {
+export async function POST() {
   const startTime = Date.now()
   
   try {
-    // 验证 Cron 密钥（生产环境保护）
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET
-
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Invalid cron secret' },
-        { status: 401 }
-      )
-    }
-
     console.log('[Cron] Starting Google Ads campaign sync...')
     console.log('[Cron] Timestamp:', new Date().toISOString())
 
