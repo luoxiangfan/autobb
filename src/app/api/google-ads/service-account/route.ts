@@ -78,12 +78,27 @@ export async function DELETE(req: NextRequest) {
     }
 
     const db = getDatabase()
+    
+    // 🔧 修复：先解除 google_ads_accounts 中的外键引用，再删除服务账号
+    // 避免外键约束错误：update or delete on table "google_ads_service_accounts" violates foreign key constraint
+    await db.exec(`
+      UPDATE google_ads_accounts
+      SET service_account_id = NULL,
+          auth_type = 'oauth',  -- 回退到 OAuth 模式
+          updated_at = ${db.type === 'postgres' ? 'NOW()' : "datetime('now')"}
+      WHERE service_account_id = ? AND user_id = ?
+    `, [id, user.id])
+    
+    // 现在可以安全删除服务账号
     await db.exec(`
       DELETE FROM google_ads_service_accounts
       WHERE id = ? AND user_id = ?
     `, [id, user.id])
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ 
+      success: true,
+      message: '服务账号已删除，关联的 Google Ads 账户已回退到 OAuth 模式'
+    })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
