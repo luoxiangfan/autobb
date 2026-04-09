@@ -297,6 +297,7 @@ async function saveCampaignToDatabase(params: {
   )
 
   if (existing) {
+    console.log(`[GoogleAds Sync] Updating Campaign ${campaign.campaign_id} for User ${userId}`)
     // 更新现有广告系列
     await db.exec(
       `UPDATE campaigns SET
@@ -320,6 +321,7 @@ async function saveCampaignToDatabase(params: {
         existing.campaign_id,
       ]
     )
+    console.log(`[GoogleAds Sync] Updated Campaign ${campaign.campaign_id} for User ${userId}`)
     return existing.id
   } else {
     console.log(`[GoogleAds Sync] Creating Campaign ${campaign.campaign_id} for User ${userId}`)
