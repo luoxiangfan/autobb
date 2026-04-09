@@ -1,0 +1,125 @@
+diff --git a/src/app/api/admin/google-ads/oauth-config/[id]/route.ts b/src/app/api/admin/google-ads/oauth-config/[id]/route.ts
+index 1959432..f8a37b9 100644
+--- a/src/app/api/admin/google-ads/oauth-config/[id]/route.ts
++++ b/src/app/api/admin/google-ads/oauth-config/[id]/route.ts
+@@ -16,8 +16,11 @@ async function getAdminUser(request: NextRequest) {
+   if (!userId) return null
+   
+   const user = await findUserById(userId)
+-  // TODO: 添加管理员权限检查
+-  // if (!user?.is_admin) return null
++  
++  // 管理员权限检查
++  if (user.role !== 'admin') {
++    return null
++  }
+   
+   return user
+ }
+diff --git a/src/app/api/admin/google-ads/oauth-config/route.ts b/src/app/api/admin/google-ads/oauth-config/route.ts
+index a1f724d..2367f1f 100644
+--- a/src/app/api/admin/google-ads/oauth-config/route.ts
++++ b/src/app/api/admin/google-ads/oauth-config/route.ts
+@@ -17,8 +17,11 @@ async function getAdminUser(request: NextRequest) {
+   if (!userId) return null
+   
+   const user = await findUserById(userId)
+-  // TODO: 添加管理员权限检查
+-  // if (!user?.is_admin) return null
++  
++  // 管理员权限检查
++  if (user.role !== 'admin') {
++    return null
++  }
+   
+   return user
+ }
+diff --git a/src/app/api/admin/google-ads/service-account/[id]/route.ts b/src/app/api/admin/google-ads/service-account/[id]/route.ts
+index 5d0a9de..0b233ec 100644
+--- a/src/app/api/admin/google-ads/service-account/[id]/route.ts
++++ b/src/app/api/admin/google-ads/service-account/[id]/route.ts
+@@ -11,8 +11,11 @@ async function getAdminUser(request: NextRequest) {
+   if (!userId) return null
+   
+   const user = await findUserById(userId)
+-  // TODO: 添加管理员权限检查
+-  // if (!user?.is_admin) return null
++  
++  // 管理员权限检查
++  if (user.role !== 'admin') {
++    return null
++  }
+   
+   return user
+ }
+diff --git a/src/app/api/admin/google-ads/service-account/route.ts b/src/app/api/admin/google-ads/service-account/route.ts
+index 7e56ba0..00ff54f 100644
+--- a/src/app/api/admin/google-ads/service-account/route.ts
++++ b/src/app/api/admin/google-ads/service-account/route.ts
+@@ -18,8 +18,11 @@ async function getAdminUser(request: NextRequest) {
+   if (!userId) return null
+   
+   const user = await findUserById(userId)
+-  // TODO: 添加管理员权限检查
+-  // if (!user?.is_admin) return null
++  
++  // 管理员权限检查
++  if (user.role !== 'admin') {
++    return null
++  }
+   
+   return user
+ }
+diff --git a/src/app/api/admin/google-ads/users-for-binding/route.ts b/src/app/api/admin/google-ads/users-for-binding/route.ts
+new file mode 100644
+index 0000000..d2b6dfc
+--- /dev/null
++++ b/src/app/api/admin/google-ads/users-for-binding/route.ts
+@@ -0,0 +1,47 @@
++import { NextRequest, NextResponse } from 'next/server'
++import { verifyAuth } from '@/lib/auth'
++import { getDatabase } from '@/lib/db'
++
++/**
++ * 管理员端：获取可绑定的用户列表（简化版）
++ * 
++ * 仅返回绑定用户时需要的字段，不包含敏感信息
++ * 用于 Google Ads 共享配置绑定用户时选择
++ */
++
++export const dynamic = 'force-dynamic'
++
++export async function GET(request: NextRequest) {
++  const auth = await verifyAuth(request)
++  if (!auth.authenticated || auth.user?.role !== 'admin') {
++    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
++  }
++
++  try {
++    const db = getDatabase()
++    
++    const users = await db.query(`
++      SELECT 
++        id,
++        email,
++        display_name,
++        role,
++        is_active,
++        created_at
++      FROM users
++      WHERE is_active = 1
++      ORDER BY created_at DESC
++    `, [])
++
++    return NextResponse.json({ 
++      success: true,
++      data: { users }
++    })
++  } catch (error: any) {
++    console.error('[Admin Users For Binding GET] Error:', error)
++    return NextResponse.json({ 
++      error: '获取用户列表失败',
++      message: error.message 
++    }, { status: 500 })
++  }
++}

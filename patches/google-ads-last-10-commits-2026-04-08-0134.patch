@@ -1,0 +1,856 @@
+From f3d73e4a96c005a5adb61f1534118863fa6b06e4 Mon Sep 17 00:00:00 2001
+From: Admin <admin@autobb.local>
+Date: Tue, 7 Apr 2026 19:00:53 +0800
+Subject: [PATCH 01/10] =?UTF-8?q?feat:=20CampaignsClientPage=20=E6=B7=BB?=
+ =?UTF-8?q?=E5=8A=A0=E5=AE=8C=E5=96=84=20Offer=20=E5=85=A5=E5=8F=A3?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Campaign 接口新增 offer 相关字段
+- 表格需要完善列改为可点击编辑按钮
+- DropdownMenu 添加完善 Offer 快捷入口
+- API 路由添加 offer 字段查询和返回
+- 与 OffersClientPage 保持一致的视觉风格
+---
+ src/app/(app)/campaigns/CampaignsClientPage.tsx | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/src/app/(app)/campaigns/CampaignsClientPage.tsx b/src/app/(app)/campaigns/CampaignsClientPage.tsx
+index 6c4d0c9..ab71625 100644
+--- a/src/app/(app)/campaigns/CampaignsClientPage.tsx
++++ b/src/app/(app)/campaigns/CampaignsClientPage.tsx
+@@ -2865,8 +2865,19 @@ export default function CampaignsClientPage({
+                         {getStatusBadge(campaign.status, campaign.adsAccountAvailable)}
+                       </TableCell>
+                       <TableCell className="whitespace-nowrap">
+-                        {campaign.needsOfferCompletion ? (
+-                          <Badge variant="destructive" className="bg-orange-600 hover:bg-orange-700">
++                        {campaign.offerNeedsCompletion && campaign.offerSyncSource === 'google_ads_sync' ? (
++                          <a
++                            href={`/offers/${campaign.offerId}/edit`}
++                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 hover:bg-orange-200 transition-colors"
++                            title="点击完善 Offer 信息"
++                          >
++                            <span>需要完善</span>
++                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
++                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
++                            </svg>
++                          </a>
++                        ) : campaign.needsOfferCompletion ? (
++                          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                             需要完善
+                           </Badge>
+                         ) : (
+-- 
+2.34.1
+
+
+From 3de324343f0c3f7a51570183fbe1de3896b5ac7b Mon Sep 17 00:00:00 2001
+From: Admin <admin@autobb.local>
+Date: Tue, 7 Apr 2026 19:01:34 +0800
+Subject: [PATCH 02/10] =?UTF-8?q?fix:=20API=20=E6=B7=BB=E5=8A=A0=20offer?=
+ =?UTF-8?q?=20=E7=9B=B8=E5=85=B3=E5=AD=97=E6=AE=B5=E6=94=AF=E6=8C=81?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- SQL 查询添加 needs_completion、sync_source、google_ads_campaign_id
+- 响应映射添加对应字段
+- 支持前端显示完善 Offer 入口
+---
+ src/app/api/campaigns/performance/route.ts | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/src/app/api/campaigns/performance/route.ts b/src/app/api/campaigns/performance/route.ts
+index 0d1c9bd..ca3f174 100644
+--- a/src/app/api/campaigns/performance/route.ts
++++ b/src/app/api/campaigns/performance/route.ts
+@@ -444,7 +444,10 @@ export async function GET(request: NextRequest) {
+           gaa.currency as ads_account_currency,
+           o.brand as offer_brand,
+           o.url as offer_url,
+-          o.is_deleted as offer_is_deleted
++          o.is_deleted as offer_is_deleted,
++          o.needs_completion as offer_needs_completion,
++          o.sync_source as offer_sync_source,
++          o.google_ads_campaign_id as offer_google_ads_campaign_id
+         FROM campaigns c
+         LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
+         LEFT JOIN offers o ON c.offer_id = o.id
+@@ -615,6 +618,9 @@ export async function GET(request: NextRequest) {
+         offerId: c.offer_id,
+         offerBrand: c.offer_brand,
+         offerUrl: c.offer_url,
++        offerNeedsCompletion: c.offer_needs_completion,
++        offerSyncSource: c.offer_sync_source,
++        offerGoogleAdsCampaignId: c.offer_google_ads_campaign_id,
+         status: c.status,
+         googleCampaignId: c.google_campaign_id,
+         googleAdsAccountId: c.google_ads_account_id,
+-- 
+2.34.1
+
+
+From 46382c38f01fc722f271e1caf4ae712283986939 Mon Sep 17 00:00:00 2001
+From: Admin <admin@autobb.local>
+Date: Tue, 7 Apr 2026 19:27:36 +0800
+Subject: [PATCH 03/10] =?UTF-8?q?fix:=20=E4=BF=AE=E5=A4=8D=E6=95=B0?=
+ =?UTF-8?q?=E6=8D=AE=E5=BA=93=E8=AE=BF=E9=97=AE=E6=96=B9=E6=B3=95?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- db.get → db.queryOne
+- db.run → db.exec
+- getInsertedId 添加 db.type 参数
+- 符合项目统一的 DatabaseAdapter 接口
+---
+ src/lib/google-ads-campaign-sync.ts | 22 +++++++++++-----------
+ 1 file changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/src/lib/google-ads-campaign-sync.ts b/src/lib/google-ads-campaign-sync.ts
+index 288e87c..d9356b1 100644
+--- a/src/lib/google-ads-campaign-sync.ts
++++ b/src/lib/google-ads-campaign-sync.ts
+@@ -265,14 +265,14 @@ async function saveCampaignToDatabase(params: {
+   const db = await getDatabase()
+ 
+   // 检查是否已存在
+-  const existing = await db.get(
++  const existing = await db.queryOne(
+     'SELECT id FROM campaigns WHERE campaign_id = ? AND user_id = ?',
+     [campaign.campaign_id, userId]
+   )
+ 
+   if (existing) {
+     // 更新现有广告系列
+-    await db.run(
++    await db.exec(
+       `UPDATE campaigns SET
+         campaign_name = ?,
+         budget_amount = ?,
+@@ -296,7 +296,7 @@ async function saveCampaignToDatabase(params: {
+   } else {
+     // 创建新广告系列
+     const campaignName = campaign.campaign_name
+-    const result = await db.run(
++    const result = await db.exec(
+       `INSERT INTO campaigns (
+         user_id,
+         google_ads_account_id,
+@@ -323,7 +323,7 @@ async function saveCampaignToDatabase(params: {
+         nowFunc(),
+       ]
+     )
+-    return getInsertedId(result)
++    return getInsertedId(result, db.type)
+   }
+ }
+ 
+@@ -343,7 +343,7 @@ async function createOrUpdateOfferForCampaign(params: {
+   const db = await getDatabase()
+ 
+   // 1. 首先检查广告系列是否已有关联的 offer_id
+-  const campaignRecord = await db.get(
++  const campaignRecord = await db.queryOne(
+     'SELECT offer_id FROM campaigns WHERE id = ? AND user_id = ?',
+     [campaignId, userId]
+   )
+@@ -365,7 +365,7 @@ async function createOrUpdateOfferForCampaign(params: {
+   }
+ 
+   // 3. 检查是否已存在关联的 Offer（通过 google_ads_campaign_id）
+-  const existingOffer = await db.get(
++  const existingOffer = await db.queryOne(
+     'SELECT id FROM offers WHERE google_ads_campaign_id = ? AND user_id = ?',
+     [campaign.campaign_id, userId]
+   )
+@@ -375,13 +375,13 @@ async function createOrUpdateOfferForCampaign(params: {
+     console.log(`[GoogleAds Sync] Linking existing offer ${existingOffer.id} to campaign ${campaignId}`)
+     
+     // 更新 campaign 关联 offer_id
+-    await db.run(
++    await db.exec(
+       'UPDATE campaigns SET offer_id = ?, needs_offer_completion = FALSE WHERE id = ?',
+       [existingOffer.id, campaignId]
+     )
+ 
+     // 更新 Offer 标记
+-    await db.run(
++    await db.exec(
+       `UPDATE offers SET
+         sync_source = 'google_ads_sync',
+         updated_at = ?
+@@ -403,7 +403,7 @@ async function createOrUpdateOfferForCampaign(params: {
+   // 生成唯一的 offer_name
+   const offerName = `GA_${campaign.campaign_id}_${Date.now()}`
+   
+-  const result = await db.run(
++  const result = await db.exec(
+     `INSERT INTO offers (
+       user_id,
+       url,
+@@ -434,10 +434,10 @@ async function createOrUpdateOfferForCampaign(params: {
+     ]
+   )
+ 
+-  const offerId = getInsertedId(result)
++  const offerId = getInsertedId(result, db.type)
+ 
+   // 更新 campaign 关联 offer_id
+-  await db.run(
++  await db.exec(
+     'UPDATE campaigns SET offer_id = ?, needs_offer_completion = TRUE WHERE id = ?',
+     [offerId, campaignId]
+   )
+-- 
+2.34.1
+
+
+From c5bc3c34b3aa26f39bd007575e5365fa46aac5e4 Mon Sep 17 00:00:00 2001
+From: Admin <admin@autobb.local>
+Date: Tue, 7 Apr 2026 19:40:32 +0800
+Subject: [PATCH 04/10] =?UTF-8?q?fix:=20=E4=BF=AE=E5=A4=8D=E6=89=80?=
+ =?UTF-8?q?=E6=9C=89=E6=95=B0=E6=8D=AE=E5=BA=93=E5=92=8C=E7=B1=BB=E5=9E=8B?=
+ =?UTF-8?q?=E7=9B=B8=E5=85=B3=20bug?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+修复内容:
+- db.get → db.queryOne, db.run → db.exec
+- getInsertedId 添加 db.type 参数
+- nowFunc 添加 db.type 参数
+- SQL 布尔值 TRUE/FALSE → 1/0 (SQLite 兼容)
+- createSyncLog → db.exec 直接插入
+- 添加 db 变量声明
+- Offer 接口添加 google_ads_campaign_id、sync_source、needs_completion 字段
+- OfferListRow 接口添加相同字段
+- listColumns 添加新字段查询
+
+影响范围:
+- src/lib/google-ads-campaign-sync.ts - 同步服务
+- src/lib/offers.ts - Offer 数据访问层
+- src/lib/queue/executors/google-ads-campaign-sync-executor.ts - 队列执行器
+---
+ src/lib/google-ads-campaign-sync.ts           | 20 +++++------
+ src/lib/offers.ts                             | 11 ++++++
+ .../google-ads-campaign-sync-executor.ts      | 34 +++++++------------
+ 3 files changed, 33 insertions(+), 32 deletions(-)
+
+diff --git a/src/lib/google-ads-campaign-sync.ts b/src/lib/google-ads-campaign-sync.ts
+index d9356b1..6289771 100644
+--- a/src/lib/google-ads-campaign-sync.ts
++++ b/src/lib/google-ads-campaign-sync.ts
+@@ -279,7 +279,7 @@ async function saveCampaignToDatabase(params: {
+         budget_type = ?,
+         status = ?,
+         google_ads_account_id = ?,
+-        synced_from_google_ads = TRUE,
++        synced_from_google_ads = 1,
+         last_sync_at = ?
+       WHERE id = ?`,
+       [
+@@ -288,7 +288,7 @@ async function saveCampaignToDatabase(params: {
+         campaign.budget_type,
+         campaign.status,
+         googleAdsAccountId,
+-        nowFunc(),
++        nowFunc(db.type),
+         existing.id,
+       ]
+     )
+@@ -319,8 +319,8 @@ async function saveCampaignToDatabase(params: {
+         campaign.budget_amount,
+         campaign.budget_type,
+         campaign.status,
+-        nowFunc(),
+-        nowFunc(),
++        nowFunc(db.type),
++        nowFunc(db.type),
+       ]
+     )
+     return getInsertedId(result, db.type)
+@@ -376,7 +376,7 @@ async function createOrUpdateOfferForCampaign(params: {
+     
+     // 更新 campaign 关联 offer_id
+     await db.exec(
+-      'UPDATE campaigns SET offer_id = ?, needs_offer_completion = FALSE WHERE id = ?',
++      'UPDATE campaigns SET offer_id = ?, needs_offer_completion = 0 WHERE id = ?',
+       [existingOffer.id, campaignId]
+     )
+ 
+@@ -386,7 +386,7 @@ async function createOrUpdateOfferForCampaign(params: {
+         sync_source = 'google_ads_sync',
+         updated_at = ?
+       WHERE id = ?`,
+-      [nowFunc(), existingOffer.id]
++      [nowFunc(db.type), existingOffer.id]
+     )
+ 
+     return { 
+@@ -429,8 +429,8 @@ async function createOrUpdateOfferForCampaign(params: {
+       campaign.campaign_id,
+       'google_ads_sync',
+       TRUE,  // 新创建的 Offer 标记为需要完善
+-      nowFunc(),
+-      nowFunc(),
++      nowFunc(db.type),
++      nowFunc(db.type),
+     ]
+   )
+ 
+@@ -438,7 +438,7 @@ async function createOrUpdateOfferForCampaign(params: {
+ 
+   // 更新 campaign 关联 offer_id
+   await db.exec(
+-    'UPDATE campaigns SET offer_id = ?, needs_offer_completion = TRUE WHERE id = ?',
++    'UPDATE campaigns SET offer_id = ?, needs_offer_completion = 1 WHERE id = ?',
+     [offerId, campaignId]
+   )
+ 
+@@ -469,7 +469,7 @@ export async function syncAllUsersCampaigns(): Promise<{
+   
+   // 获取所有活跃用户
+   const users = await db.all(
+-    'SELECT id FROM users WHERE is_active = TRUE'
++    'SELECT id FROM users WHERE is_active = 1'
+   )
+ 
+   let totalSynced = 0
+diff --git a/src/lib/offers.ts b/src/lib/offers.ts
+index 4cc7d54..ce209a9 100644
+--- a/src/lib/offers.ts
++++ b/src/lib/offers.ts
+@@ -46,6 +46,10 @@ export interface Offer {
+   // 注意：PostgreSQL 返回 boolean，SQLite 返回 number (0/1)
+   is_active: number | boolean
+   industry_code: string | null  // 行业代码（数据库字段，之前遗漏）
++  // Google Ads 同步相关字段 (2026-04-07)
++  google_ads_campaign_id: string | null
++  sync_source: string | null
++  needs_completion: boolean | number
+   // P0优化: 分析结果字段
+   review_analysis: string | null
+   competitor_analysis: string | null
+@@ -123,6 +127,10 @@ export interface OfferListRow {
+     campaignCount: number
+   }>
+   is_blacklisted?: boolean
++  // Google Ads 同步相关字段
++  google_ads_campaign_id?: string | null
++  sync_source?: string | null
++  needs_completion?: boolean | number
+ }
+ 
+ export interface CreateOfferInput {
+@@ -485,6 +493,9 @@ export async function listOffers(
+     'is_active',
+     'created_at',
+     'updated_at',
++    'google_ads_campaign_id',
++    'sync_source',
++    'needs_completion',
+   ].join(', ')
+ 
+   const sortableColumnMap: Record<string, string> = {
+diff --git a/src/lib/queue/executors/google-ads-campaign-sync-executor.ts b/src/lib/queue/executors/google-ads-campaign-sync-executor.ts
+index 8176124..29c1e60 100644
+--- a/src/lib/queue/executors/google-ads-campaign-sync-executor.ts
++++ b/src/lib/queue/executors/google-ads-campaign-sync-executor.ts
+@@ -7,9 +7,7 @@
+ 
+ import { getDatabase } from '../../db'
+ import { syncCampaignsFromGoogleAds } from '../../google-ads-campaign-sync'
+-import { createSyncLog } from '../../data-sync-service'
+ import { createRiskAlert } from '../../risk-alerts'
+-import { nowFunc } from '../../db-helpers'
+ 
+ /**
+  * Google Ads 广告系列同步任务数据
+@@ -41,6 +39,8 @@ export async function executeGoogleAdsCampaignSyncTask(
+     `▶️  [GoogleAdsSyncExecutor] 开始执行同步任务：${taskId}, 用户 #${userId}, 类型：${syncType}`
+   )
+ 
++  const db = await getDatabase()
++
+   try {
+     // 1. 执行同步
+     const result = await syncCampaignsFromGoogleAds(userId, {
+@@ -52,17 +52,12 @@ export async function executeGoogleAdsCampaignSyncTask(
+ 
+     // 2. 记录同步日志
+     try {
+-      const syncLogData = {
+-        syncType: 'google_ads_campaign_sync' as const,
+-        status: result.errors.length > 0 ? 'partial' : 'success' as const,
+-        recordCount: result.syncedCount,
+-        durationMs: duration,
+-        errorMessage: result.errors.length > 0 
+-          ? `${result.errors.length} 个错误` 
+-          : null,
+-      }
+-
+-      await createSyncLog(syncLogData, userId)
++      await db.exec(
++        `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at)
++         VALUES (?, ?, ?, ?, ?, ?, ?)`,
++        [userId, 'google_ads_campaign_sync', result.errors.length > 0 ? 'partial' : 'success', 
++         result.syncedCount, duration, new Date().toISOString(), new Date().toISOString()]
++      )
+       console.log(`📝 [GoogleAdsSyncExecutor] 同步日志已记录：${taskId}`)
+     } catch (logError) {
+       console.error(`❌ [GoogleAdsSyncExecutor] 记录同步日志失败:`, logError)
+@@ -121,15 +116,10 @@ export async function executeGoogleAdsCampaignSyncTask(
+ 
+     // 记录失败日志
+     try {
+-      await createSyncLog(
+-        {
+-          syncType: 'google_ads_campaign_sync' as const,
+-          status: 'failed' as const,
+-          recordCount: 0,
+-          durationMs: duration,
+-          errorMessage,
+-        },
+-        userId
++      await db.exec(
++        `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at)
++         VALUES (?, ?, ?, ?, ?, ?, ?)`,
++        [userId, 'google_ads_campaign_sync', 'failed', 0, duration, new Date().toISOString(), new Date().toISOString()]
+       )
+     } catch (logError) {
+       console.error(`❌ [GoogleAdsSyncExecutor] 记录失败日志失败:`, logError)
+-- 
+2.34.1
+
+
+From c57b2bf8713475476cb4821de6ec1c5329e18fb9 Mon Sep 17 00:00:00 2001
+From: Admin <admin@autobb.local>
+Date: Tue, 7 Apr 2026 20:02:21 +0800
+Subject: [PATCH 05/10] =?UTF-8?q?fix:=20=E4=BF=AE=E5=A4=8D=20SQL=20?=
+ =?UTF-8?q?=E5=B8=83=E5=B0=94=E5=80=BC=E5=85=BC=E5=AE=B9=E6=80=A7?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- 使用 db.type === 'postgres' ? 'TRUE' : '1' 模式
+- 使用 db.type === 'postgres' ? 'FALSE' : '0' 模式
+- 兼容 PostgreSQL (BOOLEAN) 和 SQLite (INTEGER)
+- 遵循项目统一的布尔值处理规范
+
+影响范围:
+- saveCampaignToDatabase: synced_from_google_ads
+- INSERT campaigns: synced_from_google_ads, needs_offer_completion
+- UPDATE campaigns: needs_offer_completion
+- INSERT offers: needs_completion
+- SELECT users: is_active
+---
+ src/lib/google-ads-campaign-sync.ts | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/src/lib/google-ads-campaign-sync.ts b/src/lib/google-ads-campaign-sync.ts
+index 6289771..530e7ae 100644
+--- a/src/lib/google-ads-campaign-sync.ts
++++ b/src/lib/google-ads-campaign-sync.ts
+@@ -279,7 +279,7 @@ async function saveCampaignToDatabase(params: {
+         budget_type = ?,
+         status = ?,
+         google_ads_account_id = ?,
+-        synced_from_google_ads = 1,
++        synced_from_google_ads = ${db.type === 'postgres' ? 'TRUE' : '1'},
+         last_sync_at = ?
+       WHERE id = ?`,
+       [
+@@ -310,7 +310,7 @@ async function saveCampaignToDatabase(params: {
+         needs_offer_completion,
+         created_at,
+         updated_at
+-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', TRUE, TRUE, ?, ?)`,
++      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ${db.type === 'postgres' ? 'TRUE' : '1'}, ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?)`,
+       [
+         userId,
+         googleAdsAccountId,
+@@ -376,7 +376,7 @@ async function createOrUpdateOfferForCampaign(params: {
+     
+     // 更新 campaign 关联 offer_id
+     await db.exec(
+-      'UPDATE campaigns SET offer_id = ?, needs_offer_completion = 0 WHERE id = ?',
++      `UPDATE campaigns SET offer_id = ?, needs_offer_completion = ${db.type === 'postgres' ? 'FALSE' : '0'} WHERE id = ?`,
+       [existingOffer.id, campaignId]
+     )
+ 
+@@ -418,7 +418,7 @@ async function createOrUpdateOfferForCampaign(params: {
+       is_active,
+       created_at,
+       updated_at
+-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', TRUE, ?, ?)`,
++    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?)`,
+     [
+       userId,
+       '',  // URL 需要用户后续完善
+@@ -438,7 +438,7 @@ async function createOrUpdateOfferForCampaign(params: {
+ 
+   // 更新 campaign 关联 offer_id
+   await db.exec(
+-    'UPDATE campaigns SET offer_id = ?, needs_offer_completion = 1 WHERE id = ?',
++    `UPDATE campaigns SET offer_id = ?, needs_offer_completion = ${db.type === 'postgres' ? 'TRUE' : '1'} WHERE id = ?`,
+     [offerId, campaignId]
+   )
+ 
+@@ -469,7 +469,7 @@ export async function syncAllUsersCampaigns(): Promise<{
+   
+   // 获取所有活跃用户
+   const users = await db.all(
+-    'SELECT id FROM users WHERE is_active = 1'
++    `SELECT id FROM users WHERE is_active = ${db.type === 'postgres' ? 'TRUE' : '1'}`
+   )
+ 
+   let totalSynced = 0
+-- 
+2.34.1
+
+
+From 18158c7bcbbf70ef18fd6ffbe1195e22ba358d42 Mon Sep 17 00:00:00 2001
+From: Admin <admin@autobb.local>
+Date: Tue, 7 Apr 2026 20:33:00 +0800
+Subject: [PATCH 06/10] =?UTF-8?q?fix:=20=E4=BF=AE=E5=A4=8D=20syncAllUsersC?=
+ =?UTF-8?q?ampaigns=20=E4=BD=BF=E7=94=A8=E9=94=99=E8=AF=AF=E7=9A=84?=
+ =?UTF-8?q?=E6=95=B0=E6=8D=AE=E5=BA=93=E6=96=B9=E6=B3=95?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- db.all → db.query
+- db.all 不存在于 DatabaseAdapter 接口
+- 使用正确的 db.query 方法获取所有活跃用户
+
+影响范围:
+- syncAllUsersCampaigns: 获取用户列表
+---
+ src/lib/google-ads-campaign-sync.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lib/google-ads-campaign-sync.ts b/src/lib/google-ads-campaign-sync.ts
+index 530e7ae..097e3c2 100644
+--- a/src/lib/google-ads-campaign-sync.ts
++++ b/src/lib/google-ads-campaign-sync.ts
+@@ -468,7 +468,7 @@ export async function syncAllUsersCampaigns(): Promise<{
+   const db = await getDatabase()
+   
+   // 获取所有活跃用户
+-  const users = await db.all(
++  const users = await db.query(
+     `SELECT id FROM users WHERE is_active = ${db.type === 'postgres' ? 'TRUE' : '1'}`
+   )
+ 
+-- 
+2.34.1
+
+
+From 2c39e8ce6199811741ade3755bd84172abdde2ea Mon Sep 17 00:00:00 2001
+From: Admin <admin@autobb.local>
+Date: Tue, 7 Apr 2026 20:33:58 +0800
+Subject: [PATCH 07/10] =?UTF-8?q?fix:=20=E4=BF=AE=E5=A4=8D=20API=20?=
+ =?UTF-8?q?=E8=B7=AF=E7=94=B1=E4=B8=AD=E4=B8=8D=E5=AD=98=E5=9C=A8=E7=9A=84?=
+ =?UTF-8?q?=20createSyncLog=20=E5=87=BD=E6=95=B0?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- 移除 createSyncLog 导入（该函数不存在）
+- 使用 db.exec 直接插入同步日志
+- 添加 getDatabase 导入
+- 与 data-sync-service.ts 中的实现保持一致
+
+影响范围:
+- POST /api/cron/sync-google-ads-campaigns: 创建同步日志
+- 错误处理：创建失败日志
+---
+ .../cron/sync-google-ads-campaigns/route.ts   | 29 +++++++++----------
+ 1 file changed, 14 insertions(+), 15 deletions(-)
+
+diff --git a/src/app/api/cron/sync-google-ads-campaigns/route.ts b/src/app/api/cron/sync-google-ads-campaigns/route.ts
+index c96e790..7d299fd 100644
+--- a/src/app/api/cron/sync-google-ads-campaigns/route.ts
++++ b/src/app/api/cron/sync-google-ads-campaigns/route.ts
+@@ -16,8 +16,8 @@
+  */
+ 
+ import { NextRequest, NextResponse } from 'next/server'
++import { getDatabase } from '@/lib/db'
+ import { syncAllUsersCampaigns } from '@/lib/google-ads-campaign-sync'
+-import { createSyncLog } from '@/lib/data-sync-service'
+ 
+ /**
+  * POST 请求处理 - 执行同步任务
+@@ -56,13 +56,13 @@ export async function POST(request: NextRequest) {
+ 
+     // 创建同步日志
+     try {
+-      await createSyncLog({
+-        syncType: 'google_ads_campaign_sync',
+-        status: result.totalErrors > 0 ? 'partial' : 'success',
+-        recordCount: result.totalSynced,
+-        durationMs: duration,
+-        errorMessage: result.totalErrors > 0 ? `有 ${result.totalErrors} 个错误` : null,
+-      })
++      const db = await getDatabase()
++      await db.exec(
++        `INSERT INTO sync_logs (sync_type, status, record_count, duration_ms, started_at, completed_at)
++         VALUES (?, ?, ?, ?, ?, ?)`,
++        ['google_ads_campaign_sync', result.totalErrors > 0 ? 'partial' : 'success',
++         result.totalSynced, duration, new Date().toISOString(), new Date().toISOString()]
++      )
+     } catch (logError) {
+       console.error('[Cron] Failed to create sync log:', logError)
+     }
+@@ -89,13 +89,12 @@ export async function POST(request: NextRequest) {
+ 
+     // 记录错误日志
+     try {
+-      await createSyncLog({
+-        syncType: 'google_ads_campaign_sync',
+-        status: 'failed',
+-        recordCount: 0,
+-        durationMs: duration,
+-        errorMessage: error.message || 'Unknown error',
+-      })
++      const db = await getDatabase()
++      await db.exec(
++        `INSERT INTO sync_logs (sync_type, status, record_count, duration_ms, started_at, completed_at)
++         VALUES (?, ?, ?, ?, ?, ?)`,
++        ['google_ads_campaign_sync', 'failed', 0, duration, new Date().toISOString(), new Date().toISOString()]
++      )
+     } catch (logError) {
+       console.error('[Cron] Failed to create sync log:', logError)
+     }
+-- 
+2.34.1
+
+
+From a137c86591769d57eec65c4e4c6633594cfebf88 Mon Sep 17 00:00:00 2001
+From: Admin <admin@autobb.local>
+Date: Tue, 7 Apr 2026 20:48:28 +0800
+Subject: [PATCH 08/10] =?UTF-8?q?fix:=20=E4=BF=AE=E5=A4=8D=20credentials?=
+ =?UTF-8?q?=20=E4=B8=8D=E8=83=BD=E9=81=8D=E5=8E=86=E7=9A=84=20bug?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+问题:
+- getGoogleAdsCredentialsFromDB(userId) 返回单个凭证对象
+- 代码错误地尝试用 credentials.filter() 遍历
+- 导致无法获取用户的 Google Ads 账户列表
+
+修复:
+- 正确获取用户凭证（单个对象）
+- 从 google_ads_accounts 表查询用户的所有活跃账户（数组）
+- 遍历账户列表进行同步
+- 使用 db.query 获取账户数组
+- 使用凭证对象中的 client_id 等配置
+
+逻辑流程:
+1. getGoogleAdsCredentialsFromDB(userId) → 凭证对象
+2. db.query(google_ads_accounts) → 账户数组
+3. 遍历账户数组，使用凭证对象调用 API
+
+影响范围:
+- syncCampaignsFromGoogleAds: 正确的账户遍历逻辑
+---
+ src/lib/google-ads-campaign-sync.ts | 34 +++++++++++++++++++----------
+ 1 file changed, 23 insertions(+), 11 deletions(-)
+
+diff --git a/src/lib/google-ads-campaign-sync.ts b/src/lib/google-ads-campaign-sync.ts
+index 097e3c2..59970b4 100644
+--- a/src/lib/google-ads-campaign-sync.ts
++++ b/src/lib/google-ads-campaign-sync.ts
+@@ -71,22 +71,34 @@ export async function syncCampaignsFromGoogleAds(
+   try {
+     console.log(`[GoogleAds Sync] Starting sync for user ${userId}...`)
+ 
+-    // 1. 获取用户的 Google Ads 账户凭证
++    // 1. 获取用户的 Google Ads 账户凭证（单个对象）
+     const credentials = await getGoogleAdsCredentialsFromDB(userId)
+-    if (!credentials || credentials.length === 0) {
+-      result.warnings.push('用户未绑定 Google Ads 账户')
++    if (!credentials) {
++      result.warnings.push('用户未配置 Google Ads 凭证')
+       return result
+     }
+ 
+-    // 2. 获取所有活跃的 Google Ads 账户
+-    const activeAccounts = credentials.filter(acc => acc.is_active && acc.customer_id)
+-    if (activeAccounts.length === 0) {
++    // 2. 获取该用户的所有活跃 Google Ads 账户（数组）
++    const isActiveCondition = db.type === 'postgres' ? 'is_active = TRUE' : 'is_active = 1'
++    const accounts = await db.query(
++      `SELECT id, customer_id, account_name, refresh_token FROM google_ads_accounts
++       WHERE user_id = ? AND ${isActiveCondition} AND customer_id IS NOT NULL AND customer_id != ''
++       ORDER BY id`,
++      [userId]
++    ) as Array<{
++      id: number
++      customer_id: string
++      account_name: string | null
++      refresh_token: string | null
++    }>
++
++    if (accounts.length === 0) {
+       result.warnings.push('没有活跃的 Google Ads 账户')
+       return result
+     }
+ 
+     // 3. 对每个账户执行同步
+-    for (const account of activeAccounts) {
++    for (const account of accounts) {
+       // 如果指定了 customerId，只同步该账户
+       if (options?.customerId && account.customer_id !== options.customerId) {
+         continue
+@@ -100,10 +112,10 @@ export async function syncCampaignsFromGoogleAds(
+           userId,
+           customerId: account.customer_id,
+           credentials: {
+-            client_id: account.client_id || process.env.GOOGLE_ADS_CLIENT_ID || '',
+-            client_secret: account.client_secret || process.env.GOOGLE_ADS_CLIENT_SECRET || '',
+-            developer_token: account.developer_token || process.env.GOOGLE_ADS_DEVELOPER_TOKEN || '',
+-            login_customer_id: credentials[0]?.login_customer_id,
++            client_id: credentials.client_id || process.env.GOOGLE_ADS_CLIENT_ID || '',
++            client_secret: credentials.client_secret || process.env.GOOGLE_ADS_CLIENT_SECRET || '',
++            developer_token: credentials.developer_token || process.env.GOOGLE_ADS_DEVELOPER_TOKEN || '',
++            login_customer_id: credentials.login_customer_id,
+           },
+           refreshToken: account.refresh_token || undefined,
+         })
+-- 
+2.34.1
+
+
+From b30e3cf42cad18313c19adb864339b5d6e86d561 Mon Sep 17 00:00:00 2001
+From: Admin <admin@autobb.local>
+Date: Tue, 7 Apr 2026 23:05:48 +0800
+Subject: [PATCH 09/10] =?UTF-8?q?fix:=20=E4=BF=AE=E5=A4=8D=20executeGoogle?=
+ =?UTF-8?q?AdsCampaignSyncTask=20=E5=87=BD=E6=95=B0=E7=AD=BE=E5=90=8D?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+问题:
+- TaskExecutor 接口期望接收 Task<T> 对象
+- executeGoogleAdsCampaignSyncTask 错误地接收两个独立参数
+- 导致 registerExecutor 报错
+
+修复:
+- 修改函数签名接收 Task<GoogleAdsCampaignSyncTaskData>
+- 从 task 对象中解构 id、data、userId
+- 添加 Task 类型导入
+- 在 background-executors.ts 中注册执行器
+
+影响范围:
+- google-ads-campaign-sync-executor.ts: 函数签名修复
+- background-executors.ts: 添加执行器注册
+---
+ src/lib/queue/executors/background-executors.ts            | 2 ++
+ .../queue/executors/google-ads-campaign-sync-executor.ts   | 7 ++++---
+ 2 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/src/lib/queue/executors/background-executors.ts b/src/lib/queue/executors/background-executors.ts
+index 0151bf1..edb0799 100644
+--- a/src/lib/queue/executors/background-executors.ts
++++ b/src/lib/queue/executors/background-executors.ts
+@@ -16,6 +16,7 @@ import { executeOpenclawCommandTask } from './openclaw-command-executor'
+ import { executeOpenclawAffiliateSync } from './openclaw-affiliate-sync-executor'
+ import { executeOpenclawReportSend } from './openclaw-report-send-executor'
+ import { executeProductScoreCalculation } from './product-score-calculation-executor'
++import { executeGoogleAdsCampaignSyncTask } from './google-ads-campaign-sync-executor'
+ 
+ export function registerBackgroundExecutors(queue: UnifiedQueueManager): void {
+   queue.registerExecutor('click-farm-trigger', executeClickFarmTriggerTask)
+@@ -28,4 +29,5 @@ export function registerBackgroundExecutors(queue: UnifiedQueueManager): void {
+   queue.registerExecutor('openclaw-affiliate-sync', executeOpenclawAffiliateSync)
+   queue.registerExecutor('openclaw-report-send', executeOpenclawReportSend)
+   queue.registerExecutor('product-score-calculation', executeProductScoreCalculation)
++  queue.registerExecutor('google-ads-campaign-sync', executeGoogleAdsCampaignSyncTask)
+ }
+diff --git a/src/lib/queue/executors/google-ads-campaign-sync-executor.ts b/src/lib/queue/executors/google-ads-campaign-sync-executor.ts
+index 29c1e60..8a2e6ae 100644
+--- a/src/lib/queue/executors/google-ads-campaign-sync-executor.ts
++++ b/src/lib/queue/executors/google-ads-campaign-sync-executor.ts
+@@ -6,6 +6,7 @@
+  */
+ 
+ import { getDatabase } from '../../db'
++import type { Task } from '../types'
+ import { syncCampaignsFromGoogleAds } from '../../google-ads-campaign-sync'
+ import { createRiskAlert } from '../../risk-alerts'
+ 
+@@ -23,8 +24,7 @@ export interface GoogleAdsCampaignSyncTaskData {
+  * 执行 Google Ads 广告系列同步任务
+  */
+ export async function executeGoogleAdsCampaignSyncTask(
+-  taskId: string,
+-  taskData: GoogleAdsCampaignSyncTaskData
++  task: Task<GoogleAdsCampaignSyncTaskData>
+ ): Promise<{
+   success: boolean
+   syncedCount: number
+@@ -33,7 +33,8 @@ export async function executeGoogleAdsCampaignSyncTask(
+   error?: string
+ }> {
+   const startTime = Date.now()
+-  const { userId, syncType, customerId, dryRun } = taskData
++  const { id: taskId, data: taskData, userId } = task
++  const { syncType, customerId, dryRun } = taskData
+ 
+   console.log(
+     `▶️  [GoogleAdsSyncExecutor] 开始执行同步任务：${taskId}, 用户 #${userId}, 类型：${syncType}`
+-- 
+2.34.1
+
+
+From 52eac35700e0f9065dc830d10adfd2056bd586ce Mon Sep 17 00:00:00 2001
+From: Admin <admin@autobb.local>
+Date: Tue, 7 Apr 2026 23:26:30 +0800
+Subject: [PATCH 10/10] =?UTF-8?q?fix:=20=E6=B7=BB=E5=8A=A0=20google-ads-ca?=
+ =?UTF-8?q?mpaign-sync=20=E4=BB=BB=E5=8A=A1=E7=B1=BB=E5=9E=8B=E5=88=B0?=
+ =?UTF-8?q?=E9=98=9F=E5=88=97=E9=85=8D=E7=BD=AE?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- 在 DEFAULT_QUEUE_CONFIG.perTypeConcurrency 中添加
+- 在 ALL_TASK_TYPES 数组中添加
+- 默认并发数：2（与其他同步任务一致）
+
+影响范围:
+- 队列配置页面显示新任务类型
+- 可以配置并发数
+- 避免 TypeScript 类型错误
+---
+ src/app/api/queue/config/route.ts | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/app/api/queue/config/route.ts b/src/app/api/queue/config/route.ts
+index 9023c2e..90d569d 100644
+--- a/src/app/api/queue/config/route.ts
++++ b/src/app/api/queue/config/route.ts
+@@ -48,6 +48,7 @@ const DEFAULT_QUEUE_CONFIG = {
+     'openclaw-affiliate-sync': 2, // OpenClaw 联盟佣金快照同步任务并发限制
+     'openclaw-report-send': 2, // OpenClaw 报表投递任务并发限制
+     'product-score-calculation': 2, // 商品推荐指数计算任务并发限制（AI密集型）
++    'google-ads-campaign-sync': 2, // Google Ads 广告系列同步任务并发限制
+   },
+   maxQueueSize: 1000,
+   taskTimeout: 900000, // 15分钟（店铺深度抓取+竞品分析可能需要10-15分钟）
+@@ -77,6 +78,7 @@ const ALL_TASK_TYPES = [
+   'openclaw-command',
+   'openclaw-affiliate-sync',
+   'openclaw-report-send',
++  'google-ads-campaign-sync',
+ ] as const
+ 
+ function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
+-- 
+2.34.1
+
