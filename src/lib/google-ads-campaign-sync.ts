@@ -299,7 +299,8 @@ async function saveCampaignToDatabase(params: {
         budget_type = ?,
         status = ?,
         google_ads_account_id = ?,
-        synced_from_google_ads = ${db.type === 'postgres' ? 'TRUE' : '1'}
+        synced_from_google_ads = ${db.type === 'postgres' ? 'TRUE' : '1'},
+        updated_at = ${nowFunc(db.type)}
       WHERE id = ?`,
       [
         campaign.cpc_bid_ceiling_micros || null,  // 🆕 可选的 max_cpc 字段
@@ -329,8 +330,10 @@ async function saveCampaignToDatabase(params: {
         offer_id,
         needs_offer_completion,
         max_cpc,
-        google_campaign_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?)`,
+        google_campaign_id,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?, ?, ?)`,
       [
         userId,
         googleAdsAccountId,
@@ -342,6 +345,8 @@ async function saveCampaignToDatabase(params: {
         offerId || null,  // 🆕 如果提供了 offerId，则关联
         campaign.cpc_bid_ceiling_micros || null,  // 🆕 可选的 max_cpc 字段
         campaign.campaign_id,  // google_campaign_id
+        nowFunc(db.type),
+        nowFunc(db.type),
       ]
     )
     return getInsertedId(result, db.type)
