@@ -57,7 +57,7 @@ export async function executeGoogleAdsCampaignSyncTask(
         `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [userId, 'google_ads_campaign_sync', result.errors.length > 0 ? 'partial' : 'success', 
-         result.syncedCount, duration, new Date().toISOString(), new Date().toISOString()]
+         result.syncedCount, duration, new Date(), new Date()]
       )
       console.log(`📝 [GoogleAdsSyncExecutor] 同步日志已记录：${taskId}`)
     } catch (logError) {
@@ -122,7 +122,7 @@ export async function executeGoogleAdsCampaignSyncTask(
       await db.exec(
         `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [userId, 'google_ads_campaign_sync', 'failed', 0, duration, new Date().toISOString(), new Date().toISOString()]
+        [userId, 'google_ads_campaign_sync', 'failed', 0, duration, new Date(), new Date()]
       )
     } catch (logError) {
       console.error(`❌ [GoogleAdsSyncExecutor] 记录失败日志失败:`, logError)

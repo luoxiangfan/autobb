@@ -307,7 +307,7 @@ async function saveCampaignToDatabase(params: {
         status = ?,
         google_ads_account_id = ?,
         synced_from_google_ads = ${db.type === 'postgres' ? 'TRUE' : '1'},
-        updated_at = ${new Date().toISOString()}
+        updated_at = ?
       WHERE campaign_id = ?`,
       [
         campaign.cpc_bid_ceiling_micros || null,  // 🆕 可选的 max_cpc 字段
@@ -316,6 +316,7 @@ async function saveCampaignToDatabase(params: {
         campaign.budget_type,
         campaign.status,
         googleAdsAccountId,
+        new Date(),
         existing.campaign_id,
       ]
     )
@@ -352,8 +353,8 @@ async function saveCampaignToDatabase(params: {
         offerId || null,  // 🆕 如果提供了 offerId，则关联
         campaign.cpc_bid_ceiling_micros || null,  // 🆕 可选的 max_cpc 字段
         campaign.campaign_id,  // google_campaign_id
-        new Date().toISOString(),
-        new Date().toISOString(),
+        new Date(),
+        new Date(),
       ]
     )
     return getInsertedId(result, db.type)
@@ -437,7 +438,7 @@ export async function syncAllUsersCampaigns(): Promise<{
   
   // 获取所有活跃用户
   const users = await db.query(
-    `SELECT id FROM users WHERE is_active = ${db.type === 'postgres' ? 'TRUE' : '1'}`
+    `SELECT id FROM users WHERE role != 'admin' AND is_active = ${db.type === 'postgres' ? 'TRUE' : '1'}`
   )
 
   let totalSynced = 0
