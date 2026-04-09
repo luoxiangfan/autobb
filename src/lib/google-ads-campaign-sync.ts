@@ -393,7 +393,7 @@ async function createOfferFirst(params: {
       sync_source,
       needs_completion,
       scrape_status,
-      is_active,
+      is_active
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ${db.type === 'postgres' ? 'TRUE' : '1'})`,
     [
       userId,
