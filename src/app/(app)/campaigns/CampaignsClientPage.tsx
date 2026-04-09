@@ -71,6 +71,7 @@ import {
 import { matchesCampaignSearch } from '@/lib/campaign-search'
 import { convertCurrency, formatCurrency } from '@/lib/currency'
 import { formatCurrency as formatCurrencyDashboard, formatMultiCurrency } from '@/lib/utils'
+import { syncAffiliateProducts } from '@/lib/affiliate-products'
 
 const CampaignsTrendsSection = dynamic(() => import('./CampaignsTrendsSection'), {
   ssr: false,
@@ -2397,6 +2398,30 @@ export default function CampaignsClientPage({
     }
   }
 
+  const syncCampaigns = () => {
+    fetch('/api/cron/sync-google-ads-campaigns', {
+      method: 'POST',
+      credentials: 'include',
+    })
+      .then((response) => {
+        if (response.status === 401) {
+          handleUnauthorized()
+          throw new Error('UNAUTHORIZED')
+        }
+        if (!response.ok) {
+          throw new Error('同步失败')
+        }
+        return response.json()
+      })
+      .then((data) => {
+        showSuccess('同步成功', `共同步了 ${data.syncedCount} 个广告系列`)
+        void fetchCampaigns({ silent: true })
+      })
+      .catch((err: any) => {
+        if (err?.message === 'UNAUTHORIZED') return
+        showError('同步失败', err?.message || '网络错误')
+      })
+  }
   const handleOpenBatchOfflineDialog = () => {
     if (!hasBatchOfflineSelection || batchOfflineSubmitting) return
 
@@ -2997,6 +3022,7 @@ export default function CampaignsClientPage({
                     : `批量下线 (${selectedCampaignIds.size})`}
                 </Button>
               )}
+              <Button onClick={syncCampaigns}>同步广告系列</Button>
               <Button onClick={() => router.push('/offers')}>
                 创建广告系列
               </Button>
