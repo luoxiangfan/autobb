@@ -611,9 +611,7 @@ export default function PromptsManagementPage() {
                             <p className="text-sm font-medium text-amber-800">正在编辑：{prompt.name}</p>
                           </div>
                           <div className="text-xs text-amber-700">
-                            当前版本：<span className="font-mono">{prompt.version}</span> → 
-                            新版本将自动保存为历史版本
-                          </div>
+                            当前版本：<span className="font-mono">{prompt.version}</span></div>
                         </div>
                         <div>
                           <label className="text-xs font-medium text-slate-700 mb-1 block">变更说明</label>
