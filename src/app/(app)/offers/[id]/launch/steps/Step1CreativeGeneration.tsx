@@ -26,8 +26,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { showError, showSuccess } from '@/lib/toast-utils'
 import ScoreRadarChart from '@/components/charts/ScoreRadarChart'
-import { BonusScoreCard } from '@/components/BonusScoreCard'
-import { ConversionFeedbackForm } from '@/components/ConversionFeedbackForm'
 import { CreativeTypeProgress } from '@/components/CreativeTypeProgress'
 import {
   deriveCanonicalCreativeType,
@@ -955,11 +953,6 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
 
   // 展开/折叠状态管理
   const [expandedSections, setExpandedSections] = useState<Record<number, Record<string, boolean>>>({})
-
-  // Bonus Score & Conversion Feedback
-  const [showFeedbackForm, setShowFeedbackForm] = useState(false)
-  const [selectedCreativeForFeedback, setSelectedCreativeForFeedback] = useState<number | null>(null)
-  const [bonusScoreRefreshKey, setBonusScoreRefreshKey] = useState(0)
 
   // 删除确认对话框状态
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -2106,18 +2099,6 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
                         </div>
                       )}
 
-                      {/* Performance Bonus Score */}
-                      <div className="mt-3 border-t pt-3">
-                        <BonusScoreCard
-                          key={`bonus-${creative.id}-${bonusScoreRefreshKey}`}
-                          adCreativeId={creative.id}
-                          baseScore={creative.adStrength.score || 0}
-                          onConversionClick={() => {
-                            setSelectedCreativeForFeedback(creative.id)
-                            setShowFeedbackForm(true)
-                          }}
-                        />
-                      </div>
                     </div>
                   ) : (
                     /* Fallback: Old Score Display */
@@ -2300,20 +2281,6 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
             )
           })}
         </div>
-      )}
-
-      {/* Conversion Feedback Dialog */}
-      {selectedCreativeForFeedback && (
-        <ConversionFeedbackForm
-          adCreativeId={selectedCreativeForFeedback}
-          open={showFeedbackForm}
-          onOpenChange={setShowFeedbackForm}
-          onSuccess={() => {
-            // Refresh bonus score data
-            setBonusScoreRefreshKey(prev => prev + 1)
-            setShowFeedbackForm(false)
-          }}
-        />
       )}
 
       {/* Quality Gate Intercept Dialog */}
