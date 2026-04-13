@@ -281,6 +281,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(error.toJSON(), { status: error.httpStatus })
     }
 
+    // 4.5. 检查 Offer 是否已有广告系列（一对一约束）
+    const isDeletedCheck = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
+    const existingCampaign = await db.queryOne(`
+      SELECT id, campaign_name, creation_status, status
+      FROM campaigns
+      WHERE offer_id = ? AND user_id = ? AND ${isDeletedCheck}
+      LIMIT 1
+    `, [_offerId, userId]) as any
+
+    if (existingCampaign) {
+      const error = createError.invalidParameter({
+        field: 'offerId',
+        value: _offerId,
+        constraint: 'One Offer can only have one Campaign'
+      })
+      return NextResponse.json({
+        ...error.toJSON(),
+        message: '该 Offer 已有关联的广告系列，一个 Offer 只能发布一个广告系列',
+        existingCampaign: {
+          id: existingCampaign.id,
+          campaignName: existingCampaign.campaign_name,
+          creationStatus: existingCampaign.creation_status,
+          status: existingCampaign.status,
+        },
+      }, { status: 409 })
+    }
+
     // 5. 选择广告创意（单创意模式 vs 智能优化模式）
     let creatives: any[] = []
 

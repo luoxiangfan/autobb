@@ -41,10 +41,35 @@ export interface CreateCampaignInput {
 }
 
 /**
+ * 检查 Offer 是否已有广告系列（排除已删除的）
+ */
+export async function hasActiveCampaignForOffer(offerId: number, userId: number): Promise<boolean> {
+  const db = await getDatabase()
+
+  // PostgreSQL 使用 is_deleted = FALSE，SQLite 使用 is_deleted = 0
+  const isDeletedCheck = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
+
+  const row = await db.queryOne(`
+    SELECT id FROM campaigns
+    WHERE offer_id = ? AND user_id = ? AND ${isDeletedCheck}
+    LIMIT 1
+  `, [offerId, userId]) as any
+
+  return !!row
+}
+
+/**
  * 创建广告系列
+ * 约束：一个 Offer 只能有一个广告系列（一对一关联）
  */
 export async function createCampaign(input: CreateCampaignInput): Promise<Campaign> {
   const db = await getDatabase()
+
+  // 检查 Offer 是否已有广告系列
+  const hasExisting = await hasActiveCampaignForOffer(input.offerId, input.userId)
+  if (hasExisting) {
+    throw new Error(`该 Offer 已有关联的广告系列，一个 Offer 只能发布一个广告系列`)
+  }
 
   const result = await db.exec(`
     INSERT INTO campaigns (
