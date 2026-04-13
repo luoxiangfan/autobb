@@ -5,8 +5,3 @@ ALTER TABLE campaigns ADD COLUMN custom_name TEXT;
 
 -- 添加索引以优化按自定义名称搜索
 CREATE INDEX IF NOT EXISTS idx_campaigns_custom_name ON campaigns(custom_name);
-
--- 记录迁移历史
-INSERT INTO migration_history (name, applied_at) 
-VALUES ('109_add_campaign_custom_name', CURRENT_TIMESTAMP)
-ON CONFLICT(name) DO NOTHING;
