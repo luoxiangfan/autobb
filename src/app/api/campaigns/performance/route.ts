@@ -349,6 +349,7 @@ export async function GET(request: NextRequest) {
     const statusFilterRaw = (searchParams.get('status') || '').trim().toUpperCase()
     const statusFilter = ['ENABLED', 'PAUSED', 'REMOVED', 'ALL'].includes(statusFilterRaw) ? statusFilterRaw : ''
     const needsOfferCompletionFilter = (searchParams.get('needsOfferCompletion') || '').trim().toUpperCase()
+    const statusCategoryFilter = (searchParams.get('statusCategory') || '').trim().toLowerCase()
     const showDeletedParam = parseOptionalBoolean(searchParams.get('showDeleted'))
     const refresh = parseOptionalBoolean(searchParams.get('refresh')) === true
     const noCache = parseOptionalBoolean(searchParams.get('noCache')) === true
@@ -416,6 +417,7 @@ export async function GET(request: NextRequest) {
           c.custom_name,
           c.offer_id,
           c.status,
+          c.status_category,
           c.google_campaign_id,
           c.google_ads_account_id,
           c.budget_amount,
@@ -629,6 +631,7 @@ export async function GET(request: NextRequest) {
         clickFarmTaskStatus: c.click_farm_task_status ?? null,
         urlSwapTaskStatus: c.url_swap_task_status ?? null,
         status: c.status,
+        statusCategory: c.status_category ?? 'pending',
         googleCampaignId: c.google_campaign_id,
         googleAdsAccountId: c.google_ads_account_id,
         adsAccountCustomerId: c.ads_account_customer_id ?? null,
@@ -695,6 +698,10 @@ export async function GET(request: NextRequest) {
     
     if (needsOfferCompletionFilter && needsOfferCompletionFilter !== 'ALL') {
       listCampaigns = listCampaigns.filter((campaign) => String(campaign.offerNeedsCompletion || '').toUpperCase() === needsOfferCompletionFilter)
+    }
+
+    if (statusCategoryFilter && statusCategoryFilter !== 'all') {
+      listCampaigns = listCampaigns.filter((campaign) => (campaign.statusCategory || 'pending') === statusCategoryFilter)
     }
 
     if (sortBy && sortOrder) {

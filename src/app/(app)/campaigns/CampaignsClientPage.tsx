@@ -112,6 +112,7 @@ interface Campaign {
   needsOfferCompletion: boolean
   clickFarmTaskStatus: string | null
   urlSwapTaskStatus: string | null
+  statusCategory: string
   performance?: {
     impressions: number
     clicks: number
@@ -378,6 +379,7 @@ export default function CampaignsClientPage({
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [needsOfferCompletionFilter, setNeedsOfferCompletionFilter] = useState<string>('all') // 'all' | 'true' | 'false'
+  const [statusCategoryFilter, setStatusCategoryFilter] = useState<string>('all') // 'all' | 'pending' | 'watching' | 'qualified'
   const [timeRange, setTimeRange] = useState<CampaignsTimeRange>('7')
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const [appliedCustomRange, setAppliedCustomRange] = useState<{ startDate: string; endDate: string } | null>(null)
@@ -1196,6 +1198,10 @@ export default function CampaignsClientPage({
 
     if (needsOfferCompletionFilter !== 'all') {
       params.set('needsOfferCompletion', needsOfferCompletionFilter)
+    }
+
+    if (statusCategoryFilter !== 'all') {
+      params.set('statusCategory', statusCategoryFilter)
     }
 
     if (sortField && sortDirection) {
@@ -3293,6 +3299,29 @@ export default function CampaignsClientPage({
                 </Select>
               </div>
 
+              {/* 状态分类筛选 */}
+              <div className="w-full sm:w-[220px] md:w-[200px]">
+                <Select
+                  value={statusCategoryFilter}
+                  onValueChange={(value) => {
+                    setStatusCategoryFilter(value)
+                    if (isServerPagingMode && currentPage !== 1) {
+                      setCurrentPage(1)
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="运营状态" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">所有运营状态</SelectItem>
+                    <SelectItem value="pending">待定</SelectItem>
+                    <SelectItem value="watching">观察</SelectItem>
+                    <SelectItem value="qualified">合格</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="flex items-center px-3 py-2 border border-gray-200 rounded-md bg-gray-50 md:ml-auto">
                 <span className="text-xs text-gray-500 whitespace-nowrap mr-2">
                   数据同步时间（北京时间）
@@ -3360,6 +3389,7 @@ export default function CampaignsClientPage({
                       <SortableHeader field="configuredMaxCpc" className="w-[94px] whitespace-nowrap !px-0.5">配置CPC</SortableHeader>
                       <SortableHeader field="conversions" className="w-[94px] whitespace-nowrap !px-0.5">佣金</SortableHeader>
                       <SortableHeader field="cost" className="w-[94px] whitespace-nowrap !px-0.5">花费</SortableHeader>
+                      <SortableHeader field="statusCategory" className="w-[100px] whitespace-nowrap">运营状态</SortableHeader>
                       <TableHead className="w-[100px] whitespace-nowrap">关联 Offer 任务</TableHead>
                       <SortableHeader field="status" className="w-[78px] whitespace-nowrap">投放状态</SortableHeader>
                       <SortableHeader field="servingStartDate" className="w-[74px] whitespace-nowrap">投放日期</SortableHeader>
@@ -3607,6 +3637,48 @@ export default function CampaignsClientPage({
                             </Badge>
                           )
                         })()}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <Select
+                          value={campaign.statusCategory || 'pending'}
+                          onValueChange={async (value) => {
+                            try {
+                              const response = await fetch(`/api/campaigns/${campaign.id}/status-category`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ statusCategory: value }),
+                              })
+                              if (response.status === 401) {
+                                handleUnauthorized()
+                                return
+                              }
+                              if (!response.ok) {
+                                const data = await response.json().catch(() => null)
+                                showError('更新失败', data?.error || '网络错误')
+                                await fetchCampaigns({ silent: true })
+                                return
+                              }
+                              setCampaigns((prev) =>
+                                prev.map((c) =>
+                                  c.id === campaign.id ? { ...c, statusCategory: value } : c
+                                )
+                              )
+                            } catch (err: any) {
+                              showError('更新失败', err?.message || '网络错误')
+                              await fetchCampaigns({ silent: true })
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-8 w-[100px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">待定</SelectItem>
+                            <SelectItem value="watching">观察</SelectItem>
+                            <SelectItem value="qualified">合格</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {getStatusBadge(campaign.status, campaign.adsAccountAvailable)}

@@ -17,6 +17,7 @@ export interface Campaign {
   targetCpa: number | null
   maxCpc: number | null
   status: string
+  statusCategory: string
   startDate: string | null
   endDate: string | null
   creationStatus: string
@@ -211,6 +212,7 @@ export async function updateCampaign(
       | 'targetCpa'
       | 'maxCpc'
       | 'status'
+      | 'statusCategory'
       | 'startDate'
       | 'endDate'
       | 'campaignId'
@@ -261,6 +263,10 @@ export async function updateCampaign(
   if (updates.status !== undefined) {
     fields.push('status = ?')
     values.push(updates.status)
+  }
+  if (updates.statusCategory !== undefined) {
+    fields.push('status_category = ?')
+    values.push(updates.statusCategory)
   }
   if (updates.startDate !== undefined) {
     fields.push('start_date = ?')
@@ -542,6 +548,7 @@ function mapRowToCampaign(row: any): Campaign {
     targetCpa: row.target_cpa,
     maxCpc: row.max_cpc,
     status: row.status,
+    statusCategory: row.status_category ?? 'pending',
     startDate: row.start_date,
     endDate: row.end_date,
     creationStatus: row.creation_status,
