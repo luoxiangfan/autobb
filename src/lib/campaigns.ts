@@ -2,7 +2,7 @@ import { getDatabase } from './db'
 import { getInsertedId } from './db-helpers'
 import { markUrlSwapTargetsRemovedByCampaignId, getUrlSwapTaskByOfferId, disableUrlSwapTask } from './url-swap'
 import { applyCampaignTransition } from './campaign-state-machine'
-import { getClickFarmTaskByOfferId, stopClickFarmTask } from './click-farm'
+import { stopClickFarmTask } from './click-farm'
 
 export interface Campaign {
   id: number
