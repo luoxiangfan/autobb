@@ -2426,7 +2426,7 @@ export default function CampaignsClientPage({
         return response.json()
       })
       .then((data) => {
-        showSuccess('同步成功', `共同步了 ${data.syncedCount} 个广告系列`)
+        showSuccess('广告系列同步成功')
         void fetchCampaigns({ silent: true })
       })
       .catch((err: any) => {
