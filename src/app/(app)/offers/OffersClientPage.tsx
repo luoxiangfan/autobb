@@ -148,7 +148,7 @@ export default function OffersClientPage({
     setPageSize,
     offset,
     pageSizeOptions,
-  } = usePagination({ initialPageSize: 10 })
+  } = usePagination({ initialPageSize: 50 })
 
   const hasUnsupportedServerSort = sortBy !== '' && !OFFERS_SERVER_SUPPORTED_SORTS.has(sortBy)
   const isServerPagingMode = offersServerPagingEnabled && !manualCompatMode && !hasUnsupportedServerSort

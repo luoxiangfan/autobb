@@ -382,7 +382,7 @@ export default function CampaignsClientPage({
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(50)
   const isServerPagingMode = campaignsServerPagingEnabled
   const totalItems = isServerPagingMode ? serverTotal : filteredCampaigns.length
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
@@ -3508,6 +3508,7 @@ export default function CampaignsClientPage({
                           )}
                         </div>
                       </TableCell>
+                      {/* 关联Ads账号 */}
                       <TableCell className="w-[92px] min-w-[92px] max-w-[92px] whitespace-nowrap">
                         <div className="w-[92px] min-w-[92px] max-w-[92px] overflow-hidden">
                           <div className="font-medium text-gray-900 truncate" title={adsAccountDisplayName}>
@@ -3621,7 +3622,7 @@ export default function CampaignsClientPage({
                           <DropdownMenuContent align="end" className="w-40">
                             <DropdownMenuItem
                               className="gap-2"
-                              onClick={() => router.push(`/offers/${campaign.offerId}`)}
+                              onClick={() => window.open(`/offers/${campaign.offerId}`, '_blank')}
                             >
                               <Package className="w-4 h-4 text-green-600" />
                               <span>查看关联Offer</span>
