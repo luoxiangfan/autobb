@@ -393,7 +393,7 @@ export default function CampaignsClientPage({
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
 
   // Sorting states
-  type SortField = 'campaignName' | 'budgetAmount' | 'impressions' | 'clicks' | 'ctr' | 'cpc' | 'configuredMaxCpc' | 'conversions' | 'cost' | 'roas' | 'status' | 'servingStartDate'
+  type SortField = 'campaignName' | 'budgetAmount' | 'impressions' | 'clicks' | 'ctr' | 'cpc' | 'configuredMaxCpc' | 'conversions' | 'cost' | 'roas' | 'status' | 'servingStartDate' | 'statusCategory'
   type SortDirection = 'asc' | 'desc' | null
   const [sortField, setSortField] = useState<SortField | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>(null)
