@@ -10,6 +10,7 @@ export interface Campaign {
   googleAdsAccountId: number
   campaignId: string | null
   campaignName: string
+  customName: string | null
   budgetAmount: number
   budgetType: string
   targetCpa: number | null
@@ -178,6 +179,7 @@ export async function updateCampaign(
     Pick<
       Campaign,
       | 'campaignName'
+      | 'customName'
       | 'budgetAmount'
       | 'budgetType'
       | 'targetCpa'
@@ -209,6 +211,10 @@ export async function updateCampaign(
   if (updates.campaignName !== undefined) {
     fields.push('campaign_name = ?')
     values.push(updates.campaignName)
+  }
+  if (updates.customName !== undefined) {
+    fields.push('custom_name = ?')
+    values.push(updates.customName)
   }
   if (updates.budgetAmount !== undefined) {
     fields.push('budget_amount = ?')
@@ -443,6 +449,7 @@ function mapRowToCampaign(row: any): Campaign {
     googleAdsAccountId: row.google_ads_account_id,
     campaignId: row.campaign_id,
     campaignName: row.campaign_name,
+    customName: row.custom_name ?? null,
     budgetAmount: row.budget_amount,
     budgetType: row.budget_type,
     targetCpa: row.target_cpa,

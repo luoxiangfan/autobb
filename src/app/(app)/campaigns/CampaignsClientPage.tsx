@@ -91,6 +91,7 @@ interface Campaign {
   googleCampaignId?: string | null
   campaignId: string | null
   campaignName: string
+  customName: string | null
   budgetAmount: number
   budgetType: string
   status: string
@@ -453,6 +454,9 @@ export default function CampaignsClientPage({
     currency: string
   } | null>(null)
 
+  const [editCustomNameOpen, setEditCustomNameOpen] = useState(false)
+  const [editCustomNameTarget, setEditCustomNameTarget] = useState<{ id: number; campaignName: string; customName: string | null } | null>(null)
+  const [editCustomNameSubmitting, setEditCustomNameSubmitting] = useState(false)
   // Toggle status states
   const [statusUpdatingIds, setStatusUpdatingIds] = useState<Set<number>>(new Set())
   const [isToggleStatusDialogOpen, setIsToggleStatusDialogOpen] = useState(false)
@@ -1416,6 +1420,76 @@ export default function CampaignsClientPage({
 
     // Keep table data eventually consistent with backend-calculated fields.
     await fetchCampaigns({ silent: true })
+
+  const handleCustomNameUpdated = async (payload: {
+    campaignId: number
+    customName: string | null
+  }) => {
+    const campaignId = payload.campaignId
+    const customName = payload.customName === '' ? null : payload.customName
+
+    setCampaigns((prev) =>
+      prev.map((campaign) => {
+        if (campaign.id !== campaignId) {
+          return campaign
+        }
+        return {
+          ...campaign,
+          customName: customName,
+        }
+      })
+    )
+  }
+
+  const openEditCustomNameDialog = (campaign: Campaign) => {
+    setEditCustomNameTarget({
+      id: campaign.id,
+      campaignName: campaign.campaignName,
+      customName: campaign.customName,
+    })
+    setEditCustomNameOpen(true)
+  }
+
+  const confirmEditCustomName = async () => {
+    if (!editCustomNameTarget || editCustomNameSubmitting) return
+
+    setEditCustomNameSubmitting(true)
+
+    try {
+      const response = await fetch(`/api/campaigns/${editCustomNameTarget.id}/custom-name`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          customName: editCustomNameTarget.customName,
+        }),
+      })
+
+      if (response.status === 401) {
+        handleUnauthorized()
+        return
+      }
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error || '更新自定义名称失败')
+      }
+
+      await handleCustomNameUpdated({
+        campaignId: editCustomNameTarget.id,
+        customName: editCustomNameTarget.customName,
+      })
+
+      showSuccess('更新成功', '自定义名称已保存')
+    } catch (err: any) {
+      showError('更新失败', err?.message || '网络错误')
+    } finally {
+      setEditCustomNameSubmitting(false)
+      setEditCustomNameOpen(false)
+      setEditCustomNameTarget(null)
+    }
+  }
+
   }
 
   const openDeleteDraftDialog = (campaign: Campaign) => {
@@ -3367,6 +3441,7 @@ export default function CampaignsClientPage({
                         />
                       </TableHead>
                       <SortableHeader field="campaignName" className="w-[300px] whitespace-nowrap">系列名称</SortableHeader>
+                      <TableHead className="w-[200px] whitespace-nowrap">自定义名称</TableHead>
                       <TableHead className="w-[92px] min-w-[92px] max-w-[92px] whitespace-nowrap">关联Ads账号</TableHead>
                       <SortableHeader field="budgetAmount" className="w-[86px] whitespace-nowrap">预算</SortableHeader>
                       <SortableHeader field="impressions" className="w-[58px] whitespace-nowrap !px-0.5">展示</SortableHeader>
@@ -3508,7 +3583,50 @@ export default function CampaignsClientPage({
                           )}
                         </div>
                       </TableCell>
-                      {/* 关联Ads账号 */}
+                      <TableCell className="w-[200px] whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            value={campaign.customName ?? ''}
+                            onChange={async (e) => {
+                              const customName = e.target.value
+                              setCampaigns((prev) =>
+                                prev.map((c) =>
+                                  c.id === campaign.id ? { ...c, customName: customName === '' ? null : customName } : c
+                                )
+                              )
+                            }}
+                            onBlur={async () => {
+                              if (campaign.customName === undefined) return
+                              try {
+                                const response = await fetch(`/api/campaigns/${campaign.id}/custom-name`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
+                                  body: JSON.stringify({
+                                    customName: campaign.customName === '' ? null : campaign.customName,
+                                  }),
+                                })
+                                if (response.status === 401) {
+                                  handleUnauthorized()
+                                  return
+                                }
+                                if (!response.ok) {
+                                  const data = await response.json().catch(() => null)
+                                  showError('更新失败', data?.error || '网络错误')
+                                  await fetchCampaigns({ silent: true })
+                                  return
+                                }
+                              } catch (err: any) {
+                                showError('更新失败', err?.message || '网络错误')
+                                await fetchCampaigns({ silent: true })
+                              }
+                            }}
+                            placeholder="点击添加自定义名称"
+                            className="h-8 text-sm"
+                            disabled={isDeleted || offerDeleted}
+                          />
+                        </div>
+                      </TableCell>
                       <TableCell className="w-[92px] min-w-[92px] max-w-[92px] whitespace-nowrap">
                         <div className="w-[92px] min-w-[92px] max-w-[92px] overflow-hidden">
                           <div className="font-medium text-gray-900 truncate" title={adsAccountDisplayName}>

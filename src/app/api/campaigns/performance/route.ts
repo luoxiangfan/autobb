@@ -413,6 +413,7 @@ export async function GET(request: NextRequest) {
           c.id,
           c.campaign_id,
           c.campaign_name,
+          c.custom_name,
           c.offer_id,
           c.status,
           c.google_campaign_id,
@@ -614,6 +615,7 @@ export async function GET(request: NextRequest) {
       return {
         id: c.id,
         campaignName: c.campaign_name,
+        customName: c.custom_name ?? null,
         offerId: c.offer_id,
         offerBrand: c.offer_brand,
         offerUrl: c.offer_url,
