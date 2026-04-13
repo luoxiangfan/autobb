@@ -1,7 +1,8 @@
 import { getDatabase } from './db'
 import { getInsertedId } from './db-helpers'
-import { markUrlSwapTargetsRemovedByCampaignId } from './url-swap'
+import { markUrlSwapTargetsRemovedByCampaignId, getUrlSwapTaskByOfferId, disableUrlSwapTask } from './url-swap'
 import { applyCampaignTransition } from './campaign-state-machine'
+import { getClickFarmTaskByOfferId, stopClickFarmTask } from './click-farm'
 
 export interface Campaign {
   id: number
@@ -303,6 +304,8 @@ export async function deleteCampaign(id: number, userId: number): Promise<Delete
   const campaign = await db.queryOne(
     `
       SELECT
+        c.id,
+        c.offer_id,
         c.creation_status,
         c.is_deleted,
         c.status,
@@ -318,6 +321,8 @@ export async function deleteCampaign(id: number, userId: number): Promise<Delete
     [id, userId]
   ) as
     | {
+        id: number
+        offer_id: number
         creation_status: string | null
         is_deleted: any
         status: string | null
@@ -348,6 +353,11 @@ export async function deleteCampaign(id: number, userId: number): Promise<Delete
 
   // 情况一：已移除广告系列，直接物理删除（保留现有行为）
   if (normalizedStatus === 'REMOVED') {
+    // 暂停关联 Offer 的补点击和换链接任务
+    if (campaign.offer_id) {
+      await pauseOfferTasks(campaign.offer_id, userId)
+    }
+
     const result = await db.exec(
       `
         DELETE FROM campaigns
@@ -372,6 +382,11 @@ export async function deleteCampaign(id: number, userId: number): Promise<Delete
 
   // 情况二：草稿广告系列 → 软删除（沿用原有状态机）
   if (creationStatus === 'draft') {
+    // 暂停关联 Offer 的补点击和换链接任务
+    if (campaign.offer_id) {
+      await pauseOfferTasks(campaign.offer_id, userId)
+    }
+
     const transitionResult = await applyCampaignTransition({
       userId,
       campaignId: id,
@@ -387,6 +402,11 @@ export async function deleteCampaign(id: number, userId: number): Promise<Delete
 
   // 情况三：Ads 账号已解绑/不可用 → 仅本地下线并删除
   if (canDeleteDueToAdsUnavailable) {
+    // 暂停关联 Offer 的补点击和换链接任务
+    if (campaign.offer_id) {
+      await pauseOfferTasks(campaign.offer_id, userId)
+    }
+
     // 本地状态机标记为 REMOVED（不会触发任何 Google Ads 调用）
     await applyCampaignTransition({
       userId,
@@ -412,6 +432,48 @@ export async function deleteCampaign(id: number, userId: number): Promise<Delete
 
   // 其他情况：保持原有保护逻辑
   return { success: false, reason: 'NOT_DRAFT' }
+}
+
+/**
+ * 暂停关联 Offer 的补点击和换链接任务
+ */
+async function pauseOfferTasks(offerId: number, userId: number): Promise<void> {
+  try {
+    // 暂停补点击任务
+    const clickFarmTask = await getClickFarmTaskByOfferId(offerId, userId)
+    if (clickFarmTask && ['pending', 'running', 'paused'].includes(clickFarmTask.status)) {
+      await stopClickFarmTask(String(clickFarmTask.id), userId)
+      console.log(`[campaigns] 已暂停补点击任务 (offerId=${offerId}, taskId=${clickFarmTask.id})`)
+    }
+
+    // 禁用换链接任务
+    const urlSwapTask = await getUrlSwapTaskByOfferId(offerId, userId)
+    if (urlSwapTask && urlSwapTask.status !== 'disabled') {
+      await disableUrlSwapTask(String(urlSwapTask.id), userId)
+      console.log(`[campaigns] 已禁用换链接任务 (offerId=${offerId}, taskId=${urlSwapTask.id})`)
+    }
+  } catch (error: any) {
+    console.error(`[campaigns] 暂停 Offer 任务失败 (offerId=${offerId}):`, error)
+    // 不抛出错误，避免影响广告系列删除流程
+  }
+}
+
+/**
+ * 通过 offer_id 获取补点击任务
+ */
+async function getClickFarmTaskByOfferId(offerId: number, userId: number): Promise<any | null> {
+  const db = await getDatabase()
+
+  const task = await db.queryOne<any>(`
+    SELECT * FROM click_farm_tasks
+    WHERE offer_id = ? AND user_id = ? AND is_deleted = 0
+    ORDER BY created_at DESC
+    LIMIT 1
+  `, [offerId, userId])
+
+  if (!task) return null
+
+  return task
 }
 
 /**
