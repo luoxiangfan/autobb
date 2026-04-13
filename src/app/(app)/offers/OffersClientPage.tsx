@@ -1597,8 +1597,8 @@ export default function OffersClientPage({
                               label: '发布广告',
                               href: `/offers/${offer.id}/launch`,  // 🔥 2026-01-05: 使用href打开新标签页
                               target: '_blank',
-                              disabled: offer.scrapeStatus !== 'completed',
-                              title: offer.scrapeStatus !== 'completed' ? '请等待数据抓取完成' : undefined,
+                              disabled: offer.scrapeStatus !== 'completed' || offer.campaignId !== null,
+                              title: offer.campaignId !== null ? '该 Offer 已有关联广告系列，一个 Offer 只能发布一个广告系列' : offer.scrapeStatus !== 'completed' ? '请等待数据抓取完成' : undefined,
                             }}
                             secondaryActions={[
                               {

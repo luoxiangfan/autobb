@@ -127,6 +127,7 @@ export interface OfferListRow {
     campaignCount: number
   }>
   is_blacklisted?: boolean
+  campaign_id?: number | null
 }
 
 export interface CreateOfferInput {
@@ -470,35 +471,36 @@ export async function listOffers(
 
   // 获取列表
   const listColumns = [
-    'id',
-    'user_id',
-    'url',
-    'brand',
-    'category',
-    'target_country',
-    'target_language',
-    'offer_name',
-    'affiliate_link',
-    'brand_description',
-    'unique_selling_points',
-    'product_highlights',
-    'target_audience',
-    'final_url',
-    'final_url_suffix',
-    'product_price',
-    'commission_payout',
-    'commission_type',
-    'commission_value',
-    'commission_currency',
-    'scrape_status',
-    'scrape_error',
-    'scraped_at',
-    'is_active',
-    'created_at',
-    'updated_at',
-    'google_ads_campaign_id',
-    'sync_source',
-    'needs_completion',
+    'o.id',
+    'o.user_id',
+    'o.url',
+    'o.brand',
+    'o.category',
+    'o.target_country',
+    'o.target_language',
+    'o.offer_name',
+    'o.affiliate_link',
+    'o.brand_description',
+    'o.unique_selling_points',
+    'o.product_highlights',
+    'o.target_audience',
+    'o.final_url',
+    'o.final_url_suffix',
+    'o.product_price',
+    'o.commission_payout',
+    'o.commission_type',
+    'o.commission_value',
+    'o.commission_currency',
+    'o.scrape_status',
+    'o.scrape_error',
+    'o.scraped_at',
+    'o.is_active',
+    'o.created_at',
+    'o.updated_at',
+    'o.google_ads_campaign_id',
+    'o.sync_source',
+    'o.needs_completion',
+    'c.id as campaign_id',
   ].join(', ')
 
   const sortableColumnMap: Record<string, string> = {
@@ -517,7 +519,7 @@ export async function listOffers(
     : 'created_at'
   const sortOrder = options?.sortOrder === 'asc' ? 'ASC' : 'DESC'
 
-  let listQuery = `SELECT ${listColumns} FROM offers WHERE ${whereClause} ORDER BY ${sortColumn} ${sortOrder}, id DESC`
+  let listQuery = `SELECT ${listColumns} FROM offers o LEFT JOIN campaigns c ON o.id = c.offer_id AND c.is_deleted = 0 WHERE ${whereClause} ORDER BY ${sortColumn} ${sortOrder}, o.id DESC`
 
   if (options?.limit) {
     listQuery += ` LIMIT ${options.limit}`
@@ -605,7 +607,8 @@ export async function listOffers(
   // 合并关联账号到offers
   const offersWithAccounts = offers.map(offer => ({
     ...offer,
-    linked_accounts: accountsByOfferId.get(offer.id)
+    linked_accounts: accountsByOfferId.get(offer.id),
+    campaign_id: offer.campaign_id ?? null
   }))
 
   // 🔥 检查黑名单并标记风险
