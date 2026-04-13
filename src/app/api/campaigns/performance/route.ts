@@ -441,10 +441,14 @@ export async function GET(request: NextRequest) {
           o.is_deleted as offer_is_deleted,
           o.needs_completion as offer_needs_completion,
           o.sync_source as offer_sync_source,
-          o.google_ads_campaign_id as offer_google_ads_campaign_id
+          o.google_ads_campaign_id as offer_google_ads_campaign_id,
+          cft.status as click_farm_task_status,
+          ust.status as url_swap_task_status
         FROM campaigns c
         LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
         LEFT JOIN offers o ON c.offer_id = o.id
+        LEFT JOIN click_farm_tasks cft ON c.offer_id = cft.offer_id AND cft.is_deleted = 0
+        LEFT JOIN url_swap_tasks ust ON c.offer_id = ust.offer_id AND ust.is_deleted = 0
         WHERE c.user_id = ?
         ORDER BY c.created_at DESC
       `, [userId]) as any[]
@@ -622,6 +626,8 @@ export async function GET(request: NextRequest) {
         offerNeedsCompletion: c.offer_needs_completion,
         offerSyncSource: c.offer_sync_source,
         offerGoogleAdsCampaignId: c.offer_google_ads_campaign_id,
+        clickFarmTaskStatus: c.click_farm_task_status ?? null,
+        urlSwapTaskStatus: c.url_swap_task_status ?? null,
         status: c.status,
         googleCampaignId: c.google_campaign_id,
         googleAdsAccountId: c.google_ads_account_id,

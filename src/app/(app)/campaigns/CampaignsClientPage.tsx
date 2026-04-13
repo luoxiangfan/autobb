@@ -110,6 +110,8 @@ interface Campaign {
   offerIsDeleted?: boolean | number
   offerSyncSource: string
   needsOfferCompletion: boolean
+  clickFarmTaskStatus: string | null
+  urlSwapTaskStatus: string | null
   performance?: {
     impressions: number
     clicks: number
@@ -3358,7 +3360,7 @@ export default function CampaignsClientPage({
                       <SortableHeader field="configuredMaxCpc" className="w-[94px] whitespace-nowrap !px-0.5">配置CPC</SortableHeader>
                       <SortableHeader field="conversions" className="w-[94px] whitespace-nowrap !px-0.5">佣金</SortableHeader>
                       <SortableHeader field="cost" className="w-[94px] whitespace-nowrap !px-0.5">花费</SortableHeader>
-                      <SortableHeader field="roas" className="w-[62px] whitespace-nowrap !px-0.5">ROAS</SortableHeader>
+                      <TableHead className="w-[100px] whitespace-nowrap">关联 Offer 任务</TableHead>
                       <SortableHeader field="status" className="w-[78px] whitespace-nowrap">投放状态</SortableHeader>
                       <SortableHeader field="servingStartDate" className="w-[74px] whitespace-nowrap">投放日期</SortableHeader>
                       <TableHead className="w-[48px] whitespace-nowrap text-center">操作</TableHead>
@@ -3449,7 +3451,6 @@ export default function CampaignsClientPage({
 		                    const canDeleteDraftAction = canDeleteDraft && !deleteDraftSubmitting
 		                    const isRemovedStatus = String(campaign.status || '').toUpperCase() === 'REMOVED'
 		                    const canDeleteRemovedAction = (isRemovedStatus || campaign.adsAccountAvailable === false) && !deleteRemovedSubmitting
-                        const campaignRoas = formatCampaignRoas(campaign)
                         const configuredMaxCpc = Number(campaign.configuredMaxCpc)
                         const hasConfiguredMaxCpc = Number.isFinite(configuredMaxCpc) && configuredMaxCpc > 0
 
@@ -3580,10 +3581,32 @@ export default function CampaignsClientPage({
                           {formatMoney(Number(campaign.performance?.costLocal ?? campaign.performance?.costUsd) || 0, performanceCurrency)}
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap !px-0.5">
-                        <div className="font-medium text-gray-900">
-                          {campaignRoas}
-                        </div>
+                      <TableCell className="whitespace-nowrap">
+                        {(() => {
+                          const hasClickFarm = campaign.clickFarmTaskStatus && campaign.clickFarmTaskStatus !== 'completed'
+                          const hasUrlSwap = campaign.urlSwapTaskStatus && campaign.urlSwapTaskStatus !== 'completed'
+                          
+                          // 红：都未开启，黄：一个开启，绿：两个都开启
+                          const taskColor = hasClickFarm && hasUrlSwap
+                            ? 'bg-green-100 text-green-800 border-green-200'
+                            : hasClickFarm || hasUrlSwap
+                              ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                              : 'bg-red-100 text-red-800 border-red-200'
+                          
+                          const taskLabel = hasClickFarm && hasUrlSwap
+                            ? '双任务'
+                            : hasClickFarm
+                              ? '补点击'
+                              : hasUrlSwap
+                                ? '换链接'
+                                : '无任务'
+                          
+                          return (
+                            <Badge variant="outline" className={`w-full justify-center ${taskColor}`}>
+                              {taskLabel}
+                            </Badge>
+                          )
+                        })()}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {getStatusBadge(campaign.status, campaign.adsAccountAvailable)}
