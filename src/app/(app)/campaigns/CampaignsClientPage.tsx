@@ -3291,28 +3291,6 @@ export default function CampaignsClientPage({
                 </Select>
               </div>
 
-              {/* 需要完善 Offer 筛选 */}
-              <div className="w-full sm:w-[220px] md:w-[200px]">
-                <Select
-                  value={needsOfferCompletionFilter}
-                  onValueChange={(value) => {
-                    setNeedsOfferCompletionFilter(value)
-                    if (isServerPagingMode && currentPage !== 1) {
-                      setCurrentPage(1)
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Offer完善状态" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Offer所有完善状态</SelectItem>
-                    <SelectItem value="true">Offer需要完善</SelectItem>
-                    <SelectItem value="false">Offer已完善</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               <div className="flex items-center px-3 py-2 border border-gray-200 rounded-md bg-gray-50 md:ml-auto">
                 <span className="text-xs text-gray-500 whitespace-nowrap mr-2">
                   数据同步时间（北京时间）
@@ -3372,7 +3350,6 @@ export default function CampaignsClientPage({
                       </TableHead>
                       <SortableHeader field="campaignName" className="w-[300px] whitespace-nowrap">系列名称</SortableHeader>
                       <TableHead className="w-[200px] whitespace-nowrap">自定义名称</TableHead>
-                      <TableHead className="w-[92px] min-w-[92px] max-w-[92px] whitespace-nowrap">关联Ads账号</TableHead>
                       <SortableHeader field="budgetAmount" className="w-[86px] whitespace-nowrap">预算</SortableHeader>
                       <SortableHeader field="impressions" className="w-[58px] whitespace-nowrap !px-0.5">展示</SortableHeader>
                       <SortableHeader field="clicks" className="w-[58px] whitespace-nowrap !px-0.5">点击</SortableHeader>
@@ -3384,7 +3361,6 @@ export default function CampaignsClientPage({
                       <SortableHeader field="roas" className="w-[62px] whitespace-nowrap !px-0.5">ROAS</SortableHeader>
                       <SortableHeader field="status" className="w-[78px] whitespace-nowrap">投放状态</SortableHeader>
                       <SortableHeader field="servingStartDate" className="w-[74px] whitespace-nowrap">投放日期</SortableHeader>
-                      <TableHead className="w-[100px] whitespace-nowrap">需要完善 Offer</TableHead>
                       <TableHead className="w-[48px] whitespace-nowrap text-center">操作</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -3557,23 +3533,6 @@ export default function CampaignsClientPage({
                           />
                         </div>
                       </TableCell>
-                      <TableCell className="w-[92px] min-w-[92px] max-w-[92px] whitespace-nowrap">
-                        <div className="w-[92px] min-w-[92px] max-w-[92px] overflow-hidden">
-                          <div className="font-medium text-gray-900 truncate" title={adsAccountDisplayName}>
-                            {adsAccountDisplayName}
-                          </div>
-                          {!shouldHideAdsAccount && adsAccountDisplayId && (
-                            <div className="text-[11px] text-gray-500 font-mono leading-none mt-0.5 truncate" title={adsAccountDisplayId}>
-                              {adsAccountDisplayId}
-                            </div>
-                          )}
-                          {!shouldHideAdsAccount && campaign.adsAccountAvailable === false && (
-                            <Badge variant="outline" className="mt-0.5 text-[10px] px-1 py-0 whitespace-nowrap border-orange-200 text-orange-700 bg-orange-50">
-                              已解绑
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div className="min-w-0">
                           <div className="font-medium text-gray-900 truncate" title={formatMoney(Number(campaign.budgetAmount) || 0, budgetCurrency)}>
@@ -3633,26 +3592,6 @@ export default function CampaignsClientPage({
                         <span className="text-sm text-gray-900">
                           {campaign.servingStartDate || '-'}
                         </span>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {campaign.needsOfferCompletion && campaign.offerSyncSource === 'google_ads_sync' ? (
-                          <a
-                            href={`/offers/${campaign.offerId}/edit`}
-                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 hover:bg-orange-200 transition-colors"
-                            title="点击完善 Offer 信息"
-                          >
-                            <span>需要完善</span>
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                          </a>
-                        ) : campaign.needsOfferCompletion ? (
-                          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                            需要完善
-                          </Badge>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-center">
                         <DropdownMenu>
