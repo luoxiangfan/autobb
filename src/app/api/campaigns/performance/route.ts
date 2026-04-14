@@ -365,6 +365,9 @@ export async function GET(request: NextRequest) {
         .map((id) => Number.parseInt(id.trim(), 10))
         .filter((id) => Number.isFinite(id) && id > 0)
       : []
+    // 🔧 新增：按创建时间过滤（用于"最近 14 天新增"页面）
+    const createdAtStartParam = searchParams.get('createdAtStart')
+    const createdAtEndParam = searchParams.get('createdAtEnd')
     let startDateStr = startDateQuery || ''
     let endDateStr = endDateQuery || ''
     let rangeDays = daysBack
@@ -453,8 +456,14 @@ export async function GET(request: NextRequest) {
         LEFT JOIN click_farm_tasks cft ON c.offer_id = cft.offer_id AND ${db.type === 'postgres' ? 'cft.is_deleted = FALSE' : 'cft.is_deleted = 0'}
         LEFT JOIN url_swap_tasks ust ON c.offer_id = ust.offer_id AND ${db.type === 'postgres' ? 'ust.is_deleted = FALSE' : 'ust.is_deleted = 0'}
         WHERE c.user_id = ?
+        ${createdAtStartParam ? `AND c.created_at >= ?` : ''}
+        ${createdAtEndParam ? `AND c.created_at <= ?` : ''}
         ORDER BY c.created_at DESC
-      `, [userId]) as any[]
+      `, [
+        userId,
+        ...(createdAtStartParam ? [createdAtStartParam] : []),
+        ...(createdAtEndParam ? [createdAtEndParam] : [])
+      ]) as any[]
     )
 
     const aggregateByCampaignCurrency = async (params: {

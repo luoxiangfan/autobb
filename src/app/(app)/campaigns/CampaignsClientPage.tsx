@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { showSuccess, showError, showInfo } from '@/lib/toast-utils'
 import {
@@ -49,7 +49,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Search, Trash2, ExternalLink, AlertCircle, CheckCircle2, PlayCircle, PauseCircle, XCircle, TrendingUp, Coins, Wallet, ArrowUpDown, ArrowUp, ArrowDown, Package, Loader2, MoreHorizontal, BarChart3, Download } from 'lucide-react'
+import { Search, Trash2, AlertCircle, CheckCircle2, PlayCircle, PauseCircle, XCircle, TrendingUp, Coins, Wallet, ArrowUpDown, ArrowUp, ArrowDown, Package, Loader2, MoreHorizontal, BarChart3, Download } from 'lucide-react'
 import type { TrendChartData, TrendChartMetric } from '@/components/charts/TrendChart'
 import type { DateRange } from '@/components/ui/date-range-picker'
 import {
@@ -270,6 +270,10 @@ const formatCampaignRoas = (campaign: Campaign): string => {
 interface CampaignsClientPageProps {
   campaignsReqDedupEnabled?: boolean
   campaignsServerPagingEnabled?: boolean
+  defaultTimeRange?: '7' | '14' | '30',
+  createdAtStart?: string
+  createdAtEnd?: string
+  pageTitle?: string
 }
 
 type SelectedCampaignSnapshot = {
@@ -366,8 +370,13 @@ const BATCH_OPERATION_CHUNK_SIZE = 100
 export default function CampaignsClientPage({
   campaignsReqDedupEnabled = false,
   campaignsServerPagingEnabled = false,
+  defaultTimeRange,
+  createdAtStart,
+  createdAtEnd,
+  pageTitle = '广告系列管理',
 }: CampaignsClientPageProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [filteredCampaigns, setFilteredCampaigns] = useState<Campaign[]>([])
   const [serverTotal, setServerTotal] = useState(0)
@@ -382,7 +391,21 @@ export default function CampaignsClientPage({
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [needsOfferCompletionFilter, setNeedsOfferCompletionFilter] = useState<string>('all') // 'all' | 'true' | 'false'
   const [statusCategoryFilter, setStatusCategoryFilter] = useState<string>('all') // 'all' | 'pending' | 'watching' | 'qualified'
-  const [timeRange, setTimeRange] = useState<CampaignsTimeRange>('7')
+  
+  // 从 URL 参数或 props 读取默认时间范围
+  const getTimeRangeFromUrl = () => {
+    try {
+      const param = searchParams?.get('timeRange')
+      if (param === '7' || param === '14' || param === '30') {
+        return param
+      }
+    } catch {
+      // ignore
+    }
+    return defaultTimeRange || '7'
+  }
+  
+  const [timeRange, setTimeRange] = useState<CampaignsTimeRange>(getTimeRangeFromUrl())
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const [appliedCustomRange, setAppliedCustomRange] = useState<{ startDate: string; endDate: string } | null>(null)
   const showDeletedCampaigns = false
@@ -1219,6 +1242,14 @@ export default function CampaignsClientPage({
     if (sortField && sortDirection) {
       params.set('sortBy', sortField)
       params.set('sortOrder', sortDirection)
+    }
+
+    // 🔧 新增：支持按创建时间过滤（用于"最近 14 天新增"页面）
+    if (createdAtStart) {
+      params.set('createdAtStart', createdAtStart)
+    }
+    if (createdAtEnd) {
+      params.set('createdAtEnd', createdAtEnd)
     }
 
     return params
@@ -3048,7 +3079,7 @@ export default function CampaignsClientPage({
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold text-gray-900">广告系列管理</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{pageTitle}</h1>
               <Badge variant="outline" className="text-sm">
                 {visibleCampaignCount}
               </Badge>

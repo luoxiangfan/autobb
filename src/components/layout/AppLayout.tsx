@@ -151,6 +151,11 @@ const navigationItems: NavItem[] = [
     icon: Megaphone,
   },
   {
+    label: '最近14天新增广告系列',
+    href: '/recent-14-days-campaigns',
+    icon: Megaphone,
+  },
+  {
     label: '创意管理',
     href: '/creatives',
     icon: Lightbulb,
