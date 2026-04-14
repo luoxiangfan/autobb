@@ -4317,48 +4317,6 @@ export default function CampaignsClientPage({
                 className={
                   toggleStatusNextStatus === 'PAUSED'
                     ? 'bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-600'
-
-        {/* Pause Offer Tasks Confirmation Dialog */}
-        <AlertDialog
-          open={isPauseOfferTasksDialogOpen}
-          onOpenChange={(open) => {
-            setIsPauseOfferTasksDialogOpen(open)
-            if (!open) {
-              setPauseOfferTasksTarget(null)
-            }
-          }}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>确认暂停关联 Offer 任务</AlertDialogTitle>
-              <AlertDialogDescription asChild>
-                <div className="space-y-3">
-                  <p>
-                    确认要暂停广告系列 <strong className="text-gray-900">{pauseOfferTasksTarget?.campaignName || '-'}</strong> 关联 Offer 的任务吗？
-                  </p>
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-800">
-                    <p className="font-medium mb-1">暂停后将会：</p>
-                    <ul className="list-disc list-inside space-y-1 ml-2">
-                      <li>补点击任务标记为已停止</li>
-                      <li>换链接任务标记已禁用</li>
-                      <li>可随时重新启用任务</li>
-                    </ul>
-                  </div>
-                </div>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={pauseOfferTasksSubmitting}>取消</AlertDialogCancel>
-              <Button
-                onClick={() => void confirmPauseOfferTasks()}
-                disabled={pauseOfferTasksSubmitting}
-                className="bg-orange-600 hover:bg-orange-700 focus:ring-orange-600"
-              >
-                {pauseOfferTasksSubmitting ? '暂停中...' : '确认暂停'}
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
                     : 'bg-green-600 hover:bg-green-700 focus:ring-green-600'
                 }
               >
@@ -4367,6 +4325,47 @@ export default function CampaignsClientPage({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      {/* Pause Offer Tasks Confirmation Dialog */}
+      <AlertDialog
+        open={isPauseOfferTasksDialogOpen}
+        onOpenChange={(open) => {
+          setIsPauseOfferTasksDialogOpen(open)
+          if (!open) {
+            setPauseOfferTasksTarget(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认暂停关联 Offer 任务</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  确认要暂停广告系列 <strong className="text-gray-900">{pauseOfferTasksTarget?.campaignName || '-'}</strong> 关联 Offer 的任务吗？
+                </p>
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-800">
+                  <p className="font-medium mb-1">暂停后将会：</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>补点击任务标记为已停止</li>
+                    <li>换链接任务标记已禁用</li>
+                    <li>可随时重新启用任务</li>
+                  </ul>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pauseOfferTasksSubmitting}>取消</AlertDialogCancel>
+            <Button
+              onClick={() => void confirmPauseOfferTasks()}
+              disabled={pauseOfferTasksSubmitting}
+              className="bg-orange-600 hover:bg-orange-700 focus:ring-orange-600"
+            >
+              {pauseOfferTasksSubmitting ? '暂停中...' : '确认暂停'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Batch Delete Confirmation Dialog */}
       <AlertDialog
