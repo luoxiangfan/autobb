@@ -81,6 +81,8 @@ const AdjustCampaignCpcDialog = dynamic(() => import('@/components/AdjustCampaig
 const AdjustCampaignBudgetDialog = dynamic(() => import('@/components/AdjustCampaignBudgetDialog'), { ssr: false })
 const ClickFarmTaskModal = dynamic(() => import('@/components/ClickFarmTaskModal'), { ssr: false })
 const UrlSwapTaskModal = dynamic(() => import('@/components/UrlSwapTaskModal'), { ssr: false })
+const EditableCustomName = dynamic(() => import('@/components/EditableCustomName').then(mod => mod.EditableCustomName), { ssr: false })
+const EditableStatusCategory = dynamic(() => import('@/components/EditableStatusCategory').then(mod => mod.EditableStatusCategory), { ssr: false })
 
 interface Campaign {
   id: number
@@ -3574,48 +3576,19 @@ export default function CampaignsClientPage({
                         </div>
                       </TableCell>
                       <TableCell className="w-[200px] whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <Input
-                            value={campaign.customName ?? ''}
-                            onChange={async (e) => {
-                              const customName = e.target.value
-                              setCampaigns((prev) =>
-                                prev.map((c) =>
-                                  c.id === campaign.id ? { ...c, customName: customName === '' ? null : customName } : c
-                                )
+                        <EditableCustomName
+                          campaignId={campaign.id}
+                          initialCustomName={campaign.customName}
+                          disabled={isDeleted || offerDeleted}
+                          onSaved={(newName) => {
+                            // 更新本地状态
+                            setCampaigns((prev) =>
+                              prev.map((c) =>
+                                c.id === campaign.id ? { ...c, customName: newName } : c
                               )
-                            }}
-                            onBlur={async () => {
-                              if (campaign.customName === undefined) return
-                              try {
-                                const response = await fetch(`/api/campaigns/${campaign.id}/custom-name`, {
-                                  method: 'PUT',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  credentials: 'include',
-                                  body: JSON.stringify({
-                                    customName: campaign.customName === '' ? null : campaign.customName,
-                                  }),
-                                })
-                                if (response.status === 401) {
-                                  handleUnauthorized()
-                                  return
-                                }
-                                if (!response.ok) {
-                                  const data = await response.json().catch(() => null)
-                                  showError('更新失败', data?.error || '网络错误')
-                                  await fetchCampaigns({ silent: true })
-                                  return
-                                }
-                              } catch (err: any) {
-                                showError('更新失败', err?.message || '网络错误')
-                                await fetchCampaigns({ silent: true })
-                              }
-                            }}
-                            placeholder="点击添加自定义名称"
-                            className="h-8 text-sm"
-                            disabled={isDeleted || offerDeleted}
-                          />
-                        </div>
+                            )
+                          }}
+                        />
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div className="min-w-0">
@@ -3665,46 +3638,19 @@ export default function CampaignsClientPage({
                         </div>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        <Select
-                          value={campaign.statusCategory || 'pending'}
-                          onValueChange={async (value) => {
-                            try {
-                              const response = await fetch(`/api/campaigns/${campaign.id}/status-category`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                credentials: 'include',
-                                body: JSON.stringify({ statusCategory: value }),
-                              })
-                              if (response.status === 401) {
-                                handleUnauthorized()
-                                return
-                              }
-                              if (!response.ok) {
-                                const data = await response.json().catch(() => null)
-                                showError('更新失败', data?.error || '网络错误')
-                                await fetchCampaigns({ silent: true })
-                                return
-                              }
-                              setCampaigns((prev) =>
-                                prev.map((c) =>
-                                  c.id === campaign.id ? { ...c, statusCategory: value } : c
-                                )
+                        <EditableStatusCategory
+                          campaignId={campaign.id}
+                          initialStatusCategory={campaign.statusCategory}
+                          disabled={isDeleted || offerDeleted}
+                          onSaved={(newStatus) => {
+                            // 更新本地状态
+                            setCampaigns((prev) =>
+                              prev.map((c) =>
+                                c.id === campaign.id ? { ...c, statusCategory: newStatus } : c
                               )
-                            } catch (err: any) {
-                              showError('更新失败', err?.message || '网络错误')
-                              await fetchCampaigns({ silent: true })
-                            }
+                            )
                           }}
-                        >
-                          <SelectTrigger className="h-8 w-[100px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">待定</SelectItem>
-                            <SelectItem value="watching">观察</SelectItem>
-                            <SelectItem value="qualified">合格</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        />
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {(() => {

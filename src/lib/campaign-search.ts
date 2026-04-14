@@ -1,5 +1,6 @@
 export type CampaignSearchCandidate = {
   campaignName?: string | null
+  customName?: string | null  // 自定义名称
   campaignId?: string | null
   adsAccountName?: string | null
   adsAccountCustomerId?: string | null
@@ -15,6 +16,7 @@ export function matchesCampaignSearch(
 
   const searchableFields = [
     campaign.campaignName,
+    campaign.customName,  // 支持自定义名称搜索
     campaign.campaignId,
     campaign.adsAccountName,
     campaign.adsAccountCustomerId,
