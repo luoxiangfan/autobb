@@ -393,7 +393,7 @@ export default function CampaignsClientPage({
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
 
   // Sorting states
-  type SortField = 'campaignName' | 'budgetAmount' | 'impressions' | 'clicks' | 'ctr' | 'cpc' | 'configuredMaxCpc' | 'conversions' | 'cost' | 'roas' | 'status' | 'servingStartDate' | 'statusCategory'
+  type SortField = 'campaignName' | 'budgetAmount' | 'impressions' | 'clicks' | 'ctr' | 'cpc' | 'configuredMaxCpc' | 'conversions' | 'cost' | 'roas' | 'status' | 'servingStartDate'
   type SortDirection = 'asc' | 'desc' | null
   const [sortField, setSortField] = useState<SortField | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>(null)
@@ -786,6 +786,7 @@ export default function CampaignsClientPage({
         pageSize,
         searchQuery: debouncedSearchQuery.trim(),
         statusFilter,
+        statusCategoryFilter,
         needsOfferCompletionFilter,
         sortField,
         sortDirection,
@@ -1055,6 +1056,10 @@ export default function CampaignsClientPage({
       result = result.filter((c) => c.status === statusFilter)
     }
 
+    if (statusCategoryFilter !== 'all') {
+      result = result.filter((c) => c.statusCategory === statusCategoryFilter)
+    }
+
     // 按需要完善 Offer 状态筛选
     if (needsOfferCompletionFilter !== 'all') {
       const needsCompletion = needsOfferCompletionFilter === 'true'
@@ -1147,7 +1152,7 @@ export default function CampaignsClientPage({
 
     setFilteredCampaigns(result)
 
-    const filterKey = JSON.stringify({ searchQuery, statusFilter, sortField, sortDirection, showDeletedCampaigns, needsOfferCompletionFilter })
+    const filterKey = JSON.stringify({ searchQuery, statusFilter, sortField, sortDirection, showDeletedCampaigns, needsOfferCompletionFilter, statusCategoryFilter })
     const filtersChanged = filterKeyRef.current !== filterKey
     filterKeyRef.current = filterKey
 
@@ -1156,7 +1161,7 @@ export default function CampaignsClientPage({
       const nextPage = filtersChanged ? 1 : prev
       return nextPage > filteredTotalPages ? filteredTotalPages : nextPage
     })
-  }, [campaigns, searchQuery, statusFilter, sortField, sortDirection, pageSize, showDeletedCampaigns, isServerPagingMode, totalPages, needsOfferCompletionFilter])
+  }, [campaigns, searchQuery, statusFilter, sortField, sortDirection, pageSize, showDeletedCampaigns, isServerPagingMode, totalPages, needsOfferCompletionFilter, statusCategoryFilter])
 
   const buildDateRangeParams = (): URLSearchParams => {
     const params = new URLSearchParams()
@@ -3437,7 +3442,7 @@ export default function CampaignsClientPage({
                       <SortableHeader field="configuredMaxCpc" className="w-[94px] whitespace-nowrap !px-0.5">配置CPC</SortableHeader>
                       <SortableHeader field="conversions" className="w-[94px] whitespace-nowrap !px-0.5">佣金</SortableHeader>
                       <SortableHeader field="cost" className="w-[94px] whitespace-nowrap !px-0.5">花费</SortableHeader>
-                      <SortableHeader field="statusCategory" className="w-[100px] whitespace-nowrap">运营状态</SortableHeader>
+                      <TableHead className="w-[100px] whitespace-nowrap">运营状态</TableHead>
                       <TableHead className="w-[100px] whitespace-nowrap">关联 Offer 任务</TableHead>
                       <SortableHeader field="status" className="w-[78px] whitespace-nowrap">投放状态</SortableHeader>
                       <SortableHeader field="servingStartDate" className="w-[74px] whitespace-nowrap">投放日期</SortableHeader>
@@ -3654,38 +3659,6 @@ export default function CampaignsClientPage({
                           {formatMoney(Number(campaign.performance?.commission ?? campaign.performance?.conversions) || 0, performanceCurrency)}
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap !px-0.5">
-                        <div className="font-medium text-gray-900">
-                          {formatMoney(Number(campaign.performance?.costLocal ?? campaign.performance?.costUsd) || 0, performanceCurrency)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {(() => {
-                          const hasClickFarm = campaign.clickFarmTaskStatus && campaign.clickFarmTaskStatus !== 'completed'
-                          const hasUrlSwap = campaign.urlSwapTaskStatus && campaign.urlSwapTaskStatus !== 'completed'
-                          
-                          // 红：都未开启，黄：一个开启，绿：两个都开启
-                          const taskColor = hasClickFarm && hasUrlSwap
-                            ? 'bg-green-100 text-green-800 border-green-200'
-                            : hasClickFarm || hasUrlSwap
-                              ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                              : 'bg-red-100 text-red-800 border-red-200'
-                          
-                          const taskLabel = hasClickFarm && hasUrlSwap
-                            ? '双任务'
-                            : hasClickFarm
-                              ? '补点击'
-                              : hasUrlSwap
-                                ? '换链接'
-                                : '无任务'
-                          
-                          return (
-                            <Badge variant="outline" className={`w-full justify-center ${taskColor}`}>
-                              {taskLabel}
-                            </Badge>
-                          )
-                        })()}
-                      </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <Select
                           value={campaign.statusCategory || 'pending'}
@@ -3727,6 +3700,38 @@ export default function CampaignsClientPage({
                             <SelectItem value="qualified">合格</SelectItem>
                           </SelectContent>
                         </Select>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap !px-0.5">
+                        <div className="font-medium text-gray-900">
+                          {formatMoney(Number(campaign.performance?.costLocal ?? campaign.performance?.costUsd) || 0, performanceCurrency)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {(() => {
+                          const hasClickFarm = campaign.clickFarmTaskStatus && campaign.clickFarmTaskStatus !== 'completed'
+                          const hasUrlSwap = campaign.urlSwapTaskStatus && campaign.urlSwapTaskStatus !== 'completed'
+                          
+                          // 红：都未开启，黄：一个开启，绿：两个都开启
+                          const taskColor = hasClickFarm && hasUrlSwap
+                            ? 'bg-green-100 text-green-800 border-green-200'
+                            : hasClickFarm || hasUrlSwap
+                              ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                              : 'bg-red-100 text-red-800 border-red-200'
+                          
+                          const taskLabel = hasClickFarm && hasUrlSwap
+                            ? '双任务'
+                            : hasClickFarm
+                              ? '补点击'
+                              : hasUrlSwap
+                                ? '换链接'
+                                : '无任务'
+                          
+                          return (
+                            <Badge variant="outline" className={`w-full justify-center ${taskColor}`}>
+                              {taskLabel}
+                            </Badge>
+                          )
+                        })()}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {getStatusBadge(campaign.status, campaign.adsAccountAvailable)}

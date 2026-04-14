@@ -392,6 +392,7 @@ export async function GET(request: NextRequest) {
       search: searchQuery,
       status: statusFilter || 'ALL',
       needsOfferCompletion: needsOfferCompletionFilter || 'ALL',
+      statusCategory: statusCategoryFilter || 'all',
       showDeleted: showDeletedParam,
       sortBy,
       sortOrder,

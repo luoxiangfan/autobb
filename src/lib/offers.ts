@@ -395,29 +395,29 @@ export async function listOffers(
 ): Promise<{ offers: OfferListRow[]; total: number }> {
   const db = await getDatabase()
 
-  let whereConditions = ['user_id = ?']
+  let whereConditions = ['o.user_id = ?']
   const params: any[] = [userId]
 
   // 默认排除已删除的Offer（需求25）
   if (!options?.includeDeleted) {
     const db_type = db.type
     if (db_type === 'postgres') {
-      whereConditions.push("(is_deleted IS NULL OR is_deleted::text IN ('0', 'f', 'false'))")
+      whereConditions.push("(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))")
     } else {
-      whereConditions.push('(is_deleted = 0 OR is_deleted IS NULL)')
+      whereConditions.push('(o.is_deleted = 0 OR o.is_deleted IS NULL)')
     }
   }
 
   // 如果提供了ids参数，只查询特定ID的Offers（用于批量上传进度显示）
   if (options?.ids && options.ids.length > 0) {
     const placeholders = options.ids.map(() => '?').join(',')
-    whereConditions.push(`id IN (${placeholders})`)
+    whereConditions.push(`o.id IN (${placeholders})`)
     params.push(...options.ids)
   }
 
   // 构建WHERE条件
   if (options?.isActive !== undefined) {
-    whereConditions.push('is_active = ?')
+    whereConditions.push('o.is_active = ?')
     const db_type = db.type
     if (db_type === 'postgres') {
       params.push(options.isActive) // PostgreSQL uses boolean
@@ -427,7 +427,7 @@ export async function listOffers(
   }
 
   if (options?.targetCountry) {
-    whereConditions.push('target_country = ?')
+    whereConditions.push('o.target_country = ?')
     params.push(options.targetCountry)
   }
 
@@ -441,12 +441,12 @@ export async function listOffers(
       const searchPattern = `%${normalizedQuery}%`
       whereConditions.push(
         `(
-          CAST(id AS TEXT) ${likeOperator} ?
-          OR brand ${likeOperator} ?
-          OR offer_name ${likeOperator} ?
-          OR url ${likeOperator} ?
-          OR final_url ${likeOperator} ?
-          OR category ${likeOperator} ?
+          CAST(o.id AS TEXT) ${likeOperator} ?
+          OR o.brand ${likeOperator} ?
+          OR o.offer_name ${likeOperator} ?
+          OR o.url ${likeOperator} ?
+          OR o.final_url ${likeOperator} ?
+          OR o.category ${likeOperator} ?
         )`
       )
       params.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern)
@@ -454,19 +454,19 @@ export async function listOffers(
   }
 
   if (options?.scrapeStatus) {
-    whereConditions.push('scrape_status = ?')
+    whereConditions.push('o.scrape_status = ?')
     params.push(options.scrapeStatus)
   }
 
   if (options?.needsCompletion !== undefined) {
-    whereConditions.push('needs_completion = ?')
+    whereConditions.push('o.needs_completion = ?')
     params.push(options.needsCompletion)
   }
 
   const whereClause = whereConditions.join(' AND ')
 
   // 获取总数
-  const countQuery = `SELECT COUNT(*) as count FROM offers WHERE ${whereClause}`
+  const countQuery = `SELECT COUNT(*) as count FROM offers o WHERE ${whereClause}`
   const { count } = await db.queryOne(countQuery, params) as { count: number }
 
   // 获取列表
@@ -504,22 +504,24 @@ export async function listOffers(
   ].join(', ')
 
   const sortableColumnMap: Record<string, string> = {
-    offerName: 'offer_name',
-    brand: 'brand',
-    targetCountry: 'target_country',
-    targetLanguage: 'target_language',
-    scrapeStatus: 'scrape_status',
-    needsCompletion: 'needs_completion',
-    createdAt: 'created_at',
-    updatedAt: 'updated_at',
+    offerName: 'o.offer_name',
+    brand: 'o.brand',
+    targetCountry: 'o.target_country',
+    targetLanguage: 'o.target_language',
+    scrapeStatus: 'o.scrape_status',
+    needsCompletion: 'o.needs_completion',
+    createdAt: 'o.created_at',
+    updatedAt: 'o.updated_at',
   }
 
   const sortColumn = options?.sortBy && sortableColumnMap[options.sortBy]
     ? sortableColumnMap[options.sortBy]
-    : 'created_at'
+    : 'o.created_at'
   const sortOrder = options?.sortOrder === 'asc' ? 'ASC' : 'DESC'
-
-  let listQuery = `SELECT ${listColumns} FROM offers o LEFT JOIN campaigns c ON o.id = c.offer_id AND c.is_deleted = 0 WHERE ${whereClause} ORDER BY ${sortColumn} ${sortOrder}, o.id DESC`
+  const campaignDeletedCondition = db.type === 'postgres'
+    ? "(c.is_deleted = false OR c.is_deleted IS NULL)"
+    : "(c.is_deleted = 0 OR c.is_deleted IS NULL)"
+  let listQuery = `SELECT ${listColumns} FROM offers o LEFT JOIN campaigns c ON o.id = c.offer_id AND ${campaignDeletedCondition} WHERE ${whereClause} ORDER BY ${sortColumn} ${sortOrder}, o.id DESC`
 
   if (options?.limit) {
     listQuery += ` LIMIT ${options.limit}`
