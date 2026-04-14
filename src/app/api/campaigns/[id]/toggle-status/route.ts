@@ -7,6 +7,7 @@ import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 import { invalidateDashboardCache } from '@/lib/api-cache'
+import { pauseOfferTasks } from '@/lib/campaign-offer-tasks'
 
 type ToggleStatusBody = {
   status?: string
@@ -252,6 +253,27 @@ export async function PUT(
       action: 'TOGGLE_STATUS',
       payload: { status: nextStatus as 'PAUSED' | 'ENABLED' },
     })
+
+    // 如果是暂停操作，同时暂停关联 offer 的补点击和换链接任务
+    if (nextStatus === 'PAUSED') {
+      try {
+        const campaignData = await db.queryOne<any>(`
+          SELECT offer_id FROM campaigns WHERE id = ? AND user_id = ?
+        `, [campaignId, userId])
+
+        if (campaignData?.offer_id) {
+          await pauseOfferTasks(
+            campaignData.offer_id,
+            userId,
+            'campaign_paused',
+            '广告系列已暂停，自动暂停任务'
+          )
+        }
+      } catch (taskError: any) {
+        // 任务暂停失败不影响主流程，仅记录日志
+        console.error('[toggle-status] 暂停关联 offer 任务失败:', taskError)
+      }
+    }
 
     invalidateDashboardCache(userId)
 

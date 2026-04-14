@@ -3659,6 +3659,11 @@ export default function CampaignsClientPage({
                           {formatMoney(Number(campaign.performance?.commission ?? campaign.performance?.conversions) || 0, performanceCurrency)}
                         </div>
                       </TableCell>
+                      <TableCell className="whitespace-nowrap !px-0.5">
+                        <div className="font-medium text-gray-900">
+                          {formatMoney(Number(campaign.performance?.costLocal ?? campaign.performance?.costUsd) || 0, performanceCurrency)}
+                        </div>
+                      </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <Select
                           value={campaign.statusCategory || 'pending'}
@@ -3700,11 +3705,6 @@ export default function CampaignsClientPage({
                             <SelectItem value="qualified">合格</SelectItem>
                           </SelectContent>
                         </Select>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap !px-0.5">
-                        <div className="font-medium text-gray-900">
-                          {formatMoney(Number(campaign.performance?.costLocal ?? campaign.performance?.costUsd) || 0, performanceCurrency)}
-                        </div>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {(() => {

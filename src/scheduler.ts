@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 持续运行的定时任务调度服务
  * 使用node-cron实现定时调度，由supervisord管理进程
  *
@@ -1029,6 +1029,29 @@ async function linkAndAccountCheckTask() {
   }
 }
 
+
+/**
+ * 任务 3.0: 广告系列暂停任务检测
+ * 频率：默认每 30 分钟
+ * 功能：检测所有已暂停的广告系列，自动暂停关联 offer 的补点击和换链接任务
+ */
+async function campaignPausedTaskSchedulerTask() {
+  log('🔄 开始检测已暂停广告系列的任务...')
+
+  try {
+    const { getCampaignPausedTaskScheduler } = await import('./lib/queue/schedulers/campaign-paused-task-scheduler')
+    const scheduler = getCampaignPausedTaskScheduler()
+
+    // 调用内部检查方法（通过反射访问私有方法）
+    // @ts-ignore - 访问私有方法
+    await scheduler.checkAndPauseTasks()
+
+    log('🔄 广告系列暂停任务检测完成')
+  } catch (error) {
+    logError('❌ 广告系列暂停任务检测执行失败:', error)
+  }
+}
+
 /**
  * 任务3.1: 创意完成后未发布超时检查
  * 频率：默认每30分钟
@@ -1409,4 +1432,18 @@ process.on('unhandledRejection', (reason, promise) => {
 startScheduler()
 
 // 保持进程运行
-log('💡 调度器进程运行中，按 Ctrl+C 停止')
+  // 任务 3.0: 广告系列暂停任务检测（新增功能）
+  const campaignPausedTaskCron = process.env.CAMPAIGN_PAUSED_TASK_CHECK_CRON || '*/30 * * * *'
+  const campaignPausedTaskEnabled = process.env.CAMPAIGN_PAUSED_TASK_ENABLED !== 'false'
+
+  if (campaignPausedTaskEnabled) {
+    cron.schedule(campaignPausedTaskCron, async () => {
+      await campaignPausedTaskSchedulerTask()
+    }, {
+      scheduled: true,
+      timezone: 'Asia/Shanghai'
+    })
+    log('✅ 广告系列暂停任务检测已启动 (cron: ' + campaignPausedTaskCron + ')')
+  } else {
+    log('⏸️  广告系列暂停任务检测已禁用 (CAMPAIGN_PAUSED_TASK_ENABLED=false)')
+  }
