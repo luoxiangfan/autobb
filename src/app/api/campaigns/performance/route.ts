@@ -449,8 +449,8 @@ export async function GET(request: NextRequest) {
         FROM campaigns c
         LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
         LEFT JOIN offers o ON c.offer_id = o.id
-        LEFT JOIN click_farm_tasks cft ON c.offer_id = cft.offer_id AND cft.is_deleted = 0
-        LEFT JOIN url_swap_tasks ust ON c.offer_id = ust.offer_id AND ust.is_deleted = 0
+        LEFT JOIN click_farm_tasks cft ON c.offer_id = cft.offer_id AND ${db.type === 'postgres' ? 'cft.is_deleted = FALSE' : 'cft.is_deleted = 0'}
+        LEFT JOIN url_swap_tasks ust ON c.offer_id = ust.offer_id AND ${db.type === 'postgres' ? 'ust.is_deleted = FALSE' : 'ust.is_deleted = 0'}
         WHERE c.user_id = ?
         ORDER BY c.created_at DESC
       `, [userId]) as any[]

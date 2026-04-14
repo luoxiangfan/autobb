@@ -206,7 +206,7 @@ async function get(request: NextRequest) {
           needsCompletion: offer.needs_completion,
           scrapeError: offer.scrape_error,
           scrapedAt: offer.scraped_at,
-          isActive: offer.is_active === 1,
+          isActive: offer.is_active === true || offer.is_active === 1,
           createdAt: offer.created_at,
           updatedAt: offer.updated_at,
           // 新增字段（需求1和需求5）
