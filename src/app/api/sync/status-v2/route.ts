@@ -25,6 +25,10 @@ export async function GET(request: NextRequest) {
       ? "(CURRENT_TIMESTAMP - INTERVAL '30 minutes')"
       : "datetime('now', '-30 minutes')"
 
+    const runningSecondsSql = db.type === 'postgres'
+      ? "CAST(EXTRACT(EPOCH FROM (NOW() - started_at)) AS INTEGER)"
+      : "CAST((strftime('%s', 'now') - strftime('%s', started_at)) AS INTEGER)";
+
     const runningSync = await db.queryOne(`
       SELECT 
         id,
@@ -33,7 +37,7 @@ export async function GET(request: NextRequest) {
         status,
         started_at,
         is_manual,
-        CAST((strftime('%s', 'now') - strftime('%s', started_at)) AS INTEGER) as running_seconds
+        ${runningSecondsSql} as running_seconds
       FROM sync_logs
       WHERE ${runningCheck}
         AND started_at >= ${timeThreshold}
