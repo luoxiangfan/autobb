@@ -29,6 +29,10 @@ export async function GET(request: NextRequest) {
       ? "CAST(EXTRACT(EPOCH FROM (NOW() - started_at::timestamptz)) AS INTEGER)"
       : "CAST((strftime('%s', 'now') - strftime('%s', started_at)) AS INTEGER)";
 
+    const startedAtField = db.type === 'postgres' 
+      ? "started_at::timestamptz" 
+      : "started_at";
+
     const runningSync = await db.queryOne(`
       SELECT 
         id,
@@ -40,8 +44,8 @@ export async function GET(request: NextRequest) {
         ${runningSecondsSql} as running_seconds
       FROM sync_logs
       WHERE ${runningCheck}
-        AND started_at >= ${timeThreshold}
-      ORDER BY started_at DESC
+        AND ${startedAtField} >= ${timeThreshold}
+      ORDER BY ${startedAtField} DESC
       LIMIT 1
     `) as any
 
