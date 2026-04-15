@@ -264,14 +264,42 @@ export async function updateGoogleAdsAccount(
 export async function deleteGoogleAdsAccount(id: number, userId: number): Promise<boolean> {
   const db = await getDatabase()
 
-  const result = await db.exec(`
-    UPDATE google_ads_accounts
-    SET is_deleted = ${db.type === 'sqlite' ? '1' : 'TRUE'},
-        deleted_at = ${db.type === 'sqlite' ? "datetime('now')" : 'NOW()'}
-    WHERE id = ? AND user_id = ?
-  `, [id, userId])
+  // 🔧 使用事务确保原子性
+  return await db.transaction(async () => {
+    // 1. 先获取要删除的账号信息（获取 customer_id）
+    const account = await db.queryOne(`
+      SELECT customer_id FROM google_ads_accounts
+      WHERE id = ? AND user_id = ?
+    `, [id, userId]) as { customer_id: string } | undefined
 
-  return result.changes > 0
+    if (!account) {
+      return false
+    }
+
+    const customerId = account.customer_id
+
+    // 2. 🔧 级联删除：将该 customer_id 的所有广告系列标记为已删除
+    const campaignResult = await db.exec(`
+      UPDATE campaigns
+      SET is_deleted = ..., deleted_at = ...
+      WHERE google_ads_account_id = ? AND user_id = ?
+    `, [id, userId])
+
+    console.log(`[Delete Account] Soft deleted ${campaignResult.changes} campaigns for customer_id ${customerId}`)
+
+    // 3. 🔧 标记该 customer_id 为已删除（通过设置 is_deleted 和 is_active=false）
+    const accountResult = await db.exec(`
+      UPDATE google_ads_accounts
+      SET is_deleted = ...,
+          is_active = ...,
+          deleted_at = ...
+      WHERE id = ? AND user_id = ?
+    `, [id, userId])
+
+    console.log(`[Delete Account] Marked customer_id ${customerId} as deleted`)
+
+    return accountResult.changes > 0
+  })
 }
 
 /**
