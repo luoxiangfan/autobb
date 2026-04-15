@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       : "datetime('now', '-30 minutes')"
 
     const runningSecondsSql = db.type === 'postgres'
-      ? "CAST(EXTRACT(EPOCH FROM (NOW() - started_at)) AS INTEGER)"
+      ? "CAST(EXTRACT(EPOCH FROM (NOW() - started_at::timestamptz)) AS INTEGER)"
       : "CAST((strftime('%s', 'now') - strftime('%s', started_at)) AS INTEGER)";
 
     const runningSync = await db.queryOne(`
