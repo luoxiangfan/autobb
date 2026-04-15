@@ -16,28 +16,39 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { syncAllUsersCampaigns } from '@/lib/google-ads-campaign-sync'
 
 /**
  * POST 请求处理 - 执行同步任务
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   const startTime = Date.now()
   const startedAt = new Date().toISOString()
   let syncLogId: number | null = null
+  let authResult: any = null
   const db = await getDatabase()
   
   try {
+    authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const userId = authResult.user.userId
     console.log('[Cron] Starting Google Ads campaign sync...')
     console.log('[Cron] Timestamp:', startedAt)
 
     // 🔧 优化：同步开始时写入 running 状态的记录
     try {
       const logResult = await db.exec(
-        `INSERT INTO sync_logs (sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        ['google_ads_campaign_sync', 'running', 0, 0, startedAt, null, true]  // is_manual=true（手动触发）
+        `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, 'google_ads_campaign_sync', 'running', 0, 0, startedAt, null, true]  // user_id=userId, is_manual=true
       )
       // 🔧 获取插入的 ID（支持 PostgreSQL 和 SQLite）
       syncLogId = logResult.lastInsertRowid || null
@@ -81,10 +92,10 @@ export async function POST() {
       // 兜底：如果没有获取到 ID，则插入新记录（保持原有逻辑）
       try {
         await db.exec(
-          `INSERT INTO sync_logs (sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          ['google_ads_campaign_sync', result.totalErrors > 0 ? 'partial' : 'success',
-           result.totalSynced, duration, startedAt, completedAt, true]  // is_manual=true
+          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [userId, 'google_ads_campaign_sync', result.totalErrors > 0 ? 'partial' : 'success',
+           result.totalSynced, duration, startedAt, completedAt, false]  // user_id=userId, is_manual=false
         )
       } catch (logError) {
         console.error('[Cron] Failed to create sync log (fallback):', logError)
@@ -133,9 +144,9 @@ export async function POST() {
       // 兜底：如果没有获取到 ID，则插入新记录（保持原有逻辑）
       try {
         await db.exec(
-          `INSERT INTO sync_logs (sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          ['google_ads_campaign_sync', 'failed', 0, duration, startedAt, completedAt, true]  // is_manual=true
+          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [authResult?.user?.userId || 0, 'google_ads_campaign_sync', 'failed', 0, duration, startedAt, completedAt, true]  // is_manual=true
         )
       } catch (logError) {
         console.error('[Cron] Failed to create sync log (fallback):', logError)
