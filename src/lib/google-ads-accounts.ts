@@ -1,4 +1,6 @@
 import { getDatabase } from './db'
+import { pauseClickFarmTasksByOfferId } from './click-farm'
+import { pauseUrlSwapTargetsByOfferId } from './url-swap'
 import { getInsertedId, nowFunc, toBool } from './db-helpers'
 
 export interface GoogleAdsAccount {
@@ -287,7 +289,35 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
 
     console.log(`[Delete Account] Soft deleted ${campaignResult.changes} campaigns for customer_id ${customerId}`)
 
-    // 3. 🔧 标记该 customer_id 为已删除（通过设置 is_deleted 和 is_active=false）
+    // 3. 获取所有关联的 offer_id，用于暂停相关任务
+    const offerIds = await db.query(`
+      SELECT DISTINCT offer_id FROM campaigns
+      WHERE google_ads_account_id = ? AND user_id = ?
+    `, [id, userId]) as { offer_id: number }[]
+
+    // 4. 暂停关联 Offer 的补点击任务和换链接任务
+    let pausedClickFarmCount = 0
+    let pausedUrlSwapCount = 0
+
+    for (const { offer_id } of offerIds) {
+      try {
+        const clickFarmPaused = await pauseClickFarmTasksByOfferId(offer_id)
+        pausedClickFarmCount += clickFarmPaused
+        console.log(`[Delete Account] Paused ${clickFarmPaused} click farm tasks for offer_id ${offer_id}`)
+      } catch (error) {
+        console.error(`[Delete Account] Failed to pause click farm tasks for offer_id ${offer_id}:`, error)
+      }
+
+      try {
+        const urlSwapPaused = await pauseUrlSwapTargetsByOfferId(offer_id)
+        pausedUrlSwapCount += urlSwapPaused
+        console.log(`[Delete Account] Paused ${urlSwapPaused} url swap targets for offer_id ${offer_id}`)
+      } catch (error) {
+        console.error(`[Delete Account] Failed to pause url swap targets for offer_id ${offer_id}:`, error)
+      }
+    }
+
+    // 5. 🔧 标记该 customer_id 为已删除（通过设置 is_deleted 和 is_active=false）
     const accountResult = await db.exec(`
       UPDATE google_ads_accounts
       SET is_deleted = ...,
