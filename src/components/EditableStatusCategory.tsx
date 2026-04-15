@@ -147,6 +147,7 @@ export function EditableStatusCategory({
           }}
           onBlur={() => setIsEditing(false)}
           className="h-8 w-[100px] text-sm"
+          padding="py-0"
           autoFocus
         >
           <option value="" disabled>

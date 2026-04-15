@@ -2,7 +2,9 @@
 
 import React from 'react'
 
-export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {}
+export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+  padding?: string
+}
 
 export interface SelectContentProps extends React.HTMLAttributes<HTMLDivElement> {}
 export interface SelectItemProps extends React.OptionHTMLAttributes<HTMLOptionElement> {}
@@ -12,11 +14,11 @@ export interface SelectValueProps {
 }
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps & { onValueChange?: (value: string) => void }>(
-  ({ className = '', children, onValueChange, ...props }, ref) => {
+  ({ className = '', padding = 'py-2', children, onValueChange, ...props }, ref) => {
     return (
       <select
         ref={ref}
-        className={`flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+        className={`flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 ${padding} text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
         onChange={(e) => onValueChange?.(e.target.value)}
         {...props}
       >
