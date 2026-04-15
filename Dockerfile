@@ -204,7 +204,7 @@ EXPOSE 80
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
-    CMD wget --no-verbose --tries=1 --spider http://localhost/api/health || exit 1
+    CMD curl -fsS http://localhost/api/health >/dev/null || exit 1
 
 # 使用入口脚本启动（先初始化数据库，再启动supervisord）
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
