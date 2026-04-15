@@ -529,6 +529,31 @@ export default function CampaignsClientPage({
   const [editTaskIdForUrlSwap, setEditTaskIdForUrlSwap] = useState<string | undefined>(undefined)
   const [urlSwapLoading, setUrlSwapLoading] = useState(false)
 
+  const [syncing, setSyncing] = useState(false)
+  const SYNC_TIMEOUT_MS = 60000
+  const [globalSyncStatus, setGlobalSyncStatus] = useState<{ 
+    hasRunningSync: boolean
+    runningSync?: {
+      syncType: string
+      runningSeconds: number
+      isManual: boolean
+    }
+  } | null>(null)
+
+  const checkGlobalSyncStatus = async () => {
+    try {
+      const response = await fetch('/api/sync/status-v2', { credentials: 'include' })
+      if (response.ok) {
+        const data = await response.json()
+        setGlobalSyncStatus(data)
+        return data
+      }
+    } catch (error) {
+      console.error('检查同步状态失败:', error)
+    }
+    return null
+  }
+
   // 仅将软删除(isDeleted)视为"已删除"，REMOVED 视为"已下线"仍展示
   const isCampaignDeleted = (campaign: Campaign) => {
     const deletedFlag = campaign.isDeleted === true || campaign.isDeleted === 1
@@ -819,7 +844,10 @@ export default function CampaignsClientPage({
       })
     : ''
 
-  useEffect(() => {
+    useEffect(() => {
+      void checkGlobalSyncStatus()
+    }, [])
+    useEffect(() => {
     if (!isServerPagingMode) {
       setDebouncedSearchQuery(searchQuery)
       return
@@ -2496,29 +2524,48 @@ export default function CampaignsClientPage({
     }
   }
 
-  const syncCampaigns = () => {
-    fetch('/api/cron/sync-google-ads-campaigns', {
-      method: 'POST',
-      credentials: 'include',
-    })
-      .then((response) => {
-        if (response.status === 401) {
-          handleUnauthorized()
-          throw new Error('UNAUTHORIZED')
-        }
-        if (!response.ok) {
-          throw new Error('同步失败')
-        }
-        return response.json()
+  const syncCampaigns = async () => {
+    // 🔧 检查是否有其他同步任务正在进行
+    const status = await checkGlobalSyncStatus()
+    if (status?.hasRunningSync) {
+      const runningInfo = status.runningSync
+      showError(
+        '同步任务进行中',
+        `有${runningInfo.isManual === true ? '手动' : '定时'}同步任务正在运行（已运行${runningInfo.runningSeconds}秒），请稍后再试`
+      )
+      return
+    }
+    // 🔧 检查当前是否正在同步
+    if (syncing) {
+      showInfo('同步进行中', '请勿重复点击')
+      return
+    }
+    setSyncing(true)
+    const timeoutId = setTimeout(() => setSyncing(false), SYNC_TIMEOUT_MS)
+    try {
+      const response = await fetch('/api/cron/sync-google-ads-campaigns', {
+        method: 'POST',
+        credentials: 'include',
       })
-      .then((data) => {
-        showSuccess('广告系列同步成功')
-        void fetchCampaigns({ silent: true })
-      })
-      .catch((err: any) => {
-        if (err?.message === 'UNAUTHORIZED') return
-        showError('同步失败', err?.message || '网络错误')
-      })
+      
+      if (response.status === 401) {
+        handleUnauthorized()
+        return
+      }
+      
+      if (!response.ok) {
+        throw new Error('同步失败')
+      }
+      
+      showSuccess('广告系列同步成功', '数据已更新')
+      void fetchCampaigns({ silent: true })
+    } catch (err: any) {
+      if (err?.message === 'UNAUTHORIZED') return
+      showError('同步失败', err?.message || '网络错误')
+    } finally {
+      clearTimeout(timeoutId)
+      setSyncing(false)
+    }
   }
   const handleOpenBatchOfflineDialog = () => {
     if (!hasBatchOfflineSelection || batchOfflineSubmitting) return
@@ -3120,7 +3167,17 @@ export default function CampaignsClientPage({
                     : `批量下线 (${selectedCampaignIds.size})`}
                 </Button>
               )}
-              <Button onClick={syncCampaigns}>同步广告系列</Button>
+              <Button 
+                onClick={() => void syncCampaigns()} 
+                disabled={syncing || globalSyncStatus?.hasRunningSync}
+              >
+                {syncing || globalSyncStatus?.hasRunningSync 
+                  ? (globalSyncStatus?.hasRunningSync 
+                      ? '同步任务进行中' 
+                      : '同步中...')
+                  : '同步广告系列'
+                }
+              </Button>
               <Button onClick={() => router.push('/offers')}>
                 创建广告系列
               </Button>

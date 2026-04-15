@@ -33,9 +33,12 @@ export async function executeGoogleAdsCampaignSyncTask(
   error?: string
 }> {
   const startTime = Date.now()
+  const startedAt = new Date().toISOString()
   // const { userId, syncType, customerId, dryRun } = taskData
   const { id: taskId, data: taskData, userId } = task
   const { syncType, customerId, dryRun } = taskData
+  let syncLogId: number | null = null
+  
   console.log(
     `▶️  [GoogleAdsSyncExecutor] 开始执行同步任务：${taskId}, 用户 #${userId}, 类型：${syncType}`
   )
@@ -43,6 +46,20 @@ export async function executeGoogleAdsCampaignSyncTask(
   const db = await getDatabase()
 
   try {
+    // 🔧 优化：同步开始时写入 running 状态的记录
+    try {
+      const logResult = await db.exec(
+        `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, 'google_ads_campaign_sync', 'running', 0, 0, startedAt, null, false]  // is_manual=false（自动触发）
+      )
+      // 🔧 获取插入的 ID（支持 PostgreSQL 和 SQLite）
+      syncLogId = logResult.lastInsertRowid || null
+      console.log(`📝 [GoogleAdsSyncExecutor] 创建同步日志记录 ID: ${syncLogId}`)
+    } catch (logError) {
+      console.error(`❌ [GoogleAdsSyncExecutor] 创建初始同步日志失败:`, logError)
+    }
+
     // 1. 执行同步
     const result = await syncCampaignsFromGoogleAds(userId, {
       customerId,
@@ -50,18 +67,37 @@ export async function executeGoogleAdsCampaignSyncTask(
     })
 
     const duration = Date.now() - startTime
+    const completedAt = new Date().toISOString()
 
-    // 2. 记录同步日志
-    try {
-      await db.exec(
-        `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [userId, 'google_ads_campaign_sync', result.errors.length > 0 ? 'partial' : 'success', 
-         result.syncedCount, duration, new Date(), new Date()]
-      )
-      console.log(`📝 [GoogleAdsSyncExecutor] 同步日志已记录：${taskId}`)
-    } catch (logError) {
-      console.error(`❌ [GoogleAdsSyncExecutor] 记录同步日志失败:`, logError)
+    // 🔧 优化：同步完成后更新记录（而不是插入新记录）
+    if (syncLogId !== null) {
+      try {
+        await db.exec(
+          `UPDATE sync_logs 
+           SET status = ?, 
+               record_count = ?, 
+               duration_ms = ?, 
+               completed_at = ?
+           WHERE id = ?`,
+          [result.errors.length > 0 ? 'partial' : 'success', result.syncedCount, duration, completedAt, syncLogId]
+        )
+        console.log(`📝 [GoogleAdsSyncExecutor] 更新同步日志记录 ID: ${syncLogId}`)
+      } catch (logError) {
+        console.error(`❌ [GoogleAdsSyncExecutor] 更新同步日志失败:`, logError)
+      }
+    } else {
+      // 兜底：如果没有获取到 ID，则插入新记录（保持原有逻辑）
+      try {
+        await db.exec(
+          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [userId, 'google_ads_campaign_sync', result.errors.length > 0 ? 'partial' : 'success', 
+           result.syncedCount, duration, startedAt, completedAt, false]  // is_manual=false
+        )
+        console.log(`📝 [GoogleAdsSyncExecutor] 同步日志已记录（fallback）：${taskId}`)
+      } catch (logError) {
+        console.error(`❌ [GoogleAdsSyncExecutor] 记录同步日志失败:`, logError)
+      }
     }
 
     // 3. 如果有错误，创建风险预警
@@ -110,6 +146,7 @@ export async function executeGoogleAdsCampaignSyncTask(
     }
   } catch (error: any) {
     const duration = Date.now() - startTime
+    const completedAt = new Date().toISOString()
     const errorMessage = error.message || '未知错误'
 
     console.error(
@@ -117,15 +154,34 @@ export async function executeGoogleAdsCampaignSyncTask(
       error
     )
 
-    // 记录失败日志
-    try {
-      await db.exec(
-        `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [userId, 'google_ads_campaign_sync', 'failed', 0, duration, new Date(), new Date()]
-      )
-    } catch (logError) {
-      console.error(`❌ [GoogleAdsSyncExecutor] 记录失败日志失败:`, logError)
+    // 🔧 优化：同步失败时更新记录
+    if (syncLogId !== null) {
+      try {
+        await db.exec(
+          `UPDATE sync_logs 
+           SET status = ?, 
+               record_count = ?, 
+               duration_ms = ?, 
+               completed_at = ?,
+               error_message = ?
+           WHERE id = ?`,
+          ['failed', 0, duration, completedAt, errorMessage, syncLogId]
+        )
+        console.log(`📝 [GoogleAdsSyncExecutor] 更新同步日志记录 ID: ${syncLogId} (failed)`);
+      } catch (logError) {
+        console.error(`❌ [GoogleAdsSyncExecutor] 更新同步日志失败:`, logError)
+      }
+    } else {
+      // 兜底：如果没有获取到 ID，则插入新记录（保持原有逻辑）
+      try {
+        await db.exec(
+          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [userId, 'google_ads_campaign_sync', 'failed', 0, duration, startedAt, completedAt, false]  // is_manual=false
+        )
+      } catch (logError) {
+        console.error(`❌ [GoogleAdsSyncExecutor] 记录失败日志失败:`, logError)
+      }
     }
 
     // 创建风险预警

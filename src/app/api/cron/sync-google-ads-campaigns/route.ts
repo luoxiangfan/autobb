@@ -24,15 +24,33 @@ import { syncAllUsersCampaigns } from '@/lib/google-ads-campaign-sync'
  */
 export async function POST() {
   const startTime = Date.now()
+  const startedAt = new Date().toISOString()
+  let syncLogId: number | null = null
+  const db = await getDatabase()
   
   try {
     console.log('[Cron] Starting Google Ads campaign sync...')
-    console.log('[Cron] Timestamp:', new Date().toISOString())
+    console.log('[Cron] Timestamp:', startedAt)
+
+    // 🔧 优化：同步开始时写入 running 状态的记录
+    try {
+      const logResult = await db.exec(
+        `INSERT INTO sync_logs (sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        ['google_ads_campaign_sync', 'running', 0, 0, startedAt, null, true]  // is_manual=true（手动触发）
+      )
+      // 🔧 获取插入的 ID（支持 PostgreSQL 和 SQLite）
+      syncLogId = logResult.lastInsertRowid || null
+      console.log('[Cron] Created sync log with ID:', syncLogId)
+    } catch (logError) {
+      console.error('[Cron] Failed to create initial sync log:', logError)
+    }
 
     // 执行同步
     const result = await syncAllUsersCampaigns()
     
     const duration = Date.now() - startTime
+    const completedAt = new Date().toISOString()
 
     console.log('[Cron] Google Ads campaign sync completed:', {
       duration: `${duration}ms`,
@@ -43,22 +61,39 @@ export async function POST() {
       totalErrors: result.totalErrors,
     })
 
-    // 创建同步日志
-    try {
-      const db = await getDatabase()
-      await db.exec(
-        `INSERT INTO sync_logs (sync_type, status, record_count, duration_ms, started_at, completed_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        ['google_ads_campaign_sync', result.totalErrors > 0 ? 'partial' : 'success',
-         result.totalSynced, duration, new Date().toISOString(), new Date().toISOString()]
-      )
-    } catch (logError) {
-      console.error('[Cron] Failed to create sync log:', logError)
+    // 🔧 优化：同步完成后更新记录（而不是插入新记录）
+    if (syncLogId !== null) {
+      try {
+        await db.exec(
+          `UPDATE sync_logs 
+           SET status = ?, 
+               record_count = ?, 
+               duration_ms = ?, 
+               completed_at = ?
+           WHERE id = ?`,
+          [result.totalErrors > 0 ? 'partial' : 'success', result.totalSynced, duration, completedAt, syncLogId]
+        )
+        console.log('[Cron] Updated sync log ID:', syncLogId)
+      } catch (logError) {
+        console.error('[Cron] Failed to update sync log:', logError)
+      }
+    } else {
+      // 兜底：如果没有获取到 ID，则插入新记录（保持原有逻辑）
+      try {
+        await db.exec(
+          `INSERT INTO sync_logs (sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          ['google_ads_campaign_sync', result.totalErrors > 0 ? 'partial' : 'success',
+           result.totalSynced, duration, startedAt, completedAt, true]  // is_manual=true
+        )
+      } catch (logError) {
+        console.error('[Cron] Failed to create sync log (fallback):', logError)
+      }
     }
 
     return NextResponse.json({
       success: true,
-      timestamp: new Date().toISOString(),
+      timestamp: completedAt,
       duration: `${duration}ms`,
       summary: {
         totalUsers: result.totalUsers,
@@ -74,18 +109,37 @@ export async function POST() {
 
   } catch (error: any) {
     const duration = Date.now() - startTime
+    const completedAt = new Date().toISOString()
     console.error('[Cron] Google Ads campaign sync error:', error)
 
-    // 记录错误日志
-    try {
-      const db = await getDatabase()
-      await db.exec(
-        `INSERT INTO sync_logs (sync_type, status, record_count, duration_ms, started_at, completed_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        ['google_ads_campaign_sync', 'failed', 0, duration, new Date().toISOString(), new Date().toISOString()]
-      )
-    } catch (logError) {
-      console.error('[Cron] Failed to create sync log:', logError)
+    // 🔧 优化：同步失败时更新记录
+    if (syncLogId !== null) {
+      try {
+        await db.exec(
+          `UPDATE sync_logs 
+           SET status = ?, 
+               record_count = ?, 
+               duration_ms = ?, 
+               completed_at = ?,
+               error_message = ?
+           WHERE id = ?`,
+          ['failed', 0, duration, completedAt, error.message || '同步失败', syncLogId]
+        )
+        console.log('[Cron] Updated sync log ID (failed):', syncLogId)
+      } catch (logError) {
+        console.error('[Cron] Failed to update sync log (failed):', logError)
+      }
+    } else {
+      // 兜底：如果没有获取到 ID，则插入新记录（保持原有逻辑）
+      try {
+        await db.exec(
+          `INSERT INTO sync_logs (sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          ['google_ads_campaign_sync', 'failed', 0, duration, startedAt, completedAt, true]  // is_manual=true
+        )
+      } catch (logError) {
+        console.error('[Cron] Failed to create sync log (fallback):', logError)
+      }
     }
 
     return NextResponse.json(
@@ -93,7 +147,7 @@ export async function POST() {
         success: false,
         error: 'Internal server error',
         message: error.message || '同步服务异常',
-        timestamp: new Date().toISOString(),
+        timestamp: completedAt,
         duration: `${duration}ms`,
       },
       { status: 500 }
