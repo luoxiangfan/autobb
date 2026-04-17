@@ -539,6 +539,10 @@ export default function CampaignsClientPage({
       isManual: boolean
     }
   } | null>(null)
+  
+  // 🔧 优化 (2026-04-17): 轮询状态管理
+  const [isPolling, setIsPolling] = useState(false)
+  const pollingRef = useRef<NodeJS.Timeout | null>(null)
 
   const checkGlobalSyncStatus = async () => {
     try {
@@ -546,12 +550,40 @@ export default function CampaignsClientPage({
       if (response.ok) {
         const data = await response.json()
         setGlobalSyncStatus(data)
+        
+        // 🔧 优化：如果有正在运行的同步任务，启动轮询
+        if (data.hasRunningSync && !isPolling) {
+          startPolling()
+        } else if (!data.hasRunningSync && isPolling) {
+          stopPolling()
+        }
+        
         return data
       }
     } catch (error) {
       console.error('检查同步状态失败:', error)
     }
     return null
+  }
+  
+  // 🔧 启动轮询（每 3 秒检查一次）
+  const startPolling = () => {
+    if (isPolling) return
+    setIsPolling(true)
+    pollingRef.current = setInterval(() => {
+      void checkGlobalSyncStatus()
+    }, 3000)
+    console.log('[Sync] Started polling for sync status')
+  }
+  
+  // 🔧 停止轮询
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current)
+      pollingRef.current = null
+    }
+    setIsPolling(false)
+    console.log('[Sync] Stopped polling for sync status')
   }
 
   // 仅将软删除(isDeleted)视为"已删除"，REMOVED 视为"已下线"仍展示
@@ -844,9 +876,20 @@ export default function CampaignsClientPage({
       })
     : ''
 
-    useEffect(() => {
-      void checkGlobalSyncStatus()
-    }, [])
+    // 🔧 初始检查同步状态
+  useEffect(() => {
+    void checkGlobalSyncStatus()
+  }, [])
+  
+  // 🔧 清理轮询（组件卸载时）
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+        pollingRef.current = null
+      }
+    }
+  }, [])
     useEffect(() => {
     if (!isServerPagingMode) {
       setDebouncedSearchQuery(searchQuery)
