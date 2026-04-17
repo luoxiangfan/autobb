@@ -321,8 +321,8 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
     // 5. 🔧 标记该 customer_id 为已删除（通过设置 is_deleted 和 is_active=false）
     const accountResult = await db.exec(`
       UPDATE google_ads_accounts
-      SET is_deleted = ${db.type === 'sqlite' ? '1' : 'TRUE'}
-          is_active = ${db.type === 'sqlite' ? '0' : 'FALSE'}
+      SET is_deleted = ${db.type === 'sqlite' ? '1' : 'TRUE'},
+          is_active = ${db.type === 'sqlite' ? '0' : 'FALSE'},
           deleted_at = ${db.type === 'sqlite' ? "datetime('now')" : 'NOW()'}
       WHERE id = ? AND user_id = ?
     `, [id, userId])
