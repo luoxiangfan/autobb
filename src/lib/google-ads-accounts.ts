@@ -283,7 +283,8 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
     // 2. 🔧 级联删除：将该 customer_id 的所有广告系列标记为已删除
     const campaignResult = await db.exec(`
       UPDATE campaigns
-      SET is_deleted = ..., deleted_at = ...
+      SET is_deleted = ${db.type === 'sqlite' ? '1' : 'TRUE'},
+          deleted_at = ${db.type === 'sqlite' ? "datetime('now')" : 'NOW()'}
       WHERE google_ads_account_id = ? AND user_id = ?
     `, [id, userId])
 
@@ -320,9 +321,9 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
     // 5. 🔧 标记该 customer_id 为已删除（通过设置 is_deleted 和 is_active=false）
     const accountResult = await db.exec(`
       UPDATE google_ads_accounts
-      SET is_deleted = ...,
-          is_active = ...,
-          deleted_at = ...
+      SET is_deleted = ${db.type === 'sqlite' ? '1' : 'TRUE'}
+          is_active = ${db.type === 'sqlite' ? '0' : 'FALSE'}
+          deleted_at = ${db.type === 'sqlite' ? "datetime('now')" : 'NOW()'}
       WHERE id = ? AND user_id = ?
     `, [id, userId])
 
