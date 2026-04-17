@@ -1205,6 +1205,22 @@ function startScheduler() {
     log('⏸️  链接和账号检查任务已禁用 (LINK_CHECK_ENABLED=false)')
   }
 
+  // 任务 3.0: 广告系列暂停任务检测（新增功能）
+  const campaignPausedTaskCron = process.env.CAMPAIGN_PAUSED_TASK_CHECK_CRON || '*/30 * * * *'
+  const campaignPausedTaskEnabled = process.env.CAMPAIGN_PAUSED_TASK_ENABLED !== 'false'
+
+  if (campaignPausedTaskEnabled) {
+    cron.schedule(campaignPausedTaskCron, async () => {
+      await campaignPausedTaskSchedulerTask()
+    }, {
+      scheduled: true,
+      timezone: 'Asia/Shanghai'
+    })
+    log('✅ 广告系列暂停任务检测已启动 (cron: ' + campaignPausedTaskCron + ')')
+  } else {
+    log('⏸️  广告系列暂停任务检测已禁用 (CAMPAIGN_PAUSED_TASK_ENABLED=false)')
+  }
+
   // 任务3.1: 创意完成后未发布超时检查
   const creativePublishAlertEnabled = process.env.CREATIVE_PUBLISH_ALERT_ENABLED !== 'false'
   const creativePublishAlertCron = process.env.CREATIVE_PUBLISH_ALERT_CRON || '*/30 * * * *'
@@ -1432,18 +1448,4 @@ process.on('unhandledRejection', (reason, promise) => {
 startScheduler()
 
 // 保持进程运行
-  // 任务 3.0: 广告系列暂停任务检测（新增功能）
-  const campaignPausedTaskCron = process.env.CAMPAIGN_PAUSED_TASK_CHECK_CRON || '*/30 * * * *'
-  const campaignPausedTaskEnabled = process.env.CAMPAIGN_PAUSED_TASK_ENABLED !== 'false'
-
-  if (campaignPausedTaskEnabled) {
-    cron.schedule(campaignPausedTaskCron, async () => {
-      await campaignPausedTaskSchedulerTask()
-    }, {
-      scheduled: true,
-      timezone: 'Asia/Shanghai'
-    })
-    log('✅ 广告系列暂停任务检测已启动 (cron: ' + campaignPausedTaskCron + ')')
-  } else {
-    log('⏸️  广告系列暂停任务检测已禁用 (CAMPAIGN_PAUSED_TASK_ENABLED=false)')
-  }
+log('💡 调度器进程运行中，按 Ctrl+C 停止')
