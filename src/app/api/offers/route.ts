@@ -222,6 +222,9 @@ async function get(request: NextRequest) {
           linkedAccounts: offer.linked_accounts || [],
           // 🔥 黑名单标记
           isBlacklisted: offer.is_blacklisted || false,
+          // 🔧 修复：添加 campaignId 字段
+          campaignId: offer.campaign_id || null,
+          googleAdsCampaignId: offer.google_ads_campaign_id || null,
         })),
         total,
         limit,

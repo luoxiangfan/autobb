@@ -128,6 +128,7 @@ export interface OfferListRow {
   }>
   is_blacklisted?: boolean
   campaign_id?: number | null
+  google_ads_campaign_id?: string | null
 }
 
 export interface CreateOfferInput {
