@@ -549,6 +549,23 @@ export async function pauseClickFarmTask(
 }
 
 /**
+ * 🔧 优化 (2026-04-15): 批量暂停补点击任务（按 offer_id）
+ */
+export async function pauseClickFarmTasksByOfferId(offerId: number): Promise<number> {
+  const db = await getDatabase();
+  const result = await db.exec(`
+    UPDATE click_farm_tasks
+    SET status = 'paused',
+        pause_reason = 'offer_deactivated',
+        pause_message = 'Offer 关联的广告系列已删除',
+        updated_at = datetime('now'),
+        paused_at = datetime('now')
+    WHERE offer_id = ? AND status IN ('pending', 'running')
+  `, [offerId]);
+  return result.changes || 0;
+}
+
+/**
  * 获取用户统计数据
  *
  * @param userId - 用户ID
