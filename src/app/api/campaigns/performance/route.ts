@@ -448,13 +448,11 @@ export async function GET(request: NextRequest) {
           o.needs_completion as offer_needs_completion,
           o.sync_source as offer_sync_source,
           o.google_ads_campaign_id as offer_google_ads_campaign_id,
-          cft.status as click_farm_task_status,
-          ust.status as url_swap_task_status
+          (SELECT status FROM click_farm_tasks WHERE offer_id = c.offer_id AND ${db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'} LIMIT 1) as click_farm_task_status,
+          (SELECT status FROM url_swap_tasks WHERE offer_id = c.offer_id AND ${db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'} LIMIT 1) as url_swap_task_status
         FROM campaigns c
         LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
         LEFT JOIN offers o ON c.offer_id = o.id
-        (SELECT status FROM click_farm_tasks WHERE offer_id = c.offer_id AND ${db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'} LIMIT 1) as click_farm_task_status,
-        (SELECT status FROM url_swap_tasks WHERE offer_id = c.offer_id AND ${db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'} LIMIT 1) as url_swap_task_status
         WHERE c.user_id = ?
         ${createdAtStartParam ? `AND c.created_at >= ?` : ''}
         ${createdAtEndParam ? `AND c.created_at <= ?` : ''}
