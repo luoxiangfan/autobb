@@ -453,8 +453,8 @@ export async function GET(request: NextRequest) {
         FROM campaigns c
         LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
         LEFT JOIN offers o ON c.offer_id = o.id
-        LEFT JOIN click_farm_tasks cft ON c.offer_id = cft.offer_id AND ${db.type === 'postgres' ? 'cft.is_deleted = FALSE' : 'cft.is_deleted = 0'}
-        LEFT JOIN url_swap_tasks ust ON c.offer_id = ust.offer_id AND ${db.type === 'postgres' ? 'ust.is_deleted = FALSE' : 'ust.is_deleted = 0'}
+        (SELECT status FROM click_farm_tasks WHERE offer_id = c.offer_id AND ${db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'} LIMIT 1) as click_farm_task_status,
+        (SELECT status FROM url_swap_tasks WHERE offer_id = c.offer_id AND ${db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'} LIMIT 1) as url_swap_task_status
         WHERE c.user_id = ?
         ${createdAtStartParam ? `AND c.created_at >= ?` : ''}
         ${createdAtEndParam ? `AND c.created_at <= ?` : ''}
