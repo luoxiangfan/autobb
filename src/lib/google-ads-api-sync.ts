@@ -721,13 +721,35 @@ function buildCampaignConfig(
 
 /**
  * 更新广告系列的 campaign_config
+ * 🔧 修改 (2026-04-21): 只更新从 Google 同步的广告系列
  */
 export async function updateCampaignConfig(
   campaignId: number,
   campaignConfig: any
-): Promise<void> {
+): Promise<boolean> {
   const db = await getDatabase()
   
+  // 🔧 检查广告系列是否存在且是从 Google 同步的
+  const campaign = await db.queryOne(`
+    SELECT id, synced_from_google_ads
+    FROM campaigns
+    WHERE id = ?
+  `, [campaignId]) as { id: number; synced_from_google_ads: number | boolean } | undefined
+  
+  if (!campaign) {
+    console.log(`[Campaign Config] Campaign ${campaignId} not found, skipping config update`)
+    return false
+  }
+  
+  // 🔧 检查 synced_from_google_ads 字段
+  const isSyncedFromGoogle = campaign.synced_from_google_ads === true || campaign.synced_from_google_ads === 1
+  
+  if (!isSyncedFromGoogle) {
+    console.log(`[Campaign Config] Campaign ${campaignId} is not synced from Google Ads, skipping config update`)
+    return false
+  }
+  
+  // 更新 campaign_config
   await db.exec(`
     UPDATE campaigns
     SET campaign_config = ?,
@@ -740,4 +762,5 @@ export async function updateCampaignConfig(
   ])
   
   console.log(`[Campaign Config] Updated for campaign ${campaignId}`)
+  return true
 }

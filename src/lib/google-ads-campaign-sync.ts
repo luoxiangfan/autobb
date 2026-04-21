@@ -209,24 +209,27 @@ export async function syncCampaignsFromGoogleAds(
               )
               
               if (apiSyncResult.campaignConfig && Object.keys(apiSyncResult.campaignConfig).length > 0) {
-                await updateCampaignConfig(campaignId, apiSyncResult.campaignConfig)
+                // 🔧 更新 campaign_config（只更新从 Google 同步的广告系列）
+                const updated = await updateCampaignConfig(campaignId, apiSyncResult.campaignConfig)
                 
-                // 同时更新备份中的 campaign_config
-                const db = await getDatabase()
-                await db.exec(`
-                  UPDATE campaign_backups
-                  SET campaign_config = ?,
-                      updated_at = ?
-                  WHERE offer_id = ? AND user_id = ?
-                  ORDER BY created_at DESC LIMIT 1
-                `, [
-                  JSON.stringify(apiSyncResult.campaignConfig),
-                  new Date(),
-                  offerResult.offerId,
-                  userId
-                ])
-                
-                console.log(`[GoogleAds Sync] Updated campaign_config from API`)
+                if (updated) {
+                  // 同时更新备份中的 campaign_config
+                  const db = await getDatabase()
+                  await db.exec(`
+                    UPDATE campaign_backups
+                    SET campaign_config = ?,
+                        updated_at = ?
+                    WHERE offer_id = ? AND user_id = ?
+                    ORDER BY created_at DESC LIMIT 1
+                  `, [
+                    JSON.stringify(apiSyncResult.campaignConfig),
+                    new Date(),
+                    offerResult.offerId,
+                    userId
+                  ])
+                  
+                  console.log(`[GoogleAds Sync] Updated campaign_config from API`)
+                }
               }
             } catch (error) {
               console.error('[GoogleAds Sync] Failed to sync from Google Ads API:', error)
