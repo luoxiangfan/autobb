@@ -553,13 +553,14 @@ export async function pauseClickFarmTask(
  */
 export async function pauseClickFarmTasksByOfferId(offerId: number): Promise<number> {
   const db = await getDatabase();
+  const nowSql = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
   const result = await db.exec(`
     UPDATE click_farm_tasks
     SET status = 'paused',
         pause_reason = 'offer_deactivated',
         pause_message = 'Offer 关联的广告系列已删除',
-        updated_at = datetime('now'),
-        paused_at = datetime('now')
+        updated_at = ${nowSql},
+        paused_at = ${nowSql}
     WHERE offer_id = ? AND status IN ('pending', 'running')
   `, [offerId]);
   return result.changes || 0;
@@ -1347,4 +1348,27 @@ export async function getPendingTasks(): Promise<ClickFarmTask[]> {
   }
 
   return tasks.map(parseClickFarmTask);
+}
+
+/**
+ * 🔧 新增 (2026-04-21): 根据 Offer ID 获取补点击任务
+ */
+export async function getClickFarmTaskByOfferId(
+  offerId: number,
+  userId: number
+): Promise<ClickFarmTask | null> {
+  const db = await getDatabase()
+  
+  const task = await db.queryOne(`
+    SELECT * FROM click_farm_tasks
+    WHERE offer_id = ? AND user_id = ? AND is_deleted = 0
+    ORDER BY created_at DESC
+    LIMIT 1
+  `, [offerId, userId]) as any
+  
+  if (!task) {
+    return null
+  }
+  
+  return parseClickFarmTask(task)
 }
