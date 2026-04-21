@@ -10,6 +10,8 @@
  */
 
 import { getDatabase } from './db'
+import { autoBackupCampaign } from './campaign-backups'
+import { syncAdComponentsFromGoogleAds, updateCampaignConfig } from './google-ads-api-sync'
 import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB, trackOAuthApiCall } from './google-ads-api'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { getInsertedId, nowFunc } from './db-helpers'
@@ -28,6 +30,17 @@ export interface GoogleAdsCampaign {
   customer_id: string
   account_name?: string
   cpc_bid_ceiling_micros?: number
+  final_url_suffix?: string
+  campaign_config?: {
+    biddingStrategy?: string
+    marketingObjective?: string
+    finalUrlSuffix?: string
+    [key: string]: any
+  }
+  start_date_time?: string
+  end_date_time?: string
+  target_country?: string
+  target_language?: string
 }
 
 /**
@@ -161,6 +174,64 @@ export async function syncCampaignsFromGoogleAds(
             }
 
             console.log(`[GoogleAds Sync] Synced campaign: ${campaign.campaign_name} (${campaign.campaign_id}), offer: ${offerResult.created ? 'created' : 'linked'} (offer_id=${offerResult.offerId})`)
+
+            // 🔧 备份广告系列（包含 campaign_config）
+            try {
+              await autoBackupCampaign({
+                userId,
+                offerId: offerResult.offerId,
+                campaignId: campaignId,
+                backupSource: 'google_ads',
+              })
+              console.log(`[GoogleAds Sync] Auto backed up campaign ${campaignId}`)
+            } catch (error) {
+              console.error('[GoogleAds Sync] Failed to auto backup campaign:', error)
+              // 备份失败不影响同步，只记录日志
+            }
+
+            // 🔧 通过 Google Ads API 同步广告组件并保存为 campaign_config
+            try {
+              const apiSyncResult = await syncAdComponentsFromGoogleAds(
+                userId,
+                account.customer_id,
+                campaign.campaign_id,
+                account.id,
+                {
+                  finalUrlSuffix: campaign.final_url_suffix,
+                  campaignName: campaign.campaign_name,
+                  budgetAmount: campaign.budget_amount,
+                  budgetType: campaign.budget_type,
+                  marketingObjective: 'WEB_TRAFFIC',
+                  biddingStrategy: 'MAXIMIZE_CLICKS',
+                  targetCountry: 'US',
+                  targetLanguage: 'English'
+                }
+              )
+              
+              if (apiSyncResult.campaignConfig && Object.keys(apiSyncResult.campaignConfig).length > 0) {
+                await updateCampaignConfig(campaignId, apiSyncResult.campaignConfig)
+                
+                // 同时更新备份中的 campaign_config
+                const db = await getDatabase()
+                await db.exec(`
+                  UPDATE campaign_backups
+                  SET campaign_config = ?,
+                      updated_at = ?
+                  WHERE offer_id = ? AND user_id = ?
+                  ORDER BY created_at DESC LIMIT 1
+                `, [
+                  JSON.stringify(apiSyncResult.campaignConfig),
+                  new Date(),
+                  offerResult.offerId,
+                  userId
+                ])
+                
+                console.log(`[GoogleAds Sync] Updated campaign_config from API`)
+              }
+            } catch (error) {
+              console.error('[GoogleAds Sync] Failed to sync from Google Ads API:', error)
+              // API 同步失败不影响主流程，只记录日志
+            }
           } catch (error: any) {
             result.errors.push({
               campaignId: campaign.campaign_id,
@@ -232,7 +303,8 @@ async function fetchCampaignsFromGoogleAds(params: {
       campaign_budget.amount_micros,
       campaign.target_spend.cpc_bid_ceiling_micros,
       campaign_budget.type,
-      campaign.status
+      campaign.status,
+      campaign.final_url_suffix
     FROM campaign
     WHERE campaign.status != 'REMOVED'
   `
@@ -271,6 +343,7 @@ async function fetchCampaignsFromGoogleAds(params: {
       budget_type: (row.campaign_budget?.type || 'DAILY') as 'DAILY' | 'TOTAL',
       status: (row.campaign?.status || 'PAUSED') as 'ENABLED' | 'PAUSED' | 'REMOVED',
       customer_id: customerId,
+      final_url_suffix: row.final_url_suffix
       // account_name: row.customer_client?.descriptive_name,
     }))
   } catch (error: any) {
