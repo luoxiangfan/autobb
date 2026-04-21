@@ -83,6 +83,7 @@ const ClickFarmTaskModal = dynamic(() => import('@/components/ClickFarmTaskModal
 const UrlSwapTaskModal = dynamic(() => import('@/components/UrlSwapTaskModal'), { ssr: false })
 const EditableCustomName = dynamic(() => import('@/components/EditableCustomName').then(mod => mod.EditableCustomName), { ssr: false })
 const EditableStatusCategory = dynamic(() => import('@/components/EditableStatusCategory').then(mod => mod.EditableStatusCategory), { ssr: false })
+const BatchTasksDialog = dynamic(() => import('@/components/BatchTasksDialog'), { ssr: false })
 
 interface Campaign {
   id: number
@@ -470,6 +471,15 @@ export default function CampaignsClientPage({
   const [overallRoasError, setOverallRoasError] = useState<string | null>(null)
   const [overallRoasStats, setOverallRoasStats] = useState<OverallRoasStatistics | null>(null)
   const [hideBrandNames, setHideBrandNames] = useState(false)
+
+
+    // 批量任务相关状态
+    const [isBatchTasksDialogOpen, setIsBatchTasksDialogOpen] = useState(false)
+    const [batchTasksLoading, setBatchTasksLoading] = useState(false)
+
+    // 全选状态
+    const allSelected = selectedCampaignIds.size === filteredCampaigns.length && filteredCampaigns.length > 0
+    const someSelected = selectedCampaignIds.size > 0 && !allSelected
 
   // Adjust CPC dialog states
   const [adjustCpcOpen, setAdjustCpcOpen] = useState(false)
@@ -3217,6 +3227,15 @@ export default function CampaignsClientPage({
                     : `批量下线 (${selectedCampaignIds.size})`}
                 </Button>
               )}
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setIsBatchTasksDialogOpen(true)}
+                disabled={selectedCampaignIds.size === 0}
+              >
+                <PlayCircle className="w-4 h-4 mr-2" />
+                批量开启任务 ({selectedCampaignIds.size})
+              </Button>
               <Button 
                 onClick={() => void syncCampaigns()} 
                 disabled={syncing || globalSyncStatus?.hasRunningSync}
@@ -4942,6 +4961,15 @@ export default function CampaignsClientPage({
           editTaskId={editTaskIdForUrlSwap}
         />
       )}
+      <BatchTasksDialog
+        open={isBatchTasksDialogOpen}
+        onOpenChange={setIsBatchTasksDialogOpen}
+        campaignIds={Array.from(selectedCampaignIds)}
+        onSuccess={() => {
+          setSelectedCampaignIds(new Set())
+          // fetchData(true)  // 刷新数据
+        }}
+      />
     </div>
   )
 }

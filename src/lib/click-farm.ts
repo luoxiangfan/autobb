@@ -1349,3 +1349,26 @@ export async function getPendingTasks(): Promise<ClickFarmTask[]> {
 
   return tasks.map(parseClickFarmTask);
 }
+
+/**
+ * 🔧 新增 (2026-04-21): 根据 Offer ID 获取补点击任务
+ */
+export async function getClickFarmTaskByOfferId(
+  offerId: number,
+  userId: number
+): Promise<ClickFarmTask | null> {
+  const db = await getDatabase()
+  
+  const task = await db.queryOne(`
+    SELECT * FROM click_farm_tasks
+    WHERE offer_id = ? AND user_id = ? AND is_deleted = 0
+    ORDER BY created_at DESC
+    LIMIT 1
+  `, [offerId, userId]) as any
+  
+  if (!task) {
+    return null
+  }
+  
+  return parseClickFarmTask(task)
+}
