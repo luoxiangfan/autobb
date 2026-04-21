@@ -188,7 +188,7 @@ async function syncAdGroupsFromApi(
         ad_group.id,
         ad_group.name,
         ad_group.status,
-        ad_group.cpc_bid_ceiling_micros,
+        ad_group.cpc_bid_micros,
         campaign.id
       FROM ad_group
       WHERE campaign.id = '${campaignId}'
@@ -204,7 +204,7 @@ async function syncAdGroupsFromApi(
       ad_group_id: row.ad_group?.id || '',
       ad_group_name: row.ad_group?.name || '',
       status: row.ad_group?.status || 'ENABLED',
-      max_cpc_bid_micros: row.ad_group?.cpc_bid_ceiling_micros,
+      max_cpc_bid_micros: row.ad_group?.cpc_bid_micros,
       campaign_id: row.campaign?.id || campaignId,
     }))
   } catch (error: any) {
@@ -329,7 +329,7 @@ async function syncNegativeKeywordsFromApi(
         campaign_criterion.criterion_id,
         campaign_criterion.keyword.text,
         campaign_criterion.keyword.match_type,
-        campaign_criterion.keyword.status
+        campaign_criterion.status
       FROM campaign_criterion
       WHERE campaign.id = '${campaignId}'
         AND campaign_criterion.type = 'KEYWORD'
@@ -365,7 +365,7 @@ async function syncNegativeKeywordsFromApi(
           ad_group_criterion.negative_keyword.match_type
         FROM ad_group_criterion
         WHERE ad_group.id = '${adGroup.ad_group_id}'
-          AND ad_group_criterion.negative_keyword IS NOT NULL
+          AND ad_group_criterion.negative = TRUE
       `
 
       const rows = await executeGAQLQueryPython({
