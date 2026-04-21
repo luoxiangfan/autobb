@@ -119,25 +119,19 @@ export async function syncAdComponentsFromGoogleAds(
   }
 
   try {
-    // 1. 获取凭证
-    const credentials = await getGoogleAdsCredentialsFromDB(userId)
-    if (!credentials) {
-      throw new Error('未找到 Google Ads 凭证')
-    }
-
-    // 2. 同步广告组
+    // 1. 同步广告组
     const adGroups = await syncAdGroupsFromApi(userId, customerId, campaignId)
     result.adGroupsCount = adGroups.length
 
-    // 3. 同步广告
+    // 2. 同步广告
     const ads = await syncAdsFromApi(userId, customerId, adGroups)
     result.adsCount = ads.length
 
-    // 4. 同步关键词
+    // 3. 同步关键词
     const keywords = await syncKeywordsFromApi(userId, customerId, adGroups)
     result.keywordsCount = keywords.length
 
-    // 5. 同步否定关键词
+    // 4. 同步否定关键词
     const negativeKeywords = await syncNegativeKeywordsFromApi(
       userId,
       customerId,
