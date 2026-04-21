@@ -195,7 +195,7 @@ export async function syncCampaignsFromGoogleAds(
                 userId,
                 account.customer_id,
                 campaign.campaign_id,
-                account.id,
+                account.service_account_id!,
                 {
                   finalUrlSuffix: campaign.final_url_suffix,
                   campaignName: campaign.campaign_name,

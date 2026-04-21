@@ -97,7 +97,7 @@ export async function syncAdComponentsFromGoogleAds(
   userId: number,
   customerId: string,
   campaignId: string,
-  googleAdsAccountId?: number,
+  serviceAccountId?: string,
   campaignBasicInfo?: {
     campaignName?: string
     budgetAmount?: number
@@ -120,15 +120,15 @@ export async function syncAdComponentsFromGoogleAds(
 
   try {
     // 1. 同步广告组
-    const adGroups = await syncAdGroupsFromApi(userId, customerId, campaignId)
+    const adGroups = await syncAdGroupsFromApi(userId, customerId, campaignId, serviceAccountId)
     result.adGroupsCount = adGroups.length
 
     // 2. 同步广告
-    const ads = await syncAdsFromApi(userId, customerId, adGroups)
+    const ads = await syncAdsFromApi(userId, customerId, adGroups, serviceAccountId)
     result.adsCount = ads.length
 
     // 3. 同步关键词
-    const keywords = await syncKeywordsFromApi(userId, customerId, adGroups)
+    const keywords = await syncKeywordsFromApi(userId, customerId, adGroups, serviceAccountId)
     result.keywordsCount = keywords.length
 
     // 4. 同步否定关键词
@@ -136,12 +136,13 @@ export async function syncAdComponentsFromGoogleAds(
       userId,
       customerId,
       campaignId,
-      adGroups
+      adGroups,
+      serviceAccountId
     )
     result.negativeKeywordsCount = negativeKeywords.length
 
     // 6. 🔧 通过 campaign_criterion 获取定位信息（国家、语言）
-    const targetingInfo = await syncTargetingFromApi(userId, customerId, campaignId)
+    const targetingInfo = await syncTargetingFromApi(userId, customerId, campaignId, serviceAccountId)
 
     // 7. 构建 campaign_config
     result.campaignConfig = buildCampaignConfig(
@@ -180,7 +181,8 @@ export async function syncAdComponentsFromGoogleAds(
 async function syncAdGroupsFromApi(
   userId: number,
   customerId: string,
-  campaignId: string
+  campaignId: string,
+  serviceAccountId?: string
 ): Promise<GoogleAdsAdGroup[]> {
   try {
     const query = `
@@ -191,16 +193,17 @@ async function syncAdGroupsFromApi(
         ad_group.cpc_bid_micros,
         campaign.id
       FROM ad_group
-      WHERE campaign.id = '${campaignId}'
+      WHERE campaign.id = ${campaignId}
     `
 
     const rows = await executeGAQLQueryPython({
       userId,
       customerId,
       query,
+      serviceAccountId
     })
 
-    return rows.map((row: any) => ({
+    return (rows?.results || []).map((row: any) => ({
       ad_group_id: row.ad_group?.id || '',
       ad_group_name: row.ad_group?.name || '',
       status: row.ad_group?.status || 'ENABLED',
@@ -219,7 +222,8 @@ async function syncAdGroupsFromApi(
 async function syncAdsFromApi(
   userId: number,
   customerId: string,
-  adGroups: GoogleAdsAdGroup[]
+  adGroups: GoogleAdsAdGroup[],
+  serviceAccountId?: string
 ): Promise<GoogleAdsAd[]> {
   const ads: GoogleAdsAd[] = []
 
@@ -237,16 +241,17 @@ async function syncAdsFromApi(
           ad_group_ad.ad.callouts,
           ad_group_ad.ad.sitelinks
         FROM ad_group_ad
-        WHERE ad_group.id = '${adGroup.ad_group_id}'
+        WHERE ad_group.id = ${adGroup.ad_group_id}
       `
 
       const rows = await executeGAQLQueryPython({
         userId,
         customerId,
         query,
+        serviceAccountId
       })
 
-      for (const row of rows) {
+      for (const row of (rows?.results || [])) {
         ads.push({
           ad_id: row.ad_group_ad?.ad?.id || '',
           ad_group_id: row.ad_group?.id || adGroup.ad_group_id,
@@ -272,7 +277,8 @@ async function syncAdsFromApi(
 async function syncKeywordsFromApi(
   userId: number,
   customerId: string,
-  adGroups: GoogleAdsAdGroup[]
+  adGroups: GoogleAdsAdGroup[],
+  serviceAccountId?: string
 ): Promise<GoogleAdsKeyword[]> {
   const keywords: GoogleAdsKeyword[] = []
 
@@ -285,16 +291,17 @@ async function syncKeywordsFromApi(
           ad_group_criterion.keyword.match_type,
           ad_group_criterion.cpc_bid_micros
         FROM ad_group_criterion
-        WHERE ad_group.id = '${adGroup.ad_group_id}'
+        WHERE ad_group.id = ${adGroup.ad_group_id}
       `
 
       const rows = await executeGAQLQueryPython({
         userId,
         customerId,
         query,
+        serviceAccountId
       })
 
-      for (const row of rows) {
+      for (const row of (rows?.results || [])) {
         keywords.push({
           ad_group_id: adGroup.ad_group_id,
           text: row.ad_group_criterion?.keyword?.text || '',
@@ -318,7 +325,8 @@ async function syncNegativeKeywordsFromApi(
   userId: number,
   customerId: string,
   campaignId: string,
-  adGroups: GoogleAdsAdGroup[]
+  adGroups: GoogleAdsAdGroup[],
+  serviceAccountId?: string
 ): Promise<GoogleAdsNegativeKeyword[]> {
   const negativeKeywords: GoogleAdsNegativeKeyword[] = []
 
@@ -331,7 +339,7 @@ async function syncNegativeKeywordsFromApi(
         campaign_criterion.keyword.match_type,
         campaign_criterion.status
       FROM campaign_criterion
-      WHERE campaign.id = '${campaignId}'
+      WHERE campaign.id = ${campaignId}
         AND campaign_criterion.type = 'KEYWORD'
         AND campaign_criterion.negative = TRUE
     `
@@ -340,9 +348,10 @@ async function syncNegativeKeywordsFromApi(
       userId,
       customerId,
       query,
+      serviceAccountId
     })
 
-    for (const row of rows) {
+    for (const row of (rows?.results || [])) {
       negativeKeywords.push({
         text: row.campaign_criterion?.keyword?.text || '',
         matchType: row.campaign_criterion?.keyword?.match_type || 'BROAD',
@@ -364,7 +373,7 @@ async function syncNegativeKeywordsFromApi(
           ad_group_criterion.negative_keyword.text,
           ad_group_criterion.negative_keyword.match_type
         FROM ad_group_criterion
-        WHERE ad_group.id = '${adGroup.ad_group_id}'
+        WHERE ad_group.id = ${adGroup.ad_group_id}
           AND ad_group_criterion.negative = TRUE
       `
 
@@ -372,9 +381,10 @@ async function syncNegativeKeywordsFromApi(
         userId,
         customerId,
         query,
+        serviceAccountId
       })
 
-      for (const row of rows) {
+      for (const row of (rows?.results || [])) {
         negativeKeywords.push({
           text: row.ad_group_criterion?.negative_keyword?.text || '',
           matchType: row.ad_group_criterion?.negative_keyword?.match_type || 'BROAD',
@@ -396,7 +406,8 @@ async function syncNegativeKeywordsFromApi(
 async function syncTargetingFromApi(
   userId: number,
   customerId: string,
-  campaignId: string
+  campaignId: string,
+  serviceAccountId?: string
 ): Promise<{
   targetCountry?: string
   targetLanguage?: string
@@ -417,7 +428,7 @@ async function syncTargetingFromApi(
         campaign_criterion.location,
         campaign_criterion.language
       FROM campaign_criterion
-      WHERE campaign.id = '${campaignId}'
+      WHERE campaign.id = ${campaignId}
         AND (
           campaign_criterion.location IS NOT NULL
           OR campaign_criterion.language IS NOT NULL
@@ -431,10 +442,11 @@ async function syncTargetingFromApi(
       userId,
       customerId,
       query: query,
+      serviceAccountId
     })
 
     // 遍历结果，提取国家和语言信息
-    for (const row of rows) {
+    for (const row of (rows?.results || [])) {
       // 提取国家代码
       if (!targetingInfo.targetCountry && row.campaign_criterion?.location?.geo_target_constant) {
         targetingInfo.targetCountry = getCountryName(row.campaign_criterion.location.geo_target_constant?.split('/')?.pop())
