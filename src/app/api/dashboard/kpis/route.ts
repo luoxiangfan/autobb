@@ -148,8 +148,36 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
-    const userId = authResult.user.userId
     const { searchParams } = new URL(request.url)
+    
+    // 🔧 新增：支持管理员查看所有用户或指定用户数据
+    const allUsersParam = searchParams.get('allUsers')
+    const targetUserIdParam = searchParams.get('userId')
+    
+    let userId: number
+    let isAllUsers = false
+    
+    // 检查是否为管理员
+    const isAdmin = authResult.user.role === 'admin'
+    
+    if (allUsersParam === 'true' && isAdmin) {
+      // 管理员查看所有用户总和
+      userId = 0  // 特殊值，表示所有用户
+      isAllUsers = true
+    } else if (targetUserIdParam && isAdmin) {
+      // 管理员查看指定用户
+      userId = parseInt(targetUserIdParam, 10)
+      if (!Number.isFinite(userId)) {
+        return NextResponse.json(
+          { error: '无效的 userId 参数' },
+          { status: 400 }
+        )
+      }
+    } else {
+      // 普通用户只能查看自己的数据
+      userId = authResult.user.userId
+    }
+    
     const rawDays = parseInt(searchParams.get('days') || '7', 10)
     const days = Number.isFinite(rawDays) ? Math.min(Math.max(rawDays, 1), 3650) : 7
     const startDateQuery = parseYmdParam(searchParams.get('start_date'))
@@ -179,6 +207,7 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
       days,
       startDate: startDateQuery || '',
       endDate: endDateQuery || '',
+      allUsers: isAllUsers,
     })
 
     const buildResult = async () => {
@@ -204,13 +233,16 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
       const currencyQuery = `
         SELECT DISTINCT currency
         FROM campaign_performance
-        WHERE user_id = ?
+        WHERE ${isAllUsers ? '1=1' : 'user_id = ?'}
           AND date >= ?
           AND date <= ?
       `
+      const currencyParams = isAllUsers 
+        ? [currentStartDate, currentEndDate]
+        : [userId, currentStartDate, currentEndDate]
       const currencies = await db.query(
         currencyQuery,
-        [userId, currentStartDate, currentEndDate]
+        currencyParams
       ) as Array<{ currency: string }>
 
       const uniqueCurrencies = currencies.map(c => c.currency).filter(Boolean)
@@ -224,7 +256,7 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
           SUM(clicks) as clicks,
           SUM(cost) as cost
         FROM campaign_performance
-        WHERE user_id = ?
+        WHERE ${isAllUsers ? '1=1' : 'user_id = ?'}
           AND date >= ?
           AND date <= ?
         GROUP BY currency
@@ -234,14 +266,17 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
           SUM(clicks) as clicks,
           SUM(cost) as cost
         FROM campaign_performance
-        WHERE user_id = ?
+        WHERE ${isAllUsers ? '1=1' : 'user_id = ?'}
           AND date >= ?
           AND date <= ?
       `
 
+      const currentParams = isAllUsers
+        ? [currentStartDate, currentEndDate]
+        : [userId, currentStartDate, currentEndDate]
       const currentDataRaw = isMultiCurrency
-        ? await db.query(currentPeriodQuery, [userId, currentStartDate, currentEndDate])
-        : [await db.queryOne(currentPeriodQuery, [userId, currentStartDate, currentEndDate])]
+        ? await db.query(currentPeriodQuery, currentParams)
+        : [await db.queryOne(currentPeriodQuery, currentParams)]
 
       const currentData = currentDataRaw as Array<{
         currency?: string | null
@@ -257,19 +292,18 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
           SUM(clicks) as clicks,
           SUM(cost) as cost
         FROM campaign_performance
-        WHERE user_id = ?
+        WHERE ${isAllUsers ? '1=1' : 'user_id = ?'}
           AND date >= ?
           AND date <= ?
         GROUP BY COALESCE(currency, 'USD')
       `
 
+      const previousParams = isAllUsers
+        ? [previousStartDate, previousEndDate]
+        : [userId, previousStartDate, previousEndDate]
       const previousData = await db.query(
         previousPeriodQuery,
-        [
-          userId,
-          previousStartDate,
-          previousEndDate
-        ]
+        previousParams
       ) as Array<{
         currency?: string | null
         impressions: number | null
@@ -281,15 +315,19 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
         start: string
         end: string
       }): Promise<number> => {
+        const commissionQuery = `
+          SELECT COALESCE(SUM(commission_amount), 0) AS total_commission
+          FROM affiliate_commission_attributions
+          WHERE ${isAllUsers ? '1=1' : 'user_id = ?'}
+            AND report_date >= ?
+            AND report_date <= ?
+        `
+        const commissionParams = isAllUsers
+          ? [params.start, params.end]
+          : [userId, params.start, params.end]
         const row = await db.queryOne<{ total_commission: number }>(
-          `
-            SELECT COALESCE(SUM(commission_amount), 0) AS total_commission
-            FROM affiliate_commission_attributions
-            WHERE user_id = ?
-              AND report_date >= ?
-              AND report_date <= ?
-          `,
-          [userId, params.start, params.end]
+          commissionQuery,
+          commissionParams
         )
 
         return Number(row?.total_commission) || 0
@@ -306,16 +344,20 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
           includeAllFailures: true,
         })
         try {
+          const commissionQuery = `
+            SELECT COALESCE(SUM(commission_amount), 0) AS total_commission
+            FROM openclaw_affiliate_attribution_failures
+            WHERE ${isAllUsers ? '1=1' : 'user_id = ?'}
+              AND report_date >= ?
+              AND report_date <= ?
+              AND ${unattributedFailureFilter.sql}
+          `
+          const commissionParams = isAllUsers
+            ? [params.start, params.end, ...unattributedFailureFilter.values]
+            : [userId, params.start, params.end, ...unattributedFailureFilter.values]
           const row = await db.queryOne<{ total_commission: number }>(
-            `
-              SELECT COALESCE(SUM(commission_amount), 0) AS total_commission
-              FROM openclaw_affiliate_attribution_failures
-              WHERE user_id = ?
-                AND report_date >= ?
-                AND report_date <= ?
-                AND ${unattributedFailureFilter.sql}
-            `,
-            [userId, params.start, params.end, ...unattributedFailureFilter.values]
+            commissionQuery,
+            commissionParams
           )
 
           return Number(row?.total_commission) || 0
