@@ -550,14 +550,6 @@ export default function CampaignsClientPage({
       if (response.ok) {
         const data = await response.json()
         setGlobalSyncStatus(data)
-        
-        // 🔧 优化：如果有正在运行的同步任务，启动轮询
-        if (data.hasRunningSync && !isPolling) {
-          startPolling()
-        } else if (!data.hasRunningSync && isPolling) {
-          stopPolling()
-        }
-        
         return data
       }
     } catch (error) {
@@ -568,7 +560,10 @@ export default function CampaignsClientPage({
   
   // 🔧 启动轮询（每 3 秒检查一次）
   const startPolling = () => {
-    if (isPolling) return
+    if (pollingRef.current) {
+      // 已经存在轮询，不需要重复启动
+      return
+    }
     setIsPolling(true)
     pollingRef.current = setInterval(() => {
       void checkGlobalSyncStatus()
@@ -881,6 +876,17 @@ export default function CampaignsClientPage({
     void checkGlobalSyncStatus()
   }, [])
   
+  // 🔧 监听同步状态，自动管理轮询
+  useEffect(() => {
+    if (globalSyncStatus?.hasRunningSync && !pollingRef.current) {
+      // 有运行中的任务，启动轮询
+      startPolling()
+    } else if (!globalSyncStatus?.hasRunningSync && pollingRef.current) {
+      // 任务结束，停止轮询
+      stopPolling()
+    }
+  }, [globalSyncStatus?.hasRunningSync])
+  
   // 🔧 清理轮询（组件卸载时）
   useEffect(() => {
     return () => {
@@ -888,6 +894,7 @@ export default function CampaignsClientPage({
         clearInterval(pollingRef.current)
         pollingRef.current = null
       }
+      setIsPolling(false)
     }
   }, [])
     useEffect(() => {
