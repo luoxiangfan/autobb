@@ -118,6 +118,15 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/login',
+        statusCode: 301
+      }
+    ]
+  },
 }
 
 module.exports = nextConfig
