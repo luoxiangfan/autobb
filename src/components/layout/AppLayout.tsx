@@ -146,6 +146,11 @@ const navigationItems: NavItem[] = [
     icon: Package,
   },
   {
+    label: '已解除关联的Offer',
+    href: '/offers/unlinked',
+    icon: Package,
+  },
+  {
     label: '广告系列',
     href: '/campaigns',
     icon: Megaphone,
