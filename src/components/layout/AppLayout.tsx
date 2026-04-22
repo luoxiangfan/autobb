@@ -147,7 +147,7 @@ const navigationItems: NavItem[] = [
   },
   {
     label: '已解除关联的Offer',
-    href: '/offers/unlinked',
+    href: '/unlinked-offers',
     icon: Package,
   },
   {
