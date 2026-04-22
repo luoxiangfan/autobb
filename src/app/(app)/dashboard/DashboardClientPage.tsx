@@ -129,6 +129,10 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const [appliedCustomRange, setAppliedCustomRange] = useState<{ startDate: string; endDate: string } | null>(null)
   const [kpiData, setKpiData] = useState<KPIData | null>(null)
+  // 🔧 新增：用户筛选状态
+  const [selectedUserId, setSelectedUserId] = useState<string>('all')  // 'all' 或用户 ID
+  const [users, setUsers] = useState<Array<{ id: number; username: string; email: string }>>([])
+  const [isAdmin, setIsAdmin] = useState(false)
   const [risks, setRisks] = useState<RiskAlert[]>([])
   const [offerSummary, setOfferSummary] = useState<OfferSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -155,6 +159,27 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
   /**
    * 处理401未授权错误 - 跳转到登录页
    */
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch('/api/users?limit=100', {
+        credentials: 'include',
+        cache: 'no-store',
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setUsers(data.users || [])
+        setIsAdmin(data.isAdmin || false)
+        
+        // 管理员默认选择所有用户
+        if (data.isAdmin) {
+          setSelectedUserId('all')
+        }
+      }
+    } catch (error) {
+      console.error('获取用户列表失败:', error)
+    }
+  }
+
   const handleUnauthorized = () => {
     document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
     const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search)
@@ -182,6 +207,14 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
       }
       if (showRefresh) {
         kpiParams.set('refresh', 'true')
+      }
+      // 🔧 添加用户筛选参数
+      if (isAdmin) {
+        if (selectedUserId === 'all') {
+          kpiParams.set('allUsers', 'true')
+        } else if (selectedUserId) {
+          kpiParams.set('userId', selectedUserId)
+        }
       }
 
       const [kpiRes, riskRes, offerRes] = await Promise.all([
@@ -254,9 +287,14 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
     }
   }
 
+  // 🔧 获取用户列表（仅管理员）
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
   useEffect(() => {
     fetchData()
-  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate])
+  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, selectedUserId])
 
   useEffect(() => {
     return () => {
@@ -398,6 +436,23 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {/* 🔧 用户筛选器（仅管理员） */}
+            {isAdmin && (
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                title="选择用户"
+              >
+                <option value="all">所有用户</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.username || user.email}
+                  </option>
+                ))}
+              </select>
+            )}
+
             {/* 刷新按钮 */}
             <Button
               variant="ghost"

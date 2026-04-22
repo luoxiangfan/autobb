@@ -31,11 +31,11 @@ export async function pauseOfferTasks(
   }
 
   const pausedCondition = db.type === 'postgres' ? 'NOW()' : 'datetime("now")'
-
+  const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
   // 1. 暂停补点击任务
   const clickFarmTask = await db.queryOne<any>(`
     SELECT id, status FROM click_farm_tasks
-    WHERE offer_id = ? AND user_id = ? AND is_deleted = 0
+    WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
     ORDER BY created_at DESC
     LIMIT 1
   `, [offerId, userId])
@@ -58,7 +58,7 @@ export async function pauseOfferTasks(
   // 2. 禁用换链接任务
   const urlSwapTask = await db.queryOne<any>(`
     SELECT id, status FROM url_swap_tasks
-    WHERE offer_id = ? AND user_id = ? AND is_deleted = 0
+    WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
     ORDER BY created_at DESC
     LIMIT 1
   `, [offerId, userId])
