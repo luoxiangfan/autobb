@@ -161,22 +161,29 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
    */
   const fetchUsers = async () => {
     try {
-      const res = await fetch('/api/users?limit=100', {
+      // 🔧 修复：使用 /api/admin/users API
+      const res = await fetch('/api/admin/users?limit=100', {
         credentials: 'include',
         cache: 'no-store',
       })
+      
+      if (res.status === 403) {
+        // 非管理员，不获取用户列表
+        setIsAdmin(false)
+        return
+      }
+      
       if (res.ok) {
         const data = await res.json()
         setUsers(data.users || [])
-        setIsAdmin(data.isAdmin || false)
+        setIsAdmin(true)
         
         // 管理员默认选择所有用户
-        if (data.isAdmin) {
-          setSelectedUserId('all')
-        }
+        setSelectedUserId('all')
       }
     } catch (error) {
       console.error('获取用户列表失败:', error)
+      setIsAdmin(false)
     }
   }
 
@@ -436,6 +443,16 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
             </p>
           </div>
           <div className="flex items-center gap-3">
+
+            {/* 刷新按钮 */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => fetchData(true)}
+              disabled={refreshing}
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </Button>
             {/* 🔧 用户筛选器（仅管理员） */}
             {isAdmin && (
               <select
@@ -452,16 +469,6 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
                 ))}
               </select>
             )}
-
-            {/* 刷新按钮 */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => fetchData(true)}
-              disabled={refreshing}
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            </Button>
             {/* 时间范围 */}
             <div className="flex bg-white rounded-lg border p-1">
               {([7, 14, 30] as const).map((d) => (
