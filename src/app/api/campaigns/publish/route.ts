@@ -1205,6 +1205,66 @@ export async function POST(request: NextRequest) {
       ])
 
       const campaignId = getInsertedId(campaignInsert, db.type)
+      
+      // 🔧 创建备份（用于通过备份重新创建）
+      try {
+        await db.exec(`
+          INSERT INTO campaign_backups (
+            user_id,
+            offer_id,
+            ad_creative_id,
+            campaign_data,
+            campaign_config,
+            backup_type,
+            backup_source,
+            backup_version,
+            custom_name,
+            campaign_name,
+            budget_amount,
+            budget_type,
+            target_cpa,
+            max_cpc,
+            status,
+            google_ads_account_id,
+            created_at,
+            updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          userId,
+          _offerId,
+          creative.id,  // ad_creative_id
+          JSON.stringify({
+            campaign_id: campaignId,
+            offer_id: _offerId,
+            google_ads_account_id: resolvedGoogleAdsAccountId,
+            campaign_name: resolvedCampaignName,
+            budget_amount: variantBudget,
+            budget_type: normalizedBudgetType,
+            max_cpc: persistedMaxCpc,
+            target_cpa: null,
+            status: 'PAUSED',
+          }),
+          JSON.stringify(normalizedCampaignConfig),
+          'auto',  // backup_type
+          'publish',  // backup_source
+          1,  // backup_version
+          null,  // custom_name
+          resolvedCampaignName,
+          variantBudget,
+          normalizedBudgetType,
+          null,  // target_cpa
+          persistedMaxCpc,
+          'PAUSED',
+          resolvedGoogleAdsAccountId,
+          now,
+          now
+        ])
+        console.log(`📦 已创建 Campaign 备份 campaignId=${campaignId}, creativeId=${creative.id}`)
+      } catch (backupError) {
+        console.error('[Publish] 创建备份失败:', backupError)
+        // 备份失败不影响主要流程
+      }
+      
       createdCampaigns.push({
         campaignId,
         creative,

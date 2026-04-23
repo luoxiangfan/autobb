@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       try {
         // 检查 Offer 是否存在且属于当前用户
         const offer = await db.queryOne(`
-          SELECT id, offer_name, brand
+          SELECT id, offer_name, brand, target_country
           FROM offers
           WHERE id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
         `, [offerId, userId])
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // 检查是否已有活跃的广告系列
+        // 🔧 检查是否已有活跃的广告系列
         const existingCampaign = await db.queryOne(`
           SELECT id FROM campaigns
           WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
@@ -101,12 +101,33 @@ export async function POST(request: NextRequest) {
 
         if (existingCampaign) {
           result.skipped++
+          console.log(`[Batch Create] Skipped offer ${offerId}: already has active campaign`)
           continue
         }
 
-        // 创建广告系列
-        const campaignName = campaignConfig?.campaignName || `${offer.brand || offer.offer_name}_Campaign`
+        // 🔧 自动选择第一个广告创意
+        const creative = await db.queryOne(`
+          SELECT id, creative_name, keyword_bucket
+          FROM ad_creatives
+          WHERE offer_id = ? AND user_id = ?
+          ORDER BY created_at DESC
+          LIMIT 1
+        `, [offerId, userId]) as { id: number; creative_name: string; keyword_bucket: string } | undefined
+
+        if (!creative) {
+          result.skipped++
+          console.log(`[Batch Create] Skipped offer ${offerId}: no creative found`)
+          continue
+        }
+
+        // 🔧 自动生成广告系列名称（参考发布广告功能）
+        const dateStr = new Date().toISOString().split('T')[0].replace(/[-t:z.]/gi, '')
+        const brandName = (offer.brand || offer.offer_name || 'Unknown').replace(/[^a-zA-Z0-9]/g, '').slice(0, 20)
+        const country = offer.target_country || 'US'
         
+        const campaignName = campaignConfig?.campaignName || `${brandName}_${country}_${dateStr}`
+        
+        // 🔧 使用默认配置创建广告系列
         await createCampaign({
           userId: userId,
           offerId,
@@ -118,6 +139,21 @@ export async function POST(request: NextRequest) {
           maxCpc: campaignConfig?.maxCpc || null,
           status: campaignConfig?.status || 'PAUSED',
         })
+
+        console.log(`[Batch Create] Created campaign for offer ${offerId} with creative ${creative.id}`)
+
+        // 🔧 清除 Offer 的解除关联信息（防止重复创建）
+        try {
+          await db.exec(`
+            UPDATE offers
+            SET unlinked_from_customer_ids = NULL,
+                last_unlinked_at = NULL
+            WHERE id = ?
+          `, [offerId])
+          console.log(`[Batch Create] Cleared unlinked info for offer ${offerId}`)
+        } catch (error) {
+          console.error(`[Batch Create] Failed to clear unlinked info for offer ${offerId}:`, error)
+        }
 
         result.created++
       } catch (error: any) {
