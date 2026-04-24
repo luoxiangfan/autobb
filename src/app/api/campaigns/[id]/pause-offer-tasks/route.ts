@@ -74,7 +74,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       const isDeletedCondition = db.type === 'postgres' ? 'NOW()' : 'datetime("now")'
       await db.exec(`
         UPDATE url_swap_tasks
-        SET status = 'disabled', disabled_at = ${isDeletedCondition}
+        SET status = 'disabled', updated_at = ${isDeletedCondition}
         WHERE id = ? AND user_id = ?
       `, [urlSwapTask.id, numericUserId])
       urlSwapTaskDisabled = true
