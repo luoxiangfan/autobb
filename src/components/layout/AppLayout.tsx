@@ -145,11 +145,11 @@ const navigationItems: NavItem[] = [
     href: '/offers',
     icon: Package,
   },
-  // {
-  //   label: '已解除关联的Offer',
-  //   href: '/unlinked-offers',
-  //   icon: Package,
-  // },
+  {
+    label: '已解除关联的Offer',
+    href: '/unlinked-offers',
+    icon: Package,
+  },
   {
     label: '广告系列',
     href: '/campaigns',
@@ -236,12 +236,6 @@ const adminNavigationItems: NavItem[] = [
   {
     label: '用户管理',
     href: '/admin/users',
-    icon: Users,
-    requireAdmin: true,
-  },
-  {
-    label: 'MCC分配',
-    href: '/admin/mcc-assignment',
     icon: Users,
     requireAdmin: true,
   },

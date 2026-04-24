@@ -93,52 +93,26 @@ export async function syncCampaignsFromGoogleAds(
     //   return result
     // }
 
-    // 2. 🔧 获取该用户的所有活跃 Google Ads 账户（支持 MCC 过滤）
+    // 2. 获取该用户的所有活跃 Google Ads 账户（数组）
     const isActiveCondition = db.type === 'postgres' ? 'is_active = TRUE' : 'is_active = 1'
     const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = FALSE' : 'is_manager_account = 0'
     const isDeletedCondition = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
-    
-    // 🔧 获取用户分配的 MCC 账号列表
-    let mccCustomerIds: string[] = []
-    const mccAssignments = await db.query(`
-      SELECT mcc_customer_id FROM user_mcc_assignments
-      WHERE user_id = ?
-    `, [userId]) as Array<{ mcc_customer_id: string }>
-    
-    if (mccAssignments.length > 0) {
-      mccCustomerIds = mccAssignments.map(a => a.mcc_customer_id)
-      console.log(`[GoogleAds Sync] User ${userId} has ${mccCustomerIds.length} assigned MCCs: ${mccCustomerIds.join(', ')}`)
+    let customerIds: string = ','
+    if (userId == 2) {
+      customerIds = `'3647422686','3530335491'`
     }
-    
-    // 🔧 构建 customer_id 过滤条件
-    let customerIdsFilter = ''
-    if (mccCustomerIds.length > 0) {
-      // 如果分配了 MCC，只获取这些 MCC 下的 customer_id
-      // 需要查询 google_ads_accounts 表中 parent_customer_id 在 MCC 列表中的账户
-      const mccPlaceholders = mccCustomerIds.map(() => '?').join(',')
-      customerIdsFilter = `AND parent_customer_id IN (${mccPlaceholders})`
-    } else {
-      // 如果没有分配 MCC，使用硬编码的 customerIds（向后兼容）
-      let customerIds: string = ','
-      if (userId == 2) {
-        customerIds = `'3647422686','3530335491'`
-      }
-      if (userId == 3) {
-        customerIds = `'3087435596','8642496427','8623761154'`
-      }
-      customerIdsFilter = `AND customer_id IN (${customerIds})`
+    if (userId == 3) {
+      customerIds = `'3087435596','8642496427','8623761154'`
     }
-    
     const accounts = await db.query(
-      `SELECT id, customer_id, account_name, parent_customer_id, refresh_token, auth_type, service_account_id FROM google_ads_accounts
-       WHERE user_id = ? AND ${isActiveCondition} AND ${isManagerCondition} AND ${isDeletedCondition} AND status = 'ENABLED' AND customer_id IS NOT NULL AND customer_id != '' ${customerIdsFilter}
+      `SELECT id, customer_id, account_name, refresh_token, auth_type, service_account_id FROM google_ads_accounts
+       WHERE user_id = ? AND ${isActiveCondition} AND ${isManagerCondition} AND ${isDeletedCondition} AND status = 'ENABLED' AND customer_id IS NOT NULL AND customer_id != '' AND customer_id in (${customerIds})
        ORDER BY id`,
-      [userId, ...(mccCustomerIds.length > 0 ? mccCustomerIds : [])]
+      [userId]
     ) as Array<{
       id: number
       customer_id: string
       account_name: string | null
-      parent_customer_id: string | null
       refresh_token: string | null
       auth_type: string | null
       service_account_id: string | null
