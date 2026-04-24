@@ -211,6 +211,7 @@ async function batchCreateToGoogleAds(params: {
           },
           pauseOldCampaigns: false,
           enableCampaignImmediately: false,
+          forcePublish: true
         }),
       })
 

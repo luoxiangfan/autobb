@@ -132,12 +132,25 @@ export async function findGoogleAdsAccountsByUserId(userId: number): Promise<Goo
  * 注意：这会返回所有is_active=1的账号，包括DISABLED状态的
  * 如果需要可用于API调用的账号，请使用 findEnabledGoogleAdsAccounts
  */
-export async function findActiveGoogleAdsAccounts(userId: number): Promise<GoogleAdsAccount[]> {
+export async function findActiveGoogleAdsAccounts(userId: number, manager?: boolean): Promise<GoogleAdsAccount[]> {
   const db = await getDatabase()
 
   // 🔧 PostgreSQL兼容性修复: is_active在PostgreSQL中是BOOLEAN类型
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
   const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
+  const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = false' : 'is_manager_account = 0'
+  let sqlStr = `
+    SELECT * FROM google_ads_accounts
+    WHERE user_id = ? AND ${isActiveCondition} AND ${isDeletedCheck}
+    ORDER BY created_at DESC
+  `
+  if (manager) {
+    sqlStr = `
+      SELECT * FROM google_ads_accounts
+      WHERE user_id = ? AND ${isActiveCondition} AND ${isDeletedCheck} AND ${isManagerCondition}
+      ORDER BY created_at DESC
+    `
+  }
 
   const rows = await db.query(`
     SELECT * FROM google_ads_accounts
