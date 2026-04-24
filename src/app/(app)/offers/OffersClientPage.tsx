@@ -37,7 +37,6 @@ import { ResponsivePagination } from '@/components/ui/responsive-pagination'
 import { getScrapeStatusLabel } from '@/lib/i18n-constants'
 import { showError, showInfo, showSuccess } from '@/lib/toast-utils'
 import type { OfferListItem, UnlinkTarget } from './types'
-import { PlayCircle } from 'lucide-react'
 
 // 使用类型别名保持兼容性
 type Offer = OfferListItem
@@ -88,7 +87,6 @@ const ResponsiveActionCell = dynamic(
   () => import('@/components/ui/table-action-buttons').then((mod) => mod.ResponsiveActionCell),
   { ssr: false }
 )
-const BatchTasksDialog = dynamic(() => import('@/components/BatchTasksDialog'), { ssr: false })
 
 export default function OffersClientPage({
   offersIncrementalPollEnabled = false,
@@ -141,13 +139,6 @@ export default function OffersClientPage({
   const [batchRebuilding, setBatchRebuilding] = useState(false)
   const MAX_BATCH_CREATIVE_OFFERS = 50
   const MAX_BATCH_REBUILD_OFFERS = 50
-
-  const [isBatchTasksDialogOpen, setIsBatchTasksDialogOpen] = useState(false)
-  const [batchTasksLoading, setBatchTasksLoading] = useState(false)
-
-  // 全选状态
-  const allSelected = selectedOfferIds.size === filteredOffers.length && filteredOffers.length > 0
-  const someSelected = selectedOfferIds.size > 0 && !allSelected
 
   // 分页状态 - 使用统一的usePagination Hook
   const {
@@ -1305,15 +1296,6 @@ export default function OffersClientPage({
               )}
 
               <Button
-                variant="default"
-                size="sm"
-                onClick={() => setIsBatchTasksDialogOpen(true)}
-                disabled={selectedOfferIds.size === 0}
-              >
-                <PlayCircle className="w-4 h-4 mr-2" />
-                批量开启任务 ({selectedOfferIds.size})
-              </Button>
-              <Button
                 onClick={() => setIsCreateModalOpen(true)}
                 className="flex-1 sm:flex-none"
               >
@@ -1834,15 +1816,6 @@ export default function OffersClientPage({
           onConfirmToggleBlacklist={handleToggleBlacklist}
         />
       )}
-      <BatchTasksDialog
-        open={isBatchTasksDialogOpen}
-        onOpenChange={setIsBatchTasksDialogOpen}
-        offerIds={Array.from(selectedOfferIds)}
-        onSuccess={() => {
-          setSelectedOfferIds(new Set())
-          fetchOffers()  // 刷新数据
-        }}
-      />
     </div>
   )
 }
