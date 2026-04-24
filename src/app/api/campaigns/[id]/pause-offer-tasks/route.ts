@@ -42,9 +42,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     // 2. 暂停补点击任务
     let clickFarmTaskPaused = false
+    const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
     const clickFarmTask = await db.queryOne<any>(`
       SELECT id, status FROM click_farm_tasks
-      WHERE offer_id = ? AND user_id = ? AND is_deleted = 0
+      WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
       ORDER BY created_at DESC
       LIMIT 1
     `, [offerId, numericUserId])
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     let urlSwapTaskDisabled = false
     const urlSwapTask = await db.queryOne<any>(`
       SELECT id, status FROM url_swap_tasks
-      WHERE offer_id = ? AND user_id = ? AND is_deleted = 0
+      WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
       ORDER BY created_at DESC
       LIMIT 1
     `, [offerId, numericUserId])
