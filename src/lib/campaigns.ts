@@ -3,7 +3,6 @@ import { getInsertedId } from './db-helpers'
 import { markUrlSwapTargetsRemovedByCampaignId, getUrlSwapTaskByOfferId, disableUrlSwapTask } from './url-swap'
 import { applyCampaignTransition } from './campaign-state-machine'
 import { stopClickFarmTask } from './click-farm'
-import { autoBackupCampaign } from './campaign-backups'
 
 export interface Campaign {
   id: number
@@ -40,11 +39,6 @@ export interface CreateCampaignInput {
   status?: string
   startDate?: string
   endDate?: string
-  // 🔧 新增：广告系列排期和定位字段
-  startDateTime?: string  // ISO 8601 格式
-  endDateTime?: string  // ISO 8601 格式
-  targetCountry?: string  // 国家代码
-  targetLanguage?: string  // 语言
 }
 
 /**
@@ -96,31 +90,11 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
     input.maxCpc || null,
     input.status || 'PAUSED',
     input.startDate || null,
-    input.endDate || null,
-    input.startDateTime || null,  // 🔧 新增
-    input.endDateTime || null,  // 🔧 新增
-    input.targetCountry || null,  // 🔧 新增
-    input.targetLanguage || null,  // 🔧 新增
+    input.endDate || null
   ])
 
   const insertedId = getInsertedId(result, db.type)
-  const campaign = (await findCampaignById(insertedId, input.userId))!
-
-  // 🔧 优化 (2026-04-20): 创建广告系列时自动备份
-  try {
-    await autoBackupCampaign({
-      userId: input.userId,
-      offerId: input.offerId,
-      campaignId: insertedId,
-      backupSource: 'autoads',
-    })
-    console.log(`[Campaign Created] Auto backed up campaign ${insertedId} for user ${input.userId}`)
-  } catch (error) {
-    console.error('[Campaign Created] Failed to auto backup campaign:', error)
-    // 备份失败不影响广告系列创建，只记录日志
-  }
-
-  return campaign
+  return (await findCampaignById(insertedId, input.userId))!
 }
 
 /**
