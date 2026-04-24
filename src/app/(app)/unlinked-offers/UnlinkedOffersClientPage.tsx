@@ -24,7 +24,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { Alert } from '@/components/ui/alert'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Package, Calendar, RotateCcw, Loader2, ExternalLink } from 'lucide-react'
 
@@ -49,15 +49,22 @@ export default function UnlinkedOffersClientPage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [customerId, setCustomerId] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
   
   // 批量创建对话框
   const [isBatchCreateOpen, setIsBatchCreateOpen] = useState(false)
-  const [batchCreating, setBatchCreating] = useState(false)
-  const [createToGoogle, setCreateToGoogle] = useState(true)
+  const [googleAdsAccounts, setGoogleAdsAccounts] = useState<Array<{ id: number; customer_id: string; account_name: string }>>([])
+  const [selectedAccountId, setSelectedAccountId] = useState('')
+  const [campaignName, setCampaignName] = useState('')
+  const [budgetAmount, setBudgetAmount] = useState(50)
+  const [budgetType, setBudgetType] = useState('DAILY')
+  const [creating, setCreating] = useState(false)
 
   useEffect(() => {
     fetchUnlinkedOffers()
-  }, [startDate, endDate, customerId])
+    fetchGoogleAdsAccounts()
+  }, [startDate, endDate, customerId, currentPage, pageSize])
 
   const fetchUnlinkedOffers = async () => {
     setLoading(true)
@@ -66,7 +73,8 @@ export default function UnlinkedOffersClientPage() {
       if (startDate) params.set('startDate', startDate)
       if (endDate) params.set('endDate', endDate)
       if (customerId) params.set('customerId', customerId)
-      params.set('limit', '100')
+      params.set('limit', pageSize.toString())
+      params.set('offset', ((currentPage - 1) * pageSize).toString())
 
       const response = await fetch(`/api/offers/unlinked?${params.toString()}`, {
         credentials: 'include',
@@ -85,17 +93,35 @@ export default function UnlinkedOffersClientPage() {
     }
   }
 
+  const fetchGoogleAdsAccounts = async () => {
+    try {
+      const response = await fetch('/api/google-ads-accounts', {
+        credentials: 'include',
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setGoogleAdsAccounts(data.accounts || [])
+      }
+    } catch (error) {
+      console.error('获取 Google Ads 账号失败:', error)
+    }
+  }
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedOfferIds(offers.map(o => o.id))
+      // 只选择当前页的 Offer
+      const currentIds = offers.map(o => o.id)
+      setSelectedOfferIds([...new Set([...selectedOfferIds, ...currentIds])])
     } else {
-      setSelectedOfferIds([])
+      // 取消选择当前页的 Offer
+      const currentIds = offers.map(o => o.id)
+      setSelectedOfferIds(selectedOfferIds.filter(id => !currentIds.includes(id)))
     }
   }
 
   const handleSelectOffer = (checked: boolean, offerId: number) => {
     if (checked) {
-      setSelectedOfferIds([...new Set([...selectedOfferIds, offerId])])
+      setSelectedOfferIds([...selectedOfferIds, offerId])
     } else {
       setSelectedOfferIds(selectedOfferIds.filter(id => id !== offerId))
     }
@@ -107,35 +133,43 @@ export default function UnlinkedOffersClientPage() {
       return
     }
 
-    setBatchCreating(true)
+    if (!selectedAccountId) {
+      toast.error('请选择 Google Ads 账号')
+      return
+    }
+
+    setCreating(true)
     try {
-      const response = await fetch('/api/campaign-backups/create-from-backup', {
+      const response = await fetch('/api/offers/batch-create-campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
           offerIds: selectedOfferIds,
-          createToGoogle,
+          googleAdsAccountId: parseInt(selectedAccountId),
+          campaignConfig: {
+            campaignName: campaignName || 'Rebuild_Campaign',
+            budgetAmount,
+            budgetType,
+            status: 'PAUSED',
+          },
         }),
       })
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || '批量创建失败')
+        throw new Error(error.error || '创建失败')
       }
 
       const result = await response.json()
       toast.success(result.message)
-      
-      // 刷新列表
-      fetchUnlinkedOffers()
-      setSelectedOfferIds([])
       setIsBatchCreateOpen(false)
+      setSelectedOfferIds([])
     } catch (error: any) {
-      console.error('批量创建失败:', error)
+      console.error('批量创建广告系列失败:', error)
       toast.error('批量创建失败', { description: error.message })
     } finally {
-      setBatchCreating(false)
+      setCreating(false)
     }
   }
 
@@ -160,16 +194,14 @@ export default function UnlinkedOffersClientPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {selectedOfferIds.length > 0 && (
-                <Button
-                  variant="default"
-                  onClick={() => setIsBatchCreateOpen(true)}
-                  disabled={batchCreating}
-                >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  批量创建广告系列 ({selectedOfferIds.length})
-                </Button>
-              )}
+              <Button
+                variant="default"
+                onClick={() => setIsBatchCreateOpen(true)}
+                disabled={selectedOfferIds.length === 0}
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                批量创建广告系列 ({selectedOfferIds.length})
+              </Button>
             </div>
           </div>
         </div>
@@ -211,7 +243,7 @@ export default function UnlinkedOffersClientPage() {
                     setStartDate('')
                     setEndDate('')
                     setCustomerId('')
-                    setSelectedOfferIds([])
+                    setCurrentPage(1)
                   }}
                 >
                   重置筛选
@@ -340,25 +372,60 @@ export default function UnlinkedOffersClientPage() {
         {total > 0 && (
           <div className="flex items-center justify-between mt-6">
             <div className="text-sm text-gray-600">
-              共 {total} 条记录
+              共 {total} 条记录，第 {currentPage} 页，共 {Math.ceil(total / pageSize)} 页
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {}}
-                disabled={true}
-              >
-                上一页
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {}}
-                disabled={true}
-              >
-                下一页
-              </Button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm">每页显示</Label>
+                <Select value={pageSize.toString()} onValueChange={(value) => {
+                  setPageSize(Number(value))
+                  setCurrentPage(1)
+                }}>
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10 条</SelectItem>
+                    <SelectItem value="20">20 条</SelectItem>
+                    <SelectItem value="50">50 条</SelectItem>
+                    <SelectItem value="100">100 条</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  首页
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  上一页
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage >= Math.ceil(total / pageSize)}
+                >
+                  下一页
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.ceil(total / pageSize))}
+                  disabled={currentPage >= Math.ceil(total / pageSize)}
+                >
+                  末页
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -375,66 +442,73 @@ export default function UnlinkedOffersClientPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <Alert className="bg-blue-50 border-blue-200">
-              <div className="text-sm text-blue-900">
-                <strong>📋 配置说明：</strong>
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>自动选择每个 Offer 的第一个广告创意</li>
-                  <li>使用备份中的广告系列配置</li>
-                  <li>默认预算：50 元/天</li>
-                  <li>初始状态：暂停</li>
-                </ul>
-              </div>
-            </Alert>
-
-            <div className="flex items-center space-x-3">
-              <Checkbox
-                id="createToGoogle"
-                checked={createToGoogle}
-                onCheckedChange={(checked) => setCreateToGoogle(checked as boolean)}
-                className="data-[state=checked]:bg-blue-600"
-              />
-              <Label htmlFor="createToGoogle" className="font-medium cursor-pointer flex-1">
-                <div className="flex items-center gap-2">
-                  <span>🚀 创建到 Google Ads</span>
-                  <span className="text-xs text-gray-500">
-                    （使用 /api/campaigns/publish 逻辑）
-                  </span>
-                </div>
-              </Label>
+            <div>
+              <Label>Google Ads 账号 *</Label>
+              <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="请选择 Google Ads 账号" />
+                </SelectTrigger>
+                <SelectContent>
+                  {googleAdsAccounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id.toString()}>
+                      {account.account_name || account.customer_id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {!createToGoogle && (
-              <Alert>
-                <div className="text-sm">
-                  ⚠️ 只在数据库中创建广告系列，不同步到 Google Ads
-                </div>
-              </Alert>
-            )}
+            <div>
+              <Label>广告系列名称前缀</Label>
+              <Input
+                placeholder="Rebuild_Campaign"
+                value={campaignName}
+                onChange={(e) => setCampaignName(e.target.value)}
+              />
+            </div>
 
-            {selectedOfferIds.length > 10 && (
-              <Alert variant="destructive">
-                <div className="text-sm">
-                  ⚠️ 选中项目较多（{selectedOfferIds.length}个），建议分批操作（每批 10 个以内）
-                </div>
-              </Alert>
-            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>每日预算</Label>
+                <Input
+                  type="number"
+                  value={budgetAmount}
+                  onChange={(e) => setBudgetAmount(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label>预算类型</Label>
+                <Select value={budgetType} onValueChange={setBudgetType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DAILY">每日预算</SelectItem>
+                    <SelectItem value="TOTAL">总预算</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900">
+              <strong>说明：</strong>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>新创建的广告系列状态为"暂停"</li>
+                <li>跳过已有活跃广告系列的 Offer</li>
+                <li>创建后可在广告系列页面查看和管理</li>
+              </ul>
+            </div>
           </div>
 
-          <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setIsBatchCreateOpen(false)} 
-              disabled={batchCreating}
-            >
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBatchCreateOpen(false)} disabled={creating}>
               取消
             </Button>
-            <Button 
-              onClick={handleBatchCreate} 
-              disabled={batchCreating || selectedOfferIds.length === 0}
-              className="bg-blue-600 hover:bg-blue-700"
+            <Button
+              onClick={handleBatchCreate}
+              disabled={creating || !selectedAccountId || selectedOfferIds.length === 0}
             >
-              {batchCreating ? (
+              {creating ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   创建中...
