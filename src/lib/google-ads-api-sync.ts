@@ -243,7 +243,7 @@ async function syncAdsFromApi(
           ad_group_ad.ad.id,
           ad_group_ad.ad.type,
           ad_group_ad.status,
-          ad_group.id as ad_group_id,
+          ad_group.id,
           ad_group_ad.ad.responsive_search_ad.headlines,
           ad_group_ad.ad.responsive_search_ad.descriptions,
           ad_group_ad.ad.responsive_search_ad.path1,
