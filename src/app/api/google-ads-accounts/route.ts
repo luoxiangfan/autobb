@@ -21,9 +21,10 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const activeOnly = searchParams.get('activeOnly') === 'true'
+    const manager = searchParams.get('manager') === 'true'
 
     const accounts = activeOnly
-      ? await findActiveGoogleAdsAccounts(parseInt(userId, 10))
+      ? await findActiveGoogleAdsAccounts(parseInt(userId, 10), manager)
       : await findGoogleAdsAccountsByUserId(parseInt(userId, 10))
 
     return NextResponse.json({

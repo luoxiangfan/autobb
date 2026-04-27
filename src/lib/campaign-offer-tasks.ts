@@ -67,7 +67,7 @@ export async function pauseOfferTasks(
     await db.exec(`
       UPDATE url_swap_tasks
       SET status = 'disabled', 
-          updated_at = ${pausedCondition}
+          disabled_at = ${pausedCondition}
       WHERE id = ? AND user_id = ?
     `, [urlSwapTask.id, userId])
     

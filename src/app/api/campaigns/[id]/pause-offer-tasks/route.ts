@@ -42,10 +42,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     // 2. 暂停补点击任务
     let clickFarmTaskPaused = false
-    const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
     const clickFarmTask = await db.queryOne<any>(`
       SELECT id, status FROM click_farm_tasks
-      WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
+      WHERE offer_id = ? AND user_id = ? AND is_deleted = 0
       ORDER BY created_at DESC
       LIMIT 1
     `, [offerId, numericUserId])
@@ -65,7 +64,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     let urlSwapTaskDisabled = false
     const urlSwapTask = await db.queryOne<any>(`
       SELECT id, status FROM url_swap_tasks
-      WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
+      WHERE offer_id = ? AND user_id = ? AND is_deleted = 0
       ORDER BY created_at DESC
       LIMIT 1
     `, [offerId, numericUserId])
@@ -74,7 +73,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       const isDeletedCondition = db.type === 'postgres' ? 'NOW()' : 'datetime("now")'
       await db.exec(`
         UPDATE url_swap_tasks
-        SET status = 'disabled', updated_at = ${isDeletedCondition}
+        SET status = 'disabled', disabled_at = ${isDeletedCondition}
         WHERE id = ? AND user_id = ?
       `, [urlSwapTask.id, numericUserId])
       urlSwapTaskDisabled = true

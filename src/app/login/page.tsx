@@ -165,224 +165,135 @@ function LoginForm() {
   return (
     <div className="marketing-shell min-h-screen bg-slate-50 text-slate-900 selection:bg-blue-100 selection:text-slate-900">
       <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-200/80 bg-white/92 backdrop-blur">
-        <div className="mx-auto flex h-[4.5rem] w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2" aria-label="AutoAds 首页">
-            <Image src="/logo.svg" alt="AutoAds" width={124} height={34} className="h-8 w-auto" priority />
-          </Link>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <ConsultCustomerDialogTrigger className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-orange-600/30 transition hover:bg-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 sm:text-base">
-              预约咨询
-            </ConsultCustomerDialogTrigger>
-            <Link
-              href="/"
-              className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:border-blue-400 hover:text-blue-700 sm:text-base"
-            >
-              返回首页
-            </Link>
-          </div>
-        </div>
       </header>
 
-      <main className="overflow-x-clip pb-10 pt-[4.5rem]">
-        <section className="relative border-b border-slate-200/80 bg-[radial-gradient(circle_at_15%_0%,rgba(37,99,235,0.16),transparent_42%),radial-gradient(circle_at_85%_0%,rgba(249,115,22,0.14),transparent_38%),linear-gradient(to_bottom,#ffffff,#f8fafc)]">
-          <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.05fr,0.95fr] lg:gap-14 lg:px-8 lg:py-20">
-            <div className="max-w-2xl">
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-semibold text-blue-700">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                AutoAds 账号入口
+      <main className="overflow-x-clip">
+        <section>
+          <div className="mx-auto flex justify-center items-center w-auto max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.05fr,0.95fr] lg:gap-14 lg:px-8 lg:py-20">
+            <div className="rounded-[28px] md:w-1/2 max-w-full border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/10 sm:p-8">
+              <div className="mb-6 space-y-2">
+                <h2 className="font-display text-3xl font-bold tracking-tight text-slate-950">欢迎回来</h2>
+                <p className="text-base text-slate-600">请输入账号信息，登录 AutoAds 控制台。</p>
               </div>
 
-              <h1 className="font-display text-4xl font-bold leading-tight tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-                <span className="block">账号登录</span>
-                <span className="block">继续你的投放流程</span>
-              </h1>
-
-              <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-700">
-                先咨询开通试用账号，再登录使用系统。已有账号可直接进入控制台，继续管理广告投放与优化。
-              </p>
-
-              <div className="mt-7 grid gap-3 sm:grid-cols-2">
-                <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="inline-flex items-center gap-2 text-sm font-medium text-slate-600">
-                    <Clock3 className="h-4 w-4 text-blue-700" />
-                    上线节奏
-                  </p>
-                  <p className="mt-2 text-2xl font-bold text-slate-950">10分钟</p>
-                  <p className="mt-1 text-sm text-slate-600">从创意到首轮发布</p>
-                </article>
-                <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="inline-flex items-center gap-2 text-sm font-medium text-slate-600">
-                    <Target className="h-4 w-4 text-blue-700" />
-                    执行路径
-                  </p>
-                  <p className="mt-2 text-2xl font-bold text-slate-950">4步跑通</p>
-                  <p className="mt-1 text-sm text-slate-600">粘贴链接 → AI生成 → 一键发布</p>
-                </article>
-              </div>
-
-              <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5">
-                <p className="text-sm font-semibold text-blue-900">登录后你可直接继续这些动作：</p>
-                <div className="mt-3 grid gap-2 text-sm text-blue-900 sm:grid-cols-2">
-                  {[
-                    '继续未完成的广告创建流程',
-                    '查看投放表现与ROI变化',
-                    '管理关键词与创意迭代',
-                    '同步链接与账号状态',
-                  ].map((item) => (
-                    <p key={item} className="inline-flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" />
-                      <span>{item}</span>
-                    </p>
-                  ))}
+              {error && (
+                <div className="mb-4 flex items-center gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600 animate-in fade-in slide-in-from-top-2">
+                  <div className="rounded-full bg-red-100 p-1">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                  {error}
                 </div>
-              </div>
-            </div>
+              )}
 
-            <div className="relative">
-              <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/10 sm:p-8">
-                <div className="mb-6 space-y-2">
-                  <h2 className="font-display text-3xl font-bold tracking-tight text-slate-950">欢迎回来</h2>
-                  <p className="text-base text-slate-600">请输入账号信息，登录 AutoAds 控制台。</p>
+              {securityWarning && (
+                <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 animate-in fade-in slide-in-from-top-2">
+                  <div className="mt-0.5 rounded-full bg-amber-100 p-1">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="mb-1 font-medium">安全提醒</div>
+                    <div className="text-amber-700">{securityWarning}</div>
+                  </div>
+                </div>
+              )}
+
+              <form className="space-y-6" onSubmit={handleLogin}>
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="username" className="text-sm font-medium text-slate-800">
+                      用户名 / 邮箱
+                    </Label>
+                    <Input
+                      id="username"
+                      name="username"
+                      type="text"
+                      autoComplete="username"
+                      required
+                      placeholder="name@company.com"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="h-12 rounded-xl border-slate-300 bg-white px-4 text-base"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password" className="text-sm font-medium text-slate-800">
+                        密码
+                      </Label>
+                      <Link href="/contact" className="text-sm font-medium text-blue-700 hover:text-blue-600">
+                        忘记密码？
+                      </Link>
+                    </div>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="h-12 rounded-xl border-slate-300 bg-white px-4 text-base"
+                    />
+                  </div>
                 </div>
 
-                {error && (
-                  <div className="mb-4 flex items-center gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600 animate-in fade-in slide-in-from-top-2">
-                    <div className="rounded-full bg-red-100 p-1">
-                      <ShieldCheck className="h-4 w-4" />
-                    </div>
-                    {error}
-                  </div>
-                )}
-
-                {securityWarning && (
-                  <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 animate-in fade-in slide-in-from-top-2">
-                    <div className="mt-0.5 rounded-full bg-amber-100 p-1">
-                      <ShieldCheck className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="mb-1 font-medium">安全提醒</div>
-                      <div className="text-amber-700">{securityWarning}</div>
-                    </div>
-                  </div>
-                )}
-
-                <form className="space-y-6" onSubmit={handleLogin}>
-                  <div className="space-y-5">
-                    <div className="space-y-2">
-                      <Label htmlFor="username" className="text-sm font-medium text-slate-800">
-                        用户名 / 邮箱
-                      </Label>
-                      <Input
-                        id="username"
-                        name="username"
-                        type="text"
-                        autoComplete="username"
-                        required
-                        placeholder="name@company.com"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        className="h-12 rounded-xl border-slate-300 bg-white px-4 text-base"
+                {showCaptcha && (
+                  <div className="space-y-2">
+                    <Label htmlFor="turnstile-container" className="text-sm font-medium text-slate-800">
+                      安全验证
+                    </Label>
+                    <div className="relative">
+                      <div
+                        id="turnstile-container"
+                        className="flex min-h-[65px] items-center justify-center rounded-xl border border-slate-200 bg-slate-50"
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="password" className="text-sm font-medium text-slate-800">
-                          密码
-                        </Label>
-                        <Link href="/contact" className="text-sm font-medium text-blue-700 hover:text-blue-600">
-                          忘记密码？
-                        </Link>
-                      </div>
-                      <Input
-                        id="password"
-                        name="password"
-                        type="password"
-                        autoComplete="current-password"
-                        required
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="h-12 rounded-xl border-slate-300 bg-white px-4 text-base"
-                      />
-                    </div>
-                  </div>
-
-                  {showCaptcha && (
-                    <div className="space-y-2">
-                      <Label htmlFor="turnstile-container" className="text-sm font-medium text-slate-800">
-                        安全验证
-                      </Label>
-                      <div className="relative">
-                        <div
-                          id="turnstile-container"
-                          className="flex min-h-[65px] items-center justify-center rounded-xl border border-slate-200 bg-slate-50"
-                        />
-                        {captchaLoading && (
-                          <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/60 backdrop-blur-sm">
-                            <div className="flex flex-col items-center gap-2">
-                              <Loader2 className="h-5 w-5 animate-spin text-slate-600" />
-                              <span className="text-xs text-slate-600">加载验证码...</span>
-                            </div>
+                      {captchaLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/60 backdrop-blur-sm">
+                          <div className="flex flex-col items-center gap-2">
+                            <Loader2 className="h-5 w-5 animate-spin text-slate-600" />
+                            <span className="text-xs text-slate-600">加载验证码...</span>
                           </div>
-                        )}
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <p className="flex-1 text-xs text-slate-500">为了账户安全，请完成验证后继续登录</p>
-                        {!captchaLoading && turnstileLoaded.current && !captchaToken && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (turnstileWidgetId.current && window.turnstile) {
-                                window.turnstile.reset(turnstileWidgetId.current)
-                              }
-                            }}
-                            className="shrink-0 whitespace-nowrap text-xs text-blue-700 hover:text-blue-600"
-                          >
-                            重新加载
-                          </button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
+                    <div className="flex items-start gap-2">
+                      <p className="flex-1 text-xs text-slate-500">为了账户安全，请完成验证后继续登录</p>
+                      {!captchaLoading && turnstileLoaded.current && !captchaToken && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (turnstileWidgetId.current && window.turnstile) {
+                              window.turnstile.reset(turnstileWidgetId.current)
+                            }
+                          }}
+                          className="shrink-0 whitespace-nowrap text-xs text-blue-700 hover:text-blue-600"
+                        >
+                          重新加载
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={loading || captchaLoading || (showCaptcha && !captchaToken)}
+                  className="h-12 w-full rounded-full bg-blue-700 text-base font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      登录中...
+                    </>
+                  ) : (
+                    <>
+                      账号登录
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </>
                   )}
-
-                  <Button
-                    type="submit"
-                    disabled={loading || captchaLoading || (showCaptcha && !captchaToken)}
-                    className="h-12 w-full rounded-full bg-blue-700 text-base font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        登录中...
-                      </>
-                    ) : (
-                      <>
-                        账号登录
-                        <ArrowRight className="ml-2 h-5 w-5" />
-                      </>
-                    )}
-                  </Button>
-                </form>
-
-                <div className="mt-6 rounded-2xl border border-orange-200 bg-orange-50 p-4">
-                  <p className="text-sm text-orange-900">还没有账号？试用账号需先咨询开通。</p>
-                  <ConsultCustomerDialogTrigger className="mt-3 inline-flex items-center gap-2 rounded-full bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-500">
-                    预约咨询开通
-                    <MessageSquare className="h-4 w-4" />
-                  </ConsultCustomerDialogTrigger>
-                </div>
-              </div>
-
-              <p className="mt-4 text-center text-sm text-slate-500">
-                登录即表示你同意 AutoAds 的
-                <Link href="/terms" className="mx-1 text-slate-700 hover:text-blue-700">
-                  服务条款
-                </Link>
-                与
-                <Link href="/privacy" className="mx-1 text-slate-700 hover:text-blue-700">
-                  隐私政策
-                </Link>
-              </p>
+                </Button>
+              </form>
             </div>
           </div>
         </section>

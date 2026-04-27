@@ -10,6 +10,8 @@
  */
 
 import { getDatabase } from './db'
+import { autoBackupCampaign } from './campaign-backups'
+import { syncAdComponentsFromGoogleAds, updateCampaignConfig } from './google-ads-api-sync'
 import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB, trackOAuthApiCall } from './google-ads-api'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { getInsertedId, nowFunc } from './db-helpers'
@@ -28,6 +30,17 @@ export interface GoogleAdsCampaign {
   customer_id: string
   account_name?: string
   cpc_bid_ceiling_micros?: number
+  final_url_suffix?: string
+  campaign_config?: {
+    biddingStrategy?: string
+    marketingObjective?: string
+    finalUrlSuffix?: string
+    [key: string]: any
+  }
+  start_date_time?: string
+  end_date_time?: string
+  target_country?: string
+  target_language?: string
 }
 
 /**
@@ -80,26 +93,52 @@ export async function syncCampaignsFromGoogleAds(
     //   return result
     // }
 
-    // 2. 获取该用户的所有活跃 Google Ads 账户（数组）
+    // 2. 🔧 获取该用户的所有活跃 Google Ads 账户（支持 MCC 过滤）
     const isActiveCondition = db.type === 'postgres' ? 'is_active = TRUE' : 'is_active = 1'
     const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = FALSE' : 'is_manager_account = 0'
     const isDeletedCondition = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
-    let customerIds: string = ','
-    if (userId == 2) {
-      customerIds = `'3647422686','3530335491'`
+    
+    // 🔧 获取用户分配的 MCC 账号列表
+    let mccCustomerIds: string[] = []
+    const mccAssignments = await db.query(`
+      SELECT mcc_customer_id FROM user_mcc_assignments
+      WHERE user_id = ?
+    `, [userId]) as Array<{ mcc_customer_id: string }>
+    
+    if (mccAssignments.length > 0) {
+      mccCustomerIds = mccAssignments.map(a => a.mcc_customer_id)
+      console.log(`[GoogleAds Sync] User ${userId} has ${mccCustomerIds.length} assigned MCCs: ${mccCustomerIds.join(', ')}`)
     }
-    if (userId == 3) {
-      customerIds = `'3087435596','8642496427','8623761154'`
+    
+    // 🔧 构建 customer_id 过滤条件
+    let customerIdsFilter = ''
+    if (mccCustomerIds.length > 0) {
+      // 如果分配了 MCC，只获取这些 MCC 下的 customer_id
+      // 需要查询 google_ads_accounts 表中 parent_customer_id 在 MCC 列表中的账户
+      const mccPlaceholders = mccCustomerIds.map(() => '?').join(',')
+      customerIdsFilter = `AND parent_customer_id IN (${mccPlaceholders})`
+    } else {
+      // 如果没有分配 MCC，使用硬编码的 customerIds（向后兼容）
+      let customerIds: string = ','
+      if (userId == 2) {
+        customerIds = `'3647422686','3530335491'`
+      }
+      if (userId == 3) {
+        customerIds = `'3087435596','8642496427','8623761154'`
+      }
+      customerIdsFilter = `AND customer_id IN (${customerIds})`
     }
+    
     const accounts = await db.query(
-      `SELECT id, customer_id, account_name, refresh_token, auth_type, service_account_id FROM google_ads_accounts
-       WHERE user_id = ? AND ${isActiveCondition} AND ${isManagerCondition} AND ${isDeletedCondition} AND status = 'ENABLED' AND customer_id IS NOT NULL AND customer_id != '' AND customer_id in (${customerIds})
+      `SELECT id, customer_id, account_name, parent_customer_id, refresh_token, auth_type, service_account_id FROM google_ads_accounts
+       WHERE user_id = ? AND ${isActiveCondition} AND ${isManagerCondition} AND ${isDeletedCondition} AND status = 'ENABLED' AND customer_id IS NOT NULL AND customer_id != '' ${customerIdsFilter}
        ORDER BY id`,
-      [userId]
+      [userId, ...(mccCustomerIds.length > 0 ? mccCustomerIds : [])]
     ) as Array<{
       id: number
       customer_id: string
       account_name: string | null
+      parent_customer_id: string | null
       refresh_token: string | null
       auth_type: string | null
       service_account_id: string | null
@@ -161,6 +200,67 @@ export async function syncCampaignsFromGoogleAds(
             }
 
             console.log(`[GoogleAds Sync] Synced campaign: ${campaign.campaign_name} (${campaign.campaign_id}), offer: ${offerResult.created ? 'created' : 'linked'} (offer_id=${offerResult.offerId})`)
+
+            // 🔧 备份广告系列（包含 campaign_config）
+            try {
+              await autoBackupCampaign({
+                userId,
+                offerId: offerResult.offerId,
+                campaignId: campaignId,
+                backupSource: 'google_ads',
+              })
+              console.log(`[GoogleAds Sync] Auto backed up campaign ${campaignId}`)
+            } catch (error) {
+              console.error('[GoogleAds Sync] Failed to auto backup campaign:', error)
+              // 备份失败不影响同步，只记录日志
+            }
+
+            // 🔧 通过 Google Ads API 同步广告组件并保存为 campaign_config
+            try {
+              const apiSyncResult = await syncAdComponentsFromGoogleAds(
+                userId,
+                account.customer_id,
+                campaign.campaign_id,
+                account.service_account_id!,
+                {
+                  finalUrlSuffix: campaign.final_url_suffix,
+                  campaignName: campaign.campaign_name,
+                  budgetAmount: campaign.budget_amount,
+                  budgetType: campaign.budget_type,
+                  marketingObjective: 'WEB_TRAFFIC',
+                  biddingStrategy: 'MAXIMIZE_CLICKS',
+                  targetCountry: 'US',
+                  targetLanguage: 'English'
+                }
+              )
+              
+              if (apiSyncResult.campaignConfig && Object.keys(apiSyncResult.campaignConfig).length > 0) {
+                // 🔧 更新 campaign_config（只更新从 Google 同步的广告系列）
+                const updated = await updateCampaignConfig(campaignId, apiSyncResult.campaignConfig)
+                
+                if (updated) {
+                  // 同时更新备份中的 campaign_config
+                  const db = await getDatabase()
+                  await db.exec(`
+                    UPDATE campaign_backups
+                    SET campaign_config = ?,
+                        updated_at = ?
+                    WHERE offer_id = ? AND user_id = ?
+                    ORDER BY created_at DESC LIMIT 1
+                  `, [
+                    JSON.stringify(apiSyncResult.campaignConfig),
+                    new Date(),
+                    offerResult.offerId,
+                    userId
+                  ])
+                  
+                  console.log(`[GoogleAds Sync] Updated campaign_config from API`)
+                }
+              }
+            } catch (error) {
+              console.error('[GoogleAds Sync] Failed to sync from Google Ads API:', error)
+              // API 同步失败不影响主流程，只记录日志
+            }
           } catch (error: any) {
             result.errors.push({
               campaignId: campaign.campaign_id,
@@ -232,7 +332,8 @@ async function fetchCampaignsFromGoogleAds(params: {
       campaign_budget.amount_micros,
       campaign.target_spend.cpc_bid_ceiling_micros,
       campaign_budget.type,
-      campaign.status
+      campaign.status,
+      campaign.final_url_suffix
     FROM campaign
     WHERE campaign.status != 'REMOVED'
   `
@@ -271,6 +372,7 @@ async function fetchCampaignsFromGoogleAds(params: {
       budget_type: (row.campaign_budget?.type || 'DAILY') as 'DAILY' | 'TOTAL',
       status: (row.campaign?.status || 'PAUSED') as 'ENABLED' | 'PAUSED' | 'REMOVED',
       customer_id: customerId,
+      final_url_suffix: row.final_url_suffix
       // account_name: row.customer_client?.descriptive_name,
     }))
   } catch (error: any) {
@@ -323,7 +425,7 @@ async function saveCampaignToDatabase(params: {
       ]
     )
     console.log(`[GoogleAds Sync] Updated Campaign ${campaign.campaign_id} for User ${userId}`)
-    return existing.id
+    return existing.campaign_id
   } else {
     console.log(`[GoogleAds Sync] Creating Campaign ${campaign.campaign_id} for User ${userId}`)
     // 创建新广告系列
@@ -362,7 +464,7 @@ async function saveCampaignToDatabase(params: {
       ]
     )
     console.log(`[GoogleAds Sync] Created Campaign ${campaign.campaign_id} for User ${userId}`)
-    return getInsertedId(result, db.type)
+    return Number(campaign.campaign_id + '')
   }
 }
 

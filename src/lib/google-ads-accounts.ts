@@ -132,12 +132,25 @@ export async function findGoogleAdsAccountsByUserId(userId: number): Promise<Goo
  * 注意：这会返回所有is_active=1的账号，包括DISABLED状态的
  * 如果需要可用于API调用的账号，请使用 findEnabledGoogleAdsAccounts
  */
-export async function findActiveGoogleAdsAccounts(userId: number): Promise<GoogleAdsAccount[]> {
+export async function findActiveGoogleAdsAccounts(userId: number, manager?: boolean): Promise<GoogleAdsAccount[]> {
   const db = await getDatabase()
 
   // 🔧 PostgreSQL兼容性修复: is_active在PostgreSQL中是BOOLEAN类型
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
   const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
+  const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = false' : 'is_manager_account = 0'
+  let sqlStr = `
+    SELECT * FROM google_ads_accounts
+    WHERE user_id = ? AND ${isActiveCondition} AND ${isDeletedCheck}
+    ORDER BY created_at DESC
+  `
+  if (manager) {
+    sqlStr = `
+      SELECT * FROM google_ads_accounts
+      WHERE user_id = ? AND ${isActiveCondition} AND ${isDeletedCheck} AND ${isManagerCondition}
+      ORDER BY created_at DESC
+    `
+  }
 
   const rows = await db.query(`
     SELECT * FROM google_ads_accounts
@@ -290,13 +303,62 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
 
     console.log(`[Delete Account] Soft deleted ${campaignResult.changes} campaigns for customer_id ${customerId}`)
 
-    // 3. 获取所有关联的 offer_id，用于暂停相关任务
+    // 3. 获取所有关联的 offer_id，用于暂停相关任务和记录解除关联
     const offerIds = await db.query(`
       SELECT DISTINCT offer_id FROM campaigns
       WHERE google_ads_account_id = ? AND user_id = ?
     `, [id, userId]) as { offer_id: number }[]
 
-    // 4. 暂停关联 Offer 的补点击任务和换链接任务
+    // 4. 🔧 记录 Offer 解除关联时间
+    const now = new Date().toISOString()
+    if (offerIds.length > 0) {
+      for (const { offer_id } of offerIds) {
+        try {
+          // 获取当前 unlinked_from_customer_ids
+          const offer = await db.queryOne(`
+            SELECT unlinked_from_customer_ids FROM offers
+            WHERE id = ?
+          `, [offer_id]) as { unlinked_from_customer_ids: string | null } | undefined
+
+          if (offer) {
+            // 解析现有的 customer_ids 数组
+            let unlinkedCustomerIds: string[] = []
+            if (offer.unlinked_from_customer_ids) {
+              try {
+                unlinkedCustomerIds = JSON.parse(offer.unlinked_from_customer_ids)
+                if (!Array.isArray(unlinkedCustomerIds)) {
+                  unlinkedCustomerIds = []
+                }
+              } catch {
+                unlinkedCustomerIds = []
+              }
+            }
+
+            // 添加新的 customer_id（如果不存在）
+            if (!unlinkedCustomerIds.includes(customerId)) {
+              unlinkedCustomerIds.push(customerId)
+            }
+
+            // 更新 offers 表
+            await db.exec(`
+              UPDATE offers
+              SET unlinked_from_customer_ids = ?,
+                  last_unlinked_at = ?
+              WHERE id = ?
+            `, [
+              JSON.stringify(unlinkedCustomerIds),
+              now,
+              offer_id
+            ])
+          }
+        } catch (error) {
+          console.error(`[Delete Account] Failed to record unlinked time for offer_id ${offer_id}:`, error)
+        }
+      }
+      console.log(`[Delete Account] Recorded unlinked time for ${offerIds.length} offers`)
+    }
+
+    // 5. 暂停关联 Offer 的补点击任务和换链接任务
     let pausedClickFarmCount = 0
     let pausedUrlSwapCount = 0
 
@@ -318,7 +380,7 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
       }
     }
 
-    // 5. 🔧 标记该 customer_id 为已删除（通过设置 is_deleted 和 is_active=false）
+    // 6. 🔧 标记该 customer_id 为已删除（通过设置 is_deleted 和 is_active=false）
     const accountResult = await db.exec(`
       UPDATE google_ads_accounts
       SET is_deleted = ${db.type === 'sqlite' ? '1' : 'TRUE'},
