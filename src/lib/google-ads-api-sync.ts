@@ -39,13 +39,13 @@ export interface GoogleAdsAd {
     descriptions: Array<{ text: string }>
   }
   final_urls?: string[]
-  callouts?: Array<{ text: string }>
+  final_url?: string
+  final_url_suffix?: string
+  callouts?: string[]
   sitelinks?: Array<{
-    sitelink_asset?: {
-      text?: string
-      url?: string
-      description?: string
-    }
+    text?: string
+    url?: string
+    description?: string
   }>
 }
 
@@ -144,17 +144,26 @@ export async function syncAdComponentsFromGoogleAds(
     // 6. 🔧 通过 campaign_criterion 获取定位信息（国家、语言）
     const targetingInfo = await syncTargetingFromApi(userId, customerId, campaignId, serviceAccountId)
 
-    // 7. 构建 campaign_config
+    // 7. 🔧 从广告系列层级获取 callouts 和 sitelinks
+    const campaignAssets = await syncCampaignAssetsFromApi(
+      userId,
+      customerId,
+      campaignId,
+      serviceAccountId
+    )
+    
+    // 8. 构建 campaign_config
     result.campaignConfig = buildCampaignConfig(
       adGroups, 
       ads, 
       keywords, 
       negativeKeywords,
+      campaignAssets,  // 🔧 传递广告系列层级的扩展资源
       {
         ...campaignBasicInfo,
         targetCountry: targetingInfo.targetCountry,
         targetLanguage: targetingInfo.targetLanguage,
-      }
+      },
     )
 
     console.log(`[Google Ads API Sync] Completed for campaign ${campaignId}:`, {
@@ -237,9 +246,10 @@ async function syncAdsFromApi(
           ad_group.id as ad_group_id,
           ad_group_ad.ad.responsive_search_ad.headlines,
           ad_group_ad.ad.responsive_search_ad.descriptions,
+          ad_group_ad.ad.responsive_search_ad.path1,
+          ad_group_ad.ad.responsive_search_ad.path2,
           ad_group_ad.ad.final_urls,
-          ad_group_ad.ad.callouts,
-          ad_group_ad.ad.sitelinks
+          ad_group_ad.ad.final_url_suffix
         FROM ad_group_ad
         WHERE ad_group.id = ${adGroup.ad_group_id}
       `
@@ -259,8 +269,8 @@ async function syncAdsFromApi(
           status: row.ad_group_ad?.status || 'ENABLED',
           responsive_search_ad: row.ad_group_ad?.ad?.responsive_search_ad,
           final_urls: row.ad_group_ad?.ad?.final_urls,
-          callouts: row.ad_group_ad?.ad?.callouts,
-          sitelinks: row.ad_group_ad?.ad?.sitelinks,
+          final_url_suffix: row.ad_group_ad?.ad?.final_url_suffix,
+          final_url: (row.ad_group_ad?.ad?.final_urls ?? [])[0],
         })
       }
     } catch (error: any) {
@@ -469,6 +479,89 @@ async function syncTargetingFromApi(
   return targetingInfo
 }
 
+/**
+ * 🔧 从 Google Ads API 同步广告系列层级的扩展资源（callouts 和 sitelinks）
+ */
+async function syncCampaignAssetsFromApi(
+  userId: number,
+  customerId: string,
+  campaignId: string,
+  serviceAccountId?: string
+): Promise<{
+  final_url?: string
+  callouts: string[]
+  sitelinks: Array<{
+    text: string
+    url?: string
+    description?: string
+  }>
+}> {
+  const campaignAssets: {
+    final_url?: string
+    callouts: string[]
+    sitelinks: Array<{
+      text: string
+      url?: string
+      description?: string
+    }>
+  } = {
+    callouts: [],
+    sitelinks: [],
+  }
+
+  try {
+    // 🔧 查询广告系列层级的 callout 和 sitelink 扩展
+    const query = `
+      SELECT 
+        campaign.id,
+        campaign.name,
+        assets.callout_asset,
+        assets.sitelink_asset
+      FROM campaign
+      LEFT JOIN campaign_asset ON campaign.id = campaign_asset.campaign
+      LEFT JOIN asset ON campaign_asset.asset = asset.id
+      WHERE campaign.id = ${campaignId}
+        AND campaign_asset.status = 'ENABLED'
+        AND (
+          asset.type = 'CALLOUT'
+          OR asset.type = 'SITELINK'
+        )
+    `
+
+    const rows = await executeGAQLQueryPython({
+      userId,
+      customerId,
+      query: query,
+      serviceAccountId
+    })
+
+    // 遍历结果，提取 callouts 和 sitelinks
+    for (const row of (rows?.results || [])) {
+      // 提取 callouts
+      if (row.asset?.callout_asset) {
+        campaignAssets.callouts.push(String(row.asset.callout_asset?.callout_text || ''))
+      }
+      if (row?.asset?.type === 'SITELINK') {
+        campaignAssets.final_url = row.asset.final_urls[0] || undefined
+      }
+      // 提取 sitelinks
+      if (row.asset?.sitelink_asset) {
+        campaignAssets.sitelinks.push({
+          text: String(row.asset.sitelink_asset?.link_text || ''),
+          url: String(row.asset.final_urls?.[0] || ''),
+          description: String(row.asset.sitelink_asset.description1 || row.asset.sitelink_asset.description2 || ''),
+        })
+      }
+    }
+
+    console.log(`[Sync Campaign Assets] Found ${campaignAssets.callouts.length} callouts and ${campaignAssets.sitelinks.length} sitelinks for campaign ${campaignId}`)
+  } catch (error: any) {
+    console.error('[Sync Campaign Assets] Error:', error)
+  }
+
+  return campaignAssets
+}
+
 export const LanguageCodeMap = {
     'en': 1000,      // English
     'zh': 1017,      // Chinese (Simplified)
@@ -638,6 +731,15 @@ function buildCampaignConfig(
   ads: GoogleAdsAd[],
   keywords: GoogleAdsKeyword[],
   negativeKeywords: GoogleAdsNegativeKeyword[],
+  campaignAssets: {
+    final_url?: string
+    callouts: string[]
+    sitelinks: Array<{
+      text: string
+      url?: string
+      description?: string
+    }>
+  },
   campaignBasicInfo?: {
     campaignName?: string
     budgetAmount?: number
@@ -712,20 +814,41 @@ function buildCampaignConfig(
     }
     
     config.finalUrls = firstAd.final_urls || []
+    config.finalUrl = firstAd.final_url || ''
+    config.finalUrlSuffix = firstAd.final_url_suffix || ''
+    config.callouts = campaignAssets.callouts
+    config.sitelinks = campaignAssets.sitelinks
+    config.finalUrls = [campaignAssets.final_url]
+    // 🔧 处理 callouts 和 sitelinks（广告系列层级配置）
+    // callouts 的 asset.type 是 CALLOUT
+    // sitelinks 的 asset.type 是 SITELINK，url 为 asset.final_urls[0]
+    // if (firstAd.callouts) {
+    //   config.calloutAssets = firstAd.callouts.map((c: any) => ({
+    //     type: 'CALLOUT',
+    //     text: c.text || '',
+    //   }))
+    //   // 同时保留 callouts 数组用于兼容
+    //   config.callouts = firstAd.callouts.map((c: any) => c.text)
+    // }
     
-    if (firstAd.callouts) {
-      config.callouts = firstAd.callouts.map((c: any) => c.text)
-    }
-    
-    if (firstAd.sitelinks) {
-      config.sitelinks = firstAd.sitelinks
-        .filter((s: any) => s.sitelink_asset)
-        .map((s: any) => ({
-          text: s.sitelink_asset?.text || '',
-          url: s.sitelink_asset?.url || '',
-          description: s.sitelink_asset?.description || '',
-        }))
-    }
+    // if (firstAd.sitelinks) {
+    //   config.sitelinkAssets = firstAd.sitelinks
+    //     .filter((s: any) => s.sitelink_asset)
+    //     .map((s: any) => ({
+    //       type: 'SITELINK',
+    //       text: s.sitelink_asset?.text || '',
+    //       final_urls: [s.sitelink_asset?.final_urls?.[0] || s.sitelink_asset?.url || ''],
+    //       description: s.sitelink_asset?.description || '',
+    //     }))
+    //   // 同时保留 sitelinks 数组用于兼容
+    //   config.sitelinks = firstAd.sitelinks
+    //     .filter((s: any) => s.sitelink_asset)
+    //     .map((s: any) => ({
+    //       text: s.sitelink_asset?.text || '',
+    //       url: s.sitelink_asset?.final_urls?.[0] || s.sitelink_asset?.url || '',
+    //       description: s.sitelink_asset?.description || '',
+    //     }))
+    // }
   }
 
   return config
@@ -743,10 +866,10 @@ export async function updateCampaignConfig(
   
   // 🔧 检查广告系列是否存在且是从 Google 同步的
   const campaign = await db.queryOne(`
-    SELECT id, synced_from_google_ads
+    SELECT id, synced_from_google_ads, campaign_config
     FROM campaigns
     WHERE id = ?
-  `, [campaignId]) as { id: number; synced_from_google_ads: number | boolean } | undefined
+  `, [campaignId]) as { id: number; synced_from_google_ads: number | boolean, campaign_config: string | null } | undefined
   
   if (!campaign) {
     console.log(`[Campaign Config] Campaign ${campaignId} not found, skipping config update`)
@@ -755,8 +878,9 @@ export async function updateCampaignConfig(
   
   // 🔧 检查 synced_from_google_ads 字段
   const isSyncedFromGoogle = campaign.synced_from_google_ads === true || campaign.synced_from_google_ads === 1
+  const haveConfig = campaign.campaign_config && campaign.campaign_config != null && campaign.campaign_config != ''
   
-  if (!isSyncedFromGoogle) {
+  if (!isSyncedFromGoogle || haveConfig) {
     console.log(`[Campaign Config] Campaign ${campaignId} is not synced from Google Ads, skipping config update`)
     return false
   }

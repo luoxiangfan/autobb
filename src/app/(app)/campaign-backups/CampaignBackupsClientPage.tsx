@@ -62,7 +62,6 @@ export default function CampaignBackupsClientPage() {
   // 批量创建对话框
   const [isBatchCreateOpen, setIsBatchCreateOpen] = useState(false)
   const [batchCreating, setBatchCreating] = useState(false)
-  const [createToGoogle, setCreateToGoogle] = useState(true)
 
   useEffect(() => {
     fetchBackups()
@@ -123,7 +122,7 @@ export default function CampaignBackupsClientPage() {
         credentials: 'include',
         body: JSON.stringify({
           backupIds: selectedBackupIds,
-          createToGoogle,
+          createToGoogle: true,
         }),
       })
 
@@ -375,38 +374,10 @@ export default function CampaignBackupsClientPage() {
                 <strong>📋 配置说明：</strong>
                 <ul className="list-disc list-inside mt-2 space-y-1">
                   <li>使用备份中的广告系列配置</li>
-                  <li>自动选择备份中指定的广告创意</li>
-                  <li>如果创意不存在，自动选择第一个创意</li>
                   <li>默认预算：使用备份中的预算</li>
                 </ul>
               </div>
             </Alert>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Switch
-                  id="createToGoogle"
-                  checked={createToGoogle}
-                  onCheckedChange={(checked) => setCreateToGoogle(checked)}
-                />
-                <Label htmlFor="createToGoogle" className="font-medium cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <span>🚀 创建到 Google Ads</span>
-                    <span className="text-xs text-gray-500">
-                      （使用 /api/campaigns/publish 逻辑）
-                    </span>
-                  </div>
-                </Label>
-              </div>
-            </div>
-
-            {!createToGoogle && (
-              <Alert>
-                <div className="text-sm">
-                  ⚠️ 只在数据库中创建广告系列，不同步到 Google Ads
-                </div>
-              </Alert>
-            )}
 
             {selectedBackupIds.length > 10 && (
               <Alert variant="destructive">

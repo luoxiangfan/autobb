@@ -173,7 +173,7 @@ export interface CampaignPublishTaskData {
 
   // 创意信息
   creative: {
-    id: number
+    id?: number
     headlines: string[]
     descriptions: string[]
     finalUrl: string

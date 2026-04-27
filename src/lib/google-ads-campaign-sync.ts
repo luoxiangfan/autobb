@@ -410,7 +410,7 @@ async function saveCampaignToDatabase(params: {
         budget_type = ?,
         status = ?,
         google_ads_account_id = ?,
-        synced_from_google_ads = ${db.type === 'postgres' ? 'TRUE' : '1'},
+        synced_from_google_ads = ${db.type === 'postgres' ? 'FALSE' : '0'},
         updated_at = ?
       WHERE campaign_id = ?`,
       [
@@ -493,7 +493,7 @@ async function createOfferFirst(params: {
   console.log(`[GoogleAds Sync] Creating new offer for campaign ${campaign.campaign_id}`)
   
   // 生成唯一的 offer_name
-  const offerName = `${campaign.campaign_name}_US_01`
+  const offerName = campaign.campaign_name
   
   const result = await db.exec(
     `INSERT INTO offers (

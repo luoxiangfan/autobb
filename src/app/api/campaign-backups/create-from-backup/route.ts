@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
+import { generateNamingScheme } from '@/lib/naming-convention'
 import { getLatestBackupForOffer } from '@/lib/campaign-backups'
+import { buildEffectiveCreative } from '@/lib/campaign-publish/effective-creative'
+import { resolveTaskCampaignKeywords } from '@/lib/campaign-publish/task-keyword-fallback'
 
 /**
  * POST /api/campaign-backups/create-from-backup
@@ -11,6 +14,7 @@ import { getLatestBackupForOffer } from '@/lib/campaign-backups'
  */
 export async function POST(request: NextRequest) {
   try {
+    const parentRequestId = request.headers.get('x-request-id') || undefined
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json({ error: '未授权' }, { status: 401 })
@@ -81,6 +85,7 @@ export async function POST(request: NextRequest) {
         userId,
         db,
         request,
+        parentRequestId
       })
     } else {
       return await batchCreateInDatabase({
@@ -106,8 +111,9 @@ async function batchCreateToGoogleAds(params: {
   userId: number
   db: any
   request: NextRequest
+  parentRequestId?: string
 }): Promise<NextResponse> {
-  const { backups, userId, db, request } = params
+  const { backups, userId, db, request, parentRequestId } = params
 
   const results = {
     success: 0,
@@ -122,126 +128,140 @@ async function batchCreateToGoogleAds(params: {
     }>,
   }
 
-  for (const backup of backups) {
+  // 获取队列管理器实例
+  const { getOrCreateQueueManager } = await import('@/lib/queue/init-queue')
+  const queue = await getOrCreateQueueManager()
+
+  for (const { offer_id, campaignId, variantName, campaignConfig: campaignConfigForTask, google_ads_account_id, id: backupId } of backups) {
     try {
-      // 1. 解析备份数据
-      const campaignData = typeof backup.campaign_data === 'string'
-        ? JSON.parse(backup.campaign_data)
-        : backup.campaign_data
-      
-      const campaignConfig = typeof backup.campaign_config === 'string'
-        ? JSON.parse(backup.campaign_config)
-        : backup.campaign_config
-
-      if (!campaignConfig) {
-        results.failed++
-        results.details.push({
-          backupId: backup.id,
-          offerId: backup.offer_id,
-          error: '备份中没有广告系列配置',
-        })
-        continue
-      }
-
-      // 2. 🔧 优先使用备份中的 ad_creative_id
-      let creativeId = backup.ad_creative_id
-      
-      if (creativeId) {
-        // 验证广告创意是否存在
-        const existingCreative = await db.queryOne(`
-          SELECT id
-          FROM ad_creatives
-          WHERE id = ? AND offer_id = ? AND user_id = ?
-        `, [creativeId, backup.offer_id, userId])
-        
-        if (!existingCreative) {
-          console.log(`[Batch Backup Create] 备份 ${backup.id} 中的广告创意 ${creativeId} 不存在，自动选择第一个创意`)
-          creativeId = null
-        }
-      }
-      
-      // 如果没有 ad_creative_id 或创意不存在，自动选择第一个广告创意
-      if (!creativeId) {
-        const creative = await db.queryOne(`
-          SELECT id, launch_score
-          FROM ad_creatives
-          WHERE offer_id = ? AND user_id = ?
-          ORDER BY launch_score DESC, created_at DESC
-          LIMIT 1
-        `, [backup.offer_id, userId])
-        
-        if (!creative) {
-          results.skipped++
-          results.details.push({
-            backupId: backup.id,
-            offerId: backup.offer_id,
-            error: '没有可用的广告创意',
-          })
-          continue
-        }
-        creativeId = creative.id
-      }
-
-      // 3. 🔧 调用 /api/campaigns/publish API
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-      const publishUrl = `${appUrl}/api/campaigns/publish`
-
-      const publishResponse = await fetch(publishUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': request.headers.get('Cookie') || '',
+      console.log(`🚀 队列化Campaign发布任务 ${campaignId} (Variant ${variantName || 'Single'})...`)
+      const offer = await db.queryOne(`
+          SELECT id, url, final_url, final_url_suffix, brand, target_country, target_language, scrape_status, category, offer_name
+          FROM offers
+          WHERE id = ? AND user_id = ?
+        `, [offer_id, userId]) as any
+      // 🔥 使用统一命名规范生成名称
+      const naming = generateNamingScheme({
+        offer: {
+          id: offer_id,
+          brand: offer.brand,
+          offerName: offer.offer_name || undefined,
+          category: offer.category || undefined
         },
-        body: JSON.stringify({
-          offerId: backup.offer_id,
-          adCreativeId: creativeId,
-          googleAdsAccountId: campaignData.google_ads_account_id,
-          campaignConfig: {
-            campaignName: campaignConfig.campaignName || campaignData.campaign_name,
-            budgetAmount: campaignConfig.budgetAmount || campaignData.budget_amount || 50,
-            budgetType: campaignConfig.budgetType || campaignData.budget_type || 'DAILY',
-            targetCountry: campaignConfig.targetCountry || campaignData.target_country,
-            targetLanguage: campaignConfig.targetLanguage || campaignData.target_language,
-            biddingStrategy: campaignConfig.biddingStrategy || 'MAXIMIZE_CLICKS',
-            finalUrlSuffix: campaignConfig.finalUrlSuffix || '',
-            adGroupName: campaignConfig.adGroupName,
-            maxCpcBid: campaignConfig.maxCpcBid || campaignData.max_cpc,
-            keywords: campaignConfig.keywords || [],
-            negativeKeywords: campaignConfig.negativeKeywords || [],
-          },
-          pauseOldCampaigns: false,
-          enableCampaignImmediately: false,
-          forcePublish: true
-        }),
+        config: {
+          targetCountry: campaignConfigForTask.targetCountry,
+          budgetAmount: campaignConfigForTask.budgetAmount,
+          budgetType: campaignConfigForTask.budgetType || 'DAILY',
+          biddingStrategy: campaignConfigForTask.biddingStrategy || 'MAXIMIZE_CLICKS',
+          maxCpcBid: campaignConfigForTask.maxCpcBid
+        },
+        creative: undefined,
+        smartOptimization: undefined
+      })
+      const effectiveCreativeForTask = buildEffectiveCreative({
+        dbCreative: {
+          headlines: campaignConfigForTask.headlines,
+          descriptions: campaignConfigForTask.descriptions,
+          keywords: campaignConfigForTask.keywords,
+          negativeKeywords: campaignConfigForTask.negativeKeywords,
+          callouts: campaignConfigForTask.callouts,
+          sitelinks: campaignConfigForTask.sitelinks,
+          finalUrl: campaignConfigForTask.finalUrl,
+          finalUrlSuffix: campaignConfigForTask.finalUrlSuffix
+        },
+        campaignConfig: campaignConfigForTask,
+        offerUrlFallback: offer.url
       })
 
-      const publishResult = await publishResponse.json()
+      const taskKeywordConfig = resolveTaskCampaignKeywords({
+        configuredKeywords: campaignConfigForTask.keywords,
+        configuredNegativeKeywords: campaignConfigForTask.negativeKeywords,
+        fallbackKeywords: effectiveCreativeForTask.keywords,
+        fallbackNegativeKeywords: effectiveCreativeForTask.negativeKeywords,
+      })
 
-      if (publishResult.success) {
-        results.success++
-        results.details.push({
-          backupId: backup.id,
-          offerId: backup.offer_id,
-          campaignId: publishResult.campaignId,
-          googleCampaignId: publishResult.googleCampaignId,
-        })
-        console.log(`[Batch Backup Create] 创建成功 backupId=${backup.id}, campaignId=${publishResult.campaignId}`)
-      } else {
-        results.failed++
-        results.details.push({
-          backupId: backup.id,
-          offerId: backup.offer_id,
-          error: publishResult.errors?.[0]?.message || '创建失败',
-        })
+      if (taskKeywordConfig.usedKeywordFallback && taskKeywordConfig.keywords.length > 0) {
+        console.log(`[Publish] campaignConfig.keywords缺失，回退到创意关键词: ${taskKeywordConfig.keywords.length}个`)
       }
+      if (taskKeywordConfig.usedNegativeKeywordFallback && taskKeywordConfig.negativeKeywords.length > 0) {
+        console.log(`[Publish] campaignConfig.negativeKeywords缺失，回退到创意否定词: ${taskKeywordConfig.negativeKeywords.length}个`)
+      }
+
+      // 🆕 使用队列系统处理Campaign发布（避免504超时）
+      const taskData: any = {
+        campaignId: campaignId,
+        offerId: offer_id,
+        googleAdsAccountId: google_ads_account_id,
+        userId: userId,
+        naming: naming, // 🔥 新增：传递规范化命名
+        marketingObjective: campaignConfigForTask.marketingObjective || 'WEB_TRAFFIC', // 🔧 新增(2025-12-19): 营销目标
+        campaignConfig: {
+          targetCountry: campaignConfigForTask.targetCountry,
+          targetLanguage: campaignConfigForTask.targetLanguage,
+          biddingStrategy: campaignConfigForTask.biddingStrategy,
+          budgetAmount: campaignConfigForTask.budgetAmount,
+          budgetType: campaignConfigForTask.budgetType,
+          maxCpcBid: campaignConfigForTask.maxCpcBid,
+          keywords: taskKeywordConfig.keywords,
+          negativeKeywords: taskKeywordConfig.negativeKeywords,
+          negativeKeywordMatchType:
+            campaignConfigForTask.negativeKeywordMatchType ||
+            campaignConfigForTask.negativeKeywordsMatchType ||
+            undefined
+        },
+        creative: {
+          headlines: effectiveCreativeForTask.headlines,
+          descriptions: effectiveCreativeForTask.descriptions,
+          finalUrl: effectiveCreativeForTask.finalUrl,
+          finalUrlSuffix: effectiveCreativeForTask.finalUrlSuffix,
+          path1: campaignConfigForTask.path1,
+          path2: campaignConfigForTask.path2,
+          callouts: effectiveCreativeForTask.callouts,
+          sitelinks: effectiveCreativeForTask.sitelinks,
+          keywordsWithVolume: campaignConfigForTask.keywords_with_volume
+            ? JSON.parse(campaignConfigForTask.keywords_with_volume)
+            : undefined
+        },
+        brandName: offer.brand,
+        forcePublish: true,
+        enableCampaignImmediately: false,
+        pauseOldCampaigns: false
+      }
+
+      // 入队任务
+      await queue.enqueue(
+        'campaign-publish',
+        taskData,
+        userId,
+        {
+          parentRequestId,
+          priority: 'high'
+        }
+      )
+
+      console.log(`✅ Campaign发布任务已入队 ID: ${campaignId}`)
+
+      // 立即返回成功状态
+      results.success++
+      results.details.push({
+        backupId: backupId,
+        offerId: offer_id,
+        campaignId: campaignId,
+        googleCampaignId: campaignId,
+      })
+
     } catch (error: any) {
+      // 入队失败处理
+      const errorMessage = error?.message || '队列任务创建失败'
+      console.error(`❌ Campaign ${campaignId} 队列化失败:`, errorMessage)
+
       results.failed++
       results.details.push({
-        backupId: backup.id,
-        offerId: backup.offer_id,
+        backupId: backupId,
+        offerId: offer_id,
         error: error.message,
       })
-      console.error(`[Batch Backup Create] backupId=${backup.id} Error:`, error)
+      console.error(`[Batch Backup Create] backupId=${backupId} Error:`, error)
     }
   }
 
