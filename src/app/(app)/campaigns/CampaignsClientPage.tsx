@@ -3811,8 +3811,8 @@ export default function CampaignsClientPage({
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {(() => {
-                          const hasClickFarm = campaign.clickFarmTaskStatus && campaign.clickFarmTaskStatus !== 'completed'
-                          const hasUrlSwap = campaign.urlSwapTaskStatus && campaign.urlSwapTaskStatus !== 'completed'
+                          const hasClickFarm = campaign.clickFarmTaskStatus && campaign.clickFarmTaskStatus === 'running'
+                          const hasUrlSwap = campaign.urlSwapTaskStatus && campaign.urlSwapTaskStatus === 'enabled'
                           
                           // 红：都未开启，黄：一个开启，绿：两个都开启
                           const taskColor = hasClickFarm && hasUrlSwap
@@ -3824,10 +3824,10 @@ export default function CampaignsClientPage({
                           const taskLabel = hasClickFarm && hasUrlSwap
                             ? '双任务'
                             : hasClickFarm
-                              ? '补点击'
+                              ? '补点击运行中'
                               : hasUrlSwap
-                                ? '换链接'
-                                : '无任务'
+                                ? '换链接已启用'
+                                : '无运行中任务'
                           
                           return (
                             <Badge variant="outline" className={`w-full justify-center ${taskColor}`}>
