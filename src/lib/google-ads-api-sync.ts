@@ -380,8 +380,8 @@ async function syncNegativeKeywordsFromApi(
         SELECT 
           ad_group_criterion.criterion_id,
           ad_group_criterion.status,
-          ad_group_criterion.negative_keyword.text,
-          ad_group_criterion.negative_keyword.match_type
+          ad_group_criterion.keyword.text,
+          ad_group_criterion.keyword.match_type
         FROM ad_group_criterion
         WHERE ad_group.id = ${adGroup.ad_group_id}
           AND ad_group_criterion.negative = TRUE
@@ -396,8 +396,8 @@ async function syncNegativeKeywordsFromApi(
 
       for (const row of (rows?.results || [])) {
         negativeKeywords.push({
-          text: row.ad_group_criterion?.negative_keyword?.text || '',
-          matchType: row.ad_group_criterion?.negative_keyword?.match_type || 'BROAD',
+          text: row.ad_group_criterion?.keyword?.text || '',
+          matchType: row.ad_group_criterion?.keyword?.match_type || 'BROAD',
           level: 'ad_group',
           ad_group_id: adGroup.ad_group_id,
         })
