@@ -386,16 +386,23 @@ function parseCampaignBackup(row: any): CampaignBackup {
 export async function autoBackupCampaign(params: {
   userId: number
   offerId: number
-  campaignId: string
+  campaignId: string | number
   backupSource: 'autoads' | 'google_ads'
 }): Promise<void> {
   const db = await getDatabase()
 
-  // 获取广告系列数据
-  const campaign = await db.queryOne(`
+  let sqlStr = `
     SELECT * FROM campaigns
     WHERE campaign_id = ? AND user_id = ?
-  `, [params.campaignId, params.userId]) as any
+  `
+  if (typeof params.campaignId === 'number') {
+    sqlStr = `
+      SELECT * FROM campaigns
+      WHERE id = ? AND user_id = ?
+    `
+  }
+  // 获取广告系列数据
+  const campaign = await db.queryOne(sqlStr, [params.campaignId, params.userId]) as any
 
   if (!campaign) {
     console.error('[Auto Backup] Campaign not found:', params.campaignId)
