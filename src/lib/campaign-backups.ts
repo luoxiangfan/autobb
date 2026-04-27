@@ -386,7 +386,7 @@ function parseCampaignBackup(row: any): CampaignBackup {
 export async function autoBackupCampaign(params: {
   userId: number
   offerId: number
-  campaignId: number
+  campaignId: string
   backupSource: 'autoads' | 'google_ads'
 }): Promise<void> {
   const db = await getDatabase()
@@ -394,7 +394,7 @@ export async function autoBackupCampaign(params: {
   // 获取广告系列数据
   const campaign = await db.queryOne(`
     SELECT * FROM campaigns
-    WHERE id = ? AND user_id = ?
+    WHERE campaign_id = ? AND user_id = ?
   `, [params.campaignId, params.userId]) as any
 
   if (!campaign) {

@@ -97,7 +97,7 @@ export default function MCCAssignmentClientPage() {
 
   const fetchMccAccounts = async () => {
     try {
-      const response = await fetch('/api/google-ads-accounts?manager=true', {
+      const response = await fetch('/api/google-ads-accounts?manager=true&activeOnly=true', {
         credentials: 'include',
       })
       if (response.ok) {

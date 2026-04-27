@@ -859,7 +859,7 @@ function buildCampaignConfig(
  * 🔧 修改 (2026-04-21): 只更新从 Google 同步的广告系列
  */
 export async function updateCampaignConfig(
-  campaignId: number,
+  campaignId: string,
   campaignConfig: any
 ): Promise<boolean> {
   const db = await getDatabase()
@@ -868,7 +868,7 @@ export async function updateCampaignConfig(
   const campaign = await db.queryOne(`
     SELECT id, synced_from_google_ads, campaign_config
     FROM campaigns
-    WHERE id = ?
+    WHERE campaign_id = ?
   `, [campaignId]) as { id: number; synced_from_google_ads: number | boolean, campaign_config: string | null } | undefined
   
   if (!campaign) {
@@ -890,7 +890,7 @@ export async function updateCampaignConfig(
     UPDATE campaigns
     SET campaign_config = ?,
         updated_at = ?
-    WHERE id = ?
+    WHERE campaign_id = ?
   `, [
     JSON.stringify(campaignConfig),
     new Date(),

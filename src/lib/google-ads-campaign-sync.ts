@@ -389,7 +389,7 @@ async function saveCampaignToDatabase(params: {
   googleAdsAccountId: number
   campaign: GoogleAdsCampaign
   offerId?: number  // 🆕 可选的 offer_id
-}): Promise<number> {
+}): Promise<string> {
   const { userId, googleAdsAccountId, campaign, offerId } = params
   const db = await getDatabase()
 
@@ -464,7 +464,7 @@ async function saveCampaignToDatabase(params: {
       ]
     )
     console.log(`[GoogleAds Sync] Created Campaign ${campaign.campaign_id} for User ${userId}`)
-    return Number(campaign.campaign_id + '')
+    return campaign.campaign_id
   }
 }
 
