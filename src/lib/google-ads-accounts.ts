@@ -138,7 +138,7 @@ export async function findActiveGoogleAdsAccounts(userId: number, manager?: bool
   // 🔧 PostgreSQL兼容性修复: is_active在PostgreSQL中是BOOLEAN类型
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
   const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
-  const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = false' : 'is_manager_account = 0'
+  const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = TRUE' : 'is_manager_account = 1'
   let sqlStr = `
     SELECT * FROM google_ads_accounts
     WHERE user_id = ? AND ${isActiveCondition} AND ${isDeletedCheck}
@@ -147,7 +147,7 @@ export async function findActiveGoogleAdsAccounts(userId: number, manager?: bool
   if (manager) {
     sqlStr = `
       SELECT * FROM google_ads_accounts
-      WHERE user_id = ? AND ${isActiveCondition} AND ${isDeletedCheck} AND ${isManagerCondition}
+      WHERE user_id = ? AND ${isActiveCondition} AND ${isDeletedCheck} AND ${isManagerCondition} AND parent_mcc_id IS NOT NULL AND parent_mcc_id != ''
       ORDER BY created_at DESC
     `
   }

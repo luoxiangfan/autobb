@@ -44,9 +44,9 @@ interface User {
 
 interface MCCAccount {
   id: number
-  customer_id: string
-  account_name: string | null
-  is_manager_account: boolean
+  customerId: string
+  accountName: string | null
+  isManagerAccount: boolean
 }
 
 interface MCCAssignment {
@@ -102,7 +102,7 @@ export default function MCCAssignmentClientPage() {
       })
       if (response.ok) {
         const data = await response.json()
-        setMccAccounts(data.accounts || [])
+        setMccAccounts(data?.accounts || [])
       }
     } catch (error: any) {
       console.error('获取 MCC 账号失败:', error)
@@ -194,13 +194,13 @@ export default function MCCAssignmentClientPage() {
   }
 
   const filteredMccAccounts = mccAccounts.filter(mcc =>
-    mcc.account_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    mcc.customer_id.includes(searchTerm)
+    mcc.accountName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    mcc.customerId.includes(searchTerm)
   )
 
   const assignedMccIds = userAssignments.map(a => a.mcc_customer_id)
   const availableMccAccounts = filteredMccAccounts.filter(
-    mcc => !assignedMccIds.includes(mcc.customer_id)
+    mcc => !assignedMccIds.includes(mcc.customerId)
   )
 
   return (
@@ -379,10 +379,10 @@ export default function MCCAssignmentClientPage() {
                   ) : (
                     <div className="flex flex-wrap gap-1">
                       {selectedMccIds.slice(0, 3).map(id => {
-                        const mcc = mccAccounts.find(m => m.customer_id === id)
+                        const mcc = mccAccounts.find(m => m.customerId === id)
                         return (
                           <Badge key={id} variant="secondary" className="text-xs">
-                            {mcc?.account_name || id}
+                            {mcc?.accountName || id}
                           </Badge>
                         )
                       })}
@@ -425,31 +425,31 @@ export default function MCCAssignmentClientPage() {
                             key={mcc.id}
                             className="flex items-center gap-2 px-4 py-2 hover:bg-accent cursor-pointer"
                             onClick={() => {
-                              if (selectedMccIds.includes(mcc.customer_id)) {
-                                setSelectedMccIds(selectedMccIds.filter(id => id !== mcc.customer_id))
+                              if (selectedMccIds.includes(mcc.customerId)) {
+                                setSelectedMccIds(selectedMccIds.filter(id => id !== mcc.customerId))
                               } else {
-                                setSelectedMccIds([...selectedMccIds, mcc.customer_id])
+                                setSelectedMccIds([...selectedMccIds, mcc.customerId])
                               }
                             }}
                           >
                             <Checkbox
-                              checked={selectedMccIds.includes(mcc.customer_id)}
+                              checked={selectedMccIds.includes(mcc.customerId)}
                               onCheckedChange={(checked) => {
                                 if (checked) {
-                                  setSelectedMccIds([...selectedMccIds, mcc.customer_id])
+                                  setSelectedMccIds([...selectedMccIds, mcc.customerId])
                                 } else {
-                                  setSelectedMccIds(selectedMccIds.filter(id => id !== mcc.customer_id))
+                                  setSelectedMccIds(selectedMccIds.filter(id => id !== mcc.customerId))
                                 }
                               }}
                               onClick={(e) => e.stopPropagation()}
                             />
                             <div className="flex-1 min-w-0">
-                              <div className="font-mono text-sm">{mcc.customer_id}</div>
+                              <div className="font-mono text-sm">{mcc.customerId}</div>
                               <div className="text-xs text-muted-foreground truncate">
-                                {mcc.account_name || '未命名'}
+                                {mcc.accountName || '未命名'}
                               </div>
                             </div>
-                            {selectedMccIds.includes(mcc.customer_id) && (
+                            {selectedMccIds.includes(mcc.customerId) && (
                               <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
                             )}
                           </div>
