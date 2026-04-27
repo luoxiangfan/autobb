@@ -222,7 +222,7 @@ export default function CampaignBackupsClientPage() {
         <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
+              <div className='flex items-center gap-x-2 whitespace-nowrap'>
                 <Label>开始日期</Label>
                 <Input
                   type="date"
@@ -230,7 +230,7 @@ export default function CampaignBackupsClientPage() {
                   onChange={(e) => setStartDate(e.target.value)}
                 />
               </div>
-              <div>
+              <div className='flex items-center gap-x-2 whitespace-nowrap'>
                 <Label>结束日期</Label>
                 <Input
                   type="date"

@@ -83,7 +83,12 @@ export default function MCCAssignmentClientPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/admin/users', {
+      const params = new URLSearchParams({
+        role: 'user',
+        status: 'active',
+        limit: '10'
+      })
+      const response = await fetch(`/api/admin/users?${params}`, {
         credentials: 'include',
       })
       if (response.ok) {

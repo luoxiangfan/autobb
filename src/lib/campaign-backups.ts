@@ -86,7 +86,7 @@ export async function createCampaignBackup(input: CreateCampaignBackupInput): Pr
       target_cpa, max_cpc,
       status, google_ads_account_id,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     input.userId,
     input.offerId,
