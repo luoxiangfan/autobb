@@ -62,10 +62,32 @@ export default function CampaignBackupsClientPage() {
   // 批量创建对话框
   const [isBatchCreateOpen, setIsBatchCreateOpen] = useState(false)
   const [batchCreating, setBatchCreating] = useState(false)
+  const [createToGoogle, setCreateToGoogle] = useState(false)
+  const [googleAdsAccounts, setGoogleAdsAccounts] = useState<Array<{
+    id: number
+    customer_id: string
+    account_name: string | null
+  }>>([])
+  const [selectedGoogleAdsAccountId, setSelectedGoogleAdsAccountId] = useState<number | null>(null)
 
   useEffect(() => {
     fetchBackups()
+    fetchGoogleAdsAccounts()
   }, [startDate, endDate, backupSource])
+
+  const fetchGoogleAdsAccounts = async () => {
+    try {
+      const response = await fetch('/api/google-ads-accounts', {
+        credentials: 'include',
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setGoogleAdsAccounts(data.accounts || [])
+      }
+    } catch (error: any) {
+      console.error('获取 Google Ads 账号失败:', error)
+    }
+  }
 
   const fetchBackups = async () => {
     setLoading(true)
@@ -122,7 +144,8 @@ export default function CampaignBackupsClientPage() {
         credentials: 'include',
         body: JSON.stringify({
           backupIds: selectedBackupIds,
-          createToGoogle: true,
+          createToGoogle,
+          googleAdsAccountId: selectedGoogleAdsAccountId || undefined,
         }),
       })
 
@@ -371,13 +394,55 @@ export default function CampaignBackupsClientPage() {
           <div className="space-y-4 py-4">
             <Alert className="bg-blue-50 border-blue-200">
               <div className="text-sm text-blue-900">
-                <strong>📋 配置说明：</strong>
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>使用备份中的广告系列配置</li>
-                  <li>默认预算：使用备份中的预算</li>
-                </ul>
+                <strong>📋 创建步骤：</strong>
+                <ol className="list-decimal list-inside mt-2 space-y-1">
+                  <li>在数据库中创建广告系列</li>
+                  <li>发布到 Google Ads</li>
+                </ol>
               </div>
             </Alert>
+
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <Switch
+                  id="createToGoogle"
+                  checked={createToGoogle}
+                  onCheckedChange={(checked) => setCreateToGoogle(checked as boolean)}
+                />
+                <Label htmlFor="createToGoogle" className="font-medium cursor-pointer flex-1">
+                  <div className="flex items-center gap-2">
+                    <span>🚀 发布到 Google Ads</span>
+                    <span className="text-xs text-gray-500">
+                      （需要先选择 Google Ads 账号）
+                    </span>
+                  </div>
+                </Label>
+              </div>
+
+              {createToGoogle && (
+                <div className="space-y-2">
+                  <Label htmlFor="googleAdsAccount">选择 Google Ads 账号</Label>
+                  <select
+                    id="googleAdsAccount"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={selectedGoogleAdsAccountId || ''}
+                    onChange={(e) => setSelectedGoogleAdsAccountId(Number(e.target.value))}
+                  >
+                    <option value="">请选择账号</option>
+                    {googleAdsAccounts.map(account => (
+                      <option key={account.id} value={account.id}>
+                        {account.account_name || account.customer_id}
+                      </option>
+                    ))}
+                  </select>
+                  {googleAdsAccounts.length === 0 && (
+                    <p className="text-xs text-gray-500">
+                      暂无可用的 Google Ads 账号，请先创建账号
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
             {selectedBackupIds.length > 10 && (
               <Alert variant="destructive">
@@ -401,7 +466,7 @@ export default function CampaignBackupsClientPage() {
             </Button>
             <Button 
               onClick={handleBatchCreate} 
-              disabled={batchCreating || selectedBackupIds.length === 0}
+              disabled={batchCreating || selectedBackupIds.length === 0 || (createToGoogle && !selectedGoogleAdsAccountId)}
               className="bg-blue-600 hover:bg-blue-700"
             >
               {batchCreating ? (

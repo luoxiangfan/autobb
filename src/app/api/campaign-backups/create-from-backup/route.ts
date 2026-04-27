@@ -7,6 +7,170 @@ import { buildEffectiveCreative } from '@/lib/campaign-publish/effective-creativ
 import { resolveTaskCampaignKeywords } from '@/lib/campaign-publish/task-keyword-fallback'
 
 /**
+ * 🔧 批量发布到 Google Ads（第二步）
+ */
+async function batchPublishToGoogleAds(params: {
+  dbResult: any
+  backups: any[]
+  userId: number
+  googleAdsAccountId: number
+  db: any
+  request: NextRequest
+  parentRequestId?: string
+}): Promise<NextResponse> {
+  const { dbResult, backups, userId, googleAdsAccountId, db, request, parentRequestId } = params
+
+  const results = {
+    success: 0,
+    failed: 0,
+    details: [] as Array<{
+      backupId: number
+      campaignId: number
+      googleCampaignId?: string
+      error?: string
+    }>,
+  }
+
+  // 获取 Google Ads 账号信息
+  const adsAccount = await db.queryOne(`
+    SELECT customer_id, refresh_token, auth_type, service_account_id, is_active, is_deleted
+    FROM google_ads_accounts
+    WHERE id = ? AND user_id = ?
+  `, [googleAdsAccountId, userId])
+
+  if (!adsAccount) {
+    return NextResponse.json({
+      success: false,
+      message: 'Google Ads 账号不存在或无权访问',
+      data: results,
+    }, { status: 400 })
+  }
+
+  // 检查账号状态
+  const isActive = adsAccount.is_active === true || adsAccount.is_active === 1
+  const isDeleted = adsAccount.is_deleted === true || adsAccount.is_deleted === 1
+
+  if (!isActive || isDeleted) {
+    return NextResponse.json({
+      success: false,
+      message: 'Google Ads 账号已禁用或删除',
+      data: results,
+    }, { status: 400 })
+  }
+
+  // 遍历数据库创建结果，发布到 Google Ads
+  for (const detail of dbResult.details) {
+    if (!detail.campaignId) {
+      results.failed++
+      results.details.push({
+        backupId: detail.backupId,
+        campaignId: 0,
+        error: '数据库创建失败',
+      })
+      continue
+    }
+
+    try {
+      const backup = backups.find(b => b.id === detail.backupId)
+      if (!backup) {
+        results.failed++
+        results.details.push({
+          backupId: detail.backupId,
+          campaignId: detail.campaignId,
+          error: '备份不存在',
+        })
+        continue
+      }
+
+      // 解析备份数据
+      const campaignConfig = typeof backup.campaign_config === 'string'
+        ? JSON.parse(backup.campaign_config)
+        : backup.campaign_config
+
+      if (!campaignConfig) {
+        results.failed++
+        results.details.push({
+          backupId: backup.id,
+          campaignId: detail.campaignId,
+          error: '备份中没有广告系列配置',
+        })
+        continue
+      }
+
+      // 🔧 调用 /api/campaigns/publish API
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      const publishUrl = `${appUrl}/api/campaigns/publish`
+
+      const publishResponse = await fetch(publishUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': request.headers.get('Cookie') || '',
+          'x-request-id': parentRequestId || '',
+        },
+        body: JSON.stringify({
+          offerId: backup.offer_id,
+          adCreativeId: backup.ad_creative_id || 0,
+          googleAdsAccountId,
+          campaignConfig: {
+            // 🔧 直接使用备份中的 campaign_config，包含完整的广告创意信息
+            ...campaignConfig,
+            // 确保必要字段存在
+            campaignName: campaignConfig.campaignName || backup.campaign_name,
+            budgetAmount: campaignConfig.budgetAmount || backup.budget_amount || 70,
+            budgetType: campaignConfig.budgetType || backup.budget_type || 'DAILY',
+            targetCountry: campaignConfig.targetCountry || backup.target_country,
+            targetLanguage: campaignConfig.targetLanguage || backup.target_language,
+            biddingStrategy: campaignConfig.biddingStrategy || 'MAXIMIZE_CLICKS',
+            finalUrlSuffix: campaignConfig.finalUrlSuffix || backup.final_url_suffix || '',
+            adGroupName: campaignConfig.adGroupName,
+            maxCpcBid: campaignConfig.maxCpcBid || backup.max_cpc,
+            keywords: campaignConfig.keywords || [],
+            negativeKeywords: campaignConfig.negativeKeywords || [],
+          },
+          forcePublish: true,
+          pauseOldCampaigns: false,
+          enableCampaignImmediately: false,
+        }),
+      })
+
+      const publishResult = await publishResponse.json()
+
+      if (publishResult.success) {
+        results.success++
+        results.details.push({
+          backupId: backup.id,
+          campaignId: detail.campaignId,
+          googleCampaignId: publishResult.googleCampaignId,
+        })
+        console.log(`[Batch Publish] 发布成功 backupId=${backup.id}, campaignId=${detail.campaignId}, googleCampaignId=${publishResult.googleCampaignId}`)
+      } else {
+        results.failed++
+        results.details.push({
+          backupId: backup.id,
+          campaignId: detail.campaignId,
+          error: publishResult.errors?.[0]?.message || '发布失败',
+        })
+      }
+    } catch (error: any) {
+      results.failed++
+      results.details.push({
+        backupId: detail.backupId,
+        campaignId: detail.campaignId,
+        error: error.message,
+      })
+      console.error(`[Batch Publish] backupId=${detail.backupId} Error:`, error)
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: `批量发布完成：成功 ${results.success} 个，失败 ${results.failed} 个`,
+    data: results,
+  })
+}
+
+/**
  * POST /api/campaign-backups/create-from-backup
  * 通过备份创建广告系列（支持批量）
  * 
@@ -22,7 +186,7 @@ export async function POST(request: NextRequest) {
 
     const userId = authResult.user.userId
     const body = await request.json()
-    const { backupId, backupIds, offerId, createToGoogle = true } = body
+    const { backupId, backupIds, offerId, createToGoogle = false, googleAdsAccountId } = body
 
     // 参数验证：支持单个 backupId、多个 backupIds 或 offerId
     if (!backupId && !backupIds && !offerId) {
@@ -78,22 +242,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 🔧 批量创建
-    if (createToGoogle) {
-      return await batchCreateToGoogleAds({
+    // 🔧 分两步创建：先数据库，再 Google Ads
+    // 第一步：在数据库中创建广告系列
+    const dbResult = await batchCreateInDatabase({
+      backups,
+      userId,
+      db,
+    })
+    
+    // 第二步：如果选择创建到 Google Ads，则调用 publish API
+    if (createToGoogle && googleAdsAccountId) {
+      return await batchPublishToGoogleAds({
+        dbResult,
         backups,
         userId,
+        googleAdsAccountId,
         db,
         request,
         parentRequestId
       })
-    } else {
-      return await batchCreateInDatabase({
-        backups,
-        userId,
-        db,
-      })
     }
+    
+    // 只返回数据库创建结果
+    return NextResponse.json(dbResult)
   } catch (error: any) {
     console.error('通过备份批量创建广告系列失败:', error)
     return NextResponse.json(
@@ -104,7 +275,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * 🔧 批量使用 /api/campaigns/publish 的逻辑创建到 Google Ads
+ * 🔧 批量创建到 Google Ads
  */
 async function batchCreateToGoogleAds(params: {
   backups: any[]
