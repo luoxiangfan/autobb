@@ -23,6 +23,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Alert } from '@/components/ui/alert'
 import { Switch } from '@/components/ui/switch'
@@ -62,18 +69,23 @@ export default function CampaignBackupsClientPage() {
   // 批量创建对话框
   const [isBatchCreateOpen, setIsBatchCreateOpen] = useState(false)
   const [batchCreating, setBatchCreating] = useState(false)
-  const [createToGoogle, setCreateToGoogle] = useState(false)
+  const [createToGoogle, setCreateToGoogle] = useState(true)
   const [googleAdsAccounts, setGoogleAdsAccounts] = useState<Array<{
     id: number
     customer_id: string
     account_name: string | null
   }>>([])
   const [selectedGoogleAdsAccountId, setSelectedGoogleAdsAccountId] = useState<number | null>(null)
+  
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+  const [total, setTotal] = useState(0)
 
   useEffect(() => {
     fetchBackups()
     fetchGoogleAdsAccounts()
-  }, [startDate, endDate, backupSource])
+  }, [startDate, endDate, backupSource, currentPage, pageSize])
 
   const fetchGoogleAdsAccounts = async () => {
     try {
@@ -96,7 +108,8 @@ export default function CampaignBackupsClientPage() {
       if (startDate) params.set('startDate', startDate)
       if (endDate) params.set('endDate', endDate)
       if (backupSource !== 'all') params.set('backupSource', backupSource)
-      params.set('limit', '100')
+      params.set('limit', pageSize.toString())
+      params.set('offset', ((currentPage - 1) * pageSize).toString())
 
       const response = await fetch(`/api/campaign-backups?${params.toString()}`, {
         credentials: 'include',
@@ -106,6 +119,7 @@ export default function CampaignBackupsClientPage() {
 
       const data = await response.json()
       setBackups(data.backups || [])
+      setTotal(data.total || 0)
     } catch (error: any) {
       console.error('获取备份列表失败:', error)
       toast.error('获取数据失败', { description: error.message })
@@ -226,18 +240,6 @@ export default function CampaignBackupsClientPage() {
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </div>
-              <div>
-                <Label>备份来源</Label>
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={backupSource}
-                  onChange={(e) => setBackupSource(e.target.value)}
-                >
-                  <option value="all">全部</option>
-                  <option value="publish">发布创建</option>
-                  <option value="auto">自动创建</option>
-                </select>
-              </div>
               <div className="flex items-end">
                 <Button
                   variant="outline"
@@ -246,6 +248,8 @@ export default function CampaignBackupsClientPage() {
                     setEndDate('')
                     setBackupSource('all')
                     setSelectedBackupIds([])
+                    setCurrentPage(1)
+                    setPageSize(20)
                   }}
                 >
                   重置筛选
@@ -259,7 +263,7 @@ export default function CampaignBackupsClientPage() {
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Package className="w-4 h-4" />
-            <span>共 {backups.length} 个备份</span>
+            <span>共 {total} 条记录，第 {currentPage} 页，共 {Math.ceil(total / pageSize) || 1} 页</span>
             {selectedBackupIds.length > 0 && (
               <Badge variant="secondary">已选择 {selectedBackupIds.length} 个</Badge>
             )}
@@ -280,10 +284,9 @@ export default function CampaignBackupsClientPage() {
                   </TableHead>
                   <TableHead>广告系列名称</TableHead>
                   <TableHead>Offer</TableHead>
-                  <TableHead>广告创意</TableHead>
                   <TableHead>预算</TableHead>
-                  <TableHead>来源</TableHead>
                   <TableHead>创建时间</TableHead>
+                  <TableHead>更新时间</TableHead>
                   <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
@@ -324,15 +327,6 @@ export default function CampaignBackupsClientPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {backup.ad_creative_id ? (
-                          <Badge variant="outline" className="text-xs">
-                            创意 {backup.ad_creative_id}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-gray-400">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
                         <div className="text-sm">
                           ${backup.budget_amount}
                         </div>
@@ -341,25 +335,19 @@ export default function CampaignBackupsClientPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={backup.backup_source === 'publish' ? 'default' : 'secondary'}>
-                          {backup.backup_source === 'publish' ? '发布' : '自动'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
                         <div className="text-sm">
                           <Calendar className="w-3 h-3 inline mr-1" />
                           {formatDate(backup.created_at)}
                         </div>
                       </TableCell>
                       <TableCell>
+                        <div className="text-sm">
+                          <Calendar className="w-3 h-3 inline mr-1" />
+                          {formatDate(backup.updated_at)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => router.push(`/campaign-backups/${backup.id}`)}
-                          >
-                            <FileText className="w-4 h-4" />
-                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -379,6 +367,68 @@ export default function CampaignBackupsClientPage() {
             </Table>
           </div>
         </Card>
+
+        {/* 分页 */}
+        {total > 0 && (
+          <div className="flex items-center justify-between mt-6">
+            <div className="text-sm text-gray-600">
+              显示 {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, total)} 条，共 {total} 条
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm">每页显示</Label>
+                <Select value={pageSize.toString()} onValueChange={(value) => {
+                  setPageSize(Number(value))
+                  setCurrentPage(1)
+                }}>
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10 条</SelectItem>
+                    <SelectItem value="20">20 条</SelectItem>
+                    <SelectItem value="50">50 条</SelectItem>
+                    <SelectItem value="100">100 条</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  首页
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  上一页
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage >= Math.ceil(total / pageSize)}
+                >
+                  下一页
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.ceil(total / pageSize))}
+                  disabled={currentPage >= Math.ceil(total / pageSize)}
+                >
+                  末页
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 批量创建对话框 */}
@@ -402,45 +452,25 @@ export default function CampaignBackupsClientPage() {
               </div>
             </Alert>
 
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <Switch
-                  id="createToGoogle"
-                  checked={createToGoogle}
-                  onCheckedChange={(checked) => setCreateToGoogle(checked as boolean)}
-                />
-                <Label htmlFor="createToGoogle" className="font-medium cursor-pointer flex-1">
-                  <div className="flex items-center gap-2">
-                    <span>🚀 发布到 Google Ads</span>
-                    <span className="text-xs text-gray-500">
-                      （需要先选择 Google Ads 账号）
-                    </span>
-                  </div>
-                </Label>
-              </div>
-
-              {createToGoogle && (
-                <div className="space-y-2">
-                  <Label htmlFor="googleAdsAccount">选择 Google Ads 账号</Label>
-                  <select
-                    id="googleAdsAccount"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={selectedGoogleAdsAccountId || ''}
-                    onChange={(e) => setSelectedGoogleAdsAccountId(Number(e.target.value))}
-                  >
-                    <option value="">请选择账号</option>
-                    {googleAdsAccounts.map(account => (
-                      <option key={account.id} value={account.id}>
-                        {account.account_name || account.customer_id}
-                      </option>
-                    ))}
-                  </select>
-                  {googleAdsAccounts.length === 0 && (
-                    <p className="text-xs text-gray-500">
-                      暂无可用的 Google Ads 账号，请先创建账号
-                    </p>
-                  )}
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="googleAdsAccount">选择 Google Ads 账号</Label>
+              <select
+                id="googleAdsAccount"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={selectedGoogleAdsAccountId || ''}
+                onChange={(e) => setSelectedGoogleAdsAccountId(Number(e.target.value))}
+              >
+                <option value="">请选择账号</option>
+                {googleAdsAccounts.map(account => (
+                  <option key={account.id} value={account.id}>
+                    {account.account_name || account.customer_id}
+                  </option>
+                ))}
+              </select>
+              {googleAdsAccounts.length === 0 && (
+                <p className="text-xs text-gray-500">
+                  暂无可用的 Google Ads 账号，请先创建账号
+                </p>
               )}
             </div>
 

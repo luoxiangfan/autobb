@@ -24,22 +24,22 @@ export async function GET(request: NextRequest) {
     const db = await getDatabase()
 
     // 构建查询条件
-    const whereConditions: string[] = ['user_id = ?']
+    const whereConditions: string[] = ['cb.user_id = ?']
     const params: any[] = [userId]
 
     // 日期范围筛选
     if (startDate) {
-      whereConditions.push('created_at >= ?')
+      whereConditions.push('cb.created_at >= ?')
       params.push(startDate)
     }
     if (endDate) {
-      whereConditions.push('created_at <= ?')
+      whereConditions.push('cb.created_at <= ?')
       params.push(endDate)
     }
 
     // 备份来源筛选
     if (backupSource && backupSource !== 'all') {
-      whereConditions.push('backup_source = ?')
+      whereConditions.push('cb.backup_source = ?')
       params.push(backupSource)
     }
 
@@ -64,11 +64,9 @@ export async function GET(request: NextRequest) {
         cb.created_at,
         cb.updated_at,
         o.offer_name,
-        o.brand,
-        ac.creative_name
+        o.brand
       FROM campaign_backups cb
       LEFT JOIN offers o ON cb.offer_id = o.id
-      LEFT JOIN ad_creatives ac ON cb.ad_creative_id = ac.id
       WHERE ${whereClause}
       ORDER BY cb.created_at DESC
       LIMIT ?
