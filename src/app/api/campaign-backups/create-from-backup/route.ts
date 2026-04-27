@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
 
     const userId = authResult.user.userId
     const body = await request.json()
-    const { backupId, backupIds, offerId, createToGoogle = false, googleAdsAccountId } = body
+    const { backupId, backupIds, offerId, googleAdsAccountId } = body
 
     // 参数验证：支持单个 backupId、多个 backupIds 或 offerId
     if (!backupId && !backupIds && !offerId) {
@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
     })
     
     // 第二步：如果选择创建到 Google Ads，则调用 publish API
-    if (createToGoogle && googleAdsAccountId) {
+    if (googleAdsAccountId) {
       return await batchPublishToGoogleAds({
         dbResult,
         backups,

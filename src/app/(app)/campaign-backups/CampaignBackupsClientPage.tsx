@@ -69,7 +69,6 @@ export default function CampaignBackupsClientPage() {
   // 批量创建对话框
   const [isBatchCreateOpen, setIsBatchCreateOpen] = useState(false)
   const [batchCreating, setBatchCreating] = useState(false)
-  const [createToGoogle, setCreateToGoogle] = useState(true)
   const [googleAdsAccounts, setGoogleAdsAccounts] = useState<Array<{
     id: number
     customer_id: string
@@ -158,7 +157,6 @@ export default function CampaignBackupsClientPage() {
         credentials: 'include',
         body: JSON.stringify({
           backupIds: selectedBackupIds,
-          createToGoogle,
           googleAdsAccountId: selectedGoogleAdsAccountId || undefined,
         }),
       })
@@ -496,7 +494,7 @@ export default function CampaignBackupsClientPage() {
             </Button>
             <Button 
               onClick={handleBatchCreate} 
-              disabled={batchCreating || selectedBackupIds.length === 0 || (createToGoogle && !selectedGoogleAdsAccountId)}
+              disabled={batchCreating || selectedBackupIds.length === 0 || !selectedGoogleAdsAccountId}
               className="bg-blue-600 hover:bg-blue-700"
             >
               {batchCreating ? (
