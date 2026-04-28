@@ -14,6 +14,7 @@
 import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB } from './google-ads-api'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { getDatabase } from './db'
+import { ca } from 'date-fns/locale'
 
 /**
  * Google Ads 广告组数据（来自 API）
@@ -24,6 +25,7 @@ export interface GoogleAdsAdGroup {
   status: 'ENABLED' | 'PAUSED' | 'REMOVED'
   max_cpc_bid_micros?: number
   campaign_id: string
+  final_url_suffix?: string
 }
 
 /**
@@ -107,6 +109,7 @@ export async function syncAdComponentsFromGoogleAds(
     biddingStrategy?: string
     marketingObjective?: string
     finalUrlSuffix?: string
+    maxCpcBid?: number
   }
 ): Promise<ApiSyncResult> {
   const result: ApiSyncResult = {
@@ -200,6 +203,7 @@ async function syncAdGroupsFromApi(
         ad_group.name,
         ad_group.status,
         ad_group.cpc_bid_micros,
+        ad_group.final_url_suffix,
         campaign.id
       FROM ad_group
       WHERE campaign.id = ${campaignId}
@@ -218,6 +222,7 @@ async function syncAdGroupsFromApi(
       status: row.ad_group?.status || 'ENABLED',
       max_cpc_bid_micros: row.ad_group?.cpc_bid_micros,
       campaign_id: row.campaign?.id || campaignId,
+      final_url_suffix: row.ad_group?.final_url_suffix,
     }))
   } catch (error: any) {
     console.error('[Sync Ad Groups] Error:', error)
@@ -369,6 +374,7 @@ async function syncNegativeKeywordsFromApi(
         campaign_id: campaignId,
       })
     }
+    console.log(`[Sync Campaign Negative Keywords] Found ${negativeKeywords.length} campaign-level negative keywords for campaign ${campaignId}`)
   } catch (error: any) {
     console.error('[Sync Campaign Negative Keywords] Error:', error)
   }
@@ -402,6 +408,7 @@ async function syncNegativeKeywordsFromApi(
           ad_group_id: adGroup.ad_group_id,
         })
       }
+      console.log(`[Sync Ad Group Negative Keywords] Found ${negativeKeywords.length} ad group-level negative keywords for ad group ${adGroup.ad_group_id}`)
     } catch (error: any) {
       console.error(`[Sync Ad Group Negative Keywords] Error for ${adGroup.ad_group_id}:`, error)
     }
@@ -453,6 +460,11 @@ async function syncTargetingFromApi(
 
     // 遍历结果，提取国家和语言信息
     for (const row of (rows?.results || [])) {
+      console.log(`[Sync Targeting] Processing criterion ${row.campaign_criterion?.criterion_id}:`, {
+        location: row.campaign_criterion?.location,
+        language: row.campaign_criterion?.language,
+        displayName: row.campaign_criterion?.type + ' - ' + row.campaign_criterion?.display_name,
+      })
       // 提取国家代码
       if (!targetingInfo.targetCountry && row.campaign_criterion?.location?.geo_target_constant) {
         targetingInfo.targetCountry = getCountryName(row.campaign_criterion.location.geo_target_constant?.split('/')?.pop())
@@ -764,9 +776,9 @@ function buildCampaignConfig(
     const firstAdGroup = adGroups[0]
     config.adGroupName = firstAdGroup.ad_group_name
     config.adGroupId = firstAdGroup.ad_group_id
-    config.maxCpcBid = firstAdGroup.max_cpc_bid_micros 
-      ? Number(firstAdGroup.max_cpc_bid_micros) / 1000000 
-      : undefined
+    if (!config.finalUrlSuffix && firstAdGroup.final_url_suffix) {
+      config.finalUrlSuffix = firstAdGroup.final_url_suffix
+    }
   }
 
   // 关键词
@@ -809,41 +821,14 @@ function buildCampaignConfig(
     
     config.finalUrls = firstAd.final_urls || []
     config.finalUrl = firstAd.final_url || ''
-    config.finalUrlSuffix = firstAd.final_url_suffix || ''
-    config.callouts = campaignAssets.callouts
-    config.sitelinks = campaignAssets.sitelinks
-    config.finalUrls = [campaignAssets.final_url]
-    // 🔧 处理 callouts 和 sitelinks（广告系列层级配置）
-    // callouts 的 asset.type 是 CALLOUT
-    // sitelinks 的 asset.type 是 SITELINK，url 为 asset.final_urls[0]
-    // if (firstAd.callouts) {
-    //   config.calloutAssets = firstAd.callouts.map((c: any) => ({
-    //     type: 'CALLOUT',
-    //     text: c.text || '',
-    //   }))
-    //   // 同时保留 callouts 数组用于兼容
-    //   config.callouts = firstAd.callouts.map((c: any) => c.text)
-    // }
-    
-    // if (firstAd.sitelinks) {
-    //   config.sitelinkAssets = firstAd.sitelinks
-    //     .filter((s: any) => s.sitelink_asset)
-    //     .map((s: any) => ({
-    //       type: 'SITELINK',
-    //       text: s.sitelink_asset?.text || '',
-    //       final_urls: [s.sitelink_asset?.final_urls?.[0] || s.sitelink_asset?.url || ''],
-    //       description: s.sitelink_asset?.description || '',
-    //     }))
-    //   // 同时保留 sitelinks 数组用于兼容
-    //   config.sitelinks = firstAd.sitelinks
-    //     .filter((s: any) => s.sitelink_asset)
-    //     .map((s: any) => ({
-    //       text: s.sitelink_asset?.text || '',
-    //       url: s.sitelink_asset?.final_urls?.[0] || s.sitelink_asset?.url || '',
-    //       description: s.sitelink_asset?.description || '',
-    //     }))
-    // }
+    config.adId = firstAd.ad_id
+    if (!config.finalUrlSuffix && firstAd.final_url_suffix) {
+      config.finalUrlSuffix = firstAd.final_url_suffix || ''
+    }
   }
+  
+  config.callouts = campaignAssets.callouts
+  config.sitelinks = campaignAssets.sitelinks
 
   return config
 }
@@ -863,7 +848,12 @@ export async function updateCampaignConfig(
     SELECT id, synced_from_google_ads, campaign_config
     FROM campaigns
     WHERE campaign_id = ?
-  `, [campaignId]) as { id: number; synced_from_google_ads: number | boolean, campaign_config: string | null } | undefined
+  `, [campaignId]) as {
+    id: number
+    synced_from_google_ads: number | boolean
+    campaign_config: string | null
+    ad_creative_id: number | null
+  } | undefined
   
   if (!campaign) {
     console.log(`[Campaign Config] Campaign ${campaignId} not found, skipping config update`)
@@ -871,7 +861,7 @@ export async function updateCampaignConfig(
   }
   
   // 🔧 检查 campaign_config 字段
-  const haveConfig = campaign.campaign_config && campaign.campaign_config != null && campaign.campaign_config != ''
+  const haveConfig = campaign.ad_creative_id && campaign.ad_creative_id != null
   
   if (haveConfig) {
     console.log(`[Campaign Config] Campaign ${campaignId} is already configured, skipping config update`)
@@ -882,11 +872,15 @@ export async function updateCampaignConfig(
   await db.exec(`
     UPDATE campaigns
     SET campaign_config = ?,
-        updated_at = ?
+        updated_at = ?,
+        google_ad_group_id = ?,
+        google_ad_id = ?,
     WHERE campaign_id = ?
   `, [
     JSON.stringify(campaignConfig),
     new Date(),
+    campaignConfig.adGroupId || null,
+    `${campaignConfig.adGroupId}~${campaignConfig.adId}` || null,
     campaignId,
   ])
   

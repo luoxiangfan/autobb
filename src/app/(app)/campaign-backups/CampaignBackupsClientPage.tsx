@@ -71,8 +71,8 @@ export default function CampaignBackupsClientPage() {
   const [batchCreating, setBatchCreating] = useState(false)
   const [googleAdsAccounts, setGoogleAdsAccounts] = useState<Array<{
     id: number
-    customer_id: string
-    account_name: string | null
+    customerId: string
+    accountName: string | null
   }>>([])
   const [selectedGoogleAdsAccountId, setSelectedGoogleAdsAccountId] = useState<number | null>(null)
   
@@ -374,7 +374,7 @@ export default function CampaignBackupsClientPage() {
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <Label className="text-sm">每页显示</Label>
+                <Label className="text-sm whitespace-nowrap">每页显示</Label>
                 <Select value={pageSize.toString()} onValueChange={(value) => {
                   setPageSize(Number(value))
                   setCurrentPage(1)
@@ -461,7 +461,7 @@ export default function CampaignBackupsClientPage() {
                 <option value="">请选择账号</option>
                 {googleAdsAccounts.map(account => (
                   <option key={account.id} value={account.id}>
-                    {account.account_name || account.customer_id}
+                    {account.accountName || account.customerId}
                   </option>
                 ))}
               </select>

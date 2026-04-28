@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate')
     const backupSource = searchParams.get('backupSource')
     const limit = parseInt(searchParams.get('limit') || '100', 10)
+    const offset = parseInt(searchParams.get('offset') || '0', 10)
 
     const db = await getDatabase()
 
@@ -45,6 +46,14 @@ export async function GET(request: NextRequest) {
 
     const whereClause = whereConditions.join(' AND ')
 
+    // 🔧 查询总数（符合查询条件的记录总数）
+    const countResult = await db.queryOne(`
+      SELECT COUNT(*) as count
+      FROM campaign_backups cb
+      WHERE ${whereClause}
+    `, params) as { count: number }
+    const total = countResult.count || 0
+
     // 查询备份列表（关联 Offer 和广告创意信息）
     const backups = await db.query(`
       SELECT 
@@ -69,8 +78,8 @@ export async function GET(request: NextRequest) {
       LEFT JOIN offers o ON cb.offer_id = o.id
       WHERE ${whereClause}
       ORDER BY cb.created_at DESC
-      LIMIT ?
-    `, [...params, limit]) as any[]
+      LIMIT ? OFFSET ?
+    `, [...params, limit, offset]) as any[]
 
     // 解析 JSON 字段
     const parsedBackups = backups.map(backup => ({
@@ -86,7 +95,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       backups: parsedBackups,
-      total: parsedBackups.length,
+      total,  // 🔧 使用数据库查询的总数
+      limit,
+      offset,
     })
   } catch (error: any) {
     console.error('获取备份列表失败:', error)

@@ -381,9 +381,14 @@ export default function MCCAssignmentClientPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleRemove(assignment.mcc_customer_id)}
+                            onClick={() => confirmDelete(assignment.mcc_customer_id)}
+                            disabled={!selectedUserId || removingMccId === assignment.mcc_customer_id}
                           >
-                            <Trash2 className="w-4 h-4 text-red-600" />
+                            {removingMccId === assignment.mcc_customer_id ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-red-600" />
+                            ) : (
+                              <Trash2 className="w-4 h-4 text-red-600" />
+                            )}
                           </Button>
                         </TableCell>
                       </TableRow>

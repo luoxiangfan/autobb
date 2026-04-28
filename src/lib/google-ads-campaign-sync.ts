@@ -12,11 +12,11 @@
 import { getDatabase } from './db'
 import { autoBackupCampaign } from './campaign-backups'
 import { syncAdComponentsFromGoogleAds, updateCampaignConfig } from './google-ads-api-sync'
-import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB, trackOAuthApiCall } from './google-ads-api'
+import { getCustomerWithCredentials, trackOAuthApiCall } from './google-ads-api'
 import { executeGAQLQueryPython } from './python-ads-client'
-import { getInsertedId, nowFunc } from './db-helpers'
+import { getInsertedId } from './db-helpers'
 import { createRiskAlert } from './risk-alerts'
-import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
+import { ApiOperationType } from './google-ads-api-tracker'
 
 /**
  * Google Ads 广告系列数据
@@ -230,7 +230,8 @@ export async function syncCampaignsFromGoogleAds(
                   marketingObjective: 'WEB_TRAFFIC',
                   biddingStrategy: 'MAXIMIZE_CLICKS',
                   targetCountry: 'US',
-                  targetLanguage: 'English'
+                  targetLanguage: 'English',
+                  maxCpcBid: campaign.cpc_bid_ceiling_micros ? Number(campaign.cpc_bid_ceiling_micros) / 1000000 : undefined,
                 }
               )
               
