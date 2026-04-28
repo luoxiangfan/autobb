@@ -11,10 +11,8 @@
  * @module google-ads-api-sync
  */
 
-import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB } from './google-ads-api'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { getDatabase } from './db'
-import { ca } from 'date-fns/locale'
 
 /**
  * Google Ads 广告组数据（来自 API）

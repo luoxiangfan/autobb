@@ -409,54 +409,53 @@ export async function autoBackupCampaign(params: {
     return
   }
 
-  // 对于 Google Ads 同步的广告系列，检查是否已有备份
-  if (params.backupSource === 'google_ads') {
-    const existingBackup = await db.queryOne(`
-      SELECT backup_version FROM campaign_backups
-      WHERE offer_id = ? AND user_id = ? AND backup_source = 'google_ads'
-      ORDER BY backup_version DESC
-      LIMIT 1
-    `, [campaign.offer_id, params.userId]) as any
+  // 🔧 优化：备份唯一（offer_id, user_id），不重复创建
+  // 检查是否已有备份（不区分 backup_source）
+  const existingBackup = await db.queryOne(`
+    SELECT id, backup_source, backup_version
+    FROM campaign_backups
+    WHERE offer_id = ? AND user_id = ?
+    ORDER BY created_at DESC
+    LIMIT 1
+  `, [campaign.offer_id, params.userId]) as { id: number; backup_source: string; backup_version: number } | undefined
 
-    // 如果已有 version 2 的备份，说明已经备份过两次，不再重复备份
-    if (existingBackup?.backup_version === 2) {
-      console.log('[Auto Backup] Already backed up twice for Google Ads campaign:', params.campaignId)
-      return
-    }
-
+  if (existingBackup) {
+    // 🔧 直接更新已有备份，而不是创建新记录
+    console.log('[Auto Backup] Updating existing backup for campaign:', params.campaignId)
+    
     // 确定备份版本
-    const backupVersion = existingBackup ? 2 : 1
-    console.log(`[Auto Backup] Creating Google Ads backup version ${backupVersion} for campaign:`, params.campaignId)
-
-    await createCampaignBackup({
-      userId: params.userId,
-      offerId: campaign.offer_id,
-      campaignData: campaign,
-      campaignConfig: campaign.campaign_config,  // 🔧 新增：备份配置
-      backupType: 'auto',
-      backupSource: 'google_ads',
-      backupVersion: backupVersion,
-      customName: campaign.custom_name,
-      campaignName: campaign.campaign_name,
-      budgetAmount: campaign.budget_amount,
-      budgetType: campaign.budget_type,
-      targetCpa: campaign.target_cpa,
-      maxCpc: campaign.max_cpc,
-      status: campaign.status,
-      googleAdsAccountId: campaign.google_ads_account_id,
-    })
+    const newBackupVersion = params.backupSource === 'google_ads' 
+      ? Math.max(existingBackup.backup_version, 2)  // google_ads 至少为 2
+      : existingBackup.backup_version
+    
+    await db.exec(`
+      UPDATE campaign_backups
+      SET campaign_data = ?,
+          campaign_config = ?,
+          backup_source = ?,
+          backup_version = ?,
+          updated_at = ?
+      WHERE id = ?
+    `, [
+      JSON.stringify(campaign),
+      campaign.campaign_config ? JSON.stringify(campaign.campaign_config) : null,
+      params.backupSource,
+      newBackupVersion,
+      new Date(),
+      existingBackup.id
+    ])
   } else {
-    // autoads 创建的广告系列，只备份一次
-    console.log('[Auto Backup] Creating autoads backup for campaign:', params.campaignId)
-
+    // 没有已有备份，创建新备份
+    console.log('[Auto Backup] Creating new backup for campaign:', params.campaignId)
+    
     await createCampaignBackup({
       userId: params.userId,
       offerId: campaign.offer_id,
       campaignData: campaign,
-      campaignConfig: campaign.campaign_config,  // 🔧 新增：备份配置
+      campaignConfig: campaign.campaign_config,
       backupType: 'auto',
-      backupSource: 'autoads',
-      backupVersion: 1,
+      backupSource: params.backupSource,
+      backupVersion: params.backupSource === 'google_ads' ? 1 : 1,
       customName: campaign.custom_name,
       campaignName: campaign.campaign_name,
       budgetAmount: campaign.budget_amount,

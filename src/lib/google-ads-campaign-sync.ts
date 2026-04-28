@@ -215,54 +215,82 @@ export async function syncCampaignsFromGoogleAds(
               // 备份失败不影响同步，只记录日志
             }
 
-            // 🔧 通过 Google Ads API 同步广告组件并保存为 campaign_config
-            try {
-              const apiSyncResult = await syncAdComponentsFromGoogleAds(
-                userId,
-                account.customer_id,
-                campaign.campaign_id,
-                account.service_account_id!,
-                {
-                  finalUrlSuffix: campaign.final_url_suffix,
-                  campaignName: campaign.campaign_name,
-                  budgetAmount: campaign.budget_amount,
-                  budgetType: campaign.budget_type,
-                  marketingObjective: 'WEB_TRAFFIC',
-                  biddingStrategy: 'MAXIMIZE_CLICKS',
-                  targetCountry: 'US',
-                  targetLanguage: 'English',
-                  maxCpcBid: campaign.cpc_bid_ceiling_micros ? Number(campaign.cpc_bid_ceiling_micros) / 1000000 : undefined,
-                }
-              )
+            const existingBackup = await db.queryOne(`
+              SELECT backup_source, backup_version
+              FROM campaign_backups
+              WHERE offer_id = ? AND user_id = ?
+              ORDER BY created_at DESC
+              LIMIT 1
+            `, [offerResult.offerId, userId]) as { backup_source: string; backup_version: number } | undefined
               
-              if (apiSyncResult.campaignConfig && Object.keys(apiSyncResult.campaignConfig).length > 0) {
-                // 🔧 更新 campaign_config（只更新从 Google 同步的广告系列）
-                const updated = await updateCampaignConfig(campaignId, apiSyncResult.campaignConfig)
+            let shouldSyncComponents = true
+
+            if (existingBackup) {
+              // 情况一：backup_source='autoads'，不需要备份
+              if (existingBackup.backup_source === 'autoads') {
+                shouldSyncComponents = false
+                console.log(`[GoogleAds Sync] Skip sync for campaign ${campaignId}: existing backup with backup_source='autoads'`)
+              }
+              // 情况二：backup_source='google_ads' 并且 backup_version>=2，不需要备份
+              else if (existingBackup.backup_source === 'google_ads' && existingBackup.backup_version >= 2) {
+                shouldSyncComponents = false
+                console.log(`[GoogleAds Sync] Skip sync for campaign ${campaignId}: existing backup with backup_version=${existingBackup.backup_version}`)
+              }
+            }
+            if (shouldSyncComponents) {
+              // 🔧 通过 Google Ads API 同步广告组件并保存为 campaign_config
+              try {
+                const apiSyncResult = await syncAdComponentsFromGoogleAds(
+                  userId,
+                  account.customer_id,
+                  campaign.campaign_id,
+                  account.service_account_id!,
+                  {
+                    finalUrlSuffix: campaign.final_url_suffix,
+                    campaignName: campaign.campaign_name,
+                    budgetAmount: campaign.budget_amount,
+                    budgetType: campaign.budget_type,
+                    marketingObjective: 'WEB_TRAFFIC',
+                    biddingStrategy: 'MAXIMIZE_CLICKS',
+                    targetCountry: 'US',
+                    targetLanguage: 'English',
+                    maxCpcBid: campaign.cpc_bid_ceiling_micros ? Number(campaign.cpc_bid_ceiling_micros) / 1000000 : undefined,
+                  }
+                )
                 
-                if (updated) {
-                  // 同时更新备份中的 campaign_config
-                  const db = await getDatabase()
-                  await db.exec(`
-                    UPDATE campaign_backups
-                    SET campaign_config = ?, updated_at = ?
-                    WHERE id = (
+                if (apiSyncResult.campaignConfig && Object.keys(apiSyncResult.campaignConfig).length > 0) {
+                  // 🔧 更新 campaign_config（只更新从 Google 同步的广告系列）
+                  const updated = await updateCampaignConfig(campaignId, apiSyncResult.campaignConfig)
+                  
+                  if (updated) {
+                    // 同时更新备份中的 campaign_config
+                    const dbCheck = await getDatabase()
+                    const latestBackup = await dbCheck.queryOne(`
                       SELECT id FROM campaign_backups 
                       WHERE offer_id = ? AND user_id = ? 
-                      ORDER BY created_at DESC LIMIT 1
-                    )
-                  `, [
-                    JSON.stringify(apiSyncResult.campaignConfig),
-                    new Date(),
-                    offerResult.offerId,
-                    userId
-                  ])
-                  
-                  console.log(`[GoogleAds Sync] Updated campaign_config from API`)
+                      ORDER BY created_at DESC 
+                      LIMIT 1
+                    `, [offerResult.offerId, userId])
+                    
+                    if (latestBackup) {
+                      await dbCheck.exec(`
+                        UPDATE campaign_backups
+                        SET campaign_config = ?, updated_at = ?
+                        WHERE id = ?
+                      `, [
+                        JSON.stringify(apiSyncResult.campaignConfig),
+                        new Date(),
+                        latestBackup.id
+                      ])
+                      
+                      console.log(`[GoogleAds Sync] Updated campaign_config from API`)
+                    }
+                  }
                 }
+              } catch (error) {
+                console.error('[GoogleAds Sync] Failed to sync from Google Ads API:', error)
+                // API 同步失败不影响主流程，只记录日志
               }
-            } catch (error) {
-              console.error('[GoogleAds Sync] Failed to sync from Google Ads API:', error)
-              // API 同步失败不影响主流程，只记录日志
             }
           } catch (error: any) {
             result.errors.push({
