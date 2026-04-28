@@ -440,7 +440,7 @@ async function syncTargetingFromApi(
       FROM campaign_criterion
       WHERE campaign.id = ${campaignId}
         AND campaign_criterion.status = 'ENABLED'
-        AND criterion.type IN ('LOCATION', 'LANGUAGE')
+        AND campaign_criterion.type IN ('LOCATION', 'LANGUAGE')
       LIMIT 10
     `
 
