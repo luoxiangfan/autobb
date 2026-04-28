@@ -16,6 +16,7 @@ import { getDatabase } from '../../db'
 import { getQueueManagerForTaskType } from '../queue-routing'
 import { getUserAuthType, getGoogleAdsCredentials } from '../../google-ads-oauth'
 import { getServiceAccountConfig } from '../../google-ads-service-account'
+import { buildUserExecutionEligibleSql } from '../../user-execution-eligibility'
 
 /**
  * Google Ads 广告系列同步任务数据
@@ -143,6 +144,7 @@ export class GoogleAdsCampaignSyncScheduler {
 
       const db = await getDatabase()
       const now = new Date()
+      const userEligibleCondition = buildUserExecutionEligibleSql({ dbType: db.type, userAlias: 'u' })
 
       // 查询所有启用了自动同步的用户
       const configs = await db.query<UserSyncConfig>(
@@ -165,16 +167,12 @@ export class GoogleAdsCampaignSyncScheduler {
             WHERE user_id = u.id AND sync_type = 'google_ads_campaign_sync'
           ) AS last_campaign_sync_at
         FROM users u
-        WHERE u.is_active = TRUE
-          AND (
-            u.package_expires_at IS NULL 
-            OR u.package_expires_at >= NOW()
-          )
-          AND COALESCE(
-            (SELECT value FROM system_settings
-             WHERE user_id = u.id AND category = 'google_ads' AND key = 'campaign_sync_enabled' LIMIT 1),
-            'true'
-          ) = 'true'
+        WHERE COALESCE(
+          (SELECT value FROM system_settings
+           WHERE user_id = u.id AND category = 'google_ads' AND key = 'campaign_sync_enabled' LIMIT 1),
+          'true'
+        ) = 'true'
+          AND ${userEligibleCondition}
         `
       )
 
