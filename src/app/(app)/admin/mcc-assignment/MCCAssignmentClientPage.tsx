@@ -72,6 +72,9 @@ export default function MCCAssignmentClientPage() {
   const [assigning, setAssigning] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [isMccSelectOpen, setIsMccSelectOpen] = useState(false)
+  const [removingMccId, setRemovingMccId] = useState<string | null>(null)  // 🔧 删除中的 MCC ID
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)  // 🔧 删除确认对话框
+  const [mccToDelete, setMccToDelete] = useState<string | null>(null)  // 🔧 待删除的 MCC ID
 
   useEffect(() => {
     fetchUsers()
@@ -186,8 +189,9 @@ export default function MCCAssignmentClientPage() {
   }
 
   const handleRemove = async (mccCustomerId: string) => {
-    if (!selectedUserId) return
+    if (!selectedUserId || !mccCustomerId) return
 
+    setRemovingMccId(mccCustomerId)
     try {
       const response = await fetch('/api/admin/user-mcc', {
         method: 'DELETE',
@@ -209,9 +213,26 @@ export default function MCCAssignmentClientPage() {
       
       // 刷新分配列表
       fetchUserAssignments(selectedUserId)
+      setDeleteConfirmOpen(false)
+      setMccToDelete(null)
     } catch (error: any) {
       console.error('移除 MCC 失败:', error)
       toast.error('移除失败', { description: error.message })
+    } finally {
+      setRemovingMccId(null)
+    }
+  }
+
+  // 🔧 打开删除确认对话框
+  const confirmDelete = (mccCustomerId: string) => {
+    setMccToDelete(mccCustomerId)
+    setDeleteConfirmOpen(true)
+  }
+
+  // 🔧 确认删除
+  const handleConfirmDelete = () => {
+    if (mccToDelete) {
+      handleRemove(mccToDelete)
     }
   }
 
@@ -527,6 +548,47 @@ export default function MCCAssignmentClientPage() {
                 <>
                   <Plus className="w-4 h-4 mr-2" />
                   分配 {selectedMccIds.length} 个账号
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 🔧 删除确认对话框 */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>确认删除</DialogTitle>
+            <DialogDescription>
+              确定要删除这个 MCC 账号分配吗？此操作不可撤销。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteConfirmOpen(false)
+                setMccToDelete(null)
+              }}
+              disabled={!!removingMccId}
+            >
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={!!removingMccId}
+            >
+              {removingMccId ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  删除中...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  确认删除
                 </>
               )}
             </Button>
