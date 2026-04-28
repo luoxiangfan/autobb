@@ -1401,6 +1401,16 @@ function stopAllSchedulerTasks() {
     }
   }
 
+  // 停止 Google Ads 同步调度器
+  try {
+    const { getGoogleAdsCampaignSyncScheduler } = require('./lib/queue/schedulers/google-ads-campaign-sync-scheduler')
+    const googleAdsSyncScheduler = getGoogleAdsCampaignSyncScheduler()
+    googleAdsSyncScheduler.stop()
+    log('✅ Google Ads 广告系列同步调度器已停止')
+  } catch (error) {
+    logError('⚠️ 停止 Google Ads 同步调度器失败:', error)
+  }
+
   for (const [userId, schedule] of openclawStrategySchedules.entries()) {
     try {
       schedule.task.stop()
