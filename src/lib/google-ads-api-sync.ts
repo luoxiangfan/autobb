@@ -511,17 +511,15 @@ async function syncCampaignAssetsFromApi(
       SELECT 
         campaign.id,
         campaign.name,
-        assets.callout_asset,
-        assets.sitelink_asset
-      FROM campaign
-      LEFT JOIN campaign_asset ON campaign.id = campaign_asset.campaign
-      LEFT JOIN asset ON campaign_asset.asset = asset.id
+        asset.final_urls,
+        asset.callout_asset.callout_text,
+        asset.sitelink_asset.link_text,
+        asset.sitelink_asset.description1,
+        asset.sitelink_asset.description2
+      FROM campaign_asset
       WHERE campaign.id = ${campaignId}
         AND campaign_asset.status = 'ENABLED'
-        AND (
-          asset.type = 'CALLOUT'
-          OR asset.type = 'SITELINK'
-        )
+        AND asset.type IN ('CALLOUT', 'SITELINK')
     `
 
     const rows = await executeGAQLQueryPython({
