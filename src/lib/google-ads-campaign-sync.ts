@@ -344,29 +344,61 @@ export async function syncCampaignsFromGoogleAds(
 }
 
 /**
- * 从 Google Ads API 获取广告系列列表
+ * 🔧 优化：使用合并 GAQL 查询，一次获取所有数据
  */
-async function fetchCampaignsFromGoogleAds(params: {
+async function fetchAllDataFromGoogleAds(params: {
   userId: number
   customerId: string
   authType: string
   serviceAccountId?: string,
   refreshToken: string | null
-}): Promise<GoogleAdsCampaign[]> {
+}): Promise<{
+  campaigns: GoogleAdsCampaign[]
+  adGroups: Map<string, any[]>
+  ads: Map<string, any[]>
+  keywords: Map<string, any[]>
+  callouts: Map<string, any[]>
+  sitelinks: Map<string, any[]>
+}> {
   const { userId, customerId, authType, serviceAccountId, refreshToken } = params
 
-  // 使用 GAQL 查询广告系列
+  // 🔧 使用合并 GAQL 查询，一次获取所有数据
+  // 这样可以减少 API 调用次数，防止 429 错误
   const query = `
-    SELECT 
+    SELECT
       campaign.id,
       campaign.name,
-      campaign_budget.amount_micros,
-      campaign.target_spend.cpc_bid_ceiling_micros,
-      campaign_budget.type,
       campaign.status,
-      campaign.final_url_suffix
+      campaign.final_url_suffix,
+      campaign_budget.amount_micros,
+      campaign_budget.type,
+      campaign.target_spend.cpc_bid_ceiling_micros,
+      ad_group.id as ad_group_id,
+      ad_group.name as ad_group_name,
+      ad_group_ad.ad.id as ad_id,
+      ad_group_ad.ad.type as ad_type,
+      ad_group_ad.ad.responsive_search_ad.headlines as ad_headlines,
+      ad_group_ad.ad.responsive_search_ad.descriptions as ad_descriptions,
+      ad_group_ad.ad.responsive_search_ad.final_urls as ad_final_urls,
+      ad_group_criterion.criterion_id as keyword_criterion_id,
+      ad_group_criterion.keyword.text as keyword_text,
+      ad_group_criterion.keyword.match_type as keyword_match_type,
+      asset.id as asset_id,
+      asset.type as asset_type,
+      asset.callout_asset.text as callout_text,
+      asset.sitelink_asset.link_text as sitelink_text,
+      asset.sitelink_asset.final_urls as sitelink_urls,
+      asset.sitelink_asset.description as sitelink_description
     FROM campaign
+    LEFT JOIN ad_group ON campaign.id = ad_group.campaign
+    LEFT JOIN ad_group_ad ON ad_group.id = ad_group_ad.ad_group
+    LEFT JOIN ad_group_criterion ON ad_group.id = ad_group_criterion.ad_group
+    LEFT JOIN asset ON asset.id IN (
+      SELECT asset FROM ad_group_ad_asset WHERE ad_group_ad.ad_group = ad_group.id
+    )
     WHERE campaign.status != 'REMOVED'
+    AND ad_group.status != 'REMOVED'
+    AND ad_group_ad.status != 'REMOVED'
   `
 
   try {
@@ -394,22 +426,113 @@ async function fetchCampaignsFromGoogleAds(params: {
       )
     }
 
-    // 转换结果为结构化数据
-    return results.map((row: any) => ({
-      campaign_id: String(row.campaign?.id || ''),
-      campaign_name: row.campaign?.name || `Campaign_${row.campaign?.id}`,
-      budget_amount: Number(row.campaign_budget?.amount_micros || 0) / 1000000, // 转换为元
-      cpc_bid_ceiling_micros: Number(row.campaign?.target_spend?.cpc_bid_ceiling_micros || 0) / 1000000, // 转换为元
-      budget_type: (row.campaign_budget?.type || 'DAILY') as 'DAILY' | 'TOTAL',
-      status: (row.campaign?.status || 'PAUSED') as 'ENABLED' | 'PAUSED' | 'REMOVED',
-      customer_id: customerId,
-      final_url_suffix: row.final_url_suffix
-      // account_name: row.customer_client?.descriptive_name,
-    }))
+    // 🔧 在内存中处理数据，按 campaign_id 分组
+    const campaignMap = new Map<string, GoogleAdsCampaign>()
+    const adGroupsMap = new Map<string, any[]>()
+    const adsMap = new Map<string, any[]>()
+    const keywordsMap = new Map<string, any[]>()
+    const calloutsMap = new Map<string, any[]>()
+    const sitelinksMap = new Map<string, any[]>()
+
+    for (const row of results) {
+      const campaignId = String(row.campaign?.id || '')
+      
+      // 添加广告系列
+      if (!campaignMap.has(campaignId)) {
+        campaignMap.set(campaignId, {
+          campaign_id: campaignId,
+          campaign_name: row.campaign?.name || `Campaign_${campaignId}`,
+          budget_amount: Number(row.campaign_budget?.amount_micros || 0) / 1000000,
+          cpc_bid_ceiling_micros: Number(row.campaign?.target_spend?.cpc_bid_ceiling_micros || 0) / 1000000,
+          budget_type: (row.campaign_budget?.type || 'DAILY') as 'DAILY' | 'TOTAL',
+          status: (row.campaign?.status || 'PAUSED') as 'ENABLED' | 'PAUSED' | 'REMOVED',
+          customer_id: customerId,
+          final_url_suffix: row.campaign?.final_url_suffix || '',
+        })
+      }
+
+      // 添加广告组
+      const adGroupId = String(row.ad_group_id || '')
+      if (adGroupId && !adGroupsMap.has(adGroupId)) {
+        const adGroups = adGroupsMap.get(campaignId) || []
+        adGroups.push({
+          ad_group_id: adGroupId,
+          ad_group_name: row.ad_group_name,
+        })
+        adGroupsMap.set(campaignId, adGroups)
+      }
+
+      // 添加广告
+      const adId = String(row.ad_id || '')
+      if (adId) {
+        const ads = adsMap.get(campaignId) || []
+        ads.push({
+          ad_id: adId,
+          ad_type: row.ad_type,
+          headlines: row.ad_headlines,
+          descriptions: row.ad_descriptions,
+          final_urls: row.ad_final_urls,
+        })
+        adsMap.set(campaignId, ads)
+      }
+
+      // 添加关键词
+      const keywordId = String(row.keyword_criterion_id || '')
+      if (keywordId && row.keyword_text) {
+        const keywords = keywordsMap.get(campaignId) || []
+        keywords.push({
+          keyword_id: keywordId,
+          keyword_text: row.keyword_text,
+          keyword_match_type: row.keyword_match_type,
+        })
+        keywordsMap.set(campaignId, keywords)
+      }
+
+      // 添加扩展（Callout/Sitelink）
+      const assetType = String(row.asset_type || '')
+      if (assetType === 'CALLOUT' && row.callout_text) {
+        const callouts = calloutsMap.get(campaignId) || []
+        callouts.push({ text: row.callout_text })
+        calloutsMap.set(campaignId, callouts)
+      } else if (assetType === 'SITELINK' && row.sitelink_text) {
+        const sitelinks = sitelinksMap.get(campaignId) || []
+        sitelinks.push({
+          text: row.sitelink_text,
+          url: row.sitelink_urls?.[0] || '',
+          description: row.sitelink_description,
+        })
+        sitelinksMap.set(campaignId, sitelinks)
+      }
+    }
+
+    console.log(`[GoogleAds Sync] Fetched ${campaignMap.size} campaigns with all data in single query`)
+
+    return {
+      campaigns: Array.from(campaignMap.values()),
+      adGroups: adGroupsMap,
+      ads: adsMap,
+      keywords: keywordsMap,
+      callouts: calloutsMap,
+      sitelinks: sitelinksMap,
+    }
   } catch (error: any) {
-    console.error('[GoogleAds Sync] Failed to fetch campaigns:', error)
-    throw new Error(`获取广告系列失败：${error.message}`)
+    console.error('[GoogleAds Sync] Failed to fetch data:', error)
+    throw new Error(`获取广告数据失败：${error.message}`)
   }
+}
+
+/**
+ * 从 Google Ads API 获取广告系列列表（兼容旧接口）
+ */
+async function fetchCampaignsFromGoogleAds(params: {
+  userId: number
+  customerId: string
+  authType: string
+  serviceAccountId?: string,
+  refreshToken: string | null
+}): Promise<GoogleAdsCampaign[]> {
+  const result = await fetchAllDataFromGoogleAds(params)
+  return result.campaigns
 }
 
 /**

@@ -409,8 +409,8 @@ export async function autoBackupCampaign(params: {
     return
   }
 
-  // 🔧 优化：备份唯一（offer_id, user_id），不重复创建
-  // 检查是否已有备份（不区分 backup_source）
+  // 🔧 优化：备份唯一（offer_id, user_id），达到稳定状态后不再更新
+  // 检查是否已有备份
   const existingBackup = await db.queryOne(`
     SELECT id, backup_source, backup_version
     FROM campaign_backups
@@ -419,8 +419,24 @@ export async function autoBackupCampaign(params: {
     LIMIT 1
   `, [campaign.offer_id, params.userId]) as { id: number; backup_source: string; backup_version: number } | undefined
 
+  // 🔧 检查是否需要更新备份
+  let shouldUpdate = true
+  
   if (existingBackup) {
-    // 🔧 直接更新已有备份，而不是创建新记录
+    // 情况一：backup_source='google_ads' 且 backup_version=2，已达到稳定状态，不再更新
+    if (existingBackup.backup_source === 'google_ads' && existingBackup.backup_version >= 2) {
+      shouldUpdate = false
+      console.log('[Auto Backup] Skip update: google_ads backup version 2 already exists for campaign:', params.campaignId)
+    }
+    // 情况二：backup_source='autoads' 且 backup_version=1，已达到稳定状态，不再更新
+    else if (existingBackup.backup_source === 'autoads' && existingBackup.backup_version >= 1) {
+      shouldUpdate = false
+      console.log('[Auto Backup] Skip update: autoads backup version 1 already exists for campaign:', params.campaignId)
+    }
+  }
+
+  if (shouldUpdate && existingBackup) {
+    // 🔧 更新已有备份
     console.log('[Auto Backup] Updating existing backup for campaign:', params.campaignId)
     
     // 确定备份版本
@@ -444,7 +460,7 @@ export async function autoBackupCampaign(params: {
       new Date(),
       existingBackup.id
     ])
-  } else {
+  } else if (!existingBackup) {
     // 没有已有备份，创建新备份
     console.log('[Auto Backup] Creating new backup for campaign:', params.campaignId)
     
@@ -455,7 +471,7 @@ export async function autoBackupCampaign(params: {
       campaignConfig: campaign.campaign_config,
       backupType: 'auto',
       backupSource: params.backupSource,
-      backupVersion: params.backupSource === 'google_ads' ? 1 : 1,
+      backupVersion: 1,
       customName: campaign.custom_name,
       campaignName: campaign.campaign_name,
       budgetAmount: campaign.budget_amount,
@@ -465,5 +481,8 @@ export async function autoBackupCampaign(params: {
       status: campaign.status,
       googleAdsAccountId: campaign.google_ads_account_id,
     })
+  } else {
+    // 已有备份且已达到稳定状态，跳过更新
+    console.log('[Auto Backup] Backup already stable, skipping update for campaign:', params.campaignId)
   }
 }
