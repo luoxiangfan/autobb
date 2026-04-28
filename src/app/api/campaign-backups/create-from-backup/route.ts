@@ -248,18 +248,27 @@ export async function POST(request: NextRequest) {
       backups,
       userId,
       db,
-    })
+    }) as any
     
     // 第二步：如果选择创建到 Google Ads，则调用 publish API
     if (googleAdsAccountId) {
-      return await batchPublishToGoogleAds({
-        dbResult,
+      // return await batchPublishToGoogleAds({
+      //   dbResult,
+      //   backups,
+      //   userId,
+      //   googleAdsAccountId,
+      //   db,
+      //   request,
+      //   parentRequestId
+      // })
+      return await batchCreateToGoogleAds({
         backups,
         userId,
-        googleAdsAccountId,
         db,
         request,
-        parentRequestId
+        parentRequestId,
+        googleAdsAccountId,
+        campaigns: dbResult.details
       })
     }
     
@@ -283,8 +292,10 @@ async function batchCreateToGoogleAds(params: {
   db: any
   request: NextRequest
   parentRequestId?: string
+  googleAdsAccountId: number
+  campaigns: any[]
 }): Promise<NextResponse> {
-  const { backups, userId, db, request, parentRequestId } = params
+  const { backups, userId, db, request, parentRequestId, googleAdsAccountId, campaigns } = params
 
   const results = {
     success: 0,
@@ -299,13 +310,41 @@ async function batchCreateToGoogleAds(params: {
     }>,
   }
 
+  // 验证 Google Ads 账号
+  const adsAccount = await db.queryOne(`
+    SELECT customer_id, refresh_token, auth_type, service_account_id, is_active, is_deleted
+    FROM google_ads_accounts
+    WHERE id = ? AND user_id = ?
+  `, [googleAdsAccountId, userId])
+
+  if (!adsAccount) {
+    return NextResponse.json({
+      success: false,
+      message: 'Google Ads 账号不存在或无权访问',
+      data: results,
+    }, { status: 400 })
+  }
+
+  // 检查账号状态
+  const isActive = adsAccount.is_active === true || adsAccount.is_active === 1
+  const isDeleted = adsAccount.is_deleted === true || adsAccount.is_deleted === 1
+
+  if (!isActive || isDeleted) {
+    return NextResponse.json({
+      success: false,
+      message: 'Google Ads 账号已禁用或删除',
+      data: results,
+    }, { status: 400 })
+  }
+
   // 获取队列管理器实例
   const { getOrCreateQueueManager } = await import('@/lib/queue/init-queue')
   const queue = await getOrCreateQueueManager()
 
-  for (const { offer_id, campaignId, variantName, campaignConfig: campaignConfigForTask, google_ads_account_id, id: backupId } of backups) {
+  for (const { offer_id, campaignConfig: campaignConfigForTask, google_ads_account_id, id: backupId } of backups) {
+    const campaignId = campaigns.find(c => c.backupId === backupId)?.campaignId
     try {
-      console.log(`🚀 队列化Campaign发布任务 ${campaignId} (Variant ${variantName || 'Single'})...`)
+      console.log(`🚀 队列化Campaign发布任务 ${campaignId}...`)
       const offer = await db.queryOne(`
           SELECT id, url, final_url, final_url_suffix, brand, target_country, target_language, scrape_status, category, offer_name
           FROM offers
@@ -362,7 +401,7 @@ async function batchCreateToGoogleAds(params: {
       const taskData: any = {
         campaignId: campaignId,
         offerId: offer_id,
-        googleAdsAccountId: google_ads_account_id,
+        googleAdsAccountId: googleAdsAccountId,
         userId: userId,
         naming: naming, // 🔥 新增：传递规范化命名
         marketingObjective: campaignConfigForTask.marketingObjective || 'WEB_TRAFFIC', // 🔧 新增(2025-12-19): 营销目标
