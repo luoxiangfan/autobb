@@ -870,12 +870,11 @@ export async function updateCampaignConfig(
     return false
   }
   
-  // 🔧 检查 synced_from_google_ads 字段
-  const isSyncedFromGoogle = campaign.synced_from_google_ads === true || campaign.synced_from_google_ads === 1
+  // 🔧 检查 campaign_config 字段
   const haveConfig = campaign.campaign_config && campaign.campaign_config != null && campaign.campaign_config != ''
   
-  if (!isSyncedFromGoogle || haveConfig) {
-    console.log(`[Campaign Config] Campaign ${campaignId} is not synced from Google Ads, skipping config update`)
+  if (haveConfig) {
+    console.log(`[Campaign Config] Campaign ${campaignId} is already configured, skipping config update`)
     return false
   }
   

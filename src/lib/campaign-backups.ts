@@ -91,7 +91,7 @@ export async function createCampaignBackup(input: CreateCampaignBackupInput): Pr
     input.userId,
     input.offerId,
     JSON.stringify(input.campaignData),
-    input.campaignConfig ? JSON.stringify(input.campaignConfig) : null,  // 🔧 新增
+    input.campaignConfig ? input.campaignConfig : null,  // 🔧 新增
     input.backupType || 'auto',
     input.backupSource || 'autoads',
     input.backupVersion || 1,
