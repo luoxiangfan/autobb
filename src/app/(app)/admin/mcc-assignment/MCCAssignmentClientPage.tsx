@@ -58,6 +58,9 @@ interface MCCAssignment {
   mcc_account_name: string | null
 }
 
+// 🔧 用于取消未完成的请求
+let fetchAssignmentsAbortController: AbortController | null = null
+
 export default function MCCAssignmentClientPage() {
   const [loading, setLoading] = useState(true)
   const [users, setUsers] = useState<User[]>([])
@@ -77,6 +80,8 @@ export default function MCCAssignmentClientPage() {
 
   useEffect(() => {
     if (selectedUserId) {
+      // 🔧 切换用户时先清除旧数据
+      setUserAssignments([])
       fetchUserAssignments(selectedUserId)
     }
   }, [selectedUserId])
@@ -117,15 +122,27 @@ export default function MCCAssignmentClientPage() {
   }
 
   const fetchUserAssignments = async (userId: string) => {
+    // 🔧 取消未完成的请求
+    if (fetchAssignmentsAbortController) {
+      fetchAssignmentsAbortController.abort()
+    }
+    fetchAssignmentsAbortController = new AbortController()
+
     try {
       const response = await fetch(`/api/admin/user-mcc?userId=${userId}`, {
         credentials: 'include',
+        signal: fetchAssignmentsAbortController.signal,
       })
       if (response.ok) {
         const data = await response.json()
+        // 🔧 直接替换数据，不追加
         setUserAssignments(data.assignments || [])
       }
     } catch (error: any) {
+      if (error.name === 'AbortError') {
+        // 🔧 请求被取消，不处理
+        return
+      }
       console.error('获取用户 MCC 分配失败:', error)
     }
   }

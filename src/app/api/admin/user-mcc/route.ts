@@ -34,7 +34,12 @@ export async function GET(request: NextRequest) {
         gaa.account_name as mcc_account_name
       FROM user_mcc_assignments uma
       LEFT JOIN users u ON uma.assigned_by = u.id
-      LEFT JOIN google_ads_accounts gaa ON uma.mcc_customer_id = gaa.customer_id
+      LEFT JOIN (
+        SELECT customer_id, MAX(account_name) as account_name
+        FROM google_ads_accounts
+        WHERE is_manager_account = ${db.type === 'postgres' ? 'TRUE' : '1'}
+        GROUP BY customer_id
+      ) gaa ON uma.mcc_customer_id = gaa.customer_id
       WHERE uma.user_id = ?
       ORDER BY uma.assigned_at DESC
     `, [queryUserId]) as Array<{
