@@ -112,9 +112,11 @@ export async function POST(request: NextRequest) {
     // 验证 MCC 账号是否存在（必须是 is_manager_account = TRUE）
     const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = TRUE' : 'is_manager_account = 1'
     const mccAccounts = await db.query(`
-      SELECT customer_id, account_name FROM google_ads_accounts
+      SELECT customer_id, MAX(account_name) AS account_name
+      FROM google_ads_accounts
       WHERE customer_id IN (${mccCustomerIds.map(() => '?').join(',')})
       AND ${isManagerCondition}
+      GROUP BY customer_id
     `, mccCustomerIds) as Array<{ customer_id: string; account_name: string }>
 
     if (mccAccounts.length !== mccCustomerIds.length) {
