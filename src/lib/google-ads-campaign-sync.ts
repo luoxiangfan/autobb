@@ -243,10 +243,12 @@ export async function syncCampaignsFromGoogleAds(
                   const db = await getDatabase()
                   await db.exec(`
                     UPDATE campaign_backups
-                    SET campaign_config = ?,
-                        updated_at = ?
-                    WHERE offer_id = ? AND user_id = ?
-                    ORDER BY created_at DESC LIMIT 1
+                    SET campaign_config = ?, updated_at = ?
+                    WHERE id = (
+                      SELECT id FROM campaign_backups 
+                      WHERE offer_id = ? AND user_id = ? 
+                      ORDER BY created_at DESC LIMIT 1
+                    )
                   `, [
                     JSON.stringify(apiSyncResult.campaignConfig),
                     new Date(),
