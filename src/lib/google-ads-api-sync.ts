@@ -435,14 +435,10 @@ async function syncTargetingFromApi(
         campaign_criterion.status,
         campaign_criterion.display_name,
         campaign_criterion.negative,
-        campaign_criterion.location,
-        campaign_criterion.language
+        campaign_criterion.location.geo_target_constant,
+        campaign_criterion.language.language_constant
       FROM campaign_criterion
       WHERE campaign.id = ${campaignId}
-        AND (
-          campaign_criterion.location IS NOT NULL
-          OR campaign_criterion.language IS NOT NULL
-        )
         AND campaign_criterion.status = 'ENABLED'
         AND AND criterion.type IN ('LOCATION', 'LANGUAGE')
       LIMIT 10

@@ -152,11 +152,7 @@ export async function findActiveGoogleAdsAccounts(userId: number, manager?: bool
     `
   }
 
-  const rows = await db.query(`
-    SELECT * FROM google_ads_accounts
-    WHERE user_id = ? AND ${isActiveCondition} AND ${isDeletedCheck}
-    ORDER BY created_at DESC
-  `, [userId]) as any[]
+  const rows = await db.query(sqlStr, [userId]) as any[]
 
   return rows.map(mapRowToGoogleAdsAccount)
 }
