@@ -516,7 +516,7 @@ async function fetchAllDataFromGoogleAds(params: {
         ad_group_ad.ad.type,
         ad_group_ad.ad.responsive_search_ad.headlines,
         ad_group_ad.ad.responsive_search_ad.descriptions,
-        ad_group_ad.ad.responsive_search_ad.final_urls
+        ad_group_ad.ad.final_urls
       FROM ad_group_ad
       WHERE campaign.status != 'REMOVED'
         AND ad_group.status != 'REMOVED'
