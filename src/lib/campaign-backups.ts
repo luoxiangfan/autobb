@@ -35,6 +35,7 @@ export interface CampaignBackup {
   googleAdsAccountId: number | null
   createdAt: string
   updatedAt: string
+  adCreativeId?: number | null  // 🔧 新增：广告创意 ID
 }
 
 /**
@@ -56,6 +57,7 @@ export interface CreateCampaignBackupInput {
   maxCpc?: number | null
   status: string
   googleAdsAccountId?: number | null
+  adCreativeId?: number | null
 }
 
 /**
@@ -85,8 +87,8 @@ export async function createCampaignBackup(input: CreateCampaignBackupInput): Pr
       budget_amount, budget_type,
       target_cpa, max_cpc,
       status, google_ads_account_id,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      created_at, updated_at, ad_creative_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     input.userId,
     input.offerId,
@@ -105,6 +107,7 @@ export async function createCampaignBackup(input: CreateCampaignBackupInput): Pr
     input.googleAdsAccountId || null,
     now,
     now,
+    input.adCreativeId || null,  // 🔧 新增：广告创意 ID
   ])
 
   const backupId = getInsertedId(result, db.type)
@@ -216,6 +219,7 @@ export async function createCampaignFromBackup(
     maxCpc: number
     googleAdsAccountId: number
     campaignConfig: any
+    adCreativeId?: number | null  // 🔧 新增：广告创意 ID
     createToGoogle?: boolean  // 🔧 新增：是否创建到 Google Ads
   }>
 ): Promise<{
@@ -248,6 +252,7 @@ export async function createCampaignFromBackup(
   const maxCpc = overrides?.maxCpc ?? campaignData.max_cpc ?? backup.maxCpc
   const googleAdsAccountId = overrides?.googleAdsAccountId ?? campaignData.google_ads_account_id ?? backup.googleAdsAccountId
   const finalCampaignConfig = overrides?.campaignConfig ?? campaignConfig  // 🔧 新增
+  const adCreativeId = overrides?.adCreativeId ?? campaignData?.ad_creative_id ?? backup.adCreativeId  // 🔧 新增
 
   // 创建广告系列
   const result = await db.exec(`
@@ -377,6 +382,7 @@ function parseCampaignBackup(row: any): CampaignBackup {
     googleAdsAccountId: row.google_ads_account_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    adCreativeId: row.ad_creative_id,  // 🔧 新增：广告创意 ID
   }
 }
 
@@ -480,6 +486,7 @@ export async function autoBackupCampaign(params: {
       maxCpc: campaign.max_cpc,
       status: campaign.status,
       googleAdsAccountId: campaign.google_ads_account_id,
+      adCreativeId: campaign.ad_creative_id,
     })
   } else {
     // 已有备份且已达到稳定状态，跳过更新
