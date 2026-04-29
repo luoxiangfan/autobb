@@ -160,7 +160,7 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
     // 检查是否为管理员
     const isAdmin = authResult.user.role === 'admin'
     
-    if (allUsersParam === 'true' && isAdmin) {
+    if ((allUsersParam === 'true' || !targetUserIdParam) && isAdmin) {
       // 管理员查看所有用户总和
       userId = 0  // 特殊值，表示所有用户
       isAllUsers = true
