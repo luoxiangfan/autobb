@@ -59,6 +59,167 @@ export interface SyncResult {
   warnings: string[]
 }
 
+export const LanguageCodeMap = {
+    'en': 1000,      // English
+    'zh': 1017,      // Chinese (Simplified)
+    'zh-cn': 1017,   // Chinese (Simplified)
+    'zh-tw': 1018,   // Chinese (Traditional)
+    'ja': 1005,      // Japanese
+    'de': 1001,      // German
+    'fr': 1002,      // French
+    'es': 1003,      // Spanish
+    'it': 1004,      // Italian
+    'ko': 1012,      // Korean
+    'ru': 1031,      // Russian
+    'pt': 1014,      // Portuguese
+    'ar': 1019,      // Arabic
+    'hi': 1023,      // Hindi
+    'nl': 1020,      // Dutch
+    'th': 1033,      // Thai
+    'vi': 1044,      // Vietnamese
+    'tr': 1037,      // Turkish
+    'sv': 1032,      // Swedish
+    'da': 1009,      // Danish
+    'fi': 1011,      // Finnish
+    'no': 1013,      // Norwegian
+    'pl': 1021,      // Polish
+    'cs': 1008,      // Czech
+    'hu': 1024,      // Hungarian
+    'el': 1022,      // Greek
+    'he': 1025,      // Hebrew
+    'id': 1027,      // Indonesian
+    'ms': 1019,      // Malay
+    'tl': 1034,      // Tagalog
+}
+
+export const languageMap: { [key: string]: string } = {
+  'english': 'en',
+  'chinese (simplified)': 'zh-cn',
+  'chinese (traditional)': 'zh-tw',
+  'chinese': 'zh',
+  'spanish': 'es',
+  'french': 'fr',
+  'german': 'de',
+  'japanese': 'ja',
+  'korean': 'ko',
+  'portuguese': 'pt',
+  'italian': 'it',
+  'russian': 'ru',
+  'arabic': 'ar',
+  'hindi': 'hi',
+  'dutch': 'nl',
+  'thai': 'th',
+  'vietnamese': 'vi',
+  'turkish': 'tr',
+  'swedish': 'sv',
+  'danish': 'da',
+  'finnish': 'fi',
+  'norwegian': 'no',
+  'polish': 'pl',
+  'czech': 'cs',
+  'hungarian': 'hu',
+  'greek': 'el',
+  'hebrew': 'he',
+  'indonesian': 'id',
+  'malay': 'ms',
+}
+
+export const geoTargetMAP: { [key: string]: number } = {
+  // 北美
+  'US': 2840,   // United States
+  'CA': 2124,   // Canada
+  'MX': 2484,   // Mexico
+
+  // 欧洲
+  'GB': 2826,   // United Kingdom
+  'UK': 2826,   // United Kingdom (alias)
+  'DE': 2276,   // Germany
+  'FR': 2250,   // France
+  'IT': 2380,   // Italy
+  'ES': 2724,   // Spain
+  'PT': 2620,   // Portugal
+  'NL': 2528,   // Netherlands
+  'BE': 2056,   // Belgium
+  'AT': 2040,   // Austria
+  'CH': 2756,   // Switzerland
+  'SE': 2752,   // Sweden
+  'NO': 2578,   // Norway
+  'DK': 2208,   // Denmark
+  'FI': 2246,   // Finland
+  'PL': 2616,   // Poland
+  'CZ': 2203,   // Czech Republic
+  'HU': 2348,   // Hungary
+  'GR': 2300,   // Greece
+  'IE': 2372,   // Ireland
+  'RO': 2642,   // Romania
+  'BG': 2100,   // Bulgaria
+  'HR': 2191,   // Croatia
+  'RS': 2688,   // Serbia
+  'SI': 2705,   // Slovenia
+  'SK': 2703,   // Slovakia
+  'UA': 2804,   // Ukraine
+  'EE': 2233,   // Estonia
+  'LV': 2428,   // Latvia
+  'LT': 2440,   // Lithuania
+  'RU': 2643,   // Russia
+
+  // 亚洲
+  'CN': 2156,   // China
+  'JP': 2392,   // Japan
+  'KR': 2410,   // South Korea
+  'IN': 2356,   // India
+  'ID': 2360,   // Indonesia
+  'TH': 2764,   // Thailand
+  'VN': 2704,   // Vietnam
+  'PH': 2608,   // Philippines
+  'MY': 2458,   // Malaysia
+  'SG': 2702,   // Singapore
+  'HK': 2344,   // Hong Kong
+  'TW': 2158,   // Taiwan
+  'BD': 2050,   // Bangladesh
+  'PK': 2586,   // Pakistan
+
+  // 中东
+  'TR': 2792,   // Turkey
+  'SA': 2682,   // Saudi Arabia
+  'AE': 2784,   // United Arab Emirates
+  'IL': 2376,   // Israel
+  'EG': 2818,   // Egypt
+  'IR': 2364,   // Iran
+  'IQ': 2368,   // Iraq
+  'QA': 2634,   // Qatar
+  'KW': 2414,   // Kuwait
+
+  // 大洋洲
+  'AU': 2036,   // Australia
+  'NZ': 2554,   // New Zealand
+
+  // 南美
+  'BR': 2076,   // Brazil
+  'AR': 2032,   // Argentina
+  'CO': 2170,   // Colombia
+  'CL': 2152,   // Chile
+  'PE': 2604,   // Peru
+  'VE': 2862,   // Venezuela
+
+  // 非洲
+  'ZA': 2710,   // South Africa
+  'NG': 2566,   // Nigeria
+  'KE': 2404,   // Kenya
+  'MA': 2504,   // Morocco
+}
+
+/**
+ * 🔧 将语言代码转换为语言名称
+ */
+function getLanguageName(languageCode: string): string {
+  return languageMap[languageCode] || languageCode
+}
+
+function getCountryName(countryCode: string): string {
+  return Object.keys(geoTargetMAP).find(key => geoTargetMAP[key] == Number(countryCode)) || countryCode
+}
+
 /**
  * 从 Google Ads 同步广告系列
  * 
@@ -159,7 +320,7 @@ export async function syncCampaignsFromGoogleAds(
       console.log(`[GoogleAds Sync] Syncing account: ${account.customer_id} (${account.account_name || 'N/A'})`)
 
       try {
-        // 4. 从 Google Ads API 获取广告系列列表
+        // 4. 从 Google Ads API 获取广告系列列表（聚合后的完整数据）
         const campaigns = await fetchCampaignsFromGoogleAds({
           userId,
           customerId: account.customer_id,
@@ -171,7 +332,7 @@ export async function syncCampaignsFromGoogleAds(
         console.log(`[GoogleAds Sync] Found ${campaigns.length} campaigns for account ${account.customer_id}`)
 
         // 5. 保存广告系列到数据库并创建关联 Offer
-        for (const campaign of campaigns) {
+        for (const { campaign, campaign_config } of campaigns) {
           if (options?.dryRun) {
             console.log(`[Dry Run] Would sync campaign: ${campaign.campaign_name} (${campaign.campaign_id})`)
             result.syncedCount++
@@ -240,27 +401,9 @@ export async function syncCampaignsFromGoogleAds(
             if (shouldSyncComponents) {
               // 🔧 通过 Google Ads API 同步广告组件并保存为 campaign_config
               try {
-                const apiSyncResult = await syncAdComponentsFromGoogleAds(
-                  userId,
-                  account.customer_id,
-                  campaign.campaign_id,
-                  account.service_account_id!,
-                  {
-                    finalUrlSuffix: campaign.final_url_suffix,
-                    campaignName: campaign.campaign_name,
-                    budgetAmount: campaign.budget_amount,
-                    budgetType: campaign.budget_type,
-                    marketingObjective: 'WEB_TRAFFIC',
-                    biddingStrategy: 'MAXIMIZE_CLICKS',
-                    targetCountry: 'US',
-                    targetLanguage: 'English',
-                    maxCpcBid: campaign.cpc_bid_ceiling_micros ? Number(campaign.cpc_bid_ceiling_micros) / 1000000 : undefined,
-                  }
-                )
-                
-                if (apiSyncResult.campaignConfig && Object.keys(apiSyncResult.campaignConfig).length > 0) {
+                if (campaign_config && Object.keys(campaign_config).length > 0) {
                   // 🔧 更新 campaign_config（只更新从 Google 同步的广告系列）
-                  const updated = await updateCampaignConfig(campaignId, apiSyncResult.campaignConfig)
+                  const updated = await updateCampaignConfig(campaignId, campaign_config)
                   
                   if (updated) {
                     // 同时更新备份中的 campaign_config
@@ -278,7 +421,7 @@ export async function syncCampaignsFromGoogleAds(
                         SET campaign_config = ?, updated_at = ?
                         WHERE id = ?
                       `, [
-                        JSON.stringify(apiSyncResult.campaignConfig),
+                        JSON.stringify(campaign_config),
                         new Date(),
                         latestBackup.id
                       ])
@@ -344,7 +487,8 @@ export async function syncCampaignsFromGoogleAds(
 }
 
 /**
- * 🔧 优化：使用合并 GAQL 查询，一次获取所有数据
+ * 🔧 优化：使用 4 个独立的 GAQL 查询获取所有数据，然后在内存中聚合成完整广告系列数据
+ * GAQL 不支持 JOIN 和子查询，需要拆分查询
  */
 async function fetchAllDataFromGoogleAds(params: {
   userId: number
@@ -352,89 +496,155 @@ async function fetchAllDataFromGoogleAds(params: {
   authType: string
   serviceAccountId?: string,
   refreshToken: string | null
-}): Promise<{
-  campaigns: GoogleAdsCampaign[]
-  adGroups: Map<string, any[]>
-  ads: Map<string, any[]>
-  keywords: Map<string, any[]>
-  callouts: Map<string, any[]>
-  sitelinks: Map<string, any[]>
-}> {
+}): Promise<any[]> {
   const { userId, customerId, authType, serviceAccountId, refreshToken } = params
 
-  // 🔧 使用合并 GAQL 查询，一次获取所有数据
-  // 这样可以减少 API 调用次数，防止 429 错误
-  const query = `
-    SELECT
-      campaign.id,
-      campaign.name,
-      campaign.status,
-      campaign.final_url_suffix,
-      campaign_budget.amount_micros,
-      campaign_budget.type,
-      campaign.target_spend.cpc_bid_ceiling_micros,
-      ad_group.id as ad_group_id,
-      ad_group.name as ad_group_name,
-      ad_group_ad.ad.id as ad_id,
-      ad_group_ad.ad.type as ad_type,
-      ad_group_ad.ad.responsive_search_ad.headlines as ad_headlines,
-      ad_group_ad.ad.responsive_search_ad.descriptions as ad_descriptions,
-      ad_group_ad.ad.responsive_search_ad.final_urls as ad_final_urls,
-      ad_group_criterion.criterion_id as keyword_criterion_id,
-      ad_group_criterion.keyword.text as keyword_text,
-      ad_group_criterion.keyword.match_type as keyword_match_type,
-      asset.id as asset_id,
-      asset.type as asset_type,
-      asset.callout_asset.text as callout_text,
-      asset.sitelink_asset.link_text as sitelink_text,
-      asset.sitelink_asset.final_urls as sitelink_urls,
-      asset.sitelink_asset.description as sitelink_description
-    FROM campaign
-    LEFT JOIN ad_group ON campaign.id = ad_group.campaign
-    LEFT JOIN ad_group_ad ON ad_group.id = ad_group_ad.ad_group
-    LEFT JOIN ad_group_criterion ON ad_group.id = ad_group_criterion.ad_group
-    LEFT JOIN asset ON asset.id IN (
-      SELECT asset FROM ad_group_ad_asset WHERE ad_group_ad.ad_group = ad_group.id
-    )
-    WHERE campaign.status != 'REMOVED'
-    AND ad_group.status != 'REMOVED'
-    AND ad_group_ad.status != 'REMOVED'
-  `
-
   try {
-    let results: any[] = []
+    // 🔧 查询 1：获取广告、广告组、广告系列及预算数据
+    const query1 = `
+      SELECT
+        campaign.id,
+        campaign.name,
+        campaign.status,
+        campaign.final_url_suffix,
+        campaign_budget.amount_micros,
+        campaign_budget.type,
+        campaign.target_spend.cpc_bid_ceiling_micros,
+        ad_group.id,
+        ad_group.name,
+        ad_group_ad.ad.id,
+        ad_group_ad.ad.type,
+        ad_group_ad.ad.responsive_search_ad.headlines,
+        ad_group_ad.ad.responsive_search_ad.descriptions,
+        ad_group_ad.ad.responsive_search_ad.final_urls
+      FROM ad_group_ad
+      WHERE campaign.status != 'REMOVED'
+        AND ad_group.status != 'REMOVED'
+        AND ad_group_ad.status != 'REMOVED'
+    `
+
+    // 🔧 查询 2：获取关键词数据
+    const query2 = `
+      SELECT
+        campaign.id,
+        ad_group.id,
+        ad_group_criterion.criterion_id,
+        ad_group_criterion.keyword.text,
+        ad_group_criterion.keyword.match_type
+      FROM ad_group_criterion
+      WHERE ad_group_criterion.type = 'KEYWORD'
+        AND campaign.status != 'REMOVED'
+        AND ad_group.status != 'REMOVED'
+        AND ad_group_criterion.status != 'REMOVED'
+    `
+
+    // 🔧 查询 3：获取素材资源（Assets）数据
+    const query3 = `
+      SELECT
+        campaign.id,
+        asset.type,
+        asset.final_urls,
+        asset.callout_asset.callout_text,
+        asset.sitelink_asset.link_text,
+        asset.sitelink_asset.description1,
+        asset.sitelink_asset.description2
+      FROM campaign_asset
+      WHERE campaign.status != 'REMOVED'
+        AND campaign_asset.status != 'REMOVED'
+        AND asset.type IN ('CALLOUT', 'SITELINK')
+    `
+
+    // 🔧 查询 4：获取广告系列层级的定位（国家/语言）
+    const query4 = `
+      SELECT
+        campaign.id,
+        campaign_criterion.criterion_id,
+        campaign_criterion.type,
+        campaign_criterion.display_name,
+        campaign_criterion.language.language_constant,
+        campaign_criterion.location.geo_target_constant,
+        campaign_criterion.negative
+      FROM campaign_criterion
+      WHERE campaign.status != 'REMOVED'
+        AND campaign_criterion.type IN ('LANGUAGE', 'LOCATION')
+        AND campaign_criterion.status != 'REMOVED'
+    `
+
+    // 🔧 执行四个查询（串行，间隔 1 秒，避免 API 限流）
+    let results1: any[] = []
+    let results2: any[] = []
+    let results3: any[] = []
+    let results4: any[] = []
+
     if (authType === 'service_account') {
-      const result = await executeGAQLQueryPython({
-        userId,
-        serviceAccountId,
-        customerId,
-        query,
-      })
-      results = result.results || []
+      // 查询 1
+      const r1 = await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query: query1 })
+      results1 = r1?.results || []
+      
+      // 🔧 等待 1 秒
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // 查询 2
+      const r2 = await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query: query2 })
+      results2 = r2?.results || []
+      
+      // 🔧 等待 1 秒
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // 查询 3
+      const r3 = await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query: query3 })
+      results3 = r3?.results || []
+      
+      // 🔧 等待 1 秒
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // 查询 4
+      const r4 = await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query: query4 })
+      results4 = r4?.results || []
     } else {
       const customer = await getCustomerWithCredentials({
         userId,
         customerId,
         refreshToken: refreshToken || undefined,
       })
-      results = await trackOAuthApiCall(
-        userId,
-        customerId,
-        ApiOperationType.SEARCH,
-        '/api/google-ads/query',
-        () => customer.query(query)
-      )
+      
+      // 查询 1
+      const r1 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query1))
+      results1 = r1 || []
+      
+      // 🔧 等待 1 秒
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // 查询 2
+      const r2 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query2))
+      results2 = r2 || []
+      
+      // 🔧 等待 1 秒
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // 查询 3
+      const r3 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query3))
+      results3 = r3 || []
+      
+      // 🔧 等待 1 秒
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // 查询 4
+      const r4 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query4))
+      results4 = r4 || []
     }
 
-    // 🔧 在内存中处理数据，按 campaign_id 分组
+    // 🔧 在内存中处理数据，按 ID 分组
     const campaignMap = new Map<string, GoogleAdsCampaign>()
-    const adGroupsMap = new Map<string, any[]>()
-    const adsMap = new Map<string, any[]>()
-    const keywordsMap = new Map<string, any[]>()
-    const calloutsMap = new Map<string, any[]>()
-    const sitelinksMap = new Map<string, any[]>()
+    const adGroupsMap = new Map<string, any[]>()  // key: ad_group_id
+    const adsMap = new Map<string, any[]>()       // key: ad_group_id
+    const keywordsMap = new Map<string, any[]>()  // key: ad_group_id
+    const calloutsMap = new Map<string, any[]>()  // key: campaign_id
+    const sitelinksMap = new Map<string, any[]>() // key: campaign_id
+    const locationsMap = new Map<string, any[]>() // key: campaign_id
 
-    for (const row of results) {
+    // 处理查询 1 结果（广告系列、广告组、广告）
+    for (const row of results1) {
       const campaignId = String(row.campaign?.id || '')
       
       // 添加广告系列
@@ -452,69 +662,150 @@ async function fetchAllDataFromGoogleAds(params: {
       }
 
       // 添加广告组
-      const adGroupId = String(row.ad_group_id || '')
-      if (adGroupId && !adGroupsMap.has(adGroupId)) {
-        const adGroups = adGroupsMap.get(campaignId) || []
-        adGroups.push({
-          ad_group_id: adGroupId,
-          ad_group_name: row.ad_group_name,
-        })
-        adGroupsMap.set(campaignId, adGroups)
+      const adGroupId = String(row.ad_group?.id || '')
+      if (adGroupId) {
+        if (!adGroupsMap.has(adGroupId)) {
+          adGroupsMap.set(adGroupId, [{
+            ad_group_id: adGroupId,
+            ad_group_name: row.ad_group?.name,
+            campaign_id: campaignId,
+          }])
+        }
+        
+        // 添加广告
+        const adId = String(row.ad_group_ad?.ad?.id || '')
+        if (adId) {
+          const ads = adsMap.get(adGroupId) || []
+          ads.push({
+            ad_id: adId,
+            ad_type: row.ad_group_ad?.ad?.type,
+            headlines: row.ad_group_ad?.ad?.responsive_search_ad?.headlines,
+            descriptions: row.ad_group_ad?.ad?.responsive_search_ad?.descriptions,
+            final_urls: row.ad_group_ad?.ad?.responsive_search_ad?.final_urls,
+          })
+          adsMap.set(adGroupId, ads)
+        }
       }
+    }
 
-      // 添加广告
-      const adId = String(row.ad_id || '')
-      if (adId) {
-        const ads = adsMap.get(campaignId) || []
-        ads.push({
-          ad_id: adId,
-          ad_type: row.ad_type,
-          headlines: row.ad_headlines,
-          descriptions: row.ad_descriptions,
-          final_urls: row.ad_final_urls,
-        })
-        adsMap.set(campaignId, ads)
-      }
-
-      // 添加关键词
-      const keywordId = String(row.keyword_criterion_id || '')
-      if (keywordId && row.keyword_text) {
-        const keywords = keywordsMap.get(campaignId) || []
+    // 处理查询 2 结果（关键词）
+    for (const row of results2) {
+      const adGroupId = String(row.ad_group?.id || '')
+      const keywordId = String(row.ad_group_criterion?.criterion_id || '')
+      
+      if (keywordId && row.ad_group_criterion?.keyword?.text) {
+        const keywords = keywordsMap.get(adGroupId) || []
         keywords.push({
           keyword_id: keywordId,
-          keyword_text: row.keyword_text,
-          keyword_match_type: row.keyword_match_type,
+          keyword_text: row.ad_group_criterion?.keyword?.text,
+          keyword_match_type: row.ad_group_criterion?.keyword?.match_type,
         })
-        keywordsMap.set(campaignId, keywords)
+        keywordsMap.set(adGroupId, keywords)
       }
+    }
 
-      // 添加扩展（Callout/Sitelink）
-      const assetType = String(row.asset_type || '')
-      if (assetType === 'CALLOUT' && row.callout_text) {
+    // 处理查询 3 结果（素材资源）
+    for (const row of results3) {
+      const campaignId = String(row.campaign?.id || '')
+      const assetType = String(row.asset?.type || '')
+      
+      if (assetType === 'CALLOUT' && row.asset?.callout_asset?.callout_text) {
         const callouts = calloutsMap.get(campaignId) || []
-        callouts.push({ text: row.callout_text })
+        callouts.push({ text: row.asset.callout_asset.callout_text })
         calloutsMap.set(campaignId, callouts)
-      } else if (assetType === 'SITELINK' && row.sitelink_text) {
+      } else if (assetType === 'SITELINK' && row.asset?.sitelink_asset?.link_text) {
         const sitelinks = sitelinksMap.get(campaignId) || []
         sitelinks.push({
-          text: row.sitelink_text,
-          url: row.sitelink_urls?.[0] || '',
-          description: row.sitelink_description,
+          text: row.asset?.sitelink_asset?.link_text || '',
+          url: (row.asset?.sitelink_asset?.final_urls ?? [])?.[0] || '',
+          description: row.asset?.sitelink_asset?.description1 || row.asset?.sitelink_asset?.description2 || '',
         })
         sitelinksMap.set(campaignId, sitelinks)
       }
     }
 
-    console.log(`[GoogleAds Sync] Fetched ${campaignMap.size} campaigns with all data in single query`)
-
-    return {
-      campaigns: Array.from(campaignMap.values()),
-      adGroups: adGroupsMap,
-      ads: adsMap,
-      keywords: keywordsMap,
-      callouts: calloutsMap,
-      sitelinks: sitelinksMap,
+      // 处理查询 4 结果（定位）
+    for (const row of results4) {
+      const campaignId = String(row.campaign?.id || '')
+      if (campaignId) {
+        const locations = locationsMap.get(campaignId) || []
+        locations.push({
+          criterion_id: row.campaign_criterion?.criterion_id,
+          type: row.campaign_criterion?.type,
+          display_name: row.campaign_criterion?.display_name,
+          language: row.campaign_criterion?.language?.language_constant,
+          location: row.campaign_criterion?.location?.geo_target_constant,
+          negative: row.campaign_criterion?.negative,
+        })
+        locationsMap.set(campaignId, locations)
+      }
     }
+
+    // 🔧 聚合成完整的广告系列数据并返回
+    const campaigns: any[] = []
+    
+    for (const [campaignId, campaign] of campaignMap.entries()) {
+      const adGroupId = Array.from(adGroupsMap.keys()).find(key => 
+        adGroupsMap.get(key)?.[0]?.campaign_id === campaignId
+      )
+      
+      const adGroup = adGroupId ? adGroupsMap.get(adGroupId)?.[0] : null
+      const ads = adGroupId ? (adsMap.get(adGroupId) || []) : []
+      const keywords = adGroupId ? (keywordsMap.get(adGroupId) || []) : []
+      const callouts = calloutsMap.get(campaignId) || []
+      const sitelinks = sitelinksMap.get(campaignId) || []
+      const locations = locationsMap.get(campaignId) || []
+      
+      // 提取否定关键词
+      const negativeKeywords: string[] = []
+      const negativeKeywordMatchType: any = {}
+      for (const kw of keywords) {
+        if (kw.negative) {
+          negativeKeywords.push(kw.keyword_text)
+          negativeKeywordMatchType[kw.keyword_text] = kw.keyword_match_type
+        }
+      }
+      
+      // 过滤正关键词
+      const positiveKeywords = keywords.filter(kw => !kw.negative).map(kw => ({
+        text: kw.keyword_text,
+        matchType: kw.keyword_match_type,
+      }))
+      
+      // 构建广告系列对象
+      campaigns.push({
+        campaign,
+        campaign_config: {
+          campaignName: campaign.campaign_name,
+          budgetAmount: campaign.budget_amount,
+          budgetType: campaign.budget_type,
+          targetCountry: getCountryName(locations.find((loc: any) => loc.type === 'LOCATION')?.geo_target_constant?.split('/')?.pop()) || 'US',
+          targetLanguage: getLanguageName(locations.find((loc: any) => loc.type === 'LANGUAGE')?.display_name) || 'English',
+          biddingStrategy: (campaign as any).bidding_strategy || 'MAXIMIZE_CLICKS',
+          marketingObjective: 'WEB_TRAFFIC',
+          finalUrlSuffix: campaign.final_url_suffix || '',
+          adGroupName: adGroup?.ad_group_name || '',
+          maxCpcBid: campaign.cpc_bid_ceiling_micros,
+          keywords: positiveKeywords,
+          negativeKeywords: negativeKeywords,
+          negativeKeywordMatchType: negativeKeywordMatchType,
+          adName: ads[0]?.ad_name || `RSA_${campaign.campaign_name}`,
+          headlines: ads[0]?.headlines?.map((h: any) => h.text) || [],
+          descriptions: ads[0]?.descriptions?.map((d: any) => d.text) || [],
+          finalUrls: ads[0]?.final_urls || [],
+          callouts: callouts.map((c: any) => c.text),
+          sitelinks: sitelinks.map((s: any) => ({
+            text: s.text,
+            url: s.url,
+            description: s.description,
+          })),
+        }
+      })
+    }
+    
+    console.log(`[GoogleAds Sync] Aggregated ${campaigns.length} complete campaigns`)
+    
+    return campaigns
   } catch (error: any) {
     console.error('[GoogleAds Sync] Failed to fetch data:', error)
     throw new Error(`获取广告数据失败：${error.message}`)
@@ -530,9 +821,8 @@ async function fetchCampaignsFromGoogleAds(params: {
   authType: string
   serviceAccountId?: string,
   refreshToken: string | null
-}): Promise<GoogleAdsCampaign[]> {
-  const result = await fetchAllDataFromGoogleAds(params)
-  return result.campaigns
+}): Promise<any[]> {
+  return await fetchAllDataFromGoogleAds(params)
 }
 
 /**
