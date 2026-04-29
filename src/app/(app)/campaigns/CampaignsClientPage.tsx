@@ -1594,6 +1594,9 @@ export default function CampaignsClientPage({
 
       const result = await response.json()
       showSuccess('暂停成功', `补点击：${result.details.clickFarmTask}, 换链接：${result.details.urlSwapTask}`)
+      
+      // 🔧 成功后刷新列表
+      await fetchCampaigns({ silent: true })
     } catch (err: any) {
       showError('暂停失败', err?.message || '网络错误')
     } finally {
