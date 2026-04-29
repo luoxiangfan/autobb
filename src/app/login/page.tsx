@@ -33,11 +33,44 @@ function LoginForm() {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const [captchaLoading, setCaptchaLoading] = useState(false)
   const [securityWarning, setSecurityWarning] = useState<string | null>(null)
+  const [checkingSession, setCheckingSession] = useState(true)
   const turnstileWidgetId = useRef<string | null>(null)
   const turnstileLoaded = useRef(false)
 
   // 检查CAPTCHA功能是否启用
   const captchaEnabled = process.env.NEXT_PUBLIC_CAPTCHA_ENABLED === 'true'
+
+  useEffect(() => {
+    let cancelled = false
+
+    const checkAuthAndRedirect = async () => {
+      try {
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include',
+          cache: 'no-store',
+        })
+
+        if (response.ok) {
+          const redirect = searchParams?.get('redirect')
+          const target = redirect && redirect !== '/login' ? redirect : '/dashboard'
+          router.replace(target)
+          return
+        }
+      } catch {
+        // Keep user on login page when auth check fails.
+      }
+
+      if (!cancelled) {
+        setCheckingSession(false)
+      }
+    }
+
+    checkAuthAndRedirect()
+
+    return () => {
+      cancelled = true
+    }
+  }, [router, searchParams])
 
   useEffect(() => {
     const errorParam = searchParams?.get('error')
@@ -160,6 +193,14 @@ function LoginForm() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (checkingSession) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+      </div>
+    )
   }
 
   return (
