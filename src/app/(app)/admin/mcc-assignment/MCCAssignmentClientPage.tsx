@@ -49,11 +49,6 @@ interface MCCAccount {
   isManagerAccount: boolean
 }
 
-interface MCCAssignmentWithUser extends MCCAssignment {
-  assigned_to_user_id?: number
-  assigned_to_username?: string
-}
-
 interface MCCAssignment {
   id: number
   mcc_customer_id: string
@@ -61,6 +56,7 @@ interface MCCAssignment {
   assigned_by: number | null
   assigned_by_username: string | null
   mcc_account_name: string | null
+  assigned_to_user_id: number | null
 }
 
 // 🔧 用于取消未完成的请求
@@ -471,11 +467,10 @@ export default function MCCAssignmentClientPage() {
 
   // 🔧 打开转移对话框
   const handleTransfer = (assignment: MCCAssignment) => {
-    const assignmentWithUser = assignment as MCCAssignmentWithUser
     setMccToTransfer({
       mccId: assignment.mcc_customer_id,
-      fromUserId: assignmentWithUser.assigned_to_user_id || 0,
-      fromUsername: users.find(u => u.id === assignmentWithUser.assigned_to_user_id)?.username || '未知用户',
+      fromUserId: assignment.assigned_to_user_id || 0,
+      fromUsername: users.find(u => u.id === assignment.assigned_to_user_id)?.username || '未知用户',
     })
     setTransferTargetUserId('')
     setTransferDialogOpen(true)

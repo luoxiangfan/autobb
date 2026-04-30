@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import { getGoogleAdsClient, getCustomer } from '@/lib/google-ads-api'
@@ -1801,13 +1801,46 @@ async function get(request: NextRequest) {
       return (a.descriptiveName || '').localeCompare(b.descriptiveName || '')
     })
 
-    // 🔧 修复(2025-12-12): 简化响应，移除共享配置相关信息
+    // 🔧 过滤：只返回用户 MCC 下的账号（非 MCC 账号）
+    // 当 filterByUserMcc=true 时：
+    // - 普通用户：只返回 parentMcc 在用户分配的 MCC 列表中的非 MCC 账号
+    // - 管理员：跳过过滤，显示所有非 MCC 账号
+    const filterByUserMcc = searchParams.get('filterByUserMcc') === 'true'
+    const isAdmin = authResult.user.role === 'admin'
+    
+    let finalAccounts = accountsWithOffers
+    
+    if (filterByUserMcc && !isAdmin) {
+      // 获取用户分配的 MCC 列表
+      const userMccAssignments = await db.query(`
+        SELECT mcc_customer_id FROM user_mcc_assignments WHERE user_id = ?
+      `, [userId]) as Array<{ mcc_customer_id: string }>
+      
+      const userMccIds = new Set(userMccAssignments.map(a => a.mcc_customer_id))
+      
+      // 过滤：只保留 parentMcc 在用户 MCC 列表中的非 MCC 账号
+      finalAccounts = accountsWithOffers.filter(account => {
+        // 排除 MCC 账号
+        if (account.manager) return false
+        // 只保留 parentMcc 在用户分配列表中的账号
+        return account.parentMcc && userMccIds.has(account.parentMcc)
+      })
+      
+      console.log(`🔧 filterByUserMcc=true (普通用户): 从 ${accountsWithOffers.length} 个账号过滤到 ${finalAccounts.length} 个账号`)
+    } else if (filterByUserMcc && isAdmin) {
+      // 管理员：只过滤掉 MCC 账号，显示所有非 MCC 账号
+      finalAccounts = accountsWithOffers.filter(account => !account.manager)
+      console.log(`🔧 filterByUserMcc=true (管理员): 过滤后剩余 ${finalAccounts.length} 个非 MCC 账号`)
+    }
+
+    // 🔧 修复 (2025-12-12): 简化响应，移除共享配置相关信息
     const finalSyncState = syncStore.get(syncKey)
+
     return jsonNoStore({
       success: true,
       data: {
-        total: accountsWithOffers.length,
-        accounts: accountsWithOffers,
+        total: finalAccounts.length,
+        accounts: finalAccounts,
         cached: usedCache,
         cacheStale: usedCache ? cacheStaleBeforeRefresh : false,
         refreshFailed,

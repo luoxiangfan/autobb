@@ -208,7 +208,8 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
       }
 
       // 🔓 KISS优化(2025-12-12): 传入offerId用于计算账号优先级
-      const response = await fetch(`/api/google-ads/credentials/accounts?${params}`, {
+      // 🔧 添加 filterByUserMcc=true，只获取用户 MCC 下的 Google Ads 账号（非 MCC 账号）
+      const response = await fetch(`/api/google-ads/credentials/accounts?${params}&filterByUserMcc=true`, {
         credentials: 'include'
       })
 

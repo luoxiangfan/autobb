@@ -487,7 +487,7 @@ export async function syncCampaignsFromGoogleAds(
 }
 
 /**
- * 🔧 优化：使用 4 个独立的 GAQL 查询获取所有数据，然后在内存中聚合成完整广告系列数据
+ * 🔧 优化：使用 5 个独立的 GAQL 查询获取所有数据，然后在内存中聚合成完整广告系列数据
  * GAQL 不支持 JOIN 和子查询，需要拆分查询
  */
 async function fetchAllDataFromGoogleAds(params: {
@@ -756,6 +756,8 @@ async function fetchAllDataFromGoogleAds(params: {
 
       // 处理查询 4 结果（定位）
     for (const row of results4) {
+      console.log(`[GoogleAds Sync] Processing targeting criterion for campaign ${row.campaign?.id}: type=${row.campaign_criterion?.type}, display_name=${row.campaign_criterion?.display_name}`)
+      console.log(`[GoogleAds Sync] Criterion details: language=${row.campaign_criterion?.language?.language_constant}, location=${row.campaign_criterion?.location?.geo_target_constant}, negative=${row.campaign_criterion?.negative}`)
       const campaignId = String(row.campaign?.id || '')
       if (campaignId) {
         const locations = locationsMap.get(campaignId) || []

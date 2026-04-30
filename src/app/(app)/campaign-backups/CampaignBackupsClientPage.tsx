@@ -102,7 +102,8 @@ export default function CampaignBackupsClientPage() {
 
   const fetchGoogleAdsAccounts = async () => {
     try {
-      const response = await fetch('/api/google-ads-accounts', {
+      // 🔧 添加 filterByUserMcc=true，只获取用户 MCC 下的 Google Ads 账号（非 MCC 账号）
+      const response = await fetch('/api/google-ads-accounts?filterByUserMcc=true', {
         credentials: 'include',
       })
       if (response.ok) {

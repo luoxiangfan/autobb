@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
     const assignments = await db.query(`
       SELECT 
         uma.id,
+        uma.user_id as assigned_to_user_id,
         uma.mcc_customer_id,
         uma.assigned_at,
         uma.assigned_by,
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
       assigned_by: number | null
       assigned_by_username: string | null
       mcc_account_name: string | null
+      assigned_to_user_id: number
     }>
 
     return NextResponse.json({

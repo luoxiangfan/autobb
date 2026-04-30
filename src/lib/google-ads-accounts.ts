@@ -43,7 +43,7 @@ export interface CreateGoogleAdsAccountInput {
 }
 
 /**
- * 创建Google Ads账号
+ * 创建 Google Ads 账号
  */
 export async function createGoogleAdsAccount(input: CreateGoogleAdsAccountInput): Promise<GoogleAdsAccount> {
   const db = await getDatabase()
@@ -71,7 +71,7 @@ export async function createGoogleAdsAccount(input: CreateGoogleAdsAccountInput)
 }
 
 /**
- * 查找Google Ads账号（带权限验证）
+ * 查找 Google Ads 账号（带权限验证）
  */
 export async function findGoogleAdsAccountById(id: number, userId: number): Promise<GoogleAdsAccount | null> {
   const db = await getDatabase()
@@ -90,7 +90,7 @@ export async function findGoogleAdsAccountById(id: number, userId: number): Prom
 }
 
 /**
- * 根据customer_id查找账号
+ * 根据 customer_id 查找账号
  */
 export async function findGoogleAdsAccountByCustomerId(
   customerId: string,
@@ -112,7 +112,7 @@ export async function findGoogleAdsAccountByCustomerId(
 }
 
 /**
- * 查找用户的所有Google Ads账号
+ * 查找用户的所有 Google Ads 账号
  */
 export async function findGoogleAdsAccountsByUserId(userId: number): Promise<GoogleAdsAccount[]> {
   const db = await getDatabase()
@@ -129,13 +129,13 @@ export async function findGoogleAdsAccountsByUserId(userId: number): Promise<Goo
 
 /**
  * 查找用户的激活账号（包括所有状态）
- * 注意：这会返回所有is_active=1的账号，包括DISABLED状态的
- * 如果需要可用于API调用的账号，请使用 findEnabledGoogleAdsAccounts
+ * 注意：这会返回所有 is_active=1 的账号，包括 DISABLED 状态的
+ * 如果需要可用于 API 调用的账号，请使用 findEnabledGoogleAdsAccounts
  */
 export async function findActiveGoogleAdsAccounts(userId: number, manager?: boolean): Promise<GoogleAdsAccount[]> {
   const db = await getDatabase()
 
-  // 🔧 PostgreSQL兼容性修复: is_active在PostgreSQL中是BOOLEAN类型
+  // 🔧 PostgreSQL 兼容性修复：is_active 在 PostgreSQL 中是 BOOLEAN 类型
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
   const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
   const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = TRUE' : 'is_manager_account = 1'
@@ -158,13 +158,13 @@ export async function findActiveGoogleAdsAccounts(userId: number, manager?: bool
 }
 
 /**
- * 查找用户可用于API调用的账号（ENABLED状态，非Manager账号）
+ * 查找用户可用于 API 调用的账号（ENABLED 状态，非 Manager 账号）
  */
 export async function findEnabledGoogleAdsAccounts(userId: number): Promise<GoogleAdsAccount[]> {
   const db = await getDatabase()
 
-  // 🔧 PostgreSQL兼容性修复: 布尔字段在PostgreSQL中是BOOLEAN类型
-  // 使用SQL条件而非参数绑定，避免类型不匹配
+  // 🔧 PostgreSQL 兼容性修复：布尔字段在 PostgreSQL 中是 BOOLEAN 类型
+  // 使用 SQL 条件而非参数绑定，避免类型不匹配
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
   const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = false' : 'is_manager_account = 0'
   const identityVerificationOkCondition = db.type === 'postgres'
@@ -187,7 +187,46 @@ export async function findEnabledGoogleAdsAccounts(userId: number): Promise<Goog
 }
 
 /**
- * 更新Google Ads账号
+ * 查找用户 MCC 下的 Google Ads 账号（非 Manager 账号）
+ * 只返回 parent_mcc_id 在用户分配的 MCC 列表中的账号
+ */
+export async function findGoogleAdsAccountsByUserMcc(userId: number, manager?: boolean): Promise<GoogleAdsAccount[]> {
+  const db = await getDatabase()
+
+  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
+  const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = FALSE' : 'is_manager_account = 0'
+  
+  // 基础查询：只返回用户 MCC 下的账号
+  let sqlStr = `
+    SELECT gaa.* FROM google_ads_accounts gaa
+    WHERE gaa.user_id = ? 
+      AND ${isActiveCondition} 
+      AND ${isDeletedCheck}
+      AND gaa.parent_mcc_id IN (
+        SELECT mcc_customer_id FROM user_mcc_assignments WHERE user_id = ?
+      )
+  `
+  
+  const params: any[] = [userId, userId]
+  
+  // 如果指定 manager=true，则只返回 Manager 账号
+  if (manager) {
+    sqlStr += ` AND ${isManagerCondition}`
+  } else {
+    // 默认只返回非 Manager 账号（普通 Google Ads 账号）
+    sqlStr += ` AND NOT ${isManagerCondition}`
+  }
+  
+  sqlStr += ` ORDER BY gaa.created_at DESC`
+
+  const rows = await db.query(sqlStr, params) as any[]
+
+  return rows.map(mapRowToGoogleAdsAccount)
+}
+
+/**
+ * 更新 Google Ads 账号
  */
 export async function updateGoogleAdsAccount(
   id: number,
@@ -267,10 +306,10 @@ export async function updateGoogleAdsAccount(
 }
 
 /**
- * 删除Google Ads账号（软删除）
+ * 删除 Google Ads 账号（软删除）
  *
  * 🔧 修改历史：
- * - 2025-12-29: 改为软删除，防止campaigns关联断裂
+ * - 2025-12-29: 改为软删除，防止 campaigns 关联断裂
  */
 export async function deleteGoogleAdsAccount(id: number, userId: number): Promise<boolean> {
   const db = await getDatabase()
@@ -397,7 +436,7 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
 export async function setActiveGoogleAdsAccount(id: number, userId: number): Promise<boolean> {
   const db = await getDatabase()
 
-  // 🔧 PostgreSQL兼容性：布尔字段和时间函数兼容性处理
+  // 🔧 PostgreSQL 兼容性：布尔字段和时间函数兼容性处理
   const isActiveTrue = db.type === 'postgres' ? true : 1
   const isActiveFalse = db.type === 'postgres' ? false : 0
   const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
@@ -420,8 +459,8 @@ export async function setActiveGoogleAdsAccount(id: number, userId: number): Pro
 }
 
 /**
- * 获取Google Ads账号的解密凭证
- * 用于API调用时获取认证信息
+ * 获取 Google Ads 账号的解密凭证
+ * 用于 API 调用时获取认证信息
  */
 export async function getDecryptedCredentials(
   accountId: number,
@@ -448,7 +487,7 @@ export async function getDecryptedCredentials(
 }
 
 /**
- * 数据库行映射为GoogleAdsAccount对象
+ * 数据库行映射为 GoogleAdsAccount 对象
  */
 function mapRowToGoogleAdsAccount(row: any): GoogleAdsAccount {
   return {

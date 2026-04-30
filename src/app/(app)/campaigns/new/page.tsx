@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -66,7 +66,7 @@ export default function NewCampaignPage() {
       setCampaignName(`${offerData.offer.brand} - ${offerData.offer.targetCountry} Campaign`)
 
       // 获取Google Ads账号列表
-      const accountsRes = await fetch('/api/google-ads-accounts', {
+      const accountsRes = await fetch('/api/google-ads-accounts?filterByUserMcc=true', {
         credentials: 'include',
       })
 
