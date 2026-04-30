@@ -189,6 +189,10 @@ export async function findEnabledGoogleAdsAccounts(userId: number): Promise<Goog
 /**
  * 查找用户 MCC 下的 Google Ads 账号（非 Manager 账号）
  * 只返回 parent_mcc_id 在用户分配的 MCC 列表中的账号
+ * 
+ * 🔧 修复 (2026-04-30): 移除 user_id 限制
+ * 原因：Google Ads 账号可能是管理员同步的，user_id 字段可能是管理员 ID
+ * 正确逻辑：只要 parent_mcc_id 在用户分配的 MCC 列表中，就应该返回
  */
 export async function findGoogleAdsAccountsByUserMcc(userId: number, manager?: boolean): Promise<GoogleAdsAccount[]> {
   const db = await getDatabase()
@@ -197,18 +201,17 @@ export async function findGoogleAdsAccountsByUserMcc(userId: number, manager?: b
   const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
   const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = FALSE' : 'is_manager_account = 0'
   
-  // 基础查询：只返回用户 MCC 下的账号
+  // 基础查询：只返回用户 MCC 下的账号（不限制 user_id，因为账号可能是管理员同步的）
   let sqlStr = `
     SELECT gaa.* FROM google_ads_accounts gaa
-    WHERE gaa.user_id = ? 
-      AND ${isActiveCondition} 
+    WHERE ${isActiveCondition} 
       AND ${isDeletedCheck}
       AND gaa.parent_mcc_id IN (
         SELECT mcc_customer_id FROM user_mcc_assignments WHERE user_id = ?
       )
   `
   
-  const params: any[] = [userId, userId]
+  const params: any[] = [userId]
   
   // 如果指定 manager=true，则只返回 Manager 账号
   if (manager) {
