@@ -201,24 +201,22 @@ export async function findGoogleAdsAccountsByUserMcc(userId: number, manager?: b
   const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
   const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = FALSE' : 'is_manager_account = 0'
   
-  // 基础查询：只返回用户 MCC 下的账号（不限制 user_id，因为账号可能是管理员同步的）
+  // 基础查询：只返回用户 MCC 下的账号
   let sqlStr = `
     SELECT gaa.* FROM google_ads_accounts gaa
-    WHERE ${isActiveCondition} 
+    WHERE gaa.user_id = ? 
+      AND ${isActiveCondition} 
       AND ${isDeletedCheck}
       AND gaa.parent_mcc_id IN (
         SELECT mcc_customer_id FROM user_mcc_assignments WHERE user_id = ?
       )
   `
   
-  const params: any[] = [userId]
+  const params: any[] = [userId, userId]
   
   // 如果指定 manager=true，则只返回 Manager 账号
   if (manager) {
     sqlStr += ` AND ${isManagerCondition}`
-  } else {
-    // 默认只返回非 Manager 账号（普通 Google Ads 账号）
-    sqlStr += ` AND NOT ${isManagerCondition}`
   }
   
   sqlStr += ` ORDER BY gaa.created_at DESC`
