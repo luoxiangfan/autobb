@@ -49,6 +49,7 @@ const DEFAULT_QUEUE_CONFIG = {
     'openclaw-report-send': 2, // OpenClaw 报表投递任务并发限制
     'product-score-calculation': 2, // 商品推荐指数计算任务并发限制（AI密集型）
     'google-ads-campaign-sync': 1, // Google Ads广告系列同步任务并发限制（避免API配额问题）
+    'campaign-batch-create': 1, // 批量从备份创建广告系列任务并发限制（资源密集型）
   },
   maxQueueSize: 1000,
   taskTimeout: 900000, // 15分钟（店铺深度抓取+竞品分析可能需要10-15分钟）
@@ -79,6 +80,7 @@ const ALL_TASK_TYPES = [
   'openclaw-affiliate-sync',
   'openclaw-report-send',
   'google-ads-campaign-sync',
+  'campaign-batch-create',
 ] as const
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number): number {

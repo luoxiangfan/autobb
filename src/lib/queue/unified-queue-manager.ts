@@ -181,6 +181,7 @@ export class UnifiedQueueManager {
         'openclaw-report-send': 2,    // 🆕 OpenClaw 报表投递任务并发限制
         'product-score-calculation': 2, // 🆕 商品推荐指数计算任务并发限制（AI密集型）
         'google-ads-campaign-sync': 1, // 🆕 Google Ads广告系列同步任务并发限制
+        'campaign-batch-create': 1, // 🆕 批量从备份创建广告系列任务并发限制（资源密集型）
       },
       maxQueueSize: config.maxQueueSize || 1000,
       taskTimeout: config.taskTimeout || 900000,  // 15分钟超时（店铺深度抓取+竞品分析可能需要10-15分钟）

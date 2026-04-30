@@ -5,6 +5,7 @@ import { generateNamingScheme } from '@/lib/naming-convention'
 import { getLatestBackupForOffer } from '@/lib/campaign-backups'
 import { buildEffectiveCreative } from '@/lib/campaign-publish/effective-creative'
 import { resolveTaskCampaignKeywords } from '@/lib/campaign-publish/task-keyword-fallback'
+import { regenerateAdCreative } from '@/lib/ad-creative-regenerator'
 
 /**
  * 🔧 批量发布到 Google Ads（第二步）
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest) {
 
     const userId = authResult.user.userId
     const body = await request.json()
-    const { backupId, backupIds, offerId, googleAdsAccountId } = body
+    const { backupId, backupIds, offerId, googleAdsAccountId, regenerateCreativeMap } = body
 
     // 参数验证：支持单个 backupId、多个 backupIds 或 offerId
     if (!backupId && !backupIds && !offerId) {
@@ -268,7 +269,8 @@ export async function POST(request: NextRequest) {
         request,
         parentRequestId,
         googleAdsAccountId,
-        campaigns: dbResult.details
+        campaigns: dbResult.details,
+        regenerateCreativeMap
       })
     }
     
@@ -294,8 +296,9 @@ async function batchCreateToGoogleAds(params: {
   parentRequestId?: string
   googleAdsAccountId: number
   campaigns: any[]
+  regenerateCreativeMap?: { [key: number]: boolean }
 }): Promise<NextResponse> {
-  const { backups, userId, db, request, parentRequestId, googleAdsAccountId, campaigns } = params
+  const { backups, userId, db, request, parentRequestId, googleAdsAccountId, campaigns, regenerateCreativeMap } = params
 
   const results = {
     success: 0,
@@ -307,6 +310,8 @@ async function batchCreateToGoogleAds(params: {
       campaignId?: number
       googleCampaignId?: string
       error?: string
+      regeneratedCreative?: boolean
+      newAdCreativeId?: number | null
     }>,
   }
 
@@ -345,6 +350,38 @@ async function batchCreateToGoogleAds(params: {
     const campaignId = campaigns.find(c => c.backupId === backupId)?.campaignId
     try {
       console.log(`🚀 队列化Campaign发布任务 ${campaignId}...`)
+      let finalCampaignConfig = campaignConfigForTask
+      let regeneratedCreative = false
+      let newAdCreativeId: number | null = null
+        
+      const shouldRegenerate = regenerateCreativeMap?.[backupId] === true
+      if (shouldRegenerate) {
+        console.log(`🔄 备份ID ${backupId} 需要重新生成创意，正在处理...`)
+        const regenerateResult = await regenerateAdCreative({
+          userId,
+          offerId: offer_id,
+          previousAdCreativeId: campaignConfigForTask.adCreativeId || 0,
+          campaignConfigForTask
+        })
+        if (regenerateResult.success) {
+          finalCampaignConfig = regenerateResult.campaignConfig
+          regeneratedCreative = true
+          newAdCreativeId = regenerateResult.adCreativeId || null
+          console.log(`✅ 备份ID ${backupId} 创意重新生成成功，新的 Ad Creative ID: ${newAdCreativeId}`)
+        } else {
+          console.warn(`⚠️ 备份ID ${backupId} 创意重新生成失败，使用原有创意继续发布: ${regenerateResult.error}`)
+        }
+        // 成功后更新备份
+        if (regeneratedCreative && newAdCreativeId) {
+          await db.exec(`
+            UPDATE campaign_backups
+            SET ad_creative_id = ?,
+                campaign_config = ?,
+                updated_at = ?
+            WHERE id = ?
+          `, [newAdCreativeId, JSON.stringify(finalCampaignConfig), new Date(), backupId])
+        }
+      }
       const offer = await db.queryOne(`
           SELECT id, url, final_url, final_url_suffix, brand, target_country, target_language, scrape_status, category, offer_name
           FROM offers
@@ -359,33 +396,33 @@ async function batchCreateToGoogleAds(params: {
           category: offer.category || undefined
         },
         config: {
-          targetCountry: campaignConfigForTask.targetCountry,
-          budgetAmount: campaignConfigForTask.budgetAmount,
-          budgetType: campaignConfigForTask.budgetType || 'DAILY',
-          biddingStrategy: campaignConfigForTask.biddingStrategy || 'MAXIMIZE_CLICKS',
-          maxCpcBid: campaignConfigForTask.maxCpcBid
+          targetCountry: finalCampaignConfig.targetCountry,
+          budgetAmount: finalCampaignConfig.budgetAmount,
+          budgetType: finalCampaignConfig.budgetType || 'DAILY',
+          biddingStrategy: finalCampaignConfig.biddingStrategy || 'MAXIMIZE_CLICKS',
+          maxCpcBid: finalCampaignConfig.maxCpcBid
         },
         creative: undefined,
         smartOptimization: undefined
       })
       const effectiveCreativeForTask = buildEffectiveCreative({
         dbCreative: {
-          headlines: campaignConfigForTask.headlines,
-          descriptions: campaignConfigForTask.descriptions,
-          keywords: campaignConfigForTask.keywords,
-          negativeKeywords: campaignConfigForTask.negativeKeywords,
-          callouts: campaignConfigForTask.callouts,
-          sitelinks: campaignConfigForTask.sitelinks,
-          finalUrl: campaignConfigForTask.finalUrl,
-          finalUrlSuffix: campaignConfigForTask.finalUrlSuffix
+          headlines: finalCampaignConfig.headlines,
+          descriptions: finalCampaignConfig.descriptions,
+          keywords: finalCampaignConfig.keywords,
+          negativeKeywords: finalCampaignConfig.negativeKeywords,
+          callouts: finalCampaignConfig.callouts,
+          sitelinks: finalCampaignConfig.sitelinks,
+          finalUrl: finalCampaignConfig.finalUrl,
+          finalUrlSuffix: finalCampaignConfig.finalUrlSuffix
         },
-        campaignConfig: campaignConfigForTask,
+        campaignConfig: finalCampaignConfig,
         offerUrlFallback: offer.url
       })
 
       const taskKeywordConfig = resolveTaskCampaignKeywords({
-        configuredKeywords: campaignConfigForTask.keywords,
-        configuredNegativeKeywords: campaignConfigForTask.negativeKeywords,
+        configuredKeywords: finalCampaignConfig.keywords,
+        configuredNegativeKeywords: finalCampaignConfig.negativeKeywords,
         fallbackKeywords: effectiveCreativeForTask.keywords,
         fallbackNegativeKeywords: effectiveCreativeForTask.negativeKeywords,
       })
@@ -404,19 +441,19 @@ async function batchCreateToGoogleAds(params: {
         googleAdsAccountId: googleAdsAccountId,
         userId: userId,
         naming: naming, // 🔥 新增：传递规范化命名
-        marketingObjective: campaignConfigForTask.marketingObjective || 'WEB_TRAFFIC', // 🔧 新增(2025-12-19): 营销目标
+        marketingObjective: finalCampaignConfig.marketingObjective || 'WEB_TRAFFIC', // 🔧 新增(2025-12-19): 营销目标
         campaignConfig: {
-          targetCountry: campaignConfigForTask.targetCountry,
-          targetLanguage: campaignConfigForTask.targetLanguage,
-          biddingStrategy: campaignConfigForTask.biddingStrategy,
-          budgetAmount: campaignConfigForTask.budgetAmount,
-          budgetType: campaignConfigForTask.budgetType,
-          maxCpcBid: campaignConfigForTask.maxCpcBid,
+          targetCountry: finalCampaignConfig.targetCountry,
+          targetLanguage: finalCampaignConfig.targetLanguage,
+          biddingStrategy: finalCampaignConfig.biddingStrategy,
+          budgetAmount: finalCampaignConfig.budgetAmount,
+          budgetType: finalCampaignConfig.budgetType,
+          maxCpcBid: finalCampaignConfig.maxCpcBid,
           keywords: taskKeywordConfig.keywords,
           negativeKeywords: taskKeywordConfig.negativeKeywords,
           negativeKeywordMatchType:
-            campaignConfigForTask.negativeKeywordMatchType ||
-            campaignConfigForTask.negativeKeywordsMatchType ||
+            finalCampaignConfig.negativeKeywordMatchType ||
+            finalCampaignConfig.negativeKeywordsMatchType ||
             undefined
         },
         creative: {
@@ -424,12 +461,12 @@ async function batchCreateToGoogleAds(params: {
           descriptions: effectiveCreativeForTask.descriptions,
           finalUrl: effectiveCreativeForTask.finalUrl,
           finalUrlSuffix: effectiveCreativeForTask.finalUrlSuffix,
-          path1: campaignConfigForTask.path1,
-          path2: campaignConfigForTask.path2,
+          path1: finalCampaignConfig.path1,
+          path2: finalCampaignConfig.path2,
           callouts: effectiveCreativeForTask.callouts,
           sitelinks: effectiveCreativeForTask.sitelinks,
-          keywordsWithVolume: campaignConfigForTask.keywords_with_volume
-            ? JSON.parse(campaignConfigForTask.keywords_with_volume)
+          keywordsWithVolume: finalCampaignConfig.keywords_with_volume
+            ? JSON.parse(finalCampaignConfig.keywords_with_volume)
             : undefined
         },
         brandName: offer.brand,

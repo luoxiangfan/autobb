@@ -32,6 +32,7 @@ export type TaskType =
   | 'openclaw-report-send'    // 🆕 OpenClaw 每日报表投递任务
   | 'product-score-calculation' // 🆕 商品推荐指数计算任务
   | 'google-ads-campaign-sync' // 🆕 Google Ads广告系列同步任务
+  | 'campaign-batch-create' // 🆕 批量从备份创建广告系列任务
 
 export const ALL_TASK_TYPES: TaskType[] = [
   'scrape',
@@ -57,6 +58,7 @@ export const ALL_TASK_TYPES: TaskType[] = [
   'openclaw-report-send',
   'product-score-calculation',
   'google-ads-campaign-sync',
+  'campaign-batch-create',
 ]
 
 /**

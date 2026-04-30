@@ -28,6 +28,7 @@ import { executeOpenclawAffiliateSync } from './openclaw-affiliate-sync-executor
 import { executeOpenclawReportSend } from './openclaw-report-send-executor'
 import { executeProductScoreCalculation } from './product-score-calculation-executor'
 import { executeGoogleAdsCampaignSyncTask } from './google-ads-campaign-sync-executor'
+import { executeCampaignBatchCreate } from './campaign-batch-create-executor'
 import { logger } from '@/lib/structured-logger'
 
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on'])
@@ -152,6 +153,7 @@ export function registerBackgroundExecutors(queue: UnifiedQueueManager): void {
   queue.registerExecutor('openclaw-report-send', executeOpenclawReportSend)
   queue.registerExecutor('product-score-calculation', executeProductScoreCalculation)
   queue.registerExecutor('google-ads-campaign-sync', executeGoogleAdsCampaignSyncTask)
+  queue.registerExecutor('campaign-batch-create', executeCampaignBatchCreate)
 }
 
 export { createScrapeExecutor, convertPriorityToEnum } from './scrape-executor'
@@ -181,3 +183,4 @@ export type { OpenclawAffiliateSyncTaskData } from './openclaw-affiliate-sync-ex
 export type { OpenclawReportSendTaskData } from './openclaw-report-send-executor'
 export type { ProductScoreCalculationTaskData } from './product-score-calculation-executor'
 export type { GoogleAdsCampaignSyncTaskData } from './google-ads-campaign-sync-executor'
+export type { CampaignBatchCreateTaskData } from './campaign-batch-create-executor'

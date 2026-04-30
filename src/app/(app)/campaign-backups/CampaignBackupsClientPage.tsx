@@ -35,6 +35,7 @@ import { Alert } from '@/components/ui/alert'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import { Package, Calendar, RotateCcw, Loader2, ExternalLink, FileText, CheckCircle2, XCircle } from 'lucide-react'
+import { BatchProgressIndicator } from '@/components/BatchProgressIndicator'
 
 interface CampaignBackup {
   id: number
@@ -75,6 +76,19 @@ export default function CampaignBackupsClientPage() {
     accountName: string | null
   }>>([])
   const [selectedGoogleAdsAccountId, setSelectedGoogleAdsAccountId] = useState<number | null>(null)
+  
+  // 🔧 重新生成广告创意选项 - 每条记录独立选择
+  const [regenerateCreativeMap, setRegenerateCreativeMap] = useState<Map<number, boolean>>(new Map())
+  
+  // 🔥 异步批量创建状态
+  const [showProgressDialog, setShowProgressDialog] = useState(false)
+  const [batchId, setBatchId] = useState<string | null>(null)
+  const [batchStatus, setBatchStatus] = useState<string | null>(null)
+  const [batchProgress, setBatchProgress] = useState(0)
+  const [batchTotalCount, setBatchTotalCount] = useState(0)
+  const [batchCompletedCount, setBatchCompletedCount] = useState(0)
+  const [batchFailedCount, setBatchFailedCount] = useState(0)
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false)
   
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1)
@@ -143,21 +157,42 @@ export default function CampaignBackupsClientPage() {
     }
   }
 
+  const handleOpenBatchCreateDialog = () => {
+    // 🔧 初始化每条记录的选择状态
+    const newMap = new Map<number, boolean>()
+    selectedBackupIds.forEach(id => {
+      const backup = backups.find(b => b.id === id)
+      // 只有同时有 ad_creative_id 和 offer_id 的备份才能选择重新生成
+      if (backup?.ad_creative_id && backup?.offer_id) {
+        newMap.set(id, false) // 默认不重新生成
+      }
+    })
+    setRegenerateCreativeMap(newMap)
+    setIsBatchCreateOpen(true)
+  }
+
   const handleBatchCreate = async () => {
     if (selectedBackupIds.length === 0) {
       toast.error('请选择至少一个备份')
       return
     }
 
-    setBatchCreating(true)
+    if (!selectedGoogleAdsAccountId) {
+      toast.error('请选择 Google Ads 账号')
+      return
+    }
+
+    setIsBatchProcessing(true)
     try {
-      const response = await fetch('/api/campaign-backups/create-from-backup', {
+      // 调用新的异步 API
+      const response = await fetch('/api/campaign-backups/batch-create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
           backupIds: selectedBackupIds,
-          googleAdsAccountId: selectedGoogleAdsAccountId || undefined,
+          googleAdsAccountId: selectedGoogleAdsAccountId,
+          regenerateCreativeMap: Object.fromEntries(regenerateCreativeMap),
         }),
       })
 
@@ -167,18 +202,155 @@ export default function CampaignBackupsClientPage() {
       }
 
       const result = await response.json()
-      toast.success(result.message)
       
-      // 刷新列表
-      fetchBackups()
-      setSelectedBackupIds([])
+      // 设置任务状态
+      setBatchId(result.batchId)
+      setBatchTotalCount(result.total_count)
+      setBatchCompletedCount(0)
+      setBatchFailedCount(0)
+      setBatchProgress(0)
+      setBatchStatus('pending')
+      setShowProgressDialog(true)
+      
+      // 关闭选择对话框
       setIsBatchCreateOpen(false)
+      
+      toast.success('批量创建任务已启动', {
+        description: '任务正在后台执行，请查看进度对话框',
+        duration: 5000,
+      })
+
+      // 订阅 SSE 进度
+      subscribeToProgress(result.batchId)
+      
     } catch (error: any) {
       console.error('批量创建失败:', error)
       toast.error('批量创建失败', { description: error.message })
-    } finally {
-      setBatchCreating(false)
+      setIsBatchProcessing(false)
     }
+  }
+
+  // 订阅 SSE 进度
+  const subscribeToProgress = async (bid: string) => {
+    try {
+      const response = await fetch(`/api/campaign-backups/batch-create/stream/${bid}`, {
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
+      if (!response.body) {
+        throw new Error('Response body is null')
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) {
+          console.log('✅ SSE stream completed')
+          break
+        }
+
+        buffer += decoder.decode(value, { stream: true })
+
+        // 处理完整消息（由\n\n分隔）
+        const messages = buffer.split('\n\n')
+        buffer = messages.pop() || ''
+
+        for (const message of messages) {
+          if (!message.trim() || !message.startsWith('data: ')) continue
+
+          try {
+            const jsonStr = message.substring(6)
+            const data = JSON.parse(jsonStr)
+
+            console.log('📨 SSE Message:', data)
+
+            if (data.type === 'progress') {
+              setBatchStatus(data.status)
+              setBatchCompletedCount(data.completed)
+              setBatchFailedCount(data.failed)
+              setBatchProgress(data.progress)
+            } else if (data.type === 'complete') {
+              setBatchStatus(data.status)
+              setBatchCompletedCount(data.completed)
+              setBatchFailedCount(data.failed)
+              setBatchProgress(100)
+              setIsBatchProcessing(false)
+              
+              // 完成任务
+              handleBatchComplete(data.status, data.completed, data.failed)
+              return
+            } else if (data.type === 'error') {
+              setBatchStatus('failed')
+              setIsBatchProcessing(false)
+              toast.error('批量创建任务出错', {
+                description: data.error?.message || '未知错误',
+              })
+              return
+            }
+          } catch (parseError) {
+            console.error('Failed to parse SSE message:', parseError, message)
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('SSE subscription failed, falling back to polling:', err)
+      // Fallback 到轮询
+      startPolling(bid)
+    }
+  }
+
+  // 轮询 fallback
+  const startPolling = async (bid: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/campaign-backups/batch-create/status/${bid}`)
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+
+        const data = await response.json()
+        
+        setBatchStatus(data.status)
+        setBatchCompletedCount(data.completed)
+        setBatchFailedCount(data.failed)
+        setBatchProgress(data.progress)
+
+        if (data.status === 'completed' || data.status === 'partial' || data.status === 'failed') {
+          clearInterval(pollInterval)
+          setIsBatchProcessing(false)
+          handleBatchComplete(data.status, data.completed, data.failed)
+        }
+      } catch (err) {
+        console.error('Polling error:', err)
+      }
+    }, 2000)
+  }
+
+  // 处理批量创建完成
+  const handleBatchComplete = (status: string, completed: number, failed: number) => {
+    const message = status === 'completed'
+      ? `✅ 成功创建 ${completed} 个广告系列`
+      : status === 'partial'
+      ? `⚠️ 创建完成：成功 ${completed} 个，失败 ${failed} 个`
+      : `❌ 创建失败`
+
+    toast.success(message, {
+      duration: 10000,
+    })
+
+    // 刷新列表
+    fetchBackups()
+    
+    // 清空选择
+    setSelectedBackupIds([])
   }
 
   const formatDate = (dateStr: string) => {
@@ -205,11 +377,20 @@ export default function CampaignBackupsClientPage() {
               {selectedBackupIds.length > 0 && (
                 <Button
                   variant="default"
-                  onClick={() => setIsBatchCreateOpen(true)}
-                  disabled={batchCreating}
+                  onClick={handleOpenBatchCreateDialog}
+                  disabled={isBatchProcessing || selectedBackupIds.length === 0}
                 >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  批量创建 ({selectedBackupIds.length})
+                  {isBatchProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      创建中...
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      批量创建 ({selectedBackupIds.length})
+                    </>
+                  )}
                 </Button>
               )}
             </div>
@@ -351,7 +532,7 @@ export default function CampaignBackupsClientPage() {
                             size="sm"
                             onClick={() => {
                               setSelectedBackupIds([backup.id])
-                              setIsBatchCreateOpen(true)
+                              handleOpenBatchCreateDialog()
                             }}
                           >
                             <RotateCcw className="w-4 h-4" />
@@ -450,6 +631,75 @@ export default function CampaignBackupsClientPage() {
               </div>
             </Alert>
 
+            {/* 🔧 显示每条记录的选择状态 */}
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              <Label className="text-sm font-medium">重新生成广告创意设置</Label>
+              {selectedBackupIds.length === 0 ? (
+                <p className="text-xs text-gray-500">请选择要创建的备份</p>
+              ) : (
+                selectedBackupIds.map(id => {
+                  const backup = backups.find(b => b.id === id)
+                  const canRegenerate = backup?.ad_creative_id && backup?.offer_id
+                  const shouldRegenerate = regenerateCreativeMap.get(id) || false
+                  
+                  return (
+                    <div key={id} className={`flex items-center justify-between p-2 rounded-md border ${
+                      canRegenerate ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100'
+                    }`}>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">{backup?.campaign_name || `备份 #${id}`}</div>
+                        <div className="text-xs text-gray-500">
+                          {canRegenerate ? (
+                            <span>✅ 支持重新生成</span>
+                          ) : (
+                            <span>ℹ️ 不支持（缺少 ad_creative_id 或 offer_id）</span>
+                          )}
+                        </div>
+                      </div>
+                      {canRegenerate ? (
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            id={`dialog-regenerate-${id}`}
+                            checked={shouldRegenerate}
+                            onCheckedChange={(checked) => {
+                              const newMap = new Map(regenerateCreativeMap)
+                              newMap.set(id, checked)
+                              setRegenerateCreativeMap(newMap)
+                            }}
+                            disabled={isBatchProcessing}
+                          />
+                          <Label htmlFor={`dialog-regenerate-${id}`} className="text-xs cursor-pointer">
+                            {shouldRegenerate ? '🤖 重新生成' : '📦 使用备份'}
+                          </Label>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">📦 使用备份</span>
+                      )}
+                    </div>
+                  )
+                })
+              )}
+            </div>
+
+            {isBatchProcessing && (
+              <Alert className="bg-yellow-50 border-yellow-200">
+                <div className="text-sm text-yellow-900">
+                  ⚠️ 当前有批量创建任务正在进行中，请等待完成后再操作
+                </div>
+              </Alert>
+            )}
+
+            <Alert className="bg-blue-50 border-blue-200">
+              <div className="text-sm text-blue-900">
+                <strong>💡 说明：</strong>
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>开启"重新生成"：使用 AI 基于 Offer 重新生成广告创意，成功后使用新创意发布</li>
+                  <li>关闭"重新生成"：直接使用备份中的广告创意数据发布</li>
+                  <li>不支持的备份：缺少 ad_creative_id 或 offer_id，只能使用备份数据</li>
+                </ul>
+              </div>
+            </Alert>
+
             <div className="space-y-2">
               <Label htmlFor="googleAdsAccount">选择 Google Ads 账号</Label>
               <select
@@ -488,30 +738,42 @@ export default function CampaignBackupsClientPage() {
                 setIsBatchCreateOpen(false)
                 setSelectedBackupIds([])
               }} 
-              disabled={batchCreating}
+              disabled={isBatchProcessing}
             >
               取消
             </Button>
             <Button 
               onClick={handleBatchCreate} 
-              disabled={batchCreating || selectedBackupIds.length === 0 || !selectedGoogleAdsAccountId}
+              disabled={isBatchProcessing || selectedBackupIds.length === 0 || !selectedGoogleAdsAccountId}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {batchCreating ? (
+              {isBatchProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  创建中...
+                  提交中...
                 </>
               ) : (
                 <>
                   <RotateCcw className="w-4 h-4 mr-2" />
-                  批量创建
+                  开始创建
                 </>
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 🔥 进度指示器 */}
+      <BatchProgressIndicator
+        open={showProgressDialog}
+        onOpenChange={setShowProgressDialog}
+        batchId={batchId}
+        status={batchStatus}
+        progress={batchProgress}
+        totalCount={batchTotalCount}
+        completedCount={batchCompletedCount}
+        failedCount={batchFailedCount}
+      />
     </div>
   )
 }
