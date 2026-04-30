@@ -29,13 +29,16 @@ export async function GET(request: NextRequest) {
     const params: any[] = [userId]
 
     // 日期范围筛选
+    // 注意：created_at 是 TIMESTAMP 类型，需要将日期转换为完整的时间范围（包含毫秒）
     if (startDate) {
       whereConditions.push('cb.created_at >= ?')
-      params.push(startDate)
+      // 将 startDate 设置为当天 00:00:00.000
+      params.push(`${startDate} 00:00:00.000`)
     }
     if (endDate) {
       whereConditions.push('cb.created_at <= ?')
-      params.push(endDate)
+      // 将 endDate 设置为当天 23:59:59.999，确保包含整天的所有数据（包括毫秒）
+      params.push(`${endDate} 23:59:59.999`)
     }
 
     // 备份来源筛选
