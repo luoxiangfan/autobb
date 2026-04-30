@@ -504,12 +504,6 @@ async function fetchAllDataFromGoogleAds(params: {
     const query1 = `
       SELECT
         campaign.id,
-        campaign.name,
-        campaign.status,
-        campaign.final_url_suffix,
-        campaign_budget.amount_micros,
-        campaign_budget.type,
-        campaign.target_spend.cpc_bid_ceiling_micros,
         ad_group.id,
         ad_group.name,
         ad_group_ad.ad.id,
@@ -569,12 +563,28 @@ async function fetchAllDataFromGoogleAds(params: {
         AND campaign_criterion.type IN ('LANGUAGE', 'LOCATION')
         AND campaign_criterion.status != 'REMOVED'
     `
+    
+    const query5 = `
+      SELECT
+        campaign.id,
+        campaign.name,
+        campaign.status,
+        campaign.final_url_suffix,
+        campaign_budget.amount_micros,
+        campaign_budget.type,
+        campaign.target_spend.cpc_bid_ceiling_micros,
+      FROM campaign
+      WHERE campaign.status != 'REMOVED'
+    `
 
-    // 🔧 执行四个查询（串行，间隔 1 秒，避免 API 限流）
+    console.log(`[GoogleAds Sync] Executing GAQL queries for customer ${customerId}...`)
+
+    // 🔧 执行五个查询（串行，间隔 1 秒，避免 API 限流）
     let results1: any[] = []
     let results2: any[] = []
     let results3: any[] = []
     let results4: any[] = []
+    let results5: any[] = []
 
     if (authType === 'service_account') {
       // 查询 1
@@ -601,6 +611,13 @@ async function fetchAllDataFromGoogleAds(params: {
       // 查询 4
       const r4 = await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query: query4 })
       results4 = r4?.results || []
+
+        // 🔧 等待 1 秒
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
+      // 查询 5
+      const r5 = await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query: query5 })
+      results5 = r5?.results || []
     } else {
       const customer = await getCustomerWithCredentials({
         userId,
@@ -632,6 +649,13 @@ async function fetchAllDataFromGoogleAds(params: {
       // 查询 4
       const r4 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query4))
       results4 = r4 || []
+
+      // 🔧 等待 1 秒
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
+      // 查询 5
+      const r5 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query5))
+      results5 = r5 || []
     }
 
     // 🔧 在内存中处理数据，按 ID 分组
@@ -643,8 +667,8 @@ async function fetchAllDataFromGoogleAds(params: {
     const sitelinksMap = new Map<string, any[]>() // key: campaign_id
     const locationsMap = new Map<string, any[]>() // key: campaign_id
 
-    // 处理查询 1 结果（广告系列、广告组、广告）
-    for (const row of results1) {
+    // 处理查询 5 结果（广告系列）
+    for (const row of results5) {
       const campaignId = String(row.campaign?.id || '')
       
       // 添加广告系列
@@ -660,6 +684,11 @@ async function fetchAllDataFromGoogleAds(params: {
           final_url_suffix: row.campaign?.final_url_suffix || '',
         })
       }
+    }
+
+    // 处理查询 1 结果（广告组、广告）
+    for (const row of results1) {
+      const campaignId = String(row.campaign?.id || '')
 
       // 添加广告组
       const adGroupId = String(row.ad_group?.id || '')
