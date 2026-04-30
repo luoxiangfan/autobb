@@ -207,9 +207,10 @@ export default function GoogleAdsPage() {
       if (!isPoll && !forceRefresh) setAccountsLoading(true)
       if (forceRefresh) setAccountsSyncing(true)
       if (forceRefresh) setAccountsSyncError(null)
+      // 🔧 添加 filterByUserMcc=true 参数，让后端根据用户 MCC 分配过滤账号
       const url = forceRefresh
-        ? `/api/google-ads/credentials/accounts?refresh=true&async=true&auth_type=service_account&service_account_id=${serviceAccountId}`
-        : `/api/google-ads/credentials/accounts?auth_type=service_account&service_account_id=${serviceAccountId}`
+        ? `/api/google-ads/credentials/accounts?refresh=true&async=true&auth_type=service_account&service_account_id=${serviceAccountId}&filterByUserMcc=true`
+        : `/api/google-ads/credentials/accounts?auth_type=service_account&service_account_id=${serviceAccountId}&filterByUserMcc=true`
       const response = await fetch(url, {
         credentials: 'include',
         cache: 'no-store',
@@ -281,9 +282,10 @@ export default function GoogleAdsPage() {
       if (!isPoll && !forceRefresh) setAccountsLoading(true)
       if (forceRefresh) setAccountsSyncing(true)
       if (forceRefresh) setAccountsSyncError(null)
+      // 🔧 添加 filterByUserMcc=true 参数，让后端根据用户 MCC 分配过滤账号
       const url = forceRefresh
-        ? '/api/google-ads/credentials/accounts?refresh=true&async=true'
-        : '/api/google-ads/credentials/accounts'
+        ? '/api/google-ads/credentials/accounts?refresh=true&async=true&filterByUserMcc=true'
+        : '/api/google-ads/credentials/accounts?filterByUserMcc=true'
       const response = await fetch(url, {
         credentials: 'include',
         cache: 'no-store',

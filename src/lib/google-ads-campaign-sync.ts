@@ -11,7 +11,7 @@
 
 import { getDatabase } from './db'
 import { autoBackupCampaign } from './campaign-backups'
-import { syncAdComponentsFromGoogleAds, updateCampaignConfig } from './google-ads-api-sync'
+import { updateCampaignConfig } from './google-ads-api-sync'
 import { getCustomerWithCredentials, trackOAuthApiCall } from './google-ads-api'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { getInsertedId } from './db-helpers'

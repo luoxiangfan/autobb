@@ -68,7 +68,8 @@ export default function GoogleAdsAccountsPage() {
   const fetchAccounts = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/google-ads-accounts', {
+      // 🔧 添加 filterByUserMcc=true 参数，让后端根据用户 MCC 分配过滤账号
+      const response = await fetch('/api/google-ads-accounts?filterByUserMcc=true', {
         credentials: 'include',
       })
 
