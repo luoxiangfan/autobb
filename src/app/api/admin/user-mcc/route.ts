@@ -137,6 +137,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 🔧 检查 MCC 账号是否已被其他用户绑定（一个 MCC 只能绑定一个用户）
+    const placeholders = mccCustomerIds.map(() => '?').join(',')
+    const existingAssignments = await db.query(`
+      SELECT mcc_customer_id, user_id, u.username as assigned_to_username
+      FROM user_mcc_assignments uma
+      LEFT JOIN users u ON uma.user_id = u.id
+      WHERE mcc_customer_id IN (${placeholders})
+      AND user_id != ?
+    `, [...mccCustomerIds, userId]) as Array<{ mcc_customer_id: string; user_id: number; assigned_to_username: string | null }>
+
+    if (existingAssignments.length > 0) {
+      const conflicts = existingAssignments.map(a => ({
+        mccCustomerId: a.mcc_customer_id,
+        assignedToUserId: a.user_id,
+        assignedToUsername: a.assigned_to_username || `用户${a.user_id}`,
+      }))
+      return NextResponse.json(
+        { 
+          error: '以下 MCC 账号已被其他用户绑定，一个 MCC 账号只能与一个用户绑定',
+          conflicts,
+        },
+        { status: 409 }
+      )
+    }
+
     // 批量插入或忽略（SQLite）/ ON CONFLICT DO NOTHING（PostgreSQL）
     const now = new Date().toISOString()
     const insertedCount = await (async () => {

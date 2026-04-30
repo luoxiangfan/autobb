@@ -49,6 +49,11 @@ interface MCCAccount {
   isManagerAccount: boolean
 }
 
+interface MCCAssignmentWithUser extends MCCAssignment {
+  assigned_to_user_id?: number
+  assigned_to_username?: string
+}
+
 interface MCCAssignment {
   id: number
   mcc_customer_id: string
@@ -75,10 +80,12 @@ export default function MCCAssignmentClientPage() {
   const [removingMccId, setRemovingMccId] = useState<string | null>(null)  // 🔧 删除中的 MCC ID
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)  // 🔧 删除确认对话框
   const [mccToDelete, setMccToDelete] = useState<string | null>(null)  // 🔧 待删除的 MCC ID
+  const [allAssignments, setAllAssignments] = useState<Map<string, { userId: number, username: string }>>(new Map())  // 🔧 所有 MCC 的分配情况
 
   useEffect(() => {
     fetchUsers()
     fetchMccAccounts()
+    fetchAllAssignments()  // 🔧 获取所有 MCC 的分配情况
   }, [])
 
   useEffect(() => {
@@ -121,6 +128,28 @@ export default function MCCAssignmentClientPage() {
       console.error('获取 MCC 账号失败:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 🔧 获取所有 MCC 的分配情况（用于显示哪些 MCC 已被其他用户绑定）
+  const fetchAllAssignments = async () => {
+    try {
+      const response = await fetch('/api/admin/user-mcc/all', {
+        credentials: 'include',
+      })
+      if (response.ok) {
+        const data = await response.json()
+        const assignmentMap = new Map<string, { userId: number, username: string }>()
+        data.assignments?.forEach((a: any) => {
+          assignmentMap.set(a.mcc_customer_id, {
+            userId: a.user_id,
+            username: a.username || `用户${a.user_id}`,
+          })
+        })
+        setAllAssignments(assignmentMap)
+      }
+    } catch (error: any) {
+      console.error('获取所有 MCC 分配失败:', error)
     }
   }
 
@@ -170,6 +199,13 @@ export default function MCCAssignmentClientPage() {
 
       if (!response.ok) {
         const error = await response.json()
+        // 🔧 特殊处理 MCC 冲突错误
+        if (response.status === 409 && error.conflicts) {
+          const conflictList = error.conflicts
+            .map((c: any) => `${c.mccCustomerId} (已绑定给：${c.assignedToUsername})`)
+            .join('\n')
+          throw new Error(`${error.error}\n\n${conflictList}`)
+        }
         throw new Error(error.error || '分配失败')
       }
 
@@ -242,8 +278,9 @@ export default function MCCAssignmentClientPage() {
   )
 
   const assignedMccIds = userAssignments.map(a => a.mcc_customer_id)
+  // 🔧 可用 MCC = 未分配给任何用户的 MCC
   const availableMccAccounts = filteredMccAccounts.filter(
-    mcc => !assignedMccIds.includes(mcc.customerId)
+    mcc => !allAssignments.has(mcc.customerId)
   )
 
   return (
@@ -408,6 +445,8 @@ export default function MCCAssignmentClientPage() {
             <DialogTitle>分配 MCC 账号</DialogTitle>
             <DialogDescription>
               为用户 {users.find(u => u.id.toString() === selectedUserId)?.username} 分配 MCC 账号（支持多选）
+              <br />
+              <span className="text-xs text-green-600">💡 提示：仅显示未分配的 MCC 账号，一个 MCC 账号只能与一个用户绑定</span>
             </DialogDescription>
           </DialogHeader>
 
@@ -461,11 +500,13 @@ export default function MCCAssignmentClientPage() {
                       />
                     </div>
 
-                    {/* 选项列表 */}
+                    {/* 选项列表 - 仅显示未分配的 MCC */}
                     <div className="py-2">
                       {availableMccAccounts.length === 0 ? (
                         <div className="px-4 py-2 text-sm text-muted-foreground text-center">
-                          {searchTerm ? '没有匹配的 MCC 账号' : '所有 MCC 账号都已分配'}
+                          {searchTerm 
+                            ? '没有匹配的未分配 MCC 账号' 
+                            : '所有 MCC 账号都已分配给其他用户'}
                         </div>
                       ) : (
                         availableMccAccounts.map(mcc => (
@@ -516,6 +557,11 @@ export default function MCCAssignmentClientPage() {
                   </AlertDescription>
                 </Alert>
               )}
+              
+              {/* 统计信息 */}
+              <div className="text-xs text-gray-500">
+                可用 MCC：{availableMccAccounts.length} / 总 MCC：{mccAccounts.length}
+              </div>
             </div>
 
             {/* 点击外部关闭 */}
