@@ -872,7 +872,7 @@ export async function updateCampaignConfig(
     SET campaign_config = ?,
         updated_at = ?,
         google_ad_group_id = ?,
-        google_ad_id = ?,
+        google_ad_id = ?
     WHERE campaign_id = ?
   `, [
     JSON.stringify(campaignConfig),
