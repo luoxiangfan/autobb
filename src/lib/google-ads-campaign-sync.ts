@@ -536,6 +536,7 @@ async function fetchAllDataFromGoogleAds(params: {
     const query3 = `
       SELECT
         campaign.id,
+        campaign.status,
         asset.type,
         asset.final_urls,
         asset.callout_asset.callout_text,
@@ -572,7 +573,7 @@ async function fetchAllDataFromGoogleAds(params: {
         campaign.final_url_suffix,
         campaign_budget.amount_micros,
         campaign_budget.type,
-        campaign.target_spend.cpc_bid_ceiling_micros,
+        campaign.target_spend.cpc_bid_ceiling_micros
       FROM campaign
       WHERE campaign.status != 'REMOVED'
     `
