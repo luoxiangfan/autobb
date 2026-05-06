@@ -519,19 +519,15 @@ export async function executeCampaignPublish(
     // 2. 检查OAuth凭证或服务账号配置
     const credentials = await getGoogleAdsCredentials(userId)
 
-    // 检查是否有服务账号配置
-    const serviceAccount = await db.queryOne(`
-      SELECT id FROM google_ads_service_accounts
-      WHERE user_id = ? AND is_active = true
-      ORDER BY created_at DESC LIMIT 1
-    `, [userId]) as { id: string } | undefined
-
-    if ((!credentials || !credentials.refresh_token) && !serviceAccount) {
-      throw new Error('OAuth refresh token或服务账号配置缺失，请重新授权或配置服务账号')
-    }
-
     // 获取认证类型和服务账号ID
     const auth = await getUserAuthType(userId)
+
+    if (
+      (!credentials || !credentials.refresh_token)
+      && !(auth.authType === 'service_account' && auth.serviceAccountId)
+    ) {
+      throw new Error('OAuth refresh token或服务账号配置缺失，请重新授权或配置服务账号')
+    }
     const refreshToken = credentials?.refresh_token || ''
 
     let serviceAccountMccId: string | undefined

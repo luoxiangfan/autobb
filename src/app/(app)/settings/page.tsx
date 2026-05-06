@@ -1237,6 +1237,10 @@ export default function SettingsPage() {
   }
 
   const handleSaveServiceAccount = async () => {
+    if (currentUserRole !== 'admin') {
+      toast.error('仅管理员可配置全租户服务账号')
+      return
+    }
     if (!serviceAccountForm.name || !serviceAccountForm.mccCustomerId || !serviceAccountForm.developerToken || !serviceAccountForm.serviceAccountJson) {
       toast.error('请填写所有必填字段')
       return
@@ -1282,6 +1286,10 @@ export default function SettingsPage() {
   }
 
   const deleteServiceAccountNow = async (id: string) => {
+    if (currentUserRole !== 'admin') {
+      toast.error('仅管理员可删除全租户服务账号配置')
+      return
+    }
     setDeletingServiceAccountId(id)
     try {
       const response = await fetch(`/api/google-ads/service-account?id=${id}`, {
@@ -2031,9 +2039,13 @@ export default function SettingsPage() {
                       </div>
                     )}
 
-                    {/* 服务账号配置表单 */}
+                    {/* 服务账号配置表单（全租户，仅管理员可写） */}
                     {googleAdsAuthMethod === 'service_account' && (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
+                      <div className="space-y-4">
+                        <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950">
+                          服务账号为<strong>全租户</strong>资源：由管理员在此保存后，所有用户均可选用「服务账号认证」模式；普通用户不可修改密钥与删除租户级配置。
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
                         <div>
                           <Label className="label-text flex items-center gap-2">
                             配置名称
@@ -2048,6 +2060,7 @@ export default function SettingsPage() {
                             onChange={(e) => setServiceAccountForm(prev => ({ ...prev, name: e.target.value }))}
                             placeholder="例如: 生产环境MCC"
                             className="mt-2"
+                            disabled={currentUserRole !== 'admin'}
                           />
                         </div>
 
@@ -2076,6 +2089,7 @@ export default function SettingsPage() {
                             onChange={(e) => setServiceAccountForm(prev => ({ ...prev, mccCustomerId: e.target.value }))}
                             placeholder="例如: 1234567890"
                             className="mt-2"
+                            disabled={currentUserRole !== 'admin'}
                           />
                         </div>
 
@@ -2105,6 +2119,7 @@ export default function SettingsPage() {
                             placeholder="输入 Developer Token"
                             type="password"
                             className="mt-2"
+                            disabled={currentUserRole !== 'admin'}
                           />
                         </div>
 
@@ -2134,8 +2149,10 @@ export default function SettingsPage() {
                             placeholder='粘贴JSON内容，例如: {"type":"service_account","project_id":"...","private_key":"..."}'
                             rows={6}
                             className="mt-2 font-mono text-xs"
+                            disabled={currentUserRole !== 'admin'}
                           />
                         </div>
+                      </div>
                       </div>
                     )}
 
@@ -2157,6 +2174,7 @@ export default function SettingsPage() {
                                     </div>
                                   </div>
                                 </div>
+                                {currentUserRole === 'admin' && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -2166,6 +2184,7 @@ export default function SettingsPage() {
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -2562,7 +2581,13 @@ export default function SettingsPage() {
                         handleSave(category)
                       }
                     }}
-                    disabled={saving || savingServiceAccount}
+                    disabled={
+                      saving
+                      || savingServiceAccount
+                      || (category === 'google_ads'
+                        && googleAdsAuthMethod === 'service_account'
+                        && currentUserRole !== 'admin')
+                    }
                   >
                   {(saving || savingServiceAccount) ? '保存中...' : '保存配置'}
                   </Button>
@@ -2576,7 +2601,9 @@ export default function SettingsPage() {
                         deletingOAuthConfig ||
                         (googleAdsAuthMethod === 'oauth' && !hasOAuthConfigToDelete) ||
                         (googleAdsAuthMethod === 'service_account' &&
-                          (!!deletingServiceAccountId || !hasServiceAccountConfigToDelete))
+                          (!!deletingServiceAccountId
+                            || !hasServiceAccountConfigToDelete
+                            || currentUserRole !== 'admin'))
                       }
                     >
                       删除当前配置

@@ -2,25 +2,72 @@ import { getDatabase } from './db'
 import { decrypt } from './crypto'
 import { getGoogleAdsClient } from './google-ads-api'
 
+/** SQLite 存 TEXT，Postgres 为 INTEGER；与 user_id 列比较时统一参数形态 */
+function userIdParamForServiceAccountRow(dbType: string, userId: number): string | number {
+  return dbType === 'postgres' ? userId : String(userId)
+}
+
+/**
+ * 当前用户可用的服务账号：优先用户自有记录，其次全租户默认（user_id IS NULL，由管理员配置）
+ */
+function activeServiceAccountScopeSql(isActiveCondition: string): string {
+  return `(user_id IS NULL OR user_id = ?) AND ${isActiveCondition}`
+}
+
+function preferUserOwnedServiceAccountOrderBy(): string {
+  return 'CASE WHEN user_id IS NULL THEN 1 ELSE 0 END'
+}
+
+/**
+ * 解析当前用户生效的服务账号 id（含全租户默认）
+ */
+export async function findActiveServiceAccountIdForUser(userId: number): Promise<string | undefined> {
+  const db = await getDatabase()
+  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const uid = userIdParamForServiceAccountRow(db.type, userId)
+  const row = await db.queryOne(
+    `
+    SELECT id
+    FROM google_ads_service_accounts
+    WHERE ${activeServiceAccountScopeSql(isActiveCondition)}
+    ORDER BY ${preferUserOwnedServiceAccountOrderBy()}, created_at DESC
+    LIMIT 1
+  `,
+    [uid]
+  ) as { id: string } | undefined
+
+  return row?.id
+}
+
 /**
  * 获取服务账号配置（从数据库）
+ * 支持全租户默认（user_id IS NULL）与用户自有记录；指定 id 时须属于该用户或租户默认。
  */
 export async function getServiceAccountConfig(userId: number, serviceAccountId?: string) {
   const db = await getDatabase()
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const uid = userIdParamForServiceAccountRow(db.type, userId)
 
-  let query = `
-    SELECT id, name, mcc_customer_id, developer_token, service_account_email, private_key, project_id
-    FROM google_ads_service_accounts
-    WHERE user_id = ? AND ${isActiveCondition}
-  `
-  const params: any[] = [userId]
+  let query: string
+  const params: unknown[] = []
 
   if (serviceAccountId) {
-    query += ' AND id = ?'
-    params.push(serviceAccountId)
+    query = `
+    SELECT id, name, mcc_customer_id, developer_token, service_account_email, private_key, project_id
+    FROM google_ads_service_accounts
+    WHERE id = ? AND ${isActiveCondition}
+      AND (user_id IS NULL OR user_id = ?)
+  `
+    params.push(serviceAccountId, uid)
   } else {
-    query += ' ORDER BY created_at DESC LIMIT 1'
+    query = `
+    SELECT id, name, mcc_customer_id, developer_token, service_account_email, private_key, project_id
+    FROM google_ads_service_accounts
+    WHERE ${activeServiceAccountScopeSql(isActiveCondition)}
+    ORDER BY ${preferUserOwnedServiceAccountOrderBy()}, created_at DESC
+    LIMIT 1
+  `
+    params.push(uid)
   }
 
   const account = await db.queryOne(query, params) as any
@@ -39,16 +86,20 @@ export async function getServiceAccountConfig(userId: number, serviceAccountId?:
 }
 
 /**
- * 列出用户的所有服务账号配置
+ * 列出与当前用户相关的服务账号：全租户默认 + 用户历史自有记录（若有）
  */
 export async function listServiceAccounts(userId: number) {
   const db = await getDatabase()
-  const accounts = await db.query(`
-    SELECT id, name, mcc_customer_id, service_account_email, is_active, created_at
+  const uid = userIdParamForServiceAccountRow(db.type, userId)
+  const accounts = await db.query(
+    `
+    SELECT id, name, mcc_customer_id, service_account_email, is_active, created_at, user_id
     FROM google_ads_service_accounts
-    WHERE user_id = ?
-    ORDER BY created_at DESC
-  `, [userId])
+    WHERE user_id IS NULL OR user_id = ?
+    ORDER BY CASE WHEN user_id IS NULL THEN 0 ELSE 1 END, created_at DESC
+  `,
+    [uid]
+  )
 
   return accounts
 }

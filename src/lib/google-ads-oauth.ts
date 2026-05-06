@@ -1,5 +1,6 @@
 import { getDatabase } from './db'
 import { boolCondition } from './db-helpers'
+import { findActiveServiceAccountIdForUser } from './google-ads-service-account'
 
 /**
  * 获取用户的Google Ads授权方式
@@ -23,17 +24,9 @@ export async function getUserAuthType(userId: number): Promise<{
     return { authType: 'oauth' }
   }
 
-  // 检查服务账号配置
-  const serviceAccountIsActiveCondition = boolCondition('is_active', true, db.type)
-  const serviceAccount = await db.queryOne(
-    `SELECT id FROM google_ads_service_accounts
-     WHERE user_id = ? AND ${serviceAccountIsActiveCondition}
-     ORDER BY created_at DESC LIMIT 1`,
-    [userId]
-  ) as { id: string } | undefined
-
-  if (serviceAccount) {
-    return { authType: 'service_account', serviceAccountId: serviceAccount.id }
+  const serviceAccountId = await findActiveServiceAccountIdForUser(userId)
+  if (serviceAccountId) {
+    return { authType: 'service_account', serviceAccountId }
   }
 
   // 默认返回OAuth（即使未配置）
@@ -326,20 +319,26 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
   try {
     const db = await getDatabase()
 
-    // 1. 检查是否有已激活的服务账号配置
-    const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-    const serviceAccount = await db.queryOne(`
+    // 1. 检查是否有已激活的服务账号配置（含全租户默认）
+    const saId = await findActiveServiceAccountIdForUser(userId)
+    const serviceAccount = saId
+      ? (await db.queryOne(
+          `
       SELECT id, name, mcc_customer_id, developer_token, service_account_email
       FROM google_ads_service_accounts
-      WHERE user_id = ? AND ${isActiveCondition}
-      ORDER BY created_at DESC LIMIT 1
-    `, [userId]) as {
-      id: string
-      name: string
-      mcc_customer_id: string
-      developer_token: string
-      service_account_email: string
-    } | undefined
+      WHERE id = ?
+    `,
+          [saId]
+        )) as
+          | {
+              id: string
+              name: string
+              mcc_customer_id: string
+              developer_token: string
+              service_account_email: string
+            }
+          | undefined
+      : undefined
 
     // 2. 如果有服务账号配置，优先使用服务账号验证
     if (serviceAccount) {

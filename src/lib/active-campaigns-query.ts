@@ -98,13 +98,6 @@ export async function queryActiveCampaigns(
   // 2. 检查OAuth凭证或服务账号配置
   const credentials = await getGoogleAdsCredentials(userId)
 
-  // 检查是否有服务账号配置
-  const serviceAccount = await db.queryOne(`
-    SELECT id FROM google_ads_service_accounts
-    WHERE user_id = ? AND ${isActiveCondition}
-    ORDER BY created_at DESC LIMIT 1
-  `, [userId]) as { id: string } | undefined
-
   const auth = await getUserAuthType(userId)
 
   let serviceAccountMccId: string | undefined
@@ -129,7 +122,7 @@ export async function queryActiveCampaigns(
     targetCustomerId: adsAccount.customer_id,
   })
 
-  if (!credentials?.refresh_token && !serviceAccount) {
+  if (!credentials?.refresh_token && !(auth.authType === 'service_account' && auth.serviceAccountId)) {
     throw new Error('Google Ads OAuth凭证或服务账号配置无效')
   }
 
@@ -246,14 +239,6 @@ export async function pauseCampaigns(
   // 检查OAuth凭证或服务账号配置
   const credentials2 = await getGoogleAdsCredentials(userId)
 
-  // 检查是否有服务账号配置
-  const isActiveCondition2 = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-  const serviceAccount2 = await db.queryOne(`
-    SELECT id FROM google_ads_service_accounts
-    WHERE user_id = ? AND ${isActiveCondition2}
-    ORDER BY created_at DESC LIMIT 1
-  `, [userId]) as { id: string } | undefined
-
   const auth = await getUserAuthType(userId)
 
   let serviceAccountMccId2: string | undefined
@@ -278,7 +263,7 @@ export async function pauseCampaigns(
     targetCustomerId: adsAccount.customer_id,
   })
 
-  if (!credentials2?.refresh_token && !serviceAccount2) {
+  if (!credentials2?.refresh_token && !(auth.authType === 'service_account' && auth.serviceAccountId)) {
     throw new Error('Google Ads OAuth凭证或服务账号配置无效')
   }
 

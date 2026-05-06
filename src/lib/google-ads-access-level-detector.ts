@@ -251,12 +251,21 @@ export async function updateApiAccessLevel(
       WHERE user_id = ?
     `, [level, userId])
   } else {
+    const { getUserAuthType } = await import('./google-ads-oauth')
+    const auth = await getUserAuthType(userId)
+    if (!auth.serviceAccountId) {
+      console.warn(`[updateApiAccessLevel] 用户 ${userId} 无生效的服务账号，跳过更新`)
+      return
+    }
     const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE google_ads_service_accounts
       SET api_access_level = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE user_id = ? AND ${isActiveCondition}
-    `, [level, userId])
+      WHERE id = ? AND ${isActiveCondition}
+    `,
+      [level, auth.serviceAccountId]
+    )
   }
 
   console.log(`✅ 已更新用户 ${userId} 的API访问级别: ${level}`)

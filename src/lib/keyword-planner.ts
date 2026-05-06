@@ -469,12 +469,17 @@ export async function getKeywordSearchVolumes(
             } else if (config.authType === 'service_account') {
               // 如果是服务账号模式，从服务账号表获取
               const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-              const serviceAccountRow = await db.queryOne(`
+              const uid = db.type === 'postgres' ? userId : String(userId)
+              const serviceAccountRow = await db.queryOne(
+                `
                 SELECT api_access_level
                 FROM google_ads_service_accounts
-                WHERE user_id = ? AND ${isActiveCondition}
+                WHERE (user_id IS NULL OR user_id = ?) AND ${isActiveCondition}
+                ORDER BY CASE WHEN user_id IS NULL THEN 1 ELSE 0 END, created_at DESC
                 LIMIT 1
-              `, [userId]) as { api_access_level?: string } | undefined
+              `,
+                [uid]
+              ) as { api_access_level?: string } | undefined
 
               if (serviceAccountRow?.api_access_level) {
                 apiAccessLevel = serviceAccountRow.api_access_level.toLowerCase()

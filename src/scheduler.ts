@@ -157,7 +157,7 @@ async function hasValidSyncCredentials(userId: number): Promise<{ ok: boolean; r
 
     const serviceAccount = await getServiceAccountConfig(userId, auth.serviceAccountId)
     if (!serviceAccount) {
-      return { ok: false, reason: '未配置服务账号（需上传服务账号JSON文件）' }
+      return { ok: false, reason: '未配置服务账号（需由管理员配置全租户服务账号）' }
     }
     if (
       !serviceAccount.mccCustomerId

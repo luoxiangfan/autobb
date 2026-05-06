@@ -5,10 +5,10 @@ import { getGoogleAdsClient, getCustomer } from '@/lib/google-ads-api'
 import { getDatabase } from '@/lib/db'
 import { getInsertedId } from '@/lib/db-helpers'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
-import { decrypt } from '@/lib/crypto'
 import { toNumber } from '@/lib/utils'
 import { extractCustomerIdFromResourceName } from '@/lib/google-ads-resource-name'
 import { getSetting } from '@/lib/settings'
+import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { withPerformanceMonitoring } from '@/lib/api-performance'
 
 // 该接口返回用户私有数据（账号列表/关联Offer），必须禁用任何层面的静态缓存
@@ -485,34 +485,6 @@ async function deactivateMissingAccounts(params: {
   `, [inactiveValue, params.userId, ...scopeParams, ...missing])
 
   console.log(`🧹 已标记 ${missing.length} 个已解除关联的账号为非激活: ${missing.slice(0, 10).join(', ')}${missing.length > 10 ? '...' : ''}`)
-}
-
-/**
- * 获取服务账号配置
- */
-async function getServiceAccountConfig(userId: number, serviceAccountId: string) {
-  const db = await getDatabase()
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-  const account = await db.queryOne(`
-    SELECT id, name, mcc_customer_id, developer_token, service_account_email, private_key, project_id
-    FROM google_ads_service_accounts
-    WHERE user_id = ? AND id = ? AND ${isActiveCondition}
-  `, [userId, serviceAccountId]) as any
-
-  if (!account) return null
-
-  // 解密私钥
-  const decryptedPrivateKey = decrypt(account.private_key)
-
-  return {
-    id: account.id,
-    name: account.name,
-    mccCustomerId: account.mcc_customer_id,
-    developerToken: account.developer_token,
-    serviceAccountEmail: account.service_account_email,
-    privateKey: decryptedPrivateKey,
-    projectId: account.project_id,
-  }
 }
 
 /**

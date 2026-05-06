@@ -52,12 +52,17 @@ async function resolveDailyQuotaLimit(userId: number): Promise<number> {
 
     // 如果没有 OAuth 凭证，尝试从服务账号获取
     const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-    const serviceAccountRow = await db.queryOne(`
+    const uid = db.type === 'postgres' ? userId : String(userId)
+    const serviceAccountRow = await db.queryOne(
+      `
       SELECT api_access_level
       FROM google_ads_service_accounts
-      WHERE user_id = ? AND ${isActiveCondition}
+      WHERE (user_id IS NULL OR user_id = ?) AND ${isActiveCondition}
+      ORDER BY CASE WHEN user_id IS NULL THEN 1 ELSE 0 END, created_at DESC
       LIMIT 1
-    `, [userId]) as { api_access_level?: string } | undefined
+    `,
+      [uid]
+    ) as { api_access_level?: string } | undefined
 
     if (serviceAccountRow?.api_access_level) {
       const level = serviceAccountRow.api_access_level.toLowerCase()

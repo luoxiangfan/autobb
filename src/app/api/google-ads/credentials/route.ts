@@ -114,12 +114,16 @@ export async function GET(request: NextRequest) {
     try {
       const db = await getDatabase()
       const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-      const serviceAccount = await db.queryOne(`
+      const uid = db.type === 'postgres' ? userId : String(userId)
+      const serviceAccount = await db.queryOne(
+        `
         SELECT id, name, api_access_level FROM google_ads_service_accounts
-        WHERE user_id = ? AND ${isActiveCondition}
-        ORDER BY created_at DESC
+        WHERE (user_id IS NULL OR user_id = ?) AND ${isActiveCondition}
+        ORDER BY CASE WHEN user_id IS NULL THEN 1 ELSE 0 END, created_at DESC
         LIMIT 1
-      `, [userId]) as { id: string; name: string; api_access_level?: string } | undefined
+      `,
+        [uid]
+      ) as { id: string; name: string; api_access_level?: string } | undefined
 
       if (serviceAccount) {
         hasServiceAccount = true
@@ -288,14 +292,16 @@ export async function PATCH(request: NextRequest) {
         SET api_access_level = ?
         WHERE user_id = ?
       `, [apiAccessLevel, userId])
-    } else if (auth.authType === 'service_account') {
-      // 更新服务账号的 API 访问级别
+    } else if (auth.authType === 'service_account' && auth.serviceAccountId) {
       const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-      await db.exec(`
+      await db.exec(
+        `
         UPDATE google_ads_service_accounts
         SET api_access_level = ?
-        WHERE user_id = ? AND ${isActiveCondition}
-      `, [apiAccessLevel, userId])
+        WHERE id = ? AND ${isActiveCondition}
+      `,
+        [apiAccessLevel, auth.serviceAccountId]
+      )
     } else {
       return NextResponse.json(
         { error: '未找到有效的Google Ads凭证配置' },

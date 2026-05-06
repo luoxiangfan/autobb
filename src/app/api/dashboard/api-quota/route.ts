@@ -54,12 +54,9 @@ export async function GET(request: NextRequest) {
 
     // 🔧 修复(2025-01-05): 同时检查 OAuth 和服务账号凭证
     const userCredentials = await getGoogleAdsCredentials(currentUserId)
-    const db = await getDatabase()
-    const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-    const serviceAccount = await db.queryOne(
-      `SELECT id FROM google_ads_service_accounts WHERE user_id = ? AND ${isActiveCondition} LIMIT 1`,
-      [currentUserId]
-    ) as { id: string } | undefined
+    const { findActiveServiceAccountIdForUser } = await import('@/lib/google-ads-service-account')
+    const saId = await findActiveServiceAccountIdForUser(currentUserId)
+    const serviceAccount = saId ? ({ id: saId } as { id: string }) : undefined
 
     // 如果两种认证模式都没有配置，返回空数据
     if (!userCredentials && !serviceAccount) {

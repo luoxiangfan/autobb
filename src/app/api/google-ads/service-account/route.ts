@@ -2,18 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { parseServiceAccountJson } from '@/lib/google-ads-service-account'
 import { encrypt } from '@/lib/crypto'
-import { getUserIdFromRequest, findUserById } from '@/lib/auth'
-
-async function getAuthenticatedUser(request: NextRequest) {
-  const userId = getUserIdFromRequest(request)
-  if (!userId) return null
-  return await findUserById(userId)
-}
+import { verifyAuth } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req)
-  if (!user) {
+  const auth = await verifyAuth(req)
+  if (!auth.authenticated || !auth.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (auth.user.role !== 'admin') {
+    return NextResponse.json(
+      { error: '仅管理员可配置全租户 Google Ads 服务账号' },
+      { status: 403 }
+    )
   }
 
   try {
@@ -22,23 +22,28 @@ export async function POST(req: NextRequest) {
     const { clientEmail, privateKey, projectId } = parseServiceAccountJson(serviceAccountJson)
     const encryptedPrivateKey = encrypt(privateKey)
 
-    const db = getDatabase()
+    const db = await getDatabase()
     const id = crypto.randomUUID()
     const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
 
-    // 🔧 修复：只保留1个服务账号，先删除旧的，再插入新的
-    await db.exec(`
+    // 全租户唯一：删除旧的全局服务账号后再插入（user_id IS NULL）
+    await db.exec(
+      `
       DELETE FROM google_ads_service_accounts
-      WHERE user_id = ?
-    `, [user.id])
+      WHERE user_id IS NULL
+    `
+    )
 
-    await db.exec(`
+    await db.exec(
+      `
       INSERT INTO google_ads_service_accounts (
         id, user_id, name, mcc_customer_id, developer_token,
         service_account_email, private_key, project_id,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc}, ${nowFunc})
-    `, [id, user.id, name, mccCustomerId, developerToken, clientEmail, encryptedPrivateKey, projectId])
+      ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ${nowFunc}, ${nowFunc})
+    `,
+      [id, name, mccCustomerId, developerToken, clientEmail, encryptedPrivateKey, projectId]
+    )
 
     return NextResponse.json({ success: true, id })
   } catch (error: any) {
@@ -47,26 +52,33 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthenticatedUser(req)
-  if (!user) {
+  const auth = await verifyAuth(req)
+  if (!auth.authenticated || !auth.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const db = getDatabase()
-  const accounts = await db.query(`
-    SELECT id, name, mcc_customer_id, service_account_email, is_active, created_at
+  const db = await getDatabase()
+  const uid = db.type === 'postgres' ? auth.user.userId : String(auth.user.userId)
+  const accounts = await db.query(
+    `
+    SELECT id, name, mcc_customer_id, service_account_email, is_active, created_at, user_id
     FROM google_ads_service_accounts
-    WHERE user_id = ?
-    ORDER BY created_at DESC
-  `, [user.id])
+    WHERE user_id IS NULL OR user_id = ?
+    ORDER BY CASE WHEN user_id IS NULL THEN 0 ELSE 1 END, created_at DESC
+  `,
+    [uid]
+  )
 
   return NextResponse.json({ accounts })
 }
 
 export async function DELETE(req: NextRequest) {
-  const user = await getAuthenticatedUser(req)
-  if (!user) {
+  const auth = await verifyAuth(req)
+  if (!auth.authenticated || !auth.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (auth.user.role !== 'admin') {
+    return NextResponse.json({ error: '仅管理员可删除全租户服务账号配置' }, { status: 403 })
   }
 
   try {
@@ -77,11 +89,14 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Missing id parameter' }, { status: 400 })
     }
 
-    const db = getDatabase()
-    await db.exec(`
+    const db = await getDatabase()
+    await db.exec(
+      `
       DELETE FROM google_ads_service_accounts
-      WHERE id = ? AND user_id = ?
-    `, [id, user.id])
+      WHERE id = ? AND user_id IS NULL
+    `,
+      [id]
+    )
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

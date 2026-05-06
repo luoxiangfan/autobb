@@ -11,7 +11,7 @@ import {
   createGoogleAdsCalloutExtensions,
   createGoogleAdsSitelinkExtensions
 } from '@/lib/google-ads-api'
-import { getGoogleAdsCredentials } from '@/lib/google-ads-oauth'
+import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
 import { createError, ErrorCode, AppError } from '@/lib/errors'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
 import { calculateLaunchScore } from '@/lib/scoring'
@@ -586,16 +586,9 @@ export async function POST(request: NextRequest) {
     // 6.1 检查OAuth凭证或服务账号配置
     const credentials = await getGoogleAdsCredentials(userId)
 
-    // 检查是否有服务账号配置
-    const db2 = await getDatabase()
-    const isActiveCondition = db2.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-    const serviceAccount = await db2.queryOne(`
-      SELECT id FROM google_ads_service_accounts
-      WHERE user_id = ? AND ${isActiveCondition}
-      ORDER BY created_at DESC LIMIT 1
-    `, [userId]) as { id: string } | undefined
+    const authPre = await getUserAuthType(userId)
 
-    if (!serviceAccount && (!credentials || !credentials.refresh_token)) {
+    if (!(authPre.authType === 'service_account' && authPre.serviceAccountId) && (!credentials || !credentials.refresh_token)) {
       const error = new AppError(ErrorCode.GADS_CREDENTIALS_INVALID, {
         userId,
         reason: 'OAuth refresh token or service account configuration missing'

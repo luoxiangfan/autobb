@@ -217,16 +217,9 @@ async function loadGoogleAdsUpdateAuthContext(params: {
   const credentials = await getGoogleAdsCredentials(params.userId)
   const auth = await getUserAuthType(params.userId)
 
-  const isActiveCondition = params.db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-  const serviceAccount = await params.db.queryOne(`
-    SELECT id FROM google_ads_service_accounts
-    WHERE user_id = ? AND ${isActiveCondition}
-    ORDER BY created_at DESC LIMIT 1
-  `, [params.userId]) as { id: string } | undefined
-
   const effectiveServiceAccountId = auth.authType === 'service_account'
-    ? (auth.serviceAccountId || serviceAccount?.id)
-    : (serviceAccount?.id ?? auth.serviceAccountId)
+    ? auth.serviceAccountId
+    : undefined
 
   if ((!credentials || !credentials.refresh_token) && !effectiveServiceAccountId) {
     throw new Error('OAuth refresh token或服务账号配置缺失，请重新授权或配置服务账号')
