@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
@@ -392,7 +393,8 @@ const CATEGORY_CONFIG: Record<string, {
   google_ads: {
     label: 'Google Ads API',
     icon: Shield,
-    description: '配置Google Ads API凭证，用于广告系列管理和数据同步',
+    description:
+      '配置 Google Ads API：OAuth 应用参数（Client ID 等）可由管理员设为全租户默认，各用户仍须单独完成授权；也可在下方为个人账号填写覆盖值。',
     color: 'text-blue-600'
   },
   ai: {
@@ -470,6 +472,9 @@ export default function SettingsPage() {
     | null
   >(null)
   const [permissionError, setPermissionError] = useState<any | null>(null)
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
+  /** 管理员：将当前 Google Ads OAuth 应用表单保存为全租户默认（system_settings 全局） */
+  const [saveGoogleAdsTenantDefaults, setSaveGoogleAdsTenantDefaults] = useState(false)
 
   /**
    * 处理401未授权错误 - 跳转到登录页
@@ -482,6 +487,19 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchSettings()
+  }, [])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' })
+        if (!res.ok) return
+        const data = await res.json()
+        setCurrentUserRole(data.user?.role ?? null)
+      } catch {
+        setCurrentUserRole(null)
+      }
+    })()
   }, [])
 
   // 检查 OAuth 回调结果
@@ -502,7 +520,8 @@ export default function SettingsPage() {
         'missing_state': 'OAuth 授权失败：缺少状态参数',
         'invalid_state': 'OAuth 授权失败：无效的状态参数',
         'state_expired': 'OAuth 授权失败：状态参数已过期',
-        'missing_google_ads_config': 'OAuth 授权失败：请先保存 Client ID、Client Secret 和 Developer Token',
+        'missing_google_ads_config':
+          'OAuth 授权失败：缺少 OAuth 应用配置。请联系管理员配置全租户默认，或在设置中保存 Client ID、Client Secret 和 Developer Token',
       }
       toast.error(errorMessages[errorParam] || `OAuth 授权失败：${errorParam}`)
       // 清除 URL 参数
@@ -979,13 +998,27 @@ export default function SettingsPage() {
           }))
       }
 
+      if (category === 'google_ads' && saveGoogleAdsTenantDefaults) {
+        if (!updates.some((u) => u.key === 'use_service_account')) {
+          updates.push({ category: 'google_ads', key: 'use_service_account', value: 'false' })
+        }
+      }
+
+      const putBody: {
+        updates: typeof updates
+        googleAdsTenantDefaults?: boolean
+      } = { updates }
+      if (category === 'google_ads' && saveGoogleAdsTenantDefaults) {
+        putBody.googleAdsTenantDefaults = true
+      }
+
       const response = await fetch('/api/settings', {
         method: 'PUT',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ updates }),
+        body: JSON.stringify(putBody),
       })
 
       if (!response.ok) {
@@ -994,7 +1027,12 @@ export default function SettingsPage() {
       }
 
       const categoryLabel = CATEGORY_CONFIG[category]?.label || category
-      toast.success(`${categoryLabel} 配置保存成功`)
+      if (category === 'google_ads' && saveGoogleAdsTenantDefaults) {
+        toast.success(`已保存全租户 Google Ads OAuth 应用默认配置`)
+        setSaveGoogleAdsTenantDefaults(false)
+      } else {
+        toast.success(`${categoryLabel} 配置保存成功`)
+      }
 
       // 仅刷新当前分类，避免覆盖其他分类未保存修改
       await refreshCategorySettings(category)
@@ -1976,6 +2014,20 @@ export default function SettingsPage() {
                             </div>
                           )
                         })}
+                      </div>
+                    )}
+
+                    {googleAdsAuthMethod === 'oauth' && currentUserRole === 'admin' && (
+                      <div className="flex items-start gap-3 p-4 rounded-lg border border-indigo-200 bg-indigo-50/80">
+                        <Checkbox
+                          id="google-ads-tenant-defaults"
+                          checked={saveGoogleAdsTenantDefaults}
+                          onCheckedChange={(v) => setSaveGoogleAdsTenantDefaults(v === true)}
+                          className="mt-0.5"
+                        />
+                        <label htmlFor="google-ads-tenant-defaults" className="text-sm text-indigo-950 cursor-pointer leading-relaxed">
+                          将本次保存的 OAuth 应用参数写入<strong>全租户默认</strong>（所有用户共用 Client ID、Client Secret、Developer Token、Login Customer ID；各用户仍需点击「启动 OAuth 授权」完成各自授权）。
+                        </label>
                       </div>
                     )}
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCodeForTokens, saveGoogleAdsCredentials } from '@/lib/google-ads-oauth'
-import { getUserOnlySetting } from '@/lib/settings'
+import { getSetting } from '@/lib/settings'
 
 // 强制动态渲染
 export const dynamic = 'force-dynamic'
@@ -19,9 +19,7 @@ function createRedirectUrl(path: string): URL {
  * GET /api/google-ads/oauth/callback
  * Google Ads OAuth回调处理
  *
- * 🔧 修复(2025-12-12): 独立账号模式 - 每个用户必须使用自己的OAuth凭证
- * - 不再支持平台共享配置，确保用户数据完全隔离
- * - login_customer_id, client_id, client_secret, developer_token 都必须由用户自己配置
+ * OAuth 应用级参数支持全局租户默认 + 用户覆盖；tokens 仍写入当前用户。
  */
 export async function GET(request: NextRequest) {
   try {
@@ -71,18 +69,16 @@ export async function GET(request: NextRequest) {
 
     const userId = stateData.user_id
 
-    // 校验: login_customer_id 必须由用户自己配置（不使用 getSetting，避免回退到全局配置）
-    const loginCustomerId = (await getUserOnlySetting('google_ads', 'login_customer_id', userId))?.value || ''
+    const loginCustomerId = (await getSetting('google_ads', 'login_customer_id', userId))?.value || ''
     if (!loginCustomerId) {
       return NextResponse.redirect(
         createRedirectUrl('/settings?error=missing_login_customer_id&category=google_ads')
       )
     }
 
-    // 🔧 修复(2025-12-12): 独立账号模式 - 必须使用用户自己的OAuth凭证
-    const clientId = (await getUserOnlySetting('google_ads', 'client_id', userId))?.value || ''
-    const clientSecret = (await getUserOnlySetting('google_ads', 'client_secret', userId))?.value || ''
-    const developerToken = (await getUserOnlySetting('google_ads', 'developer_token', userId))?.value || ''
+    const clientId = (await getSetting('google_ads', 'client_id', userId))?.value || ''
+    const clientSecret = (await getSetting('google_ads', 'client_secret', userId))?.value || ''
+    const developerToken = (await getSetting('google_ads', 'developer_token', userId))?.value || ''
 
     if (!clientId || !clientSecret || !developerToken) {
       return NextResponse.redirect(

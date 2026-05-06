@@ -2,7 +2,7 @@ import { GoogleAdsApi, Customer, enums } from 'google-ads-api'
 import { updateGoogleAdsAccount } from './google-ads-accounts'
 import { withRetry } from './retry'
 import { gadsApiCache, generateGadsApiCacheKey } from './cache'
-import { getUserOnlySetting } from './settings'
+import { getSetting } from './settings'
 import { isGoogleAdsAccountAccessError } from './google-ads-login-customer'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 import { getDatabase } from './db'
@@ -162,7 +162,9 @@ export function sanitizeKeywordForGoogleAds(keyword: string): {
 /**
  * 从数据库获取用户的Google Ads凭证
  *
- * 🆕 新增(2025-12-22): 统一的凭证获取函数,确保所有API调用都从数据库读取
+ * OAuth 应用级字段（client_id / client_secret / developer_token / login_customer_id /
+ * use_service_account）优先使用用户自身配置（含 google_ads_credentials 表），否则回退到
+ * 全局租户默认（system_settings 中 user_id IS NULL，由管理员配置）。
  *
  * @param userId - 用户ID
  * @returns Google Ads凭证对象
@@ -210,11 +212,11 @@ export async function getGoogleAdsCredentialsFromDB(userId: number): Promise<{
     loginCustomerIdSetting,
     useServiceAccountSetting,
   ] = await Promise.all([
-    hasDbClientId ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'client_id', userId),
-    hasDbClientSecret ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'client_secret', userId),
-    hasDbDeveloperToken ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'developer_token', userId),
-    hasDbLoginCustomerId ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'login_customer_id', userId),
-    getUserOnlySetting('google_ads', 'use_service_account', userId),
+    hasDbClientId ? Promise.resolve(null) : getSetting('google_ads', 'client_id', userId),
+    hasDbClientSecret ? Promise.resolve(null) : getSetting('google_ads', 'client_secret', userId),
+    hasDbDeveloperToken ? Promise.resolve(null) : getSetting('google_ads', 'developer_token', userId),
+    hasDbLoginCustomerId ? Promise.resolve(null) : getSetting('google_ads', 'login_customer_id', userId),
+    getSetting('google_ads', 'use_service_account', userId),
   ])
 
   const useServiceAccount = String(useServiceAccountSetting?.value ?? '').toLowerCase() === 'true'
@@ -227,11 +229,17 @@ export async function getGoogleAdsCredentialsFromDB(userId: number): Promise<{
 
   // 🔧 修复(2025-12-25): 服务账号模式不需要login_customer_id
   if (!clientId || !clientSecret || !developerToken) {
-    throw new Error(`用户(ID=${userId})未配置完整的 Google Ads 凭证。请在设置页面配置所有必需参数。`)
+    throw new Error(
+      `用户(ID=${userId})未配置完整的 Google Ads OAuth 应用凭证（Client ID / Secret / Developer Token）。` +
+        `请由管理员配置全租户默认值，或在个人设置中填写。`
+    )
   }
 
   if (!useServiceAccount && !loginCustomerId) {
-    throw new Error(`用户(ID=${userId})未配置 login_customer_id。OAuth模式需要此参数。`)
+    throw new Error(
+      `用户(ID=${userId})未配置 login_customer_id（OAuth 所需 MCC / Login Customer ID）。` +
+        `请由管理员配置全租户默认值，或在个人设置中填写。`
+    )
   }
 
   return {

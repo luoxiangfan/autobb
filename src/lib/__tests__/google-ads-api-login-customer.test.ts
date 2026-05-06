@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const customerFactory = vi.fn()
 const queryOne = vi.fn()
-const getUserOnlySetting = vi.fn()
+const getSetting = vi.fn()
 const updateGoogleAdsAccount = vi.fn()
 
 vi.mock('google-ads-api', () => {
@@ -34,7 +34,7 @@ vi.mock('@/lib/db', () => ({
 }))
 
 vi.mock('@/lib/settings', () => ({
-  getUserOnlySetting,
+  getSetting,
 }))
 
 vi.mock('@/lib/google-ads-accounts', () => ({
@@ -56,7 +56,7 @@ describe('getCustomerWithCredentials login_customer_id fallback', () => {
       login_customer_id: '5010618892',
     })
 
-    getUserOnlySetting.mockResolvedValue({ value: 'false' })
+    getSetting.mockResolvedValue({ value: 'false' })
 
     vi.stubGlobal('fetch', vi.fn(async () => ({
       ok: true,

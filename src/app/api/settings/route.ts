@@ -4,8 +4,10 @@ import {
   getAllSettings,
   getSettingsByCategory,
   getUserOnlySettingsByCategory,
+  updateSetting,
   updateSettings,
 } from '@/lib/settings'
+import { verifyAuth } from '@/lib/auth'
 import { invalidateProxyPoolCache } from '@/lib/offer-utils'
 import { GEMINI_PROVIDERS, getGeminiEndpoint, getGeminiApiKeyUrl, type GeminiProvider } from '@/lib/gemini-config'
 import { GEMINI_ACTIVE_MODEL, isDeprecatedGeminiModel, normalizeModelForProvider } from '@/lib/gemini-models'
@@ -170,6 +172,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
+const GOOGLE_ADS_TENANT_DEFAULT_KEYS = new Set([
+  'client_id',
+  'client_secret',
+  'developer_token',
+  'login_customer_id',
+  'use_service_account',
+])
+
 const updateSettingsSchema = z.object({
   updates: z.array(
     z.object({
@@ -178,6 +188,8 @@ const updateSettingsSchema = z.object({
       value: z.string(),
     })
   ),
+  /** 仅管理员：将 google_ads 下指定键写入全局租户默认（user_id IS NULL） */
+  googleAdsTenantDefaults: z.boolean().optional(),
 })
 
 /**
@@ -204,7 +216,41 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const { updates } = validationResult.data
+    const { updates, googleAdsTenantDefaults } = validationResult.data
+
+    if (googleAdsTenantDefaults) {
+      const auth = await verifyAuth(request)
+      if (!auth.authenticated || !auth.user) {
+        return NextResponse.json({ error: '需要登录' }, { status: 401 })
+      }
+      if (auth.user.role !== 'admin') {
+        return NextResponse.json({ error: '仅管理员可保存全租户 Google Ads OAuth 应用默认配置' }, { status: 403 })
+      }
+      if (updates.length === 0) {
+        return NextResponse.json({ error: 'updates 不能为空' }, { status: 400 })
+      }
+      const invalid = updates.filter(
+        (u) => u.category !== 'google_ads' || !GOOGLE_ADS_TENANT_DEFAULT_KEYS.has(u.key)
+      )
+      if (invalid.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              'googleAdsTenantDefaults 模式下仅允许更新 google_ads 分类下的 OAuth 应用字段（client_id、client_secret、developer_token、login_customer_id、use_service_account）',
+          },
+          { status: 400 }
+        )
+      }
+      for (const u of updates) {
+        await updateSetting(u.category, u.key, u.value, undefined)
+      }
+      const { gadsApiCache } = await import('@/lib/cache')
+      gadsApiCache.clear()
+      return NextResponse.json({
+        success: true,
+        message: `已更新全租户 Google Ads 默认配置 ${updates.length} 项`,
+      })
+    }
 
     // 联盟同步配置必须是用户级，不允许无用户上下文写入
     const hasAffiliateSyncUpdate = updates.some((update) => update.category === 'affiliate_sync')

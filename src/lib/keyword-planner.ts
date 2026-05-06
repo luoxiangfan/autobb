@@ -6,12 +6,12 @@ import { GoogleAdsApi, enums } from './google-ads-api'
 import { getDatabase } from './db'
 import { boolCondition, dateMinusDays } from './db-helpers'
 import { getCachedKeywordVolume, cacheKeywordVolume, getBatchCachedVolumes, batchCacheVolumes } from './redis'
-import { decrypt } from './crypto'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 import { refreshAccessToken, getGoogleAdsCredentials } from './google-ads-oauth'
 import { getGoogleAdsLanguageIdString, getGoogleAdsGeoTargetId, normalizeCountryCode, normalizeLanguageCode } from './language-country-codes'
 import { getGoogleAdsClient, getCustomerWithCredentials } from './google-ads-api'
 import { getServiceAccountConfig, AuthType } from './google-ads-service-account'
+import { getSettingsByCategory } from './settings'
 
 /**
  * 🔧 修复(2025-12-24): 获取 KeywordPlanIdeaService
@@ -107,21 +107,13 @@ function isInvalidGrantMessage(message: string): boolean {
 }
 
 
-// Helper: Read user configs from system_settings
-async function readUserConfigs(db: any, userId: number): Promise<Record<string, string>> {
-  const configs = await db.query(`
-    SELECT key, value, encrypted_value
-    FROM system_settings
-    WHERE category = 'google_ads' AND user_id = ?
-  `, [userId]) as Array<{ key: string; value: string | null; encrypted_value: string | null }>
-
+/** Google Ads 分类下有效配置（用户值优先，否则全局租户默认） */
+async function readGoogleAdsEffectiveSettings(userId: number): Promise<Record<string, string>> {
+  const rows = await getSettingsByCategory('google_ads', userId)
   const configMap: Record<string, string> = {}
-  for (const c of configs) {
-    if (c.encrypted_value) {
-      const decrypted = decrypt(c.encrypted_value)
-      if (decrypted) configMap[c.key] = decrypted
-    } else if (c.value) {
-      configMap[c.key] = c.value
+  for (const row of rows) {
+    if (row.value && String(row.value).trim() !== '') {
+      configMap[row.key] = String(row.value)
     }
   }
   return configMap
@@ -187,7 +179,6 @@ async function getUserCustomerId(db: any, userId: number): Promise<string> {
   return fallback?.customer_id || ''
 }
 
-// 🔧 修复(2025-12-12): 独立账号模式 - 每个用户必须配置自己的完整 OAuth 凭证
 // Get Google Ads API config - supports both OAuth and Service Account authentication
 export async function getGoogleAdsConfig(
   userId?: number,
@@ -203,7 +194,7 @@ export async function getGoogleAdsConfig(
     const db = await getDatabase()
 
     // 1. 优先检查 OAuth 配置
-    const userConfigs = await readUserConfigs(db, userId)
+    const userConfigs = await readGoogleAdsEffectiveSettings(userId)
     const hasOAuth = userConfigs.client_id && userConfigs.client_secret && userConfigs.developer_token
 
     // 2. 如果有 OAuth 配置，优先使用 OAuth
