@@ -368,6 +368,12 @@ export async function GET(request: NextRequest) {
     // 🔧 新增：按创建时间过滤（用于"最近 14 天新增"页面）
     const createdAtStartParam = searchParams.get('createdAtStart')
     const createdAtEndParam = searchParams.get('createdAtEnd')
+    // 🔧 新增：按用户筛选（管理员功能）
+    const userIdFilterParam = searchParams.get('userId')
+    const userIdFilter = userIdFilterParam ? Number.parseInt(userIdFilterParam, 10) : null
+    const effectiveUserId = userIdFilter && Number.isFinite(userIdFilter) && authResult.user.role === 'admin'
+      ? userIdFilter
+      : userId
     let startDateStr = startDateQuery || ''
     let endDateStr = endDateQuery || ''
     let rangeDays = daysBack
@@ -400,6 +406,7 @@ export async function GET(request: NextRequest) {
       sortBy,
       sortOrder,
       ids: idsFilter,
+      userId: effectiveUserId,
     })
 
     if (!shouldBypassReadCache) {
@@ -416,6 +423,7 @@ export async function GET(request: NextRequest) {
       await db.query(`
         SELECT
           c.id,
+          c.user_id,
           c.campaign_id,
           c.campaign_name,
           c.custom_name,
@@ -458,7 +466,7 @@ export async function GET(request: NextRequest) {
         ${createdAtEndParam ? `AND c.created_at <= ?` : ''}
         ORDER BY c.created_at DESC
       `, [
-        userId,
+        effectiveUserId,
         ...(createdAtStartParam ? [createdAtStartParam] : []),
         ...(createdAtEndParam ? [createdAtEndParam] : [])
       ]) as any[]
@@ -480,7 +488,7 @@ export async function GET(request: NextRequest) {
           AND date >= ?
           AND date <= ?
         GROUP BY campaign_id, COALESCE(currency, 'USD')
-      `, [userId, params.start, params.end]) as any[]
+      `, [effectiveUserId, params.start, params.end]) as any[]
 
       const map = new Map<number, Map<string, Agg>>()
       for (const row of rows) {
@@ -522,8 +530,8 @@ export async function GET(request: NextRequest) {
           GROUP BY campaign_id, COALESCE(currency, 'USD')
         `,
         hasCurrencyFilter
-          ? [userId, params.start, params.end, String(params.currency)]
-          : [userId, params.start, params.end]
+          ? [effectiveUserId, params.start, params.end, String(params.currency)]
+          : [effectiveUserId, params.start, params.end]
       )
 
       const map = new Map<number, Map<string, number>>()
@@ -628,6 +636,7 @@ export async function GET(request: NextRequest) {
 
       return {
         id: c.id,
+        userId: c.user_id,
         campaignName: c.campaign_name,
         customName: c.custom_name ?? null,
         offerId: c.offer_id,
@@ -821,7 +830,7 @@ export async function GET(request: NextRequest) {
             FROM sync_logs
             WHERE user_id = ?
           `,
-          [userId]
+          [effectiveUserId]
         )
       : db.queryOne<{ latest_sync_at: string | null }>(
           `
@@ -829,7 +838,7 @@ export async function GET(request: NextRequest) {
             FROM sync_logs
             WHERE user_id = ?
           `,
-          [userId]
+          [effectiveUserId]
         )
 
     const latestSyncFromLogsRow = await latestSyncFromLogsPromise
@@ -881,20 +890,20 @@ export async function GET(request: NextRequest) {
         `,
         hasCurrencyFilter
           ? [
-              userId,
+              effectiveUserId,
               params.start,
               params.end,
               String(params.currency),
-              userId,
+              effectiveUserId,
               params.start,
               params.end,
               String(params.currency),
             ]
           : [
-              userId,
+              effectiveUserId,
               params.start,
               params.end,
-              userId,
+              effectiveUserId,
               params.start,
               params.end,
             ]
@@ -951,23 +960,23 @@ export async function GET(request: NextRequest) {
       try {
         const queryParams = hasCurrencyFilter
           ? [
-              userId,
+              effectiveUserId,
               params.currentStart,
               params.currentEnd,
               ...unattributedFailureFilter.values,
               String(params.currency),
-              userId,
+              effectiveUserId,
               params.previousStart,
               params.previousEnd,
               ...unattributedFailureFilter.values,
               String(params.currency),
             ]
           : [
-              userId,
+              effectiveUserId,
               params.currentStart,
               params.currentEnd,
               ...unattributedFailureFilter.values,
-              userId,
+              effectiveUserId,
               params.previousStart,
               params.previousEnd,
               ...unattributedFailureFilter.values,

@@ -23,6 +23,7 @@ export type CampaignPerformanceCachePayload = {
   ids: number[]
   needsOfferCompletion: string | null
   statusCategory: string | null
+  userId?: number
 }
 
 export type CampaignTrendsCachePayload = {

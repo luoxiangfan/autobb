@@ -392,6 +392,9 @@ export default function CampaignsClientPage({
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [needsOfferCompletionFilter, setNeedsOfferCompletionFilter] = useState<string>('all') // 'all' | 'true' | 'false'
   const [statusCategoryFilter, setStatusCategoryFilter] = useState<string>('all') // 'all' | 'pending' | 'watching' | 'qualified'
+  const [userFilter, setUserFilter] = useState<string>('all') // 'all' | userId
+  const [users, setUsers] = useState<Array<{ id: number; username: string; email: string }>>([])
+  const [usersLoading, setUsersLoading] = useState(false)
   
   // 从 URL 参数或 props 读取默认时间范围
   const getTimeRangeFromUrl = () => {
@@ -878,12 +881,32 @@ export default function CampaignsClientPage({
         sortField,
         sortDirection,
         showDeletedCampaigns,
+        userFilter,
       })
     : ''
 
     // 🔧 初始检查同步状态
   useEffect(() => {
     void checkGlobalSyncStatus()
+  }, [])
+
+  // 🔧 加载用户列表（管理员功能）
+  useEffect(() => {
+    const loadUsers = async () => {
+      setUsersLoading(true)
+      try {
+        const response = await fetch('/api/admin/users', { credentials: 'include' })
+        if (response.ok) {
+          const data = await response.json()
+          setUsers(data.users || [])
+        }
+      } catch (error) {
+        console.error('加载用户列表失败:', error)
+      } finally {
+        setUsersLoading(false)
+      }
+    }
+    void loadUsers()
   }, [])
   
   // 🔧 监听同步状态，自动管理轮询
@@ -1082,7 +1105,7 @@ export default function CampaignsClientPage({
 
   useEffect(() => {
     fetchCampaigns()
-  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey])
+  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey, userFilter])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -1338,6 +1361,11 @@ export default function CampaignsClientPage({
     }
     if (createdAtEnd) {
       params.set('createdAtEnd', createdAtEnd)
+    }
+
+    // 🔧 新增：支持按用户筛选（管理员功能）
+    if (userFilter && userFilter !== 'all') {
+      params.set('userId', userFilter)
     }
 
     return params
@@ -3533,6 +3561,32 @@ export default function CampaignsClientPage({
                     <SelectItem value="pending">待定</SelectItem>
                     <SelectItem value="watching">观察</SelectItem>
                     <SelectItem value="qualified">合格</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 🔧 新增：用户筛选（管理员功能） */}
+              <div className="w-full sm:w-[220px] md:w-[200px]">
+                <Select
+                  value={userFilter}
+                  onValueChange={(value) => {
+                    setUserFilter(value)
+                    if (isServerPagingMode && currentPage !== 1) {
+                      setCurrentPage(1)
+                    }
+                  }}
+                  disabled={usersLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择用户" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">所有用户</SelectItem>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={String(user.id)}>
+                        {user.username}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
