@@ -10,6 +10,7 @@ import {
   getCachedCampaignPerformance,
   setCachedCampaignPerformance,
 } from '@/lib/campaigns-read-cache'
+import { getAffiliateDomainKeywords } from '@/lib/affiliate-platform-domain-keywords'
 
 function formatAsYmd(value: unknown): string | null {
   if (value === null || value === undefined) return null
@@ -27,36 +28,6 @@ function formatAsYmd(value: unknown): string | null {
 function normalizeCurrency(value: unknown): string {
   const normalized = String(value ?? '').trim().toUpperCase()
   return normalized || 'USD'
-}
-
-/**
- * 将联盟平台名称映射到域名关键字列表（用于 LIKE 查询）
- * 示例：
- * - Amazon -> ['amzn.to', 'amazon.com', 'amazon.co.uk', ...]
- * - ShareASale -> ['shareasale.com']
- */
-function getAffiliateDomainKeywords(platformName: string): string[] {
-  const platformDomainMap: Record<string, string[]> = {
-    'Amazon': ['amzn.to', 'amazon.com', 'amazon.co.uk', 'amazon.ca', 'amazon.de', 'amazon.fr', 'amazon.co.jp'],
-    'LinkShare': ['click.linksynergy.com', 'linksynergy.com'],
-    'ShareASale': ['shareasale.com'],
-    'CJ': ['cj.dotomi.com', 'commissionjunction.com'],
-    'Skimlinks': ['go.redirectingat.com', 'redirectingat.com'],
-    'Awin': ['awin1.com'],
-    'Google Affiliate': ['clickserve.dartsearch.net', 'affiliate.google.com'],
-    'TradeTracker': ['tp.media'],
-    'FlexOffers': ['flexlinks.com', 'flexoffers.com'],
-    'Impact': ['impact.com'],
-    'Rakuten': ['rakutenadvertising.com'],
-    'ClickBank': ['clickbank.net'],
-    'Digistore24': ['digistore24.com'],
-    'WarriorPlus': ['warriorplus.com'],
-    'JVZoo': ['jvzoo.com'],
-    'YeahPromos': ['yeahpromos.com'],
-    'PartnerBoost': ['partnerboost.com', 'app.partnerboost.com', 'pboost.me'],
-  }
-
-  return platformDomainMap[platformName] || [platformName.toLowerCase()]
 }
 
 function formatLocalYmd(date: Date): string {
@@ -408,9 +379,20 @@ export async function GET(request: NextRequest) {
       : (userIdFilter && Number.isFinite(userIdFilter) && isAdmin ? userIdFilter : userId)
     // 🔧 新增：按联盟筛选（affiliate platform）
     const affiliateFilterParam = searchParams.get('affiliate')
-    const affiliateFilter = affiliateFilterParam ? decodeURIComponent(affiliateFilterParam).trim() : null
+    let affiliateFilter: string | null = null
+    if (affiliateFilterParam) {
+      try {
+        affiliateFilter = decodeURIComponent(affiliateFilterParam).trim() || null
+      } catch {
+        affiliateFilter = affiliateFilterParam.trim() || null
+      }
+    }
     // 将联盟平台名称映射到域名关键字（用于 LIKE 查询）
     const affiliateDomainKeywords = affiliateFilter ? getAffiliateDomainKeywords(affiliateFilter) : []
+    const affiliateLikeBindValues =
+      affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0
+        ? affiliateDomainKeywords.map((k) => `%${k}%`)
+        : []
     let startDateStr = startDateQuery || ''
     let endDateStr = endDateQuery || ''
     let rangeDays = daysBack
@@ -508,7 +490,7 @@ export async function GET(request: NextRequest) {
         ORDER BY c.created_at DESC
       `, [
         ...(effectiveUserId !== null ? [effectiveUserId] : []),
-        ...(affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? affiliateDomainKeywords.map(k => `%${k}%`) : []),
+        ...affiliateLikeBindValues,
         ...(createdAtStartParam ? [createdAtStartParam] : []),
         ...(createdAtEndParam ? [createdAtEndParam] : [])
       ]) as any[]
@@ -585,14 +567,14 @@ export async function GET(request: NextRequest) {
               ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.start,
               params.end,
-              ...(affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? affiliateDomainKeywords.map(k => `%${k}%`) : []),
+              ...affiliateLikeBindValues,
               String(params.currency),
             ]
           : [
               ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.start,
               params.end,
-              ...(affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? affiliateDomainKeywords.map(k => `%${k}%`) : []),
+              ...affiliateLikeBindValues,
             ]
       )
 
@@ -960,23 +942,21 @@ export async function GET(request: NextRequest) {
               ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.start,
               params.end,
-              ...(affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? affiliateDomainKeywords.map(k => `%${k}%`) : []),
               String(params.currency),
               ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.start,
               params.end,
-              ...(affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? affiliateDomainKeywords.map(k => `%${k}%`) : []),
+              ...affiliateLikeBindValues,
               String(params.currency),
             ]
           : [
               ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.start,
               params.end,
-              ...(affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? affiliateDomainKeywords.map(k => `%${k}%`) : []),
               ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.start,
               params.end,
-              ...(affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? affiliateDomainKeywords.map(k => `%${k}%`) : []),
+              ...affiliateLikeBindValues,
             ]
       )
 

@@ -1158,7 +1158,7 @@ export default function CampaignsClientPage({
   useEffect(() => {
     if (!trendsSectionMounted) return
     fetchTrends()
-  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, trendsSectionMounted])
+  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, trendsSectionMounted, affiliateFilter])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -1178,7 +1178,7 @@ export default function CampaignsClientPage({
     return () => {
       window.clearInterval(timer)
     }
-  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey, trendsSectionMounted])
+  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey, trendsSectionMounted, affiliateFilter, userFilter])
 
   useEffect(() => {
     upsertSelectedCampaignSnapshots(campaigns)
@@ -1364,6 +1364,12 @@ export default function CampaignsClientPage({
     }
 
     if (!isServerPagingMode) {
+      if (userFilter && userFilter !== 'all') {
+        params.set('userId', userFilter)
+      }
+      if (affiliateFilter && affiliateFilter !== 'all') {
+        params.set('affiliate', affiliateFilter)
+      }
       return params
     }
 
@@ -1408,7 +1414,7 @@ export default function CampaignsClientPage({
 
     // 🔧 新增：支持按联盟筛选
     if (affiliateFilter && affiliateFilter !== 'all') {
-      params.set('affiliate', encodeURIComponent(affiliateFilter))
+      params.set('affiliate', affiliateFilter)
     }
 
     return params
@@ -1508,8 +1514,16 @@ export default function CampaignsClientPage({
     }
   }
 
+  const buildTrendsQueryParams = (): URLSearchParams => {
+    const params = buildDateRangeParams()
+    if (affiliateFilter && affiliateFilter !== 'all') {
+      params.set('affiliate', affiliateFilter)
+    }
+    return params
+  }
+
   const fetchTrends = async () => {
-    const queryString = buildDateRangeParams().toString()
+    const queryString = buildTrendsQueryParams().toString()
     const dedupKey = queryString
 
     const executeFetchTrends = async () => {

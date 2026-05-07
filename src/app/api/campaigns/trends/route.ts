@@ -8,6 +8,7 @@ import {
   getCachedCampaignTrends,
   setCachedCampaignTrends,
 } from '@/lib/campaigns-read-cache'
+import { getAffiliateDomainKeywords } from '@/lib/affiliate-platform-domain-keywords'
 
 function normalizeCurrency(value: unknown): string {
   const normalized = String(value ?? '').trim().toUpperCase()
@@ -122,6 +123,18 @@ export async function GET(request: NextRequest) {
     }
     const requestedCurrencyRaw = searchParams.get('currency')
     const requestedCurrency = requestedCurrencyRaw ? normalizeCurrency(requestedCurrencyRaw) : null
+    const affiliateFilterParam = searchParams.get('affiliate')
+    const affiliateFilter = affiliateFilterParam ? decodeURIComponent(affiliateFilterParam).trim() : null
+    const affiliateDomainKeywords = affiliateFilter ? getAffiliateDomainKeywords(affiliateFilter) : []
+    const hasAffiliateOfferLinkFilter = Boolean(
+      affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0
+    )
+    const affiliateOfferLikeClause = hasAffiliateOfferLinkFilter
+      ? `AND (${affiliateDomainKeywords.map(() => 'o.affiliate_link LIKE ?').join(' OR ')})`
+      : ''
+    const affiliateOfferLikeParams = hasAffiliateOfferLinkFilter
+      ? affiliateDomainKeywords.map((k) => `%${k}%`)
+      : []
     const refresh = parseOptionalBoolean(searchParams.get('refresh'))
     const noCache = parseOptionalBoolean(searchParams.get('noCache'))
     const shouldBypassReadCache = refresh || noCache
@@ -145,6 +158,7 @@ export async function GET(request: NextRequest) {
       startDate: startDateStr,
       endDate: endDateStr,
       currency: requestedCurrency,
+      affiliate: affiliateFilter || null,
     })
 
     if (!shouldBypassReadCache) {
@@ -157,7 +171,22 @@ export async function GET(request: NextRequest) {
     const db = await getDatabase()
 
     const currencyRows = await db.query<any>(
+      hasAffiliateOfferLinkFilter
+        ? `
+      SELECT
+        COALESCE(cp.currency, 'USD') as currency,
+        SUM(cp.cost) as cost
+      FROM campaign_performance cp
+      INNER JOIN campaigns c ON c.id = cp.campaign_id AND c.user_id = cp.user_id
+      INNER JOIN offers o ON o.id = c.offer_id
+      WHERE cp.user_id = ?
+        AND cp.date >= ?
+        AND cp.date <= ?
+        ${affiliateOfferLikeClause}
+      GROUP BY COALESCE(cp.currency, 'USD')
+      ORDER BY cost DESC
       `
+        : `
       SELECT
         COALESCE(currency, 'USD') as currency,
         SUM(cost) as cost
@@ -168,7 +197,9 @@ export async function GET(request: NextRequest) {
       GROUP BY COALESCE(currency, 'USD')
       ORDER BY cost DESC
       `,
-      [userId, startDateStr, endDateStr]
+      hasAffiliateOfferLinkFilter
+        ? [userId, startDateStr, endDateStr, ...affiliateOfferLikeParams]
+        : [userId, startDateStr, endDateStr]
     )
 
     const costCurrencies = currencyRows
@@ -176,7 +207,25 @@ export async function GET(request: NextRequest) {
       .filter((v, idx, arr) => arr.indexOf(v) === idx)
 
     const adTrends = await db.query<any>(
+      hasAffiliateOfferLinkFilter
+        ? `
+      SELECT
+        DATE(cp.date) as date,
+        COALESCE(cp.currency, 'USD') as currency,
+        SUM(cp.impressions) as impressions,
+        SUM(cp.clicks) as clicks,
+        SUM(cp.cost) as cost
+      FROM campaign_performance cp
+      INNER JOIN campaigns c ON c.id = cp.campaign_id AND c.user_id = cp.user_id
+      INNER JOIN offers o ON o.id = c.offer_id
+      WHERE cp.user_id = ?
+        AND cp.date >= ?
+        AND cp.date <= ?
+        ${affiliateOfferLikeClause}
+      GROUP BY DATE(cp.date), COALESCE(cp.currency, 'USD')
+      ORDER BY date ASC, currency ASC
       `
+        : `
       SELECT
         DATE(date) as date,
         COALESCE(currency, 'USD') as currency,
@@ -190,11 +239,29 @@ export async function GET(request: NextRequest) {
       GROUP BY DATE(date), COALESCE(currency, 'USD')
       ORDER BY date ASC, currency ASC
       `,
-      [userId, startDateStr, endDateStr]
+      hasAffiliateOfferLinkFilter
+        ? [userId, startDateStr, endDateStr, ...affiliateOfferLikeParams]
+        : [userId, startDateStr, endDateStr]
     )
 
     const queryAttributedCommissionTrends = async () => db.query<any>(
+      hasAffiliateOfferLinkFilter
+        ? `
+      SELECT
+        a.report_date as date,
+        COALESCE(a.currency, 'USD') as currency,
+        COALESCE(SUM(a.commission_amount), 0) as commission
+      FROM affiliate_commission_attributions a
+      LEFT JOIN campaigns c ON a.campaign_id = c.id
+      INNER JOIN offers o ON o.id = COALESCE(a.offer_id, c.offer_id)
+      WHERE a.user_id = ?
+        AND a.report_date >= ?
+        AND a.report_date <= ?
+        ${affiliateOfferLikeClause}
+      GROUP BY a.report_date, COALESCE(a.currency, 'USD')
+      ORDER BY report_date ASC, currency ASC
       `
+        : `
       SELECT
         report_date as date,
         COALESCE(currency, 'USD') as currency,
@@ -206,7 +273,9 @@ export async function GET(request: NextRequest) {
       GROUP BY report_date, COALESCE(currency, 'USD')
       ORDER BY report_date ASC, currency ASC
       `,
-      [userId, startDateStr, endDateStr]
+      hasAffiliateOfferLinkFilter
+        ? [userId, startDateStr, endDateStr, ...affiliateOfferLikeParams]
+        : [userId, startDateStr, endDateStr]
     )
 
     const queryUnattributedCommissionTrends = async (): Promise<any[]> => {
@@ -218,7 +287,23 @@ export async function GET(request: NextRequest) {
       })
       try {
         return await db.query<any>(
+          hasAffiliateOfferLinkFilter
+            ? `
+          SELECT
+            f.report_date as date,
+            COALESCE(f.currency, 'USD') as currency,
+            COALESCE(SUM(f.commission_amount), 0) as commission
+          FROM openclaw_affiliate_attribution_failures f
+          INNER JOIN offers o ON o.id = f.offer_id
+          WHERE f.user_id = ?
+            AND f.report_date >= ?
+            AND f.report_date <= ?
+            AND ${unattributedFailureFilter.sql}
+            ${affiliateOfferLikeClause}
+          GROUP BY f.report_date, COALESCE(f.currency, 'USD')
+          ORDER BY report_date ASC, currency ASC
           `
+            : `
           SELECT
             report_date as date,
             COALESCE(currency, 'USD') as currency,
@@ -231,7 +316,9 @@ export async function GET(request: NextRequest) {
           GROUP BY report_date, COALESCE(currency, 'USD')
           ORDER BY report_date ASC, currency ASC
           `,
-          [userId, startDateStr, endDateStr, ...unattributedFailureFilter.values]
+          hasAffiliateOfferLinkFilter
+            ? [userId, startDateStr, endDateStr, ...unattributedFailureFilter.values, ...affiliateOfferLikeParams]
+            : [userId, startDateStr, endDateStr, ...unattributedFailureFilter.values]
         )
       } catch (error: any) {
         const message = String(error?.message || '')
