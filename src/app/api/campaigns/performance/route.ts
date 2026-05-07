@@ -374,6 +374,9 @@ export async function GET(request: NextRequest) {
     const effectiveUserId = userIdFilter && Number.isFinite(userIdFilter) && authResult.user.role === 'admin'
       ? userIdFilter
       : userId
+    // 🔧 新增：按联盟筛选（affiliate platform）
+    const affiliateFilterParam = searchParams.get('affiliate')
+    const affiliateFilter = affiliateFilterParam ? decodeURIComponent(affiliateFilterParam).trim().toLowerCase() : null
     let startDateStr = startDateQuery || ''
     let endDateStr = endDateQuery || ''
     let rangeDays = daysBack
@@ -407,6 +410,7 @@ export async function GET(request: NextRequest) {
       sortOrder,
       ids: idsFilter,
       userId: effectiveUserId,
+      affiliate: affiliateFilter || undefined,
     })
 
     if (!shouldBypassReadCache) {
@@ -462,11 +466,18 @@ export async function GET(request: NextRequest) {
         LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
         LEFT JOIN offers o ON c.offer_id = o.id
         WHERE c.user_id = ?
+        ${affiliateFilterParam && affiliateFilter ? `AND EXISTS (
+          SELECT 1 FROM system_settings ss
+          WHERE ss.category = 'affiliate_sync'
+            AND (ss.user_id = c.user_id OR ss.user_id IS NULL)
+            AND LOWER(ss.key) LIKE ?
+        )` : ''}
         ${createdAtStartParam ? `AND c.created_at >= ?` : ''}
         ${createdAtEndParam ? `AND c.created_at <= ?` : ''}
         ORDER BY c.created_at DESC
       `, [
         effectiveUserId,
+        ...(affiliateFilterParam && affiliateFilter ? [`%${affiliateFilter}%`] : []),
         ...(createdAtStartParam ? [createdAtStartParam] : []),
         ...(createdAtEndParam ? [createdAtEndParam] : [])
       ]) as any[]

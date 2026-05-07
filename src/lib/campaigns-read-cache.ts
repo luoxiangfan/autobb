@@ -24,6 +24,7 @@ export type CampaignPerformanceCachePayload = {
   needsOfferCompletion: string | null
   statusCategory: string | null
   userId?: number
+  affiliate?: string
 }
 
 export type CampaignTrendsCachePayload = {

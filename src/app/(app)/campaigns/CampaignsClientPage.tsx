@@ -72,6 +72,7 @@ import { matchesCampaignSearch } from '@/lib/campaign-search'
 import { convertCurrency, formatCurrency } from '@/lib/currency'
 import { formatCurrency as formatCurrencyDashboard, formatMultiCurrency } from '@/lib/utils'
 import { syncAffiliateProducts } from '@/lib/affiliate-products'
+import { is } from 'date-fns/locale'
 
 const CampaignsTrendsSection = dynamic(() => import('./CampaignsTrendsSection'), {
   ssr: false,
@@ -395,6 +396,10 @@ export default function CampaignsClientPage({
   const [userFilter, setUserFilter] = useState<string>('all') // 'all' | userId
   const [users, setUsers] = useState<Array<{ id: number; username: string; email: string }>>([])
   const [usersLoading, setUsersLoading] = useState(false)
+  const [isAdmin, setIsAdmin] = useState<boolean>(false)
+  const [affiliateFilter, setAffiliateFilter] = useState<string>('all') // 'all' | affiliate platform
+  const [affiliates, setAffiliates] = useState<Array<{ name: string; count: number }>>([])
+  const [affiliatesLoading, setAffiliatesLoading] = useState(false)
   
   // 从 URL 参数或 props 读取默认时间范围
   const getTimeRangeFromUrl = () => {
@@ -882,6 +887,7 @@ export default function CampaignsClientPage({
         sortDirection,
         showDeletedCampaigns,
         userFilter,
+        affiliateFilter,
       })
     : ''
 
@@ -890,23 +896,57 @@ export default function CampaignsClientPage({
     void checkGlobalSyncStatus()
   }, [])
 
-  // 🔧 加载用户列表（管理员功能）
+  // 🔧 检查管理员权限并加载用户列表（管理员功能）- 参考 dashboard 页面实现
   useEffect(() => {
-    const loadUsers = async () => {
-      setUsersLoading(true)
+    const checkAdminAndLoadUsers = async () => {
       try {
-        const response = await fetch('/api/admin/users', { credentials: 'include' })
-        if (response.ok) {
-          const data = await response.json()
+        setUsersLoading(true)
+        // 🔧 直接使用 /api/admin/users 验证管理员权限（403=非管理员）
+        const usersResponse = await fetch('/api/admin/users?limit=100', {
+          credentials: 'include',
+          cache: 'no-store',
+        })
+        
+        if (usersResponse.status === 403 || usersResponse.status === 401) {
+          // 非管理员，不获取用户列表
+          setIsAdmin(false)
+          return
+        }
+        
+        if (usersResponse.ok) {
+          const data = await usersResponse.json()
           setUsers(data.users || [])
+          setIsAdmin(true)
+        } else {
+          setIsAdmin(false)
         }
       } catch (error) {
-        console.error('加载用户列表失败:', error)
+        console.error('检查管理员权限或加载用户列表失败:', error)
+        setIsAdmin(false)
       } finally {
         setUsersLoading(false)
       }
     }
-    void loadUsers()
+    void checkAdminAndLoadUsers()
+  }, [])
+
+  // 🔧 加载联盟平台列表（用于筛选）
+  useEffect(() => {
+    const loadAffiliates = async () => {
+      setAffiliatesLoading(true)
+      try {
+        const response = await fetch('/api/campaigns/affiliate-platforms', { credentials: 'include' })
+        if (response.ok) {
+          const data = await response.json()
+          setAffiliates(data.affiliates || [])
+        }
+      } catch (error) {
+        console.error('加载联盟平台列表失败:', error)
+      } finally {
+        setAffiliatesLoading(false)
+      }
+    }
+    void loadAffiliates()
   }, [])
   
   // 🔧 监听同步状态，自动管理轮询
@@ -1105,7 +1145,7 @@ export default function CampaignsClientPage({
 
   useEffect(() => {
     fetchCampaigns()
-  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey, userFilter])
+  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey, userFilter, affiliateFilter])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -1366,6 +1406,11 @@ export default function CampaignsClientPage({
     // 🔧 新增：支持按用户筛选（管理员功能）
     if (userFilter && userFilter !== 'all') {
       params.set('userId', userFilter)
+    }
+
+    // 🔧 新增：支持按联盟筛选
+    if (affiliateFilter && affiliateFilter !== 'all') {
+      params.set('affiliate', encodeURIComponent(affiliateFilter))
     }
 
     return params
@@ -3566,25 +3611,53 @@ export default function CampaignsClientPage({
               </div>
 
               {/* 🔧 新增：用户筛选（管理员功能） */}
+              {isAdmin && (
+                <div className="w-full sm:w-[220px] md:w-[200px]">
+                  <Select
+                    value={userFilter}
+                    onValueChange={(value) => {
+                      setUserFilter(value)
+                      if (isServerPagingMode && currentPage !== 1) {
+                        setCurrentPage(1)
+                      }
+                    }}
+                    disabled={usersLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择用户" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">所有用户</SelectItem>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={String(user.id)}>
+                          {user.username}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* 🔧 新增：联盟平台筛选 */}
               <div className="w-full sm:w-[220px] md:w-[200px]">
                 <Select
-                  value={userFilter}
+                  value={affiliateFilter}
                   onValueChange={(value) => {
-                    setUserFilter(value)
+                    setAffiliateFilter(value)
                     if (isServerPagingMode && currentPage !== 1) {
                       setCurrentPage(1)
                     }
                   }}
-                  disabled={usersLoading}
+                  disabled={affiliatesLoading}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="选择用户" />
+                    <SelectValue placeholder="选择联盟平台" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">所有用户</SelectItem>
-                    {users.map((user) => (
-                      <SelectItem key={user.id} value={String(user.id)}>
-                        {user.username}
+                    <SelectItem value="all">所有联盟平台</SelectItem>
+                    {affiliates.map((affiliate) => (
+                      <SelectItem key={affiliate.name} value={affiliate.name}>
+                        {affiliate.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
