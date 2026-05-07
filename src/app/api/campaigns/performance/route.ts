@@ -371,9 +371,11 @@ export async function GET(request: NextRequest) {
     // 🔧 新增：按用户筛选（管理员功能）
     const userIdFilterParam = searchParams.get('userId')
     const userIdFilter = userIdFilterParam ? Number.parseInt(userIdFilterParam, 10) : null
-    const effectiveUserId = userIdFilter && Number.isFinite(userIdFilter) && authResult.user.role === 'admin'
-      ? userIdFilter
-      : userId
+    // 管理员可以选择特定用户或查看所有用户（userIdFilter 为 null 或 'all'）
+    const isAdmin = authResult.user.role === 'admin'
+    const effectiveUserId = isAdmin && (!userIdFilterParam || userIdFilterParam === 'all')
+      ? null  // 管理员查看所有用户
+      : (userIdFilter && Number.isFinite(userIdFilter) && isAdmin ? userIdFilter : userId)
     // 🔧 新增：按联盟筛选（affiliate platform）
     const affiliateFilterParam = searchParams.get('affiliate')
     const affiliateFilter = affiliateFilterParam ? decodeURIComponent(affiliateFilterParam).trim().toLowerCase() : null
@@ -409,7 +411,7 @@ export async function GET(request: NextRequest) {
       sortBy,
       sortOrder,
       ids: idsFilter,
-      userId: effectiveUserId,
+      userId: effectiveUserId ?? undefined,
       affiliate: affiliateFilter || undefined,
     })
 
@@ -465,7 +467,7 @@ export async function GET(request: NextRequest) {
         FROM campaigns c
         LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
         LEFT JOIN offers o ON c.offer_id = o.id
-        WHERE c.user_id = ?
+        WHERE ${effectiveUserId !== null ? 'c.user_id = ?' : '1=1'}
         ${affiliateFilterParam && affiliateFilter ? `AND EXISTS (
           SELECT 1 FROM system_settings ss
           WHERE ss.category = 'affiliate_sync'
@@ -476,7 +478,7 @@ export async function GET(request: NextRequest) {
         ${createdAtEndParam ? `AND c.created_at <= ?` : ''}
         ORDER BY c.created_at DESC
       `, [
-        effectiveUserId,
+        ...(effectiveUserId !== null ? [effectiveUserId] : []),
         ...(affiliateFilterParam && affiliateFilter ? [`%${affiliateFilter}%`] : []),
         ...(createdAtStartParam ? [createdAtStartParam] : []),
         ...(createdAtEndParam ? [createdAtEndParam] : [])
@@ -495,11 +497,15 @@ export async function GET(request: NextRequest) {
           COALESCE(SUM(clicks), 0) as clicks,
           COALESCE(SUM(cost), 0) as cost
         FROM campaign_performance
-        WHERE user_id = ?
+        WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
           AND date >= ?
           AND date <= ?
         GROUP BY campaign_id, COALESCE(currency, 'USD')
-      `, [effectiveUserId, params.start, params.end]) as any[]
+      `, [
+        ...(effectiveUserId !== null ? [effectiveUserId] : []),
+        params.start,
+        params.end
+      ]) as any[]
 
       const map = new Map<number, Map<string, Agg>>()
       for (const row of rows) {
@@ -533,7 +539,7 @@ export async function GET(request: NextRequest) {
             COALESCE(currency, 'USD') as currency,
             COALESCE(SUM(commission_amount), 0) AS commission
           FROM affiliate_commission_attributions
-          WHERE user_id = ?
+          WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
             AND report_date >= ?
             AND report_date <= ?
             ${hasCurrencyFilter ? 'AND COALESCE(currency, \'USD\') = ?' : ''}
@@ -541,8 +547,8 @@ export async function GET(request: NextRequest) {
           GROUP BY campaign_id, COALESCE(currency, 'USD')
         `,
         hasCurrencyFilter
-          ? [effectiveUserId, params.start, params.end, String(params.currency)]
-          : [effectiveUserId, params.start, params.end]
+          ? [...(effectiveUserId !== null ? [effectiveUserId] : []), params.start, params.end, String(params.currency)]
+          : [...(effectiveUserId !== null ? [effectiveUserId] : []), params.start, params.end]
       )
 
       const map = new Map<number, Map<string, number>>()
@@ -839,17 +845,17 @@ export async function GET(request: NextRequest) {
               )
             )::text AS latest_sync_at
             FROM sync_logs
-            WHERE user_id = ?
+            WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
           `,
-          [effectiveUserId]
+          ...(effectiveUserId !== null ? [[effectiveUserId]] : [[]])
         )
       : db.queryOne<{ latest_sync_at: string | null }>(
           `
             SELECT MAX(COALESCE(NULLIF(completed_at, ''), NULLIF(started_at, ''), NULLIF(created_at, ''))) AS latest_sync_at
             FROM sync_logs
-            WHERE user_id = ?
+            WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
           `,
-          [effectiveUserId]
+          ...(effectiveUserId !== null ? [[effectiveUserId]] : [[]])
         )
 
     const latestSyncFromLogsRow = await latestSyncFromLogsPromise
@@ -880,7 +886,7 @@ export async function GET(request: NextRequest) {
             COALESCE(SUM(clicks), 0) AS clicks,
             COALESCE(SUM(cost), 0) AS amount
           FROM campaign_performance
-          WHERE user_id = ?
+          WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
             AND date >= ?
             AND date <= ?
             ${hasCurrencyFilter ? 'AND COALESCE(currency, \'USD\') = ?' : ''}
@@ -893,7 +899,7 @@ export async function GET(request: NextRequest) {
             0 AS clicks,
             COALESCE(SUM(commission_amount), 0) AS amount
           FROM affiliate_commission_attributions
-          WHERE user_id = ?
+          WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
             AND report_date >= ?
             AND report_date <= ?
             ${hasCurrencyFilter ? 'AND COALESCE(currency, \'USD\') = ?' : ''}
@@ -901,20 +907,20 @@ export async function GET(request: NextRequest) {
         `,
         hasCurrencyFilter
           ? [
-              effectiveUserId,
+              ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.start,
               params.end,
               String(params.currency),
-              effectiveUserId,
+              ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.start,
               params.end,
               String(params.currency),
             ]
           : [
-              effectiveUserId,
+              ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.start,
               params.end,
-              effectiveUserId,
+              ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.start,
               params.end,
             ]
@@ -971,23 +977,23 @@ export async function GET(request: NextRequest) {
       try {
         const queryParams = hasCurrencyFilter
           ? [
-              effectiveUserId,
+              ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.currentStart,
               params.currentEnd,
               ...unattributedFailureFilter.values,
               String(params.currency),
-              effectiveUserId,
+              ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.previousStart,
               params.previousEnd,
               ...unattributedFailureFilter.values,
               String(params.currency),
             ]
           : [
-              effectiveUserId,
+              ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.currentStart,
               params.currentEnd,
               ...unattributedFailureFilter.values,
-              effectiveUserId,
+              ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.previousStart,
               params.previousEnd,
               ...unattributedFailureFilter.values,
@@ -1003,7 +1009,7 @@ export async function GET(request: NextRequest) {
               COALESCE(currency, 'USD') AS currency,
               COALESCE(SUM(commission_amount), 0) AS total_commission
             FROM openclaw_affiliate_attribution_failures
-            WHERE user_id = ?
+            WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
               AND report_date >= ?
               AND report_date <= ?
               AND ${unattributedFailureFilter.sql}
@@ -1015,7 +1021,7 @@ export async function GET(request: NextRequest) {
               COALESCE(currency, 'USD') AS currency,
               COALESCE(SUM(commission_amount), 0) AS total_commission
             FROM openclaw_affiliate_attribution_failures
-            WHERE user_id = ?
+            WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
               AND report_date >= ?
               AND report_date <= ?
               AND ${unattributedFailureFilter.sql}
