@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         COUNT(DISTINCT c.id) as campaign_count
       FROM system_settings s
       LEFT JOIN offers o ON o.user_id = s.user_id
-      LEFT JOIN campaigns c ON o.id = c.offer_id AND c.is_deleted = 0
+      LEFT JOIN campaigns c ON o.id = c.offer_id AND c.is_deleted = ${db.type === 'postgres' ? 'FALSE' : '0'}
       WHERE s.category = 'affiliate_sync'
         AND s.key NOT LIKE '%\_token'
         AND s.key NOT LIKE '%\_secret'
