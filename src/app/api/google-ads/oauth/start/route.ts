@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { generateOAuthUrl } from '@/lib/google-ads-oauth'
 import { getUserOnlySetting } from '@/lib/settings'
-import { resolveGoogleAdsAppCredentials } from '@/lib/google-ads-credential-policy'
 
 /**
  * GET /api/google-ads/oauth/start
@@ -61,20 +60,28 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    let app: Awaited<ReturnType<typeof resolveGoogleAdsAppCredentials>>
-    try {
-      app = await resolveGoogleAdsAppCredentials(userId)
-    } catch (e: any) {
+    // 🔧 修复(2025-12-12): 独立账号模式 - 必须获取用户自己的OAuth配置
+    const userClientIdSetting = await getUserOnlySetting('google_ads', 'client_id', userId)
+    const userClientSecretSetting = await getUserOnlySetting('google_ads', 'client_secret', userId)
+    const userDeveloperTokenSetting = await getUserOnlySetting('google_ads', 'developer_token', userId)
+
+    console.log(`🔐 [OAuth Start] client_id 查询结果:`, summarizeSetting(userClientIdSetting))
+    console.log(`🔐 [OAuth Start] client_secret 查询结果:`, summarizeSetting(userClientSecretSetting))
+    console.log(`🔐 [OAuth Start] developer_token 查询结果:`, summarizeSetting(userDeveloperTokenSetting))
+
+    const userClientId = userClientIdSetting?.value || ''
+    const userClientSecret = userClientSecretSetting?.value || ''
+    const userDeveloperToken = userDeveloperTokenSetting?.value || ''
+
+    // 🔧 修复(2025-12-12): 独立账号模式 - 必须有完整的OAuth配置，不再回退到共享配置
+    if (!userClientId || !userClientSecret || !userDeveloperToken) {
       return NextResponse.json(
-        { error: e?.message || '请先在设置页面完成 Google Ads API 配置（Client ID、Client Secret、Developer Token 都是必填项）' },
+        { error: '请先在设置页面完成 Google Ads API 配置（Client ID、Client Secret、Developer Token 都是必填项）' },
         { status: 400 }
       )
     }
 
-    const userClientId = app.client_id
-    const userClientSecret = app.client_secret
-    const userDeveloperToken = app.developer_token
-
+    // 🧯 防误填：developer_token 被错误填写为 client_secret（常见前缀 GOCSPX-）
     if (userDeveloperToken.trim() === userClientSecret.trim() || looksLikeOAuthClientSecret(userDeveloperToken)) {
       return NextResponse.json(
         {
@@ -87,7 +94,7 @@ export async function GET(request: NextRequest) {
     }
 
     const clientId = userClientId
-    console.log(`🔐 用户 ${userId} OAuth 应用凭证已解析（credential_source=${app.credentialSource}）`)
+    console.log(`🔐 用户 ${userId} 使用自己的OAuth配置`)
 
     // 生成state用于验证回调
     const state = Buffer.from(

@@ -251,12 +251,6 @@ const adminNavigationItems: NavItem[] = [
     requireAdmin: true,
   },
   {
-    label: 'Google Ads 凭证',
-    href: '/admin/google-ads-credentials',
-    icon: Key,
-    requireAdmin: true,
-  },
-  {
     label: '备份与定时任务',
     href: '/admin/backups',
     icon: Clock,

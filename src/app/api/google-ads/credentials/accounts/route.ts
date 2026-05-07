@@ -9,7 +9,6 @@ import { decrypt } from '@/lib/crypto'
 import { toNumber } from '@/lib/utils'
 import { extractCustomerIdFromResourceName } from '@/lib/google-ads-resource-name'
 import { getUserOnlySetting } from '@/lib/settings'
-import { tryResolveGoogleAdsAppCredentials } from '@/lib/google-ads-credential-policy'
 import { withPerformanceMonitoring } from '@/lib/api-performance'
 
 // 该接口返回用户私有数据（账号列表/关联Offer），必须禁用任何层面的静态缓存
@@ -1502,11 +1501,7 @@ async function get(request: NextRequest) {
     if (developerTokenLooksWrong) {
       // 🆕 自愈：用户可能已经在设置里修正了 developer_token，但尚未重新授权（google_ads_credentials 仍是旧值）
       if (authType === 'oauth') {
-        const resolvedApp = await tryResolveGoogleAdsAppCredentials(userId)
-        const settingDeveloperToken =
-          resolvedApp?.developer_token ||
-          (await getUserOnlySetting('google_ads', 'developer_token', userId))?.value ||
-          ''
+        const settingDeveloperToken = (await getUserOnlySetting('google_ads', 'developer_token', userId))?.value || ''
         const settingLooksOk =
           !!settingDeveloperToken &&
           settingDeveloperToken.trim() !== clientSecret.trim() &&

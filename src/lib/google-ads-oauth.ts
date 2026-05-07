@@ -1,6 +1,5 @@
 import { getDatabase } from './db'
 import { boolCondition } from './db-helpers'
-import { resolveGoogleAdsAppCredentials } from './google-ads-credential-policy'
 
 /**
  * 获取用户的Google Ads授权方式
@@ -232,9 +231,10 @@ export async function refreshAccessToken(userId: number): Promise<{
     throw new Error('Google Ads凭证不存在')
   }
 
-  const app = await resolveGoogleAdsAppCredentials(userId)
-  const clientId = app.client_id
-  const clientSecret = app.client_secret
+  // 🔧 修复(2025-12-12): 独立账号模式 - 每个用户必须有自己的完整凭证
+  // 不再回退到平台共享配置或管理员配置
+  const clientId = credentials.client_id
+  const clientSecret = credentials.client_secret
   const refreshToken = credentials.refresh_token
 
   if (!clientId || !clientSecret) {
@@ -390,18 +390,17 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
       return { valid: false, error: '缺少Refresh Token，请完成 OAuth 授权', authType: 'oauth' }
     }
 
-    let app: { client_id: string; client_secret: string; developer_token: string }
-    try {
-      app = await resolveGoogleAdsAppCredentials(userId)
-    } catch (e: any) {
-      return { valid: false, error: e?.message || '凭证配置不完整，请在设置中完成 Google Ads API 配置', authType: 'oauth' }
+    // 🔧 修复(2025-12-12): 独立账号模式 - 必须使用用户自己的凭证
+    if (!credentials.client_id || !credentials.client_secret || !credentials.developer_token) {
+      return { valid: false, error: '凭证配置不完整，请在设置中完成 Google Ads API 配置', authType: 'oauth' }
     }
 
+    // 使用 google-ads-api 库验证凭证 - 传入用户自己的凭证
     const { getGoogleAdsClient } = await import('./google-ads-api')
     const client = getGoogleAdsClient({
-      client_id: app.client_id,
-      client_secret: app.client_secret,
-      developer_token: app.developer_token,
+      client_id: credentials.client_id,
+      client_secret: credentials.client_secret,
+      developer_token: credentials.developer_token
     })
 
     // 调用 listAccessibleCustomers 测试凭证

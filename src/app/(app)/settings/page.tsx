@@ -87,12 +87,6 @@ interface GoogleAdsAccount {
 }
 
 // Google Ads凭证状态接口
-interface GoogleAdsCredentialPolicy {
-  credentialSource: string
-  appFieldsReadOnly: boolean
-  orgSharedConfigured: boolean
-}
-
 interface GoogleAdsCredentialStatus {
   hasCredentials: boolean
   hasRefreshToken?: boolean
@@ -476,7 +470,6 @@ export default function SettingsPage() {
     | null
   >(null)
   const [permissionError, setPermissionError] = useState<any | null>(null)
-  const [googleAdsCredentialPolicy, setGoogleAdsCredentialPolicy] = useState<GoogleAdsCredentialPolicy | null>(null)
 
   /**
    * 处理401未授权错误 - 跳转到登录页
@@ -624,7 +617,6 @@ export default function SettingsPage() {
 
       const data = await response.json()
       setSettings(data.settings)
-      setGoogleAdsCredentialPolicy(data.googleAdsCredentialPolicy ?? null)
 
       // 初始化表单数据，基于CATEGORY_FIELDS定义，确保所有字段都能显示
       const initialFormData: Record<string, Record<string, string>> = {}
@@ -1354,13 +1346,6 @@ export default function SettingsPage() {
 
   const isReadOnlySetting = (category: string, key: string): boolean => {
     if (category === 'ai' && key === 'gemini_endpoint') return true
-    if (
-      category === 'google_ads' &&
-      googleAdsCredentialPolicy?.appFieldsReadOnly &&
-      (key === 'client_id' || key === 'client_secret' || key === 'developer_token')
-    ) {
-      return true
-    }
     return category === 'affiliate_sync' && getFixedAffiliateSyncSettingValue(key) !== undefined
   }
 
@@ -1756,21 +1741,6 @@ export default function SettingsPage() {
                 {/* 特殊处理 Google Ads 配置分类 */}
                 {category === 'google_ads' ? (
                   <div className="space-y-6">
-                    {googleAdsCredentialPolicy?.appFieldsReadOnly && (
-                      <div className="p-4 rounded-lg border border-blue-200 bg-blue-50 text-sm text-blue-900">
-                        <p className="font-semibold mb-1">使用管理员统一的应用凭证</p>
-                        <p>
-                          当前策略为「使用组织配置」：OAuth Client ID、Client Secret、Developer Token
-                          由管理员在「管理后台 → Google Ads 凭证」维护，此处仅可查看。您仍需配置自己的 Login Customer ID（MCC）并完成 OAuth
-                          授权，以便系统保存您个人 Google 账号的 Refresh Token。
-                        </p>
-                        {!googleAdsCredentialPolicy.orgSharedConfigured && (
-                          <p className="mt-2 text-amber-800 font-medium">
-                            提示：管理员尚未填写组织级应用凭证，请先联系管理员完成后台配置，否则无法发起授权与 API 调用。
-                          </p>
-                        )}
-                      </div>
-                    )}
                     {/* Google Ads 凭证状态 */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {googleAdsCredentialStatus?.hasCredentials ? (
