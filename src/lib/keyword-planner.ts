@@ -227,9 +227,9 @@ export async function getGoogleAdsConfig(
       }
 
       return {
-        clientId: oauthApp.client_id,
-        clientSecret: oauthApp.client_secret,
-        developerToken: oauthApp.developer_token,
+        clientId: oauthApp?.client_id || userConfigs.client_id || '',
+        clientSecret: oauthApp?.client_secret || userConfigs.client_secret || '',
+        developerToken: oauthApp?.developer_token || userConfigs.developer_token || '',
         customerId: credentials.login_customer_id,
         loginCustomerId: credentials.login_customer_id,
         refreshToken: credentials.refresh_token,
