@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCodeForTokens, saveGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import { getUserOnlySetting } from '@/lib/settings'
+import { resolveGoogleAdsAppCredentials } from '@/lib/google-ads-credential-policy'
 
 // 强制动态渲染
 export const dynamic = 'force-dynamic'
@@ -79,16 +80,18 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 🔧 修复(2025-12-12): 独立账号模式 - 必须使用用户自己的OAuth凭证
-    const clientId = (await getUserOnlySetting('google_ads', 'client_id', userId))?.value || ''
-    const clientSecret = (await getUserOnlySetting('google_ads', 'client_secret', userId))?.value || ''
-    const developerToken = (await getUserOnlySetting('google_ads', 'developer_token', userId))?.value || ''
-
-    if (!clientId || !clientSecret || !developerToken) {
+    let app: { client_id: string; client_secret: string; developer_token: string }
+    try {
+      app = await resolveGoogleAdsAppCredentials(userId)
+    } catch {
       return NextResponse.redirect(
         createRedirectUrl('/settings?error=missing_google_ads_config&category=google_ads')
       )
     }
+
+    const clientId = app.client_id
+    const clientSecret = app.client_secret
+    const developerToken = app.developer_token
 
     const looksLikeOAuthClientSecret = (value: string) => /^GOCSPX[-_]?/i.test(value.trim())
     if (developerToken.trim() === clientSecret.trim() || looksLikeOAuthClientSecret(developerToken)) {
@@ -97,7 +100,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log(`🔐 OAuth回调: 用户 ${userId} 使用自己的OAuth配置`)
+    console.log(`🔐 OAuth回调: 用户 ${userId} 已解析 OAuth 应用凭证`)
 
     const redirectUri = `${getBaseUrl()}/api/google-ads/oauth/callback`
 

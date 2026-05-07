@@ -12,6 +12,7 @@ import { refreshAccessToken, getGoogleAdsCredentials } from './google-ads-oauth'
 import { getGoogleAdsLanguageIdString, getGoogleAdsGeoTargetId, normalizeCountryCode, normalizeLanguageCode } from './language-country-codes'
 import { getGoogleAdsClient, getCustomerWithCredentials } from './google-ads-api'
 import { getServiceAccountConfig, AuthType } from './google-ads-service-account'
+import { resolveGoogleAdsAppCredentials } from './google-ads-credential-policy'
 
 /**
  * 🔧 修复(2025-12-24): 获取 KeywordPlanIdeaService
@@ -202,15 +203,23 @@ export async function getGoogleAdsConfig(
 
     const db = await getDatabase()
 
-    // 1. 优先检查 OAuth 配置
     const userConfigs = await readUserConfigs(db, userId)
-    const hasOAuth = userConfigs.client_id && userConfigs.client_secret && userConfigs.developer_token
 
-    // 2. 如果有 OAuth 配置，优先使用 OAuth
+    let oauthApp: { client_id: string; client_secret: string; developer_token: string } | null = null
+    try {
+      oauthApp = await resolveGoogleAdsAppCredentials(userId)
+    } catch {
+      oauthApp = null
+    }
+
+    const hasOAuth =
+      !!oauthApp?.client_id &&
+      !!oauthApp?.client_secret &&
+      !!oauthApp?.developer_token
+
     if (hasOAuth && authType !== 'service_account') {
       console.log(`[KeywordPlanner] Using OAuth authentication for user ${userId}`)
 
-      // Get refresh token
       const credentials = await getGoogleAdsCredentials(userId)
       if (!credentials?.refresh_token) {
         console.error(`[KeywordPlanner] User ${userId} has no refresh token. Please authorize Google Ads API in Settings.`)
@@ -218,9 +227,9 @@ export async function getGoogleAdsConfig(
       }
 
       return {
-        clientId: userConfigs.client_id,
-        clientSecret: userConfigs.client_secret,
-        developerToken: userConfigs.developer_token,
+        clientId: oauthApp.client_id,
+        clientSecret: oauthApp.client_secret,
+        developerToken: oauthApp.developer_token,
         customerId: credentials.login_customer_id,
         loginCustomerId: credentials.login_customer_id,
         refreshToken: credentials.refresh_token,
@@ -228,15 +237,14 @@ export async function getGoogleAdsConfig(
       }
     }
 
-    // 3. 否则使用服务账号配置
     const serviceAccount = await getServiceAccountConfig(userId, serviceAccountId)
     if (serviceAccount) {
       console.log(`[KeywordPlanner] Using service account authentication for user ${userId}`)
       console.log(`[KeywordPlanner] MCC Customer ID: ${serviceAccount.mccCustomerId}`)
 
       return {
-        clientId: userConfigs.client_id,
-        clientSecret: userConfigs.client_secret,
+        clientId: userConfigs.client_id || oauthApp?.client_id || '',
+        clientSecret: userConfigs.client_secret || oauthApp?.client_secret || '',
         developerToken: serviceAccount.developerToken,
         customerId: serviceAccount.mccCustomerId,
         authType: 'service_account' as const,

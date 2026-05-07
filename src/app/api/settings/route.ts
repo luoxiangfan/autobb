@@ -4,6 +4,7 @@ import {
   getAllSettings,
   getSettingsByCategory,
   getUserOnlySettingsByCategory,
+  updateSetting,
   updateSettings,
 } from '@/lib/settings'
 import { invalidateProxyPoolCache } from '@/lib/offer-utils'
@@ -13,6 +14,13 @@ import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
 import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
 import { getFixedAffiliateSyncSettingValue } from '@/lib/affiliate-sync-config'
+import {
+  buildGoogleAdsCredentialPolicyPayload,
+  getGoogleAdsCredentialSource,
+  isGoogleAdsAppFieldKey,
+  isGoogleAdsCredentialSourceKey,
+  tryResolveGoogleAdsAppCredentials,
+} from '@/lib/google-ads-credential-policy'
 
 /**
  * GET /api/settings
@@ -112,6 +120,26 @@ export async function GET(request: NextRequest) {
 
 
     // 🔧 2025-12-29: 为 AI 分类添加动态计算字段
+    let googleAdsCredentialPolicy: {
+      credentialSource: string
+      appFieldsReadOnly: boolean
+      orgSharedConfigured: boolean
+    } | null = null
+
+    if (userIdNum) {
+      googleAdsCredentialPolicy = await buildGoogleAdsCredentialPolicyPayload(userIdNum)
+      const resolvedApp = await tryResolveGoogleAdsAppCredentials(userIdNum)
+      if (resolvedApp && groupedSettings['google_ads']) {
+        for (const item of groupedSettings['google_ads']) {
+          if (isGoogleAdsAppFieldKey(item.key)) {
+            if (item.key === 'client_id') item.value = resolvedApp.client_id
+            if (item.key === 'client_secret') item.value = resolvedApp.client_secret
+            if (item.key === 'developer_token') item.value = resolvedApp.developer_token
+          }
+        }
+      }
+    }
+
     if (groupedSettings['ai']) {
       // 获取 gemini_provider 值
       const providerSetting = groupedSettings['ai'].find(s => s.key === 'gemini_provider')
@@ -157,6 +185,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       settings: groupedSettings,
+      googleAdsCredentialPolicy,
     })
   } catch (error: any) {
     console.error('获取配置失败:', error)
@@ -205,6 +234,33 @@ export async function PUT(request: NextRequest) {
     }
 
     const { updates } = validationResult.data
+
+    const userRole = request.headers.get('x-user-role') || ''
+    const isAdmin = userRole === 'admin'
+
+    for (const update of updates) {
+      if (update.category === 'google_ads_shared' && !isAdmin) {
+        return NextResponse.json({ error: '仅管理员可修改组织级 Google Ads API 配置' }, { status: 403 })
+      }
+      if (update.category === 'google_ads' && isGoogleAdsCredentialSourceKey(update.key) && !isAdmin) {
+        return NextResponse.json({ error: 'credential_source 仅可由管理员在「管理后台 → Google Ads 凭证」中修改' }, { status: 403 })
+      }
+    }
+
+    if (userIdNum) {
+      const source = await getGoogleAdsCredentialSource(userIdNum)
+      if (source === 'inherit_org') {
+        const blocked = updates.filter(
+          (u) => u.category === 'google_ads' && isGoogleAdsAppFieldKey(u.key)
+        )
+        if (blocked.length > 0) {
+          return NextResponse.json(
+            { error: '当前使用管理员统一的应用凭证（Client ID / Secret / Developer Token），请由管理员在「管理后台 → Google Ads 凭证」维护组织级配置，用户设置中不可修改这些字段' },
+            { status: 403 }
+          )
+        }
+      }
+    }
 
     // 联盟同步配置必须是用户级，不允许无用户上下文写入
     const hasAffiliateSyncUpdate = updates.some((update) => update.category === 'affiliate_sync')
@@ -323,8 +379,15 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // 更新配置
-    await updateSettings(updates, userIdNum)
+    const sharedUpdates = updates.filter((u) => u.category === 'google_ads_shared')
+    const otherUpdates = updates.filter((u) => u.category !== 'google_ads_shared')
+
+    for (const u of sharedUpdates) {
+      await updateSetting(u.category, u.key, u.value, undefined)
+    }
+    if (otherUpdates.length > 0) {
+      await updateSettings(otherUpdates, userIdNum)
+    }
 
     // 🔥 修复（2025-12-11）：如果更新了代理配置，清除代理池缓存
     const hasProxyUpdate = updates.some(u => u.category === 'proxy')
@@ -334,7 +397,9 @@ export async function PUT(request: NextRequest) {
     }
 
     // 🔥 新增：如果更新了Google Ads配置，清除相关缓存
-    const hasGoogleAdsUpdate = updates.some(u => u.category === 'google_ads')
+    const hasGoogleAdsUpdate = updates.some(
+      (u) => u.category === 'google_ads' || u.category === 'google_ads_shared'
+    )
     if (hasGoogleAdsUpdate && userIdNum) {
       console.log('🔄 检测到Google Ads配置更新，清除API缓存')
       const { gadsApiCache } = await import('@/lib/cache')
