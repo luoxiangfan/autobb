@@ -71,8 +71,6 @@ import {
 import { matchesCampaignSearch } from '@/lib/campaign-search'
 import { convertCurrency, formatCurrency } from '@/lib/currency'
 import { formatCurrency as formatCurrencyDashboard, formatMultiCurrency } from '@/lib/utils'
-import { syncAffiliateProducts } from '@/lib/affiliate-products'
-import { is } from 'date-fns/locale'
 
 const CampaignsTrendsSection = dynamic(() => import('./CampaignsTrendsSection'), {
   ssr: false,

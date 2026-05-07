@@ -29,6 +29,36 @@ function normalizeCurrency(value: unknown): string {
   return normalized || 'USD'
 }
 
+/**
+ * 将联盟平台名称映射到域名关键字列表（用于 LIKE 查询）
+ * 示例：
+ * - Amazon -> ['amzn.to', 'amazon.com', 'amazon.co.uk', ...]
+ * - ShareASale -> ['shareasale.com']
+ */
+function getAffiliateDomainKeywords(platformName: string): string[] {
+  const platformDomainMap: Record<string, string[]> = {
+    'Amazon': ['amzn.to', 'amazon.com', 'amazon.co.uk', 'amazon.ca', 'amazon.de', 'amazon.fr', 'amazon.co.jp'],
+    'LinkShare': ['click.linksynergy.com', 'linksynergy.com'],
+    'ShareASale': ['shareasale.com'],
+    'CJ': ['cj.dotomi.com', 'commissionjunction.com'],
+    'Skimlinks': ['go.redirectingat.com', 'redirectingat.com'],
+    'Awin': ['awin1.com'],
+    'Google Affiliate': ['clickserve.dartsearch.net', 'affiliate.google.com'],
+    'TradeTracker': ['tp.media'],
+    'FlexOffers': ['flexlinks.com', 'flexoffers.com'],
+    'Impact': ['impact.com'],
+    'Rakuten': ['rakutenadvertising.com'],
+    'ClickBank': ['clickbank.net'],
+    'Digistore24': ['digistore24.com'],
+    'WarriorPlus': ['warriorplus.com'],
+    'JVZoo': ['jvzoo.com'],
+    'YeahPromos': ['yeahpromos.com'],
+    'PartnerBoost': ['partnerboost.com', 'app.partnerboost.com', 'pboost.me'],
+  }
+
+  return platformDomainMap[platformName] || [platformName.toLowerCase()]
+}
+
 function formatLocalYmd(date: Date): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: process.env.TZ || 'Asia/Shanghai',
@@ -378,7 +408,9 @@ export async function GET(request: NextRequest) {
       : (userIdFilter && Number.isFinite(userIdFilter) && isAdmin ? userIdFilter : userId)
     // 🔧 新增：按联盟筛选（affiliate platform）
     const affiliateFilterParam = searchParams.get('affiliate')
-    const affiliateFilter = affiliateFilterParam ? decodeURIComponent(affiliateFilterParam).trim().toLowerCase() : null
+    const affiliateFilter = affiliateFilterParam ? decodeURIComponent(affiliateFilterParam).trim() : null
+    // 将联盟平台名称映射到域名关键字（用于 LIKE 查询）
+    const affiliateDomainKeywords = affiliateFilter ? getAffiliateDomainKeywords(affiliateFilter) : []
     let startDateStr = startDateQuery || ''
     let endDateStr = endDateQuery || ''
     let rangeDays = daysBack
@@ -468,18 +500,15 @@ export async function GET(request: NextRequest) {
         LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
         LEFT JOIN offers o ON c.offer_id = o.id
         WHERE ${effectiveUserId !== null ? 'c.user_id = ?' : '1=1'}
-        ${affiliateFilterParam && affiliateFilter ? `AND EXISTS (
-          SELECT 1 FROM system_settings ss
-          WHERE ss.category = 'affiliate_sync'
-            AND (ss.user_id = c.user_id OR ss.user_id IS NULL)
-            AND LOWER(ss.key) LIKE ?
+        ${affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? `AND (
+          ${affiliateDomainKeywords.map((keyword, i) => `o.affiliate_link LIKE ?`).join(' OR ')}
         )` : ''}
         ${createdAtStartParam ? `AND c.created_at >= ?` : ''}
         ${createdAtEndParam ? `AND c.created_at <= ?` : ''}
         ORDER BY c.created_at DESC
       `, [
         ...(effectiveUserId !== null ? [effectiveUserId] : []),
-        ...(affiliateFilterParam && affiliateFilter ? [`%${affiliateFilter}%`] : []),
+        ...(affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? affiliateDomainKeywords.map(k => `%${k}%`) : []),
         ...(createdAtStartParam ? [createdAtStartParam] : []),
         ...(createdAtEndParam ? [createdAtEndParam] : [])
       ]) as any[]
@@ -535,20 +564,36 @@ export async function GET(request: NextRequest) {
       const rows = await db.query<{ campaign_id: number; currency: string; commission: number }>(
         `
           SELECT
-            campaign_id,
-            COALESCE(currency, 'USD') as currency,
-            COALESCE(SUM(commission_amount), 0) AS commission
-          FROM affiliate_commission_attributions
-          WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
-            AND report_date >= ?
-            AND report_date <= ?
-            ${hasCurrencyFilter ? 'AND COALESCE(currency, \'USD\') = ?' : ''}
-            AND campaign_id IS NOT NULL
-          GROUP BY campaign_id, COALESCE(currency, 'USD')
+            a.campaign_id,
+            COALESCE(a.currency, 'USD') as currency,
+            COALESCE(SUM(a.commission_amount), 0) AS commission
+          FROM affiliate_commission_attributions a
+          INNER JOIN campaigns c ON a.campaign_id = c.id
+          INNER JOIN offers o ON c.offer_id = o.id
+          WHERE ${effectiveUserId !== null ? 'c.user_id = ?' : '1=1'}
+            AND a.report_date >= ?
+            AND a.report_date <= ?
+            ${affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? `AND (${
+              affiliateDomainKeywords.map((_, i) => `o.affiliate_link LIKE ?`).join(' OR ')
+            })` : ''}
+            ${hasCurrencyFilter ? 'AND COALESCE(a.currency, \'USD\') = ?' : ''}
+            AND a.campaign_id IS NOT NULL
+          GROUP BY a.campaign_id, COALESCE(a.currency, 'USD')
         `,
         hasCurrencyFilter
-          ? [...(effectiveUserId !== null ? [effectiveUserId] : []), params.start, params.end, String(params.currency)]
-          : [...(effectiveUserId !== null ? [effectiveUserId] : []), params.start, params.end]
+          ? [
+              ...(effectiveUserId !== null ? [effectiveUserId] : []),
+              params.start,
+              params.end,
+              ...(affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? affiliateDomainKeywords.map(k => `%${k}%`) : []),
+              String(params.currency),
+            ]
+          : [
+              ...(effectiveUserId !== null ? [effectiveUserId] : []),
+              params.start,
+              params.end,
+              ...(affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? affiliateDomainKeywords.map(k => `%${k}%`) : []),
+            ]
       )
 
       const map = new Map<number, Map<string, number>>()
@@ -894,15 +939,20 @@ export async function GET(request: NextRequest) {
           UNION ALL
           SELECT
             'attributed' AS summary_source,
-            COALESCE(currency, 'USD') AS currency,
+            COALESCE(a.currency, 'USD') AS currency,
             0 AS impressions,
             0 AS clicks,
-            COALESCE(SUM(commission_amount), 0) AS amount
-          FROM affiliate_commission_attributions
-          WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
-            AND report_date >= ?
-            AND report_date <= ?
-            ${hasCurrencyFilter ? 'AND COALESCE(currency, \'USD\') = ?' : ''}
+            COALESCE(SUM(a.commission_amount), 0) AS amount
+          FROM affiliate_commission_attributions a
+          INNER JOIN campaigns c ON a.campaign_id = c.id
+          INNER JOIN offers o ON c.offer_id = o.id
+          WHERE ${effectiveUserId !== null ? 'c.user_id = ?' : '1=1'}
+            AND a.report_date >= ?
+            AND a.report_date <= ?
+            ${affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? `AND (${
+              affiliateDomainKeywords.map((_, i) => `o.affiliate_link LIKE ?`).join(' OR ')
+            })` : ''}
+            ${hasCurrencyFilter ? 'AND COALESCE(a.currency, \'USD\') = ?' : ''}
           GROUP BY 2
         `,
         hasCurrencyFilter
@@ -910,19 +960,23 @@ export async function GET(request: NextRequest) {
               ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.start,
               params.end,
+              ...(affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? affiliateDomainKeywords.map(k => `%${k}%`) : []),
               String(params.currency),
               ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.start,
               params.end,
+              ...(affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? affiliateDomainKeywords.map(k => `%${k}%`) : []),
               String(params.currency),
             ]
           : [
               ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.start,
               params.end,
+              ...(affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? affiliateDomainKeywords.map(k => `%${k}%`) : []),
               ...(effectiveUserId !== null ? [effectiveUserId] : []),
               params.start,
               params.end,
+              ...(affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? affiliateDomainKeywords.map(k => `%${k}%`) : []),
             ]
       )
 
