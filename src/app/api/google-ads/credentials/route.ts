@@ -4,11 +4,13 @@ import {
   saveGoogleAdsCredentials,
   getGoogleAdsCredentials,
   deleteGoogleAdsCredentials,
-  verifyGoogleAdsCredentials,
-  getUserAuthType
+  getUserAuthType,
 } from '@/lib/google-ads-oauth'
-import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getDatabase } from '@/lib/db'
+import {
+  canMaintainGoogleAdsConfig,
+  getGoogleAdsConfigScope,
+} from '@/lib/google-ads-config-policy'
 
 /**
  * POST /api/google-ads/credentials
@@ -16,7 +18,6 @@ import { getDatabase } from '@/lib/db'
  */
 export async function POST(request: NextRequest) {
   try {
-    // 验证用户身份
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
@@ -25,8 +26,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 解析请求参数
     const body = await request.json()
+    const requestedTargetUserId =
+      typeof body?.targetUserId === 'number' && Number.isFinite(body.targetUserId)
+        ? body.targetUserId
+        : undefined
+    if (requestedTargetUserId && authResult.user.role !== 'admin') {
+      return NextResponse.json({ error: '仅管理员可为其他用户维护 Google Ads 配置' }, { status: 403 })
+    }
+    const targetUserId =
+      authResult.user.role === 'admin' && requestedTargetUserId
+        ? requestedTargetUserId
+        : authResult.user.userId
+
+    const canMaintain = await canMaintainGoogleAdsConfig(targetUserId, authResult.user.role)
+    if (!canMaintain) {
+      return NextResponse.json(
+        {
+          error:
+            '当前账号的 Google Ads 配置由管理员统一维护，您仅可查看。若需自行维护，请联系管理员切换为“用户独立配置”。',
+        },
+        { status: 403 }
+      )
+    }
+
     const {
       client_id,
       client_secret,
@@ -50,7 +73,7 @@ export async function POST(request: NextRequest) {
     console.log(`   Developer Token: ${developer_token.substring(0, 10)}...`)
 
     // 保存凭证
-    const credentials = await saveGoogleAdsCredentials(authResult.user.userId, {
+    const credentials = await saveGoogleAdsCredentials(targetUserId, {
       client_id,
       client_secret,
       refresh_token,
@@ -101,7 +124,18 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const userId = authResult.user.userId
+    const requestedTargetUserId = Number(request.nextUrl.searchParams.get('targetUserId') || '')
+    const hasTargetUserId = Number.isFinite(requestedTargetUserId) && requestedTargetUserId > 0
+    if (hasTargetUserId && authResult.user.role !== 'admin') {
+      return NextResponse.json({ error: '仅管理员可查看其他用户的 Google Ads 配置' }, { status: 403 })
+    }
+    const userId = hasTargetUserId ? requestedTargetUserId : authResult.user.userId
+
+    const configScope = await getGoogleAdsConfigScope(userId)
+    const canMaintainConfig = await canMaintainGoogleAdsConfig(
+      userId,
+      authResult.user.role
+    )
 
     // 1. 检查 OAuth 凭证
     const credentials = await getGoogleAdsCredentials(userId)
@@ -111,25 +145,27 @@ export async function GET(request: NextRequest) {
     let serviceAccountId: string | null = null
     let serviceAccountName: string | null = null
     let serviceAccountApiAccessLevel: string | null = null
+    let serviceAccountUserId: number | null = null
     try {
       const db = await getDatabase()
       const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
       const uid = db.type === 'postgres' ? userId : String(userId)
       const serviceAccount = await db.queryOne(
         `
-        SELECT id, name, api_access_level FROM google_ads_service_accounts
+        SELECT id, name, api_access_level, user_id FROM google_ads_service_accounts
         WHERE (user_id IS NULL OR user_id = ?) AND ${isActiveCondition}
         ORDER BY CASE WHEN user_id IS NULL THEN 1 ELSE 0 END, created_at DESC
         LIMIT 1
       `,
         [uid]
-      ) as { id: string; name: string; api_access_level?: string } | undefined
+      ) as { id: string; name: string; api_access_level?: string; user_id?: number | null } | undefined
 
       if (serviceAccount) {
         hasServiceAccount = true
         serviceAccountId = serviceAccount.id
         serviceAccountName = serviceAccount.name
         serviceAccountApiAccessLevel = serviceAccount.api_access_level || null
+        serviceAccountUserId = serviceAccount.user_id ?? null
       }
     } catch (err) {
       console.error('检查服务账号配置失败:', err)
@@ -143,6 +179,8 @@ export async function GET(request: NextRequest) {
           hasCredentials: false,
           hasRefreshToken: false,
           hasServiceAccount: false,
+          configScope,
+          canMaintainConfig,
         }
       })
     }
@@ -176,8 +214,11 @@ export async function GET(request: NextRequest) {
         hasServiceAccount,
         serviceAccountId,
         serviceAccountName,
+        serviceAccountUserId,
         authType: auth.authType,
         apiAccessLevel,
+        configScope,
+        canMaintainConfig,
         lastVerifiedAt: credentials?.last_verified_at,
         isActive: credentials?.is_active === 1,
         createdAt: credentials?.created_at,
@@ -204,7 +245,6 @@ export async function GET(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    // 验证用户身份
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
@@ -213,7 +253,23 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    const userId = authResult.user.userId
+    const requestedTargetUserId = Number(request.nextUrl.searchParams.get('targetUserId') || '')
+    const hasTargetUserId = Number.isFinite(requestedTargetUserId) && requestedTargetUserId > 0
+    if (hasTargetUserId && authResult.user.role !== 'admin') {
+      return NextResponse.json({ error: '仅管理员可删除其他用户的 Google Ads 配置' }, { status: 403 })
+    }
+
+    const userId = hasTargetUserId ? requestedTargetUserId : authResult.user.userId
+    const canMaintain = await canMaintainGoogleAdsConfig(userId, authResult.user.role)
+    if (!canMaintain) {
+      return NextResponse.json(
+        {
+          error:
+            '当前账号的 Google Ads 配置由管理员统一维护，您仅可查看。若需删除或修改，请联系管理员操作。',
+        },
+        { status: 403 }
+      )
+    }
 
     // 1) 停用/清空 OAuth 凭证（google_ads_credentials）
     await deleteGoogleAdsCredentials(userId)
@@ -260,7 +316,6 @@ export async function DELETE(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    // 验证用户身份
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
@@ -269,8 +324,29 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const userId = authResult.user.userId
     const body = await request.json()
+    const requestedTargetUserId =
+      typeof body?.targetUserId === 'number' && Number.isFinite(body.targetUserId)
+        ? body.targetUserId
+        : undefined
+    if (requestedTargetUserId && authResult.user.role !== 'admin') {
+      return NextResponse.json({ error: '仅管理员可修改其他用户的 Google Ads 配置' }, { status: 403 })
+    }
+    const userId =
+      authResult.user.role === 'admin' && requestedTargetUserId
+        ? requestedTargetUserId
+        : authResult.user.userId
+    const canMaintain = await canMaintainGoogleAdsConfig(userId, authResult.user.role)
+    if (!canMaintain) {
+      return NextResponse.json(
+        {
+          error:
+            '当前账号的 Google Ads 配置由管理员统一维护，您仅可查看。若需修改，请联系管理员操作。',
+        },
+        { status: 403 }
+      )
+    }
+
     const { apiAccessLevel } = body
 
     // 验证参数

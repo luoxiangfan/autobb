@@ -12,6 +12,7 @@ import { invalidateProxyPoolCache } from '@/lib/offer-utils'
 import { GEMINI_PROVIDERS, getGeminiEndpoint, getGeminiApiKeyUrl, type GeminiProvider } from '@/lib/gemini-config'
 import { GEMINI_ACTIVE_MODEL, isDeprecatedGeminiModel, normalizeModelForProvider } from '@/lib/gemini-models'
 import { getDatabase } from '@/lib/db'
+import { canMaintainGoogleAdsConfig } from '@/lib/google-ads-config-policy'
 import { z } from 'zod'
 import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
 import { getFixedAffiliateSyncSettingValue } from '@/lib/affiliate-sync-config'
@@ -269,6 +270,31 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    // Google Ads 配置写入权限控制：
+    // - 管理员始终可维护
+    // - 普通用户仅当管理员为其设置为“用户自行维护”时可写
+    const hasGoogleAdsUpdate = updates.some((update) => update.category === 'google_ads')
+    if (hasGoogleAdsUpdate) {
+      const auth = await verifyAuth(request)
+      if (!auth.authenticated || !auth.user) {
+        return NextResponse.json(
+          { error: '更新 Google Ads 配置需要登录' },
+          { status: 401 }
+        )
+      }
+
+      const canMaintain = await canMaintainGoogleAdsConfig(auth.user.userId, auth.user.role)
+      if (!canMaintain) {
+        return NextResponse.json(
+          {
+            error:
+              '当前账号的 Google Ads 配置由管理员统一维护，您仅可查看。若需自行维护，请联系管理员切换为“用户独立配置”。',
+          },
+          { status: 403 }
+        )
+      }
+    }
+
     // 🔧 同步更新：AI配置变更时，按“服务商 + 模型”自动填充 gemini_endpoint
     const hasAIUpdate = updates.some(u => u.category === 'ai')
     if (hasAIUpdate) {
@@ -380,7 +406,6 @@ export async function PUT(request: NextRequest) {
     }
 
     // 🔥 新增：如果更新了Google Ads配置，清除相关缓存
-    const hasGoogleAdsUpdate = updates.some(u => u.category === 'google_ads')
     if (hasGoogleAdsUpdate && userIdNum) {
       console.log('🔄 检测到Google Ads配置更新，清除API缓存')
       const { gadsApiCache } = await import('@/lib/cache')

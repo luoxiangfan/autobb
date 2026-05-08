@@ -94,11 +94,14 @@ interface GoogleAdsCredentialStatus {
   hasServiceAccount?: boolean
   serviceAccountId?: string | null
   serviceAccountName?: string | null
+  serviceAccountUserId?: number | null
   authType?: 'oauth' | 'service_account'
   clientId?: string | null
   developerToken?: string | null
   loginCustomerId?: string
   apiAccessLevel?: 'test' | 'explorer' | 'basic' | 'standard'
+  configScope?: 'tenant' | 'user'
+  canMaintainConfig?: boolean
   lastVerifiedAt?: string
   isActive?: boolean
 }
@@ -669,6 +672,14 @@ export default function SettingsPage() {
   }
 
   const handleInputChange = (category: string, key: string, value: string) => {
+    if (
+      category === 'google_ads' &&
+      currentUserRole !== 'admin' &&
+      googleAdsCredentialStatus?.canMaintainConfig === false
+    ) {
+      return
+    }
+
     setFormData(prev => {
       const updated = {
         ...prev,
@@ -1237,8 +1248,9 @@ export default function SettingsPage() {
   }
 
   const handleSaveServiceAccount = async () => {
-    if (currentUserRole !== 'admin') {
-      toast.error('仅管理员可配置全租户服务账号')
+    const canMaintain = currentUserRole === 'admin' || googleAdsCredentialStatus?.canMaintainConfig === true
+    if (!canMaintain) {
+      toast.error('当前账号无权维护服务账号配置，请联系管理员调整配置策略')
       return
     }
     if (!serviceAccountForm.name || !serviceAccountForm.mccCustomerId || !serviceAccountForm.developerToken || !serviceAccountForm.serviceAccountJson) {
@@ -1286,8 +1298,9 @@ export default function SettingsPage() {
   }
 
   const deleteServiceAccountNow = async (id: string) => {
-    if (currentUserRole !== 'admin') {
-      toast.error('仅管理员可删除全租户服务账号配置')
+    const canMaintain = currentUserRole === 'admin' || googleAdsCredentialStatus?.canMaintainConfig === true
+    if (!canMaintain) {
+      toast.error('当前账号无权删除服务账号配置')
       return
     }
     setDeletingServiceAccountId(id)
@@ -1357,7 +1370,10 @@ export default function SettingsPage() {
       ['login_customer_id', 'client_id', 'client_secret', 'developer_token'].some(isSet)
   })()
 
-  const hasServiceAccountConfigToDelete = Boolean(googleAdsCredentialStatus?.serviceAccountId)
+  const hasServiceAccountConfigToDelete = Boolean(googleAdsCredentialStatus?.serviceAccountId) && (
+    currentUserRole === 'admin'
+      || googleAdsCredentialStatus?.serviceAccountUserId !== null
+  )
 
   const requestDeleteCurrentGoogleAdsConfig = () => {
     if (googleAdsAuthMethod === 'oauth') {
@@ -1431,6 +1447,10 @@ export default function SettingsPage() {
     const metaKey = `${category}.${setting.key}`
     const metadata = SETTING_METADATA[metaKey]
     const value = formData[category]?.[setting.key] || ''
+    const isGoogleAdsConfigReadOnly =
+      category === 'google_ads' &&
+      currentUserRole !== 'admin' &&
+      googleAdsCredentialStatus?.canMaintainConfig === false
 
     // 🆕 gemini_endpoint 只读显示
     if (isReadOnlySetting(category, setting.key)) {
@@ -1465,6 +1485,7 @@ export default function SettingsPage() {
         <Select
           value={value || metadata?.defaultValue || ''}
           onValueChange={(v) => handleInputChange(category, setting.key, v)}
+          disabled={isGoogleAdsConfigReadOnly}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="请选择" />
@@ -1482,7 +1503,7 @@ export default function SettingsPage() {
 
     // 数字类型
     if (setting.dataType === 'number') {
-      const readOnly = isReadOnlySetting(category, setting.key)
+      const readOnly = isReadOnlySetting(category, setting.key) || isGoogleAdsConfigReadOnly
       return (
         <Input
           type="number"
@@ -1504,6 +1525,8 @@ export default function SettingsPage() {
           type="time"
           value={value}
           onChange={(e) => handleInputChange(category, setting.key, e.target.value)}
+          readOnly={isGoogleAdsConfigReadOnly}
+          disabled={isGoogleAdsConfigReadOnly}
         />
       )
     }
@@ -1519,6 +1542,8 @@ export default function SettingsPage() {
           placeholder={metadata?.placeholder}
           rows={6}
           className="font-mono text-sm"
+          readOnly={isGoogleAdsConfigReadOnly}
+          disabled={isGoogleAdsConfigReadOnly}
           onFocus={(e) => {
             if (setting.isSensitive && value && e.target.value === '***已配置***') {
               e.target.value = ''
@@ -1543,7 +1568,10 @@ export default function SettingsPage() {
             onChange={(e) => handleInputChange(category, setting.key, e.target.value)}
             placeholder={metadata?.placeholder || ''}
             className={hasValue ? 'border-green-300' : ''}
+            readOnly={isGoogleAdsConfigReadOnly}
+            disabled={isGoogleAdsConfigReadOnly}
             onFocus={() => {
+              if (isGoogleAdsConfigReadOnly) return
               setEditingField(fieldKey)
               if (hasValue && !isEditing) {
                 handleInputChange(category, setting.key, '')
@@ -1569,9 +1597,9 @@ export default function SettingsPage() {
         value={value || metadata?.defaultValue || ''}
         onChange={(e) => handleInputChange(category, setting.key, e.target.value)}
         placeholder={metadata?.placeholder}
-        readOnly={isReadOnlySetting(category, setting.key)}
-        disabled={isReadOnlySetting(category, setting.key)}
-        className={isReadOnlySetting(category, setting.key) ? 'bg-gray-100 cursor-not-allowed' : undefined}
+        readOnly={isReadOnlySetting(category, setting.key) || isGoogleAdsConfigReadOnly}
+        disabled={isReadOnlySetting(category, setting.key) || isGoogleAdsConfigReadOnly}
+        className={(isReadOnlySetting(category, setting.key) || isGoogleAdsConfigReadOnly) ? 'bg-gray-100 cursor-not-allowed' : undefined}
       />
     )
   }
@@ -1985,6 +2013,12 @@ export default function SettingsPage() {
 
                     {/* 基础配置字段 - 2列布局 */}
                     {googleAdsAuthMethod === 'oauth' && (
+                      <div className="space-y-4">
+                        {currentUserRole !== 'admin' && googleAdsCredentialStatus?.canMaintainConfig === false && (
+                          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                            当前账号使用管理员统一维护的 Google Ads 配置，您只能查看，不能修改。
+                          </div>
+                        )}
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
                         {categorySettings.map((setting: Setting) => {
                           const metaKey = `${category}.${setting.key}`
@@ -2023,6 +2057,7 @@ export default function SettingsPage() {
                           )
                         })}
                       </div>
+                      </div>
                     )}
 
                     {googleAdsAuthMethod === 'oauth' && currentUserRole === 'admin' && (
@@ -2043,7 +2078,11 @@ export default function SettingsPage() {
                     {googleAdsAuthMethod === 'service_account' && (
                       <div className="space-y-4">
                         <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950">
-                          服务账号为<strong>全租户</strong>资源：由管理员在此保存后，所有用户均可选用「服务账号认证」模式；普通用户不可修改密钥与删除租户级配置。
+                          {currentUserRole === 'admin'
+                            ? '服务账号支持管理员全租户配置，也支持按用户独立配置（通过用户管理页切换策略）。'
+                            : (googleAdsCredentialStatus?.canMaintainConfig
+                              ? '当前账号可维护自己的服务账号配置（仅影响本人）。'
+                              : '当前账号仅可查看管理员提供的服务账号配置，不能修改。')}
                         </div>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
                         <div>
@@ -2060,7 +2099,7 @@ export default function SettingsPage() {
                             onChange={(e) => setServiceAccountForm(prev => ({ ...prev, name: e.target.value }))}
                             placeholder="例如: 生产环境MCC"
                             className="mt-2"
-                            disabled={currentUserRole !== 'admin'}
+                            disabled={!(currentUserRole === 'admin' || googleAdsCredentialStatus?.canMaintainConfig === true)}
                           />
                         </div>
 
@@ -2089,7 +2128,7 @@ export default function SettingsPage() {
                             onChange={(e) => setServiceAccountForm(prev => ({ ...prev, mccCustomerId: e.target.value }))}
                             placeholder="例如: 1234567890"
                             className="mt-2"
-                            disabled={currentUserRole !== 'admin'}
+                            disabled={!(currentUserRole === 'admin' || googleAdsCredentialStatus?.canMaintainConfig === true)}
                           />
                         </div>
 
@@ -2119,7 +2158,7 @@ export default function SettingsPage() {
                             placeholder="输入 Developer Token"
                             type="password"
                             className="mt-2"
-                            disabled={currentUserRole !== 'admin'}
+                            disabled={!(currentUserRole === 'admin' || googleAdsCredentialStatus?.canMaintainConfig === true)}
                           />
                         </div>
 
@@ -2149,7 +2188,7 @@ export default function SettingsPage() {
                             placeholder='粘贴JSON内容，例如: {"type":"service_account","project_id":"...","private_key":"..."}'
                             rows={6}
                             className="mt-2 font-mono text-xs"
-                            disabled={currentUserRole !== 'admin'}
+                            disabled={!(currentUserRole === 'admin' || googleAdsCredentialStatus?.canMaintainConfig === true)}
                           />
                         </div>
                       </div>
@@ -2174,7 +2213,10 @@ export default function SettingsPage() {
                                     </div>
                                   </div>
                                 </div>
-                                {currentUserRole === 'admin' && (
+                                {(currentUserRole === 'admin' ||
+                                  (googleAdsCredentialStatus?.canMaintainConfig === true &&
+                                    account?.user_id !== null &&
+                                    account?.user_id !== undefined)) && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -2585,8 +2627,12 @@ export default function SettingsPage() {
                       saving
                       || savingServiceAccount
                       || (category === 'google_ads'
+                        && googleAdsAuthMethod === 'oauth'
+                        && currentUserRole !== 'admin'
+                        && googleAdsCredentialStatus?.canMaintainConfig === false)
+                      || (category === 'google_ads'
                         && googleAdsAuthMethod === 'service_account'
-                        && currentUserRole !== 'admin')
+                        && !(currentUserRole === 'admin' || googleAdsCredentialStatus?.canMaintainConfig === true))
                     }
                   >
                   {(saving || savingServiceAccount) ? '保存中...' : '保存配置'}
@@ -2599,11 +2645,13 @@ export default function SettingsPage() {
                       onClick={requestDeleteCurrentGoogleAdsConfig}
                       disabled={
                         deletingOAuthConfig ||
-                        (googleAdsAuthMethod === 'oauth' && !hasOAuthConfigToDelete) ||
+                        (googleAdsAuthMethod === 'oauth' &&
+                          (!hasOAuthConfigToDelete
+                            || (currentUserRole !== 'admin' && googleAdsCredentialStatus?.canMaintainConfig === false))) ||
                         (googleAdsAuthMethod === 'service_account' &&
                           (!!deletingServiceAccountId
                             || !hasServiceAccountConfigToDelete
-                            || currentUserRole !== 'admin'))
+                            || !(currentUserRole === 'admin' || googleAdsCredentialStatus?.canMaintainConfig === true)))
                       }
                     >
                       删除当前配置

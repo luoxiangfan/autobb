@@ -9,6 +9,11 @@ import {
   UserManagementContext,
 } from '@/lib/audit-logger'
 import { clearUserExecutionEligibilityCache } from '@/lib/user-execution-eligibility'
+import {
+  getGoogleAdsConfigScope,
+  setGoogleAdsConfigScope,
+  type GoogleAdsConfigScope,
+} from '@/lib/google-ads-config-policy'
 
 // 获取客户端IP地址
 function getClientIP(request: NextRequest): string {
@@ -44,6 +49,7 @@ export async function PATCH(
       openclawEnabled,
       productManagementEnabled,
       strategyCenterEnabled,
+      googleAdsConfigScope,
     } = body
 
     const db = getDatabase()
@@ -128,7 +134,10 @@ export async function PATCH(
       }
     }
 
-    if (fieldUpdates.length === 0) {
+    const shouldUpdateGoogleAdsConfigScope =
+      googleAdsConfigScope === 'tenant' || googleAdsConfigScope === 'user'
+
+    if (fieldUpdates.length === 0 && !shouldUpdateGoogleAdsConfigScope) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
     }
 
@@ -152,17 +161,25 @@ export async function PATCH(
       updates: updates
     })
 
-    const result = await db.exec(finalSql, values)
+    const result = fieldUpdates.length > 0
+      ? await db.exec(finalSql, values)
+      : { changes: 0 }
 
     // 🔧 调试日志
     console.log('🔍 [Admin] 更新结果:', result)
 
-    if (result.changes === 0) {
+    if (fieldUpdates.length > 0 && result.changes === 0) {
       console.error('❌ [Admin] 更新用户失败:', { userId, finalSql, values })
       return NextResponse.json({ error: 'Failed to update user' }, { status: 500 })
     }
 
+    if (shouldUpdateGoogleAdsConfigScope) {
+      await setGoogleAdsConfigScope(userId, googleAdsConfigScope as GoogleAdsConfigScope)
+      changedFields.push('google_ads_config_scope')
+    }
+
     const updatedUser = await db.queryOne('SELECT id, username, email, package_type, package_expires_at, is_active, openclaw_enabled, product_management_enabled, strategy_center_enabled FROM users WHERE id = ?', [userId]) as any
+    const updatedGoogleAdsConfigScope = await getGoogleAdsConfigScope(userId)
 
     // 获取操作者的username（从数据库查询）
     const operator = await db.queryOne('SELECT username FROM users WHERE id = ?', [auth.user!.userId]) as { username: string } | undefined
@@ -206,7 +223,13 @@ export async function PATCH(
       await logUserUpdated(auditContext, beforeUser, updatedUser, nonStatusFields)
     }
 
-    return NextResponse.json({ success: true, user: updatedUser })
+    return NextResponse.json({
+      success: true,
+      user: {
+        ...updatedUser,
+        google_ads_config_scope: updatedGoogleAdsConfigScope,
+      },
+    })
 
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

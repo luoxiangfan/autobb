@@ -40,6 +40,7 @@ function transformUserToApiResponse(user: any, now: Date) {
     openclawEnabled: user.openclaw_enabled === true || user.openclaw_enabled === 1,
     productManagementEnabled: user.product_management_enabled === true || user.product_management_enabled === 1,
     strategyCenterEnabled: user.strategy_center_enabled === true || user.strategy_center_enabled === 1,
+    googleAdsConfigScope: String(user.google_ads_config_scope || '').toLowerCase() === 'user' ? 'user' : 'tenant',
     disableSuggested,
     disableSuggestedReason: disableSuggested ? 'expired_over_30d' : null,
     lastLoginAt: user.last_login_at,
@@ -84,6 +85,14 @@ export async function GET(request: NextRequest) {
         openclaw_enabled,
         product_management_enabled,
         strategy_center_enabled,
+        (
+          SELECT value
+          FROM system_settings ss
+          WHERE ss.user_id = users.id
+            AND ss.category = 'google_ads'
+            AND ss.key = 'config_scope'
+          LIMIT 1
+        ) AS google_ads_config_scope,
         last_login_at,
         created_at,
         locked_until,

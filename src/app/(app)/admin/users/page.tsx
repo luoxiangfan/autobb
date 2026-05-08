@@ -59,6 +59,7 @@ interface User {
     openclawEnabled: boolean
     productManagementEnabled: boolean
     strategyCenterEnabled: boolean
+    googleAdsConfigScope: 'tenant' | 'user'
     disableSuggested?: boolean
     disableSuggestedReason?: 'expired_over_30d' | null
     createdAt: string
@@ -452,6 +453,27 @@ export default function UserManagementPage() {
         }
     }
 
+    const handleUpdateGoogleAdsConfigScope = async (
+        userId: number,
+        username: string,
+        scope: 'tenant' | 'user'
+    ) => {
+        const scopeLabel = scope === 'tenant' ? '管理员统一配置' : '用户独立配置'
+        try {
+            const res = await fetch(`/api/admin/users/${userId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ googleAdsConfigScope: scope })
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error)
+            toast.success(`已将 "${username}" 的 Google Ads 配置模式设置为：${scopeLabel}`)
+            fetchUsers(pagination.page)
+        } catch (error: any) {
+            toast.error(error.message)
+        }
+    }
+
     const handleDeleteUser = (userId: number, username: string, isActive: boolean) => {
         // 检查用户是否处于启用状态
         // 🔧 修复(2025-12-30): 改为boolean判断
@@ -758,6 +780,9 @@ export default function UserManagementPage() {
                                             {renderSortIcon('role')}
                                         </button>
                                     </TableHead>
+                                    <TableHead className="hidden w-[120px] whitespace-nowrap lg:table-cell">
+                                        Google Ads
+                                    </TableHead>
                                     <TableHead
                                         className="hidden w-[92px] whitespace-nowrap md:table-cell"
                                         aria-sort={sortField === 'packageType' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
@@ -829,7 +854,7 @@ export default function UserManagementPage() {
                             <TableBody>
                                 {users.length === 0 && !loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                                        <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                                             未找到用户
                                         </TableCell>
                                     </TableRow>
@@ -855,6 +880,18 @@ export default function UserManagementPage() {
                                             <TableCell className="hidden whitespace-nowrap lg:table-cell">
                                                 <Badge variant={user.role === 'admin' ? 'default' : 'secondary'} className="h-6 px-2 text-xs">
                                                     {user.role === 'admin' ? '管理员' : '用户'}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="hidden whitespace-nowrap lg:table-cell">
+                                                <Badge
+                                                    variant="outline"
+                                                    className={`h-6 px-2 text-xs ${
+                                                        user.googleAdsConfigScope === 'user'
+                                                            ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
+                                                            : 'border-indigo-500 text-indigo-700 bg-indigo-50'
+                                                    }`}
+                                                >
+                                                    {user.googleAdsConfigScope === 'user' ? '用户独立配置' : '管理员统一配置'}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="hidden whitespace-nowrap md:table-cell">
@@ -1001,6 +1038,33 @@ export default function UserManagementPage() {
                                                                 <div>
                                                                     <div className="font-medium">{user.strategyCenterEnabled ? '关闭 策略中心 权限' : '开启 策略中心 权限'}</div>
                                                                     <div className="text-xs text-muted-foreground">切换该用户的策略中心访问权限</div>
+                                                                </div>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleUpdateGoogleAdsConfigScope(user.id, user.username, 'tenant')}
+                                                                className="items-start gap-2 py-2"
+                                                                title="该用户只能查看 Google Ads 配置，由管理员统一维护"
+                                                            >
+                                                                <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0 text-indigo-600" />
+                                                                <div>
+                                                                    <div className="font-medium">Google Ads: 管理员统一配置</div>
+                                                                    <div className="text-xs text-muted-foreground">
+                                                                        {user.googleAdsConfigScope === 'tenant' ? '当前已启用' : '用户仅可查看，不能修改'}
+                                                                    </div>
+                                                                </div>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleUpdateGoogleAdsConfigScope(user.id, user.username, 'user')}
+                                                                className="items-start gap-2 py-2"
+                                                                title="允许该用户维护自己的 Google Ads 配置"
+                                                            >
+                                                                <Edit className="w-4 h-4 mt-0.5 shrink-0 text-emerald-600" />
+                                                                <div>
+                                                                    <div className="font-medium">Google Ads: 用户独立配置</div>
+                                                                    <div className="text-xs text-muted-foreground">
+                                                                        {user.googleAdsConfigScope === 'user' ? '当前已启用' : '用户可自行查看/修改配置'}
+                                                                    </div>
                                                                 </div>
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem
