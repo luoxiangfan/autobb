@@ -188,10 +188,16 @@ const DropdownMenuContent = React.forwardRef<
 });
 DropdownMenuContent.displayName = "DropdownMenuContent";
 
+type DropdownMenuItemProps = Omit<React.HTMLAttributes<HTMLDivElement>, "onSelect"> & {
+    inset?: boolean;
+    disabled?: boolean;
+    onSelect?: (event: React.MouseEvent<HTMLDivElement>) => void;
+};
+
 const DropdownMenuItem = React.forwardRef<
     HTMLDivElement,
-    React.HTMLAttributes<HTMLDivElement> & { inset?: boolean; disabled?: boolean }
->(({ className, inset, disabled, ...props }, ref) => {
+    DropdownMenuItemProps
+>(({ className, inset, disabled, onSelect, onClick, ...props }, ref) => {
     const { setOpen } = React.useContext(DropdownMenuContext);
 
     return (
@@ -208,8 +214,11 @@ const DropdownMenuItem = React.forwardRef<
                     e.preventDefault();
                     return;
                 }
-                setOpen(false);
-                props.onClick?.(e);
+                onSelect?.(e);
+                onClick?.(e);
+                if (!e.defaultPrevented) {
+                    setOpen(false);
+                }
             }}
             {...props}
         />
