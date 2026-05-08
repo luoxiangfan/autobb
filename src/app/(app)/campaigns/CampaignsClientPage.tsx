@@ -391,7 +391,7 @@ export default function CampaignsClientPage({
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [needsOfferCompletionFilter, setNeedsOfferCompletionFilter] = useState<string>('all') // 'all' | 'true' | 'false'
   const [statusCategoryFilter, setStatusCategoryFilter] = useState<string>('all') // 'all' | 'pending' | 'watching' | 'qualified'
-  const [userFilter, setUserFilter] = useState<string>('all') // 'all' | userId
+  const [selectedUserFilters, setSelectedUserFilters] = useState<string[]>([]) // [] => all users
   const [users, setUsers] = useState<Array<{ id: number; username: string; email: string }>>([])
   const [usersLoading, setUsersLoading] = useState(false)
   const [isAdmin, setIsAdmin] = useState<boolean>(false)
@@ -884,16 +884,19 @@ export default function CampaignsClientPage({
         sortField,
         sortDirection,
         showDeletedCampaigns,
-        userFilter,
+        selectedUserFilters: selectedUserFilters.slice().sort(),
         affiliateFilter,
       })
     : ''
+  const selectedUsersLabel = selectedUserFilters.length > 0
+    ? `用户(${selectedUserFilters.length})`
+    : '所有用户'
   const hasActiveFilters = (
     searchQuery.trim().length > 0
     || statusFilter !== 'all'
     || statusCategoryFilter !== 'all'
     || needsOfferCompletionFilter !== 'all'
-    || userFilter !== 'all'
+    || selectedUserFilters.length > 0
     || affiliateFilter !== 'all'
   )
 
@@ -1023,7 +1026,7 @@ export default function CampaignsClientPage({
     setStatusFilter('all')
     setStatusCategoryFilter('all')
     setNeedsOfferCompletionFilter('all')
-    setUserFilter('all')
+    setSelectedUserFilters([])
     setAffiliateFilter('all')
     if (currentPage !== 1) {
       setCurrentPage(1)
@@ -1164,7 +1167,7 @@ export default function CampaignsClientPage({
 
   useEffect(() => {
     fetchCampaigns()
-  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey, userFilter, affiliateFilter])
+  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey, selectedUserFilters, affiliateFilter])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -1199,7 +1202,7 @@ export default function CampaignsClientPage({
     return () => {
       window.clearInterval(timer)
     }
-  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey, trendsSectionMounted, affiliateFilter, userFilter])
+  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey, trendsSectionMounted, affiliateFilter, selectedUserFilters])
 
   useEffect(() => {
     upsertSelectedCampaignSnapshots(campaigns)
@@ -1423,9 +1426,9 @@ export default function CampaignsClientPage({
       params.set('createdAtEnd', createdAtEnd)
     }
 
-    // 🔧 新增：支持按用户筛选（管理员功能）
-    if (userFilter && userFilter !== 'all') {
-      params.set('userId', userFilter)
+    // 🔧 新增：支持按多个用户筛选（管理员功能）
+    if (selectedUserFilters.length > 0) {
+      params.set('userIds', selectedUserFilters.join(','))
     }
 
     // 🔧 新增：支持按联盟筛选
@@ -3641,28 +3644,58 @@ export default function CampaignsClientPage({
               {/* 🔧 新增：用户筛选（管理员功能） */}
               {isAdmin && (
                 <div className="w-full sm:w-[220px] md:w-[200px]">
-                  <Select
-                    value={userFilter}
-                    onValueChange={(value) => {
-                      setUserFilter(value)
-                      if (isServerPagingMode && currentPage !== 1) {
-                        setCurrentPage(1)
-                      }
-                    }}
-                    disabled={usersLoading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="选择用户" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">所有用户</SelectItem>
-                      {users.map((user) => (
-                        <SelectItem key={user.id} value={String(user.id)}>
-                          {user.username}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-between font-normal"
+                        disabled={usersLoading}
+                      >
+                        {selectedUsersLabel}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto">
+                      <DropdownMenuItem
+                        onSelect={(event) => {
+                          event.preventDefault()
+                          setSelectedUserFilters([])
+                          if (isServerPagingMode && currentPage !== 1) {
+                            setCurrentPage(1)
+                          }
+                        }}
+                      >
+                        <Checkbox checked={selectedUserFilters.length === 0} className="mr-2" />
+                        所有用户
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {users.map((user) => {
+                        const userId = String(user.id)
+                        const checked = selectedUserFilters.includes(userId)
+                        return (
+                          <DropdownMenuItem
+                            key={user.id}
+                            onSelect={(event) => {
+                              event.preventDefault()
+                              setSelectedUserFilters((prev) => {
+                                const exists = prev.includes(userId)
+                                if (exists) {
+                                  return prev.filter((id) => id !== userId)
+                                }
+                                return [...prev, userId]
+                              })
+                              if (isServerPagingMode && currentPage !== 1) {
+                                setCurrentPage(1)
+                              }
+                            }}
+                          >
+                            <Checkbox checked={checked} className="mr-2" />
+                            {user.username}
+                          </DropdownMenuItem>
+                        )
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               )}
 

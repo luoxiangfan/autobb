@@ -382,14 +382,28 @@ export async function GET(request: NextRequest) {
     // 🔧 新增：按创建时间过滤（用于"最近 14 天新增"页面）
     const createdAtStartParam = searchParams.get('createdAtStart')
     const createdAtEndParam = searchParams.get('createdAtEnd')
-    // 🔧 新增：按用户筛选（管理员功能）
+    // 🔧 新增：按用户筛选（管理员功能，支持多选）
+    const userIdsParam = (searchParams.get('userIds') || '').trim()
+    const requestedUserIds = userIdsParam
+      ? Array.from(new Set(
+          userIdsParam
+            .split(',')
+            .map((id) => Number.parseInt(id.trim(), 10))
+            .filter((id) => Number.isFinite(id) && id > 0)
+        ))
+      : []
+    // 向后兼容：仍支持旧的单选 userId 参数
     const userIdFilterParam = searchParams.get('userId')
     const userIdFilter = userIdFilterParam ? Number.parseInt(userIdFilterParam, 10) : null
-    // 管理员可以选择特定用户或查看所有用户（userIdFilter 为 null 或 'all'）
     const isAdmin = authResult.user.role === 'admin'
-    const effectiveUserId = isAdmin && (!userIdFilterParam || userIdFilterParam === 'all')
-      ? null  // 管理员查看所有用户
-      : (userIdFilter && Number.isFinite(userIdFilter) && isAdmin ? userIdFilter : userId)
+    const effectiveUserIds: number[] | null = (() => {
+      if (!isAdmin) return [userId]
+      if (requestedUserIds.length > 0) return requestedUserIds
+      if (userIdFilterParam && userIdFilterParam !== 'all' && userIdFilter && Number.isFinite(userIdFilter)) {
+        return [userIdFilter]
+      }
+      return null
+    })()
     // 🔧 新增：按联盟筛选（affiliate platform）
     const affiliateFilterParam = searchParams.get('affiliate')
     let affiliateFilter: string | null = null
@@ -438,7 +452,7 @@ export async function GET(request: NextRequest) {
       sortBy,
       sortOrder,
       ids: idsFilter,
-      userId: effectiveUserId ?? undefined,
+      userIds: effectiveUserIds ?? undefined,
       affiliate: affiliateFilter || undefined,
     })
 
@@ -451,6 +465,12 @@ export async function GET(request: NextRequest) {
 
     const campaignsParallelEnabled = isPerformanceReleaseEnabled('campaignsParallel')
     const db = await getDatabase()
+    const buildUserScopeClause = (column: string): string => (
+      effectiveUserIds !== null
+        ? `${column} IN (${effectiveUserIds.map(() => '?').join(',')})`
+        : '1=1'
+    )
+    const userScopeValues = effectiveUserIds ?? []
     const unattributedFailureFilter = buildAffiliateUnattributedFailureFilter({
       includePendingWithinGrace: true,
       includeAllFailures: true,
@@ -498,7 +518,7 @@ export async function GET(request: NextRequest) {
         FROM campaigns c
         LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
         LEFT JOIN offers o ON c.offer_id = o.id
-        WHERE ${effectiveUserId !== null ? 'c.user_id = ?' : '1=1'}
+        WHERE ${buildUserScopeClause('c.user_id')}
         ${affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? `AND (
           ${affiliateDomainKeywords.map((keyword, i) => `o.affiliate_link LIKE ?`).join(' OR ')}
         )` : ''}
@@ -506,7 +526,7 @@ export async function GET(request: NextRequest) {
         ${createdAtEndParam ? `AND c.created_at <= ?` : ''}
         ORDER BY c.created_at DESC
       `, [
-        ...(effectiveUserId !== null ? [effectiveUserId] : []),
+        ...userScopeValues,
         ...affiliateLikeBindValues,
         ...(createdAtStartParam ? [createdAtStartParam] : []),
         ...(createdAtEndParam ? [createdAtEndParam] : [])
@@ -525,12 +545,12 @@ export async function GET(request: NextRequest) {
           COALESCE(SUM(clicks), 0) as clicks,
           COALESCE(SUM(cost), 0) as cost
         FROM campaign_performance
-        WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
+        WHERE ${buildUserScopeClause('user_id')}
           AND date >= ?
           AND date <= ?
         GROUP BY campaign_id, COALESCE(currency, 'USD')
       `, [
-        ...(effectiveUserId !== null ? [effectiveUserId] : []),
+        ...userScopeValues,
         params.start,
         params.end
       ]) as any[]
@@ -569,7 +589,7 @@ export async function GET(request: NextRequest) {
           FROM affiliate_commission_attributions a
           INNER JOIN campaigns c ON a.campaign_id = c.id
           INNER JOIN offers o ON c.offer_id = o.id
-          WHERE ${effectiveUserId !== null ? 'c.user_id = ?' : '1=1'}
+          WHERE ${buildUserScopeClause('c.user_id')}
             AND a.report_date >= ?
             AND a.report_date <= ?
             ${affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? `AND (${
@@ -581,14 +601,14 @@ export async function GET(request: NextRequest) {
         `,
         hasCurrencyFilter
           ? [
-              ...(effectiveUserId !== null ? [effectiveUserId] : []),
+              ...userScopeValues,
               params.start,
               params.end,
               ...affiliateLikeBindValues,
               String(params.currency),
             ]
           : [
-              ...(effectiveUserId !== null ? [effectiveUserId] : []),
+              ...userScopeValues,
               params.start,
               params.end,
               ...affiliateLikeBindValues,
@@ -624,7 +644,7 @@ export async function GET(request: NextRequest) {
           FROM openclaw_affiliate_attribution_failures f
           INNER JOIN campaigns c ON f.campaign_id = c.id
           INNER JOIN offers o ON c.offer_id = o.id
-          WHERE ${effectiveUserId !== null ? 'c.user_id = ?' : '1=1'}
+          WHERE ${buildUserScopeClause('c.user_id')}
             AND f.report_date >= ?
             AND f.report_date <= ?
             AND f.campaign_id IS NOT NULL
@@ -637,7 +657,7 @@ export async function GET(request: NextRequest) {
         `,
           hasCurrencyFilter
             ? [
-                ...(effectiveUserId !== null ? [effectiveUserId] : []),
+                ...userScopeValues,
                 params.start,
                 params.end,
                 ...unattributedFailureFilter.values,
@@ -645,7 +665,7 @@ export async function GET(request: NextRequest) {
                 String(params.currency),
               ]
             : [
-                ...(effectiveUserId !== null ? [effectiveUserId] : []),
+                ...userScopeValues,
                 params.start,
                 params.end,
                 ...unattributedFailureFilter.values,
@@ -967,17 +987,17 @@ export async function GET(request: NextRequest) {
               )
             )::text AS latest_sync_at
             FROM sync_logs
-            WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
+            WHERE ${buildUserScopeClause('user_id')}
           `,
-          ...(effectiveUserId !== null ? [[effectiveUserId]] : [[]])
+          userScopeValues
         )
       : db.queryOne<{ latest_sync_at: string | null }>(
           `
             SELECT MAX(COALESCE(NULLIF(completed_at, ''), NULLIF(started_at, ''), NULLIF(created_at, ''))) AS latest_sync_at
             FROM sync_logs
-            WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
+            WHERE ${buildUserScopeClause('user_id')}
           `,
-          ...(effectiveUserId !== null ? [[effectiveUserId]] : [[]])
+          userScopeValues
         )
 
     const latestSyncFromLogsRow = await latestSyncFromLogsPromise
@@ -1008,7 +1028,7 @@ export async function GET(request: NextRequest) {
             COALESCE(SUM(clicks), 0) AS clicks,
             COALESCE(SUM(cost), 0) AS amount
           FROM campaign_performance
-          WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
+          WHERE ${buildUserScopeClause('user_id')}
             AND date >= ?
             AND date <= ?
             ${hasCurrencyFilter ? 'AND COALESCE(currency, \'USD\') = ?' : ''}
@@ -1023,7 +1043,7 @@ export async function GET(request: NextRequest) {
           FROM affiliate_commission_attributions a
           INNER JOIN campaigns c ON a.campaign_id = c.id
           INNER JOIN offers o ON c.offer_id = o.id
-          WHERE ${effectiveUserId !== null ? 'c.user_id = ?' : '1=1'}
+          WHERE ${buildUserScopeClause('c.user_id')}
             AND a.report_date >= ?
             AND a.report_date <= ?
             ${affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? `AND (${
@@ -1034,21 +1054,21 @@ export async function GET(request: NextRequest) {
         `,
         hasCurrencyFilter
           ? [
-              ...(effectiveUserId !== null ? [effectiveUserId] : []),
+              ...userScopeValues,
               params.start,
               params.end,
               String(params.currency),
-              ...(effectiveUserId !== null ? [effectiveUserId] : []),
+              ...userScopeValues,
               params.start,
               params.end,
               ...affiliateLikeBindValues,
               String(params.currency),
             ]
           : [
-              ...(effectiveUserId !== null ? [effectiveUserId] : []),
+              ...userScopeValues,
               params.start,
               params.end,
-              ...(effectiveUserId !== null ? [effectiveUserId] : []),
+              ...userScopeValues,
               params.start,
               params.end,
               ...affiliateLikeBindValues,
@@ -1100,23 +1120,23 @@ export async function GET(request: NextRequest) {
       try {
         const queryParams = hasCurrencyFilter
           ? [
-              ...(effectiveUserId !== null ? [effectiveUserId] : []),
+              ...userScopeValues,
               params.currentStart,
               params.currentEnd,
               ...unattributedFailureFilter.values,
               String(params.currency),
-              ...(effectiveUserId !== null ? [effectiveUserId] : []),
+              ...userScopeValues,
               params.previousStart,
               params.previousEnd,
               ...unattributedFailureFilter.values,
               String(params.currency),
             ]
           : [
-              ...(effectiveUserId !== null ? [effectiveUserId] : []),
+              ...userScopeValues,
               params.currentStart,
               params.currentEnd,
               ...unattributedFailureFilter.values,
-              ...(effectiveUserId !== null ? [effectiveUserId] : []),
+              ...userScopeValues,
               params.previousStart,
               params.previousEnd,
               ...unattributedFailureFilter.values,
@@ -1132,7 +1152,7 @@ export async function GET(request: NextRequest) {
               COALESCE(currency, 'USD') AS currency,
               COALESCE(SUM(commission_amount), 0) AS total_commission
             FROM openclaw_affiliate_attribution_failures
-            WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
+            WHERE ${buildUserScopeClause('user_id')}
               AND report_date >= ?
               AND report_date <= ?
               AND ${unattributedFailureFilter.sql}
@@ -1144,7 +1164,7 @@ export async function GET(request: NextRequest) {
               COALESCE(currency, 'USD') AS currency,
               COALESCE(SUM(commission_amount), 0) AS total_commission
             FROM openclaw_affiliate_attribution_failures
-            WHERE ${effectiveUserId !== null ? 'user_id = ?' : '1=1'}
+            WHERE ${buildUserScopeClause('user_id')}
               AND report_date >= ?
               AND report_date <= ?
               AND ${unattributedFailureFilter.sql}
