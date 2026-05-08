@@ -793,10 +793,15 @@ export async function GET(request: NextRequest) {
       const clicks = Number(selectedCurrent?.clicks) || 0
       const cost = Number(selectedCurrent?.cost) || 0
 
-      const commissionByCurrency = currentCommissionByCampaign.get(Number(c.id))
-      const commission = reportingCurrency
-        ? Number(commissionByCurrency?.get(selectedCurrency)) || 0
-        : sumAmountsInCurrency(commissionByCurrency, selectedCurrency)
+      const attributedCommissionByCurrency = currentCommissionByCampaign.get(Number(c.id))
+      const unattributedCommissionByCurrency = currentUnattributedCommissionByCampaign.get(Number(c.id))
+      const attributedCommission = reportingCurrency
+        ? Number(attributedCommissionByCurrency?.get(selectedCurrency)) || 0
+        : sumAmountsInCurrency(attributedCommissionByCurrency, selectedCurrency)
+      const unattributedCommission = reportingCurrency
+        ? Number(unattributedCommissionByCurrency?.get(selectedCurrency)) || 0
+        : sumAmountsInCurrency(unattributedCommissionByCurrency, selectedCurrency)
+      const commission = attributedCommission + unattributedCommission
       const commissionPerClick = clicks > 0 ? commission / clicks : 0
       const costBase = convertToBase(cost, selectedCurrency)
       const commissionBase = convertToBase(commission, selectedCurrency)
@@ -844,6 +849,8 @@ export async function GET(request: NextRequest) {
           clicks,
           conversions: roundTo2(commission),
           commission: roundTo2(commission),
+          attributedCommission: roundTo2(attributedCommission),
+          unattributedCommission: roundTo2(unattributedCommission),
           commissionBase: roundTo2(commissionBase),
           costLocal: cost,
           costUsd: cost,
