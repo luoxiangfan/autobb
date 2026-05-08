@@ -3469,7 +3469,7 @@ export default function CampaignsClientPage({
                     <p className="text-sm font-medium text-gray-600">总佣金({trendsCurrencyValue})</p>
                     <p className="text-2xl font-bold text-gray-900 mt-1">
                       {formatCurrencyDashboard(
-                        Number(trendsTotalsConverted?.commission ?? summaryTotalCommissionDisplay),
+                        Number(trendsTotalsConverted?.commission || summaryTotalCommissionDisplay),
                         String(trendsCurrencyValue || defaultCurrency)
                       )}
                     </p>
