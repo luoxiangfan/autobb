@@ -224,6 +224,19 @@ function sumCommissionByCampaign(
   return total
 }
 
+function filterMapByCampaignIds<T>(
+  byCampaign: Map<number, T>,
+  campaignIds: Set<number>
+): Map<number, T> {
+  if (campaignIds.size === 0) return new Map<number, T>()
+  const filtered = new Map<number, T>()
+  for (const [campaignId, value] of byCampaign.entries()) {
+    if (!campaignIds.has(campaignId)) continue
+    filtered.set(campaignId, value)
+  }
+  return filtered
+}
+
 const CAMPAIGN_SORT_FIELDS = new Set([
   'campaignName',
   'budgetAmount',
@@ -438,6 +451,10 @@ export async function GET(request: NextRequest) {
 
     const campaignsParallelEnabled = isPerformanceReleaseEnabled('campaignsParallel')
     const db = await getDatabase()
+    const unattributedFailureFilter = buildAffiliateUnattributedFailureFilter({
+      includePendingWithinGrace: true,
+      includeAllFailures: true,
+    })
 
     const queryCampaignRows = async (): Promise<any[]> => (
       await db.query(`
@@ -591,18 +608,91 @@ export async function GET(request: NextRequest) {
       return map
     }
 
+    const queryUnattributedCommissionByCampaignCurrency = async (params: {
+      start: string
+      end: string
+      currency?: string
+    }): Promise<Map<number, Map<string, number>>> => {
+      const hasCurrencyFilter = Boolean(params.currency)
+      try {
+        const rows = await db.query<{ campaign_id: number; currency: string; commission: number }>(
+          `
+          SELECT
+            f.campaign_id,
+            COALESCE(f.currency, 'USD') as currency,
+            COALESCE(SUM(f.commission_amount), 0) AS commission
+          FROM openclaw_affiliate_attribution_failures f
+          INNER JOIN campaigns c ON f.campaign_id = c.id
+          INNER JOIN offers o ON c.offer_id = o.id
+          WHERE ${effectiveUserId !== null ? 'c.user_id = ?' : '1=1'}
+            AND f.report_date >= ?
+            AND f.report_date <= ?
+            AND f.campaign_id IS NOT NULL
+            AND ${unattributedFailureFilter.sql}
+            ${affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? `AND (${
+              affiliateDomainKeywords.map((_, i) => `o.affiliate_link LIKE ?`).join(' OR ')
+            })` : ''}
+            ${hasCurrencyFilter ? 'AND COALESCE(f.currency, \'USD\') = ?' : ''}
+          GROUP BY f.campaign_id, COALESCE(f.currency, 'USD')
+        `,
+          hasCurrencyFilter
+            ? [
+                ...(effectiveUserId !== null ? [effectiveUserId] : []),
+                params.start,
+                params.end,
+                ...unattributedFailureFilter.values,
+                ...affiliateLikeBindValues,
+                String(params.currency),
+              ]
+            : [
+                ...(effectiveUserId !== null ? [effectiveUserId] : []),
+                params.start,
+                params.end,
+                ...unattributedFailureFilter.values,
+                ...affiliateLikeBindValues,
+              ]
+        )
+
+        const map = new Map<number, Map<string, number>>()
+        for (const row of rows) {
+          const campaignId = Number(row.campaign_id)
+          if (!Number.isFinite(campaignId)) continue
+          const currency = normalizeCurrency(row.currency)
+          const commission = Number(row.commission) || 0
+          const byCurrency = map.get(campaignId) ?? new Map<string, number>()
+          byCurrency.set(currency, commission)
+          map.set(campaignId, byCurrency)
+        }
+        return map
+      } catch (error: any) {
+        const message = String(error?.message || '')
+        if (
+          /openclaw_affiliate_attribution_failures/i.test(message)
+          && /(no such table|does not exist)/i.test(message)
+        ) {
+          return new Map<number, Map<string, number>>()
+        }
+        throw error
+      }
+    }
+
     let campaigns: any[]
     let currentAggByCampaign: Map<number, Map<string, Agg>>
     let currentCommissionByCampaign: Map<number, Map<string, number>>
+    let currentUnattributedCommissionByCampaign: Map<number, Map<string, number>>
 
     if (campaignsParallelEnabled) {
-      ;[campaigns, currentAggByCampaign, currentCommissionByCampaign] = await Promise.all([
+      ;[campaigns, currentAggByCampaign, currentCommissionByCampaign, currentUnattributedCommissionByCampaign] = await Promise.all([
         queryCampaignRows(),
         aggregateByCampaignCurrency({
           start: startDateStr,
           end: endDateStr,
         }),
         queryCommissionByCampaignCurrency({
+          start: startDateStr,
+          end: endDateStr,
+        }),
+        queryUnattributedCommissionByCampaignCurrency({
           start: startDateStr,
           end: endDateStr,
         }),
@@ -614,6 +704,10 @@ export async function GET(request: NextRequest) {
         end: endDateStr,
       })
       currentCommissionByCampaign = await queryCommissionByCampaignCurrency({
+        start: startDateStr,
+        end: endDateStr,
+      })
+      currentUnattributedCommissionByCampaign = await queryUnattributedCommissionByCampaignCurrency({
         start: startDateStr,
         end: endDateStr,
       })
@@ -840,6 +934,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    const summaryCampaigns = [...listCampaigns]
     const listTotal = listCampaigns.length
     const pagingOffset = offset ?? 0
     if (limit !== null || offset !== null) {
@@ -1001,12 +1096,6 @@ export async function GET(request: NextRequest) {
       previousTotal: number
       currentByCurrency: Array<{ currency: string; amount: number }>
     }> => {
-      const unattributedFailureFilter = buildAffiliateUnattributedFailureFilter({
-        // Include all unattributed commissions (including campaign_mapping_miss)
-        // to match affiliate backend totals
-        includePendingWithinGrace: true,
-        includeAllFailures: true,
-      })
       const hasCurrencyFilter = Boolean(params.currency)
       try {
         const queryParams = hasCurrencyFilter
@@ -1111,13 +1200,37 @@ export async function GET(request: NextRequest) {
 
 
     const isFilteredByCurrency = Boolean(reportingCurrency)
+    const summaryCampaignIds = new Set(
+      summaryCampaigns
+        .map((campaign) => Number(campaign.id))
+        .filter((id) => Number.isFinite(id))
+    )
+    const summaryAggByCampaign = filterMapByCampaignIds(currentAggByCampaign, summaryCampaignIds)
+    const summaryAttributedCommissionByCampaign = filterMapByCampaignIds(
+      currentCommissionByCampaign,
+      summaryCampaignIds
+    )
+    const summaryUnattributedCommissionByCampaign = filterMapByCampaignIds(
+      currentUnattributedCommissionByCampaign,
+      summaryCampaignIds
+    )
+    const summaryCostsDerived = summarizeCostsByCurrency(summaryAggByCampaign)
     const currentTotalsDerived = summarizeAggByCurrency({
-      byCampaign: currentAggByCampaign,
+      byCampaign: summaryAggByCampaign,
       reportingCurrency,
     })
-    const currentAttributedCommissionByCurrencyDerived = summarizeCommissionByCurrency(currentCommissionByCampaign)
+    const currentAttributedCommissionByCurrencyDerived = summarizeCommissionByCurrency(
+      summaryAttributedCommissionByCampaign
+    )
+    const currentUnattributedCommissionByCurrencyDerived = summarizeCommissionByCurrency(
+      summaryUnattributedCommissionByCampaign
+    )
     const currentAttributedCommissionTotalDerived = sumCommissionByCampaign(
-      currentCommissionByCampaign,
+      summaryAttributedCommissionByCampaign,
+      reportingCurrency
+    )
+    const currentUnattributedCommissionTotalDerived = sumCommissionByCampaign(
+      summaryUnattributedCommissionByCampaign,
       reportingCurrency
     )
 
@@ -1156,14 +1269,14 @@ export async function GET(request: NextRequest) {
       prevTotals = prevSummary.totals
       currentAttributedCommissionTotal = currentAttributedCommissionTotalDerived
       prevAttributedCommissionTotal = prevSummary.attributedCommissionTotal
-      currentUnattributedCommissionTotal = unattributedSummary.currentTotal
+      currentUnattributedCommissionTotal = currentUnattributedCommissionTotalDerived
       prevUnattributedCommissionTotal = unattributedSummary.previousTotal
       currentAttributedCommissionByCurrency = isFilteredByCurrency
         ? []
         : currentAttributedCommissionByCurrencyDerived
       currentUnattributedCommissionByCurrency = isFilteredByCurrency
         ? []
-        : unattributedSummary.currentByCurrency
+        : currentUnattributedCommissionByCurrencyDerived
     } else {
       currentTotals = currentTotalsDerived
 
@@ -1182,21 +1295,22 @@ export async function GET(request: NextRequest) {
         previousEnd: prevEndDateStr,
         currency: reportingCurrency || undefined,
       })
-      currentUnattributedCommissionTotal = unattributedSummary.currentTotal
+      currentUnattributedCommissionTotal = currentUnattributedCommissionTotalDerived
       prevUnattributedCommissionTotal = unattributedSummary.previousTotal
       currentAttributedCommissionByCurrency = isFilteredByCurrency
         ? []
         : currentAttributedCommissionByCurrencyDerived
       currentUnattributedCommissionByCurrency = !isFilteredByCurrency
-        ? unattributedSummary.currentByCurrency
+        ? currentUnattributedCommissionByCurrencyDerived
         : []
     }
+    const summaryCostCurrencies = summaryCostsDerived.map((row) => row.currency)
     const commissionCurrencies = Array.from(new Set([
       ...currentAttributedCommissionByCurrency.map((row) => normalizeCurrency(row.currency)),
       ...currentUnattributedCommissionByCurrency.map((row) => normalizeCurrency(row.currency)),
     ]))
     const summaryCurrencies = Array.from(new Set([
-      ...costCurrencies,
+      ...summaryCostCurrencies,
       ...commissionCurrencies,
     ]))
     const hasMixedCurrency = summaryCurrencies.length > 1
@@ -1215,6 +1329,22 @@ export async function GET(request: NextRequest) {
       cost: isFilteredByCurrency ? calcChange(currentTotals.cost, prevTotals.cost) : null,
       roas: null as number | null,
       roasInfinite: false,
+    }
+    const hasCampaignScopeFilter = (
+      idsFilter.length > 0
+      || showDeletedParam === false
+      || Boolean(searchQuery)
+      || (statusFilter && statusFilter !== 'ALL')
+      || (needsOfferCompletionFilter && needsOfferCompletionFilter !== 'ALL')
+      || (statusCategoryFilter && statusCategoryFilter !== 'all')
+    )
+    if (hasCampaignScopeFilter) {
+      changes.impressions = null
+      changes.clicks = null
+      changes.conversions = null
+      changes.cost = null
+      changes.roas = null
+      changes.roasInfinite = false
     }
 
     const roasAvailable = isFilteredByCurrency || !hasMixedCurrency
@@ -1244,10 +1374,10 @@ export async function GET(request: NextRequest) {
     }
 
     const statusDistribution = {
-      enabled: formattedCampaigns.filter((c) => String(c.status || '').toUpperCase() === 'ENABLED').length,
-      paused: formattedCampaigns.filter((c) => String(c.status || '').toUpperCase() === 'PAUSED').length,
-      removed: formattedCampaigns.filter((c) => String(c.status || '').toUpperCase() === 'REMOVED').length,
-      total: formattedCampaigns.length,
+      enabled: summaryCampaigns.filter((c) => String(c.status || '').toUpperCase() === 'ENABLED').length,
+      paused: summaryCampaigns.filter((c) => String(c.status || '').toUpperCase() === 'PAUSED').length,
+      removed: summaryCampaigns.filter((c) => String(c.status || '').toUpperCase() === 'REMOVED').length,
+      total: summaryCampaigns.length,
     }
 
     const responsePayload = {
@@ -1257,8 +1387,8 @@ export async function GET(request: NextRequest) {
       limit: limit ?? null,
       offset: pagingOffset,
       summary: {
-        totalCampaigns: formattedCampaigns.length,
-        activeCampaigns: formattedCampaigns.filter(c => c.status === 'ENABLED').length,
+        totalCampaigns: summaryCampaigns.length,
+        activeCampaigns: summaryCampaigns.filter(c => c.status === 'ENABLED').length,
         totalImpressions: currentTotals.impressions,
         totalClicks: currentTotals.clicks,
         totalConversions: roundTo2(currentCommissionTotal),
@@ -1269,10 +1399,10 @@ export async function GET(request: NextRequest) {
         totalRoas: roasAvailable ? totalRoas : null,
         totalRoasInfinite: roasAvailable ? totalRoasInfinite : false,
         baseCurrency: BASE_CURRENCY,
-        currency: hasMixedCurrency && !isFilteredByCurrency ? 'MIXED' : (reportingCurrency || summaryCurrencies[0] || costCurrencies[0] || 'USD'),
-        currencies: costCurrencies,
+        currency: hasMixedCurrency && !isFilteredByCurrency ? 'MIXED' : (reportingCurrency || summaryCurrencies[0] || summaryCostCurrencies[0] || 'USD'),
+        currencies: summaryCostCurrencies,
         hasMixedCurrency,
-        costs: hasMixedCurrency && !isFilteredByCurrency ? costs : undefined,
+        costs: hasMixedCurrency && !isFilteredByCurrency ? summaryCostsDerived : undefined,
         attributedCommissionsByCurrency: currentAttributedCommissionByCurrency,
         unattributedCommissionsByCurrency: currentUnattributedCommissionByCurrency,
         latestSyncAt,

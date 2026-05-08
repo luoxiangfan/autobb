@@ -1363,20 +1363,6 @@ export default function CampaignsClientPage({
       return params
     }
 
-    if (!isServerPagingMode) {
-      if (userFilter && userFilter !== 'all') {
-        params.set('userId', userFilter)
-      }
-      if (affiliateFilter && affiliateFilter !== 'all') {
-        params.set('affiliate', affiliateFilter)
-      }
-      return params
-    }
-
-    params.set('limit', String(pageSize))
-    params.set('offset', String((currentPage - 1) * pageSize))
-    params.set('showDeleted', String(showDeletedCampaigns))
-
     const normalizedSearch = (isServerPagingMode ? debouncedSearchQuery : searchQuery).trim()
     if (normalizedSearch) {
       params.set('search', normalizedSearch)
@@ -1394,7 +1380,16 @@ export default function CampaignsClientPage({
       params.set('statusCategory', statusCategoryFilter)
     }
 
-    if (sortField && sortDirection) {
+    if (isServerPagingMode) {
+      params.set('limit', String(pageSize))
+      params.set('offset', String((currentPage - 1) * pageSize))
+      params.set('showDeleted', String(showDeletedCampaigns))
+    } else {
+      // 非服务端分页模式也透传软删除筛选，让汇总卡片与列表口径一致
+      params.set('showDeleted', String(showDeletedCampaigns))
+    }
+
+    if (isServerPagingMode && sortField && sortDirection) {
       params.set('sortBy', sortField)
       params.set('sortOrder', sortDirection)
     }
