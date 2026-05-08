@@ -1685,10 +1685,26 @@ export async function persistAffiliateCommissionAttributions(params: {
 
     const asinToCampaigns = new Map<string, CampaignAttributionCandidate[]>()
     const brandToCampaigns = new Map<string, CampaignAttributionCandidate[]>()
+    const asinToOfferIds = new Map<string, Set<number>>()
+    const brandToOfferIds = new Map<string, Set<number>>()
     const asinToBrands = new Map<string, Set<string>>()
+    const appendOfferId = (map: Map<string, Set<number>>, key: string | null | undefined, offerId: number) => {
+      if (!key || !Number.isFinite(offerId)) return
+      const current = map.get(key) || new Set<number>()
+      current.add(offerId)
+      map.set(key, current)
+    }
+    const appendOfferIds = (target: Set<number>, offerIds?: Set<number>) => {
+      if (!offerIds || offerIds.size === 0) return
+      for (const offerId of offerIds) {
+        target.add(offerId)
+      }
+    }
 
     for (const [offerId, offerContext] of offerContexts.entries()) {
+      appendOfferId(brandToOfferIds, offerContext.normalizedBrand, offerId)
       for (const asin of offerContext.asins) {
+        appendOfferId(asinToOfferIds, asin, offerId)
         const brands = asinToBrands.get(asin) || new Set<string>()
         if (offerContext.normalizedBrand) brands.add(offerContext.normalizedBrand)
         asinToBrands.set(asin, brands)
@@ -1908,6 +1924,15 @@ export async function persistAffiliateCommissionAttributions(params: {
       const baseReasonCode: AffiliateAttributionBaseFailureReasonCode = !hasIdentifier
         ? 'missing_identifier'
         : (sourceAsin ? 'campaign_mapping_miss' : 'offer_mapping_miss')
+      const inferredOfferIds = new Set<number>()
+      appendOfferIds(inferredOfferIds, sourceAsin ? asinToOfferIds.get(sourceAsin) : undefined)
+      appendOfferIds(inferredOfferIds, entry.normalizedBrand ? brandToOfferIds.get(entry.normalizedBrand) : undefined)
+      for (const brand of inferredBrands) {
+        appendOfferIds(inferredOfferIds, brandToOfferIds.get(brand))
+      }
+      const inferredOfferId = inferredOfferIds.size === 1
+        ? Array.from(inferredOfferIds)[0]
+        : null
 
       failureRows.push({
         userId: params.userId,
@@ -1917,7 +1942,7 @@ export async function persistAffiliateCommissionAttributions(params: {
         sourceMid: entry.sourceMid,
         sourceAsin: entry.sourceAsin,
         sourceLinkId: entry.sourceLinkId,
-        offerId: null,
+        offerId: inferredOfferId,
         commissionAmount: entry.commission,
         currency: entry.currency,
         reasonCode: resolveAffiliateAttributionFailureReasonCode({

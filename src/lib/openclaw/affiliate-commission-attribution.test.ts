@@ -539,6 +539,59 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
     expect((failureInsertCalls[0]?.[1] as any[])[10]).toBe('campaign_mapping_miss')
   })
 
+  it('writes inferred offer_id for unattributed rows when ASIN maps to a single offer', async () => {
+    const today = formatLocalYmd(new Date())
+
+    query.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('AS event_id')) return []
+      if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes('AS event_id')) return []
+      if (sql.includes('FROM offers')) {
+        return [
+          { id: 7001, brand: 'Acme', url: 'https://example.com', final_url: null, affiliate_link: null },
+        ]
+      }
+      if (sql.includes('FROM affiliate_product_offer_links apol')) {
+        return [{ offer_id: 7001, asin: 'B0MISSCAMP1' }]
+      }
+      if (sql.includes('FROM campaigns c')) return []
+      if (sql.includes('FROM affiliate_products') && sql.includes('brand IS NOT NULL')) return []
+      return []
+    })
+
+    const result = await persistAffiliateCommissionAttributions({
+      userId: 9,
+      reportDate: today,
+      entries: [
+        {
+          platform: 'partnerboost',
+          reportDate: today,
+          commission: 5.25,
+          sourceAsin: 'B0MISSCAMP1',
+          raw: { id: 'evt-unattributed-offer-1' },
+        },
+      ],
+      replaceExisting: true,
+      lockHistorical: false,
+    })
+
+    expect(result).toEqual({
+      reportDate: today,
+      totalCommission: 5.25,
+      attributedCommission: 0,
+      unattributedCommission: 5.25,
+      attributedOffers: 0,
+      attributedCampaigns: 0,
+      writtenRows: 0,
+    })
+
+    const failureInsertCalls = exec.mock.calls.filter(([sql]) =>
+      typeof sql === 'string' && sql.includes('INSERT INTO openclaw_affiliate_attribution_failures')
+    )
+    expect(failureInsertCalls).toHaveLength(1)
+    // values tuple: user_id, report_date, platform, source_order_id, source_mid, source_asin, source_link_id, offer_id, ...
+    expect((failureInsertCalls[0]?.[1] as any[])[7]).toBe(7001)
+  })
+
   it('uses brand from affiliate_products for fallback attribution when no offer link exists', async () => {
     const today = formatLocalYmd(new Date())
 
