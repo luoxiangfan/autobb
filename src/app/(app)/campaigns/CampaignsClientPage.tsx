@@ -888,6 +888,14 @@ export default function CampaignsClientPage({
         affiliateFilter,
       })
     : ''
+  const hasActiveFilters = (
+    searchQuery.trim().length > 0
+    || statusFilter !== 'all'
+    || statusCategoryFilter !== 'all'
+    || needsOfferCompletionFilter !== 'all'
+    || userFilter !== 'all'
+    || affiliateFilter !== 'all'
+  )
 
     // 🔧 初始检查同步状态
   useEffect(() => {
@@ -1007,6 +1015,19 @@ export default function CampaignsClientPage({
 
   const selectPresetTimeRange = (days: Exclude<CampaignsTimeRange, 'custom'>) => {
     setTimeRange(days)
+  }
+
+  const resetFilters = () => {
+    setSearchQuery('')
+    setDebouncedSearchQuery('')
+    setStatusFilter('all')
+    setStatusCategoryFilter('all')
+    setNeedsOfferCompletionFilter('all')
+    setUserFilter('all')
+    setAffiliateFilter('all')
+    if (currentPage !== 1) {
+      setCurrentPage(1)
+    }
   }
 
   const resetBatchOfflineOptions = () => {
@@ -3670,6 +3691,15 @@ export default function CampaignsClientPage({
                   </SelectContent>
                 </Select>
               </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={resetFilters}
+                disabled={!hasActiveFilters}
+              >
+                重置筛选
+              </Button>
 
               <div className="flex items-center px-3 py-2 border border-gray-200 rounded-md bg-gray-50 md:ml-auto">
                 <span className="text-xs text-gray-500 whitespace-nowrap mr-2">
