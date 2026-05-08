@@ -1037,7 +1037,7 @@ export default function CampaignsClientPage({
     setStatusFilter('all')
     setStatusCategoryFilter('all')
     setNeedsOfferCompletionFilter('all')
-    setSelectedUserFilters([])
+    setSelectedUserFilters(users.map((user) => String(user.id)))
     setAffiliateFilter('all')
     if (currentPage !== 1) {
       setCurrentPage(1)
