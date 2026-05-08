@@ -559,6 +559,7 @@ export default function CampaignsClientPage({
   // 🔧 优化 (2026-04-17): 轮询状态管理
   const [isPolling, setIsPolling] = useState(false)
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
+  const userSelectionInitializedRef = useRef(false)
 
   const checkGlobalSyncStatus = async () => {
     try {
@@ -928,7 +929,13 @@ export default function CampaignsClientPage({
         
         if (usersResponse.ok) {
           const data = await usersResponse.json()
-          setUsers(data.users || [])
+          const fetchedUsers: Array<{ id: number; username: string; email: string }> = data.users || []
+          setUsers(fetchedUsers)
+          // 默认全选一次，避免后续用户手动取消后被再次覆盖
+          if (!userSelectionInitializedRef.current && fetchedUsers.length > 0) {
+            setSelectedUserFilters(fetchedUsers.map((user) => String(user.id)))
+            userSelectionInitializedRef.current = true
+          }
           setIsAdmin(true)
         } else {
           setIsAdmin(false)
