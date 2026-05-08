@@ -888,7 +888,11 @@ export default function CampaignsClientPage({
         affiliateFilter,
       })
     : ''
-  const selectedUsersLabel = selectedUserFilters.length > 0
+  const allUsersSelected = users.length > 0
+    && selectedUserFilters.length === users.length
+    && users.every((user) => selectedUserFilters.includes(String(user.id)))
+  const userFilterApplied = selectedUserFilters.length > 0 && !allUsersSelected
+  const selectedUsersLabel = userFilterApplied
     ? `用户(${selectedUserFilters.length})`
     : '所有用户'
   const hasActiveFilters = (
@@ -896,7 +900,7 @@ export default function CampaignsClientPage({
     || statusFilter !== 'all'
     || statusCategoryFilter !== 'all'
     || needsOfferCompletionFilter !== 'all'
-    || selectedUserFilters.length > 0
+    || userFilterApplied
     || affiliateFilter !== 'all'
   )
 
@@ -1427,7 +1431,7 @@ export default function CampaignsClientPage({
     }
 
     // 🔧 新增：支持按多个用户筛选（管理员功能）
-    if (selectedUserFilters.length > 0) {
+    if (userFilterApplied) {
       params.set('userIds', selectedUserFilters.join(','))
     }
 
@@ -3643,7 +3647,7 @@ export default function CampaignsClientPage({
 
               {/* 🔧 新增：用户筛选（管理员功能） */}
               {isAdmin && (
-                <div className="w-full sm:w-[220px] md:w-[200px]">
+                <div className="w-auto">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -3659,14 +3663,19 @@ export default function CampaignsClientPage({
                       <DropdownMenuItem
                         onSelect={(event) => {
                           event.preventDefault()
-                          setSelectedUserFilters([])
+                          setSelectedUserFilters(() => {
+                            if (allUsersSelected) {
+                              return []
+                            }
+                            return users.map((user) => String(user.id))
+                          })
                           if (isServerPagingMode && currentPage !== 1) {
                             setCurrentPage(1)
                           }
                         }}
                       >
-                        <Checkbox checked={selectedUserFilters.length === 0} className="mr-2" />
-                        所有用户
+                        <Checkbox checked={allUsersSelected} className="mr-2" />
+                        {allUsersSelected ? '取消全选' : '全选'}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {users.map((user) => {
