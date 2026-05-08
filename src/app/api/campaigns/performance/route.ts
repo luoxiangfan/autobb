@@ -637,39 +637,50 @@ export async function GET(request: NextRequest) {
       try {
         const rows = await db.query<{ campaign_id: number; currency: string; commission: number }>(
           `
+          WITH scoped_campaigns AS (
+            SELECT c.id, c.offer_id, c.user_id
+            FROM campaigns c
+            INNER JOIN offers o ON c.offer_id = o.id
+            WHERE ${buildUserScopeClause('c.user_id')}
+              AND c.offer_id IS NOT NULL
+              ${affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? `AND (${
+                affiliateDomainKeywords.map(() => `o.affiliate_link LIKE ?`).join(' OR ')
+              })` : ''}
+          ),
+          offer_campaign_counts AS (
+            SELECT offer_id, COUNT(*) AS campaign_count
+            FROM scoped_campaigns
+            GROUP BY offer_id
+          )
           SELECT
-            f.campaign_id,
+            sc.id AS campaign_id,
             COALESCE(f.currency, 'USD') as currency,
-            COALESCE(SUM(f.commission_amount), 0) AS commission
+            COALESCE(SUM(f.commission_amount / occ.campaign_count), 0) AS commission
           FROM openclaw_affiliate_attribution_failures f
-          INNER JOIN campaigns c ON f.campaign_id = c.id
-          INNER JOIN offers o ON c.offer_id = o.id
-          WHERE ${buildUserScopeClause('c.user_id')}
-            AND f.report_date >= ?
+          INNER JOIN scoped_campaigns sc ON f.offer_id = sc.offer_id
+          INNER JOIN offer_campaign_counts occ ON sc.offer_id = occ.offer_id
+          WHERE f.report_date >= ?
             AND f.report_date <= ?
-            AND f.campaign_id IS NOT NULL
+            AND f.offer_id IS NOT NULL
             AND ${unattributedFailureFilter.sql}
-            ${affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? `AND (${
-              affiliateDomainKeywords.map((_, i) => `o.affiliate_link LIKE ?`).join(' OR ')
-            })` : ''}
             ${hasCurrencyFilter ? 'AND COALESCE(f.currency, \'USD\') = ?' : ''}
-          GROUP BY f.campaign_id, COALESCE(f.currency, 'USD')
+          GROUP BY sc.id, COALESCE(f.currency, 'USD')
         `,
           hasCurrencyFilter
             ? [
                 ...userScopeValues,
+                ...affiliateLikeBindValues,
                 params.start,
                 params.end,
                 ...unattributedFailureFilter.values,
-                ...affiliateLikeBindValues,
                 String(params.currency),
               ]
             : [
                 ...userScopeValues,
+                ...affiliateLikeBindValues,
                 params.start,
                 params.end,
                 ...unattributedFailureFilter.values,
-                ...affiliateLikeBindValues,
               ]
         )
 
@@ -688,7 +699,7 @@ export async function GET(request: NextRequest) {
         const message = String(error?.message || '')
         if (
           /openclaw_affiliate_attribution_failures/i.test(message)
-          && /(no such table|does not exist)/i.test(message)
+          && /(no such table|does not exist|no such column|column .* does not exist)/i.test(message)
         ) {
           return new Map<number, Map<string, number>>()
         }

@@ -1843,4 +1843,84 @@ describe('GET /api/campaigns/performance', () => {
       googleAdsAccountId: 424242,
     }))
   })
+
+  it('gracefully degrades when attribution failures table has no campaign_id column', async () => {
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
+        return [{ currency: 'USD', total_cost: 30 }]
+      }
+      if (sql.includes('FROM campaigns c')) {
+        return [
+          {
+            id: 1,
+            campaign_id: 'cmp_alpha',
+            campaign_name: 'Alpha Campaign',
+            offer_id: 11,
+            offer_brand: 'Brand A',
+            offer_url: 'https://example.com/a',
+            status: 'ENABLED',
+            google_campaign_id: 'g_1',
+            google_ads_account_id: 100,
+            budget_amount: 20,
+            budget_type: 'DAILY',
+            creation_status: 'SUCCESS',
+            creation_error: null,
+            last_sync_at: '2026-02-25T00:00:00.000Z',
+            created_at: '2026-02-20T00:00:00.000Z',
+            published_at: '2026-02-20T00:00:00.000Z',
+            is_deleted: 0,
+            deleted_at: null,
+            ads_account_id: 100,
+            ads_account_customer_id: '123456',
+            ads_account_name: 'Main',
+            ads_account_is_active: 1,
+            ads_account_is_deleted: 0,
+            ads_account_currency: 'USD',
+            offer_is_deleted: 0,
+          },
+        ]
+      }
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+        return [{ campaign_id: 1, currency: 'USD', impressions: 100, clicks: 20, cost: 30 }]
+      }
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id')) {
+        return [{ campaign_id: 1, currency: 'USD', commission: 12 }]
+      }
+      if (sql.includes('FROM openclaw_affiliate_attribution_failures f')) {
+        throw new Error('SQLITE_ERROR: no such column: f.campaign_id')
+      }
+      if (sql.includes('summary_source')) {
+        return buildPreviousSummaryRows({
+          performance: [{ currency: 'USD', impressions: 80, clicks: 16, cost: 24 }],
+          attributed: [{ currency: 'USD', amount: 8 }],
+        })
+      }
+      if (sql.includes('period_label')) {
+        return []
+      }
+      throw new Error(`unexpected query sql: ${sql}`)
+    })
+
+    const queryOne = vi.fn(async (sql: string) => {
+      if (sql.includes('FROM sync_logs')) {
+        return { latest_sync_at: null }
+      }
+      throw new Error(`unexpected queryOne sql: ${sql}`)
+    })
+
+    dbFns.getDatabase.mockResolvedValue({
+      type: 'sqlite',
+      query,
+      queryOne,
+    })
+
+    const res = await GET(new NextRequest('http://localhost/api/campaigns/performance?daysBack=7'))
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(data.summary?.attributedCommission).toBe(12)
+    expect(data.summary?.unattributedCommission).toBe(0)
+    expect(data.summary?.totalCommission).toBe(12)
+  })
 })
