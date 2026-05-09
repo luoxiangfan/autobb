@@ -7,8 +7,10 @@ export type OpenclawSettingMap = Record<string, string | null>
 const AFFILIATE_SYNC_KEYS = [
   'yeahpromos_token',
   'yeahpromos_site_id',
+  'yeahpromos_commission_field',
   'partnerboost_token',
   'partnerboost_base_url',
+  'partnerboost_commission_mode',
   'openclaw_affiliate_sync_interval_hours',
   'openclaw_affiliate_sync_mode',
 ] as const

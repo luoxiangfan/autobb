@@ -3,7 +3,24 @@ import {
   type AffiliateCommissionRawEntry,
   type AffiliatePlatform,
 } from '@/lib/openclaw/affiliate-commission-attribution'
+import { persistAffiliateCommissionReconciliation } from '@/lib/openclaw/affiliate-commission-reconciliation'
 import { getOpenclawSettingsWithAffiliateSyncMap, parseNumber } from '@/lib/openclaw/settings'
+
+export type PartnerboostCommissionMode = 'auto' | 'estimated' | 'settled'
+
+export function normalizePartnerboostCommissionMode(value: unknown): PartnerboostCommissionMode {
+  const v = String(value ?? '').trim().toLowerCase()
+  if (v === 'estimated' || v === 'est' || v === 'estimate') return 'estimated'
+  if (v === 'settled' || v === 'actual' || v === 'paid' || v === 'final') return 'settled'
+  return 'auto'
+}
+
+function normalizeYeahPromosCommissionField(value: unknown): string {
+  const raw = String(value ?? '').trim()
+  const key = raw.replace(/[^a-zA-Z0-9_]/g, '')
+  if (!key) return 'sale_comm'
+  return key
+}
 
 type PlatformQueryError = {
   platform: AffiliatePlatform | 'attribution'
@@ -48,6 +65,43 @@ const PARTNERBOOST_COMMISSION_ALIASES = [
   'Est Commission',
   'est commission',
   // Fallback aliases observed in some affiliate feeds
+  'commission',
+  'commission_amount',
+  'commissionAmount',
+  'sale_comm',
+  'saleComm',
+  'earnings',
+  'earning',
+]
+
+const PARTNERBOOST_ESTIMATED_COMMISSION_ALIASES = [
+  'estCommission',
+  'est_commission',
+  'EstCommission',
+  'Est. Commission',
+  'Est Commission',
+  'est commission',
+]
+
+const PARTNERBOOST_SETTLED_COMMISSION_ALIASES = [
+  'actualCommission',
+  'actual_commission',
+  'Actual Commission',
+  'paidCommission',
+  'paid_commission',
+  'Paid Commission',
+  'settledCommission',
+  'settled_commission',
+  'settlementCommission',
+  'settlement_commission',
+  'finalCommission',
+  'final_commission',
+  'confirmedCommission',
+  'confirmed_commission',
+  'paid_amount',
+  'paidAmount',
+  'commission_paid',
+  'commissionPaid',
   'commission',
   'commission_amount',
   'commissionAmount',
@@ -362,7 +416,21 @@ function pickMid(...values: unknown[]): string | null {
   return null
 }
 
-function parsePartnerboostCommissionValue(row: any): number {
+function isExcludedPartnerboostAmountKey(normalizedKey: string): boolean {
+  if (!normalizedKey) return true
+  if (normalizedKey.includes('rate') || normalizedKey.includes('ratio') || normalizedKey.includes('percent') || normalizedKey.includes('pct')) {
+    return true
+  }
+  if (normalizedKey.includes('saleamount') || normalizedKey.includes('orderamount') || normalizedKey.includes('itemprice')) {
+    return true
+  }
+  if (normalizedKey.includes('quantity') || normalizedKey.includes('qty') || normalizedKey.includes('units')) {
+    return true
+  }
+  return false
+}
+
+function parsePartnerboostCommissionValueAuto(row: any): number {
   const direct = parseNumberish(getFieldValue(row, PARTNERBOOST_COMMISSION_ALIASES), 0)
   if (direct > 0) return direct
   if (!row || typeof row !== 'object') return direct
@@ -373,10 +441,7 @@ function parsePartnerboostCommissionValue(row: any): number {
   for (const [key, value] of Object.entries(row)) {
     if (isEmptyValue(value)) continue
     const normalizedKey = normalizeLookupKey(key)
-    if (!normalizedKey) continue
-    if (normalizedKey.includes('rate') || normalizedKey.includes('ratio') || normalizedKey.includes('percent') || normalizedKey.includes('pct')) {
-      continue
-    }
+    if (isExcludedPartnerboostAmountKey(normalizedKey)) continue
 
     let score = -1
     if (normalizedKey.includes('est') && normalizedKey.includes('commission')) {
@@ -401,6 +466,93 @@ function parsePartnerboostCommissionValue(row: any): number {
   }
 
   return bestValue > 0 ? bestValue : direct
+}
+
+function parsePartnerboostCommissionValueEstimated(row: any): number {
+  const direct = parseNumberish(getFieldValue(row, PARTNERBOOST_ESTIMATED_COMMISSION_ALIASES), 0)
+  if (direct > 0) return direct
+  if (!row || typeof row !== 'object') return 0
+
+  let bestScore = -1
+  let bestValue = 0
+
+  for (const [key, value] of Object.entries(row)) {
+    if (isEmptyValue(value)) continue
+    const normalizedKey = normalizeLookupKey(key)
+    if (isExcludedPartnerboostAmountKey(normalizedKey)) continue
+    if (!normalizedKey.includes('est')) continue
+
+    let score = -1
+    if (normalizedKey.includes('commission') || normalizedKey.includes('salecomm') || normalizedKey.includes('earning')) {
+      score = 2
+    }
+
+    if (score < 0) continue
+
+    const parsed = parseNumberish(value, 0)
+    if (parsed <= 0) continue
+
+    if (score > bestScore || (score === bestScore && parsed > bestValue)) {
+      bestScore = score
+      bestValue = parsed
+    }
+  }
+
+  return bestValue > 0 ? bestValue : 0
+}
+
+function parsePartnerboostCommissionValueSettled(row: any): number {
+  const direct = parseNumberish(getFieldValue(row, PARTNERBOOST_SETTLED_COMMISSION_ALIASES), 0)
+  if (direct > 0) return direct
+  if (!row || typeof row !== 'object') return 0
+
+  let bestScore = -1
+  let bestValue = 0
+
+  for (const [key, value] of Object.entries(row)) {
+    if (isEmptyValue(value)) continue
+    const normalizedKey = normalizeLookupKey(key)
+    if (isExcludedPartnerboostAmountKey(normalizedKey)) continue
+    if (normalizedKey.includes('est')) continue
+
+    let score = -1
+    if (
+      (normalizedKey.includes('actual') || normalizedKey.includes('paid') || normalizedKey.includes('settle')
+        || normalizedKey.includes('confirm') || normalizedKey.includes('final'))
+      && (normalizedKey.includes('commission') || normalizedKey.includes('earning') || normalizedKey.includes('salecomm'))
+    ) {
+      score = 5
+    } else if (normalizedKey.includes('commission')) {
+      score = 3
+    } else if (normalizedKey.includes('salecomm')) {
+      score = 2
+    } else if (normalizedKey.includes('earning')) {
+      score = 1
+    }
+
+    if (score < 0) continue
+
+    const parsed = parseNumberish(value, 0)
+    if (parsed <= 0) continue
+
+    if (score > bestScore || (score === bestScore && parsed > bestValue)) {
+      bestScore = score
+      bestValue = parsed
+    }
+  }
+
+  if (bestValue > 0) return bestValue
+  return parsePartnerboostCommissionValueAuto(row)
+}
+
+function parsePartnerboostCommissionValue(row: any, mode: PartnerboostCommissionMode = 'auto'): number {
+  if (mode === 'estimated') {
+    return parsePartnerboostCommissionValueEstimated(row)
+  }
+  if (mode === 'settled') {
+    return parsePartnerboostCommissionValueSettled(row)
+  }
+  return parsePartnerboostCommissionValueAuto(row)
 }
 
 function pickPartnerboostCommissionSignals(row: any): Record<string, unknown> {
@@ -434,7 +586,9 @@ async function fetchPartnerboostCommission(params: {
   token: string
   baseUrl: string
   reportDate: string
+  commissionMode?: PartnerboostCommissionMode
 }): Promise<CommissionCollection> {
+  const commissionMode = params.commissionMode || 'auto'
   const startDate = toPartnerboostDate(params.reportDate)
   const endDate = toPartnerboostDate(params.reportDate)
 
@@ -474,7 +628,7 @@ async function fetchPartnerboostCommission(params: {
       const firstRow = rows[0] || {}
       const keys = Object.keys(firstRow).slice(0, 50)
       const commissionSignals = pickPartnerboostCommissionSignals(firstRow)
-      const parsedCommission = parsePartnerboostCommissionValue(firstRow)
+      const parsedCommission = parsePartnerboostCommissionValue(firstRow, commissionMode)
       console.log(
         `[affiliate-revenue][debug] PartnerBoost amazon_report date=${params.reportDate} page=${reportPage} rows=${rows.length} parsedCommission(firstRow)=${parsedCommission} keys=${keys.join(',')} signals=${JSON.stringify(commissionSignals)}`
       )
@@ -557,7 +711,7 @@ async function fetchPartnerboostCommission(params: {
         const firstRow = rows[0] || {}
         const keys = Object.keys(firstRow).slice(0, 50)
         const commissionSignals = pickPartnerboostCommissionSignals(firstRow)
-        const parsedCommission = parsePartnerboostCommissionValue(firstRow)
+        const parsedCommission = parsePartnerboostCommissionValue(firstRow, commissionMode)
         console.log(
           `[affiliate-revenue][debug] PartnerBoost medium.transaction date=${params.reportDate} page=${txPage} rows=${rows.length} parsedCommission(firstRow)=${parsedCommission} keys=${keys.join(',')} signals=${JSON.stringify(commissionSignals)}`
         )
@@ -651,7 +805,7 @@ async function fetchPartnerboostCommission(params: {
   if (transactionRows.length > 0) {
     records = transactionRows.length
     for (const row of transactionRows) {
-      const commission = parsePartnerboostCommissionValue(row)
+      const commission = parsePartnerboostCommissionValue(row, commissionMode)
       totalCommission += commission
 
       if (commission <= 0) continue
@@ -674,7 +828,7 @@ async function fetchPartnerboostCommission(params: {
   if (useReportAsPrimary) {
     records = reportRows.length
     for (const row of reportRows) {
-      const commission = parsePartnerboostCommissionValue(row)
+      const commission = parsePartnerboostCommissionValue(row, commissionMode)
       totalCommission += commission
       if (commission <= 0) {
         continue
@@ -687,12 +841,12 @@ async function fetchPartnerboostCommission(params: {
     }
   }
 
-  if (transactionRows.length > 0 && transactionRows.every((row) => parsePartnerboostCommissionValue(row) <= 0)) {
+  if (transactionRows.length > 0 && transactionRows.every((row) => parsePartnerboostCommissionValue(row, commissionMode) <= 0)) {
     const firstRowKeys = Object.keys(transactionRows[0] || {}).slice(0, 30)
     console.warn(
       `[affiliate-revenue] PartnerBoost transaction returned ${transactionRows.length} rows on ${params.reportDate}, but commission resolved to 0. keys=${firstRowKeys.join(',')}`
     )
-  } else if (transactionRows.length === 0 && reportRows.length > 0 && reportRows.every((row) => parsePartnerboostCommissionValue(row) <= 0)) {
+  } else if (transactionRows.length === 0 && reportRows.length > 0 && reportRows.every((row) => parsePartnerboostCommissionValue(row, commissionMode) <= 0)) {
     const firstRowKeys = Object.keys(reportRows[0] || {}).slice(0, 30)
     console.warn(
       `[affiliate-revenue] PartnerBoost amazon_report returned ${reportRows.length} rows on ${params.reportDate}, but commission resolved to 0. keys=${firstRowKeys.join(',')}`
@@ -710,6 +864,14 @@ async function fetchPartnerboostCommission(params: {
   }
 }
 
+function parseYeahPromosCommissionFromRow(row: any, fieldKey: string): number {
+  if (!row || typeof row !== 'object') return 0
+  const fromAliases = parseNumberish(getFieldValue(row, [fieldKey]), 0)
+  if (fromAliases > 0) return fromAliases
+  const direct = parseNumberish((row as Record<string, unknown>)[fieldKey], 0)
+  return direct > 0 ? direct : 0
+}
+
 async function fetchYeahPromosCommission(params: {
   token: string
   siteId: string
@@ -717,7 +879,9 @@ async function fetchYeahPromosCommission(params: {
   isAmazonOnly: boolean
   pageStart: number
   limit: number
+  commissionField?: string
 }): Promise<CommissionCollection> {
+  const commissionField = normalizeYeahPromosCommissionField(params.commissionField)
   let page = params.pageStart
   let pageTotal: number | null = null
   let pagesFetched = 0
@@ -759,7 +923,7 @@ async function fetchYeahPromosCommission(params: {
     const rows = normalized.rows
 
     for (const row of rows) {
-      const commission = parseNumberish(row?.sale_comm, 0)
+      const commission = parseYeahPromosCommissionFromRow(row, commissionField)
       totalCommission += commission
 
       if (commission > 0) {
@@ -841,6 +1005,7 @@ export async function fetchAffiliateCommissionRevenue(params: {
   const attributionEntries: AffiliateCommissionRawEntry[] = []
 
   const partnerboostToken = String(settings.partnerboost_token || '').trim()
+  const partnerboostCommissionMode = normalizePartnerboostCommissionMode(settings.partnerboost_commission_mode)
   if (partnerboostToken) {
     configuredPlatforms.push('partnerboost')
 
@@ -853,6 +1018,7 @@ export async function fetchAffiliateCommissionRevenue(params: {
         token: partnerboostToken,
         baseUrl,
         reportDate,
+        commissionMode: partnerboostCommissionMode,
       })
       queriedPlatforms.push('partnerboost')
       breakdown.push({
@@ -878,6 +1044,7 @@ export async function fetchAffiliateCommissionRevenue(params: {
     const pageStart = Math.max(1, parseNumber(settings.yeahpromos_page, 1) || 1)
     const limit = Math.max(1, parseNumber(settings.yeahpromos_limit, YEAHPROMOS_DEFAULT_LIMIT) || YEAHPROMOS_DEFAULT_LIMIT)
     const isAmazonOnly = String(settings.yeahpromos_is_amazon || '').trim() === '1'
+    const yeahPromosCommissionField = normalizeYeahPromosCommissionField(settings.yeahpromos_commission_field)
 
     try {
       const metrics = await fetchYeahPromosCommission({
@@ -887,6 +1054,7 @@ export async function fetchAffiliateCommissionRevenue(params: {
         isAmazonOnly,
         pageStart,
         limit,
+        commissionField: yeahPromosCommissionField,
       })
       queriedPlatforms.push('yeahpromos')
       breakdown.push({
@@ -939,6 +1107,26 @@ export async function fetchAffiliateCommissionRevenue(params: {
       platform: 'attribution',
       message: `[attribution] ${error?.message || 'Attribution persistence failed'}`,
     })
+  }
+
+  if (queriedPlatforms.length > 0) {
+    try {
+      await persistAffiliateCommissionReconciliation({
+        userId: params.userId,
+        reportDate,
+        breakdown: breakdown.map((b) => ({
+          platform: b.platform,
+          totalCommission: b.totalCommission,
+          currency: b.currency,
+        })),
+        entries: attributionEntries,
+        queriedPlatforms,
+      })
+    } catch (error: any) {
+      console.warn(
+        `[affiliate-revenue] reconciliation snapshot failed for ${reportDate}: ${error?.message || error}`
+      )
+    }
   }
 
   return {

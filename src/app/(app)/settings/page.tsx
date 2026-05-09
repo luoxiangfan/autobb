@@ -231,6 +231,22 @@ const SETTING_METADATA: Record<string, {
     placeholder: DEFAULT_PARTNERBOOST_BASE_URL,
     defaultValue: DEFAULT_PARTNERBOOST_BASE_URL,
   },
+  'affiliate_sync.partnerboost_commission_mode': {
+    label: 'PartnerBoost 佣金口径',
+    description: '与联盟后台对账时优先使用的金额字段',
+    options: [
+      { value: 'auto', label: 'auto（兼容历史解析）' },
+      { value: 'estimated', label: 'estimated（优先预估）' },
+      { value: 'settled', label: 'settled（优先实结/已付）' },
+    ],
+    defaultValue: 'auto',
+  },
+  'affiliate_sync.yeahpromos_commission_field': {
+    label: 'YeahPromos 佣金字段',
+    description: '订单 JSON 中取佣金金额的字段名，默认 sale_comm；若后台使用其他字段可在此填写',
+    placeholder: 'sale_comm',
+    defaultValue: 'sale_comm',
+  },
   'affiliate_sync.openclaw_affiliate_sync_interval_hours': {
     label: '佣金同步间隔（小时）',
     description: '联盟佣金同步已固定为默认间隔，当前不支持修改',
@@ -337,8 +353,10 @@ const CATEGORY_FIELDS: Record<string, {
   affiliate_sync: [
     { key: 'yeahpromos_token', dataType: 'string', isSensitive: true, isRequired: false },
     { key: 'yeahpromos_site_id', dataType: 'string', isSensitive: false, isRequired: false },
+    { key: 'yeahpromos_commission_field', dataType: 'string', isSensitive: false, isRequired: false },
     { key: 'partnerboost_token', dataType: 'string', isSensitive: true, isRequired: false },
     { key: 'partnerboost_base_url', dataType: 'string', isSensitive: false, isRequired: false },
+    { key: 'partnerboost_commission_mode', dataType: 'string', isSensitive: false, isRequired: false },
     { key: 'openclaw_affiliate_sync_interval_hours', dataType: 'number', isSensitive: false, isRequired: false },
     { key: 'openclaw_affiliate_sync_mode', dataType: 'string', isSensitive: false, isRequired: false },
   ],
@@ -356,8 +374,10 @@ const CATEGORY_FIELDS: Record<string, {
 const AFFILIATE_SYNC_DELETABLE_KEYS = [
   'yeahpromos_token',
   'yeahpromos_site_id',
+  'yeahpromos_commission_field',
   'partnerboost_token',
   'partnerboost_base_url',
+  'partnerboost_commission_mode',
   'openclaw_affiliate_sync_interval_hours',
   'openclaw_affiliate_sync_mode',
 ] as const

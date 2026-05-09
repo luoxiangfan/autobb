@@ -373,6 +373,8 @@ const AFFILIATE_SYNC_DELETE_KEYS = [
   'yeahpromos_site_id',
   'partnerboost_token',
   'partnerboost_base_url',
+  'partnerboost_commission_mode',
+  'yeahpromos_commission_field',
   'openclaw_affiliate_sync_interval_hours',
   'openclaw_affiliate_sync_mode',
 ]

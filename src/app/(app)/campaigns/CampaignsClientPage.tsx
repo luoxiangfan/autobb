@@ -614,7 +614,7 @@ export default function CampaignsClientPage({
   const formatMoney = (value: number, currencyCode: string = defaultCurrency) =>
     formatCurrency(value, currencyCode)
   const trendsCurrencyValue = trendsBaseCurrency || defaultCurrency
-  const trendsOverviewDescription = `说明：花费/佣金/CPC/ROAS 按 ${trendsCurrencyValue} 统一折算`
+  const trendsOverviewDescription = `说明：花费/佣金/CPC/ROAS 按 ${trendsCurrencyValue} 统一折算；联盟佣金由订单归因到广告系列（ASIN 优先，同品牌多系列时按花费/点击拆分，与联盟后台行级可能不一致）`
   const trafficTrendDescription = `左轴：展示+点击，右轴：佣金(${trendsCurrencyValue})`
   const costTrendDescription = `左轴：花费+佣金(${trendsCurrencyValue})，右轴：CPC/ROAS`
   const formatTrendsMoney = (value: number) => formatCurrency(value, trendsCurrencyValue)
@@ -3303,10 +3303,10 @@ export default function CampaignsClientPage({
   }
 
   // 可排序表头组件
-  const SortableHeader = ({ field, children, className = '' }: { field: SortField; children: React.ReactNode; className?: string }) => {
+  const SortableHeader = ({ field, children, className = '', title }: { field: SortField; children: React.ReactNode; className?: string; title?: string }) => {
     const isActive = sortField === field
     return (
-      <TableHead className={`cursor-pointer select-none hover:bg-gray-50 ${className}`} onClick={() => handleSort(field)}>
+      <TableHead title={title} className={`cursor-pointer select-none hover:bg-gray-50 ${className}`} onClick={() => handleSort(field)}>
         <div className="flex items-center gap-0.5">
           {children}
           {isActive ? (
@@ -3848,7 +3848,13 @@ export default function CampaignsClientPage({
                       <SortableHeader field="ctr" className="w-[56px] whitespace-nowrap !px-0.5">点击率</SortableHeader>
                       <SortableHeader field="cpc" className="w-[94px] whitespace-nowrap !px-0.5">实际CPC</SortableHeader>
                       <SortableHeader field="configuredMaxCpc" className="w-[94px] whitespace-nowrap !px-0.5">配置CPC</SortableHeader>
-                      <SortableHeader field="conversions" className="w-[94px] whitespace-nowrap !px-0.5">佣金</SortableHeader>
+                      <SortableHeader
+                        field="conversions"
+                        className="w-[94px] whitespace-nowrap !px-0.5"
+                        title="联盟订单归因到本广告系列；同品牌多系列时按花费/点击拆分，可能与联盟后台行级不一致"
+                      >
+                        佣金
+                      </SortableHeader>
                       <SortableHeader field="cost" className="w-[94px] whitespace-nowrap !px-0.5">花费</SortableHeader>
                       <TableHead className="w-[100px] whitespace-nowrap">运营状态</TableHead>
                       <TableHead className="w-[100px] whitespace-nowrap">关联 Offer 任务</TableHead>

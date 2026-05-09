@@ -1510,6 +1510,82 @@ async function queryCampaignAttributionCandidates(params: {
     .filter((row) => Number.isFinite(row.campaignId) && Number.isFinite(row.offerId))
 }
 
+async function inferOfferIdForCommissionFailure(params: {
+  userId: number
+  entry: NormalizedCommissionEntry
+  offerContexts: Map<number, OfferContext>
+}): Promise<number | null> {
+  const { userId, entry, offerContexts } = params
+  const asin = entry.sourceAsin ? normalizeAsin(entry.sourceAsin) : null
+
+  if (asin) {
+    const offerIds = new Set<number>()
+    for (const ctx of offerContexts.values()) {
+      if (ctx.asins.has(asin)) {
+        offerIds.add(ctx.offerId)
+      }
+    }
+    if (offerIds.size === 1) {
+      return Array.from(offerIds)[0]
+    }
+
+    const byAsin = await queryActiveOfferIdsByAsins({ userId, asins: [asin] })
+    const list = byAsin.get(asin) || []
+    const uniqueOffers = Array.from(
+      new Set(list.filter((id) => Number.isFinite(Number(id))).map((id) => Number(id)))
+    )
+    if (uniqueOffers.length === 1) {
+      return uniqueOffers[0]
+    }
+  }
+
+  if (entry.platform === 'partnerboost' && entry.sourceLinkId) {
+    const linkKey = normalizeText(entry.sourceLinkId)?.toLowerCase() || ''
+    if (linkKey) {
+      const linkMap = await queryPartnerboostProductIdsByLinkIds({ userId, linkIds: [linkKey] })
+      const productIds = linkMap.get(linkKey) || []
+      if (productIds.length > 0) {
+        const offerLinks = await queryOfferLinksByProductIds(userId, productIds)
+        const offers = new Set<number>()
+        for (const pid of productIds) {
+          for (const oid of offerLinks.get(pid) || []) {
+            offers.add(oid)
+          }
+        }
+        if (offers.size === 1) {
+          return Array.from(offers)[0]
+        }
+      }
+    }
+  }
+
+  if (entry.sourceMid) {
+    const products = await queryProductIdentifierRows({
+      userId,
+      platform: entry.platform,
+      mids: [entry.sourceMid],
+      asins: [],
+    })
+    const productIds = products
+      .map((p) => Number(p.id))
+      .filter((id) => Number.isFinite(id))
+    if (productIds.length > 0) {
+      const offerLinks = await queryOfferLinksByProductIds(userId, productIds)
+      const offers = new Set<number>()
+      for (const pid of productIds) {
+        for (const oid of offerLinks.get(pid) || []) {
+          offers.add(oid)
+        }
+      }
+      if (offers.size === 1) {
+        return Array.from(offers)[0]
+      }
+    }
+  }
+
+  return null
+}
+
 export async function persistAffiliateCommissionAttributions(params: {
   userId: number
   reportDate: string
@@ -1571,11 +1647,12 @@ export async function persistAffiliateCommissionAttributions(params: {
   )
   const incomingPlatforms = normalizeAffiliatePlatforms(normalizedEntries.map((entry) => entry.platform))
   const replacePlatforms = normalizeAffiliatePlatforms(params.replacePlatforms)
-  const shouldResetHistoricalSnapshot = params.replaceExisting
-    && replacePlatforms.length > 0
-    && isHistoricalReportDate(params.reportDate)
+  /** 联盟同步按日全量替换：先删后写，保证 API 冲正后本地可归零 */
+  const shouldReplacePlatformSnapshot = Boolean(
+    params.replaceExisting && replacePlatforms.length > 0
+  )
 
-  if (params.lockHistorical && isHistoricalReportDate(params.reportDate) && !shouldResetHistoricalSnapshot) {
+  if (params.lockHistorical && isHistoricalReportDate(params.reportDate) && !shouldReplacePlatformSnapshot) {
     const existingSummary = await queryExistingAttributionSummary({
       db,
       userId: params.userId,
@@ -1607,7 +1684,7 @@ export async function persistAffiliateCommissionAttributions(params: {
   }
 
   if (normalizedEntries.length === 0) {
-    if (shouldResetHistoricalSnapshot) {
+    if (shouldReplacePlatformSnapshot) {
       await db.transaction(async () => {
         await deleteExistingAttributionSnapshot({
           db,
@@ -1629,6 +1706,17 @@ export async function persistAffiliateCommissionAttributions(params: {
     }
   }
 
+  if (shouldReplacePlatformSnapshot) {
+    await db.transaction(async () => {
+      await deleteExistingAttributionSnapshot({
+        db,
+        userId: params.userId,
+        reportDate: params.reportDate,
+        platforms: replacePlatforms,
+      })
+    })
+  }
+
   let existingOutcomes = new Map<string, ExistingEventOutcome>()
   try {
     existingOutcomes = await queryExistingEventOutcomes({
@@ -1636,7 +1724,6 @@ export async function persistAffiliateCommissionAttributions(params: {
       userId: params.userId,
       reportDate: params.reportDate,
       eventIds: normalizedEntries.map((entry) => entry.eventId),
-      excludePlatforms: shouldResetHistoricalSnapshot ? replacePlatforms : undefined,
     })
   } catch (error: any) {
     if (!isStatementTimeoutError(error)) {
@@ -1909,6 +1996,12 @@ export async function persistAffiliateCommissionAttributions(params: {
         ? 'missing_identifier'
         : (sourceAsin ? 'campaign_mapping_miss' : 'offer_mapping_miss')
 
+      const inferredOfferId = await inferOfferIdForCommissionFailure({
+        userId: params.userId,
+        entry,
+        offerContexts,
+      })
+
       failureRows.push({
         userId: params.userId,
         reportDate: params.reportDate,
@@ -1917,7 +2010,7 @@ export async function persistAffiliateCommissionAttributions(params: {
         sourceMid: entry.sourceMid,
         sourceAsin: entry.sourceAsin,
         sourceLinkId: entry.sourceLinkId,
-        offerId: null,
+        offerId: inferredOfferId,
         commissionAmount: entry.commission,
         currency: entry.currency,
         reasonCode: resolveAffiliateAttributionFailureReasonCode({
@@ -1942,15 +2035,6 @@ export async function persistAffiliateCommissionAttributions(params: {
   }
 
   await db.transaction(async () => {
-    if (shouldResetHistoricalSnapshot) {
-      await deleteExistingAttributionSnapshot({
-        db,
-        userId: params.userId,
-        reportDate: params.reportDate,
-        platforms: replacePlatforms,
-      })
-    }
-
     for (const row of rowsToInsert) {
       await db.exec(
         `
@@ -2018,7 +2102,7 @@ export async function persistAffiliateCommissionAttributions(params: {
     failureRows.reduce((sum, row) => sum + (Number(row.commissionAmount) || 0), 0)
   )
 
-  if (shouldResetHistoricalSnapshot) {
+  if (shouldReplacePlatformSnapshot) {
     return {
       reportDate: params.reportDate,
       totalCommission,
