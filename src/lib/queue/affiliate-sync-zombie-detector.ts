@@ -36,6 +36,19 @@ export type ZombieTaskDetectionResult = {
 const MAX_RUNNING_HOURS = 48 // 超过48小时视为异常
 const MAX_HEARTBEAT_GAP_HOURS = 0.5 // 心跳超过30分钟未更新视为异常（YP登录态失效通常立即体现）
 
+/** EXTRACT/聚合等数值在 PG 驱动下可能为 string，统一为有限 number */
+function coerceHours(value: unknown): number {
+  if (value == null) return 0
+  const n = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
+function coerceHoursOrNull(value: unknown): number | null {
+  if (value == null) return null
+  const n = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(n) ? n : null
+}
+
 /**
  * 检测并修复僵尸同步任务
  */
@@ -61,8 +74,8 @@ export async function detectAndFixZombieSyncTasks(options: {
       updated_count: number
       started_at: string
       last_heartbeat_at: string | null
-      hours_running: number
-      hours_since_heartbeat: number | null
+      hours_running: number | string
+      hours_since_heartbeat: number | string | null
     }>(
       `
         SELECT
@@ -101,6 +114,8 @@ export async function detectAndFixZombieSyncTasks(options: {
     )
 
     for (const task of suspiciousTasks) {
+      const hoursRunning = coerceHours(task.hours_running)
+      const hoursSinceHeartbeat = coerceHoursOrNull(task.hours_since_heartbeat)
       const processedItems = task.created_count + task.updated_count
       const completionRate = task.total_items > 0
         ? (processedItems / task.total_items * 100).toFixed(2)
@@ -112,16 +127,16 @@ export async function detectAndFixZombieSyncTasks(options: {
       let shouldMarkAsFailed = false
 
       if (task.status === 'queued' && task.started_at) {
-        reason = `状态机错误：已开始运行但状态仍为queued（运行${task.hours_running.toFixed(1)}小时）`
+        reason = `状态机错误：已开始运行但状态仍为queued（运行${hoursRunning.toFixed(1)}小时）`
         // 如果已处理超过95%，标记为完成；否则标记为失败
         shouldMarkAsCompleted = processedItems > 0 && (processedItems / Math.max(task.total_items, 1)) >= 0.95
         shouldMarkAsFailed = !shouldMarkAsCompleted
-      } else if (task.hours_running > MAX_RUNNING_HOURS) {
-        reason = `运行超时：已运行${task.hours_running.toFixed(1)}小时（完成度${completionRate}%）`
+      } else if (hoursRunning > MAX_RUNNING_HOURS) {
+        reason = `运行超时：已运行${hoursRunning.toFixed(1)}小时（完成度${completionRate}%）`
         shouldMarkAsCompleted = processedItems > 0 && (processedItems / Math.max(task.total_items, 1)) >= 0.95
         shouldMarkAsFailed = !shouldMarkAsCompleted
-      } else if (task.hours_since_heartbeat && task.hours_since_heartbeat > MAX_HEARTBEAT_GAP_HOURS) {
-        reason = `心跳超时：最后心跳距今${task.hours_since_heartbeat.toFixed(1)}小时（完成度${completionRate}%）`
+      } else if (hoursSinceHeartbeat != null && hoursSinceHeartbeat > MAX_HEARTBEAT_GAP_HOURS) {
+        reason = `心跳超时：最后心跳距今${hoursSinceHeartbeat.toFixed(1)}小时（完成度${completionRate}%）`
         // YP平台心跳超时很可能是登录态失效导致
         if (task.platform === 'yeahpromos') {
           reason += ' - 可能是YP登录态失效，请重新采集登录态后再试'
@@ -138,8 +153,8 @@ export async function detectAndFixZombieSyncTasks(options: {
         processedItems,
         startedAt: task.started_at,
         lastHeartbeatAt: task.last_heartbeat_at,
-        hoursRunning: task.hours_running,
-        hoursSinceHeartbeat: task.hours_since_heartbeat,
+        hoursRunning,
+        hoursSinceHeartbeat,
         reason,
       })
 
@@ -223,7 +238,7 @@ export async function getZombieTaskStats(): Promise<{
     status: string
     platform: string
     count: number
-    oldest_hours: number | null
+    oldest_hours: number | string | null
   }>(
     `
       SELECT
@@ -257,9 +272,10 @@ export async function getZombieTaskStats(): Promise<{
     byPlatform[row.platform] = (byPlatform[row.platform] || 0) + count
 
     if (row.oldest_hours !== null) {
+      const oldest = coerceHours(row.oldest_hours)
       oldestZombieHours = oldestZombieHours === null
-        ? row.oldest_hours
-        : Math.max(oldestZombieHours, row.oldest_hours)
+        ? oldest
+        : Math.max(oldestZombieHours, oldest)
     }
   }
 
