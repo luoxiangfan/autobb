@@ -453,7 +453,6 @@ export default function CampaignsClientPage({
     roas: number
   } | null>(null)
   const [trendsCostsByCurrency, setTrendsCostsByCurrency] = useState<Array<{ currency: string; amount: number }>>([])
-  const [trendsCommissionsByCurrency, setTrendsCommissionsByCurrency] = useState<Array<{ currency: string; amount: number }>>([])
   const [expandedTrendChart, setExpandedTrendChart] = useState<'traffic' | 'cost' | null>(null)
   const expandedTrendChartHeight = 380
   const [trendsSectionMounted, setTrendsSectionMounted] = useState(false)
@@ -853,17 +852,10 @@ export default function CampaignsClientPage({
       Array.isArray(summary?.costs) && summary.costs.length > 0
         ? summary.costs
         : (
-          summary?.currency && summary.currency !== 'MIXED'
-            ? [{ currency: String(summary.currency), amount: Number(summary?.totalCostUsd ?? 0) }]
-            : []
-        )
-    )
-  const commissionBreakdown = trendsCommissionsByCurrency.length > 0
-    ? trendsCommissionsByCurrency
-    : (
-      summary?.currency && summary.currency !== 'MIXED'
-        ? [{ currency: String(summary.currency), amount: summaryTotalCommission }]
-        : []
+            summary?.currency && summary.currency !== 'MIXED'
+              ? [{ currency: String(summary.currency), amount: Number(summary?.totalCostUsd ?? 0) }]
+              : []
+          )
     )
   const mixedAttributedCommissionBreakdown = Array.isArray(summary?.attributedCommissionsByCurrency)
     ? summary.attributedCommissionsByCurrency
@@ -904,6 +896,17 @@ export default function CampaignsClientPage({
     || userFilterApplied
     || affiliateFilter !== 'all'
   )
+  const trendsFilterDepsKey = JSON.stringify({
+    search: (isServerPagingMode ? debouncedSearchQuery : searchQuery).trim(),
+    statusFilter,
+    statusCategoryFilter,
+    needsOfferCompletionFilter,
+    showDeletedCampaigns,
+    selectedUserFilters: selectedUserFilters.slice().sort(),
+    affiliateFilter,
+    createdAtStart: createdAtStart ?? '',
+    createdAtEnd: createdAtEnd ?? '',
+  })
 
     // 🔧 初始检查同步状态
   useEffect(() => {
@@ -1193,7 +1196,7 @@ export default function CampaignsClientPage({
   useEffect(() => {
     if (!trendsSectionMounted) return
     fetchTrends()
-  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, trendsSectionMounted, affiliateFilter])
+  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, trendsSectionMounted, trendsFilterDepsKey])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -1213,7 +1216,7 @@ export default function CampaignsClientPage({
     return () => {
       window.clearInterval(timer)
     }
-  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey, trendsSectionMounted, affiliateFilter, selectedUserFilters])
+  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey, trendsSectionMounted, trendsFilterDepsKey])
 
   useEffect(() => {
     upsertSelectedCampaignSnapshots(campaigns)
@@ -1546,9 +1549,41 @@ export default function CampaignsClientPage({
 
   const buildTrendsQueryParams = (): URLSearchParams => {
     const params = buildDateRangeParams()
+
+    const normalizedSearch = (isServerPagingMode ? debouncedSearchQuery : searchQuery).trim()
+    if (normalizedSearch) {
+      params.set('search', normalizedSearch)
+    }
+
+    if (statusFilter !== 'all') {
+      params.set('status', statusFilter)
+    }
+
+    if (needsOfferCompletionFilter !== 'all') {
+      params.set('needsOfferCompletion', needsOfferCompletionFilter)
+    }
+
+    if (statusCategoryFilter !== 'all') {
+      params.set('statusCategory', statusCategoryFilter)
+    }
+
+    params.set('showDeleted', String(showDeletedCampaigns))
+
+    if (createdAtStart) {
+      params.set('createdAtStart', createdAtStart)
+    }
+    if (createdAtEnd) {
+      params.set('createdAtEnd', createdAtEnd)
+    }
+
+    if (userFilterApplied) {
+      params.set('userIds', selectedUserFilters.join(','))
+    }
+
     if (affiliateFilter && affiliateFilter !== 'all') {
       params.set('affiliate', affiliateFilter)
     }
+
     return params
   }
 
@@ -1588,7 +1623,6 @@ export default function CampaignsClientPage({
         setTrendsBaseCurrency(String(data.summary?.baseCurrency || 'USD'))
         setTrendsTotalsConverted(data.summary?.totalsConverted || null)
         setTrendsCostsByCurrency(Array.isArray(data.summary?.costsByCurrency) ? data.summary.costsByCurrency : [])
-        setTrendsCommissionsByCurrency(Array.isArray(data.summary?.commissionsByCurrency) ? data.summary.commissionsByCurrency : [])
         setTrendsError(null)
       } catch (err: any) {
         if (err?.name === 'AbortError') {
@@ -1596,7 +1630,6 @@ export default function CampaignsClientPage({
         }
         setTrendsTotalsConverted(null)
         setTrendsCostsByCurrency([])
-        setTrendsCommissionsByCurrency([])
         setTrendsError(err.message || '加载趋势数据失败')
       } finally {
         if (requestSeq === trendsFetchSeqRef.current) {
@@ -3440,7 +3473,7 @@ export default function CampaignsClientPage({
                     <p className="text-sm font-medium text-gray-600">总花费({trendsCurrencyValue})</p>
                     <p className="text-2xl font-bold text-gray-900 mt-1">
                       {formatCurrencyDashboard(
-                        Number(trendsTotalsConverted?.cost ?? summaryTotalCostDisplay),
+                        Number(trendsTotalsConverted != null ? trendsTotalsConverted.cost : summaryTotalCostDisplay),
                         String(trendsCurrencyValue || defaultCurrency)
                       )}
                     </p>
@@ -3469,7 +3502,7 @@ export default function CampaignsClientPage({
                     <p className="text-sm font-medium text-gray-600">总佣金({trendsCurrencyValue})</p>
                     <p className="text-2xl font-bold text-gray-900 mt-1">
                       {formatCurrencyDashboard(
-                        Number(trendsTotalsConverted?.commission || summaryTotalCommissionDisplay),
+                        Number(trendsTotalsConverted != null ? trendsTotalsConverted.commission : summaryTotalCommissionDisplay),
                         String(trendsCurrencyValue || defaultCurrency)
                       )}
                     </p>

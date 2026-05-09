@@ -8,7 +8,12 @@ import {
   getCachedCampaignTrends,
   setCachedCampaignTrends,
 } from '@/lib/campaigns-read-cache'
-import { getAffiliateDomainKeywords } from '@/lib/affiliate-platform-domain-keywords'
+import {
+  filterCampaignRowIdsForTrendsScope,
+  parseAffiliateTrendsParam,
+  queryCampaignRowsForTrendsScope,
+  resolveEffectiveUserIdsForCampaignScope,
+} from '@/lib/campaign-trends-scope'
 
 function normalizeCurrency(value: unknown): string {
   const normalized = String(value ?? '').trim().toUpperCase()
@@ -53,6 +58,32 @@ function parseOptionalBoolean(value: string | null): boolean {
   if (value === null) return false
   const normalized = String(value).trim().toLowerCase()
   return normalized === 'true' || normalized === '1'
+}
+
+function parseOptionalBooleanParam(value: string | null): boolean | null {
+  if (value === null) return null
+  const normalized = String(value).trim().toLowerCase()
+  if (normalized === 'true' || normalized === '1') return true
+  if (normalized === 'false' || normalized === '0') return false
+  return null
+}
+
+/** Keep each IN list under SQLite SQLITE_MAX_VARIABLE_NUMBER (~999) with room for other binds. */
+const CAMPAIGN_ID_IN_CHUNK = 350
+
+function chunkIds(ids: number[]): number[][] {
+  if (ids.length === 0) return []
+  const chunks: number[][] = []
+  for (let i = 0; i < ids.length; i += CAMPAIGN_ID_IN_CHUNK) {
+    chunks.push(ids.slice(i, i + CAMPAIGN_ID_IN_CHUNK))
+  }
+  return chunks
+}
+
+function buildIdDisjunctionSql(columnExpr: string, chunks: number[][]): { sql: string; values: number[] } {
+  if (chunks.length === 0) return { sql: '1=0', values: [] }
+  const parts = chunks.map((ch) => `${columnExpr} IN (${ch.map(() => '?').join(',')})`)
+  return { sql: `(${parts.join(' OR ')})`, values: chunks.flat() }
 }
 
 function roundTo2(value: number): number {
@@ -123,9 +154,9 @@ export async function GET(request: NextRequest) {
     }
     const requestedCurrencyRaw = searchParams.get('currency')
     const requestedCurrency = requestedCurrencyRaw ? normalizeCurrency(requestedCurrencyRaw) : null
+
     const affiliateFilterParam = searchParams.get('affiliate')
-    const affiliateFilter = affiliateFilterParam ? decodeURIComponent(affiliateFilterParam).trim() : null
-    const affiliateDomainKeywords = affiliateFilter ? getAffiliateDomainKeywords(affiliateFilter) : []
+    const { affiliateFilter, affiliateDomainKeywords } = parseAffiliateTrendsParam(affiliateFilterParam)
     const hasAffiliateOfferLinkFilter = Boolean(
       affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0
     )
@@ -135,6 +166,42 @@ export async function GET(request: NextRequest) {
     const affiliateOfferLikeParams = hasAffiliateOfferLinkFilter
       ? affiliateDomainKeywords.map((k) => `%${k}%`)
       : []
+
+    const searchQuery = (searchParams.get('search') || '').trim().toLowerCase()
+    const statusFilterRaw = (searchParams.get('status') || '').trim().toUpperCase()
+    const statusFilter = ['ENABLED', 'PAUSED', 'REMOVED', 'ALL'].includes(statusFilterRaw) ? statusFilterRaw : ''
+    const needsOfferCompletionFilter = (searchParams.get('needsOfferCompletion') || '').trim().toUpperCase()
+    const statusCategoryFilter = (searchParams.get('statusCategory') || '').trim().toLowerCase()
+    const showDeletedParam = parseOptionalBooleanParam(searchParams.get('showDeleted'))
+    const idsParam = (searchParams.get('ids') || '').trim()
+    const idsFilter = idsParam
+      ? idsParam
+        .split(',')
+        .map((id) => Number.parseInt(id.trim(), 10))
+        .filter((id) => Number.isFinite(id) && id > 0)
+      : []
+    const createdAtStartParam = searchParams.get('createdAtStart')
+    const createdAtEndParam = searchParams.get('createdAtEnd')
+    const userIdsParam = (searchParams.get('userIds') || '').trim()
+    const requestedUserIds = userIdsParam
+      ? Array.from(new Set(
+          userIdsParam
+            .split(',')
+            .map((id) => Number.parseInt(id.trim(), 10))
+            .filter((id) => Number.isFinite(id) && id > 0)
+        ))
+      : []
+    const userIdFilterParam = searchParams.get('userId')
+    const userIdFilter = userIdFilterParam ? Number.parseInt(userIdFilterParam, 10) : null
+    const isAdmin = authResult.user.role === 'admin'
+    const effectiveUserIds = resolveEffectiveUserIdsForCampaignScope({
+      authUserId: userId,
+      isAdmin,
+      requestedUserIds,
+      userIdFilterParam,
+      userIdFilter,
+    })
+
     const refresh = parseOptionalBoolean(searchParams.get('refresh'))
     const noCache = parseOptionalBoolean(searchParams.get('noCache'))
     const shouldBypassReadCache = refresh || noCache
@@ -159,6 +226,15 @@ export async function GET(request: NextRequest) {
       endDate: endDateStr,
       currency: requestedCurrency,
       affiliate: affiliateFilter || null,
+      search: searchQuery,
+      status: statusFilter || 'ALL',
+      needsOfferCompletion: needsOfferCompletionFilter || 'ALL',
+      statusCategory: statusCategoryFilter || 'all',
+      showDeleted: showDeletedParam,
+      userIds: effectiveUserIds === null ? null : [...effectiveUserIds].sort((a, b) => a - b),
+      ids: [...idsFilter].sort((a, b) => a - b),
+      createdAtStart: createdAtStartParam,
+      createdAtEnd: createdAtEndParam,
     })
 
     if (!shouldBypassReadCache) {
@@ -170,36 +246,83 @@ export async function GET(request: NextRequest) {
 
     const db = await getDatabase()
 
+    const campaignRows = await queryCampaignRowsForTrendsScope(db, {
+      effectiveUserIds,
+      affiliateDomainKeywords,
+      createdAtStartParam,
+      createdAtEndParam,
+    })
+
+    const scopedIds = filterCampaignRowIdsForTrendsScope(campaignRows, {
+      searchQuery,
+      statusFilter,
+      needsOfferCompletionFilter,
+      statusCategoryFilter,
+      showDeletedParam,
+      idsFilter,
+    })
+
+    const idChunks = chunkIds(scopedIds)
+    const campaignIdDisjunction = buildIdDisjunctionSql('cp.campaign_id', idChunks)
+    const attributionCampaignDisjunction = buildIdDisjunctionSql('a.campaign_id', idChunks)
+    const scopedCampaignIdDisjunction = buildIdDisjunctionSql('c.id', idChunks)
+
+    const buildEmptyTrendsPayload = () => ({
+      success: true,
+      trends: [] as any[],
+      dateRange: {
+        start: startDateStr,
+        end: endDateStr,
+        days: rangeDays,
+      },
+      summary: {
+        currency: BASE_CURRENCY,
+        currencies: [] as string[],
+        hasMixedCurrency: false,
+        baseCurrency: BASE_CURRENCY,
+        totalsConverted: {
+          cost: 0,
+          commission: 0,
+          impressions: 0,
+          clicks: 0,
+          cpc: 0,
+          roas: 0,
+        },
+        costsByCurrency: [] as Array<{ currency: string; amount: number }>,
+        commissionsByCurrency: [] as Array<{ currency: string; amount: number }>,
+      },
+    })
+
+    if (idChunks.length === 0) {
+      const responsePayload = buildEmptyTrendsPayload()
+      if (shouldWriteCache) {
+        await setCachedCampaignTrends(userId, cacheHash, responsePayload)
+      }
+      return NextResponse.json(responsePayload)
+    }
+
+    const perfFromJoin = `
+      FROM campaign_performance cp
+      INNER JOIN campaigns c ON c.id = cp.campaign_id AND c.user_id = cp.user_id
+      ${hasAffiliateOfferLinkFilter ? 'INNER JOIN offers o ON o.id = c.offer_id' : ''}
+      WHERE cp.date >= ?
+        AND cp.date <= ?
+        AND ${campaignIdDisjunction.sql}
+        ${hasAffiliateOfferLinkFilter ? affiliateOfferLikeClause : ''}
+    `
+
+    const perfAggBinds = [startDateStr, endDateStr, ...campaignIdDisjunction.values, ...affiliateOfferLikeParams]
+
     const currencyRows = await db.query<any>(
-      hasAffiliateOfferLinkFilter
-        ? `
+      `
       SELECT
         COALESCE(cp.currency, 'USD') as currency,
         SUM(cp.cost) as cost
-      FROM campaign_performance cp
-      INNER JOIN campaigns c ON c.id = cp.campaign_id AND c.user_id = cp.user_id
-      INNER JOIN offers o ON o.id = c.offer_id
-      WHERE cp.user_id = ?
-        AND cp.date >= ?
-        AND cp.date <= ?
-        ${affiliateOfferLikeClause}
+      ${perfFromJoin}
       GROUP BY COALESCE(cp.currency, 'USD')
       ORDER BY cost DESC
-      `
-        : `
-      SELECT
-        COALESCE(currency, 'USD') as currency,
-        SUM(cost) as cost
-      FROM campaign_performance
-      WHERE user_id = ?
-        AND date >= ?
-        AND date <= ?
-      GROUP BY COALESCE(currency, 'USD')
-      ORDER BY cost DESC
       `,
-      hasAffiliateOfferLinkFilter
-        ? [userId, startDateStr, endDateStr, ...affiliateOfferLikeParams]
-        : [userId, startDateStr, endDateStr]
+      perfAggBinds
     )
 
     const costCurrencies = currencyRows
@@ -207,118 +330,81 @@ export async function GET(request: NextRequest) {
       .filter((v, idx, arr) => arr.indexOf(v) === idx)
 
     const adTrends = await db.query<any>(
-      hasAffiliateOfferLinkFilter
-        ? `
+      `
       SELECT
         DATE(cp.date) as date,
         COALESCE(cp.currency, 'USD') as currency,
         SUM(cp.impressions) as impressions,
         SUM(cp.clicks) as clicks,
         SUM(cp.cost) as cost
-      FROM campaign_performance cp
-      INNER JOIN campaigns c ON c.id = cp.campaign_id AND c.user_id = cp.user_id
-      INNER JOIN offers o ON o.id = c.offer_id
-      WHERE cp.user_id = ?
-        AND cp.date >= ?
-        AND cp.date <= ?
-        ${affiliateOfferLikeClause}
+      ${perfFromJoin}
       GROUP BY DATE(cp.date), COALESCE(cp.currency, 'USD')
       ORDER BY date ASC, currency ASC
-      `
-        : `
-      SELECT
-        DATE(date) as date,
-        COALESCE(currency, 'USD') as currency,
-        SUM(impressions) as impressions,
-        SUM(clicks) as clicks,
-        SUM(cost) as cost
-      FROM campaign_performance
-      WHERE user_id = ?
-        AND date >= ?
-        AND date <= ?
-      GROUP BY DATE(date), COALESCE(currency, 'USD')
-      ORDER BY date ASC, currency ASC
       `,
-      hasAffiliateOfferLinkFilter
-        ? [userId, startDateStr, endDateStr, ...affiliateOfferLikeParams]
-        : [userId, startDateStr, endDateStr]
+      perfAggBinds
     )
 
     const queryAttributedCommissionTrends = async () => db.query<any>(
-      hasAffiliateOfferLinkFilter
-        ? `
+      `
       SELECT
         a.report_date as date,
         COALESCE(a.currency, 'USD') as currency,
         COALESCE(SUM(a.commission_amount), 0) as commission
       FROM affiliate_commission_attributions a
-      LEFT JOIN campaigns c ON a.campaign_id = c.id
-      INNER JOIN offers o ON o.id = COALESCE(a.offer_id, c.offer_id)
-      WHERE a.user_id = ?
-        AND a.report_date >= ?
+      INNER JOIN campaigns c ON a.campaign_id = c.id
+      ${hasAffiliateOfferLinkFilter ? 'INNER JOIN offers o ON o.id = c.offer_id' : ''}
+      WHERE a.report_date >= ?
         AND a.report_date <= ?
-        ${affiliateOfferLikeClause}
+        AND ${attributionCampaignDisjunction.sql}
+        ${hasAffiliateOfferLinkFilter ? affiliateOfferLikeClause : ''}
       GROUP BY a.report_date, COALESCE(a.currency, 'USD')
       ORDER BY report_date ASC, currency ASC
-      `
-        : `
-      SELECT
-        report_date as date,
-        COALESCE(currency, 'USD') as currency,
-        COALESCE(SUM(commission_amount), 0) as commission
-      FROM affiliate_commission_attributions
-      WHERE user_id = ?
-        AND report_date >= ?
-        AND report_date <= ?
-      GROUP BY report_date, COALESCE(currency, 'USD')
-      ORDER BY report_date ASC, currency ASC
       `,
-      hasAffiliateOfferLinkFilter
-        ? [userId, startDateStr, endDateStr, ...affiliateOfferLikeParams]
-        : [userId, startDateStr, endDateStr]
+      [startDateStr, endDateStr, ...attributionCampaignDisjunction.values, ...affiliateOfferLikeParams]
     )
 
     const queryUnattributedCommissionTrends = async (): Promise<any[]> => {
       const unattributedFailureFilter = buildAffiliateUnattributedFailureFilter({
-        // Include all unattributed commissions (including campaign_mapping_miss)
-        // to match affiliate backend daily totals
         includePendingWithinGrace: true,
         includeAllFailures: true,
       })
       try {
         return await db.query<any>(
-          hasAffiliateOfferLinkFilter
-            ? `
+          `
+          WITH scoped_campaigns AS (
+            SELECT c.id, c.offer_id, c.user_id
+            FROM campaigns c
+            INNER JOIN offers o ON c.offer_id = o.id
+            WHERE ${scopedCampaignIdDisjunction.sql}
+              AND c.offer_id IS NOT NULL
+              ${hasAffiliateOfferLinkFilter ? affiliateOfferLikeClause : ''}
+          ),
+          offer_campaign_counts AS (
+            SELECT offer_id, COUNT(*) AS campaign_count
+            FROM scoped_campaigns
+            GROUP BY offer_id
+          )
           SELECT
             f.report_date as date,
             COALESCE(f.currency, 'USD') as currency,
-            COALESCE(SUM(f.commission_amount), 0) as commission
+            COALESCE(SUM(f.commission_amount / occ.campaign_count), 0) as commission
           FROM openclaw_affiliate_attribution_failures f
-          INNER JOIN offers o ON o.id = f.offer_id
-          WHERE f.user_id = ?
-            AND f.report_date >= ?
+          INNER JOIN scoped_campaigns sc ON f.offer_id = sc.offer_id
+          INNER JOIN offer_campaign_counts occ ON sc.offer_id = occ.offer_id
+          WHERE f.report_date >= ?
             AND f.report_date <= ?
+            AND f.offer_id IS NOT NULL
             AND ${unattributedFailureFilter.sql}
-            ${affiliateOfferLikeClause}
           GROUP BY f.report_date, COALESCE(f.currency, 'USD')
           ORDER BY report_date ASC, currency ASC
-          `
-            : `
-          SELECT
-            report_date as date,
-            COALESCE(currency, 'USD') as currency,
-            COALESCE(SUM(commission_amount), 0) as commission
-          FROM openclaw_affiliate_attribution_failures
-          WHERE user_id = ?
-            AND report_date >= ?
-            AND report_date <= ?
-            AND ${unattributedFailureFilter.sql}
-          GROUP BY report_date, COALESCE(currency, 'USD')
-          ORDER BY report_date ASC, currency ASC
           `,
-          hasAffiliateOfferLinkFilter
-            ? [userId, startDateStr, endDateStr, ...unattributedFailureFilter.values, ...affiliateOfferLikeParams]
-            : [userId, startDateStr, endDateStr, ...unattributedFailureFilter.values]
+          [
+            ...scopedCampaignIdDisjunction.values,
+            ...affiliateOfferLikeParams,
+            startDateStr,
+            endDateStr,
+            ...unattributedFailureFilter.values,
+          ]
         )
       } catch (error: any) {
         const message = String(error?.message || '')

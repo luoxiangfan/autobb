@@ -34,6 +34,16 @@ export type CampaignTrendsCachePayload = {
   currency: string | null
   /** When set, trend series match the same offer-link filter as /api/campaigns/performance */
   affiliate?: string | null
+  /** Same list-scoping as /api/campaigns/performance (excluding limit/offset/sort). */
+  search: string
+  status: string
+  needsOfferCompletion: string
+  statusCategory: string
+  showDeleted: boolean | null
+  userIds: number[] | null
+  ids: number[]
+  createdAtStart?: string | null
+  createdAtEnd?: string | null
 }
 
 function buildHash(payload: unknown): string {

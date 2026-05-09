@@ -30,6 +30,32 @@ vi.mock('@/lib/campaigns-read-cache', () => ({
   setCachedCampaignTrends: campaignCacheFns.setCachedCampaignTrends,
 }))
 
+/** One campaign row so scoped performance/commission queries run (matches queryCampaignRowsForTrendsScope). */
+const mockTrendsScopeCampaignRow = {
+  id: 1,
+  status: 'ENABLED',
+  status_category: 'pending',
+  campaign_id: 'cmp-1',
+  campaign_name: 'Test Campaign',
+  custom_name: null,
+  google_ads_account_id: null,
+  is_deleted: 0,
+  ads_account_name: null,
+  ads_account_customer_id: null,
+  offer_needs_completion: false,
+}
+
+function scopeThen(
+  impl: (sql: string, params?: unknown[]) => Promise<unknown[]>
+): (sql: string, params?: unknown[]) => Promise<unknown[]> {
+  return async (sql: string, params?: unknown[]) => {
+    if (sql.includes('FROM campaigns c') && sql.includes('LEFT JOIN google_ads_accounts')) {
+      return [mockTrendsScopeCampaignRow]
+    }
+    return impl(sql, params ?? [])
+  }
+}
+
 describe('GET /api/campaigns/trends', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -76,11 +102,11 @@ describe('GET /api/campaigns/trends', () => {
   })
 
   it('refresh=true bypasses read cache and writes fresh trends payload', async () => {
-    const query = vi.fn(async (sql: string) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
+    const query = vi.fn(scopeThen(async (sql: string) => {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(cp.currency')) {
         return [{ currency: 'USD', cost: 5 }]
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(date), COALESCE(currency')) {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')) {
         return [{ date: '2026-02-24', currency: 'USD', impressions: 50, clicks: 10, cost: 5 }]
       }
       if (sql.includes('FROM affiliate_commission_attributions')) {
@@ -90,7 +116,7 @@ describe('GET /api/campaigns/trends', () => {
         return []
       }
       throw new Error(`unexpected sql: ${sql}`)
-    })
+    }))
 
     dbFns.getDatabase.mockResolvedValue({ query })
     campaignCacheFns.getCachedCampaignTrends.mockResolvedValue({
@@ -113,15 +139,15 @@ describe('GET /api/campaigns/trends', () => {
   })
 
   it('returns multi-currency stacked trend fields and merged commissions', async () => {
-    const query = vi.fn(async (sql: string) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
+    const query = vi.fn(scopeThen(async (sql: string) => {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(cp.currency')) {
         return [
           { currency: 'USD', cost: 10 },
           { currency: 'CNY', cost: 20 },
         ]
       }
 
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(date), COALESCE(currency')) {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')) {
         return [
           { date: '2026-02-24', currency: 'USD', impressions: 100, clicks: 20, cost: 10 },
           { date: '2026-02-24', currency: 'CNY', impressions: 50, clicks: 5, cost: 20 },
@@ -143,7 +169,7 @@ describe('GET /api/campaigns/trends', () => {
       }
 
       throw new Error(`unexpected sql: ${sql}`)
-    })
+    }))
 
     dbFns.getDatabase.mockResolvedValue({ query })
 
@@ -176,12 +202,12 @@ describe('GET /api/campaigns/trends', () => {
   })
 
   it('includes all unattributed failures for campaign trend backend parity', async () => {
-    const query = vi.fn(async (sql: string, params: any[] = []) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
+    const query = vi.fn(scopeThen(async (sql: string, params: unknown[] = []) => {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(cp.currency')) {
         return [{ currency: 'USD', cost: 40 }]
       }
 
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(date), COALESCE(currency')) {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')) {
         return [{ date: '2026-02-27', currency: 'USD', impressions: 80, clicks: 8, cost: 40 }]
       }
 
@@ -190,14 +216,15 @@ describe('GET /api/campaigns/trends', () => {
       }
 
       if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
-        expect(sql).toContain('1 = 1')
+        expect(sql).toContain('scoped_campaigns')
+        expect(sql).toContain('offer_campaign_counts')
         expect(sql).not.toContain("COALESCE(reason_code, '') <> ?")
         expect(sql).not.toContain("COALESCE(reason_code, '') NOT IN")
         return [{ date: '2026-02-27', currency: 'USD', commission: 5.99 }]
       }
 
       throw new Error(`unexpected sql: ${sql}`)
-    })
+    }))
 
     dbFns.getDatabase.mockResolvedValue({ query })
 
@@ -213,11 +240,11 @@ describe('GET /api/campaigns/trends', () => {
   })
 
   it('falls back when unattributed table is unavailable', async () => {
-    const query = vi.fn(async (sql: string) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
+    const query = vi.fn(scopeThen(async (sql: string) => {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(cp.currency')) {
         return [{ currency: 'USD', cost: 5 }]
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(date), COALESCE(currency')) {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')) {
         return [{ date: '2026-02-24', currency: 'USD', impressions: 50, clicks: 10, cost: 5 }]
       }
       if (sql.includes('FROM affiliate_commission_attributions')) {
@@ -227,7 +254,7 @@ describe('GET /api/campaigns/trends', () => {
         throw new Error('relation "openclaw_affiliate_attribution_failures" does not exist')
       }
       throw new Error(`unexpected sql: ${sql}`)
-    })
+    }))
 
     dbFns.getDatabase.mockResolvedValue({ query })
 
@@ -242,11 +269,11 @@ describe('GET /api/campaigns/trends', () => {
   })
 
   it('keeps converted commission totals when commission currency is absent from ad cost currencies', async () => {
-    const query = vi.fn(async (sql: string) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
+    const query = vi.fn(scopeThen(async (sql: string) => {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(cp.currency')) {
         return [{ currency: 'USD', cost: 42.33 }]
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(date), COALESCE(currency')) {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')) {
         return [{ date: '2026-03-07', currency: 'USD', impressions: 345, clicks: 39, cost: 42.33 }]
       }
       if (sql.includes('FROM affiliate_commission_attributions')) {
@@ -256,7 +283,7 @@ describe('GET /api/campaigns/trends', () => {
         return []
       }
       throw new Error(`unexpected sql: ${sql}`)
-    })
+    }))
 
     dbFns.getDatabase.mockResolvedValue({ query })
 
@@ -281,14 +308,14 @@ describe('GET /api/campaigns/trends', () => {
   })
 
   it('applies optional single-currency filter while keeping converted totals', async () => {
-    const query = vi.fn(async (sql: string) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
+    const query = vi.fn(scopeThen(async (sql: string) => {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(cp.currency')) {
         return [
           { currency: 'USD', cost: 12.5 },
           { currency: 'CNY', cost: 8.2 },
         ]
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(date), COALESCE(currency')) {
+      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')) {
         return [
           { date: '2026-02-24', currency: 'USD', impressions: 80, clicks: 16, cost: 6.4 },
           { date: '2026-02-24', currency: 'CNY', impressions: 40, clicks: 8, cost: 3.2 },
@@ -304,7 +331,7 @@ describe('GET /api/campaigns/trends', () => {
         return [{ date: '2026-02-24', currency: 'CNY', commission: 1 }]
       }
       throw new Error(`unexpected sql: ${sql}`)
-    })
+    }))
 
     dbFns.getDatabase.mockResolvedValue({ query })
 
