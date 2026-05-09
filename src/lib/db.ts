@@ -450,7 +450,7 @@ class PostgresAdapter implements DatabaseAdapter {
     const hasReturning = /\bRETURNING\b/i.test(pgSql)
 
     if (isInsert && !hasReturning) {
-      const noIdTables = new Set(['brand_core_keyword_daily'])
+      const noIdTables = new Set(['brand_core_keyword_daily', 'usd_exchange_rates'])
       const tableName = extractTableName(pgSql)
 
       if (!noIdTables.has(tableName)) {

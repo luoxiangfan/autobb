@@ -27,6 +27,22 @@ export async function register() {
       }
     }
 
+    // 汇率：独立 scheduler 进程写入 DB 后，本进程内存需定期从 DB 重载（默认 1 小时；VERCEL 上默认关闭）
+    if (!skipRuntimeDbInit) {
+      const raw = process.env.EXCHANGE_RATE_CACHE_RELOAD_MS
+      const disabled = raw === '0' || raw === 'false'
+      const defaultMs = process.env.VERCEL ? 0 : 60 * 60 * 1000
+      const intervalMs = disabled ? 0 : Number(raw || defaultMs)
+      if (intervalMs > 0) {
+        const tick = () => {
+          void import('./lib/exchange-rates-service')
+            .then((m) => m.loadUsdRatesFromDatabase())
+            .catch((e) => console.warn('[exchange-rates] periodic cache reload failed:', e))
+        }
+        setInterval(tick, intervalMs)
+      }
+    }
+
     // 🔥 修复（2025-01-02）：移除重复的队列初始化
     // initializeDatabase() 内部已调用 initializeQueueSystem()，此处无需重复调用
     // 原来重复调用会导致日志重复输出

@@ -1,18 +1,17 @@
 /**
  * 货币汇率转换工具
  *
- * 注意：
- * 1. 汇率数据为静态配置，建议定期更新
- * 2. 生产环境建议使用实时汇率API（如exchangerate-api.com）
+ * 运行时使用数据库中的 USD 基准汇率（由 ExchangeRate-API 定时同步）；
+ * 若库中无数据或未配置 API Key，则回退到下方静态表。
  */
+import { parseCommissionPayoutValue, parseProductPriceMoney } from '@/lib/offer-monetization'
+import { getEffectiveUsdRates } from '@/lib/exchange-rates-service'
 
 /**
- * 汇率表（基准货币：USD）
+ * 静态回退汇率（基准货币：USD），与 DB 中字段含义一致：每 1 USD 可兑换的外币数量
  * 更新时间：2026-03-03 00:02:32 UTC
  * 来源：open.er-api.com (ExchangeRate-API)
  */
-import { parseCommissionPayoutValue, parseProductPriceMoney } from '@/lib/offer-monetization'
-
 export const EXCHANGE_RATES: Record<string, number> = {
   USD: 1,        // 美元（基准）
   CNY: 6.90304,      // 人民币
@@ -100,8 +99,11 @@ export function convertCurrency(
   fromCurrency: string,
   toCurrency: string
 ): number {
-  const fromRate = EXCHANGE_RATES[fromCurrency]
-  const toRate = EXCHANGE_RATES[toCurrency]
+  const rates = getEffectiveUsdRates(EXCHANGE_RATES)
+  const from = String(fromCurrency || '').trim().toUpperCase()
+  const to = String(toCurrency || '').trim().toUpperCase()
+  const fromRate = rates[from]
+  const toRate = rates[to]
 
   if (!fromRate || !toRate) {
     throw new Error(`不支持的货币类型: ${fromCurrency} 或 ${toCurrency}`)

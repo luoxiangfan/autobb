@@ -672,6 +672,10 @@ export async function initializeDatabase(): Promise<void> {
     await runStep('增量迁移检查', async () => {
       await runPendingMigrations()
     })
+    await runStep('汇率数据', async () => {
+      const { ensureExchangeRatesOnStartup } = await import('./exchange-rates-service')
+      await ensureExchangeRatesOnStartup()
+    })
     // 🆕 确保管理员账号存在（如果不存在则创建，如果存在则更新密码）
     await runStep('管理员账号检查', async () => {
       await ensureAdminAccount()
@@ -705,6 +709,10 @@ export async function initializeDatabase(): Promise<void> {
   // 初始化完成后也执行迁移（确保所有增量迁移都被应用）
   await runStep('增量迁移检查', async () => {
     await runPendingMigrations()
+  })
+  await runStep('汇率数据', async () => {
+    const { ensureExchangeRatesOnStartup } = await import('./exchange-rates-service')
+    await ensureExchangeRatesOnStartup()
   })
   // 🆕 初始化队列系统（统一开发和生产环境）
   await runStep('统一队列初始化', async () => {

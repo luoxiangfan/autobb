@@ -9,7 +9,8 @@
  * 4. 每天凌晨3点清理90天前的数据
  * 5. 每天凌晨2点检查链接可用性和账号状态（需求20优化）
  * 6. 每天定时暂停禁用/过期用户的后台任务（补点击/换链接）
- * 6. [已禁用] A/B测试监控 - 当前业务场景未使用，暂时禁用以减少日志噪音
+ * 7. 每天 UTC 01:00 同步 USD 基准汇率（ExchangeRate-API）
+ * 8. [已禁用] A/B测试监控 - 当前业务场景未使用，暂时禁用以减少日志噪音
  */
 
 import cron from 'node-cron'
@@ -542,6 +543,30 @@ async function syncDataTask() {
     log(`📊 数据同步任务入队完成 - 已入队: ${queuedCount}/${activeUsers.length}`)
   } catch (error) {
     logError('❌ 数据同步任务执行失败:', error)
+  }
+}
+
+async function exchangeRatesDailyTask() {
+  if (isShuttingDown) {
+    return
+  }
+  if (process.env.EXCHANGE_RATE_SYNC_ENABLED === 'false') {
+    return
+  }
+  try {
+    const { getExchangeRateApiKey, syncExchangeRatesFromRemote } = await import('./lib/exchange-rates-service')
+    if (!getExchangeRateApiKey()) {
+      log('⏭️  USD 汇率同步跳过：未配置 EXCHANGE_RATE_API_KEY')
+      return
+    }
+    const result = await syncExchangeRatesFromRemote()
+    if (result.ok) {
+      log('✅ USD 汇率已从 ExchangeRate-API 更新')
+    } else {
+      logError('❌ USD 汇率同步失败:', result.message)
+    }
+  } catch (error) {
+    logError('❌ USD 汇率同步异常:', error)
   }
 }
 
@@ -1112,6 +1137,7 @@ function startScheduler() {
   log('  - OpenClaw 每周报表推送: 每周一上午9:10')
   log('  - OpenClaw 联盟佣金快照刷新: 每小时（按用户配置）')
   log('  - OpenClaw 策略调度: 按用户配置')
+  log('  - USD 汇率同步: 每天 UTC 01:00（EXCHANGE_RATE_SYNC_CRON 可覆盖）')
   log('  - A/B测试监控: [已禁用] 当前业务未使用')
 
   // 任务0: 每小时整点执行补点击任务调度
@@ -1160,6 +1186,21 @@ function startScheduler() {
     log(`✅ 推荐指数自愈调度已启动 (cron: ${productScoreSchedulerCron})`)
   } else {
     log('⏸️  推荐指数自愈调度已禁用 (PRODUCT_SCORE_SCHEDULER_ENABLED=false)')
+  }
+
+  // 任务0.4: USD 基准汇率（UTC 每天 01:00，与 API 日更对齐）
+  const exchangeRateSyncEnabled = process.env.EXCHANGE_RATE_SYNC_ENABLED !== 'false'
+  const exchangeRateCron = process.env.EXCHANGE_RATE_SYNC_CRON || '0 1 * * *'
+  if (exchangeRateSyncEnabled) {
+    cron.schedule(exchangeRateCron, async () => {
+      await exchangeRatesDailyTask()
+    }, {
+      scheduled: true,
+      timezone: 'UTC',
+    })
+    log(`✅ USD 汇率同步已启动 (cron: ${exchangeRateCron}, timezone: UTC)`)
+  } else {
+    log('⏸️  USD 汇率同步已禁用 (EXCHANGE_RATE_SYNC_ENABLED=false)')
   }
 
   // 任务1: 高频检查 + 按用户间隔触发同步（避免固定整点导致的延迟）
