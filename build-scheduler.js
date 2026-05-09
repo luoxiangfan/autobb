@@ -109,6 +109,7 @@ async function buildOpenclawSync() {
         // 排除需要原生模块的依赖
         'better-sqlite3',
         'bcrypt',
+        'chromium-bidi',
       ],
       minify: false,
       sourcemap: false,
