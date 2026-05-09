@@ -536,7 +536,7 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
       typeof sql === 'string' && sql.includes('INSERT INTO openclaw_affiliate_attribution_failures')
     )
     expect(failureInsertCalls).toHaveLength(1)
-    expect((failureInsertCalls[0]?.[1] as any[])[10]).toBe('campaign_mapping_miss')
+    expect((failureInsertCalls[0]?.[1] as any[])[11]).toBe('campaign_mapping_miss')
   })
 
   it('uses brand from affiliate_products for fallback attribution when no offer link exists', async () => {

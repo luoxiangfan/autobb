@@ -72,6 +72,8 @@ type AttributionFailureRow = {
   sourceAsin: string | null
   sourceLinkId: string | null
   offerId: number | null
+  /** 审计用：在无法写入归因表时，尽量关联到唯一可推断的本地 campaigns.id */
+  campaignId: number | null
   commissionAmount: number
   currency: string
   reasonCode: AffiliateAttributionFailureReasonCode
@@ -160,6 +162,38 @@ function preferOnlineCampaignCandidates(candidates: CampaignAttributionCandidate
     candidate.campaignStatus === 'ENABLED' || candidate.campaignStatus === 'PAUSED'
   ))
   return onlineCandidates.length > 0 ? onlineCandidates : candidates
+}
+
+/**
+ * 失败行写入前尽量解析 campaign_id（例如 ASIN 在 offer 下唯一、且该 offer 下仅有一个可投放 Campaign）。
+ */
+function resolveFailureAuditCampaignId(params: {
+  offerContexts: Map<number, OfferContext>
+  campaignCandidates: CampaignAttributionCandidate[]
+  matchedAsinCandidates: CampaignAttributionCandidate[]
+  sourceAsin: string | null
+}): number | null {
+  const asin = params.sourceAsin
+  if (!asin) return null
+
+  if (params.matchedAsinCandidates.length === 1) {
+    const id = params.matchedAsinCandidates[0]?.campaignId
+    return Number.isFinite(id) ? id : null
+  }
+
+  const offersWithAsin: number[] = []
+  for (const [offerId, ctx] of params.offerContexts.entries()) {
+    if (ctx.asins.has(asin)) offersWithAsin.push(offerId)
+  }
+  if (offersWithAsin.length !== 1) return null
+
+  const offerId = offersWithAsin[0]
+  const forOffer = params.campaignCandidates.filter((c) => c.offerId === offerId)
+  const preferred = preferOnlineCampaignCandidates(forOffer)
+  if (preferred.length !== 1) return null
+
+  const id = preferred[0]?.campaignId
+  return Number.isFinite(id) ? id : null
 }
 
 function roundTo(value: number, decimals = 4): number {
@@ -1918,6 +1952,12 @@ export async function persistAffiliateCommissionAttributions(params: {
         sourceAsin: entry.sourceAsin,
         sourceLinkId: entry.sourceLinkId,
         offerId: null,
+        campaignId: resolveFailureAuditCampaignId({
+          offerContexts,
+          campaignCandidates,
+          matchedAsinCandidates,
+          sourceAsin,
+        }),
         commissionAmount: entry.commission,
         currency: entry.currency,
         reasonCode: resolveAffiliateAttributionFailureReasonCode({
@@ -1980,9 +2020,9 @@ export async function persistAffiliateCommissionAttributions(params: {
         await db.exec(
           `
             INSERT INTO openclaw_affiliate_attribution_failures
-              (user_id, report_date, platform, source_order_id, source_mid, source_asin, source_link_id, offer_id, commission_amount, currency, reason_code, reason_detail, raw_payload)
+              (user_id, report_date, platform, source_order_id, source_mid, source_asin, source_link_id, offer_id, campaign_id, commission_amount, currency, reason_code, reason_detail, raw_payload)
             VALUES
-              (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
             row.userId,
@@ -1993,6 +2033,7 @@ export async function persistAffiliateCommissionAttributions(params: {
             row.sourceAsin,
             row.sourceLinkId,
             row.offerId,
+            row.campaignId,
             row.commissionAmount,
             row.currency,
             row.reasonCode,
