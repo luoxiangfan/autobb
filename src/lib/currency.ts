@@ -5,7 +5,7 @@
  * 若库中无数据或未配置 API Key，则回退到下方静态表。
  */
 import { parseCommissionPayoutValue, parseProductPriceMoney } from '@/lib/offer-monetization'
-import { getEffectiveUsdRates } from '@/lib/exchange-rates-service'
+import { getEffectiveUsdRates } from '@/lib/exchange-rates-cache'
 
 /**
  * 静态回退汇率（基准货币：USD），与 DB 中字段含义一致：每 1 USD 可兑换的外币数量

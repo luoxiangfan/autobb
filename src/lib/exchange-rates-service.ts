@@ -4,6 +4,7 @@
  */
 
 import { getDatabase } from '@/lib/db'
+import { setUsdRatesMemoryCache } from '@/lib/exchange-rates-cache'
 
 export type ExchangeRateApiPayload = {
   result: string
@@ -15,19 +16,6 @@ export type ExchangeRateApiPayload = {
   time_next_update_utc?: string
   base_code?: string
   conversion_rates?: Record<string, number>
-}
-
-let usdRatesFromDb: Record<string, number> | null = null
-
-export function getEffectiveUsdRates(fallback: Record<string, number>): Record<string, number> {
-  if (usdRatesFromDb && Object.keys(usdRatesFromDb).length > 0) {
-    return { ...fallback, ...usdRatesFromDb }
-  }
-  return fallback
-}
-
-export function setUsdRatesMemoryCache(rates: Record<string, number> | null): void {
-  usdRatesFromDb = rates && Object.keys(rates).length > 0 ? rates : null
 }
 
 export function getExchangeRateApiKey(): string | undefined {
