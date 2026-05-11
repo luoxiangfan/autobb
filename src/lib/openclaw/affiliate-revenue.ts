@@ -57,6 +57,18 @@ const PARTNERBOOST_COMMISSION_ALIASES = [
   'earning',
 ]
 
+const YEAHPROMOS_COMMISSION_ALIASES = [
+  'sale_comm',
+  'saleComm',
+  'commission',
+  'commission_amount',
+  'commissionAmount',
+  'estCommission',
+  'est_commission',
+  'earnings',
+  'earning',
+]
+
 const PARTNERBOOST_ORDER_ID_ALIASES = [
   'order_id',
   'orderId',
@@ -384,6 +396,47 @@ function parsePartnerboostCommissionValue(row: any): number {
     } else if (normalizedKey.includes('commission')) {
       score = 3
     } else if (normalizedKey.includes('salecomm')) {
+      score = 2
+    } else if (normalizedKey.includes('earning')) {
+      score = 1
+    }
+
+    if (score < 0) continue
+
+    const parsed = parseNumberish(value, 0)
+    if (parsed <= 0) continue
+
+    if (score > bestScore || (score === bestScore && parsed > bestValue)) {
+      bestScore = score
+      bestValue = parsed
+    }
+  }
+
+  return bestValue > 0 ? bestValue : direct
+}
+
+function parseYeahPromosCommissionValue(row: any): number {
+  const direct = parseNumberish(getFieldValue(row, YEAHPROMOS_COMMISSION_ALIASES), 0)
+  if (direct > 0) return direct
+  if (!row || typeof row !== 'object') return direct
+
+  let bestScore = -1
+  let bestValue = 0
+
+  for (const [key, value] of Object.entries(row)) {
+    if (isEmptyValue(value)) continue
+    const normalizedKey = normalizeLookupKey(key)
+    if (!normalizedKey) continue
+    if (normalizedKey.includes('rate') || normalizedKey.includes('ratio') || normalizedKey.includes('percent') || normalizedKey.includes('pct')) {
+      continue
+    }
+
+    let score = -1
+    if (normalizedKey.includes('salecomm')) {
+      score = 4
+    } else if (normalizedKey.includes('est') && normalizedKey.includes('commission')) {
+      score = 3
+    } else if (normalizedKey.includes('commission')) {
       score = 2
     } else if (normalizedKey.includes('earning')) {
       score = 1
@@ -759,7 +812,7 @@ async function fetchYeahPromosCommission(params: {
     const rows = normalized.rows
 
     for (const row of rows) {
-      const commission = parseNumberish(row?.sale_comm, 0)
+      const commission = parseYeahPromosCommissionValue(row)
       totalCommission += commission
 
       if (commission > 0) {
