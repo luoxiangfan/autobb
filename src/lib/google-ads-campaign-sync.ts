@@ -332,7 +332,7 @@ export async function syncCampaignsFromGoogleAds(
         console.log(`[GoogleAds Sync] Found ${campaigns.length} campaigns for account ${account.customer_id}`)
 
         // 5. 保存广告系列到数据库并创建关联 Offer
-        for (const { campaign, campaign_config } of campaigns) {
+        for (const { campaign, campaign_config, adGroupId, adId } of campaigns) {
           if (options?.dryRun) {
             console.log(`[Dry Run] Would sync campaign: ${campaign.campaign_name} (${campaign.campaign_id})`)
             result.syncedCount++
@@ -353,6 +353,8 @@ export async function syncCampaignsFromGoogleAds(
               googleAdsAccountId: account.id,
               campaign,
               offerId: offerResult.offerId,
+              adGroupId,
+              adId,
             })
 
             result.syncedCount++
@@ -403,7 +405,7 @@ export async function syncCampaignsFromGoogleAds(
               try {
                 if (campaign_config && Object.keys(campaign_config).length > 0) {
                   // 🔧 更新 campaign_config（只更新从 Google 同步的广告系列）
-                  const updated = await updateCampaignConfig(campaignId, campaign_config)
+                  const updated = await updateCampaignConfig(campaignId, campaign_config, adGroupId || null, adId || null)
                   
                   if (updated) {
                     // 同时更新备份中的 campaign_config
@@ -510,7 +512,9 @@ async function fetchAllDataFromGoogleAds(params: {
         ad_group_ad.ad.type,
         ad_group_ad.ad.responsive_search_ad.headlines,
         ad_group_ad.ad.responsive_search_ad.descriptions,
-        ad_group_ad.ad.final_urls
+        ad_group_ad.ad.name,
+        ad_group_ad.ad.final_urls,
+        ad_group_ad.ad.final_url_suffix
       FROM ad_group_ad
       WHERE campaign.status != 'REMOVED'
         AND ad_group.status != 'REMOVED'
@@ -711,7 +715,9 @@ async function fetchAllDataFromGoogleAds(params: {
             ad_type: row.ad_group_ad?.ad?.type,
             headlines: row.ad_group_ad?.ad?.responsive_search_ad?.headlines,
             descriptions: row.ad_group_ad?.ad?.responsive_search_ad?.descriptions,
-            final_urls: row.ad_group_ad?.ad?.responsive_search_ad?.final_urls,
+            final_urls: row.ad_group_ad?.ad?.final_urls,
+            final_url_suffix: row.ad_group_ad?.ad?.final_url_suffix,
+            name: row.ad_group_ad?.ad?.name,
           })
           adsMap.set(adGroupId, ads)
         }
@@ -807,6 +813,8 @@ async function fetchAllDataFromGoogleAds(params: {
       // 构建广告系列对象
       campaigns.push({
         campaign,
+        adGroupId: adGroup?.ad_group_id || null,
+        adId: ads[0]?.ad_id || null,
         campaign_config: {
           campaignName: campaign.campaign_name,
           budgetAmount: campaign.budget_amount,
@@ -815,13 +823,13 @@ async function fetchAllDataFromGoogleAds(params: {
           targetLanguage: getLanguageName(locations.find((loc: any) => loc.type === 'LANGUAGE')?.display_name) || 'English',
           biddingStrategy: (campaign as any).bidding_strategy || 'MAXIMIZE_CLICKS',
           marketingObjective: 'WEB_TRAFFIC',
-          finalUrlSuffix: campaign.final_url_suffix || '',
+          finalUrlSuffix: ads[0]?.final_url_suffix || '',
           adGroupName: adGroup?.ad_group_name || '',
           maxCpcBid: campaign.cpc_bid_ceiling_micros,
           keywords: positiveKeywords,
           negativeKeywords: negativeKeywords,
           negativeKeywordMatchType: negativeKeywordMatchType,
-          adName: ads[0]?.ad_name || `RSA_${campaign.campaign_name}`,
+          adName: ads[0]?.name || `RSA_${campaign.campaign_name}`,
           headlines: ads[0]?.headlines?.map((h: any) => h.text) || [],
           descriptions: ads[0]?.descriptions?.map((d: any) => d.text) || [],
           finalUrls: ads[0]?.final_urls || [],
@@ -865,8 +873,10 @@ async function saveCampaignToDatabase(params: {
   googleAdsAccountId: number
   campaign: GoogleAdsCampaign
   offerId?: number  // 🆕 可选的 offer_id
+  adGroupId?: number | null  // 🆕 可选的 ad_group_id
+  adId?: number | null  // 🆕 可选的 ad_id
 }): Promise<string> {
-  const { userId, googleAdsAccountId, campaign, offerId } = params
+  const { userId, googleAdsAccountId, campaign, offerId, adGroupId, adId } = params
   const db = await getDatabase()
 
   // 检查是否已存在
@@ -887,7 +897,9 @@ async function saveCampaignToDatabase(params: {
         status = ?,
         google_ads_account_id = ?,
         synced_from_google_ads = ${db.type === 'postgres' ? 'FALSE' : '0'},
-        updated_at = ?
+        updated_at = ?,
+        google_ad_group_id = ?,
+        google_ad_id = ?
       WHERE campaign_id = ?`,
       [
         campaign.cpc_bid_ceiling_micros || null,  // 🆕 可选的 max_cpc 字段
@@ -897,6 +909,8 @@ async function saveCampaignToDatabase(params: {
         campaign.status,
         googleAdsAccountId,
         new Date(),
+        `${adGroupId}` || null,  // 🆕 可选的 ad_group_id 字段
+        `${adGroupId}~${adId}` || null,  // 🆕 可选的 ad_id 字段
         existing.campaign_id,
       ]
     )
@@ -921,9 +935,11 @@ async function saveCampaignToDatabase(params: {
         needs_offer_completion,
         max_cpc,
         google_campaign_id,
+        google_ad_group_id,
+        google_ad_id,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         googleAdsAccountId,
@@ -935,6 +951,8 @@ async function saveCampaignToDatabase(params: {
         offerId || null,  // 🆕 如果提供了 offerId，则关联
         campaign.cpc_bid_ceiling_micros || null,  // 🆕 可选的 max_cpc 字段
         campaign.campaign_id,  // google_campaign_id
+        `${adGroupId}` || null,  // 🆕 可选的 ad_group_id 字段
+        `${adGroupId}~${adId}` || null,  // 🆕 可选的 ad_id 字段
         new Date(),
         new Date(),
       ]

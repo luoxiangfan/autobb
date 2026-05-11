@@ -837,7 +837,9 @@ function buildCampaignConfig(
  */
 export async function updateCampaignConfig(
   campaignId: string,
-  campaignConfig: any
+  campaignConfig: any,
+  adGroupId: number | null,
+  adId: number | null
 ): Promise<boolean> {
   const db = await getDatabase()
   
@@ -877,8 +879,8 @@ export async function updateCampaignConfig(
   `, [
     JSON.stringify(campaignConfig),
     new Date(),
-    campaignConfig.adGroupId || null,
-    `${campaignConfig.adGroupId}~${campaignConfig.adId}` || null,
+    `${adGroupId}` || null,
+    `${adGroupId}~${adId}` || null,
     campaignId,
   ])
   
