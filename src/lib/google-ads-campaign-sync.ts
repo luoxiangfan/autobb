@@ -423,7 +423,7 @@ export async function syncCampaignsFromGoogleAds(
                         SET campaign_config = ?, updated_at = ?
                         WHERE id = ?
                       `, [
-                        JSON.stringify(campaign_config),
+                        campaign_config,
                         new Date(),
                         latestBackup.id
                       ])

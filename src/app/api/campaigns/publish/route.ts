@@ -1233,7 +1233,7 @@ export async function POST(request: NextRequest) {
           userId,
           _offerId,
           creative.id,  // ad_creative_id
-          JSON.stringify({
+          {
             campaign_id: campaignId,
             offer_id: _offerId,
             google_ads_account_id: resolvedGoogleAdsAccountId,
@@ -1243,8 +1243,8 @@ export async function POST(request: NextRequest) {
             max_cpc: persistedMaxCpc,
             target_cpa: null,
             status: 'PAUSED',
-          }),
-          JSON.stringify(normalizedCampaignConfig),
+          },
+          normalizedCampaignConfig,
           'auto',  // backup_type
           'publish',  // backup_source
           1,  // backup_version

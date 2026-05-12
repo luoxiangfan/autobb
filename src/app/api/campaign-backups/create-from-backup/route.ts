@@ -379,7 +379,7 @@ async function batchCreateToGoogleAds(params: {
                 campaign_config = ?,
                 updated_at = ?
             WHERE id = ?
-          `, [newAdCreativeId, JSON.stringify(finalCampaignConfig), new Date(), backupId])
+          `, [newAdCreativeId, finalCampaignConfig, new Date(), backupId])
         }
       }
       const offer = await db.queryOne(`

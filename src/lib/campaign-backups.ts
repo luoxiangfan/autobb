@@ -92,7 +92,7 @@ export async function createCampaignBackup(input: CreateCampaignBackupInput): Pr
   `, [
     input.userId,
     input.offerId,
-    JSON.stringify(input.campaignData),
+    input.campaignData,
     input.campaignConfig ? input.campaignConfig : null,  // 🔧 新增
     input.backupType || 'auto',
     input.backupSource || 'autoads',
@@ -459,8 +459,8 @@ export async function autoBackupCampaign(params: {
           updated_at = ?
       WHERE id = ?
     `, [
-      JSON.stringify(campaign),
-      campaign.campaign_config ? JSON.stringify(campaign.campaign_config) : null,
+      campaign,
+      campaign.campaign_config ? campaign.campaign_config : null,
       params.backupSource,
       newBackupVersion,
       new Date(),
