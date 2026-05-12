@@ -498,26 +498,39 @@ async function persistAffiliateCommissionRawSnapshots(params: {
   userId: number
   reportDate: string
   snapshots: AffiliateCommissionRawSnapshot[]
-  replacePlatforms: AffiliatePlatform[]
 }): Promise<void> {
   const db = await getDatabase()
-  const replacePlatforms = Array.from(new Set(params.replacePlatforms))
-  const placeholders = replacePlatforms.map(() => '?').join(', ')
 
   await db.transaction(async () => {
-    if (replacePlatforms.length > 0) {
-      await db.exec(
+    for (const snapshot of params.snapshots) {
+      const requestPayload = toDbJsonObjectField(snapshot.requestPayload ?? null, db.type, null)
+      const responsePayload = toDbJsonObjectField(snapshot.responsePayload ?? null, db.type, null)
+      const updateResult = await db.exec(
         `
-          DELETE FROM openclaw_affiliate_commission_raw_sync_payloads
+          UPDATE openclaw_affiliate_commission_raw_sync_payloads
+          SET request_payload = ?,
+              response_payload = ?
           WHERE user_id = ?
             AND report_date = ?
-            AND platform IN (${placeholders})
+            AND platform = ?
+            AND source_api = ?
+            AND page_no = ?
         `,
-        [params.userId, params.reportDate, ...replacePlatforms]
+        [
+          requestPayload,
+          responsePayload,
+          params.userId,
+          params.reportDate,
+          snapshot.platform,
+          snapshot.sourceApi,
+          snapshot.page,
+        ]
       )
-    }
 
-    for (const snapshot of params.snapshots) {
+      if ((updateResult?.changes ?? 0) > 0) {
+        continue
+      }
+
       await db.exec(
         `
           INSERT INTO openclaw_affiliate_commission_raw_sync_payloads
@@ -531,8 +544,8 @@ async function persistAffiliateCommissionRawSnapshots(params: {
           snapshot.platform,
           snapshot.sourceApi,
           snapshot.page,
-          toDbJsonObjectField(snapshot.requestPayload ?? null, db.type, null),
-          toDbJsonObjectField(snapshot.responsePayload ?? null, db.type, null),
+          requestPayload,
+          responsePayload,
         ]
       )
     }
@@ -1081,7 +1094,6 @@ export async function fetchAffiliateCommissionRevenue(params: {
       userId: params.userId,
       reportDate,
       snapshots: rawSnapshots,
-      replacePlatforms: queriedPlatforms,
     })
   } catch (error: any) {
     const message = String(error?.message || '')
