@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import 'dotenv/config'
 import { getDatabase } from '../src/lib/db'
-import { getOpenclawSettingsMap } from '../src/lib/openclaw/settings'
+import { getAffiliateSyncSettingsMap } from '../src/lib/openclaw/settings'
 import { fetchAffiliateCommissionRevenue } from '../src/lib/openclaw/affiliate-revenue'
 
 type CliArgs = {
@@ -111,14 +111,14 @@ async function loadTokenDiagnostics(userId: number): Promise<void> {
       SELECT key, value, encrypted_value, is_sensitive
       FROM system_settings
       WHERE user_id = ?
-        AND category = 'openclaw'
+        AND category = 'affiliate_sync'
         AND key IN ('partnerboost_token', 'yeahpromos_token', 'yeahpromos_site_id')
       ORDER BY key
     `,
     [userId]
   )
 
-  const settings = await getOpenclawSettingsMap(userId)
+  const settings = await getAffiliateSyncSettingsMap(userId)
   const settingsPbToken = String(settings.partnerboost_token || '').trim()
   const settingsYpToken = String(settings.yeahpromos_token || '').trim()
   const settingsYpSiteId = String(settings.yeahpromos_site_id || '').trim()
