@@ -671,6 +671,69 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
     expect(campaignIds).toContain(7002)
   })
 
+  it('normalizes affiliate platform brand metadata suffixes like (ZYG) and VC', async () => {
+    const today = formatLocalYmd(new Date())
+
+    query.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('AS event_id')) return []
+      if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes('AS event_id')) return []
+      if (sql.includes('FROM offers')) {
+        return [
+          { id: 6004, brand: 'Lefant', url: 'https://www.amazon.com/dp/B0LEFANT01', final_url: null, affiliate_link: null },
+        ]
+      }
+      if (sql.includes('FROM affiliate_product_offer_links apol')) {
+        return []
+      }
+      if (sql.includes('FROM affiliate_products') && sql.includes('brand IS NOT NULL')) {
+        return [
+          { asin: 'B0LEFANT02', brand: 'Lefant UK(ZYG)' },
+          { asin: 'B0LEFANT03', brand: 'Lefant DE VC' },
+        ]
+      }
+      if (sql.includes('FROM campaigns c')) {
+        return [
+          { campaign_id: 7004, offer_id: 6004, brand: 'Lefant', created_at: `${today}T00:00:00.000Z`, cost: 60, clicks: 30 },
+        ]
+      }
+      return []
+    })
+
+    const result = await persistAffiliateCommissionAttributions({
+      userId: 13,
+      reportDate: today,
+      entries: [
+        {
+          platform: 'partnerboost',
+          reportDate: today,
+          commission: 12.5,
+          sourceAsin: 'B0LEFANT02',
+          raw: { id: 'evt-lefant-zyg' },
+        },
+        {
+          platform: 'partnerboost',
+          reportDate: today,
+          commission: 7.5,
+          sourceAsin: 'B0LEFANT03',
+          raw: { id: 'evt-lefant-vc' },
+        },
+      ],
+      replaceExisting: true,
+      lockHistorical: false,
+    })
+
+    expect(result.attributedCommission).toBe(20)
+    expect(result.unattributedCommission).toBe(0)
+    expect(result.attributedCampaigns).toBe(1)
+
+    const attributionInsertCalls = exec.mock.calls.filter(([sql]) =>
+      typeof sql === 'string' && sql.includes('INSERT INTO affiliate_commission_attributions')
+    )
+    expect(attributionInsertCalls).toHaveLength(2)
+    const campaignIds = attributionInsertCalls.map(([, params]) => (params as any[])[7])
+    expect(campaignIds.every((id) => id === 7004)).toBe(true)
+  })
+
   it('maps Livionex brand to Livfresh via alias', async () => {
     const today = formatLocalYmd(new Date())
 

@@ -221,10 +221,19 @@ function normalizeBrand(value: unknown): string | null {
     .replace(/\s+/g, ' ')
     .trim()
 
+  // Remove trailing partner metadata wrappers, e.g. "Lefant UK(ZYG)" -> "lefant uk".
+  while (/\s*[\(\[][^\)\]]*[\)\]]\s*$/.test(normalized)) {
+    normalized = normalized
+      .replace(/\s*[\(\[][^\)\]]*[\)\]]\s*$/, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
   // Remove store-related suffixes first (before country suffixes)
   normalized = normalized
     .replace(/\s+vc\s+store$/i, '')
     .replace(/\s+official\s+store$/i, '')
+    .replace(/\s+vc$/i, '')
     .replace(/\s+store$/i, '')
     .trim()
 
