@@ -118,6 +118,9 @@ export async function replaceUsdExchangeRatesInDb(params: {
       )
     }
   })
+
+  // Persist succeeded: always refresh in-memory cache from DB snapshot.
+  await loadUsdRatesFromDatabase()
 }
 
 export async function fetchLatestUsdRatesFromApi(): Promise<ExchangeRateApiPayload> {
@@ -166,7 +169,6 @@ export async function syncExchangeRatesFromRemote(): Promise<{ ok: true } | { ok
       timeLastUpdateUtc: payload.time_last_update_utc ?? null,
       timeNextUpdateUtc: payload.time_next_update_utc ?? null,
     })
-    await loadUsdRatesFromDatabase()
     return { ok: true }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
