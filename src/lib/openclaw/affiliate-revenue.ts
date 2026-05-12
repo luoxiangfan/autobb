@@ -3,10 +3,12 @@ import {
   type AffiliateCommissionRawEntry,
   type AffiliatePlatform,
 } from '@/lib/openclaw/affiliate-commission-attribution'
+import { getDatabase } from '@/lib/db'
+import { toDbJsonObjectField } from '@/lib/json-field'
 import { getOpenclawSettingsWithAffiliateSyncMap, parseNumber } from '@/lib/openclaw/settings'
 
 type PlatformQueryError = {
-  platform: AffiliatePlatform | 'attribution'
+  platform: AffiliatePlatform | 'attribution' | 'raw_audit'
   message: string
 }
 
@@ -481,6 +483,60 @@ type CommissionCollection = {
   totalCommission: number
   records: number
   entries: AffiliateCommissionRawEntry[]
+  rawSnapshots: AffiliateCommissionRawSnapshot[]
+}
+
+type AffiliateCommissionRawSnapshot = {
+  platform: AffiliatePlatform
+  sourceApi: string
+  page: number
+  requestPayload: unknown
+  responsePayload: unknown
+}
+
+async function persistAffiliateCommissionRawSnapshots(params: {
+  userId: number
+  reportDate: string
+  snapshots: AffiliateCommissionRawSnapshot[]
+  replacePlatforms: AffiliatePlatform[]
+}): Promise<void> {
+  const db = await getDatabase()
+  const replacePlatforms = Array.from(new Set(params.replacePlatforms))
+  const placeholders = replacePlatforms.map(() => '?').join(', ')
+
+  await db.transaction(async () => {
+    if (replacePlatforms.length > 0) {
+      await db.exec(
+        `
+          DELETE FROM openclaw_affiliate_commission_raw_sync_payloads
+          WHERE user_id = ?
+            AND report_date = ?
+            AND platform IN (${placeholders})
+        `,
+        [params.userId, params.reportDate, ...replacePlatforms]
+      )
+    }
+
+    for (const snapshot of params.snapshots) {
+      await db.exec(
+        `
+          INSERT INTO openclaw_affiliate_commission_raw_sync_payloads
+            (user_id, report_date, platform, source_api, page_no, request_payload, response_payload)
+          VALUES
+            (?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          params.userId,
+          params.reportDate,
+          snapshot.platform,
+          snapshot.sourceApi,
+          snapshot.page,
+          toDbJsonObjectField(snapshot.requestPayload ?? null, db.type, null),
+          toDbJsonObjectField(snapshot.responsePayload ?? null, db.type, null),
+        ]
+      )
+    }
+  })
 }
 
 async function fetchPartnerboostCommission(params: {
@@ -492,6 +548,7 @@ async function fetchPartnerboostCommission(params: {
   const endDate = toPartnerboostDate(params.reportDate)
 
   const reportRows: any[] = []
+  const rawSnapshots: AffiliateCommissionRawSnapshot[] = []
   let reportPage = 1
 
   while (reportPage <= PARTNERBOOST_MAX_PAGES) {
@@ -517,6 +574,22 @@ async function fetchPartnerboostCommission(params: {
     }
 
     const payload = await response.json() as any
+    rawSnapshots.push({
+      platform: 'partnerboost',
+      sourceApi: 'amazon_report',
+      page: reportPage,
+      requestPayload: {
+        page_size: PARTNERBOOST_PAGE_SIZE,
+        page: reportPage,
+        start_date: startDate,
+        end_date: endDate,
+        marketplace: '',
+        asins: '',
+        adGroupIds: '',
+        order_ids: '',
+      },
+      responsePayload: payload,
+    })
     const statusCode = Number(payload?.status?.code)
     if (!Number.isFinite(statusCode) || statusCode !== 0) {
       throw new Error(`PartnerBoost report error: ${payload?.status?.msg || statusCode}`)
@@ -599,6 +672,19 @@ async function fetchPartnerboostCommission(params: {
       }
 
       const payload = await response.json() as any
+      rawSnapshots.push({
+        platform: 'partnerboost',
+        sourceApi: 'transaction',
+        page: txPage,
+        requestPayload: {
+          begin_date: params.reportDate,
+          end_date: params.reportDate,
+          status: 'All',
+          page: txPage,
+          limit: PARTNERBOOST_PAGE_SIZE,
+        },
+        responsePayload: payload,
+      })
       const statusCode = Number(payload?.status?.code)
       if (!Number.isFinite(statusCode) || statusCode !== 0) {
         throw new Error(`PartnerBoost transaction error: ${payload?.status?.msg || statusCode}`)
@@ -760,6 +846,7 @@ async function fetchPartnerboostCommission(params: {
     totalCommission: roundTo2(totalCommission),
     records,
     entries,
+    rawSnapshots,
   }
 }
 
@@ -777,6 +864,7 @@ async function fetchYeahPromosCommission(params: {
   let totalCommission = 0
   let records = 0
   const entries: AffiliateCommissionRawEntry[] = []
+  const rawSnapshots: AffiliateCommissionRawSnapshot[] = []
 
   while (pagesFetched < YEAHPROMOS_MAX_PAGES) {
     const url = new URL('https://yeahpromos.com/index/Getorder/getorder')
@@ -803,6 +891,20 @@ async function fetchYeahPromosCommission(params: {
     }
 
     const payload = await response.json() as any
+    rawSnapshots.push({
+      platform: 'yeahpromos',
+      sourceApi: 'getorder',
+      page,
+      requestPayload: {
+        site_id: params.siteId,
+        startDate: params.reportDate,
+        endDate: params.reportDate,
+        page,
+        limit: params.limit,
+        is_amazon: params.isAmazonOnly ? 1 : 0,
+      },
+      responsePayload: payload,
+    })
     const code = normalizeYeahPromosCode(payload)
     if (code !== null && code !== 100000) {
       throw new Error(`YeahPromos order error: ${code}`)
@@ -877,6 +979,7 @@ async function fetchYeahPromosCommission(params: {
     totalCommission: roundTo2(totalCommission),
     records,
     entries,
+    rawSnapshots,
   }
 }
 
@@ -892,6 +995,7 @@ export async function fetchAffiliateCommissionRevenue(params: {
   const breakdown: PlatformBreakdown[] = []
   const errors: PlatformQueryError[] = []
   const attributionEntries: AffiliateCommissionRawEntry[] = []
+  const rawSnapshots: AffiliateCommissionRawSnapshot[] = []
 
   const partnerboostToken = String(settings.partnerboost_token || '').trim()
   if (partnerboostToken) {
@@ -915,6 +1019,7 @@ export async function fetchAffiliateCommissionRevenue(params: {
         currency: 'USD',
       })
       attributionEntries.push(...metrics.entries)
+      rawSnapshots.push(...metrics.rawSnapshots)
     } catch (error: any) {
       errors.push({
         platform: 'partnerboost',
@@ -949,6 +1054,7 @@ export async function fetchAffiliateCommissionRevenue(params: {
         currency: 'USD',
       })
       attributionEntries.push(...metrics.entries)
+      rawSnapshots.push(...metrics.rawSnapshots)
     } catch (error: any) {
       errors.push({
         platform: 'yeahpromos',
@@ -968,6 +1074,28 @@ export async function fetchAffiliateCommissionRevenue(params: {
     attributedOffers: 0,
     attributedCampaigns: 0,
     writtenRows: 0,
+  }
+
+  try {
+    await persistAffiliateCommissionRawSnapshots({
+      userId: params.userId,
+      reportDate,
+      snapshots: rawSnapshots,
+      replacePlatforms: queriedPlatforms,
+    })
+  } catch (error: any) {
+    const message = String(error?.message || '')
+    if (
+      /openclaw_affiliate_commission_raw_sync_payloads/i.test(message)
+      && /(no such table|does not exist)/i.test(message)
+    ) {
+      console.warn('[affiliate-revenue] raw payload audit table missing, skip raw payload persistence')
+    } else {
+      errors.push({
+        platform: 'raw_audit',
+        message: `[raw_audit] ${error?.message || 'Raw payload persistence failed'}`,
+      })
+    }
   }
 
   try {

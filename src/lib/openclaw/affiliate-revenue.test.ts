@@ -3,6 +3,9 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 const hoisted = vi.hoisted(() => ({
   getOpenclawSettingsWithAffiliateSyncMapMock: vi.fn(),
   persistAffiliateCommissionAttributionsMock: vi.fn(),
+  getDatabaseMock: vi.fn(),
+  dbExecMock: vi.fn(),
+  dbTransactionMock: vi.fn(),
 }))
 
 vi.mock('@/lib/openclaw/settings', () => ({
@@ -15,6 +18,10 @@ vi.mock('@/lib/openclaw/settings', () => ({
 
 vi.mock('@/lib/openclaw/affiliate-commission-attribution', () => ({
   persistAffiliateCommissionAttributions: hoisted.persistAffiliateCommissionAttributionsMock,
+}))
+
+vi.mock('@/lib/db', () => ({
+  getDatabase: hoisted.getDatabaseMock,
 }))
 
 import { fetchAffiliateCommissionRevenue } from './affiliate-revenue'
@@ -40,6 +47,14 @@ function makeErrorResponse(status: number, text: string): any {
 describe('fetchAffiliateCommissionRevenue partnerboost commission sync', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    hoisted.dbExecMock.mockReset()
+    hoisted.dbTransactionMock.mockReset()
+    hoisted.dbTransactionMock.mockImplementation(async (fn: () => Promise<unknown>) => await fn())
+    hoisted.getDatabaseMock.mockResolvedValue({
+      type: 'sqlite',
+      exec: hoisted.dbExecMock,
+      transaction: hoisted.dbTransactionMock,
+    })
 
     hoisted.getOpenclawSettingsWithAffiliateSyncMapMock.mockResolvedValue({
       partnerboost_token: 'pb-token',
@@ -119,6 +134,10 @@ describe('fetchAffiliateCommissionRevenue partnerboost commission sync', () => {
     expect(entry?.sourceAsin).toBe('B0CCY6VG8Z')
     expect(entry?.sourceLinkId).toBe('a6e3PBLq_xxx')
     expect(entry?.sourceLink).toContain('/dp/B0CCY6VG8Z')
+    const rawPayloadInsertCalls = hoisted.dbExecMock.mock.calls.filter(([sql]) =>
+      typeof sql === 'string' && sql.includes('INSERT INTO openclaw_affiliate_commission_raw_sync_payloads')
+    )
+    expect(rawPayloadInsertCalls).toHaveLength(2)
   })
 
   it('uses single report adGroup as fallback when transaction row has no match and no linkId', async () => {
