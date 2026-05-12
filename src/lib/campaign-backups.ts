@@ -418,55 +418,19 @@ export async function autoBackupCampaign(params: {
   // 🔧 优化：备份唯一（offer_id, user_id），达到稳定状态后不再更新
   // 检查是否已有备份
   const existingBackup = await db.queryOne(`
-    SELECT id, backup_source, backup_version
+    SELECT id, backup_source, backup_version, created_at
     FROM campaign_backups
     WHERE offer_id = ? AND user_id = ?
     ORDER BY created_at DESC
     LIMIT 1
-  `, [campaign.offer_id, params.userId]) as { id: number; backup_source: string; backup_version: number } | undefined
+  `, [campaign.offer_id, params.userId]) as {
+    id: number
+    backup_source: 'autoads' | 'google_ads'
+    backup_version: number
+    created_at: string
+  } | undefined
 
-  // 🔧 检查是否需要更新备份
-  let shouldUpdate = true
-  
-  if (existingBackup) {
-    // 情况一：backup_source='google_ads' 且 backup_version=2，已达到稳定状态，不再更新
-    if (existingBackup.backup_source === 'google_ads' && existingBackup.backup_version >= 2) {
-      shouldUpdate = false
-      console.log('[Auto Backup] Skip update: google_ads backup version 2 already exists for campaign:', params.campaignId)
-    }
-    // 情况二：backup_source='autoads' 且 backup_version=1，已达到稳定状态，不再更新
-    else if (existingBackup.backup_source === 'autoads' && existingBackup.backup_version >= 1) {
-      shouldUpdate = false
-      console.log('[Auto Backup] Skip update: autoads backup version 1 already exists for campaign:', params.campaignId)
-    }
-  }
-
-  if (shouldUpdate && existingBackup) {
-    // 🔧 更新已有备份
-    console.log('[Auto Backup] Updating existing backup for campaign:', params.campaignId)
-    
-    // 确定备份版本
-    const newBackupVersion = params.backupSource === 'google_ads' 
-      ? Math.max(existingBackup.backup_version, 2)  // google_ads 至少为 2
-      : existingBackup.backup_version
-    
-    await db.exec(`
-      UPDATE campaign_backups
-      SET campaign_data = ?,
-          campaign_config = ?,
-          backup_source = ?,
-          backup_version = ?,
-          updated_at = ?
-      WHERE id = ?
-    `, [
-      campaign,
-      campaign.campaign_config ? campaign.campaign_config : null,
-      params.backupSource,
-      newBackupVersion,
-      new Date(),
-      existingBackup.id
-    ])
-  } else if (!existingBackup) {
+  if (!existingBackup) {
     // 没有已有备份，创建新备份
     console.log('[Auto Backup] Creating new backup for campaign:', params.campaignId)
     
@@ -489,7 +453,49 @@ export async function autoBackupCampaign(params: {
       adCreativeId: campaign.ad_creative_id,
     })
   } else {
-    // 已有备份且已达到稳定状态，跳过更新
-    console.log('[Auto Backup] Backup already stable, skipping update for campaign:', params.campaignId)
+    // 已有备份：
+    // 1) autoads：创建后永不更新
+    // 2) google_ads：仅在首次创建满 7 天后，允许一次升级到 version=2
+    if (existingBackup.backup_source === 'autoads') {
+      console.log('[Auto Backup] Skip update: autoads backup is immutable after creation:', params.campaignId)
+      return
+    }
+
+    if (existingBackup.backup_source !== 'google_ads') {
+      console.log('[Auto Backup] Skip update: unsupported backup source:', existingBackup.backup_source)
+      return
+    }
+
+    if (existingBackup.backup_version >= 2) {
+      console.log('[Auto Backup] Skip update: google_ads backup already upgraded to version 2:', params.campaignId)
+      return
+    }
+
+    const createdAtMs = new Date(existingBackup.created_at).getTime()
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
+    const elapsedMs = Date.now() - createdAtMs
+    const hasReachedDay7 = Number.isFinite(createdAtMs) && elapsedMs >= sevenDaysMs
+
+    if (!hasReachedDay7) {
+      console.log('[Auto Backup] Skip update: google_ads backup has not reached day 7 yet:', params.campaignId)
+      return
+    }
+
+    console.log('[Auto Backup] Day-7 update for google_ads backup:', params.campaignId)
+    await db.exec(`
+      UPDATE campaign_backups
+      SET campaign_data = ?,
+          campaign_config = ?,
+          backup_source = ?,
+          backup_version = 2,
+          updated_at = ?
+      WHERE id = ?
+    `, [
+      campaign,
+      campaign.campaign_config ? campaign.campaign_config : null,
+      'google_ads',
+      new Date(),
+      existingBackup.id,
+    ])
   }
 }
