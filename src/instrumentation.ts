@@ -27,20 +27,20 @@ export async function register() {
       }
     }
 
-    // 汇率：独立 scheduler 进程写入 DB 后，本进程内存需定期从 DB 重载（默认 1 小时；VERCEL 上默认关闭）
-    if (!skipRuntimeDbInit) {
-      const raw = process.env.EXCHANGE_RATE_CACHE_RELOAD_MS
-      const disabled = raw === '0' || raw === 'false'
-      const defaultMs = process.env.VERCEL ? 0 : 60 * 60 * 1000
-      const intervalMs = disabled ? 0 : Number(raw || defaultMs)
-      if (intervalMs > 0) {
-        const tick = () => {
-          void import('./lib/exchange-rates-service')
-            .then((m) => m.loadUsdRatesFromDatabase())
-            .catch((e) => console.warn('[exchange-rates] periodic cache reload failed:', e))
-        }
-        setInterval(tick, intervalMs)
-      }
+    // 汇率：无论是否跳过运行时 DB 初始化，都要在当前进程预热一次内存缓存；
+    // 否则 docker-entrypoint 场景下会长期停留在静态回退汇率。
+    const raw = process.env.EXCHANGE_RATE_CACHE_RELOAD_MS
+    const disabled = raw === '0' || raw === 'false'
+    const defaultMs = process.env.VERCEL ? 0 : 60 * 60 * 1000
+    const intervalMs = disabled ? 0 : Number(raw || defaultMs)
+    const tick = () => {
+      void import('./lib/exchange-rates-service')
+        .then((m) => m.loadUsdRatesFromDatabase())
+        .catch((e) => console.warn('[exchange-rates] periodic cache reload failed:', e))
+    }
+    tick()
+    if (intervalMs > 0) {
+      setInterval(tick, intervalMs)
     }
 
     // 🔥 修复（2025-01-02）：移除重复的队列初始化
