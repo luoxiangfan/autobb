@@ -1793,6 +1793,12 @@ export async function persistAffiliateCommissionAttributions(params: {
           current.push(candidate)
           brandToCampaigns.set(brand, current)
         }
+
+        for (const asin of offerContext.asins) {
+          const current = asinToCampaigns.get(asin) || []
+          current.push(candidate)
+          asinToCampaigns.set(asin, current)
+        }
       }
     }
 
