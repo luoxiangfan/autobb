@@ -601,6 +601,74 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
     expect(rawPayload._autoads_attribution_rule).toBe('brand_equal_split')
   })
 
+  it('uses linked affiliate product brand as campaign brand alias for fallback attribution', async () => {
+    const today = formatLocalYmd(new Date())
+
+    query.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('AS event_id')) return []
+      if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes('AS event_id')) return []
+      if (sql.includes('FROM offers')) {
+        return [
+          { id: 6194, brand: 'Max & Lily', url: 'https://www.amazon.com/dp/B0BLTB51D7', final_url: null, affiliate_link: null },
+        ]
+      }
+      if (sql.includes('FROM affiliate_product_offer_links apol')) {
+        return [
+          { offer_id: 6194, asin: 'B0BLTB51D7', brand: "Max & Lily Kid's Furniture" },
+        ]
+      }
+      if (sql.includes('FROM affiliate_products') && sql.includes('brand IS NOT NULL')) {
+        return [
+          { asin: 'B08KTR8FJJ', brand: "Max & Lily Kid's Furniture" },
+        ]
+      }
+      if (sql.includes('FROM campaigns c')) {
+        return [
+          { campaign_id: 4970, offer_id: 6194, brand: 'Max & Lily', campaign_status: 'ENABLED', created_at: `${today}T00:00:00.000Z`, cost: 8.02, clicks: 5 },
+        ]
+      }
+      return []
+    })
+
+    const result = await persistAffiliateCommissionAttributions({
+      userId: 1,
+      reportDate: today,
+      entries: [
+        {
+          platform: 'yeahpromos',
+          reportDate: today,
+          commission: 191.1375,
+          sourceAsin: 'B08KTR8FJJ',
+          raw: {
+            id: 'evt-max-lily-1',
+            advert_name: "Max & Lily Kid's Furniture",
+          },
+        },
+      ],
+      replaceExisting: true,
+      lockHistorical: false,
+    })
+
+    expect(result.attributedCommission).toBe(191.1375)
+    expect(result.unattributedCommission).toBe(0)
+    expect(result.attributedCampaigns).toBe(1)
+
+    const attributionInsertCalls = exec.mock.calls.filter(([sql]) =>
+      typeof sql === 'string' && sql.includes('INSERT INTO affiliate_commission_attributions')
+    )
+    expect(attributionInsertCalls).toHaveLength(1)
+    expect((attributionInsertCalls[0]?.[1] as any[])[6]).toBe(6194)
+    expect((attributionInsertCalls[0]?.[1] as any[])[7]).toBe(4970)
+
+    const rawPayload = JSON.parse((attributionInsertCalls[0]?.[1] as any[])[10])
+    expect(rawPayload._autoads_attribution_rule).toBe('brand_equal_split')
+
+    const failureInsertCalls = exec.mock.calls.filter(([sql]) =>
+      typeof sql === 'string' && sql.includes('INSERT INTO openclaw_affiliate_attribution_failures')
+    )
+    expect(failureInsertCalls).toHaveLength(0)
+  })
+
   it('normalizes brands with country suffixes for attribution matching', async () => {
     const today = formatLocalYmd(new Date())
 

@@ -136,7 +136,7 @@ type ExistingEventOutcome = {
 
 type OfferContext = {
   offerId: number
-  normalizedBrand: string | null
+  normalizedBrands: Set<string>
   asins: Set<string>
 }
 
@@ -1489,9 +1489,13 @@ async function queryOfferContexts(params: {
     if (finalUrlAsin) asins.add(finalUrlAsin)
     if (affiliateLinkAsin) asins.add(affiliateLinkAsin)
 
+    const normalizedBrand = normalizeBrand(row.brand)
+    const normalizedBrands = new Set<string>()
+    if (normalizedBrand) normalizedBrands.add(normalizedBrand)
+
     contexts.set(offerId, {
       offerId,
-      normalizedBrand: normalizeBrand(row.brand),
+      normalizedBrands,
       asins,
     })
   }
@@ -1499,9 +1503,10 @@ async function queryOfferContexts(params: {
   const productRows = await params.db.query<{
     offer_id: number
     asin: string | null
+    brand: string | null
   }>(
     `
-      SELECT apol.offer_id, ap.asin
+      SELECT apol.offer_id, ap.asin, ap.brand
       FROM affiliate_product_offer_links apol
       INNER JOIN affiliate_products ap ON ap.id = apol.product_id
       WHERE apol.user_id = ?
@@ -1518,6 +1523,9 @@ async function queryOfferContexts(params: {
     const context = contexts.get(offerId)
     if (!context) continue
     context.asins.add(asin)
+
+    const productBrand = normalizeBrand(row.brand)
+    if (productBrand) context.normalizedBrands.add(productBrand)
   }
 
   return contexts
@@ -1768,22 +1776,22 @@ export async function persistAffiliateCommissionAttributions(params: {
     for (const [offerId, offerContext] of offerContexts.entries()) {
       for (const asin of offerContext.asins) {
         const brands = asinToBrands.get(asin) || new Set<string>()
-        if (offerContext.normalizedBrand) brands.add(offerContext.normalizedBrand)
+        for (const brand of offerContext.normalizedBrands) {
+          brands.add(brand)
+        }
         asinToBrands.set(asin, brands)
       }
 
       const matchingCampaigns = campaignCandidates.filter((candidate) => candidate.offerId === offerId)
       for (const candidate of matchingCampaigns) {
-        if (candidate.normalizedBrand) {
-          const current = brandToCampaigns.get(candidate.normalizedBrand) || []
-          current.push(candidate)
-          brandToCampaigns.set(candidate.normalizedBrand, current)
-        }
+        const campaignBrands = offerContext.normalizedBrands.size > 0
+          ? Array.from(offerContext.normalizedBrands)
+          : (candidate.normalizedBrand ? [candidate.normalizedBrand] : [])
 
-        for (const asin of offerContext.asins) {
-          const current = asinToCampaigns.get(asin) || []
+        for (const brand of campaignBrands) {
+          const current = brandToCampaigns.get(brand) || []
           current.push(candidate)
-          asinToCampaigns.set(asin, current)
+          brandToCampaigns.set(brand, current)
         }
       }
     }
