@@ -1788,32 +1788,7 @@ export async function persistAffiliateCommissionAttributions(params: {
       }
     }
 
-    // Enhance asinToBrands with brand info from affiliate_products table
-    // This allows brand fallback attribution even when products have no offer links
-    const productBrandRows = await db.query<{ asin: string; brand: string }>(
-      `
-        SELECT asin, brand
-        FROM affiliate_products
-        WHERE user_id = ?
-          AND asin IS NOT NULL
-          AND brand IS NOT NULL
-      `,
-      [params.userId]
-    )
-
-    for (const row of productBrandRows) {
-      const asin = normalizeAsin(row.asin)
-      if (!asin) continue
-      const brand = normalizeBrand(row.brand)
-      if (!brand) continue
-
-      const brands = asinToBrands.get(asin) || new Set<string>()
-      brands.add(brand)
-      asinToBrands.set(asin, brands)
-    }
-
-    // NEW: Enhance asinToBrands with brand info from affiliate platform API
-    // Collect ASINs from commission entries that are not in any Offer
+    // Collect ASINs observed in current commission entries.
     const commissionAsins = new Set<string>()
     for (const entry of freshEntries) {
       if (entry.sourceAsin) {
@@ -1822,30 +1797,49 @@ export async function persistAffiliateCommissionAttributions(params: {
       }
     }
 
-    // Find ASINs that are not in any Offer context
-    const missingAsins: string[] = []
-    for (const asin of commissionAsins) {
-      let foundInOffer = false
-      for (const context of offerContexts.values()) {
-        if (context.asins.has(asin)) {
-          foundInOffer = true
-          break
-        }
-      }
-      if (!foundInOffer) {
-        missingAsins.push(asin)
+    // Enhance asinToBrands with brand info from affiliate_products table.
+    // IMPORTANT: restrict lookup to commission-related ASINs to avoid full-table scans.
+    const asinsMissingBrandInfo = Array.from(commissionAsins)
+      .filter((asin) => (asinToBrands.get(asin)?.size || 0) === 0)
+
+    for (const asinChunk of chunkArray(asinsMissingBrandInfo)) {
+      const productBrandRows = await db.query<{ asin: string; brand: string }>(
+        `
+          SELECT asin, brand
+          FROM affiliate_products
+          WHERE user_id = ?
+            AND asin IS NOT NULL
+            AND brand IS NOT NULL
+            AND UPPER(COALESCE(asin, '')) IN (${asinChunk.map(() => '?').join(', ')})
+        `,
+        [params.userId, ...asinChunk]
+      )
+
+      for (const row of productBrandRows) {
+        const asin = normalizeAsin(row.asin)
+        if (!asin) continue
+        const brand = normalizeBrand(row.brand)
+        if (!brand) continue
+
+        const brands = asinToBrands.get(asin) || new Set<string>()
+        brands.add(brand)
+        asinToBrands.set(asin, brands)
       }
     }
 
-    // Fetch brand information from affiliate platform API for missing ASINs
+    // Enhance asinToBrands with brand info from affiliate platform API as a final fallback.
+    const missingAsins = asinsMissingBrandInfo
+      .filter((asin) => (asinToBrands.get(asin)?.size || 0) === 0)
+
     if (missingAsins.length > 0) {
       const platformAsins = new Map<AffiliatePlatform, string[]>()
+      const missingAsinSet = new Set(missingAsins)
 
       // Group ASINs by platform based on commission entries
       for (const entry of freshEntries) {
         if (!entry.sourceAsin) continue
         const normalizedAsin = normalizeAsin(entry.sourceAsin)
-        if (!normalizedAsin || !missingAsins.includes(normalizedAsin)) continue
+        if (!normalizedAsin || !missingAsinSet.has(normalizedAsin)) continue
 
         const asinsForPlatform = platformAsins.get(entry.platform) || []
         if (!asinsForPlatform.includes(normalizedAsin)) {
