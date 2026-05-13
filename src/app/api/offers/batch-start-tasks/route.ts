@@ -24,8 +24,17 @@ export async function POST(request: NextRequest) {
     const userId = authResult.user.userId
     const body = await request.json()
     const { offerIds, enableClickFarm = true, enableUrlSwap = true } = body
+    const normalizedOfferIds = Array.isArray(offerIds)
+      ? Array.from(
+          new Set(
+            offerIds
+              .map((id) => Number(id))
+              .filter((id) => Number.isInteger(id) && id > 0)
+          )
+        )
+      : []
 
-    if (!offerIds || !Array.isArray(offerIds) || offerIds.length === 0) {
+    if (normalizedOfferIds.length === 0) {
       return NextResponse.json(
         { error: '请选择至少一个 Offer' },
         { status: 400 }
@@ -35,11 +44,12 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase()
 
     // 查询 Offer 信息
+    const offerIdPlaceholders = normalizedOfferIds.map(() => '?').join(',')
     const offers = await db.query(`
       SELECT id, url as offer_url, affiliate_link, target_country
       FROM offers
-      WHERE id = ANY(?) AND user_id = ? AND is_deleted = 0
-    `, [offerIds, userId]) as Array<{
+      WHERE id IN (${offerIdPlaceholders}) AND user_id = ? AND IS_DELETED_FALSE
+    `, [...normalizedOfferIds, userId]) as Array<{
       id: number
       offer_url: string
       affiliate_link: string

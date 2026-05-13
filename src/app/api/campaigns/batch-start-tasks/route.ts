@@ -24,8 +24,17 @@ export async function POST(request: NextRequest) {
     const userId = authResult.user.userId
     const body = await request.json()
     const { campaignIds, enableClickFarm = true, enableUrlSwap = true } = body
+    const normalizedCampaignIds = Array.isArray(campaignIds)
+      ? Array.from(
+          new Set(
+            campaignIds
+              .map((id) => Number(id))
+              .filter((id) => Number.isInteger(id) && id > 0)
+          )
+        )
+      : []
 
-    if (!campaignIds || !Array.isArray(campaignIds) || campaignIds.length === 0) {
+    if (normalizedCampaignIds.length === 0) {
       return NextResponse.json(
         { error: '请选择至少一个广告系列' },
         { status: 400 }
@@ -35,13 +44,14 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase()
 
     // 查询广告系列关联的 Offer
+    const campaignIdPlaceholders = normalizedCampaignIds.map(() => '?').join(',')
     const campaigns = await db.query(`
       SELECT DISTINCT o.id as offer_id, o.url as offer_url, o.affiliate_link, o.target_country
       FROM campaigns c
       INNER JOIN offers o ON c.offer_id = o.id
-      WHERE c.id = ANY(?) AND c.user_id = ? AND c.is_deleted = 0
-        AND o.is_deleted = 0
-    `, [campaignIds, userId]) as Array<{
+      WHERE c.id IN (${campaignIdPlaceholders}) AND c.user_id = ? AND c.IS_DELETED_FALSE
+        AND o.IS_DELETED_FALSE
+    `, [...normalizedCampaignIds, userId]) as Array<{
       offer_id: number
       offer_url: string
       affiliate_link: string
