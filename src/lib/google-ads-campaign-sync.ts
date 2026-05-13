@@ -59,6 +59,25 @@ export interface SyncResult {
   warnings: string[]
 }
 
+interface CampaignSyncAuditInsert {
+  userId: number
+  googleAdsAccountId: number
+  customerId: string
+  campaignId: string
+  campaignName: string
+  query1Rows: number
+  query2Rows: number
+  query3Rows: number
+  query4Rows: number
+  aggregatedAdGroups: number
+  aggregatedAds: number
+  aggregatedKeywords: number
+  aggregatedCallouts: number
+  aggregatedSitelinks: number
+  aggregatedLocations: number
+  auditPayload: Record<string, any>
+}
+
 export const LanguageCodeMap = {
     'en': 1000,      // English
     'zh': 1017,      // Chinese (Simplified)
@@ -324,9 +343,11 @@ export async function syncCampaignsFromGoogleAds(
         const campaigns = await fetchCampaignsFromGoogleAds({
           userId,
           customerId: account.customer_id,
+          googleAdsAccountId: account.id,
           authType: account.auth_type || 'oauth',
           serviceAccountId: account.auth_type === 'service_account' ? account.service_account_id || undefined : undefined,
           refreshToken: account.refresh_token,
+          enableAudit: !options?.dryRun,
         })
 
         console.log(`[GoogleAds Sync] Found ${campaigns.length} campaigns for account ${account.customer_id}`)
@@ -495,11 +516,13 @@ export async function syncCampaignsFromGoogleAds(
 async function fetchAllDataFromGoogleAds(params: {
   userId: number
   customerId: string
+  googleAdsAccountId: number
   authType: string
   serviceAccountId?: string,
   refreshToken: string | null
+  enableAudit?: boolean
 }): Promise<any[]> {
-  const { userId, customerId, authType, serviceAccountId, refreshToken } = params
+  const { userId, customerId, googleAdsAccountId, authType, serviceAccountId, refreshToken, enableAudit = true } = params
 
   try {
     // 🔧 查询 1：获取广告、广告组、广告系列及预算数据
@@ -508,6 +531,7 @@ async function fetchAllDataFromGoogleAds(params: {
         campaign.id,
         ad_group.id,
         ad_group.name,
+        ad_group.final_url_suffix,
         ad_group_ad.ad.id,
         ad_group_ad.ad.type,
         ad_group_ad.ad.responsive_search_ad.headlines,
@@ -665,6 +689,11 @@ async function fetchAllDataFromGoogleAds(params: {
 
     // 🔧 在内存中处理数据，按 ID 分组
     const campaignMap = new Map<string, GoogleAdsCampaign>()
+    const query1ByCampaign = new Map<string, any[]>()
+    const query2ByCampaign = new Map<string, any[]>()
+    const query3ByCampaign = new Map<string, any[]>()
+    const query4ByCampaign = new Map<string, any[]>()
+    const query5ByCampaign = new Map<string, any[]>()
     const adGroupsMap = new Map<string, any[]>()  // key: ad_group_id
     const adsMap = new Map<string, any[]>()       // key: ad_group_id
     const keywordsMap = new Map<string, any[]>()  // key: ad_group_id
@@ -675,6 +704,11 @@ async function fetchAllDataFromGoogleAds(params: {
     // 处理查询 5 结果（广告系列）
     for (const row of results5) {
       const campaignId = String(row.campaign?.id || '')
+      if (campaignId) {
+        const rows = query5ByCampaign.get(campaignId) || []
+        rows.push(row)
+        query5ByCampaign.set(campaignId, rows)
+      }
       
       // 添加广告系列
       if (!campaignMap.has(campaignId)) {
@@ -694,6 +728,11 @@ async function fetchAllDataFromGoogleAds(params: {
     // 处理查询 1 结果（广告组、广告）
     for (const row of results1) {
       const campaignId = String(row.campaign?.id || '')
+      if (campaignId) {
+        const rows = query1ByCampaign.get(campaignId) || []
+        rows.push(row)
+        query1ByCampaign.set(campaignId, rows)
+      }
 
       // 添加广告组
       const adGroupId = String(row.ad_group?.id || '')
@@ -726,6 +765,13 @@ async function fetchAllDataFromGoogleAds(params: {
 
     // 处理查询 2 结果（关键词）
     for (const row of results2) {
+      const campaignId = String(row.campaign?.id || '')
+      if (campaignId) {
+        const rows = query2ByCampaign.get(campaignId) || []
+        rows.push(row)
+        query2ByCampaign.set(campaignId, rows)
+      }
+
       const adGroupId = String(row.ad_group?.id || '')
       const keywordId = String(row.ad_group_criterion?.criterion_id || '')
       
@@ -743,6 +789,12 @@ async function fetchAllDataFromGoogleAds(params: {
     // 处理查询 3 结果（素材资源）
     for (const row of results3) {
       const campaignId = String(row.campaign?.id || '')
+      if (campaignId) {
+        const rows = query3ByCampaign.get(campaignId) || []
+        rows.push(row)
+        query3ByCampaign.set(campaignId, rows)
+      }
+
       const assetType = String(row.asset?.type || '')
       
       if (assetType === 'CALLOUT' && row.asset?.callout_asset?.callout_text) {
@@ -766,6 +818,10 @@ async function fetchAllDataFromGoogleAds(params: {
       console.log(`[GoogleAds Sync] Criterion details: language=${row.campaign_criterion?.language?.language_constant}, location=${row.campaign_criterion?.location?.geo_target_constant}, negative=${row.campaign_criterion?.negative}`)
       const campaignId = String(row.campaign?.id || '')
       if (campaignId) {
+        const queryRows = query4ByCampaign.get(campaignId) || []
+        queryRows.push(row)
+        query4ByCampaign.set(campaignId, queryRows)
+
         const locations = locationsMap.get(campaignId) || []
         locations.push({
           criterion_id: row.campaign_criterion?.criterion_id,
@@ -781,6 +837,7 @@ async function fetchAllDataFromGoogleAds(params: {
 
     // 🔧 聚合成完整的广告系列数据并返回
     const campaigns: any[] = []
+    const auditRows: CampaignSyncAuditInsert[] = []
     
     for (const [campaignId, campaign] of campaignMap.entries()) {
       const adGroupId = Array.from(adGroupsMap.keys()).find(key => 
@@ -811,7 +868,7 @@ async function fetchAllDataFromGoogleAds(params: {
       }))
       
       // 构建广告系列对象
-      campaigns.push({
+      const campaignPayload = {
         campaign,
         adGroupId: adGroup?.ad_group_id || null,
         adId: ads[0]?.ad_id || null,
@@ -840,9 +897,58 @@ async function fetchAllDataFromGoogleAds(params: {
             description: s.description,
           })),
         }
+      }
+
+      campaigns.push({
+        ...campaignPayload
+      })
+
+      const query1Rows = query1ByCampaign.get(campaignId) || []
+      const query2Rows = query2ByCampaign.get(campaignId) || []
+      const query3Rows = query3ByCampaign.get(campaignId) || []
+      const query4Rows = query4ByCampaign.get(campaignId) || []
+      const query5Rows = query5ByCampaign.get(campaignId) || []
+      const adGroupIds = new Set(query1Rows.map((row: any) => String(row.ad_group?.id || '')).filter(Boolean))
+      const adIds = new Set(query1Rows.map((row: any) => String(row.ad_group_ad?.ad?.id || '')).filter(Boolean))
+
+      auditRows.push({
+        userId,
+        googleAdsAccountId,
+        customerId,
+        campaignId,
+        campaignName: campaign.campaign_name,
+        query1Rows: query1Rows.length,
+        query2Rows: query2Rows.length,
+        query3Rows: query3Rows.length,
+        query4Rows: query4Rows.length,
+        aggregatedAdGroups: adGroupIds.size,
+        aggregatedAds: adIds.size,
+        aggregatedKeywords: keywords.length,
+        aggregatedCallouts: callouts.length,
+        aggregatedSitelinks: sitelinks.length,
+        aggregatedLocations: locations.length,
+        auditPayload: {
+          campaign_id: campaignId,
+          customer_id: customerId,
+          raw_data: {
+            query1: query1Rows,
+            query2: query2Rows,
+            query3: query3Rows,
+            query4: query4Rows,
+            query5: query5Rows,
+          },
+        },
       })
     }
     
+    if (enableAudit && auditRows.length > 0) {
+      try {
+        await saveCampaignSyncAuditRows(auditRows)
+      } catch (error) {
+        console.error('[GoogleAds Sync] Unexpected audit persistence error (ignored):', error)
+      }
+    }
+
     console.log(`[GoogleAds Sync] Aggregated ${campaigns.length} complete campaigns`)
     
     return campaigns
@@ -858,11 +964,85 @@ async function fetchAllDataFromGoogleAds(params: {
 async function fetchCampaignsFromGoogleAds(params: {
   userId: number
   customerId: string
+  googleAdsAccountId: number
   authType: string
   serviceAccountId?: string,
   refreshToken: string | null
+  enableAudit?: boolean
 }): Promise<any[]> {
   return await fetchAllDataFromGoogleAds(params)
+}
+
+async function saveCampaignSyncAuditRows(rows: CampaignSyncAuditInsert[]): Promise<void> {
+  try {
+    const db = await getDatabase()
+
+    for (const row of rows) {
+      try {
+        await db.exec(
+          `INSERT INTO google_ads_campaign_sync_audits (
+            user_id,
+            google_ads_account_id,
+            customer_id,
+            campaign_id,
+            campaign_name,
+            query1_rows,
+            query2_rows,
+            query3_rows,
+            query4_rows,
+            aggregated_ad_groups,
+            aggregated_ads,
+            aggregated_keywords,
+            aggregated_callouts,
+            aggregated_sitelinks,
+            aggregated_locations,
+            audit_payload,
+            synced_at,
+            created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(user_id, customer_id, campaign_id) DO UPDATE SET
+            google_ads_account_id = excluded.google_ads_account_id,
+            campaign_name = excluded.campaign_name,
+            query1_rows = excluded.query1_rows,
+            query2_rows = excluded.query2_rows,
+            query3_rows = excluded.query3_rows,
+            query4_rows = excluded.query4_rows,
+            aggregated_ad_groups = excluded.aggregated_ad_groups,
+            aggregated_ads = excluded.aggregated_ads,
+            aggregated_keywords = excluded.aggregated_keywords,
+            aggregated_callouts = excluded.aggregated_callouts,
+            aggregated_sitelinks = excluded.aggregated_sitelinks,
+            aggregated_locations = excluded.aggregated_locations,
+            audit_payload = excluded.audit_payload,
+            synced_at = excluded.synced_at`,
+          [
+            row.userId,
+            row.googleAdsAccountId,
+            row.customerId,
+            row.campaignId,
+            row.campaignName,
+            row.query1Rows,
+            row.query2Rows,
+            row.query3Rows,
+            row.query4Rows,
+            row.aggregatedAdGroups,
+            row.aggregatedAds,
+            row.aggregatedKeywords,
+            row.aggregatedCallouts,
+            row.aggregatedSitelinks,
+            row.aggregatedLocations,
+            db.type === 'postgres' ? row.auditPayload : JSON.stringify(row.auditPayload),
+            new Date(),
+            new Date(),
+          ]
+        )
+      } catch (error) {
+        console.error(`[GoogleAds Sync] Failed to persist audit row for campaign ${row.campaignId} (ignored):`, error)
+      }
+    }
+  } catch (error) {
+    console.error('[GoogleAds Sync] Failed to initialize audit persistence (ignored):', error)
+  }
 }
 
 /**
