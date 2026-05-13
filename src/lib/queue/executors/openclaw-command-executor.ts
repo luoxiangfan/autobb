@@ -13,6 +13,7 @@ import { resolveTaskCampaignKeywords } from '@/lib/campaign-publish/task-keyword
 import { inferNegativeKeywordMatchType, normalizeMatchType } from '@/lib/campaign-publish/negative-keyword-match-type'
 import { normalizeCampaignPublishCampaignConfig } from '@/lib/autoads-request-normalizers'
 import { parseCommissionPayoutValue, parseMoneyValue } from '@/lib/offer-monetization'
+import { pickFirstTwoLetterCountryCode } from '@/lib/two-letter-country-code'
 
 export type OpenclawCommandTaskData = {
   runId: string
@@ -111,6 +112,78 @@ function extractOfferIdFromOfferUpdatePath(path: string): number | null {
   const matched = String(path || '').match(/^\/api\/offers\/(\d+)$/)
   if (!matched?.[1]) return null
   return toPositiveInteger(matched[1])
+}
+
+function normalizeOfferTargetCountryPayload(params: {
+  method: string
+  path: string
+  body: unknown
+}): { body: unknown; normalized: boolean } {
+  const normalizedMethod = params.method.toUpperCase()
+  if (normalizedMethod !== 'POST' && normalizedMethod !== 'PUT') {
+    return { body: params.body, normalized: false }
+  }
+  if (!isPlainObject(params.body)) {
+    return { body: params.body, normalized: false }
+  }
+
+  const payload = params.body as Record<string, unknown>
+  const hasSnake = Object.prototype.hasOwnProperty.call(payload, 'target_country')
+  const hasCamel = Object.prototype.hasOwnProperty.call(payload, 'targetCountry')
+  if (!hasSnake && !hasCamel) {
+    return { body: params.body, normalized: false }
+  }
+
+  const normalizedTargetCountry = pickFirstTwoLetterCountryCode(
+    payload.target_country,
+    payload.targetCountry,
+  )
+
+  if (isOfferExtractPath(params.path)) {
+    const resolvedTargetCountry = normalizedTargetCountry || 'US'
+    const nextBody: Record<string, unknown> = { ...payload }
+    let changed = false
+
+    if (hasSnake && toTrimmedString(payload.target_country) !== resolvedTargetCountry) {
+      nextBody.target_country = resolvedTargetCountry
+      changed = true
+    }
+    if (hasCamel && toTrimmedString(payload.targetCountry) !== resolvedTargetCountry) {
+      nextBody.targetCountry = resolvedTargetCountry
+      changed = true
+    }
+
+    return changed ? { body: nextBody, normalized: true } : { body: params.body, normalized: false }
+  }
+
+  if (!isOfferUpdatePath(params.path)) {
+    return { body: params.body, normalized: false }
+  }
+
+  const nextBody: Record<string, unknown> = { ...payload }
+  let changed = false
+
+  if (normalizedTargetCountry) {
+    if (hasSnake && toTrimmedString(payload.target_country) !== normalizedTargetCountry) {
+      nextBody.target_country = normalizedTargetCountry
+      changed = true
+    }
+    if (hasCamel && toTrimmedString(payload.targetCountry) !== normalizedTargetCountry) {
+      nextBody.targetCountry = normalizedTargetCountry
+      changed = true
+    }
+  } else {
+    if (hasSnake) {
+      delete nextBody.target_country
+      changed = true
+    }
+    if (hasCamel) {
+      delete nextBody.targetCountry
+      changed = true
+    }
+  }
+
+  return changed ? { body: nextBody, normalized: true } : { body: params.body, normalized: false }
 }
 
 type OfferExtractCommissionSourceMatchType =
@@ -1875,6 +1948,13 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
 
   try {
     const parentRequestId = toTrimmedString(run.parent_request_id)
+    const targetCountryNormalized = normalizeOfferTargetCountryPayload({
+      method: run.request_method,
+      path: run.request_path,
+      body: requestBody,
+    })
+    requestBody = targetCountryNormalized.body
+    requestBodyForAudit = requestBody === undefined ? null : JSON.stringify(requestBody)
 
     const offerExtractByMessageHydrated = await hydrateOfferExtractCommissionByMessageContext({
       db,
@@ -1908,6 +1988,8 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
 
     if (
       (
+        targetCountryNormalized.normalized
+        ||
         offerExtractByMessageHydrated.hydrated
         || offerUpdateByMessageHydrated.hydrated
         || publishHydrated.hydrated

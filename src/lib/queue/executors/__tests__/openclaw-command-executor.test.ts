@@ -239,7 +239,67 @@ describe('openclaw command executor click-farm guard', () => {
         path: '/api/offers/extract',
         method: 'POST',
         body: expect.objectContaining({
+          target_country: 'US',
           commission_payout: '22.5%',
+        }),
+      })
+    )
+  })
+
+  it('normalizes invalid three-letter offer.extract country codes before forwarding', async () => {
+    const db = {
+      type: 'postgres',
+      exec: vi.fn().mockResolvedValue({ changes: 1 }),
+      query: vi.fn().mockResolvedValue([]),
+      queryOne: vi.fn(async (sql: string) => {
+        if (sql.includes('FROM openclaw_command_runs') && sql.includes('LIMIT 1')) {
+          return {
+            id: 'run-offer-country-normalize-1',
+            user_id: 1,
+            channel: 'feishu',
+            sender_id: 'ou_test',
+            request_method: 'POST',
+            request_path: '/api/offers/extract',
+            request_query_json: null,
+            request_body_json: JSON.stringify({
+              affiliate_link: 'https://example.com/aff',
+              target_country: 'USA',
+              product_price: '$22.99',
+              page_type: 'product',
+              skipCache: true,
+              skipWarmup: false,
+            }),
+            risk_level: 'medium',
+            status: 'queued',
+            confirm_required: false,
+          }
+        }
+
+        if (sql.includes('FROM openclaw_command_confirms')) {
+          return { status: 'not_required' }
+        }
+
+        return null
+      }),
+    }
+
+    mocks.getDatabase.mockResolvedValue(db)
+    mocks.fetchAutoadsAsUser.mockResolvedValue(
+      new Response(JSON.stringify({ success: true, taskId: 'task-offer-country-normalize-1' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    )
+
+    const result = await executeOpenclawCommandTask(createTask('run-offer-country-normalize-1'))
+    expect(result.success).toBe(true)
+
+    expect(mocks.fetchAutoadsAsUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/api/offers/extract',
+        method: 'POST',
+        body: expect.objectContaining({
+          target_country: 'US',
         }),
       })
     )
@@ -307,6 +367,54 @@ describe('openclaw command executor click-farm guard', () => {
         }),
       })
     )
+  })
+
+  it('drops invalid three-letter offer.update country codes before forwarding', async () => {
+    const db = {
+      type: 'postgres',
+      exec: vi.fn().mockResolvedValue({ changes: 1 }),
+      query: vi.fn().mockResolvedValue([]),
+      queryOne: vi.fn(async (sql: string) => {
+        if (sql.includes('FROM openclaw_command_runs') && sql.includes('LIMIT 1')) {
+          return {
+            id: 'run-offer-update-country-normalize-1',
+            user_id: 1,
+            channel: 'feishu',
+            sender_id: 'ou_test',
+            request_method: 'PUT',
+            request_path: '/api/offers/3889',
+            request_query_json: null,
+            request_body_json: JSON.stringify({
+              target_country: 'USA',
+              product_price: '179.99',
+            }),
+            risk_level: 'medium',
+            status: 'queued',
+            confirm_required: false,
+          }
+        }
+
+        if (sql.includes('FROM openclaw_command_confirms')) {
+          return { status: 'not_required' }
+        }
+
+        return null
+      }),
+    }
+
+    mocks.getDatabase.mockResolvedValue(db)
+    mocks.fetchAutoadsAsUser.mockResolvedValue(
+      new Response(JSON.stringify({ success: true, offer: { id: 3889 } }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    )
+
+    const result = await executeOpenclawCommandTask(createTask('run-offer-update-country-normalize-1'))
+    expect(result.success).toBe(true)
+
+    const calledBody = mocks.fetchAutoadsAsUser.mock.calls[0][0].body
+    expect(calledBody.target_country).toBeUndefined()
   })
 
   it('hydrates missing offer.extract commission from feishu message context', async () => {

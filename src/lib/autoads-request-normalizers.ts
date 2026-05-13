@@ -3,6 +3,7 @@ import {
   normalizeOfferCommissionPayoutInput,
   normalizeOfferProductPriceInput,
 } from '@/lib/offer-monetization'
+import { pickFirstTwoLetterCountryCode } from '@/lib/two-letter-country-code'
 type PlainObject = Record<string, any>
 
 function isPlainObject(value: unknown): value is PlainObject {
@@ -426,9 +427,10 @@ export function normalizeOfferExtractRequestBody(
     aliasMap: OFFER_EXTRACT_ALIAS_MAP,
   })
 
-  if (isMissingRequiredValue(normalized.target_country)) {
-    normalized.target_country = 'US'
-  }
+  normalized.target_country = pickFirstTwoLetterCountryCode(
+    normalized.target_country,
+    normalized.targetCountry,
+  ) || 'US'
 
   if (isMissingRequiredValue(normalized.page_type)) {
     normalized.page_type = 'product'
@@ -443,10 +445,11 @@ export function normalizeOfferExtractRequestBody(
 
   const shouldNormalizeMonetization = options?.normalizeMonetization !== false
   if (shouldNormalizeMonetization) {
+    const targetCountry = normalized.target_country
     if (normalized.product_price !== undefined && normalized.product_price !== null) {
       const normalizedPrice = normalizeOfferProductPriceInput(
         String(normalized.product_price),
-        String(normalized.target_country || 'US')
+        String(targetCountry)
       )
       normalized.product_price = normalizedPrice ?? null
     }
@@ -454,7 +457,7 @@ export function normalizeOfferExtractRequestBody(
     if (normalized.commission_payout !== undefined && normalized.commission_payout !== null) {
       const normalizedCommission = normalizeOfferCommissionPayoutInput(
         String(normalized.commission_payout),
-        String(normalized.target_country || 'US'),
+        String(targetCountry),
         {
           numericMode: options?.numericCommissionMode || 'percent',
         }
@@ -464,7 +467,7 @@ export function normalizeOfferExtractRequestBody(
 
     try {
       const normalizedCommission = normalizeOfferCommissionInput({
-        targetCountry: String(normalized.target_country || 'US'),
+        targetCountry: String(targetCountry),
         commissionType: normalized.commission_type,
         commissionValue: normalized.commission_value,
         commissionCurrency: normalized.commission_currency,

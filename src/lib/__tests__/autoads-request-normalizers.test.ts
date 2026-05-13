@@ -144,7 +144,25 @@ describe('autoads request normalizers', () => {
     expect(normalized.skip_cache).toBeUndefined()
   })
 
-  it('keeps ambiguous bare numeric commission untouched in offer normalization', () => {
+  it('drops non-two-letter offer extract countries back to default US', () => {
+    const normalized = normalizeOfferExtractRequestBody({
+      affiliate_link: 'https://aff.example.com/track',
+      target_country: 'USA',
+    }) || {}
+
+    expect(normalized.target_country).toBe('US')
+  })
+
+  it('preserves valid two-letter UK offer extract country', () => {
+    const normalized = normalizeOfferExtractRequestBody({
+      affiliate_link: 'https://aff.example.com/track',
+      targetCountry: 'uk',
+    }) || {}
+
+    expect(normalized.target_country).toBe('UK')
+  })
+
+  it('normalizes ambiguous bare numeric commission to amount mode in offer normalization', () => {
     const normalized = normalizeOfferExtractRequestBody(
       {
         affiliate_link: 'https://aff.example.com/track',
@@ -158,9 +176,10 @@ describe('autoads request normalizers', () => {
     ) || {}
 
     expect(normalized.product_price).toBe('$349.99')
-    expect(normalized.commission_payout).toBe('105.00')
-    expect(normalized.commission_type).toBeUndefined()
-    expect(normalized.commission_value).toBeUndefined()
+    expect(normalized.commission_payout).toBe('$105')
+    expect(normalized.commission_type).toBe('amount')
+    expect(normalized.commission_value).toBe('105')
+    expect(normalized.commission_currency).toBe('USD')
   })
 
   it('does not auto-convert bare numeric commission to percent in offer normalization', () => {

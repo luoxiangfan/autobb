@@ -8,6 +8,7 @@ import {
   getCurrencySymbolByCode,
   parseMoneyValue,
 } from '@/lib/offer-monetization'
+import { pickFirstTwoLetterCountryCode } from '@/lib/two-letter-country-code'
 
 type PlainObject = Record<string, any>
 
@@ -136,7 +137,10 @@ function normalizeOfferExtractCommissionInputByInputShape(params: {
   path: string
 }): PlainObject {
   const { sourceBody, method, path } = params
-  const targetCountry = String(sourceBody.target_country ?? sourceBody.targetCountry ?? 'US').trim() || 'US'
+  const targetCountry = pickFirstTwoLetterCountryCode(
+    sourceBody.target_country,
+    sourceBody.targetCountry,
+  ) || 'US'
   const commissionRaw = getFirstNonEmptyText([
     sourceBody.commission_payout,
     sourceBody.commissionPayout,
@@ -154,6 +158,12 @@ function normalizeOfferExtractCommissionInputByInputShape(params: {
 
   const nextBody: PlainObject = {
     ...sourceBody,
+  }
+  if (Object.prototype.hasOwnProperty.call(sourceBody, 'target_country')) {
+    nextBody.target_country = targetCountry
+  }
+  if (Object.prototype.hasOwnProperty.call(sourceBody, 'targetCountry')) {
+    nextBody.targetCountry = targetCountry
   }
 
   const percentValue = parsePercentText(commissionRaw)

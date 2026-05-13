@@ -233,6 +233,53 @@ describe('openclaw command payload policy behavior', () => {
     })
   })
 
+  it('falls back invalid three-letter offer extract country codes to US', () => {
+    const { body } = normalizeOpenclawCommandPayload({
+      method: 'POST',
+      path: '/api/offers/extract',
+      body: {
+        affiliate_link: 'https://example.com/aff',
+        target_country: 'USA',
+        product_price: '399',
+      },
+    })
+
+    expect(body).toEqual({
+      affiliate_link: 'https://example.com/aff',
+      target_country: 'US',
+      product_price: '$399',
+      page_type: 'product',
+      skipCache: false,
+      skipWarmup: false,
+    })
+  })
+
+  it('accepts UK as a valid two-letter offer extract country code', () => {
+    const { body } = normalizeOpenclawCommandPayload({
+      method: 'POST',
+      path: '/api/offers/extract',
+      body: {
+        affiliate_link: 'https://example.com/aff',
+        target_country: 'uk',
+        product_price: '399',
+        commission_payout: '74.81',
+      },
+    })
+
+    expect(body).toEqual({
+      affiliate_link: 'https://example.com/aff',
+      target_country: 'UK',
+      product_price: '£399',
+      commission_payout: '£74.81',
+      commission_type: 'amount',
+      commission_value: '74.81',
+      commission_currency: 'GBP',
+      page_type: 'product',
+      skipCache: false,
+      skipWarmup: false,
+    })
+  })
+
   it('ignores commission_rate mismatch and follows percent-form commission_payout for offer extract', () => {
     const { body } = normalizeOpenclawCommandPayload({
       method: 'POST',
