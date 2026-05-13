@@ -149,6 +149,23 @@ type CampaignAttributionCandidate = {
   clicks: number
 }
 
+const DEFAULT_REMOVED_CAMPAIGN_ATTRIBUTION_GRACE_DAYS = 30
+const MIN_REMOVED_CAMPAIGN_ATTRIBUTION_GRACE_DAYS = 0
+const MAX_REMOVED_CAMPAIGN_ATTRIBUTION_GRACE_DAYS = 90
+
+function getRemovedCampaignAttributionGraceDays(value?: unknown): number {
+  const parsed = Number(
+    value ?? process.env.OPENCLAW_AFFILIATE_ATTRIBUTION_REMOVED_CAMPAIGN_GRACE_DAYS
+  )
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_REMOVED_CAMPAIGN_ATTRIBUTION_GRACE_DAYS
+  }
+  return Math.min(
+    MAX_REMOVED_CAMPAIGN_ATTRIBUTION_GRACE_DAYS,
+    Math.max(MIN_REMOVED_CAMPAIGN_ATTRIBUTION_GRACE_DAYS, Math.floor(parsed))
+  )
+}
+
 function normalizeCampaignStatus(value: unknown): 'ENABLED' | 'PAUSED' | 'REMOVED' | 'UNKNOWN' {
   const normalized = String(value ?? '').trim().toUpperCase()
   if (normalized === 'ENABLED' || normalized === 'PAUSED' || normalized === 'REMOVED') {
@@ -157,11 +174,28 @@ function normalizeCampaignStatus(value: unknown): 'ENABLED' | 'PAUSED' | 'REMOVE
   return 'UNKNOWN'
 }
 
-function preferOnlineCampaignCandidates(candidates: CampaignAttributionCandidate[]): CampaignAttributionCandidate[] {
+function preferOnlineCampaignCandidates(
+  candidates: CampaignAttributionCandidate[],
+  options?: {
+    removedCampaignGraceDays?: number
+  }
+): CampaignAttributionCandidate[] {
   const onlineCandidates = candidates.filter((candidate) => (
     candidate.campaignStatus === 'ENABLED' || candidate.campaignStatus === 'PAUSED'
   ))
-  return onlineCandidates.length > 0 ? onlineCandidates : candidates
+  if (onlineCandidates.length > 0) return onlineCandidates
+
+  const removedCampaignGraceDays = getRemovedCampaignAttributionGraceDays(
+    options?.removedCampaignGraceDays
+  )
+  if (removedCampaignGraceDays <= 0) {
+    return candidates.filter((candidate) => candidate.campaignStatus !== 'REMOVED')
+  }
+
+  return candidates.filter((candidate) => {
+    if (candidate.campaignStatus !== 'REMOVED') return true
+    return candidate.cost > 0 || candidate.clicks > 0
+  })
 }
 
 /**
@@ -1718,12 +1752,13 @@ export async function persistAffiliateCommissionAttributions(params: {
   const failureRows: AttributionFailureRow[] = []
 
   if (freshEntries.length > 0) {
+    const removedCampaignGraceDays = getRemovedCampaignAttributionGraceDays()
     const offerContexts = await queryOfferContexts({ db, userId: params.userId })
     const campaignCandidates = await queryCampaignAttributionCandidates({
       db,
       userId: params.userId,
       reportDate: params.reportDate,
-      lookbackDays: 7,
+      lookbackDays: Math.max(7, removedCampaignGraceDays),
     })
 
     const asinToCampaigns = new Map<string, CampaignAttributionCandidate[]>()
@@ -1914,7 +1949,10 @@ export async function persistAffiliateCommissionAttributions(params: {
       const directCandidates = brandFilteredAsinCandidates.length > 0
         ? brandFilteredAsinCandidates
         : matchedAsinCandidates
-      const preferredDirectCandidates = preferOnlineCampaignCandidates(directCandidates)
+      const preferredDirectCandidates = preferOnlineCampaignCandidates(
+        directCandidates,
+        { removedCampaignGraceDays }
+      )
 
       if (preferredDirectCandidates.length > 0) {
         appendAttributionRows({
@@ -1936,7 +1974,10 @@ export async function persistAffiliateCommissionAttributions(params: {
       const brandCandidates = Array.from(inferredBrands)
         .flatMap((brand) => brandToCampaigns.get(brand) || [])
         .filter((candidate, index, list) => list.findIndex((item) => item.campaignId === candidate.campaignId) === index)
-      const preferredBrandCandidates = preferOnlineCampaignCandidates(brandCandidates)
+      const preferredBrandCandidates = preferOnlineCampaignCandidates(
+        brandCandidates,
+        { removedCampaignGraceDays }
+      )
 
       if (preferredBrandCandidates.length > 0) {
         appendAttributionRows({

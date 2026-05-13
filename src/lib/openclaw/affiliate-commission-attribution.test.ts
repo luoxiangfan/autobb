@@ -849,6 +849,69 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
     expect((attributionInsertCalls[0]?.[1] as any[])[7]).toBe(7101)
   })
 
+  it('falls back to unattributed when only removed campaigns exist but have no recent activity', async () => {
+    const today = formatLocalYmd(new Date())
+    const previousGraceDays = process.env.OPENCLAW_AFFILIATE_ATTRIBUTION_REMOVED_CAMPAIGN_GRACE_DAYS
+    process.env.OPENCLAW_AFFILIATE_ATTRIBUTION_REMOVED_CAMPAIGN_GRACE_DAYS = '30'
+
+    try {
+      query.mockImplementation(async (sql: string) => {
+        if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('AS event_id')) return []
+        if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes('AS event_id')) return []
+        if (sql.includes('FROM offers')) {
+          return [
+            { id: 6201, brand: 'Dormify', url: 'https://www.amazon.com/dp/B0REMOVED2', final_url: null, affiliate_link: null },
+          ]
+        }
+        if (sql.includes('FROM affiliate_product_offer_links apol')) return []
+        if (sql.includes('FROM campaigns c')) {
+          if (!sql.includes("c.status IN ('ENABLED', 'PAUSED', 'REMOVED')")) return []
+          return [
+            { campaign_id: 7201, offer_id: 6201, brand: 'Dormify', campaign_status: 'REMOVED', created_at: `${today}T00:00:00.000Z`, cost: 0, clicks: 0 },
+          ]
+        }
+        return []
+      })
+
+      const result = await persistAffiliateCommissionAttributions({
+        userId: 14,
+        reportDate: today,
+        entries: [
+          {
+            platform: 'yeahpromos',
+            reportDate: today,
+            commission: 12.34,
+            sourceAsin: 'B0REMOVED2',
+            raw: { id: 'evt-removed-no-activity-1', advert_name: 'Dormify' },
+          },
+        ],
+        replaceExisting: true,
+        lockHistorical: false,
+      })
+
+      expect(result.attributedCommission).toBe(0)
+      expect(result.unattributedCommission).toBe(12.34)
+      expect(result.attributedCampaigns).toBe(0)
+
+      const attributionInsertCalls = exec.mock.calls.filter(([sql]) =>
+        typeof sql === 'string' && sql.includes('INSERT INTO affiliate_commission_attributions')
+      )
+      expect(attributionInsertCalls).toHaveLength(0)
+
+      const failureInsertCalls = exec.mock.calls.filter(([sql]) =>
+        typeof sql === 'string' && sql.includes('INSERT INTO openclaw_affiliate_attribution_failures')
+      )
+      expect(failureInsertCalls).toHaveLength(1)
+      expect((failureInsertCalls[0]?.[1] as any[])[10]).toBe('campaign_mapping_miss')
+    } finally {
+      if (previousGraceDays === undefined) {
+        delete process.env.OPENCLAW_AFFILIATE_ATTRIBUTION_REMOVED_CAMPAIGN_GRACE_DAYS
+      } else {
+        process.env.OPENCLAW_AFFILIATE_ATTRIBUTION_REMOVED_CAMPAIGN_GRACE_DAYS = previousGraceDays
+      }
+    }
+  })
+
   it('normalizes brands with LT- prefix and Wahl variations', async () => {
     const today = formatLocalYmd(new Date())
 
