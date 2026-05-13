@@ -4,7 +4,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createUrlSwapTask, getUrlSwapTasks, hasUrlSwapTask } from '@/lib/url-swap';
 import { triggerUrlSwapScheduling } from '@/lib/url-swap-scheduler';
-import { validateUrlSwapTask } from '@/lib/url-swap-validator';
 import type { CreateUrlSwapTaskRequest } from '@/lib/url-swap-types';
 import { normalizeAffiliateLinksInput, findInvalidAffiliateLinks } from '@/lib/url-swap-link-utils';
 
@@ -142,20 +141,13 @@ export async function POST(request: NextRequest) {
       body.manual_affiliate_links = normalizedList
     }
 
-    // 方式一/方式二：验证代理配置
-    const validation = await validateUrlSwapTask(body.offer_id);
-    if (!validation.valid) {
-      return NextResponse.json(
-        { error: 'validation_error', message: validation.error },
-        { status: 400 }
-      );
-    }
-
     // 创建任务
     const task = await createUrlSwapTask(userIdNum, body);
 
-    // 立即触发调度（事件驱动）
-    await triggerUrlSwapScheduling(task.id);
+    // 异步触发调度：避免把调度耗时算进创建接口RT，Cron会作为兜底
+    void triggerUrlSwapScheduling(task.id).catch((schedulingError: any) => {
+      console.error(`[url-swap] 异步调度失败: ${task.id}`, schedulingError);
+    });
 
     console.log(`[url-swap] 创建任务成功: ${task.id}`);
 

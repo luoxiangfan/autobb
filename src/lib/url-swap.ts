@@ -32,6 +32,56 @@ type UrlSwapTargetInput = {
   google_campaign_id: string
 }
 
+const INITIAL_URL_RESOLVE_TIMEOUT_MS = 8000
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeoutMs}ms`))
+    }, timeoutMs)
+  })
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+    }
+  }) as Promise<T>
+}
+
+async function resolveInitialUrlForTaskCreation(
+  swapMode: UrlSwapMode,
+  offer: any,
+  userId: number
+): Promise<{ finalUrl: string | null; finalUrlSuffix: string | null }> {
+  if (swapMode !== 'auto') {
+    return {
+      finalUrl: offer.final_url || null,
+      finalUrlSuffix: offer.final_url_suffix || null,
+    }
+  }
+
+  try {
+    return await withTimeout(
+      resolveAffiliateLink(offer.affiliate_link, {
+        targetCountry: offer.target_country,
+        userId,
+        skipCache: true
+      }),
+      INITIAL_URL_RESOLVE_TIMEOUT_MS,
+      'initial URL resolve'
+    )
+  } catch (error: any) {
+    // 任务创建应优先成功，首次解析失败或超时由调度执行阶段兜底重试
+    console.warn('[url-swap] 初始化URL解析失败，降级为使用Offer缓存URL:', error?.message || error)
+    return {
+      finalUrl: offer.final_url || null,
+      finalUrlSuffix: offer.final_url_suffix || null,
+    }
+  }
+}
+
 /**
  * 创建换链接任务
  */
@@ -79,17 +129,8 @@ export async function createUrlSwapTask(
     }
   }
 
-  // 4. 初始化当前URL（方式一：首次解析；方式二：使用Offer已保存的final_url/final_url_suffix）
-  const resolved: { finalUrl: string | null; finalUrlSuffix: string | null } = swapMode === 'auto'
-    ? await resolveAffiliateLink(offer.affiliate_link, {
-        targetCountry: offer.target_country,
-        userId,
-        skipCache: true
-      })
-    : {
-        finalUrl: offer.final_url || null,
-        finalUrlSuffix: offer.final_url_suffix || null,
-      }
+  // 4. 初始化当前URL（首次解析超时/失败时使用Offer已有URL，避免阻塞创建请求）
+  const resolved = await resolveInitialUrlForTaskCreation(swapMode, offer, userId)
 
   // 5. 获取关联的Campaign目标（支持多账号）
   const normalizedCustomerId = normalizeNullableString(input.google_customer_id)
