@@ -5,6 +5,7 @@ import { createClickFarmTask, updateClickFarmTask } from '@/lib/click-farm'
 import { getClickFarmTaskByOfferId } from '@/lib/click-farm'
 import { createUrlSwapTask, updateUrlSwapTask, getUrlSwapTaskByOfferId } from '@/lib/url-swap'
 import { generateDefaultDistribution } from '@/lib/click-farm/distribution'
+import { getTimezoneByCountry } from '@/lib/timezone-utils'
 
 /**
  * POST /api/campaigns/batch-start-tasks
@@ -196,19 +197,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * 根据国家代码获取时区
- */
-function getTimezoneByCountry(countryCode: string): string {
-  const timezoneMap: Record<string, string> = {
-    'US': 'America/New_York',
-    'GB': 'Europe/London',
-    'CA': 'America/Toronto',
-    'AU': 'Australia/Sydney',
-    'DE': 'Europe/Berlin',
-    'FR': 'Europe/Paris',
-    'JP': 'Asia/Tokyo',
-    'CN': 'Asia/Shanghai',
-  }
-  return timezoneMap[countryCode] || 'America/New_York'
-}
