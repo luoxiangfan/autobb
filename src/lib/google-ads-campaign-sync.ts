@@ -366,6 +366,7 @@ export async function syncCampaignsFromGoogleAds(
             const offerResult = await createOfferFirst({
               userId,
               campaign,
+              campaignConfig: campaign_config,
             })
 
             // 保存广告系列并关联 offer_id
@@ -1151,17 +1152,61 @@ async function saveCampaignToDatabase(params: {
 async function createOfferFirst(params: {
   userId: number
   campaign: GoogleAdsCampaign
+  campaignConfig?: GoogleAdsCampaign['campaign_config']
 }): Promise<{ offerId: number; created: boolean }> {
-  const { userId, campaign } = params
+  const { userId, campaign, campaignConfig } = params
   const db = await getDatabase()
+  const finalUrl = typeof campaignConfig?.finalUrls?.[0] === 'string'
+    ? campaignConfig.finalUrls[0].trim()
+    : ''
+  const finalUrlSuffix = typeof campaignConfig?.finalUrlSuffix === 'string'
+    ? campaignConfig.finalUrlSuffix.trim()
+    : ''
+  const url = finalUrl
+  const isNullOrEmpty = (value: unknown): boolean =>
+    value === null || value === undefined || (typeof value === 'string' && value.trim() === '')
 
   // 1. 检查是否已存在关联的 Offer（通过 google_ads_campaign_id）
   const existingOffer = await db.queryOne(
-    'SELECT id FROM offers WHERE google_ads_campaign_id = ? AND user_id = ?',
+    'SELECT id, sync_source, url, final_url, final_url_suffix FROM offers WHERE google_ads_campaign_id = ? AND user_id = ?',
     [campaign.campaign_id, userId]
-  )
+  ) as {
+    id: number
+    sync_source?: string | null
+    url?: string | null
+    final_url?: string | null
+    final_url_suffix?: string | null
+  } | undefined
 
   if (existingOffer) {
+    if (existingOffer.sync_source === 'google_ads_sync') {
+      const updates: string[] = []
+      const updateParams: any[] = []
+
+      if (isNullOrEmpty(existingOffer.url) && url) {
+        updates.push('url = ?')
+        updateParams.push(url)
+      }
+
+      if (isNullOrEmpty(existingOffer.final_url) && finalUrl) {
+        updates.push('final_url = ?')
+        updateParams.push(finalUrl)
+      }
+
+      if (isNullOrEmpty(existingOffer.final_url_suffix) && finalUrlSuffix) {
+        updates.push('final_url_suffix = ?')
+        updateParams.push(finalUrlSuffix)
+      }
+
+      if (updates.length > 0) {
+        await db.exec(
+          `UPDATE offers SET ${updates.join(', ')}, updated_at = ? WHERE id = ?`,
+          [...updateParams, new Date(), existingOffer.id]
+        )
+        console.log(`[GoogleAds Sync] Updated empty URL fields for existing offer ${existingOffer.id}`)
+      }
+    }
+
     console.log(`[GoogleAds Sync] Found existing offer ${existingOffer.id} for campaign ${campaign.campaign_id}`)
     return { offerId: existingOffer.id, created: false }
   }
@@ -1176,6 +1221,8 @@ async function createOfferFirst(params: {
     `INSERT INTO offers (
       user_id,
       url,
+      final_url,
+      final_url_suffix,
       brand,
       target_country,
       target_language,
@@ -1185,10 +1232,12 @@ async function createOfferFirst(params: {
       needs_completion,
       scrape_status,
       is_active
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       userId,
-      '',  // URL 需要用户后续完善
+      url,
+      finalUrl,
+      finalUrlSuffix,
       campaign.campaign_name,
       'US',  // 默认国家，需要用户完善
       'English',  // 默认语言
