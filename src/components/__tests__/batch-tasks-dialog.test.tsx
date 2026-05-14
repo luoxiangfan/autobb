@@ -191,6 +191,64 @@ describe('BatchTasksDialog', () => {
     expect(sent.offerIds).toEqual([101])
   })
 
+  it('disables primary button when there is no valid selection (deduped positive ids)', () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(
+      <BatchTasksDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        variant="offers"
+        offerIds={[0, -1, NaN as unknown as number]}
+      />
+    )
+
+    const startBtn = screen.getByRole('button', { name: '一键开启' }) as HTMLButtonElement
+    expect(startBtn.disabled).toBe(true)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('does not duplicate unmatched hint in error toast when server message already mentions 未命中', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({
+          success: false,
+          message: '批量开启任务失败（已跳过 2 个未命中的 Offer ID）',
+          data: {
+            selectionIdKind: 'offer',
+            requestedIdsCount: 2,
+            matchedOfferCount: 0,
+            unmatchedIdsCount: 2,
+            errors: [{ offerId: 101, type: 'clickFarm', error: '代理不可用' }],
+          },
+        }),
+      })
+    )
+
+    render(
+      <BatchTasksDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        variant="offers"
+        offerIds={[101, 102]}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '一键开启' }))
+
+    await waitFor(() => {
+      expect(toastFns.error).toHaveBeenCalledTimes(1)
+    })
+
+    const desc = (toastFns.error.mock.calls[0][1] as { description?: string }).description ?? ''
+    expect(desc).not.toMatch(/另有 2 个请求 ID 未命中/)
+    expect(desc).toMatch(/已选 2 个 Offer ID/)
+    expect(desc).toMatch(/Offer 101/)
+  })
+
   it('uses campaigns endpoint when variant is campaigns even if offerIds is set', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,

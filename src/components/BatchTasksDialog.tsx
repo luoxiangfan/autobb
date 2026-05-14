@@ -31,6 +31,14 @@ function isAbortError(error: unknown): boolean {
   return name === 'AbortError'
 }
 
+/** 仅接受普通对象，排除数组与 null，避免误把 `data: []` 当业务载荷 */
+function batchResponseDataObject(data: unknown): Record<string, unknown> {
+  if (data === null || typeof data !== 'object' || Array.isArray(data)) {
+    return {}
+  }
+  return data as Record<string, unknown>
+}
+
 /** Strict Mode 会重复挂载；模块级保证 dev 下「缺 variant」只告警一次 */
 let batchTasksDialogVariantDevWarned = false
 
@@ -97,6 +105,10 @@ export default function BatchTasksDialog({
       toast.error('请至少选择一种任务类型')
       return
     }
+    if (selectionIdCount === 0) {
+      toast.error('请先选择至少一个要批量处理的项目')
+      return
+    }
     if (submittingRef.current) {
       return
     }
@@ -137,21 +149,23 @@ export default function BatchTasksDialog({
       })
 
       const result = await response.json().catch(() => ({}))
-      const responseData = result?.data && typeof result.data === 'object' ? result.data : {}
-      const errors = Array.isArray(responseData?.errors) ? responseData.errors : []
-      const failedItemsByType = responseData?.failedItemsByType && typeof responseData.failedItemsByType === 'object'
-        ? responseData.failedItemsByType as { clickFarm?: number; urlSwap?: number; general?: number }
-        : {}
+      const responseData = batchResponseDataObject(result?.data)
+      const errors = Array.isArray(responseData.errors) ? responseData.errors : []
+      const rawFailedByType = responseData.failedItemsByType
+      const failedItemsByType =
+        rawFailedByType && typeof rawFailedByType === 'object' && !Array.isArray(rawFailedByType)
+          ? (rawFailedByType as { clickFarm?: number; urlSwap?: number; general?: number })
+          : {}
 
       const requestedIdsCount = Number(
-        responseData?.requestedIdsCount ?? selectionIdCount ?? 0
+        responseData.requestedIdsCount ?? selectionIdCount ?? 0
       )
       const matchedOfferCount = Number(
-        responseData?.matchedOfferCount ?? responseData?.requestedCount ?? 0
+        responseData.matchedOfferCount ?? responseData.requestedCount ?? 0
       )
-      const unmatchedIdsCount = Number(responseData?.unmatchedIdsCount ?? 0)
+      const unmatchedIdsCount = Number(responseData.unmatchedIdsCount ?? 0)
       const selectionIdKindFromApi =
-        responseData?.selectionIdKind === 'campaign' ? 'campaign' : 'offer'
+        responseData.selectionIdKind === 'campaign' ? 'campaign' : 'offer'
       const unmatchedHint =
         unmatchedIdsCount > 0
           ? selectionIdKindFromApi === 'campaign'
@@ -181,7 +195,12 @@ export default function BatchTasksDialog({
         const fallback = errors.length > 0
           ? `共 ${errors.length} 条失败记录（按操作项计）${byTypeParts.length > 0 ? `：${byTypeParts.join('，')}` : ''}`
           : '操作失败'
-        const errDesc = [unmatchedHint, idSelectionLine, compactErrorMessage].filter(Boolean).join('')
+        const rawServerMessage = typeof result?.message === 'string' ? result.message : ''
+        const serverMessageHasUnmatched =
+          rawServerMessage.includes('未命中') || rawServerMessage.includes('不完全对应')
+        const unmatchedPrefixForErrorDesc =
+          unmatchedIdsCount > 0 && !serverMessageHasUnmatched ? unmatchedHint : ''
+        const errDesc = [unmatchedPrefixForErrorDesc, idSelectionLine, compactErrorMessage].filter(Boolean).join('')
         const title =
           typeof result?.message === 'string' && result.message.trim().length > 0
             ? result.message.trim()
@@ -196,11 +215,11 @@ export default function BatchTasksDialog({
       }
 
       const messages: string[] = []
-      const clickFarmTasksCreated = Number(responseData?.clickFarmTasksCreated || 0)
-      const clickFarmTasksUpdated = Number(responseData?.clickFarmTasksUpdated || 0)
-      const urlSwapTasksCreated = Number(responseData?.urlSwapTasksCreated || 0)
-      const urlSwapTasksUpdated = Number(responseData?.urlSwapTasksUpdated || 0)
-      const failedOfferCount = Number(responseData?.failedOfferCount ?? 0)
+      const clickFarmTasksCreated = Number(responseData.clickFarmTasksCreated || 0)
+      const clickFarmTasksUpdated = Number(responseData.clickFarmTasksUpdated || 0)
+      const urlSwapTasksCreated = Number(responseData.urlSwapTasksCreated || 0)
+      const urlSwapTasksUpdated = Number(responseData.urlSwapTasksUpdated || 0)
+      const failedOfferCount = Number(responseData.failedOfferCount ?? 0)
       const failedOperationCount = errors.length
 
       if (clickFarmTasksCreated > 0) {
@@ -328,6 +347,14 @@ export default function BatchTasksDialog({
             </div>
           </div>
 
+          {selectionIdCount === 0 && (
+            <Alert variant="destructive">
+              <div className="text-sm">
+                ⚠️ 当前没有可批量处理的有效项目（去重后 ID 须为正整数），请关闭后在列表中重新勾选
+              </div>
+            </Alert>
+          )}
+
           {(!enableClickFarm && !enableUrlSwap) && (
             <Alert variant="destructive">
               <div className="text-sm">
@@ -351,9 +378,18 @@ export default function BatchTasksDialog({
           </Button>
           <Button
             onClick={handleBatchStart}
-            disabled={loading || (!enableClickFarm && !enableUrlSwap)}
+            disabled={
+              loading
+              || (!enableClickFarm && !enableUrlSwap)
+              || selectionIdCount === 0
+            }
             className="bg-blue-600 hover:bg-blue-700"
             aria-busy={loading}
+            title={
+              selectionIdCount === 0
+                ? '请先在列表中勾选至少一项有效数据'
+                : undefined
+            }
           >
             {loading ? (
               <>
