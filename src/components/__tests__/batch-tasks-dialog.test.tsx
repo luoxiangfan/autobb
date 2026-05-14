@@ -52,33 +52,32 @@ describe('BatchTasksDialog', () => {
     const onOpenChange = vi.fn()
     const onSuccess = vi.fn()
 
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: '批量任务处理完成',
-          data: {
-            requestedCount: 2,
-            requestedIdsCount: 2,
-            matchedOfferCount: 2,
-            failedOfferCount: 1,
-            clickFarmTasksCreated: 1,
-            clickFarmTasksUpdated: 0,
-            urlSwapTasksCreated: 0,
-            urlSwapTasksUpdated: 0,
-            failedItemsByType: {
-              clickFarm: 0,
-              urlSwap: 1,
-              general: 0,
-            },
-            errors: [
-              { offerId: 102, type: 'urlSwap', error: '缺少 Campaign 关联' },
-            ],
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: '批量任务处理完成',
+        data: {
+          selectionIdKind: 'offer',
+          requestedCount: 2,
+          requestedIdsCount: 2,
+          matchedOfferCount: 2,
+          failedOfferCount: 1,
+          clickFarmTasksCreated: 1,
+          clickFarmTasksUpdated: 0,
+          urlSwapTasksCreated: 0,
+          urlSwapTasksUpdated: 0,
+          failedItemsByType: {
+            clickFarm: 0,
+            urlSwap: 1,
+            general: 0,
           },
-        }),
-      })
-    )
+          errors: [
+            { offerId: 102, type: 'urlSwap', error: '缺少 Campaign 关联' },
+          ],
+        },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
 
     render(
       <BatchTasksDialog
@@ -99,12 +98,17 @@ describe('BatchTasksDialog', () => {
     expect(toastFns.warning).toHaveBeenCalledWith(
       '批量任务处理完成',
       expect.objectContaining({
-        description: expect.stringMatching(/实际处理 2 个 Offer.*换链接 1 项/s),
+        description: expect.stringMatching(/已选 2 个 Offer ID.*实际处理 2 个 Offer.*换链接 1 项/s),
       })
     )
     expect(toastFns.success).not.toHaveBeenCalled()
     expect(onSuccess).toHaveBeenCalledTimes(1)
     expect(onOpenChange).toHaveBeenCalledWith(false)
+
+    const init = fetchMock.mock.calls[0][1] as RequestInit
+    const sent = JSON.parse(init.body as string)
+    expect(sent).not.toHaveProperty('campaignIds')
+    expect(sent.offerIds).toEqual([101, 102])
   })
 
   it('shows error toast when API returns structured full failure', async () => {
@@ -178,6 +182,10 @@ describe('BatchTasksDialog', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalled())
     const url = fetchMock.mock.calls[0][0] as string
     expect(url).toContain('/api/offers/batch-start-tasks')
+    const init = fetchMock.mock.calls[0][1] as RequestInit
+    const sent = JSON.parse(init.body as string)
+    expect(sent).not.toHaveProperty('campaignIds')
+    expect(sent.offerIds).toEqual([101])
   })
 
   it('uses campaigns endpoint when variant is campaigns even if offerIds is set', async () => {
@@ -202,5 +210,9 @@ describe('BatchTasksDialog', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalled())
     const url = fetchMock.mock.calls[0][0] as string
     expect(url).toContain('/api/campaigns/batch-start-tasks')
+    const init = fetchMock.mock.calls[0][1] as RequestInit
+    const sent = JSON.parse(init.body as string)
+    expect(sent).not.toHaveProperty('offerIds')
+    expect(sent.campaignIds).toEqual([301])
   })
 })

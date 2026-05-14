@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -30,7 +30,10 @@ export type BatchTasksDialogVariant = 'offers' | 'campaigns'
 interface BatchTasksDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** 显式指定批量模式；不传则按「是否存在有效 campaignIds」推断（兼容旧用法） */
+  /**
+   * 应显式传入 `offers` 或 `campaigns`，与请求接口一致。
+   * 未传时仍会根据「是否存在有效 campaignIds」推断（仅兼容旧调用；新页面必须传入）。
+   */
   variant?: BatchTasksDialogVariant
   campaignIds?: number[]  // 广告系列页面使用
   offerIds?: number[]     // Offer 页面使用
@@ -48,6 +51,15 @@ export default function BatchTasksDialog({
   const [loading, setLoading] = useState(false)
   const [enableClickFarm, setEnableClickFarm] = useState(true)
   const [enableUrlSwap, setEnableUrlSwap] = useState(true)
+  const submittingRef = useRef(false)
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && variant === undefined) {
+      console.warn(
+        '[BatchTasksDialog] 请传入 variant="offers" | "campaigns"；未传时依赖 campaignIds 推断，后续可能改为必填。'
+      )
+    }
+  }, [variant])
 
   const isCampaignMode = useMemo(() => {
     if (variant === 'campaigns') return true
@@ -68,7 +80,10 @@ export default function BatchTasksDialog({
       toast.error('请至少选择一种任务类型')
       return
     }
-
+    if (submittingRef.current) {
+      return
+    }
+    submittingRef.current = true
     setLoading(true)
     try {
       const endpoint = isCampaignMode
@@ -80,13 +95,19 @@ export default function BatchTasksDialog({
           ? crypto.randomUUID()
           : undefined
 
-      const body = {
-        campaignIds: campaignIds || [],
-        offerIds: offerIds || [],
-        enableClickFarm,
-        enableUrlSwap,
-        ...(clientRequestId ? { clientRequestId } : {}),
-      }
+      const body = isCampaignMode
+        ? {
+            campaignIds: campaignIds || [],
+            enableClickFarm,
+            enableUrlSwap,
+            ...(clientRequestId ? { clientRequestId } : {}),
+          }
+        : {
+            offerIds: offerIds || [],
+            enableClickFarm,
+            enableUrlSwap,
+            ...(clientRequestId ? { clientRequestId } : {}),
+          }
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -127,7 +148,14 @@ export default function BatchTasksDialog({
       const failedOfferCount = Number(responseData?.failedOfferCount ?? 0)
       const failedOperationCount = errors.length
       const unmatchedIdsCount = Number(responseData?.unmatchedIdsCount ?? 0)
-      const unmatchedHint = unmatchedIdsCount > 0 ? `另有 ${unmatchedIdsCount} 个请求 ID 未命中。` : ''
+      const selectionIdKindFromApi =
+        responseData?.selectionIdKind === 'campaign' ? 'campaign' : 'offer'
+      const unmatchedHint =
+        unmatchedIdsCount > 0
+          ? selectionIdKindFromApi === 'campaign'
+            ? `另有 ${unmatchedIdsCount} 个广告系列 ID 可能未单独命中库中记录。`
+            : `另有 ${unmatchedIdsCount} 个请求 ID 未命中。`
+          : ''
 
       if (clickFarmTasksCreated > 0) {
         messages.push(`新建 ${clickFarmTasksCreated} 个补点击`)
@@ -182,8 +210,12 @@ export default function BatchTasksDialog({
           (result.message.includes('未命中') || result.message.includes('不完全对应'))
         const partialUnmatchedPrefix =
           unmatchedIdsCount > 0 && !serverMessageHasUnmatched ? unmatchedHint : ''
+        const idSelectionPhrase =
+          selectionIdKindFromApi === 'campaign'
+            ? `已选 ${requestedIdsCount} 个广告系列（去重后 ID）`
+            : `已选 ${requestedIdsCount} 个 Offer ID`
         toast.warning(partialTitle, {
-          description: `${partialUnmatchedPrefix}${successPart}；已选 ${requestedIdsCount} 个 ID，实际处理 ${matchedOfferCount} 个 Offer；${failedOfferCount} 个 Offer 至少有一项失败；${errorPart}`,
+          description: `${partialUnmatchedPrefix}${successPart}；${idSelectionPhrase}，实际处理 ${matchedOfferCount} 个 Offer；${failedOfferCount} 个 Offer 至少有一项失败；${errorPart}`,
           duration: 6000,
         })
       } else {
@@ -204,6 +236,7 @@ export default function BatchTasksDialog({
         duration: 5000,
       })
     } finally {
+      submittingRef.current = false
       setLoading(false)
     }
   }
