@@ -58,6 +58,13 @@ function finiteNonNegativeInt(raw: unknown, fallback: number): number {
   return Math.floor(n)
 }
 
+/** API 常见 `{ message?, error? }`，优先非空 trim 后的 message */
+function firstTrimmedApiString(message: unknown, error: unknown, fallback: string): string {
+  if (typeof message === 'string' && message.trim().length > 0) return message.trim()
+  if (typeof error === 'string' && error.trim().length > 0) return error.trim()
+  return fallback
+}
+
 /** Strict Mode 会重复挂载；模块级保证 dev 下「缺 variant」只告警一次 */
 let batchTasksDialogVariantDevWarned = false
 
@@ -175,6 +182,9 @@ export default function BatchTasksDialog({
         rawFailedByType && typeof rawFailedByType === 'object' && !Array.isArray(rawFailedByType)
           ? (rawFailedByType as { clickFarm?: number; urlSwap?: number; general?: number })
           : {}
+      const failedClickFarmItems = finiteNonNegativeInt(failedItemsByType.clickFarm, 0)
+      const failedUrlSwapItems = finiteNonNegativeInt(failedItemsByType.urlSwap, 0)
+      const failedGeneralItems = finiteNonNegativeInt(failedItemsByType.general, 0)
 
       const requestedIdsCount = finiteNonNegativeInt(
         responseData.requestedIdsCount,
@@ -195,9 +205,9 @@ export default function BatchTasksDialog({
           : ''
 
       const byTypeParts: string[] = []
-      if (Number(failedItemsByType.clickFarm || 0) > 0) byTypeParts.push(`补点击 ${Number(failedItemsByType.clickFarm)} 项`)
-      if (Number(failedItemsByType.urlSwap || 0) > 0) byTypeParts.push(`换链接 ${Number(failedItemsByType.urlSwap)} 项`)
-      if (Number(failedItemsByType.general || 0) > 0) byTypeParts.push(`通用 ${Number(failedItemsByType.general)} 项`)
+      if (failedClickFarmItems > 0) byTypeParts.push(`补点击 ${failedClickFarmItems} 项`)
+      if (failedUrlSwapItems > 0) byTypeParts.push(`换链接 ${failedUrlSwapItems} 项`)
+      if (failedGeneralItems > 0) byTypeParts.push(`通用 ${failedGeneralItems} 项`)
 
       const compactErrorMessage = errors
         .slice(0, 3)
@@ -224,12 +234,7 @@ export default function BatchTasksDialog({
         const unmatchedPrefixForErrorDesc =
           unmatchedIdsCount > 0 && !serverCoversUnmatched ? unmatchedHint : ''
         const errDesc = [unmatchedPrefixForErrorDesc, idSelectionLine, compactErrorMessage].filter(Boolean).join('')
-        const title =
-          typeof result?.message === 'string' && result.message.trim().length > 0
-            ? result.message.trim()
-            : typeof result?.error === 'string' && result.error.trim().length > 0
-              ? result.error.trim()
-              : '批量开启任务失败'
+        const title = firstTrimmedApiString(result?.message, result?.error, '批量开启任务失败')
         toast.error(title, {
           description: errDesc || fallback,
           duration: 6000,
@@ -263,29 +268,33 @@ export default function BatchTasksDialog({
         const errorPart = compactErrorMessage
           ? `共 ${failedOperationCount} 条失败记录（按操作项计）${byTypeParts.length > 0 ? `：${byTypeParts.join('，')}` : ''}；示例：${compactErrorMessage}${errors.length > 3 ? '…' : ''}`
           : `共 ${failedOperationCount} 条失败记录（按操作项计）`
-        const partialTitle =
-          typeof result?.message === 'string' && result.message.trim().length > 0
-            ? result.message.trim()
-            : typeof result?.error === 'string' && result.error.trim().length > 0
-              ? result.error.trim()
-              : '批量开启任务部分成功'
+        const partialTitle = firstTrimmedApiString(
+          result?.message,
+          result?.error,
+          '批量开启任务部分成功'
+        )
         const partialUnmatchedPrefix =
           unmatchedIdsCount > 0 && !serverCoversUnmatched ? unmatchedHint : ''
         const idSelectionPhrase =
           selectionIdKindFromApi === 'campaign'
             ? `已选 ${requestedIdsCount} 个广告系列（去重后 ID）`
             : `已选 ${requestedIdsCount} 个 Offer ID`
+        const offerOutcomeClause =
+          failedOfferCount > 0
+            ? `${failedOfferCount} 个 Offer 至少有一项失败`
+            : '部分操作项失败（详见下方明细）'
         toast.warning(partialTitle, {
-          description: `${partialUnmatchedPrefix}${successPart}；${idSelectionPhrase}，实际处理 ${matchedOfferCount} 个 Offer；${failedOfferCount} 个 Offer 至少有一项失败；${errorPart}`,
+          description: `${partialUnmatchedPrefix}${successPart}；${idSelectionPhrase}，实际处理 ${matchedOfferCount} 个 Offer；${offerOutcomeClause}；${errorPart}`,
           duration: 6000,
         })
       } else {
         // 未命中提示已在接口返回的 `message`（toast 标题）中由服务端拼接，此处不再重复
         const successDescription = messages.join('；')
-        const successTitle =
-          typeof result?.message === 'string' && result.message.trim().length > 0
-            ? result.message.trim()
-            : '批量开启任务成功'
+        const successTitle = firstTrimmedApiString(
+          result?.message,
+          result?.error,
+          '批量开启任务成功'
+        )
         toast.success(successTitle, {
           ...(successDescription ? { description: successDescription } : {}),
           duration: 5000,
