@@ -26,6 +26,9 @@ function countDedupedPositiveIds(ids?: number[]): number {
 }
 
 function isAbortError(error: unknown): boolean {
+  if (typeof DOMException !== 'undefined' && error instanceof DOMException) {
+    return error.name === 'AbortError'
+  }
   if (!error || typeof error !== 'object') return false
   const name = (error as { name?: string }).name
   return name === 'AbortError'
@@ -47,6 +50,12 @@ function batchApiPayloadMentionsUnmatched(message: unknown, error: unknown): boo
   return pieces.some(
     (text) => text.includes('未命中') || text.includes('不完全对应')
   )
+}
+
+function finiteNonNegativeInt(raw: unknown, fallback: number): number {
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 0) return fallback
+  return Math.floor(n)
 }
 
 /** Strict Mode 会重复挂载；模块级保证 dev 下「缺 variant」只告警一次 */
@@ -167,13 +176,15 @@ export default function BatchTasksDialog({
           ? (rawFailedByType as { clickFarm?: number; urlSwap?: number; general?: number })
           : {}
 
-      const requestedIdsCount = Number(
-        responseData.requestedIdsCount ?? selectionIdCount ?? 0
+      const requestedIdsCount = finiteNonNegativeInt(
+        responseData.requestedIdsCount,
+        selectionIdCount
       )
-      const matchedOfferCount = Number(
-        responseData.matchedOfferCount ?? responseData.requestedCount ?? 0
+      const matchedOfferCount = finiteNonNegativeInt(
+        responseData.matchedOfferCount ?? responseData.requestedCount,
+        0
       )
-      const unmatchedIdsCount = Number(responseData.unmatchedIdsCount ?? 0)
+      const unmatchedIdsCount = finiteNonNegativeInt(responseData.unmatchedIdsCount, 0)
       const selectionIdKindFromApi =
         responseData.selectionIdKind === 'campaign' ? 'campaign' : 'offer'
       const unmatchedHint =
@@ -200,15 +211,16 @@ export default function BatchTasksDialog({
           ? `已选 ${requestedIdsCount} 个广告系列（去重后 ID），实际处理 ${matchedOfferCount} 个 Offer。`
           : `已选 ${requestedIdsCount} 个 Offer ID，实际处理 ${matchedOfferCount} 个 Offer。`
 
+      const serverCoversUnmatched = batchApiPayloadMentionsUnmatched(
+        result?.message,
+        result?.error
+      )
+
       if (!response.ok) {
         if (ac.signal.aborted) return
         const fallback = errors.length > 0
           ? `共 ${errors.length} 条失败记录（按操作项计）${byTypeParts.length > 0 ? `：${byTypeParts.join('，')}` : ''}`
           : '操作失败'
-        const serverCoversUnmatched = batchApiPayloadMentionsUnmatched(
-          result?.message,
-          result?.error
-        )
         const unmatchedPrefixForErrorDesc =
           unmatchedIdsCount > 0 && !serverCoversUnmatched ? unmatchedHint : ''
         const errDesc = [unmatchedPrefixForErrorDesc, idSelectionLine, compactErrorMessage].filter(Boolean).join('')
@@ -226,11 +238,11 @@ export default function BatchTasksDialog({
       }
 
       const messages: string[] = []
-      const clickFarmTasksCreated = Number(responseData.clickFarmTasksCreated || 0)
-      const clickFarmTasksUpdated = Number(responseData.clickFarmTasksUpdated || 0)
-      const urlSwapTasksCreated = Number(responseData.urlSwapTasksCreated || 0)
-      const urlSwapTasksUpdated = Number(responseData.urlSwapTasksUpdated || 0)
-      const failedOfferCount = Number(responseData.failedOfferCount ?? 0)
+      const clickFarmTasksCreated = finiteNonNegativeInt(responseData.clickFarmTasksCreated, 0)
+      const clickFarmTasksUpdated = finiteNonNegativeInt(responseData.clickFarmTasksUpdated, 0)
+      const urlSwapTasksCreated = finiteNonNegativeInt(responseData.urlSwapTasksCreated, 0)
+      const urlSwapTasksUpdated = finiteNonNegativeInt(responseData.urlSwapTasksUpdated, 0)
+      const failedOfferCount = finiteNonNegativeInt(responseData.failedOfferCount, 0)
       const failedOperationCount = errors.length
 
       if (clickFarmTasksCreated > 0) {
@@ -252,13 +264,11 @@ export default function BatchTasksDialog({
           ? `共 ${failedOperationCount} 条失败记录（按操作项计）${byTypeParts.length > 0 ? `：${byTypeParts.join('，')}` : ''}；示例：${compactErrorMessage}${errors.length > 3 ? '…' : ''}`
           : `共 ${failedOperationCount} 条失败记录（按操作项计）`
         const partialTitle =
-          typeof result.message === 'string' && result.message.trim().length > 0
+          typeof result?.message === 'string' && result.message.trim().length > 0
             ? result.message.trim()
-            : '批量开启任务部分成功'
-        const serverCoversUnmatched = batchApiPayloadMentionsUnmatched(
-          result?.message,
-          result?.error
-        )
+            : typeof result?.error === 'string' && result.error.trim().length > 0
+              ? result.error.trim()
+              : '批量开启任务部分成功'
         const partialUnmatchedPrefix =
           unmatchedIdsCount > 0 && !serverCoversUnmatched ? unmatchedHint : ''
         const idSelectionPhrase =
@@ -273,7 +283,7 @@ export default function BatchTasksDialog({
         // 未命中提示已在接口返回的 `message`（toast 标题）中由服务端拼接，此处不再重复
         const successDescription = messages.join('；')
         const successTitle =
-          typeof result.message === 'string' && result.message.trim().length > 0
+          typeof result?.message === 'string' && result.message.trim().length > 0
             ? result.message.trim()
             : '批量开启任务成功'
         toast.success(successTitle, {
@@ -368,7 +378,7 @@ export default function BatchTasksDialog({
           {selectionIdCount === 0 && (
             <Alert variant="destructive">
               <div className="text-sm">
-                ⚠️ 当前没有可批量处理的有效项目（去重后 ID 须为正整数），请关闭后在列表中重新勾选
+                ⚠️ 关闭本窗口后回到列表重新勾选即可
               </div>
             </Alert>
           )}

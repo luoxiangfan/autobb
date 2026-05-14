@@ -339,6 +339,99 @@ describe('BatchTasksDialog', () => {
     )
 
     expect(document.body.textContent).toMatch(/请先在列表中勾选至少一项有效数据/)
+    expect(document.body.textContent).toMatch(/关闭本窗口后回到列表重新勾选即可/)
+  })
+
+  it('uses error as partial-warning title when message is absent', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          error: '部分失败：请检查依赖',
+          data: {
+            selectionIdKind: 'offer',
+            requestedIdsCount: 2,
+            matchedOfferCount: 2,
+            failedOfferCount: 1,
+            clickFarmTasksCreated: 1,
+            clickFarmTasksUpdated: 0,
+            urlSwapTasksCreated: 0,
+            urlSwapTasksUpdated: 0,
+            failedItemsByType: {
+              clickFarm: 0,
+              urlSwap: 1,
+              general: 0,
+            },
+            errors: [{ offerId: 102, type: 'urlSwap', error: '缺少 Campaign 关联' }],
+          },
+        }),
+      })
+    )
+
+    render(
+      <BatchTasksDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        variant="offers"
+        offerIds={[101, 102]}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '一键开启' }))
+
+    await waitFor(() => {
+      expect(toastFns.warning).toHaveBeenCalledTimes(1)
+    })
+
+    expect(toastFns.warning.mock.calls[0][0]).toBe('部分失败：请检查依赖')
+  })
+
+  it('does not surface NaN in toast when API sends non-numeric counts', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          message: '批量任务处理完成',
+          data: {
+            selectionIdKind: 'offer',
+            requestedIdsCount: 'bogus',
+            matchedOfferCount: 'nope',
+            failedOfferCount: 'x',
+            clickFarmTasksCreated: 'bad',
+            clickFarmTasksUpdated: 0,
+            urlSwapTasksCreated: 0,
+            urlSwapTasksUpdated: 0,
+            failedItemsByType: {
+              clickFarm: 0,
+              urlSwap: 1,
+              general: 0,
+            },
+            errors: [{ offerId: 102, type: 'urlSwap', error: '缺少 Campaign 关联' }],
+          },
+        }),
+      })
+    )
+
+    render(
+      <BatchTasksDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        variant="offers"
+        offerIds={[101, 102]}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '一键开启' }))
+
+    await waitFor(() => {
+      expect(toastFns.warning).toHaveBeenCalledTimes(1)
+    })
+
+    const desc = (toastFns.warning.mock.calls[0][1] as { description?: string }).description ?? ''
+    expect(desc).not.toMatch(/NaN/)
+    expect(desc).toMatch(/已选 2 个 Offer ID.*实际处理 0 个 Offer/)
   })
 
   it('uses campaigns endpoint when variant is campaigns even if offerIds is set', async () => {
