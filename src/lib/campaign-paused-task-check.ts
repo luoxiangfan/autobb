@@ -38,10 +38,102 @@ export interface CampaignPausedTaskCheckResult {
   details: CampaignPausedTaskCheckUserResult[]
 }
 
+interface UserOfferBatch {
+  userId: number
+  offerIds: number[]
+}
+
+/** 用户级并发默认硬上限（可用 QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY_MAX 覆盖） */
+const DEFAULT_USER_CONCURRENCY_CAP = 16
+
+function parsePositiveIntEnv(rawValue: string | undefined, defaultValue: number): number {
+  if (!rawValue) return defaultValue
+  const parsed = Number.parseInt(rawValue, 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) return defaultValue
+  return parsed
+}
+
+function getUserConcurrencySettings(): {
+  requested: number
+  cap: number
+  effective: number
+} {
+  const cap = Math.max(
+    1,
+    parsePositiveIntEnv(
+      process.env.QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY_MAX,
+      DEFAULT_USER_CONCURRENCY_CAP
+    )
+  )
+  const requested = parsePositiveIntEnv(
+    process.env.QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY,
+    3
+  )
+  return { requested, cap, effective: Math.min(requested, cap) }
+}
+
+function logCampaignPausedTaskCheckComplete(payload: Record<string, unknown>): void {
+  console.log(JSON.stringify({ event: 'campaign_paused_task_check_complete', ...payload }))
+}
+
+async function processUserOfferBatch(
+  batch: UserOfferBatch,
+  pauseReason: string,
+  pauseMessage: string
+): Promise<CampaignPausedTaskCheckUserResult> {
+  const { userId, offerIds } = batch
+  let userOffersAttempted = 0
+  let userOffersSucceeded = 0
+  let userOffersFailed = 0
+  let userOffersChanged = 0
+  let userOffersNoop = 0
+  let userClickFarmPaused = 0
+  let userUrlSwapDisabled = 0
+
+  try {
+    const batchResults = await pauseOfferTasksBatch(offerIds, userId, pauseReason, pauseMessage)
+
+    for (const { result, error } of batchResults) {
+      userOffersAttempted++
+      if (error) {
+        userOffersFailed++
+      } else {
+        userOffersSucceeded++
+        if (result.clickFarmTaskPaused || result.urlSwapTaskDisabled) {
+          userOffersChanged++
+        } else {
+          userOffersNoop++
+        }
+      }
+
+      if (result.clickFarmTaskPaused) userClickFarmPaused++
+      if (result.urlSwapTaskDisabled) userUrlSwapDisabled++
+    }
+  } catch (error: any) {
+    const message = error?.message || String(error)
+    console.error(`[runCampaignPausedTaskCheck] 用户 ${userId} 批处理失败:`, message)
+    userOffersAttempted += offerIds.length
+    userOffersFailed += offerIds.length
+  }
+
+  return {
+    userId,
+    offerIds,
+    offersAttempted: userOffersAttempted,
+    offersSucceeded: userOffersSucceeded,
+    offersFailed: userOffersFailed,
+    offersChanged: userOffersChanged,
+    offersNoop: userOffersNoop,
+    clickFarmTasksPaused: userClickFarmPaused,
+    urlSwapTasksDisabled: userUrlSwapDisabled,
+  }
+}
+
 export async function runCampaignPausedTaskCheck(
   pauseReason: string,
   pauseMessage: string
 ): Promise<CampaignPausedTaskCheckResult> {
+  const checkStartedAt = Date.now()
   const db = await getDatabase()
   const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
 
@@ -68,33 +160,66 @@ export async function runCampaignPausedTaskCheck(
   const totalPausedCampaigns = Number(pausedOfferPairs[0]?.total_paused_campaigns ?? 0)
 
   if (pausedOfferPairs.length === 0) {
+    const summary: CampaignPausedTaskCheckSummary = {
+      totalPausedCampaigns,
+      totalPausedOfferPairs: 0,
+      totalOffersProcessed: 0,
+      totalOffersAttempted: 0,
+      totalOffersSucceeded: 0,
+      totalOffersFailed: 0,
+      totalOffersChanged: 0,
+      totalOffersNoop: 0,
+      clickFarmTasksPaused: 0,
+      urlSwapTasksDisabled: 0,
+      errors: 0,
+    }
+    const concurrency = getUserConcurrencySettings()
+    logCampaignPausedTaskCheckComplete({
+      durationMs: Date.now() - checkStartedAt,
+      dbType: db.type,
+      userBatchCount: 0,
+      activeUserConcurrency: 0,
+      requestedUserConcurrency: concurrency.requested,
+      userConcurrencyCap: concurrency.cap,
+      effectiveUserConcurrency: concurrency.effective,
+      summary,
+    })
     return {
-      summary: {
-        totalPausedCampaigns,
-        totalPausedOfferPairs: 0,
-        totalOffersProcessed: 0,
-        totalOffersAttempted: 0,
-        totalOffersSucceeded: 0,
-        totalOffersFailed: 0,
-        totalOffersChanged: 0,
-        totalOffersNoop: 0,
-        clickFarmTasksPaused: 0,
-        urlSwapTasksDisabled: 0,
-        errors: 0,
-      },
+      summary,
       details: [],
     }
   }
 
-  const userOfferMap = new Map<number, number[]>()
+  const userBatches: UserOfferBatch[] = []
   for (const pair of pausedOfferPairs) {
-    if (!userOfferMap.has(pair.user_id)) {
-      userOfferMap.set(pair.user_id, [])
+    const lastBatch = userBatches[userBatches.length - 1]
+    if (!lastBatch || lastBatch.userId !== pair.user_id) {
+      userBatches.push({
+        userId: pair.user_id,
+        offerIds: [pair.offer_id],
+      })
+    } else {
+      lastBatch.offerIds.push(pair.offer_id)
     }
-    userOfferMap.get(pair.user_id)!.push(pair.offer_id)
   }
 
-  const details: CampaignPausedTaskCheckUserResult[] = []
+  const details = new Array<CampaignPausedTaskCheckUserResult>(userBatches.length)
+  const concurrency = getUserConcurrencySettings()
+  const maxUserConcurrency = concurrency.effective
+
+  let nextBatchIndex = 0
+  const workers = Array.from({ length: Math.min(maxUserConcurrency, userBatches.length) }, async () => {
+    while (true) {
+      const index = nextBatchIndex
+      nextBatchIndex += 1
+      if (index >= userBatches.length) return
+
+      const userResult = await processUserOfferBatch(userBatches[index], pauseReason, pauseMessage)
+      details[index] = userResult
+    }
+  })
+  await Promise.all(workers)
+
   let totalOffersAttempted = 0
   let totalOffersSucceeded = 0
   let totalOffersFailed = 0
@@ -104,79 +229,45 @@ export async function runCampaignPausedTaskCheck(
   let totalUrlSwapTasksDisabled = 0
   let totalErrors = 0
 
-  for (const [userId, offerIdArray] of userOfferMap.entries()) {
-    let userOffersAttempted = 0
-    let userOffersSucceeded = 0
-    let userOffersFailed = 0
-    let userOffersChanged = 0
-    let userOffersNoop = 0
-    let userClickFarmPaused = 0
-    let userUrlSwapDisabled = 0
-
-    try {
-      const batchResults = await pauseOfferTasksBatch(offerIdArray, userId, pauseReason, pauseMessage)
-
-      for (const { result, error } of batchResults) {
-        userOffersAttempted++
-        if (error) {
-          userOffersFailed++
-          totalErrors++
-        } else {
-          userOffersSucceeded++
-          if (result.clickFarmTaskPaused || result.urlSwapTaskDisabled) {
-            userOffersChanged++
-          } else {
-            userOffersNoop++
-          }
-        }
-
-        if (result.clickFarmTaskPaused) userClickFarmPaused++
-        if (result.urlSwapTaskDisabled) userUrlSwapDisabled++
-      }
-    } catch (error: any) {
-      const message = error?.message || String(error)
-      console.error(`[runCampaignPausedTaskCheck] 用户 ${userId} 批处理失败:`, message)
-      userOffersAttempted += offerIdArray.length
-      userOffersFailed += offerIdArray.length
-      totalErrors += offerIdArray.length
-    }
-
-    totalOffersAttempted += userOffersAttempted
-    totalOffersSucceeded += userOffersSucceeded
-    totalOffersFailed += userOffersFailed
-    totalOffersChanged += userOffersChanged
-    totalOffersNoop += userOffersNoop
-    totalClickFarmTasksPaused += userClickFarmPaused
-    totalUrlSwapTasksDisabled += userUrlSwapDisabled
-
-    details.push({
-      userId,
-      offerIds: offerIdArray,
-      offersAttempted: userOffersAttempted,
-      offersSucceeded: userOffersSucceeded,
-      offersFailed: userOffersFailed,
-      offersChanged: userOffersChanged,
-      offersNoop: userOffersNoop,
-      clickFarmTasksPaused: userClickFarmPaused,
-      urlSwapTasksDisabled: userUrlSwapDisabled,
-    })
+  for (const userResult of details) {
+    totalOffersAttempted += userResult.offersAttempted
+    totalOffersSucceeded += userResult.offersSucceeded
+    totalOffersFailed += userResult.offersFailed
+    totalOffersChanged += userResult.offersChanged
+    totalOffersNoop += userResult.offersNoop
+    totalClickFarmTasksPaused += userResult.clickFarmTasksPaused
+    totalUrlSwapTasksDisabled += userResult.urlSwapTasksDisabled
+    totalErrors += userResult.offersFailed
   }
 
+  const summary: CampaignPausedTaskCheckSummary = {
+    totalPausedCampaigns,
+    totalPausedOfferPairs: pausedOfferPairs.length,
+    // 兼容历史字段语义：processed = attempted
+    totalOffersProcessed: totalOffersAttempted,
+    totalOffersAttempted,
+    totalOffersSucceeded,
+    totalOffersFailed,
+    totalOffersChanged,
+    totalOffersNoop,
+    clickFarmTasksPaused: totalClickFarmTasksPaused,
+    urlSwapTasksDisabled: totalUrlSwapTasksDisabled,
+    errors: totalErrors,
+  }
+
+  logCampaignPausedTaskCheckComplete({
+    durationMs: Date.now() - checkStartedAt,
+    dbType: db.type,
+    userBatchCount: userBatches.length,
+    activeUserConcurrency: Math.min(maxUserConcurrency, userBatches.length),
+    requestedUserConcurrency: concurrency.requested,
+    userConcurrencyCap: concurrency.cap,
+    effectiveUserConcurrency: concurrency.effective,
+    summary,
+  })
+
   return {
-    summary: {
-      totalPausedCampaigns,
-      totalPausedOfferPairs: pausedOfferPairs.length,
-      // 兼容历史字段语义：processed = attempted
-      totalOffersProcessed: totalOffersAttempted,
-      totalOffersAttempted,
-      totalOffersSucceeded,
-      totalOffersFailed,
-      totalOffersChanged,
-      totalOffersNoop,
-      clickFarmTasksPaused: totalClickFarmTasksPaused,
-      urlSwapTasksDisabled: totalUrlSwapTasksDisabled,
-      errors: totalErrors,
-    },
+    summary,
     details,
   }
 }

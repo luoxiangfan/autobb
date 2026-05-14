@@ -320,6 +320,9 @@ SQLITE_TX_WAIT_TIMEOUT_MS=10000
 # 暂停广告系列关联 Offer 任务批处理并发度（1-10）
 # 未设置时默认：development=2，非 development=3
 PAUSE_OFFER_TASKS_BATCH_CONCURRENCY=3
+# 暂停广告系列任务检查按用户并发上限（>=1，默认3；受 MAX 收敛）
+QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY=3
+QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY_MAX=16
 
 # Supabase认证
 NEXT_PUBLIC_SUPABASE_URL="your-supabase-url"
@@ -348,6 +351,9 @@ DATABASE_URL="postgresql://user:password@host:5432/autoads"
 # SQLITE_TX_WAIT_TIMEOUT_MS=5000
 # 暂停广告系列关联 Offer 任务批处理并发度（建议 2-5）
 PAUSE_OFFER_TASKS_BATCH_CONCURRENCY=3
+# 暂停广告系列任务检查按用户并发上限（建议 2-5；受 MAX 收敛）
+QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY=3
+QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY_MAX=16
 
 # 其他配置同上，但使用生产环境的值
 NODE_ENV="production"
@@ -363,6 +369,11 @@ NEXT_PUBLIC_APP_URL="https://your-domain.com"
 - 生效范围 `1-10`（超出会自动收敛到边界）；
 - 未设置时默认：`development=2`，非 development（含 production）=`3`；生产建议 `2-5`；
 - 值越大批处理越快，但会提升 DB 与队列瞬时压力。
+
+`QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY` 用于控制已暂停广告系列检查时按用户并发处理上限：
+- 未设置时默认 `3`；会与 `QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY_MAX`（默认 `16`）取 `min`，防止误配压垮数据库；
+- 值越大单次检查越快，但会提高数据库并发压力，建议按监控逐步上调。
+- **与 `PAUSE_OFFER_TASKS_BATCH_CONCURRENCY` 的关系**：每个用户批次内部仍会按 offer 并行（上限见该变量），两者相乘会抬高峰值并发，调参时请一并观察 DB 与队列监控。
 
 常用选值速查（仅适用于 SQLite）：
 

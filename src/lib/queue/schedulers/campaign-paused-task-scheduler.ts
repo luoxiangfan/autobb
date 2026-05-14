@@ -11,6 +11,8 @@
  * 配置项：
  * - QUEUE_CAMPAIGN_PAUSED_CHECK_INTERVAL_MS: 检测间隔（默认 30 分钟）
  * - QUEUE_CAMPAIGN_PAUSED_RUN_ON_START: 启动时是否立即执行一次（默认 true）
+ * - QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY: 按用户并发处理上限（默认 3，受 MAX 收敛）
+ * - QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY_MAX: 用户并发硬上限（默认 16）
  */
 
 import { runCampaignPausedTaskCheck } from '@/lib/campaign-paused-task-check'
