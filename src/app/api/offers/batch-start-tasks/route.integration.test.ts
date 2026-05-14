@@ -120,6 +120,7 @@ describe('POST /api/offers/batch-start-tasks integration', () => {
       requestedCount: 2,
       requestedIdsCount: 2,
       matchedOfferCount: 2,
+      unmatchedIdsCount: 0,
       failedOfferCount: 1,
       clickFarmTasksUpdated: 1,
       urlSwapTasksCreated: 1,

@@ -126,6 +126,7 @@ describe('POST /api/campaigns/batch-start-tasks', () => {
       requestedCount: 1,
       requestedIdsCount: 1,
       matchedOfferCount: 1,
+      unmatchedIdsCount: 0,
       failedOfferCount: 0,
       partialSuccess: false,
       clickFarmTasksCreated: 1,
@@ -166,6 +167,7 @@ describe('POST /api/campaigns/batch-start-tasks', () => {
       requestedCount: 1,
       requestedIdsCount: 1,
       matchedOfferCount: 1,
+      unmatchedIdsCount: 0,
       failedOfferCount: 1,
       clickFarmTasksCreated: 0,
       clickFarmTasksUpdated: 0,
@@ -191,6 +193,22 @@ describe('POST /api/campaigns/batch-start-tasks', () => {
     expect(res.status).toBe(400)
     const data = await res.json()
     expect(data.error).toMatch(/任务类型/)
+    expect(dbFns.query).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 when both flags are JSON string false', async () => {
+    const req = new NextRequest('http://localhost/api/campaigns/batch-start-tasks', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        campaignIds: [301],
+        enableClickFarm: 'false',
+        enableUrlSwap: 'false',
+      }),
+    })
+
+    const res = await POST(req)
+    expect(res.status).toBe(400)
     expect(dbFns.query).not.toHaveBeenCalled()
   })
 })

@@ -263,10 +263,11 @@ export async function batchStartTasksForOffers(input: BatchStartTasksInput): Pro
   const hasAnyFailure = result.errors.length > 0
   const partialSuccess = hasAnySuccess && hasAnyFailure
   const success = hasAnySuccess && !hasAnyFailure
-  const failedItemsByType = {
-    clickFarm: result.errors.filter((item) => item.type === 'clickFarm').length,
-    urlSwap: result.errors.filter((item) => item.type === 'urlSwap').length,
-    general: result.errors.filter((item) => item.type === 'general').length,
+  const failedItemsByType = { clickFarm: 0, urlSwap: 0, general: 0 }
+  for (const item of result.errors) {
+    if (item.type === 'clickFarm') failedItemsByType.clickFarm += 1
+    else if (item.type === 'urlSwap') failedItemsByType.urlSwap += 1
+    else failedItemsByType.general += 1
   }
 
   return {

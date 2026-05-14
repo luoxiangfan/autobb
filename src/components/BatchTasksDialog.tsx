@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,15 @@ import { Label } from '@/components/ui/label'
 import { Alert } from '@/components/ui/alert'
 import { toast } from 'sonner'
 import { Loader2, PlayCircle } from 'lucide-react'
+
+function countDedupedPositiveIds(ids?: number[]): number {
+  if (!ids?.length) return 0
+  return new Set(
+    ids
+      .map((id) => Number(id))
+      .filter((id) => Number.isInteger(id) && id > 0)
+  ).size
+}
 
 interface BatchTasksDialogProps {
   open: boolean
@@ -35,8 +44,14 @@ export default function BatchTasksDialog({
   const [enableClickFarm, setEnableClickFarm] = useState(true)
   const [enableUrlSwap, setEnableUrlSwap] = useState(true)
 
-  const itemCount = campaignIds?.length || offerIds?.length || 0
   const isCampaignMode = !!campaignIds
+  const selectionIdCount = useMemo(
+    () =>
+      isCampaignMode
+        ? countDedupedPositiveIds(campaignIds)
+        : countDedupedPositiveIds(offerIds),
+    [isCampaignMode, campaignIds, offerIds]
+  )
 
   const handleBatchStart = async () => {
     if (!enableClickFarm && !enableUrlSwap) {
@@ -94,13 +109,15 @@ export default function BatchTasksDialog({
       const urlSwapTasksCreated = Number(responseData?.urlSwapTasksCreated || 0)
       const urlSwapTasksUpdated = Number(responseData?.urlSwapTasksUpdated || 0)
       const requestedIdsCount = Number(
-        responseData?.requestedIdsCount ?? itemCount ?? 0
+        responseData?.requestedIdsCount ?? selectionIdCount ?? 0
       )
       const matchedOfferCount = Number(
         responseData?.matchedOfferCount ?? responseData?.requestedCount ?? 0
       )
       const failedOfferCount = Number(responseData?.failedOfferCount ?? 0)
       const failedOperationCount = errors.length
+      const unmatchedIdsCount = Number(responseData?.unmatchedIdsCount ?? 0)
+      const unmatchedHint = unmatchedIdsCount > 0 ? `另有 ${unmatchedIdsCount} 个请求 ID 未命中。` : ''
 
       if (clickFarmTasksCreated > 0) {
         messages.push(`新建 ${clickFarmTasksCreated} 个补点击`)
@@ -129,8 +146,9 @@ export default function BatchTasksDialog({
         .join('；')
 
       if (errors.length > 0 && succeededCount === 0) {
+        const errDesc = [unmatchedHint, compactErrorMessage].filter(Boolean).join('')
         toast.error('批量开启任务失败', {
-          description: compactErrorMessage || '全部任务执行失败',
+          description: errDesc || '全部任务执行失败',
           duration: 6000,
         })
         return
@@ -146,12 +164,16 @@ export default function BatchTasksDialog({
           ? `共 ${failedOperationCount} 条失败记录（按操作项计）${warningByTypeParts.length > 0 ? `：${warningByTypeParts.join('，')}` : ''}；示例：${compactErrorMessage}${errors.length > 3 ? '…' : ''}`
           : `共 ${failedOperationCount} 条失败记录（按操作项计）`
         toast.warning('批量开启任务部分成功', {
-          description: `${successPart}；已选 ${requestedIdsCount} 个 ID，实际处理 ${matchedOfferCount} 个 Offer；${failedOfferCount} 个 Offer 至少有一项失败；${errorPart}`,
+          description: `${unmatchedHint}${successPart}；已选 ${requestedIdsCount} 个 ID，实际处理 ${matchedOfferCount} 个 Offer；${failedOfferCount} 个 Offer 至少有一项失败；${errorPart}`,
           duration: 6000,
         })
       } else {
+        const successDescription =
+          unmatchedIdsCount > 0
+            ? `${messages.join('；')}（另有 ${unmatchedIdsCount} 个请求 ID 未命中，未处理）`
+            : messages.join('；')
         toast.success(result.message || '批量开启任务成功', {
-          description: messages.join('；'),
+          description: successDescription,
           duration: 5000,
         })
       }
@@ -175,7 +197,7 @@ export default function BatchTasksDialog({
         <DialogHeader>
           <DialogTitle>批量开启任务</DialogTitle>
           <DialogDescription>
-            为选中的 {itemCount} 个{isCampaignMode ? '广告系列' : 'Offer'}批量开启补点击和换链任务
+            为选中的 {selectionIdCount} 个{isCampaignMode ? '广告系列' : 'Offer'}（去重后）批量开启补点击和换链任务
           </DialogDescription>
         </DialogHeader>
 
@@ -240,10 +262,10 @@ export default function BatchTasksDialog({
             </Alert>
           )}
 
-          {itemCount > 100 && (
+          {selectionIdCount > 100 && (
             <Alert variant="destructive">
               <div className="text-sm">
-                ⚠️ 选中项目较多（{itemCount}个），建议分批操作（每批 100 个以内）
+                ⚠️ 选中项目较多（{selectionIdCount} 个，去重后），建议分批操作（每批 100 个以内）
               </div>
             </Alert>
           )}

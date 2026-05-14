@@ -128,6 +128,7 @@ describe('POST /api/offers/batch-start-tasks', () => {
       requestedCount: 1,
       requestedIdsCount: 1,
       matchedOfferCount: 1,
+      unmatchedIdsCount: 0,
       failedOfferCount: 0,
       partialSuccess: false,
       clickFarmTasksUpdated: 1,
@@ -185,5 +186,71 @@ describe('POST /api/offers/batch-start-tasks', () => {
     const data = await res.json()
     expect(data.error).toMatch(/任务类型/)
     expect(dbFns.query).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 when both flags are JSON string false', async () => {
+    const req = new NextRequest('http://localhost/api/offers/batch-start-tasks', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        offerIds: [101],
+        enableClickFarm: 'false',
+        enableUrlSwap: 'false',
+      }),
+    })
+
+    const res = await POST(req)
+    expect(res.status).toBe(400)
+    expect(dbFns.query).not.toHaveBeenCalled()
+  })
+
+  it('skips click-farm when enableClickFarm is string false', async () => {
+    clickFarmFns.getClickFarmTaskByOfferId.mockClear()
+    urlSwapFns.getUrlSwapTaskByOfferId.mockResolvedValue(null)
+    clickFarmFns.createClickFarmTask.mockResolvedValue({})
+    urlSwapFns.createUrlSwapTask.mockResolvedValue({})
+
+    const req = new NextRequest('http://localhost/api/offers/batch-start-tasks', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        offerIds: [101],
+        enableClickFarm: 'false',
+        enableUrlSwap: true,
+      }),
+    })
+
+    const res = await POST(req)
+    expect(res.status).toBe(200)
+    expect(clickFarmFns.getClickFarmTaskByOfferId).not.toHaveBeenCalled()
+    expect(urlSwapFns.createUrlSwapTask).toHaveBeenCalled()
+    expect(clickFarmFns.createClickFarmTask).not.toHaveBeenCalled()
+  })
+
+  it('exposes unmatchedIdsCount when some offer ids are not found', async () => {
+    dbFns.query.mockResolvedValue([
+      { id: 101, target_country: 'US' },
+    ])
+    clickFarmFns.getClickFarmTaskByOfferId.mockResolvedValue(null)
+    urlSwapFns.getUrlSwapTaskByOfferId.mockResolvedValue(null)
+    clickFarmFns.createClickFarmTask.mockResolvedValue({})
+    urlSwapFns.createUrlSwapTask.mockResolvedValue({})
+
+    const req = new NextRequest('http://localhost/api/offers/batch-start-tasks', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        offerIds: [101, 999],
+        enableClickFarm: true,
+        enableUrlSwap: true,
+      }),
+    })
+
+    const res = await POST(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.data.unmatchedIdsCount).toBe(1)
+    expect(data.message).toContain('已跳过 1 个未命中的请求 ID')
   })
 })
