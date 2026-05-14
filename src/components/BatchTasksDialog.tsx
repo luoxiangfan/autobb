@@ -164,8 +164,17 @@ export default function BatchTasksDialog({
         const errorPart = compactErrorMessage
           ? `共 ${failedOperationCount} 条失败记录（按操作项计）${warningByTypeParts.length > 0 ? `：${warningByTypeParts.join('，')}` : ''}；示例：${compactErrorMessage}${errors.length > 3 ? '…' : ''}`
           : `共 ${failedOperationCount} 条失败记录（按操作项计）`
-        toast.warning('批量开启任务部分成功', {
-          description: `${unmatchedHint}${successPart}；已选 ${requestedIdsCount} 个 ID，实际处理 ${matchedOfferCount} 个 Offer；${failedOfferCount} 个 Offer 至少有一项失败；${errorPart}`,
+        const partialTitle =
+          typeof result.message === 'string' && result.message.trim().length > 0
+            ? result.message.trim()
+            : '批量开启任务部分成功'
+        const serverMessageHasUnmatched =
+          typeof result.message === 'string' &&
+          (result.message.includes('未命中') || result.message.includes('不完全对应'))
+        const partialUnmatchedPrefix =
+          unmatchedIdsCount > 0 && !serverMessageHasUnmatched ? unmatchedHint : ''
+        toast.warning(partialTitle, {
+          description: `${partialUnmatchedPrefix}${successPart}；已选 ${requestedIdsCount} 个 ID，实际处理 ${matchedOfferCount} 个 Offer；${failedOfferCount} 个 Offer 至少有一项失败；${errorPart}`,
           duration: 6000,
         })
       } else {
@@ -192,7 +201,7 @@ export default function BatchTasksDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" aria-busy={loading}>
         <DialogHeader>
           <DialogTitle>批量开启任务</DialogTitle>
           <DialogDescription>

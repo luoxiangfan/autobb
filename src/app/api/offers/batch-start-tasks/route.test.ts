@@ -125,6 +125,7 @@ describe('POST /api/offers/batch-start-tasks', () => {
     expect(clickFarmFns.createClickFarmTask).not.toHaveBeenCalled()
     expect(urlSwapFns.createUrlSwapTask).not.toHaveBeenCalled()
     expect(data.data).toMatchObject({
+      selectionIdKind: 'offer',
       requestedCount: 1,
       requestedIdsCount: 1,
       matchedOfferCount: 1,
@@ -227,6 +228,20 @@ describe('POST /api/offers/batch-start-tasks', () => {
     expect(clickFarmFns.createClickFarmTask).not.toHaveBeenCalled()
   })
 
+  it('returns 400 INVALID_JSON for malformed JSON body', async () => {
+    const req = new NextRequest('http://localhost/api/offers/batch-start-tasks', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{',
+    })
+
+    const res = await POST(req)
+    expect(res.status).toBe(400)
+    const data = await res.json()
+    expect(data.code).toBe('INVALID_JSON')
+    expect(dbFns.query).not.toHaveBeenCalled()
+  })
+
   it('exposes unmatchedIdsCount when some offer ids are not found', async () => {
     dbFns.query.mockResolvedValue([
       { id: 101, target_country: 'US' },
@@ -251,6 +266,6 @@ describe('POST /api/offers/batch-start-tasks', () => {
 
     expect(res.status).toBe(200)
     expect(data.data.unmatchedIdsCount).toBe(1)
-    expect(data.message).toContain('已跳过 1 个未命中的请求 ID')
+    expect(data.message).toContain('已跳过 1 个未命中的 Offer ID')
   })
 })

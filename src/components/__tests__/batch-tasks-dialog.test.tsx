@@ -96,7 +96,7 @@ describe('BatchTasksDialog', () => {
     })
 
     expect(toastFns.warning).toHaveBeenCalledWith(
-      '批量开启任务部分成功',
+      '批量任务处理完成',
       expect.objectContaining({
         description: expect.stringMatching(/实际处理 2 个 Offer.*换链接 1 项/s),
       })

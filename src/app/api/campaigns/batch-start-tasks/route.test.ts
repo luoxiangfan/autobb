@@ -123,6 +123,7 @@ describe('POST /api/campaigns/batch-start-tasks', () => {
     expect(urlSwapFns.updateUrlSwapTask).not.toHaveBeenCalled()
     expect(urlSwapFns.enableUrlSwapTask).not.toHaveBeenCalled()
     expect(data.data).toMatchObject({
+      selectionIdKind: 'campaign',
       requestedCount: 1,
       requestedIdsCount: 1,
       matchedOfferCount: 1,
@@ -164,6 +165,7 @@ describe('POST /api/campaigns/batch-start-tasks', () => {
     expect(data.success).toBe(false)
     expect(data.partialSuccess).toBe(false)
     expect(data.data).toMatchObject({
+      selectionIdKind: 'campaign',
       requestedCount: 1,
       requestedIdsCount: 1,
       matchedOfferCount: 1,

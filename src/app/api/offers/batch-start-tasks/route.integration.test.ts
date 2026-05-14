@@ -117,6 +117,7 @@ describe('POST /api/offers/batch-start-tasks integration', () => {
     expect(data.success).toBe(false)
     expect(data.partialSuccess).toBe(true)
     expect(data.data).toMatchObject({
+      selectionIdKind: 'offer',
       requestedCount: 2,
       requestedIdsCount: 2,
       matchedOfferCount: 2,

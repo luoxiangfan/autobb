@@ -7,6 +7,7 @@ import {
   coerceBatchStartTaskFlag,
   logBatchStartTasksHttpOutcome,
   normalizeBatchStartClientRequestId,
+  parseBatchStartRequestBody,
 } from '@/lib/batch-start-tasks-route-helpers'
 
 /**
@@ -25,11 +26,15 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = authResult.user.userId
-    const body = await request.json()
-    const clientRequestId = normalizeBatchStartClientRequestId(body?.clientRequestId)
-    const enableClickFarm = coerceBatchStartTaskFlag(body?.enableClickFarm, true)
-    const enableUrlSwap = coerceBatchStartTaskFlag(body?.enableUrlSwap, true)
-    const { offerIds } = body
+    const parsed = await parseBatchStartRequestBody(request)
+    if (!parsed.ok) {
+      return parsed.response
+    }
+    const body = parsed.body
+    const clientRequestId = normalizeBatchStartClientRequestId(body.clientRequestId)
+    const enableClickFarm = coerceBatchStartTaskFlag(body.enableClickFarm, true)
+    const enableUrlSwap = coerceBatchStartTaskFlag(body.enableUrlSwap, true)
+    const { offerIds } = body as { offerIds?: unknown }
 
     if (!enableClickFarm && !enableUrlSwap) {
       return NextResponse.json(
@@ -92,6 +97,7 @@ export async function POST(request: NextRequest) {
       result,
       requestedIdsCount,
       matchedOfferCount,
+      selectionIdKind: 'offer',
       clientRequestId,
     })
 
