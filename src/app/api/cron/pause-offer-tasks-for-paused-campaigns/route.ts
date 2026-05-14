@@ -22,7 +22,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { pauseOfferTasksBatch } from '@/lib/campaign-offer-tasks'
+import { runCampaignPausedTaskCheck } from '@/lib/campaign-paused-task-check'
 
 /**
  * 验证 cron 请求的合法性
@@ -68,112 +68,41 @@ export async function POST(request: NextRequest) {
     console.log('[Cron] Starting paused campaign offer tasks check...')
     console.log('[Cron] Timestamp:', new Date().toISOString())
 
-    const db = await getDatabase()
-    const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
+    const result = await runCampaignPausedTaskCheck(
+      'campaign_paused_cron',
+      '定时检测：关联广告系列已暂停，自动暂停任务'
+    )
 
-    // 1. 查询所有已暂停的广告系列（按用户分组）
-    const pausedCampaigns = await db.query<any>(`
-      SELECT 
-        c.id as campaign_id,
-        c.offer_id,
-        c.user_id,
-        c.status,
-        c.updated_at
-      FROM campaigns c
-      WHERE c.status = 'PAUSED'
-        AND c.is_deleted = ${isDeletedFalse}
-        AND c.offer_id IS NOT NULL
-      ORDER BY c.user_id, c.updated_at DESC
-    `)
-
-    if (!pausedCampaigns || pausedCampaigns.length === 0) {
+    if (result.summary.totalPausedOfferPairs === 0) {
       console.log('[Cron] 没有找到已暂停的广告系列')
       return NextResponse.json({
         success: true,
         timestamp: new Date().toISOString(),
         duration: `${Date.now() - startTime}ms`,
-        summary: {
-          totalPausedCampaigns: 0,
-          totalOffersProcessed: 0,
-          clickFarmTasksPaused: 0,
-          urlSwapTasksDisabled: 0,
-        },
+        summary: result.summary,
         message: '没有找到已暂停的广告系列',
       })
     }
-
-    // 2. 按用户分组，去重 offer_id（一个用户可能有多个广告系列关联同一个 offer）
-    const userOfferMap = new Map<number, Set<number>>()
-    
-    for (const campaign of pausedCampaigns) {
-      const userId = campaign.user_id
-      const offerId = campaign.offer_id
-      
-      if (!userOfferMap.has(userId)) {
-        userOfferMap.set(userId, new Set())
-      }
-      userOfferMap.get(userId)!.add(offerId)
-    }
-
-    // 3. 批量处理每个用户的 offer
-    let totalOffersProcessed = 0
-    let totalClickFarmTasksPaused = 0
-    let totalUrlSwapTasksDisabled = 0
-    const results: Array<{
-      userId: number
-      offerIds: number[]
-      clickFarmTasksPaused: number
-      urlSwapTasksDisabled: number
-    }> = []
-
-    for (const [userId, offerIds] of userOfferMap.entries()) {
-      const offerIdArray = Array.from(offerIds)
-      const batchResults = await pauseOfferTasksBatch(
-        offerIdArray,
-        userId,
-        'campaign_paused_cron',
-        '定时检测：关联广告系列已暂停，自动暂停任务'
-      )
-
-      let userClickFarmPaused = 0
-      let userUrlSwapDisabled = 0
-
-      for (const { result } of batchResults) {
-        if (result.clickFarmTaskPaused) userClickFarmPaused++
-        if (result.urlSwapTaskDisabled) userUrlSwapDisabled++
-      }
-
-      totalOffersProcessed += offerIdArray.length
-      totalClickFarmTasksPaused += userClickFarmPaused
-      totalUrlSwapTasksDisabled += userUrlSwapDisabled
-
-      results.push({
-        userId,
-        offerIds: offerIdArray,
-        clickFarmTasksPaused: userClickFarmPaused,
-        urlSwapTasksDisabled: userUrlSwapDisabled,
-      })
-
-      console.log(`[Cron] 用户 ${userId}: 处理 ${offerIdArray.length} 个 offer, ` +
-        `暂停 ${userClickFarmPaused} 个补点击任务，禁用 ${userUrlSwapDisabled} 个换链接任务`)
+    for (const userResult of result.details) {
+      console.log(`[Cron] 用户 ${userResult.userId}: 处理 ${userResult.offerIds.length} 个 offer, ` +
+        `成功 ${userResult.offersSucceeded}，失败 ${userResult.offersFailed}，` +
+        `暂停 ${userResult.clickFarmTasksPaused} 个补点击任务，禁用 ${userResult.urlSwapTasksDisabled} 个换链接任务`)
     }
 
     const duration = Date.now() - startTime
 
     console.log('[Cron] Paused campaign offer tasks check completed:', {
       duration: `${duration}ms`,
-      totalPausedCampaigns: pausedCampaigns.length,
-      totalOffersProcessed,
-      totalClickFarmTasksPaused,
-      totalUrlSwapTasksDisabled,
+      ...result.summary,
     })
 
     // 4. 创建执行日志
     try {
+      const db = await getDatabase()
       await db.exec(
         `INSERT INTO sync_logs (sync_type, status, record_count, duration_ms, started_at, completed_at)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        ['paused_campaign_task_check', 'success', totalOffersProcessed, duration, 
+        ['paused_campaign_task_check', 'success', result.summary.totalOffersProcessed, duration, 
          new Date().toISOString(), new Date().toISOString()]
       )
     } catch (logError) {
@@ -184,15 +113,11 @@ export async function POST(request: NextRequest) {
       success: true,
       timestamp: new Date().toISOString(),
       duration: `${duration}ms`,
-      summary: {
-        totalPausedCampaigns: pausedCampaigns.length,
-        totalOffersProcessed,
-        clickFarmTasksPaused: totalClickFarmTasksPaused,
-        urlSwapTasksDisabled: totalUrlSwapTasksDisabled,
-      },
-      details: results,
-      message: `处理完成：检查 ${pausedCampaigns.length} 个暂停广告系列，处理 ${totalOffersProcessed} 个 offer，` +
-        `暂停 ${totalClickFarmTasksPaused} 个补点击任务，禁用 ${totalUrlSwapTasksDisabled} 个换链接任务`,
+      summary: result.summary,
+      details: result.details,
+      message: `处理完成：检查 ${result.summary.totalPausedCampaigns} 个暂停广告系列（去重关系 ${result.summary.totalPausedOfferPairs}），` +
+        `处理 ${result.summary.totalOffersProcessed} 个 offer，成功 ${result.summary.totalOffersSucceeded} 个（变更 ${result.summary.totalOffersChanged}，无变更 ${result.summary.totalOffersNoop}）、失败 ${result.summary.totalOffersFailed} 个，` +
+        `暂停 ${result.summary.clickFarmTasksPaused} 个补点击任务，禁用 ${result.summary.urlSwapTasksDisabled} 个换链接任务`,
     })
 
   } catch (error: any) {

@@ -13,8 +13,7 @@
  * - QUEUE_CAMPAIGN_PAUSED_RUN_ON_START: 启动时是否立即执行一次（默认 true）
  */
 
-import { getDatabase } from '@/lib/db'
-import { pauseOfferTasksBatch } from '@/lib/campaign-offer-tasks'
+import { runCampaignPausedTaskCheck } from '@/lib/campaign-paused-task-check'
 
 function parseBooleanEnv(rawValue: string | undefined, defaultValue: boolean): boolean {
   if (rawValue === undefined) return defaultValue
@@ -26,33 +25,32 @@ function parseBooleanEnv(rawValue: string | undefined, defaultValue: boolean): b
   return defaultValue
 }
 
-function parseNonNegativeIntEnv(rawValue: string | undefined, defaultValue: number): number {
+function parseNonNegativeIntEnv(rawValue: string | undefined, defaultValue: number, minValue: number = 0): number {
   if (rawValue === undefined) return defaultValue
 
   const parsed = Number.parseInt(rawValue, 10)
-  if (!Number.isFinite(parsed) || parsed < 0) {
+  if (!Number.isFinite(parsed) || parsed < minValue) {
     return defaultValue
   }
 
   return parsed
 }
 
-interface PausedCampaignInfo {
-  id: number
-  user_id: number
-  offer_id: number
-  status: string
-  updated_at: string
-}
-
 export class CampaignPausedTaskScheduler {
   private intervalHandle: NodeJS.Timeout | null = null
   private startupTimeoutHandle: NodeJS.Timeout | null = null
   private isRunning: boolean = false
+  private isChecking: boolean = false
   private lastCheckAt: Date | null = null
   private lastCheckResult: {
     totalPausedCampaigns: number
+    totalPausedOfferPairs: number
     totalOffersProcessed: number
+    totalOffersAttempted: number
+    totalOffersSucceeded: number
+    totalOffersFailed: number
+    totalOffersChanged: number
+    totalOffersNoop: number
     clickFarmTasksPaused: number
     urlSwapTasksDisabled: number
     errors: number
@@ -60,7 +58,8 @@ export class CampaignPausedTaskScheduler {
 
   private readonly CHECK_INTERVAL_MS = parseNonNegativeIntEnv(
     process.env.QUEUE_CAMPAIGN_PAUSED_CHECK_INTERVAL_MS,
-    30 * 60 * 1000  // 默认 30 分钟
+    30 * 60 * 1000,  // 默认 30 分钟
+    1_000            // 最低 1 秒，避免 0 导致忙循环
   )
   private readonly RUN_ON_START = parseBooleanEnv(
     process.env.QUEUE_CAMPAIGN_PAUSED_RUN_ON_START,
@@ -134,37 +133,35 @@ export class CampaignPausedTaskScheduler {
    * 检查并暂停任务
    */
   private async checkAndPauseTasks(): Promise<void> {
+    if (this.isChecking) {
+      console.log('⏭️ 上一次暂停任务检测仍在运行，跳过本次执行')
+      return
+    }
+
+    this.isChecking = true
     const checkStartAt = Date.now()
 
     try {
       const now = new Date()
       console.log(`\n[${now.toISOString()}] 🔄 检测已暂停广告系列的任务...`)
 
-      const db = await getDatabase()
-      const isDeletedCondition = db.type === 'postgres' ? false : 0
-      // 查询所有已暂停的广告系列（按用户分组）
-      const query = `
-        SELECT 
-          c.id,
-          c.user_id,
-          c.offer_id,
-          c.status,
-          c.updated_at
-        FROM campaigns c
-        WHERE c.status = 'PAUSED'
-          AND c.is_deleted = ${isDeletedCondition}
-          AND c.offer_id IS NOT NULL
-        ORDER BY c.user_id, c.updated_at DESC
-      `
+      const result = await runCampaignPausedTaskCheck(
+        'campaign_paused_cron',
+        '定时检测：关联广告系列已暂停，自动暂停任务'
+      )
 
-      const pausedCampaigns = await db.query<PausedCampaignInfo>(query)
-
-      if (pausedCampaigns.length === 0) {
+      if (result.summary.totalPausedOfferPairs === 0) {
         console.log('  ℹ️  没有已暂停的广告系列')
         this.lastCheckAt = new Date()
         this.lastCheckResult = {
-          totalPausedCampaigns: 0,
+          totalPausedCampaigns: result.summary.totalPausedCampaigns,
+          totalPausedOfferPairs: 0,
           totalOffersProcessed: 0,
+          totalOffersAttempted: 0,
+          totalOffersSucceeded: 0,
+          totalOffersFailed: 0,
+          totalOffersChanged: 0,
+          totalOffersNoop: 0,
           clickFarmTasksPaused: 0,
           urlSwapTasksDisabled: 0,
           errors: 0,
@@ -172,53 +169,15 @@ export class CampaignPausedTaskScheduler {
         return
       }
 
-      console.log(`  📊 找到 ${pausedCampaigns.length} 个已暂停的广告系列`)
+      console.log(`  📊 找到 ${result.summary.totalPausedCampaigns} 个已暂停广告系列`)
+      console.log(`  📊 去重后用户-offer 关系数：${result.summary.totalPausedOfferPairs}`)
 
-      // 按用户分组，去重 offer_id
-      const userOfferMap = new Map<number, Set<number>>()
-
-      for (const campaign of pausedCampaigns) {
-        const userId = campaign.user_id
-        const offerId = campaign.offer_id
-
-        if (!userOfferMap.has(userId)) {
-          userOfferMap.set(userId, new Set())
-        }
-        userOfferMap.get(userId)!.add(offerId)
-      }
-
-      // 批量处理每个用户的 offer
-      let totalOffersProcessed = 0
-      let totalClickFarmTasksPaused = 0
-      let totalUrlSwapTasksDisabled = 0
-      let totalErrors = 0
-
-      for (const [userId, offerIds] of userOfferMap.entries()) {
-        const offerIdArray = Array.from(offerIds)
-
-        try {
-          const batchResults = await pauseOfferTasksBatch(
-            offerIdArray,
-            userId,
-            'campaign_paused_cron',
-            '定时检测：关联广告系列已暂停，自动暂停任务'
-          )
-
-          for (const { result } of batchResults) {
-            if (result.clickFarmTaskPaused) totalClickFarmTasksPaused++
-            if (result.urlSwapTaskDisabled) totalUrlSwapTasksDisabled++
-          }
-
-          totalOffersProcessed += offerIdArray.length
-
-          console.log(
-            `  ✓ 用户 ${userId}: 处理 ${offerIdArray.length} 个 offer, ` +
-            `暂停 ${totalClickFarmTasksPaused} 个补点击任务，禁用 ${totalUrlSwapTasksDisabled} 个换链接任务`
-          )
-        } catch (error: any) {
-          totalErrors++
-          console.error(`  ✗ 用户 ${userId} 处理失败:`, error.message)
-        }
+      for (const userResult of result.details) {
+        console.log(
+          `  ✓ 用户 ${userResult.userId}: 处理 ${userResult.offerIds.length} 个 offer, ` +
+          `成功 ${userResult.offersSucceeded}，失败 ${userResult.offersFailed}，` +
+          `暂停 ${userResult.clickFarmTasksPaused} 个补点击任务，禁用 ${userResult.urlSwapTasksDisabled} 个换链接任务`
+        )
       }
 
       const elapsedMs = Date.now() - checkStartAt
@@ -226,19 +185,21 @@ export class CampaignPausedTaskScheduler {
       // 记录检查结果
       this.lastCheckAt = new Date()
       this.lastCheckResult = {
-        totalPausedCampaigns: pausedCampaigns.length,
-        totalOffersProcessed,
-        clickFarmTasksPaused: totalClickFarmTasksPaused,
-        urlSwapTasksDisabled: totalUrlSwapTasksDisabled,
-        errors: totalErrors,
+        ...result.summary,
       }
 
       console.log(`\n✅ 检测完成（耗时 ${elapsedMs}ms）:`)
-      console.log(`   - 已暂停广告系列：${pausedCampaigns.length}`)
-      console.log(`   - 已处理 offer: ${totalOffersProcessed}`)
-      console.log(`   - 已暂停补点击任务：${totalClickFarmTasksPaused}`)
-      console.log(`   - 已禁用换链接任务：${totalUrlSwapTasksDisabled}`)
-      console.log(`   - 错误数：${totalErrors}`)
+      console.log(`   - 已暂停广告系列：${result.summary.totalPausedCampaigns}`)
+      console.log(`   - 去重后用户-offer 关系：${result.summary.totalPausedOfferPairs}`)
+      console.log(`   - 已处理 offer: ${result.summary.totalOffersProcessed}`)
+      console.log(`   - 尝试处理 offer: ${result.summary.totalOffersAttempted}`)
+      console.log(`   - 处理成功 offer: ${result.summary.totalOffersSucceeded}`)
+      console.log(`   - 处理失败 offer: ${result.summary.totalOffersFailed}`)
+      console.log(`   - 发生状态变更 offer: ${result.summary.totalOffersChanged}`)
+      console.log(`   - 无状态变更 offer: ${result.summary.totalOffersNoop}`)
+      console.log(`   - 已暂停补点击任务：${result.summary.clickFarmTasksPaused}`)
+      console.log(`   - 已禁用换链接任务：${result.summary.urlSwapTasksDisabled}`)
+      console.log(`   - 错误数：${result.summary.errors}`)
     } catch (error: any) {
       const elapsedMs = Date.now() - checkStartAt
       console.error(`❌ 检测已暂停广告系列任务失败（耗时 ${elapsedMs}ms）:`, error)
@@ -246,11 +207,19 @@ export class CampaignPausedTaskScheduler {
       this.lastCheckAt = new Date()
       this.lastCheckResult = {
         totalPausedCampaigns: 0,
+        totalPausedOfferPairs: 0,
         totalOffersProcessed: 0,
+        totalOffersAttempted: 0,
+        totalOffersSucceeded: 0,
+        totalOffersFailed: 0,
+        totalOffersChanged: 0,
+        totalOffersNoop: 0,
         clickFarmTasksPaused: 0,
         urlSwapTasksDisabled: 0,
         errors: 1,
       }
+    } finally {
+      this.isChecking = false
     }
   }
 
@@ -263,7 +232,13 @@ export class CampaignPausedTaskScheduler {
     lastCheckAt: string | null
     lastCheckResult: {
       totalPausedCampaigns: number
+      totalPausedOfferPairs: number
       totalOffersProcessed: number
+      totalOffersAttempted: number
+      totalOffersSucceeded: number
+      totalOffersFailed: number
+      totalOffersChanged: number
+      totalOffersNoop: number
       clickFarmTasksPaused: number
       urlSwapTasksDisabled: number
       errors: number

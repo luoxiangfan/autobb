@@ -141,15 +141,16 @@ export async function pauseOfferTasksBatch(
   userId: number,
   pauseReason: string = 'campaign_paused_batch',
   pauseMessage: string = '关联广告系列已暂停，自动暂停任务'
-): Promise<Array<{ offerId: number; result: PauseOfferTasksResult }>> {
-  const results: Array<{ offerId: number; result: PauseOfferTasksResult }> = []
+): Promise<Array<{ offerId: number; result: PauseOfferTasksResult; error?: string }>> {
+  const results: Array<{ offerId: number; result: PauseOfferTasksResult; error?: string }> = []
 
   for (const offerId of offerIds) {
     try {
       const result = await pauseOfferTasks(offerId, userId, pauseReason, pauseMessage)
       results.push({ offerId, result })
     } catch (error: any) {
-      console.error(`[pauseOfferTasksBatch] 处理 offer ${offerId} 失败:`, error)
+      const message = error?.message || String(error)
+      console.error(`[pauseOfferTasksBatch] 处理 offer ${offerId} 失败:`, message)
       results.push({
         offerId,
         result: {
@@ -158,6 +159,7 @@ export async function pauseOfferTasksBatch(
           urlSwapTaskDisabled: false,
           urlSwapTaskCount: 0,
         },
+        error: message,
       })
     }
   }
