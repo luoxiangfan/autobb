@@ -1837,6 +1837,7 @@ export default function OffersClientPage({
       <BatchTasksDialog
         open={isBatchTasksDialogOpen}
         onOpenChange={setIsBatchTasksDialogOpen}
+        variant="offers"
         offerIds={Array.from(selectedOfferIds)}
         onSuccess={() => {
           setSelectedOfferIds(new Set())

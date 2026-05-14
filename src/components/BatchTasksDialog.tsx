@@ -25,9 +25,13 @@ function countDedupedPositiveIds(ids?: number[]): number {
   ).size
 }
 
+export type BatchTasksDialogVariant = 'offers' | 'campaigns'
+
 interface BatchTasksDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** 显式指定批量模式；不传则按「是否存在有效 campaignIds」推断（兼容旧用法） */
+  variant?: BatchTasksDialogVariant
   campaignIds?: number[]  // 广告系列页面使用
   offerIds?: number[]     // Offer 页面使用
   onSuccess?: () => void
@@ -36,6 +40,7 @@ interface BatchTasksDialogProps {
 export default function BatchTasksDialog({
   open,
   onOpenChange,
+  variant,
   campaignIds,
   offerIds,
   onSuccess,
@@ -44,8 +49,12 @@ export default function BatchTasksDialog({
   const [enableClickFarm, setEnableClickFarm] = useState(true)
   const [enableUrlSwap, setEnableUrlSwap] = useState(true)
 
-  /** 勿用 `!!campaignIds`：空数组 `[]` 在 JS 中为真值，会误走 campaigns 接口。 */
-  const isCampaignMode = Boolean(campaignIds?.length)
+  const isCampaignMode = useMemo(() => {
+    if (variant === 'campaigns') return true
+    if (variant === 'offers') return false
+    /** 勿用 `!!campaignIds`：空数组 `[]` 在 JS 中为真值 */
+    return Boolean(campaignIds?.length)
+  }, [variant, campaignIds])
   const selectionIdCount = useMemo(
     () =>
       isCampaignMode

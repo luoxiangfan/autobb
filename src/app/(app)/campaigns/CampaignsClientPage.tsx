@@ -5223,6 +5223,7 @@ export default function CampaignsClientPage({
       <BatchTasksDialog
         open={isBatchTasksDialogOpen}
         onOpenChange={setIsBatchTasksDialogOpen}
+        variant="campaigns"
         campaignIds={Array.from(selectedCampaignIds)}
         onSuccess={() => {
           setSelectedCampaignIds(new Set())

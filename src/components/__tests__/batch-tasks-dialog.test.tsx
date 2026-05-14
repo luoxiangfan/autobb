@@ -84,6 +84,7 @@ describe('BatchTasksDialog', () => {
       <BatchTasksDialog
         open={true}
         onOpenChange={onOpenChange}
+        variant="offers"
         offerIds={[101, 102]}
         onSuccess={onSuccess}
       />
@@ -133,6 +134,7 @@ describe('BatchTasksDialog', () => {
       <BatchTasksDialog
         open={true}
         onOpenChange={onOpenChange}
+        variant="offers"
         offerIds={[101, 102]}
         onSuccess={onSuccess}
       />
@@ -165,6 +167,7 @@ describe('BatchTasksDialog', () => {
       <BatchTasksDialog
         open={true}
         onOpenChange={vi.fn()}
+        variant="offers"
         campaignIds={[]}
         offerIds={[101]}
       />
@@ -175,5 +178,29 @@ describe('BatchTasksDialog', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalled())
     const url = fetchMock.mock.calls[0][0] as string
     expect(url).toContain('/api/offers/batch-start-tasks')
+  })
+
+  it('uses campaigns endpoint when variant is campaigns even if offerIds is set', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: 'bad' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(
+      <BatchTasksDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        variant="campaigns"
+        campaignIds={[301]}
+        offerIds={[101]}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '一键开启' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    const url = fetchMock.mock.calls[0][0] as string
+    expect(url).toContain('/api/campaigns/batch-start-tasks')
   })
 })
