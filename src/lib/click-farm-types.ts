@@ -17,6 +17,8 @@ export type ClickFarmTaskStatus =
 export type PauseReason =
   | 'no_proxy'   // 缺少代理
   | 'manual'     // 手动暂停
+  | 'offer_deactivated' // Offer 下线或关联资源失效
+  | 'broken_link' // Offer 推广链接失效
   | null;
 
 /**

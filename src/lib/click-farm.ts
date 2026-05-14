@@ -13,6 +13,7 @@ import type {
   ClickFarmTask,
   ClickFarmTaskListItem,  // 🆕 导入任务列表项类型
   ClickFarmTaskStatus,  // 🆕 导入状态类型
+  PauseReason,
   CreateClickFarmTaskRequest,
   UpdateClickFarmTaskRequest,
   TaskFilters,
@@ -551,18 +552,26 @@ export async function pauseClickFarmTask(
 /**
  * 🔧 优化 (2026-04-15): 批量暂停补点击任务（按 offer_id）
  */
-export async function pauseClickFarmTasksByOfferId(offerId: number): Promise<number> {
+export async function pauseClickFarmTasksByOfferId(
+  offerId: number,
+  options?: {
+    reason?: PauseReason
+    message?: string | null
+  }
+): Promise<number> {
   const db = await getDatabase();
   const nowSql = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const reason = options?.reason ?? 'offer_deactivated'
+  const message = options?.message ?? 'Offer 关联的广告系列已删除'
   const result = await db.exec(`
     UPDATE click_farm_tasks
     SET status = 'paused',
-        pause_reason = 'offer_deactivated',
-        pause_message = 'Offer 关联的广告系列已删除',
+        pause_reason = ?,
+        pause_message = ?,
         updated_at = ${nowSql},
         paused_at = ${nowSql}
     WHERE offer_id = ? AND status IN ('pending', 'running')
-  `, [offerId]);
+  `, [reason, message, offerId]);
   return result.changes || 0;
 }
 
