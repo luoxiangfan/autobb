@@ -23,6 +23,59 @@ export interface DatabaseAdapter {
 class SQLiteAdapter implements DatabaseAdapter {
   type: DatabaseType = 'sqlite'
   private db: Database.Database
+  private txStorage = new AsyncLocalStorage<symbol | null>()
+  private activeTxToken: symbol | null = null
+  private txWaiters: Array<() => void> = []
+  private readonly txWaitTimeoutMs = (() => {
+    const raw = Number(process.env.SQLITE_TX_WAIT_TIMEOUT_MS || 10000)
+    if (!Number.isFinite(raw) || raw <= 0) return 10000
+    return Math.floor(raw)
+  })()
+
+  private waitForTxRelease(scope: string): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const waiter = () => {
+        clearTimeout(timer)
+        resolve()
+      }
+      const timer = setTimeout(() => {
+        const index = this.txWaiters.indexOf(waiter)
+        if (index >= 0) this.txWaiters.splice(index, 1)
+        const message = `[sqlite-tx] wait timeout (${this.txWaitTimeoutMs}ms) while waiting in ${scope}`
+        console.warn(message)
+        reject(new Error(message))
+      }, this.txWaitTimeoutMs)
+
+      this.txWaiters.push(waiter)
+    })
+  }
+
+  private async waitForTxTurn(): Promise<void> {
+    const callerToken = this.txStorage.getStore() ?? null
+    while (this.activeTxToken && this.activeTxToken !== callerToken) {
+      await this.waitForTxRelease('query/exec')
+    }
+  }
+
+  private releaseAllWaiters(): void {
+    if (this.txWaiters.length === 0) return
+    const waiters = this.txWaiters.splice(0, this.txWaiters.length)
+    for (const notify of waiters) notify()
+  }
+
+  private async acquireTxLock(token: symbol): Promise<void> {
+    while (this.activeTxToken && this.activeTxToken !== token) {
+      await this.waitForTxRelease('transaction')
+    }
+    this.activeTxToken = token
+  }
+
+  private releaseTxLock(token: symbol): void {
+    if (this.activeTxToken === token) {
+      this.activeTxToken = null
+      this.releaseAllWaiters()
+    }
+  }
 
   constructor(dbPath: string) {
     // 确保data目录存在
@@ -48,18 +101,21 @@ class SQLiteAdapter implements DatabaseAdapter {
   }
 
   async query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+    await this.waitForTxTurn()
     const normalizedSql = normalizeSqliteSql(sql)
     const normalizedParams = normalizeSqliteParams(params)
     return Promise.resolve(this.db.prepare(normalizedSql).all(...normalizedParams) as T[])
   }
 
   async queryOne<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
+    await this.waitForTxTurn()
     const normalizedSql = normalizeSqliteSql(sql)
     const normalizedParams = normalizeSqliteParams(params)
     return Promise.resolve(this.db.prepare(normalizedSql).get(...normalizedParams) as T | undefined)
   }
 
   async exec(sql: string, params: any[] = []): Promise<{ changes: number; lastInsertRowid?: number }> {
+    await this.waitForTxTurn()
     const normalizedSql = normalizeSqliteSql(sql)
     const normalizedParams = normalizeSqliteParams(params)
 
@@ -100,9 +156,10 @@ class SQLiteAdapter implements DatabaseAdapter {
   }
 
   async transaction<T>(fn: () => Promise<T>): Promise<T> {
-    // better-sqlite3 的原生 transaction 只支持同步回调。
-    // 为兼容当前代码库大量 async 回调事务，这里改为显式 BEGIN/COMMIT/ROLLBACK。
-    if (this.db.inTransaction) {
+    const currentToken = this.txStorage.getStore() ?? null
+
+    // 嵌套事务：同一上下文内用 SAVEPOINT 实现。
+    if (currentToken) {
       const savepoint = `sp_${Date.now()}_${Math.floor(Math.random() * 1_000_000)}`
       this.db.exec(`SAVEPOINT ${savepoint}`)
       try {
@@ -120,19 +177,26 @@ class SQLiteAdapter implements DatabaseAdapter {
       }
     }
 
-    this.db.exec('BEGIN')
-    try {
-      const result = await fn()
-      this.db.exec('COMMIT')
-      return result
-    } catch (error) {
+    // 顶层事务：显式加锁，避免跨请求 SQL 混入同一连接事务。
+    const txToken = Symbol('sqlite-tx')
+    await this.acquireTxLock(txToken)
+    return await this.txStorage.run(txToken, async () => {
+      this.db.exec('BEGIN')
       try {
-        this.db.exec('ROLLBACK')
-      } catch {
-        // ignore rollback errors and preserve original error
+        const result = await fn()
+        this.db.exec('COMMIT')
+        return result
+      } catch (error) {
+        try {
+          this.db.exec('ROLLBACK')
+        } catch {
+          // ignore rollback errors and preserve original error
+        }
+        throw error
+      } finally {
+        this.releaseTxLock(txToken)
       }
-      throw error
-    }
+    })
   }
 
   close(): void {

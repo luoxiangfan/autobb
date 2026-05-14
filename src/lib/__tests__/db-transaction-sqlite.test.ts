@@ -20,6 +20,7 @@ describe('SQLite async transaction semantics', () => {
 
   afterEach(async () => {
     closeDatabase()
+    delete process.env.SQLITE_TX_WAIT_TIMEOUT_MS
     try {
       await fs.unlink(dbPath)
     } catch {
@@ -55,5 +56,79 @@ describe('SQLite async transaction semantics', () => {
 
     const row = await db.queryOne<{ count: number }>('SELECT COUNT(*) as count FROM tx_case')
     expect(row?.count).toBe(0)
+  })
+
+  it('does not allow concurrent writes to leak into active transaction', async () => {
+    const db = getDatabase()
+    await db.exec('CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)')
+
+    let releaseTxWait: (() => void) | null = null
+    const txWait = new Promise<void>((resolve) => {
+      releaseTxWait = resolve
+    })
+
+    let reachedTxWaitResolve: (() => void) | null = null
+    const reachedTxWait = new Promise<void>((resolve) => {
+      reachedTxWaitResolve = resolve
+    })
+
+    const txPromise = db.transaction(async () => {
+      await db.exec('INSERT INTO tx_case (value) VALUES (?)', ['tx-1'])
+      reachedTxWaitResolve?.()
+      await txWait
+
+      const rowInTx = await db.queryOne<{ count: number }>('SELECT COUNT(*) as count FROM tx_case')
+      expect(rowInTx?.count).toBe(1)
+
+      await db.exec('INSERT INTO tx_case (value) VALUES (?)', ['tx-2'])
+    })
+
+    await reachedTxWait
+
+    let outsiderResolved = false
+    const outsiderPromise = db.exec('INSERT INTO tx_case (value) VALUES (?)', ['outside']).then(() => {
+      outsiderResolved = true
+    })
+
+    await Promise.resolve()
+    expect(outsiderResolved).toBe(false)
+
+    releaseTxWait?.()
+    await Promise.all([txPromise, outsiderPromise])
+
+    const row = await db.queryOne<{ count: number }>('SELECT COUNT(*) as count FROM tx_case')
+    expect(row?.count).toBe(3)
+  })
+
+  it('fails fast when waiting for transaction lock exceeds timeout', async () => {
+    closeDatabase()
+    process.env.SQLITE_TX_WAIT_TIMEOUT_MS = '30'
+    const db = getDatabase()
+    await db.exec('CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)')
+
+    let releaseTxWait: (() => void) | null = null
+    const txWait = new Promise<void>((resolve) => {
+      releaseTxWait = resolve
+    })
+
+    let reachedTxWaitResolve: (() => void) | null = null
+    const reachedTxWait = new Promise<void>((resolve) => {
+      reachedTxWaitResolve = resolve
+    })
+
+    const txPromise = db.transaction(async () => {
+      await db.exec('INSERT INTO tx_case (value) VALUES (?)', ['tx-1'])
+      reachedTxWaitResolve?.()
+      await txWait
+    })
+
+    await reachedTxWait
+
+    await expect(
+      db.exec('INSERT INTO tx_case (value) VALUES (?)', ['outside-timeout'])
+    ).rejects.toThrow(/wait timeout/i)
+
+    releaseTxWait?.()
+    await txPromise
   })
 })

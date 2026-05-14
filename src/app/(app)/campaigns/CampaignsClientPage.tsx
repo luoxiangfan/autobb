@@ -3167,8 +3167,18 @@ export default function CampaignsClientPage({
       // 后端可能返回非阻断 warning（如关联 offer 任务暂停失败），前端需要显式提示。
       const warnings = Array.isArray(data?.warnings) ? data.warnings : []
       if (warnings.length > 0) {
+        const warningCodeLabel: Record<string, string> = {
+          OFFER_TASK_PAUSE_FAILED: '关联任务暂停失败',
+          OFFER_NOT_BOUND: '未关联 Offer',
+        }
         const warningMessage = warnings
-          .map((item: any) => String(item?.message || '').trim())
+          .map((item: any) => {
+            const code = String(item?.code || '').trim()
+            const message = String(item?.message || '').trim()
+            if (!message) return ''
+            const label = warningCodeLabel[code] || code
+            return label ? `[${label}] ${message}` : message
+          })
           .filter(Boolean)
           .join('；')
         if (warningMessage) {

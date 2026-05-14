@@ -104,4 +104,29 @@ describe('pauseOfferTasks', () => {
       urlSwapTaskCount: 0,
     })
   })
+
+  it('splits large task-id updates into batches', async () => {
+    const largeClickFarmIds = Array.from({ length: 1205 }, (_, index) => ({
+      id: `cf-${index + 1}`,
+    }))
+    dbFns.query
+      .mockResolvedValueOnce(largeClickFarmIds)
+      .mockResolvedValueOnce([])
+
+    const result = await pauseOfferTasks(123, 7)
+
+    expect(result.clickFarmTaskPaused).toBe(true)
+    expect(result.clickFarmTaskCount).toBe(1205)
+
+    // 1205 ids with batch size 200 => 7 update statements
+    expect(dbFns.exec).toHaveBeenCalledTimes(7)
+
+    for (const [sql, params] of dbFns.exec.mock.calls) {
+      const normalizedSql = String(sql)
+      expect(normalizedSql).toContain('UPDATE click_farm_tasks')
+      // base params: reason + message + userId + offerId = 4
+      expect(Array.isArray(params)).toBe(true)
+      expect((params as any[]).length).toBeLessThanOrEqual(4 + 200)
+    }
+  })
 })
