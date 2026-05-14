@@ -17,9 +17,10 @@ import { Select, SelectContent, SelectItem } from '@/components/ui/select';
 import { Alert } from '@/components/ui/alert';
 import { Loader2, AlertCircle, TrendingUp, Edit3, RotateCcw, GripVertical, Clock, Globe, Link, Tag, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
-import { getTimezoneByCountry } from '@/lib/timezone-utils';
+import { getTimezoneByCountry, getDateInTimezone } from '@/lib/timezone-utils';
+import { BATCH_CLICK_FARM_TASK_DEFAULTS } from '@/lib/batch-task-defaults';
 import { REFERER_OPTIONS, SOCIAL_MEDIA_REFERRERS, CreateClickFarmTaskRequest } from '@/lib/click-farm-types';
-import { balanceDistribution, generateDefaultDistribution } from '@/lib/click-farm/distribution';
+import { balanceDistribution } from '@/lib/click-farm/distribution';
 import HourlyDistributionEditor from '@/components/ui/HourlyDistributionEditor';
 
 interface ClickFarmTaskModalProps {
@@ -65,9 +66,11 @@ export default function ClickFarmTaskModal({
 
   // Form state
   const [selectedOfferId, setSelectedOfferId] = useState<number | null>(null);
-  const [dailyClickCount, setDailyClickCount] = useState(216);
-  const [timePeriod, setTimePeriod] = useState('06:00-24:00');
-  const [durationDays, setDurationDays] = useState(14);
+  const [dailyClickCount, setDailyClickCount] = useState(BATCH_CLICK_FARM_TASK_DEFAULTS.dailyClickCount);
+  const [timePeriod, setTimePeriod] = useState(
+    `${BATCH_CLICK_FARM_TASK_DEFAULTS.startTime}-${BATCH_CLICK_FARM_TASK_DEFAULTS.endTime}`,
+  );
+  const [durationDays, setDurationDays] = useState(BATCH_CLICK_FARM_TASK_DEFAULTS.durationDays);
   const [scheduledStartDate, setScheduledStartDate] = useState<string>(  // 🆕 开始日期状态
     new Date().toISOString().split('T')[0]  // 默认当天
   );
@@ -193,10 +196,11 @@ export default function ClickFarmTaskModal({
   // 这是distribution自动生成的唯一入口,避免多处设置导致竞态条件
   // 触发条件: selectedOfferId变化 || dailyClickCount变化 || timePeriod变化 || 手动修改标志重置
   // 手动修改场景(不触发此effect): 拖拽编辑、均衡分布、编辑器修改、编辑模式加载
+  // 创建流程默认使用均衡分布（与批量开启任务一致）
   useEffect(() => {
     if (selectedOfferId && dailyClickCount > 0 && timePeriod && !isDistributionManuallyModified) {
       const [startTime, endTime] = timePeriod.split('-');
-      const newDist = generateDefaultDistribution(dailyClickCount, startTime, endTime);
+      const newDist = balanceDistribution(dailyClickCount, startTime, endTime);
       setDistribution(newDist);
     }
   }, [selectedOfferId, dailyClickCount, timePeriod, isDistributionManuallyModified]);
@@ -224,6 +228,10 @@ export default function ClickFarmTaskModal({
       // 自动设置时区
       const autoTimezone = getTimezoneByCountry(offer.targetCountry);
       setTimezone(autoTimezone);
+      // 创建模式：开始日期与批量开启一致（按 Offer 目标国家对应时区的「今天」）
+      if (!isEditMode) {
+        setScheduledStartDate(getDateInTimezone(new Date(), autoTimezone));
+      }
     } catch (error) {
       console.error('[loadAuxiliaryData] 错误:', error);
       // 设置失败不阻塞,使用默认时区
@@ -732,9 +740,9 @@ export default function ClickFarmTaskModal({
   // 🔧 修复P2-7(2025-12-30): 添加重置表单状态的函数
   const resetFormState = () => {
     setSelectedOfferId(null);
-    setDailyClickCount(216);
-    setTimePeriod('06:00-24:00');
-    setDurationDays(14);
+    setDailyClickCount(BATCH_CLICK_FARM_TASK_DEFAULTS.dailyClickCount);
+    setTimePeriod(`${BATCH_CLICK_FARM_TASK_DEFAULTS.startTime}-${BATCH_CLICK_FARM_TASK_DEFAULTS.endTime}`);
+    setDurationDays(BATCH_CLICK_FARM_TASK_DEFAULTS.durationDays);
     setScheduledStartDate(new Date().toISOString().split('T')[0]);
     setDistribution([]);
     setProxyWarning('');

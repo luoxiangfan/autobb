@@ -1,7 +1,6 @@
+import { BATCH_URL_SWAP_TASK_DEFAULTS, getBatchClickFarmRuntimeConfig } from '@/lib/batch-task-defaults'
 import { createClickFarmTask, getClickFarmTaskByOfferId, restartClickFarmTask, updateClickFarmTask } from '@/lib/click-farm'
-import { balanceDistribution } from '@/lib/click-farm/distribution'
 import { createUrlSwapTask, enableUrlSwapTask, getUrlSwapTaskByOfferId, updateUrlSwapTask } from '@/lib/url-swap'
-import { getDateInTimezone, getTimezoneByCountry } from '@/lib/timezone-utils'
 
 export interface BatchStartOfferTarget {
   offerId: number
@@ -69,24 +68,13 @@ async function processOffer(
   offer: BatchStartOfferTarget,
   result: MutableResult
 ): Promise<void> {
-  const timezone = getTimezoneByCountry(offer.targetCountry || 'US')
   const now = input.now || new Date()
-  const scheduledStartDate = getDateInTimezone(now, timezone)
-
-  const clickFarmConfig = {
-    dailyClickCount: 10,
-    startTime: '06:00',
-    endTime: '24:00',
-    durationDays: 9999, // 不限期
-    scheduledStartDate,
-    hourlyDistribution: balanceDistribution(10, '06:00', '24:00'),
-    refererConfig: { type: 'none' as const },
-  }
+  const clickFarmConfig = getBatchClickFarmRuntimeConfig(offer, now)
 
   const urlSwapConfig = {
-    swapMode: 'auto' as const,
-    swapIntervalMinutes: 1440, // 24 小时
-    durationDays: -1, // 不限期
+    swapMode: BATCH_URL_SWAP_TASK_DEFAULTS.swapMode,
+    swapIntervalMinutes: BATCH_URL_SWAP_TASK_DEFAULTS.swapIntervalMinutes,
+    durationDays: BATCH_URL_SWAP_TASK_DEFAULTS.durationDays,
   }
 
   let hasError = false
@@ -105,7 +93,7 @@ async function processOffer(
             duration_days: clickFarmConfig.durationDays,
             scheduled_start_date: clickFarmConfig.scheduledStartDate,
             hourly_distribution: clickFarmConfig.hourlyDistribution,
-            timezone,
+            timezone: clickFarmConfig.timezone,
             referer_config: clickFarmConfig.refererConfig,
           })
           result.clickFarmTasksCreated++
@@ -117,7 +105,7 @@ async function processOffer(
             duration_days: clickFarmConfig.durationDays,
             scheduled_start_date: clickFarmConfig.scheduledStartDate,
             hourly_distribution: clickFarmConfig.hourlyDistribution,
-            timezone,
+            timezone: clickFarmConfig.timezone,
             referer_config: clickFarmConfig.refererConfig,
           })
           if (existingTask.status === 'paused' || existingTask.status === 'stopped' || existingTask.status === 'pending') {
@@ -134,7 +122,7 @@ async function processOffer(
           duration_days: clickFarmConfig.durationDays,
           scheduled_start_date: clickFarmConfig.scheduledStartDate,
           hourly_distribution: clickFarmConfig.hourlyDistribution,
-          timezone,
+          timezone: clickFarmConfig.timezone,
           referer_config: clickFarmConfig.refererConfig,
         })
         result.clickFarmTasksCreated++

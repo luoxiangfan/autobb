@@ -20,7 +20,7 @@ import { Loader2, AlertCircle, Link, Clock, Globe, ExternalLink } from 'lucide-r
 import { toast } from 'sonner';
 import type { UrlSwapTask } from '@/lib/url-swap-types';
 import { URL_SWAP_INTERVAL_OPTIONS, URL_SWAP_ALLOWED_INTERVALS_MINUTES } from '@/lib/url-swap-intervals';
-import { parseAffiliateLinksText, findInvalidAffiliateLinks } from '@/lib/url-swap-link-utils';
+import { BATCH_URL_SWAP_TASK_DEFAULTS } from '@/lib/batch-task-defaults';
 
 interface UrlSwapTaskModalProps {
   open: boolean;
@@ -67,8 +67,8 @@ export default function UrlSwapTaskModal({
   const [enabling, setEnabling] = useState(false);
 
   // Form state
-  const [swapIntervalMinutes, setSwapIntervalMinutes] = useState(30);
-  const [durationDays, setDurationDays] = useState(30);
+  const [swapIntervalMinutes, setSwapIntervalMinutes] = useState(BATCH_URL_SWAP_TASK_DEFAULTS.swapIntervalMinutes);
+  const [durationDays, setDurationDays] = useState(BATCH_URL_SWAP_TASK_DEFAULTS.durationDays);
   const [googleCustomerId, setGoogleCustomerId] = useState('');
   const [googleCampaignId, setGoogleCampaignId] = useState('');
   const [swapMode, setSwapMode] = useState<'auto' | 'manual'>('auto');
@@ -299,8 +299,8 @@ export default function UrlSwapTaskModal({
   };
 
   const resetFormState = () => {
-    setSwapIntervalMinutes(30);
-    setDurationDays(30);
+    setSwapIntervalMinutes(BATCH_URL_SWAP_TASK_DEFAULTS.swapIntervalMinutes);
+    setDurationDays(BATCH_URL_SWAP_TASK_DEFAULTS.durationDays);
     setGoogleCustomerId('');
     setGoogleCampaignId('');
     setSwapMode('auto');
