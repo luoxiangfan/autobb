@@ -13,6 +13,11 @@ type ToggleStatusBody = {
   status?: string
 }
 
+type ToggleStatusWarning = {
+  code: 'OFFER_TASK_PAUSE_FAILED' | 'OFFER_NOT_BOUND'
+  message: string
+}
+
 function normalizeGoogleCampaignId(value: unknown): string | null {
   if (value === null || value === undefined) return null
   const raw = String(value).trim()
@@ -63,6 +68,7 @@ export async function PUT(
       `
         SELECT
           id,
+          offer_id,
           campaign_id,
           google_campaign_id,
           google_ads_account_id,
@@ -76,6 +82,7 @@ export async function PUT(
     ) as
       | {
           id: number
+          offer_id: number | null
           campaign_id: string | null
           google_campaign_id: string | null
           google_ads_account_id: number | null
@@ -254,24 +261,45 @@ export async function PUT(
       payload: { status: nextStatus as 'PAUSED' | 'ENABLED' },
     })
 
+    const warnings: ToggleStatusWarning[] = []
+    let offerTaskPause: {
+      attempted: boolean
+      success: boolean
+      clickFarmTaskCount?: number
+      urlSwapTaskCount?: number
+    } | null = null
+
     // 如果是暂停操作，同时暂停关联 offer 的补点击和换链接任务
     if (nextStatus === 'PAUSED') {
       try {
-        const campaignData = await db.queryOne<any>(`
-          SELECT offer_id FROM campaigns WHERE id = ? AND user_id = ?
-        `, [campaignId, userId])
-
-        if (campaignData?.offer_id) {
-          await pauseOfferTasks(
-            campaignData.offer_id,
+        if (campaignRow.offer_id) {
+          const pauseResult = await pauseOfferTasks(
+            campaignRow.offer_id,
             userId,
             'campaign_paused',
             '广告系列已暂停，自动暂停任务'
           )
+          offerTaskPause = {
+            attempted: true,
+            success: true,
+            clickFarmTaskCount: pauseResult.clickFarmTaskCount,
+            urlSwapTaskCount: pauseResult.urlSwapTaskCount,
+          }
+        } else {
+          offerTaskPause = { attempted: false, success: false }
+          warnings.push({
+            code: 'OFFER_NOT_BOUND',
+            message: '该广告系列未绑定 Offer，未执行关联任务暂停',
+          })
         }
       } catch (taskError: any) {
         // 任务暂停失败不影响主流程，仅记录日志
         console.error('[toggle-status] 暂停关联 offer 任务失败:', taskError)
+        offerTaskPause = { attempted: true, success: false }
+        warnings.push({
+          code: 'OFFER_TASK_PAUSE_FAILED',
+          message: taskError?.message || '暂停关联 Offer 任务失败，请稍后重试',
+        })
       }
     }
 
@@ -283,6 +311,8 @@ export async function PUT(
       success: true,
       status: nextStatus,
       campaign: updated,
+      offerTaskPause,
+      warnings,
     })
   } catch (error: any) {
     console.error('更新广告系列状态失败:', error)

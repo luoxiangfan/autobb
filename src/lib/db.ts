@@ -100,8 +100,39 @@ class SQLiteAdapter implements DatabaseAdapter {
   }
 
   async transaction<T>(fn: () => Promise<T>): Promise<T> {
-    const transactionFn = this.db.transaction(async () => await fn())
-    return await transactionFn()
+    // better-sqlite3 的原生 transaction 只支持同步回调。
+    // 为兼容当前代码库大量 async 回调事务，这里改为显式 BEGIN/COMMIT/ROLLBACK。
+    if (this.db.inTransaction) {
+      const savepoint = `sp_${Date.now()}_${Math.floor(Math.random() * 1_000_000)}`
+      this.db.exec(`SAVEPOINT ${savepoint}`)
+      try {
+        const result = await fn()
+        this.db.exec(`RELEASE SAVEPOINT ${savepoint}`)
+        return result
+      } catch (error) {
+        try {
+          this.db.exec(`ROLLBACK TO SAVEPOINT ${savepoint}`)
+          this.db.exec(`RELEASE SAVEPOINT ${savepoint}`)
+        } catch {
+          // ignore rollback errors and preserve original error
+        }
+        throw error
+      }
+    }
+
+    this.db.exec('BEGIN')
+    try {
+      const result = await fn()
+      this.db.exec('COMMIT')
+      return result
+    } catch (error) {
+      try {
+        this.db.exec('ROLLBACK')
+      } catch {
+        // ignore rollback errors and preserve original error
+      }
+      throw error
+    }
   }
 
   close(): void {

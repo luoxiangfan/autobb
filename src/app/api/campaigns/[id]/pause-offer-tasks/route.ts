@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
+import { pauseOfferTasks } from '@/lib/campaign-offer-tasks'
 
 /**
  * POST /api/campaigns/:id/pause-offer-tasks
@@ -16,8 +17,15 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     const db = await getDatabase()
-    const numericUserId = parseInt(userId, 10)
-    const campaignId = parseInt(id, 10)
+    const numericUserId = Number(userId)
+    const campaignId = Number(id)
+
+    if (!Number.isFinite(numericUserId)) {
+      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    }
+    if (!Number.isFinite(campaignId)) {
+      return NextResponse.json({ error: '无效的 campaign id' }, { status: 400 })
+    }
 
     // 1. 获取广告系列信息（验证权限并获取 offer_id）
     const campaign = await db.queryOne<any>(`
@@ -40,54 +48,23 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       )
     }
 
-    // 2. 暂停补点击任务
-    let clickFarmTaskPaused = false
-    const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
-    const clickFarmTask = await db.queryOne<any>(`
-      SELECT id, status FROM click_farm_tasks
-      WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
-      ORDER BY created_at DESC
-      LIMIT 1
-    `, [offerId, numericUserId])
-
-    if (clickFarmTask && ['pending', 'running', 'paused'].includes(clickFarmTask.status)) {
-      const isDeletedCondition = db.type === 'postgres' ? 'NOW()' : 'datetime("now")'
-      await db.exec(`
-        UPDATE click_farm_tasks
-        SET status = 'stopped', pause_reason = 'manual', pause_message = '用户通过广告系列页面手动暂停', paused_at = ${isDeletedCondition}
-        WHERE id = ? AND user_id = ?
-      `, [clickFarmTask.id, numericUserId])
-      clickFarmTaskPaused = true
-      console.log(`[campaigns] 已暂停补点击任务 (offerId=${offerId}, taskId=${clickFarmTask.id})`)
-    }
-
-    // 3. 禁用换链接任务
-    let urlSwapTaskDisabled = false
-    const urlSwapTask = await db.queryOne<any>(`
-      SELECT id, status FROM url_swap_tasks
-      WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
-      ORDER BY created_at DESC
-      LIMIT 1
-    `, [offerId, numericUserId])
-
-    if (urlSwapTask && urlSwapTask.status !== 'disabled') {
-      const isDeletedCondition = db.type === 'postgres' ? 'NOW()' : 'datetime("now")'
-      await db.exec(`
-        UPDATE url_swap_tasks
-        SET status = 'disabled', updated_at = ${isDeletedCondition}
-        WHERE id = ? AND user_id = ?
-      `, [urlSwapTask.id, numericUserId])
-      urlSwapTaskDisabled = true
-      console.log(`[campaigns] 已禁用换链接任务 (offerId=${offerId}, taskId=${urlSwapTask.id})`)
-    }
+    // 2. 复用统一逻辑批量暂停/禁用关联任务
+    const paused = await pauseOfferTasks(
+      offerId,
+      numericUserId,
+      'manual',
+      '用户通过广告系列页面手动暂停'
+    )
 
     // 4. 返回结果
     const result = {
       success: true,
       message: '任务暂停完成',
       details: {
-        clickFarmTask: clickFarmTaskPaused ? '已暂停' : '无活跃任务',
-        urlSwapTask: urlSwapTaskDisabled ? '已禁用' : '无活跃任务',
+        clickFarmTask: paused.clickFarmTaskPaused ? '已暂停' : '无活跃任务',
+        clickFarmTaskCount: paused.clickFarmTaskCount,
+        urlSwapTask: paused.urlSwapTaskDisabled ? '已禁用' : '无活跃任务',
+        urlSwapTaskCount: paused.urlSwapTaskCount,
       },
     }
 

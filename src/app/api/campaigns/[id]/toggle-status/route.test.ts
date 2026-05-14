@@ -31,6 +31,10 @@ const cacheFns = vi.hoisted(() => ({
   invalidateDashboardCache: vi.fn(),
 }))
 
+const offerTaskFns = vi.hoisted(() => ({
+  pauseOfferTasks: vi.fn(),
+}))
+
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
     queryOne: dbFns.queryOne,
@@ -62,6 +66,10 @@ vi.mock('@/lib/api-cache', () => ({
   invalidateDashboardCache: cacheFns.invalidateDashboardCache,
 }))
 
+vi.mock('@/lib/campaign-offer-tasks', () => ({
+  pauseOfferTasks: offerTaskFns.pauseOfferTasks,
+}))
+
 describe('PUT /api/campaigns/:id/toggle-status', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -74,6 +82,12 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
     })
     adsFns.updateGoogleAdsCampaignStatus.mockResolvedValue(undefined)
     transitionFns.applyCampaignTransition.mockResolvedValue({ updatedCount: 1 })
+    offerTaskFns.pauseOfferTasks.mockResolvedValue({
+      clickFarmTaskPaused: true,
+      clickFarmTaskCount: 1,
+      urlSwapTaskDisabled: true,
+      urlSwapTaskCount: 1,
+    })
     campaignFns.findCampaignById.mockResolvedValue({
       id: 1,
       status: 'PAUSED',
@@ -85,6 +99,7 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
           campaign_id: '1234567890',
           google_campaign_id: '1234567890',
           google_ads_account_id: 10,
+          offer_id: 99,
           status: 'ENABLED',
           is_deleted: 0,
         }
@@ -132,6 +147,13 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
     expect(res.status).toBe(200)
     expect(data.success).toBe(true)
     expect(data.status).toBe('PAUSED')
+    expect(data.offerTaskPause).toEqual({
+      attempted: true,
+      success: true,
+      clickFarmTaskCount: 1,
+      urlSwapTaskCount: 1,
+    })
+    expect(data.warnings).toEqual([])
     expect(adsFns.updateGoogleAdsCampaignStatus).toHaveBeenCalledWith({
       customerId: '1122334455',
       refreshToken: 'oauth-refresh-token',
@@ -149,7 +171,59 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
       action: 'TOGGLE_STATUS',
       payload: { status: 'PAUSED' },
     })
+    expect(offerTaskFns.pauseOfferTasks).toHaveBeenCalledWith(
+      99,
+      7,
+      'campaign_paused',
+      '广告系列已暂停，自动暂停任务'
+    )
     expect(cacheFns.invalidateDashboardCache).toHaveBeenCalledWith(7)
+  })
+
+  it('does not pause offer tasks when next status is ENABLED', async () => {
+    const req = new NextRequest('http://localhost/api/campaigns/1/toggle-status', {
+      method: 'PUT',
+      headers: {
+        'x-user-id': '7',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ status: 'ENABLED' }),
+    })
+
+    const res = await PUT(req, { params: { id: '1' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(offerTaskFns.pauseOfferTasks).not.toHaveBeenCalled()
+    expect(data.offerTaskPause).toBeNull()
+    expect(data.warnings).toEqual([])
+  })
+
+  it('returns warning when pausing offer tasks fails', async () => {
+    offerTaskFns.pauseOfferTasks.mockRejectedValueOnce(new Error('queue unavailable'))
+
+    const req = new NextRequest('http://localhost/api/campaigns/1/toggle-status', {
+      method: 'PUT',
+      headers: {
+        'x-user-id': '7',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ status: 'PAUSED' }),
+    })
+
+    const res = await PUT(req, { params: { id: '1' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(data.offerTaskPause).toEqual({ attempted: true, success: false })
+    expect(data.warnings).toEqual([
+      {
+        code: 'OFFER_TASK_PAUSE_FAILED',
+        message: 'queue unavailable',
+      },
+    ])
   })
 
   it('uses linked service account without requiring OAuth base credentials', async () => {

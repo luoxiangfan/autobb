@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
     console.log('[Cron] Timestamp:', new Date().toISOString())
 
     const db = await getDatabase()
+    const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
 
     // 1. 查询所有已暂停的广告系列（按用户分组）
     const pausedCampaigns = await db.query<any>(`
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
         c.updated_at
       FROM campaigns c
       WHERE c.status = 'PAUSED'
-        AND c.is_deleted = 0
+        AND c.is_deleted = ${isDeletedFalse}
         AND c.offer_id IS NOT NULL
       ORDER BY c.user_id, c.updated_at DESC
     `)

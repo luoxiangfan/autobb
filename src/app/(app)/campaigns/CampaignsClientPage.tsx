@@ -3163,6 +3163,18 @@ export default function CampaignsClientPage({
       )
 
       showSuccess(nextStatus === 'PAUSED' ? '已暂停' : '已启用', campaign.campaignName)
+
+      // 后端可能返回非阻断 warning（如关联 offer 任务暂停失败），前端需要显式提示。
+      const warnings = Array.isArray(data?.warnings) ? data.warnings : []
+      if (warnings.length > 0) {
+        const warningMessage = warnings
+          .map((item: any) => String(item?.message || '').trim())
+          .filter(Boolean)
+          .join('；')
+        if (warningMessage) {
+          showInfo('状态已更新，但有提示', warningMessage)
+        }
+      }
     } catch (err: any) {
       showError('操作失败', err?.message || '网络错误')
     } finally {

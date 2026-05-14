@@ -7,12 +7,16 @@
  */
 
 import { getDatabase } from './db'
+import { removePendingClickFarmQueueTasksByTaskIds } from './click-farm/queue-cleanup'
+import { removePendingUrlSwapQueueTasksByTaskIds } from './url-swap/queue-cleanup'
 
 export interface PauseOfferTasksResult {
   clickFarmTaskPaused: boolean
-  clickFarmTaskId?: number
+  clickFarmTaskId?: string
+  clickFarmTaskCount: number
   urlSwapTaskDisabled: boolean
-  urlSwapTaskId?: number
+  urlSwapTaskId?: string
+  urlSwapTaskCount: number
 }
 
 /**
@@ -27,53 +31,83 @@ export async function pauseOfferTasks(
   const db = await getDatabase()
   const result: PauseOfferTasksResult = {
     clickFarmTaskPaused: false,
+    clickFarmTaskCount: 0,
     urlSwapTaskDisabled: false,
+    urlSwapTaskCount: 0,
   }
 
   const pausedCondition = db.type === 'postgres' ? 'NOW()' : 'datetime("now")'
   const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
-  // 1. 暂停补点击任务
-  const clickFarmTask = await db.queryOne<any>(`
-    SELECT id, status FROM click_farm_tasks
-    WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
-    ORDER BY created_at DESC
-    LIMIT 1
-  `, [offerId, userId])
+  let clickFarmTaskIds: string[] = []
+  let urlSwapTaskIds: string[] = []
 
-  if (clickFarmTask && ['pending', 'running', 'paused'].includes(clickFarmTask.status)) {
-    await db.exec(`
-      UPDATE click_farm_tasks
-      SET status = 'stopped', 
-          pause_reason = ?, 
-          pause_message = ?, 
-          paused_at = ${pausedCondition}
-      WHERE id = ? AND user_id = ?
-    `, [pauseReason, pauseMessage, clickFarmTask.id, userId])
-    
-    result.clickFarmTaskPaused = true
-    result.clickFarmTaskId = clickFarmTask.id
-    console.log(`[pauseOfferTasks] 已暂停补点击任务 (offerId=${offerId}, taskId=${clickFarmTask.id})`)
+  // 统一事务内完成查询与状态更新，避免并发下读写窗口不一致
+  await db.transaction(async () => {
+    // 1) 批量暂停补点击任务（避免只暂停最新一条造成遗漏）
+    const clickFarmTasks = await db.query<Array<{ id: string }>>(`
+      SELECT id FROM click_farm_tasks
+      WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
+        AND status IN ('pending', 'running', 'paused')
+    `, [offerId, userId])
+    clickFarmTaskIds = clickFarmTasks.map((task) => String(task.id))
+
+    if (clickFarmTaskIds.length > 0) {
+      await db.exec(`
+        UPDATE click_farm_tasks
+        SET status = 'stopped',
+            pause_reason = ?,
+            pause_message = ?,
+            paused_at = ${pausedCondition},
+            updated_at = ${pausedCondition}
+        WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
+          AND status IN ('pending', 'running', 'paused')
+      `, [pauseReason, pauseMessage, offerId, userId])
+
+      result.clickFarmTaskPaused = true
+      result.clickFarmTaskId = clickFarmTaskIds[0]
+      result.clickFarmTaskCount = clickFarmTaskIds.length
+    }
+
+    // 2) 批量禁用换链接任务（仅处理可暂停态，避免触碰 completed 历史任务）
+    const urlSwapTasks = await db.query<Array<{ id: string }>>(`
+      SELECT id FROM url_swap_tasks
+      WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
+        AND status IN ('enabled', 'error')
+    `, [offerId, userId])
+    urlSwapTaskIds = urlSwapTasks.map((task) => String(task.id))
+
+    if (urlSwapTaskIds.length > 0) {
+      await db.exec(`
+        UPDATE url_swap_tasks
+        SET status = 'disabled',
+            updated_at = ${pausedCondition}
+        WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
+          AND status IN ('enabled', 'error')
+      `, [offerId, userId])
+
+      result.urlSwapTaskDisabled = true
+      result.urlSwapTaskId = urlSwapTaskIds[0]
+      result.urlSwapTaskCount = urlSwapTaskIds.length
+    }
+  })
+
+  // 提交后清理队列，避免事务内执行外部副作用导致锁占用过长
+  if (clickFarmTaskIds.length > 0) {
+    try {
+      await removePendingClickFarmQueueTasksByTaskIds(clickFarmTaskIds, userId)
+    } catch (error: any) {
+      console.warn(`[pauseOfferTasks] 清理补点击队列失败 (offerId=${offerId}):`, error?.message || error)
+    }
+    console.log(`[pauseOfferTasks] 已暂停补点击任务 (offerId=${offerId}, taskCount=${clickFarmTaskIds.length})`)
   }
 
-  // 2. 禁用换链接任务
-  const urlSwapTask = await db.queryOne<any>(`
-    SELECT id, status FROM url_swap_tasks
-    WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
-    ORDER BY created_at DESC
-    LIMIT 1
-  `, [offerId, userId])
-
-  if (urlSwapTask && urlSwapTask.status !== 'disabled') {
-    await db.exec(`
-      UPDATE url_swap_tasks
-      SET status = 'disabled', 
-          updated_at = ${pausedCondition}
-      WHERE id = ? AND user_id = ?
-    `, [urlSwapTask.id, userId])
-    
-    result.urlSwapTaskDisabled = true
-    result.urlSwapTaskId = urlSwapTask.id
-    console.log(`[pauseOfferTasks] 已禁用换链接任务 (offerId=${offerId}, taskId=${urlSwapTask.id})`)
+  if (urlSwapTaskIds.length > 0) {
+    try {
+      await removePendingUrlSwapQueueTasksByTaskIds(urlSwapTaskIds, userId)
+    } catch (error: any) {
+      console.warn(`[pauseOfferTasks] 清理换链接队列失败 (offerId=${offerId}):`, error?.message || error)
+    }
+    console.log(`[pauseOfferTasks] 已禁用换链接任务 (offerId=${offerId}, taskCount=${urlSwapTaskIds.length})`)
   }
 
   return result
@@ -99,7 +133,12 @@ export async function pauseOfferTasksBatch(
       console.error(`[pauseOfferTasksBatch] 处理 offer ${offerId} 失败:`, error)
       results.push({
         offerId,
-        result: { clickFarmTaskPaused: false, urlSwapTaskDisabled: false },
+        result: {
+          clickFarmTaskPaused: false,
+          clickFarmTaskCount: 0,
+          urlSwapTaskDisabled: false,
+          urlSwapTaskCount: 0,
+        },
       })
     }
   }
