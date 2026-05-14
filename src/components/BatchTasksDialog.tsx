@@ -64,31 +64,85 @@ export default function BatchTasksDialog({
         body: JSON.stringify(body),
       })
 
+      const result = await response.json().catch(() => ({}))
+      const responseData = result?.data && typeof result.data === 'object' ? result.data : {}
+      const errors = Array.isArray(responseData?.errors) ? responseData.errors : []
+      const failedItemsByType = responseData?.failedItemsByType && typeof responseData.failedItemsByType === 'object'
+        ? responseData.failedItemsByType as { clickFarm?: number; urlSwap?: number; general?: number }
+        : {}
+
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: '操作失败' }))
-        throw new Error(error.error || '操作失败')
+        const byTypeParts: string[] = []
+        if (Number(failedItemsByType.clickFarm || 0) > 0) byTypeParts.push(`补点击 ${Number(failedItemsByType.clickFarm)} 项`)
+        if (Number(failedItemsByType.urlSwap || 0) > 0) byTypeParts.push(`换链接 ${Number(failedItemsByType.urlSwap)} 项`)
+        if (Number(failedItemsByType.general || 0) > 0) byTypeParts.push(`通用 ${Number(failedItemsByType.general)} 项`)
+        const fallback = errors.length > 0
+          ? `失败 ${errors.length} 项${byTypeParts.length > 0 ? `（${byTypeParts.join('，')}）` : ''}`
+          : '操作失败'
+        throw new Error(result?.message || result?.error || fallback)
       }
 
-      const result = await response.json()
-      
       const messages: string[] = []
-      if (result.data.clickFarmTasksCreated > 0) {
-        messages.push(`新建 ${result.data.clickFarmTasksCreated} 个补点击`)
+      const clickFarmTasksCreated = Number(responseData?.clickFarmTasksCreated || 0)
+      const clickFarmTasksUpdated = Number(responseData?.clickFarmTasksUpdated || 0)
+      const urlSwapTasksCreated = Number(responseData?.urlSwapTasksCreated || 0)
+      const urlSwapTasksUpdated = Number(responseData?.urlSwapTasksUpdated || 0)
+      const requestedCount = Number(responseData?.requestedCount || itemCount || 0)
+      const failedOfferCount = Number(responseData?.failedOfferCount || errors.length || 0)
+
+      if (clickFarmTasksCreated > 0) {
+        messages.push(`新建 ${clickFarmTasksCreated} 个补点击`)
       }
-      if (result.data.clickFarmTasksUpdated > 0) {
-        messages.push(`更新 ${result.data.clickFarmTasksUpdated} 个补点击`)
+      if (clickFarmTasksUpdated > 0) {
+        messages.push(`更新 ${clickFarmTasksUpdated} 个补点击`)
       }
-      if (result.data.urlSwapTasksCreated > 0) {
-        messages.push(`新建 ${result.data.urlSwapTasksCreated} 个换链接`)
+      if (urlSwapTasksCreated > 0) {
+        messages.push(`新建 ${urlSwapTasksCreated} 个换链接`)
       }
-      if (result.data.urlSwapTasksUpdated > 0) {
-        messages.push(`更新 ${result.data.urlSwapTasksUpdated} 个换链接`)
+      if (urlSwapTasksUpdated > 0) {
+        messages.push(`更新 ${urlSwapTasksUpdated} 个换链接`)
       }
 
-      toast.success(result.message, {
-        description: messages.join('；'),
-        duration: 5000,
-      })
+      const succeededCount = (
+        clickFarmTasksCreated
+        + clickFarmTasksUpdated
+        + urlSwapTasksCreated
+        + urlSwapTasksUpdated
+      )
+      const compactErrorMessage = errors
+        .slice(0, 3)
+        .map((item: { offerId?: number; type?: string; error?: string }) => (
+          `Offer ${item.offerId ?? '-'}(${item.type ?? 'unknown'}): ${item.error ?? '未知错误'}`
+        ))
+        .join('；')
+
+      if (errors.length > 0 && succeededCount === 0) {
+        toast.error('批量开启任务失败', {
+          description: compactErrorMessage || '全部任务执行失败',
+          duration: 6000,
+        })
+        return
+      }
+
+      if (errors.length > 0) {
+        const successPart = messages.length > 0 ? messages.join('；') : '部分任务成功'
+        const warningByTypeParts: string[] = []
+        if (Number(failedItemsByType.clickFarm || 0) > 0) warningByTypeParts.push(`补点击 ${Number(failedItemsByType.clickFarm)} 项`)
+        if (Number(failedItemsByType.urlSwap || 0) > 0) warningByTypeParts.push(`换链接 ${Number(failedItemsByType.urlSwap)} 项`)
+        if (Number(failedItemsByType.general || 0) > 0) warningByTypeParts.push(`通用 ${Number(failedItemsByType.general)} 项`)
+        const errorPart = compactErrorMessage
+          ? `失败 ${errors.length} 项${warningByTypeParts.length > 0 ? `（${warningByTypeParts.join('，')}）` : ''}：${compactErrorMessage}${errors.length > 3 ? '…' : ''}`
+          : `失败 ${errors.length} 项`
+        toast.warning('批量开启任务部分成功', {
+          description: `${successPart}；请求 ${requestedCount} 个，失败 ${failedOfferCount} 个；${errorPart}`,
+          duration: 6000,
+        })
+      } else {
+        toast.success(result.message || '批量开启任务成功', {
+          description: messages.join('；'),
+          duration: 5000,
+        })
+      }
 
       onSuccess?.()
       onOpenChange(false)

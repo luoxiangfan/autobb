@@ -1367,10 +1367,14 @@ export async function getClickFarmTaskByOfferId(
   userId: number
 ): Promise<ClickFarmTask | null> {
   const db = await getDatabase()
-  
+
+  const isDeletedCondition = db.type === 'postgres'
+    ? '(is_deleted = FALSE OR is_deleted IS NULL)'
+    : '(is_deleted = 0 OR is_deleted IS NULL)'
+
   const task = await db.queryOne(`
     SELECT * FROM click_farm_tasks
-    WHERE offer_id = ? AND user_id = ? AND is_deleted = 0
+    WHERE offer_id = ? AND user_id = ? AND ${isDeletedCondition}
     ORDER BY created_at DESC
     LIMIT 1
   `, [offerId, userId]) as any
