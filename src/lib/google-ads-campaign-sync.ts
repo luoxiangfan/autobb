@@ -550,6 +550,7 @@ async function fetchAllDataFromGoogleAds(params: {
       SELECT
         campaign.id,
         ad_group.id,
+        ad_group_criterion.negative,
         ad_group_criterion.criterion_id,
         ad_group_criterion.keyword.text,
         ad_group_criterion.keyword.match_type
@@ -741,6 +742,7 @@ async function fetchAllDataFromGoogleAds(params: {
           adGroupsMap.set(adGroupId, [{
             ad_group_id: adGroupId,
             ad_group_name: row.ad_group?.name,
+            final_url_suffix: row.ad_group?.final_url_suffix,
             campaign_id: campaignId,
           }])
         }
@@ -779,6 +781,7 @@ async function fetchAllDataFromGoogleAds(params: {
         const keywords = keywordsMap.get(adGroupId) || []
         keywords.push({
           keyword_id: keywordId,
+          negative: row.ad_group_criterion?.negative || false,
           keyword_text: row.ad_group_criterion?.keyword?.text,
           keyword_match_type: row.ad_group_criterion?.keyword?.match_type,
         })
@@ -843,14 +846,14 @@ async function fetchAllDataFromGoogleAds(params: {
       const adGroupId = Array.from(adGroupsMap.keys()).find(key => 
         adGroupsMap.get(key)?.[0]?.campaign_id === campaignId
       )
-      
+
       const adGroup = adGroupId ? adGroupsMap.get(adGroupId)?.[0] : null
       const ads = adGroupId ? (adsMap.get(adGroupId) || []) : []
       const keywords = adGroupId ? (keywordsMap.get(adGroupId) || []) : []
       const callouts = calloutsMap.get(campaignId) || []
       const sitelinks = sitelinksMap.get(campaignId) || []
       const locations = locationsMap.get(campaignId) || []
-      
+
       // 提取否定关键词
       const negativeKeywords: string[] = []
       const negativeKeywordMatchType: any = {}
@@ -860,13 +863,13 @@ async function fetchAllDataFromGoogleAds(params: {
           negativeKeywordMatchType[kw.keyword_text] = kw.keyword_match_type
         }
       }
-      
+
       // 过滤正关键词
       const positiveKeywords = keywords.filter(kw => !kw.negative).map(kw => ({
         text: kw.keyword_text,
         matchType: kw.keyword_match_type,
       }))
-      
+
       // 构建广告系列对象
       const campaignPayload = {
         campaign,
@@ -880,7 +883,7 @@ async function fetchAllDataFromGoogleAds(params: {
           targetLanguage: getLanguageName(locations.find((loc: any) => loc.type === 'LANGUAGE')?.display_name) || 'English',
           biddingStrategy: (campaign as any).bidding_strategy || 'MAXIMIZE_CLICKS',
           marketingObjective: 'WEB_TRAFFIC',
-          finalUrlSuffix: ads[0]?.final_url_suffix || '',
+          finalUrlSuffix: ads[0]?.final_url_suffix || adGroup?.final_url_suffix || campaign?.final_url_suffix || '',
           adGroupName: adGroup?.ad_group_name || '',
           maxCpcBid: campaign.cpc_bid_ceiling_micros,
           keywords: positiveKeywords,
@@ -940,7 +943,7 @@ async function fetchAllDataFromGoogleAds(params: {
         },
       })
     }
-    
+
     if (enableAudit && auditRows.length > 0) {
       try {
         await saveCampaignSyncAuditRows(auditRows)
@@ -950,7 +953,7 @@ async function fetchAllDataFromGoogleAds(params: {
     }
 
     console.log(`[GoogleAds Sync] Aggregated ${campaigns.length} complete campaigns`)
-    
+
     return campaigns
   } catch (error: any) {
     console.error('[GoogleAds Sync] Failed to fetch data:', error)
