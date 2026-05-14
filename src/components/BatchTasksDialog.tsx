@@ -39,6 +39,16 @@ function batchResponseDataObject(data: unknown): Record<string, unknown> {
   return data as Record<string, unknown>
 }
 
+/** 与路由 `appendUnmatchedHint` 等文案对齐：message/error 任一已说明未命中时，客户端不再重复前缀 */
+function batchApiPayloadMentionsUnmatched(message: unknown, error: unknown): boolean {
+  const pieces = [message, error].filter(
+    (x): x is string => typeof x === 'string' && x.trim().length > 0
+  )
+  return pieces.some(
+    (text) => text.includes('未命中') || text.includes('不完全对应')
+  )
+}
+
 /** Strict Mode 会重复挂载；模块级保证 dev 下「缺 variant」只告警一次 */
 let batchTasksDialogVariantDevWarned = false
 
@@ -195,11 +205,12 @@ export default function BatchTasksDialog({
         const fallback = errors.length > 0
           ? `共 ${errors.length} 条失败记录（按操作项计）${byTypeParts.length > 0 ? `：${byTypeParts.join('，')}` : ''}`
           : '操作失败'
-        const rawServerMessage = typeof result?.message === 'string' ? result.message : ''
-        const serverMessageHasUnmatched =
-          rawServerMessage.includes('未命中') || rawServerMessage.includes('不完全对应')
+        const serverCoversUnmatched = batchApiPayloadMentionsUnmatched(
+          result?.message,
+          result?.error
+        )
         const unmatchedPrefixForErrorDesc =
-          unmatchedIdsCount > 0 && !serverMessageHasUnmatched ? unmatchedHint : ''
+          unmatchedIdsCount > 0 && !serverCoversUnmatched ? unmatchedHint : ''
         const errDesc = [unmatchedPrefixForErrorDesc, idSelectionLine, compactErrorMessage].filter(Boolean).join('')
         const title =
           typeof result?.message === 'string' && result.message.trim().length > 0
@@ -244,11 +255,12 @@ export default function BatchTasksDialog({
           typeof result.message === 'string' && result.message.trim().length > 0
             ? result.message.trim()
             : '批量开启任务部分成功'
-        const serverMessageHasUnmatched =
-          typeof result.message === 'string' &&
-          (result.message.includes('未命中') || result.message.includes('不完全对应'))
+        const serverCoversUnmatched = batchApiPayloadMentionsUnmatched(
+          result?.message,
+          result?.error
+        )
         const partialUnmatchedPrefix =
-          unmatchedIdsCount > 0 && !serverMessageHasUnmatched ? unmatchedHint : ''
+          unmatchedIdsCount > 0 && !serverCoversUnmatched ? unmatchedHint : ''
         const idSelectionPhrase =
           selectionIdKindFromApi === 'campaign'
             ? `已选 ${requestedIdsCount} 个广告系列（去重后 ID）`
@@ -260,7 +272,11 @@ export default function BatchTasksDialog({
       } else {
         // 未命中提示已在接口返回的 `message`（toast 标题）中由服务端拼接，此处不再重复
         const successDescription = messages.join('；')
-        toast.success(result.message || '批量开启任务成功', {
+        const successTitle =
+          typeof result.message === 'string' && result.message.trim().length > 0
+            ? result.message.trim()
+            : '批量开启任务成功'
+        toast.success(successTitle, {
           ...(successDescription ? { description: successDescription } : {}),
           duration: 5000,
         })
@@ -290,7 +306,9 @@ export default function BatchTasksDialog({
         <DialogHeader>
           <DialogTitle>批量开启任务</DialogTitle>
           <DialogDescription>
-            为选中的 {selectionIdCount} 个{isCampaignMode ? '广告系列' : 'Offer'}（去重后）批量开启补点击和换链任务
+            {selectionIdCount === 0
+              ? '请先在列表中勾选至少一项有效数据（去重后为正整数 ID），再批量开启任务。'
+              : `为选中的 ${selectionIdCount} 个${isCampaignMode ? '广告系列' : 'Offer'}（去重后）批量开启补点击和换链任务`}
           </DialogDescription>
         </DialogHeader>
 

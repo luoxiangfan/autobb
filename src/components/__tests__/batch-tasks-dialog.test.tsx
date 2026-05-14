@@ -249,6 +249,98 @@ describe('BatchTasksDialog', () => {
     expect(desc).toMatch(/Offer 101/)
   })
 
+  it('does not duplicate unmatched hint when only error field mentions 未命中', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({
+          error: '校验失败：2 个 ID 未命中库',
+          data: {
+            selectionIdKind: 'offer',
+            requestedIdsCount: 2,
+            matchedOfferCount: 0,
+            unmatchedIdsCount: 2,
+            errors: [{ offerId: 101, type: 'clickFarm', error: 'x' }],
+          },
+        }),
+      })
+    )
+
+    render(
+      <BatchTasksDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        variant="offers"
+        offerIds={[101, 102]}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '一键开启' }))
+
+    await waitFor(() => {
+      expect(toastFns.error).toHaveBeenCalledTimes(1)
+    })
+
+    expect(toastFns.error.mock.calls[0][0]).toBe('校验失败：2 个 ID 未命中库')
+    const desc = (toastFns.error.mock.calls[0][1] as { description?: string }).description ?? ''
+    expect(desc).not.toMatch(/另有 2 个请求 ID 未命中/)
+    expect(desc).toMatch(/已选 2 个 Offer ID/)
+  })
+
+  it('success toast uses default title when message is not a string', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          message: 12345,
+          data: {
+            selectionIdKind: 'offer',
+            requestedIdsCount: 1,
+            matchedOfferCount: 1,
+            errors: [],
+            clickFarmTasksCreated: 1,
+            clickFarmTasksUpdated: 0,
+            urlSwapTasksCreated: 0,
+            urlSwapTasksUpdated: 0,
+            failedOfferCount: 0,
+          },
+        }),
+      })
+    )
+
+    render(
+      <BatchTasksDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        variant="offers"
+        offerIds={[101]}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '一键开启' }))
+
+    await waitFor(() => {
+      expect(toastFns.success).toHaveBeenCalledTimes(1)
+    })
+
+    expect(toastFns.success.mock.calls[0][0]).toBe('批量开启任务成功')
+  })
+
+  it('shows zero-selection guidance in dialog description', () => {
+    render(
+      <BatchTasksDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        variant="offers"
+        offerIds={[]}
+      />
+    )
+
+    expect(document.body.textContent).toMatch(/请先在列表中勾选至少一项有效数据/)
+  })
+
   it('uses campaigns endpoint when variant is campaigns even if offerIds is set', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
