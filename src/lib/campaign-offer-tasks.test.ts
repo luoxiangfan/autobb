@@ -164,15 +164,8 @@ describe('pauseOfferTasks', () => {
 })
 
 describe('pauseOfferTasksBatch', () => {
-  const originalNodeEnv = process.env.NODE_ENV
-
   afterEach(() => {
-    delete process.env.PAUSE_OFFER_TASKS_BATCH_CONCURRENCY
-    if (originalNodeEnv === undefined) {
-      delete process.env.NODE_ENV
-    } else {
-      process.env.NODE_ENV = originalNodeEnv
-    }
+    vi.unstubAllEnvs()
   })
 
   it('runs with bounded concurrency and keeps result order', async () => {
@@ -205,7 +198,7 @@ describe('pauseOfferTasksBatch', () => {
   })
 
   it('uses env-configured concurrency with bounds', async () => {
-    process.env.PAUSE_OFFER_TASKS_BATCH_CONCURRENCY = '2'
+    vi.stubEnv('PAUSE_OFFER_TASKS_BATCH_CONCURRENCY', '2')
     let inFlight = 0
     let maxInFlight = 0
     const spy = vi
@@ -232,8 +225,8 @@ describe('pauseOfferTasksBatch', () => {
   })
 
   it('falls back to environment default when env value is invalid', async () => {
-    process.env.NODE_ENV = 'development'
-    process.env.PAUSE_OFFER_TASKS_BATCH_CONCURRENCY = 'invalid'
+    vi.stubEnv('NODE_ENV', 'development')
+    vi.stubEnv('PAUSE_OFFER_TASKS_BATCH_CONCURRENCY', 'invalid')
     let inFlight = 0
     let maxInFlight = 0
     const spy = vi
@@ -260,8 +253,8 @@ describe('pauseOfferTasksBatch', () => {
   })
 
   it('falls back to environment default when env value is empty string', async () => {
-    process.env.NODE_ENV = 'development'
-    process.env.PAUSE_OFFER_TASKS_BATCH_CONCURRENCY = '   '
+    vi.stubEnv('NODE_ENV', 'development')
+    vi.stubEnv('PAUSE_OFFER_TASKS_BATCH_CONCURRENCY', '   ')
     let inFlight = 0
     let maxInFlight = 0
     const spy = vi
@@ -301,7 +294,7 @@ describe('pauseOfferTasksBatch', () => {
       })
 
     try {
-      process.env.NODE_ENV = 'development'
+      vi.stubEnv('NODE_ENV', 'development')
       let inFlightDev = 0
       let maxInFlightDev = 0
       spy.mockImplementation(async () => {
@@ -319,7 +312,7 @@ describe('pauseOfferTasksBatch', () => {
       await pauseOfferTasksBatch([1, 2, 3, 4], 7)
       expect(maxInFlightDev).toBeLessThanOrEqual(2)
 
-      process.env.NODE_ENV = 'production'
+      vi.stubEnv('NODE_ENV', 'production')
       let inFlightProd = 0
       let maxInFlightProd = 0
       spy.mockImplementation(async () => {
