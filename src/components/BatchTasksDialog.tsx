@@ -25,6 +25,15 @@ function countDedupedPositiveIds(ids?: number[]): number {
   ).size
 }
 
+function isAbortError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const name = (error as { name?: string }).name
+  return name === 'AbortError'
+}
+
+/** Strict Mode 会重复挂载；模块级保证 dev 下「缺 variant」只告警一次 */
+let batchTasksDialogVariantDevWarned = false
+
 export type BatchTasksDialogVariant = 'offers' | 'campaigns'
 
 interface BatchTasksDialogProps {
@@ -52,19 +61,27 @@ export default function BatchTasksDialog({
   const [enableClickFarm, setEnableClickFarm] = useState(true)
   const [enableUrlSwap, setEnableUrlSwap] = useState(true)
   const submittingRef = useRef(false)
+  const batchFetchAbortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && variant === undefined) {
-      console.warn(
-        '[BatchTasksDialog] 请传入 variant="offers" | "campaigns"；未传时依赖 campaignIds 推断，后续可能改为必填。'
-      )
-    }
+    if (process.env.NODE_ENV !== 'development' || variant !== undefined) return
+    if (batchTasksDialogVariantDevWarned) return
+    batchTasksDialogVariantDevWarned = true
+    console.warn(
+      '[BatchTasksDialog] 请传入 variant="offers" | "campaigns"；未传时依赖 campaignIds 推断，后续可能改为必填。'
+    )
   }, [variant])
+
+  useEffect(() => {
+    if (!open) {
+      batchFetchAbortRef.current?.abort()
+    }
+  }, [open])
 
   const isCampaignMode = useMemo(() => {
     if (variant === 'campaigns') return true
     if (variant === 'offers') return false
-    /** 勿用 `!!campaignIds`：空数组 `[]` 在 JS 中为真值 */
+    /** 依据 `.length` 推断：空数组为 false（勿用 `!!campaignIds`，空数组在 JS 中为真值） */
     return Boolean(campaignIds?.length)
   }, [variant, campaignIds])
   const selectionIdCount = useMemo(
@@ -85,6 +102,8 @@ export default function BatchTasksDialog({
     }
     submittingRef.current = true
     setLoading(true)
+    const ac = new AbortController()
+    batchFetchAbortRef.current = ac
     try {
       const endpoint = isCampaignMode
         ? '/api/campaigns/batch-start-tasks'
@@ -114,6 +133,7 @@ export default function BatchTasksDialog({
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(body),
+        signal: ac.signal,
       })
 
       const result = await response.json().catch(() => ({}))
@@ -123,30 +143,12 @@ export default function BatchTasksDialog({
         ? responseData.failedItemsByType as { clickFarm?: number; urlSwap?: number; general?: number }
         : {}
 
-      if (!response.ok) {
-        const byTypeParts: string[] = []
-        if (Number(failedItemsByType.clickFarm || 0) > 0) byTypeParts.push(`补点击 ${Number(failedItemsByType.clickFarm)} 项`)
-        if (Number(failedItemsByType.urlSwap || 0) > 0) byTypeParts.push(`换链接 ${Number(failedItemsByType.urlSwap)} 项`)
-        if (Number(failedItemsByType.general || 0) > 0) byTypeParts.push(`通用 ${Number(failedItemsByType.general)} 项`)
-        const fallback = errors.length > 0
-          ? `共 ${errors.length} 条失败记录（按操作项计）${byTypeParts.length > 0 ? `：${byTypeParts.join('，')}` : ''}`
-          : '操作失败'
-        throw new Error(result?.message || result?.error || fallback)
-      }
-
-      const messages: string[] = []
-      const clickFarmTasksCreated = Number(responseData?.clickFarmTasksCreated || 0)
-      const clickFarmTasksUpdated = Number(responseData?.clickFarmTasksUpdated || 0)
-      const urlSwapTasksCreated = Number(responseData?.urlSwapTasksCreated || 0)
-      const urlSwapTasksUpdated = Number(responseData?.urlSwapTasksUpdated || 0)
       const requestedIdsCount = Number(
         responseData?.requestedIdsCount ?? selectionIdCount ?? 0
       )
       const matchedOfferCount = Number(
         responseData?.matchedOfferCount ?? responseData?.requestedCount ?? 0
       )
-      const failedOfferCount = Number(responseData?.failedOfferCount ?? 0)
-      const failedOperationCount = errors.length
       const unmatchedIdsCount = Number(responseData?.unmatchedIdsCount ?? 0)
       const selectionIdKindFromApi =
         responseData?.selectionIdKind === 'campaign' ? 'campaign' : 'offer'
@@ -156,6 +158,50 @@ export default function BatchTasksDialog({
             ? `另有 ${unmatchedIdsCount} 个广告系列 ID 可能未单独命中库中记录。`
             : `另有 ${unmatchedIdsCount} 个请求 ID 未命中。`
           : ''
+
+      const byTypeParts: string[] = []
+      if (Number(failedItemsByType.clickFarm || 0) > 0) byTypeParts.push(`补点击 ${Number(failedItemsByType.clickFarm)} 项`)
+      if (Number(failedItemsByType.urlSwap || 0) > 0) byTypeParts.push(`换链接 ${Number(failedItemsByType.urlSwap)} 项`)
+      if (Number(failedItemsByType.general || 0) > 0) byTypeParts.push(`通用 ${Number(failedItemsByType.general)} 项`)
+
+      const compactErrorMessage = errors
+        .slice(0, 3)
+        .map((item: { offerId?: number; type?: string; error?: string }) => (
+          `Offer ${item.offerId ?? '-'}(${item.type ?? 'unknown'}): ${item.error ?? '未知错误'}`
+        ))
+        .join('；')
+
+      const idSelectionLine =
+        selectionIdKindFromApi === 'campaign'
+          ? `已选 ${requestedIdsCount} 个广告系列（去重后 ID），实际处理 ${matchedOfferCount} 个 Offer。`
+          : `已选 ${requestedIdsCount} 个 Offer ID，实际处理 ${matchedOfferCount} 个 Offer。`
+
+      if (!response.ok) {
+        if (ac.signal.aborted) return
+        const fallback = errors.length > 0
+          ? `共 ${errors.length} 条失败记录（按操作项计）${byTypeParts.length > 0 ? `：${byTypeParts.join('，')}` : ''}`
+          : '操作失败'
+        const errDesc = [unmatchedHint, idSelectionLine, compactErrorMessage].filter(Boolean).join('')
+        const title =
+          typeof result?.message === 'string' && result.message.trim().length > 0
+            ? result.message.trim()
+            : typeof result?.error === 'string' && result.error.trim().length > 0
+              ? result.error.trim()
+              : '批量开启任务失败'
+        toast.error(title, {
+          description: errDesc || fallback,
+          duration: 6000,
+        })
+        return
+      }
+
+      const messages: string[] = []
+      const clickFarmTasksCreated = Number(responseData?.clickFarmTasksCreated || 0)
+      const clickFarmTasksUpdated = Number(responseData?.clickFarmTasksUpdated || 0)
+      const urlSwapTasksCreated = Number(responseData?.urlSwapTasksCreated || 0)
+      const urlSwapTasksUpdated = Number(responseData?.urlSwapTasksUpdated || 0)
+      const failedOfferCount = Number(responseData?.failedOfferCount ?? 0)
+      const failedOperationCount = errors.length
 
       if (clickFarmTasksCreated > 0) {
         messages.push(`新建 ${clickFarmTasksCreated} 个补点击`)
@@ -170,36 +216,10 @@ export default function BatchTasksDialog({
         messages.push(`更新 ${urlSwapTasksUpdated} 个换链接`)
       }
 
-      const succeededCount = (
-        clickFarmTasksCreated
-        + clickFarmTasksUpdated
-        + urlSwapTasksCreated
-        + urlSwapTasksUpdated
-      )
-      const compactErrorMessage = errors
-        .slice(0, 3)
-        .map((item: { offerId?: number; type?: string; error?: string }) => (
-          `Offer ${item.offerId ?? '-'}(${item.type ?? 'unknown'}): ${item.error ?? '未知错误'}`
-        ))
-        .join('；')
-
-      if (errors.length > 0 && succeededCount === 0) {
-        const errDesc = [unmatchedHint, compactErrorMessage].filter(Boolean).join('')
-        toast.error('批量开启任务失败', {
-          description: errDesc || '全部任务执行失败',
-          duration: 6000,
-        })
-        return
-      }
-
       if (errors.length > 0) {
         const successPart = messages.length > 0 ? messages.join('；') : '部分任务成功'
-        const warningByTypeParts: string[] = []
-        if (Number(failedItemsByType.clickFarm || 0) > 0) warningByTypeParts.push(`补点击 ${Number(failedItemsByType.clickFarm)} 项`)
-        if (Number(failedItemsByType.urlSwap || 0) > 0) warningByTypeParts.push(`换链接 ${Number(failedItemsByType.urlSwap)} 项`)
-        if (Number(failedItemsByType.general || 0) > 0) warningByTypeParts.push(`通用 ${Number(failedItemsByType.general)} 项`)
         const errorPart = compactErrorMessage
-          ? `共 ${failedOperationCount} 条失败记录（按操作项计）${warningByTypeParts.length > 0 ? `：${warningByTypeParts.join('，')}` : ''}；示例：${compactErrorMessage}${errors.length > 3 ? '…' : ''}`
+          ? `共 ${failedOperationCount} 条失败记录（按操作项计）${byTypeParts.length > 0 ? `：${byTypeParts.join('，')}` : ''}；示例：${compactErrorMessage}${errors.length > 3 ? '…' : ''}`
           : `共 ${failedOperationCount} 条失败记录（按操作项计）`
         const partialTitle =
           typeof result.message === 'string' && result.message.trim().length > 0
@@ -230,12 +250,16 @@ export default function BatchTasksDialog({
       onSuccess?.()
       onOpenChange(false)
     } catch (error: any) {
+      if (isAbortError(error)) return
       console.error('批量开启任务失败:', error)
       toast.error('批量开启任务失败', {
-        description: error.message,
+        description: error?.message ?? String(error),
         duration: 5000,
       })
     } finally {
+      if (batchFetchAbortRef.current === ac) {
+        batchFetchAbortRef.current = null
+      }
       submittingRef.current = false
       setLoading(false)
     }
@@ -325,10 +349,11 @@ export default function BatchTasksDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             取消
           </Button>
-          <Button 
-            onClick={handleBatchStart} 
+          <Button
+            onClick={handleBatchStart}
             disabled={loading || (!enableClickFarm && !enableUrlSwap)}
             className="bg-blue-600 hover:bg-blue-700"
+            aria-busy={loading}
           >
             {loading ? (
               <>

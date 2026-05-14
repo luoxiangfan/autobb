@@ -153,7 +153,10 @@ describe('BatchTasksDialog', () => {
     expect(toastFns.error).toHaveBeenCalledWith(
       '批量开启任务失败',
       expect.objectContaining({
-        description: '批量开启任务失败',
+        description: expect.stringMatching(
+          /已选 2 个 Offer ID，实际处理 2 个 Offer。Offer 101\(clickFarm\): 代理不可用；Offer 102\(urlSwap\): 缺少 Campaign 关联/s
+        ),
+        duration: 6000,
       })
     )
     expect(onSuccess).not.toHaveBeenCalled()
