@@ -25,7 +25,7 @@ const urlSwapFns = vi.hoisted(() => ({
 }))
 
 const utilFns = vi.hoisted(() => ({
-  generateDefaultDistribution: vi.fn(),
+  balanceDistribution: vi.fn(),
   getTimezoneByCountry: vi.fn(),
   getDateInTimezone: vi.fn(),
 }))
@@ -53,7 +53,7 @@ vi.mock('@/lib/url-swap', () => ({
 }))
 
 vi.mock('@/lib/click-farm/distribution', () => ({
-  generateDefaultDistribution: utilFns.generateDefaultDistribution,
+  balanceDistribution: utilFns.balanceDistribution,
 }))
 
 vi.mock('@/lib/timezone-utils', () => ({
@@ -85,7 +85,7 @@ describe('POST /api/campaigns/batch-start-tasks', () => {
       },
     ])
 
-    utilFns.generateDefaultDistribution.mockReturnValue([2, 2, 2])
+    utilFns.balanceDistribution.mockReturnValue([2, 2, 2])
     utilFns.getTimezoneByCountry.mockReturnValue('America/New_York')
     utilFns.getDateInTimezone.mockReturnValue('2026-01-01')
   })

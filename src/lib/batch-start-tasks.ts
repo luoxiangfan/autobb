@@ -1,5 +1,5 @@
 import { createClickFarmTask, getClickFarmTaskByOfferId, restartClickFarmTask, updateClickFarmTask } from '@/lib/click-farm'
-import { generateDefaultDistribution } from '@/lib/click-farm/distribution'
+import { balanceDistribution } from '@/lib/click-farm/distribution'
 import { createUrlSwapTask, enableUrlSwapTask, getUrlSwapTaskByOfferId, updateUrlSwapTask } from '@/lib/url-swap'
 import { getDateInTimezone, getTimezoneByCountry } from '@/lib/timezone-utils'
 
@@ -79,7 +79,7 @@ async function processOffer(
     endTime: '24:00',
     durationDays: 9999, // 不限期
     scheduledStartDate,
-    hourlyDistribution: generateDefaultDistribution(10, '06:00', '24:00'),
+    hourlyDistribution: balanceDistribution(10, '06:00', '24:00'),
     refererConfig: { type: 'none' as const },
   }
 

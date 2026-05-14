@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest';
 import {
   normalizeDistribution,
   generateDefaultDistribution,
+  balanceDistribution,
   validateDistribution,
   formatBytes,
   estimateTraffic
@@ -159,6 +160,19 @@ describe('ClickFarm Distribution', () => {
       const otherTraffic = result.slice(0, 6).reduce((sum, n) => sum + n, 0) +
                           result.slice(18, 24).reduce((sum, n) => sum + n, 0);
       expect(otherTraffic).toBeLessThanOrEqual(20);  // 最多18个最小值
+    });
+  });
+
+  describe('balanceDistribution', () => {
+    it('应在活跃时段均匀分配且总和等于每日点击数（批量开启默认：10 次、06:00-24:00）', () => {
+      const result = balanceDistribution(10, '06:00', '24:00');
+      expect(result).toHaveLength(24);
+      expect(result.reduce((s, n) => s + n, 0)).toBe(10);
+      expect(result.slice(0, 6).every((n) => n === 0)).toBe(true);
+      const active = result.slice(6, 24);
+      const max = Math.max(...active);
+      const min = Math.min(...active.filter((n) => n > 0));
+      expect(max - min).toBeLessThanOrEqual(1);
     });
   });
 
