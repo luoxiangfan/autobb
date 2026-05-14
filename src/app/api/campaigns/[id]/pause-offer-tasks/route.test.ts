@@ -27,6 +27,8 @@ describe('POST /api/campaigns/:id/pause-offer-tasks', () => {
       id: 1,
       offer_id: 1001,
       user_id: 7,
+      status: 'PAUSED',
+      is_deleted: 0,
     })
     pauseFns.pauseOfferTasks.mockResolvedValue({
       clickFarmTaskPaused: true,
@@ -73,5 +75,29 @@ describe('POST /api/campaigns/:id/pause-offer-tasks', () => {
         urlSwapTaskCount: 1,
       },
     })
+  })
+
+  it('returns 400 when campaign is deleted or removed', async () => {
+    dbFns.queryOne.mockResolvedValueOnce({
+      id: 1,
+      offer_id: 1001,
+      user_id: 7,
+      status: 'REMOVED',
+      is_deleted: 0,
+    })
+
+    const req = new NextRequest('http://localhost/api/campaigns/1/pause-offer-tasks', {
+      method: 'POST',
+      headers: {
+        'x-user-id': '7',
+      },
+    })
+
+    const res = await POST(req, { params: { id: '1' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.error).toContain('已删除/移除')
+    expect(pauseFns.pauseOfferTasks).not.toHaveBeenCalled()
   })
 })

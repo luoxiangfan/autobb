@@ -29,7 +29,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     // 1. 获取广告系列信息（验证权限并获取 offer_id）
     const campaign = await db.queryOne<any>(`
-      SELECT id, offer_id, user_id FROM campaigns
+      SELECT id, offer_id, user_id, status, is_deleted FROM campaigns
       WHERE id = ? AND user_id = ?
     `, [campaignId, numericUserId])
 
@@ -37,6 +37,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json(
         { error: '广告系列不存在或无权访问' },
         { status: 404 }
+      )
+    }
+
+    const isDeleted = campaign.is_deleted === true || campaign.is_deleted === 1
+    if (isDeleted || String(campaign.status || '').toUpperCase() === 'REMOVED') {
+      return NextResponse.json(
+        { error: '该广告系列已删除/移除，无法执行关联任务暂停' },
+        { status: 400 }
       )
     }
 

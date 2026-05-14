@@ -32,28 +32,66 @@ class SQLiteAdapter implements DatabaseAdapter {
     return Math.floor(raw)
   })()
 
-  private waitForTxRelease(scope: string): Promise<void> {
+  private waitForTxRelease(
+    scope: string,
+    options?: { failOnTimeout?: boolean; shouldWait?: () => boolean }
+  ): Promise<void> {
+    const failOnTimeout = options?.failOnTimeout === true
+    const shouldWait = options?.shouldWait ?? (() => true)
+    if (!shouldWait()) return Promise.resolve()
     return new Promise<void>((resolve, reject) => {
-      const waiter = () => {
+      let settled = false
+      const cleanup = () => {
         clearTimeout(timer)
-        resolve()
-      }
-      const timer = setTimeout(() => {
         const index = this.txWaiters.indexOf(waiter)
         if (index >= 0) this.txWaiters.splice(index, 1)
+      }
+      const resolveOnce = () => {
+        if (settled) return
+        settled = true
+        cleanup()
+        resolve()
+      }
+      const rejectOnce = (error: Error) => {
+        if (settled) return
+        settled = true
+        cleanup()
+        reject(error)
+      }
+      const waiter = () => {
+        resolveOnce()
+      }
+      const timer = setTimeout(() => {
+        // 二次检查：如果锁已释放，直接通过，避免超时误判。
+        if (!shouldWait()) {
+          resolveOnce()
+          return
+        }
         const message = `[sqlite-tx] wait timeout (${this.txWaitTimeoutMs}ms) while waiting in ${scope}`
         console.warn(message)
-        reject(new Error(message))
+        if (failOnTimeout) {
+          rejectOnce(new Error(message))
+          return
+        }
+        // 普通 query/exec 等待超时时不直接失败，避免将瞬时锁竞争放大为请求错误。
+        resolveOnce()
       }, this.txWaitTimeoutMs)
 
       this.txWaiters.push(waiter)
+      // 入队后立刻重检一次，修复“释放发生在入队瞬间”导致的丢唤醒。
+      if (!shouldWait()) {
+        resolveOnce()
+      }
     })
   }
 
   private async waitForTxTurn(): Promise<void> {
     const callerToken = this.txStorage.getStore() ?? null
     while (this.activeTxToken && this.activeTxToken !== callerToken) {
-      await this.waitForTxRelease('query/exec')
+      await this.waitForTxRelease('query/exec', {
+        failOnTimeout: false,
+        shouldWait: () => this.activeTxToken !== null && this.activeTxToken !== callerToken,
+      })
     }
   }
 
@@ -65,7 +103,10 @@ class SQLiteAdapter implements DatabaseAdapter {
 
   private async acquireTxLock(token: symbol): Promise<void> {
     while (this.activeTxToken && this.activeTxToken !== token) {
-      await this.waitForTxRelease('transaction')
+      await this.waitForTxRelease('transaction', {
+        failOnTimeout: true,
+        shouldWait: () => this.activeTxToken !== null && this.activeTxToken !== token,
+      })
     }
     this.activeTxToken = token
   }

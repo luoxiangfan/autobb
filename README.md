@@ -314,6 +314,12 @@ autobb/
 ```bash
 # 数据库
 DATABASE_URL="file:./data/autoads.db"
+# SQLite 单连接事务等待超时（毫秒）
+# 开发建议 10000；生产若仍用 SQLite 建议 3000-5000
+SQLITE_TX_WAIT_TIMEOUT_MS=10000
+# 暂停广告系列关联 Offer 任务批处理并发度（1-10）
+# 未设置时默认：development=2，非 development=3
+PAUSE_OFFER_TASKS_BATCH_CONCURRENCY=3
 
 # Supabase认证
 NEXT_PUBLIC_SUPABASE_URL="your-supabase-url"
@@ -338,10 +344,36 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 # 数据库（PostgreSQL）
 DATABASE_URL="postgresql://user:password@host:5432/autoads"
 
+# 仅在生产使用 SQLite 时配置（建议 3000-5000）
+# SQLITE_TX_WAIT_TIMEOUT_MS=5000
+# 暂停广告系列关联 Offer 任务批处理并发度（建议 2-5）
+PAUSE_OFFER_TASKS_BATCH_CONCURRENCY=3
+
 # 其他配置同上，但使用生产环境的值
 NODE_ENV="production"
 NEXT_PUBLIC_APP_URL="https://your-domain.com"
 ```
+
+`SQLITE_TX_WAIT_TIMEOUT_MS` 仅影响 SQLite 单连接场景：
+- `query/exec` 等待锁超时会记录告警并继续等待；
+- 新事务抢锁超时会快速失败，避免队列长期卡死；
+- 开发默认 `10000`，线上若仍用 SQLite 推荐 `3000-5000`。
+
+`PAUSE_OFFER_TASKS_BATCH_CONCURRENCY` 用于控制 `pauseOfferTasksBatch` 的并发度：
+- 生效范围 `1-10`（超出会自动收敛到边界）；
+- 未设置时默认：`development=2`，非 development（含 production）=`3`；生产建议 `2-5`；
+- 值越大批处理越快，但会提升 DB 与队列瞬时压力。
+
+常用选值速查（仅适用于 SQLite）：
+
+| 场景 | 推荐值（ms） | 何时使用 | 备注 |
+|---|---:|---|---|
+| 本地开发/调试 | 10000 | 需要保留较大调试窗口、避免误报超时 | 默认值，优先保证开发体验 |
+| 单机中低并发生产 | 5000 | 偶发锁竞争，可接受短暂排队 | 平衡稳定性与故障暴露速度 |
+| 单机中高并发生产 | 3000 | 锁等待频繁，需要更快发现卡死事务 | 建议配合告警观察超时日志 |
+| 压测/故障演练 | 1000-3000 | 主动验证锁竞争与恢复能力 | 仅用于演练，不建议长期使用 |
+
+若持续出现事务抢锁超时，优先排查慢事务并评估迁移到 PostgreSQL，而不是继续下调该值。
 
 ---
 

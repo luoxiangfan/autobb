@@ -100,7 +100,7 @@ describe('SQLite async transaction semantics', () => {
     expect(row?.count).toBe(3)
   })
 
-  it('fails fast when waiting for transaction lock exceeds timeout', async () => {
+  it('keeps waiting query/exec calls after timeout and succeeds once lock is released', async () => {
     closeDatabase()
     process.env.SQLITE_TX_WAIT_TIMEOUT_MS = '30'
     const db = getDatabase()
@@ -124,11 +124,88 @@ describe('SQLite async transaction semantics', () => {
 
     await reachedTxWait
 
+    let outsiderResolved = false
+    const outsiderPromise = db.exec('INSERT INTO tx_case (value) VALUES (?)', ['outside-timeout']).then(() => {
+      outsiderResolved = true
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    expect(outsiderResolved).toBe(false)
+
+    releaseTxWait?.()
+    await Promise.all([txPromise, outsiderPromise])
+
+    const row = await db.queryOne<{ count: number }>('SELECT COUNT(*) as count FROM tx_case')
+    expect(row?.count).toBe(2)
+  })
+
+  it('fails fast when a second transaction waits beyond timeout', async () => {
+    closeDatabase()
+    process.env.SQLITE_TX_WAIT_TIMEOUT_MS = '30'
+    const db = getDatabase()
+    await db.exec('CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)')
+
+    let releaseTxWait: (() => void) | null = null
+    const txWait = new Promise<void>((resolve) => {
+      releaseTxWait = resolve
+    })
+
+    let reachedTxWaitResolve: (() => void) | null = null
+    const reachedTxWait = new Promise<void>((resolve) => {
+      reachedTxWaitResolve = resolve
+    })
+
+    const firstTxPromise = db.transaction(async () => {
+      await db.exec('INSERT INTO tx_case (value) VALUES (?)', ['tx-1'])
+      reachedTxWaitResolve?.()
+      await txWait
+    })
+
+    await reachedTxWait
+
     await expect(
-      db.exec('INSERT INTO tx_case (value) VALUES (?)', ['outside-timeout'])
+      db.transaction(async () => {
+        await db.exec('INSERT INTO tx_case (value) VALUES (?)', ['tx-2'])
+      })
     ).rejects.toThrow(/wait timeout/i)
 
     releaseTxWait?.()
-    await txPromise
+    await firstTxPromise
+  })
+
+  it('does not miss wake-up when lock is released near waiter registration', async () => {
+    closeDatabase()
+    process.env.SQLITE_TX_WAIT_TIMEOUT_MS = '200'
+    const db = getDatabase()
+    await db.exec('CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)')
+
+    let releaseTxWait: (() => void) | null = null
+    const txWait = new Promise<void>((resolve) => {
+      releaseTxWait = resolve
+    })
+
+    let reachedTxWaitResolve: (() => void) | null = null
+    const reachedTxWait = new Promise<void>((resolve) => {
+      reachedTxWaitResolve = resolve
+    })
+
+    const firstTxPromise = db.transaction(async () => {
+      await db.exec('INSERT INTO tx_case (value) VALUES (?)', ['tx-1'])
+      reachedTxWaitResolve?.()
+      await txWait
+    })
+
+    await reachedTxWait
+
+    const secondTxPromise = db.transaction(async () => {
+      await db.exec('INSERT INTO tx_case (value) VALUES (?)', ['tx-2'])
+    })
+
+    // 释放时机贴近 secondTx 的等待注册，验证不会因为丢唤醒而误超时。
+    releaseTxWait?.()
+    await Promise.all([firstTxPromise, secondTxPromise])
+
+    const row = await db.queryOne<{ count: number }>('SELECT COUNT(*) as count FROM tx_case')
+    expect(row?.count).toBe(2)
   })
 })
