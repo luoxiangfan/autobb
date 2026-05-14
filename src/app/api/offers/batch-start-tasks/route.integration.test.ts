@@ -118,6 +118,8 @@ describe('POST /api/offers/batch-start-tasks integration', () => {
     expect(data.partialSuccess).toBe(true)
     expect(data.data).toMatchObject({
       requestedCount: 2,
+      requestedIdsCount: 2,
+      matchedOfferCount: 2,
       failedOfferCount: 1,
       clickFarmTasksUpdated: 1,
       urlSwapTasksCreated: 1,

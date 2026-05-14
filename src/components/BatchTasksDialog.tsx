@@ -50,11 +50,17 @@ export default function BatchTasksDialog({
         ? '/api/campaigns/batch-start-tasks'
         : '/api/offers/batch-start-tasks'
 
+      const clientRequestId =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : undefined
+
       const body = {
         campaignIds: campaignIds || [],
         offerIds: offerIds || [],
         enableClickFarm,
         enableUrlSwap,
+        ...(clientRequestId ? { clientRequestId } : {}),
       }
 
       const response = await fetch(endpoint, {
@@ -77,7 +83,7 @@ export default function BatchTasksDialog({
         if (Number(failedItemsByType.urlSwap || 0) > 0) byTypeParts.push(`换链接 ${Number(failedItemsByType.urlSwap)} 项`)
         if (Number(failedItemsByType.general || 0) > 0) byTypeParts.push(`通用 ${Number(failedItemsByType.general)} 项`)
         const fallback = errors.length > 0
-          ? `失败 ${errors.length} 项${byTypeParts.length > 0 ? `（${byTypeParts.join('，')}）` : ''}`
+          ? `共 ${errors.length} 条失败记录（按操作项计）${byTypeParts.length > 0 ? `：${byTypeParts.join('，')}` : ''}`
           : '操作失败'
         throw new Error(result?.message || result?.error || fallback)
       }
@@ -87,8 +93,14 @@ export default function BatchTasksDialog({
       const clickFarmTasksUpdated = Number(responseData?.clickFarmTasksUpdated || 0)
       const urlSwapTasksCreated = Number(responseData?.urlSwapTasksCreated || 0)
       const urlSwapTasksUpdated = Number(responseData?.urlSwapTasksUpdated || 0)
-      const requestedCount = Number(responseData?.requestedCount || itemCount || 0)
-      const failedOfferCount = Number(responseData?.failedOfferCount || errors.length || 0)
+      const requestedIdsCount = Number(
+        responseData?.requestedIdsCount ?? itemCount ?? 0
+      )
+      const matchedOfferCount = Number(
+        responseData?.matchedOfferCount ?? responseData?.requestedCount ?? 0
+      )
+      const failedOfferCount = Number(responseData?.failedOfferCount ?? 0)
+      const failedOperationCount = errors.length
 
       if (clickFarmTasksCreated > 0) {
         messages.push(`新建 ${clickFarmTasksCreated} 个补点击`)
@@ -131,10 +143,10 @@ export default function BatchTasksDialog({
         if (Number(failedItemsByType.urlSwap || 0) > 0) warningByTypeParts.push(`换链接 ${Number(failedItemsByType.urlSwap)} 项`)
         if (Number(failedItemsByType.general || 0) > 0) warningByTypeParts.push(`通用 ${Number(failedItemsByType.general)} 项`)
         const errorPart = compactErrorMessage
-          ? `失败 ${errors.length} 项${warningByTypeParts.length > 0 ? `（${warningByTypeParts.join('，')}）` : ''}：${compactErrorMessage}${errors.length > 3 ? '…' : ''}`
-          : `失败 ${errors.length} 项`
+          ? `共 ${failedOperationCount} 条失败记录（按操作项计）${warningByTypeParts.length > 0 ? `：${warningByTypeParts.join('，')}` : ''}；示例：${compactErrorMessage}${errors.length > 3 ? '…' : ''}`
+          : `共 ${failedOperationCount} 条失败记录（按操作项计）`
         toast.warning('批量开启任务部分成功', {
-          description: `${successPart}；请求 ${requestedCount} 个，失败 ${failedOfferCount} 个；${errorPart}`,
+          description: `${successPart}；已选 ${requestedIdsCount} 个 ID，实际处理 ${matchedOfferCount} 个 Offer；${failedOfferCount} 个 Offer 至少有一项失败；${errorPart}`,
           duration: 6000,
         })
       } else {

@@ -26,6 +26,7 @@ export interface BatchStartTasksErrorItem {
 export interface BatchStartTasksResult {
   success: boolean
   partialSuccess: boolean
+  /** 本批传入 `batchStartTasksForOffers` 的 Offer 数量（通常等于路由层的 matchedOfferCount） */
   requestedCount: number
   processedOfferCount: number
   failedOfferCount: number
@@ -119,7 +120,7 @@ async function processOffer(
             timezone,
             referer_config: clickFarmConfig.refererConfig,
           })
-          if (existingTask.status === 'paused' || existingTask.status === 'stopped') {
+          if (existingTask.status === 'paused' || existingTask.status === 'stopped' || existingTask.status === 'pending') {
             await restartClickFarmTask(existingTask.id, input.userId)
           }
           result.clickFarmTasksUpdated++

@@ -124,6 +124,8 @@ describe('POST /api/campaigns/batch-start-tasks', () => {
     expect(urlSwapFns.enableUrlSwapTask).not.toHaveBeenCalled()
     expect(data.data).toMatchObject({
       requestedCount: 1,
+      requestedIdsCount: 1,
+      matchedOfferCount: 1,
       failedOfferCount: 0,
       partialSuccess: false,
       clickFarmTasksCreated: 1,
@@ -162,6 +164,8 @@ describe('POST /api/campaigns/batch-start-tasks', () => {
     expect(data.partialSuccess).toBe(false)
     expect(data.data).toMatchObject({
       requestedCount: 1,
+      requestedIdsCount: 1,
+      matchedOfferCount: 1,
       failedOfferCount: 1,
       clickFarmTasksCreated: 0,
       clickFarmTasksUpdated: 0,
@@ -170,5 +174,23 @@ describe('POST /api/campaigns/batch-start-tasks', () => {
     })
     expect(Array.isArray(data.data.errors)).toBe(true)
     expect(data.data.errors).toHaveLength(2)
+  })
+
+  it('returns 400 when both task types are disabled', async () => {
+    const req = new NextRequest('http://localhost/api/campaigns/batch-start-tasks', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        campaignIds: [301],
+        enableClickFarm: false,
+        enableUrlSwap: false,
+      }),
+    })
+
+    const res = await POST(req)
+    expect(res.status).toBe(400)
+    const data = await res.json()
+    expect(data.error).toMatch(/任务类型/)
+    expect(dbFns.query).not.toHaveBeenCalled()
   })
 })

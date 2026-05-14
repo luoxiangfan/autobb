@@ -31,9 +31,9 @@ export async function POST(
       );
     }
 
-    if (!['stopped', 'paused'].includes(task.status)) {
+    if (!['stopped', 'paused', 'pending'].includes(task.status)) {
       return NextResponse.json(
-        { error: 'invalid_status', message: '只能重启stopped或paused状态的任务' },
+        { error: 'invalid_status', message: '只能重启 stopped、paused 或 pending 状态的任务' },
         { status: 400 }
       );
     }

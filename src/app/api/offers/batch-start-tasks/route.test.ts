@@ -126,6 +126,8 @@ describe('POST /api/offers/batch-start-tasks', () => {
     expect(urlSwapFns.createUrlSwapTask).not.toHaveBeenCalled()
     expect(data.data).toMatchObject({
       requestedCount: 1,
+      requestedIdsCount: 1,
+      matchedOfferCount: 1,
       failedOfferCount: 0,
       partialSuccess: false,
       clickFarmTasksUpdated: 1,
@@ -165,5 +167,23 @@ describe('POST /api/offers/batch-start-tasks', () => {
         scheduled_start_date: '2025-12-31',
       })
     )
+  })
+
+  it('returns 400 when both task types are disabled', async () => {
+    const req = new NextRequest('http://localhost/api/offers/batch-start-tasks', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        offerIds: [101],
+        enableClickFarm: false,
+        enableUrlSwap: false,
+      }),
+    })
+
+    const res = await POST(req)
+    expect(res.status).toBe(400)
+    const data = await res.json()
+    expect(data.error).toMatch(/任务类型/)
+    expect(dbFns.query).not.toHaveBeenCalled()
   })
 })

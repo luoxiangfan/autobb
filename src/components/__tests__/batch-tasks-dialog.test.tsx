@@ -60,6 +60,8 @@ describe('BatchTasksDialog', () => {
           message: '批量任务处理完成',
           data: {
             requestedCount: 2,
+            requestedIdsCount: 2,
+            matchedOfferCount: 2,
             failedOfferCount: 1,
             clickFarmTasksCreated: 1,
             clickFarmTasksUpdated: 0,
@@ -96,7 +98,7 @@ describe('BatchTasksDialog', () => {
     expect(toastFns.warning).toHaveBeenCalledWith(
       '批量开启任务部分成功',
       expect.objectContaining({
-        description: expect.stringContaining('换链接 1 项'),
+        description: expect.stringMatching(/实际处理 2 个 Offer.*换链接 1 项/s),
       })
     )
     expect(toastFns.success).not.toHaveBeenCalled()

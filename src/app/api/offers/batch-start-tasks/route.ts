@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { batchStartTasksForOffers } from '@/lib/batch-start-tasks'
+import {
+  buildBatchStartTasksApiData,
+  logBatchStartTasksHttpOutcome,
+  normalizeBatchStartClientRequestId,
+} from '@/lib/batch-start-tasks-route-helpers'
 
 /**
  * POST /api/offers/batch-start-tasks
@@ -20,7 +25,16 @@ export async function POST(request: NextRequest) {
 
     const userId = authResult.user.userId
     const body = await request.json()
+    const clientRequestId = normalizeBatchStartClientRequestId(body?.clientRequestId)
     const { offerIds, enableClickFarm = true, enableUrlSwap = true } = body
+
+    if (!enableClickFarm && !enableUrlSwap) {
+      return NextResponse.json(
+        { error: '请至少选择一种任务类型' },
+        { status: 400 }
+      )
+    }
+
     const normalizedOfferIds = Array.isArray(offerIds)
       ? Array.from(
           new Set(
@@ -58,6 +72,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const requestedIdsCount = normalizedOfferIds.length
+    const matchedOfferCount = offers.length
+
     const result = await batchStartTasksForOffers({
       userId,
       offers: offers.map((offer) => ({
@@ -77,11 +94,22 @@ export async function POST(request: NextRequest) {
         ? `部分成功：已处理 ${completedClickFarm} 个补点击任务和 ${completedUrlSwap} 个换链接任务，失败 ${result.failedOfferCount} 个 Offer`
         : '批量开启任务失败'
 
+    const data = buildBatchStartTasksApiData(result, requestedIdsCount, matchedOfferCount, clientRequestId)
+
+    logBatchStartTasksHttpOutcome('offers', userId, status, {
+      clientRequestId,
+      requestedIdsCount,
+      matchedOfferCount,
+      partialSuccess: result.partialSuccess,
+      failedOfferCount: result.failedOfferCount,
+      failedOperationCount: result.errors.length,
+    })
+
     return NextResponse.json({
       success: result.success,
       partialSuccess: result.partialSuccess,
       message,
-      data: result,
+      data,
     }, { status })
   } catch (error: any) {
     console.error('批量开启任务失败:', error)

@@ -522,7 +522,7 @@ export async function restartClickFarmTask(
         pause_message = NULL,
         paused_at = NULL,
         updated_at = datetime('now')
-    WHERE id = ? AND user_id = ? AND status IN ('stopped', 'paused')
+    WHERE id = ? AND user_id = ? AND status IN ('stopped', 'paused', 'pending')
   `, [id, userId]);
 
   return (await getClickFarmTaskById(id, userId))!;
