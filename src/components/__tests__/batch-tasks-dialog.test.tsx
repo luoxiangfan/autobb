@@ -153,4 +153,27 @@ describe('BatchTasksDialog', () => {
     expect(onSuccess).not.toHaveBeenCalled()
     expect(onOpenChange).not.toHaveBeenCalledWith(false)
   })
+
+  it('treats empty campaignIds array as Offer mode (fetch offers API)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: '请选择至少一个 Offer' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(
+      <BatchTasksDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        campaignIds={[]}
+        offerIds={[101]}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '一键开启' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    const url = fetchMock.mock.calls[0][0] as string
+    expect(url).toContain('/api/offers/batch-start-tasks')
+  })
 })

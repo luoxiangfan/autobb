@@ -44,7 +44,8 @@ export default function BatchTasksDialog({
   const [enableClickFarm, setEnableClickFarm] = useState(true)
   const [enableUrlSwap, setEnableUrlSwap] = useState(true)
 
-  const isCampaignMode = !!campaignIds
+  /** 勿用 `!!campaignIds`：空数组 `[]` 在 JS 中为真值，会误走 campaigns 接口。 */
+  const isCampaignMode = Boolean(campaignIds?.length)
   const selectionIdCount = useMemo(
     () =>
       isCampaignMode
@@ -168,12 +169,10 @@ export default function BatchTasksDialog({
           duration: 6000,
         })
       } else {
-        const successDescription =
-          unmatchedIdsCount > 0
-            ? `${messages.join('；')}（另有 ${unmatchedIdsCount} 个请求 ID 未命中，未处理）`
-            : messages.join('；')
+        // 未命中提示已在接口返回的 `message`（toast 标题）中由服务端拼接，此处不再重复
+        const successDescription = messages.join('；')
         toast.success(result.message || '批量开启任务成功', {
-          description: successDescription,
+          ...(successDescription ? { description: successDescription } : {}),
           duration: 5000,
         })
       }
