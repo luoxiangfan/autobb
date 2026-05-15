@@ -21,20 +21,30 @@ import { firstNonEmptyFinalUrlFromCampaignConfig } from './google-ads-campaign-f
 
 /**
  * 从 Google Ads campaign_name 提取 offer brand。
- * 已知形态（按尝试顺序）：
- * - {字母}{数字}-{brand}@后缀（例：B0023-{brand}@xxx，首字母可为任意字母）
- * - {brand}_US_77_106_20260407152617037（及类似 _国家码_数字_数字_数字 后缀）
- * - {字母}{数字}-{brand}（例：P0003-{brand}，首字母可为任意字母）
- * 无法识别时返回原始 campaign_name（trim 后）。
+ * 若名称中不含 `@`，不做解析，直接返回 trim 后的原文。
+ * 含 `@` 时依次尝试：
+ * - {字母}{数字}-{brand}@后缀（例：B0023-{brand}@xxx）
+ * - {纯字母前缀}-{brand}@后缀（例：PB-{brand}@xxx）
+ * - {brand}_国家码_数字_数字_数字（行尾地理后缀形态）
+ * - {字母}{数字}-{brand}（整串剩余段，作兜底）
+ * 仍无法识别时返回原文。
  */
 export function extractBrandFromGoogleAdsCampaignName(campaignName: string): string {
   const raw = (campaignName ?? '').trim()
   if (!raw) return raw
+  if (!raw.includes('@')) return raw
 
   // {字母}{数字}-{brand}@…
   const letterNumAt = raw.match(/^[A-Za-z]\d+-(.+)@[^@]+$/i)
   if (letterNumAt?.[1]) {
     const inner = letterNumAt[1].trim()
+    if (inner) return inner
+  }
+
+  // {纯字母前缀}-{brand}@…（须放在「字母+数字-」之后，避免 B0023-… 被吞成 B-0023…）
+  const lettersPrefixAt = raw.match(/^[A-Za-z]+-(.+)@[^@]+$/i)
+  if (lettersPrefixAt?.[1]) {
+    const inner = lettersPrefixAt[1].trim()
     if (inner) return inner
   }
 
