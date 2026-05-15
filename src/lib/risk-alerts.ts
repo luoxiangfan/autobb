@@ -173,10 +173,16 @@ export async function saveLinkCheckResult(
   return info?.id ?? 0
 }
 
+export type RiskAlertDedupCreated = {
+  id: number
+  created: boolean
+}
+
 /**
- * 创建风险提示
+ * 创建风险提示（带去重元数据：是否新插入）。
+ * 同一天窗内同类 + 同一 resource（含 NULL）已有 active 记录则跳过 INSERT。
  */
-export async function createRiskAlert(
+export async function createRiskAlertWithDedupMeta(
   userId: number,
   alertType: string,
   severity: 'critical' | 'warning' | 'info',
@@ -187,12 +193,11 @@ export async function createRiskAlert(
     resourceId?: number
     details?: Record<string, any>
   }
-): Promise<number> {
+): Promise<RiskAlertDedupCreated> {
   const db = await getDatabase()
   const recentCutoffExpr = dateMinusDays(1, db.type)
   const createdAtExpr = db.type === 'postgres' ? `created_at::timestamp` : 'created_at'
 
-  // 检查是否已存在相同的活跃提示（避免重复）
   const resourceId = options?.resourceId ?? null
   let existingQuery = `
     SELECT id FROM risk_alerts
@@ -214,12 +219,9 @@ export async function createRiskAlert(
   const existing = await db.queryOne(existingQuery, existingParams)
 
   if (existing) {
-    // 已存在相同提示，不重复创建
-    return (existing as any).id
+    return { id: (existing as { id: number }).id, created: false }
   }
 
-  // 创建新提示
-  // 🔧 PostgreSQL兼容性：确保undefined值转换为null
   const result = await db.queryOne<{ id: number }>(
     `
     INSERT INTO risk_alerts (
@@ -246,7 +248,60 @@ export async function createRiskAlert(
     ]
   )
 
-  return result?.id ?? 0
+  return { id: result?.id ?? 0, created: true }
+}
+
+/**
+ * 更新仍活跃的风险告警正文（去重命中后刷新时间与描述，避免长期代理失败却只有旧文案）。
+ */
+export async function refreshActiveRiskAlertContent(
+  userId: number,
+  alertId: number,
+  alertType: string,
+  title: string,
+  message: string,
+  details?: Record<string, any> | null
+): Promise<boolean> {
+  const db = await getDatabase()
+  const result = await db.exec(
+    `
+    UPDATE risk_alerts
+    SET title = ?,
+        message = ?,
+        details = ?,
+        updated_at = ${nowFunc(db.type)}
+    WHERE id = ? AND user_id = ? AND alert_type = ? AND status = 'active'
+  `,
+    [title, message, details ? JSON.stringify(details) : null, alertId, userId, alertType]
+  )
+  return (result.changes ?? 0) > 0
+}
+
+/**
+ * 创建风险提示
+ */
+export async function createRiskAlert(
+  userId: number,
+  alertType: string,
+  severity: 'critical' | 'warning' | 'info',
+  title: string,
+  message: string,
+  options?: {
+    resourceType?: 'campaign' | 'creative' | 'offer'
+    resourceId?: number
+    details?: Record<string, any>
+  }
+): Promise<number> {
+  const { id } = await createRiskAlertWithDedupMeta(
+    userId,
+    alertType,
+    severity,
+    title,
+    message,
+    options
+  )
+
+  return id
 }
 
 /**
