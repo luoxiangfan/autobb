@@ -568,6 +568,10 @@ export default function CampaignsClientPage({
   const userSelectionInitializedRef = useRef(false)
   /** SSE / 管线 idle 时抑制 toast（本页刚点完「同步」与完成提示去重） */
   const pipelineIdleToastSuppressedUntilRef = useRef(0)
+  /** 仅在「同步广告系列」请求已成功返回后，允许根据 status-v2 自动结束 syncing，避免误清 */
+  const allowIdleClearSyncingRef = useRef(false)
+  /** 正在 await 队列排空循环时禁止根据 status-v2 清 syncing（避免重复点击） */
+  const googleAdsSyncWaitLoopActiveRef = useRef(false)
 
   const checkGlobalSyncStatus = async () => {
     try {
@@ -575,6 +579,19 @@ export default function CampaignsClientPage({
       if (response.ok) {
         const data = await response.json()
         setGlobalSyncStatus(data)
+        if (
+          allowIdleClearSyncingRef.current &&
+          !googleAdsSyncWaitLoopActiveRef.current
+        ) {
+          const qp = Number(data.googleAdsCampaignSyncQueue?.pending ?? 0)
+          const qr = Number(data.googleAdsCampaignSyncQueue?.running ?? 0)
+          const logBusy =
+            data.hasRunningSync === true &&
+            data.runningSync?.syncType === 'google_ads_campaign_sync'
+          if (qp + qr === 0 && !logBusy) {
+            setSyncing(false)
+          }
+        }
         return data
       }
     } catch (error) {
@@ -605,6 +622,22 @@ export default function CampaignsClientPage({
     setIsPolling(false)
     console.log('[Sync] Stopped polling for sync status')
   }
+
+  const googleAdsCampaignQueueTotal =
+    Number(globalSyncStatus?.googleAdsCampaignSyncQueue?.pending ?? 0) +
+    Number(globalSyncStatus?.googleAdsCampaignSyncQueue?.running ?? 0)
+  const syncCampaignButtonDisabled =
+    syncing ||
+    globalSyncStatus?.hasRunningSync === true ||
+    googleAdsCampaignQueueTotal > 0
+  const syncCampaignButtonLabel =
+    syncing
+      ? '同步中...'
+      : globalSyncStatus?.hasRunningSync
+        ? '同步任务进行中'
+        : googleAdsCampaignQueueTotal > 0
+          ? '队列同步中...'
+          : '同步广告系列'
 
   // 仅将软删除(isDeleted)视为"已删除"，REMOVED 视为"已下线"仍展示
   const isCampaignDeleted = (campaign: Campaign) => {
@@ -981,16 +1014,23 @@ export default function CampaignsClientPage({
     void loadAffiliates()
   }, [])
   
-  // 🔧 监听同步状态，自动管理轮询
+  // 🔧 监听同步状态，自动管理轮询（含：仅有队列任务但 sync_logs 尚未写入 running 的阶段）
   useEffect(() => {
-    if (globalSyncStatus?.hasRunningSync && !pollingRef.current) {
-      // 有运行中的任务，启动轮询
+    const st = globalSyncStatus
+    const queueTotal =
+      Number(st?.googleAdsCampaignSyncQueue?.pending ?? 0) +
+      Number(st?.googleAdsCampaignSyncQueue?.running ?? 0)
+    const needPoll = Boolean(st?.hasRunningSync) || queueTotal > 0
+    if (needPoll && !pollingRef.current) {
       startPolling()
-    } else if (!globalSyncStatus?.hasRunningSync && pollingRef.current) {
-      // 任务结束，停止轮询
+    } else if (!needPoll && pollingRef.current) {
       stopPolling()
     }
-  }, [globalSyncStatus?.hasRunningSync])
+  }, [
+    globalSyncStatus?.hasRunningSync,
+    globalSyncStatus?.googleAdsCampaignSyncQueue?.pending,
+    globalSyncStatus?.googleAdsCampaignSyncQueue?.running,
+  ])
 
   // 🔧 清理轮询（组件卸载时）
   useEffect(() => {
@@ -2765,12 +2805,19 @@ export default function CampaignsClientPage({
   const syncCampaigns = async () => {
     // 🔧 检查是否有其他同步任务正在进行
     const status = await checkGlobalSyncStatus()
-    if (status?.hasRunningSync) {
-      const runningInfo = status.runningSync
-      showError(
-        '同步任务进行中',
-        `有${runningInfo?.isManual === true ? '手动' : '定时'}同步任务正在运行（已运行${runningInfo?.runningSeconds ?? 0}秒），请稍后再试`
-      )
+    const queuePending =
+      Number(status?.googleAdsCampaignSyncQueue?.pending ?? 0) +
+      Number(status?.googleAdsCampaignSyncQueue?.running ?? 0)
+    if (status?.hasRunningSync || queuePending > 0) {
+      const runningInfo = status?.runningSync
+      if (status?.hasRunningSync) {
+        showError(
+          '同步任务进行中',
+          `有${runningInfo?.isManual === true ? '手动' : '定时'}同步任务正在运行（已运行${runningInfo?.runningSeconds ?? 0}秒），请稍后再试`
+        )
+      } else {
+        showError('同步任务进行中', 'Google Ads 广告系列同步队列仍有任务，请稍后再试')
+      }
       return
     }
     // 🔧 检查当前是否正在同步
@@ -2779,6 +2826,7 @@ export default function CampaignsClientPage({
       return
     }
     setSyncing(true)
+    allowIdleClearSyncingRef.current = false
     const safetyRelease = setTimeout(
       () => setSyncing(false),
       GOOGLE_ADS_SYNC_WAIT_MAX_MS + 30_000
@@ -2818,6 +2866,8 @@ export default function CampaignsClientPage({
         )
       }
 
+      allowIdleClearSyncingRef.current = true
+
       const asyncPayload =
         response.status === 202 &&
         data != null &&
@@ -2836,43 +2886,48 @@ export default function CampaignsClientPage({
           let everBusy = false
           let consecutiveIdle = 0
           let exitedOnIdle = false
-          await new Promise((r) => setTimeout(r, GOOGLE_ADS_SYNC_QUEUE_LAG_MS))
-          while (Date.now() - waitStartedAt < GOOGLE_ADS_SYNC_WAIT_MAX_MS) {
-            const st = await checkGlobalSyncStatus()
-            const queue = st?.googleAdsCampaignSyncQueue
-            const qp = Number(queue?.pending ?? 0)
-            const qr = Number(queue?.running ?? 0)
-            const logBusy =
-              st?.hasRunningSync === true &&
-              st?.runningSync?.syncType === 'google_ads_campaign_sync'
-            const busy = qp + qr > 0 || logBusy
-            if (busy) {
-              everBusy = true
-              consecutiveIdle = 0
-            } else {
-              consecutiveIdle++
-              if (consecutiveIdle >= 2) {
-                exitedOnIdle = true
-                break
+          googleAdsSyncWaitLoopActiveRef.current = true
+          try {
+            await new Promise((r) => setTimeout(r, GOOGLE_ADS_SYNC_QUEUE_LAG_MS))
+            while (Date.now() - waitStartedAt < GOOGLE_ADS_SYNC_WAIT_MAX_MS) {
+              const st = await checkGlobalSyncStatus()
+              const queue = st?.googleAdsCampaignSyncQueue
+              const qp = Number(queue?.pending ?? 0)
+              const qr = Number(queue?.running ?? 0)
+              const logBusy =
+                st?.hasRunningSync === true &&
+                st?.runningSync?.syncType === 'google_ads_campaign_sync'
+              const busy = qp + qr > 0 || logBusy
+              if (busy) {
+                everBusy = true
+                consecutiveIdle = 0
+              } else {
+                consecutiveIdle++
+                if (consecutiveIdle >= 2) {
+                  exitedOnIdle = true
+                  break
+                }
               }
+              if (
+                !everBusy &&
+                Date.now() - waitStartedAt > GOOGLE_ADS_SYNC_QUEUE_STUCK_MS
+              ) {
+                throw new Error(
+                  '任务已提交但长时间未开始执行，请确认 Redis 与后台队列 Worker（QUEUE_BACKGROUND_WORKER）已启动'
+                )
+              }
+              await new Promise((r) => setTimeout(r, GOOGLE_ADS_SYNC_POLL_MS))
             }
             if (
-              !everBusy &&
-              Date.now() - waitStartedAt > GOOGLE_ADS_SYNC_QUEUE_STUCK_MS
+              !exitedOnIdle &&
+              Date.now() - waitStartedAt >= GOOGLE_ADS_SYNC_WAIT_MAX_MS
             ) {
               throw new Error(
-                '任务已提交但长时间未开始执行，请确认 Redis 与后台队列 Worker（QUEUE_BACKGROUND_WORKER）已启动'
+                '等待同步完成超时，请稍后刷新列表；任务可能仍在后台执行'
               )
             }
-            await new Promise((r) => setTimeout(r, GOOGLE_ADS_SYNC_POLL_MS))
-          }
-          if (
-            !exitedOnIdle &&
-            Date.now() - waitStartedAt >= GOOGLE_ADS_SYNC_WAIT_MAX_MS
-          ) {
-            throw new Error(
-              '等待同步完成超时，请稍后刷新列表；任务可能仍在后台执行'
-            )
+          } finally {
+            googleAdsSyncWaitLoopActiveRef.current = false
           }
         } else {
           showInfo(
@@ -2897,6 +2952,7 @@ export default function CampaignsClientPage({
       showError('同步失败', err?.message || '网络错误')
     } finally {
       clearTimeout(safetyRelease)
+      allowIdleClearSyncingRef.current = false
       pipelineIdleToastSuppressedUntilRef.current = Date.now() + 5000
       setSyncing(false)
     }
@@ -3521,14 +3577,9 @@ export default function CampaignsClientPage({
               </Button>
               <Button 
                 onClick={() => void syncCampaigns()} 
-                disabled={syncing || globalSyncStatus?.hasRunningSync}
+                disabled={syncCampaignButtonDisabled}
               >
-                {syncing || globalSyncStatus?.hasRunningSync 
-                  ? (globalSyncStatus?.hasRunningSync 
-                      ? '同步任务进行中' 
-                      : '同步中...')
-                  : '同步广告系列'
-                }
+                {syncCampaignButtonLabel}
               </Button>
               <Button onClick={() => router.push('/offers')}>
                 创建广告系列

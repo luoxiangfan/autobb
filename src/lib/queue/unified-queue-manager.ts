@@ -1697,6 +1697,21 @@ export class UnifiedQueueManager {
   }
 
   /**
+   * 按任务类型获取仍在 pending 索引（可调度队列）中的任务。
+   * 注意：与 {@link QueueStorageAdapter.getStats} 的 `byType` 不同——`byType` 统计的是 tasks 存储内
+   * 该类型的任务总数（含 completed 等未 purge 记录），不能当作「待执行数」。
+   */
+  async getPendingTasksForType(taskType: TaskType): Promise<Task[]> {
+    try {
+      await this.ensureInitialized()
+      return await this.adapter.getPendingTasks(taskType)
+    } catch (error) {
+      console.error(`[队列] 获取 ${taskType} 待处理任务失败:`, error)
+      return []
+    }
+  }
+
+  /**
    * 🔥 从队列中移除指定任务（供外部使用，如清理Offer关联任务）
    */
   async removeTask(taskId: string): Promise<boolean> {

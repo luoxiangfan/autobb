@@ -8,7 +8,8 @@ import {
 export const GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE = 'google-ads-campaign-sync' as const
 
 /**
- * 合并 core + background 队列中 google-ads-campaign-sync 的待处理与执行中数量
+ * 合并 core + background 队列中 google-ads-campaign-sync 的待处理与执行中数量。
+ * pending 来自各队列 pending 索引（与 getStats().byType 不同：后者含已完成未清理任务）。
  */
 export async function getGoogleAdsCampaignSyncQueueCounts(): Promise<{
   pending: number
@@ -16,15 +17,22 @@ export async function getGoogleAdsCampaignSyncQueueCounts(): Promise<{
 }> {
   try {
     const coreQueueManager = getQueueManager()
-    const coreStats = await coreQueueManager.getStats()
-    let pending = coreStats.byType?.[GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE] ?? 0
+    await coreQueueManager.ensureInitialized()
+    const [corePendingTasks, coreStats] = await Promise.all([
+      coreQueueManager.getPendingTasksForType(GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE),
+      coreQueueManager.getStats(),
+    ])
+    let pending = corePendingTasks.filter((t) => t.status === 'pending').length
     let running = coreStats.byTypeRunning?.[GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE] ?? 0
 
     if (isBackgroundQueueSplitEnabled()) {
       const backgroundQueueManager = getBackgroundQueueManager()
       await backgroundQueueManager.ensureInitialized()
-      const bgStats = await backgroundQueueManager.getStats()
-      pending += bgStats.byType?.[GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE] ?? 0
+      const [bgPendingTasks, bgStats] = await Promise.all([
+        backgroundQueueManager.getPendingTasksForType(GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE),
+        backgroundQueueManager.getStats(),
+      ])
+      pending += bgPendingTasks.filter((t) => t.status === 'pending').length
       running += bgStats.byTypeRunning?.[GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE] ?? 0
     }
 
