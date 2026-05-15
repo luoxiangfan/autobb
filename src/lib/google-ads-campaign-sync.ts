@@ -382,9 +382,18 @@ export async function syncCampaignsFromGoogleAds(
             result.syncedCount++
             if (offerResult.created) {
               result.createdOffersCount++
+            } else if (offerResult.offerUrlFieldsUpdated) {
+              result.updatedOffersCount++
             }
 
-            console.log(`[GoogleAds Sync] Synced campaign: ${campaign.campaign_name} (${campaign.campaign_id}), offer: ${offerResult.created ? 'created' : 'linked'} (offer_id=${offerResult.offerId})`)
+            const offerSyncLabel = offerResult.created
+              ? 'created'
+              : offerResult.offerUrlFieldsUpdated
+                ? 'linked (backfilled empty url / final_url / final_url_suffix)'
+                : 'linked'
+            console.log(
+              `[GoogleAds Sync] Synced campaign: ${campaign.campaign_name} (${campaign.campaign_id}), offer: ${offerSyncLabel} (offer_id=${offerResult.offerId})`
+            )
 
             // 🔧 备份广告系列（包含 campaign_config）
             try {
@@ -1146,6 +1155,20 @@ async function saveCampaignToDatabase(params: {
   }
 }
 
+/** First non-empty trimmed string in `campaign_config.finalUrls` (Google may return leading blanks). */
+function firstNonEmptyFinalUrlFromCampaignConfig(
+  campaignConfig?: GoogleAdsCampaign['campaign_config']
+): string {
+  const raw = campaignConfig?.finalUrls
+  if (!Array.isArray(raw)) return ''
+  for (const item of raw) {
+    if (typeof item !== 'string') continue
+    const trimmed = item.trim()
+    if (trimmed !== '') return trimmed
+  }
+  return ''
+}
+
 /**
  * 🆕 修复：先创建 Offer，返回 offer_id
  */
@@ -1153,12 +1176,10 @@ async function createOfferFirst(params: {
   userId: number
   campaign: GoogleAdsCampaign
   campaignConfig?: GoogleAdsCampaign['campaign_config']
-}): Promise<{ offerId: number; created: boolean }> {
+}): Promise<{ offerId: number; created: boolean; offerUrlFieldsUpdated: boolean }> {
   const { userId, campaign, campaignConfig } = params
   const db = await getDatabase()
-  const finalUrl = typeof campaignConfig?.finalUrls?.[0] === 'string'
-    ? campaignConfig.finalUrls[0].trim()
-    : ''
+  const finalUrl = firstNonEmptyFinalUrlFromCampaignConfig(campaignConfig)
   const finalUrlSuffix = typeof campaignConfig?.finalUrlSuffix === 'string'
     ? campaignConfig.finalUrlSuffix.trim()
     : ''
@@ -1179,6 +1200,7 @@ async function createOfferFirst(params: {
   } | undefined
 
   if (existingOffer) {
+    let offerUrlFieldsUpdated = false
     if (existingOffer.sync_source === 'google_ads_sync') {
       const updates: string[] = []
       const updateParams: any[] = []
@@ -1203,12 +1225,13 @@ async function createOfferFirst(params: {
           `UPDATE offers SET ${updates.join(', ')}, updated_at = ? WHERE id = ?`,
           [...updateParams, new Date(), existingOffer.id]
         )
+        offerUrlFieldsUpdated = true
         console.log(`[GoogleAds Sync] Updated empty URL fields for existing offer ${existingOffer.id}`)
       }
     }
 
     console.log(`[GoogleAds Sync] Found existing offer ${existingOffer.id} for campaign ${campaign.campaign_id}`)
-    return { offerId: existingOffer.id, created: false }
+    return { offerId: existingOffer.id, created: false, offerUrlFieldsUpdated }
   }
 
   // 2. 创建新 Offer
@@ -1253,7 +1276,7 @@ async function createOfferFirst(params: {
   const offerId = getInsertedId(result, db.type)
   console.log(`[GoogleAds Sync] Created offer ${offerId} for campaign ${campaign.campaign_id}`)
   
-  return { offerId, created: true }
+  return { offerId, created: true, offerUrlFieldsUpdated: false }
 }
 
 /**
