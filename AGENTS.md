@@ -51,6 +51,7 @@ gitnexus impact evaluateAdStrength --depth 2
 1. 进入代码修改前，先汇报 `impact` 结果（直接调用方、风险级别、影响模块）。
 2. 若风险为 HIGH/CRITICAL，先给出降风险方案，再实施修改。
 3. 改动完成后，说明是否需要重新 `analyze` 以保持索引新鲜。
+4. 改动完成后，检查是否存在错误
 
 ### 当前仓库限制
 
