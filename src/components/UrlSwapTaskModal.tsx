@@ -20,6 +20,7 @@ import { Loader2, AlertCircle, Link, Clock, Globe, ExternalLink } from 'lucide-r
 import { toast } from 'sonner';
 import type { UrlSwapTask } from '@/lib/url-swap-types';
 import { URL_SWAP_INTERVAL_OPTIONS, URL_SWAP_ALLOWED_INTERVALS_MINUTES } from '@/lib/url-swap-intervals';
+import { parseAffiliateLinksText, findInvalidAffiliateLinks } from '@/lib/url-swap-link-utils';
 import { BATCH_URL_SWAP_TASK_DEFAULTS } from '@/lib/batch-task-defaults';
 
 interface UrlSwapTaskModalProps {
