@@ -5195,7 +5195,7 @@ export default function CampaignsClientPage({
             }
           }}
           onSuccess={() => {
-            // 任务创建/更新成功后可以选择刷新列表或显示提示
+            void fetchCampaigns({ silent: true })
           }}
           preSelectedOfferId={selectedOfferForClickFarm?.offerId}
           editTaskId={editTaskIdForClickFarm}
@@ -5214,7 +5214,7 @@ export default function CampaignsClientPage({
             }
           }}
           onSuccess={() => {
-            // 任务创建/更新成功后可以选择刷新列表或显示提示
+            void fetchCampaigns({ silent: true })
           }}
           offerId={selectedOfferForUrlSwap?.offerId}
           editTaskId={editTaskIdForUrlSwap}
@@ -5227,7 +5227,7 @@ export default function CampaignsClientPage({
         campaignIds={Array.from(selectedCampaignIds)}
         onSuccess={() => {
           setSelectedCampaignIds(new Set())
-          // fetchData(true)  // 刷新数据
+          void fetchCampaigns({ silent: true })
         }}
       />
     </div>
