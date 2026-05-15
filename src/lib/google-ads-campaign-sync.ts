@@ -20,6 +20,42 @@ import { ApiOperationType } from './google-ads-api-tracker'
 import { firstNonEmptyFinalUrlFromCampaignConfig } from './google-ads-campaign-final-url'
 
 /**
+ * 从 Google Ads campaign_name 提取 offer brand。
+ * 已知形态（按尝试顺序）：
+ * - {字母}{数字}-{brand}@后缀（例：B0023-{brand}@xxx，首字母可为任意字母）
+ * - {brand}_US_77_106_20260407152617037（及类似 _国家码_数字_数字_数字 后缀）
+ * - {字母}{数字}-{brand}（例：P0003-{brand}，首字母可为任意字母）
+ * 无法识别时返回原始 campaign_name（trim 后）。
+ */
+export function extractBrandFromGoogleAdsCampaignName(campaignName: string): string {
+  const raw = (campaignName ?? '').trim()
+  if (!raw) return raw
+
+  // {字母}{数字}-{brand}@…
+  const letterNumAt = raw.match(/^[A-Za-z]\d+-(.+)@[^@]+$/i)
+  if (letterNumAt?.[1]) {
+    const inner = letterNumAt[1].trim()
+    if (inner) return inner
+  }
+
+  // {brand}_US_77_106_20260407152617037
+  const geoSuffix = raw.match(/^(.+)_[A-Z]{2}_\d+_\d+_\d+$/i)
+  if (geoSuffix?.[1]) {
+    const inner = geoSuffix[1].trim()
+    if (inner) return inner
+  }
+
+  // {字母}{数字}-{brand}（无 @ 段）
+  const letterNum = raw.match(/^[A-Za-z]\d+-(.+)$/i)
+  if (letterNum?.[1]) {
+    const inner = letterNum[1].trim()
+    if (inner) return inner
+  }
+
+  return raw
+}
+
+/**
  * Google Ads 广告系列数据
  */
 export interface GoogleAdsCampaign {
@@ -1175,9 +1211,14 @@ async function createOfferFirst(params: {
   const isNullOrEmpty = (value: unknown): boolean =>
     value === null || value === undefined || (typeof value === 'string' && value.trim() === '')
 
+  const campaignNameTrimmed = campaign.campaign_name.trim()
+  const derivedBrand = extractBrandFromGoogleAdsCampaignName(campaign.campaign_name)
+  /** 仅当解析结果与完整 campaign_name 不同，视为提取成功（否则不碰已有 offer 的 brand） */
+  const brandExtractSucceeded = derivedBrand !== campaignNameTrimmed
+
   // 1. 检查是否已存在关联的 Offer（通过 google_ads_campaign_id）
   const existingOffer = await db.queryOne(
-    'SELECT id, sync_source, url, final_url, final_url_suffix FROM offers WHERE google_ads_campaign_id = ? AND user_id = ?',
+    'SELECT id, sync_source, url, final_url, final_url_suffix, brand FROM offers WHERE google_ads_campaign_id = ? AND user_id = ?',
     [campaign.campaign_id, userId]
   ) as {
     id: number
@@ -1185,6 +1226,7 @@ async function createOfferFirst(params: {
     url?: string | null
     final_url?: string | null
     final_url_suffix?: string | null
+    brand?: string | null
   } | undefined
 
   if (existingOffer) {
@@ -1208,13 +1250,27 @@ async function createOfferFirst(params: {
         updateParams.push(finalUrlSuffix)
       }
 
+      const existingBrand = typeof existingOffer.brand === 'string' ? existingOffer.brand.trim() : ''
+      const brandStillRawCampaignStyle =
+        existingBrand === campaignNameTrimmed ||
+        (existingBrand !== '' && extractBrandFromGoogleAdsCampaignName(existingBrand) !== existingBrand)
+
+      if (
+        brandExtractSucceeded &&
+        derivedBrand !== existingBrand &&
+        (brandStillRawCampaignStyle || !existingBrand)
+      ) {
+        updates.push('brand = ?')
+        updateParams.push(derivedBrand)
+      }
+
       if (updates.length > 0) {
         await db.exec(
           `UPDATE offers SET ${updates.join(', ')}, updated_at = ? WHERE id = ?`,
           [...updateParams, new Date(), existingOffer.id]
         )
         offerUrlFieldsUpdated = true
-        console.log(`[GoogleAds Sync] Updated empty URL fields for existing offer ${existingOffer.id}`)
+        console.log(`[GoogleAds Sync] Updated offer ${existingOffer.id} (${updates.join(', ')})`)
       }
     }
 
@@ -1249,7 +1305,7 @@ async function createOfferFirst(params: {
       url,
       finalUrl,
       finalUrlSuffix,
-      campaign.campaign_name,
+      derivedBrand,
       'US',  // 默认国家，需要用户完善
       'English',  // 默认语言
       offerName,
