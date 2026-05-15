@@ -160,19 +160,49 @@ async function main() {
     }
   }
 
+  const inactiveQueueSweepEnabled = parseBooleanEnv(
+    process.env.INACTIVE_SOURCE_QUEUE_SWEEP_ENABLED,
+    true
+  )
+  const runInactiveSourceQueueSweep = async (source: 'startup' | 'interval') => {
+    if (!inactiveQueueSweepEnabled) return
+    try {
+      const { sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap } = await import(
+        './lib/queue/inactive-source-queue-sweep'
+      )
+      const sweep = await sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap()
+      if (sweep.clickFarmQueueRemoved > 0 || sweep.urlSwapQueueRemoved > 0) {
+        logger.info('background_inactive_source_queue_sweep', { source, ...sweep })
+      }
+    } catch (error: any) {
+      logger.warn('background_inactive_source_queue_sweep_failed', {
+        source,
+        message: error?.message || String(error),
+      })
+    }
+  }
+
   if (clickFarmSelfHealEnabled) {
     logger.info('background_click_farm_self_heal_enabled', {
       intervalMs: clickFarmSelfHealIntervalMs,
       overdueMinutes: clickFarmSelfHealOverdueMinutes,
     })
-    setTimeout(() => {
-      void runClickFarmSelfHeal('startup')
-    }, 15_000).unref?.()
   }
-  const clickFarmSelfHealTimer = setInterval(
-    () => void runClickFarmSelfHeal('interval'),
-    clickFarmSelfHealIntervalMs
-  )
+  if (inactiveQueueSweepEnabled) {
+    logger.info('background_inactive_source_queue_sweep_enabled', {
+      intervalMs: clickFarmSelfHealIntervalMs,
+    })
+  }
+
+  setTimeout(() => {
+    if (clickFarmSelfHealEnabled) void runClickFarmSelfHeal('startup')
+    if (inactiveQueueSweepEnabled) void runInactiveSourceQueueSweep('startup')
+  }, 15_000).unref?.()
+
+  const clickFarmSelfHealTimer = setInterval(() => {
+    if (clickFarmSelfHealEnabled) void runClickFarmSelfHeal('interval')
+    if (inactiveQueueSweepEnabled) void runInactiveSourceQueueSweep('interval')
+  }, clickFarmSelfHealIntervalMs)
   clickFarmSelfHealTimer.unref?.()
 
   // 可选：定期刷新DB配置（多实例环境下避免配置漂移）

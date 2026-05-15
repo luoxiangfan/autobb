@@ -288,6 +288,20 @@ async function urlSwapSchedulerTask() {
     const result = await triggerAllUrlSwapTasks()
 
     log(`🔄 换链接任务调度完成 - 处理: ${result.processed}, 入队: ${result.executed}, 跳过: ${result.skipped}, 错误: ${result.errors}`)
+
+    try {
+      const { sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap } = await import(
+        './lib/queue/inactive-source-queue-sweep'
+      )
+      const sweep = await sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap()
+      if (sweep.clickFarmQueueRemoved > 0 || sweep.urlSwapQueueRemoved > 0) {
+        log(
+          `🧹 非活跃来源队列清理 - 暂停补点击ID数: ${sweep.pausedClickFarmIds}, 禁用换链ID数: ${sweep.disabledUrlSwapIds}, 移除队列项: 补点击=${sweep.clickFarmQueueRemoved}, 换链=${sweep.urlSwapQueueRemoved}`
+        )
+      }
+    } catch (sweepError) {
+      logError('❌ 非活跃来源队列清理失败:', sweepError)
+    }
   } catch (error) {
     logError('❌ 换链接任务调度执行失败:', error)
   }
@@ -1124,7 +1138,7 @@ function startScheduler() {
   log('🚀 定时任务调度器启动')
   log('📅 任务调度计划:')
   log('  - 补点击任务: 每小时整点 (0 * * * *)')
-  log('  - 换链接任务: 每分钟 (* * * * *)')
+  log('  - 换链接任务: 每分钟 (* * * * *)；同周期兜底清理「已暂停补点击 / 已禁用换链」在队列中的挂起项')
   log('  - 联盟商品同步: 每10分钟 (*/10 * * * *)')
   log('  - 推荐指数自愈调度: 默认每小时 (20 * * * *)')
   log('  - 数据同步: 每5分钟检查，按用户间隔触发（默认4小时）')

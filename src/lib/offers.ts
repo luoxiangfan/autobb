@@ -14,6 +14,8 @@ import {
 } from './url-swap'
 import { applyCampaignTransition, applyCampaignTransitionByIds } from './campaign-state-machine'
 import { toDbJsonObjectField } from './json-field'
+import { removePendingClickFarmQueueTasksByTaskIds } from './click-farm/queue-cleanup'
+import { removePendingUrlSwapQueueTasksByTaskIds } from './url-swap/queue-cleanup'
 
 export interface Offer {
   id: number
@@ -1199,6 +1201,16 @@ export async function deleteOffer(
           updated_at = ${nowFunc}
       WHERE offer_id = ? AND user_id = ?
     `, [isDeletedTrue, id, userId])
+
+    try {
+      const cfIds = clickFarmTasks.map((t: { id: unknown }) => String(t.id).trim()).filter(Boolean)
+      if (cfIds.length > 0) {
+        await removePendingClickFarmQueueTasksByTaskIds(cfIds, userId)
+      }
+    } catch (queueError: unknown) {
+      const msg = queueError instanceof Error ? queueError.message : String(queueError)
+      console.warn(`[Offer删除] 补点击队列清理失败:`, msg)
+    }
   }
 
   // 🔥 需求：禁用关联的URL Swap换链接任务
@@ -1225,28 +1237,17 @@ export async function deleteOffer(
 
     console.log(`[Offer删除] 禁用 ${urlSwapTasks.length} 个关联的URL Swap任务`)
 
-    // 🔥 （可选）从队列中移除待处理的URL Swap任务
-    // 避免已禁用的任务仍在队列中等待执行
     try {
-      const { getOrCreateQueueManager } = await import('./queue/init-queue')
-      const queueManager = await getOrCreateQueueManager()
-
-      const pendingTasks = await queueManager.getPendingTasks()
-      let removedCount = 0
-
-      for (const task of pendingTasks) {
-        if (task.type === 'url-swap' && task.data.offerId === id) {
-          await queueManager.removeTask(task.id)
-          removedCount++
+      const usIds = urlSwapTasks.map((t: { id: unknown }) => String(t.id).trim()).filter(Boolean)
+      if (usIds.length > 0) {
+        const { removedCount } = await removePendingUrlSwapQueueTasksByTaskIds(usIds, userId)
+        if (removedCount > 0) {
+          console.log(`[Offer删除] 从队列移除 ${removedCount} 个待处理的URL Swap任务`)
         }
       }
-
-      if (removedCount > 0) {
-        console.log(`[Offer删除] 从队列移除 ${removedCount} 个待处理的URL Swap任务`)
-      }
-    } catch (queueError: any) {
-      // 队列清理失败不影响主流程
-      console.warn(`[Offer删除] 队列清理失败:`, queueError.message)
+    } catch (queueError: unknown) {
+      const msg = queueError instanceof Error ? queueError.message : String(queueError)
+      console.warn(`[Offer删除] 换链接队列清理失败:`, msg)
     }
   }
 

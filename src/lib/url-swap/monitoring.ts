@@ -15,6 +15,7 @@ import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/json-field'
 import type { UrlSwapTask, UrlSwapTaskStatus } from '@/lib/url-swap-types'
 import { pauseUrlSwapTargetsByTaskId } from '@/lib/url-swap'
+import { removePendingUrlSwapQueueTasksByTaskIds } from '@/lib/url-swap/queue-cleanup'
 import { notifySwapError, notifyUrlSwapTaskPaused } from './notifications'
 
 /**
@@ -338,6 +339,16 @@ export async function autoDisableHighFailureTask(taskId: string): Promise<boolea
     `, [`任务失败率过高 (${failureRate.toFixed(1)}%)，已自动禁用`, now, taskId])
 
     await pauseUrlSwapTargetsByTaskId(taskId)
+
+    try {
+      const userId = Number(task.user_id)
+      await removePendingUrlSwapQueueTasksByTaskIds(
+        [taskId],
+        Number.isFinite(userId) && userId > 0 ? userId : undefined
+      )
+    } catch (error) {
+      console.warn(`[url-swap] 自动禁用后清理队列失败: ${taskId}`, error)
+    }
 
     // 发送通知
     await notifyUrlSwapTaskPaused(

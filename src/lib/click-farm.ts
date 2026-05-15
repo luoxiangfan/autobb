@@ -547,6 +547,12 @@ export async function pauseClickFarmTask(
         updated_at = datetime('now')
     WHERE id = ?
   `, [reason, message, id]);
+
+  try {
+    await removePendingClickFarmQueueTasksByTaskIds([String(id)])
+  } catch (error) {
+    console.warn(`[click-farm] 暂停任务后清理队列失败: ${id}`, error)
+  }
 }
 
 /**
@@ -563,6 +569,15 @@ export async function pauseClickFarmTasksByOfferId(
   const nowSql = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
   const reason = options?.reason ?? 'offer_deactivated'
   const message = options?.message ?? 'Offer 关联的广告系列已删除'
+
+  const pendingRows = await db.query<{ id: string | number }>(`
+    SELECT id FROM click_farm_tasks
+    WHERE offer_id = ? AND status IN ('pending', 'running') AND IS_DELETED_FALSE
+  `, [offerId])
+  const taskIdsToClean = (pendingRows || [])
+    .map((row) => String(row.id).trim())
+    .filter(Boolean)
+
   const result = await db.exec(`
     UPDATE click_farm_tasks
     SET status = 'paused',
@@ -572,6 +587,15 @@ export async function pauseClickFarmTasksByOfferId(
         paused_at = ${nowSql}
     WHERE offer_id = ? AND status IN ('pending', 'running') AND IS_DELETED_FALSE
   `, [reason, message, offerId]);
+
+  if (taskIdsToClean.length > 0) {
+    try {
+      await removePendingClickFarmQueueTasksByTaskIds(taskIdsToClean)
+    } catch (error) {
+      console.warn(`[click-farm] 按 offer 暂停后清理队列失败 (offerId=${offerId}):`, error)
+    }
+  }
+
   return result.changes || 0;
 }
 
