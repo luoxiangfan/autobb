@@ -1,4 +1,4 @@
--- Migration: 241_campaign_paused_task_query_indexes.pg.sql
+-- Migration: 242_campaign_paused_task_query_indexes.pg.sql
 -- Purpose: speed up paused campaign task check query
 -- Created: 2026-05-14
 

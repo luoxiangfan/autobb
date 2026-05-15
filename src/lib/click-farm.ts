@@ -570,7 +570,7 @@ export async function pauseClickFarmTasksByOfferId(
         pause_message = ?,
         updated_at = ${nowSql},
         paused_at = ${nowSql}
-    WHERE offer_id = ? AND status IN ('pending', 'running')
+    WHERE offer_id = ? AND status IN ('pending', 'running') AND IS_DELETED_FALSE
   `, [reason, message, offerId]);
   return result.changes || 0;
 }
