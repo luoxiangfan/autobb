@@ -363,6 +363,7 @@ export async function createCampaignBudgetPython(params: {
       name: params.name,
       amount_micros: params.amountMicros,
       delivery_method: params.deliveryMethod,
+      // 与 Google Ads 默认（可共享）相反：每系列专用预算
       explicitly_shared: false,
     }, {
       headers: getPythonRequestHeaders(params.userId, params.requestId),

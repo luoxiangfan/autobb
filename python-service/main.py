@@ -837,11 +837,13 @@ class CreateCampaignBudgetRequest(BaseModel):
     name: str
     amount_micros: int
     delivery_method: str  # "STANDARD" or "ACCELERATED"
+    # 平均日预算在 Google Ads API 中默认可被多个系列引用（共享预算库）；创建系列时使用专用预算
+    explicitly_shared: bool = Field(default=False)
 
 
 @app.post("/api/google-ads/campaign-budget/create")
 async def create_campaign_budget(request: CreateCampaignBudgetRequest):
-    """创建广告系列预算"""
+    """创建广告系列预算（默认 explicitly_shared=false，即单系列专用、不进入共享预算库行为）"""
     user_id = request.service_account.user_id
     try:
         client = create_google_ads_client(request.service_account)
@@ -854,7 +856,7 @@ async def create_campaign_budget(request: CreateCampaignBudgetRequest):
         budget.delivery_method = client.enums.BudgetDeliveryMethodEnum[
             request.delivery_method
         ]
-        budget.explicitly_shared = False
+        budget.explicitly_shared = request.explicitly_shared
 
         response = campaign_budget_service.mutate_campaign_budgets(
             customer_id=request.customer_id, operations=[operation]

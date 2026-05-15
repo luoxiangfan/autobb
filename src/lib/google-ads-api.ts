@@ -1127,6 +1127,8 @@ async function createCampaignBudget(
     customerId: string
   }
 ): Promise<string> {
+  // Google Ads：平均日预算默认可被多个系列引用（explicitly_shared 默认 true，见 share-budgets 文档）。
+  // 本系统每系列独立预算，必须显式 explicitly_shared=false。
   const budget = {
     name: params.name,
     amount_micros: params.amount * 1000000, // 转换为micros (1 USD = 1,000,000 micros)
