@@ -17,6 +17,7 @@ import { executeGAQLQueryPython } from './python-ads-client'
 import { getInsertedId } from './db-helpers'
 import { createRiskAlert } from './risk-alerts'
 import { ApiOperationType } from './google-ads-api-tracker'
+import { firstNonEmptyFinalUrlFromCampaignConfig } from './google-ads-campaign-final-url'
 
 /**
  * Google Ads 广告系列数据
@@ -35,6 +36,7 @@ export interface GoogleAdsCampaign {
     biddingStrategy?: string
     marketingObjective?: string
     finalUrlSuffix?: string
+    finalUrls?: string[]
     [key: string]: any
   }
   start_date_time?: string
@@ -1155,20 +1157,6 @@ async function saveCampaignToDatabase(params: {
   }
 }
 
-/** First non-empty trimmed string in `campaign_config.finalUrls` (Google may return leading blanks). */
-function firstNonEmptyFinalUrlFromCampaignConfig(
-  campaignConfig?: GoogleAdsCampaign['campaign_config']
-): string {
-  const raw = campaignConfig?.finalUrls
-  if (!Array.isArray(raw)) return ''
-  for (const item of raw) {
-    if (typeof item !== 'string') continue
-    const trimmed = item.trim()
-    if (trimmed !== '') return trimmed
-  }
-  return ''
-}
-
 /**
  * 🆕 修复：先创建 Offer，返回 offer_id
  */
@@ -1203,7 +1191,7 @@ async function createOfferFirst(params: {
     let offerUrlFieldsUpdated = false
     if (existingOffer.sync_source === 'google_ads_sync') {
       const updates: string[] = []
-      const updateParams: any[] = []
+      const updateParams: unknown[] = []
 
       if (isNullOrEmpty(existingOffer.url) && url) {
         updates.push('url = ?')
