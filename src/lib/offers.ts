@@ -388,6 +388,8 @@ export async function listOffers(
     searchQuery?: string
     scrapeStatus?: string
     needsCompletion?: boolean
+    /** true: 有非空联盟链接；false: 无或仅空白 */
+    hasAffiliateLink?: boolean
     sortBy?: string
     sortOrder?: 'asc' | 'desc'
     includeDeleted?: boolean
@@ -462,6 +464,12 @@ export async function listOffers(
   if (options?.needsCompletion !== undefined) {
     whereConditions.push('o.needs_completion = ?')
     params.push(options.needsCompletion)
+  }
+
+  if (options?.hasAffiliateLink === true) {
+    whereConditions.push("(o.affiliate_link IS NOT NULL AND TRIM(o.affiliate_link) != '')")
+  } else if (options?.hasAffiliateLink === false) {
+    whereConditions.push("(o.affiliate_link IS NULL OR TRIM(o.affiliate_link) = '')")
   }
 
   const whereClause = whereConditions.join(' AND ')

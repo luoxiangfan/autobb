@@ -178,6 +178,8 @@ describe('GET /api/offers', () => {
       targetCountry: undefined,
       searchQuery: undefined,
       scrapeStatus: undefined,
+      needsCompletion: undefined,
+      hasAffiliateLink: undefined,
       sortBy: undefined,
       sortOrder: undefined,
     })
@@ -270,6 +272,8 @@ describe('GET /api/offers', () => {
       targetCountry: undefined,
       searchQuery: undefined,
       scrapeStatus: 'in_progress',
+      needsCompletion: undefined,
+      hasAffiliateLink: undefined,
       sortBy: 'targetCountry',
       sortOrder: 'asc',
     })
@@ -280,11 +284,41 @@ describe('GET /api/offers', () => {
       targetCountry: undefined,
       searchQuery: undefined,
       scrapeStatus: 'in_progress',
+      needsCompletion: undefined,
+      hasAffiliateLink: undefined,
       sortBy: 'targetCountry',
       sortOrder: 'asc',
     })
     expect(data.success).toBe(true)
     expect(data.total).toBe(1)
+  })
+
+  it('passes hasAffiliateLink query param to listOffers', async () => {
+    offerFns.listOffers.mockResolvedValue({
+      offers: [createOfferRow()],
+      total: 1,
+    })
+
+    const req = new NextRequest('http://localhost/api/offers?limit=10&offset=0&hasAffiliateLink=false', {
+      headers: { 'x-user-id': '7' },
+    })
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(offerFns.listOffers).toHaveBeenCalledWith(7, {
+      limit: 10,
+      offset: 0,
+      isActive: undefined,
+      targetCountry: undefined,
+      searchQuery: undefined,
+      scrapeStatus: undefined,
+      needsCompletion: undefined,
+      hasAffiliateLink: false,
+      sortBy: undefined,
+      sortOrder: undefined,
+    })
+    expect(data.success).toBe(true)
   })
 
   it('returns compatibility signal and falls back sort when sortBy is unsupported', async () => {
@@ -307,6 +341,8 @@ describe('GET /api/offers', () => {
       targetCountry: undefined,
       searchQuery: undefined,
       scrapeStatus: undefined,
+      needsCompletion: undefined,
+      hasAffiliateLink: undefined,
       sortBy: 'linkedAccounts',
       sortOrder: 'asc',
     })
@@ -317,6 +353,8 @@ describe('GET /api/offers', () => {
       targetCountry: undefined,
       searchQuery: undefined,
       scrapeStatus: undefined,
+      needsCompletion: undefined,
+      hasAffiliateLink: undefined,
       sortBy: undefined,
       sortOrder: 'asc',
     })

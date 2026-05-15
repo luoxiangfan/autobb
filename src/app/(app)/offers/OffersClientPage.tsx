@@ -69,6 +69,9 @@ const OFFERS_SERVER_SUPPORTED_SORTS = new Set([
   'targetCountry',
   'targetLanguage',
   'scrapeStatus',
+  'needsCompletion',
+  'createdAt',
+  'updatedAt',
 ])
 
 const CreateOfferModalV2 = dynamic(() => import('@/components/CreateOfferModalV2'), { ssr: false })
@@ -124,9 +127,10 @@ export default function OffersClientPage({
   const [countryFilter, setCountryFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [needsCompletionFilter, setNeedsCompletionFilter] = useState<string>('all') // 'all' | 'true' | 'false'
+  const [affiliateLinkFilter, setAffiliateLinkFilter] = useState<string>('all') // 'all' | 'true' | 'false' 是否有联盟推广链接
 
-  // P2-5: 排序状态
-  const [sortBy, setSortBy] = useState<string>('')
+  // P2-5: 排序状态（默认按创建时间降序）
+  const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const filterKeyRef = useRef<string>('')
 
@@ -169,6 +173,7 @@ export default function OffersClientPage({
   const serverCountry = isServerPagingMode && countryFilter !== 'all' ? countryFilter : ''
   const serverScrapeStatus = isServerPagingMode && statusFilter !== 'all' ? statusFilter : ''
   const serverNeedsCompletion = isServerPagingMode && needsCompletionFilter !== 'all' ? needsCompletionFilter : ''
+  const serverHasAffiliateLink = isServerPagingMode && affiliateLinkFilter !== 'all' ? affiliateLinkFilter : ''
   const serverSortBy = isServerPagingMode && sortBy && OFFERS_SERVER_SUPPORTED_SORTS.has(sortBy)
     ? sortBy
     : ''
@@ -274,6 +279,7 @@ export default function OffersClientPage({
       if (serverCountry) params.set('targetCountry', serverCountry)
       if (serverScrapeStatus) params.set('scrapeStatus', serverScrapeStatus)
       if (serverNeedsCompletion) params.set('needsCompletion', serverNeedsCompletion)
+      if (serverHasAffiliateLink) params.set('hasAffiliateLink', serverHasAffiliateLink)
 
       if (serverSortBy) {
         params.set('sortBy', serverSortBy)
@@ -290,6 +296,7 @@ export default function OffersClientPage({
     serverCountry,
     serverScrapeStatus,
     serverNeedsCompletion,
+    serverHasAffiliateLink,
     serverSortBy,
     serverSortOrder,
   ])
@@ -629,6 +636,7 @@ export default function OffersClientPage({
         countryFilter,
         statusFilter,
         needsCompletionFilter,
+        affiliateLinkFilter,
         sortBy,
         sortOrder,
       })
@@ -671,39 +679,60 @@ export default function OffersClientPage({
       filtered = filtered.filter((offer) => (offer.needsCompletion ?? false) === needsCompletion)
     }
 
-    // P2-5: 排序
-    if (sortBy) {
-      filtered = [...filtered].sort((a, b) => {
-        // 特殊处理：关联账号数量排序
-        if (sortBy === 'linkedAccounts') {
-          const aCount = a.linkedAccounts?.length || 0
-          const bCount = b.linkedAccounts?.length || 0
-          return sortOrder === 'asc' ? aCount - bCount : bCount - aCount
-        }
-
-        const aVal = a[sortBy as keyof Offer]
-        const bVal = b[sortBy as keyof Offer]
-
-        if (aVal === null || aVal === undefined) return 1
-        if (bVal === null || bVal === undefined) return -1
-
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return sortOrder === 'asc'
-            ? aVal.localeCompare(bVal)
-            : bVal.localeCompare(aVal)
-        }
-
-        if (typeof aVal === 'number' && typeof bVal === 'number') {
-          return sortOrder === 'asc' ? aVal - bVal : bVal - aVal
-        }
-
-        return 0
+    if (affiliateLinkFilter !== 'all') {
+      const wantLink = affiliateLinkFilter === 'true'
+      filtered = filtered.filter((offer) => {
+        const has = Boolean(offer.affiliateLink && String(offer.affiliateLink).trim() !== '')
+        return wantLink ? has : !has
       })
     }
 
+    // P2-5: 排序（无显式列时默认创建时间降序）
+    const effectiveSortField = sortBy || 'createdAt'
+    const effectiveSortOrder = sortBy ? sortOrder : 'desc'
+    filtered = [...filtered].sort((a, b) => {
+      if (effectiveSortField === 'linkedAccounts') {
+        const aCount = a.linkedAccounts?.length || 0
+        const bCount = b.linkedAccounts?.length || 0
+        return effectiveSortOrder === 'asc' ? aCount - bCount : bCount - aCount
+      }
+
+      const aVal = a[effectiveSortField as keyof Offer]
+      const bVal = b[effectiveSortField as keyof Offer]
+
+      if (aVal === null || aVal === undefined) return 1
+      if (bVal === null || bVal === undefined) return -1
+
+      if (typeof aVal === 'boolean' && typeof bVal === 'boolean') {
+        const aNum = aVal ? 1 : 0
+        const bNum = bVal ? 1 : 0
+        return effectiveSortOrder === 'asc' ? aNum - bNum : bNum - aNum
+      }
+
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return effectiveSortOrder === 'asc'
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal)
+      }
+
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return effectiveSortOrder === 'asc' ? aVal - bVal : bVal - aVal
+      }
+
+      return 0
+    })
+
     setFilteredOffers(filtered)
 
-    const filterKey = JSON.stringify({ searchQuery, countryFilter, statusFilter, sortBy, sortOrder, needsCompletionFilter })
+    const filterKey = JSON.stringify({
+      searchQuery,
+      countryFilter,
+      statusFilter,
+      sortBy,
+      sortOrder,
+      needsCompletionFilter,
+      affiliateLinkFilter,
+    })
     const filtersChanged = filterKeyRef.current !== filterKey
     filterKeyRef.current = filterKey
 
@@ -718,6 +747,7 @@ export default function OffersClientPage({
     countryFilter,
     statusFilter,
     needsCompletionFilter,
+    affiliateLinkFilter,
     sortBy,
     sortOrder,
     pageSize,
@@ -729,15 +759,13 @@ export default function OffersClientPage({
   // P2-5: 排序处理函数
   const handleSort = (field: string) => {
     if (sortBy === field) {
-      // 同一列：切换排序方向或取消排序
       if (sortOrder === 'desc') {
         setSortOrder('asc')
       } else {
-        setSortBy('')
+        setSortBy('createdAt')
         setSortOrder('desc')
       }
     } else {
-      // 新列：默认降序
       setSortBy(field)
       setSortOrder('desc')
     }
@@ -1124,7 +1152,13 @@ export default function OffersClientPage({
     return Array.from(values)
   }, [offers, countryFilter])
 
-  const hasActiveFilters = Boolean(searchQuery || countryFilter !== 'all' || statusFilter !== 'all' || needsCompletionFilter !== 'all')
+  const hasActiveFilters = Boolean(
+    searchQuery
+    || countryFilter !== 'all'
+    || statusFilter !== 'all'
+    || needsCompletionFilter !== 'all'
+    || affiliateLinkFilter !== 'all'
+  )
   useEffect(() => {
     if (manualCompatMode && !hasUnsupportedServerSort) {
       setManualCompatMode(false)
@@ -1391,6 +1425,16 @@ export default function OffersClientPage({
                   <option value="completed">{getScrapeStatusLabel('completed')}</option>
                   <option value="failed">{getScrapeStatusLabel('failed')}</option>
                 </select>
+
+                <select
+                  value={affiliateLinkFilter}
+                  onChange={(event) => setAffiliateLinkFilter(event.target.value)}
+                  className="h-10 min-w-[160px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="all">联盟链接（全部）</option>
+                  <option value="true">有联盟推广链接</option>
+                  <option value="false">无联盟推广链接</option>
+                </select>
               </div>
             </div>
 
@@ -1408,6 +1452,7 @@ export default function OffersClientPage({
                     setCountryFilter('all')
                     setStatusFilter('all')
                     setNeedsCompletionFilter('all')
+                    setAffiliateLinkFilter('all')
                   }}
                 >
                   清除筛选
@@ -1496,6 +1541,15 @@ export default function OffersClientPage({
                         状态
                       </SortableTableHead>
                       <SortableTableHead
+                        field="createdAt"
+                        currentSortBy={sortBy}
+                        sortOrder={sortOrder}
+                        onSort={handleSort}
+                        className="w-[150px] whitespace-nowrap"
+                      >
+                        创建时间
+                      </SortableTableHead>
+                      <SortableTableHead
                         field="linkedAccounts"
                         currentSortBy={sortBy}
                         sortOrder={sortOrder}
@@ -1572,6 +1626,19 @@ export default function OffersClientPage({
                         <TableCell className="whitespace-nowrap">
                           <div className={offer.isBlacklisted ? 'opacity-50' : ''}>
                             {getScrapeStatusBadge(offer.scrapeStatus)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-body-sm text-muted-foreground">
+                          <div className={offer.isBlacklisted ? 'opacity-50' : ''}>
+                            {offer.createdAt
+                              ? new Date(offer.createdAt).toLocaleString('zh-CN', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                              : '—'}
                           </div>
                         </TableCell>
                         <TableCell>

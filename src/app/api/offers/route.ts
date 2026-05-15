@@ -79,6 +79,11 @@ async function get(request: NextRequest) {
     const searchQuery = searchParams.get('search') || undefined
     const scrapeStatus = searchParams.get('scrapeStatus') || undefined
     const needsCompletion = searchParams.get('needsCompletion') === 'true' ? true : searchParams.get('needsCompletion') === 'false' ? false : undefined
+    const hasAffiliateLink = searchParams.get('hasAffiliateLink') === 'true'
+      ? true
+      : searchParams.get('hasAffiliateLink') === 'false'
+        ? false
+        : undefined
     const requestedSortBy = searchParams.get('sortBy') || undefined
     const sortByUnsupported = Boolean(requestedSortBy && !OFFERS_SERVER_SUPPORTED_SORTS.has(requestedSortBy))
     const sortBy = sortByUnsupported ? undefined : requestedSortBy
@@ -169,6 +174,7 @@ async function get(request: NextRequest) {
       searchQuery,
       scrapeStatus,
       needsCompletion,
+      hasAffiliateLink,
       sortBy: requestedSortBy,
       sortOrder,
     })
@@ -182,6 +188,7 @@ async function get(request: NextRequest) {
         searchQuery,
         scrapeStatus,
         needsCompletion,
+        hasAffiliateLink,
         sortBy,
         sortOrder,
       })
