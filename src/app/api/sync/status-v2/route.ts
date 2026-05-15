@@ -1,38 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import {
-  getBackgroundQueueManager,
-  getQueueManager,
-  isBackgroundQueueSplitEnabled,
-} from '@/lib/queue'
-
-const GOOGLE_ADS_CAMPAIGN_SYNC_TASK = 'google-ads-campaign-sync' as const
-
-async function getGoogleAdsCampaignSyncQueueCounts(): Promise<{
-  pending: number
-  running: number
-}> {
-  try {
-    const coreQueueManager = getQueueManager()
-    const coreStats = await coreQueueManager.getStats()
-    let pending = coreStats.byType?.[GOOGLE_ADS_CAMPAIGN_SYNC_TASK] ?? 0
-    let running = coreStats.byTypeRunning?.[GOOGLE_ADS_CAMPAIGN_SYNC_TASK] ?? 0
-
-    if (isBackgroundQueueSplitEnabled()) {
-      const backgroundQueueManager = getBackgroundQueueManager()
-      await backgroundQueueManager.ensureInitialized()
-      const bgStats = await backgroundQueueManager.getStats()
-      pending += bgStats.byType?.[GOOGLE_ADS_CAMPAIGN_SYNC_TASK] ?? 0
-      running += bgStats.byTypeRunning?.[GOOGLE_ADS_CAMPAIGN_SYNC_TASK] ?? 0
-    }
-
-    return { pending, running }
-  } catch (e) {
-    console.warn('[sync/status-v2] google-ads-campaign-sync queue stats unavailable:', e)
-    return { pending: 0, running: 0 }
-  }
-}
+import { getGoogleAdsCampaignSyncQueueCounts } from '@/lib/google-ads-campaign-sync-pipeline-status'
 
 /**
  * GET /api/sync/status-v2

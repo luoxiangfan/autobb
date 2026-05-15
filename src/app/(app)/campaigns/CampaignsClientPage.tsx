@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { showSuccess, showError, showInfo } from '@/lib/toast-utils'
+import { GOOGLE_ADS_CAMPAIGN_PIPELINE_IDLE_EVENT } from '@/lib/google-ads-campaign-sync-events'
 import {
   Table,
   TableBody,
@@ -565,6 +566,8 @@ export default function CampaignsClientPage({
   const [isPolling, setIsPolling] = useState(false)
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
   const userSelectionInitializedRef = useRef(false)
+  /** SSE / 管线 idle 时抑制 toast（本页刚点完「同步」与完成提示去重） */
+  const pipelineIdleToastSuppressedUntilRef = useRef(0)
 
   const checkGlobalSyncStatus = async () => {
     try {
@@ -988,7 +991,7 @@ export default function CampaignsClientPage({
       stopPolling()
     }
   }, [globalSyncStatus?.hasRunningSync])
-  
+
   // 🔧 清理轮询（组件卸载时）
   useEffect(() => {
     return () => {
@@ -999,7 +1002,8 @@ export default function CampaignsClientPage({
       setIsPolling(false)
     }
   }, [])
-    useEffect(() => {
+
+  useEffect(() => {
     if (!isServerPagingMode) {
       setDebouncedSearchQuery(searchQuery)
       return
@@ -1552,6 +1556,23 @@ export default function CampaignsClientPage({
       campaignsInFlightRef.current.delete(dedupKey)
     }
   }
+
+  const fetchCampaignsRef = useRef(fetchCampaigns)
+  fetchCampaignsRef.current = fetchCampaigns
+
+  // SSE（AppLayout）在 Google Ads 管线 idle 时派发事件：刷新列表并按需 toast
+  useEffect(() => {
+    const onPipelineIdle = () => {
+      void fetchCampaignsRef.current({ silent: true })
+      if (Date.now() >= pipelineIdleToastSuppressedUntilRef.current) {
+        showInfo('广告系列', 'Google Ads 同步已完成，列表已更新')
+      }
+    }
+    window.addEventListener(GOOGLE_ADS_CAMPAIGN_PIPELINE_IDLE_EVENT, onPipelineIdle)
+    return () => {
+      window.removeEventListener(GOOGLE_ADS_CAMPAIGN_PIPELINE_IDLE_EVENT, onPipelineIdle)
+    }
+  }, [])
 
   const buildTrendsQueryParams = (): URLSearchParams => {
     const params = buildDateRangeParams()
@@ -2809,6 +2830,8 @@ export default function CampaignsClientPage({
         const summary = asyncPayload.summary as { enqueued?: number } | undefined
         const enqueued = typeof summary?.enqueued === 'number' ? summary.enqueued : 0
         if (enqueued > 0) {
+          pipelineIdleToastSuppressedUntilRef.current =
+            Date.now() + GOOGLE_ADS_SYNC_WAIT_MAX_MS + 60_000
           const waitStartedAt = Date.now()
           let everBusy = false
           let consecutiveIdle = 0
@@ -2874,6 +2897,7 @@ export default function CampaignsClientPage({
       showError('同步失败', err?.message || '网络错误')
     } finally {
       clearTimeout(safetyRelease)
+      pipelineIdleToastSuppressedUntilRef.current = Date.now() + 5000
       setSyncing(false)
     }
   }

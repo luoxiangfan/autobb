@@ -33,6 +33,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import dynamic from 'next/dynamic'
+import { GoogleAdsCampaignSyncSseBridge } from '@/components/GoogleAdsCampaignSyncSseBridge'
 
 // 动态导入模态框组件，实现代码分割
 const UserProfileModal = dynamic(
@@ -697,6 +698,8 @@ export default function AppLayout({
         open={passwordModalOpen}
         onOpenChange={setPasswordModalOpen}
       />
+
+      {user ? <GoogleAdsCampaignSyncSseBridge /> : null}
     </div>
   )
 }
