@@ -37,6 +37,7 @@ export async function executeGoogleAdsCampaignSyncTask(
   // const { userId, syncType, customerId, dryRun } = taskData
   const { id: taskId, data: taskData, userId } = task
   const { syncType, customerId, dryRun } = taskData
+  const isManualSync = syncType === 'manual'
   let syncLogId: number | null = null
   
   console.log(
@@ -51,7 +52,7 @@ export async function executeGoogleAdsCampaignSyncTask(
       const logResult = await db.exec(
         `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, 'google_ads_campaign_sync', 'running', 0, 0, startedAt, null, false]  // is_manual=false（自动触发）
+        [userId, 'google_ads_campaign_sync', 'running', 0, 0, startedAt, null, isManualSync]
       )
       // 🔧 获取插入的 ID（支持 PostgreSQL 和 SQLite）
       syncLogId = logResult.lastInsertRowid || null
@@ -92,7 +93,7 @@ export async function executeGoogleAdsCampaignSyncTask(
           `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [userId, 'google_ads_campaign_sync', result.errors.length > 0 ? 'partial' : 'success', 
-           result.syncedCount, duration, startedAt, completedAt, false]  // is_manual=false
+           result.syncedCount, duration, startedAt, completedAt, isManualSync]
         )
         console.log(`📝 [GoogleAdsSyncExecutor] 同步日志已记录（fallback）：${taskId}`)
       } catch (logError) {
@@ -177,7 +178,7 @@ export async function executeGoogleAdsCampaignSyncTask(
         await db.exec(
           `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [userId, 'google_ads_campaign_sync', 'failed', 0, duration, startedAt, completedAt, false]  // is_manual=false
+          [userId, 'google_ads_campaign_sync', 'failed', 0, duration, startedAt, completedAt, isManualSync]
         )
       } catch (logError) {
         console.error(`❌ [GoogleAdsSyncExecutor] 记录失败日志失败:`, logError)

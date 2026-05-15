@@ -546,14 +546,19 @@ export default function CampaignsClientPage({
   const [urlSwapLoading, setUrlSwapLoading] = useState(false)
 
   const [syncing, setSyncing] = useState(false)
-  const SYNC_TIMEOUT_MS = 60000
-  const [globalSyncStatus, setGlobalSyncStatus] = useState<{ 
+  /** 后台队列执行 Google Ads 同步时，轮询 /api/sync/status-v2 的间隔与上限 */
+  const GOOGLE_ADS_SYNC_POLL_MS = 2000
+  const GOOGLE_ADS_SYNC_WAIT_MAX_MS = 15 * 60 * 1000
+  const GOOGLE_ADS_SYNC_QUEUE_LAG_MS = 1000
+  const GOOGLE_ADS_SYNC_QUEUE_STUCK_MS = 120_000
+  const [globalSyncStatus, setGlobalSyncStatus] = useState<{
     hasRunningSync: boolean
     runningSync?: {
       syncType: string
       runningSeconds: number
       isManual: boolean
     }
+    googleAdsCampaignSyncQueue?: { pending: number; running: number }
   } | null>(null)
   
   // 🔧 优化 (2026-04-17): 轮询状态管理
@@ -2743,7 +2748,7 @@ export default function CampaignsClientPage({
       const runningInfo = status.runningSync
       showError(
         '同步任务进行中',
-        `有${runningInfo.isManual === true ? '手动' : '定时'}同步任务正在运行（已运行${runningInfo.runningSeconds}秒），请稍后再试`
+        `有${runningInfo?.isManual === true ? '手动' : '定时'}同步任务正在运行（已运行${runningInfo?.runningSeconds ?? 0}秒），请稍后再试`
       )
       return
     }
@@ -2753,29 +2758,115 @@ export default function CampaignsClientPage({
       return
     }
     setSyncing(true)
-    const timeoutId = setTimeout(() => setSyncing(false), SYNC_TIMEOUT_MS)
+    const safetyRelease = setTimeout(
+      () => setSyncing(false),
+      GOOGLE_ADS_SYNC_WAIT_MAX_MS + 30_000
+    )
     try {
       const response = await fetch('/api/cron/sync-google-ads-campaigns', {
         method: 'POST',
         credentials: 'include',
       })
-      
+
+      const text = await response.text()
+      let data: Record<string, unknown> | null = null
+      try {
+        data = text ? (JSON.parse(text) as Record<string, unknown>) : null
+      } catch {
+        data = null
+      }
+
       if (response.status === 401) {
         handleUnauthorized()
         return
       }
-      
+
       if (!response.ok) {
-        throw new Error('同步失败')
+        let detail = `HTTP ${response.status}`
+        if (data && typeof data.message === 'string') {
+          detail = `${detail}: ${data.message}`
+        } else if (data && typeof data.error === 'string') {
+          detail = `${detail}: ${data.error}`
+        } else if (text) {
+          detail = `${detail}: ${text.slice(0, 200)}`
+        }
+        throw new Error(
+          response.status === 504 || response.status === 502
+            ? `网关超时或上游未响应（${detail}）。任务可能已入队，请刷新列表或查看 sync_logs。`
+            : `同步失败（${detail}）`
+        )
       }
-      
-      showSuccess('广告系列同步成功', '数据已更新')
+
+      const isAsyncAccepted =
+        response.status === 202 && data?.accepted === true && data?.async === true
+      let skipFinalSuccessToast = false
+      if (isAsyncAccepted) {
+        const summary = data.summary as { enqueued?: number } | undefined
+        const enqueued = typeof summary?.enqueued === 'number' ? summary.enqueued : 0
+        if (enqueued > 0) {
+          const waitStartedAt = Date.now()
+          let everBusy = false
+          let consecutiveIdle = 0
+          let exitedOnIdle = false
+          await new Promise((r) => setTimeout(r, GOOGLE_ADS_SYNC_QUEUE_LAG_MS))
+          while (Date.now() - waitStartedAt < GOOGLE_ADS_SYNC_WAIT_MAX_MS) {
+            const st = await checkGlobalSyncStatus()
+            const queue = st?.googleAdsCampaignSyncQueue
+            const qp = Number(queue?.pending ?? 0)
+            const qr = Number(queue?.running ?? 0)
+            const logBusy =
+              st?.hasRunningSync === true &&
+              st?.runningSync?.syncType === 'google_ads_campaign_sync'
+            const busy = qp + qr > 0 || logBusy
+            if (busy) {
+              everBusy = true
+              consecutiveIdle = 0
+            } else {
+              consecutiveIdle++
+              if (consecutiveIdle >= 2) {
+                exitedOnIdle = true
+                break
+              }
+            }
+            if (
+              !everBusy &&
+              Date.now() - waitStartedAt > GOOGLE_ADS_SYNC_QUEUE_STUCK_MS
+            ) {
+              throw new Error(
+                '任务已提交但长时间未开始执行，请确认 Redis 与后台队列 Worker（QUEUE_BACKGROUND_WORKER）已启动'
+              )
+            }
+            await new Promise((r) => setTimeout(r, GOOGLE_ADS_SYNC_POLL_MS))
+          }
+          if (
+            !exitedOnIdle &&
+            Date.now() - waitStartedAt >= GOOGLE_ADS_SYNC_WAIT_MAX_MS
+          ) {
+            throw new Error(
+              '等待同步完成超时，请稍后刷新列表；任务可能仍在后台执行'
+            )
+          }
+        } else {
+          showInfo(
+            '同步',
+            typeof data.message === 'string' ? data.message : '未将任何用户加入同步队列'
+          )
+          skipFinalSuccessToast = true
+        }
+      }
+
+      if (!skipFinalSuccessToast) {
+        showSuccess(
+          '广告系列同步成功',
+          isAsyncAccepted ? '后台任务已完成' : '数据已更新'
+        )
+      }
       void fetchCampaigns({ silent: true })
     } catch (err: any) {
       if (err?.message === 'UNAUTHORIZED') return
       showError('同步失败', err?.message || '网络错误')
     } finally {
-      clearTimeout(timeoutId)
+      clearTimeout(safetyRelease)
       setSyncing(false)
     }
   }

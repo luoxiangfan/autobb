@@ -1,10 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
+import {
+  getBackgroundQueueManager,
+  getQueueManager,
+  isBackgroundQueueSplitEnabled,
+} from '@/lib/queue'
+
+const GOOGLE_ADS_CAMPAIGN_SYNC_TASK = 'google-ads-campaign-sync' as const
+
+async function getGoogleAdsCampaignSyncQueueCounts(): Promise<{
+  pending: number
+  running: number
+}> {
+  try {
+    const coreQueueManager = getQueueManager()
+    const coreStats = await coreQueueManager.getStats()
+    let pending = coreStats.byType?.[GOOGLE_ADS_CAMPAIGN_SYNC_TASK] ?? 0
+    let running = coreStats.byTypeRunning?.[GOOGLE_ADS_CAMPAIGN_SYNC_TASK] ?? 0
+
+    if (isBackgroundQueueSplitEnabled()) {
+      const backgroundQueueManager = getBackgroundQueueManager()
+      await backgroundQueueManager.ensureInitialized()
+      const bgStats = await backgroundQueueManager.getStats()
+      pending += bgStats.byType?.[GOOGLE_ADS_CAMPAIGN_SYNC_TASK] ?? 0
+      running += bgStats.byTypeRunning?.[GOOGLE_ADS_CAMPAIGN_SYNC_TASK] ?? 0
+    }
+
+    return { pending, running }
+  } catch (e) {
+    console.warn('[sync/status-v2] google-ads-campaign-sync queue stats unavailable:', e)
+    return { pending: 0, running: 0 }
+  }
+}
 
 /**
- * GET /api/sync/status
- * 检查是否有正在进行的同步任务
+ * GET /api/sync/status-v2
+ * 检查是否有正在进行的同步任务，并附带 google-ads-campaign-sync 队列深度（供异步同步轮询）
  */
 export async function GET(request: NextRequest) {
   try {
@@ -63,6 +95,8 @@ export async function GET(request: NextRequest) {
       LIMIT 1
     `, [userId]) as any
 
+    const googleAdsCampaignSyncQueue = await getGoogleAdsCampaignSyncQueueCounts()
+
     return NextResponse.json({
       hasRunningSync: !!runningSync,
       runningSync: runningSync ? {
@@ -80,6 +114,7 @@ export async function GET(request: NextRequest) {
         syncType: lastCompletedSync.sync_type,
         isManual: lastCompletedSync.is_manual,
       } : null,
+      googleAdsCampaignSyncQueue,
     })
   } catch (error: any) {
     console.error('检查同步状态失败:', error)
