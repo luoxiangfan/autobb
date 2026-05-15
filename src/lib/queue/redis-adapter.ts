@@ -9,7 +9,7 @@ import type {
   PendingEligibilityStats,
   RunningConcurrencySnapshot
 } from './types'
-import { isBackgroundTaskType } from './task-category'
+import { isBackgroundTaskType, isEphemeralTaskType } from './task-category'
 
 /**
  * Redis队列存储适配器
@@ -24,10 +24,6 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
 
   private reconnectAttempts = 0
   private readonly MAX_RECONNECT_ATTEMPTS = 10
-
-  private isEphemeralTaskType(type: Task['type']): boolean {
-    return type === 'click-farm' || type === 'click-farm-trigger' || type === 'click-farm-batch'
-  }
 
   constructor(
     private redisUrl: string,
@@ -292,7 +288,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
     const pipeline = this.client.pipeline()
 
     const shouldPurgeEphemeral =
-      (status === 'completed' || status === 'failed') && this.isEphemeralTaskType(task.type)
+      (status === 'completed' || status === 'failed') && isEphemeralTaskType(task.type)
 
     if (!shouldPurgeEphemeral) {
       // 1. 更新任务详情
@@ -308,7 +304,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
         const targetSet = status === 'completed' ? 'completed' : 'failed'
         pipeline.sadd(this.getKey(targetSet), taskId)
       } else {
-        // click-farm 系列为高频任务：完成即清理，避免 tasks hash 膨胀导致统计 OOM
+        // 瞬时任务：完成即清理，避免 tasks hash 膨胀导致统计 OOM
         pipeline.hdel(this.getKey('tasks'), taskId)
         pipeline.srem(this.getKey('completed'), taskId)
         pipeline.srem(this.getKey('failed'), taskId)

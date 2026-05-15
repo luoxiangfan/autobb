@@ -16,6 +16,18 @@ const BACKGROUND_TASK_TYPES: ReadonlySet<TaskType> = new Set([
   'google-ads-campaign-sync',
 ])
 
+/** 完成/失败后从队列存储立即移除，避免 Redis tasks hash / 内存膨胀 */
+const EPHEMERAL_TASK_TYPES: ReadonlySet<TaskType> = new Set([
+  'click-farm',
+  'click-farm-trigger',
+  'click-farm-batch',
+  'google-ads-campaign-sync',
+])
+
+export function isEphemeralTaskType(type: TaskType | string): boolean {
+  return EPHEMERAL_TASK_TYPES.has(type as TaskType)
+}
+
 export function isBackgroundTaskType(type: TaskType | string): boolean {
   return BACKGROUND_TASK_TYPES.has(type as TaskType)
 }

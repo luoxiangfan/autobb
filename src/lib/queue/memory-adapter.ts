@@ -7,7 +7,7 @@ import type {
   PendingEligibilityStats,
   RunningConcurrencySnapshot
 } from './types'
-import { isBackgroundTaskType } from './task-category'
+import { isBackgroundTaskType, isEphemeralTaskType } from './task-category'
 
 /**
  * 内存队列存储适配器
@@ -24,10 +24,6 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
     const n = parseInt(process.env.MEMORY_QUEUE_MAX_FINISHED_TASKS || '5000', 10)
     return Number.isFinite(n) && n > 0 ? n : 5000
   })()
-
-  private isEphemeralTaskType(type: Task['type']): boolean {
-    return type === 'click-farm' || type === 'click-farm-trigger' || type === 'click-farm-batch'
-  }
 
   private recordFinished(taskId: string) {
     this.finishedOrder.push(taskId)
@@ -136,8 +132,8 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
     if (status === 'completed' || status === 'failed') {
       task.completedAt = Date.now()
       this.runningTasks.delete(taskId)
-      if (this.isEphemeralTaskType(task.type)) {
-        // click-farm 系列为高频任务：完成即清理，避免内存队列膨胀
+      if (isEphemeralTaskType(task.type)) {
+        // 瞬时任务：完成即清理，避免内存队列膨胀
         this.tasks.delete(taskId)
         return
       }
