@@ -2797,11 +2797,16 @@ export default function CampaignsClientPage({
         )
       }
 
-      const isAsyncAccepted =
-        response.status === 202 && data?.accepted === true && data?.async === true
+      const asyncPayload =
+        response.status === 202 &&
+        data != null &&
+        data.accepted === true &&
+        data.async === true
+          ? data
+          : null
       let skipFinalSuccessToast = false
-      if (isAsyncAccepted) {
-        const summary = data.summary as { enqueued?: number } | undefined
+      if (asyncPayload) {
+        const summary = asyncPayload.summary as { enqueued?: number } | undefined
         const enqueued = typeof summary?.enqueued === 'number' ? summary.enqueued : 0
         if (enqueued > 0) {
           const waitStartedAt = Date.now()
@@ -2849,7 +2854,9 @@ export default function CampaignsClientPage({
         } else {
           showInfo(
             '同步',
-            typeof data.message === 'string' ? data.message : '未将任何用户加入同步队列'
+            typeof asyncPayload.message === 'string'
+              ? asyncPayload.message
+              : '未将任何用户加入同步队列'
           )
           skipFinalSuccessToast = true
         }
@@ -2858,7 +2865,7 @@ export default function CampaignsClientPage({
       if (!skipFinalSuccessToast) {
         showSuccess(
           '广告系列同步成功',
-          isAsyncAccepted ? '后台任务已完成' : '数据已更新'
+          asyncPayload ? '后台任务已完成' : '数据已更新'
         )
       }
       void fetchCampaigns({ silent: true })
