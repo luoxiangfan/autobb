@@ -43,6 +43,7 @@
     "type-check": "tsc --noEmit",
     "verify:google-ads": "tsx scripts/verify-google-ads-config.ts",
     "test:competitor-compression": "tsx scripts/run-competitor-ab-test.ts",
+    "proxy:diagnose": "tsx scripts/diagnose-proxy-connectivity.ts",
     "perf:flags:check": "tsx scripts/performance-release-governance.ts check",
     "perf:rollback:template": "tsx scripts/performance-release-governance.ts rollback-template",
     "perf:rollback:all:template": "tsx scripts/performance-release-governance.ts rollback-template --all",
