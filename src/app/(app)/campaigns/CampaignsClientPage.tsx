@@ -83,6 +83,7 @@ const AdjustCampaignBudgetDialog = dynamic(() => import('@/components/AdjustCamp
 const ClickFarmTaskModal = dynamic(() => import('@/components/ClickFarmTaskModal'), { ssr: false })
 const UrlSwapTaskModal = dynamic(() => import('@/components/UrlSwapTaskModal'), { ssr: false })
 const EditableCustomName = dynamic(() => import('@/components/EditableCustomName').then(mod => mod.EditableCustomName), { ssr: false })
+const EditableCampaignName = dynamic(() => import('@/components/EditableCampaignName').then(mod => mod.EditableCampaignName), { ssr: false })
 const EditableStatusCategory = dynamic(() => import('@/components/EditableStatusCategory').then(mod => mod.EditableStatusCategory), { ssr: false })
 const BatchTasksDialog = dynamic(() => import('@/components/BatchTasksDialog'), { ssr: false })
 
@@ -4145,9 +4146,18 @@ export default function CampaignsClientPage({
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <div className="font-medium text-gray-900 whitespace-nowrap" title={campaign.campaignName}>
-                            {campaign.campaignName}
-                          </div>
+                          <EditableCampaignName
+                            campaignId={campaign.id}
+                            initialCampaignName={campaign.campaignName}
+                            disabled={isDeleted || offerDeleted}
+                            onSaved={(newName) => {
+                              setCampaigns((prev) =>
+                                prev.map((c) =>
+                                  c.id === campaign.id ? { ...c, campaignName: newName } : c
+                                )
+                              )
+                            }}
+                          />
                           {isDeleted && (
                             <span
                               className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-600 shrink-0"

@@ -696,6 +696,7 @@ export async function updateCampaignPython(params: {
   customerId: string
   campaignResourceName: string
   // 可选更新字段
+  name?: string
   cpcBidMicros?: number  // 手动CPC出价
   maxCpcBidMicros?: number  // Maximize Clicks 最大CPC限制
   targetCpaMicros?: number  // 目标CPA
@@ -708,6 +709,7 @@ export async function updateCampaignPython(params: {
       service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
       customer_id: params.customerId,
       campaign_resource_name: params.campaignResourceName,
+      name: params.name,
       cpc_bid_micros: params.cpcBidMicros,
       max_cpc_bid_micros: params.maxCpcBidMicros,
       target_cpa_micros: params.targetCpaMicros,

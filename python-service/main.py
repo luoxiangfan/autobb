@@ -1317,6 +1317,7 @@ class UpdateCampaignRequest(BaseModel):
     service_account: ServiceAccountConfig
     customer_id: str
     campaign_resource_name: str
+    name: Optional[str] = None
     cpc_bid_micros: Optional[int] = None
     max_cpc_bid_micros: Optional[int] = None
     target_cpa_micros: Optional[int] = None
@@ -1334,6 +1335,10 @@ async def update_campaign(request: UpdateCampaignRequest):
         operation = client.get_type("CampaignOperation")
         campaign = operation.update
         campaign.resource_name = request.campaign_resource_name
+
+        if request.name:
+            campaign.name = request.name.strip()
+            operation.update_mask.paths.append("name")
 
         # CPC 出价更新
         if request.cpc_bid_micros:

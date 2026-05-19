@@ -1235,6 +1235,75 @@ export async function updateGoogleAdsCampaignStatus(params: {
 }
 
 /**
+ * 更新 Google Ads 广告系列名称
+ */
+export async function updateGoogleAdsCampaignName(params: {
+  customerId: string
+  refreshToken: string
+  campaignId: string
+  name: string
+  accountId?: number
+  userId: number
+  loginCustomerId?: string
+  authType?: 'oauth' | 'service_account'
+  serviceAccountId?: string
+}): Promise<void> {
+  const trimmedName = String(params.name || '').trim()
+  if (!trimmedName) {
+    throw new Error('广告系列名称不能为空')
+  }
+
+  const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
+
+  if (params.authType === 'service_account') {
+    const { updateCampaignPython } = await import('./python-ads-client')
+    await updateCampaignPython({
+      userId: params.userId,
+      serviceAccountId: params.serviceAccountId,
+      customerId: params.customerId,
+      campaignResourceName: resourceName,
+      name: trimmedName,
+    })
+  } else {
+    const customer = await getCustomerWithCredentials({
+      customerId: params.customerId,
+      refreshToken: params.refreshToken,
+      accountId: params.accountId,
+      userId: params.userId,
+      loginCustomerId: params.loginCustomerId,
+      authType: params.authType,
+      serviceAccountId: params.serviceAccountId,
+    })
+
+    await trackOAuthApiCall(
+      params.userId,
+      params.customerId,
+      ApiOperationType.MUTATE,
+      '/api/google-ads/campaign/update',
+      () => withRetry(
+        () => customer.campaigns.update([{
+          resource_name: resourceName,
+          name: trimmedName,
+        }]),
+        {
+          maxRetries: 3,
+          initialDelay: 1000,
+          operationName: `Update Campaign Name: ${params.campaignId}`,
+        }
+      )
+    )
+  }
+
+  const getCacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, {
+    campaignId: params.campaignId,
+  })
+  const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId)
+
+  gadsApiCache.delete(getCacheKey)
+  gadsApiCache.delete(listCacheKey)
+}
+
+/**
  * 更新 Google Ads 关键词状态（Ad Group Criterion）
  */
 export async function updateGoogleAdsKeywordStatus(params: {
