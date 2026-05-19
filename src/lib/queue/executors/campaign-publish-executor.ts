@@ -794,10 +794,6 @@ export async function executeCampaignPublish(
     // 🔧 修复(2026-03-07): 确保micros值是10000的倍数（Google Ads计费单位要求）
     const cpcBidMicros = Math.round(effectiveMaxCpcBid * 100) * 10000  // 转换为micros并确保是10000的倍数
 
-    const campaignName = naming?.associativeCampaignName
-      || naming?.campaignName
-      || `Campaign_${creative.id}`
-
     const storedCampaignConfig = resumableCampaignRow?.campaign_config
       ? (() => {
         try {
@@ -810,6 +806,17 @@ export async function executeCampaignPublish(
         }
       })()
       : {}
+
+    const storedCampaignName = String(
+      storedCampaignConfig.campaignName
+      || storedCampaignConfig.associativeCampaignName
+      || ''
+    ).trim()
+
+    const campaignName = naming?.associativeCampaignName
+      || naming?.campaignName
+      || storedCampaignName
+      || `Campaign_${creative.id}`
 
     let googleCampaignId = resumePlan.googleCampaignId || ''
 

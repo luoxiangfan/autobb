@@ -235,6 +235,56 @@ describe('POST /api/campaigns/publish URL alignment', () => {
     expect(mocks.invalidateOfferCache).not.toHaveBeenCalled()
   })
 
+  it('uses user-provided campaignName from campaignConfig instead of auto-generated naming', async () => {
+    const { db, getInsertedCampaignConfig } = createMockDb()
+    mocks.getDatabase.mockResolvedValue(db)
+
+    const customCampaignName = 'My Custom Campaign Name'
+
+    const req = new NextRequest('http://localhost/api/campaigns/publish', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        offerId: 11,
+        adCreativeId: 22,
+        googleAdsAccountId: 33,
+        pauseOldCampaigns: false,
+        campaignConfig: {
+          campaignName: customCampaignName,
+          adGroupName: 'BrandA-US-11-22',
+          budgetAmount: 20,
+          budgetType: 'DAILY',
+          targetCountry: 'US',
+          targetLanguage: 'en',
+          biddingStrategy: 'MAXIMIZE_CLICKS',
+          maxCpcBid: 1,
+          keywords: ['kw1'],
+          negativeKeywords: [],
+        },
+      }),
+    })
+
+    const res = await POST(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(202)
+    expect(data.success).toBe(true)
+    expect(getInsertedCampaignConfig()).toMatchObject({
+      campaignName: customCampaignName,
+    })
+    expect(mocks.queueEnqueue).toHaveBeenCalledWith(
+      'campaign-publish',
+      expect.objectContaining({
+        naming: expect.objectContaining({
+          campaignName: customCampaignName,
+          associativeCampaignName: customCampaignName,
+        }),
+      }),
+      7,
+      expect.any(Object)
+    )
+  })
+
   it('uses creative URL source when request does not override ownership fields', async () => {
     const { db, getInsertedCampaignConfig } = createMockDb()
     mocks.getDatabase.mockResolvedValue(db)

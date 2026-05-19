@@ -250,6 +250,7 @@ export async function POST(request: NextRequest) {
       typeof value === 'string' ? value.trim() : ''
     )
 
+    const baseCampaignName = normalizeName(_campaignConfig?.campaignName)
     const baseAdGroupName = normalizeName(_campaignConfig?.adGroupName)
     const baseAdName = normalizeName(_campaignConfig?.adName)
     const parsedAdGroupName = baseAdGroupName ? parseAdGroupName(baseAdGroupName) : null
@@ -1088,7 +1089,9 @@ export async function POST(request: NextRequest) {
     })
 
     const allowCustomAdGroupName = Boolean(baseAdGroupName && parsedAdGroupName)
-    const resolvedCampaignName = naming.associativeCampaignName || naming.campaignName
+    const resolvedCampaignName = baseCampaignName
+      || naming.associativeCampaignName
+      || naming.campaignName
     const resolvedAdGroupName = allowCustomAdGroupName ? baseAdGroupName : naming.adGroupName
     const resolvedAdName = baseAdName || naming.adName
     const campaignConfigForCreative = buildAlignedCampaignConfigForCreative(
