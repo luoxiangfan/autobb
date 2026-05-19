@@ -136,7 +136,9 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 - `offerId`, `googleAdsAccountId`, `campaignConfig`
 - `adCreativeId` is required unless `enableSmartOptimization=true`
 - Optional top-level keys:
-- `pauseOldCampaigns`, `enableCampaignImmediately`, `enableSmartOptimization`, `variantCount`, `forcePublish`
+- `pauseOldCampaigns`, `enableCampaignImmediately`, `enableSmartOptimization`, `forcePublish`
+- Publish shape: **1 Campaign + 1 Ad Group** per Offer (strict one-to-one). Do not send `variantCount` / `variant_count` (deprecated, ignored).
+- `enableSmartOptimization=true`: auto-picks the single highest `launch_score` creative; still creates only one Ad Group.
 - `campaignConfig` used by Web includes:
 - `campaignName`, `budgetAmount`, `budgetType`, `targetCountry`, `targetLanguage`
 - `biddingStrategy`, `finalUrlSuffix`, `marketingObjective`
