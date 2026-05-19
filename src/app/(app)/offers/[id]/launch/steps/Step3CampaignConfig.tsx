@@ -335,7 +335,7 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
   const getDefaultCPC = (currency: string): number => {
     const defaults: Record<string, number> = {
       USD: 0.17,
-      CNY: 1.2,
+      CNY: 1.23,
       EUR: 0.16,
       GBP: 0.13,
       JPY: 25,

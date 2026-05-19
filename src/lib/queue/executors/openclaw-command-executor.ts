@@ -434,7 +434,7 @@ const WEB_DEFAULT_DAILY_BUDGET_BY_CURRENCY: Record<string, number> = {
 
 const WEB_DEFAULT_CPC_BY_CURRENCY: Record<string, number> = {
   USD: 0.17,
-  CNY: 1.2,
+  CNY: 1.23,
   EUR: 0.16,
   GBP: 0.13,
   JPY: 25,
