@@ -219,6 +219,9 @@ export default function LaunchAdPage() {
   }
 
   const handleCreativeSelected = (creative: SelectedCreative) => {
+    if (selectedCreative?.id !== creative.id) {
+      setCampaignConfig(null)
+    }
     setSelectedCreative(creative)
     setCanProceed(true)
   }

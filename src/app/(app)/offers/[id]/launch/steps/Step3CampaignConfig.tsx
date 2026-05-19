@@ -11,7 +11,7 @@
  * 4. 移除重复的确认按钮，点击"下一步"时验证配置
  */
 
-import { useState, useEffect, type DragEvent } from 'react'
+import { useState, useEffect, useRef, type DragEvent } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -452,10 +452,21 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
   const [newNegativeKeywordMatchType, setNewNegativeKeywordMatchType] = useState<NegativeKeywordMatchType>('EXACT')
   const [draggingNegativeKeyword, setDraggingNegativeKeyword] = useState<string | null>(null)
 
-  // 🔧 修复(2025-12-27): 当selectedCreative变化时，重新初始化配置
-  // 解决用户在第1步切换创意后，第3步仍显示旧创意参数的问题
+  // 当用户在第1步切换创意且仍停留在第3步时，按新创意重置配置。
+  // 不在首次挂载时重置：从第4步返回时 useState 已通过 initialConfig 恢复用户修改。
+  const trackedCreativeIdRef = useRef<number | null>(null)
+
   useEffect(() => {
     if (!selectedCreative) return
+
+    const creativeId = selectedCreative.id
+    if (trackedCreativeIdRef.current === null) {
+      trackedCreativeIdRef.current = creativeId
+      return
+    }
+    if (trackedCreativeIdRef.current === creativeId) return
+
+    trackedCreativeIdRef.current = creativeId
 
     const naming = generateInitialNaming()
 
@@ -465,7 +476,6 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
     )
 
     setConfig({
-      // Campaign Level - 使用统一命名规范
       campaignName: naming.campaignName,
       budgetAmount: getDefaultBudget(accountCurrency),
       budgetType: 'DAILY' as const,
@@ -475,27 +485,22 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
       marketingObjective: 'WEB_TRAFFIC' as const,
       finalUrlSuffix: selectedCreative?.finalUrlSuffix || offer.finalUrlSuffix || '',
 
-      // Ad Group Level - 使用统一命名规范
       adGroupName: naming.adGroupName,
       maxCpcBid: getDefaultCPC(accountCurrency),
 
-      // Keywords Level
       keywords: buildInitialKeywords(selectedCreative, offer?.brand || selectedCreative?.brand),
       negativeKeywords: negativeKeywordState.negativeKeywords,
       negativeKeywordMatchType: negativeKeywordState.negativeKeywordMatchType,
 
-      // Ad Level - 使用统一命名规范
       adName: naming.adName || `RSA_${selectedCreative?.theme || 'Default'}_C${selectedCreative?.id || 0}`,
       headlines: (selectedCreative?.headlines || []).slice(0, 15),
       descriptions: (selectedCreative?.descriptions || []).slice(0, 4),
       finalUrls: [selectedCreative?.finalUrl || offer.finalUrl || offer.url],
 
-      // Extensions
       callouts: selectedCreative?.callouts || [],
       sitelinks: selectedCreative?.sitelinks || []
     })
 
-    // 重置验证错误和动态CPC开关
     setValidationErrors([])
     setEnableDynamicCpc(false)
     setSelectedKeywordIndexes(new Set())
