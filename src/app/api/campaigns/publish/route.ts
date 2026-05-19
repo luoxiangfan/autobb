@@ -45,6 +45,10 @@ import {
   isCampaignOfferUniqueViolation,
   rollbackPendingCampaignAfterEnqueueFailure,
 } from '@/lib/campaign-offer-constraint'
+import {
+  findResumablePublishCampaignForOffer,
+  reactivateCampaignForPublishResume,
+} from '@/lib/campaign-publish-resume'
 
 const SINGLE_BRAND_PER_ACCOUNT_ENFORCED = (
   process.env.CAMPAIGN_PUBLISH_ENFORCE_SINGLE_BRAND_PER_ACCOUNT
@@ -273,9 +277,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(error.toJSON(), { status: error.httpStatus })
     }
 
-    // 4.5. 检查 Offer 是否已有广告系列（严格一对一约束）
+    // 4.5. 检查 Offer 是否已有广告系列（严格一对一约束）；发布失败/未完成时可续发复用
     await abandonStalePendingCampaignsForOffer(_offerId, userId)
-    const existingCampaign = await getActiveCampaignConflictForOffer(_offerId, userId)
+    const resumableCampaign = await findResumablePublishCampaignForOffer(_offerId, userId)
+    const existingCampaign = resumableCampaign
+      ? null
+      : await getActiveCampaignConflictForOffer(_offerId, userId)
 
     if (existingCampaign) {
       const error = createError.invalidParameter({
@@ -1127,6 +1134,12 @@ export async function POST(request: NextRequest) {
       negativeKeywords: persistedKeywordConfig.negativeKeywords,
       budgetAmount: _campaignConfig.budgetAmount,
       budgetType: _campaignConfig.budgetType,
+      headlines: effectiveCreativeForPersistence.headlines,
+      descriptions: effectiveCreativeForPersistence.descriptions,
+      callouts: effectiveCreativeForPersistence.callouts,
+      sitelinks: effectiveCreativeForPersistence.sitelinks,
+      finalUrl: effectiveCreativeForPersistence.finalUrl,
+      finalUrlSuffix: effectiveCreativeForPersistence.finalUrlSuffix,
       ...(resolvedAdName ? { adName: resolvedAdName } : {}),
       ...(_enableSmartOptimization
         ? { smartOptimization: { enabled: true, selectedCreativeId: selectedCreative.id } }
@@ -1144,45 +1157,66 @@ export async function POST(request: NextRequest) {
     )
 
     let campaignId: number
+    let resumedExistingCampaign = false
     try {
-      const campaignInsert = await db.exec(`
-        INSERT INTO campaigns (
-          user_id,
-          offer_id,
-          google_ads_account_id,
-          campaign_name,
-          budget_amount,
-          budget_type,
-          max_cpc,
-          status,
-          creation_status,
-          ad_creative_id,
-          campaign_config,
-          pause_old_campaigns,
-          is_test_variant,
-          ab_test_id,
-          traffic_allocation,
-          created_at,
-          updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PAUSED', 'pending', ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-        userId,
-        _offerId,
-        resolvedGoogleAdsAccountId,
-        publishNaming.associativeCampaignName || publishNaming.campaignName,
-        _campaignConfig.budgetAmount,
-        normalizedBudgetType,
-        persistedMaxCpc,
-        selectedCreative.id,
-        JSON.stringify(primaryCampaignConfig),
-        _pauseOldCampaigns ? 1 : 0,
-        0,
-        abTestId,
-        1,
-        now,
-        now,
-      ])
-      campaignId = getInsertedId(campaignInsert, db.type)
+      if (resumableCampaign) {
+        campaignId = resumableCampaign.id
+        resumedExistingCampaign = true
+        await reactivateCampaignForPublishResume({
+          campaignId,
+          offerId: Number(_offerId),
+          userId,
+          googleAdsAccountId: resolvedGoogleAdsAccountId,
+          adCreativeId: Number(selectedCreative.id),
+          campaignName: publishNaming.associativeCampaignName || publishNaming.campaignName,
+          campaignConfig: primaryCampaignConfig,
+          budgetAmount: _campaignConfig.budgetAmount,
+          budgetType: String(normalizedBudgetType || _campaignConfig.budgetType || 'DAILY'),
+          maxCpc: persistedMaxCpc,
+        })
+        console.log(
+          `[CampaignPublish] 续发复用 Campaign ${campaignId}（offer=${_offerId}, status=${resumableCampaign.creation_status}）`
+        )
+      } else {
+        const campaignInsert = await db.exec(`
+          INSERT INTO campaigns (
+            user_id,
+            offer_id,
+            google_ads_account_id,
+            campaign_name,
+            budget_amount,
+            budget_type,
+            max_cpc,
+            status,
+            creation_status,
+            ad_creative_id,
+            campaign_config,
+            pause_old_campaigns,
+            is_test_variant,
+            ab_test_id,
+            traffic_allocation,
+            created_at,
+            updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PAUSED', 'pending', ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          userId,
+          _offerId,
+          resolvedGoogleAdsAccountId,
+          publishNaming.associativeCampaignName || publishNaming.campaignName,
+          _campaignConfig.budgetAmount,
+          normalizedBudgetType,
+          persistedMaxCpc,
+          selectedCreative.id,
+          JSON.stringify(primaryCampaignConfig),
+          _pauseOldCampaigns ? 1 : 0,
+          0,
+          abTestId,
+          1,
+          now,
+          now,
+        ])
+        campaignId = getInsertedId(campaignInsert, db.type)
+      }
     } catch (insertError) {
       if (isCampaignOfferUniqueViolation(insertError)) {
         const raceConflict = await getActiveCampaignConflictForOffer(_offerId, userId)
@@ -1280,6 +1314,7 @@ export async function POST(request: NextRequest) {
       campaignConfig: primaryCampaignConfig,
       offerUrlFallback: offer.url,
     })
+    // effectiveCreativeForPersistence 已在 primaryCampaignConfig 构建前计算
 
     const taskKeywordConfig = resolveTaskCampaignKeywords({
       configuredKeywords: primaryCampaignConfig.keywords,
@@ -1302,6 +1337,7 @@ export async function POST(request: NextRequest) {
           offerId: _offerId,
           googleAdsAccountId: resolvedGoogleAdsAccountId,
           userId,
+          resumePublish: resumedExistingCampaign,
           naming: publishNaming,
           marketingObjective: _campaignConfig.marketingObjective || 'WEB_TRAFFIC',
           campaignConfig: {
@@ -1349,7 +1385,10 @@ export async function POST(request: NextRequest) {
           id: campaignId,
           status: 'queued',
           creationStatus: 'pending',
-          message: '广告系列发布任务已提交（1 个 Campaign + 1 个 Ad Group）',
+          resumed: resumedExistingCampaign,
+          message: resumedExistingCampaign
+            ? '已续发上次未完成的发布任务，将复用远端 Campaign 并补全缺失资源'
+            : '广告系列发布任务已提交（1 个 Campaign + 1 个 Ad Group）',
         })
       } catch (enqueueError: any) {
         const errorMessage = enqueueError?.message || '队列任务创建失败'

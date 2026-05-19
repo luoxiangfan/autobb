@@ -687,7 +687,7 @@ function normalizeCampaignDateFields(rows: any[]): any[] {
   })
 }
 
-async function findExistingCampaignByName(params: {
+export async function findGoogleAdsCampaignByName(params: {
   customerId: string
   refreshToken: string
   campaignName: string
@@ -778,7 +778,7 @@ export async function createGoogleAdsCampaign(params: {
   if (authType === 'service_account') {
     // ♻️ 幂等：如果同名Campaign已存在（常见于任务重试），直接复用避免报错/产生孤儿预算
     try {
-      const existing = await findExistingCampaignByName({
+      const existing = await findGoogleAdsCampaignByName({
         customerId: params.customerId,
         refreshToken: params.refreshToken,
         campaignName: params.campaignName,
@@ -830,7 +830,7 @@ export async function createGoogleAdsCampaign(params: {
       })
     } catch (error: any) {
       if (isDuplicateCampaignNameError(error)) {
-        const existing = await findExistingCampaignByName({
+        const existing = await findGoogleAdsCampaignByName({
           customerId: params.customerId,
           refreshToken: params.refreshToken,
           campaignName: params.campaignName,
@@ -856,7 +856,7 @@ export async function createGoogleAdsCampaign(params: {
 
   // ♻️ 幂等：如果同名Campaign已存在（常见于任务重试），直接复用避免报错/产生孤儿预算
   try {
-    const existing = await findExistingCampaignByName({
+    const existing = await findGoogleAdsCampaignByName({
       customerId: params.customerId,
       refreshToken: params.refreshToken,
       campaignName: params.campaignName,
@@ -978,7 +978,7 @@ export async function createGoogleAdsCampaign(params: {
     )
   } catch (error: any) {
     if (isDuplicateCampaignNameError(error)) {
-      const existing = await findExistingCampaignByName({
+      const existing = await findGoogleAdsCampaignByName({
         customerId: params.customerId,
         refreshToken: params.refreshToken,
         campaignName: params.campaignName,
@@ -1611,6 +1611,83 @@ export async function listGoogleAdsCampaigns(params: {
   return results
 }
 
+export async function findGoogleAdsAdGroupByName(params: {
+  customerId: string
+  refreshToken: string
+  campaignId: string
+  adGroupName: string
+  userId: number
+  loginCustomerId?: string
+  authType?: 'oauth' | 'service_account'
+  serviceAccountId?: string
+  customer?: Customer
+}): Promise<{ adGroupId: string; resourceName: string } | null> {
+  const nameLiteral = escapeGaqlStringLiteral(params.adGroupName)
+  const query = `
+    SELECT
+      ad_group.id,
+      ad_group.resource_name,
+      ad_group.name,
+      ad_group.status
+    FROM ad_group
+    WHERE ad_group.campaign = 'customers/${params.customerId}/campaigns/${params.campaignId}'
+      AND ad_group.name = '${nameLiteral}'
+      AND ad_group.status != 'REMOVED'
+    LIMIT 1
+  `
+
+  const authType = params.authType || 'oauth'
+  let results: any[]
+
+  if (authType === 'service_account') {
+    const { executeGAQLQueryPython } = await import('./python-ads-client')
+    const response = await executeGAQLQueryPython({
+      userId: params.userId,
+      serviceAccountId: params.serviceAccountId,
+      customerId: params.customerId,
+      query,
+    })
+    results = response.results || []
+  } else {
+    const customer = params.customer || await getCustomerWithCredentials({
+      customerId: params.customerId,
+      refreshToken: params.refreshToken,
+      userId: params.userId,
+      loginCustomerId: params.loginCustomerId,
+      authType: params.authType,
+      serviceAccountId: params.serviceAccountId,
+    })
+    results = await trackOAuthApiCall(
+      params.userId,
+      params.customerId,
+      ApiOperationType.SEARCH,
+      '/api/google-ads/query',
+      () => customer.query(query)
+    )
+  }
+
+  const row = results[0]
+  const adGroupId = String(row?.ad_group?.id || row?.adGroup?.id || '').trim()
+  if (!adGroupId) return null
+
+  const resourceName = String(
+    row?.ad_group?.resource_name
+    || row?.adGroup?.resourceName
+    || `customers/${params.customerId}/adGroups/${adGroupId}`
+  ).trim()
+
+  return { adGroupId, resourceName }
+}
+
+function isDuplicateAdGroupNameError(error: any): boolean {
+  const errors = error?.errors
+  if (!Array.isArray(errors)) return false
+  return errors.some((entry: any) => {
+    const code = entry?.error_code?.ad_group_error
+    return code === 'DUPLICATE_ADGROUP_NAME' || code === 3
+  })
+}
+
 /**
  * 创建Google Ads Ad Group
  */
@@ -1629,26 +1706,68 @@ export async function createGoogleAdsAdGroup(params: {
 }): Promise<{ adGroupId: string; resourceName: string }> {
   const authType = params.authType || 'oauth'
 
+  const reuseExistingAdGroup = async (): Promise<{ adGroupId: string; resourceName: string } | null> => {
+    try {
+      return await findGoogleAdsAdGroupByName({
+        customerId: params.customerId,
+        refreshToken: params.refreshToken,
+        campaignId: params.campaignId,
+        adGroupName: params.adGroupName,
+        userId: params.userId,
+        loginCustomerId: params.loginCustomerId,
+        authType,
+        serviceAccountId: params.serviceAccountId,
+      })
+    } catch (lookupError: any) {
+      console.warn(`⚠️ Ad Group存在性检查失败，将继续尝试创建: ${lookupError?.message || lookupError}`)
+      return null
+    }
+  }
+
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
   if (authType === 'service_account') {
+    const existing = await reuseExistingAdGroup()
+    if (existing) {
+      console.log(`♻️ 复用已存在的Ad Group: ${params.adGroupName} (ID=${existing.adGroupId})`)
+      return existing
+    }
+
     const { createAdGroupPython } = await import('./python-ads-client')
 
     const campaignResourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
-    const adGroupResourceName = await createAdGroupPython({
-      userId: params.userId,
-      serviceAccountId: params.serviceAccountId,
-      customerId: params.customerId,
-      campaignResourceName,
-      name: params.adGroupName,
-      status: params.status,
-      cpcBidMicros: params.cpcBidMicros,
-    })
+    let adGroupResourceName: string
+    try {
+      adGroupResourceName = await createAdGroupPython({
+        userId: params.userId,
+        serviceAccountId: params.serviceAccountId,
+        customerId: params.customerId,
+        campaignResourceName,
+        name: params.adGroupName,
+        status: params.status,
+        cpcBidMicros: params.cpcBidMicros,
+      })
+    } catch (error: any) {
+      if (isDuplicateAdGroupNameError(error)) {
+        const duplicate = await reuseExistingAdGroup()
+        if (duplicate) {
+          console.log(`♻️ Ad Group名称重复，复用已存在的Ad Group: ${params.adGroupName} (ID=${duplicate.adGroupId})`)
+          return duplicate
+        }
+      }
+      throw error
+    }
 
     const adGroupId = adGroupResourceName.split('/').pop() || ''
     return { adGroupId, resourceName: adGroupResourceName }
   }
 
   // OAuth模式：使用原有逻辑
+  const existing = await reuseExistingAdGroup()
+  if (existing) {
+    console.log(`♻️ 复用已存在的Ad Group: ${params.adGroupName} (ID=${existing.adGroupId})`)
+    return existing
+  }
+
   const customer = await getCustomerWithCredentials(params)
 
   const adGroup = {
@@ -1663,24 +1782,35 @@ export async function createGoogleAdsAdGroup(params: {
     ;(adGroup as any).cpc_bid_micros = params.cpcBidMicros
   }
 
-  const response = await trackOAuthApiCall(
-    params.userId,
-    params.customerId,
-    ApiOperationType.MUTATE,
-    '/api/google-ads/ad-group/create',
-    () => customer.adGroups.create([adGroup])
-  )
+  try {
+    const response = await trackOAuthApiCall(
+      params.userId,
+      params.customerId,
+      ApiOperationType.MUTATE,
+      '/api/google-ads/ad-group/create',
+      () => customer.adGroups.create([adGroup])
+    )
 
-  if (!response || !response.results || response.results.length === 0) {
-    throw new Error('创建Ad Group失败：无响应')
-  }
+    if (!response || !response.results || response.results.length === 0) {
+      throw new Error('创建Ad Group失败：无响应')
+    }
 
-  const result = response.results[0]
-  const adGroupId = result.resource_name?.split('/').pop() || ''
+    const result = response.results[0]
+    const adGroupId = result.resource_name?.split('/').pop() || ''
 
-  return {
-    adGroupId,
-    resourceName: result.resource_name || '',
+    return {
+      adGroupId,
+      resourceName: result.resource_name || '',
+    }
+  } catch (error: any) {
+    if (isDuplicateAdGroupNameError(error)) {
+      const duplicate = await reuseExistingAdGroup()
+      if (duplicate) {
+        console.log(`♻️ Ad Group名称重复，复用已存在的Ad Group: ${params.adGroupName} (ID=${duplicate.adGroupId})`)
+        return duplicate
+      }
+    }
+    throw error
   }
 }
 
@@ -1828,6 +1958,65 @@ export async function createGoogleAdsKeywordsBatch(params: {
           keywordText: keywordOperationsWithMeta[index]?.keywordText || '',
         })
       })
+    }
+  }
+
+  return results
+}
+
+function isDuplicateKeywordCriterionError(error: unknown): boolean {
+  const message = String((error as { message?: string })?.message || error || '').toLowerCase()
+  if (
+    message.includes('already exists')
+    || message.includes('resource_already_exists')
+    || message.includes('duplicate')
+    || message.includes('重复')
+  ) {
+    return true
+  }
+
+  const errors = (error as { errors?: Array<{ error_code?: Record<string, unknown> }> })?.errors
+  if (!Array.isArray(errors)) return false
+
+  return errors.some((entry) => {
+    const codes = entry?.error_code || {}
+    return Object.values(codes).some((code) => {
+      const normalized = String(code || '').toUpperCase()
+      return normalized.includes('DUPLICATE') || normalized.includes('ALREADY_EXISTS')
+    })
+  })
+}
+
+/**
+ * 批量创建关键词；若整批因重复失败，则逐条重试并跳过已存在项（用于发布续发补全）。
+ */
+export async function createGoogleAdsKeywordsBatchAllowingDuplicates(
+  params: Parameters<typeof createGoogleAdsKeywordsBatch>[0]
+): Promise<Array<{ keywordId: string; resourceName: string; keywordText: string }>> {
+  if (!params.keywords.length) return []
+
+  try {
+    return await createGoogleAdsKeywordsBatch(params)
+  } catch (batchError) {
+    if (!isDuplicateKeywordCriterionError(batchError)) {
+      throw batchError
+    }
+    console.warn('[Keyword] 批量创建命中重复，改为逐条补全缺失关键词')
+  }
+
+  const results: Array<{ keywordId: string; resourceName: string; keywordText: string }> = []
+  for (const keyword of params.keywords) {
+    try {
+      const created = await createGoogleAdsKeywordsBatch({
+        ...params,
+        keywords: [keyword],
+      })
+      results.push(...created)
+    } catch (singleError) {
+      if (isDuplicateKeywordCriterionError(singleError)) {
+        continue
+      }
+      throw singleError
     }
   }
 

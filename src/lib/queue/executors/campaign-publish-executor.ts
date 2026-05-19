@@ -24,14 +24,24 @@ import {
 import {
   createGoogleAdsCampaign,
   createGoogleAdsAdGroup,
-  createGoogleAdsKeywordsBatch,
+  createGoogleAdsKeywordsBatchAllowingDuplicates,
   createGoogleAdsResponsiveSearchAd,
+  findGoogleAdsAdGroupByName,
+  findGoogleAdsCampaignByName,
   getGoogleAdsCampaign,
   updateGoogleAdsCampaignStatus,
+  updateGoogleAdsCampaignBudget,
   createGoogleAdsCalloutExtensions,
   createGoogleAdsSitelinkExtensions,
   ensureKeywordsInHeadlines,
 } from '@/lib/google-ads-api'
+import {
+  buildPublishResumePlan,
+  collectCampaignNameCandidates,
+  persistPublishGoogleAdsIds,
+  type PublishResumePlan,
+  type ResumablePublishCampaignRow,
+} from '@/lib/campaign-publish-resume'
 import { setCampaignPageViewGoalWithCredentials } from '@/lib/google-ads-conversion-goals'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
 import { generateNamingScheme, type NamingScheme } from '@/lib/naming-convention'
@@ -208,6 +218,8 @@ export interface CampaignPublishTaskData {
   // 可选标志
   forcePublish?: boolean               // 是否强制发布（允许非15/4创意）
   enableCampaignImmediately?: boolean  // 是否立即启用Campaign
+  /** 续发：复用上次失败/未完成发布创建的远端资源 */
+  resumePublish?: boolean
   /** @deprecated 暂停旧系列由 publish API 在入队前处理，执行器不再读取 */
   pauseOldCampaigns?: boolean
 }
@@ -374,6 +386,7 @@ export async function executeCampaignPublish(
     brandName,
     forcePublish = false,
     enableCampaignImmediately = false,
+    resumePublish = false,
   } = task.data
 
   const apiStartTime = Date.now()
@@ -660,6 +673,75 @@ export async function executeCampaignPublish(
       runWithLoginCustomerFallbackAndHeartbeat,
     }
 
+    const resumableCampaignRow = resumePublish
+      ? await db.queryOne<ResumablePublishCampaignRow>(
+        `
+          SELECT
+            id,
+            campaign_name,
+            creation_status,
+            status,
+            google_campaign_id,
+            campaign_id,
+            google_ad_group_id,
+            google_ad_id,
+            campaign_config,
+            google_ads_account_id,
+            ad_creative_id,
+            budget_amount,
+            budget_type,
+            max_cpc
+          FROM campaigns
+          WHERE id = ? AND user_id = ? AND offer_id = ?
+          LIMIT 1
+        `,
+        [campaignId, userId, offerId]
+      )
+      : null
+    const resumePlan: PublishResumePlan = buildPublishResumePlan({
+      stored: resumableCampaignRow ?? null,
+      enableLocalResume: Boolean(resumePublish && resumableCampaignRow),
+      nextCampaignConfig: campaignConfig as Record<string, unknown>,
+      nextCreative: {
+        headlines: normalizeCreativeTextAssets(creative.headlines),
+        descriptions: normalizeCreativeTextAssets(creative.descriptions),
+        finalUrl: creative.finalUrl,
+        finalUrlSuffix: creative.finalUrlSuffix,
+        path1: creative.path1,
+        path2: creative.path2,
+        callouts: Array.isArray(creative.callouts) ? creative.callouts.map(String) : [],
+        sitelinks: creative.sitelinks,
+      },
+    })
+
+    if (resumePlan.resumeMode) {
+      console.log(
+        `[Publish] 续发模式: discoverRemote=${resumePlan.discoverRemoteByName}, ` +
+        `campaign=${resumePlan.googleCampaignId || '-'}, ` +
+        `adGroup=${resumePlan.googleAdGroupId || '-'}, ad=${resumePlan.googleAdId || '-'}`
+      )
+    }
+
+    const flushPublishGoogleIds = async (ids: {
+      googleCampaignId?: string
+      googleAdGroupId?: string
+      googleAdId?: string
+    }) => {
+      try {
+        await persistPublishGoogleAdsIds({
+          userId,
+          campaignId,
+          googleCampaignId: ids.googleCampaignId,
+          googleAdGroupId: ids.googleAdGroupId,
+          googleAdId: ids.googleAdId,
+        })
+      } catch (persistError: any) {
+        console.warn(
+          `⚠️ 远端 ID 即时回写失败（不影响发布继续）: ${persistError?.message || persistError}`
+        )
+      }
+    }
+
     await pauseHistoricalOrphanGoogleCampaignsForOffer({
       ctx: publishRollbackContext,
       offerId,
@@ -716,32 +798,108 @@ export async function executeCampaignPublish(
       || naming?.campaignName
       || `Campaign_${creative.id}`
 
-    const { campaignId: googleCampaignId } = await runWithLoginCustomerFallbackAndHeartbeat(
-      '创建Campaign',
-      (loginCustomerId) =>
-        createGoogleAdsCampaign({
-        customerId: adsAccount.customer_id,
-        refreshToken: refreshToken,
-        campaignName: campaignName, // 🔥 使用规范化命名
-        budgetAmount: campaignConfig.budgetAmount,
-        budgetType: campaignConfig.budgetType,
-        biddingStrategy: campaignConfig.biddingStrategy,
-        cpcBidCeilingMicros: cpcBidMicros, // 🔥 使用用户配置或货币默认值（已确保是10000的倍数）
-        targetCountry: campaignConfig.targetCountry,
-        targetLanguage: campaignConfig.targetLanguage,
-        finalUrlSuffix: creative.finalUrlSuffix || undefined,
-        status: 'ENABLED',
-        accountId: adsAccount.id,
-        userId,
-        loginCustomerId,
-        authType: auth.authType,
-        serviceAccountId: auth.serviceAccountId,
-        })
-    )
+    const storedCampaignConfig = resumableCampaignRow?.campaign_config
+      ? (() => {
+        try {
+          const parsed = JSON.parse(String(resumableCampaignRow.campaign_config))
+          return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+            ? parsed as Record<string, unknown>
+            : {}
+        } catch {
+          return {}
+        }
+      })()
+      : {}
+
+    let googleCampaignId = resumePlan.googleCampaignId || ''
+
+    if (!googleCampaignId && resumePlan.discoverRemoteByName) {
+      const campaignNameCandidates = collectCampaignNameCandidates(
+        campaignName,
+        resumableCampaignRow?.campaign_name,
+        storedCampaignConfig.campaignName as string | undefined,
+        storedCampaignConfig.associativeCampaignName as string | undefined
+      )
+
+      for (const candidateName of campaignNameCandidates) {
+        const discovered = await runWithLoginCustomerFallbackAndHeartbeat(
+          `查找远端Campaign(${candidateName})`,
+          (loginCustomerId) =>
+            findGoogleAdsCampaignByName({
+              customerId: adsAccount.customer_id,
+              refreshToken,
+              campaignName: candidateName,
+              userId,
+              loginCustomerId,
+              authType: auth.authType,
+              serviceAccountId: auth.serviceAccountId,
+            })
+        )
+
+        if (discovered?.campaignId) {
+          googleCampaignId = discovered.campaignId
+          console.log(
+            `🔍 续发：按名称匹配到远端 Campaign ${googleCampaignId}（${candidateName}）`
+          )
+          await flushPublishGoogleIds({ googleCampaignId })
+          break
+        }
+      }
+    }
+
+    if (googleCampaignId) {
+      console.log(`♻️ 续发复用 Campaign (Google ID: ${googleCampaignId})`)
+      if (resumePlan.campaignSettingsChanged) {
+        totalApiOperations++
+        await runWithLoginCustomerFallbackAndHeartbeat(
+          '更新Campaign预算',
+          (loginCustomerId) =>
+            updateGoogleAdsCampaignBudget({
+              customerId: adsAccount.customer_id,
+              refreshToken,
+              campaignId: googleCampaignId,
+              budgetAmount: campaignConfig.budgetAmount,
+              budgetType: campaignConfig.budgetType,
+              accountId: adsAccount.id,
+              userId,
+              loginCustomerId,
+              authType: auth.authType,
+              serviceAccountId: auth.serviceAccountId,
+            })
+        )
+        console.log(`✅ Campaign预算已更新 (Google ID: ${googleCampaignId})`)
+      } else {
+        console.log(`⏭️ Campaign 配置未变化，跳过更新`)
+      }
+    } else {
+      const createdCampaign = await runWithLoginCustomerFallbackAndHeartbeat(
+        '创建Campaign',
+        (loginCustomerId) =>
+          createGoogleAdsCampaign({
+            customerId: adsAccount.customer_id,
+            refreshToken: refreshToken,
+            campaignName: campaignName, // 🔥 使用规范化命名
+            budgetAmount: campaignConfig.budgetAmount,
+            budgetType: campaignConfig.budgetType,
+            biddingStrategy: campaignConfig.biddingStrategy,
+            cpcBidCeilingMicros: cpcBidMicros, // 🔥 使用用户配置或货币默认值（已确保是10000的倍数）
+            targetCountry: campaignConfig.targetCountry,
+            targetLanguage: campaignConfig.targetLanguage,
+            finalUrlSuffix: creative.finalUrlSuffix || undefined,
+            status: 'ENABLED',
+            accountId: adsAccount.id,
+            userId,
+            loginCustomerId,
+            authType: auth.authType,
+            serviceAccountId: auth.serviceAccountId,
+          })
+      )
+      googleCampaignId = createdCampaign.campaignId
+      console.log(`✅ Campaign创建成功 (Google ID: ${googleCampaignId})`)
+    }
 
     orphanGoogleCampaignId = googleCampaignId
-
-    console.log(`✅ Campaign创建成功 (Google ID: ${googleCampaignId})`)
+    await flushPublishGoogleIds({ googleCampaignId })
     console.log(`📝 使用命名: Campaign=${campaignName}（1 Campaign + 1 Ad Group）`)
 
     // 回读远端Google Ads中的真实Campaign名称，作为本地权威名称
@@ -831,28 +989,58 @@ export async function executeCampaignPublish(
     const adGroupStartTime = Date.now()
     const adGroupName = naming?.adGroupName || `AdGroup_${creative.id}`
 
-    console.log(`\n🧩 创建 Ad Group: ${adGroupName}`)
+    if (!googleAdGroupId && googleCampaignId && resumePlan.resumeMode) {
+      const discoveredAdGroup = await runWithLoginCustomerFallbackAndHeartbeat(
+        `查找远端Ad Group(${adGroupName})`,
+        (loginCustomerId) =>
+          findGoogleAdsAdGroupByName({
+            customerId: adsAccount.customer_id,
+            refreshToken,
+            campaignId: googleCampaignId,
+            adGroupName,
+            userId,
+            loginCustomerId,
+            authType: auth.authType,
+            serviceAccountId: auth.serviceAccountId,
+          })
+      )
 
-    totalApiOperations++
-    const { adGroupId: createdAdGroupId } = await runWithLoginCustomerFallbackAndHeartbeat(
-      '创建Ad Group',
-      (loginCustomerId) => createGoogleAdsAdGroup({
-        customerId: adsAccount.customer_id,
-        refreshToken: refreshToken,
-        campaignId: googleCampaignId,
-        adGroupName,
-        cpcBidMicros: cpcBidMicros,
-        status: 'ENABLED',
-        accountId: adsAccount.id,
-        userId,
-        loginCustomerId,
-        authType: auth.authType,
-        serviceAccountId: auth.serviceAccountId,
-      })
-    )
+      if (discoveredAdGroup?.adGroupId) {
+        googleAdGroupId = discoveredAdGroup.adGroupId
+        console.log(`🔍 续发：按名称匹配到远端 Ad Group ${googleAdGroupId}`)
+        await flushPublishGoogleIds({ googleCampaignId, googleAdGroupId })
+      }
+    }
 
-    googleAdGroupId = createdAdGroupId
-    console.log(`✅ Ad Group创建成功 (Google ID: ${googleAdGroupId})`)
+    if (resumePlan.googleAdGroupId && !resumePlan.adGroupSettingsChanged) {
+      googleAdGroupId = resumePlan.googleAdGroupId
+      console.log(`♻️ 续发复用 Ad Group (Google ID: ${googleAdGroupId})，配置未变化`)
+    } else if (googleAdGroupId && resumePlan.resumeMode && !resumePlan.adGroupSettingsChanged) {
+      console.log(`♻️ 续发复用 Ad Group (Google ID: ${googleAdGroupId})，配置未变化`)
+    } else {
+      console.log(`\n🧩 创建 Ad Group: ${adGroupName}`)
+      totalApiOperations++
+      const { adGroupId: createdAdGroupId } = await runWithLoginCustomerFallbackAndHeartbeat(
+        '创建Ad Group',
+        (loginCustomerId) => createGoogleAdsAdGroup({
+          customerId: adsAccount.customer_id,
+          refreshToken: refreshToken,
+          campaignId: googleCampaignId,
+          adGroupName,
+          cpcBidMicros: cpcBidMicros,
+          status: 'ENABLED',
+          accountId: adsAccount.id,
+          userId,
+          loginCustomerId,
+          authType: auth.authType,
+          serviceAccountId: auth.serviceAccountId,
+        })
+      )
+
+      googleAdGroupId = createdAdGroupId
+      console.log(`✅ Ad Group创建成功 (Google ID: ${googleAdGroupId})`)
+      await flushPublishGoogleIds({ googleCampaignId, googleAdGroupId })
+    }
 
     const keywordMatchTypeMap = new Map<string, PositiveKeywordMatchType>()
     if (creative.keywordsWithVolume) {
@@ -935,8 +1123,8 @@ export async function executeCampaignPublish(
     if (keywordOperations.length > 0) {
       totalApiOperations += keywordOperations.length
       await runWithLoginCustomerFallbackAndHeartbeat(
-        '创建正向关键词',
-        (loginCustomerId) => createGoogleAdsKeywordsBatch({
+        resumePlan.keywordsChanged ? '创建正向关键词' : '补全正向关键词',
+        (loginCustomerId) => createGoogleAdsKeywordsBatchAllowingDuplicates({
           customerId: adsAccount.customer_id,
           refreshToken: refreshToken,
           adGroupId: googleAdGroupId,
@@ -953,8 +1141,8 @@ export async function executeCampaignPublish(
     if (negativeKeywordOperations.length > 0) {
       totalApiOperations += negativeKeywordOperations.length
       await runWithLoginCustomerFallbackAndHeartbeat(
-        '创建否定关键词',
-        (loginCustomerId) => createGoogleAdsKeywordsBatch({
+        resumePlan.keywordsChanged ? '创建否定关键词' : '补全否定关键词',
+        (loginCustomerId) => createGoogleAdsKeywordsBatchAllowingDuplicates({
           customerId: adsAccount.customer_id,
           refreshToken: refreshToken,
           adGroupId: googleAdGroupId,
@@ -995,27 +1183,33 @@ export async function executeCampaignPublish(
       forcePublish
     )
 
-    totalApiOperations++
-    const adResult = await runWithLoginCustomerFallbackAndHeartbeat(
-      '创建RSA广告',
-      (loginCustomerId) => createGoogleAdsResponsiveSearchAd({
-        customerId: adsAccount.customer_id,
-        refreshToken: refreshToken,
-        adGroupId: googleAdGroupId,
-        headlines: headlinesForPublish,
-        descriptions: descriptionsForPublish,
-        finalUrls: [creative.finalUrl],
-        path1: creative.path1 || undefined,
-        path2: creative.path2 || undefined,
-        accountId: adsAccount.id,
-        userId,
-        loginCustomerId,
-        authType: auth.authType,
-        serviceAccountId: auth.serviceAccountId,
-      })
-    )
+    if (resumePlan.googleAdId && !resumePlan.rsaChanged) {
+      googleAdId = resumePlan.googleAdId
+      console.log(`♻️ 续发复用 RSA (Google ID: ${googleAdId})，创意未变化`)
+    } else {
+      totalApiOperations++
+      const adResult = await runWithLoginCustomerFallbackAndHeartbeat(
+        resumePlan.googleAdId ? '更新RSA广告（新建）' : '创建RSA广告',
+        (loginCustomerId) => createGoogleAdsResponsiveSearchAd({
+          customerId: adsAccount.customer_id,
+          refreshToken: refreshToken,
+          adGroupId: googleAdGroupId,
+          headlines: headlinesForPublish,
+          descriptions: descriptionsForPublish,
+          finalUrls: [creative.finalUrl],
+          path1: creative.path1 || undefined,
+          path2: creative.path2 || undefined,
+          accountId: adsAccount.id,
+          userId,
+          loginCustomerId,
+          authType: auth.authType,
+          serviceAccountId: auth.serviceAccountId,
+        })
+      )
 
-    googleAdId = adResult.adId
+      googleAdId = adResult.adId
+      await flushPublishGoogleIds({ googleCampaignId, googleAdGroupId, googleAdId })
+    }
     console.log(`✅ Ad Group + RSA 发布完成 (AdGroup=${googleAdGroupId}, Ad=${googleAdId})，耗时: ${Date.now() - adGroupStartTime}ms`)
 
     const extensionCreative = creative
@@ -1073,8 +1267,13 @@ export async function executeCampaignPublish(
     // 跟踪Extensions执行结果（非致命错误）
     let extensionsErrors: string[] = []
 
+    const shouldCreateExtensions = !resumePlan.resumeMode || resumePlan.extensionsChanged
+
     // 13.1 添加Callout Extensions（非致命，失败时记录错误但继续）
     try {
+      if (!shouldCreateExtensions) {
+        console.log('⏭️ 续发：扩展未变化，跳过 Callout')
+      } else {
       totalApiOperations += finalCallouts.length + 1
       await runWithLoginCustomerFallbackAndHeartbeat(
         '创建Callout扩展',
@@ -1091,6 +1290,7 @@ export async function executeCampaignPublish(
         })
       )
       console.log(`  ✅ [串行1/2] 成功添加${finalCallouts.length}个Callout扩展`)
+      }
     } catch (calloutError: any) {
       const errorMsg = calloutError.message || String(calloutError)
       extensionsErrors.push(`Callout扩展: ${errorMsg}`)
@@ -1099,6 +1299,9 @@ export async function executeCampaignPublish(
 
     // 13.2 添加Sitelink Extensions（非致命，失败时记录错误但继续）
     try {
+      if (!shouldCreateExtensions) {
+        console.log('⏭️ 续发：扩展未变化，跳过 Sitelink')
+      } else {
       totalApiOperations += formattedSitelinks.length + 1
       await runWithLoginCustomerFallbackAndHeartbeat(
         '创建Sitelink扩展',
@@ -1115,6 +1318,7 @@ export async function executeCampaignPublish(
         })
       )
       console.log(`  ✅ [串行2/2] 成功添加${formattedSitelinks.length}个Sitelink扩展`)
+      }
     } catch (sitelinkError: any) {
       const errorMsg = sitelinkError.message || String(sitelinkError)
       extensionsErrors.push(`Sitelink扩展: ${errorMsg}`)
