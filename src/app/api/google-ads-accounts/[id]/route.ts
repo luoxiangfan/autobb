@@ -4,6 +4,36 @@ import {
   updateGoogleAdsAccount,
   deleteGoogleAdsAccount,
 } from '@/lib/google-ads-accounts'
+import {
+  listDeletableRemoteCampaignsForAccount,
+  countDeletableRemoteCampaignsForAccount,
+  limitDeletableRemoteCampaigns,
+} from '@/lib/google-ads-account-delete-campaigns'
+import { getGoogleAdsAccountDeleteRemoteConfig } from '@/lib/google-ads-account-delete-config'
+import { executeGoogleAdsCampaignRemoteActions } from '@/lib/google-ads-campaign-remote-actions'
+import { parseDeleteGoogleAdsAccountRequest } from '@/lib/google-ads-account-delete-request'
+import { buildDeleteAccountApiWarnings } from '@/lib/google-ads-account-delete-warnings'
+import { parseTruthyFlag } from '@/lib/parse-truthy-flag'
+import type { GoogleAdsCampaignRemoteActionSummary } from '@/lib/google-ads-campaign-remote-actions'
+
+function emptyGoogleAdsRemoteSummary(): GoogleAdsCampaignRemoteActionSummary {
+  const config = getGoogleAdsAccountDeleteRemoteConfig()
+  return {
+    planned: 0,
+    attempted: 0,
+    paused: 0,
+    removed: 0,
+    pausedFallback: 0,
+    failed: 0,
+    action: 'NONE',
+    executed: false,
+    failures: [],
+    truncated: 0,
+    maxCampaigns: config.maxCampaigns,
+    timedOut: false,
+    concurrency: config.concurrency,
+  }
+}
 
 /**
  * GET /api/google-ads-accounts/:id
@@ -24,7 +54,9 @@ export async function GET(
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
-    const account = await findGoogleAdsAccountById(parseInt(id, 10), parseInt(userId, 10))
+    const accountId = parseInt(id, 10)
+    const numericUserId = parseInt(userId, 10)
+    const account = await findGoogleAdsAccountById(accountId, numericUserId)
 
     if (!account) {
       return NextResponse.json(
@@ -35,9 +67,26 @@ export async function GET(
       )
     }
 
+    const includeDeletableCampaignCount = parseTruthyFlag(
+      request.nextUrl.searchParams.get('deletableCampaignCount')
+    )
+
+    if (!includeDeletableCampaignCount) {
+      return NextResponse.json({
+        success: true,
+        account,
+      })
+    }
+
+    const remoteConfig = getGoogleAdsAccountDeleteRemoteConfig()
+    const totalCount = await countDeletableRemoteCampaignsForAccount(accountId, numericUserId)
+
     return NextResponse.json({
       success: true,
       account,
+      deletableRemoteCampaignCount: totalCount,
+      remoteDeleteMaxCampaigns: remoteConfig.maxCampaigns,
+      remoteDeleteWillTruncate: totalCount > remoteConfig.maxCampaigns,
     })
   } catch (error: any) {
     console.error('获取Google Ads账号详情失败:', error)
@@ -125,6 +174,9 @@ export async function PUT(
 /**
  * DELETE /api/google-ads-accounts/:id
  * 删除Google Ads账号
+ *
+ * 可选参数 removeGoogleAdsCampaigns（query 或 JSON body，body 可无 Content-Type）：
+ * 为 true 时，同步 best-effort 在 Google Ads 远端删除该账号下已同步的 Campaign，并在响应中返回结果
  */
 export async function DELETE(
   request: NextRequest,
@@ -139,8 +191,17 @@ export async function DELETE(
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
+    const accountId = parseInt(id, 10)
+    const numericUserId = parseInt(userId, 10)
+    if (!Number.isFinite(accountId) || !Number.isFinite(numericUserId)) {
+      return NextResponse.json({ error: '无效的账号或用户 ID' }, { status: 400 })
+    }
+
+    const { removeGoogleAdsCampaigns: shouldRemoveGoogleAdsCampaigns } =
+      await parseDeleteGoogleAdsAccountRequest(request)
+
     // 验证账号存在且属于当前用户
-    const existingAccount = await findGoogleAdsAccountById(parseInt(id, 10), parseInt(userId, 10))
+    const existingAccount = await findGoogleAdsAccountById(accountId, numericUserId)
 
     if (!existingAccount) {
       return NextResponse.json(
@@ -151,12 +212,68 @@ export async function DELETE(
       )
     }
 
-    // 删除账号
-    deleteGoogleAdsAccount(parseInt(id, 10), parseInt(userId, 10))
+    const remoteConfig = getGoogleAdsAccountDeleteRemoteConfig()
+    const allDeletableCampaigns = shouldRemoveGoogleAdsCampaigns
+      ? await listDeletableRemoteCampaignsForAccount(accountId, numericUserId)
+      : []
+    const { selected: campaignsToRemove, truncated, maxCampaigns } = limitDeletableRemoteCampaigns(
+      allDeletableCampaigns,
+      remoteConfig.maxCampaigns
+    )
+
+    const adsAccountSnapshot = {
+      id: existingAccount.id,
+      customer_id: existingAccount.customerId,
+      parent_mcc_id: existingAccount.parentMccId ?? null,
+      is_active: existingAccount.isActive ? 1 : 0,
+      is_deleted: 0,
+    }
+
+    // 先执行远端删除（使用删除前快照），再删本地，避免本地已删但远端仍投放
+    const googleAdsRemote = shouldRemoveGoogleAdsCampaigns
+      ? await executeGoogleAdsCampaignRemoteActions({
+          userId: numericUserId,
+          adsAccount: adsAccountSnapshot,
+          campaigns: campaignsToRemove.map((campaign) => ({
+            google_campaign_id: String(campaign.google_campaign_id),
+          })),
+          shouldRemove: true,
+          logPrefix: 'delete-account',
+          skipAccountEligibilityCheck: true,
+          limitMeta: { truncated, maxCampaigns },
+          remoteConfig,
+        })
+      : emptyGoogleAdsRemoteSummary()
+
+    const deleted = await deleteGoogleAdsAccount(accountId, numericUserId)
+    if (!deleted) {
+      return NextResponse.json(
+        {
+          error: '删除账号失败',
+          data: {
+            accountId,
+            localDeleted: false,
+            googleAds: googleAdsRemote,
+            warnings: buildDeleteAccountApiWarnings(shouldRemoveGoogleAdsCampaigns, googleAdsRemote, {
+              localDeleted: false,
+            }),
+          },
+        },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({
       success: true,
       message: '账号删除成功',
+      data: {
+        accountId,
+        localDeleted: true,
+        googleAds: googleAdsRemote,
+        warnings: buildDeleteAccountApiWarnings(shouldRemoveGoogleAdsCampaigns, googleAdsRemote, {
+          localDeleted: true,
+        }),
+      },
     })
   } catch (error: any) {
     console.error('删除Google Ads账号失败:', error)

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { unlinkOfferFromAccount } from '@/lib/offers'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
-import { removeGoogleAdsCampaign, updateGoogleAdsCampaignStatus } from '@/lib/google-ads-api'
+import { queueGoogleAdsCampaignRemoteActions } from '@/lib/google-ads-campaign-remote-actions'
+import { parseTruthyFlag } from '@/lib/parse-truthy-flag'
 
 /**
  * POST /api/offers/:id/unlink
@@ -27,7 +27,7 @@ export async function POST(
     // 从请求体获取要解除关联的Ads账号ID
     const body = await request.json()
     const { accountId, removeGoogleAdsCampaigns } = body
-    const shouldRemoveGoogleAdsCampaigns = Boolean(removeGoogleAdsCampaigns)
+    const shouldRemoveGoogleAdsCampaigns = parseTruthyFlag(removeGoogleAdsCampaigns)
 
     if (!accountId) {
       return NextResponse.json({ error: '缺少accountId参数' }, { status: 400 })
@@ -67,114 +67,20 @@ export async function POST(
       is_deleted: any
     } | null
 
-    // 若账号不可用/缺少customer_id，则只能做本地解除关联
-    const accountIsActive = adsAccount ? (adsAccount.is_active === true || adsAccount.is_active === 1) : false
-    const accountIsDeleted = adsAccount ? (adsAccount.is_deleted === true || adsAccount.is_deleted === 1) : false
-
     // 先执行本地解除关联（核心业务动作），避免等待外部 Google Ads API 导致前端超时/取消请求（499）
     const result = await unlinkOfferFromAccount(offerId, googleAdsAccountId, userId)
 
-    const shouldAttemptGoogleAds = Boolean(
-      adsAccount?.customer_id &&
-      accountIsActive &&
-      !accountIsDeleted &&
-      campaignsToUnlink.length > 0
-    )
-
-    if (shouldAttemptGoogleAds) {
-      // 异步 best-effort：尽量在 Google Ads 端暂停已同步的 Campaign
-      // 不阻塞当前 API 响应，避免 499（client closed request）
-      void (async () => {
-        const googleAdsRemoval = {
-          attempted: 0,
-          paused: 0,
-          removed: 0,
-          pausedFallback: 0,
-          failed: 0,
-          action: shouldRemoveGoogleAdsCampaigns ? 'REMOVE' : 'PAUSE',
-          failures: [] as Array<{ campaignId: string; reason: string }>
-        }
-
-        try {
-          const auth = await getUserAuthType(userId)
-          const credentials = await getGoogleAdsCredentials(userId)
-          const refreshToken = credentials?.refresh_token || ''
-
-          let loginCustomerId: string | undefined = credentials?.login_customer_id
-            ? String(credentials.login_customer_id)
-            : undefined
-          if (!loginCustomerId && adsAccount!.parent_mcc_id) {
-            loginCustomerId = String(adsAccount!.parent_mcc_id)
-          }
-
-          for (const campaign of campaignsToUnlink) {
-            const googleCampaignId = String(campaign.google_campaign_id)
-            googleAdsRemoval.attempted++
-            try {
-              if (shouldRemoveGoogleAdsCampaigns) {
-                await removeGoogleAdsCampaign({
-                  customerId: adsAccount!.customer_id!,
-                  refreshToken,
-                  campaignId: googleCampaignId,
-                  accountId: adsAccount!.id,
-                  userId,
-                  loginCustomerId,
-                  authType: auth.authType,
-                  serviceAccountId: auth.serviceAccountId
-                })
-                googleAdsRemoval.removed++
-              } else {
-                await updateGoogleAdsCampaignStatus({
-                  customerId: adsAccount!.customer_id!,
-                  refreshToken,
-                  campaignId: googleCampaignId,
-                  status: 'PAUSED',
-                  accountId: adsAccount!.id,
-                  userId,
-                  loginCustomerId,
-                  authType: auth.authType,
-                  serviceAccountId: auth.serviceAccountId
-                })
-                googleAdsRemoval.paused++
-              }
-            } catch (err: any) {
-              if (shouldRemoveGoogleAdsCampaigns) {
-                try {
-                  await updateGoogleAdsCampaignStatus({
-                    customerId: adsAccount!.customer_id!,
-                    refreshToken,
-                    campaignId: googleCampaignId,
-                    status: 'PAUSED',
-                    accountId: adsAccount!.id,
-                    userId,
-                    loginCustomerId,
-                    authType: auth.authType,
-                    serviceAccountId: auth.serviceAccountId
-                  })
-                  googleAdsRemoval.pausedFallback++
-                } catch (pauseErr: any) {
-                  googleAdsRemoval.failed++
-                  googleAdsRemoval.failures.push({
-                    campaignId: googleCampaignId,
-                    reason: String(pauseErr?.message || err?.message || 'UNKNOWN_ERROR')
-                  })
-                }
-              } else {
-                googleAdsRemoval.failed++
-                googleAdsRemoval.failures.push({
-                  campaignId: googleCampaignId,
-                  reason: String(err?.message || 'UNKNOWN_ERROR')
-                })
-              }
-            }
-          }
-        } catch (err: any) {
-          console.error('[unlink] Google Ads best-effort removal failed:', err?.message || err)
-        } finally {
-          console.log('[unlink] Google Ads best-effort pause summary:', googleAdsRemoval)
-        }
-      })()
-    }
+    const googleAdsRemote = adsAccount
+      ? queueGoogleAdsCampaignRemoteActions({
+          userId,
+          adsAccount,
+          campaigns: campaignsToUnlink.map((campaign) => ({
+            google_campaign_id: String(campaign.google_campaign_id),
+          })),
+          shouldRemove: shouldRemoveGoogleAdsCampaigns,
+          logPrefix: 'unlink',
+        })
+      : { queued: false, planned: campaignsToUnlink.length, action: 'NONE' as const }
 
     return NextResponse.json({
       success: true,
@@ -184,9 +90,9 @@ export async function POST(
         accountId: googleAdsAccountId,
         unlinkedCampaigns: result.unlinkedCount,
         googleAds: {
-          queued: shouldAttemptGoogleAds,
-          planned: campaignsToUnlink.length,
-          action: shouldRemoveGoogleAdsCampaigns ? 'REMOVE' : 'PAUSE'
+          queued: googleAdsRemote.queued,
+          planned: googleAdsRemote.planned,
+          action: googleAdsRemote.action,
         }
       },
     })

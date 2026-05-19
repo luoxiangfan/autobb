@@ -1187,8 +1187,12 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
   {
     method: 'DELETE',
     path: '/api/google-ads-accounts/:id',
-    canonicalKeys: [],
+    canonicalKeys: ['removeGoogleAdsCampaigns'],
     allowEmptyBody: true,
+    aliasMap: {
+      remove_google_ads_campaigns: 'removeGoogleAdsCampaigns',
+    },
+    // 参数优先级：query removeGoogleAdsCampaigns > JSON body（见 docs/api/google-ads-accounts-delete.md）
   },
 ]
 

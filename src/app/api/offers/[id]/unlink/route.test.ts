@@ -23,13 +23,12 @@ vi.mock('@/lib/db', () => ({
   }))
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getGoogleAdsCredentials: vi.fn(async () => null),
-  getUserAuthType: vi.fn(async () => ({ authType: 'oauth' }))
-}))
-
-vi.mock('@/lib/google-ads-api', () => ({
-  updateGoogleAdsCampaignStatus: vi.fn()
+vi.mock('@/lib/google-ads-campaign-remote-actions', () => ({
+  queueGoogleAdsCampaignRemoteActions: vi.fn((params: { shouldRemove?: boolean }) => ({
+    queued: false,
+    planned: 0,
+    action: params.shouldRemove ? 'REMOVE' : 'PAUSE',
+  })),
 }))
 
 const { unlinkOfferFromAccount } = await import('@/lib/offers')

@@ -211,6 +211,21 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 }
 ```
 
+### `googleAdsAccount.delete`
+- Method/Path: `DELETE /api/google-ads-accounts/:id`
+- Optional: `removeGoogleAdsCampaigns` (query **or** JSON body; query wins if both set)
+- Body may be omitted; JSON without `Content-Type` is accepted.
+- Order: remote Campaign delete (bounded concurrency + timeout) → local soft-delete account.
+- Response highlights: `data.localDeleted`, `data.googleAds.failures[]`, `data.googleAds.truncated` (over per-request cap).
+- Pre-check count: `GET /api/google-ads-accounts/:id?deletableCampaignCount=true` → `deletableRemoteCampaignCount`, `remoteDeleteMaxCampaigns`, `remoteDeleteWillTruncate`.
+- Full contract: `docs/api/google-ads-accounts-delete.md`
+
+```json
+{
+  "removeGoogleAdsCampaigns": true
+}
+```
+
 ### `offer.blacklist.add`
 - Method/Path: `POST /api/offers/:id/blacklist`
 - Body: empty object `{}`.

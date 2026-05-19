@@ -1,6 +1,8 @@
 import { getDatabase } from './db'
-import { pauseClickFarmTasksByOfferId } from './click-farm'
-import { pauseUrlSwapTargetsByOfferId } from './url-swap'
+import { markUrlSwapTargetsRemovedByOfferAccount } from './url-swap'
+import { pauseOfferTasks } from './campaign-offer-tasks'
+import { hasActiveCampaignForOffer } from './campaign-offer-constraint'
+import { applyCampaignTransitionByIds } from './campaign-state-machine'
 import { getInsertedId, nowFunc, toBool } from './db-helpers'
 
 export interface GoogleAdsAccount {
@@ -315,108 +317,91 @@ export async function updateGoogleAdsAccount(
 export async function deleteGoogleAdsAccount(id: number, userId: number): Promise<boolean> {
   const db = await getDatabase()
 
-  // 🔧 使用事务确保原子性
-  return await db.transaction(async () => {
-    // 1. 先获取要删除的账号信息（获取 customer_id）
-    const account = await db.queryOne(`
-      SELECT customer_id FROM google_ads_accounts
-      WHERE id = ? AND user_id = ?
-    `, [id, userId]) as { customer_id: string } | undefined
+  const account = await db.queryOne(`
+    SELECT customer_id FROM google_ads_accounts
+    WHERE id = ? AND user_id = ?
+  `, [id, userId]) as { customer_id: string } | undefined
 
-    if (!account) {
-      return false
+  if (!account) {
+    return false
+  }
+
+  const customerId = account.customer_id
+  const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
+
+  const linkedCampaigns = await db.query<{ id: number; offer_id: number }>(`
+    SELECT id, offer_id
+    FROM campaigns
+    WHERE google_ads_account_id = ?
+      AND user_id = ?
+      AND (is_deleted = ${isDeletedFalse} OR is_deleted IS NULL)
+  `, [id, userId])
+
+  const campaignIds = linkedCampaigns
+    .map((row) => Number(row.id))
+    .filter((campaignId) => Number.isFinite(campaignId) && campaignId > 0)
+  const offerIds = Array.from(
+    new Set(
+      linkedCampaigns
+        .map((row) => Number(row.offer_id))
+        .filter((offerId) => Number.isFinite(offerId) && offerId > 0)
+    )
+  )
+
+  const deleted = await db.transaction(async () => {
+    if (campaignIds.length > 0) {
+      const transitionResult = await applyCampaignTransitionByIds({
+        userId,
+        campaignIds,
+        action: 'OFFER_DELETE',
+        payload: { removedReason: 'account_delete' },
+      })
+      console.log(
+        `[Delete Account] Marked ${transitionResult.updatedCount} campaigns REMOVED for customer_id ${customerId}`
+      )
     }
 
-    const customerId = account.customer_id
-
-    // 2. 🔧 级联删除：将该 customer_id 的所有广告系列标记为已删除
-    const campaignResult = await db.exec(`
-      UPDATE campaigns
-      SET is_deleted = ${db.type === 'sqlite' ? '1' : 'TRUE'},
-          deleted_at = ${db.type === 'sqlite' ? "datetime('now')" : 'NOW()'}
-      WHERE google_ads_account_id = ? AND user_id = ?
-    `, [id, userId])
-
-    console.log(`[Delete Account] Soft deleted ${campaignResult.changes} campaigns for customer_id ${customerId}`)
-
-    // 3. 获取所有关联的 offer_id，用于暂停相关任务和记录解除关联
-    const offerIds = await db.query(`
-      SELECT DISTINCT offer_id FROM campaigns
-      WHERE google_ads_account_id = ? AND user_id = ?
-    `, [id, userId]) as { offer_id: number }[]
-
-    // 4. 🔧 记录 Offer 解除关联时间
     const now = new Date().toISOString()
-    if (offerIds.length > 0) {
-      for (const { offer_id } of offerIds) {
-        try {
-          // 获取当前 unlinked_from_customer_ids
-          const offer = await db.queryOne(`
-            SELECT unlinked_from_customer_ids FROM offers
-            WHERE id = ?
-          `, [offer_id]) as { unlinked_from_customer_ids: string | null } | undefined
+    for (const offerId of offerIds) {
+      try {
+        const offer = await db.queryOne(`
+          SELECT unlinked_from_customer_ids FROM offers
+          WHERE id = ? AND user_id = ?
+        `, [offerId, userId]) as { unlinked_from_customer_ids: string | null } | undefined
 
-          if (offer) {
-            // 解析现有的 customer_ids 数组
-            let unlinkedCustomerIds: string[] = []
-            if (offer.unlinked_from_customer_ids) {
-              try {
-                unlinkedCustomerIds = JSON.parse(offer.unlinked_from_customer_ids)
-                if (!Array.isArray(unlinkedCustomerIds)) {
-                  unlinkedCustomerIds = []
-                }
-              } catch {
-                unlinkedCustomerIds = []
-              }
+        if (!offer) continue
+
+        let unlinkedCustomerIds: string[] = []
+        if (offer.unlinked_from_customer_ids) {
+          try {
+            unlinkedCustomerIds = JSON.parse(offer.unlinked_from_customer_ids)
+            if (!Array.isArray(unlinkedCustomerIds)) {
+              unlinkedCustomerIds = []
             }
-
-            // 添加新的 customer_id（如果不存在）
-            if (!unlinkedCustomerIds.includes(customerId)) {
-              unlinkedCustomerIds.push(customerId)
-            }
-
-            // 更新 offers 表
-            await db.exec(`
-              UPDATE offers
-              SET unlinked_from_customer_ids = ?,
-                  last_unlinked_at = ?
-              WHERE id = ?
-            `, [
-              JSON.stringify(unlinkedCustomerIds),
-              now,
-              offer_id
-            ])
+          } catch {
+            unlinkedCustomerIds = []
           }
-        } catch (error) {
-          console.error(`[Delete Account] Failed to record unlinked time for offer_id ${offer_id}:`, error)
         }
+
+        if (!unlinkedCustomerIds.includes(customerId)) {
+          unlinkedCustomerIds.push(customerId)
+        }
+
+        await db.exec(`
+          UPDATE offers
+          SET unlinked_from_customer_ids = ?,
+              last_unlinked_at = ?
+          WHERE id = ? AND user_id = ?
+        `, [JSON.stringify(unlinkedCustomerIds), now, offerId, userId])
+      } catch (error) {
+        console.error(`[Delete Account] Failed to record unlinked time for offer_id ${offerId}:`, error)
       }
+    }
+
+    if (offerIds.length > 0) {
       console.log(`[Delete Account] Recorded unlinked time for ${offerIds.length} offers`)
     }
 
-    // 5. 暂停关联 Offer 的补点击任务和换链接任务
-    let pausedClickFarmCount = 0
-    let pausedUrlSwapCount = 0
-
-    for (const { offer_id } of offerIds) {
-      try {
-        const clickFarmPaused = await pauseClickFarmTasksByOfferId(offer_id)
-        pausedClickFarmCount += clickFarmPaused
-        console.log(`[Delete Account] Paused ${clickFarmPaused} click farm tasks for offer_id ${offer_id}`)
-      } catch (error) {
-        console.error(`[Delete Account] Failed to pause click farm tasks for offer_id ${offer_id}:`, error)
-      }
-
-      try {
-        const urlSwapPaused = await pauseUrlSwapTargetsByOfferId(offer_id)
-        pausedUrlSwapCount += urlSwapPaused
-        console.log(`[Delete Account] Paused ${urlSwapPaused} url swap targets for offer_id ${offer_id}`)
-      } catch (error) {
-        console.error(`[Delete Account] Failed to pause url swap targets for offer_id ${offer_id}:`, error)
-      }
-    }
-
-    // 6. 🔧 标记该 customer_id 为已删除（通过设置 is_deleted 和 is_active=false）
     const accountResult = await db.exec(`
       UPDATE google_ads_accounts
       SET is_deleted = ${db.type === 'sqlite' ? '1' : 'TRUE'},
@@ -425,10 +410,66 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
       WHERE id = ? AND user_id = ?
     `, [id, userId])
 
-    console.log(`[Delete Account] Marked customer_id ${customerId} as deleted`)
-
     return accountResult.changes > 0
   })
+
+  if (!deleted) {
+    return false
+  }
+
+  console.log(`[Delete Account] Marked customer_id ${customerId} as deleted`)
+
+  // 事务提交后再处理任务，避免长事务与嵌套事务
+  let pausedClickFarmCount = 0
+  let disabledUrlSwapCount = 0
+  let removedUrlSwapTargetCount = 0
+
+  for (const offerId of offerIds) {
+    try {
+      const removedTargets = await markUrlSwapTargetsRemovedByOfferAccount(offerId, id)
+      removedUrlSwapTargetCount += removedTargets
+      if (removedTargets > 0) {
+        console.log(
+          `[Delete Account] Marked ${removedTargets} url swap targets removed for offer_id ${offerId}, account_id ${id}`
+        )
+      }
+    } catch (error) {
+      console.error(
+        `[Delete Account] Failed to mark url swap targets removed for offer_id ${offerId}, account_id ${id}:`,
+        error
+      )
+    }
+
+    try {
+      if (await hasActiveCampaignForOffer(offerId, userId)) {
+        continue
+      }
+
+      const pauseResult = await pauseOfferTasks(
+        offerId,
+        userId,
+        'account_deleted',
+        '关联 Google Ads 账号已删除，自动暂停任务'
+      )
+      pausedClickFarmCount += pauseResult.clickFarmTaskCount
+      disabledUrlSwapCount += pauseResult.urlSwapTaskCount
+      if (pauseResult.clickFarmTaskCount > 0 || pauseResult.urlSwapTaskCount > 0) {
+        console.log(
+          `[Delete Account] Paused offer tasks for offer_id ${offerId}: clickFarm=${pauseResult.clickFarmTaskCount}, urlSwap=${pauseResult.urlSwapTaskCount}`
+        )
+      }
+    } catch (error) {
+      console.error(`[Delete Account] Failed to pause offer tasks for offer_id ${offerId}:`, error)
+    }
+  }
+
+  if (removedUrlSwapTargetCount > 0 || pausedClickFarmCount > 0 || disabledUrlSwapCount > 0) {
+    console.log(
+      `[Delete Account] Task cleanup summary: urlSwapTargetsRemoved=${removedUrlSwapTargetCount}, clickFarmPaused=${pausedClickFarmCount}, urlSwapDisabled=${disabledUrlSwapCount}`
+    )
+  }
+
+  return true
 }
 
 /**

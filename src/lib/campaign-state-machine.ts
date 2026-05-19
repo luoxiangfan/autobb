@@ -9,6 +9,7 @@ export type CampaignRemovedReason =
   | 'draft_delete'
   | 'offer_unlink'
   | 'offer_delete'
+  | 'account_delete'
   | 'publish_failed'
   | 'unknown_removed'
 
