@@ -31,9 +31,11 @@ describe('autoads request normalizers', () => {
       pauseOldCampaigns: false,
       enableCampaignImmediately: false,
       enableSmartOptimization: false,
-      variantCount: 3,
       forcePublish: true,
     })
+
+    expect(normalized.variantCount).toBeUndefined()
+    expect(normalized.variant_count).toBeUndefined()
 
     expect(normalized.offer_id).toBeUndefined()
     expect(normalized.campaign_config).toBeUndefined()
@@ -70,10 +72,12 @@ describe('autoads request normalizers', () => {
       offerId: 88,
       googleAdsAccountId: 66,
       enableSmartOptimization: true,
-      variantCount: 4,
       pauseOldCampaigns: true,
       enableCampaignImmediately: true,
     })
+
+    expect(normalized.variantCount).toBeUndefined()
+    expect(normalized.variant_count).toBeUndefined()
 
     expect(normalized.campaignConfig).toMatchObject({
       targetCountry: 'US',

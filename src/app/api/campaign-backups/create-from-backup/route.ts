@@ -6,6 +6,12 @@ import { getLatestBackupForOffer } from '@/lib/campaign-backups'
 import { buildEffectiveCreative } from '@/lib/campaign-publish/effective-creative'
 import { resolveTaskCampaignKeywords } from '@/lib/campaign-publish/task-keyword-fallback'
 import { regenerateAdCreative } from '@/lib/ad-creative-regenerator'
+import {
+  abandonStalePendingCampaignsForOffer,
+  CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,
+  getActiveCampaignConflictForOffer,
+  isCampaignOfferUniqueViolation,
+} from '@/lib/campaign-offer-constraint'
 
 /**
  * 🔧 批量发布到 Google Ads（第二步）
@@ -542,7 +548,19 @@ async function batchCreateInDatabase(params: {
 
   for (const backup of backups) {
     try {
-      // 解析备份数据
+      await abandonStalePendingCampaignsForOffer(backup.offer_id, userId)
+      const existingCampaign = await getActiveCampaignConflictForOffer(backup.offer_id, userId)
+
+      if (existingCampaign) {
+        results.failed++
+        results.details.push({
+          backupId: backup.id,
+          offerId: backup.offer_id,
+          error: CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,
+        })
+        continue
+      }
+
       const campaignData = typeof backup.campaign_data === 'string'
         ? JSON.parse(backup.campaign_data)
         : backup.campaign_data
@@ -562,7 +580,7 @@ async function batchCreateInDatabase(params: {
           campaign_config,
           status, creation_status,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         userId,
         backup.offer_id,
@@ -576,6 +594,7 @@ async function batchCreateInDatabase(params: {
         campaignData.max_cpc,
         campaignConfig ? JSON.stringify(campaignConfig) : null,
         'PAUSED',
+        'published',
         new Date(),
         new Date(),
       ])
@@ -592,7 +611,9 @@ async function batchCreateInDatabase(params: {
       results.details.push({
         backupId: backup.id,
         offerId: backup.offer_id,
-        error: error.message,
+        error: isCampaignOfferUniqueViolation(error)
+          ? CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE
+          : error.message,
       })
       console.error(`[Batch Backup Create in Database] backupId=${backup.id} Error:`, error)
     }

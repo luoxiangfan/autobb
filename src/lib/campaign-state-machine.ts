@@ -85,13 +85,28 @@ export function buildCampaignTransitionPatch(
         lastSyncAt: nowToken,
       }
 
-    case 'PUBLISH_FAILED':
-      return {
+    case 'PUBLISH_FAILED': {
+      const failedPatch: CampaignStatePatch = {
         status: 'REMOVED',
         creationStatus: 'failed',
         creationError: payload?.errorMessage || payload?.creationError || '发布失败',
         removedReason: payload?.removedReason || 'publish_failed',
+        isDeleted: true,
+        deletedAt: nowToken,
       }
+      // 保留已创建的远端 ID，供历史孤儿清理与运维排查（当次暂停失败时可重试）
+      if (payload?.googleCampaignId) {
+        failedPatch.campaignId = payload.googleCampaignId
+        failedPatch.googleCampaignId = payload.googleCampaignId
+      }
+      if (payload?.googleAdGroupId) {
+        failedPatch.googleAdGroupId = payload.googleAdGroupId
+      }
+      if (payload?.googleAdId) {
+        failedPatch.googleAdId = payload.googleAdId
+      }
+      return failedPatch
+    }
 
     case 'TOGGLE_STATUS':
       return {

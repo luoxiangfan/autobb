@@ -213,7 +213,6 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       'pauseOldCampaigns',
       'enableCampaignImmediately',
       'enableSmartOptimization',
-      'variantCount',
       'forcePublish',
     ],
     requiredKeys: ['offerId', 'googleAdsAccountId', 'campaignConfig'],

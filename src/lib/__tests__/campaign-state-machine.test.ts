@@ -56,6 +56,24 @@ describe('campaign-state-machine', () => {
     expect(patch.creationStatus).toBe('failed')
     expect(patch.creationError).toBe('api failed')
     expect(patch.removedReason).toBe('publish_failed')
+    expect(patch.isDeleted).toBe(true)
+    expect(patch.deletedAt).toBe('NOW')
+  })
+
+  it('persists partial google ids on publish failure for orphan cleanup retry', () => {
+    const patch = normalizeCampaignTransitionPatch(
+      buildCampaignTransitionPatch('PUBLISH_FAILED', {
+        errorMessage: 'ad group failed',
+        googleCampaignId: '9001',
+        googleAdGroupId: '8002',
+      })
+    )
+
+    expect(patch.creationStatus).toBe('failed')
+    expect(patch.campaignId).toBe('9001')
+    expect(patch.googleCampaignId).toBe('9001')
+    expect(patch.googleAdGroupId).toBe('8002')
+    expect(patch.googleAdId).toBeUndefined()
   })
 
   it('applies OFFLINE transition by id and marks url-swap targets removed', async () => {

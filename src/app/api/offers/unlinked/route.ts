@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
+import { offerOccupyingCampaignFilterSql } from '@/lib/campaign-offer-constraint'
 
 /**
  * GET /api/offers/unlinked
@@ -33,12 +34,13 @@ export async function GET(request: NextRequest) {
 
     const db = await getDatabase()
     const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
+    const occupyingFilter = offerOccupyingCampaignFilterSql(db.type, 'c')
     // 构建查询条件
     const whereConditions: string[] = [
       'o.user_id = ?',
       `o.is_deleted = ${isDeletedFalse}`,
       'o.last_unlinked_at IS NOT NULL',
-      `NOT EXISTS (SELECT 1 FROM campaigns c WHERE c.offer_id = o.id AND c.user_id = ? AND c.is_deleted = ${isDeletedFalse})`
+      `NOT EXISTS (SELECT 1 FROM campaigns c WHERE c.offer_id = o.id AND c.user_id = ? AND ${occupyingFilter})`,
     ]
     const params: any[] = [userId, userId]
 

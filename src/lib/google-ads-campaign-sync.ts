@@ -18,6 +18,7 @@ import { getInsertedId } from './db-helpers'
 import { createRiskAlert } from './risk-alerts'
 import { ApiOperationType } from './google-ads-api-tracker'
 import { firstNonEmptyFinalUrlFromCampaignConfig } from './google-ads-campaign-final-url'
+import { offerOccupyingCampaignWhereClause } from './campaign-offer-constraint'
 
 /**
  * 从 Google Ads campaign_name 提取 offer brand。
@@ -1157,11 +1158,60 @@ async function saveCampaignToDatabase(params: {
     )
     console.log(`[GoogleAds Sync] Updated Campaign ${campaign.campaign_id} for User ${userId}`)
     return existing.campaign_id
-  } else {
-    console.log(`[GoogleAds Sync] Creating Campaign ${campaign.campaign_id} for User ${userId}`)
-    // 创建新广告系列
-    const campaignName = campaign.campaign_name
-    const result = await db.exec(
+  }
+
+  if (offerId) {
+    const occupyingWhere = offerOccupyingCampaignWhereClause(db.type)
+    const existingForOffer = await db.queryOne(
+      `SELECT id, campaign_id FROM campaigns WHERE ${occupyingWhere} ORDER BY updated_at DESC, id DESC LIMIT 1`,
+      [offerId, userId]
+    ) as { id: number; campaign_id: string | null } | undefined
+
+    if (existingForOffer) {
+      console.log(
+        `[GoogleAds Sync] Offer ${offerId} 已有 Campaign ${existingForOffer.id}，更新 Google 关联而非新建`
+      )
+      await db.exec(
+        `UPDATE campaigns SET
+          campaign_id = ?,
+          campaign_name = ?,
+          budget_amount = ?,
+          budget_type = ?,
+          status = ?,
+          google_ads_account_id = ?,
+          synced_from_google_ads = ${db.type === 'postgres' ? 'TRUE' : '1'},
+          needs_offer_completion = ${db.type === 'postgres' ? 'FALSE' : '0'},
+          max_cpc = ?,
+          google_campaign_id = ?,
+          google_ad_group_id = ?,
+          google_ad_id = ?,
+          updated_at = ?
+        WHERE id = ? AND user_id = ?`,
+        [
+          campaign.campaign_id,
+          campaign.campaign_name,
+          campaign.budget_amount,
+          campaign.budget_type,
+          campaign.status,
+          googleAdsAccountId,
+          campaign.cpc_bid_ceiling_micros || null,
+          campaign.campaign_id,
+          adGroupId != null ? String(adGroupId) : null,
+          adGroupId != null && adId != null ? `${adGroupId}~${adId}` : null,
+          new Date(),
+          existingForOffer.id,
+          userId,
+        ]
+      )
+      return campaign.campaign_id
+    }
+  }
+
+  console.log(`[GoogleAds Sync] Creating Campaign ${campaign.campaign_id} for User ${userId}`)
+  const campaignName = campaign.campaign_name
+  const googleAdGroupId = adGroupId != null ? String(adGroupId) : null
+  const googleAdId = adGroupId != null && adId != null ? `${adGroupId}~${adId}` : null
+  await db.exec(
       `INSERT INTO campaigns (
         user_id,
         google_ads_account_id,
@@ -1192,15 +1242,14 @@ async function saveCampaignToDatabase(params: {
         offerId || null,  // 🆕 如果提供了 offerId，则关联
         campaign.cpc_bid_ceiling_micros || null,  // 🆕 可选的 max_cpc 字段
         campaign.campaign_id,  // google_campaign_id
-        `${adGroupId}` || null,  // 🆕 可选的 ad_group_id 字段
-        `${adGroupId}~${adId}` || null,  // 🆕 可选的 ad_id 字段
+        googleAdGroupId,
+        googleAdId,
         new Date(),
         new Date(),
       ]
     )
-    console.log(`[GoogleAds Sync] Created Campaign ${campaign.campaign_id} for User ${userId}`)
-    return campaign.campaign_id
-  }
+  console.log(`[GoogleAds Sync] Created Campaign ${campaign.campaign_id} for User ${userId}`)
+  return campaign.campaign_id
 }
 
 /**

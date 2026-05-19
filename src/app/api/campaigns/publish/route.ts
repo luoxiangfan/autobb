@@ -38,6 +38,13 @@ import { isGoogleAdsAccountAccessError } from '@/lib/google-ads-login-customer'
 import { applyCampaignTransitionByGoogleCampaignIds } from '@/lib/campaign-state-machine'
 import { normalizeCampaignPublishRequestBody } from '@/lib/autoads-request-normalizers'
 import { invalidateOfferCache } from '@/lib/api-cache'
+import {
+  CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,
+  abandonStalePendingCampaignsForOffer,
+  getActiveCampaignConflictForOffer,
+  isCampaignOfferUniqueViolation,
+  rollbackPendingCampaignAfterEnqueueFailure,
+} from '@/lib/campaign-offer-constraint'
 
 const SINGLE_BRAND_PER_ACCOUNT_ENFORCED = (
   process.env.CAMPAIGN_PUBLISH_ENFORCE_SINGLE_BRAND_PER_ACCOUNT
@@ -140,7 +147,7 @@ function extractAllSuggestions(analysis: ScoreAnalysis): string[] {
  * Request Body (🔧 修复2025-12-11: 统一使用camelCase):
  * {
  *   offerId: number
- *   adCreativeId: number  // 单创意模式：指定创意ID；智能优化模式：忽略（自动选择多个）
+ *   adCreativeId: number  // 单创意模式：指定创意ID；智能优化模式：忽略（自动选 launch_score 最高 1 条）
  *   googleAdsAccountId: number
  *   campaignConfig: {
  *     campaignName: string
@@ -157,8 +164,8 @@ function extractAllSuggestions(analysis: ScoreAnalysis): string[] {
  *     negativeKeywordMatchType?: Record<string, 'EXACT' | 'PHRASE' | 'BROAD'>
  *   }
  *   pauseOldCampaigns: boolean
- *   enableSmartOptimization?: boolean  // 启用智能优化（默认false）
- *   variantCount?: number              // 创意变体数量（默认3，范围2-5）
+ *   enableSmartOptimization?: boolean  // 启用智能优化：自动选用 launch_score 最高的 1 个创意（1 Campaign + 1 Ad Group）
+ *   variantCount?: number              // 已废弃，保留字段兼容旧客户端
  * }
  */
 export async function POST(request: NextRequest) {
@@ -185,7 +192,6 @@ export async function POST(request: NextRequest) {
       pauseOldCampaigns,
       enableCampaignImmediately = false,  // 是否立即启用Campaign，默认false（PAUSED状态）
       enableSmartOptimization = false,
-      variantCount = 3,
       forcePublish, // 强制发布标志（用于绕过40-80分警告）
       forceLaunch, // 兼容历史字段（等价于 forcePublish）
       skipLaunchScore, // 兼容历史字段（等价于 forcePublish）
@@ -197,7 +203,6 @@ export async function POST(request: NextRequest) {
       pause_old_campaigns,
       enable_campaign_immediately,
       enable_smart_optimization,
-      variant_count,
       force_publish,
       force_launch,
       skip_launch_score
@@ -211,7 +216,6 @@ export async function POST(request: NextRequest) {
     const _pauseOldCampaigns = pauseOldCampaigns ?? pause_old_campaigns
     const _enableCampaignImmediately = enableCampaignImmediately ?? enable_campaign_immediately ?? false
     const _enableSmartOptimization = enableSmartOptimization ?? enable_smart_optimization ?? false
-    const _variantCount = variantCount ?? variant_count ?? 3
     const _forcePublish = [
       forcePublish,
       force_publish,
@@ -236,18 +240,6 @@ export async function POST(request: NextRequest) {
     if (!_enableSmartOptimization && !_adCreativeId) {
       const error = createError.requiredField('adCreativeId')
       return NextResponse.json(error.toJSON(), { status: error.httpStatus })
-    }
-
-    // 智能优化模式验证variantCount
-    if (_enableSmartOptimization) {
-      if (_variantCount < 2 || _variantCount > 5) {
-        const error = createError.invalidParameter({
-          field: 'variantCount',
-          value: _variantCount,
-          constraint: 'Must be between 2 and 5'
-        })
-        return NextResponse.json(error.toJSON(), { status: error.httpStatus })
-      }
     }
 
     const normalizeName = (value: unknown): string => (
@@ -281,14 +273,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(error.toJSON(), { status: error.httpStatus })
     }
 
-    // 4.5. 检查 Offer 是否已有广告系列（一对一约束）
-    const isDeletedCheck = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
-    const existingCampaign = await db.queryOne(`
-      SELECT id, campaign_name, creation_status, status
-      FROM campaigns
-      WHERE offer_id = ? AND user_id = ? AND ${isDeletedCheck}
-      LIMIT 1
-    `, [_offerId, userId]) as any
+    // 4.5. 检查 Offer 是否已有广告系列（严格一对一约束）
+    await abandonStalePendingCampaignsForOffer(_offerId, userId)
+    const existingCampaign = await getActiveCampaignConflictForOffer(_offerId, userId)
 
     if (existingCampaign) {
       const error = createError.invalidParameter({
@@ -298,7 +285,7 @@ export async function POST(request: NextRequest) {
       })
       return NextResponse.json({
         ...error.toJSON(),
-        message: '该 Offer 已有关联的广告系列，一个 Offer 只能发布一个广告系列',
+        message: CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,
         existingCampaign: {
           id: existingCampaign.id,
           campaignName: existingCampaign.campaign_name,
@@ -312,26 +299,30 @@ export async function POST(request: NextRequest) {
     let creatives: any[] = []
 
     if (_enableSmartOptimization) {
-      // 智能优化模式：选择多个最优创意
-      creatives = await db.query(`
-        SELECT id, headlines, descriptions, keywords, negative_keywords, callouts, sitelinks, final_url, final_url_suffix, launch_score, keywords_with_volume, theme
+      const bestCreative = await db.queryOne(`
+        SELECT id, headlines, descriptions, keywords, negative_keywords, callouts, sitelinks, final_url, final_url_suffix, launch_score, keywords_with_volume, theme, path_1, path_2
         FROM ad_creatives
         WHERE offer_id = ? AND user_id = ?
-        ORDER BY launch_score DESC, created_at DESC
-        LIMIT ?
-      `, [_offerId, userId, _variantCount]) as any[]
+        ORDER BY
+          CASE WHEN launch_score IS NULL THEN 0 ELSE 1 END DESC,
+          launch_score DESC,
+          created_at DESC
+        LIMIT 1
+      `, [_offerId, userId]) as any
 
-      if (creatives.length < _variantCount) {
+      if (!bestCreative) {
         const error = createError.invalidParameter({
           field: 'creatives',
-          message: `需要至少${_variantCount}个创意，但只找到${creatives.length}个`
+          message: '智能优化模式需要至少 1 个广告创意',
         })
         return NextResponse.json(error.toJSON(), { status: error.httpStatus })
       }
+
+      creatives = [bestCreative]
     } else {
       // 单创意模式：验证指定的创意
       const creative = await db.queryOne(`
-        SELECT id, headlines, descriptions, keywords, negative_keywords, callouts, sitelinks, final_url, final_url_suffix, is_selected, keywords_with_volume, theme
+        SELECT id, headlines, descriptions, keywords, negative_keywords, callouts, sitelinks, final_url, final_url_suffix, is_selected, keywords_with_volume, theme, path_1, path_2
         FROM ad_creatives
         WHERE id = ? AND offer_id = ? AND user_id = ?
       `, [_adCreativeId, _offerId, userId]) as any
@@ -1064,108 +1055,96 @@ export async function POST(request: NextRequest) {
     const abTestId: number | null = null
     // A/B测试记录创建已移除 - 原代码: INSERT INTO ab_tests ...
 
-    // 9. 计算流量分配（预算分配）
-    const trafficAllocations = creatives.map((_, index) => {
-      // 均匀分配流量
-      return 1.0 / creatives.length
-    })
-
-    // 10. 批量创建Campaigns
-    const createdCampaigns: any[] = []
+    // 9–10. 严格一对一：1 条本地 Campaign + 1 个 Ad Group（智能优化仅选最高分创意）
+    const selectedCreative = creatives[0]
     const now = new Date().toISOString()
 
-    for (let i = 0; i < creatives.length; i++) {
-      const creative = creatives[i]
-      const variantName = creatives.length > 1 ? String.fromCharCode(65 + i) : '' // A, B, C...
-      const variantBudget = _campaignConfig.budgetAmount * trafficAllocations[i]
+    const naming = generateNamingScheme({
+      offer: {
+        id: _offerId,
+        brand: offer.brand,
+        offerName: offer.offer_name || undefined,
+        category: offer.category || undefined,
+      },
+      config: {
+        targetCountry: _campaignConfig.targetCountry,
+        budgetAmount: _campaignConfig.budgetAmount,
+        budgetType: _campaignConfig.budgetType,
+        biddingStrategy: _campaignConfig.biddingStrategy,
+        maxCpcBid: _campaignConfig.maxCpcBid,
+      },
+      creative: {
+        id: selectedCreative.id,
+        theme: selectedCreative.theme || undefined,
+      },
+      smartOptimization: _enableSmartOptimization ? { enabled: true } : undefined,
+    })
 
-      // 🔥 使用统一命名规范生成名称
-      const naming = generateNamingScheme({
-        offer: {
-          id: _offerId,
-          brand: offer.brand,
-          offerName: offer.offer_name || undefined,
-          category: offer.category || undefined
-        },
-        config: {
-          targetCountry: _campaignConfig.targetCountry,
-          budgetAmount: variantBudget,
-          budgetType: _campaignConfig.budgetType,
-          biddingStrategy: _campaignConfig.biddingStrategy,
-          maxCpcBid: _campaignConfig.maxCpcBid
-        },
-        creative: {
-          id: creative.id,
-          theme: creative.theme || undefined
-        },
-        smartOptimization: _enableSmartOptimization ? {
-          enabled: true,
-          variantIndex: i + 1,
-          totalVariants: creatives.length
-        } : undefined
-      })
+    const allowCustomAdGroupName = Boolean(baseAdGroupName && parsedAdGroupName)
+    const resolvedCampaignName = naming.associativeCampaignName || naming.campaignName
+    const resolvedAdGroupName = allowCustomAdGroupName ? baseAdGroupName : naming.adGroupName
+    const resolvedAdName = baseAdName || naming.adName
+    const campaignConfigForCreative = buildAlignedCampaignConfigForCreative(
+      selectedCreative,
+      'persist_single'
+    )
 
-      const allowCustomAdGroupName = Boolean(baseAdGroupName && parsedAdGroupName)
+    const effectiveCreativeForPersistence = buildEffectiveCreative({
+      dbCreative: {
+        headlines: selectedCreative.headlines,
+        descriptions: selectedCreative.descriptions,
+        keywords: selectedCreative.keywords,
+        negativeKeywords: selectedCreative.negative_keywords,
+        callouts: selectedCreative.callouts,
+        sitelinks: selectedCreative.sitelinks,
+        finalUrl: selectedCreative.final_url,
+        finalUrlSuffix: selectedCreative.final_url_suffix,
+      },
+      campaignConfig: campaignConfigForCreative,
+      offerUrlFallback: offer.url,
+    })
 
-      // 本地与远端（Google Ads）必须一致：以 associativeCampaignName（优先）为准
-      const resolvedCampaignName = naming.associativeCampaignName || naming.campaignName
-      const resolvedAdGroupName = _enableSmartOptimization
-        ? (!allowCustomAdGroupName
-            ? naming.adGroupName
-            : (parsedAdGroupName!.creativeId === creative.id ? baseAdGroupName : naming.adGroupName))
-        : (allowCustomAdGroupName ? baseAdGroupName : naming.adGroupName)
-      const resolvedAdName = baseAdName || naming.adName
-      const campaignConfigForCreative = buildAlignedCampaignConfigForCreative(
-        creative,
-        `persist_${variantName || 'single'}`
-      )
+    const persistedKeywordConfig = resolveTaskCampaignKeywords({
+      configuredKeywords: campaignConfigForCreative.keywords,
+      configuredNegativeKeywords: campaignConfigForCreative.negativeKeywords,
+      fallbackKeywords: effectiveCreativeForPersistence.keywords,
+      fallbackNegativeKeywords: effectiveCreativeForPersistence.negativeKeywords,
+    })
 
-      const effectiveCreativeForPersistence = buildEffectiveCreative({
-        dbCreative: {
-          headlines: creative.headlines,
-          descriptions: creative.descriptions,
-          keywords: creative.keywords,
-          negativeKeywords: creative.negative_keywords,
-          callouts: creative.callouts,
-          sitelinks: creative.sitelinks,
-          finalUrl: creative.final_url,
-          finalUrlSuffix: creative.final_url_suffix,
-        },
-        campaignConfig: campaignConfigForCreative,
-        offerUrlFallback: offer.url,
-      })
+    const publishNaming = {
+      ...naming,
+      campaignName: resolvedCampaignName,
+      associativeCampaignName: resolvedCampaignName,
+      adGroupName: resolvedAdGroupName,
+      adName: resolvedAdName || naming.adName || '',
+    }
 
-      const persistedKeywordConfig = resolveTaskCampaignKeywords({
-        configuredKeywords: campaignConfigForCreative.keywords,
-        configuredNegativeKeywords: campaignConfigForCreative.negativeKeywords,
-        fallbackKeywords: effectiveCreativeForPersistence.keywords,
-        fallbackNegativeKeywords: effectiveCreativeForPersistence.negativeKeywords,
-      })
+    const primaryCampaignConfig: Record<string, any> = {
+      ...campaignConfigForCreative,
+      campaignName: resolvedCampaignName,
+      adGroupName: resolvedAdGroupName,
+      keywords: persistedKeywordConfig.keywords,
+      negativeKeywords: persistedKeywordConfig.negativeKeywords,
+      budgetAmount: _campaignConfig.budgetAmount,
+      budgetType: _campaignConfig.budgetType,
+      ...(resolvedAdName ? { adName: resolvedAdName } : {}),
+      ...(_enableSmartOptimization
+        ? { smartOptimization: { enabled: true, selectedCreativeId: selectedCreative.id } }
+        : {}),
+    }
 
-      const normalizedCampaignConfig = {
-        ...campaignConfigForCreative,
-        campaignName: resolvedCampaignName,
-        adGroupName: resolvedAdGroupName,
-        keywords: persistedKeywordConfig.keywords,
-        negativeKeywords: persistedKeywordConfig.negativeKeywords,
-        ...(resolvedAdName ? { adName: resolvedAdName } : {})
-      }
-      const normalizedBudgetType =
-        (normalizedCampaignConfig as Record<string, any>).budgetType ?? _campaignConfig.budgetType
-      const normalizedMaxCpc = Number((normalizedCampaignConfig as Record<string, any>).maxCpcBid)
-      const persistedMaxCpc = Number.isFinite(normalizedMaxCpc) && normalizedMaxCpc > 0
-        ? normalizedMaxCpc
-        : null
-      const namingWithOverrides = {
-        ...naming,
-        campaignName: resolvedCampaignName,
-        associativeCampaignName: resolvedCampaignName,
-        adGroupName: resolvedAdGroupName,
-        adName: resolvedAdName || naming.adName
-      }
+    const normalizedBudgetType = primaryCampaignConfig.budgetType ?? _campaignConfig.budgetType
+    const normalizedMaxCpc = Number(primaryCampaignConfig.maxCpcBid)
+    const persistedMaxCpc = Number.isFinite(normalizedMaxCpc) && normalizedMaxCpc > 0
+      ? normalizedMaxCpc
+      : null
 
-      console.log(`📝 生成命名: Campaign=${resolvedCampaignName}, AdGroup=${resolvedAdGroupName}, Ad=${resolvedAdName || naming.adName}`)
+    console.log(
+      `📝 生成命名: Campaign=${resolvedCampaignName}, AdGroup=${resolvedAdGroupName}, Ad=${resolvedAdName || naming.adName}`
+    )
 
+    let campaignId: number
+    try {
       const campaignInsert = await db.exec(`
         INSERT INTO campaigns (
           user_id,
@@ -1190,212 +1169,208 @@ export async function POST(request: NextRequest) {
         userId,
         _offerId,
         resolvedGoogleAdsAccountId,
-        resolvedCampaignName,  // 🔥 使用用户配置或规范化的Campaign名称
-        variantBudget,
+        publishNaming.associativeCampaignName || publishNaming.campaignName,
+        _campaignConfig.budgetAmount,
         normalizedBudgetType,
         persistedMaxCpc,
-        creative.id,
-        JSON.stringify(normalizedCampaignConfig),
+        selectedCreative.id,
+        JSON.stringify(primaryCampaignConfig),
         _pauseOldCampaigns ? 1 : 0,
-        _enableSmartOptimization ? 1 : 0,
+        0,
         abTestId,
-        trafficAllocations[i],
+        1,
         now,
-        now
+        now,
       ])
-
-      const campaignId = getInsertedId(campaignInsert, db.type)
-      
-      // 🔧 创建备份（用于通过备份重新创建）
-      try {
-        await db.exec(`
-          INSERT INTO campaign_backups (
-            user_id,
-            offer_id,
-            ad_creative_id,
-            campaign_data,
-            campaign_config,
-            backup_type,
-            backup_source,
-            backup_version,
-            custom_name,
-            campaign_name,
-            budget_amount,
-            budget_type,
-            target_cpa,
-            max_cpc,
-            status,
-            google_ads_account_id,
-            created_at,
-            updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
-          userId,
-          _offerId,
-          creative.id,  // ad_creative_id
-          {
-            campaign_id: campaignId,
-            offer_id: _offerId,
-            google_ads_account_id: resolvedGoogleAdsAccountId,
-            campaign_name: resolvedCampaignName,
-            budget_amount: variantBudget,
-            budget_type: normalizedBudgetType,
-            max_cpc: persistedMaxCpc,
-            target_cpa: null,
-            status: 'PAUSED',
-          },
-          normalizedCampaignConfig,
-          'auto',  // backup_type
-          'publish',  // backup_source
-          1,  // backup_version
-          null,  // custom_name
-          resolvedCampaignName,
-          variantBudget,
-          normalizedBudgetType,
-          null,  // target_cpa
-          persistedMaxCpc,
-          'PAUSED',
-          resolvedGoogleAdsAccountId,
-          now,
-          now
-        ])
-        console.log(`📦 已创建 Campaign 备份 campaignId=${campaignId}, creativeId=${creative.id}`)
-      } catch (backupError) {
-        console.error('[Publish] 创建备份失败:', backupError)
-        // 备份失败不影响主要流程
+      campaignId = getInsertedId(campaignInsert, db.type)
+    } catch (insertError) {
+      if (isCampaignOfferUniqueViolation(insertError)) {
+        const raceConflict = await getActiveCampaignConflictForOffer(_offerId, userId)
+        const error = createError.invalidParameter({
+          field: 'offerId',
+          value: _offerId,
+          constraint: 'One Offer can only have one Campaign',
+        })
+        return NextResponse.json({
+          ...error.toJSON(),
+          message: CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,
+          ...(raceConflict
+            ? {
+                existingCampaign: {
+                  id: raceConflict.id,
+                  campaignName: raceConflict.campaign_name,
+                  creationStatus: raceConflict.creation_status,
+                  status: raceConflict.status,
+                },
+              }
+            : {}),
+        }, { status: 409 })
       }
-      
-      createdCampaigns.push({
-        campaignId,
-        creative,
-        variantName,
-        variantBudget,
-        naming: namingWithOverrides,  // 🔥 保存命名方案供后续使用
-        campaignConfig: normalizedCampaignConfig,
-      })
+      throw insertError
     }
 
-    // 11. 批量发布到Google Ads（改为异步队列处理）
-    // 🚀 优化(2025-12-18)：使用统一队列系统避免504超时
-    //   - 入队Campaign发布任务，立即返回202 Accepted
-    //   - 前端可轮询campaign.creation_status查看进度
+    try {
+      await db.exec(`
+        INSERT INTO campaign_backups (
+          user_id,
+          offer_id,
+          ad_creative_id,
+          campaign_data,
+          campaign_config,
+          backup_type,
+          backup_source,
+          backup_version,
+          custom_name,
+          campaign_name,
+          budget_amount,
+          budget_type,
+          target_cpa,
+          max_cpc,
+          status,
+          google_ads_account_id,
+          created_at,
+          updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        userId,
+        _offerId,
+        selectedCreative.id,
+        {
+          campaign_id: campaignId,
+          offer_id: _offerId,
+          google_ads_account_id: resolvedGoogleAdsAccountId,
+          campaign_name: publishNaming.associativeCampaignName || publishNaming.campaignName,
+          budget_amount: _campaignConfig.budgetAmount,
+          budget_type: normalizedBudgetType,
+          max_cpc: persistedMaxCpc,
+          target_cpa: null,
+          status: 'PAUSED',
+        },
+        primaryCampaignConfig,
+        'auto',
+        'publish',
+        1,
+        null,
+        publishNaming.associativeCampaignName || publishNaming.campaignName,
+        _campaignConfig.budgetAmount,
+        normalizedBudgetType,
+        null,
+        persistedMaxCpc,
+        'PAUSED',
+        resolvedGoogleAdsAccountId,
+        now,
+        now,
+      ])
+      console.log(`📦 已创建 Campaign 备份 campaignId=${campaignId}, creativeId=${selectedCreative.id}`)
+    } catch (backupError) {
+      console.error('[Publish] 创建备份失败:', backupError)
+    }
+
+    const effectiveCreativeForTask = buildEffectiveCreative({
+      dbCreative: {
+        headlines: selectedCreative.headlines,
+        descriptions: selectedCreative.descriptions,
+        keywords: selectedCreative.keywords,
+        negativeKeywords: selectedCreative.negative_keywords,
+        callouts: selectedCreative.callouts,
+        sitelinks: selectedCreative.sitelinks,
+        finalUrl: selectedCreative.final_url,
+        finalUrlSuffix: selectedCreative.final_url_suffix,
+      },
+      campaignConfig: primaryCampaignConfig,
+      offerUrlFallback: offer.url,
+    })
+
+    const taskKeywordConfig = resolveTaskCampaignKeywords({
+      configuredKeywords: primaryCampaignConfig.keywords,
+      configuredNegativeKeywords: primaryCampaignConfig.negativeKeywords,
+      fallbackKeywords: effectiveCreativeForTask.keywords,
+      fallbackNegativeKeywords: effectiveCreativeForTask.negativeKeywords,
+    })
+
+    // 11. 发布到 Google Ads（1 Campaign + 1 Ad Group，异步队列）
     const publishResults: any[] = []
     const failedCampaigns: any[] = []
 
     try {
-      // 获取队列管理器实例
       const { getOrCreateQueueManager } = await import('@/lib/queue/init-queue')
       const queue = await getOrCreateQueueManager()
 
-      for (const { campaignId, creative, variantName, naming, campaignConfig: campaignConfigForTask } of createdCampaigns) {
-        try {
-          console.log(`🚀 队列化Campaign发布任务 ${campaignId} (Variant ${variantName || 'Single'})...`)
-
-          const effectiveCreativeForTask = buildEffectiveCreative({
-            dbCreative: {
-              headlines: creative.headlines,
-              descriptions: creative.descriptions,
-              keywords: creative.keywords,
-              negativeKeywords: creative.negative_keywords,
-              callouts: creative.callouts,
-              sitelinks: creative.sitelinks,
-              finalUrl: creative.final_url,
-              finalUrlSuffix: creative.final_url_suffix
-            },
-            campaignConfig: campaignConfigForTask,
-            offerUrlFallback: offer.url
-          })
-
-          const taskKeywordConfig = resolveTaskCampaignKeywords({
-            configuredKeywords: campaignConfigForTask.keywords,
-            configuredNegativeKeywords: campaignConfigForTask.negativeKeywords,
-            fallbackKeywords: effectiveCreativeForTask.keywords,
-            fallbackNegativeKeywords: effectiveCreativeForTask.negativeKeywords,
-          })
-
-          if (taskKeywordConfig.usedKeywordFallback && taskKeywordConfig.keywords.length > 0) {
-            console.log(`[Publish] campaignConfig.keywords缺失，回退到创意关键词: ${taskKeywordConfig.keywords.length}个`)
-          }
-          if (taskKeywordConfig.usedNegativeKeywordFallback && taskKeywordConfig.negativeKeywords.length > 0) {
-            console.log(`[Publish] campaignConfig.negativeKeywords缺失，回退到创意否定词: ${taskKeywordConfig.negativeKeywords.length}个`)
-          }
-
-          // 🆕 使用队列系统处理Campaign发布（避免504超时）
-          const taskData: any = {
-            campaignId: campaignId,
-            offerId: _offerId,
-            googleAdsAccountId: resolvedGoogleAdsAccountId,
-            userId: userId,
-            naming: naming, // 🔥 新增：传递规范化命名
-            marketingObjective: campaignConfigForTask.marketingObjective || 'WEB_TRAFFIC', // 🔧 新增(2025-12-19): 营销目标
-            campaignConfig: {
-              targetCountry: campaignConfigForTask.targetCountry,
-              targetLanguage: campaignConfigForTask.targetLanguage,
-              biddingStrategy: campaignConfigForTask.biddingStrategy,
-              budgetAmount: campaignConfigForTask.budgetAmount,
-              budgetType: campaignConfigForTask.budgetType,
-              maxCpcBid: campaignConfigForTask.maxCpcBid,
-              keywords: taskKeywordConfig.keywords,
-              negativeKeywords: taskKeywordConfig.negativeKeywords,
-              negativeKeywordMatchType:
-                campaignConfigForTask.negativeKeywordMatchType ||
-                campaignConfigForTask.negativeKeywordsMatchType ||
-                undefined
-            },
-            creative: {
-              id: creative.id,
-              headlines: effectiveCreativeForTask.headlines,
-              descriptions: effectiveCreativeForTask.descriptions,
-              finalUrl: effectiveCreativeForTask.finalUrl,
-              finalUrlSuffix: effectiveCreativeForTask.finalUrlSuffix,
-              path1: creative.path_1,
-              path2: creative.path_2,
-              callouts: effectiveCreativeForTask.callouts,
-              sitelinks: effectiveCreativeForTask.sitelinks,
-              keywordsWithVolume: creative.keywords_with_volume
-                ? JSON.parse(creative.keywords_with_volume)
-                : undefined
-            },
-            brandName: offer.brand,
-            forcePublish: _forcePublish,
-            enableCampaignImmediately: _enableCampaignImmediately,
-            pauseOldCampaigns: _pauseOldCampaigns
-          }
-
-          // 入队任务
-          await queue.enqueue(
-            'campaign-publish',
-            taskData,
-            userId,
-            {
-              parentRequestId,
-              priority: 'high'
-            }
-          )
-
-          console.log(`✅ Campaign发布任务已入队 ID: ${campaignId}`)
-
-          // 立即返回成功状态
-          publishResults.push({
-            id: campaignId,
-            variantName: variantName,
-            status: 'queued',
-            creationStatus: 'pending',
-            message: '广告系列发布任务已提交到后台队列处理'
-          })
-
-        } catch (variantError: any) {
-          // 入队失败处理
-          const errorMessage = variantError?.message || '队列任务创建失败'
-          console.error(`❌ Campaign ${campaignId} 队列化失败:`, errorMessage)
-
-          // 标记为失败
-          failedCampaigns.push({
-            id: campaignId,
-            variantName: variantName,
-            error: errorMessage
-          })
+      try {
+        const taskData: any = {
+          campaignId,
+          offerId: _offerId,
+          googleAdsAccountId: resolvedGoogleAdsAccountId,
+          userId,
+          naming: publishNaming,
+          marketingObjective: _campaignConfig.marketingObjective || 'WEB_TRAFFIC',
+          campaignConfig: {
+            targetCountry: primaryCampaignConfig.targetCountry,
+            targetLanguage: primaryCampaignConfig.targetLanguage,
+            biddingStrategy: primaryCampaignConfig.biddingStrategy,
+            budgetAmount: _campaignConfig.budgetAmount,
+            budgetType: primaryCampaignConfig.budgetType ?? _campaignConfig.budgetType,
+            maxCpcBid: primaryCampaignConfig.maxCpcBid,
+            keywords: taskKeywordConfig.keywords,
+            negativeKeywords: taskKeywordConfig.negativeKeywords,
+            negativeKeywordMatchType:
+              primaryCampaignConfig.negativeKeywordMatchType ||
+              primaryCampaignConfig.negativeKeywordsMatchType ||
+              undefined,
+          },
+          creative: {
+            id: selectedCreative.id,
+            headlines: effectiveCreativeForTask.headlines,
+            descriptions: effectiveCreativeForTask.descriptions,
+            finalUrl: effectiveCreativeForTask.finalUrl,
+            finalUrlSuffix: effectiveCreativeForTask.finalUrlSuffix,
+            path1: selectedCreative.path_1,
+            path2: selectedCreative.path_2,
+            callouts: effectiveCreativeForTask.callouts,
+            sitelinks: effectiveCreativeForTask.sitelinks,
+            keywordsWithVolume: selectedCreative.keywords_with_volume
+              ? JSON.parse(selectedCreative.keywords_with_volume)
+              : undefined,
+          },
+          brandName: offer.brand,
+          forcePublish: _forcePublish,
+          enableCampaignImmediately: _enableCampaignImmediately,
+          pauseOldCampaigns: _pauseOldCampaigns,
         }
+
+        await queue.enqueue('campaign-publish', taskData, userId, {
+          parentRequestId,
+          priority: 'high',
+        })
+
+        console.log(`✅ Campaign发布任务已入队 ID: ${campaignId}（1 Campaign + 1 Ad Group）`)
+
+        publishResults.push({
+          id: campaignId,
+          status: 'queued',
+          creationStatus: 'pending',
+          message: '广告系列发布任务已提交（1 个 Campaign + 1 个 Ad Group）',
+        })
+      } catch (enqueueError: any) {
+        const errorMessage = enqueueError?.message || '队列任务创建失败'
+        console.error(`❌ Campaign ${campaignId} 队列化失败:`, errorMessage)
+
+        const rolledBack = await rollbackPendingCampaignAfterEnqueueFailure({
+          campaignId,
+          offerId: _offerId,
+          userId,
+          reason: `队列化失败: ${errorMessage}`,
+        })
+        if (rolledBack) {
+          invalidateOfferCache(userId, Number(_offerId))
+        }
+
+        failedCampaigns.push({
+          id: campaignId,
+          error: errorMessage,
+          rolledBack,
+          canRetryPublish: rolledBack,
+        })
       }
 
       // A/B测试功能已下线 (KISS optimization 2025-12-08)
@@ -1416,9 +1391,9 @@ export async function POST(request: NextRequest) {
         pausedOldCampaigns: pausedOldCampaignsSummary,
         warnings: publishWarnings.length > 0 ? publishWarnings : undefined,
         summary: {
-          total: createdCampaigns.length,
+          total: 1,
           successful: publishResults.length,
-          failed: failedCampaigns.length
+          failed: failedCampaigns.length,
         },
         // 🔥 新增(2025-12-19): Launch Score评分结果
         launchScore: (launchScore > 0 && analysis) ? {
@@ -1434,14 +1409,29 @@ export async function POST(request: NextRequest) {
         // 🔧 修复(2025-12-19): 强调这是异步队列状态，不是最终结果
         // 前端应该轮询campaign.creation_status而不仅仅依赖HTTP响应码
         message: publishResults.length > 0
-          ? `${publishResults.length}个广告系列已提交到后台处理，请稍候...'`
-          : '所有广告系列队列化失败',
+          ? '1 个广告系列（1 Campaign + 1 Ad Group）已提交到后台处理，请稍候...'
+          : '广告系列队列化失败',
         note: '请通过轮询 campaign.creation_status 监听实际发布结果。可能值: pending(处理中) | synced(成功) | failed(失败)'
       }, { status: 202 })
 
     } catch (error: any) {
       // 批量队列化的系统级错误
       console.error('Batch publish queue error:', error)
+
+      if (campaignId > 0) {
+        const rolledBack = await rollbackPendingCampaignAfterEnqueueFailure({
+          campaignId,
+          offerId: _offerId,
+          userId,
+          reason: `队列系统错误: ${error?.message || 'unknown'}`,
+        }).catch((rollbackError: any) => {
+          console.error('[Publish] 入队失败后回滚 campaign 失败:', rollbackError?.message || rollbackError)
+          return false
+        })
+        if (rolledBack) {
+          invalidateOfferCache(userId, Number(_offerId))
+        }
+      }
 
       // OAuth refresh token 过期/被撤销：提示前端引导用户重新授权，避免用户反复重试
       if (isOAuthTokenExpiredOrRevoked(error)) {

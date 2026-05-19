@@ -24,10 +24,20 @@ export interface ColumnDef {
   generated?: { expression: string; stored: boolean } // PostgreSQL only
 }
 
+/** 未软删除行的 partial index 谓词（SQLite 用 0/1，PostgreSQL 用 FALSE） */
+export const INDEX_WHERE_NOT_DELETED = {
+  sqlite: 'is_deleted = 0',
+  postgres: 'is_deleted = FALSE',
+} as const
+
 export interface IndexDef {
   name: string
   columns: string[]
   unique?: boolean
+  /** Partial index 谓词（SQLite）；与 wherePostgres 成对使用 */
+  whereSqlite?: string
+  /** Partial index 谓词（PostgreSQL）；与 whereSqlite 成对使用 */
+  wherePostgres?: string
 }
 
 export interface TableDef {
@@ -263,12 +273,23 @@ export const TABLES: TableDef[] = [
       { name: 'traffic_allocation', type: 'REAL', default: 1.0, check: 'traffic_allocation >= 0 AND traffic_allocation <= 1' },
       { name: 'synced_from_google_ads', type: 'BOOLEAN', notNull: true, default: false },  // 是否从 Google Ads 同步
       { name: 'needs_offer_completion', type: 'BOOLEAN', notNull: true, default: false },  // 是否需要完善 Offer 信息
+      { name: 'is_deleted', type: 'BOOLEAN', notNull: true, default: false },
+      { name: 'deleted_at', type: 'TIMESTAMP' },
       { name: 'created_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
       { name: 'updated_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
     ],
     indexes: [
       { name: 'idx_campaigns_user_id', columns: ['user_id'] },
       { name: 'idx_campaigns_offer_id', columns: ['offer_id'] },
+      { name: 'idx_campaigns_is_deleted', columns: ['is_deleted'] },
+      { name: 'idx_campaigns_user_is_deleted', columns: ['user_id', 'is_deleted'] },
+      {
+        name: 'idx_campaigns_offer_id_active_unique',
+        columns: ['offer_id'],
+        unique: true,
+        whereSqlite: INDEX_WHERE_NOT_DELETED.sqlite,
+        wherePostgres: INDEX_WHERE_NOT_DELETED.postgres,
+      },
       { name: 'idx_campaigns_is_test_variant', columns: ['is_test_variant'] },
       { name: 'idx_campaigns_ab_test_id', columns: ['ab_test_id'] },
     ],

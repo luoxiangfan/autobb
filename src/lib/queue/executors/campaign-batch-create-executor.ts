@@ -16,6 +16,7 @@
 import type { Task } from '../types'
 import { getDatabase } from '@/lib/db'
 import { createCampaignFromBackup } from '@/lib/campaign-backups'
+import { getActiveCampaignConflictForOffer } from '@/lib/campaign-offer-constraint'
 import { getInsertedId } from '@/lib/db-helpers'
 
 /**
@@ -71,11 +72,10 @@ export async function executeCampaignBatchCreate(
           continue
         }
 
-        // 检查是否已有活跃广告系列（避免重复创建）
-        const existingCampaign = await db.queryOne(`
-          SELECT id FROM campaigns
-          WHERE offer_id = ? AND user_id = ? AND is_deleted = 0
-        `, [backup.offer_id, task.userId]) as { id: number } | undefined
+        const existingCampaign = await getActiveCampaignConflictForOffer(
+          backup.offer_id,
+          task.userId
+        )
 
         if (existingCampaign) {
           failed++

@@ -327,4 +327,52 @@ describe('POST /api/campaigns/publish URL alignment', () => {
       expect.any(Object)
     )
   })
+
+  it('rolls back pending campaign when enqueue fails so offer can be republished', async () => {
+    const { db } = createMockDb()
+    mocks.getDatabase.mockResolvedValue(db)
+    mocks.queueEnqueue.mockRejectedValueOnce(new Error('redis unavailable'))
+
+    const req = new NextRequest('http://localhost/api/campaigns/publish', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        offerId: 11,
+        adCreativeId: 22,
+        googleAdsAccountId: 33,
+        pauseOldCampaigns: false,
+        campaignConfig: {
+          campaignName: 'BrandA-US-20260217',
+          adGroupName: 'BrandA-US-11-22',
+          budgetAmount: 20,
+          budgetType: 'DAILY',
+          targetCountry: 'US',
+          targetLanguage: 'en',
+          biddingStrategy: 'MAXIMIZE_CLICKS',
+          maxCpcBid: 1,
+          keywords: ['kw1'],
+          negativeKeywords: [],
+        },
+      }),
+    })
+
+    const res = await POST(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(202)
+    expect(data.success).toBe(false)
+    expect(data.failed).toEqual([
+      expect.objectContaining({
+        id: 1970,
+        rolledBack: true,
+        canRetryPublish: true,
+        error: 'redis unavailable',
+      }),
+    ])
+    expect(db.exec).toHaveBeenCalledWith(
+      expect.stringContaining('creation_status = \'pending\''),
+      expect.arrayContaining(['队列化失败: redis unavailable', 1970, 7, 11])
+    )
+    expect(mocks.invalidateOfferCache).toHaveBeenCalledWith(7, 11)
+  })
 })

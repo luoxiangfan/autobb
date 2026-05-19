@@ -11,6 +11,10 @@ import {
   setCachedCampaignPerformance,
 } from '@/lib/campaigns-read-cache'
 import { getAffiliateDomainKeywords } from '@/lib/affiliate-platform-domain-keywords'
+import {
+  buildCampaignAffiliateAlignedWhereClause,
+  isCampaignAffiliateAlignedRow,
+} from '@/lib/campaign-affiliate-scope'
 
 function formatAsYmd(value: unknown): string | null {
   if (value === null || value === undefined) return null
@@ -416,10 +420,12 @@ export async function GET(request: NextRequest) {
     }
     // 将联盟平台名称映射到域名关键字（用于 LIKE 查询）
     const affiliateDomainKeywords = affiliateFilter ? getAffiliateDomainKeywords(affiliateFilter) : []
-    const affiliateLikeBindValues =
+    const hasAffiliateListScope = Boolean(
       affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0
-        ? affiliateDomainKeywords.map((k) => `%${k}%`)
-        : []
+    )
+    const affiliateLikeBindValues = hasAffiliateListScope
+      ? affiliateDomainKeywords.map((k) => `%${k}%`)
+      : []
     let startDateStr = startDateQuery || ''
     let endDateStr = endDateQuery || ''
     let rangeDays = daysBack
@@ -465,6 +471,9 @@ export async function GET(request: NextRequest) {
 
     const campaignsParallelEnabled = isPerformanceReleaseEnabled('campaignsParallel')
     const db = await getDatabase()
+    const affiliateAlignedWhereClause = hasAffiliateListScope
+      ? buildCampaignAffiliateAlignedWhereClause(db.type, 'c', 'o')
+      : ''
     const buildUserScopeClause = (column: string): string => (
       effectiveUserIds !== null
         ? `${column} IN (${effectiveUserIds.map(() => '?').join(',')})`
@@ -519,9 +528,10 @@ export async function GET(request: NextRequest) {
         LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
         LEFT JOIN offers o ON c.offer_id = o.id
         WHERE ${buildUserScopeClause('c.user_id')}
-        ${affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? `AND (
-          ${affiliateDomainKeywords.map((keyword, i) => `o.affiliate_link LIKE ?`).join(' OR ')}
+        ${hasAffiliateListScope ? `AND (
+          ${affiliateDomainKeywords.map(() => `o.affiliate_link LIKE ?`).join(' OR ')}
         )` : ''}
+        ${affiliateAlignedWhereClause}
         ${createdAtStartParam ? `AND c.created_at >= ?` : ''}
         ${createdAtEndParam ? `AND c.created_at <= ?` : ''}
         ORDER BY c.created_at DESC
@@ -872,6 +882,17 @@ export async function GET(request: NextRequest) {
 
     if (showDeletedParam === false) {
       listCampaigns = listCampaigns.filter((campaign) => !isCampaignRemovedOrDeleted(campaign))
+    }
+
+    if (hasAffiliateListScope) {
+      listCampaigns = listCampaigns.filter((campaign) =>
+        isCampaignAffiliateAlignedRow({
+          is_deleted: campaign.isDeleted,
+          creation_status: campaign.creationStatus,
+          status: campaign.status,
+          offer_is_deleted: campaign.offerIsDeleted,
+        })
+      )
     }
 
     if (searchQuery) {

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { createCampaign } from '@/lib/campaigns'
+import {
+  abandonStalePendingCampaignsForOffer,
+  getActiveCampaignConflictForOffer,
+} from '@/lib/campaign-offer-constraint'
 
 /**
  * POST /api/offers/batch-create-campaigns
@@ -93,11 +97,8 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // 🔧 检查是否已有活跃的广告系列
-        const existingCampaign = await db.queryOne(`
-          SELECT id FROM campaigns
-          WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
-        `, [offerId, userId])
+        await abandonStalePendingCampaignsForOffer(offerId, userId)
+        const existingCampaign = await getActiveCampaignConflictForOffer(offerId, userId)
 
         if (existingCampaign) {
           result.skipped++

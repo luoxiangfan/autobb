@@ -25,3 +25,32 @@ export function getAffiliateDomainKeywords(platformName: string): string[] {
 
   return platformDomainMap[platformName] || [platformName.toLowerCase()]
 }
+
+/** 判断 offer.affiliate_link 是否属于指定联盟平台（与 performance / trends 筛选一致）。 */
+export function affiliateLinkMatchesPlatform(
+  affiliateLink: string | null | undefined,
+  platformName: string
+): boolean {
+  const normalizedLink = String(affiliateLink || '').toLowerCase()
+  if (!normalizedLink) return false
+
+  return getAffiliateDomainKeywords(platformName).some((keyword) =>
+    normalizedLink.includes(String(keyword || '').toLowerCase())
+  )
+}
+
+/**
+ * 按平台名排序后的列表匹配第一个平台；无匹配返回 null。
+ */
+export function resolveAffiliatePlatformForLink(
+  affiliateLink: string | null | undefined,
+  platformNames: string[]
+): string | null {
+  const sorted = [...platformNames].sort((a, b) => a.localeCompare(b))
+  for (const platformName of sorted) {
+    if (affiliateLinkMatchesPlatform(affiliateLink, platformName)) {
+      return platformName
+    }
+  }
+  return null
+}

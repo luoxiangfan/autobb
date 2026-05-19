@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
+import { offerOccupyingCampaignWhereClause } from '@/lib/campaign-offer-constraint'
 
 /**
  * GET /api/offers/:id/campaigns/status?campaignId=:campaignId
@@ -33,20 +34,23 @@ export async function GET(
     }
 
     if (!campaignId) {
-      // 向后兼容：某些OpenClaw流程会遗漏campaignId，兜底返回该Offer最新Campaign状态
+      // 向后兼容：某些 OpenClaw 流程会遗漏 campaignId，返回仍占用槽位的 Campaign 状态
       const db = await getDatabase()
+      const offerId = parseInt(id)
+      const numericUserId = parseInt(userId)
+      const occupyingWhere = offerOccupyingCampaignWhereClause(db.type)
       const latestCampaign = await db.queryOne(
         `SELECT
           id,
           offer_id,
           creation_status,
           creation_error,
-          google_campaign_id
+          COALESCE(NULLIF(TRIM(google_campaign_id), ''), NULLIF(TRIM(campaign_id), '')) AS google_campaign_id
         FROM campaigns
-        WHERE offer_id = ? AND user_id = ?
-        ORDER BY created_at DESC
+        WHERE ${occupyingWhere}
+        ORDER BY updated_at DESC, id DESC
         LIMIT 1`,
-        [parseInt(id), parseInt(userId)]
+        [offerId, numericUserId]
       ) as any
 
       if (!latestCampaign) {
@@ -77,7 +81,7 @@ export async function GET(
         offer_id,
         creation_status,
         creation_error,
-        google_campaign_id
+        COALESCE(NULLIF(TRIM(google_campaign_id), ''), NULLIF(TRIM(campaign_id), '')) AS google_campaign_id
       FROM campaigns
       WHERE id = ? AND offer_id = ? AND user_id = ?`,
       [parseInt(campaignId), parseInt(id), parseInt(userId)]

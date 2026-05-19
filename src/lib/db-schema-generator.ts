@@ -8,7 +8,7 @@
  * 4. 生成迁移文件
  */
 
-import { TABLES, DEFAULT_SETTINGS, SCHEMA_VERSION, TABLE_COUNT, TableDef, ColumnDef } from './db-schema'
+import { TABLES, DEFAULT_SETTINGS, SCHEMA_VERSION, TABLE_COUNT, TableDef, ColumnDef, IndexDef } from './db-schema'
 
 // ============================================================================
 // 类型转换
@@ -76,6 +76,17 @@ function toPostgresDefault(value: string | number | boolean | null, type: Column
 // SQLite SQL 生成
 // ============================================================================
 
+function resolveIndexWhereClause(idx: IndexDef, dialect: 'sqlite' | 'postgres'): string | undefined {
+  return dialect === 'postgres' ? idx.wherePostgres : idx.whereSqlite
+}
+
+function generateIndexSql(table: TableDef, idx: IndexDef, dialect: 'sqlite' | 'postgres'): string {
+  const unique = idx.unique ? 'UNIQUE ' : ''
+  const whereClause = resolveIndexWhereClause(idx, dialect)
+  const whereSuffix = whereClause ? ` WHERE ${whereClause}` : ''
+  return `CREATE ${unique}INDEX IF NOT EXISTS ${idx.name} ON ${table.name}(${idx.columns.join(', ')})${whereSuffix};`
+}
+
 function generateSQLiteColumn(col: ColumnDef): string {
   const parts: string[] = [col.name, toSQLiteType(col.type)]
 
@@ -139,8 +150,7 @@ function generateSQLiteTable(table: TableDef): string {
   // 索引
   if (table.indexes) {
     for (const idx of table.indexes) {
-      const unique = idx.unique ? 'UNIQUE ' : ''
-      lines.push(`CREATE ${unique}INDEX IF NOT EXISTS ${idx.name} ON ${table.name}(${idx.columns.join(', ')});`)
+      lines.push(generateIndexSql(table, idx, 'sqlite'))
     }
   }
 
@@ -264,8 +274,7 @@ function generatePostgresTable(table: TableDef): string {
   // 索引
   if (table.indexes) {
     for (const idx of table.indexes) {
-      const unique = idx.unique ? 'UNIQUE ' : ''
-      lines.push(`CREATE ${unique}INDEX IF NOT EXISTS ${idx.name} ON ${table.name}(${idx.columns.join(', ')});`)
+      lines.push(generateIndexSql(table, idx, 'postgres'))
     }
   }
 

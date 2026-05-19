@@ -217,8 +217,6 @@ export function normalizeCampaignPublishRequestBody(value: unknown): PlainObject
     source.enableCampaignImmediately !== undefined || source.enable_campaign_immediately !== undefined
   const hasTopLevelEnableSmartOptimization =
     source.enableSmartOptimization !== undefined || source.enable_smart_optimization !== undefined
-  const hasTopLevelVariantCount =
-    source.variantCount !== undefined || source.variant_count !== undefined
 
   const normalized: PlainObject = {
     ...source,
@@ -253,13 +251,6 @@ export function normalizeCampaignPublishRequestBody(value: unknown): PlainObject
     normalized.enableSmartOptimization = isTruthyFlag(normalized.enableSmartOptimization)
   }
 
-  const normalizedVariantCount = toSafeNumber(normalized.variantCount)
-  if (normalizedVariantCount === undefined) {
-    normalized.variantCount = 3
-  } else {
-    normalized.variantCount = Math.floor(normalizedVariantCount)
-  }
-
   const normalizedCampaignConfig = normalizeCampaignPublishCampaignConfig(normalized.campaignConfig)
   if (normalizedCampaignConfig) {
     const campaignConfigFlags = normalizedCampaignConfig as PlainObject
@@ -285,13 +276,6 @@ export function normalizeCampaignPublishRequestBody(value: unknown): PlainObject
         campaignConfigFlags.enableSmartOptimization ?? campaignConfigFlags.enable_smart_optimization
       if (nestedSmartFlag !== undefined) {
         normalized.enableSmartOptimization = isTruthyFlag(nestedSmartFlag)
-      }
-    }
-
-    if (!hasTopLevelVariantCount) {
-      const nestedVariantCount = toSafeNumber(campaignConfigFlags.variantCount ?? campaignConfigFlags.variant_count)
-      if (nestedVariantCount !== undefined) {
-        normalized.variantCount = Math.floor(nestedVariantCount)
       }
     }
 
@@ -326,6 +310,10 @@ export function normalizeCampaignPublishRequestBody(value: unknown): PlainObject
 
     normalized.campaignConfig = normalizedCampaignConfig
   }
+
+  // Deprecated: multi-Ad-Group variantCount is no longer used (1 Campaign + 1 Ad Group).
+  delete normalized.variantCount
+  delete normalized.variant_count
 
   return normalized
 }

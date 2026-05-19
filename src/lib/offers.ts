@@ -13,6 +13,7 @@ import {
   pauseUrlSwapTargetsByOfferId
 } from './url-swap'
 import { applyCampaignTransition, applyCampaignTransitionByIds } from './campaign-state-machine'
+import { offerOccupyingCampaignIdSubquerySql } from './campaign-offer-constraint'
 import { toDbJsonObjectField } from './json-field'
 import { removePendingClickFarmQueueTasksByTaskIds } from './click-farm/queue-cleanup'
 import { removePendingUrlSwapQueueTasksByTaskIds } from './url-swap/queue-cleanup'
@@ -511,8 +512,10 @@ export async function listOffers(
     'o.google_ads_campaign_id',
     'o.sync_source',
     'o.needs_completion',
-    'c.id as campaign_id',
   ].join(', ')
+
+  const occupyingCampaignIdSubquery = offerOccupyingCampaignIdSubquerySql(db.type, 'o.id', 'o.user_id')
+  const listColumnsWithCampaign = `${listColumns}, ${occupyingCampaignIdSubquery} as campaign_id`
 
   const sortableColumnMap: Record<string, string> = {
     offerName: 'o.offer_name',
@@ -529,10 +532,7 @@ export async function listOffers(
     ? sortableColumnMap[options.sortBy]
     : 'o.created_at'
   const sortOrder = options?.sortOrder === 'asc' ? 'ASC' : 'DESC'
-  const campaignDeletedCondition = db.type === 'postgres'
-    ? "(c.is_deleted = false OR c.is_deleted IS NULL)"
-    : "(c.is_deleted = 0 OR c.is_deleted IS NULL)"
-  let listQuery = `SELECT ${listColumns} FROM offers o LEFT JOIN campaigns c ON o.id = c.offer_id AND ${campaignDeletedCondition} WHERE ${whereClause} ORDER BY ${sortColumn} ${sortOrder}, o.id DESC`
+  let listQuery = `SELECT ${listColumnsWithCampaign} FROM offers o WHERE ${whereClause} ORDER BY ${sortColumn} ${sortOrder}, o.id DESC`
 
   if (options?.limit) {
     listQuery += ` LIMIT ${options.limit}`

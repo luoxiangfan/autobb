@@ -70,43 +70,19 @@ test.describe('需求16-20功能测试', () => {
     const hasOffers = await page.locator('table tbody tr').count() > 0
     
     if (hasOffers) {
-      // 查找"一键上广告"按钮
-      const launchAdButton = page.locator('button:has-text("一键上广告")').first()
-      
-      if (await launchAdButton.isVisible()) {
-        await launchAdButton.click()
-        
-        // Step 1: 选择广告变体数量
-        await page.waitForSelector('text=/选择广告变体数量/', { timeout: 5000 })
-        
-        // 测试需求16：选择1个广告（应该自动为品牌导向）
-        await page.click('button:has-text("1 个广告")')
-        await expect(page.locator('text=/品牌导向.*必选/i')).toBeVisible()
-        
-        // 测试需求16：选择3个广告（应该包含品牌/产品/促销）
-        await page.click('button:has-text("3 个广告")')
-        await expect(page.locator('text=/品牌导向/')).toBeVisible()
-        await expect(page.locator('text=/产品导向/')).toBeVisible()
-        await expect(page.locator('text=/促销导向/')).toBeVisible()
-        
-        console.log('✅ 需求16: 广告变体选择功能正常')
-        
-        // 点击下一步
-        await page.click('button:has-text("下一步")')
-        
-        // Step 2: 广告系列设置
-        await page.waitForSelector('text=/广告系列设置/', { timeout: 5000 })
-        
-        // 验证默认值（需求14）
-        await expect(page.locator('input[value*="Website traffic"]')).toBeVisible()
-        
-        console.log('✅ Step 2: 广告系列设置页面正常')
-        
-        // 注意：实际API调用测试需要真实的Google Ads账号授权
-        // 这里只测试UI流程
-        
+      // Launch 流程：生成创意 → 关联账号 → 配置广告 → 发布（已无「变体数量」步骤）
+      const launchLink = page.locator('a[href*="/launch"]').first()
+
+      if (await launchLink.isVisible()) {
+        await launchLink.click()
+        await page.waitForURL(/\/offers\/\d+\/launch/, { timeout: 15000 })
+
+        await page.waitForSelector('text=/生成创意/', { timeout: 10000 })
+        console.log('✅ 需求16-19: Launch 四步流程 Step1（生成创意）页面可访问')
+
+        // 注意：实际 API 发布需要 Google Ads 授权与完整创意数据
       } else {
-        console.log('⚠️  "一键上广告"按钮未找到')
+        console.log('⚠️  发布广告入口未找到（可能 Offer 已有 Campaign 或抓取未完成）')
       }
     } else {
       console.log('⚠️  暂无Offer，跳过一键上广告测试')

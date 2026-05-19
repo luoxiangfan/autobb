@@ -12,6 +12,7 @@
 import { getDatabase } from './db'
 import { createCampaignToGoogleAds } from './google-ads-create'
 import { getInsertedId } from './db-helpers'
+import { assertNoActiveCampaignForOffer } from './campaign-offer-constraint'
 
 /**
  * 广告系列备份数据接口
@@ -254,7 +255,8 @@ export async function createCampaignFromBackup(
   const finalCampaignConfig = overrides?.campaignConfig ?? campaignConfig  // 🔧 新增
   const adCreativeId = overrides?.adCreativeId ?? campaignData?.ad_creative_id ?? backup.adCreativeId  // 🔧 新增
 
-  // 创建广告系列
+  await assertNoActiveCampaignForOffer(backup.offerId, userId)
+
   const result = await db.exec(`
     INSERT INTO campaigns (
       user_id, offer_id, google_ads_account_id,
@@ -264,7 +266,7 @@ export async function createCampaignFromBackup(
       campaign_config,  -- 🔧 新增：恢复配置
       status, creation_status,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     userId,
     backup.offerId,
@@ -277,7 +279,8 @@ export async function createCampaignFromBackup(
     targetCpa,
     maxCpc,
     finalCampaignConfig ? JSON.stringify(finalCampaignConfig) : null,  // 🔧 恢复配置
-    'PAUSED',  // 初始状态为暂停
+    'PAUSED',
+    'published',
     new Date(),
     new Date(),
   ])

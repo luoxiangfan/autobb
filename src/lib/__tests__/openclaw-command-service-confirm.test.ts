@@ -375,9 +375,11 @@ describe('openclaw command service confirmation guard', () => {
       pauseOldCampaigns: true,
       enableCampaignImmediately: false,
       enableSmartOptimization: true,
-      variantCount: 4,
       forcePublish: true,
     })
+
+    expect(body.variantCount).toBeUndefined()
+    expect(body.variant_count).toBeUndefined()
 
     expect(body.offer_id).toBeUndefined()
     expect(body.force_launch).toBeUndefined()
@@ -456,8 +458,9 @@ describe('openclaw command service confirmation guard', () => {
       pauseOldCampaigns: false,
       enableCampaignImmediately: false,
       enableSmartOptimization: false,
-      variantCount: 3,
     })
+
+    expect(body.variantCount).toBeUndefined()
   })
 
   it('normalizes click-farm aliases to snake_case payload', async () => {

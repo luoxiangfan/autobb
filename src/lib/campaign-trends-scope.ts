@@ -1,6 +1,7 @@
 import type { DatabaseAdapter } from '@/lib/db'
 import { matchesCampaignSearch } from '@/lib/campaign-search'
 import { getAffiliateDomainKeywords } from '@/lib/affiliate-platform-domain-keywords'
+import { buildCampaignAffiliateAlignedWhereClause } from '@/lib/campaign-affiliate-scope'
 
 export type CampaignTrendsScopeAuth = {
   userId: number
@@ -64,6 +65,9 @@ export async function queryCampaignRowsForTrendsScope(
   const affiliateClause = hasAffiliate
     ? `AND (${affiliateDomainKeywords.map(() => `o.affiliate_link LIKE ?`).join(' OR ')})`
     : ''
+  const affiliateAlignedClause = hasAffiliate
+    ? buildCampaignAffiliateAlignedWhereClause(db.type, 'c', 'o')
+    : ''
   const affiliateBinds = hasAffiliate ? affiliateDomainKeywords.map((k) => `%${k}%`) : []
 
   const rows = await db.query(
@@ -85,6 +89,7 @@ export async function queryCampaignRowsForTrendsScope(
         LEFT JOIN offers o ON c.offer_id = o.id
         WHERE ${userScopeClause}
         ${affiliateClause}
+        ${affiliateAlignedClause}
         ${createdAtStartParam ? `AND c.created_at >= ?` : ''}
         ${createdAtEndParam ? `AND c.created_at <= ?` : ''}
         ORDER BY c.created_at DESC
