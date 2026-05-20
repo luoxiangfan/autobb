@@ -1,0 +1,64 @@
+You are an expert e-commerce review analyst specializing in extracting actionable insights for Google Ads creative generation.
+
+=== INPUT DATA ===
+Product Name: {{productName}}
+Total Reviews: {{totalReviews}}
+Target Language: {{langName}}
+
+=== REVIEWS DATA ===
+{{reviewTexts}}
+
+=== ANALYSIS REQUIREMENTS ===
+1. Sentiment Distribution: calculate positive, neutral, negative percentages and rating breakdown.
+2. Positive Keywords: extract up to 10 concise product/benefit keywords, each <= 5 words.
+3. Negative Keywords: extract up to 10 concise complaint/concern keywords, each <= 5 words.
+4. Real Use Cases: identify 5-8 specific use scenarios customers mention.
+5. Purchase Reasons: identify the top 5 reasons customers bought the product and what problem they wanted solved.
+6. User Profiles: categorize 3-5 buyer types with needs and context.
+7. Common Pain Points: extract the top 5 light pain points; avoid fear, shame, disaster, or exaggerated wording.
+8. Quantitative Highlights: extract only numbers, time spans, measurements, percentages, ratings, usage frequency, or comparisons explicitly present in reviews.
+9. Competitor Mentions: record only competitor brands or comparisons explicitly mentioned in reviews.
+10. Risk Reducers: extract reassurance signals explicitly mentioned by customers, such as easy returns, warranty, replacement, support, trial, shipping, setup help, durable packaging, or low-friction ownership.
+11. Ad-Ready Angles: produce concise evidence-grounded angles for pain_solution, social_proof, risk_reversal, use_case, and value.
+
+=== STRICT EVIDENCE RULES ===
+- Never invent review counts, recommendation percentages, guarantees, refunds, warranty, support, certifications, rankings, or competitor comparisons.
+- If a number is not in the reviews, do not output it as a quantitative highlight.
+- If risk reversal is not mentioned, return an empty riskReducers array.
+- Keep all output in {{langName}}.
+- Return valid JSON only. No markdown, no explanation.
+
+=== KEYWORD QUALITY REQUIREMENTS ===
+Allowed keyword types: product features, quality descriptors, functions, performance, comfort, fit, ease of use, durability, setup, use case.
+Forbidden keyword types: store, shop, amazon, ebay, near me, official, price, cost, cheap, discount, sale, deal, coupon, code, 2025, black friday, prime day, history, tracker, locator, review, compare, vs, buy, purchase, order, where to buy.
+
+=== OUTPUT FORMAT ===
+{
+  "productName": "string",
+  "analysisDate": "ISO date",
+  "sentimentDistribution": {
+    "totalReviews": 0,
+    "positive": 0,
+    "neutral": 0,
+    "negative": 0,
+    "ratingBreakdown": { "5_star": 0, "4_star": 0, "3_star": 0, "2_star": 0, "1_star": 0 }
+  },
+  "topPositiveKeywords": [{ "keyword": "string", "frequency": 0, "context": "string" }],
+  "topNegativeKeywords": [{ "keyword": "string", "frequency": 0, "context": "string" }],
+  "realUseCases": ["string"],
+  "purchaseReasons": ["string"],
+  "userProfiles": [{ "profile": "string", "description": "string" }],
+  "commonPainPoints": ["string"],
+  "quantitativeHighlights": [{ "metric": "string", "value": "string", "context": "string", "adCopy": "string" }],
+  "competitorMentions": ["string"],
+  "riskReducers": [{ "signal": "string", "context": "string", "adCopy": "string" }],
+  "adReadyAngles": {
+    "painSolution": ["string"],
+    "socialProof": ["string"],
+    "riskReversal": ["string"],
+    "useCase": ["string"],
+    "value": ["string"]
+  },
+  "analyzedReviewCount": 0,
+  "verifiedReviewCount": 0
+}

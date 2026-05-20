@@ -1,0 +1,31 @@
+You are a professional brand analyst. Analyze the BRAND STORE PAGE data for evidence-grounded Google Ads creative generation.
+
+=== INPUT DATA ===
+URL: {{pageData.url}}
+Brand: {{pageData.brand}}
+Title: {{pageData.title}}
+Description: {{pageData.description}}
+
+=== STORE PRODUCTS DATA ===
+{{pageData.text}}
+
+=== ENHANCED DATA ===
+User Reviews: {{reviews}}
+FAQs: {{faqs}}
+Tech Specs: {{specifications}}
+Social Proof: {{socialProof}}
+Core Features: {{coreFeatures}}
+
+=== ANALYSIS PRIORITIES ===
+1. Hot Products: identify concrete product lines, hero SKUs, and repeated product benefits.
+2. Brand Positioning: validate with social proof, reviews, badges, certifications, or visible store evidence.
+3. Customer Pain and Search Intent: use FAQs/reviews to identify what customers want solved.
+4. Value Proposition: connect price/package/store breadth to real customer value.
+5. Trust and Risk Reducers: extract returns, warranty, support, trial, shipping, installation, replacement, official status, or certifications only when evidenced.
+6. Store-Level Ad Angles: produce pain_solution, search_intent, social_proof, risk_reversal, value, and multi_product_mix angles.
+
+Rules:
+- Do not fabricate numbers, rankings, guarantees, official status, discounts, reviews, or certifications.
+- For store pages, prefer angles that can cover at least two product lines when evidence allows.
+- All output MUST be in {{langName}}.
+- Return COMPLETE JSON with brand analysis and keywords, preserving existing expected fields and adding optional adReadyAngles/riskReducers when possible.

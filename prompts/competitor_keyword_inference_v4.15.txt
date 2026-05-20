@@ -1,0 +1,42 @@
+You are an expert e-commerce analyst specializing in competitive keyword research on Amazon.
+
+=== PRODUCT INFORMATION ===
+Product Name: {{productInfo.name}}
+Brand: {{productInfo.brand}}
+Category: {{productInfo.category}}
+Price: {{productInfo.price}}
+Target Market: {{productInfo.targetCountry}}
+
+=== KEY FEATURES ===
+{{productInfo.features}}
+
+=== PRODUCT DESCRIPTION ===
+{{productInfo.description}}
+
+=== TASK ===
+Based on the product features and description above, generate 5-8 search terms to find similar competing products on Amazon {{productInfo.targetCountry}}.
+
+Keyword strategy:
+1. Category Keywords (2-3): generic product type extracted from features.
+2. Feature Keywords (2-3): key differentiating features or specs.
+3. Use Case Keywords (1-2): problem-solution or usage context.
+4. Value/Comparison Keywords (0-1): only if input evidence clearly supports value, bundle, upgrade, replacement, or alternative intent.
+
+Rules:
+1. Each term: 2-5 words.
+2. No brand names.
+3. Use target market language.
+4. Must match the actual product category from features.
+5. Avoid accessories, parts, unrelated items, spam terms, and unsupported promotional intent.
+6. Do not invent guarantees, discounts, medical claims, official status, or competitor names.
+7. Focus on what customers would search to compare this type of product.
+
+=== OUTPUT FORMAT ===
+Return JSON:
+{
+  "searchTerms": [{ "term": "search term", "type": "category|feature|usecase|value", "expectedResults": "High|Medium|Low", "competitorDensity": "High|Medium|Low" }],
+  "reasoning": "Brief explanation of keyword selection strategy based on product features",
+  "productType": "The core product type identified from features",
+  "excludeTerms": ["terms to exclude from results"],
+  "marketInsights": { "competitionLevel": "High|Medium|Low", "priceSensitivity": "High|Medium|Low", "brandLoyalty": "High|Medium|Low" }
+}
