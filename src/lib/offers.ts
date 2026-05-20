@@ -17,6 +17,8 @@ import { offerOccupyingCampaignIdSubquerySql } from './campaign-offer-constraint
 import { toDbJsonObjectField } from './json-field'
 import { removePendingClickFarmQueueTasksByTaskIds } from './click-farm/queue-cleanup'
 import { removePendingUrlSwapQueueTasksByTaskIds } from './url-swap/queue-cleanup'
+import type { OfferExtractionMode } from './offer-extraction-mode'
+import { normalizeOfferExtractionMode } from './offer-extraction-mode'
 
 export interface Offer {
   id: number
@@ -81,6 +83,7 @@ export interface Offer {
   ai_competitive_edges: string | null  // AI分析的竞争优势
   ai_analysis_v32: string | null  // 新版AI分析结果JSON（v3.2架构）
   page_type: string | null  // 页面类型：'product' | 'store'
+  extraction_mode: string | null  // 提取模式：fast | balanced | original
   generated_buckets: string | null  // 🆕 v4.16: 已生成的创意类型列表（JSON数组）
   // P1-11: 关联的Google Ads账号信息（运行时计算字段，非数据库字段）
   // 🔧 修复(2025-12-11): snake_case → camelCase
@@ -166,6 +169,7 @@ export interface CreateOfferInput {
   extraction_metadata?: string
   // 🔥 页面类型标识（店铺/单品）
   page_type?: 'store' | 'product'
+  extraction_mode?: OfferExtractionMode | string
 }
 
 export interface UpdateOfferInput {
@@ -212,6 +216,7 @@ export interface UpdateOfferInput {
   pain_points?: string
   user_questions?: string
   scenario_analyzed_at?: string
+  extraction_mode?: OfferExtractionMode | string
 }
 
 /**
@@ -221,7 +226,7 @@ export interface UpdateOfferInput {
  */
 export async function createOffer(userId: number, input: CreateOfferInput): Promise<Offer> {
   const db = await getDatabase()
-  const normalizedTargetCountry = normalizeOfferTargetCountry(input.target_country)
+  const normalizedTargetCountry = normalizeOfferTargetCountry(input.target_country) || 'US'
 
   // ========== 需求1和需求5: 自动生成字段 ==========
   // 如果没有提供brand，使用临时值"Unknown"，等抓取完成后更新
@@ -300,7 +305,8 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
     // P1-3修复: 如果有任何AI分析或广告元素提取结果，记录提取时间
     (input.review_analysis || input.competitor_analysis || input.extracted_keywords || input.extracted_headlines || input.extracted_descriptions) ? new Date().toISOString() : null,
     // 🔥 页面类型标识（店铺/单品）
-    input.page_type || 'product'  // 默认为'product'
+    input.page_type || 'product',  // 默认为'product'
+    normalizeOfferExtractionMode(input.extraction_mode),
   ]
 
   // Debug: Check for undefined values
@@ -324,8 +330,9 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
       review_analysis, competitor_analysis,
       extracted_keywords, extracted_headlines, extracted_descriptions, extraction_metadata,
       extracted_at,
-      page_type
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      page_type,
+      extraction_mode
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, params)
 
   // 🔧 修复(2025-12-30): PostgreSQL 使用 RETURNING id，SQLite 使用 lastInsertRowid
@@ -667,9 +674,13 @@ export async function updateOffer(id: number, userId: number, input: UpdateOffer
 
   const nextBrand = input.brand !== undefined ? input.brand : existing.brand
   const normalizedExistingTargetCountry = normalizeOfferTargetCountry(existing.target_country)
-  const normalizedInputTargetCountry = input.target_country !== undefined
-    ? normalizeOfferTargetCountry(input.target_country)
-    : undefined
+  let normalizedInputTargetCountry: string | undefined
+  if (input.target_country !== undefined) {
+    normalizedInputTargetCountry = normalizeOfferTargetCountry(input.target_country)
+    if (!normalizedInputTargetCountry) {
+      throw new Error('无效的目标国家代码')
+    }
+  }
   const nextTargetCountry = normalizedInputTargetCountry ?? normalizedExistingTargetCountry
   const brandChanged = input.brand !== undefined && input.brand !== existing.brand
   const targetCountryChanged = normalizedInputTargetCountry !== undefined
@@ -870,6 +881,10 @@ export async function updateOffer(id: number, userId: number, input: UpdateOffer
     updates.push('page_type = ?')
     params.push(input.page_type)
   }
+  if (input.extraction_mode !== undefined) {
+    updates.push('extraction_mode = ?')
+    params.push(normalizeOfferExtractionMode(input.extraction_mode))
+  }
 
   if (updates.length === 0) {
     return existing
@@ -890,6 +905,9 @@ export async function updateOffer(id: number, userId: number, input: UpdateOffer
   if (!updated) {
     throw new Error('Offer更新失败')
   }
+
+  const { invalidateOfferCache } = await import('./api-cache')
+  invalidateOfferCache(userId, id)
 
   return updated
 }

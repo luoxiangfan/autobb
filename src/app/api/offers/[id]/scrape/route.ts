@@ -1,107 +1,143 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { findOfferById, updateOfferScrapeStatus } from '@/lib/offers'
-import { getQueueManager } from '@/lib/queue'
-import { convertPriorityToEnum, type ScrapeTaskData } from '@/lib/queue/executors'
+import { deleteKeywordPool } from '@/lib/offer-keyword-pool'
+import { convertPriorityToEnum } from '@/lib/queue/executors'
+import {
+  assertOfferAvailableForExtractionEnqueue,
+  enqueueExistingOfferExtractionAndMarkQueued,
+} from '@/lib/offer-extraction-task'
+import {
+  getExtractionModeFromRequestBody,
+  normalizeOfferExtractionMode,
+} from '@/lib/offer-extraction-mode'
+import { applyOfferUpdateFromBody, pickOfferUpdateBody } from '@/lib/offer-update-from-body'
+import { offerExtractApiErrorBody } from '@/lib/offer-extract-request'
 
 /**
  * POST /api/offers/:id/scrape
- * 触发产品信息抓取和AI分析
  *
- * 🔥 重构：使用统一队列系统
- * - 支持 Redis 持久化
- * - 支持优先级队列
- * - 支持代理IP池（从用户设置加载）
- * - 支持并发控制（全局/用户/类型）
+ * @deprecated 请使用 POST /api/offers/:id/rebuild。本接口已转发至 offer-extraction 队列。
+ * 请求体可与 rebuild 相同，先合并保存 Offer 字段再入队。
  */
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  try {
-    const { id } = params
+  const offerIdNum = parseInt(params.id, 10)
 
-    // 从中间件注入的请求头中获取用户ID
+  if (isNaN(offerIdNum)) {
+    return NextResponse.json(
+      { error: 'Invalid request', message: 'Invalid offer ID' },
+      { status: 400 }
+    )
+  }
+
+  try {
     const userId = request.headers.get('x-user-id')
     const parentRequestId = request.headers.get('x-request-id') || undefined
     if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userIdNum = parseInt(userId, 10)
-    const offerIdNum = parseInt(id, 10)
-
-    // 查找 offer
-    const offer = await findOfferById(offerIdNum, userIdNum)
-
-    if (!offer) {
       return NextResponse.json(
-        { error: 'Offer不存在或无权访问' },
-        { status: 404 }
+        { error: 'Unauthorized', message: '请先登录' },
+        { status: 401 }
       )
     }
 
-    // 解析请求体获取优先级（可选）
+    const userIdNum = parseInt(userId, 10)
+
+    let requestBody: unknown = {}
     let priority: number | undefined
     try {
-      const body = await request.json()
-      priority = body.priority
-    } catch {
-      // 没有请求体，使用默认优先级
-    }
-
-    // 获取队列管理器
-    const queue = getQueueManager()
-
-    // 检查是否已有相同任务在队列中
-    const stats = await queue.getStats()
-    // TODO: 添加任务去重检查
-
-    // 更新状态为队列中
-    await updateOfferScrapeStatus(offerIdNum, userIdNum, 'queued')
-
-    // 构建任务数据
-    const taskData: ScrapeTaskData = {
-      offerId: offerIdNum,
-      url: offer.url,
-      brand: offer.brand || undefined,
-      target_country: offer.target_country || 'US',
-      priority
-    }
-
-    // 添加任务到队列
-    const taskId = await queue.enqueue(
-      'scrape',
-      taskData,
-      userIdNum,
-      {
-        parentRequestId,
-        priority: convertPriorityToEnum(priority),
-        maxRetries: 2,  // 抓取任务最多重试2次
-        requireProxy: true  // 抓取任务需要代理
+      requestBody = await request.json()
+      if (requestBody && typeof requestBody === 'object' && 'priority' in requestBody) {
+        const p = (requestBody as { priority?: unknown }).priority
+        if (typeof p === 'number') priority = p
       }
+    } catch {
+      // empty body
+    }
+
+    const modeFromBody = getExtractionModeFromRequestBody(requestBody)
+    if ('invalid' in modeFromBody && modeFromBody.invalid) {
+      return NextResponse.json(
+        {
+          error: 'Invalid data',
+          message: '无效的提取模式，可选：fast、balanced、original',
+        },
+        { status: 400 }
+      )
+    }
+
+    const applyResult = await applyOfferUpdateFromBody(offerIdNum, userIdNum, requestBody)
+    if ('error' in applyResult) {
+      return NextResponse.json(
+        {
+          error: applyResult.status === 404 ? 'Not found' : 'Invalid data',
+          message: applyResult.error,
+        },
+        { status: applyResult.status }
+      )
+    }
+
+    const offer = applyResult.offer
+    const extractionMode = ('mode' in modeFromBody ? modeFromBody.mode : undefined)
+      ?? normalizeOfferExtractionMode(offer.extraction_mode)
+
+    const pickedUpdate = pickOfferUpdateBody(requestBody)
+    const extractionModePersistedByApply = Boolean(
+      pickedUpdate
+      && (pickedUpdate.extraction_mode !== undefined || pickedUpdate.extractionMode !== undefined)
     )
 
-    console.log(`📥 [ScrapeAPI] 任务已入队: ${taskId}, Offer #${offerIdNum}, 用户 #${userIdNum}`)
+    await assertOfferAvailableForExtractionEnqueue(offer)
+
+    const { taskId } = await enqueueExistingOfferExtractionAndMarkQueued({
+      offer,
+      userId: userIdNum,
+      offerId: offerIdNum,
+      extractionMode,
+      parentRequestId,
+      priority: convertPriorityToEnum(priority),
+      skipExtractionModePersist: extractionModePersistedByApply,
+    })
+
+    try {
+      await deleteKeywordPool(offerIdNum)
+    } catch {
+      // 入队成功后再删关键词池
+    }
+
+    console.warn(
+      `[DEPRECATED] POST /api/offers/${offerIdNum}/scrape → offer-extraction task ${taskId}`
+    )
 
     return NextResponse.json({
       success: true,
-      message: '抓取任务已加入队列，请稍后查看结果',
+      message: '提取任务已加入队列（scrape 接口已废弃，内部使用 offer-extraction）',
       taskId,
-      queuePosition: stats.pending + 1  // 大致的队列位置
+      extractionMode,
+      deprecated: true,
+      replacement: `/api/offers/${offerIdNum}/rebuild`,
     })
-  } catch (error: any) {
-    console.error('触发抓取失败:', error)
-
-    // 如果是队列已满等错误，返回特定状态码
-    if (error.message?.includes('队列已满')) {
+  } catch (error: unknown) {
+    const apiError = offerExtractApiErrorBody(error, 'Invalid data')
+    if (apiError) {
       return NextResponse.json(
-        { error: '系统繁忙，请稍后重试' },
+        { error: apiError.error, message: apiError.message },
+        { status: apiError.status }
+      )
+    }
+
+    console.error('触发抓取失败:', error)
+    const message = error instanceof Error ? error.message : '触发抓取失败'
+
+    if (message.includes('队列已满')) {
+      return NextResponse.json(
+        { error: '系统繁忙', message: '系统繁忙，请稍后重试' },
         { status: 503 }
       )
     }
 
     return NextResponse.json(
-      { error: error.message || '触发抓取失败' },
+      { error: 'Internal server error', message },
       { status: 500 }
     )
   }

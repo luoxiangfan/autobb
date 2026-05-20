@@ -124,6 +124,13 @@ export function canonicalizeOfferBatchCsvHeader(value: unknown) {
   )) {
     return 'commission_currency'
   }
+  if (has(t =>
+    t.includes('extractionmode') ||
+    t.includes('提取模式') ||
+    t.includes('抓取模式')
+  )) {
+    return 'extraction_mode'
+  }
   return raw.toLowerCase()
 }
 

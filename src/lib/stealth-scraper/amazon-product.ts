@@ -40,14 +40,25 @@ function cleanAsin(asin: string | null | undefined): string | null {
  * 🔥 P1优化：代理失败时自动换新代理重试
  * 🌍 支持根据目标国家动态配置语言
  */
+export type ScrapeAmazonProductOptions = {
+  /** 更短等待、更少 a-no-js 重试 */
+  fastMode?: boolean
+  waitMs?: number
+  maxNoJsRetries?: number
+}
+
 export async function scrapeAmazonProduct(
   url: string,
   customProxyUrl?: string,
   targetCountry?: string,  // 🌍 目标国家参数
   maxProxyRetries: number = 2,  // 代理失败最多重试2次
-  skipCompetitorExtraction: boolean = false  // 🔥 修复：跳过竞品ASIN提取（用于竞品详情页抓取，避免二级循环）
+  skipCompetitorExtraction: boolean = false,  // 🔥 修复：跳过竞品ASIN提取（用于竞品详情页抓取，避免二级循环）
+  scrapeOptions: ScrapeAmazonProductOptions = {}
 ): Promise<AmazonProductData> {
-  console.log(`🛒 抓取Amazon产品: ${url}${targetCountry ? ` (国家: ${targetCountry})` : ''}`)
+  const fastMode = scrapeOptions.fastMode === true
+  console.log(
+    `🛒 抓取Amazon产品: ${url}${targetCountry ? ` (国家: ${targetCountry})` : ''}${fastMode ? ' [fast]' : ''}`
+  )
 
   let lastError: Error | undefined
   const effectiveProxyUrl = customProxyUrl || PROXY_URL
@@ -67,12 +78,11 @@ export async function scrapeAmazonProduct(
         await new Promise(resolve => setTimeout(resolve, 2000))
       }
 
-      // 🔥 P1优化：使用更短的超时进行快速失败检测
-      const quickTimeout = 30000  // 30秒快速检测，如果失败立即换代理
+      const quickTimeout = scrapeOptions.waitMs ?? (fastMode ? 20_000 : 30_000)
       let result = await scrapeUrlWithBrowser(url, effectiveProxyUrl, {
         waitForSelector: '#productTitle',
-        waitForTimeout: quickTimeout,  // 🔥 优先快速失败，避免等120秒
-        targetCountry,  // 🌍 传入目标国家
+        waitForTimeout: quickTimeout,
+        targetCountry,
       })
 
       // ✅ 方案4修复: 如果检测到a-no-js失败，清理池并重试一次
@@ -90,8 +100,7 @@ export async function scrapeAmazonProduct(
         const pageLang = langMatch ? langMatch[1] : '(未设置)'
         console.warn(`🌍 页面语言: ${pageLang} (目标国家: ${targetCountry})`)
 
-        // 🔥 2025-12-11优化: 增加重试次数，a-no-js失败最多重试2次（使用不同代理IP）
-        const maxNoJsRetries = 2
+        const maxNoJsRetries = scrapeOptions.maxNoJsRetries ?? (fastMode ? 1 : 2)
         for (let noJsRetry = 1; noJsRetry <= maxNoJsRetries; noJsRetry++) {
           console.warn(`🔄 a-no-js重试 ${noJsRetry}/${maxNoJsRetries}，清理代理缓存并使用新IP...`)
 

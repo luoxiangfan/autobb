@@ -18,6 +18,7 @@ import { createHash } from 'crypto'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '../unified-queue-manager'
 import type { OfferExtractionTaskData } from './offer-extraction-executor'
+import { normalizeOfferExtractionMode } from '@/lib/offer-extraction-mode'
 
 /**
  * 批量创建任务数据接口
@@ -35,6 +36,7 @@ export interface BatchCreationTaskData {
     commission_currency?: string
     page_type?: 'store' | 'product'
     store_product_links?: string[]
+    extraction_mode?: string
   }>
 }
 
@@ -151,6 +153,7 @@ export async function executeBatchCreation(
         brandName: row.brand_name,
         pageType: row.page_type,
         storeProductLinks: row.store_product_links,
+        extractionMode: normalizeOfferExtractionMode(row.extraction_mode),
       }
 
       const statusForEnqueue = existingTaskStatus.get(childTaskId)

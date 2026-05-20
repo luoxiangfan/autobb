@@ -8,7 +8,15 @@ import { analyzeReviewsWithAI, type RawReview } from './review-analyzer'
 import { analyzeCompetitorsWithAI, inferCompetitorKeywords, searchCompetitorsOnAmazon, type CompetitorProduct } from './competitor-analyzer'
 import { extractAdElements } from './ad-elements-extractor'
 import { scrapeAmazonProduct } from './stealth-scraper/amazon-product'
-import { parsePrice } from './pricing-utils'  // 🔧 新增：统一价格解析函数
+import { parsePrice } from './pricing-utils'
+import {
+  getOfferAiCompetitorDetailLimit,
+  getOfferProductReviewDeepScrapeLimit,
+  shouldRunCompetitorDetailScrapingInAi,
+  shouldRunPlaywrightCompetitorDeepScrape,
+  shouldRunPlaywrightReviewDeepScrape,
+  type OfferExtractionMode,
+} from './offer-extraction-performance'  // 🔧 新增：统一价格解析函数
 import { getProxyUrlForCountry } from './settings'  // 🔥 修复（2025-12-09）：动态获取代理URL
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { isInvalidKeyword } from './keyword-invalid-filter'
@@ -187,6 +195,8 @@ export interface AIAnalysisInput {
   // 🔥 新增（2025-12-08）：启用Playwright深度抓取，与手动创建流程保持一致
   // 当启用时，会使用Playwright抓取30条评论和5个竞品，而不是使用初始数据估算
   enablePlaywrightDeepScraping?: boolean
+  /** 提取模式：fast | balanced | original */
+  extractionMode?: OfferExtractionMode | string
 }
 
 export interface AIAnalysisResult {
@@ -882,9 +892,14 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
         console.log(`  - debug存在: ${!!debug}`)
         console.log(`  - debug内容:`, JSON.stringify(debug, null, 2))
 
-        // 🔥 新增（2025-12-08）：Playwright深度评论抓取（与手动创建流程一致）
-        // 当 enablePlaywrightDeepScraping=true 且是Amazon单品页面时，使用Playwright抓取30条真实评论
-        if (isAmazonProductPage && input.enablePlaywrightDeepScraping && extractResult.finalUrl) {
+        const runPlaywrightReviewDeepScrape = shouldRunPlaywrightReviewDeepScrape(
+          extractResult,
+          input.enablePlaywrightDeepScraping,
+          input.extractionMode
+        )
+
+        // Playwright 深度评论抓取：仅在提取阶段评论不足时执行，避免重复打开商品页
+        if (isAmazonProductPage && runPlaywrightReviewDeepScrape && extractResult.finalUrl) {
           console.log(`🚀 [DEEP SCRAPE] 启用Playwright深度评论抓取（30条评论）...`)
 
           try {
@@ -905,7 +920,10 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
 
             try {
               await page.goto(extractResult.finalUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
-              const scrapedReviews = await scrapeAmazonReviews(page, 30)
+              const scrapedReviews = await scrapeAmazonReviews(
+                page,
+                getOfferProductReviewDeepScrapeLimit(input.extractionMode)
+              )
 
               if (scrapedReviews.length > 0) {
                 console.log(`✅ Playwright抓取${scrapedReviews.length}条评论，执行AI分析...`)
@@ -932,6 +950,8 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
             console.warn(`⚠️ [DEEP SCRAPE] Playwright评论抓取失败，降级使用已抓取数据:`, playwrightError.message)
             // 降级逻辑会在下面的else分支处理
           }
+        } else if (isAmazonProductPage && input.enablePlaywrightDeepScraping && !runPlaywrightReviewDeepScrape) {
+          console.log('⏩ [DEEP SCRAPE] 提取阶段已有足够评论，跳过Playwright二次评论抓取')
         }
 
         // 🔥 原有逻辑：单品页面使用已抓取的 topReviews 数据进行评论分析（作为备用方案）
@@ -1267,8 +1287,13 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
         )
 
         const hasRelatedAsins = extractResult.relatedAsins && extractResult.relatedAsins.length > 0
+        const runPlaywrightCompetitorDeepScrape = shouldRunPlaywrightCompetitorDeepScrape(
+          extractResult,
+          input.enablePlaywrightDeepScraping,
+          input.extractionMode
+        )
 
-        if (isAmazonProductPage && !hasRelatedAsins && input.enablePlaywrightDeepScraping && extractResult.finalUrl) {
+        if (isAmazonProductPage && runPlaywrightCompetitorDeepScrape && extractResult.finalUrl) {
           console.log(`🚀 [DEEP SCRAPE] 未找到已提取的竞品ASIN，启用Playwright深度抓取（5个竞品）...`)
 
           try {
@@ -1422,7 +1447,27 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
             console.warn(`⚠️ [DEEP SCRAPE] Playwright竞品抓取失败，降级使用市场定位分析:`, playwrightError.message)
             // 降级逻辑会在下面的else分支处理
           }
+        } else if (
+          isAmazonProductPage
+          && !hasRelatedAsins
+          && input.enablePlaywrightDeepScraping
+          && !runPlaywrightCompetitorDeepScrape
+        ) {
+          console.log('⏩ [DEEP SCRAPE] 当前提取模式跳过竞品二次 Playwright 抓取')
         } else if (isAmazonProductPage && hasRelatedAsins) {
+          const runCompetitorDetailScrape = shouldRunCompetitorDetailScrapingInAi(
+            input.enableCompetitorAnalysis,
+            input.extractionMode
+          )
+
+          if (!runCompetitorDetailScrape) {
+            console.log(
+              `⏩ [AMAZON PRODUCT] 提取模式跳过竞品详情页批量抓取（${extractResult.relatedAsins!.length} 个 ASIN 已记录）`
+            )
+            result.competitorAnalysisSuccess = true
+          }
+
+          if (runCompetitorDetailScrape) {
           // 🔥 新增（2025-12-09）：使用已提取的竞品ASIN，避免重复抓取
           console.log(`✅ 复用已提取的${extractResult.relatedAsins!.length}个竞品ASIN（已过滤同品牌产品）`)
 
@@ -1448,7 +1493,7 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
             // 策略1：优先使用relatedAsins（推荐区域，速度快）
             // 策略2：如果竞品不足，使用搜索结果补充（更准确）
             const MIN_COMPETITORS = 3  // 最少需要3个有效竞品
-            const TARGET_COMPETITORS = 5  // 目标5个竞品
+            const TARGET_COMPETITORS = getOfferAiCompetitorDetailLimit(input.extractionMode)
 
             // 🔥 修复（2025-12-17）：单商品页面保留同品牌竞品用于差异化分析
             let competitors = await batchScrapeCompetitorDetails(
@@ -1584,6 +1629,7 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
           } catch (error: any) {
             console.warn(`⚠️ [REUSE ASINS] 竞品分析失败:`, error.message)
             // 降级到市场定位分析
+          }
           }
         }
 

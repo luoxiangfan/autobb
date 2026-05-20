@@ -5,6 +5,7 @@ import {
   normalizeOfferCommissionPayoutInput,
   normalizeOfferProductPriceInput,
   parseCommissionPayoutValue,
+  resolveLegacyBareNumericMode,
 } from '@/lib/offer-monetization'
 
 describe('offer monetization helpers', () => {
@@ -16,6 +17,24 @@ describe('offer monetization helpers', () => {
   it('preserves explicitly currency-marked product price', () => {
     expect(normalizeOfferProductPriceInput('EUR 349.99', 'US')).toBe('EUR 349.99')
     expect(normalizeOfferProductPriceInput('€349.99', 'US')).toBe('€349.99')
+  })
+
+  it('resolveLegacyBareNumericMode prefers explicit numericCommissionMode', () => {
+    expect(resolveLegacyBareNumericMode({ numericCommissionMode: 'amount' })).toBe('amount')
+    expect(resolveLegacyBareNumericMode({ numericCommissionMode: 'percent' })).toBe('percent')
+  })
+
+  it('resolveLegacyBareNumericMode uses percent for payout-only and undefined for structured', () => {
+    expect(resolveLegacyBareNumericMode({ commissionPayout: '30' })).toBe('percent')
+    expect(resolveLegacyBareNumericMode({ commissionPayout: '105.00' })).toBe('percent')
+    expect(resolveLegacyBareNumericMode({
+      numericCommissionMode: 'amount',
+      commissionPayout: '105.00',
+    })).toBe('amount')
+    expect(resolveLegacyBareNumericMode({
+      commissionType: 'percent',
+      commissionValue: '7.5',
+    })).toBeUndefined()
   })
 
   it('normalizes commission payout in percent and absolute modes', () => {
@@ -99,6 +118,17 @@ describe('offer monetization helpers', () => {
       commissionValue: '11.25',
       commissionCurrency: 'USD',
       commissionPayout: '$11.25',
+    })
+
+    expect(normalizeOfferCommissionInput({
+      targetCountry: 'US',
+      commissionPayout: '30',
+      legacyBareNumericMode: 'percent',
+    })).toEqual({
+      commissionType: null,
+      commissionValue: null,
+      commissionCurrency: null,
+      commissionPayout: '30',
     })
 
     expect(() => normalizeOfferCommissionInput({

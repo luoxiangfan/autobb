@@ -2,6 +2,7 @@ import { getDatabase } from '@/lib/db'
 import { getAllProxyUrls } from '@/lib/settings'
 import { getProxyPool, clearProxyPool } from '@/lib/url-resolver-enhanced'
 import { getLanguageNameForCountry, getSupportedCountries, getCountryChineseName, normalizeCountryCode } from '@/lib/language-country-codes'
+import { pickFirstTwoLetterCountryCode } from '@/lib/two-letter-country-code'
 import { calculateMaxCPC } from '@/lib/currency'
 import { maskProxyUrl } from '@/lib/proxy/validate-url'
 
@@ -366,8 +367,22 @@ export async function generateOfferName(
  * 示例：UK -> GB
  */
 export function normalizeOfferTargetCountry(countryCode: string): string {
-  const normalized = normalizeCountryCode(String(countryCode || '').trim())
-  return normalized || 'US'
+  const trimmed = String(countryCode || '').trim()
+  if (!trimmed) {
+    return ''
+  }
+
+  const mapped = normalizeCountryCode(trimmed)
+  const twoLetter = pickFirstTwoLetterCountryCode(mapped) ?? pickFirstTwoLetterCountryCode(trimmed)
+  if (twoLetter) {
+    return twoLetter
+  }
+
+  if (!mapped) {
+    return ''
+  }
+
+  return mapped.toUpperCase()
 }
 
 /**

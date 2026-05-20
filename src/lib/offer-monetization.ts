@@ -324,12 +324,53 @@ export function normalizeOfferCommissionPayoutInput(
 
 export type CommissionType = 'percent' | 'amount'
 
+export type ResolveLegacyBareNumericModeParams = {
+  numericCommissionMode?: 'amount' | 'percent'
+  commissionType?: unknown
+  commissionValue?: unknown
+  commissionPayout?: unknown
+}
+
+/**
+ * 推断 legacy commission_payout 裸数字语义（extract / PUT 共用）
+ * - 显式 numericCommissionMode 优先
+ * - 有结构化 commission_type/value 时走默认 amount 推断
+ * - 仅有 commission_payout 时保留裸数字（percent）
+ */
+export function resolveLegacyBareNumericMode(
+  params: ResolveLegacyBareNumericModeParams
+): 'amount' | 'percent' | undefined {
+  if (params.numericCommissionMode === 'amount' || params.numericCommissionMode === 'percent') {
+    return params.numericCommissionMode
+  }
+
+  const hasStructuredType = params.commissionType != null
+    && String(params.commissionType).trim() !== ''
+  const hasStructuredValue = params.commissionValue != null
+    && String(params.commissionValue).trim() !== ''
+  if (hasStructuredType || hasStructuredValue) {
+    return undefined
+  }
+
+  if (params.commissionPayout != null && String(params.commissionPayout).trim() !== '') {
+    return 'percent'
+  }
+
+  return undefined
+}
+
 export type NormalizeOfferCommissionInputParams = {
   targetCountry?: string | null
   commissionType?: string | null
   commissionValue?: string | number | null
   commissionCurrency?: string | null
   commissionPayout?: string | null
+  /**
+   * 裸数字 commission_payout（>1 且无 %/货币）的语义：
+   * - amount（默认）：推断为固定佣金金额
+   * - percent：保留原字符串，不自动加 $ 或 %
+   */
+  legacyBareNumericMode?: 'amount' | 'percent'
 }
 
 export type NormalizedOfferCommission = {
@@ -438,7 +479,8 @@ function parseStructuredCommission(
 
 function parseLegacyCommission(
   commissionPayout: string | null | undefined,
-  targetCountry?: string | null
+  targetCountry?: string | null,
+  options?: { bareNumericMode?: 'amount' | 'percent' }
 ): NormalizedOfferCommission | null {
   const raw = normalizeSpacing(String(commissionPayout || ''))
   if (!raw) return null
@@ -473,6 +515,15 @@ function parseLegacyCommission(
         commissionValue: formatCompactNumber(ratioDisplayRate),
         commissionCurrency: null,
         commissionPayout: `${formatCompactNumber(ratioDisplayRate)}%`,
+      }
+    }
+
+    if (options?.bareNumericMode === 'percent') {
+      return {
+        commissionType: null,
+        commissionValue: null,
+        commissionCurrency: null,
+        commissionPayout: raw,
       }
     }
 
@@ -535,7 +586,11 @@ export function normalizeOfferCommissionInput(
   params: NormalizeOfferCommissionInputParams
 ): NormalizedOfferCommission {
   const structured = parseStructuredCommission(params)
-  const legacy = parseLegacyCommission(params.commissionPayout, params.targetCountry)
+  const legacy = parseLegacyCommission(
+    params.commissionPayout,
+    params.targetCountry,
+    { bareNumericMode: params.legacyBareNumericMode }
+  )
 
   if (!structured && !legacy) {
     return {

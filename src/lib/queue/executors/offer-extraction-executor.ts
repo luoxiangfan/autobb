@@ -9,6 +9,11 @@
 
 import type { Task } from '../types'
 import { extractOffer } from '@/lib/offer-extraction-core'
+import {
+  getOfferExtractionModeProfile,
+  normalizeOfferExtractionMode,
+  type OfferExtractionMode,
+} from '@/lib/offer-extraction-performance'
 import { getDatabase } from '@/lib/db'
 import { executeAIAnalysis } from '@/lib/ai-analysis-service'
 import { getTargetLanguage, normalizeBrandName } from '@/lib/offer-utils'
@@ -19,6 +24,7 @@ import { filterNavigationLabels } from '@/lib/scrape-text-filters'
 import { parsePrice } from '@/lib/pricing-utils'
 import { toDbJsonObjectField } from '@/lib/json-field'
 import { extractScenariosFromReviews } from '@/lib/scenario-extractor'
+import { syncScrapedProductsFromExtractData } from '@/lib/offer-scraped-products-sync'
 import { stripTrailingCountryCodeSuffix } from '@/lib/brand-suffix-utils'
 
 function mergeUniqueStrings(primary: string[] | null | undefined, secondary: string[] | null | undefined, limit: number): string[] | null {
@@ -292,6 +298,7 @@ export interface OfferExtractionTaskData {
   // 🔥 链接类型与店铺补充单品链接
   pageType?: 'store' | 'product'
   storeProductLinks?: string[]
+  extractionMode?: OfferExtractionMode | string
 }
 
 /**
@@ -312,16 +319,22 @@ export async function executeOfferExtraction(
     commissionCurrency,
     brandName,
     pageType,
-    storeProductLinks
+    storeProductLinks,
+    extractionMode: extractionModeInput,
   } = task.data
+  const extractionMode = normalizeOfferExtractionMode(extractionModeInput)
+  const modeProfile = getOfferExtractionModeProfile(extractionMode)
   const db = getDatabase()
-
-  // 🔥 2025-12-12调试：记录task.data中的targetCountry
-  console.log(`📋 executeOfferExtraction: task.id=${task.id}, targetCountry="${targetCountry}", task.data=${JSON.stringify(task.data)}`)
 
   // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
   const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
   const toDbJson = (value: any): any => toDbJsonObjectField(value, db.type, null)
+
+  const taskLinkRow = await db.queryOne<{ offer_id: number | null }>(
+    'SELECT offer_id FROM offer_tasks WHERE id = ?',
+    [task.id]
+  )
+  const linkedOfferId = taskLinkRow?.offer_id ?? null
 
   try {
     // 更新任务状态为运行中
@@ -330,6 +343,10 @@ export async function executeOfferExtraction(
       SET status = 'running', started_at = ${nowFunc}, message = '开始提取Offer信息'
       WHERE id = ?
     `, [task.id])
+
+    if (linkedOfferId) {
+      await updateOfferScrapeStatus(linkedOfferId, task.userId, 'in_progress')
+    }
 
     console.log(`🚀 开始执行Offer提取任务: ${task.id}`)
 
@@ -343,6 +360,7 @@ export async function executeOfferExtraction(
       brandNameInput: brandName,
       pageTypeOverride: pageType,
       storeProductLinks,
+      extractionMode,
       // 进度回调：更新到数据库
       progressCallback: async (stage, status, message, data, duration) => {
         // 计算进度百分比 - 必须包含所有ProgressStage阶段
@@ -451,6 +469,7 @@ export async function executeOfferExtraction(
         commission_value: commissionValue || undefined,
         commission_currency: commissionCurrency || undefined,
         page_type: pageTypeToPersist,
+        extraction_mode: extractionMode,
       })
       createdOfferId = offer.id
       // 保存scraped_data
@@ -480,6 +499,7 @@ export async function executeOfferExtraction(
         commission_value: commissionValue || undefined,
         commission_currency: commissionCurrency || undefined,
         page_type: pageTypeToPersist,
+        extraction_mode: extractionMode,
       })
       createdOfferId = offer.id
       // 保存scraped_data
@@ -489,6 +509,14 @@ export async function executeOfferExtraction(
       // 更新offer_tasks关联
       await db.exec(`UPDATE offer_tasks SET offer_id = ? WHERE id = ?`, [offer.id, task.id])
       console.log(`✅ 普通SSE任务Offer基础创建成功: offer_id=${offer.id}`)
+    }
+
+    if (createdOfferId) {
+      try {
+        await syncScrapedProductsFromExtractData(createdOfferId, task.userId, extractResult.data)
+      } catch (syncError: any) {
+        console.warn(`⚠️ scraped_products 提前同步失败（非致命） offer_id=${createdOfferId}:`, syncError?.message || syncError)
+      }
     }
 
     // ========== 执行AI分析 ==========
@@ -545,10 +573,8 @@ export async function executeOfferExtraction(
           enableReviewAnalysis: true,
           enableCompetitorAnalysis: true,
           enableAdExtraction: true,
-          // 🔥 修复（2025-12-08）：所有offer-extraction任务都启用Playwright深度抓取
-          // 不再区分是否为批量任务，确保与手动创建流程(performScrapeAndAnalysis)完全一致
-          // 抓取30条真实评论 + 5个真实竞品
-          enablePlaywrightDeepScraping: true,
+          extractionMode,
+          enablePlaywrightDeepScraping: modeProfile.aiPlaywrightDeepScrapeEnabled,
         }),
         aiAnalysisTimeoutMs,
         `AI分析超时（>${Math.floor(aiAnalysisTimeoutMs / 1000)}秒）`
@@ -743,6 +769,17 @@ export async function executeOfferExtraction(
       toDbJson({ message: error.message, stack: error.stack }),
       task.id
     ])
+
+    if (linkedOfferId) {
+      try {
+        await updateOfferScrapeStatus(linkedOfferId, task.userId, 'failed', error.message)
+      } catch (statusError: any) {
+        console.warn(
+          `⚠️ 提取失败后同步 scrape_status 失败 offer_id=${linkedOfferId}:`,
+          statusError?.message || statusError
+        )
+      }
+    }
 
     throw error
   }

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter, useParams } from 'next/navigation'
-import { showSuccess, showError, showInfo } from '@/lib/toast-utils'
+import { showSuccess, showError } from '@/lib/toast-utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -38,6 +38,13 @@ import { Label } from '@/components/ui/label'
 import { TrendingUp, DollarSign, Target, Activity, RefreshCcw } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import { getCommissionPerConversion, parseCommissionPayoutValue } from '@/lib/offer-monetization'
+import {
+  getDefaultOfferExtractionMode,
+  getOfferExtractionModeLabel,
+  normalizeOfferExtractionMode,
+  type OfferExtractionMode,
+} from '@/lib/offer-extraction-mode'
+import { OfferExtractionModeField } from '@/components/offers/OfferExtractionModeField'
 import type { TrendChartData } from '@/components/charts/TrendChart'
 
 const OfferTrendsSection = dynamic(() => import('./OfferTrendsSection'), {
@@ -75,6 +82,7 @@ interface Offer {
   productPrice: string | null
   commissionPayout: string | null
   storeProductLinks?: string[]
+  extractionMode?: OfferExtractionMode
 }
 
 interface PerformanceSummary {
@@ -179,13 +187,13 @@ export default function OfferDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [deleting, setDeleting] = useState(false)
-  const [scraping, setScraping] = useState(false)
   const [rebuilding, setRebuilding] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isRebuildDialogOpen, setIsRebuildDialogOpen] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [rebuildError, setRebuildError] = useState<string | null>(null)
+  const [rebuildExtractionMode, setRebuildExtractionMode] = useState<OfferExtractionMode>(getDefaultOfferExtractionMode)
   const [removeGoogleAdsCampaignsOnDelete, setRemoveGoogleAdsCampaignsOnDelete] = useState(false)
 
   // Performance data states
@@ -394,34 +402,6 @@ export default function OfferDetailPage() {
     }
   }
 
-  const handleScrape = async () => {
-    setScraping(true)
-
-    try {
-      // HttpOnly Cookie自动携带，无需手动操作
-      const response = await fetch(`/api/offers/${offerId}/scrape`, {
-        method: 'POST',
-        credentials: 'include', // 确保发送cookie
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || '启动抓取失败')
-      }
-
-      showInfo('抓取已启动', '产品信息抓取已启动，请稍后刷新页面查看结果')
-
-      // 3秒后自动刷新
-      setTimeout(() => {
-        fetchOffer()
-      }, 3000)
-    } catch (err: any) {
-      showError('启动抓取失败', err.message || '请稍后重试')
-    } finally {
-      setScraping(false)
-    }
-  }
-
   const getScrapeStatusLabel = (status: string): string => {
     const labels: Record<string, string> = {
       pending: '待抓取',
@@ -444,6 +424,12 @@ export default function OfferDetailPage() {
     return colors[status] || 'bg-gray-100 text-gray-800'
   }
 
+  useEffect(() => {
+    if (isRebuildDialogOpen) {
+      setRebuildExtractionMode(normalizeOfferExtractionMode(offer?.extractionMode))
+    }
+  }, [isRebuildDialogOpen, offer?.extractionMode])
+
   const handleRebuild = async () => {
     try {
       setRebuilding(true)
@@ -452,6 +438,8 @@ export default function OfferDetailPage() {
       const response = await fetch(`/api/offers/${offerId}/rebuild`, {
         method: 'POST',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ extraction_mode: rebuildExtractionMode }),
       })
 
       const data = await response.json()
@@ -466,7 +454,13 @@ export default function OfferDetailPage() {
       setRebuildError(null)
 
       // 显示成功提示
-      showSuccess('重建任务已创建', `Offer重建任务已启动，taskId: ${data.taskId}`)
+      const modeLabel = data.extractionMode
+        ? getOfferExtractionModeLabel(data.extractionMode)
+        : '完整提取'
+      showSuccess(
+        '重建任务已创建',
+        `已按「${modeLabel}」模式启动重建${data.taskId ? `（任务 ${data.taskId}）` : ''}`
+      )
 
       // 3秒后刷新页面数据
       setTimeout(() => {
@@ -614,6 +608,9 @@ export default function OfferDetailPage() {
                 <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getScrapeStatusColor(offer.scrapeStatus)}`}>
                   {getScrapeStatusLabel(offer.scrapeStatus)}
                 </span>
+                <Badge variant="outline" className="ml-2 text-xs font-normal">
+                  提取模式：{getOfferExtractionModeLabel(offer.extractionMode)}
+                </Badge>
                 <span className="ml-3">
                   {offer.scrapeStatus === 'pending' && '产品信息后台异步抓取中...'}
                   {offer.scrapeStatus === 'in_progress' && '正在抓取产品信息...'}
@@ -623,11 +620,12 @@ export default function OfferDetailPage() {
               </div>
               {offer.scrapeStatus === 'failed' && (
                 <button
-                  onClick={handleScrape}
-                  disabled={scraping}
+                  onClick={() => setIsRebuildDialogOpen(true)}
+                  disabled={rebuilding || !offer.affiliateLink}
                   className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+                  title={!offer.affiliateLink ? '缺少推广链接，无法重新提取' : '按所选提取模式重新抓取并分析'}
                 >
-                  {scraping ? '启动中...' : '重新抓取'}
+                  重新提取
                 </button>
               )}
             </div>
@@ -1634,6 +1632,12 @@ export default function OfferDetailPage() {
                     <p className="text-sm text-red-800">{rebuildError}</p>
                   </div>
                 )}
+
+                <OfferExtractionModeField
+                    id="rebuildExtractionMode"
+                    value={rebuildExtractionMode}
+                    onChange={setRebuildExtractionMode}
+                  />
 
                 {!rebuildError && (
                   <div className="bg-blue-50 border border-blue-200 rounded-md p-3">

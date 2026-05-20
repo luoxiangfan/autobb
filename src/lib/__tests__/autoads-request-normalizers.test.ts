@@ -5,6 +5,7 @@ import {
   normalizeClickFarmTaskRequestBody,
   normalizeOfferExtractRequestBody,
 } from '@/lib/autoads-request-normalizers'
+import { resolveExtractPageInput } from '@/lib/offer-extraction-task'
 
 describe('autoads request normalizers', () => {
   it('normalizes campaign.publish payload aliases and defaults', () => {
@@ -132,6 +133,7 @@ describe('autoads request normalizers', () => {
       url: 'https://aff.example.com/track',
       brand: 'Example',
       skip_cache: '1',
+      extraction_mode: '快速',
     }) || {}
 
     expect(normalized).toMatchObject({
@@ -141,11 +143,93 @@ describe('autoads request normalizers', () => {
       page_type: 'product',
       skipCache: true,
       skipWarmup: false,
+      extraction_mode: 'fast',
     })
 
     expect(normalized.url).toBeUndefined()
     expect(normalized.brand).toBeUndefined()
     expect(normalized.skip_cache).toBeUndefined()
+  })
+
+  it('does not default page_type to product when store_product_links are present', () => {
+    const normalized = normalizeOfferExtractRequestBody({
+      affiliate_link: 'https://aff.example.com/track',
+      target_country: 'US',
+      store_product_links: ['https://amazon.com/dp/B001'],
+    }) || {}
+
+    expect(normalized.page_type).toBeUndefined()
+    expect(normalized.store_product_links).toEqual(['https://amazon.com/dp/B001'])
+  })
+
+  it('does not default page_type when storeProductLinks alias is present', () => {
+    const normalized = normalizeOfferExtractRequestBody({
+      affiliateLink: 'https://aff.example.com/track',
+      targetCountry: 'US',
+      storeProductLinks: ['https://amazon.com/dp/B002'],
+    }) || {}
+
+    expect(normalized.page_type).toBeUndefined()
+    expect(normalized.store_product_links).toEqual(['https://amazon.com/dp/B002'])
+  })
+
+  it('does not default page_type to product for Amazon stores URL without links', () => {
+    const normalized = normalizeOfferExtractRequestBody({
+      affiliate_link: 'https://www.amazon.com/stores/page/ABC',
+      target_country: 'US',
+    }) || {}
+
+    expect(normalized.page_type).toBeUndefined()
+
+    const pageInput = resolveExtractPageInput({
+      pageType: normalized.page_type,
+      affiliateLink: String(normalized.affiliate_link),
+      storeProductLinks: normalized.store_product_links,
+    })
+    expect(pageInput).toEqual({
+      pageType: 'store',
+      storeProductLinks: [],
+    })
+  })
+
+  it('omits invalid extraction_mode from normalized body', () => {
+    const normalized = normalizeOfferExtractRequestBody({
+      affiliate_link: 'https://aff.example.com/track',
+      target_country: 'US',
+      extraction_mode: 'bogus',
+    }) || {}
+
+    expect(normalized.extraction_mode).toBeUndefined()
+  })
+
+  it('keeps bare commission_payout after normalize when only payout is provided', () => {
+    const normalized = normalizeOfferExtractRequestBody({
+      affiliate_link: 'https://aff.example.com/track',
+      target_country: 'US',
+      commission_payout: '30',
+    }) || {}
+
+    expect(normalized.commission_payout).toBe('30')
+    expect(normalized.commission_type).toBeUndefined()
+  })
+
+  it('normalize + resolveExtractPageInput infers store when page_type omitted with links', () => {
+    const normalized = normalizeOfferExtractRequestBody({
+      affiliate_link: 'https://aff.example.com/track',
+      target_country: 'US',
+      store_product_links: ['https://amazon.com/dp/B001'],
+    }) || {}
+
+    const pageInput = resolveExtractPageInput({
+      pageType: normalized.page_type,
+      affiliateLink: String(normalized.affiliate_link),
+      storeProductLinks: normalized.store_product_links,
+    })
+
+    expect(pageInput).toEqual({
+      pageType: 'store',
+      storeProductLinks: ['https://amazon.com/dp/B001'],
+    })
   })
 
   it('drops non-two-letter offer extract countries back to default US', () => {
@@ -176,6 +260,7 @@ describe('autoads request normalizers', () => {
       },
       {
         normalizeMonetization: true,
+        numericCommissionMode: 'amount',
       }
     ) || {}
 

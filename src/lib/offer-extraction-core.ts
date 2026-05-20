@@ -29,6 +29,19 @@ import { warmupAffiliateLink } from '@/lib/proxy-warmup'
 import { getProxyUrlForCountry } from '@/lib/settings'
 import { fetchBrandSearchSupplement, type BrandSearchSupplement } from '@/lib/google-brand-search'
 import { deriveBrandFromProductTitle, isLikelyInvalidBrandName } from '@/lib/brand-name-utils'
+import {
+  getAmazonScrapeOptionsForMode,
+  getOfferAmazonProductMaxProxyRetries,
+  getOfferDeepScrapeConcurrency,
+  getOfferDeepScrapeTopN,
+  getOfferProductLightScrapeTimeoutMs,
+  getOfferExtractionModeProfile,
+  hasMinimalIndependentProductBaseline,
+  normalizeOfferExtractionMode,
+  shouldFallbackToRenderedIndependentProductForOffer,
+  shouldSkipAmazonCompetitorExtractionOnExtract,
+  type OfferExtractionMode,
+} from '@/lib/offer-extraction-performance'
 import type { ProgressStage } from '@/types/progress'
 
 /**
@@ -55,6 +68,8 @@ export interface ExtractOfferOptions {
   storeProductLinks?: string[]
   /** SSE进度回调函数（可选） */
   progressCallback?: ProgressCallback
+  /** 提取模式：fast | balanced | original */
+  extractionMode?: OfferExtractionMode | string
 }
 
 /**
@@ -435,10 +450,15 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
     pageTypeOverride,
     storeProductLinks,
     progressCallback,
+    extractionMode: extractionModeInput,
   } = options
 
-  // 🔥 2025-12-12调试：记录targetCountry参数
-  console.log(`📍 extractOffer: targetCountry="${targetCountry}", userId=${userId}, affiliateLink=${affiliateLink?.substring(0, 50)}...`)
+  const extractionMode = normalizeOfferExtractionMode(extractionModeInput)
+  const modeProfile = getOfferExtractionModeProfile(extractionMode)
+
+  console.log(
+    `📍 extractOffer: mode=${extractionMode}, targetCountry="${targetCountry}", userId=${userId}, affiliateLink=${affiliateLink?.substring(0, 50)}...`
+  )
 
   try {
     // ========== 步骤0: 初始化代理池（必须在预热之前） ==========
@@ -487,30 +507,48 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
     // ========== 步骤1: 推广链接预热（可选） ==========
     const proxyWarmupStartTime = Date.now()
     if (!skipWarmup) {
-      progressCallback?.('proxy_warmup', 'in_progress', '正在进行推广链接预热...', undefined, 0)
-
-      try {
+      const runWarmup = async () => {
         const targetProxyUrl = await getProxyUrlForCountry(targetCountry, userId)
-
         if (!targetProxyUrl) {
           console.warn('⚠️ 未配置代理URL，跳过预热步骤')
-          trackStageProgress(progressCallback, proxyWarmupStartTime, 'proxy_warmup', 'completed', '未配置代理URL，跳过预热')
-        } else {
-          const warmupSuccess = await warmupAffiliateLink(targetProxyUrl, affiliateLink)
-
-          if (!warmupSuccess) {
-            // 预热失败不中断流程，只记录警告
-            console.warn('⚠️ 推广链接预热失败，继续后续流程')
-            trackStageProgress(progressCallback, proxyWarmupStartTime, 'proxy_warmup', 'completed', '推广链接预热失败，继续后续流程')
-          } else {
-            console.log('✅ 推广链接预热已触发（12个代理IP访问中）')
-            trackStageProgress(progressCallback, proxyWarmupStartTime, 'proxy_warmup', 'completed', '推广链接预热已触发')
-          }
+          return false
         }
-      } catch (error: any) {
-        // 预热异常不中断流程，只记录警告
-        console.warn('⚠️ 推广链接预热异常:', error.message)
-        trackStageProgress(progressCallback, proxyWarmupStartTime, 'proxy_warmup', 'completed', `推广链接预热异常: ${error.message}`)
+        return warmupAffiliateLink(targetProxyUrl, affiliateLink)
+      }
+
+      if (modeProfile.warmupBlocking) {
+        progressCallback?.('proxy_warmup', 'in_progress', '正在进行推广链接预热...', undefined, 0)
+        try {
+          const warmupSuccess = await runWarmup()
+          trackStageProgress(
+            progressCallback,
+            proxyWarmupStartTime,
+            'proxy_warmup',
+            'completed',
+            warmupSuccess ? '推广链接预热完成' : '推广链接预热失败，继续后续流程'
+          )
+        } catch (error: any) {
+          console.warn('⚠️ 推广链接预热异常:', error?.message || error)
+          trackStageProgress(
+            progressCallback,
+            proxyWarmupStartTime,
+            'proxy_warmup',
+            'completed',
+            `推广链接预热异常: ${error?.message || error}`
+          )
+        }
+      } else {
+        progressCallback?.('proxy_warmup', 'in_progress', '正在后台触发推广链接预热...', undefined, 0)
+        void runWarmup().catch((error: any) => {
+          console.warn('⚠️ 推广链接预热异常（后台）:', error?.message || error)
+        })
+        trackStageProgress(
+          progressCallback,
+          proxyWarmupStartTime,
+          'proxy_warmup',
+          'completed',
+          '推广链接预热已在后台执行'
+        )
       }
     } else {
       console.log('⏩ 跳过推广链接预热（skipWarmup=true）')
@@ -700,45 +738,74 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
       const scrapingProductsStartTime = Date.now()
       progressCallback?.('scraping_products', 'in_progress', '正在抓取产品数据...', undefined, 0)
 
+      const deepScrapeTopN = getOfferDeepScrapeTopN(extractionMode)
+      const deepScrapeConcurrency = getOfferDeepScrapeConcurrency(extractionMode)
+      const amazonScrapeOptions = getAmazonScrapeOptionsForMode(extractionMode)
+
       if (isAmazonStore) {
-        console.log('🏪 检测到Amazon Store页面，使用深度抓取模式（包含热销商品详情）...')
-        // 🔥 方案A：前置深度抓取
-        // 进入前5个热销商品详情页，获取详细评论和竞品数据
+        console.log(`🏪 检测到Amazon Store页面，使用深度抓取模式（top ${deepScrapeTopN}）...`)
         storeData = await scrapeAmazonStoreDeep(
           fullTargetUrl,
-          5,  // 抓取前5个热销商品的详情页
+          deepScrapeTopN,
           proxyApiUrl,
           targetCountry,
-          3   // 并发数：最多同时抓取3个商品
+          deepScrapeConcurrency
         )
         brandName = storeData.brandName || storeData.storeName
         productDescription = storeData.storeDescription
         productCount = storeData.totalProducts
         console.log(`✅ Amazon Store深度识别成功: ${brandName}, 产品数: ${productCount}, 深度抓取: ${storeData.deepScrapeResults?.successCount || 0}/${storeData.deepScrapeResults?.totalScraped || 0}`)
       } else if (isAmazonProductPage) {
-        console.log('📦 检测到Amazon单品页面，使用非Crawlee方案抓取...')
-        amazonProductData = await scrapeAmazonProduct(fullTargetUrl, proxyApiUrl, targetCountry)
-
-        // 通用兜底：若“带追踪参数URL”抓取数据质量不足，则回退到 canonical /dp/ASIN URL 再抓取一次
+        const amazonMaxProxyRetries = getOfferAmazonProductMaxProxyRetries(extractionMode)
+        const skipAmazonCompetitorExtraction = shouldSkipAmazonCompetitorExtractionOnExtract(extractionMode)
         const canonicalAmazonProductUrl = buildCanonicalAmazonProductUrl(resolvedData.finalUrl)
-        const canRetryWithCanonical = !!canonicalAmazonProductUrl && canonicalAmazonProductUrl !== fullTargetUrl
+        const preferCanonicalFirst = modeProfile.preferCanonicalAmazonUrlFirst
+          && !!canonicalAmazonProductUrl
+          && canonicalAmazonProductUrl !== fullTargetUrl
+        const primaryAmazonUrl = preferCanonicalFirst ? canonicalAmazonProductUrl! : fullTargetUrl
+        const secondaryAmazonUrl = preferCanonicalFirst ? fullTargetUrl : canonicalAmazonProductUrl
 
-        if (canRetryWithCanonical && isAmazonProductDataInsufficient(amazonProductData)) {
+        const scrapeAmazonOnce = (url: string) => scrapeAmazonProduct(
+          url,
+          proxyApiUrl ?? undefined,
+          targetCountry,
+          amazonMaxProxyRetries,
+          skipAmazonCompetitorExtraction,
+          amazonScrapeOptions
+        )
+
+        console.log(
+          `📦 检测到Amazon单品页面 [${extractionMode}]，优先抓取: ${preferCanonicalFirst ? 'canonical' : 'full'} URL`
+        )
+
+        amazonProductData = await scrapeAmazonOnce(primaryAmazonUrl)
+
+        if (
+          secondaryAmazonUrl
+          && secondaryAmazonUrl !== primaryAmazonUrl
+          && isAmazonProductDataInsufficient(amazonProductData)
+        ) {
           const primaryScore = getAmazonProductDataQualityScore(amazonProductData)
-          console.warn(`⚠️ Amazon单品抓取结果质量不足（score=${primaryScore}），尝试canonical回退: ${canonicalAmazonProductUrl}`)
+          console.warn(
+            `⚠️ Amazon单品抓取质量不足（score=${primaryScore}），回退抓取: ${secondaryAmazonUrl}`
+          )
 
           try {
-            const canonicalProductData = await scrapeAmazonProduct(canonicalAmazonProductUrl, proxyApiUrl, targetCountry)
-            const canonicalScore = getAmazonProductDataQualityScore(canonicalProductData)
+            const secondaryProductData = await scrapeAmazonOnce(secondaryAmazonUrl)
+            const secondaryScore = getAmazonProductDataQualityScore(secondaryProductData)
 
-            if (canonicalScore >= primaryScore) {
-              amazonProductData = canonicalProductData
-              console.log(`✅ Amazon canonical回退成功（score ${primaryScore} -> ${canonicalScore}）`)
+            if (secondaryScore >= primaryScore) {
+              amazonProductData = secondaryProductData
+              console.log(`✅ Amazon 回退抓取成功（score ${primaryScore} -> ${secondaryScore}）`)
             } else {
-              console.warn(`⚠️ Amazon canonical回退未提升质量（score ${primaryScore} -> ${canonicalScore}），保留原结果`)
+              console.warn(
+                `⚠️ Amazon 回退抓取未提升质量（score ${primaryScore} -> ${secondaryScore}），保留主结果`
+              )
             }
-          } catch (canonicalError: any) {
-            console.warn(`⚠️ Amazon canonical回退抓取失败，保留原结果: ${canonicalError?.message || canonicalError}`)
+          } catch (secondaryError: any) {
+            console.warn(
+              `⚠️ Amazon 回退抓取失败，保留主结果: ${secondaryError?.message || secondaryError}`
+            )
           }
         }
 
@@ -767,6 +834,10 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           imageUrls: amazonProductData.imageUrls || [],
           metaTitle: null,
           metaDescription: null,
+          rating: amazonProductData.rating,
+          reviewCount: amazonProductData.reviewCount,
+          reviewHighlights: amazonProductData.reviewHighlights,
+          topReviews: amazonProductData.topReviews,
         }
         console.log(`✅ Amazon单品识别成功: ${brandName || 'Unknown'}`)
       } else if (isIndependentStore) {
@@ -777,10 +848,10 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         const storeScrapeUrl = resolvedData.finalUrl
         independentStoreData = await scrapeIndependentStoreDeep(
           storeScrapeUrl,
-          5,  // 抓取前5个热销商品的详情页
+          deepScrapeTopN,
           proxyApiUrl,
           targetCountry,
-          3   // 并发数：最多同时抓取3个商品
+          deepScrapeConcurrency
         )
         // 🔥 品牌名归一：独立站主域名更稳定，避免 “Brand + 国家/语言” 作为品牌名
         // 例：kaspersky.es 页面标题/店铺名为 “Kaspersky España”，但品牌应为 “kaspersky”
@@ -815,15 +886,32 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
 
         // 🔥 必须使用包含suffix的完整URL，否则会丢失追踪参数导致落地页不正确（例如 partnermatic/awin 链路）
         // 🔥 修复：独立站单品axios抓取也需要走代理（否则容易被风控/超时，导致品牌词为空）
+        const lightScrapeTimeoutMs = getOfferProductLightScrapeTimeoutMs(extractionMode)
         try {
-          scrapedData = await extractProductInfo(fullTargetUrl, targetCountry, proxyApiUrl, 30000, userId)
+          scrapedData = await extractProductInfo(
+            fullTargetUrl,
+            targetCountry,
+            proxyApiUrl,
+            lightScrapeTimeoutMs,
+            userId
+          )
         } catch (lightScrapeError: any) {
           console.warn(`⚠️ 轻量级scraper失败: ${lightScrapeError?.message || lightScrapeError}`)
           scrapedData = null
         }
 
-        // 🔥 检测是否需要JavaScript渲染：独立站单品若仅抓到浅层字段，继续走Playwright拿完整内容
-        if (shouldFallbackToRenderedIndependentProduct(scrapedData, fullTargetUrl)) {
+        if (modeProfile.skipPlaywrightWhenMinimalBaseline && hasMinimalIndependentProductBaseline(scrapedData)) {
+          console.log('✅ 独立站轻量抓取已满足创建 Offer 基础字段，跳过 Playwright 渲染')
+        }
+
+        const needsPlaywrightFallback = modeProfile.useLegacyIndependentPlaywrightFallback
+          ? shouldFallbackToRenderedIndependentProduct(scrapedData, fullTargetUrl)
+          : shouldFallbackToRenderedIndependentProductForOffer(scrapedData, fullTargetUrl)
+
+        if (
+          !(modeProfile.skipPlaywrightWhenMinimalBaseline && hasMinimalIndependentProductBaseline(scrapedData))
+          && needsPlaywrightFallback
+        ) {
           console.warn('⚠️ 轻量级scraper丰富度不足，尝试使用Playwright进行JavaScript渲染...')
 
           try {

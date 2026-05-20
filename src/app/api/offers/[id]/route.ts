@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { findOfferById, updateOffer, deleteOffer } from '@/lib/offers'
+import { findOfferById, deleteOffer } from '@/lib/offers'
 import { invalidateOfferCache } from '@/lib/api-cache'
-import { z } from 'zod'
 import { compactCategoryLabel, deriveCategoryFromScrapedData } from '@/lib/offer-category'
 import { filterNavigationLabels } from '@/lib/scrape-text-filters'
-import { normalizeOfferCommissionInput } from '@/lib/offer-monetization'
+import { normalizeOfferExtractionMode } from '@/lib/offer-extraction-mode'
+import { applyOfferUpdateFromBody, mapOfferToPutResponse } from '@/lib/offer-update-from-body'
 
 function safeParseJson<T>(input: unknown): T | null {
   if (typeof input !== 'string' || !input.trim()) return null
@@ -342,6 +342,7 @@ export async function GET(
         // 链接类型（店铺/单品）
         pageType: pageTypeEffective,
         storeProductLinks,
+        extractionMode: normalizeOfferExtractionMode(offer.extraction_mode),
       },
     })
   } catch (error: any) {
@@ -356,26 +357,6 @@ export async function GET(
   }
 }
 
-const updateOfferSchema = z.object({
-  url: z.string().url('无效的URL格式').optional(),
-  brand: z.string().min(1, '品牌名称不能为空').optional(),
-  category: z.string().optional(),
-  target_country: z.string().min(2, '目标国家代码至少2个字符').optional(),
-  affiliate_link: z.string().url('无效的联盟链接格式').optional(),
-  brand_description: z.string().optional(),
-  unique_selling_points: z.string().optional(),
-  product_highlights: z.string().optional(),
-  target_audience: z.string().optional(),
-  page_type: z.enum(['store', 'product']).optional(),
-  store_product_links: z.array(z.string().url('无效的URL格式')).max(3).optional(),
-  product_price: z.string().optional(),
-  commission_payout: z.string().optional(),
-  commission_type: z.enum(['percent', 'amount']).optional(),
-  commission_value: z.union([z.string(), z.number()]).optional(),
-  commission_currency: z.string().optional(),
-  is_active: z.boolean().optional(),
-})
-
 /**
  * PUT /api/offers/:id
  * 更新Offer
@@ -387,132 +368,29 @@ export async function PUT(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
     const userId = request.headers.get('x-user-id')
     if (!userId) {
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
+    const offerId = parseInt(id, 10)
+    const userIdNum = parseInt(userId, 10)
     const body = await request.json()
 
-    // 验证输入
-    const validationResult = updateOfferSchema.safeParse(body)
-    if (!validationResult.success) {
+    const applyResult = await applyOfferUpdateFromBody(offerId, userIdNum, body)
+    if ('error' in applyResult) {
       return NextResponse.json(
         {
-          error: validationResult.error.errors[0].message,
-          details: validationResult.error.errors,
+          error: applyResult.error,
+          ...(applyResult.status === 400 ? { details: applyResult.error } : {}),
         },
-        { status: 400 }
+        { status: applyResult.status }
       )
     }
 
-    const pageType = validationResult.data.page_type || undefined
-    const storeProductLinksInput = validationResult.data.store_product_links
-    let storeProductLinks: string[] | undefined = undefined
-    if (pageType === 'store' && storeProductLinksInput !== undefined) {
-      storeProductLinks = storeProductLinksInput
-        .map((link) => link.trim())
-        .filter((link) => Boolean(link))
-      storeProductLinks = Array.from(new Set(storeProductLinks)).slice(0, 3)
-    }
-
-    const hasCommissionInput = validationResult.data.commission_payout !== undefined
-      || validationResult.data.commission_type !== undefined
-      || validationResult.data.commission_value !== undefined
-      || validationResult.data.commission_currency !== undefined
-
-    let normalizedCommission: ReturnType<typeof normalizeOfferCommissionInput> | null = null
-    if (hasCommissionInput) {
-      let commissionTargetCountry = validationResult.data.target_country
-      if (!commissionTargetCountry) {
-        const existingOffer = await findOfferById(parseInt(id, 10), parseInt(userId, 10))
-        if (!existingOffer) {
-          return NextResponse.json(
-            {
-              error: 'Offer不存在或无权访问',
-            },
-            { status: 404 }
-          )
-        }
-        commissionTargetCountry = existingOffer.target_country
-      }
-
-      try {
-        normalizedCommission = normalizeOfferCommissionInput({
-          targetCountry: commissionTargetCountry,
-          commissionPayout: validationResult.data.commission_payout,
-          commissionType: validationResult.data.commission_type,
-          commissionValue: validationResult.data.commission_value,
-          commissionCurrency: validationResult.data.commission_currency,
-        })
-      } catch (error: any) {
-        return NextResponse.json(
-          {
-            error: error?.message || '佣金参数格式错误',
-          },
-          { status: 400 }
-        )
-      }
-    }
-
-    const offer = await updateOffer(parseInt(id, 10), parseInt(userId, 10), {
-      url: validationResult.data.url,
-      brand: validationResult.data.brand,
-      category: validationResult.data.category,
-      target_country: validationResult.data.target_country,
-      affiliate_link: validationResult.data.affiliate_link,
-      store_product_links: storeProductLinks !== undefined
-        ? (storeProductLinks.length > 0 ? JSON.stringify(storeProductLinks) : null)
-        : undefined,
-      brand_description: validationResult.data.brand_description,
-      unique_selling_points: validationResult.data.unique_selling_points,
-      product_highlights: validationResult.data.product_highlights,
-      target_audience: validationResult.data.target_audience,
-      product_price: validationResult.data.product_price,
-      commission_payout: hasCommissionInput ? (normalizedCommission?.commissionPayout || undefined) : undefined,
-      commission_type: hasCommissionInput ? (normalizedCommission?.commissionType || undefined) : undefined,
-      commission_value: hasCommissionInput ? (normalizedCommission?.commissionValue || undefined) : undefined,
-      commission_currency: hasCommissionInput ? (normalizedCommission?.commissionCurrency || undefined) : undefined,
-      page_type: pageType,
-      is_active: validationResult.data.is_active,
-    })
-
-    // 使缓存失效
-    invalidateOfferCache(parseInt(userId, 10), parseInt(id, 10))
-
     return NextResponse.json({
       success: true,
-      offer: {
-        id: offer.id,
-        url: offer.url,
-        brand: offer.brand,
-        offerName: offer.offer_name, // 🔧 添加offer_name字段映射
-        category: offer.category ? compactCategoryLabel(offer.category) : offer.category,
-        categoryRaw: offer.category,
-        targetCountry: offer.target_country,
-        targetLanguage: offer.target_language, // 🔧 修复(2025-12-11): 添加target_language字段
-        affiliateLink: offer.affiliate_link,
-        brandDescription: offer.brand_description,
-        uniqueSellingPoints: offer.unique_selling_points,
-        productHighlights: offer.product_highlights,
-        targetAudience: offer.target_audience,
-        // Final URL字段（从推广链接解析后的最终落地页）
-        finalUrl: offer.final_url,
-        finalUrlSuffix: offer.final_url_suffix,
-        productPrice: offer.product_price,
-        commissionPayout: offer.commission_payout,
-        commissionType: offer.commission_type,
-        commissionValue: offer.commission_value,
-        commissionCurrency: offer.commission_currency,
-        pageType: offer.page_type,
-        storeProductLinks: offer.store_product_links,
-        scrapeStatus: offer.scrape_status,
-        // 🔥 修复：兼容PostgreSQL(BOOLEAN)和SQLite(INTEGER)
-        isActive: offer.is_active === true || offer.is_active === 1,
-        createdAt: offer.created_at,
-        updatedAt: offer.updated_at,
-      },
+      offer: mapOfferToPutResponse(applyResult.offer),
     })
   } catch (error: any) {
     console.error('更新Offer失败:', error)

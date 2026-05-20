@@ -2,8 +2,11 @@ import {
   normalizeOfferCommissionInput,
   normalizeOfferCommissionPayoutInput,
   normalizeOfferProductPriceInput,
+  resolveLegacyBareNumericMode,
 } from '@/lib/offer-monetization'
+import { inferOfferPageType } from '@/lib/offer-extraction-task'
 import { pickFirstTwoLetterCountryCode } from '@/lib/two-letter-country-code'
+import { resolveExtractionModeInput } from '@/lib/offer-extraction-mode'
 type PlainObject = Record<string, any>
 
 function isPlainObject(value: unknown): value is PlainObject {
@@ -32,6 +35,17 @@ function isMissingRequiredValue(value: unknown): boolean {
   }
 
   return false
+}
+
+/** 请求体是否带有非空的店铺单品链接（用于决定是否默认 page_type=product） */
+function hasNonEmptyStoreProductLinksInput(value: unknown): boolean {
+  if (value === undefined || value === null) {
+    return false
+  }
+  if (!Array.isArray(value)) {
+    return false
+  }
+  return value.some((link) => typeof link === 'string' && link.trim().length > 0)
 }
 
 function toSafeNumber(value: unknown): number | undefined {
@@ -377,6 +391,8 @@ export function normalizeClickFarmTaskRequestBody(value: unknown): PlainObject |
 export type NormalizeOfferExtractOptions = {
   normalizeMonetization?: boolean
   numericCommissionMode?: 'amount' | 'percent'
+  /** true 时佣金规范化失败将抛出，供 extract API 返回 400 */
+  strictMonetization?: boolean
 }
 
 const OFFER_EXTRACT_ALIAS_MAP: Readonly<Record<string, string>> = {
@@ -394,6 +410,7 @@ const OFFER_EXTRACT_ALIAS_MAP: Readonly<Record<string, string>> = {
   storeProductLinks: 'store_product_links',
   skip_cache: 'skipCache',
   skip_warmup: 'skipWarmup',
+  extractionMode: 'extraction_mode',
 }
 
 export function normalizeOfferExtractRequestBody(
@@ -420,8 +437,18 @@ export function normalizeOfferExtractRequestBody(
     normalized.targetCountry,
   ) || 'US'
 
-  if (isMissingRequiredValue(normalized.page_type)) {
-    normalized.page_type = 'product'
+  // 无 page_type 时：有店铺链接或 stores URL 则留空供 infer；仅单品语义时默认 product
+  if (
+    isMissingRequiredValue(normalized.page_type)
+    && !hasNonEmptyStoreProductLinksInput(normalized.store_product_links)
+  ) {
+    const affiliateForInfer = String(
+      normalized.affiliate_link ?? source.affiliateLink ?? source.url ?? ''
+    ).trim()
+    const inferredPageType = inferOfferPageType({ affiliateLink: affiliateForInfer })
+    if (inferredPageType === 'product') {
+      normalized.page_type = 'product'
+    }
   }
 
   normalized.skipCache = normalized.skipCache !== undefined
@@ -431,9 +458,28 @@ export function normalizeOfferExtractRequestBody(
     ? isTruthyFlag(normalized.skipWarmup)
     : false
 
+  const rawExtractionMode = normalized.extraction_mode ?? normalized.extractionMode
+  delete normalized.extractionMode
+  if (rawExtractionMode != null && String(rawExtractionMode).trim() !== '') {
+    const resolvedMode = resolveExtractionModeInput(String(rawExtractionMode))
+    if (resolvedMode) {
+      normalized.extraction_mode = resolvedMode
+    } else {
+      delete normalized.extraction_mode
+    }
+  } else {
+    delete normalized.extraction_mode
+  }
+
   const shouldNormalizeMonetization = options?.normalizeMonetization !== false
   if (shouldNormalizeMonetization) {
     const targetCountry = normalized.target_country
+    const legacyBareNumericMode = resolveLegacyBareNumericMode({
+      numericCommissionMode: options?.numericCommissionMode,
+      commissionType: normalized.commission_type,
+      commissionValue: normalized.commission_value,
+      commissionPayout: normalized.commission_payout,
+    })
     if (normalized.product_price !== undefined && normalized.product_price !== null) {
       const normalizedPrice = normalizeOfferProductPriceInput(
         String(normalized.product_price),
@@ -460,6 +506,7 @@ export function normalizeOfferExtractRequestBody(
         commissionValue: normalized.commission_value,
         commissionCurrency: normalized.commission_currency,
         commissionPayout: normalized.commission_payout,
+        legacyBareNumericMode,
       })
 
       if (normalizedCommission.commissionType !== null) normalized.commission_type = normalizedCommission.commissionType
@@ -473,8 +520,11 @@ export function normalizeOfferExtractRequestBody(
 
       if (normalizedCommission.commissionPayout !== null) normalized.commission_payout = normalizedCommission.commissionPayout
       else delete normalized.commission_payout
-    } catch {
-      // 保持兼容：标准化器不抛错，API层可按需做严格校验
+    } catch (error) {
+      if (options?.strictMonetization) {
+        throw error
+      }
+      // 非 strict：保持兼容，由调用方按需二次校验
     }
   }
 

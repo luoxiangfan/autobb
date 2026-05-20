@@ -181,6 +181,7 @@ describe('extractOffer brand fallback', () => {
       targetCountry: 'US',
       userId: 1,
       skipWarmup: true,
+      extractionMode: 'fast',
     })
 
     expect(result.success).toBe(true)
@@ -189,12 +190,12 @@ describe('extractOffer brand fallback', () => {
 
     expect(vi.mocked(scrapeAmazonProduct)).toHaveBeenCalledTimes(2)
     expect(vi.mocked(scrapeAmazonProduct).mock.calls[0]?.[0])
-      .toBe('https://www.amazon.com/dp/B09RF5MPGK?maas=abc&aa_campaignid=123')
-    expect(vi.mocked(scrapeAmazonProduct).mock.calls[1]?.[0])
       .toBe('https://www.amazon.com/dp/B09RF5MPGK')
+    expect(vi.mocked(scrapeAmazonProduct).mock.calls[1]?.[0])
+      .toBe('https://www.amazon.com/dp/B09RF5MPGK?maas=abc&aa_campaignid=123')
   })
 
-  it('falls back to Playwright for independent products when light scrape richness is insufficient', async () => {
+  it('skips Playwright when independent light scrape already has offer baseline fields', async () => {
     const { extractOffer } = await import('@/lib/offer-extraction-core')
     const { resolveAffiliateLink } = await import('@/lib/url-resolver-enhanced')
     const { extractProductInfo } = await import('@/lib/scraper')
@@ -272,17 +273,17 @@ describe('extractOffer brand fallback', () => {
       targetCountry: 'US',
       userId: 1,
       skipWarmup: true,
+      extractionMode: 'fast',
     })
 
     expect(result.success).toBe(true)
-    expect(vi.mocked(scrapeIndependentProduct)).toHaveBeenCalledTimes(1)
-    expect(result.data?.reviewCount).toBe('42')
-    expect(result.data?.topReviews?.[0]).toContain('Amazing shades')
-    expect(result.data?.reviews?.[0]?.author).toBe('Patricia Adrian-Hanson')
-    expect(result.data?.specifications).toEqual({ Material: 'Rattan, Wood', Certification: 'UL' })
+    expect(vi.mocked(scrapeIndependentProduct)).not.toHaveBeenCalled()
+    expect(result.data?.brand).toBe('handwovenlamp')
+    expect(result.data?.productName).toContain('Rattan Pendant Light')
+    expect(result.data?.productPrice).toBe('$329.99 USD')
   })
 
-  it('falls back to Playwright when light scrape has zero review signals on product detail URL', async () => {
+  it('falls back to Playwright when independent baseline fields are missing', async () => {
     const { extractOffer } = await import('@/lib/offer-extraction-core')
     const { resolveAffiliateLink } = await import('@/lib/url-resolver-enhanced')
     const { extractProductInfo } = await import('@/lib/scraper')
@@ -305,19 +306,15 @@ describe('extractOffer brand fallback', () => {
     vi.mocked(extractProductInfo).mockResolvedValue({
       productName: 'Smart Bedside Table',
       rawProductTitle: 'Smart Bedside Table',
-      rawAboutThisItem: ['Wireless charging', 'Bluetooth speaker'],
-      productDescription: 'This bedside table integrates ambient lighting, wireless charging, bluetooth speakers and fingerprint unlocking functions.',
-      productPrice: '$299.00',
-      productCategory: 'Smart Furniture',
-      productFeatures: ['Wireless charging', 'Bluetooth speaker', 'Fingerprint unlock'],
-      brandName: 'Handwovenlamp',
-      imageUrls: ['https://img.example.com/smart-bedside.jpg'],
-      metaTitle: 'Smart Bedside Table',
-      metaDescription: 'Smart bedside table with lighting and charging.',
-      rating: null,
-      reviewCount: '0',
-      topReviews: [],
-      reviews: [],
+      rawAboutThisItem: [],
+      productDescription: null,
+      productPrice: null,
+      productCategory: null,
+      productFeatures: [],
+      brandName: null,
+      imageUrls: [],
+      metaTitle: null,
+      metaDescription: null,
     })
 
     vi.mocked(scrapeIndependentProduct).mockResolvedValue({
@@ -361,6 +358,7 @@ describe('extractOffer brand fallback', () => {
       targetCountry: 'US',
       userId: 1,
       skipWarmup: true,
+      extractionMode: 'original',
     })
 
     expect(result.success).toBe(true)

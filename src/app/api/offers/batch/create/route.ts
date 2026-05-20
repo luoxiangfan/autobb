@@ -19,6 +19,7 @@
  * - 可选列：佣金比例/commission_payout（兼容旧列）
  * - 可选列：commission_type + commission_value（推荐），可附带 commission_currency
  * - 店铺类型可选列：单品推广链接 product_link_1~3（最多3个）
+ * - 可选列：提取模式/extraction_mode（fast/balanced/original，缺省为系统默认）
  * - 编码：UTF-8
  * - 最大有效行数：500行
  * - 缺少必填参数的行会被自动跳过
@@ -31,6 +32,7 @@ import type { BatchCreationTaskData } from '@/lib/queue/executors/batch-creation
 import { canonicalizeOfferBatchCsvHeader, decodeCsvTextSmart, normalizeCsvHeaderCell } from '@/lib/offers/batch-offer-csv'
 import { toDbJsonObjectField } from '@/lib/json-field'
 import { normalizeOfferCommissionInput } from '@/lib/offer-monetization'
+import { resolveExtractionModeInput } from '@/lib/offer-extraction-mode'
 import Papa from 'papaparse'
 
 export const maxDuration = 60
@@ -134,6 +136,7 @@ export async function POST(req: NextRequest) {
     const productLink1Idx = headers.indexOf('product_link_1')
     const productLink2Idx = headers.indexOf('product_link_2')
     const productLink3Idx = headers.indexOf('product_link_3')
+    const extractionModeIdx = headers.indexOf('extraction_mode')
 
     // 解析数据行，只保留必填参数完整的行
     const rows: Array<{
@@ -147,9 +150,11 @@ export async function POST(req: NextRequest) {
       commission_currency?: string
       page_type?: 'store' | 'product'
       store_product_links?: string[]
+      extraction_mode?: string
     }> = []
 
     let skippedCount = 0
+    const skipReasons: Array<{ row: number; reason: string }> = []
     const commissionValidationErrors: Array<{ row: number; message: string }> = []
 
     for (let i = 1; i < lines.length; i++) {
@@ -161,15 +166,19 @@ export async function POST(req: NextRequest) {
       // 🔥 2025-12-12修复：加强验证，确保不是空字符串，target_country至少2个字符
       if (!affiliateLink || affiliateLink.trim() === '' || !targetCountry || targetCountry.trim().length < 2) {
         skippedCount++
-        console.warn(`⚠️ 跳过第${i + 1}行：缺少必填参数 (推广链接=${affiliateLink}, 推广国家=${targetCountry})`)
-        continue // 跳过参数不全的行
+        const reason = `缺少必填参数 (推广链接=${affiliateLink || ''}, 推广国家=${targetCountry || ''})`
+        skipReasons.push({ row: i + 1, reason })
+        console.warn(`⚠️ 跳过第${i + 1}行：${reason}`)
+        continue
       }
 
       // 🔧 修复：检测无效的推广链接值（如 'null/', 'null' 等）
       const normalizedAffiliateLink = affiliateLink.trim()
       if (normalizedAffiliateLink === 'null' || normalizedAffiliateLink === 'null/' || normalizedAffiliateLink === 'undefined') {
         skippedCount++
-        console.warn(`⚠️ 跳过第${i + 1}行：推广链接无效 (${normalizedAffiliateLink})`)
+        const reason = `推广链接无效 (${normalizedAffiliateLink})`
+        skipReasons.push({ row: i + 1, reason })
+        console.warn(`⚠️ 跳过第${i + 1}行：${reason}`)
         continue
       }
 
@@ -196,7 +205,9 @@ export async function POST(req: NextRequest) {
         const brandName = values[brandNameIdx].trim()
         if (brandName.length > 120) {
           skippedCount++
-          console.warn(`⚠️ 跳过第${i + 1}行：品牌名过长（>120）`)
+          const reason = '品牌名过长（>120）'
+          skipReasons.push({ row: i + 1, reason })
+          console.warn(`⚠️ 跳过第${i + 1}行：${reason}`)
           continue
         }
         if (brandName) row.brand_name = brandName
@@ -271,7 +282,9 @@ export async function POST(req: NextRequest) {
         })
         if (invalidLink) {
           skippedCount++
-          console.warn(`⚠️ 跳过第${i + 1}行：单品推广链接无效 (${invalidLink})`)
+          const reason = `单品推广链接无效 (${invalidLink})`
+          skipReasons.push({ row: i + 1, reason })
+          console.warn(`⚠️ 跳过第${i + 1}行：${reason}`)
           continue
         }
         row.page_type = 'store'
@@ -282,8 +295,23 @@ export async function POST(req: NextRequest) {
         row.page_type = 'product'
       } else if (rawPageType) {
         skippedCount++
-        console.warn(`⚠️ 跳过第${i + 1}行：无法识别链接类型 (${rawPageType})`)
+        const reason = `无法识别链接类型 (${rawPageType})`
+        skipReasons.push({ row: i + 1, reason })
+        console.warn(`⚠️ 跳过第${i + 1}行：${reason}`)
         continue
+      }
+
+      if (extractionModeIdx !== -1 && values[extractionModeIdx]?.trim()) {
+        const rawExtractionMode = values[extractionModeIdx].trim()
+        const resolvedMode = resolveExtractionModeInput(rawExtractionMode)
+        if (!resolvedMode) {
+          skippedCount++
+          const reason = `无效的提取模式 (${rawExtractionMode})`
+          skipReasons.push({ row: i + 1, reason })
+          console.warn(`⚠️ 跳过第${i + 1}行：${reason}`)
+          continue
+        }
+        row.extraction_mode = resolvedMode
       }
 
       rows.push(row)
@@ -415,8 +443,9 @@ export async function POST(req: NextRequest) {
       success: true,
       batchId,
       totalCount: rows.length,
-      skippedCount: skippedCount,
-      message: `批量任务已创建，共${rows.length}个Offer`
+      skippedCount,
+      skipReasons: skipReasons.length > 0 ? skipReasons.slice(0, 50) : undefined,
+      message: `批量任务已创建，共${rows.length}个Offer${skippedCount > 0 ? `（跳过 ${skippedCount} 行）` : ''}`,
     })
 
   } catch (error: any) {

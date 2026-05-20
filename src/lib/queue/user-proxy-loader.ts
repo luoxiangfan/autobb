@@ -106,7 +106,7 @@ type ParsedProxyEndpoint = {
  * - email: 邮件发送使用邮件服务商
  * - export: 导出任务是内部操作
  */
-export const PROXY_REQUIRED_TASK_TYPES = ['scrape'] as const
+export const PROXY_REQUIRED_TASK_TYPES = ['scrape', 'offer-extraction'] as const
 
 function parseProxyEndpoint(proxyUrl: string): ParsedProxyEndpoint | null {
   const trimmed = String(proxyUrl || '').trim()

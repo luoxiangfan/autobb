@@ -2,7 +2,9 @@ import { createOffer, deleteOffer, findOfferById } from '@/lib/offers'
 import { getDatabase, type DatabaseAdapter } from '@/lib/db'
 import { getInsertedId, toBool } from '@/lib/db-helpers'
 import { getSetting, getUserOnlySetting } from '@/lib/settings'
-import { createOfferExtractionTaskForExistingOffer } from '@/lib/offer-extraction-task'
+import {
+  enqueueExistingOfferExtractionAndMarkQueued,
+} from '@/lib/offer-extraction-task'
 import { load as loadHtml } from 'cheerio'
 import {
   buildProductSummaryCacheHash,
@@ -8111,15 +8113,10 @@ export async function createOfferFromAffiliateProduct(params: {
       createdVia: params.createdVia || 'single',
     })
 
-    const extractionTaskId = await createOfferExtractionTaskForExistingOffer({
+    const { taskId: extractionTaskId } = await enqueueExistingOfferExtractionAndMarkQueued({
+      offer,
       userId: params.userId,
       offerId: offer.id,
-      affiliateLink: affiliateLink || offer.affiliate_link || offer.url,
-      targetCountry: offer.target_country,
-      productPrice: offer.product_price,
-      commissionPayout: offer.commission_payout,
-      brandName: offer.brand,
-      pageType: offer.page_type === 'store' ? 'store' : 'product',
       priority: params.createdVia === 'single' ? 'high' : 'normal',
       skipCache: false,
       skipWarmup: false,

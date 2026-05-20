@@ -32,6 +32,8 @@ import { Loader2, CheckCircle2, AlertCircle, ExternalLink, Trash2 } from 'lucide
 import ProgressTracker from '@/components/ProgressTracker'
 import { useOfferExtractionV2 } from '@/hooks/useOfferExtractionV2'
 import { getCountryOptionsForUI } from '@/lib/language-country-codes'
+import { getDefaultOfferExtractionMode, type OfferExtractionMode } from '@/lib/offer-extraction-mode'
+import { OfferExtractionModeField } from '@/components/offers/OfferExtractionModeField'
 
 interface CreateOfferModalV2Props {
   open: boolean
@@ -100,6 +102,7 @@ export default function CreateOfferModalV2({
   const [commissionType, setCommissionType] = useState<'percent' | 'amount'>('percent')
   const [commissionValue, setCommissionValue] = useState('')
   const [commissionCurrency, setCommissionCurrency] = useState('')
+  const [extractionMode, setExtractionMode] = useState<OfferExtractionMode>(() => getDefaultOfferExtractionMode())
 
   // 步骤2：自动提取的数据
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null)
@@ -263,7 +266,8 @@ export default function CreateOfferModalV2({
       commissionType === 'amount' && commissionValue ? (commissionCurrency || undefined) : undefined,
       brandName,
       linkType,
-      normalizedLinks
+      normalizedLinks,
+      extractionMode
     )
   }
 
@@ -498,6 +502,12 @@ export default function CreateOfferModalV2({
                   </SelectContent>
                 </Select>
               </div>
+
+              <OfferExtractionModeField
+                value={extractionMode}
+                onChange={setExtractionMode}
+                descriptionClassName="text-xs text-slate-500 mt-1"
+              />
 
               {/* 可选字段 */}
               <div className="pt-4 border-t border-slate-200 space-y-4">

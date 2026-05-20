@@ -310,6 +310,7 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       })
       const normalized = normalizeOfferExtractRequestBody(normalizedSourceBody, {
         numericCommissionMode: 'amount',
+        strictMonetization: true,
       })
       if (normalized) {
         delete normalized.commission_rate
@@ -362,6 +363,7 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       })
       const normalized = normalizeOfferExtractRequestBody(normalizedSourceBody, {
         numericCommissionMode: 'amount',
+        strictMonetization: true,
       })
       if (normalized) {
         delete normalized.commission_rate

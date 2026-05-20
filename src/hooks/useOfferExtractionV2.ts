@@ -17,6 +17,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { getDefaultOfferExtractionMode } from '@/lib/offer-extraction-mode'
 import type {
   ProgressStage,
   ProgressStatus,
@@ -69,7 +70,8 @@ interface UseOfferExtractionV2Return {
     commissionCurrency?: string,
     brandName?: string,
     pageType?: 'store' | 'product',
-    storeProductLinks?: string[]
+    storeProductLinks?: string[],
+    extractionMode?: 'fast' | 'balanced' | 'original'
   ) => Promise<void>
   reconnect: (taskId: string) => Promise<void>
   reset: () => void
@@ -139,7 +141,8 @@ export function useOfferExtractionV2(): UseOfferExtractionV2Return {
     commissionCurrency?: string,
     brandName?: string,
     pageType?: 'store' | 'product',
-    storeProductLinks?: string[]
+    storeProductLinks?: string[],
+    extractionMode?: 'fast' | 'balanced' | 'original'
   ) => {
     reset()
     setIsExtracting(true)
@@ -168,6 +171,7 @@ export function useOfferExtractionV2(): UseOfferExtractionV2Return {
           brand_name: brandName || undefined,
           page_type: pageType || undefined,
           store_product_links: storeProductLinks && storeProductLinks.length > 0 ? storeProductLinks : undefined,
+          extraction_mode: extractionMode || getDefaultOfferExtractionMode(),
         }),
         signal: abortControllerRef.current.signal
       })

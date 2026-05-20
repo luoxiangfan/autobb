@@ -67,8 +67,7 @@ describe('executeAIAnalysis deep scraping uses proxy', () => {
       enablePlaywrightDeepScraping: true,
     } as any)
 
-    expect(acquire).toHaveBeenCalled()
+    expect(acquire).toHaveBeenCalledTimes(1)
     expect(acquire.mock.calls[0]?.[0]).toBe('https://proxy-provider.example/api?cc=US')
-    expect(acquire.mock.calls[1]?.[0]).toBe('https://proxy-provider.example/api?cc=US')
   })
 })

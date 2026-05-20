@@ -22,11 +22,13 @@
 
 import { NextRequest } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { getQueueManager } from '@/lib/queue/unified-queue-manager'
-import type { OfferExtractionTaskData } from '@/lib/queue/executors/offer-extraction-executor'
-import { normalizeOfferExtractRequestBody } from '@/lib/autoads-request-normalizers'
+import { createOfferExtractionTaskForNewOffer } from '@/lib/offer-extraction-task'
 import { parseJsonField } from '@/lib/json-field'
-import { normalizeOfferCommissionInput } from '@/lib/offer-monetization'
+import {
+  OfferExtractRequestError,
+  offerExtractApiErrorBody,
+  parseNewOfferExtractRequest,
+} from '@/lib/offer-extract-request'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 900 // 15分钟（店铺深度抓取+竞品分析可能需要10-15分钟）
@@ -45,158 +47,60 @@ interface OfferTask {
 
 export async function POST(req: NextRequest) {
   const db = getDatabase()
-  const queue = getQueueManager()
   const parentRequestId = req.headers.get('x-request-id') || undefined
-
-  // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
 
   try {
     // 1. 验证用户身份
     const userId = req.headers.get('x-user-id')
     if (!userId) {
-      return new Response('Unauthorized', { status: 401 })
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', message: '请先登录' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      )
     }
     const userIdNum = parseInt(userId, 10)
 
-    // 2. 解析请求参数
-    const rawBody = await req.json()
-    const body = normalizeOfferExtractRequestBody(rawBody) || rawBody
-    const {
-      affiliate_link,
-      target_country,
-      product_price,
-      commission_payout,
-      commission_type,
-      commission_value,
-      commission_currency,
-      brand_name,
-      page_type,
-      store_product_links,
-      skipCache,
-      skipWarmup
-    } = body
-
-    // 参数验证
-    if (!affiliate_link || typeof affiliate_link !== 'string' || affiliate_link.trim() === '') {
-      return new Response(
-        JSON.stringify({ error: 'Invalid affiliate_link' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // 🔥 2025-12-12修复：加强target_country验证，确保不是空字符串
-    if (!target_country || typeof target_country !== 'string' || target_country.trim().length < 2) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid target_country (至少2个字符，如US、UK、DE)' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // 可选：品牌名（用于独立站Google搜索补充）
-    if (brand_name !== undefined && brand_name !== null) {
-      if (typeof brand_name !== 'string') {
-        return new Response(
-          JSON.stringify({ error: 'Invalid brand_name' }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        )
-      }
-      if (brand_name.trim().length > 120) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid brand_name (长度不能超过120字符)' }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        )
-      }
-    }
-
-    // 可选：链接类型（店铺/单品）
-    const pageType = (page_type === 'store' || page_type === 'product') ? page_type : 'product'
-    let normalizedStoreProductLinks: string[] = []
-    if (pageType === 'store') {
-      if (store_product_links !== undefined && store_product_links !== null && !Array.isArray(store_product_links)) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid store_product_links (需为URL数组，最多3个)' }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        )
-      }
-      const rawStoreLinks = Array.isArray(store_product_links) ? store_product_links : []
-      normalizedStoreProductLinks = rawStoreLinks
-        .map((link: any) => (typeof link === 'string' ? link.trim() : ''))
-        .filter((link: string) => Boolean(link))
-      normalizedStoreProductLinks = Array.from(new Set(normalizedStoreProductLinks)).slice(0, 3)
-      for (const link of normalizedStoreProductLinks) {
-        try {
-          // eslint-disable-next-line no-new
-          new URL(link)
-        } catch {
-          return new Response(
-            JSON.stringify({ error: `单品推广链接无效: ${link}` }),
-            { status: 400, headers: { 'Content-Type': 'application/json' } }
-          )
-        }
-      }
-    }
-
-    let normalizedCommission: ReturnType<typeof normalizeOfferCommissionInput>
+    let rawBody: unknown
     try {
-      normalizedCommission = normalizeOfferCommissionInput({
-        targetCountry: target_country,
-        commissionPayout: commission_payout,
-        commissionType: commission_type,
-        commissionValue: commission_value,
-        commissionCurrency: commission_currency,
-      })
-    } catch (error: any) {
+      rawBody = await req.json()
+    } catch {
       return new Response(
-        JSON.stringify({ error: error?.message || '佣金参数格式错误' }),
+        JSON.stringify({ error: 'Invalid request', message: '请求体必须是有效的 JSON' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
-    // 3. 创建offer_tasks记录
-    const taskId = crypto.randomUUID()
-    await db.exec(
-      `INSERT INTO offer_tasks (
-        id, user_id, affiliate_link, target_country, page_type, store_product_links,
-        product_price, commission_payout, brand_name,
-        status, stage, progress, message, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'resolving_link', 0, '准备开始提取...', ${nowFunc}, ${nowFunc})`,
-      [
-        taskId,
-        userIdNum,
-        affiliate_link,
-        target_country,
-        pageType,
-        normalizedStoreProductLinks.length > 0 ? JSON.stringify(normalizedStoreProductLinks) : null,
-        product_price || null,
-        normalizedCommission.commissionPayout || null,
-        (typeof brand_name === 'string' && brand_name.trim()) ? brand_name.trim() : null
-      ]
-    )
-
-    // 4. 将任务加入队列
-    const taskData: OfferExtractionTaskData = {
-      affiliateLink: affiliate_link,
-      targetCountry: target_country,
-      skipCache: skipCache || false,
-      skipWarmup: skipWarmup || false,
-      // 🔧 修复（2025-12-31）：添加产品价格和佣金比例
-      productPrice: product_price || undefined,
-      commissionPayout: normalizedCommission.commissionPayout || undefined,
-      commissionType: normalizedCommission.commissionType || undefined,
-      commissionValue: normalizedCommission.commissionValue || undefined,
-      commissionCurrency: normalizedCommission.commissionCurrency || undefined,
-      brandName: (typeof brand_name === 'string' && brand_name.trim()) ? brand_name.trim() : undefined,
-      pageType,
-      storeProductLinks: normalizedStoreProductLinks.length > 0 ? normalizedStoreProductLinks : undefined,
+    let parsed
+    try {
+      parsed = parseNewOfferExtractRequest(rawBody)
+    } catch (error: unknown) {
+      if (error instanceof OfferExtractRequestError) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid request', message: error.message }),
+          { status: error.status, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+      throw error
     }
 
-    console.log(`📝 Created offer_task: ${taskId} for user ${userIdNum}`)
-    const queueTaskId = await queue.enqueue('offer-extraction', taskData, userIdNum, {
+    const taskId = await createOfferExtractionTaskForNewOffer({
+      userId: userIdNum,
+      affiliateLink: parsed.affiliateLink,
+      targetCountry: parsed.targetCountry,
+      productPrice: parsed.productPrice,
+      commissionPayout: parsed.commissionPayout,
+      commissionType: parsed.commissionType,
+      commissionValue: parsed.commissionValue,
+      commissionCurrency: parsed.commissionCurrency,
+      brandName: parsed.brandName,
+      pageType: parsed.pageType,
+      storeProductLinks: parsed.storeProductLinks,
+      skipCache: parsed.skipCache,
+      skipWarmup: parsed.skipWarmup,
+      extractionMode: parsed.extractionMode,
       parentRequestId,
       priority: 'normal',
-      taskId,  // 关键：传递预定义的taskId，确保队列任务ID与offer_tasks记录ID一致
-      maxRetries: 0,  // 禁用重试: Offer提取任务已经有详细进度,用户可重新提交
+      maxRetries: 2,
     })
 
     console.log(`🚀 Enqueued offer-extraction task: ${taskId}`)
@@ -354,10 +258,27 @@ export async function POST(req: NextRequest) {
       },
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('SSE initialization error:', error)
+
+    const apiError = offerExtractApiErrorBody(error, 'Invalid request')
+    if (apiError) {
+      return new Response(
+        JSON.stringify({ error: apiError.error, message: apiError.message }),
+        { status: apiError.status, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const message = error instanceof Error ? error.message : '创建提取任务失败'
+    if (message.includes('队列已满')) {
+      return new Response(
+        JSON.stringify({ error: '系统繁忙', message: '系统繁忙，请稍后重试' }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Internal server error', message }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }

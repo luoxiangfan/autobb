@@ -4,6 +4,14 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { getLanguageNameForCountry, getCountryOptionsForUI } from '@/lib/language-country-codes'
 import { normalizeOfferCommissionInput, parseCommissionPayoutValue } from '@/lib/offer-monetization'
+import {
+  getDefaultOfferExtractionMode,
+  getOfferExtractionModeLabel,
+  normalizeOfferExtractionMode,
+  type OfferExtractionMode,
+} from '@/lib/offer-extraction-mode'
+import { OfferExtractionModeField } from '@/components/offers/OfferExtractionModeField'
+import { showSuccess } from '@/lib/toast-utils'
 
 export default function EditOfferPage() {
   const router = useRouter()
@@ -12,7 +20,9 @@ export default function EditOfferPage() {
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [reExtracting, setReExtracting] = useState(false)
   const [error, setError] = useState('')
+  const [extractionMode, setExtractionMode] = useState<OfferExtractionMode>(getDefaultOfferExtractionMode)
 
   // 表单状态
   const [url, setUrl] = useState('')
@@ -107,6 +117,7 @@ export default function EditOfferPage() {
         setGoogleAdsCampaignId(offer.googleAdsCampaignId || null)
         setSyncSource(offer.syncSource || null)
         setNeedsCompletion(offer.needsCompletion ?? false)
+        setExtractionMode(normalizeOfferExtractionMode(offer.extractionMode))
       } catch (err: any) {
         setError(err.message || '加载Offer失败')
       } finally {
@@ -182,65 +193,71 @@ export default function EditOfferPage() {
     }
   }, [commissionNormalization])
 
+  const buildUpdatePayload = async () => {
+    let uniqueLinks: string[] = []
+    if (linkType === 'store') {
+      const normalizedLinks = storeProductLinks
+        .map((link) => link.trim())
+        .filter((link) => Boolean(link))
+      uniqueLinks = Array.from(new Set(normalizedLinks)).slice(0, 3)
+      for (const link of uniqueLinks) {
+        try {
+          // eslint-disable-next-line no-new
+          new URL(link)
+        } catch {
+          throw new Error(`单品推广链接无效: ${link}`)
+        }
+      }
+    }
+
+    const normalizedCommissionValue = commissionValue.trim()
+    const normalizedCommissionCurrency = commissionCurrency.trim().toUpperCase()
+    const normalizedCommission = normalizedCommissionValue
+      ? normalizeOfferCommissionInput({
+        targetCountry,
+        commissionType,
+        commissionValue: normalizedCommissionValue,
+        commissionCurrency: commissionType === 'amount'
+          ? (normalizedCommissionCurrency || undefined)
+          : undefined,
+      })
+      : null
+
+    return {
+      url,
+      brand,
+      category: category || undefined,
+      target_country: targetCountry,
+      affiliate_link: affiliateLink || undefined,
+      page_type: linkType,
+      store_product_links: linkType === 'store' ? uniqueLinks : undefined,
+      brand_description: brandDescription || undefined,
+      unique_selling_points: uniqueSellingPoints || undefined,
+      product_highlights: productHighlights || undefined,
+      target_audience: targetAudience || undefined,
+      product_price: productPrice || undefined,
+      commission_payout: normalizedCommission?.commissionPayout || undefined,
+      commission_type: normalizedCommission?.commissionType || undefined,
+      commission_value: normalizedCommission?.commissionValue || undefined,
+      commission_currency: normalizedCommission?.commissionCurrency || undefined,
+      extraction_mode: extractionMode,
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setSaving(true)
 
     try {
-      let uniqueLinks: string[] = []
-      if (linkType === 'store') {
-        const normalizedLinks = storeProductLinks
-          .map((link) => link.trim())
-          .filter((link) => Boolean(link))
-        uniqueLinks = Array.from(new Set(normalizedLinks)).slice(0, 3)
-        for (const link of uniqueLinks) {
-          try {
-            // eslint-disable-next-line no-new
-            new URL(link)
-          } catch {
-            throw new Error(`单品推广链接无效: ${link}`)
-          }
-        }
-      }
-
-      const normalizedCommissionValue = commissionValue.trim()
-      const normalizedCommissionCurrency = commissionCurrency.trim().toUpperCase()
-      const normalizedCommission = normalizedCommissionValue
-        ? normalizeOfferCommissionInput({
-          targetCountry,
-          commissionType,
-          commissionValue: normalizedCommissionValue,
-          commissionCurrency: commissionType === 'amount'
-            ? (normalizedCommissionCurrency || undefined)
-            : undefined,
-        })
-        : null
-
+      const payload = await buildUpdatePayload()
       const response = await fetch(`/api/offers/${offerId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({
-          url,
-          brand,
-          category: category || undefined,
-          target_country: targetCountry,
-          affiliate_link: affiliateLink || undefined,
-          page_type: linkType,
-          store_product_links: linkType === 'store' ? uniqueLinks : undefined,
-          brand_description: brandDescription || undefined,
-          unique_selling_points: uniqueSellingPoints || undefined,
-          product_highlights: productHighlights || undefined,
-          target_audience: targetAudience || undefined,
-          product_price: productPrice || undefined,
-          commission_payout: normalizedCommission?.commissionPayout || undefined,
-          commission_type: normalizedCommission?.commissionType || undefined,
-          commission_value: normalizedCommission?.commissionValue || undefined,
-          commission_currency: normalizedCommission?.commissionCurrency || undefined,
-        }),
+        body: JSON.stringify(payload),
       })
 
       const data = await response.json()
@@ -249,12 +266,43 @@ export default function EditOfferPage() {
         throw new Error(data.error || '更新Offer失败')
       }
 
-      // 跳转回Offer详情页
       router.push(`/offers/${offerId}`)
     } catch (err: any) {
       setError(err.message || '更新Offer失败，请稍后重试')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleSaveAndReExtract = async () => {
+    setError('')
+    setReExtracting(true)
+
+    try {
+      const payload = await buildUpdatePayload()
+      const rebuildResponse = await fetch(`/api/offers/${offerId}/rebuild`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ...payload, extraction_mode: extractionMode }),
+      })
+      const rebuildData = await rebuildResponse.json()
+      if (!rebuildResponse.ok) {
+        throw new Error(rebuildData.message || rebuildData.error || '重新提取失败')
+      }
+
+      const modeLabel = rebuildData.extractionMode
+        ? getOfferExtractionModeLabel(rebuildData.extractionMode)
+        : getOfferExtractionModeLabel(extractionMode)
+      showSuccess(
+        '重新提取已启动',
+        `已保存修改，并按「${modeLabel}」模式开始后台提取，请稍后在详情页查看进度`
+      )
+      router.push(`/offers/${offerId}`)
+    } catch (err: any) {
+      setError(err.message || '保存并重新提取失败，请稍后重试')
+    } finally {
+      setReExtracting(false)
     }
   }
 
@@ -754,6 +802,27 @@ export default function EditOfferPage() {
                 </div>
               </div>
 
+              {/* 重新提取 */}
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">重新提取</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  选择提取模式后，将按该模式重新抓取页面并运行 AI 分析，会覆盖当前抓取与分析结果。
+                </p>
+                <OfferExtractionModeField
+                  variant="native"
+                  value={extractionMode}
+                  onChange={setExtractionMode}
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveAndReExtract}
+                  disabled={saving || reExtracting}
+                  className="mt-4 px-4 py-2 border border-indigo-600 rounded-md shadow-sm text-sm font-medium text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {reExtracting ? '启动中...' : '保存并按所选模式重新提取'}
+                </button>
+              </div>
+
               {/* 提交按钮 */}
               <div className="flex justify-end space-x-3 pt-4 border-t">
                 <button
@@ -765,7 +834,7 @@ export default function EditOfferPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || reExtracting}
                   className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? '保存中...' : '保存修改'}
