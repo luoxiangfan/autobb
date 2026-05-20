@@ -12,8 +12,12 @@ export interface ActiveCampaignConflict {
   status: string
 }
 
+function campaignColumn(tableAlias: string | undefined, column: string): string {
+  return tableAlias ? `${tableAlias}.${column}` : column
+}
+
 function activeCampaignNotDeletedSql(dbType: string, tableAlias?: string): string {
-  const col = tableAlias ? `${tableAlias}.is_deleted` : 'is_deleted'
+  const col = campaignColumn(tableAlias, 'is_deleted')
   return dbType === 'postgres' ? `${col} = FALSE` : `${col} = 0`
 }
 
@@ -38,14 +42,16 @@ export function getStaleUpdatedAtThresholdIso(staleMinutes?: number): string | n
   return new Date(Date.now() - minutes * 60 * 1000).toISOString()
 }
 
-function stalePendingExcludeSql(tableAlias: string, staleThresholdIso: string | null): string {
+function stalePendingExcludeSql(tableAlias: string | undefined, staleThresholdIso: string | null): string {
   if (!staleThresholdIso) {
     return ''
   }
   const escaped = staleThresholdIso.replace(/'/g, "''")
+  const creationStatus = campaignColumn(tableAlias, 'creation_status')
+  const updatedAt = campaignColumn(tableAlias, 'updated_at')
   return `AND NOT (
-    ${tableAlias}.creation_status = 'pending'
-    AND ${tableAlias}.updated_at < '${escaped}'
+    ${creationStatus} = 'pending'
+    AND ${updatedAt} < '${escaped}'
   )`
 }
 
@@ -55,15 +61,17 @@ function stalePendingExcludeSql(tableAlias: string, staleThresholdIso: string | 
  */
 export function offerOccupyingCampaignFilterSql(
   dbType: string,
-  tableAlias = 'c',
+  tableAlias?: string,
   staleThresholdIso: string | null = getStaleUpdatedAtThresholdIso()
 ): string {
   const isDeletedCheck = activeCampaignNotDeletedSql(dbType, tableAlias)
+  const creationStatus = campaignColumn(tableAlias, 'creation_status')
+  const status = campaignColumn(tableAlias, 'status')
 
   return `
     ${isDeletedCheck}
-    AND ${tableAlias}.creation_status != 'failed'
-    AND UPPER(COALESCE(${tableAlias}.status, '')) != 'REMOVED'
+    AND ${creationStatus} != 'failed'
+    AND UPPER(COALESCE(${status}, '')) != 'REMOVED'
     ${stalePendingExcludeSql(tableAlias, staleThresholdIso)}
   `.trim().replace(/\s+/g, ' ')
 }
@@ -72,8 +80,9 @@ export function offerOccupyingCampaignFilterSql(
  * 参数化 WHERE：offer_id = ? AND user_id = ? AND [占用过滤]
  */
 export function offerOccupyingCampaignWhereClause(dbType: string): string {
+  // No table alias: used in `FROM campaigns` without `AS c` (Postgres rejects `c.*` here).
   return `
-    offer_id = ? AND user_id = ? AND ${offerOccupyingCampaignFilterSql(dbType)}
+    offer_id = ? AND user_id = ? AND ${offerOccupyingCampaignFilterSql(dbType, undefined)}
   `.trim().replace(/\s+/g, ' ')
 }
 
