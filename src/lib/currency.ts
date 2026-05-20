@@ -7,6 +7,8 @@
 import { parseCommissionPayoutValue, parseProductPriceMoney } from '@/lib/offer-monetization'
 import { getEffectiveUsdRates } from '@/lib/exchange-rates-cache'
 
+export const USD_BASE_CURRENCY = 'USD'
+
 /**
  * 静态回退汇率（基准货币：USD），与 DB 中字段含义一致：每 1 USD 可兑换的外币数量
  * 更新时间：2026-03-03 00:02:32 UTC
@@ -85,6 +87,10 @@ export const CURRENCY_NAMES: Record<string, string> = {
   PHP: '菲律宾比索',
   MYR: '马来西亚林吉特',
   RUB: '俄罗斯卢布',
+}
+
+export function normalizeCurrencyCode(value: unknown): string {
+  return String(value || '').trim().toUpperCase()
 }
 
 /**

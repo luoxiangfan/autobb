@@ -17,7 +17,7 @@
 import { getDatabase, type DatabaseType } from './db'
 import { generateContent } from './gemini'
 import { repairJsonText } from './ai-json'
-import { loadPrompt } from './prompt-loader'
+import { loadPrompt, interpolateTemplate } from './prompt-loader'
 import { findOfferById, type Offer } from './offers'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import { getUserAuthType } from './google-ads-oauth'
@@ -70,6 +70,12 @@ import {
   type PlannerDecision,
   type PlannerNonBrandPolicy,
 } from './planner-non-brand-policy'
+import {
+  buildUntrustedInputGuardrail,
+  sanitizePromptBlockValue,
+  sanitizePromptInlineValue,
+  type InputReview,
+} from './llm-input-guard'
 
 const KEYWORD_CLUSTERING_MAX_OUTPUT_TOKENS = 16384
 const KEYWORD_CLUSTERING_TIMEOUT_MS = 90000
@@ -3340,27 +3346,36 @@ function splitIntoChunks<T>(items: T[], size: number): T[][] {
 }
 
 function buildTranslationPrompt(params: {
+  promptTemplate: string
   targetLanguage: string
   keywords: string[]
 }): string {
+  const reviewedInputs: InputReview[] = []
   const numbered = params.keywords
     .map((keyword, index) => `${index}. ${keyword}`)
     .join('\n')
 
-  return [
-    `Translate the following ad keyword phrases into target language: ${params.targetLanguage}.`,
-    'Rules:',
-    '- Keep brand names unchanged.',
-    '- Keep model tokens and SKU-style alphanumeric tokens unchanged (e.g. X10, G3P800).',
-    '- Keep certification and specification tokens unchanged (e.g. NSF/ANSI 58, 1200 GPD, BTU).',
-    '- Return JSON only in this exact shape:',
-    '{"translations":[{"index":0,"keyword":"translated phrase"}]}',
-    '- Use the same index values as input lines.',
-    '- Do not skip lines, do not add extra lines.',
-    '',
-    'Input keywords:',
-    numbered,
-  ].join('\n')
+  const variables = {
+    targetLanguage: sanitizePromptInlineValue(
+      reviewedInputs,
+      'keyword_translation_target_language',
+      params.targetLanguage,
+      40,
+      'English'
+    ),
+    keywordsBlock: sanitizePromptBlockValue(
+      reviewedInputs,
+      'keyword_translation_keywords',
+      numbered,
+      4000,
+      '0. keyword'
+    ),
+  }
+
+  return interpolateTemplate(params.promptTemplate, {
+    inputGuardrail: buildUntrustedInputGuardrail(reviewedInputs),
+    ...variables,
+  })
 }
 
 function parseTranslationResponse(
@@ -3456,6 +3471,7 @@ async function translateKeywordsToTargetLanguage(params: {
 
   if (!translationEnabled || !Number.isFinite(userId) || userId <= 0) return out
   if (!targetLanguage || params.keywords.length === 0) return out
+  const promptTemplate = await loadPrompt('keyword_translation_normalization')
 
   for (const chunk of splitIntoChunks(params.keywords, TARGET_LANGUAGE_TRANSLATION_MAX_BATCH_SIZE)) {
     const uniqueChunkKeywords = Array.from(new Set(
@@ -3467,6 +3483,7 @@ async function translateKeywordsToTargetLanguage(params: {
       const aiResponse = await generateContent({
         operationType: 'keyword_translation_normalization',
         prompt: buildTranslationPrompt({
+          promptTemplate,
           targetLanguage,
           keywords: uniqueChunkKeywords,
         }),

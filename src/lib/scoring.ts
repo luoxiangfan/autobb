@@ -1,6 +1,6 @@
 import { generateContent } from './gemini'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
-import { loadPrompt } from './prompt-loader'
+import { loadPrompt, interpolateTemplate } from './prompt-loader'
 import type { ScoreAnalysis } from './launch-scores'
 import type { Offer } from './offers'
 import type { AdCreative, HeadlineAsset, DescriptionAsset } from './ad-creative'
@@ -15,6 +15,14 @@ import {
   validateExcellentStandard,
   type GoogleAdStrengthResponse
 } from './google-ads-strength-api'
+import { detectAmazonPageTypeFromUrl } from './amazon-url-utils'
+import {
+  buildUntrustedInputGuardrail,
+  sanitizePromptBlockValue,
+  sanitizePromptInlineValue,
+  type InputReview,
+} from './llm-input-guard'
+import { USD_BASE_CURRENCY, normalizeCurrencyCode } from './currency'
 
 /**
  * Launch Score 4维度评分系统 v4.0
@@ -32,6 +40,7 @@ export async function calculateLaunchScore(
   campaignConfig?: {
     budgetAmount?: number
     maxCpcBid?: number
+    currencyCode?: string
     budgetType?: string
     finalUrl?: string  // 🔧 新增：用户配置的Final URL
     targetCountry?: string  // 🔧 新增：目标国家
@@ -49,6 +58,10 @@ export async function calculateLaunchScore(
   scoreAnalysis: ScoreAnalysis
 }> {
   try {
+    const resolvedPageType = offer.page_type === 'store' || offer.page_type === 'product'
+      ? offer.page_type
+      : (detectAmazonPageTypeFromUrl(creative.final_url || offer.final_url || offer.url || '') === 'store' ? 'store' : 'product')
+
     // 🎯 获取创意中的关键词数据
     const creativeKeywords = creative.keywords || []
     const negativeKeywords = (creative as any).negativeKeywords || []
@@ -79,6 +92,7 @@ export async function calculateLaunchScore(
     // 评估预算是否合理（CPC vs 预算比例）
     const budgetAmount = campaignConfig?.budgetAmount || 10
     const maxCpcBid = campaignConfig?.maxCpcBid || 0.17
+    const campaignCurrencyCode = normalizeCurrencyCode(campaignConfig?.currencyCode || USD_BASE_CURRENCY) || USD_BASE_CURRENCY
     const dailyBudget = budgetAmount
 
     // 预算合理性评估：日预算应该支持足够的点击数
@@ -154,39 +168,145 @@ export async function calculateLaunchScore(
     console.log(`[LaunchScore] 准备替换到prompt中的否定关键词数量: ${negativeKeywords.length}`)
     console.log(`[LaunchScore] 否定关键词内容: ${negativeKeywords.length > 0 ? negativeKeywords.join(', ') : 'NONE'}`)
 
-    // 🎨 插值替换模板变量
-    const prompt = promptTemplate
-      // Campaign Overview - 🔧 使用用户配置数据
-      .replace('{{brand}}', offer.brand || 'Unknown')
-      .replace('{{productName}}', offer.brand_description || offer.brand || 'Unknown')
-      .replace('{{targetCountry}}', campaignConfig?.targetCountry || offer.target_country || 'US')
-      .replace('{{targetLanguage}}', campaignConfig?.targetLanguage || offer.target_language || 'English')
-      // 🔧 修复(2025-12-26): 移除硬编码的美元符号，预算和CPC值是用户账号货币
-      .replace('{{budget}}', campaignConfig?.budgetAmount ? `${campaignConfig.budgetAmount}/day` : '10/day')
-      .replace('{{maxCpc}}', campaignConfig?.maxCpcBid ? `${campaignConfig.maxCpcBid}` : '0.17')
-      // Budget Analysis - 🔧 基于用户配置评估，不依赖产品定价
-      .replace('{{budgetAnalysis}}', `Daily Budget: ${dailyBudget}, Max CPC: ${maxCpcBid}, Est. Clicks/Day: ${estimatedClicksPerDay.toFixed(1)}`)
-      .replace('{{budget合理性}}', isBudgetReasonable ? 'Reasonable' : 'Low')
-      .replace('{{cpc合理性}}', isCpcReasonable ? 'Reasonable' : 'High')
-      // Brand Search Data
-      .replace('{{brandSearchVolume}}', brandSearchVolume.toString())
-      .replace('{{brandCompetition}}', brandCompetition)
-      // Keywords Data
-      .replace('{{keywordCount}}', creativeKeywords.length.toString())
-      .replace('{{matchTypeDistribution}}', matchTypeDistribution)
-      .replace('{{keywordsWithVolume}}', keywordsWithVolumeText)
-      .replace('{{negativeKeywordsCount}}', negativeKeywords.length.toString())
-      .replace('{{negativeKeywords}}', negativeKeywords.length > 0 ? negativeKeywords.join(', ') : 'NONE (Critical Issue!)')
-      // Ad Creatives
-      .replace('{{headlineCount}}', headlines.length.toString())
-      .replace('{{descriptionCount}}', creative.descriptions.length.toString())
-      .replace('{{sampleHeadlines}}', headlines.slice(0, 5).join(', '))
-      .replace('{{sampleDescriptions}}', creative.descriptions.join(', '))
-      .replace('{{headlineDiversity}}', headlineDiversity.toString())
-      .replace('{{adStrength}}', adStrength)
-      // Landing Page
-      .replace('{{finalUrl}}', creative.final_url || offer.final_url || '')
-      .replace('{{pageType}}', offer.url?.includes('/stores/') || offer.url?.includes('/store/') ? 'Store Page' : 'Product Page')
+    const reviewedInputs: InputReview[] = []
+    const promptVariables = {
+      brand: sanitizePromptInlineValue(
+        reviewedInputs,
+        'launch_score_brand',
+        offer.brand,
+        120,
+        'Unknown'
+      ),
+      productName: sanitizePromptInlineValue(
+        reviewedInputs,
+        'launch_score_product_name',
+        offer.brand_description || offer.brand,
+        200,
+        'Unknown'
+      ),
+      targetCountry: sanitizePromptInlineValue(
+        reviewedInputs,
+        'launch_score_target_country',
+        campaignConfig?.targetCountry || offer.target_country,
+        40,
+        'US'
+      ),
+      targetLanguage: sanitizePromptInlineValue(
+        reviewedInputs,
+        'launch_score_target_language',
+        campaignConfig?.targetLanguage || offer.target_language,
+        40,
+        'English'
+      ),
+      budget: sanitizePromptInlineValue(
+        reviewedInputs,
+        'launch_score_budget',
+        campaignConfig?.budgetAmount ? `${campaignConfig.budgetAmount} ${campaignCurrencyCode}/day` : `10 ${campaignCurrencyCode}/day`,
+        60,
+        '10/day'
+      ),
+      maxCpc: sanitizePromptInlineValue(
+        reviewedInputs,
+        'launch_score_max_cpc',
+        campaignConfig?.maxCpcBid ? `${campaignConfig.maxCpcBid} ${campaignCurrencyCode}` : `0.17 ${campaignCurrencyCode}`,
+        60,
+        '0.17'
+      ),
+      budgetAnalysis: sanitizePromptInlineValue(
+        reviewedInputs,
+        'launch_score_budget_analysis',
+        `Daily Budget: ${dailyBudget} ${campaignCurrencyCode}, Max CPC: ${maxCpcBid} ${campaignCurrencyCode}, Est. Clicks/Day: ${estimatedClicksPerDay.toFixed(1)}`,
+        240,
+        'Unavailable'
+      ),
+      'budget合理性': sanitizePromptInlineValue(
+        reviewedInputs,
+        'launch_score_budget_reasonable',
+        isBudgetReasonable ? 'Reasonable' : 'Low',
+        20,
+        'Low'
+      ),
+      'cpc合理性': sanitizePromptInlineValue(
+        reviewedInputs,
+        'launch_score_cpc_reasonable',
+        isCpcReasonable ? 'Reasonable' : 'High',
+        20,
+        'High'
+      ),
+      brandSearchVolume: brandSearchVolume.toString(),
+      brandCompetition: sanitizePromptInlineValue(
+        reviewedInputs,
+        'launch_score_brand_competition',
+        brandCompetition,
+        20,
+        'MEDIUM'
+      ),
+      keywordCount: creativeKeywords.length.toString(),
+      matchTypeDistribution: sanitizePromptInlineValue(
+        reviewedInputs,
+        'launch_score_match_type_distribution',
+        matchTypeDistribution,
+        200,
+        'Not specified'
+      ),
+      keywordsWithVolume: sanitizePromptBlockValue(
+        reviewedInputs,
+        'launch_score_keywords_with_volume',
+        keywordsWithVolumeText,
+        2400,
+        '暂无关键词搜索量数据'
+      ),
+      negativeKeywordsCount: negativeKeywords.length.toString(),
+      negativeKeywords: sanitizePromptBlockValue(
+        reviewedInputs,
+        'launch_score_negative_keywords',
+        negativeKeywords.length > 0 ? negativeKeywords.join(', ') : 'NONE (Critical Issue!)',
+        1200,
+        'NONE (Critical Issue!)'
+      ),
+      headlineCount: headlines.length.toString(),
+      descriptionCount: creative.descriptions.length.toString(),
+      sampleHeadlines: sanitizePromptBlockValue(
+        reviewedInputs,
+        'launch_score_headlines',
+        headlines.slice(0, 5).join(', '),
+        1200,
+        'No headlines provided.'
+      ),
+      sampleDescriptions: sanitizePromptBlockValue(
+        reviewedInputs,
+        'launch_score_descriptions',
+        creative.descriptions.join(', '),
+        1200,
+        'No descriptions provided.'
+      ),
+      headlineDiversity: headlineDiversity.toString(),
+      adStrength: sanitizePromptInlineValue(
+        reviewedInputs,
+        'launch_score_ad_strength',
+        adStrength,
+        20,
+        'AVERAGE'
+      ),
+      finalUrl: sanitizePromptInlineValue(
+        reviewedInputs,
+        'launch_score_final_url',
+        creative.final_url || offer.final_url || '',
+        300,
+        'N/A'
+      ),
+      pageType: sanitizePromptInlineValue(
+        reviewedInputs,
+        'launch_score_page_type',
+        resolvedPageType === 'store' ? 'Store Page' : 'Product Page',
+        40,
+        'Product Page'
+      ),
+    }
+    const prompt = interpolateTemplate(promptTemplate, {
+      inputGuardrail: buildUntrustedInputGuardrail(reviewedInputs),
+      ...promptVariables,
+    })
 
     // 🤖 调用AI评分
     const aiResponse = await generateContent({
@@ -290,6 +410,9 @@ export async function calculateLaunchScore(
     rawAnalysis.basicConfig.finalUrl = rawAnalysis.basicConfig.finalUrl || creative.final_url || ''
     rawAnalysis.basicConfig.dailyBudget = rawAnalysis.basicConfig.dailyBudget || campaignConfig?.budgetAmount || 10
     rawAnalysis.basicConfig.maxCpc = rawAnalysis.basicConfig.maxCpc || campaignConfig?.maxCpcBid || 0.17
+    ;(rawAnalysis.basicConfig as typeof rawAnalysis.basicConfig & { currencyCode?: string }).currencyCode =
+      (rawAnalysis.basicConfig as typeof rawAnalysis.basicConfig & { currencyCode?: string }).currencyCode
+      || campaignCurrencyCode
 
     // 🎯 计算总分
     const totalScore =
@@ -788,37 +911,56 @@ export async function analyzeKeywordGapsPreGeneration(params: {
       .map(kw => `- ${kw.keyword}${kw.searchVolume ? ` (${kw.searchVolume} 搜索量)` : ''}`)
       .join('\n')
 
-    const prompt = `你是一个 Google Ads 关键词专家。请分析以下品牌的现有关键词，识别缺失的高价值行业标准关键词。
-
-品牌: ${params.brandName}
-产品类别: ${params.offer.category || '未知'}
-产品名称: ${params.offer.product_name || params.offer.brand || ''}
-目标国家: ${params.targetCountry || params.offer.target_country || 'US'}
-目标语言: ${params.targetLanguage || params.offer.target_language || 'en'}
-
-现有关键词:
-${existingKeywordsList}
-
-请识别缺失的高价值关键词，要求：
-1. 关键词必须是行业标准词（不包含品牌名）
-2. 关键词应该有较高的搜索量和购买意图
-3. 关键词应该与产品高度相关
-4. 每个关键词 2-6 个单词
-5. 最多返回 15 个关键词
-
-请以 JSON 格式返回，格式如下：
-{
-  "missing_keywords": [
-    {
-      "keyword": "recumbent bike",
-      "reason": "高搜索量行业通用词，与产品直接相关",
-      "estimated_volume": "high",
-      "priority": "high"
+    const reviewedInputs: InputReview[] = []
+    const promptTemplate = await loadPrompt('keyword_gap_analysis')
+    const promptVariables = {
+      brandName: sanitizePromptInlineValue(
+        reviewedInputs,
+        'keyword_gap_brand_name',
+        params.brandName,
+        120,
+        'Unknown brand'
+      ),
+      category: sanitizePromptInlineValue(
+        reviewedInputs,
+        'keyword_gap_category',
+        params.offer.category,
+        120,
+        '未知'
+      ),
+      productName: sanitizePromptInlineValue(
+        reviewedInputs,
+        'keyword_gap_product_name',
+        params.offer.product_name || params.offer.brand,
+        200,
+        'Unknown product'
+      ),
+      targetCountry: sanitizePromptInlineValue(
+        reviewedInputs,
+        'keyword_gap_target_country',
+        params.targetCountry || params.offer.target_country,
+        40,
+        'US'
+      ),
+      targetLanguage: sanitizePromptInlineValue(
+        reviewedInputs,
+        'keyword_gap_target_language',
+        params.targetLanguage || params.offer.target_language,
+        40,
+        'en'
+      ),
+      existingKeywords: sanitizePromptBlockValue(
+        reviewedInputs,
+        'keyword_gap_existing_keywords',
+        existingKeywordsList,
+        3200,
+        'No existing keywords provided.'
+      ),
     }
-  ]
-}
-
-只返回 JSON，不要其他文字。`
+    const prompt = interpolateTemplate(promptTemplate, {
+      inputGuardrail: buildUntrustedInputGuardrail(reviewedInputs),
+      ...promptVariables,
+    })
 
     console.log('[Gap Analysis] 调用 AI 提取关键词...')
     const response = await generateContent({

@@ -13,6 +13,14 @@ import { generateContent, type ResponseSchema } from './gemini'
 import { detectAffiliateLandingPageType, type AffiliateProduct } from './affiliate-products'
 import { withCache } from './ai-cache'
 import { estimateTokenCost, recordTokenUsage } from './ai-token-tracker'
+import { loadPrompt, interpolateTemplate } from './prompt-loader'
+import { getUserOnlySetting } from './settings'
+import {
+  buildUntrustedInputGuardrail,
+  sanitizePromptBlockValue,
+  sanitizePromptInlineValue,
+  type InputReview,
+} from './llm-input-guard'
 
 /**
  * 推荐指数计算结果
@@ -88,9 +96,12 @@ export interface HybridProductScoreSummary {
 }
 
 const DEFAULT_HYBRID_RERANK_TOP_K = 10
-// 推荐指数仅需紧凑结构化字段，限制输出预算避免长文本膨胀
-const PRODUCT_SCORE_AI_MAX_OUTPUT_TOKENS = 640
-const PRODUCT_SCORE_AI_RETRY_MAX_OUTPUT_TOKENS = 320
+// 该任务依赖完整 JSON，640/320 在生产 relay/official 场景都过低，容易截断结构化输出。
+const PRODUCT_SCORE_AI_MAX_OUTPUT_TOKENS = 1536
+const PRODUCT_SCORE_AI_RETRY_MAX_OUTPUT_TOKENS = 1536
+const PRODUCT_SCORE_SCHEMA_GUARD_CACHE_TTL_MS = 5 * 60 * 1000
+
+const productScoreSchemaGuardCache = new Map<number, { expiresAt: number; shouldFallback: boolean }>()
 
 const SEASONALITY_VALUES = ['winter', 'summer', 'spring', 'fall', 'all-year'] as const
 const PRICE_POSITIONING_VALUES = ['luxury', 'premium', 'mid-range', 'budget'] as const
@@ -137,41 +148,125 @@ function buildCombinedProductAnalysisCacheKey(
 }
 
 function buildCombinedProductScorePrompt(
+  promptTemplate: string,
   product: AffiliateProduct,
   currentMonth: number
 ): string {
-  return [
-    'Return compact JSON only.',
-    `Current month: ${currentMonth}`,
-    `Product name: ${product.product_name || 'Unknown'}`,
-    `Brand: ${product.brand || 'Unknown'}`,
-    `Price: ${product.price_amount ? `$${product.price_amount}` : 'Unknown'}`,
-    '',
-    'Return exactly one JSON object with this shape:',
-    '{"seasonality":{"seasonality":"","isPeakSeason":false,"monthsUntilPeak":0,"holidays":[]},"productAnalysis":{"category":"","targetAudience":[],"pricePositioning":"","useScenario":[],"productFeatures":[]}}',
-    '',
-    'Rules:',
-    '- Base on product identity and conservative market judgment.',
-    '- monthsUntilPeak must be between 0 and 12.',
-    '- seasonality in: winter/summer/spring/fall/all-year.',
-    '- pricePositioning in: luxury/premium/mid-range/budget.',
-    '- Arrays max 2 items each.',
-    '- No reasoning fields.',
-    '- One-line JSON only. No markdown, no explanation.',
-  ].join('\n')
+  const reviewedInputs: InputReview[] = []
+  const variables = {
+    currentMonth: sanitizePromptInlineValue(
+      reviewedInputs,
+      'product_score_current_month',
+      currentMonth,
+      4,
+      '1'
+    ),
+    productName: sanitizePromptBlockValue(
+      reviewedInputs,
+      'product_score_product_name',
+      product.product_name,
+      240,
+      'Unknown'
+    ),
+    brand: sanitizePromptInlineValue(
+      reviewedInputs,
+      'product_score_brand',
+      product.brand,
+      120,
+      'Unknown'
+    ),
+    price: sanitizePromptInlineValue(
+      reviewedInputs,
+      'product_score_price',
+      product.price_amount ? `$${product.price_amount}` : 'Unknown',
+      40,
+      'Unknown'
+    ),
+  }
+
+  return interpolateTemplate(promptTemplate, {
+    inputGuardrail: buildUntrustedInputGuardrail(reviewedInputs),
+    ...variables,
+  })
 }
 
 function buildCombinedProductScoreRetryPrompt(
+  promptTemplate: string,
   product: AffiliateProduct,
   currentMonth: number
 ): string {
-  return [
-    buildCombinedProductScorePrompt(product, currentMonth),
-    '',
-    'The previous output was invalid JSON.',
-    'Retry now and return exactly one valid JSON object only.',
-    'No markdown and no text outside JSON.',
-  ].join('\n')
+  const reviewedInputs: InputReview[] = []
+  const variables = {
+    currentMonth: sanitizePromptInlineValue(
+      reviewedInputs,
+      'product_score_retry_current_month',
+      currentMonth,
+      4,
+      '1'
+    ),
+    productName: sanitizePromptBlockValue(
+      reviewedInputs,
+      'product_score_retry_product_name',
+      product.product_name,
+      240,
+      'Unknown'
+    ),
+    brand: sanitizePromptInlineValue(
+      reviewedInputs,
+      'product_score_retry_brand',
+      product.brand,
+      120,
+      'Unknown'
+    ),
+    price: sanitizePromptInlineValue(
+      reviewedInputs,
+      'product_score_retry_price',
+      product.price_amount ? `$${product.price_amount}` : 'Unknown',
+      40,
+      'Unknown'
+    ),
+  }
+
+  return interpolateTemplate(promptTemplate, {
+    inputGuardrail: buildUntrustedInputGuardrail(reviewedInputs),
+    ...variables,
+  })
+}
+
+async function shouldBypassProductScoreAiForSchemaGuard(userId: number): Promise<boolean> {
+  if (!Number.isFinite(userId) || userId <= 0) {
+    return false
+  }
+
+  const now = Date.now()
+  const cached = productScoreSchemaGuardCache.get(userId)
+  if (cached && cached.expiresAt > now) {
+    return cached.shouldFallback
+  }
+
+  let shouldFallback = false
+  try {
+    const providerSetting = await getUserOnlySetting('ai', 'gemini_provider', userId)
+    const provider = String(providerSetting?.value || '').trim().toLowerCase()
+
+    shouldFallback = provider === 'relay'
+  } catch (error) {
+    console.warn(`[ProductScoreCalculation] 读取用户${userId}的AI配置失败，跳过schema防护降级判断:`, error)
+  }
+
+  productScoreSchemaGuardCache.set(userId, {
+    shouldFallback,
+    expiresAt: now + PRODUCT_SCORE_SCHEMA_GUARD_CACHE_TTL_MS,
+  })
+
+  if (shouldFallback) {
+    console.warn(
+      `[ProductScoreCalculation] 用户${userId}当前使用relay provider，` +
+      'product_score_combined_analysis 直接走兜底分析，避免无强schema约束调用'
+    )
+  }
+
+  return shouldFallback
 }
 
 function asObject(value: unknown): Record<string, any> | null {
@@ -762,6 +857,31 @@ async function analyzeProductScoreCombined(
 }> {
   const currentMonth = new Date().getMonth() + 1
 
+  if (await shouldBypassProductScoreAiForSchemaGuard(userId)) {
+    const analysis = buildFallbackCombinedProductScoreAnalysis(product)
+    const analyzedAt = new Date().toISOString()
+    return {
+      seasonalityAnalysis: {
+        seasonality: analysis.seasonality.seasonality,
+        holidays: analysis.seasonality.holidays,
+        isPeakSeason: analysis.seasonality.isPeakSeason,
+        monthsUntilPeak: analysis.seasonality.monthsUntilPeak,
+        reasoning: analysis.seasonality.reasoning,
+        score: calculateSeasonalityScore(analysis.seasonality, currentMonth),
+        analyzedAt,
+      },
+      productAnalysis: {
+        category: analysis.productAnalysis.category,
+        targetAudience: analysis.productAnalysis.targetAudience,
+        pricePositioning: analysis.productAnalysis.pricePositioning,
+        useScenario: analysis.productAnalysis.useScenario,
+        productFeatures: analysis.productAnalysis.productFeatures,
+        reasoning: analysis.productAnalysis.reasoning,
+        analyzedAt,
+      },
+    }
+  }
+
   return await withCache(
     'product_score_combined_analysis',
     buildCombinedProductAnalysisCacheKey(userId, product, currentMonth),
@@ -812,11 +932,13 @@ async function analyzeProductScoreCombined(
       }
 
       let analysis: CombinedProductScoreAnalysis | null = null
+      const promptTemplate = await loadPrompt('product_score_combined_analysis')
+      const retryPromptTemplate = await loadPrompt('product_score_combined_analysis_retry')
 
       try {
         const firstResult = await generateContent({
           ...requestBase,
-          prompt: buildCombinedProductScorePrompt(product, currentMonth),
+          prompt: buildCombinedProductScorePrompt(promptTemplate, product, currentMonth),
           temperature: 0.1,
         }, userId)
 
@@ -838,7 +960,7 @@ async function analyzeProductScoreCombined(
           const retryResult = await generateContent({
             ...requestBase,
             maxOutputTokens: Math.min(requestBase.maxOutputTokens, PRODUCT_SCORE_AI_RETRY_MAX_OUTPUT_TOKENS),
-            prompt: buildCombinedProductScoreRetryPrompt(product, currentMonth),
+            prompt: buildCombinedProductScoreRetryPrompt(retryPromptTemplate, product, currentMonth),
             temperature: 0,
           }, userId)
           await recordProductScoreTokenUsage(userId, 'product_score_combined_analysis', retryResult)

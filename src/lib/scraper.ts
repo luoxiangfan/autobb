@@ -15,6 +15,7 @@ import {
   getRegistrableDomainLabelFromUrl,
   refineBrandNameForLandingPage,
 } from './landing-page-scrape-utils'
+import { extractAmazonStoreSlugFromUrl } from './amazon-url-utils'
 
 const PROXY_ENABLED = process.env.PROXY_ENABLED === 'true'
 const PROXY_URL = process.env.PROXY_URL || ''
@@ -618,11 +619,11 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
     brandName = null
   }
 
-  // 如果是Amazon stores URL且没有从页面提取到品牌，从URL中提取（支持全球站点）
-  if (!brandName && isAmazonDomain(url) && url.includes('/stores/')) {
-    const urlMatch = url.match(/\/stores\/([^\/]+)\//)
-    if (urlMatch && urlMatch[1]) {
-      brandName = decodeURIComponent(urlMatch[1])
+  // 如果是Amazon店铺URL且没有从页面提取到品牌，从URL中提取（支持 vanity storefront）
+  if (!brandName && isAmazonDomain(url)) {
+    const urlBrand = extractAmazonStoreSlugFromUrl(url)
+    if (urlBrand) {
+      brandName = urlBrand
       console.log(`✅ [Amazon Store] 从URL提取品牌: ${brandName}`)
     }
   }
@@ -970,12 +971,12 @@ function extractGenericData($: any, url: string): ScrapedProductData {
     (isPlausibleBrandCandidate(brandText) ? brandText : null) ||
     null
 
-  // 优先从Amazon stores URL中提取品牌名（支持全球站点）
-  if (!brandName && isAmazonDomain(url) && url.includes('/stores/')) {
-    const urlMatch = url.match(/\/stores\/([^\/]+)\//)
-    if (urlMatch && urlMatch[1]) {
-      brandName = decodeURIComponent(urlMatch[1])
-      console.log(`✅ 从Amazon stores URL提取品牌: ${brandName}`)
+  // 优先从Amazon店铺URL中提取品牌名（支持 vanity storefront）
+  if (!brandName && isAmazonDomain(url)) {
+    const urlBrand = extractAmazonStoreSlugFromUrl(url)
+    if (urlBrand) {
+      brandName = urlBrand
+      console.log(`✅ 从Amazon店铺URL提取品牌: ${brandName}`)
     }
   }
 
@@ -995,7 +996,7 @@ function extractGenericData($: any, url: string): ScrapedProductData {
         console.log(`✅ 提取的品牌: ${brandName}`)
       }
     }
-  } else if (!url.includes('amazon.com/stores/')) {
+  } else if (!extractAmazonStoreSlugFromUrl(url)) {
     console.log(`✅ 从meta标签提取品牌: ${brandName}`)
   }
 

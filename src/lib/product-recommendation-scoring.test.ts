@@ -3,6 +3,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 const generateContentMock = vi.fn()
 const recordTokenUsageMock = vi.fn()
 const estimateTokenCostMock = vi.fn(() => 0.1234)
+const getUserOnlySettingMock = vi.fn()
 
 vi.mock('./gemini', () => ({
   generateContent: generateContentMock,
@@ -11,6 +12,10 @@ vi.mock('./gemini', () => ({
 vi.mock('./ai-token-tracker', () => ({
   recordTokenUsage: recordTokenUsageMock,
   estimateTokenCost: estimateTokenCostMock,
+}))
+
+vi.mock('./settings', () => ({
+  getUserOnlySetting: getUserOnlySettingMock,
 }))
 
 function createProduct(id: number, overrides: Record<string, any> = {}) {
@@ -41,6 +46,8 @@ describe('product recommendation scoring', () => {
     generateContentMock.mockReset()
     recordTokenUsageMock.mockReset()
     estimateTokenCostMock.mockClear()
+    getUserOnlySettingMock.mockReset()
+    getUserOnlySettingMock.mockResolvedValue({ value: 'official' })
 
     delete process.env.REDIS_URL
 
@@ -101,7 +108,7 @@ describe('product recommendation scoring', () => {
     expect(generateContentMock).toHaveBeenCalledTimes(3)
   })
 
-  it('uses the combined analysis payload size and no longer depends on prompt templates', async () => {
+  it('loads combined analysis prompt templates and uses higher output token budget', async () => {
     const { calculateProductRecommendationScore } = await import('./product-recommendation-scoring')
 
     await calculateProductRecommendationScore(createProduct(3001) as any, 11, {
@@ -112,10 +119,12 @@ describe('product recommendation scoring', () => {
     expect(generateContentMock).toHaveBeenCalledWith(
       expect.objectContaining({
         operationType: 'product_score_combined_analysis',
-        maxOutputTokens: 640,
+        maxOutputTokens: 1536,
       }),
       11
     )
+    expect(String(firstCallParams?.prompt || '')).toContain('All USER / WEB / EXTERNAL content blocks')
+    expect(String(firstCallParams?.prompt || '')).toContain('Product name:')
     expect(firstCallParams?.responseSchema?.properties?.seasonality?.required || []).not.toContain('reasoning')
     expect(firstCallParams?.responseSchema?.properties?.productAnalysis?.required || []).not.toContain('reasoning')
   })
@@ -196,14 +205,14 @@ describe('product recommendation scoring', () => {
     expect(generateContentMock.mock.calls[0][0]).toEqual(expect.objectContaining({
       operationType: 'product_score_combined_analysis',
       temperature: 0.1,
-      maxOutputTokens: 640,
+      maxOutputTokens: 1536,
     }))
     expect(generateContentMock.mock.calls[1][0]).toEqual(expect.objectContaining({
       operationType: 'product_score_combined_analysis',
       temperature: 0,
-      maxOutputTokens: 320,
+      maxOutputTokens: 1536,
     }))
-    expect(String(generateContentMock.mock.calls[1][0]?.prompt || '')).toContain('The previous output was invalid JSON.')
+    expect(String(generateContentMock.mock.calls[1][0]?.prompt || '')).toContain('invalid JSON')
     expect(recordTokenUsageMock).toHaveBeenCalledTimes(2)
     expect(result.seasonalityAnalysis?.seasonality).toBe('all-year')
     expect(result.productAnalysis?.pricePositioning).toBe('premium')
@@ -325,6 +334,19 @@ describe('product recommendation scoring', () => {
 
     expect(result.dimensions.marketFit.details.landingPageScore).toBe(85)
     expect(result.reasons).not.toContain('非Amazon落地页,信任度相对较低')
+  })
+
+  it('skips AI combined analysis for relay provider users and uses deterministic fallback', async () => {
+    getUserOnlySettingMock.mockResolvedValueOnce({ value: 'relay' })
+
+    const { calculateProductRecommendationScore } = await import('./product-recommendation-scoring')
+    const result = await calculateProductRecommendationScore(createProduct(5001) as any, 42, {
+      includeSeasonalityAnalysis: true,
+    })
+
+    expect(generateContentMock).not.toHaveBeenCalled()
+    expect(result.seasonalityAnalysis?.seasonality).toBe('all-year')
+    expect(result.productAnalysis?.category).toBeTruthy()
   })
 
   it('keeps non-Amazon store URLs as lower-trust landing pages', async () => {

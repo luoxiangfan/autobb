@@ -15,6 +15,13 @@
 
 import { generateContent } from './gemini'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
+import { loadPrompt, interpolateTemplate } from './prompt-loader'
+import {
+  buildUntrustedInputGuardrail,
+  sanitizePromptBlockValue,
+  sanitizePromptInlineValue,
+  type InputReview,
+} from './llm-input-guard'
 
 /**
  * 从AI响应中安全地提取JSON
@@ -407,21 +414,63 @@ async function generateHeadlinesWithAI(
   userId: number
 ): Promise<Partial<EnhancedHeadline>[]> {
   try {
-    const prompt = `
-      Generate 10 unique, compelling ad headlines for this product:
-      - Product: ${productInfo.productName}
-      - Brand: ${productInfo.brandName}
-      - Category: ${productInfo.category}
-      - Features: ${productInfo.features?.join(', ')}
-      - Use Cases: ${productInfo.useCases?.join(', ')}
-      - Target Audience: ${productInfo.targetAudience}
-
-      Requirements:
-      - Each headline must be ≤30 characters
-      - Include different types: brand, feature, promo, cta, urgency
-      - Must be compelling and action-oriented
-      - Avoid generic phrases
-    `
+    const reviewedInputs: InputReview[] = []
+    const promptTemplate = await loadPrompt('enhanced_headline_generation')
+    const variables = {
+      targetLanguage: sanitizePromptInlineValue(
+        reviewedInputs,
+        'headline_target_language',
+        targetLanguage,
+        40,
+        'English'
+      ),
+      productName: sanitizePromptInlineValue(
+        reviewedInputs,
+        'headline_product_name',
+        productInfo.productName,
+        160,
+        'Unknown product'
+      ),
+      brandName: sanitizePromptInlineValue(
+        reviewedInputs,
+        'headline_brand_name',
+        productInfo.brandName,
+        120,
+        'Unknown brand'
+      ),
+      category: sanitizePromptInlineValue(
+        reviewedInputs,
+        'headline_category',
+        productInfo.category,
+        120,
+        'Unknown category'
+      ),
+      features: sanitizePromptBlockValue(
+        reviewedInputs,
+        'headline_features',
+        Array.isArray(productInfo.features) ? productInfo.features.join('\n- ') : productInfo.features,
+        1200,
+        'No verified features provided.'
+      ),
+      useCases: sanitizePromptBlockValue(
+        reviewedInputs,
+        'headline_use_cases',
+        Array.isArray(productInfo.useCases) ? productInfo.useCases.join('\n- ') : productInfo.useCases,
+        800,
+        'No verified use cases provided.'
+      ),
+      targetAudience: sanitizePromptBlockValue(
+        reviewedInputs,
+        'headline_target_audience',
+        productInfo.targetAudience,
+        600,
+        'General audience'
+      ),
+    }
+    const prompt = interpolateTemplate(promptTemplate, {
+      inputGuardrail: buildUntrustedInputGuardrail(reviewedInputs),
+      ...variables,
+    })
 
     // 🔧 修复：使用responseSchema强制AI返回结构化JSON
     const responseSchema = {
@@ -499,21 +548,63 @@ async function generateDescriptionsWithAI(
   userId: number
 ): Promise<Partial<EnhancedDescription>[]> {
   try {
-    const prompt = `
-      Generate 4 unique, compelling ad descriptions for this product:
-      - Product: ${productInfo.productName}
-      - Brand: ${productInfo.brandName}
-      - Category: ${productInfo.category}
-      - Features: ${productInfo.features?.join(', ')}
-      - Use Cases: ${productInfo.useCases?.join(', ')}
-      - Target Audience: ${productInfo.targetAudience}
-
-      Requirements:
-      - Each description must be ≤90 characters
-      - Include different types: value, action, feature, proof
-      - Must include a clear call-to-action
-      - Must be persuasive and benefit-focused
-    `
+    const reviewedInputs: InputReview[] = []
+    const promptTemplate = await loadPrompt('enhanced_description_generation')
+    const variables = {
+      targetLanguage: sanitizePromptInlineValue(
+        reviewedInputs,
+        'description_target_language',
+        targetLanguage,
+        40,
+        'English'
+      ),
+      productName: sanitizePromptInlineValue(
+        reviewedInputs,
+        'description_product_name',
+        productInfo.productName,
+        160,
+        'Unknown product'
+      ),
+      brandName: sanitizePromptInlineValue(
+        reviewedInputs,
+        'description_brand_name',
+        productInfo.brandName,
+        120,
+        'Unknown brand'
+      ),
+      category: sanitizePromptInlineValue(
+        reviewedInputs,
+        'description_category',
+        productInfo.category,
+        120,
+        'Unknown category'
+      ),
+      features: sanitizePromptBlockValue(
+        reviewedInputs,
+        'description_features',
+        Array.isArray(productInfo.features) ? productInfo.features.join('\n- ') : productInfo.features,
+        1200,
+        'No verified features provided.'
+      ),
+      useCases: sanitizePromptBlockValue(
+        reviewedInputs,
+        'description_use_cases',
+        Array.isArray(productInfo.useCases) ? productInfo.useCases.join('\n- ') : productInfo.useCases,
+        800,
+        'No verified use cases provided.'
+      ),
+      targetAudience: sanitizePromptBlockValue(
+        reviewedInputs,
+        'description_target_audience',
+        productInfo.targetAudience,
+        600,
+        'General audience'
+      ),
+    }
+    const prompt = interpolateTemplate(promptTemplate, {
+      inputGuardrail: buildUntrustedInputGuardrail(reviewedInputs),
+      ...variables,
+    })
 
     // 🔧 修复：使用responseSchema强制AI返回结构化JSON
     const responseSchema = {

@@ -22,6 +22,7 @@ import { getKeywordSearchVolumes } from './keyword-planner'
 import { getUserAuthType } from './google-ads-oauth'
 import { normalizeLanguageCode } from './language-country-codes'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
+import { loadPrompt, interpolateTemplate } from './prompt-loader'
 import {
   CP_AI_FEATURE_FLAG,
   AD_STRENGTH_DIMENSION_CONFIG,
@@ -33,6 +34,12 @@ import {
   validateAdStrengthConfig,
 } from './ad-strength-config'
 import type { CanonicalCreativeType } from './creative-type'
+import {
+  buildUntrustedInputGuardrail,
+  sanitizePromptBlockValue,
+  sanitizePromptInlineValue,
+  type InputReview,
+} from './llm-input-guard'
 
 const adStrengthConfigValidation = validateAdStrengthConfig()
 if (!adStrengthConfigValidation.valid) {
@@ -1483,39 +1490,49 @@ async function enhanceCompetitivePositioningWithAI(
     }
 
     const { generateContent } = await import('./gemini')
-
-    const prompt = `
-You are an expert in Google Ads competitive positioning analysis. Analyze the following ad copy for competitive positioning elements in ANY language.
-
-Ad Copy:
-${adCopyText}
-
-Initial Fast Detection Scores (0-max):
-- Price Advantage: ${fastDetectionScores.priceAdvantage}/3
-- Unique Market Position: ${fastDetectionScores.uniqueMarketPosition}/3
-- Competitive Comparison: ${fastDetectionScores.competitiveComparison}/2
-- Value Emphasis: ${fastDetectionScores.valueEmphasis}/2
-
-Task: Perform deep semantic analysis to refine these scores. Return JSON with:
-
-{
-  "priceAdvantage": 0-3,     // Quantified savings (e.g., "Save €170", "节省170€", "170€ توفير")
-  "uniqueMarketPosition": 0-3, // Uniqueness claims (e.g., "Only", "唯一", "الوحيد", "เท่านั้น")
-  "competitiveComparison": 0-2, // Competitor comparison (e.g., "Replace", "取代", "استبدل", "แทนที่")
-  "valueEmphasis": 0-2,       // Value proposition (e.g., "Best value", "性价比", "أفضل قيمة", "คุ้มค่า")
-  "confidence": 0.0-1.0       // Confidence level (0.8+ means high confidence)
-}
-
-Rules:
-- Detect patterns in ANY language (not just English/Italian/Spanish)
-- Score based on clarity and strength of claims
-- Consider cultural context (e.g., Asian markets emphasize "value", Western markets emphasize "savings")
-- If initial score is accurate, return same score
-- Only increase score if you find clear evidence that was missed
-- Return 0 if element not present
-- Confidence: 1.0 = certain, 0.8 = high confidence, 0.6 = moderate, <0.5 = uncertain
-- Return ONLY a JSON object, no markdown, no analysis text, no extra prose
-`.trim()
+    const promptTemplate = await loadPrompt('competitive_positioning_analysis')
+    const reviewedInputs: InputReview[] = []
+    const promptVariables = {
+      adCopyText: sanitizePromptBlockValue(
+        reviewedInputs,
+        'competitive_positioning_ad_copy',
+        adCopyText,
+        3000,
+        'No ad copy provided.'
+      ),
+      priceAdvantageScore: sanitizePromptInlineValue(
+        reviewedInputs,
+        'competitive_positioning_price_advantage',
+        `${fastDetectionScores.priceAdvantage}/3`,
+        20,
+        '0/3'
+      ),
+      uniqueMarketPositionScore: sanitizePromptInlineValue(
+        reviewedInputs,
+        'competitive_positioning_unique_market_position',
+        `${fastDetectionScores.uniqueMarketPosition}/3`,
+        20,
+        '0/3'
+      ),
+      competitiveComparisonScore: sanitizePromptInlineValue(
+        reviewedInputs,
+        'competitive_positioning_comparison',
+        `${fastDetectionScores.competitiveComparison}/2`,
+        20,
+        '0/2'
+      ),
+      valueEmphasisScore: sanitizePromptInlineValue(
+        reviewedInputs,
+        'competitive_positioning_value_emphasis',
+        `${fastDetectionScores.valueEmphasis}/2`,
+        20,
+        '0/2'
+      ),
+    }
+    const prompt = interpolateTemplate(promptTemplate, {
+      inputGuardrail: buildUntrustedInputGuardrail(reviewedInputs),
+      ...promptVariables,
+    })
 
     // 智能模型选择：广告强度评估使用Flash模型（简单评分任务）
     // 🔧 修复：添加try-catch和降级策略
