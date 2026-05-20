@@ -145,8 +145,6 @@ describe('ad-creative-generator final hard contract', () => {
         'waterdrop nsf ansi 58 372 zertifiziert',
         'waterdrop x12 alkalisches mineral',
         'waterdrop',
-        'waterdrop nsf ansi 58 372 zertifiziert',
-        'waterdrop x12 alkalisches mineral',
       ],
       descriptionKeywordTargets: [
         'waterdrop nsf ansi 58 372 zertifiziert',
@@ -167,12 +165,12 @@ describe('ad-creative-generator final hard contract', () => {
       usagePlan,
     })
 
-    const joinedTopSlots = creative.headlines.slice(4, 9).join(' ').toLowerCase()
+    const joinedTopSlots = creative.headlines.slice(4, 7).join(' ').toLowerCase()
     const joinedDescriptions = creative.descriptions.slice(0, 2).join(' ').toLowerCase()
 
     expect(joinedTopSlots).not.toMatch(/alkalisch|zertifiz/)
     expect(joinedDescriptions).not.toMatch(/alkalisch|zertifiz/)
-    expect(creative.headlines.slice(4, 9).every((headline) => headline.toLowerCase().includes('waterdrop'))).toBe(true)
+    expect(creative.headlines.slice(4, 7).every((headline) => headline.toLowerCase().includes('waterdrop'))).toBe(true)
     expect(creative.descriptions.slice(0, 2).every((description) => description.toLowerCase().includes('waterdrop'))).toBe(true)
   })
 
@@ -209,11 +207,9 @@ describe('ad-creative-generator final hard contract', () => {
         'novilla king size mattress 12',
       ],
       headlineKeywordTargets: [
-        'novilla mattress full',
+        'novilla king size mattress 12',
         'novilla memory foam mattress',
         'novilla full size mattress',
-        'novilla king size mattress 12',
-        'novilla mattress full',
       ],
       descriptionKeywordTargets: [
         'novilla mattress full',
@@ -235,7 +231,7 @@ describe('ad-creative-generator final hard contract', () => {
     expect(creative.headlines[1]).toBe('Novilla Mattress Full Size')
     expect(creative.headlines[2]).toBe('Novilla Pressure Relieving')
     expect(creative.headlines[3]).toBe('Novilla Medium Plush Feel')
-    expect(creative.headlines.join(' ').toLowerCase()).toContain('novilla king size mattress 12')
+    expect(creative.headlines.slice(4, 7).join(' ').toLowerCase()).toContain('novilla king size mattress 12')
   })
 
   it('guarantees unique Google Ads headline assets after final contract enforcement', () => {

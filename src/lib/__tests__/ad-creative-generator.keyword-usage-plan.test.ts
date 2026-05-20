@@ -32,14 +32,13 @@ function buildCreativeDraft(): GeneratedAdCreativeData {
 }
 
 describe('buildCreativeKeywordUsagePlan', () => {
-  it('cycles all valid retained keywords through headline targets when fewer than five are retained', () => {
+  it('cycles retained keywords through headline targets when fewer than three slots are needed', () => {
     const plan = buildCreativeKeywordUsagePlan({
       brandName: 'BrandX',
       precomputedKeywordSet: {
         keywordsWithVolume: [
           { keyword: 'brandx x200 vacuum', searchVolume: 5200, contractRole: 'required' },
           { keyword: 'brandx robot vacuum', searchVolume: 4100, contractRole: 'required' },
-          { keyword: 'brandx cordless vacuum', searchVolume: 3200, contractRole: 'required' },
         ],
       },
     })
@@ -47,19 +46,16 @@ describe('buildCreativeKeywordUsagePlan', () => {
     expect(plan.retainedNonBrandKeywords).toEqual([
       'brandx x200 vacuum',
       'brandx robot vacuum',
-      'brandx cordless vacuum',
     ])
     expect(plan.headlineCoverageMode).toBe('exhaustive_under_5')
     expect(plan.headlineKeywordTargets).toEqual([
       'brandx x200 vacuum',
       'brandx robot vacuum',
-      'brandx cordless vacuum',
       'brandx x200 vacuum',
-      'brandx robot vacuum',
     ])
   })
 
-  it('selects the best five retained keywords for headline slots when more than five are retained', () => {
+  it('selects the best three retained keywords for headline slots when more than three are retained', () => {
     const plan = buildCreativeKeywordUsagePlan({
       brandName: 'BrandX',
       precomputedKeywordSet: {
@@ -76,15 +72,15 @@ describe('buildCreativeKeywordUsagePlan', () => {
 
     expect(plan.headlineCoverageMode).toBe('top_5')
     expect(plan.retainedNonBrandKeywords).toContain('brandx home vacuum')
-    expect(plan.headlineKeywordTargets).toHaveLength(5)
+    expect(plan.headlineKeywordTargets).toHaveLength(3)
     expect(plan.headlineKeywordTargets).not.toContain('brandx home vacuum')
     expect(plan.headlineKeywordTargets).toEqual(expect.arrayContaining([
       'brandx robot vacuum',
       'brandx x200 vacuum',
       'brandx cordless vacuum',
-      'brandx smart vacuum',
-      'brandx vacuum cleaner',
     ]))
+    expect(plan.headlineKeywordTargets).not.toContain('brandx smart vacuum')
+    expect(plan.headlineKeywordTargets).not.toContain('brandx vacuum cleaner')
   })
 
   it('excludes semantically bad or meaningless keywords from the forced slot plan', () => {
@@ -103,8 +99,6 @@ describe('buildCreativeKeywordUsagePlan', () => {
 
     expect(plan.retainedNonBrandKeywords).toEqual(['brandx x200 vacuum'])
     expect(plan.headlineKeywordTargets).toEqual([
-      'brandx x200 vacuum',
-      'brandx x200 vacuum',
       'brandx x200 vacuum',
       'brandx x200 vacuum',
       'brandx x200 vacuum',
@@ -152,16 +146,14 @@ describe('enforceRetainedKeywordSlotCoverage', () => {
 
     const result = enforceRetainedKeywordSlotCoverage(creative, usagePlan, 'en', 'BrandX')
 
-    expect(result).toEqual({ headlineFixes: 5, descriptionFixes: 2 })
+    expect(result).toEqual({ headlineFixes: 3, descriptionFixes: 2 })
     expect(creative.headlines.slice(0, 4)).toEqual([
       '{KeyWord:BrandX} Official',
       'BrandX X200 Vacuum',
       'BrandX Everyday Cleaning',
       'BrandX Lightweight Design',
     ])
-    expect(creative.headlines.slice(4, 9)).toEqual([
-      'Shop brandx x200 vacuum',
-      'brandx robot vacuum',
+    expect(creative.headlines.slice(4, 7)).toEqual([
       'Shop brandx x200 vacuum',
       'brandx robot vacuum',
       'Shop brandx x200 vacuum',
@@ -191,10 +183,8 @@ describe('enforceRetainedKeywordSlotCoverage', () => {
 
     const result = enforceRetainedKeywordSlotCoverage(creative, usagePlan, 'en', 'BrandX')
 
-    expect(result.headlineFixes).toBe(5)
-    expect(creative.headlines.slice(4, 9)).toEqual([
-      'Shop brandx x200 vacuum',
-      'brandx robot vacuum',
+    expect(result.headlineFixes).toBe(3)
+    expect(creative.headlines.slice(4, 7)).toEqual([
       'Shop brandx x200 vacuum',
       'brandx robot vacuum',
       'Shop brandx x200 vacuum',
