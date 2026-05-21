@@ -13,6 +13,11 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
 
+export interface BatchProgressErrorDetail {
+  backupId: number
+  error: string
+}
+
 interface BatchProgressIndicatorProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -22,6 +27,7 @@ interface BatchProgressIndicatorProps {
   totalCount: number
   completedCount: number
   failedCount: number
+  errorDetails?: BatchProgressErrorDetail[]
 }
 
 export function BatchProgressIndicator({
@@ -33,6 +39,7 @@ export function BatchProgressIndicator({
   totalCount,
   completedCount,
   failedCount,
+  errorDetails = [],
 }: BatchProgressIndicatorProps) {
   const [statusText, setStatusText] = useState('准备中...')
 
@@ -149,9 +156,22 @@ export function BatchProgressIndicator({
           {status === 'partial' && (
             <Alert variant="destructive">
               <AlertDescription className="text-sm">
-                ⚠️ 部分广告系列创建失败，请查看错误日志。
+                ⚠️ 部分广告系列创建失败，请查看下方明细。
               </AlertDescription>
             </Alert>
+          )}
+
+          {(status === 'partial' || status === 'failed') && errorDetails.length > 0 && (
+            <div className="max-h-40 overflow-y-auto rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 space-y-2">
+              <p className="font-medium">失败明细</p>
+              <ul className="list-disc list-inside space-y-1">
+                {errorDetails.map((item) => (
+                  <li key={item.backupId}>
+                    备份 #{item.backupId}：{item.error}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
       </DialogContent>

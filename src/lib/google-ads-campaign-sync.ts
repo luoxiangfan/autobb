@@ -10,7 +10,7 @@
  */
 
 import { getDatabase } from './db'
-import { autoBackupCampaign } from './campaign-backups'
+import { autoBackupCampaign, isAutoadsLikeBackupSource } from './campaign-backups'
 import { updateCampaignConfig } from './google-ads-api-sync'
 import { getCustomerWithCredentials, trackOAuthApiCall } from './google-ads-api'
 import { executeGAQLQueryPython } from './python-ads-client'
@@ -470,9 +470,9 @@ export async function syncCampaignsFromGoogleAds(
 
             if (existingBackup) {
               // 情况一：backup_source='autoads'，不需要备份
-              if (existingBackup.backup_source === 'autoads') {
+              if (isAutoadsLikeBackupSource(existingBackup.backup_source)) {
                 shouldSyncComponents = false
-                console.log(`[GoogleAds Sync] Skip sync for campaign ${campaignId}: existing backup with backup_source='autoads'`)
+                console.log(`[GoogleAds Sync] Skip sync for campaign ${campaignId}: existing backup with backup_source='${existingBackup.backup_source}'`)
               }
               // 情况二：backup_source='google_ads' 并且 backup_version>=2，不需要备份
               else if (existingBackup.backup_source === 'google_ads' && existingBackup.backup_version >= 2) {

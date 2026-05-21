@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue/unified-queue-manager'
+import { validateCampaignBackupsForBatchCreate } from '@/lib/campaign-backup-restore'
 import { createHash } from 'crypto'
 
 /**
@@ -68,6 +69,15 @@ export async function POST(request: NextRequest) {
         { error: `以下备份不存在或无权访问：${invalidBackups.join(', ')}` },
         { status: 400 }
       )
+    }
+
+    const batchValidation = await validateCampaignBackupsForBatchCreate(
+      backupIds,
+      userId,
+      Number(googleAdsAccountId)
+    )
+    if (!batchValidation.ok) {
+      return NextResponse.json({ error: batchValidation.error }, { status: 400 })
     }
 
     // 生成稳定的 batchId

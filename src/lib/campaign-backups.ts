@@ -10,9 +10,33 @@
  */
 
 import { getDatabase } from './db'
-import { createCampaignToGoogleAds } from './google-ads-create'
 import { getInsertedId } from './db-helpers'
-import { assertNoActiveCampaignForOffer } from './campaign-offer-constraint'
+
+/** 历史 publish 来源与 autoads 等价（发布时会归一为 autoads） */
+export function isAutoadsLikeBackupSource(source: string): boolean {
+  return source === 'autoads' || source === 'publish'
+}
+
+function serializeJsonField(value: unknown): string | null {
+  if (value == null) return null
+  if (typeof value === 'string') return value
+  return JSON.stringify(value)
+}
+
+export function backupHasCampaignConfig(value: unknown): boolean {
+  if (value == null) return false
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return false
+    try {
+      const parsed = JSON.parse(trimmed) as Record<string, unknown>
+      return typeof parsed === 'object' && parsed !== null && Object.keys(parsed).length > 0
+    } catch {
+      return false
+    }
+  }
+  return typeof value === 'object' && Object.keys(value as object).length > 0
+}
 
 /**
  * 广告系列备份数据接口
@@ -206,150 +230,117 @@ export async function getLatestBackupForOffer(offerId: number, userId: number): 
   return parseCampaignBackup(backup)
 }
 
+export interface UpsertCampaignBackupAfterPublishInput {
+  userId: number
+  offerId: number
+  adCreativeId: number
+  campaignData: Record<string, unknown>
+  campaignConfig: unknown
+  campaignName: string
+  budgetAmount: number
+  budgetType: string
+  targetCpa?: number | null
+  maxCpc?: number | null
+  googleAdsAccountId: number | null
+  customName?: string | null
+  status?: string
+}
+
 /**
- * 通过备份创建广告系列
+ * 发布完成后 upsert 备份：每个 Offer 仅保留一条，写入完整 campaign_config
  */
-export async function createCampaignFromBackup(
-  backupId: number,
-  userId: number,
-  overrides?: Partial<{
-    campaignName: string
-    budgetAmount: number
-    budgetType: string
-    targetCpa: number
-    maxCpc: number
-    googleAdsAccountId: number
-    campaignConfig: any
-    adCreativeId?: number | null  // 🔧 新增：广告创意 ID
-    createToGoogle?: boolean  // 🔧 新增：是否创建到 Google Ads
-  }>
-): Promise<{
-  campaignId: number
-  googleCampaignId?: string
-  success: boolean
-  errors?: Array<{ type: string; message: string }>
-}> {
+export async function upsertCampaignBackupAfterPublish(
+  input: UpsertCampaignBackupAfterPublishInput
+): Promise<void> {
   const db = await getDatabase()
-  const backup = await getCampaignBackupById(backupId, userId)
+  const now = new Date().toISOString()
 
-  if (!backup) {
-    throw new Error('备份不存在或无权访问')
+  const existing = (await db.queryOne(
+    `
+    SELECT id FROM campaign_backups
+    WHERE offer_id = ? AND user_id = ?
+    ORDER BY created_at DESC
+    LIMIT 1
+  `,
+    [input.offerId, input.userId]
+  )) as { id: number } | undefined
+
+  const campaignDataSerialized = serializeJsonField(input.campaignData)
+  const campaignConfigSerialized = serializeJsonField(input.campaignConfig)
+
+  if (existing) {
+    await db.exec(
+      `
+      UPDATE campaign_backups
+      SET
+        ad_creative_id = ?,
+        campaign_data = ?,
+        campaign_config = ?,
+        backup_type = 'auto',
+        backup_source = 'autoads',
+        custom_name = ?,
+        campaign_name = ?,
+        budget_amount = ?,
+        budget_type = ?,
+        target_cpa = ?,
+        max_cpc = ?,
+        status = ?,
+        google_ads_account_id = ?,
+        updated_at = ?
+      WHERE id = ? AND user_id = ?
+    `,
+      [
+        input.adCreativeId,
+        campaignDataSerialized,
+        campaignConfigSerialized,
+        input.customName ?? null,
+        input.campaignName,
+        input.budgetAmount,
+        input.budgetType,
+        input.targetCpa ?? null,
+        input.maxCpc ?? null,
+        input.status ?? 'PAUSED',
+        input.googleAdsAccountId,
+        now,
+        existing.id,
+        input.userId,
+      ]
+    )
+
+    await db.exec(
+      `
+      DELETE FROM campaign_backups
+      WHERE offer_id = ? AND user_id = ? AND id != ?
+    `,
+      [input.offerId, input.userId, existing.id]
+    )
+
+    console.log(
+      `[Publish Backup] Updated backup id=${existing.id} for offer=${input.offerId}`
+    )
+    return
   }
 
-  // 解析备份数据
-  const campaignData = typeof backup.campaignData === 'string'
-    ? JSON.parse(backup.campaignData)
-    : backup.campaignData
-  
-  const campaignConfig = typeof backup.campaignConfig === 'string'
-    ? JSON.parse(backup.campaignConfig)
-    : backup.campaignConfig
+  await createCampaignBackup({
+    userId: input.userId,
+    offerId: input.offerId,
+    campaignData: input.campaignData,
+    campaignConfig: input.campaignConfig,
+    backupType: 'auto',
+    backupSource: 'autoads',
+    backupVersion: 1,
+    customName: input.customName ?? null,
+    campaignName: input.campaignName,
+    budgetAmount: input.budgetAmount,
+    budgetType: input.budgetType,
+    targetCpa: input.targetCpa ?? null,
+    maxCpc: input.maxCpc ?? null,
+    status: input.status ?? 'PAUSED',
+    googleAdsAccountId: input.googleAdsAccountId,
+    adCreativeId: input.adCreativeId,
+  })
 
-  // 合并覆盖值
-  const campaignName = overrides?.campaignName || campaignData.campaign_name || backup.campaignName
-  const budgetAmount = overrides?.budgetAmount ?? campaignData.budget_amount ?? backup.budgetAmount
-  const budgetType = overrides?.budgetType || campaignData.budget_type || backup.budgetType
-  const targetCpa = overrides?.targetCpa ?? campaignData.target_cpa ?? backup.targetCpa
-  const maxCpc = overrides?.maxCpc ?? campaignData.max_cpc ?? backup.maxCpc
-  const googleAdsAccountId = overrides?.googleAdsAccountId ?? campaignData.google_ads_account_id ?? backup.googleAdsAccountId
-  const finalCampaignConfig = overrides?.campaignConfig ?? campaignConfig  // 🔧 新增
-  const adCreativeId = overrides?.adCreativeId ?? campaignData?.ad_creative_id ?? backup.adCreativeId  // 🔧 新增
-
-  await assertNoActiveCampaignForOffer(backup.offerId, userId)
-
-  const result = await db.exec(`
-    INSERT INTO campaigns (
-      user_id, offer_id, google_ads_account_id,
-      campaign_id, campaign_name, custom_name,
-      budget_amount, budget_type,
-      target_cpa, max_cpc,
-      ad_creative_id,
-      campaign_config,
-      status, creation_status,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [
-    userId,
-    backup.offerId,
-    googleAdsAccountId,
-    null,
-    campaignName,
-    backup.customName,
-    budgetAmount,
-    budgetType,
-    targetCpa,
-    maxCpc,
-    adCreativeId,
-    finalCampaignConfig ? JSON.stringify(finalCampaignConfig) : null,
-    'PAUSED',
-    'published',
-    new Date(),
-    new Date(),
-  ])
-
-  const campaignId = getInsertedId(result, db.type)
-
-  // 记录备份使用日志
-  await db.exec(`
-    UPDATE campaign_backups
-    SET updated_at = ?
-    WHERE id = ?
-  `, [new Date().toISOString(), backupId])
-
-  // 🔧 如果指定了创建到 Google Ads，调用 Google Ads API
-  let googleCampaignId: string | undefined
-  let createErrors: Array<{ type: string; message: string }> = []
-
-  if (overrides?.createToGoogle && googleAdsAccountId && finalCampaignConfig) {
-    try {
-      // 获取 Google Ads customer_id
-      const account = await db.queryOne(
-        'SELECT customer_id FROM google_ads_accounts WHERE id = ? AND user_id = ?',
-        [googleAdsAccountId, userId]
-      ) as { customer_id: string } | undefined
-
-      if (account?.customer_id) {
-        const createResult = await createCampaignToGoogleAds(
-          userId,
-          account.customer_id,
-          finalCampaignConfig
-        )
-
-        if (createResult.success && createResult.campaignId) {
-          googleCampaignId = createResult.campaignId
-
-          // 更新 campaigns 表的 campaign_id 字段
-          await db.exec(`
-            UPDATE campaigns
-            SET campaign_id = ?,
-                creation_status = 'published',
-                updated_at = ?
-            WHERE id = ?
-          `, [googleCampaignId, new Date(), campaignId])
-
-          console.log(`[Create from Backup] Created campaign to Google Ads: ${googleCampaignId}`)
-        } else {
-          createErrors = createResult.errors || []
-          console.error('[Create from Backup] Failed to create to Google Ads:', createErrors)
-        }
-      }
-    } catch (error: any) {
-      createErrors.push({
-        type: 'error',
-        message: error.message,
-      })
-      console.error('[Create from Backup] Error:', error)
-    }
-  }
-
-  const publishSucceeded = !overrides?.createToGoogle || createErrors.length === 0
-
-  return {
-    campaignId,
-    googleCampaignId,
-    success: publishSucceeded,
-    errors: createErrors.length > 0 ? createErrors : undefined,
-  }
+  console.log(`[Publish Backup] Created backup for offer=${input.offerId}`)
 }
 
 /**
@@ -463,7 +454,7 @@ export async function autoBackupCampaign(params: {
     // 已有备份：
     // 1) autoads：创建后永不更新
     // 2) google_ads：仅在首次创建满 7 天后，允许一次升级到 version=2
-    if (existingBackup.backup_source === 'autoads') {
+    if (isAutoadsLikeBackupSource(existingBackup.backup_source)) {
       console.log('[Auto Backup] Skip update: autoads backup is immutable after creation:', params.campaignId)
       return
     }

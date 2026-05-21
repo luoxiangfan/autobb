@@ -204,6 +204,7 @@ psql autoads
 完整的数据库初始化和管理指南：
 - 📖 [数据库初始化指南](./migrations/DATABASE_INITIALIZATION_GUIDE.md)
 - 📊 [迁移整合报告](./migrations/MIGRATION_CONSOLIDATION_REPORT.md)
+- 🛠️ [运维手册](./docs/operations/README.md)（含 [Campaign 备份去重](./docs/operations/campaign-backups-dedup.md)）
 
 ---
 
@@ -438,6 +439,7 @@ npm start
 ## 📖 文档
 
 - [数据库初始化指南](./migrations/DATABASE_INITIALIZATION_GUIDE.md) - 完整的数据库设置和管理
+- [运维手册](./docs/operations/README.md) - 一次性数据修复与维护（如 `npm run campaign-backups:dedup`）
 - [迁移整合报告](./migrations/MIGRATION_CONSOLIDATION_REPORT.md) - 数据库Schema历史和变更
 - [API文档](./docs/API.md) - API接口文档（如果有）
 - [部署指南](./docs/DEPLOYMENT.md) - 详细部署说明（如果有）

@@ -2,9 +2,13 @@
  * 从 campaign_backups 恢复并发布广告系列的共享逻辑
  */
 
-import type { DatabaseAdapter } from './db'
+import { getDatabase, type DatabaseAdapter } from './db'
 import { getInsertedId } from './db-helpers'
-import { parseCampaignBackup, type CampaignBackup } from './campaign-backups'
+import {
+  backupHasCampaignConfig,
+  parseCampaignBackup,
+  type CampaignBackup,
+} from './campaign-backups'
 import { generateNamingScheme } from './naming-convention'
 import { buildEffectiveCreative } from './campaign-publish/effective-creative'
 import { resolveTaskCampaignKeywords } from './campaign-publish/task-keyword-fallback'
@@ -67,6 +71,78 @@ function parseJsonField<T>(value: unknown): T | null {
     }
   }
   return value as T
+}
+
+export type BatchCreateBackupValidationResult =
+  | { ok: true }
+  | { ok: false; error: string }
+
+/**
+ * 批量从备份恢复前的服务端校验
+ */
+export async function validateCampaignBackupsForBatchCreate(
+  backupIds: number[],
+  userId: number,
+  googleAdsAccountId: number
+): Promise<BatchCreateBackupValidationResult> {
+  const db = await getDatabase()
+
+  const accountCheck = await validateGoogleAdsAccountForRestore(
+    db,
+    googleAdsAccountId,
+    userId
+  )
+  if (!accountCheck.ok) {
+    return { ok: false, error: accountCheck.message }
+  }
+
+  const placeholders = backupIds.map(() => '?').join(',')
+  const rows = (await db.query(
+    `
+    SELECT id, offer_id, campaign_name, campaign_config
+    FROM campaign_backups
+    WHERE id IN (${placeholders}) AND user_id = ?
+  `,
+    [...backupIds, userId]
+  )) as Array<{
+    id: number
+    offer_id: number
+    campaign_name: string
+    campaign_config: unknown
+  }>
+
+  const offerToBackupIds = new Map<number, number[]>()
+  for (const row of rows) {
+    const list = offerToBackupIds.get(row.offer_id) ?? []
+    list.push(row.id)
+    offerToBackupIds.set(row.offer_id, list)
+  }
+
+  const duplicateOffers = [...offerToBackupIds.entries()].filter(
+    ([, ids]) => ids.length > 1
+  )
+  if (duplicateOffers.length > 0) {
+    const detail = duplicateOffers
+      .map(([offerId, ids]) => `Offer ${offerId}（备份 ${ids.join(', ')}）`)
+      .join('；')
+    return {
+      ok: false,
+      error: `同一 Offer 不能选择多条备份：${detail}`,
+    }
+  }
+
+  const missingConfig = rows.filter((row) => !backupHasCampaignConfig(row.campaign_config))
+  if (missingConfig.length > 0) {
+    const names = missingConfig
+      .map((row) => `${row.campaign_name || '备份'} (#${row.id})`)
+      .join('、')
+    return {
+      ok: false,
+      error: `以下备份缺少可用的广告系列配置（campaign_config）：${names}`,
+    }
+  }
+
+  return { ok: true }
 }
 
 export async function validateGoogleAdsAccountForRestore(

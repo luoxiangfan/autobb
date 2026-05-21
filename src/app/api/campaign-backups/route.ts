@@ -41,8 +41,10 @@ export async function GET(request: NextRequest) {
       params.push(`${endDate} 23:59:59.999`)
     }
 
-    // 备份来源筛选
-    if (backupSource && backupSource !== 'all') {
+    // 备份来源筛选（历史 publish 记录归入 autoads）
+    if (backupSource === 'autoads') {
+      whereConditions.push("(cb.backup_source = 'autoads' OR cb.backup_source = 'publish')")
+    } else if (backupSource === 'google_ads') {
       whereConditions.push('cb.backup_source = ?')
       params.push(backupSource)
     }

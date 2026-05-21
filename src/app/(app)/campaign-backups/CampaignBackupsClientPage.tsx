@@ -34,7 +34,10 @@ import { Alert } from '@/components/ui/alert'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import { Package, Calendar, RotateCcw, Loader2, ExternalLink, FileText, CheckCircle2, XCircle } from 'lucide-react'
-import { BatchProgressIndicator } from '@/components/BatchProgressIndicator'
+import {
+  BatchProgressIndicator,
+  type BatchProgressErrorDetail,
+} from '@/components/BatchProgressIndicator'
 
 interface CampaignBackup {
   id: number
@@ -86,12 +89,14 @@ export default function CampaignBackupsClientPage() {
   const [batchCompletedCount, setBatchCompletedCount] = useState(0)
   const [batchFailedCount, setBatchFailedCount] = useState(0)
   const [isBatchProcessing, setIsBatchProcessing] = useState(false)
+  const [batchErrorDetails, setBatchErrorDetails] = useState<BatchProgressErrorDetail[]>([])
   
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [total, setTotal] = useState(0)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const sseAbortRef = useRef<AbortController | null>(null)
 
   const clearPolling = useCallback(() => {
     if (pollIntervalRef.current) {
@@ -101,11 +106,15 @@ export default function CampaignBackupsClientPage() {
   }, [])
 
   useEffect(() => {
-    return () => clearPolling()
+    return () => {
+      clearPolling()
+      sseAbortRef.current?.abort()
+    }
   }, [clearPolling])
 
   useEffect(() => {
     setCurrentPage(1)
+    setSelectedBackupIds([])
   }, [startDate, endDate, backupSource])
 
   useEffect(() => {
@@ -171,6 +180,69 @@ export default function CampaignBackupsClientPage() {
     }
   }
 
+  const backupHasConfig = (config: unknown): boolean => {
+    if (config == null) return false
+    if (typeof config === 'string') {
+      const trimmed = config.trim()
+      if (!trimmed) return false
+      try {
+        const parsed = JSON.parse(trimmed) as Record<string, unknown>
+        return typeof parsed === 'object' && parsed !== null && Object.keys(parsed).length > 0
+      } catch {
+        return false
+      }
+    }
+    return typeof config === 'object' && Object.keys(config as object).length > 0
+  }
+
+  const validateBatchSelection = (): string | null => {
+    const selected = backups.filter((b) => selectedBackupIds.includes(b.id))
+    const offerToIds = new Map<number, number[]>()
+    for (const backup of selected) {
+      const ids = offerToIds.get(backup.offer_id) ?? []
+      ids.push(backup.id)
+      offerToIds.set(backup.offer_id, ids)
+    }
+    const duplicateOffers = [...offerToIds.entries()].filter(([, ids]) => ids.length > 1)
+    if (duplicateOffers.length > 0) {
+      const detail = duplicateOffers
+        .map(([offerId, ids]) => `Offer ${offerId}（备份 ${ids.join(', ')}）`)
+        .join('；')
+      return `同一 Offer 不能选择多条备份：${detail}`
+    }
+    const missingConfig = selected.filter((b) => !backupHasConfig(b.campaign_config))
+    if (missingConfig.length > 0) {
+      const names = missingConfig
+        .map((b) => `${b.campaign_name} (#${b.id})`)
+        .join('、')
+      return `以下备份缺少广告系列配置：${names}`
+    }
+    return null
+  }
+
+  const extractBatchErrors = (metadata: unknown): BatchProgressErrorDetail[] => {
+    if (!metadata || typeof metadata !== 'object') return []
+    const errors = (metadata as { errors?: Array<{ backupId: number; error: string }> }).errors
+    if (!Array.isArray(errors)) return []
+    return errors
+      .filter((e) => typeof e.backupId === 'number' && typeof e.error === 'string')
+      .map((e) => ({ backupId: e.backupId, error: e.error }))
+  }
+
+  const applyBatchStatusFromApi = (data: {
+    status: string
+    completed: number
+    failed: number
+    progress: number
+    metadata?: unknown
+  }) => {
+    setBatchStatus(data.status)
+    setBatchCompletedCount(data.completed)
+    setBatchFailedCount(data.failed)
+    setBatchProgress(data.progress)
+    setBatchErrorDetails(extractBatchErrors(data.metadata))
+  }
+
   const handleOpenBatchCreateDialog = () => {
     // 🔧 初始化每条记录的选择状态
     const newMap = new Map<number, boolean>()
@@ -196,7 +268,14 @@ export default function CampaignBackupsClientPage() {
       return
     }
 
+    const validationError = validateBatchSelection()
+    if (validationError) {
+      toast.error('无法批量创建', { description: validationError })
+      return
+    }
+
     setIsBatchProcessing(true)
+    setBatchErrorDetails([])
     try {
       // 调用新的异步 API
       const response = await fetch('/api/campaign-backups/batch-create', {
@@ -244,11 +323,35 @@ export default function CampaignBackupsClientPage() {
     }
   }
 
+  const finalizeBatchFromStatus = async (bid: string) => {
+    try {
+      const response = await fetch(`/api/campaign-backups/batch-create/status/${bid}`, {
+        credentials: 'include',
+      })
+      if (!response.ok) return
+
+      const data = await response.json()
+      applyBatchStatusFromApi(data)
+
+      if (['completed', 'partial', 'failed'].includes(data.status)) {
+        setIsBatchProcessing(false)
+        handleBatchComplete(data.status, data.completed, data.failed, data.metadata)
+      }
+    } catch (err) {
+      console.error('Failed to finalize batch status:', err)
+    }
+  }
+
   // 订阅 SSE 进度
   const subscribeToProgress = async (bid: string) => {
+    sseAbortRef.current?.abort()
+    const abortController = new AbortController()
+    sseAbortRef.current = abortController
+
     try {
       const response = await fetch(`/api/campaign-backups/batch-create/stream/${bid}`, {
         credentials: 'include',
+        signal: abortController.signal,
       })
 
       if (!response.ok) {
@@ -268,6 +371,7 @@ export default function CampaignBackupsClientPage() {
 
         if (done) {
           console.log('✅ SSE stream completed')
+          await finalizeBatchFromStatus(bid)
           break
         }
 
@@ -287,19 +391,23 @@ export default function CampaignBackupsClientPage() {
             console.log('📨 SSE Message:', data)
 
             if (data.type === 'progress') {
-              setBatchStatus(data.status)
-              setBatchCompletedCount(data.completed)
-              setBatchFailedCount(data.failed)
-              setBatchProgress(data.progress)
+              applyBatchStatusFromApi({
+                status: data.status,
+                completed: data.completed,
+                failed: data.failed,
+                progress: data.progress,
+                metadata: data.metadata,
+              })
             } else if (data.type === 'complete') {
-              setBatchStatus(data.status)
-              setBatchCompletedCount(data.completed)
-              setBatchFailedCount(data.failed)
-              setBatchProgress(100)
+              applyBatchStatusFromApi({
+                status: data.status,
+                completed: data.completed,
+                failed: data.failed,
+                progress: 100,
+                metadata: data.metadata,
+              })
               setIsBatchProcessing(false)
-              
-              // 完成任务
-              handleBatchComplete(data.status, data.completed, data.failed)
+              handleBatchComplete(data.status, data.completed, data.failed, data.metadata)
               return
             } else if (data.type === 'error') {
               setBatchStatus('failed')
@@ -315,8 +423,8 @@ export default function CampaignBackupsClientPage() {
         }
       }
     } catch (err: any) {
+      if (err?.name === 'AbortError') return
       console.error('SSE subscription failed, falling back to polling:', err)
-      // Fallback 到轮询
       startPolling(bid)
     }
   }
@@ -325,22 +433,20 @@ export default function CampaignBackupsClientPage() {
     clearPolling()
     pollIntervalRef.current = setInterval(async () => {
       try {
-        const response = await fetch(`/api/campaign-backups/batch-create/status/${bid}`)
+        const response = await fetch(`/api/campaign-backups/batch-create/status/${bid}`, {
+          credentials: 'include',
+        })
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`)
         }
 
         const data = await response.json()
-        
-        setBatchStatus(data.status)
-        setBatchCompletedCount(data.completed)
-        setBatchFailedCount(data.failed)
-        setBatchProgress(data.progress)
+        applyBatchStatusFromApi(data)
 
         if (data.status === 'completed' || data.status === 'partial' || data.status === 'failed') {
           clearPolling()
           setIsBatchProcessing(false)
-          handleBatchComplete(data.status, data.completed, data.failed)
+          handleBatchComplete(data.status, data.completed, data.failed, data.metadata)
         }
       } catch (err) {
         console.error('Polling error:', err)
@@ -348,7 +454,13 @@ export default function CampaignBackupsClientPage() {
     }, 2000)
   }
 
-  const handleBatchComplete = (status: string, completed: number, failed: number) => {
+  const handleBatchComplete = (
+    status: string,
+    completed: number,
+    failed: number,
+    metadata?: unknown
+  ) => {
+    setBatchErrorDetails(extractBatchErrors(metadata))
     const message = status === 'completed'
       ? `已成功创建并提交发布 ${completed} 个广告系列`
       : status === 'partial'
@@ -503,14 +615,14 @@ export default function CampaignBackupsClientPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12">
+                    <TableCell colSpan={8} className="text-center py-12">
                       <Loader2 className="w-8 h-8 animate-spin mx-auto" />
                       <p className="text-sm text-gray-500 mt-2">加载中...</p>
                     </TableCell>
                   </TableRow>
                 ) : backups.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12">
+                    <TableCell colSpan={8} className="text-center py-12">
                       <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p className="text-gray-500">暂无备份</p>
                     </TableCell>
@@ -809,6 +921,7 @@ export default function CampaignBackupsClientPage() {
         totalCount={batchTotalCount}
         completedCount={batchCompletedCount}
         failedCount={batchFailedCount}
+        errorDetails={batchErrorDetails}
       />
     </div>
   )

@@ -45,6 +45,7 @@ import {
   isCampaignOfferUniqueViolation,
   rollbackPendingCampaignAfterEnqueueFailure,
 } from '@/lib/campaign-offer-constraint'
+import { upsertCampaignBackupAfterPublish } from '@/lib/campaign-backups'
 import {
   findResumablePublishCampaignForOffer,
   reactivateCampaignForPublishResume,
@@ -1247,32 +1248,11 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      await db.exec(`
-        INSERT INTO campaign_backups (
-          user_id,
-          offer_id,
-          ad_creative_id,
-          campaign_data,
-          campaign_config,
-          backup_type,
-          backup_source,
-          backup_version,
-          custom_name,
-          campaign_name,
-          budget_amount,
-          budget_type,
-          target_cpa,
-          max_cpc,
-          status,
-          google_ads_account_id,
-          created_at,
-          updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
+      await upsertCampaignBackupAfterPublish({
         userId,
-        _offerId,
-        selectedCreative.id,
-        {
+        offerId: _offerId,
+        adCreativeId: selectedCreative.id,
+        campaignData: {
           campaign_id: campaignId,
           offer_id: _offerId,
           google_ads_account_id: resolvedGoogleAdsAccountId,
@@ -1283,24 +1263,19 @@ export async function POST(request: NextRequest) {
           target_cpa: null,
           status: 'PAUSED',
         },
-        primaryCampaignConfig,
-        'auto',
-        'publish',
-        1,
-        null,
-        publishNaming.associativeCampaignName || publishNaming.campaignName,
-        _campaignConfig.budgetAmount,
-        normalizedBudgetType,
-        null,
-        persistedMaxCpc,
-        'PAUSED',
-        resolvedGoogleAdsAccountId,
-        now,
-        now,
-      ])
-      console.log(`📦 已创建 Campaign 备份 campaignId=${campaignId}, creativeId=${selectedCreative.id}`)
+        campaignConfig: primaryCampaignConfig,
+        campaignName: publishNaming.associativeCampaignName || publishNaming.campaignName,
+        budgetAmount: _campaignConfig.budgetAmount,
+        budgetType: normalizedBudgetType,
+        maxCpc: persistedMaxCpc,
+        targetCpa: null,
+        googleAdsAccountId: resolvedGoogleAdsAccountId,
+        customName: null,
+        status: 'PAUSED',
+      })
+      console.log(`📦 已更新 Campaign 备份 campaignId=${campaignId}, creativeId=${selectedCreative.id}`)
     } catch (backupError) {
-      console.error('[Publish] 创建备份失败:', backupError)
+      console.error('[Publish] 更新备份失败:', backupError)
     }
 
     const effectiveCreativeForTask = buildEffectiveCreative({
