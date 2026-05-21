@@ -267,8 +267,21 @@ jobs:
               && [[ -f openclaw-prebuilt/package.json ]]
           }
 
+          sync_workspace_templates_if_missing() {
+            if [[ -f openclaw-prebuilt/docs/reference/templates/AGENTS.md ]]; then
+              return 0
+            fi
+            if [[ ! -d openclaw/docs/reference/templates ]]; then
+              return 0
+            fi
+            echo "ℹ️ 补齐 openclaw-prebuilt/docs/reference/templates（heartbeat 依赖 AGENTS.md）"
+            mkdir -p openclaw-prebuilt/docs/reference
+            cp -r openclaw/docs/reference/templates openclaw-prebuilt/docs/reference/templates
+          }
+
           verify_or_refresh() {
             local source_label="$1"
+            sync_workspace_templates_if_missing
             if OPENCLAW_PREBUILT_STRICT=1 npm run openclaw:prebuilt:verify; then
               echo "✅ OpenClaw 预编译产物校验通过（来源: ${source_label}）"
               return 0

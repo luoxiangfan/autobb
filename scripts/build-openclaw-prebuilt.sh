@@ -202,6 +202,12 @@ if [[ -d "${ROOT_SKILLS_DIR}" ]]; then
   cp -r "${ROOT_SKILLS_DIR}/." "${OUT_DIR}/skills/"
 fi
 
+# 始终同步 workspace 模板（Gateway heartbeat 依赖 docs/reference/templates/AGENTS.md）
+if [[ -d "${OPENCLAW_DIR}/docs/reference/templates" ]]; then
+  mkdir -p "${OUT_DIR}/docs/reference"
+  cp -r "${OPENCLAW_DIR}/docs/reference/templates" "${OUT_DIR}/docs/reference/templates"
+fi
+
 cat > "${OUT_DIR}/.build-meta.json" <<EOF
 {
   "source_version": "${SOURCE_VERSION}",

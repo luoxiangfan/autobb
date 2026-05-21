@@ -79,7 +79,20 @@ RUN set -eux; \
       esac; \
     fi; \
     rm -f /opt/openclaw/openclaw-prebuilt/.DS_Store; \
-    rm -rf /opt/openclaw/openclaw-prebuilt/docs; \
+    if [ -d /opt/openclaw/openclaw-prebuilt/docs ]; then \
+      mkdir -p /tmp/openclaw-workspace-templates; \
+      if [ -d /opt/openclaw/openclaw-prebuilt/docs/reference/templates ]; then \
+        cp -a /opt/openclaw/openclaw-prebuilt/docs/reference/templates /tmp/openclaw-workspace-templates/; \
+      fi; \
+      rm -rf /opt/openclaw/openclaw-prebuilt/docs; \
+      if [ -d /tmp/openclaw-workspace-templates/templates ]; then \
+        mkdir -p /opt/openclaw/openclaw-prebuilt/docs/reference; \
+        cp -a /tmp/openclaw-workspace-templates/templates /opt/openclaw/openclaw-prebuilt/docs/reference/templates; \
+      fi; \
+      rm -rf /tmp/openclaw-workspace-templates; \
+    fi; \
+    test -f /opt/openclaw/openclaw-prebuilt/docs/reference/templates/AGENTS.md \
+      || test -f /opt/openclaw/openclaw-prebuilt/workspace-templates/AGENTS.md; \
     NODE_MODULES_DIR="/opt/openclaw/openclaw-prebuilt/node_modules"; \
     if [ -d "$NODE_MODULES_DIR" ]; then \
       find "$NODE_MODULES_DIR" -type d \
@@ -167,7 +180,9 @@ COPY --from=openclaw-runtime --chown=nextjs:nodejs /opt/openclaw/openclaw-prebui
 COPY --from=node22 /usr/local/bin/node /usr/local/bin/node22
 
 # 校验 OpenClaw 预编译产物存在
-RUN test -f /app/openclaw/dist/entry.js
+RUN test -f /app/openclaw/dist/entry.js && \
+    (test -f /app/openclaw/docs/reference/templates/AGENTS.md \
+      || test -f /app/openclaw/workspace-templates/AGENTS.md)
 
 # 复制数据库迁移文件（初始化需要）
 COPY --from=builder --chown=nextjs:nodejs /app/migrations ./migrations
