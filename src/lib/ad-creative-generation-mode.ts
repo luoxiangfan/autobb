@@ -2,7 +2,7 @@
  * 广告创意生成模式：快速 / 均衡 / 标准（原模式）
  */
 
-import { AD_CREATIVE_MAX_AUTO_RETRIES } from './ad-creative-quality-loop'
+import { AD_CREATIVE_MAX_AUTO_RETRIES } from './ad-creative-quality-constants'
 
 export type AdCreativeGenerationMode = 'fast' | 'balanced' | 'original'
 

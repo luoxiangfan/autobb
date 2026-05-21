@@ -4,9 +4,12 @@ import {
   type ComprehensiveAdStrengthResult
 } from './scoring'
 import {
+  AD_CREATIVE_MAX_AUTO_RETRIES,
+  AD_CREATIVE_REQUIRED_MIN_SCORE,
+} from './ad-creative-quality-constants'
+import {
   evaluateRsaQualityGate,
   inferRetryFailureType,
-  RSA_QUALITY_MINIMUM_SCORE,
   type RetryFailureType,
   type RsaQualityGateDecision
 } from './rsa-quality-gate'
@@ -18,8 +21,7 @@ import {
 } from './ad-creative-rule-gate'
 import type { CanonicalCreativeType } from './creative-type'
 
-export const AD_CREATIVE_REQUIRED_MIN_SCORE = RSA_QUALITY_MINIMUM_SCORE // GOOD
-export const AD_CREATIVE_MAX_AUTO_RETRIES = 2
+export { AD_CREATIVE_MAX_AUTO_RETRIES, AD_CREATIVE_REQUIRED_MIN_SCORE } from './ad-creative-quality-constants'
 
 export interface CreativeAttemptEvaluation {
   adStrength: ComprehensiveAdStrengthResult
