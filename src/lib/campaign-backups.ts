@@ -222,9 +222,6 @@ export async function listCampaignBackups(
   }
 }
 
-/**
- * 获取 Offer 的最新备份
- */
 /** 与 dedup 脚本一致的备份优先级排序（用于 SQL ORDER BY） */
 export function getBackupRankOrderSql(dbType: DatabaseType, tableAlias?: string): string {
   const p = tableAlias ? `${tableAlias}.` : ''
@@ -296,7 +293,24 @@ async function findAutoadsLikeBackupId(
   return row?.id ?? null
 }
 
-async function findLatestGoogleAdsBackup(
+export async function hasAutoadsLikeBackupForOffer(
+  offerId: number,
+  userId: number
+): Promise<boolean> {
+  const db = await getDatabase()
+  const row = await db.queryOne(
+    `
+    SELECT id FROM campaign_backups
+    WHERE offer_id = ? AND user_id = ?
+      AND (backup_source = 'autoads' OR backup_source = 'publish')
+    LIMIT 1
+  `,
+    [offerId, userId]
+  )
+  return row != null
+}
+
+export async function findLatestGoogleAdsBackupForOffer(
   offerId: number,
   userId: number
 ): Promise<{ id: number; backup_version: number } | null> {
@@ -328,6 +342,71 @@ async function deleteDuplicateAutoadsLikeBackups(
   `,
     [offerId, userId, keepId]
   )
+}
+
+/**
+ * 按统一排名保留 canonical 与 google_ads v2+ 最终备份，删除其余重复行
+ */
+export async function pruneCampaignBackupsForOffer(
+  offerId: number,
+  userId: number
+): Promise<number> {
+  const db = await getDatabase()
+  const rankOrder = getBackupRankOrderSql(db.type)
+
+  const canonical = (await db.queryOne(
+    `
+    SELECT id FROM campaign_backups
+    WHERE offer_id = ? AND user_id = ?
+    ORDER BY ${rankOrder}
+    LIMIT 1
+  `,
+    [offerId, userId]
+  )) as { id: number } | undefined
+
+  if (!canonical) {
+    return 0
+  }
+
+  const keepRows = (await db.query(
+    `
+    SELECT id FROM campaign_backups
+    WHERE offer_id = ? AND user_id = ?
+      AND (
+        id = ?
+        OR (backup_source = 'google_ads' AND backup_version >= 2)
+      )
+  `,
+    [offerId, userId, canonical.id]
+  )) as Array<{ id: number }>
+
+  const keepIds = [...new Set(keepRows.map((r) => r.id))]
+  if (keepIds.length === 0) {
+    return 0
+  }
+
+  const placeholders = keepIds.map(() => '?').join(', ')
+  const deleteResult = await db.exec(
+    `
+    DELETE FROM campaign_backups
+    WHERE offer_id = ? AND user_id = ?
+      AND id NOT IN (${placeholders})
+  `,
+    [offerId, userId, ...keepIds]
+  )
+
+  await db.exec(
+    `
+    UPDATE campaign_backups
+    SET backup_source = 'autoads', updated_at = ?
+    WHERE offer_id = ? AND user_id = ?
+      AND backup_source = 'publish'
+      AND id IN (${placeholders})
+  `,
+    [new Date().toISOString(), offerId, userId, ...keepIds]
+  )
+
+  return deleteResult.changes ?? 0
 }
 
 export async function upsertCampaignBackupAfterPublish(
@@ -381,14 +460,15 @@ export async function upsertCampaignBackupAfterPublish(
     )
 
     await deleteDuplicateAutoadsLikeBackups(input.offerId, input.userId, autoadsBackupId)
+    const pruned = await pruneCampaignBackupsForOffer(input.offerId, input.userId)
 
     console.log(
-      `[Publish Backup] Updated autoads backup id=${autoadsBackupId} for offer=${input.offerId}`
+      `[Publish Backup] Updated autoads backup id=${autoadsBackupId} for offer=${input.offerId}, pruned=${pruned}`
     )
     return
   }
 
-  const googleBackup = await findLatestGoogleAdsBackup(input.offerId, input.userId)
+  const googleBackup = await findLatestGoogleAdsBackupForOffer(input.offerId, input.userId)
   if (googleBackup && googleBackup.backup_version >= 2) {
     console.log(
       `[Publish Backup] Skip: google_ads backup v${googleBackup.backup_version} is final for offer=${input.offerId}`
@@ -415,7 +495,10 @@ export async function upsertCampaignBackupAfterPublish(
     adCreativeId: input.adCreativeId,
   })
 
-  console.log(`[Publish Backup] Created backup for offer=${input.offerId}`)
+  const pruned = await pruneCampaignBackupsForOffer(input.offerId, input.userId)
+  console.log(
+    `[Publish Backup] Created backup for offer=${input.offerId}, pruned=${pruned}`
+  )
 }
 
 /**
@@ -488,25 +571,19 @@ export async function autoBackupCampaign(params: {
     return
   }
 
-  // 🔧 优化：备份唯一（offer_id, user_id），达到稳定状态后不再更新
-  // 检查是否已有备份
-  const existingBackup = await db.queryOne(`
-    SELECT id, backup_source, backup_version, created_at
-    FROM campaign_backups
-    WHERE offer_id = ? AND user_id = ?
-    ORDER BY created_at DESC
-    LIMIT 1
-  `, [campaign.offer_id, params.userId]) as {
-    id: number
-    backup_source: 'autoads' | 'google_ads'
-    backup_version: number
-    created_at: string
-  } | undefined
+  if (await hasAutoadsLikeBackupForOffer(campaign.offer_id, params.userId)) {
+    console.log('[Auto Backup] Skip update: autoads backup is immutable after creation:', params.campaignId)
+    return
+  }
 
-  if (!existingBackup) {
-    // 没有已有备份，创建新备份
+  const googleBackup = await findLatestGoogleAdsBackupForOffer(
+    campaign.offer_id,
+    params.userId
+  )
+
+  if (!googleBackup) {
     console.log('[Auto Backup] Creating new backup for campaign:', params.campaignId)
-    
+
     await createCampaignBackup({
       userId: params.userId,
       offerId: campaign.offer_id,
@@ -525,45 +602,44 @@ export async function autoBackupCampaign(params: {
       googleAdsAccountId: campaign.google_ads_account_id,
       adCreativeId: campaign.ad_creative_id,
     })
-  } else {
-    // 已有备份：
-    // 1) autoads：创建后永不更新
-    // 2) google_ads：仅在首次创建满 7 天后，允许一次升级到 version=2
-    if (isAutoadsLikeBackupSource(existingBackup.backup_source)) {
-      console.log('[Auto Backup] Skip update: autoads backup is immutable after creation:', params.campaignId)
-      return
-    }
+    return
+  }
 
-    if (existingBackup.backup_source !== 'google_ads') {
-      console.log('[Auto Backup] Skip update: unsupported backup source:', existingBackup.backup_source)
-      return
-    }
+  if (googleBackup.backup_version >= 2) {
+    console.log('[Auto Backup] Skip update: google_ads backup already upgraded to version 2:', params.campaignId)
+    return
+  }
 
-    if (existingBackup.backup_version >= 2) {
-      console.log('[Auto Backup] Skip update: google_ads backup already upgraded to version 2:', params.campaignId)
-      return
-    }
+  const googleRow = await db.queryOne<{ created_at: string }>(
+    `
+    SELECT created_at FROM campaign_backups
+    WHERE id = ? AND user_id = ?
+  `,
+    [googleBackup.id, params.userId]
+  )
 
-    const createdAtMs = new Date(existingBackup.created_at).getTime()
-    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
-    const elapsedMs = Date.now() - createdAtMs
-    const hasReachedDay7 = Number.isFinite(createdAtMs) && elapsedMs >= sevenDaysMs
+  const createdAtMs = googleRow ? new Date(googleRow.created_at).getTime() : NaN
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
+  const elapsedMs = Date.now() - createdAtMs
+  const hasReachedDay7 = Number.isFinite(createdAtMs) && elapsedMs >= sevenDaysMs
 
-    if (!hasReachedDay7) {
-      console.log('[Auto Backup] Skip update: google_ads backup has not reached day 7 yet:', params.campaignId)
-      return
-    }
+  if (!hasReachedDay7) {
+    console.log('[Auto Backup] Skip update: google_ads backup has not reached day 7 yet:', params.campaignId)
+    return
+  }
 
-    console.log('[Auto Backup] Day-7 update for google_ads backup:', params.campaignId)
-    await db.exec(`
-      UPDATE campaign_backups
-      SET campaign_data = ?,
-          campaign_config = ?,
-          backup_source = ?,
-          backup_version = 2,
-          updated_at = ?
-      WHERE id = ?
-    `, [
+  console.log('[Auto Backup] Day-7 update for google_ads backup:', params.campaignId)
+  await db.exec(
+    `
+    UPDATE campaign_backups
+    SET campaign_data = ?,
+        campaign_config = ?,
+        backup_source = ?,
+        backup_version = 2,
+        updated_at = ?
+    WHERE id = ?
+  `,
+    [
       typeof campaign === 'string' ? campaign : JSON.stringify(campaign),
       campaign.campaign_config
         ? typeof campaign.campaign_config === 'string'
@@ -572,7 +648,7 @@ export async function autoBackupCampaign(params: {
         : null,
       'google_ads',
       new Date().toISOString(),
-      existingBackup.id,
-    ])
-  }
+      googleBackup.id,
+    ]
+  )
 }

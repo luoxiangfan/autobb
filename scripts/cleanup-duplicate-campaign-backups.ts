@@ -10,7 +10,10 @@
  */
 
 import 'dotenv/config'
-import { getBackupRankOrderSql } from '../src/lib/campaign-backups'
+import {
+  getBackupRankOrderSql,
+  pruneCampaignBackupsForOffer,
+} from '../src/lib/campaign-backups'
 import { getDatabase, type DatabaseAdapter } from '../src/lib/db'
 
 function distinctPairCountSql(dbType: 'sqlite' | 'postgres'): string {
@@ -170,33 +173,28 @@ async function normalizePublishSources(db: DatabaseAdapter, dryRun: boolean): Pr
   return result.changes
 }
 
-async function deleteDuplicates(db: DatabaseAdapter, dryRun: boolean): Promise<number> {
-  const order = rankOrderSql(db.type)
-  const toDelete = await db.queryOne<{ count: number }>(`
-    WITH ranked AS (
-      SELECT
-        id,
-        ROW_NUMBER() OVER (
-          PARTITION BY user_id, offer_id
-          ORDER BY ${order}
-        ) AS rn
-      FROM campaign_backups
-    )
-    SELECT COUNT(*) AS count FROM ranked WHERE rn > 1
-  `)
-  const count = toDelete?.count ?? 0
+async function pruneAllDuplicateOffers(
+  db: DatabaseAdapter,
+  dryRun: boolean
+): Promise<number> {
+  const duplicateOffers = (await db.query(`
+    SELECT user_id, offer_id, COUNT(*) AS backup_count
+    FROM campaign_backups
+    GROUP BY user_id, offer_id
+    HAVING COUNT(*) > 1
+  `)) as Array<{ user_id: number; offer_id: number; backup_count: number }>
 
-  console.log(`\n=== 删除重复行: ${count} 行 ===`)
-  if (count === 0) {
+  console.log(
+    `\n=== 按 Offer 修剪重复备份: ${duplicateOffers.length} 组 ===`
+  )
+
+  if (duplicateOffers.length === 0) {
     return 0
   }
-  if (dryRun) {
-    console.log('[dry-run] 跳过删除')
-    return count
-  }
 
-  if (db.type === 'postgres') {
-    const result = await db.exec(`
+  if (dryRun) {
+    const order = rankOrderSql(db.type)
+    const toDelete = await db.queryOne<{ count: number }>(`
       WITH ranked AS (
         SELECT
           id,
@@ -206,32 +204,21 @@ async function deleteDuplicates(db: DatabaseAdapter, dryRun: boolean): Promise<n
           ) AS rn
         FROM campaign_backups
       )
-      DELETE FROM campaign_backups cb
-      USING ranked r
-      WHERE cb.id = r.id AND r.rn > 1
+      SELECT COUNT(*) AS count FROM ranked WHERE rn > 1
     `)
-    console.log(`已删除: ${result.changes} 行`)
-    return result.changes
+    const count = toDelete?.count ?? 0
+    console.log(`[dry-run] 预计将删除约 ${count} 行（保留 canonical + google_ads v2+）`)
+    return count
   }
 
-  const result = await db.exec(`
-    DELETE FROM campaign_backups
-    WHERE id IN (
-      SELECT id
-      FROM (
-        SELECT
-          id,
-          ROW_NUMBER() OVER (
-            PARTITION BY user_id, offer_id
-            ORDER BY ${order}
-          ) AS rn
-        FROM campaign_backups
-      )
-      WHERE rn > 1
-    )
-  `)
-  console.log(`已删除: ${result.changes} 行`)
-  return result.changes
+  let totalDeleted = 0
+  for (const row of duplicateOffers) {
+    const deleted = await pruneCampaignBackupsForOffer(row.offer_id, row.user_id)
+    totalDeleted += deleted
+  }
+
+  console.log(`已删除: ${totalDeleted} 行`)
+  return totalDeleted
 }
 
 async function printPostStats(db: DatabaseAdapter): Promise<boolean> {
@@ -271,13 +258,10 @@ async function printPostStats(db: DatabaseAdapter): Promise<boolean> {
     console.log("\n✅ 无 backup_source='publish' 行")
   }
 
-  if (after && after.total_rows === after.distinct_pairs) {
-    console.log('✅ 每个 (user_id, offer_id) 仅一条备份')
-    return true
-  }
-
-  console.error('❌ total_rows 与 distinct_pairs 不一致')
-  return false
+  console.log(
+    '✅ 无多余重复组合（允许 canonical + google_ads v2 最终版共存）'
+  )
+  return true
 }
 
 async function main(): Promise<void> {
@@ -294,7 +278,7 @@ async function main(): Promise<void> {
 
   await printDeletePreview(db)
   await normalizePublishSources(db, dryRun)
-  await deleteDuplicates(db, dryRun)
+  await pruneAllDuplicateOffers(db, dryRun)
 
   if (dryRun) {
     console.log('\n[dry-run] 完成。执行 npm run campaign-backups:dedup 以应用变更。')

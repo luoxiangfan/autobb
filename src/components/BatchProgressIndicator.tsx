@@ -59,10 +59,10 @@ export function BatchProgressIndicator({
         setStatusText(`正在创建广告系列... (${completedCount + failedCount}/${totalCount})`)
         break
       case 'completed':
-        setStatusText('✅ 全部完成！')
+        setStatusText('✅ 全部完成（发布任务已入队）')
         break
       case 'partial':
-        setStatusText(`⚠️ 部分完成：成功 ${completedCount} 个，失败 ${failedCount} 个`)
+        setStatusText(`⚠️ 部分完成：入队成功 ${completedCount} 个，失败 ${failedCount} 个`)
         break
       case 'failed':
         setStatusText('❌ 任务失败')
@@ -155,7 +155,7 @@ export function BatchProgressIndicator({
           {status === 'completed' && (
             <Alert className="bg-green-50 border-green-200">
               <AlertDescription className="text-sm text-green-900">
-                🎉 所有广告系列创建成功！
+                🎉 所有广告系列已创建，发布任务已入队！
               </AlertDescription>
             </Alert>
           )}

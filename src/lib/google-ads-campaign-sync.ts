@@ -10,7 +10,11 @@
  */
 
 import { getDatabase } from './db'
-import { autoBackupCampaign, isAutoadsLikeBackupSource } from './campaign-backups'
+import {
+  autoBackupCampaign,
+  findLatestGoogleAdsBackupForOffer,
+  hasAutoadsLikeBackupForOffer,
+} from './campaign-backups'
 import { updateCampaignConfig } from './google-ads-api-sync'
 import { getCustomerWithCredentials, trackOAuthApiCall } from './google-ads-api'
 import { executeGAQLQueryPython } from './python-ads-client'
@@ -458,28 +462,26 @@ export async function syncCampaignsFromGoogleAds(
               // 备份失败不影响同步，只记录日志
             }
 
-            const existingBackup = await db.queryOne(`
-              SELECT backup_source, backup_version
-              FROM campaign_backups
-              WHERE offer_id = ? AND user_id = ?
-              ORDER BY created_at DESC
-              LIMIT 1
-            `, [offerResult.offerId, userId]) as { backup_source: string; backup_version: number } | undefined
-              
             let shouldSyncComponents = true
 
-            if (existingBackup) {
-              // 情况一：backup_source='autoads'，不需要备份
-              if (isAutoadsLikeBackupSource(existingBackup.backup_source)) {
+            if (await hasAutoadsLikeBackupForOffer(offerResult.offerId, userId)) {
+              shouldSyncComponents = false
+              console.log(
+                `[GoogleAds Sync] Skip sync for campaign ${campaignId}: autoads-like backup exists`
+              )
+            } else {
+              const googleBackup = await findLatestGoogleAdsBackupForOffer(
+                offerResult.offerId,
+                userId
+              )
+              if (googleBackup && googleBackup.backup_version >= 2) {
                 shouldSyncComponents = false
-                console.log(`[GoogleAds Sync] Skip sync for campaign ${campaignId}: existing backup with backup_source='${existingBackup.backup_source}'`)
-              }
-              // 情况二：backup_source='google_ads' 并且 backup_version>=2，不需要备份
-              else if (existingBackup.backup_source === 'google_ads' && existingBackup.backup_version >= 2) {
-                shouldSyncComponents = false
-                console.log(`[GoogleAds Sync] Skip sync for campaign ${campaignId}: existing backup with backup_version=${existingBackup.backup_version}`)
+                console.log(
+                  `[GoogleAds Sync] Skip sync for campaign ${campaignId}: google_ads backup v${googleBackup.backup_version} is final`
+                )
               }
             }
+
             if (shouldSyncComponents) {
               // 🔧 通过 Google Ads API 同步广告组件并保存为 campaign_config
               try {
@@ -488,27 +490,30 @@ export async function syncCampaignsFromGoogleAds(
                   const updated = await updateCampaignConfig(campaignId, campaign_config, adGroupId || null, adId || null)
                   
                   if (updated) {
-                    // 同时更新备份中的 campaign_config
-                    const dbCheck = await getDatabase()
-                    const latestBackup = await dbCheck.queryOne(`
-                      SELECT id FROM campaign_backups 
-                      WHERE offer_id = ? AND user_id = ? 
-                      ORDER BY created_at DESC 
-                      LIMIT 1
-                    `, [offerResult.offerId, userId])
-                    
-                    if (latestBackup) {
-                      await dbCheck.exec(`
+                    const googleBackup = await findLatestGoogleAdsBackupForOffer(
+                      offerResult.offerId,
+                      userId
+                    )
+
+                    if (googleBackup) {
+                      const dbCheck = await getDatabase()
+                      await dbCheck.exec(
+                        `
                         UPDATE campaign_backups
                         SET campaign_config = ?, updated_at = ?
-                        WHERE id = ?
-                      `, [
-                        campaign_config,
-                        new Date(),
-                        latestBackup.id
-                      ])
-                      
-                      console.log(`[GoogleAds Sync] Updated campaign_config from API`)
+                        WHERE id = ? AND user_id = ?
+                      `,
+                        [
+                          campaign_config,
+                          new Date(),
+                          googleBackup.id,
+                          userId,
+                        ]
+                      )
+
+                      console.log(
+                        `[GoogleAds Sync] Updated google_ads backup campaign_config id=${googleBackup.id}`
+                      )
                     }
                   }
                 }

@@ -487,9 +487,9 @@ export default function CampaignBackupsClientPage() {
     setBatchWarningDetails(warnings)
 
     const message = status === 'completed'
-      ? `已成功创建并提交发布 ${completed} 个广告系列`
+      ? `已成功创建 ${completed} 个广告系列，发布任务已入队`
       : status === 'partial'
-      ? `部分完成：成功 ${completed} 个，失败 ${failed} 个`
+      ? `部分完成：入队成功 ${completed} 个，失败 ${failed} 个`
       : `批量创建失败`
 
     if (status === 'failed') {
@@ -625,6 +625,7 @@ export default function CampaignBackupsClientPage() {
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Package className="w-4 h-4" />
             <span>共 {total} 条记录，第 {currentPage} 页，共 {Math.ceil(total / pageSize) || 1} 页</span>
+            <span className="text-xs text-gray-400">切换页码将清空已选备份</span>
             {selectedBackupIds.length > 0 && (
               <Badge variant="secondary">已选择 {selectedBackupIds.length} 个</Badge>
             )}
