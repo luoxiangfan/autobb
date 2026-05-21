@@ -1,0 +1,488 @@
+/**
+ * 从 campaign_backups 恢复并发布广告系列的共享逻辑
+ */
+
+import type { DatabaseAdapter } from './db'
+import { getInsertedId } from './db-helpers'
+import { parseCampaignBackup, type CampaignBackup } from './campaign-backups'
+import { generateNamingScheme } from './naming-convention'
+import { buildEffectiveCreative } from './campaign-publish/effective-creative'
+import { resolveTaskCampaignKeywords } from './campaign-publish/task-keyword-fallback'
+import { regenerateAdCreative } from './ad-creative-regenerator'
+import {
+  abandonStalePendingCampaignsForOffer,
+  CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,
+  getActiveCampaignConflictForOffer,
+  isCampaignOfferUniqueViolation,
+} from './campaign-offer-constraint'
+
+export type BatchDbCreateDetail = {
+  backupId: number
+  offerId: number
+  campaignId?: number
+  error?: string
+}
+
+export type BatchDbCreateResult = {
+  success: number
+  failed: number
+  details: BatchDbCreateDetail[]
+}
+
+export type BatchPublishDetail = {
+  backupId: number
+  offerId: number
+  campaignId?: number
+  error?: string
+  regeneratedCreative?: boolean
+  newAdCreativeId?: number | null
+}
+
+export type BatchPublishResult = {
+  success: number
+  failed: number
+  skipped: number
+  details: BatchPublishDetail[]
+}
+
+export function normalizeBackupInput(backup: CampaignBackup | Record<string, unknown>): CampaignBackup {
+  if (
+    backup &&
+    typeof backup === 'object' &&
+    'offerId' in backup &&
+    'campaignData' in backup
+  ) {
+    return backup as CampaignBackup
+  }
+  return parseCampaignBackup(backup)
+}
+
+function parseJsonField<T>(value: unknown): T | null {
+  if (value == null) return null
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T
+    } catch {
+      return null
+    }
+  }
+  return value as T
+}
+
+export async function validateGoogleAdsAccountForRestore(
+  db: DatabaseAdapter,
+  googleAdsAccountId: number,
+  userId: number
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const adsAccount = await db.queryOne(
+    `
+    SELECT is_active, is_deleted
+    FROM google_ads_accounts
+    WHERE id = ? AND user_id = ?
+  `,
+    [googleAdsAccountId, userId]
+  ) as { is_active: boolean | number; is_deleted: boolean | number } | undefined
+
+  if (!adsAccount) {
+    return { ok: false, message: 'Google Ads 账号不存在或无权访问' }
+  }
+
+  const isActive = adsAccount.is_active === true || adsAccount.is_active === 1
+  const isDeleted = adsAccount.is_deleted === true || adsAccount.is_deleted === 1
+
+  if (!isActive || isDeleted) {
+    return { ok: false, message: 'Google Ads 账号已禁用或删除' }
+  }
+
+  return { ok: true }
+}
+
+/**
+ * 在数据库中从单条备份创建 campaigns 行
+ */
+export async function createCampaignRowFromBackup(params: {
+  backup: CampaignBackup
+  userId: number
+  googleAdsAccountId?: number | null
+  db: DatabaseAdapter
+}): Promise<BatchDbCreateDetail> {
+  const { backup, userId, googleAdsAccountId, db } = params
+  const backupId = backup.id
+  const offerId = backup.offerId
+
+  try {
+    await abandonStalePendingCampaignsForOffer(offerId, userId)
+    const existingCampaign = await getActiveCampaignConflictForOffer(offerId, userId)
+
+    if (existingCampaign) {
+      return {
+        backupId,
+        offerId,
+        error: CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,
+      }
+    }
+
+    const campaignData = backup.campaignData
+    const campaignConfig = backup.campaignConfig
+    const campaignName =
+      campaignConfig?.campaignName ||
+      campaignData?.campaign_name ||
+      backup.campaignName ||
+      'Campaign'
+    const resolvedGoogleAdsAccountId =
+      googleAdsAccountId ?? backup.googleAdsAccountId ?? campaignData?.google_ads_account_id ?? null
+    const adCreativeId =
+      backup.adCreativeId ?? campaignData?.ad_creative_id ?? campaignConfig?.adCreativeId ?? null
+
+    const result = await db.exec(
+      `
+      INSERT INTO campaigns (
+        user_id, offer_id, google_ads_account_id,
+        campaign_id, campaign_name, custom_name,
+        budget_amount, budget_type,
+        target_cpa, max_cpc,
+        ad_creative_id,
+        campaign_config,
+        status, creation_status,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+      [
+        userId,
+        offerId,
+        resolvedGoogleAdsAccountId,
+        null,
+        campaignName,
+        backup.customName,
+        campaignData?.budget_amount ?? backup.budgetAmount,
+        campaignData?.budget_type ?? backup.budgetType,
+        campaignData?.target_cpa ?? backup.targetCpa,
+        campaignData?.max_cpc ?? backup.maxCpc,
+        adCreativeId,
+        campaignConfig ? JSON.stringify(campaignConfig) : null,
+        'PAUSED',
+        'published',
+        new Date(),
+        new Date(),
+      ]
+    )
+
+    const campaignId = getInsertedId(result, db.type)
+    return { backupId, offerId, campaignId }
+  } catch (error: any) {
+    return {
+      backupId,
+      offerId,
+      error: isCampaignOfferUniqueViolation(error)
+        ? CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE
+        : error.message,
+    }
+  }
+}
+
+export async function batchCreateCampaignsFromBackupsInDatabase(params: {
+  backups: Array<CampaignBackup | Record<string, unknown>>
+  userId: number
+  googleAdsAccountId?: number | null
+  db: DatabaseAdapter
+}): Promise<BatchDbCreateResult> {
+  const results: BatchDbCreateResult = {
+    success: 0,
+    failed: 0,
+    details: [],
+  }
+
+  for (const raw of params.backups) {
+    const backup = normalizeBackupInput(raw)
+    const detail = await createCampaignRowFromBackup({
+      backup,
+      userId: params.userId,
+      googleAdsAccountId: params.googleAdsAccountId,
+      db: params.db,
+    })
+    results.details.push(detail)
+    if (detail.campaignId) {
+      results.success++
+    } else {
+      results.failed++
+    }
+  }
+
+  return results
+}
+
+/**
+ * 将单条备份对应的 campaign 发布任务入队
+ */
+export async function enqueueCampaignPublishFromBackup(params: {
+  backup: CampaignBackup
+  campaignId: number
+  userId: number
+  googleAdsAccountId: number
+  db: DatabaseAdapter
+  regenerateCreative?: boolean
+  parentRequestId?: string
+}): Promise<BatchPublishDetail> {
+  const {
+    backup,
+    campaignId,
+    userId,
+    googleAdsAccountId,
+    db,
+    regenerateCreative = false,
+    parentRequestId,
+  } = params
+  const backupId = backup.id
+  const offerId = backup.offerId
+
+  try {
+    let finalCampaignConfig = backup.campaignConfig
+    if (!finalCampaignConfig) {
+      return {
+        backupId,
+        offerId,
+        campaignId,
+        error: '备份中没有广告系列配置',
+      }
+    }
+
+    let regeneratedCreative = false
+    let newAdCreativeId: number | null = null
+
+    if (regenerateCreative) {
+      const regenerateResult = await regenerateAdCreative({
+        userId,
+        offerId,
+        previousAdCreativeId:
+          finalCampaignConfig.adCreativeId || backup.adCreativeId || 0,
+        campaignConfigForTask: finalCampaignConfig,
+      })
+      if (regenerateResult.success && regenerateResult.campaignConfig) {
+        finalCampaignConfig = regenerateResult.campaignConfig
+        regeneratedCreative = true
+        newAdCreativeId = regenerateResult.adCreativeId || null
+      } else {
+        console.warn(
+          `[Backup Restore] 备份 ${backupId} 创意重新生成失败，使用原配置: ${regenerateResult.error}`
+        )
+      }
+
+      if (regeneratedCreative && newAdCreativeId) {
+        await db.exec(
+          `
+          UPDATE campaign_backups
+          SET ad_creative_id = ?,
+              campaign_config = ?,
+              updated_at = ?
+          WHERE id = ? AND user_id = ?
+        `,
+          [
+            newAdCreativeId,
+            JSON.stringify(finalCampaignConfig),
+            new Date().toISOString(),
+            backupId,
+            userId,
+          ]
+        )
+        await db.exec(
+          `UPDATE campaigns SET ad_creative_id = ?, updated_at = ? WHERE id = ? AND user_id = ?`,
+          [newAdCreativeId, new Date(), campaignId, userId]
+        )
+      }
+    }
+
+    const offer = (await db.queryOne(
+      `
+      SELECT id, url, brand, category, offer_name
+      FROM offers
+      WHERE id = ? AND user_id = ?
+    `,
+      [offerId, userId]
+    )) as {
+      id: number
+      url: string
+      brand: string
+      category: string | null
+      offer_name: string | null
+    } | undefined
+
+    if (!offer) {
+      return { backupId, offerId, campaignId, error: 'Offer 不存在或无权访问' }
+    }
+
+    const naming = generateNamingScheme({
+      offer: {
+        id: offerId,
+        brand: offer.brand,
+        offerName: offer.offer_name || undefined,
+        category: offer.category || undefined,
+      },
+      config: {
+        targetCountry: finalCampaignConfig.targetCountry,
+        budgetAmount: finalCampaignConfig.budgetAmount,
+        budgetType: finalCampaignConfig.budgetType || 'DAILY',
+        biddingStrategy: finalCampaignConfig.biddingStrategy || 'MAXIMIZE_CLICKS',
+        maxCpcBid: finalCampaignConfig.maxCpcBid,
+      },
+      creative: undefined,
+      smartOptimization: undefined,
+    })
+
+    const effectiveCreativeForTask = buildEffectiveCreative({
+      dbCreative: {
+        headlines: finalCampaignConfig.headlines,
+        descriptions: finalCampaignConfig.descriptions,
+        keywords: finalCampaignConfig.keywords,
+        negativeKeywords: finalCampaignConfig.negativeKeywords,
+        callouts: finalCampaignConfig.callouts,
+        sitelinks: finalCampaignConfig.sitelinks,
+        finalUrl: finalCampaignConfig.finalUrl,
+        finalUrlSuffix: finalCampaignConfig.finalUrlSuffix,
+      },
+      campaignConfig: finalCampaignConfig,
+      offerUrlFallback: offer.url,
+    })
+
+    const taskKeywordConfig = resolveTaskCampaignKeywords({
+      configuredKeywords: finalCampaignConfig.keywords,
+      configuredNegativeKeywords: finalCampaignConfig.negativeKeywords,
+      fallbackKeywords: effectiveCreativeForTask.keywords,
+      fallbackNegativeKeywords: effectiveCreativeForTask.negativeKeywords,
+    })
+
+    const keywordsWithVolume = parseJsonField<unknown>(
+      finalCampaignConfig.keywords_with_volume
+    )
+
+    const { getOrCreateQueueManager } = await import('@/lib/queue/init-queue')
+    const queue = await getOrCreateQueueManager()
+
+    await queue.enqueue(
+      'campaign-publish',
+      {
+        campaignId,
+        offerId,
+        googleAdsAccountId,
+        userId,
+        naming,
+        marketingObjective: finalCampaignConfig.marketingObjective || 'WEB_TRAFFIC',
+        campaignConfig: {
+          targetCountry: finalCampaignConfig.targetCountry,
+          targetLanguage: finalCampaignConfig.targetLanguage,
+          biddingStrategy: finalCampaignConfig.biddingStrategy,
+          budgetAmount: finalCampaignConfig.budgetAmount,
+          budgetType: finalCampaignConfig.budgetType,
+          maxCpcBid: finalCampaignConfig.maxCpcBid,
+          keywords: taskKeywordConfig.keywords,
+          negativeKeywords: taskKeywordConfig.negativeKeywords,
+          negativeKeywordMatchType:
+            finalCampaignConfig.negativeKeywordMatchType ||
+            finalCampaignConfig.negativeKeywordsMatchType ||
+            undefined,
+        },
+        creative: {
+          headlines: effectiveCreativeForTask.headlines,
+          descriptions: effectiveCreativeForTask.descriptions,
+          finalUrl: effectiveCreativeForTask.finalUrl,
+          finalUrlSuffix: effectiveCreativeForTask.finalUrlSuffix,
+          path1: finalCampaignConfig.path1,
+          path2: finalCampaignConfig.path2,
+          callouts: effectiveCreativeForTask.callouts,
+          sitelinks: effectiveCreativeForTask.sitelinks,
+          keywordsWithVolume: keywordsWithVolume ?? undefined,
+        },
+        brandName: offer.brand,
+        forcePublish: true,
+        enableCampaignImmediately: false,
+        pauseOldCampaigns: false,
+      },
+      userId,
+      {
+        parentRequestId,
+        priority: 'high',
+      }
+    )
+
+    return {
+      backupId,
+      offerId,
+      campaignId,
+      regeneratedCreative,
+      newAdCreativeId,
+    }
+  } catch (error: any) {
+    return {
+      backupId,
+      offerId,
+      campaignId,
+      error: error?.message || '发布任务入队失败',
+    }
+  }
+}
+
+export async function batchEnqueuePublishFromBackups(params: {
+  backups: Array<CampaignBackup | Record<string, unknown>>
+  dbCreateDetails: BatchDbCreateDetail[]
+  userId: number
+  googleAdsAccountId: number
+  db: DatabaseAdapter
+  regenerateCreativeMap?: Record<number, boolean>
+  parentRequestId?: string
+}): Promise<BatchPublishResult> {
+  const results: BatchPublishResult = {
+    success: 0,
+    failed: 0,
+    skipped: 0,
+    details: [],
+  }
+
+  const backupById = new Map(
+    params.backups.map((raw) => {
+      const b = normalizeBackupInput(raw)
+      return [b.id, b] as const
+    })
+  )
+
+  for (const detail of params.dbCreateDetails) {
+    if (!detail.campaignId) {
+      results.failed++
+      results.details.push({
+        backupId: detail.backupId,
+        offerId: detail.offerId,
+        error: detail.error || '数据库创建失败',
+      })
+      continue
+    }
+
+    const backup = backupById.get(detail.backupId)
+    if (!backup) {
+      results.failed++
+      results.details.push({
+        backupId: detail.backupId,
+        offerId: detail.offerId,
+        campaignId: detail.campaignId,
+        error: '备份不存在',
+      })
+      continue
+    }
+
+    const publishDetail = await enqueueCampaignPublishFromBackup({
+      backup,
+      campaignId: detail.campaignId,
+      userId: params.userId,
+      googleAdsAccountId: params.googleAdsAccountId,
+      db: params.db,
+      regenerateCreative: params.regenerateCreativeMap?.[detail.backupId] === true,
+      parentRequestId: params.parentRequestId,
+    })
+
+    results.details.push(publishDetail)
+    if (publishDetail.error) {
+      results.failed++
+    } else {
+      results.success++
+    }
+  }
+
+  return results
+}

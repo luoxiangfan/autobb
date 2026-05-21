@@ -1,27 +1,17 @@
 /**
- * 批量创建广告系列任务执行器（从备份）
- *
- * 功能：
- * 1. 从备份列表批量创建广告系列
- * 2. 支持重新生成广告创意
- * 3. 实时更新进度到 batch_tasks 表
- * 4. 支持重试和错误处理
- *
- * 注意：
- * - 这是异步执行器，任务加入队列后立即返回
- * - 通过 batch_id 关联任务记录
- * - 支持 SSE 实时推送进度
+ * 批量从备份创建广告系列并发布到 Google Ads
  */
 
 import type { Task } from '../types'
 import { getDatabase } from '@/lib/db'
-import { createCampaignFromBackup } from '@/lib/campaign-backups'
+import { parseCampaignBackup } from '@/lib/campaign-backups'
+import {
+  createCampaignRowFromBackup,
+  enqueueCampaignPublishFromBackup,
+  validateGoogleAdsAccountForRestore,
+} from '@/lib/campaign-backup-restore'
 import { getActiveCampaignConflictForOffer } from '@/lib/campaign-offer-constraint'
-import { getInsertedId } from '@/lib/db-helpers'
 
-/**
- * 批量创建广告系列任务数据接口
- */
 export interface CampaignBatchCreateTaskData {
   batchId: string
   backupIds: number[]
@@ -29,101 +19,124 @@ export interface CampaignBatchCreateTaskData {
   regenerateCreativeMap?: Record<number, boolean>
 }
 
-/**
- * 批量创建广告系列执行器
- */
 export async function executeCampaignBatchCreate(
   task: Task<CampaignBatchCreateTaskData>
 ): Promise<void> {
   const { batchId, backupIds, googleAdsAccountId, regenerateCreativeMap } = task.data
   const db = await getDatabase()
-  
-  // PostgreSQL 兼容性
   const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-  
+
   console.log(`🚀 开始执行批量创建广告系列：batch=${batchId}, count=${backupIds.length}`)
 
+  if (!googleAdsAccountId) {
+    throw new Error('批量创建需要指定 googleAdsAccountId')
+  }
+
+  const accountCheck = await validateGoogleAdsAccountForRestore(
+    db,
+    googleAdsAccountId,
+    task.userId
+  )
+  if (!accountCheck.ok) {
+    throw new Error(accountCheck.message)
+  }
+
   try {
-    // 1. 更新 batch_tasks 状态为 running
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE batch_tasks
       SET status = 'running', started_at = ${nowFunc}, updated_at = ${nowFunc}
       WHERE id = ?
-    `, [batchId])
+    `,
+      [batchId]
+    )
 
     let completed = 0
     let failed = 0
     const errors: Array<{ backupId: number; error: string }> = []
     const createdCampaigns: Array<{ backupId: number; campaignId: number }> = []
 
-    // 2. 逐个创建广告系列
     for (const backupId of backupIds) {
       try {
-        // 获取备份信息
-        const backup = await db.queryOne(`
-          SELECT * FROM campaign_backups
-          WHERE id = ? AND user_id = ?
-        `, [backupId, task.userId]) as any
+        const row = await db.queryOne(
+          `SELECT * FROM campaign_backups WHERE id = ? AND user_id = ?`,
+          [backupId, task.userId]
+        )
 
-        if (!backup) {
+        if (!row) {
           failed++
           errors.push({ backupId, error: '备份不存在或无权访问' })
-          console.log(`⚠️ 跳过备份 ${backupId}: 不存在或无权访问`)
           continue
         }
 
+        const backup = parseCampaignBackup(row)
+
         const existingCampaign = await getActiveCampaignConflictForOffer(
-          backup.offer_id,
+          backup.offerId,
           task.userId
         )
-
         if (existingCampaign) {
           failed++
           errors.push({ backupId, error: '该 Offer 已有活跃广告系列' })
-          console.log(`⚠️ 跳过备份 ${backupId}: Offer 已有活跃广告系列`)
           continue
         }
 
-        // 确定是否重新生成广告创意
-        const shouldRegenerate = regenerateCreativeMap?.[backupId] || false
+        const dbDetail = await createCampaignRowFromBackup({
+          backup,
+          userId: task.userId,
+          googleAdsAccountId,
+          db,
+        })
 
-        // 创建广告系列
-        const result = await createCampaignFromBackup(
-          backupId,
-          task.userId,
-          {
-            googleAdsAccountId: googleAdsAccountId || backup.google_ads_account_id,
-            createToGoogle: false, // 后台批量创建时不立即同步到 Google Ads
-          }
-        )
+        if (!dbDetail.campaignId) {
+          failed++
+          errors.push({ backupId, error: dbDetail.error || '数据库创建失败' })
+          await db.exec(
+            `UPDATE batch_tasks SET failed_count = ?, updated_at = ${nowFunc} WHERE id = ?`,
+            [failed, batchId]
+          )
+          continue
+        }
 
-        createdCampaigns.push({ backupId, campaignId: result.campaignId })
-        completed++
-        
-        console.log(`✅ 创建成功：backupId=${backupId}, campaignId=${result.campaignId}`)
+        const publishDetail = await enqueueCampaignPublishFromBackup({
+          backup,
+          campaignId: dbDetail.campaignId,
+          userId: task.userId,
+          googleAdsAccountId,
+          db,
+          regenerateCreative: regenerateCreativeMap?.[backupId] === true,
+        })
 
-        // 3. 更新进度
-        await db.exec(`
+        if (publishDetail.error) {
+          failed++
+          errors.push({ backupId, error: publishDetail.error })
+        } else {
+          completed++
+          createdCampaigns.push({ backupId, campaignId: dbDetail.campaignId })
+          console.log(
+            `✅ 创建并入队发布：backupId=${backupId}, campaignId=${dbDetail.campaignId}`
+          )
+        }
+
+        await db.exec(
+          `
           UPDATE batch_tasks
           SET completed_count = ?, failed_count = ?, updated_at = ${nowFunc}
           WHERE id = ?
-        `, [completed, failed, batchId])
-
+        `,
+          [completed, failed, batchId]
+        )
       } catch (error: any) {
         failed++
         errors.push({ backupId, error: error.message })
         console.error(`❌ 创建失败：backupId=${backupId}:`, error.message)
-        
-        // 更新进度（即使失败也要更新）
-        await db.exec(`
-          UPDATE batch_tasks
-          SET failed_count = ?, updated_at = ${nowFunc}
-          WHERE id = ?
-        `, [failed, batchId])
+        await db.exec(
+          `UPDATE batch_tasks SET failed_count = ?, updated_at = ${nowFunc} WHERE id = ?`,
+          [failed, batchId]
+        )
       }
     }
 
-    // 4. 确定最终状态
     let finalStatus: 'completed' | 'failed' | 'partial'
     if (failed === 0) {
       finalStatus = 'completed'
@@ -133,8 +146,8 @@ export async function executeCampaignBatchCreate(
       finalStatus = 'partial'
     }
 
-    // 5. 更新最终状态和错误信息
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE batch_tasks
       SET
         status = ?,
@@ -142,39 +155,36 @@ export async function executeCampaignBatchCreate(
         updated_at = ${nowFunc},
         metadata = ?
       WHERE id = ?
-    `, [
-      finalStatus,
-      JSON.stringify({
-        errors: errors.slice(0, 100), // 限制错误数量
-        createdCampaigns,
-      }),
-      batchId
-    ])
+    `,
+      [
+        finalStatus,
+        JSON.stringify({
+          errors: errors.slice(0, 100),
+          createdCampaigns,
+        }),
+        batchId,
+      ]
+    )
 
     console.log(
       `✅ 批量创建完成：batch=${batchId}, status=${finalStatus}, ` +
-      `completed=${completed}, failed=${failed}, total=${backupIds.length}`
+        `completed=${completed}, failed=${failed}, total=${backupIds.length}`
     )
-
   } catch (error: any) {
     console.error(`❌ 批量创建失败：batch=${batchId}:`, error.message)
-
     const nowFuncErr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-    
-    // 更新为失败状态
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE batch_tasks
-      SET 
-        status = 'failed', 
-        completed_at = ${nowFuncErr}, 
+      SET
+        status = 'failed',
+        completed_at = ${nowFuncErr},
         updated_at = ${nowFuncErr},
         metadata = ?
       WHERE id = ?
-    `, [
-      JSON.stringify({ error: error.message, stack: error.stack }),
-      batchId
-    ])
-
+    `,
+      [JSON.stringify({ error: error.message, stack: error.stack }), batchId]
+    )
     throw error
   }
 }

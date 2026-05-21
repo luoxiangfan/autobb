@@ -84,15 +84,20 @@ export async function GET(request: NextRequest) {
       LIMIT ? OFFSET ?
     `, [...params, limit, offset]) as any[]
 
-    // 解析 JSON 字段
-    const parsedBackups = backups.map(backup => ({
+    const safeParseJson = (value: unknown) => {
+      if (value == null) return null
+      if (typeof value !== 'string') return value
+      try {
+        return JSON.parse(value)
+      } catch {
+        return null
+      }
+    }
+
+    const parsedBackups = backups.map((backup) => ({
       ...backup,
-      campaign_data: typeof backup.campaign_data === 'string' 
-        ? JSON.parse(backup.campaign_data) 
-        : backup.campaign_data,
-      campaign_config: typeof backup.campaign_config === 'string'
-        ? JSON.parse(backup.campaign_config)
-        : backup.campaign_config,
+      campaign_data: safeParseJson(backup.campaign_data),
+      campaign_config: safeParseJson(backup.campaign_config),
     }))
 
     return NextResponse.json({

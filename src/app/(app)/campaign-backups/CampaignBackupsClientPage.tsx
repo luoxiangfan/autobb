@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -59,7 +58,6 @@ interface CampaignBackup {
 }
 
 export default function CampaignBackupsClientPage() {
-  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [backups, setBackups] = useState<CampaignBackup[]>([])
   const [selectedBackupIds, setSelectedBackupIds] = useState<number[]>([])
@@ -69,7 +67,6 @@ export default function CampaignBackupsClientPage() {
   
   // 批量创建对话框
   const [isBatchCreateOpen, setIsBatchCreateOpen] = useState(false)
-  const [batchCreating, setBatchCreating] = useState(false)
   const [googleAdsAccounts, setGoogleAdsAccounts] = useState<Array<{
     id: number
     customerId: string
@@ -94,6 +91,22 @@ export default function CampaignBackupsClientPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [total, setTotal] = useState(0)
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const clearPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current)
+      pollIntervalRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => clearPolling()
+  }, [clearPolling])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [startDate, endDate, backupSource])
 
   useEffect(() => {
     fetchBackups()
@@ -308,9 +321,9 @@ export default function CampaignBackupsClientPage() {
     }
   }
 
-  // 轮询 fallback
-  const startPolling = async (bid: string) => {
-    const pollInterval = setInterval(async () => {
+  const startPolling = (bid: string) => {
+    clearPolling()
+    pollIntervalRef.current = setInterval(async () => {
       try {
         const response = await fetch(`/api/campaign-backups/batch-create/status/${bid}`)
         if (!response.ok) {
@@ -325,7 +338,7 @@ export default function CampaignBackupsClientPage() {
         setBatchProgress(data.progress)
 
         if (data.status === 'completed' || data.status === 'partial' || data.status === 'failed') {
-          clearInterval(pollInterval)
+          clearPolling()
           setIsBatchProcessing(false)
           handleBatchComplete(data.status, data.completed, data.failed)
         }
@@ -335,17 +348,20 @@ export default function CampaignBackupsClientPage() {
     }, 2000)
   }
 
-  // 处理批量创建完成
   const handleBatchComplete = (status: string, completed: number, failed: number) => {
     const message = status === 'completed'
-      ? `✅ 成功创建 ${completed} 个广告系列`
+      ? `已成功创建并提交发布 ${completed} 个广告系列`
       : status === 'partial'
-      ? `⚠️ 创建完成：成功 ${completed} 个，失败 ${failed} 个`
-      : `❌ 创建失败`
+      ? `部分完成：成功 ${completed} 个，失败 ${failed} 个`
+      : `批量创建失败`
 
-    toast.success(message, {
-      duration: 10000,
-    })
+    if (status === 'failed') {
+      toast.error(message, { duration: 10000 })
+    } else if (status === 'partial') {
+      toast.warning(message, { duration: 10000 })
+    } else {
+      toast.success(message, { duration: 10000 })
+    }
 
     // 刷新列表
     fetchBackups()
@@ -420,6 +436,19 @@ export default function CampaignBackupsClientPage() {
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </div>
+              <div className="flex items-center gap-x-2">
+                <Label>备份来源</Label>
+                <Select value={backupSource} onValueChange={setBackupSource}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部</SelectItem>
+                    <SelectItem value="autoads">AutoAds</SelectItem>
+                    <SelectItem value="google_ads">Google Ads</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex items-end">
                 <Button
                   variant="outline"
@@ -458,12 +487,13 @@ export default function CampaignBackupsClientPage() {
                 <TableRow>
                   <TableHead className="w-[50px]">
                     <Checkbox
-                      checked={allSelected}
+                      checked={allSelected ? true : someSelected ? 'indeterminate' : false}
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
                   <TableHead>广告系列名称</TableHead>
                   <TableHead>Offer</TableHead>
+                  <TableHead>来源</TableHead>
                   <TableHead>预算</TableHead>
                   <TableHead>创建时间</TableHead>
                   <TableHead>更新时间</TableHead>
@@ -473,14 +503,14 @@ export default function CampaignBackupsClientPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12">
+                    <TableCell colSpan={9} className="text-center py-12">
                       <Loader2 className="w-8 h-8 animate-spin mx-auto" />
                       <p className="text-sm text-gray-500 mt-2">加载中...</p>
                     </TableCell>
                   </TableRow>
                 ) : backups.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12">
+                    <TableCell colSpan={9} className="text-center py-12">
                       <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p className="text-gray-500">暂无备份</p>
                     </TableCell>
@@ -505,6 +535,14 @@ export default function CampaignBackupsClientPage() {
                           <div className="text-sm">{backup.offer_name || backup.brand || '-'}</div>
                           <div className="text-xs text-gray-500">ID: {backup.offer_id}</div>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {backup.backup_source === 'google_ads' ? 'Google Ads' : 'AutoAds'}
+                        </Badge>
+                        {backup.backup_version > 1 && (
+                          <span className="text-xs text-gray-500 ml-1">v{backup.backup_version}</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
@@ -627,7 +665,7 @@ export default function CampaignBackupsClientPage() {
                 <strong>📋 创建步骤：</strong>
                 <ol className="list-decimal list-inside mt-2 space-y-1">
                   <li>在数据库中创建广告系列</li>
-                  <li>发布到 Google Ads</li>
+                  <li>将发布任务加入队列，同步到 Google Ads</li>
                 </ol>
               </div>
             </Alert>
@@ -735,10 +773,7 @@ export default function CampaignBackupsClientPage() {
           <DialogFooter className="gap-2">
             <Button 
               variant="outline" 
-              onClick={() => {
-                setIsBatchCreateOpen(false)
-                setSelectedBackupIds([])
-              }} 
+              onClick={() => setIsBatchCreateOpen(false)}
               disabled={isBatchProcessing}
             >
               取消

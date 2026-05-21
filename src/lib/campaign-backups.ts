@@ -263,22 +263,24 @@ export async function createCampaignFromBackup(
       campaign_id, campaign_name, custom_name,
       budget_amount, budget_type,
       target_cpa, max_cpc,
-      campaign_config,  -- 🔧 新增：恢复配置
+      ad_creative_id,
+      campaign_config,
       status, creation_status,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     userId,
     backup.offerId,
     googleAdsAccountId,
-    null,  // campaign_id (Google Ads ID，初始为 null)
+    null,
     campaignName,
-    backup.customName,  // 🔧 保留自定义名称
+    backup.customName,
     budgetAmount,
     budgetType,
     targetCpa,
     maxCpc,
-    finalCampaignConfig ? JSON.stringify(finalCampaignConfig) : null,  // 🔧 恢复配置
+    adCreativeId,
+    finalCampaignConfig ? JSON.stringify(finalCampaignConfig) : null,
     'PAUSED',
     'published',
     new Date(),
@@ -340,10 +342,12 @@ export async function createCampaignFromBackup(
     }
   }
 
+  const publishSucceeded = !overrides?.createToGoogle || createErrors.length === 0
+
   return {
     campaignId,
     googleCampaignId,
-    success: true,
+    success: publishSucceeded,
     errors: createErrors.length > 0 ? createErrors : undefined,
   }
 }
@@ -363,9 +367,9 @@ export async function deleteCampaignBackup(id: number, userId: number): Promise<
 }
 
 /**
- * 解析备份数据
+ * 解析备份数据（DB 行或已解析对象）
  */
-function parseCampaignBackup(row: any): CampaignBackup {
+export function parseCampaignBackup(row: any): CampaignBackup {
   return {
     id: row.id,
     userId: row.user_id,
@@ -494,10 +498,14 @@ export async function autoBackupCampaign(params: {
           updated_at = ?
       WHERE id = ?
     `, [
-      campaign,
-      campaign.campaign_config ? campaign.campaign_config : null,
+      typeof campaign === 'string' ? campaign : JSON.stringify(campaign),
+      campaign.campaign_config
+        ? typeof campaign.campaign_config === 'string'
+          ? campaign.campaign_config
+          : JSON.stringify(campaign.campaign_config)
+        : null,
       'google_ads',
-      new Date(),
+      new Date().toISOString(),
       existingBackup.id,
     ])
   }

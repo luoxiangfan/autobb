@@ -44,6 +44,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (!googleAdsAccountId) {
+      return NextResponse.json(
+        { error: '请选择 Google Ads 账号' },
+        { status: 400 }
+      )
+    }
+
     const db = await getDatabase()
     
     // 验证所有备份都存在且属于当前用户
