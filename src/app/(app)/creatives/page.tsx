@@ -53,6 +53,13 @@ import {
   CalendarDays,
 } from 'lucide-react'
 import { ResponsivePagination } from '@/components/ui/responsive-pagination'
+import { AdCreativeGenerationModeField } from '@/components/creatives/AdCreativeGenerationModeField'
+import {
+  getAdCreativeGenerationModeLabel,
+  loadStoredAdCreativeGenerationMode,
+  saveStoredAdCreativeGenerationMode,
+  type AdCreativeGenerationMode,
+} from '@/lib/ad-creative-generation-mode'
 import type { TrendChartData } from '@/components/charts/TrendChart'
 import type { DateRange } from '@/components/ui/date-range-picker'
 
@@ -103,6 +110,7 @@ interface Creative {
   path2: string | null
   aiModel: string
   theme?: string | null
+  generationMode?: AdCreativeGenerationMode | string | null
   creativeType?: 'brand_intent' | 'model_intent' | 'product_intent' | null
   keywordBucket?: string | null
   score: number | null
@@ -266,6 +274,14 @@ export default function CreativesPage() {
   const [adGroups, setAdGroups] = useState<AdGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [differentiating, setDifferentiating] = useState(false)
+  const [generationMode, setGenerationMode] = useState<AdCreativeGenerationMode>(
+    () => loadStoredAdCreativeGenerationMode()
+  )
+  const handleGenerationModeChange = (mode: AdCreativeGenerationMode) => {
+    setGenerationMode(mode)
+    saveStoredAdCreativeGenerationMode(mode)
+  }
   const [error, setError] = useState('')
   const [syncingId, setSyncingId] = useState<number | null>(null)
   const [summary, setSummary] = useState<Summary | null>(null)
@@ -572,7 +588,7 @@ export default function CreativesPage() {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ count: 3 }),
+        body: JSON.stringify({ generationMode }),
       })
 
       const data = await response.json()
@@ -581,13 +597,48 @@ export default function CreativesPage() {
         throw new Error(data.error || '生成创意失败')
       }
 
-      showSuccess('创意生成成功', `已生成 ${data.count} 组创意`)
+      showSuccess('创意生成成功', '创意已生成并保存')
       fetchOfferAndCreatives()
     } catch (err: any) {
       setError(err.message || '生成创意失败')
       showError('生成失败', err.message)
     } finally {
       setGenerating(false)
+    }
+  }
+
+  const handleGenerateDifferentiated = async () => {
+    if (!offerId) return
+    setDifferentiating(true)
+    setError('')
+
+    try {
+      const response = await fetch(`/api/offers/${offerId}/creatives/generate-differentiated`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ generationMode }),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || data.message || '差异化生成失败')
+      }
+
+      const successCount = data.data?.totalGenerated ?? 0
+      const failCount = data.data?.totalFailed ?? 0
+      showSuccess(
+        '差异化生成完成',
+        failCount > 0
+          ? `成功 ${successCount} 个，失败 ${failCount} 个（模式：${getAdCreativeGenerationModeLabel(generationMode)}）`
+          : `成功生成 ${successCount} 个差异化创意（模式：${getAdCreativeGenerationModeLabel(generationMode)}）`
+      )
+      fetchOfferAndCreatives()
+    } catch (err: any) {
+      setError(err.message || '差异化生成失败')
+      showError('差异化生成失败', err.message)
+    } finally {
+      setDifferentiating(false)
     }
   }
 
@@ -871,7 +922,7 @@ export default function CreativesPage() {
                 {creatives.length}
               </Badge>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
               {selectedCreativeIds.size > 0 && (
                 <Button
                   variant="destructive"
@@ -885,19 +936,39 @@ export default function CreativesPage() {
               <Button
                 variant="outline"
                 onClick={fetchOfferAndCreatives}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 self-start sm:self-auto"
               >
                 <RefreshCw className="w-4 h-4" />
                 刷新
               </Button>
               {offerId && (
+                <AdCreativeGenerationModeField
+                  value={generationMode}
+                  onChange={handleGenerationModeChange}
+                  disabled={generating || differentiating}
+                  className="w-full sm:min-w-[200px]"
+                />
+              )}
+              {offerId && (
                 <Button
                   onClick={handleGenerateCreatives}
-                  disabled={generating || offer?.scrapeStatus !== 'completed'}
-                  className="flex items-center gap-2"
+                  disabled={generating || differentiating || offer?.scrapeStatus !== 'completed'}
+                  className="flex items-center gap-2 self-start sm:self-auto"
                 >
                   <Wand2 className={`w-4 h-4 ${generating ? 'animate-pulse' : ''}`} />
                   {generating ? '生成中...' : '生成新创意'}
+                </Button>
+              )}
+              {offerId && (
+                <Button
+                  variant="outline"
+                  onClick={handleGenerateDifferentiated}
+                  disabled={generating || differentiating || offer?.scrapeStatus !== 'completed'}
+                  className="flex items-center gap-2 self-start sm:self-auto"
+                  title="按 A/B/D 桶一次性生成多个差异化创意"
+                >
+                  <Package className={`w-4 h-4 ${differentiating ? 'animate-pulse' : ''}`} />
+                  {differentiating ? '差异化生成中...' : '差异化生成'}
                 </Button>
               )}
             </div>
@@ -1095,10 +1166,17 @@ export default function CreativesPage() {
                           #{creative.id}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={creativeType.className}>
-                            {creativeType.shortLabel ? `${creativeType.shortLabel} · ` : ''}
-                            {creativeType.label}
-                          </Badge>
+                          <div className="flex flex-col gap-1.5 items-start">
+                            <Badge variant="outline" className={creativeType.className}>
+                              {creativeType.shortLabel ? `${creativeType.shortLabel} · ` : ''}
+                              {creativeType.label}
+                            </Badge>
+                            {creative.generationMode && (
+                              <Badge variant="secondary" className="text-[10px] font-normal">
+                                {getAdCreativeGenerationModeLabel(creative.generationMode)}
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
@@ -1217,6 +1295,11 @@ export default function CreativesPage() {
                   </Badge>
                 )
               })()}
+              {selectedCreative?.generationMode && (
+                <Badge variant="secondary">
+                  {getAdCreativeGenerationModeLabel(selectedCreative.generationMode)}
+                </Badge>
+              )}
               {selectedCreative?.creationStatus === 'synced' && (
                 <Badge className="bg-green-600">已同步</Badge>
               )}

@@ -14,7 +14,10 @@ import { getGoogleAdsConfig } from '@/lib/keyword-planner'
 import { getUserAuthType } from '@/lib/google-ads-oauth'
 import { getAvailableBuckets } from '@/lib/offer-keyword-pool'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
-import { AD_CREATIVE_MAX_AUTO_RETRIES } from '@/lib/ad-creative-quality-loop'
+import {
+  CREATIVE_GENERATION_MODE_INVALID_MESSAGE,
+  resolveCreativeGenerationRuntime,
+} from '@/lib/ad-creative-generation-mode'
 import {
   deriveCanonicalCreativeType,
 } from '@/lib/creative-type'
@@ -97,7 +100,6 @@ export async function POST(
 
   const body = await request.json()
   const {
-    maxRetries = AD_CREATIVE_MAX_AUTO_RETRIES,
     targetRating = 'GOOD',
     synthetic = false,  // 🔧 向后兼容：旧版“综合创意”标记（KISS-3类型方案中不再生成S桶）
     coverage = false,   // ✅ 新命名：coverage 模式，本质仍映射到 D / product_intent
@@ -108,13 +110,22 @@ export async function POST(
     forceGenerateReason,
     force_generate_reason,
   } = body
-  const normalizedMaxRetries = Math.max(
-    0,
-    Math.min(
-      AD_CREATIVE_MAX_AUTO_RETRIES,
-      Number.isFinite(Number(maxRetries)) ? Math.floor(Number(maxRetries)) : AD_CREATIVE_MAX_AUTO_RETRIES
-    )
-  )
+  const { runtime, invalidMode } = resolveCreativeGenerationRuntime(body)
+  if (invalidMode) {
+    return createQueueErrorResponse({
+      status: 400,
+      error: 'Invalid generationMode',
+      message: CREATIVE_GENERATION_MODE_INVALID_MESSAGE,
+      errorCode: 'CREATIVE_GENERATION_MODE_INVALID',
+      errorCategory: 'validation',
+      retryable: false,
+    })
+  }
+  const {
+    mode: generationMode,
+    profile: generationProfile,
+    maxRetries: normalizedMaxRetries,
+  } = runtime
   const normalizedTargetRating: AdCreativeTaskData['targetRating'] = 'GOOD'
   const forceGenerateOnQualityGate = forceGenerate === true || force_generate === true
   const normalizedForceGenerateReason = forceGenerateOnQualityGate
@@ -329,9 +340,9 @@ export async function POST(
     await db.exec(
       `INSERT INTO creative_tasks (
         id, user_id, offer_id, status, stage, progress, message,
-        max_retries, target_rating, created_at, updated_at
-      ) VALUES (?, ?, ?, 'pending', 'init', 0, '准备开始生成...', ?, ?, datetime('now'), datetime('now'))`,
-      [taskId, parseInt(userId, 10), parseInt(id, 10), normalizedMaxRetries, normalizedTargetRating]
+        max_retries, target_rating, generation_mode, created_at, updated_at
+      ) VALUES (?, ?, ?, 'pending', 'init', 0, '准备开始生成...', ?, ?, ?, datetime('now'), datetime('now'))`,
+      [taskId, parseInt(userId, 10), parseInt(id, 10), normalizedMaxRetries, normalizedTargetRating, generationMode]
     )
 
     // 将任务加入队列
@@ -339,6 +350,7 @@ export async function POST(
       offerId: parseInt(id, 10),
       maxRetries: normalizedMaxRetries,
       targetRating: normalizedTargetRating,
+      generationMode,
       coverage: normalizedCoverage,
       synthetic: normalizedCoverage,  // 双写旧字段，确保旧执行器/半部署状态仍映射为 D
       bucket: requestedType || undefined,
@@ -360,6 +372,7 @@ export async function POST(
     return new Response(JSON.stringify({
       taskId,
       bucket: requestedType || undefined,
+      generationMode,
     }), {
       status: 200,
       headers: JSON_HEADERS

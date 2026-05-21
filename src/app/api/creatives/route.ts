@@ -52,6 +52,7 @@ function transformCreativeToApiResponse(creative: any) {
     scoreExplanation: creative.score_explanation,
     version: creative.version,
     generationRound: creative.generation_round,
+    generationMode: creative.generation_mode ?? null,
     generationPrompt: creative.generation_prompt,
     theme: creative.theme,
     creativeType,

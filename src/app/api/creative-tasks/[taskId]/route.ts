@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/json-field'
+import { normalizeAdCreativeGenerationMode } from '@/lib/ad-creative-generation-mode'
 import { normalizeCreativeTaskError, toCreativeTaskErrorResponseFields } from '@/lib/creative-task-error'
 
 interface CreativeTaskRow {
@@ -22,6 +23,7 @@ interface CreativeTaskRow {
   updated_at: string
   started_at: string | null
   completed_at: string | null
+  generation_mode?: string | null
 }
 
 function parseBooleanQuery(value: string | null): boolean {
@@ -113,6 +115,9 @@ export async function GET(
 
     return NextResponse.json({
       taskId: task.id,
+      generationMode: task.generation_mode
+        ? normalizeAdCreativeGenerationMode(task.generation_mode)
+        : null,
       status: task.status,
       stage: task.stage,
       progress: task.progress,

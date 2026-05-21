@@ -450,6 +450,8 @@ export async function evaluateAdStrength(
     bucketType?: 'A' | 'B' | 'C' | 'D' | 'S'
     // [NEW] 规范化创意类型（用于copy intent对齐）
     creativeType?: CanonicalCreativeType
+    /** 快速/均衡生成模式：跳过竞争定位 AI 增强 */
+    skipCompetitivePositioningAi?: boolean
   }
 ): Promise<AdStrengthEvaluation> {
 
@@ -532,7 +534,12 @@ export async function evaluateAdStrength(
   }
 
   // 7. Competitive Positioning维度 (10%) - 新增
-  const competitivePositioningRaw = await calculateCompetitivePositioning(headlines, descriptions, options?.userId)
+  const competitivePositioningRaw = await calculateCompetitivePositioning(
+    headlines,
+    descriptions,
+    options?.userId,
+    { skipAiEnhancement: options?.skipCompetitivePositioningAi === true }
+  )
   const competitivePositioningConfig = AD_STRENGTH_DIMENSION_CONFIG.competitivePositioning
   const competitivePositioning = {
     ...competitivePositioningRaw,
@@ -1054,7 +1061,8 @@ function calculateDifferentiation(
 async function calculateCompetitivePositioning(
   headlines: HeadlineAsset[],
   descriptions: DescriptionAsset[],
-  userId?: number
+  userId?: number,
+  options?: { skipAiEnhancement?: boolean }
 ): Promise<{
   score: number
   weight: 0.10
@@ -1187,7 +1195,7 @@ async function calculateCompetitivePositioning(
   // ========================================
   // 触发条件：快速检测分数 > 6分（说明有较强的竞争定位元素，值得深度分析）
   const AI_ENHANCEMENT_THRESHOLD = AD_STRENGTH_COMPETITIVE_POSITIONING_CONFIG.aiEnhancementThreshold
-  const aiEnhancementEnabled = isCompetitivePositioningAiEnabled()
+  const aiEnhancementEnabled = isCompetitivePositioningAiEnabled() && options?.skipAiEnhancement !== true
 
   if (aiEnhancementEnabled && totalScore > AI_ENHANCEMENT_THRESHOLD) {
     console.log(`   🤖 触发AI增强分析（分数${totalScore.toFixed(1)} > ${AI_ENHANCEMENT_THRESHOLD}）`)

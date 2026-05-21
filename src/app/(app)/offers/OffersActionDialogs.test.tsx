@@ -53,6 +53,8 @@ function createProps(overrides: Record<string, unknown> = {}) {
     isBatchCreativeDialogOpen: false,
     onBatchCreativeDialogOpenChange: vi.fn(),
     batchCreatingCreatives: false,
+    batchGenerationMode: 'original' as const,
+    onBatchGenerationModeChange: vi.fn(),
     maxBatchCreativeOffers: 50,
     onConfirmBatchCreateCreatives: vi.fn(),
     isBatchRebuildDialogOpen: false,

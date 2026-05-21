@@ -42,6 +42,7 @@ const generatorMetaFns = vi.hoisted(() => ({
 const keywordPoolFns = vi.hoisted(() => ({
   getAvailableBuckets: vi.fn(),
   getKeywordsByLinkTypeAndBucket: vi.fn(),
+  getOrCreateKeywordPool: vi.fn(),
 }))
 
 const creativeTypeFns = vi.hoisted(() => ({
@@ -80,6 +81,8 @@ function createEvaluation() {
 
 const MODEL_INTENT_BUCKET_INTENT = '热门商品型号/产品族意图导向 - 聚焦店铺热门商品型号/产品族，关键词统一完全匹配'
 const PRODUCT_INTENT_BUCKET_INTENT = '商品需求意图导向 - 聚焦商品功能/场景需求，承接高覆盖需求流量'
+const [MODEL_INTENT_BUCKET_INTENT_ZH, MODEL_INTENT_BUCKET_INTENT_EN] = MODEL_INTENT_BUCKET_INTENT.split(' - ')
+const [PRODUCT_INTENT_BUCKET_INTENT_ZH, PRODUCT_INTENT_BUCKET_INTENT_EN] = PRODUCT_INTENT_BUCKET_INTENT.split(' - ')
 
 vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
@@ -125,6 +128,7 @@ vi.mock('@/lib/ad-creative-generator', () => ({
 vi.mock('@/lib/offer-keyword-pool', () => ({
   getAvailableBuckets: keywordPoolFns.getAvailableBuckets,
   getKeywordsByLinkTypeAndBucket: keywordPoolFns.getKeywordsByLinkTypeAndBucket,
+  getOrCreateKeywordPool: keywordPoolFns.getOrCreateKeywordPool,
 }))
 
 vi.mock('@/lib/creative-type', () => ({
@@ -173,6 +177,7 @@ describe('POST /api/offers/:id/generate-ad-creative', () => {
       return '品牌意图导向 - 聚焦品牌与核心商品锚点'
     })
     keywordPoolFns.getAvailableBuckets.mockResolvedValue(['B'])
+    keywordPoolFns.getOrCreateKeywordPool.mockResolvedValue({ id: 77, brandKeywords: [] })
     keywordPoolFns.getKeywordsByLinkTypeAndBucket.mockResolvedValue({ keywords: [] })
     generatorFns.applyKeywordSupplementationOnce.mockImplementation(async ({ keywordsWithVolume }: any) => ({
       keywords: Array.isArray(keywordsWithVolume) ? keywordsWithVolume.map((item: any) => item.keyword) : [],
@@ -216,7 +221,14 @@ describe('POST /api/offers/:id/generate-ad-creative', () => {
     }))
 
     qualityLoopFns.runCreativeGenerationQualityLoop.mockImplementation(async ({ generate }: any) => {
-      return await generate({ attempt: 1 })
+      const creative = await generate({ attempt: 1, retryFailureType: null })
+      const evaluation = createEvaluation()
+      return {
+        attempts: 1,
+        selectedCreative: creative,
+        selectedEvaluation: evaluation,
+        history: [evaluation],
+      }
     })
   })
 
@@ -252,7 +264,8 @@ describe('POST /api/offers/:id/generate-ad-creative', () => {
       1,
       expect.objectContaining({
         bucket: 'B',
-        bucketIntent: MODEL_INTENT_BUCKET_INTENT,
+        bucketIntent: MODEL_INTENT_BUCKET_INTENT_ZH,
+        bucketIntentEn: MODEL_INTENT_BUCKET_INTENT_EN,
         deferKeywordPostProcessingToBuilder: true,
       })
     )
@@ -440,7 +453,8 @@ describe('POST /api/offers/:id/generate-ad-creative', () => {
       1,
       expect.objectContaining({
         bucket: 'D',
-        bucketIntent: PRODUCT_INTENT_BUCKET_INTENT,
+        bucketIntent: PRODUCT_INTENT_BUCKET_INTENT_ZH,
+        bucketIntentEn: PRODUCT_INTENT_BUCKET_INTENT_EN,
         deferKeywordPostProcessingToBuilder: true,
       })
     )
@@ -893,17 +907,6 @@ describe('POST /api/offers/:id/generate-ad-creative', () => {
       ai_model: 'gemini-2.5-pro',
     })
 
-    qualityLoopFns.runCreativeGenerationQualityLoop.mockImplementationOnce(async ({ generate }: any) => {
-      const creative = await generate({ attempt: 1, retryFailureType: null })
-      const evaluation = createEvaluation()
-      return {
-        attempts: 1,
-        selectedCreative: creative,
-        selectedEvaluation: evaluation,
-        history: [evaluation],
-      }
-    })
-
     const req = new NextRequest('http://localhost/api/offers/96/generate-ad-creative', {
       method: 'POST',
       headers: {
@@ -924,6 +927,97 @@ describe('POST /api/offers/:id/generate-ad-creative', () => {
     }))
     expect(adCreativeFns.createAdCreative).not.toHaveBeenCalled()
     expect(offerFns.markBucketGenerated).not.toHaveBeenCalled()
+  })
+
+  it('rejects invalid generationMode', async () => {
+    const req = new NextRequest('http://localhost/api/offers/96/generate-ad-creative', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        generationMode: 'not-valid',
+        bucket: 'B',
+        creativeType: 'model_intent',
+      }),
+    })
+
+    const res = await POST(req, { params: { id: '96' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.error).toContain('generationMode')
+    expect(qualityLoopFns.runCreativeGenerationQualityLoop).not.toHaveBeenCalled()
+  })
+
+  it('uses fast generationMode with zero auto-retries in quality loop', async () => {
+    generatorFns.generateAdCreative.mockResolvedValueOnce({
+      headlines: ['Eufy X10 Omni'],
+      descriptions: ['Shop the Eufy X10 Omni robot vacuum'],
+      keywords: ['eufy x10 omni'],
+      keywordsWithVolume: [
+        { keyword: 'eufy x10 omni', searchVolume: 1800, source: 'KEYWORD_POOL', matchType: 'EXACT' },
+      ],
+      callouts: [],
+      sitelinks: [],
+      theme: MODEL_INTENT_BUCKET_INTENT,
+      explanation: 'Focused on the verified store hot model.',
+      ai_model: 'gemini-2.5-pro',
+    })
+
+    qualityLoopFns.runCreativeGenerationQualityLoop.mockImplementationOnce(async ({ generate, maxRetries, delayMs }: any) => {
+      expect(maxRetries).toBe(0)
+      expect(delayMs).toBe(0)
+      const creative = await generate({ attempt: 1, retryFailureType: null })
+      const evaluation = createEvaluation()
+      return {
+        attempts: 1,
+        selectedCreative: creative,
+        selectedEvaluation: evaluation,
+        history: [evaluation],
+      }
+    })
+
+    adCreativeFns.createAdCreative.mockResolvedValueOnce({
+      id: 503,
+      offer_id: 96,
+      user_id: 1,
+      creative_type: 'model_intent',
+      keyword_bucket: 'B',
+      bucket_intent: MODEL_INTENT_BUCKET_INTENT,
+      keywords: ['eufy x10 omni'],
+      headlines: ['Eufy X10 Omni'],
+      descriptions: ['Shop the Eufy X10 Omni robot vacuum'],
+      theme: MODEL_INTENT_BUCKET_INTENT,
+      final_url: 'https://example.com/store',
+      final_url_suffix: null,
+      generation_mode: 'fast',
+    })
+
+    const req = new NextRequest('http://localhost/api/offers/96/generate-ad-creative', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        generationMode: 'fast',
+        bucket: 'B',
+        creativeType: 'model_intent',
+      }),
+    })
+
+    const res = await POST(req, { params: { id: '96' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.generationMode).toBe('fast')
+    expect(adCreativeFns.createAdCreative).toHaveBeenCalledWith(
+      1,
+      96,
+      expect.objectContaining({
+        generation_mode: 'fast',
+      })
+    )
   })
 })
 

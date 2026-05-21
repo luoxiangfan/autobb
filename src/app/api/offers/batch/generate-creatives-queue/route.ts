@@ -18,7 +18,10 @@ import { getGoogleAdsConfig } from '@/lib/keyword-planner'
 import { getUserAuthType } from '@/lib/google-ads-oauth'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
 import { toDbJsonObjectField } from '@/lib/json-field'
-import { AD_CREATIVE_MAX_AUTO_RETRIES } from '@/lib/ad-creative-quality-loop'
+import {
+  CREATIVE_GENERATION_MODE_INVALID_MESSAGE,
+  resolveCreativeGenerationRuntime,
+} from '@/lib/ad-creative-generation-mode'
 import { getAvailableBuckets } from '@/lib/offer-keyword-pool'
 import {
   deriveCanonicalCreativeType,
@@ -65,6 +68,17 @@ export async function POST(request: NextRequest) {
     }
 
     const offerIds = Array.from(new Set(parsed.data.offerIds))
+    const { runtime, invalidMode } = resolveCreativeGenerationRuntime(body)
+    if (invalidMode) {
+      return NextResponse.json(
+        {
+          error: 'Invalid generationMode',
+          message: CREATIVE_GENERATION_MODE_INVALID_MESSAGE,
+        },
+        { status: 400 }
+      )
+    }
+    const { mode: generationMode, maxRetries: batchMaxRetries } = runtime
     const forceGenerateOnQualityGate =
       parsed.data.forceGenerateOnQualityGate ?? BATCH_FORCE_GENERATE_ON_QUALITY_GATE_DEFAULT
     const hasExplicitCreativeType = parsed.data.creativeType !== undefined
@@ -285,15 +299,16 @@ export async function POST(request: NextRequest) {
         await db.exec(
           `INSERT INTO creative_tasks (
             id, user_id, offer_id, status, stage, progress, message,
-            max_retries, target_rating, created_at, updated_at
-          ) VALUES (?, ?, ?, 'pending', 'init', 0, '准备开始生成...', ?, ?, ${nowFunc}, ${nowFunc})`,
-          [taskId, userIdNum, offerId, AD_CREATIVE_MAX_AUTO_RETRIES, 'GOOD']
+            max_retries, target_rating, generation_mode, created_at, updated_at
+          ) VALUES (?, ?, ?, 'pending', 'init', 0, '准备开始生成...', ?, ?, ?, ${nowFunc}, ${nowFunc})`,
+          [taskId, userIdNum, offerId, batchMaxRetries, 'GOOD', generationMode]
         )
 
         const taskData: AdCreativeTaskData = {
           offerId,
-          maxRetries: AD_CREATIVE_MAX_AUTO_RETRIES,
+          maxRetries: batchMaxRetries,
           targetRating: 'GOOD',
+          generationMode,
           bucket: selectedBucket,
           synthetic: false,
           forceGenerateOnQualityGate,
@@ -339,6 +354,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      generationMode,
       requestedCount: stats.requested,
       enqueuedCount: stats.enqueued,
       skippedCount: stats.skipped,

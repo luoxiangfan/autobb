@@ -31,6 +31,7 @@ const qualityLoopFns = vi.hoisted(() => ({
 const keywordPoolFns = vi.hoisted(() => ({
   getAvailableBuckets: vi.fn(),
   getKeywordsByLinkTypeAndBucket: vi.fn(),
+  getOrCreateKeywordPool: vi.fn(),
 }))
 
 const generatorMetaFns = vi.hoisted(() => ({
@@ -41,6 +42,11 @@ const creativeTypeFns = vi.hoisted(() => ({
   getCreativeTypeForBucketSlot: vi.fn(),
   mapCreativeTypeToBucketSlot: vi.fn(),
   normalizeCanonicalCreativeType: vi.fn(),
+}))
+
+const keywordRuntimeFns = vi.hoisted(() => ({
+  buildPreGenerationCreativeKeywordSet: vi.fn(),
+  finalizeCreativeKeywordSet: vi.fn(),
 }))
 
 vi.mock('@/lib/offers', () => ({
@@ -77,6 +83,7 @@ vi.mock('@/lib/ad-creative-quality-loop', () => ({
 vi.mock('@/lib/offer-keyword-pool', () => ({
   getAvailableBuckets: keywordPoolFns.getAvailableBuckets,
   getKeywordsByLinkTypeAndBucket: keywordPoolFns.getKeywordsByLinkTypeAndBucket,
+  getOrCreateKeywordPool: keywordPoolFns.getOrCreateKeywordPool,
 }))
 
 vi.mock('@/lib/ad-creative-generator', () => ({
@@ -88,6 +95,17 @@ vi.mock('@/lib/creative-type', () => ({
   mapCreativeTypeToBucketSlot: creativeTypeFns.mapCreativeTypeToBucketSlot,
   normalizeCanonicalCreativeType: creativeTypeFns.normalizeCanonicalCreativeType,
 }))
+
+vi.mock('@/lib/creative-keyword-runtime', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/creative-keyword-runtime')>(
+    '@/lib/creative-keyword-runtime'
+  )
+  return {
+    ...actual,
+    buildPreGenerationCreativeKeywordSet: keywordRuntimeFns.buildPreGenerationCreativeKeywordSet,
+    finalizeCreativeKeywordSet: keywordRuntimeFns.finalizeCreativeKeywordSet,
+  }
+})
 
 function createEvaluation() {
   return {
@@ -118,6 +136,8 @@ function createEvaluation() {
 
 const MODEL_INTENT_BUCKET_INTENT = '商品型号/产品族意图导向 - 聚焦当前商品型号/产品族，关键词统一完全匹配'
 const PRODUCT_INTENT_BUCKET_INTENT = '商品需求意图导向 - 聚焦商品功能/场景需求，承接高覆盖需求流量'
+const [MODEL_INTENT_BUCKET_INTENT_ZH, MODEL_INTENT_BUCKET_INTENT_EN] = MODEL_INTENT_BUCKET_INTENT.split(' - ')
+const [PRODUCT_INTENT_BUCKET_INTENT_ZH, PRODUCT_INTENT_BUCKET_INTENT_EN] = PRODUCT_INTENT_BUCKET_INTENT.split(' - ')
 
 describe('POST /api/offers/:id/generate-creatives', () => {
   beforeEach(() => {
@@ -146,6 +166,7 @@ describe('POST /api/offers/:id/generate-creatives', () => {
     })
 
     keywordPoolFns.getAvailableBuckets.mockResolvedValue(['A', 'B', 'D'])
+    keywordPoolFns.getOrCreateKeywordPool.mockResolvedValue({ id: 77, brandKeywords: [] })
     keywordPoolFns.getKeywordsByLinkTypeAndBucket.mockResolvedValue({
       keywords: [],
       intent: 'test',
@@ -204,6 +225,44 @@ describe('POST /api/offers/:id/generate-creatives', () => {
       keywordsWithVolume,
     }))
 
+    keywordRuntimeFns.buildPreGenerationCreativeKeywordSet.mockImplementation(async ({ seedCandidates }: any) => {
+      const seeds = Array.isArray(seedCandidates) ? seedCandidates : []
+      const keywordsWithVolume = seeds.map((item: any) => ({
+        keyword: typeof item === 'string' ? item : item.keyword,
+        searchVolume: typeof item === 'string' ? 0 : (item.searchVolume ?? 0),
+        source: typeof item === 'string' ? 'KEYWORD_POOL' : (item.source || 'KEYWORD_POOL'),
+        matchType: typeof item === 'string' ? 'PHRASE' : (item.matchType || 'PHRASE'),
+      }))
+      const keywords = keywordsWithVolume.map((item: any) => item.keyword)
+      return {
+        executableKeywords: keywords,
+        keywordsWithVolume,
+        promptKeywords: keywords,
+        keywordSupplementation: null,
+        audit: {},
+      }
+    })
+
+    keywordRuntimeFns.finalizeCreativeKeywordSet.mockImplementation(async (params: any) => {
+      const keywords = Array.isArray(params.creative?.keywords) ? params.creative.keywords : []
+      const keywordsWithVolume = Array.isArray(params.creative?.keywordsWithVolume)
+        ? params.creative.keywordsWithVolume
+        : []
+      await keywordSelectionFns.selectCreativeKeywords({
+        offer: params.offer,
+        userId: params.userId,
+        creativeType: params.creativeType,
+        bucket: params.bucket,
+        keywords,
+        keywordsWithVolume,
+      })
+      const totalKeywords = keywords.length
+      const audit = { totalKeywords }
+      params.creative.audit = audit
+      params.creative.keywordSourceAudit = audit
+      return params.creative
+    })
+
     adCreativeFns.createAdCreative.mockResolvedValue({ id: 301 })
 
     qualityLoopFns.runCreativeGenerationQualityLoop.mockImplementation(async ({ generate }: any) => {
@@ -246,8 +305,8 @@ describe('POST /api/offers/:id/generate-creatives', () => {
       1,
       expect.objectContaining({
         bucket: 'B',
-        bucketIntent: MODEL_INTENT_BUCKET_INTENT,
-        bucketIntentEn: '聚焦当前商品型号/产品族，关键词统一完全匹配',
+        bucketIntent: MODEL_INTENT_BUCKET_INTENT_ZH,
+        bucketIntentEn: MODEL_INTENT_BUCKET_INTENT_EN,
         deferKeywordPostProcessingToBuilder: true,
       })
     )
@@ -331,7 +390,8 @@ describe('POST /api/offers/:id/generate-creatives', () => {
       1,
       expect.objectContaining({
         bucket: 'D',
-        bucketIntent: PRODUCT_INTENT_BUCKET_INTENT,
+        bucketIntent: PRODUCT_INTENT_BUCKET_INTENT_ZH,
+        bucketIntentEn: PRODUCT_INTENT_BUCKET_INTENT_EN,
         deferKeywordPostProcessingToBuilder: true,
       })
     )
@@ -603,5 +663,66 @@ describe('POST /api/offers/:id/generate-creatives', () => {
       retryFailureType: 'quality_under_threshold',
       excludeKeywords: expect.any(Array),
     }))
+  })
+
+  it('rejects invalid generationMode', async () => {
+    const req = new NextRequest('http://localhost/api/offers/96/generate-creatives', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '1',
+      },
+      body: JSON.stringify({
+        generationMode: 'invalid',
+      }),
+    })
+
+    const res = await POST(req, { params: { id: '96' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.error).toContain('generationMode')
+    expect(qualityLoopFns.runCreativeGenerationQualityLoop).not.toHaveBeenCalled()
+  })
+
+  it('uses fast generationMode with zero auto-retries in quality loop', async () => {
+    keywordPoolFns.getAvailableBuckets.mockResolvedValue(['B'])
+    keywordPoolFns.getKeywordsByLinkTypeAndBucket.mockResolvedValue({ keywords: [] })
+
+    qualityLoopFns.runCreativeGenerationQualityLoop.mockImplementationOnce(async ({ generate, maxRetries }: any) => {
+      expect(maxRetries).toBe(0)
+      const creative = await generate({ attempt: 1, retryFailureType: null })
+      return {
+        attempts: 1,
+        selectedCreative: creative,
+        selectedEvaluation: createEvaluation(),
+        history: [],
+      }
+    })
+
+    const req = new NextRequest('http://localhost/api/offers/96/generate-creatives', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '1',
+      },
+      body: JSON.stringify({
+        generationMode: 'fast',
+        creativeType: 'model_intent',
+        bucket: 'B',
+      }),
+    })
+
+    const res = await POST(req, { params: { id: '96' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.generationMode).toBe('fast')
+    expect(qualityLoopFns.runCreativeGenerationQualityLoop).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxRetries: 0,
+        delayMs: 0,
+      })
+    )
   })
 })

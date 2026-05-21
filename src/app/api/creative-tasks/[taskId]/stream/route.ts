@@ -6,25 +6,16 @@
 
 import { NextRequest } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { parseJsonField } from '@/lib/json-field'
+import {
+  buildCreativeTaskStreamEvents,
+  isCreativeTaskStreamTerminal,
+  shouldPushCreativeTaskUpdate,
+  type CreativeTaskStreamRow,
+} from '@/lib/creative-task-stream'
 import { normalizeCreativeTaskError, toCreativeTaskErrorResponseFields } from '@/lib/creative-task-error'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 1200  // 20分钟
-
-interface CreativeTask {
-  id: string
-  user_id: number
-  status: 'pending' | 'running' | 'completed' | 'failed'
-  stage: string | null
-  progress: number
-  message: string | null
-  current_attempt: number
-  max_retries: number | null
-  result: unknown
-  error: unknown
-  updated_at: string
-}
 
 export async function GET(
   req: NextRequest,
@@ -33,7 +24,6 @@ export async function GET(
   const db = getDatabase()
   const { taskId } = params
 
-  // 验证用户身份
   const userId = req.headers.get('x-user-id')
   if (!userId) {
     return new Response('Unauthorized', { status: 401 })
@@ -41,8 +31,7 @@ export async function GET(
   const userIdNum = parseInt(userId, 10)
 
   try {
-    // 验证任务存在且属于当前用户
-    const taskRows = await db.query<CreativeTask>(
+    const taskRows = await db.query<CreativeTaskStreamRow>(
       'SELECT * FROM creative_tasks WHERE id = ? AND user_id = ?',
       [taskId, userIdNum]
     )
@@ -51,14 +40,14 @@ export async function GET(
       return new Response('Task not found', { status: 404 })
     }
 
-    // 创建SSE流
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       async start(controller) {
         let lastUpdatedAt: string | null = null
         let isClosed = false
+        let pollInFlight = false
 
-        const sendSSE = (data: any) => {
+        const sendSSE = (data: Record<string, unknown>) => {
           if (isClosed) return
           try {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
@@ -68,12 +57,21 @@ export async function GET(
           }
         }
 
-        // 轮询数据库获取进度
-        const pollInterval = setInterval(async () => {
+        const closeStream = (pollInterval: ReturnType<typeof setInterval>) => {
+          clearInterval(pollInterval)
+          if (!isClosed) {
+            controller.close()
+            isClosed = true
+          }
+        }
+
+        const pollTask = async (pollInterval: ReturnType<typeof setInterval>) => {
+          if (pollInFlight || isClosed) return
+          pollInFlight = true
           try {
-            const rows = await db.query<CreativeTask>(
-              'SELECT * FROM creative_tasks WHERE id = ?',
-              [taskId]
+            const rows = await db.query<CreativeTaskStreamRow>(
+              'SELECT * FROM creative_tasks WHERE id = ? AND user_id = ?',
+              [taskId, userIdNum]
             )
 
             if (!rows || rows.length === 0) {
@@ -91,77 +89,33 @@ export async function GET(
                 details: taskNotFoundError.details || {},
                 ...toCreativeTaskErrorResponseFields(taskNotFoundError),
               })
-              clearInterval(pollInterval)
-              controller.close()
-              isClosed = true
+              closeStream(pollInterval)
               return
             }
 
             const task = rows[0]
-
-            // 只在updated_at变化时才推送
-            if (task.updated_at === lastUpdatedAt) {
+            if (!shouldPushCreativeTaskUpdate(task, lastUpdatedAt)) {
               return
             }
 
             lastUpdatedAt = task.updated_at
-
-            // 推送进度更新
-            if (task.status === 'running' || task.status === 'pending') {
-              const stage = (task.stage as any) || 'init'
-              const status = task.status === 'pending' ? 'pending' : 'in_progress'
-
-              sendSSE({
-                type: 'progress',
-                step: stage,
-                progress: task.progress,
-                message: task.message || '处理中...',
-                details: {
-                  attempt: task.current_attempt,
-                  maxRetries: task.max_retries ?? undefined
-                }
-              })
+            for (const event of buildCreativeTaskStreamEvents(task)) {
+              sendSSE(event)
             }
 
-            // 任务完成
-            if (task.status === 'completed') {
-              const result = parseJsonField<Record<string, any>>(task.result, {})
-              sendSSE({
-                type: 'result',
-                ...result
-              })
-              clearInterval(pollInterval)
-              controller.close()
-              isClosed = true
+            if (isCreativeTaskStreamTerminal(task)) {
+              closeStream(pollInterval)
             }
-
-            // 任务失败
-            if (task.status === 'failed') {
-              const parsedError = parseJsonField<any>(task.error, task.error)
-              const normalizedError = normalizeCreativeTaskError(
-                parsedError ?? task.error ?? task.message ?? '任务失败',
-                task.message || '任务失败'
-              )
-              sendSSE({
-                type: 'error',
-                error: normalizedError.userMessage,
-                message: normalizedError.userMessage,
-                details: normalizedError.details || {},
-                ...toCreativeTaskErrorResponseFields(normalizedError),
-              })
-              clearInterval(pollInterval)
-              controller.close()
-              isClosed = true
-            }
-          } catch (error: any) {
+          } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'SSE polling error'
             console.error('SSE polling error:', error)
             const normalizedError = normalizeCreativeTaskError({
               code: 'CREATIVE_TASK_STREAM_POLLING_ERROR',
               category: 'system',
-              message: error?.message || 'SSE polling error',
+              message,
               userMessage: '实时进度读取失败，请刷新后重试。',
               retryable: true,
-              details: { stack: error?.stack || null },
+              details: { stack: error instanceof Error ? error.stack : null },
             })
             sendSSE({
               type: 'error',
@@ -170,26 +124,25 @@ export async function GET(
               details: normalizedError.details || {},
               ...toCreativeTaskErrorResponseFields(normalizedError),
             })
-            clearInterval(pollInterval)
-            controller.close()
-            isClosed = true
+            closeStream(pollInterval)
+          } finally {
+            pollInFlight = false
           }
-        }, 1000) // 每1秒轮询一次
+        }
 
-        // 清理逻辑：客户端断开连接时
+        const pollInterval = setInterval(() => {
+          void pollTask(pollInterval)
+        }, 1000)
+
+        await pollTask(pollInterval)
+
         req.signal.addEventListener('abort', () => {
           console.log(`🔌 Client disconnected from SSE: ${taskId}`)
-          clearInterval(pollInterval)
-          if (!isClosed) {
-            controller.close()
-            isClosed = true
-          }
+          closeStream(pollInterval)
         })
 
-        // 超时保护：20分钟后自动关闭
         setTimeout(() => {
           console.log(`⏱️ SSE timeout for task: ${taskId}`)
-          clearInterval(pollInterval)
           if (!isClosed) {
             const timeoutError = normalizeCreativeTaskError({
               code: 'CREATIVE_TASK_STREAM_TIMEOUT',
@@ -205,25 +158,24 @@ export async function GET(
               details: timeoutError.details || {},
               ...toCreativeTaskErrorResponseFields(timeoutError),
             })
-            controller.close()
-            isClosed = true
+            closeStream(pollInterval)
           }
         }, 20 * 60 * 1000)
-      }
+      },
     })
 
     return new Response(stream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        Connection: 'keep-alive',
       },
     })
-
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'SSE initialization error'
     console.error('SSE initialization error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }

@@ -1,15 +1,31 @@
 /**
  * 广告创意重新生成器
- * 
+ *
  * 功能：
- * 1. 使用 AI 基于 Offer 重新生成广告创意
+ * 1. 继承原创意/任务配置的 generation_mode，经共享桶级管线生成
  * 2. 保存新生成的广告创意
  * 3. 返回新的广告创意 ID 和 campaign_config
  */
 
-import { getDatabase } from './db'
-import { createAdCreative } from './ad-creative'
-import { generateAdCreative } from './ad-creative-generator'
+import { createAdCreative, findAdCreativeById } from './ad-creative'
+import {
+  getAdCreativeGenerationModeProfile,
+  normalizeAdCreativeGenerationMode,
+} from './ad-creative-generation-mode'
+import { getThemeByBucket } from './ad-creative-generator'
+import {
+  assertPostGenerationPersistenceGate,
+  formatBucketGenerationRejectedError,
+  resolveOfferLinkType,
+  runBucketCreativeGeneration,
+} from './bucket-creative-generation-pipeline'
+import { findOfferById } from './offers'
+import { getOrCreateKeywordPool } from './offer-keyword-pool'
+import {
+  getCreativeTypeForBucketSlot,
+  normalizeCreativeBucketSlot,
+  type CreativeBucketSlot,
+} from './creative-type'
 
 /**
  * 重新生成广告创意结果
@@ -18,6 +34,7 @@ export interface RegenerateAdCreativeResult {
   success: boolean
   adCreativeId?: number
   campaignConfig?: any
+  generationMode?: string
   error?: string
 }
 
@@ -31,26 +48,69 @@ export interface RegenerateAdCreativeParams {
   campaignConfigForTask: Record<string, any>  // 来自任务的 campaignConfig，包含原始的创意元素等信息
 }
 
+function parseBooleanEnv(value: string | undefined, fallback: boolean): boolean {
+  const normalized = String(value || '').trim().toLowerCase()
+  if (!normalized) return fallback
+  if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true
+  if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false
+  return fallback
+}
+
+function resolveRegenerationBucketContext(
+  previousCreative: Awaited<ReturnType<typeof findAdCreativeById>>,
+  campaignConfig: Record<string, any>
+): { slotBucket: CreativeBucketSlot | null; generationBucket: string | null } {
+  const raw =
+    previousCreative?.keyword_bucket
+    ?? campaignConfig?.keyword_bucket
+    ?? campaignConfig?.keywordBucket
+    ?? campaignConfig?.bucket
+  if (typeof raw !== 'string') {
+    return { slotBucket: null, generationBucket: null }
+  }
+
+  const slotBucket = normalizeCreativeBucketSlot(raw)
+  if (!slotBucket) {
+    return { slotBucket: null, generationBucket: null }
+  }
+
+  const upper = raw.trim().toUpperCase()
+  const generationBucket =
+    (upper === 'C' && slotBucket === 'B') || (upper === 'S' && slotBucket === 'D')
+      ? upper
+      : slotBucket
+
+  return { slotBucket, generationBucket }
+}
+
 /**
  * 重新生成广告创意
- * 
- * @param params 参数
- * @returns 重新生成结果
  */
 export async function regenerateAdCreative(
   params: RegenerateAdCreativeParams
 ): Promise<RegenerateAdCreativeResult> {
   const { userId, offerId, previousAdCreativeId, campaignConfigForTask } = params
-  const db = await getDatabase()
 
   try {
-    // 1. 获取 Offer 信息
-    const offer = await db.queryOne(`
-      SELECT id, brand, offer_name, target_country, url, category, final_url_suffix
-      FROM offers
-      WHERE id = ? AND user_id = ?
-    `, [offerId, userId]) as any
+    const previousCreative = previousAdCreativeId > 0
+      ? await findAdCreativeById(previousAdCreativeId, userId)
+      : null
+    const inheritedMode = normalizeAdCreativeGenerationMode(
+      previousCreative?.generation_mode
+        ?? campaignConfigForTask?.generation_mode
+        ?? campaignConfigForTask?.generationMode
+    )
+    const generationProfile = getAdCreativeGenerationModeProfile(inheritedMode)
+    const { slotBucket: bucket, generationBucket } = resolveRegenerationBucketContext(
+      previousCreative,
+      campaignConfigForTask
+    )
+    const hardPersistenceGateEnabled = parseBooleanEnv(
+      process.env.AD_CREATIVE_HARD_PERSISTENCE_GATE_ENABLED,
+      true
+    )
 
+    const offer = await findOfferById(offerId, userId)
     if (!offer) {
       return {
         success: false,
@@ -58,40 +118,85 @@ export async function regenerateAdCreative(
       }
     }
 
-    // 2. 使用 AI 重新生成广告创意
-    console.log(`[Ad Creative Regenerator] Generating new creative for offer ${offerId}`)
-    
-    const generatedCreative = await generateAdCreative(
-      offerId,
-      userId,
-      {
-        skipCache: true,  // 重新生成，不使用缓存
-      }
+    const linkType = resolveOfferLinkType(offer)
+    const bucketTheme = bucket ? getThemeByBucket(bucket, linkType) : null
+    const bucketIntent = bucketTheme?.split(' - ')[0]
+      || previousCreative?.bucket_intent
+      || undefined
+    const bucketIntentEn = bucketTheme?.split(' - ')[1] || undefined
+
+    const keywordPool = bucket
+      ? await getOrCreateKeywordPool(offerId, userId, false)
+      : null
+
+    console.log(
+      `[Ad Creative Regenerator] Generating for offer ${offerId} (mode=${inheritedMode}, bucket=${bucket || 'none'}, generationBucket=${generationBucket || 'none'}, maxRetries=${generationProfile.maxRetries})`
     )
 
+    const generationResult = await runBucketCreativeGeneration({
+      offerId,
+      userId,
+      offer,
+      bucket,
+      generationBucket,
+      generationProfile,
+      maxRetries: generationProfile.maxRetries,
+      scopeLabel: bucket ? `regenerate-ad-creative-${bucket}` : 'regenerate-ad-creative',
+      linkType,
+      keywordPool,
+      loadSearchTermFeedbackHints: true,
+      skipCache: true,
+      hardPersistenceGateEnabled,
+      bucketIntent,
+      bucketIntentEn,
+    })
+
+    const generatedCreative = generationResult.selectedCreative
     if (!generatedCreative) {
-      console.error(`[Ad Creative Regenerator] Generation failed`)
+      console.error('[Ad Creative Regenerator] Generation failed after quality loop')
       return {
         success: false,
         error: '广告创意生成失败',
       }
     }
 
-    // 3. 保存新生成的广告创意到数据库
-    console.log(`[Ad Creative Regenerator] Saving new creative to database...`)
-    
+    if (!generationResult.accepted) {
+      const evaluation = generationResult.selectedEvaluation
+      console.warn(
+        `[Ad Creative Regenerator] Quality gate not passed (mode=${inheritedMode}, score=${evaluation?.adStrength?.finalScore}, rating=${evaluation?.adStrength?.finalRating})`
+      )
+      return {
+        success: false,
+        error: formatBucketGenerationRejectedError(generationResult),
+      }
+    }
+
+    assertPostGenerationPersistenceGate({
+      enabled: hardPersistenceGateEnabled,
+      creative: generatedCreative,
+      bucket,
+      offer,
+      attempts: generationResult.attempts,
+    })
+
+    console.log('[Ad Creative Regenerator] Saving new creative to database...')
+
     const newCreative = await createAdCreative(
       userId,
       offerId,
       {
         ...generatedCreative,
-        final_url: offer.url,
+        final_url: offer.url || offer.final_url || '',
         final_url_suffix: offer.final_url_suffix || '',
+        generation_mode: inheritedMode,
+        keyword_bucket: bucket ?? generatedCreative.keyword_bucket ?? undefined,
+        bucket_intent: bucketIntent ?? generatedCreative.bucket_intent ?? undefined,
+        creative_type: bucket ? getCreativeTypeForBucketSlot(bucket) : undefined,
       }
     )
 
-    if (!newCreative || !newCreative.id) {
-      console.error(`[Ad Creative Regenerator] Save failed`)
+    if (!newCreative?.id) {
+      console.error('[Ad Creative Regenerator] Save failed')
       return {
         success: false,
         error: '广告创意保存失败',
@@ -100,9 +205,9 @@ export async function regenerateAdCreative(
 
     console.log(`[Ad Creative Regenerator] New creative saved with ID: ${newCreative.id}`)
 
-    // 4. 构建 campaign_config
     const campaignConfig = {
-      ...campaignConfigForTask,  // 保留原有的 campaignConfig 配置
+      ...campaignConfigForTask,
+      generation_mode: inheritedMode,
       headlines: generatedCreative.headlines || [],
       descriptions: generatedCreative.descriptions || [],
       keywords: generatedCreative.keywords || [],
@@ -114,12 +219,14 @@ export async function regenerateAdCreative(
       success: true,
       adCreativeId: newCreative.id,
       campaignConfig,
+      generationMode: inheritedMode,
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : '广告创意重新生成失败'
     console.error('[Ad Creative Regenerator] Error:', error)
     return {
       success: false,
-      error: error.message || '广告创意重新生成失败',
+      error: message,
     }
   }
 }

@@ -40,6 +40,7 @@ describe('GET /api/creative-tasks/[taskId]', () => {
         updated_at: '2026-03-20T10:01:00.000Z',
         started_at: '2026-03-20T10:00:05.000Z',
         completed_at: '2026-03-20T10:01:00.000Z',
+        generation_mode: 'fast',
       },
     ])
 
@@ -54,6 +55,7 @@ describe('GET /api/creative-tasks/[taskId]', () => {
 
     expect(res.status).toBe(200)
     expect(data.status).toBe('failed')
+    expect(data.generationMode).toBe('fast')
     expect(data.errorCode).toBe('CREATIVE_KEYWORD_POOL_BUILD_FAILED')
     expect(data.errorCategory).toBe('upstream')
     expect(data.errorRetryable).toBe(true)

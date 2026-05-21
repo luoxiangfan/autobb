@@ -8,32 +8,34 @@
  */
 
 import type { Task } from '../types'
+import {
+  getAdCreativeGenerationModeProfile,
+  normalizeAdCreativeGenerationMode,
+  type AdCreativeGenerationMode,
+} from '@/lib/ad-creative-generation-mode'
 import { generateAdCreative } from '@/lib/ad-creative-gen'
 import { createAdCreative } from '@/lib/ad-creative'
 import {
-  buildPreGenerationCreativeKeywordSet,
-  buildCreativeBrandKeywords,
   createCreativeAdStrengthPayload,
   createCreativeOptimizationPayload,
   createCreativeOfferSummaryPayload,
-  createCreativeQualityEvaluationInput,
   createCreativeResponsePayload,
   createCreativeScoreBreakdown,
   createCreativeTaskRetryHistory,
-  evaluateCreativePersistenceHardGate,
-  finalizeCreativeKeywordSet,
-  mergeUsedKeywordsExcludingBrand,
   resolveCreativeKeywordAudit,
-  resolveCreativeKeywordsForRetryExclusion,
 } from '@/lib/creative-keyword-runtime'
+import {
+  assertPostGenerationPersistenceGate,
+  prepareBucketKeywordContext,
+  runBucketCreativeGeneration,
+} from '@/lib/bucket-creative-generation-pipeline'
+import type { CreativeBucketSlot } from '@/lib/creative-type'
 import { findOfferById } from '@/lib/offers'
 import { getDatabase } from '@/lib/db'
 import { toDbJsonObjectField } from '@/lib/json-field'
 import {
   AD_CREATIVE_MAX_AUTO_RETRIES,
   AD_CREATIVE_REQUIRED_MIN_SCORE,
-  evaluateCreativeForQuality,
-  runCreativeGenerationQualityLoop
 } from '@/lib/ad-creative-quality-loop'
 // 🆕 v4.10: 关键词池集成
 import {
@@ -84,103 +86,6 @@ function parseBooleanEnv(value: string | undefined, fallback: boolean): boolean 
   if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true
   if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false
   return fallback
-}
-
-function normalizeKeywordMapKey(value: unknown): string {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-}
-
-function buildKeywordPoolVolumeHintMap(keywordPool: OfferKeywordPool | null): Map<string, {
-  searchVolume: number
-  volumeUnavailableReason?: string
-}> {
-  const hints = new Map<string, { searchVolume: number; volumeUnavailableReason?: string }>()
-  if (!keywordPool) return hints
-
-  const groups: Array<unknown[] | undefined> = [
-    keywordPool.brandKeywords,
-    keywordPool.bucketAKeywords,
-    keywordPool.bucketBKeywords,
-    keywordPool.bucketCKeywords,
-    keywordPool.bucketDKeywords,
-    keywordPool.storeBucketAKeywords,
-    keywordPool.storeBucketBKeywords,
-    keywordPool.storeBucketCKeywords,
-    keywordPool.storeBucketDKeywords,
-    keywordPool.storeBucketSKeywords,
-  ]
-
-  for (const group of groups) {
-    if (!Array.isArray(group) || group.length === 0) continue
-    for (const item of group) {
-      const key = normalizeKeywordMapKey((item as any)?.keyword)
-      if (!key) continue
-
-      const searchVolume = Number((item as any)?.searchVolume || 0)
-      const volumeUnavailableReasonRaw = String((item as any)?.volumeUnavailableReason || '').trim()
-      const volumeUnavailableReason = volumeUnavailableReasonRaw || undefined
-
-      const existing = hints.get(key)
-      if (!existing) {
-        hints.set(key, { searchVolume, volumeUnavailableReason })
-        continue
-      }
-
-      if (searchVolume > existing.searchVolume) {
-        hints.set(key, {
-          searchVolume,
-          volumeUnavailableReason: volumeUnavailableReason || existing.volumeUnavailableReason,
-        })
-        continue
-      }
-
-      if (!existing.volumeUnavailableReason && volumeUnavailableReason) {
-        hints.set(key, {
-          searchVolume: existing.searchVolume,
-          volumeUnavailableReason,
-        })
-      }
-    }
-  }
-
-  return hints
-}
-
-function backfillCreativeKeywordVolumesFromPoolHints(
-  creative: Awaited<ReturnType<typeof generateAdCreative>>,
-  hints: Map<string, { searchVolume: number; volumeUnavailableReason?: string }>,
-  scopeLabel: string
-): void {
-  if (!Array.isArray(creative.keywordsWithVolume) || creative.keywordsWithVolume.length === 0) return
-  if (!hints || hints.size === 0) return
-
-  let patched = 0
-  creative.keywordsWithVolume = creative.keywordsWithVolume.map((item) => {
-    if (!item || typeof item !== 'object') return item
-
-    const key = normalizeKeywordMapKey((item as any).keyword)
-    if (!key) return item
-
-    const hint = hints.get(key)
-    if (!hint || hint.searchVolume <= 0) return item
-
-    const currentSearchVolume = Number((item as any).searchVolume || 0)
-    if (currentSearchVolume > 0) return item
-
-    patched += 1
-    return {
-      ...item,
-      searchVolume: hint.searchVolume,
-      volumeUnavailableReason: (item as any).volumeUnavailableReason || hint.volumeUnavailableReason,
-    }
-  })
-
-  if (patched > 0) {
-    console.log(`[CreativeKeywordVolumeBackfill] ${scopeLabel}: patched ${patched} keywords from keyword pool hints`)
-  }
 }
 
 const staleGeneratingPlaceholderMinutes = parsePositiveIntEnv(
@@ -243,6 +148,7 @@ export interface AdCreativeTaskData {
   offerId: number
   maxRetries?: number
   targetRating?: 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'POOR'
+  generationMode?: AdCreativeGenerationMode
   coverage?: boolean   // ✅ 新命名：coverage 模式，运行时仍统一映射到 D / product_intent
   synthetic?: boolean  // 🔧 向后兼容：旧版 coverage 标记（运行时映射到 D / product_intent）
   bucket?: 'A' | 'B' | 'C' | 'D' | 'S'
@@ -265,13 +171,19 @@ export async function executeAdCreativeGeneration(
     bucket,
     forceGenerateOnQualityGate = false,
     qualityGateBypassReason,
+    generationMode: generationModeInput,
   } = task.data
   const db = getDatabase()
+  const generationMode = normalizeAdCreativeGenerationMode(generationModeInput)
+  const generationProfile = getAdCreativeGenerationModeProfile(generationMode)
+  const profileMaxRetries = generationProfile.maxRetries
   const effectiveMaxRetries = Math.max(
     0,
     Math.min(
       AD_CREATIVE_MAX_AUTO_RETRIES,
-      Number.isFinite(Number(maxRetries)) ? Math.floor(Number(maxRetries)) : AD_CREATIVE_MAX_AUTO_RETRIES
+      Number.isFinite(Number(maxRetries))
+        ? Math.min(Math.floor(Number(maxRetries)), profileMaxRetries)
+        : profileMaxRetries
     )
   )
   const enforcedTargetRating: AdCreativeTaskData['targetRating'] = 'GOOD'
@@ -565,201 +477,109 @@ export async function executeAdCreativeGeneration(
     if (effectiveMaxRetries < Number(maxRetries)) {
       console.log(`ℹ️ 已限制自动重试次数: ${maxRetries} → ${effectiveMaxRetries}`)
     }
+    console.log(
+      `⚡ 创意生成模式: ${generationMode} (maxRetries=${effectiveMaxRetries}, delayMs=${generationProfile.delayMs}, supplementation=${generationProfile.enableSupplementation})`
+    )
     if (!selectedBucket || !bucketInfo) {
       throw new Error('关键词桶上下文未初始化')
     }
 
-    let usedKeywords: string[] = []
-    const brandKeywords = buildCreativeBrandKeywords(offer.brand)
-    const offerAny = offer as any
     const currentBucketInfo: { keywords: PoolKeywordData[]; intent: string; intentEn: string } = bucketInfo
-    const rawBucketKeywords = currentBucketInfo.keywords
-    const seedCandidates = Array.isArray(rawBucketKeywords)
-      ? rawBucketKeywords as Array<Record<string, any>>
-      : []
-    const selectedCreativeType = selectedBucket
-      ? getCreativeTypeForBucketSlot(selectedBucket as 'A' | 'B' | 'D')
-      : null
-    const keywordPoolVolumeHints = buildKeywordPoolVolumeHintMap(keywordPool)
-    const precomputedKeywordSet = await buildPreGenerationCreativeKeywordSet({
+    const preparedBucketContext = await prepareBucketKeywordContext({
       offer,
       userId: task.userId,
-      creativeType: selectedCreativeType,
-      bucket: (selectedBucket || null) as any,
+      offerId,
+      bucket: selectedBucket as CreativeBucketSlot,
+      generationProfile,
       scopeLabel: selectedBucket ? `桶${selectedBucket}` : '默认',
-      seedCandidates,
-      enableSupplementation: Boolean(selectedBucket),
-      continueOnSupplementError: true,
+      bucketInfo: currentBucketInfo,
     })
 
-    const generationResult = await runCreativeGenerationQualityLoop<Awaited<ReturnType<typeof generateAdCreative>>>({
+    const generationHeartbeatTimers = new Map<number, NodeJS.Timeout>()
+    const evaluationHeartbeatTimers = new Map<number, NodeJS.Timeout>()
+
+    const generationResult = await runBucketCreativeGeneration({
+      offerId,
+      userId: task.userId,
+      offer,
+      bucket: selectedBucket as CreativeBucketSlot,
+      generationProfile,
       maxRetries: effectiveMaxRetries,
-      delayMs: 1000,
-      generate: async ({ attempt, retryFailureType }) => {
-        const attemptBaseProgress = 10 + (attempt - 1) * 25
-        const bucketLabel = selectedBucket ? ` [桶${selectedBucket}]` : ''
-        const generationMessageBase = `第${attempt}次生成${bucketLabel}: AI正在创作广告文案...`
-        const generationStartedAt = Date.now()
-        let generationHeartbeatTimer: NodeJS.Timeout | null = null
-        const updateGenerationHeartbeat = async () => {
-          const elapsedSeconds = Math.floor((Date.now() - generationStartedAt) / 1000)
-          await db.exec(`
-            UPDATE creative_tasks
-            SET stage = 'generating', progress = ?, message = ?, current_attempt = ?, updated_at = ${nowFunc}
-            WHERE id = ?
-          `, [attemptBaseProgress, `${generationMessageBase} (${elapsedSeconds}s)`, attempt, task.id])
-        }
-        await updateGenerationHeartbeat()
-        generationHeartbeatTimer = setInterval(() => {
-          void updateGenerationHeartbeat().catch((heartbeatError: any) => {
-            console.warn(`⚠️ 创意生成心跳更新失败: ${task.id}: ${heartbeatError?.message || heartbeatError}`)
-          })
-        }, creativeTaskHeartbeatMs)
-
-        let creative: Awaited<ReturnType<typeof generateAdCreative>>
-        try {
-          creative = await generateAdCreative(
-            offerId,
-            task.userId,
-            {
-              skipCache: true,
-              excludeKeywords: attempt > 1 ? usedKeywords : undefined,
-              retryFailureType,
-              keywordPool: keywordPool || undefined,
-              bucket: selectedBucket || undefined,
-              searchTermFeedbackHints,
-              bucketKeywords: currentBucketInfo.keywords.map((kw) => typeof kw === 'string' ? kw : kw.keyword),
-              bucketIntent: currentBucketInfo.intent,
-              bucketIntentEn: currentBucketInfo.intentEn,
-              deferKeywordPostProcessingToBuilder: true,
-              precomputedKeywordSet,
-              // 🔥 2026-03-13: 移除 deferKeywordSupplementation，让缺口分析始终执行
-              // deferKeywordSupplementation: Boolean(bucketInfo?.keywords && bucketInfo.keywords.length > 0)
-            }
-          )
-        } finally {
-          if (generationHeartbeatTimer) {
-            clearInterval(generationHeartbeatTimer)
-            generationHeartbeatTimer = null
+      scopeLabel: selectedBucket ? `桶${selectedBucket}` : '默认',
+      keywordPool,
+      searchTermFeedbackHints,
+      loadSearchTermFeedbackHints: false,
+      skipCache: true,
+      keywordPostProcessMode: 'applyPrecomputed',
+      hardPersistenceGateEnabled,
+      preparedBucketContext,
+      hooks: {
+        onBeforeGenerate: async ({ attempt }) => {
+          const attemptBaseProgress = 10 + (attempt - 1) * 25
+          const bucketLabel = selectedBucket ? ` [桶${selectedBucket}]` : ''
+          const generationMessageBase = `第${attempt}次生成${bucketLabel}: AI正在创作广告文案...`
+          const generationStartedAt = Date.now()
+          const updateGenerationHeartbeat = async () => {
+            const elapsedSeconds = Math.floor((Date.now() - generationStartedAt) / 1000)
+            await db.exec(`
+              UPDATE creative_tasks
+              SET stage = 'generating', progress = ?, message = ?, current_attempt = ?, updated_at = ${nowFunc}
+              WHERE id = ?
+            `, [attemptBaseProgress, `${generationMessageBase} (${elapsedSeconds}s)`, attempt, task.id])
           }
-        }
-
-        if (
-          Array.isArray(creative.keywordsWithVolume)
-          && creative.keywordsWithVolume.length > 0
-          && precomputedKeywordSet.contextFallbackStrategy !== 'filtered'
-        ) {
-          console.warn(
-            precomputedKeywordSet.contextFallbackStrategy === 'keyword_pool'
-              ? '⚠️ 创意关键词上下文过滤后为空，回退关键词池候选'
-              : '⚠️ 创意关键词上下文过滤后为空，回退原候选关键词'
-          )
-        }
-
-        await finalizeCreativeKeywordSet({
-          offer,
-          userId: task.userId,
-          creative,
-          creativeType: selectedCreativeType,
-          bucket: (selectedBucket || null) as any,
-          scopeLabel: selectedBucket ? `桶${selectedBucket}-final` : '默认-final',
-          seedCandidates,
-        })
-        backfillCreativeKeywordVolumesFromPoolHints(
-          creative,
-          keywordPoolVolumeHints,
-          selectedBucket ? `桶${selectedBucket}-final` : '默认-final'
-        )
-
-        const executableKeywordCount = Array.isArray(creative.keywords)
-          ? creative.keywords.length
-          : 0
-        if (executableKeywordCount === 0) {
-          throw new Error(
-            `关键词筛选后为空（bucket=${selectedBucket || 'unknown'}），中止本轮并触发重试`
-          )
-        }
-
-        usedKeywords = mergeUsedKeywordsExcludingBrand({
-          usedKeywords,
-          candidateKeywords: resolveCreativeKeywordsForRetryExclusion(creative),
-          brandKeywords,
-        })
-
-        return creative
-      },
-      evaluate: async (creative, { attempt }) => {
-        const attemptBaseProgress = 10 + (attempt - 1) * 25
-        const evaluationMessageBase = `第${attempt}次生成: 评估创意质量...`
-        const evaluationStartedAt = Date.now()
-        let evaluationHeartbeatTimer: NodeJS.Timeout | null = null
-        const updateEvaluationHeartbeat = async () => {
-          const elapsedSeconds = Math.floor((Date.now() - evaluationStartedAt) / 1000)
-          await db.exec(`
-            UPDATE creative_tasks
-            SET stage = 'evaluating', progress = ?, message = ?, updated_at = ${nowFunc}
-            WHERE id = ?
-          `, [attemptBaseProgress + 10, `${evaluationMessageBase} (${elapsedSeconds}s)`, task.id])
-        }
-        await updateEvaluationHeartbeat()
-        evaluationHeartbeatTimer = setInterval(() => {
-          void updateEvaluationHeartbeat().catch((heartbeatError: any) => {
-            console.warn(`⚠️ 创意评估心跳更新失败: ${task.id}: ${heartbeatError?.message || heartbeatError}`)
-          })
-        }, creativeTaskHeartbeatMs)
-
-        try {
-          const qualityEvaluation = await evaluateCreativeForQuality(createCreativeQualityEvaluationInput({
-            creative,
-            minimumScore: AD_CREATIVE_REQUIRED_MIN_SCORE,
-            offer,
-            userId: task.userId,
-            bucket: selectedBucket || null,
-            creativeType: selectedCreativeType,
-            keywords: creative.keywords || [],
-            productNameFallback: offerAny.product_title || offerAny.name,
-            productTitleFallback: offerAny.title,
-          }))
-
-          let evaluation = qualityEvaluation
-          let attemptPersistenceGateResult: ReturnType<typeof evaluateCreativePersistenceHardGate> | null = null
-          if (hardPersistenceGateEnabled) {
-            attemptPersistenceGateResult = evaluateCreativePersistenceHardGate({
-              creative,
-              bucket: selectedBucket || null,
-              targetLanguage: offer.target_language,
-              brandName: offer.brand,
+          await updateGenerationHeartbeat()
+          const timer = setInterval(() => {
+            void updateGenerationHeartbeat().catch((heartbeatError: any) => {
+              console.warn(`⚠️ 创意生成心跳更新失败: ${task.id}: ${heartbeatError?.message || heartbeatError}`)
             })
-            if (!attemptPersistenceGateResult.passed) {
-              const persistenceReasons = attemptPersistenceGateResult.violations.map(
-                (item) => `persistence:${item.code}`
-              )
-              evaluation = {
-                ...qualityEvaluation,
-                passed: false,
-                failureType: qualityEvaluation.failureType || 'format_fail',
-                reasons: [...qualityEvaluation.reasons, ...persistenceReasons],
-              }
-            }
+          }, creativeTaskHeartbeatMs)
+          generationHeartbeatTimers.set(attempt, timer)
+        },
+        onAfterGenerate: async ({ attempt }) => {
+          const timer = generationHeartbeatTimers.get(attempt)
+          if (timer) {
+            clearInterval(timer)
+            generationHeartbeatTimers.delete(attempt)
           }
-
-          const evaluationSummaryMessage = attemptPersistenceGateResult && !attemptPersistenceGateResult.passed
+        },
+        onBeforeEvaluate: async ({ attempt }) => {
+          const attemptBaseProgress = 10 + (attempt - 1) * 25
+          const evaluationMessageBase = `第${attempt}次生成: 评估创意质量...`
+          const evaluationStartedAt = Date.now()
+          const updateEvaluationHeartbeat = async () => {
+            const elapsedSeconds = Math.floor((Date.now() - evaluationStartedAt) / 1000)
+            await db.exec(`
+              UPDATE creative_tasks
+              SET stage = 'evaluating', progress = ?, message = ?, updated_at = ${nowFunc}
+              WHERE id = ?
+            `, [attemptBaseProgress + 10, `${evaluationMessageBase} (${elapsedSeconds}s)`, task.id])
+          }
+          await updateEvaluationHeartbeat()
+          const timer = setInterval(() => {
+            void updateEvaluationHeartbeat().catch((heartbeatError: any) => {
+              console.warn(`⚠️ 创意评估心跳更新失败: ${task.id}: ${heartbeatError?.message || heartbeatError}`)
+            })
+          }, creativeTaskHeartbeatMs)
+          evaluationHeartbeatTimers.set(attempt, timer)
+        },
+        onAfterEvaluate: async ({ attempt, evaluation }) => {
+          const timer = evaluationHeartbeatTimers.get(attempt)
+          if (timer) {
+            clearInterval(timer)
+            evaluationHeartbeatTimers.delete(attempt)
+          }
+          const attemptBaseProgress = 10 + (attempt - 1) * 25
+          const hasPersistenceFailure = evaluation.reasons.some((reason) => reason.startsWith('persistence:'))
+          const evaluationSummaryMessage = hasPersistenceFailure
             ? `第${attempt}次生成: ${evaluation.adStrength.finalRating} (${evaluation.adStrength.finalScore}分)，门禁预检未过`
             : `第${attempt}次生成: ${evaluation.adStrength.finalRating} (${evaluation.adStrength.finalScore}分)`
-
           await db.exec(`
             UPDATE creative_tasks
             SET progress = ?, message = ?, updated_at = ${nowFunc}
             WHERE id = ?
           `, [attemptBaseProgress + 18, evaluationSummaryMessage, task.id])
-          return evaluation
-        } finally {
-          if (evaluationHeartbeatTimer) {
-            clearInterval(evaluationHeartbeatTimer)
-            evaluationHeartbeatTimer = null
-          }
-        }
-      }
+        },
+      },
     })
 
     const attempts = generationResult.attempts
@@ -768,11 +588,7 @@ export async function executeAdCreativeGeneration(
     const bestEvaluation = selectedEvaluation.adStrength
     const bestCreativeAudit = resolveCreativeKeywordAudit(bestCreative)
     const retryHistory = createCreativeTaskRetryHistory(generationResult.history)
-    const qualityGatePassed = (
-      selectedEvaluation.rsaGate !== undefined || selectedEvaluation.ruleGate !== undefined
-    )
-      ? Boolean(selectedEvaluation.rsaGate?.passed) && Boolean(selectedEvaluation.ruleGate?.passed)
-      : Boolean(selectedEvaluation.passed)
+    const qualityGatePassed = Boolean(selectedEvaluation.passed)
     const qualityWarning = !qualityGatePassed
 
     const qualityGateBypassed = qualityWarning && hardQualityGateEnabled && qualityGateBypassRequested
@@ -834,34 +650,18 @@ export async function executeAdCreativeGeneration(
       console.warn(`⚠️ 创意未达 GOOD 阈值，已保存最佳结果: ${bestEvaluation.finalRating} (${bestEvaluation.finalScore})`)
     }
 
-    if (hardPersistenceGateEnabled) {
-      const persistenceGateResult = evaluateCreativePersistenceHardGate({
-        creative: bestCreative,
-        bucket: selectedBucket || null,
-        targetLanguage: offer.target_language,
-        brandName: offer.brand,
-      })
-      if (!persistenceGateResult.passed) {
-        const persistenceGateError = new Error(
-          `创意落库门禁未通过: ${persistenceGateResult.violations.map((item) => item.code).join(', ')}`
-        ) as Error & {
-          code?: string
-          category?: string
-          userMessage?: string
-          retryable?: boolean
-          details?: Record<string, unknown>
-        }
-        persistenceGateError.code = 'CREATIVE_PERSISTENCE_GATE_FAILED'
-        persistenceGateError.category = 'validation'
-        persistenceGateError.userMessage = '创意落库门禁未通过，任务已标记失败。'
-        persistenceGateError.retryable = true
-        persistenceGateError.details = {
-          attempts,
-          ...persistenceGateResult,
-        }
-        throw persistenceGateError
-      }
-    }
+    assertPostGenerationPersistenceGate({
+      enabled: hardPersistenceGateEnabled,
+      creative: bestCreative,
+      bucket: selectedBucket || null,
+      offer,
+      attempts,
+      envelope: {
+        category: 'validation',
+        userMessage: '创意落库门禁未通过，任务已标记失败。',
+        retryable: true,
+      },
+    })
 
     // 更新进度：保存中
     await db.exec(`
@@ -903,6 +703,7 @@ export async function executeAdCreativeGeneration(
           ai_model = ?,
           ad_strength_data = ?,
           creative_type = ?,
+          generation_mode = ?,
           creation_status = 'draft',
           updated_at = ${nowFunc}
         WHERE id = ?
@@ -932,6 +733,7 @@ export async function executeAdCreativeGeneration(
         selectedBucket
           ? getCreativeTypeForBucketSlot(selectedBucket as 'A' | 'B' | 'D')
           : null,
+        generationMode,
         placeholderCreativeId
       ])
       
@@ -971,7 +773,8 @@ export async function executeAdCreativeGeneration(
           : undefined,
         keyword_bucket: selectedBucket || undefined,
         keyword_pool_id: keywordPool?.id || undefined,
-        bucket_intent: currentBucketInfo.intent || undefined
+        bucket_intent: currentBucketInfo.intent || undefined,
+        generation_mode: generationMode,
       })
     }
 
@@ -993,6 +796,7 @@ export async function executeAdCreativeGeneration(
         qualityGatePassed: selectedEvaluation.passed,
         history: retryHistory
       }),
+      generationMode,
       qualityGate: {
         passed: qualityGatePassed,
         bypassed: qualityGateBypassed,

@@ -1,27 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers'
 import { getDatabase } from '@/lib/db'
-import { generateAdCreative } from '@/lib/ad-creative-generator'
 import { createAdCreative } from '@/lib/ad-creative'
 import { type ComprehensiveAdStrengthResult } from '@/lib/scoring'
 import {
-  applyCreativeKeywordSetToCreative,
   buildPreGenerationCreativeKeywordSet,
-  buildCreativeBrandKeywords,
   createCreativeAdStrengthPayload,
-  createCreativeQualityEvaluationInput,
-  evaluateCreativePersistenceHardGate,
   createCreativeScoreBreakdown,
-  mergeUsedKeywordsExcludingBrand,
   resolveCreativeKeywordAudit,
-  resolveCreativeKeywordsForRetryExclusion,
 } from '@/lib/creative-keyword-runtime'
 import {
-  AD_CREATIVE_MAX_AUTO_RETRIES,
-  AD_CREATIVE_REQUIRED_MIN_SCORE,
-  evaluateCreativeForQuality,
-  runCreativeGenerationQualityLoop
-} from '@/lib/ad-creative-quality-loop'
+  CREATIVE_GENERATION_MODE_INVALID_MESSAGE,
+  resolveCreativeGenerationRuntime,
+  type AdCreativeGenerationMode,
+  type AdCreativeGenerationModeProfile,
+} from '@/lib/ad-creative-generation-mode'
+import { AD_CREATIVE_REQUIRED_MIN_SCORE } from '@/lib/ad-creative-quality-loop'
+import {
+  assertPostGenerationPersistenceGate,
+  normalizePipelineBucket,
+  runBucketCreativeGeneration,
+  type BucketKeywordContext,
+} from '@/lib/bucket-creative-generation-pipeline'
 import {
   getOrCreateKeywordPool,
   getKeywordPoolByOfferId,
@@ -61,25 +61,6 @@ function parseBooleanEnv(value: unknown, fallback: boolean): boolean {
   return parseBooleanFlag(value)
 }
 
-function createCreativePersistenceGateError(params: {
-  bucket: BucketType
-  attempts: number
-  details: ReturnType<typeof evaluateCreativePersistenceHardGate>
-}) {
-  const error = new Error(
-    `创意落库门禁未通过: ${params.details.violations.map((item) => item.code).join(', ')}`
-  ) as Error & {
-    code?: string
-    details?: Record<string, unknown>
-  }
-  error.code = 'CREATIVE_PERSISTENCE_GATE_FAILED'
-  error.details = {
-    attempts: params.attempts,
-    ...params.details,
-  }
-  return error
-}
-
 function createCreativeQualityGateError(params: {
   bucket: BucketType
   attempts: number
@@ -106,6 +87,20 @@ function createCreativeQualityGateError(params: {
     requiredMinimumScore: params.requiredMinimumScore,
   }
   return error
+}
+
+function resolveDifferentiatedGenerationBucket(rawBucket: unknown, offer: any): BucketType | null {
+  const upper = String(rawBucket || '').trim().toUpperCase()
+  const slotBucket = normalizeRequestedBucketForOffer(rawBucket, offer)
+  if (!slotBucket) return null
+
+  if (upper === 'C' && slotBucket === 'B') return 'C'
+  if (upper === 'S' && slotBucket === 'D') return 'S'
+  return slotBucket
+}
+
+function resolveDifferentiatedSlotBucket(generationBucket: BucketType, offer: any): BucketType | null {
+  return normalizeRequestedBucketForOffer(generationBucket, offer)
 }
 
 function normalizeRequestedBucketForOffer(rawBucket: unknown, offer: any): BucketType | null {
@@ -208,19 +203,19 @@ export async function POST(
 
     // 解析请求体
     const body = await request.json().catch(() => ({}))
+    const { runtime, invalidMode } = resolveCreativeGenerationRuntime(body)
+    if (invalidMode) {
+      return NextResponse.json(
+        { error: CREATIVE_GENERATION_MODE_INVALID_MESSAGE },
+        { status: 400 }
+      )
+    }
+    const { mode: generationMode, profile: generationProfile, maxRetries: normalizedMaxRetries } = runtime
     const {
       buckets: requestedBuckets,
       creativeTypes: requestedCreativeTypes,
       creativeType: requestedCreativeType,
-      maxRetries = AD_CREATIVE_MAX_AUTO_RETRIES,
     } = body
-    const normalizedMaxRetries = Math.max(
-      0,
-      Math.min(
-        AD_CREATIVE_MAX_AUTO_RETRIES,
-        Number.isFinite(Number(maxRetries)) ? Math.floor(Number(maxRetries)) : AD_CREATIVE_MAX_AUTO_RETRIES
-      )
-    )
     const hardPersistenceGateEnabled = parseBooleanEnv(
       process.env.AD_CREATIVE_HARD_PERSISTENCE_GATE_ENABLED,
       true
@@ -234,7 +229,7 @@ export async function POST(
     console.log(`\n🎨 POST /api/offers/${offerId}/creatives/generate-differentiated`)
     console.log(`   requestedBuckets: ${requestedBuckets ? requestedBuckets.join(', ') : '自动选择'}`)
     console.log(`   requestedCreativeTypes: ${requestedCreativeTypes ? requestedCreativeTypes.join(', ') : requestedCreativeType || '未指定'}`)
-    console.log(`   maxRetries: ${normalizedMaxRetries}`)
+    console.log(`   generationMode: ${generationMode}, maxRetries: ${normalizedMaxRetries}`)
     console.log(`   forceRegeneratePool: ${forceRegeneratePool}`)
 
     if (forceRegeneratePool) {
@@ -313,13 +308,16 @@ export async function POST(
     let bucketsToGenerate: BucketType[]
     if (requestedBuckets && Array.isArray(requestedBuckets)) {
       const requestedBucketsFromLegacyBucket = dedupeBuckets(requestedBuckets
-        .map((b: unknown) => normalizeRequestedBucketForOffer(b, offer))
+        .map((b: unknown) => resolveDifferentiatedGenerationBucket(b, offer))
       )
       const deduped = requestedBucketsFromLegacyBucket
+      const dedupedSlotBuckets = dedupeBuckets(requestedBuckets
+        .map((b: unknown) => normalizeRequestedBucketForOffer(b, offer))
+      )
 
       if (
         requestedBucketsFromCreativeType.length > 0 &&
-        !sameBucketSet(deduped, requestedBucketsFromCreativeType)
+        !sameBucketSet(dedupedSlotBuckets, requestedBucketsFromCreativeType)
       ) {
         return NextResponse.json({
           success: false,
@@ -331,8 +329,11 @@ export async function POST(
         }, { status: 400 })
       }
 
-      // 验证请求的桶是否可用（按KISS-3类型）
-      const invalidBuckets = deduped.filter((b: BucketType) => !availableBuckets.includes(b))
+      // 验证请求的桶是否可用（按 KISS-3 槽位；legacy C/S 映射到 B/D 槽位校验）
+      const invalidBuckets = deduped.filter((generationBucket: BucketType) => {
+        const slotBucket = resolveDifferentiatedSlotBucket(generationBucket, offer)
+        return !slotBucket || !availableBuckets.includes(slotBucket)
+      })
       if (invalidBuckets.length > 0) {
         return NextResponse.json({
           success: false,
@@ -386,12 +387,14 @@ export async function POST(
           bucket,
           bucketInfo,
           normalizedMaxRetries,
+          generationProfile,
+          generationMode,
           hardPersistenceGateEnabled,
           hardQualityGateEnabled
         )
 
         results.push({
-          bucket,
+          bucket: creativeResult.creative.keyword_bucket ?? normalizePipelineBucket(bucket) ?? bucket,
           creative: creativeResult.creative,
           evaluation: creativeResult.evaluation,
           success: true
@@ -458,6 +461,7 @@ export async function POST(
 
     return NextResponse.json({
       success: failCount === 0,
+      generationMode,
       message: failCount === 0
         ? `成功生成 ${successCount} 个差异化创意`
         : `生成 ${successCount} 个成功, ${failCount} 个失败`,
@@ -554,55 +558,44 @@ async function runCreativeGenerationPass(params: {
   bucket: BucketType
   bucketInfo: { keywords: PoolKeywordData[]; intent: string; intentEn: string }
   maxRetries: number
+  generationProfile: AdCreativeGenerationModeProfile
   precomputedKeywordSet: Awaited<ReturnType<typeof buildPreGenerationCreativeKeywordSet>>
-  brandKeywords: string[]
   keywordStrings: string[]
+  seedCandidates: Array<Record<string, unknown>>
+  scopeLabel: string
 }): Promise<CreativeGenerationPassResult> {
-  let usedKeywords: string[] = []
-  const loopResult = await runCreativeGenerationQualityLoop({
+  const pipelineBucket = normalizePipelineBucket(params.bucket)
+  if (!pipelineBucket) {
+    throw new Error(`桶 ${params.bucket} 无法映射到管线槽位`)
+  }
+
+  const creativeType = getCreativeTypeForBucketSlot(pipelineBucket)
+  const preparedBucketContext: BucketKeywordContext = {
+    bucket: pipelineBucket,
+    creativeType,
+    bucketIntent: params.bucketInfo.intent,
+    bucketIntentEn: params.bucketInfo.intentEn,
+    bucketKeywords: params.keywordStrings,
+    seedCandidates: params.seedCandidates,
+    precomputedKeywordSet: params.precomputedKeywordSet,
+  }
+
+  const loopResult = await runBucketCreativeGeneration({
+    offerId: params.offerId,
+    userId: params.userId,
+    offer: params.offer,
+    bucket: pipelineBucket,
+    generationBucket: params.bucket,
+    generationProfile: params.generationProfile,
     maxRetries: params.maxRetries,
-    delayMs: 1000,
-    generate: async ({ attempt, retryFailureType }) => {
-      const creative = await generateAdCreative(params.offerId, params.userId, {
-        theme: `${params.bucketInfo.intent} - ${params.bucketInfo.intentEn}`,
-        skipCache: attempt > 1,
-        excludeKeywords: attempt > 1 ? usedKeywords : undefined,
-        retryFailureType,
-        keywordPool: params.pool,
-        bucket: params.bucket,
-        bucketKeywords: params.keywordStrings,
-        bucketIntent: params.bucketInfo.intent,
-        bucketIntentEn: params.bucketInfo.intentEn,
-        deferKeywordPostProcessingToBuilder: true,
-        precomputedKeywordSet: params.precomputedKeywordSet,
-      })
-
-      applyCreativeKeywordSetToCreative(creative, {
-        executableKeywords: params.precomputedKeywordSet.executableKeywords,
-        keywordsWithVolume: params.precomputedKeywordSet.keywordsWithVolume,
-        promptKeywords: params.precomputedKeywordSet.promptKeywords,
-        keywordSupplementation: params.precomputedKeywordSet.keywordSupplementation,
-        audit: params.precomputedKeywordSet.audit,
-      })
-
-      usedKeywords = mergeUsedKeywordsExcludingBrand({
-        usedKeywords,
-        candidateKeywords: resolveCreativeKeywordsForRetryExclusion(creative),
-        brandKeywords: params.brandKeywords,
-      })
-
-      return creative
-    },
-    evaluate: async (creative) => evaluateCreativeForQuality(createCreativeQualityEvaluationInput({
-      creative,
-      minimumScore: AD_CREATIVE_REQUIRED_MIN_SCORE,
-      offer: params.offer,
-      userId: params.userId,
-      bucket: params.bucket,
-      keywords: creative.keywords || [],
-      productNameFallback: params.offer.product_title || params.offer.name,
-      productTitleFallback: params.offer.title,
-    }))
+    scopeLabel: params.scopeLabel,
+    keywordPool: params.pool,
+    loadSearchTermFeedbackHints: false,
+    skipCacheOnRetryOnly: true,
+    keywordPostProcessMode: 'applyPrecomputed',
+    preparedBucketContext,
+    hardPersistenceGateEnabled: false,
+    theme: `${params.bucketInfo.intent} - ${params.bucketInfo.intentEn}`,
   })
 
   const bestCreative = loopResult.selectedCreative
@@ -652,18 +645,19 @@ function resolveCreativeHardGateFailure(params: {
   }
 
   if (params.hardPersistenceGateEnabled) {
-    const persistenceGateResult = evaluateCreativePersistenceHardGate({
-      creative: params.bestCreative,
-      bucket: params.bucket,
-      targetLanguage: params.targetLanguage,
-      brandName: params.brandName,
-    })
-    if (!persistenceGateResult.passed) {
-      return createCreativePersistenceGateError({
+    try {
+      assertPostGenerationPersistenceGate({
+        enabled: true,
+        creative: params.bestCreative,
         bucket: params.bucket,
+        offer: {
+          target_language: params.targetLanguage,
+          brand: params.brandName,
+        } as any,
         attempts: params.attempts,
-        details: persistenceGateResult,
       })
+    } catch (error) {
+      return error as CreativeHardGateFailure
     }
   }
 
@@ -681,6 +675,8 @@ async function generateCreativeWithBucket(
   bucket: BucketType,
   bucketInfo: { keywords: PoolKeywordData[]; intent: string; intentEn: string },
   maxRetries: number,
+  generationProfile: AdCreativeGenerationModeProfile,
+  generationMode: AdCreativeGenerationMode,
   hardPersistenceGateEnabled: boolean,
   hardQualityGateEnabled: boolean
 ): Promise<{
@@ -689,8 +685,11 @@ async function generateCreativeWithBucket(
 }> {
   const seedCandidates = Array.isArray(bucketInfo.keywords) ? bucketInfo.keywords : []
   const keywordStrings = seedCandidates.map(kw => typeof kw === 'string' ? kw : kw.keyword)
-  const brandKeywords = buildCreativeBrandKeywords(offer.brand)
-  const creativeType = getCreativeTypeForBucketSlot(bucket as 'A' | 'B' | 'D')
+  const pipelineBucket = normalizePipelineBucket(bucket)
+  if (!pipelineBucket) {
+    throw new Error(`桶 ${bucket} 无法映射到管线槽位`)
+  }
+  const creativeType = getCreativeTypeForBucketSlot(pipelineBucket)
   const hardGateRetryOnceEnabled = parseBooleanEnv(
     process.env.AD_CREATIVE_HARD_GATE_RETRY_ONCE_ENABLED,
     true
@@ -703,7 +702,8 @@ async function generateCreativeWithBucket(
     bucket,
     scopeLabel: buildDifferentiatedScopeLabel(bucket, stage),
     seedCandidates: seedCandidates as Array<Record<string, any>>,
-    enableSupplementation: true,
+    enableSupplementation: generationProfile.enableSupplementation,
+    skipSupplementAiRanking: generationProfile.skipSupplementAiRanking,
     continueOnSupplementError: true,
   })
 
@@ -717,15 +717,17 @@ async function generateCreativeWithBucket(
       bucket,
       bucketInfo,
       maxRetries,
+      generationProfile,
       precomputedKeywordSet,
-      brandKeywords,
       keywordStrings,
+      seedCandidates: seedCandidates as unknown as Array<Record<string, unknown>>,
+      scopeLabel: buildDifferentiatedScopeLabel(bucket, stage),
     })
   }
 
   let generationPass = await runGenerationPass('initial')
   let hardGateFailure = resolveCreativeHardGateFailure({
-    bucket,
+    bucket: pipelineBucket,
     attempts: generationPass.loopResult.attempts,
     bestCreative: generationPass.bestCreative,
     selectedEvaluation: generationPass.selectedEvaluation,
@@ -742,7 +744,7 @@ async function generateCreativeWithBucket(
     )
     generationPass = await runGenerationPass('hard-gate-retry')
     hardGateFailure = resolveCreativeHardGateFailure({
-      bucket,
+      bucket: pipelineBucket,
       attempts: generationPass.loopResult.attempts,
       bestCreative: generationPass.bestCreative,
       selectedEvaluation: generationPass.selectedEvaluation,
@@ -770,10 +772,11 @@ async function generateCreativeWithBucket(
       score: generationPass.evaluation.finalScore,
       score_breakdown: createCreativeScoreBreakdown(generationPass.evaluation),
       creative_type: creativeType,
-      keyword_bucket: bucket,
+      keyword_bucket: pipelineBucket,
       keyword_pool_id: pool.id,
       bucket_intent: bucketInfo.intent,
-      adStrength: createCreativeAdStrengthPayload(generationPass.evaluation, generationPass.bestCreativeAudit)
+      adStrength: createCreativeAdStrengthPayload(generationPass.evaluation, generationPass.bestCreativeAudit),
+      generation_mode: generationMode,
     }
   )
 
@@ -781,7 +784,7 @@ async function generateCreativeWithBucket(
     creative: {
       ...savedCreative,
       creative_type: creativeType,
-      keyword_bucket: bucket,
+      keyword_bucket: pipelineBucket,
       bucket_intent: bucketInfo.intent,
       keywordSupplementation: generationPass.bestCreative.keywordSupplementation || null,
       audit: generationPass.bestCreativeAudit,

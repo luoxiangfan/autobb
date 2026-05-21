@@ -43,6 +43,7 @@ describe('GET /api/offers/:id/creatives', () => {
         final_url: 'https://example.com/store',
         score: 83,
         creation_status: 'draft',
+        generation_mode: 'balanced',
         created_at: '2026-03-17T00:00:00.000Z',
       },
     ])
@@ -63,5 +64,6 @@ describe('GET /api/offers/:id/creatives', () => {
     expect(payload.data.creatives).toHaveLength(1)
     expect(payload.data.creatives[0].creativeType).toBe('product_intent')
     expect(payload.data.creatives[0].keywordBucket).toBe('D')
+    expect(payload.data.creatives[0].generationMode).toBe('balanced')
   })
 })

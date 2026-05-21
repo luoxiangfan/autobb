@@ -21,6 +21,10 @@ const qualityLoopFns = vi.hoisted(() => ({
   runCreativeGenerationQualityLoop: vi.fn(),
 }))
 
+const pipelineFns = vi.hoisted(() => ({
+  runBucketCreativeGeneration: vi.fn(),
+}))
+
 const selectionFns = vi.hoisted(() => ({
   selectCreativeKeywords: vi.fn(),
 }))
@@ -67,6 +71,14 @@ vi.mock('@/lib/ad-creative-quality-loop', () => ({
   evaluateCreativeForQuality: qualityLoopFns.evaluateCreativeForQuality,
   runCreativeGenerationQualityLoop: qualityLoopFns.runCreativeGenerationQualityLoop,
 }))
+
+vi.mock('@/lib/bucket-creative-generation-pipeline', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/bucket-creative-generation-pipeline')>()
+  return {
+    ...actual,
+    runBucketCreativeGeneration: pipelineFns.runBucketCreativeGeneration,
+  }
+})
 
 vi.mock('@/lib/creative-keyword-selection', () => ({
   CREATIVE_BRAND_KEYWORD_RESERVE: 4,
@@ -169,9 +181,21 @@ describe('POST /api/offers/:id/creatives/generate-differentiated', () => {
       })),
       truncated: false,
     }))
-    qualityLoopFns.runCreativeGenerationQualityLoop.mockImplementation(async ({ generate }: any) => {
-      const creative = await generate({ attempt: 1, retryFailureType: undefined })
+    pipelineFns.runBucketCreativeGeneration.mockImplementation(async (params: any) => {
+      const creative = await generatorFns.generateAdCreative(params.offerId, params.userId, {
+        theme: params.theme,
+        bucket: params.generationBucket ?? params.bucket,
+        bucketKeywords: params.preparedBucketContext?.bucketKeywords,
+        bucketIntent: params.preparedBucketContext?.bucketIntent,
+        bucketIntentEn: params.preparedBucketContext?.bucketIntentEn,
+        deferKeywordPostProcessingToBuilder: true,
+        precomputedKeywordSet: params.preparedBucketContext?.precomputedKeywordSet,
+        searchTermFeedbackHints: params.searchTermFeedbackHints,
+      })
       return {
+        attempts: 1,
+        maxRetries: 2,
+        accepted: true,
         selectedCreative: creative,
         selectedEvaluation: {
           passed: true,
@@ -192,7 +216,7 @@ describe('POST /api/offers/:id/creatives/generate-differentiated', () => {
             combinedSuggestions: [],
           },
         },
-        attempts: 1,
+        history: [],
       }
     })
     generatorFns.createAdCreative.mockImplementation(async (_userId: number, _offerId: number, data: any) => ({
@@ -465,7 +489,7 @@ describe('POST /api/offers/:id/creatives/generate-differentiated', () => {
   })
 
   it('returns 422 and skips persistence when hard quality gate still fails after one retry', async () => {
-    qualityLoopFns.runCreativeGenerationQualityLoop.mockResolvedValue({
+    pipelineFns.runBucketCreativeGeneration.mockResolvedValue({
       selectedCreative: {
         headlines: ['BrandX X200 Vacuum', 'Buy BrandX X200', 'X200 Robot Vacuum'],
         descriptions: ['Deep clean with X200.', 'Shop verified BrandX model.'],
@@ -517,12 +541,12 @@ describe('POST /api/offers/:id/creatives/generate-differentiated', () => {
     expect(data.error).toEqual(expect.objectContaining({
       code: 'CREATIVE_QUALITY_GATE_FAILED',
     }))
-    expect(qualityLoopFns.runCreativeGenerationQualityLoop).toHaveBeenCalledTimes(2)
+    expect(pipelineFns.runBucketCreativeGeneration).toHaveBeenCalledTimes(2)
     expect(generatorFns.createAdCreative).not.toHaveBeenCalled()
   })
 
   it('retries once with refreshed keyword set when hard gate fails and succeeds on second pass', async () => {
-    qualityLoopFns.runCreativeGenerationQualityLoop
+    pipelineFns.runBucketCreativeGeneration
       .mockResolvedValueOnce({
         selectedCreative: {
           headlines: ['BrandX X200 Vacuum', 'Buy BrandX X200', 'X200 Robot Vacuum'],
@@ -604,7 +628,194 @@ describe('POST /api/offers/:id/creatives/generate-differentiated', () => {
 
     expect(res.status).toBe(200)
     expect(data.success).toBe(true)
-    expect(qualityLoopFns.runCreativeGenerationQualityLoop).toHaveBeenCalledTimes(2)
+    expect(pipelineFns.runBucketCreativeGeneration).toHaveBeenCalledTimes(2)
     expect(generatorFns.createAdCreative).toHaveBeenCalledTimes(1)
+  })
+
+  it('maps legacy bucket C to model_intent in generation pipeline', async () => {
+    offerFns.findOfferById.mockResolvedValueOnce({
+      id: 96,
+      user_id: 1,
+      scrape_status: 'completed',
+      product_name: 'BrandX X200 Robot Vacuum',
+      category: 'robot vacuum',
+    })
+    keywordPoolFns.getAvailableBuckets.mockResolvedValueOnce(['B', 'C', 'D'])
+    keywordPoolFns.getBucketInfo.mockImplementation((pool: unknown, bucket: string) => {
+      if (bucket === 'C') {
+        return {
+          keywords: [{ keyword: 'brandx x200 vacuum', searchVolume: 1200 }],
+          intent: '商品型号/产品族意图',
+          intentEn: 'Model Intent',
+        }
+      }
+      return {
+        keywords: [{ keyword: 'brandx x200 vacuum', searchVolume: 1200 }],
+        intent: '商品型号/产品族意图',
+        intentEn: 'Model Intent',
+      }
+    })
+
+    const req = new NextRequest('http://localhost/api/offers/96/creatives/generate-differentiated', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '1',
+      },
+      body: JSON.stringify({
+        buckets: ['C'],
+      }),
+    })
+
+    const res = await POST(req, { params: { id: '96' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(pipelineFns.runBucketCreativeGeneration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        generationBucket: 'C',
+        bucket: 'B',
+        keywordPostProcessMode: 'applyPrecomputed',
+        preparedBucketContext: expect.objectContaining({
+          creativeType: 'model_intent',
+        }),
+      })
+    )
+    expect(data.data.creatives[0].bucket).toBe('B')
+    expect(data.data.creatives[0].creative.creativeType).toBe('model_intent')
+  })
+
+  it('rejects invalid generationMode', async () => {
+    const req = new NextRequest('http://localhost/api/offers/96/creatives/generate-differentiated', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '1',
+      },
+      body: JSON.stringify({
+        generationMode: 'invalid',
+        buckets: ['B'],
+      }),
+    })
+
+    const res = await POST(req, { params: { id: '96' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.error).toContain('generationMode')
+    expect(keywordPoolFns.getOrCreateKeywordPool).not.toHaveBeenCalled()
+  })
+
+  it('returns fast generationMode and caps quality-loop retries', async () => {
+    pipelineFns.runBucketCreativeGeneration.mockImplementationOnce(async (params: any) => {
+      expect(params.maxRetries).toBe(0)
+      expect(params.generationProfile.delayMs).toBe(0)
+      const creative = await generatorFns.generateAdCreative(96, 1, {})
+      return {
+        attempts: 1,
+        maxRetries: 0,
+        accepted: true,
+        selectedCreative: creative,
+        selectedEvaluation: {
+          passed: true,
+          adStrength: {
+            finalRating: 'GOOD',
+            finalScore: 82,
+            localEvaluation: {
+              dimensions: {
+                relevance: { score: 12 },
+                quality: { score: 11 },
+                completeness: { score: 10 },
+                diversity: { score: 9 },
+                compliance: { score: 8 },
+                brandSearchVolume: { score: 7 },
+                competitivePositioning: { score: 6 },
+              },
+            },
+            combinedSuggestions: [],
+          },
+        },
+        history: [],
+      }
+    })
+
+    const req = new NextRequest('http://localhost/api/offers/96/creatives/generate-differentiated', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '1',
+      },
+      body: JSON.stringify({
+        generationMode: 'fast',
+        buckets: ['B'],
+      }),
+    })
+
+    const res = await POST(req, { params: { id: '96' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.generationMode).toBe('fast')
+    expect(generatorFns.createAdCreative).toHaveBeenCalledWith(
+      1,
+      96,
+      expect.objectContaining({
+        generation_mode: 'fast',
+      })
+    )
+  })
+
+  it('uses balanced generationMode with profile-capped maxRetries', async () => {
+    pipelineFns.runBucketCreativeGeneration.mockImplementationOnce(async (params: any) => {
+      expect(params.maxRetries).toBe(1)
+      expect(params.generationProfile.delayMs).toBe(500)
+      return {
+        selectedCreative: {
+          headlines: ['BrandX X200 Vacuum'],
+          descriptions: ['Deep clean with X200.'],
+          keywords: ['brandx x200 vacuum'],
+          theme: '商品型号/产品族意图 - Model Intent',
+        },
+        selectedEvaluation: {
+          passed: true,
+          adStrength: {
+            finalRating: 'GOOD',
+            finalScore: 82,
+            localEvaluation: {
+              dimensions: {
+                relevance: { score: 12 },
+                quality: { score: 11 },
+                completeness: { score: 10 },
+                diversity: { score: 9 },
+                compliance: { score: 8 },
+                brandSearchVolume: { score: 7 },
+                competitivePositioning: { score: 6 },
+              },
+            },
+            combinedSuggestions: [],
+          },
+        },
+        attempts: 1,
+      }
+    })
+
+    const req = new NextRequest('http://localhost/api/offers/96/creatives/generate-differentiated', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '1',
+      },
+      body: JSON.stringify({
+        generationMode: 'balanced',
+        buckets: ['B'],
+      }),
+    })
+
+    const res = await POST(req, { params: { id: '96' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.generationMode).toBe('balanced')
   })
 })

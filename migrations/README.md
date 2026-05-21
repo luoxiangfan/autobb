@@ -49,3 +49,11 @@ DATABASE_URL="$DATABASE_URL" npm run db:migrate
 ## 迁移状态追踪
 
 迁移执行记录存储在 `migration_history` 表中（两种数据库均有该表）。
+
+## 近期增量迁移
+
+| 编号 | 说明 | 部署注意 |
+|------|------|----------|
+| **247** | `ad_creatives.generation_mode`、`creative_tasks.generation_mode`（`fast` / `balanced` / `original`，默认 `original`） | 已有库须执行 `npm run db:migrate`（SQLite）或应用 `pg-migrations/247_add_ad_creative_generation_mode.pg.sql`；全新库若已用含 247 字段的 consolidated 初始化可跳过 |
+
+创意生成模式 API 与 UI 依赖上述列；未迁移时入队/列表可能报错或缺少模式展示。

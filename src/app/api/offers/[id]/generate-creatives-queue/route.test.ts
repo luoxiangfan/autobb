@@ -422,4 +422,96 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       retryable: false,
     })
   })
+
+  it('rejects invalid generationMode', async () => {
+    const req = new NextRequest('http://localhost/api/offers/96/generate-creatives-queue', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '1',
+      },
+      body: JSON.stringify({
+        generationMode: 'not-a-mode',
+      }),
+    })
+
+    const res = await POST(req, { params: { id: '96' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.errorCode).toBe('CREATIVE_GENERATION_MODE_INVALID')
+    expect(queueFns.enqueue).not.toHaveBeenCalled()
+  })
+
+  it('forwards fast generationMode with profile-capped maxRetries', async () => {
+    keywordPoolFns.getAvailableBuckets.mockResolvedValue(['D'])
+    dbFns.exec.mockResolvedValue(undefined)
+
+    const req = new NextRequest('http://localhost/api/offers/96/generate-creatives-queue', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '1',
+      },
+      body: JSON.stringify({
+        generationMode: 'fast',
+        bucket: 'D',
+        maxRetries: 99,
+      }),
+    })
+
+    const res = await POST(req, { params: { id: '96' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(queueFns.enqueue).toHaveBeenCalledWith(
+      'ad-creative',
+      expect.objectContaining({
+        offerId: 96,
+        generationMode: 'fast',
+        maxRetries: 0,
+      }),
+      1,
+      expect.objectContaining({
+        taskId: expect.any(String),
+      })
+    )
+    expect(data.generationMode).toBe('fast')
+    expect(dbFns.exec).toHaveBeenCalledWith(
+      expect.stringContaining('generation_mode'),
+      expect.arrayContaining(['fast'])
+    )
+  })
+
+  it('forwards balanced generationMode with profile-capped maxRetries', async () => {
+    keywordPoolFns.getAvailableBuckets.mockResolvedValue(['D'])
+    dbFns.exec.mockResolvedValue(undefined)
+
+    const req = new NextRequest('http://localhost/api/offers/96/generate-creatives-queue', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '1',
+      },
+      body: JSON.stringify({
+        generationMode: 'balanced',
+        bucket: 'D',
+      }),
+    })
+
+    const res = await POST(req, { params: { id: '96' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(queueFns.enqueue).toHaveBeenCalledWith(
+      'ad-creative',
+      expect.objectContaining({
+        generationMode: 'balanced',
+        maxRetries: 1,
+      }),
+      1,
+      expect.any(Object)
+    )
+    expect(data.generationMode).toBe('balanced')
+  })
 })

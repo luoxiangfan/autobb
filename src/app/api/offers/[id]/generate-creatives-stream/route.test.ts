@@ -28,9 +28,14 @@ const qualityLoopFns = vi.hoisted(() => ({
   runCreativeGenerationQualityLoop: vi.fn(),
 }))
 
+const pipelineFns = vi.hoisted(() => ({
+  loadSearchTermFeedbackHintsForGeneration: vi.fn(),
+}))
+
 const keywordPoolFns = vi.hoisted(() => ({
   getAvailableBuckets: vi.fn(),
   getKeywordsByLinkTypeAndBucket: vi.fn(),
+  getOrCreateKeywordPool: vi.fn(),
 }))
 
 const generatorMetaFns = vi.hoisted(() => ({
@@ -81,6 +86,7 @@ vi.mock('@/lib/ad-creative-quality-loop', () => ({
 vi.mock('@/lib/offer-keyword-pool', () => ({
   getAvailableBuckets: keywordPoolFns.getAvailableBuckets,
   getKeywordsByLinkTypeAndBucket: keywordPoolFns.getKeywordsByLinkTypeAndBucket,
+  getOrCreateKeywordPool: keywordPoolFns.getOrCreateKeywordPool,
 }))
 
 vi.mock('@/lib/ad-creative-generator', () => ({
@@ -96,6 +102,14 @@ vi.mock('@/lib/creative-type', () => ({
 vi.mock('@/lib/sse-helper', () => ({
   isControllerOpen: sseFns.isControllerOpen,
 }))
+
+vi.mock('@/lib/bucket-creative-generation-pipeline', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/bucket-creative-generation-pipeline')>()
+  return {
+    ...actual,
+    loadSearchTermFeedbackHintsForGeneration: pipelineFns.loadSearchTermFeedbackHintsForGeneration,
+  }
+})
 
 function createEvaluation() {
   return {
@@ -161,8 +175,14 @@ describe('POST /api/offers/:id/generate-creatives-stream', () => {
       highPerformingTerms: [],
       sourceRows: 0,
     })
+    pipelineFns.loadSearchTermFeedbackHintsForGeneration.mockResolvedValue({
+      hardNegativeTerms: [],
+      softSuppressTerms: [],
+      highPerformingTerms: [],
+    })
 
     keywordPoolFns.getAvailableBuckets.mockResolvedValue(['A', 'B', 'D'])
+    keywordPoolFns.getOrCreateKeywordPool.mockResolvedValue({ id: 77, brandKeywords: [] })
     keywordPoolFns.getKeywordsByLinkTypeAndBucket.mockResolvedValue({
       keywords: [],
       intent: 'test',
@@ -427,5 +447,70 @@ describe('POST /api/offers/:id/generate-creatives-stream', () => {
     }))
     expect(adCreativeFns.createAdCreative).not.toHaveBeenCalled()
     expect(offerFns.markBucketGenerated).not.toHaveBeenCalled()
+  })
+
+  it('rejects invalid generationMode before streaming', async () => {
+    const req = new NextRequest('http://localhost/api/offers/96/generate-creatives-stream', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '1',
+      },
+      body: JSON.stringify({
+        generationMode: 'invalid-mode',
+      }),
+    })
+
+    const res = await POST(req, { params: { id: '96' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.error).toContain('generationMode')
+    expect(qualityLoopFns.runCreativeGenerationQualityLoop).not.toHaveBeenCalled()
+  })
+
+  it('uses fast generationMode with zero auto-retries in quality loop', async () => {
+    qualityLoopFns.runCreativeGenerationQualityLoop.mockImplementationOnce(async ({ generate, maxRetries, delayMs }: any) => {
+      expect(maxRetries).toBe(0)
+      expect(delayMs).toBe(0)
+      const creative = await generate({ attempt: 1, retryFailureType: undefined })
+      const evaluation = createEvaluation()
+      return {
+        attempts: 1,
+        maxRetries: 0,
+        accepted: true,
+        selectedCreative: creative,
+        selectedEvaluation: evaluation,
+        history: [evaluation],
+      }
+    })
+
+    const req = new NextRequest('http://localhost/api/offers/96/generate-creatives-stream', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '1',
+      },
+      body: JSON.stringify({
+        generationMode: 'fast',
+        creativeType: 'model_intent',
+        bucket: 'B',
+      }),
+    })
+
+    const res = await POST(req, { params: { id: '96' } })
+    const payload = await res.text()
+    const events = parseSsePayload(payload)
+    const resultEvent = events.find((event) => event.type === 'result')
+
+    expect(res.status).toBe(200)
+    expect(resultEvent).toBeTruthy()
+    expect(resultEvent.generationMode).toBe('fast')
+    expect(qualityLoopFns.runCreativeGenerationQualityLoop).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxRetries: 0,
+        delayMs: 0,
+      })
+    )
   })
 })

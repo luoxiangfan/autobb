@@ -235,6 +235,7 @@ CREATE TABLE ad_creatives (
   creation_error TEXT DEFAULT NULL,
   last_sync_at TEXT DEFAULT NULL,
   creative_type TEXT DEFAULT NULL,
+  generation_mode TEXT DEFAULT 'original',
   FOREIGN KEY (offer_id) REFERENCES offers(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -2930,6 +2931,7 @@ CREATE TABLE IF NOT EXISTS creative_tasks (
   -- 输入参数
   max_retries INTEGER DEFAULT 3,
   target_rating TEXT DEFAULT 'EXCELLENT',
+  generation_mode TEXT DEFAULT 'original',
 
   -- 执行状态
   current_attempt INTEGER DEFAULT 0,

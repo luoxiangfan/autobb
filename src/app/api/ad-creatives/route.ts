@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
         theme,
         ai_model AS aiModel,
         generation_round AS generationRound,
+        generation_mode AS generationMode,
         ad_group_id AS adGroupId,
         ad_id AS adId,
         creation_status AS creationStatus,

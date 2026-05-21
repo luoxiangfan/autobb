@@ -38,6 +38,15 @@ const creativeTypeFns = vi.hoisted(() => ({
   getCreativeTypeForBucketSlot: vi.fn(),
 }))
 
+const pipelineFns = vi.hoisted(() => ({
+  prepareBucketKeywordContext: vi.fn(),
+  runBucketCreativeGeneration: vi.fn(),
+}))
+
+const keywordRuntimeFns = vi.hoisted(() => ({
+  buildPreGenerationCreativeKeywordSet: vi.fn(),
+}))
+
 vi.mock('@/lib/db', () => ({
   getDatabase: () => ({
     type: 'sqlite' as const,
@@ -80,6 +89,23 @@ vi.mock('@/lib/offer-keyword-pool', () => ({
 vi.mock('@/lib/creative-type', () => ({
   getCreativeTypeForBucketSlot: creativeTypeFns.getCreativeTypeForBucketSlot,
 }))
+
+vi.mock('@/lib/creative-keyword-runtime', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/creative-keyword-runtime')>()
+  return {
+    ...actual,
+    buildPreGenerationCreativeKeywordSet: keywordRuntimeFns.buildPreGenerationCreativeKeywordSet,
+  }
+})
+
+vi.mock('@/lib/bucket-creative-generation-pipeline', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/bucket-creative-generation-pipeline')>()
+  return {
+    ...actual,
+    prepareBucketKeywordContext: pipelineFns.prepareBucketKeywordContext,
+    runBucketCreativeGeneration: pipelineFns.runBucketCreativeGeneration,
+  }
+})
 
 vi.mock('@/lib/json-field', () => ({
   toDbJsonObjectField: (value: unknown) => value,
@@ -138,6 +164,75 @@ describe('executeAdCreativeGeneration', () => {
       intentEn: 'Model Intent',
     })
     creativeTypeFns.getCreativeTypeForBucketSlot.mockReturnValue('model_intent')
+
+    const defaultPrecomputedKeywordSet = {
+      executableKeywords: ['brandx x200 vacuum'],
+      executableKeywordCandidates: [],
+      candidatePool: [],
+      keywords: ['brandx x200 vacuum'],
+      keywordsWithVolume: [
+        { keyword: 'brandx x200 vacuum', searchVolume: 1200, matchType: 'EXACT' },
+      ],
+      promptKeywords: ['brandx x200 vacuum'],
+      keywordSupplementation: {
+        triggered: false,
+        beforeCount: 1,
+        afterCount: 1,
+        addedKeywords: [],
+        supplementCapApplied: false,
+      },
+      contextFallbackStrategy: 'filtered' as const,
+      audit: {
+        totalKeywords: 1,
+        withSearchVolumeKeywords: 1,
+        zeroVolumeKeywords: 0,
+        volumeUnavailableKeywords: 0,
+        noVolumeMode: false,
+        fallbackMode: false,
+        contextFallbackStrategy: 'filtered',
+        sourceQuotaAudit: {} as any,
+        byRawSource: {},
+        bySourceSubtype: {},
+        bySourceField: {},
+        creativeAffinityByLabel: {},
+        creativeAffinityByLevel: {},
+      },
+      keywordSourceAudit: { totalKeywords: 1 },
+    }
+
+    keywordRuntimeFns.buildPreGenerationCreativeKeywordSet.mockResolvedValue(defaultPrecomputedKeywordSet)
+    pipelineFns.prepareBucketKeywordContext.mockResolvedValue({
+      bucket: 'B',
+      creativeType: 'model_intent',
+      bucketIntent: '商品型号/产品族意图',
+      bucketIntentEn: 'Model Intent',
+      bucketKeywords: ['brandx x200 vacuum'],
+      seedCandidates: [],
+      precomputedKeywordSet: defaultPrecomputedKeywordSet,
+    })
+    pipelineFns.runBucketCreativeGeneration.mockImplementation(async (params) => {
+      const actual = await vi.importActual<typeof import('@/lib/bucket-creative-generation-pipeline')>(
+        '@/lib/bucket-creative-generation-pipeline'
+      )
+      const usedKeywordsRef = { current: [] as string[] }
+      const keywordPoolVolumeHints = params.keywordPool
+        ? actual.buildKeywordPoolVolumeHintMap(params.keywordPool)
+        : undefined
+      const { generate, evaluate } = actual.createBucketCreativeGenerationCallbacks({
+        ...params,
+        bucketContext: params.preparedBucketContext,
+        usedKeywordsRef,
+        brandKeywords: ['brandx'],
+        keywordPoolVolumeHints,
+        searchTermFeedbackHints: params.searchTermFeedbackHints,
+      })
+      return qualityLoopFns.runCreativeGenerationQualityLoop({
+        maxRetries: params.maxRetries,
+        delayMs: params.generationProfile.delayMs,
+        generate,
+        evaluate,
+      })
+    })
 
     generatorFns.generateAdCreative.mockResolvedValue({
       headlines: ['BrandX X200 Vacuum'],
@@ -277,19 +372,24 @@ describe('executeAdCreativeGeneration', () => {
       },
     } as any)
 
-    expect(builderFns.buildCreativeKeywordSet).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      keywords: [],
-      keywordsWithVolume: [],
-      scopeLabel: '桶B',
-      seedCandidates: [{ keyword: 'brandx x200 vacuum', searchVolume: 1200 }],
-    }))
-    expect(builderFns.buildCreativeKeywordSet).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      keywords: ['brandx x200 vacuum', 'brandx official store'],
-      promptKeywords: ['brandx x200 vacuum'],
-      scopeLabel: '桶B-final',
-      enableSupplementation: false,
-      seedCandidates: [{ keyword: 'brandx x200 vacuum', searchVolume: 1200 }],
-    }))
+    expect(pipelineFns.prepareBucketKeywordContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        offerId: 96,
+        bucket: 'B',
+        scopeLabel: '桶B',
+      })
+    )
+    expect(pipelineFns.runBucketCreativeGeneration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keywordPostProcessMode: 'applyPrecomputed',
+        preparedBucketContext: expect.objectContaining({
+          precomputedKeywordSet: expect.objectContaining({
+            executableKeywords: ['brandx x200 vacuum'],
+          }),
+        }),
+      })
+    )
+    expect(builderFns.buildCreativeKeywordSet).not.toHaveBeenCalled()
     expect(generatorFns.generateAdCreative).toHaveBeenCalledWith(
       96,
       1,
@@ -300,15 +400,16 @@ describe('executeAdCreativeGeneration', () => {
           highPerformingTerms: [],
         },
         precomputedKeywordSet: expect.objectContaining({
-          executableKeywords: ['brandx x200 replacement filter'],
-          promptKeywords: ['brandx x200 replacement filter'],
+          executableKeywords: ['brandx x200 vacuum'],
+          promptKeywords: ['brandx x200 vacuum'],
         }),
+        deferKeywordPostProcessingToBuilder: true,
       })
     )
     expect(result.creative.keywords).toEqual(['brandx x200 vacuum'])
     expect(result.creative.keywordSupplementation).toMatchObject({
-      triggered: true,
-      afterCount: 2,
+      triggered: false,
+      afterCount: 1,
     })
     expect(result.creative.audit).toMatchObject({
       totalKeywords: 1,
@@ -388,21 +489,90 @@ describe('executeAdCreativeGeneration', () => {
       intentEn: 'Demand Expansion',
     })
     creativeTypeFns.getCreativeTypeForBucketSlot.mockReturnValueOnce('product_intent')
+    pipelineFns.prepareBucketKeywordContext.mockImplementation(async (params: any) => {
+      if (params.bucket !== 'D') {
+        return {
+          bucket: 'B',
+          creativeType: 'model_intent',
+          bucketIntent: '商品型号/产品族意图',
+          bucketIntentEn: 'Model Intent',
+          bucketKeywords: ['brandx x200 vacuum'],
+          seedCandidates: [],
+          precomputedKeywordSet: {
+            executableKeywords: ['brandx x200 vacuum'],
+            keywordsWithVolume: [{ keyword: 'brandx x200 vacuum', searchVolume: 1200, matchType: 'EXACT' }],
+            promptKeywords: ['brandx x200 vacuum'],
+            keywordSupplementation: {
+              triggered: false,
+              beforeCount: 1,
+              afterCount: 1,
+              addedKeywords: [],
+              supplementCapApplied: false,
+            },
+            audit: { totalKeywords: 1 },
+            contextFallbackStrategy: 'filtered',
+          },
+        }
+      }
+      return {
+        bucket: 'D',
+        creativeType: 'product_intent',
+        bucketIntent: '商品需求扩展意图',
+        bucketIntentEn: 'Demand Expansion',
+        bucketKeywords: ['novilla'],
+        seedCandidates: [{ keyword: 'novilla', searchVolume: 0 }],
+        precomputedKeywordSet: {
+          executableKeywords: ['novilla'],
+          keywordsWithVolume: [
+            { keyword: 'novilla', searchVolume: 0, source: 'BRAND_SEED', sourceType: 'BRAND_SEED', rawSource: 'DERIVED_RESCUE', matchType: 'PHRASE' },
+          ],
+          promptKeywords: ['novilla'],
+          keywordSupplementation: {
+            triggered: false,
+            beforeCount: 1,
+            afterCount: 1,
+            addedKeywords: [],
+            supplementCapApplied: false,
+          },
+          audit: { totalKeywords: 1 },
+          contextFallbackStrategy: 'filtered',
+        },
+      }
+    })
 
-    generatorFns.generateAdCreative.mockResolvedValueOnce({
-      headlines: ['Novilla Mattress Deals'],
-      descriptions: ['Find your next mattress today'],
-      keywords: ['novilla'],
-      keywordsWithVolume: [
-        { keyword: 'novilla', searchVolume: 0, source: 'BRAND_SEED', sourceType: 'BRAND_SEED', rawSource: 'DERIVED_RESCUE' },
-      ],
-      promptKeywords: ['novilla'],
-      negativeKeywords: [],
-      callouts: [],
-      sitelinks: [],
-      theme: '商品需求扩展意图',
-      explanation: 'fallback brand token',
-      ai_model: 'gemini-test',
+    generatorFns.generateAdCreative.mockImplementation(async (_offerId: number, _userId: number, options: any) => {
+      if (options?.bucket === 'D') {
+        return {
+          headlines: ['Novilla Mattress Deals'],
+          descriptions: ['Find your next mattress today'],
+          keywords: ['novilla'],
+          keywordsWithVolume: [
+            { keyword: 'novilla', searchVolume: 0, source: 'BRAND_SEED', sourceType: 'BRAND_SEED', rawSource: 'DERIVED_RESCUE' },
+          ],
+          promptKeywords: ['novilla'],
+          negativeKeywords: [],
+          callouts: [],
+          sitelinks: [],
+          theme: '商品需求扩展意图',
+          explanation: 'fallback brand token',
+          ai_model: 'gemini-test',
+        }
+      }
+      return {
+        headlines: ['BrandX X200 Vacuum'],
+        descriptions: ['Clean faster with BrandX X200'],
+        keywords: ['brandx x200 vacuum', 'brandx official store'],
+        keywordsWithVolume: [
+          { keyword: 'brandx x200 vacuum', searchVolume: 800 },
+        ],
+        promptKeywords: ['brandx x200 vacuum'],
+        negativeKeywords: ['manual'],
+        callouts: [],
+        sitelinks: [],
+        theme: '商品型号/产品族意图',
+        explanation: 'Focus on the verified model.',
+        ai_model: 'gemini-test',
+      }
     })
 
     builderFns.buildCreativeKeywordSet.mockReset()
@@ -464,7 +634,30 @@ describe('executeAdCreativeGeneration', () => {
     )
   })
 
-  it('uses finalized executable keywords for retry exclusion on later attempts', async () => {
+  it('uses precomputed executable keywords for retry exclusion on later attempts', async () => {
+    pipelineFns.prepareBucketKeywordContext.mockResolvedValueOnce({
+      bucket: 'B',
+      creativeType: 'model_intent',
+      bucketIntent: '商品型号/产品族意图',
+      bucketIntentEn: 'Model Intent',
+      bucketKeywords: ['brandx x200 vacuum'],
+      seedCandidates: [],
+      precomputedKeywordSet: {
+        executableKeywords: ['x200 vacuum'],
+        keywordsWithVolume: [{ keyword: 'x200 vacuum', searchVolume: 1200, matchType: 'EXACT' }],
+        promptKeywords: ['x200 vacuum'],
+        keywordSupplementation: {
+          triggered: false,
+          beforeCount: 1,
+          afterCount: 1,
+          addedKeywords: [],
+          supplementCapApplied: false,
+        },
+        audit: { totalKeywords: 1 },
+        contextFallbackStrategy: 'filtered',
+      },
+    })
+
     builderFns.buildCreativeKeywordSet.mockReset()
     builderFns.buildCreativeKeywordSet
       .mockResolvedValueOnce({

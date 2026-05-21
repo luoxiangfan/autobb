@@ -643,6 +643,7 @@ export async function evaluateCreativeAdStrength(
       searchVolume: number
       volumeUnavailableReason?: 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
     }>
+    skipCompetitivePositioningAi?: boolean
   }
 ): Promise<ComprehensiveAdStrengthResult> {
   console.log('🎯 开始Ad Strength评估...')
@@ -656,6 +657,7 @@ export async function evaluateCreativeAdStrength(
     creativeType: options?.creativeType,
     userId: options?.userId,
     keywordsWithVolume: options?.keywordsWithVolume,
+    skipCompetitivePositioningAi: options?.skipCompetitivePositioningAi,
   })
 
   console.log(`📊 本地评估: ${localEvaluation.rating} (${localEvaluation.overallScore}分)`)

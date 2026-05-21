@@ -1,3 +1,8 @@
+import {
+  normalizeAdCreativeGenerationMode,
+  resolveStoredGenerationMode,
+  type AdCreativeGenerationMode,
+} from './ad-creative-generation-mode'
 import { getDatabase } from './db'
 import { getInsertedId, nowFunc } from './db-helpers'
 import { GEMINI_ACTIVE_MODEL } from './gemini-models'
@@ -10,6 +15,7 @@ import {
 } from './creative-keyword-selection'
 import {
   deriveCanonicalCreativeType,
+  mapCreativeTypeToBucketSlot,
   type CanonicalCreativeType,
 } from './creative-type'
 import {
@@ -90,8 +96,14 @@ export interface AdCreative {
   generation_prompt?: string    // 生成提示词
   theme: string                 // 广告主题
   ai_model: string             // 使用的AI模型
+  generation_mode?: AdCreativeGenerationMode | string | null
+  /** camelCase 展示字段，与 generation_mode 同步 */
+  generationMode?: AdCreativeGenerationMode | string | null
   is_selected: number          // 是否被用户选中
   creative_type?: CanonicalCreativeType | null
+  keyword_bucket?: 'A' | 'B' | 'C' | 'D' | 'S' | null
+  keywordBucket?: 'A' | 'B' | 'C' | 'D' | 'S' | null
+  bucket_intent?: string | null
 
   // Google Ads同步信息
   ad_group_id?: number         // 关联的Ad Group ID
@@ -188,6 +200,8 @@ export interface GeneratedAdCreativeData {
   theme: string
   explanation: string           // 创意说明
   ai_model?: string              // 🎯 新增：实际使用的AI模型
+  keyword_bucket?: 'A' | 'B' | 'C' | 'D' | 'S' | null
+  bucket_intent?: string | null
 
   // 🆕 v4.7: RSA Display Path (展示URL路径)
   path1?: string                // RSA Display URL路径1，最多15字符
@@ -759,6 +773,7 @@ export async function createAdCreative(
     keyword_pool_id?: number
     bucket_intent?: string
     creative_type?: CanonicalCreativeType
+    generation_mode?: AdCreativeGenerationMode | string | null
   }
 ): Promise<AdCreative> {
   const db = await getDatabase()
@@ -894,6 +909,9 @@ export async function createAdCreative(
   const isDeletedFalseSql = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
   const isDeletedFalseValueSql = db.type === 'sqlite' ? '0' : 'FALSE'
   const nowSql = nowFunc(db.type)
+  const generationModeForStorage = normalizeAdCreativeGenerationMode(
+    data.generation_mode ?? undefined
+  )
   const insertParams = [
     offerId,
     userId,
@@ -919,7 +937,8 @@ export async function createAdCreative(
     // 🆕 v4.10: 关键词池桶信息
     bucketForStorage,
     data.keyword_pool_id || null,
-    data.bucket_intent || null
+    data.bucket_intent || null,
+    generationModeForStorage,
   ]
 
   const findExistingCreativeIdByBucket = async (): Promise<number | null> => {
@@ -966,6 +985,7 @@ export async function createAdCreative(
         keyword_bucket = ?,
         keyword_pool_id = ?,
         bucket_intent = ?,
+        generation_mode = ?,
         creation_status = 'draft',
         creation_error = NULL,
         is_deleted = ${isDeletedFalseValueSql},
@@ -995,6 +1015,7 @@ export async function createAdCreative(
       insertParams[21],
       insertParams[22],
       insertParams[23],
+      insertParams[24],
       creativeId,
       userId,
     ])
@@ -1015,8 +1036,9 @@ export async function createAdCreative(
           generation_round, theme, ai_model,
           ad_strength_data,
           creative_type,
-          keyword_bucket, keyword_pool_id, bucket_intent
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          keyword_bucket, keyword_pool_id, bucket_intent,
+          generation_mode
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, insertParams)
       creativeId = getInsertedId(result, db.type)
     } catch (error) {
@@ -1294,9 +1316,17 @@ function parseAdCreativeRow(row: any): AdCreative {
     bucketIntent: row.bucket_intent,
   })
 
+  const storedGenerationMode = resolveStoredGenerationMode(row.generation_mode)
+  const keywordBucket = mapCreativeTypeToBucketSlot(normalizedCreativeType)
+    || normalizeBucketSlot(row.keyword_bucket)
+
   return {
     ...row,
     creative_type: normalizedCreativeType,
+    generation_mode: storedGenerationMode,
+    generationMode: storedGenerationMode,
+    keyword_bucket: keywordBucket,
+    keywordBucket,
     headlines: ensureStringArray(row.headlines),
     descriptions: ensureStringArray(row.descriptions),
     keywords: ensureStringArray(row.keywords),

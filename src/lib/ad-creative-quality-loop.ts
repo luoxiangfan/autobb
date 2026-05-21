@@ -63,6 +63,7 @@ export interface CreativeQualityEvaluationInput {
     bucketType?: 'A' | 'B' | 'C' | 'D' | 'S' | null
     creativeType?: CanonicalCreativeType | null
     userId?: number
+    skipCompetitivePositioningAi?: boolean
   }
 }
 
@@ -165,6 +166,7 @@ export async function evaluateCreativeForQuality(
       creativeType: adStrengthContext.creativeType || undefined,
       userId: adStrengthContext.userId,
       keywordsWithVolume: creative.keywordsWithVolume,
+      skipCompetitivePositioningAi: adStrengthContext.skipCompetitivePositioningAi,
     }
   )
   const rsaGate = evaluateRsaQualityGate(adStrength, minimumScore)

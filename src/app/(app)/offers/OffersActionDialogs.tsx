@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { AdCreativeGenerationModeField } from '@/components/creatives/AdCreativeGenerationModeField'
+import type { AdCreativeGenerationMode } from '@/lib/ad-creative-generation-mode'
 import { Label } from '@/components/ui/label'
 import type { OfferListItem, UnlinkTarget } from './types'
 
@@ -45,6 +47,8 @@ type OffersActionDialogsProps = {
   isBatchCreativeDialogOpen: boolean
   onBatchCreativeDialogOpenChange: (open: boolean) => void
   batchCreatingCreatives: boolean
+  batchGenerationMode: AdCreativeGenerationMode
+  onBatchGenerationModeChange: (mode: AdCreativeGenerationMode) => void
   maxBatchCreativeOffers: number
   onConfirmBatchCreateCreatives: () => void
 
@@ -88,6 +92,8 @@ export default function OffersActionDialogs({
   isBatchCreativeDialogOpen,
   onBatchCreativeDialogOpenChange,
   batchCreatingCreatives,
+  batchGenerationMode,
+  onBatchGenerationModeChange,
   maxBatchCreativeOffers,
   onConfirmBatchCreateCreatives,
   isBatchRebuildDialogOpen,
@@ -292,6 +298,13 @@ export default function OffersActionDialogs({
                 <div className="text-body-sm text-gray-500">
                   提交后无需等待执行结果，可稍后进入对应Offer的发布流程查看生成进度。
                 </div>
+                <AdCreativeGenerationModeField
+                  id="batchGenerationMode"
+                  value={batchGenerationMode}
+                  onChange={onBatchGenerationModeChange}
+                  disabled={batchCreatingCreatives}
+                  descriptionClassName="text-body-sm text-gray-500 mt-1"
+                />
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

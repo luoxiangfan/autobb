@@ -1,34 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers'
-import { generateAdCreative } from '@/lib/ad-creative-gen'
 import { createAdCreative, type GeneratedAdCreativeData } from '@/lib/ad-creative'
 import {
-  buildPreGenerationCreativeKeywordSet,
-  buildCreativeBrandKeywords,
   createCreativeAdStrengthPayload,
   createCreativeApiRetryHistory,
   createCreativeBucketSummaryPayload,
-  finalizeCreativeKeywordSet,
   createCreativeOptimizationPayload,
   createCreativeOfferSummaryPayload,
   createCreativePublishDecisionPayload,
-  createCreativeQualityEvaluationInput,
   createCreativeQualityGatePayload,
-  evaluateCreativePersistenceHardGate,
   createCreativeResponsePayload,
   createCreativeScoreBreakdown,
-  mergeUsedKeywordsExcludingBrand,
   resolveCreativeKeywordAudit,
-  resolveCreativeKeywordsForRetryExclusion,
 } from '@/lib/creative-keyword-runtime'
-import { getSearchTermFeedbackHints } from '@/lib/search-term-feedback-hints'
 import {
-  AD_CREATIVE_MAX_AUTO_RETRIES,
-  AD_CREATIVE_REQUIRED_MIN_SCORE,
-  evaluateCreativeForQuality,
-  runCreativeGenerationQualityLoop
-} from '@/lib/ad-creative-quality-loop'
-import { getAvailableBuckets, getKeywordsByLinkTypeAndBucket } from '@/lib/offer-keyword-pool'
+  assertPostGenerationPersistenceGate,
+  loadSearchTermFeedbackHintsForGeneration,
+  runBucketCreativeGeneration,
+} from '@/lib/bucket-creative-generation-pipeline'
+import {
+  CREATIVE_GENERATION_MODE_INVALID_MESSAGE,
+  resolveCreativeGenerationRuntime,
+} from '@/lib/ad-creative-generation-mode'
+import { AD_CREATIVE_REQUIRED_MIN_SCORE } from '@/lib/ad-creative-quality-loop'
+import { getAvailableBuckets, getOrCreateKeywordPool } from '@/lib/offer-keyword-pool'
 import { markBucketGenerated } from '@/lib/offers'
 import { getThemeByBucket, type BucketType } from '@/lib/ad-creative-generator'
 import {
@@ -76,24 +71,6 @@ function createCreativeQualityGateError(params: {
   return error
 }
 
-function createCreativePersistenceGateError(params: {
-  attempts: number
-  details: ReturnType<typeof evaluateCreativePersistenceHardGate>
-}) {
-  const error = new Error(
-    `创意落库门禁未通过: ${params.details.violations.map((item) => item.code).join(', ')}`
-  ) as Error & {
-    code?: string
-    details?: Record<string, unknown>
-  }
-  error.code = 'CREATIVE_PERSISTENCE_GATE_FAILED'
-  error.details = {
-    attempts: params.attempts,
-    ...params.details,
-  }
-  return error
-}
-
 /**
  * POST /api/offers/:id/generate-creatives
  * 为指定Offer生成AI创意（支持自动重试优化到EXCELLENT）
@@ -118,8 +95,19 @@ export async function POST(
     }
 
     const body = await request.json()
+    const { runtime, invalidMode } = resolveCreativeGenerationRuntime(body)
+    if (invalidMode) {
+      return NextResponse.json(
+        { error: CREATIVE_GENERATION_MODE_INVALID_MESSAGE },
+        { status: 400 }
+      )
+    }
     const {
-      maxRetries = AD_CREATIVE_MAX_AUTO_RETRIES,
+      mode: generationMode,
+      profile: generationProfile,
+      maxRetries: normalizedMaxRetries,
+    } = runtime
+    const {
       targetRating: requestedTargetRating = 'GOOD',
       bucket: explicitBucket,
       creativeType: explicitCreativeType,
@@ -217,124 +205,37 @@ export async function POST(
     const bucketIntent = getThemeByBucket(selectedBucket as BucketType, linkType)
     const bucketIntentEn = bucketIntent.split(' - ')[1] || bucketIntent
 
-    // 读取近期搜索词反馈（轻量 hard/soft 提示）
-    let searchTermFeedbackHints: {
-      hardNegativeTerms?: string[]
-      softSuppressTerms?: string[]
-      highPerformingTerms?: string[]
-    } | undefined
-    try {
-      const hints = await getSearchTermFeedbackHints({
-        offerId: parsedOfferId,
-        userId: parsedUserId
-      })
-      searchTermFeedbackHints = {
-        hardNegativeTerms: hints.hardNegativeTerms,
-        softSuppressTerms: hints.softSuppressTerms,
-        highPerformingTerms: hints.highPerformingTerms
-      }
-      console.log(
-        `🔁 搜索词反馈已加载: high=${hints.highPerformingTerms.length}, hard=${hints.hardNegativeTerms.length}, soft=${hints.softSuppressTerms.length}, rows=${hints.sourceRows}`
-      )
-    } catch (hintError: any) {
-      console.warn(`⚠️ 搜索词反馈读取失败，继续默认生成: ${hintError?.message || 'unknown error'}`)
-    }
-
-    const normalizedMaxRetries = Math.max(
-      0,
-      Math.min(
-        AD_CREATIVE_MAX_AUTO_RETRIES,
-        Number.isFinite(Number(maxRetries)) ? Math.floor(Number(maxRetries)) : AD_CREATIVE_MAX_AUTO_RETRIES
-      )
+    const searchTermFeedbackHints = await loadSearchTermFeedbackHintsForGeneration(
+      parsedOfferId,
+      parsedUserId
     )
+
     const enforcedTargetRating = 'GOOD'
-    const offerAny = offer as any
     if (String(requestedTargetRating || '').toUpperCase() !== enforcedTargetRating) {
       console.warn(`⚠️ targetRating=${requestedTargetRating} 已忽略，统一使用最低阈值 GOOD`)
     }
 
-    console.log(`🎯 开始生成创意，目标评级: ${enforcedTargetRating}, 自动重试上限: ${normalizedMaxRetries}次`)
+    console.log(`🎯 开始生成创意，模式: ${generationMode}，目标评级: ${enforcedTargetRating}, 自动重试上限: ${normalizedMaxRetries}次`)
     console.log(`📌 生成接口 forcePublish 参数: ${forcePublishRequested ? '已传入（本接口忽略）' : '未传入'}`)
     console.time('⏱️ 总生成耗时')
 
-    let seedCandidates: Array<Record<string, any>> = []
-    try {
-      const bucketResult = await getKeywordsByLinkTypeAndBucket(
-        parsedOfferId,
-        linkType as 'product' | 'store',
-        selectedBucket
-      )
-      seedCandidates = Array.isArray(bucketResult.keywords)
-        ? bucketResult.keywords as Array<Record<string, any>>
-        : []
-    } catch (poolError: any) {
-      console.warn(
-        `⚠️ [generate-creatives] 桶${selectedBucket}关键词同步失败: ${poolError?.message || poolError}`
-      )
-    }
+    const keywordPool = await getOrCreateKeywordPool(parsedOfferId, parsedUserId, false)
 
-    const precomputedKeywordSet = await buildPreGenerationCreativeKeywordSet({
-      offer,
+    const generationResult = await runBucketCreativeGeneration({
+      offerId: parsedOfferId,
       userId: parsedUserId,
-      creativeType,
+      offer,
       bucket: selectedBucket,
-      scopeLabel: `sync-${selectedBucket || 'default'}`,
-      seedCandidates,
-      enableSupplementation: true,
-      continueOnSupplementError: true,
-    })
-
-    let usedKeywords: string[] = []
-    const brandKeywords = buildCreativeBrandKeywords(offer.brand)
-
-    const generationResult = await runCreativeGenerationQualityLoop<GeneratedAdCreativeData>({
+      generationProfile,
       maxRetries: normalizedMaxRetries,
-      delayMs: 1000,
-      generate: async ({ attempt, retryFailureType }) => {
-        const creative = await generateAdCreative(
-          parsedOfferId,
-          parsedUserId,
-          {
-            theme: bucketIntent,
-            skipCache: attempt > 1,
-            excludeKeywords: attempt > 1 ? usedKeywords : undefined,
-            retryFailureType,
-            searchTermFeedbackHints,
-            bucket: selectedBucket,
-            bucketIntent,
-            bucketIntentEn,
-            deferKeywordPostProcessingToBuilder: true,
-            precomputedKeywordSet,
-          }
-        )
-
-        await finalizeCreativeKeywordSet({
-          offer,
-          userId: parsedUserId,
-          creative,
-          creativeType,
-          bucket: selectedBucket,
-          scopeLabel: `sync-final-${selectedBucket || 'default'}`,
-          seedCandidates,
-        })
-
-        usedKeywords = mergeUsedKeywordsExcludingBrand({
-          usedKeywords,
-          candidateKeywords: resolveCreativeKeywordsForRetryExclusion(creative),
-          brandKeywords,
-        })
-
-        return creative
-      },
-      evaluate: async (creative) => evaluateCreativeForQuality(createCreativeQualityEvaluationInput({
-        creative,
-        minimumScore: AD_CREATIVE_REQUIRED_MIN_SCORE,
-        offer,
-        userId: parsedUserId,
-        bucket: selectedBucket,
-        productNameFallback: offerAny.product_title || offerAny.name,
-        productTitleFallback: offerAny.title,
-      }))
+      scopeLabel: `sync-${selectedBucket}`,
+      linkType: linkType as 'product' | 'store',
+      keywordPool,
+      searchTermFeedbackHints,
+      loadSearchTermFeedbackHints: false,
+      skipCacheOnRetryOnly: true,
+      theme: bucketIntent,
+      hardPersistenceGateEnabled,
     })
 
     const attempts = generationResult.attempts
@@ -368,20 +269,13 @@ export async function POST(
       console.log(`✅ 创意质量达标: ${bestEvaluation.finalScore}分 ≥ ${AD_CREATIVE_REQUIRED_MIN_SCORE}分 且通过规则门禁`)
     }
 
-    if (hardPersistenceGateEnabled) {
-      const persistenceGateResult = evaluateCreativePersistenceHardGate({
-        creative: bestCreative,
-        bucket: selectedBucket,
-        targetLanguage: offer.target_language,
-        brandName: offer.brand,
-      })
-      if (!persistenceGateResult.passed) {
-        throw createCreativePersistenceGateError({
-          attempts,
-          details: persistenceGateResult,
-        })
-      }
-    }
+    assertPostGenerationPersistenceGate({
+      enabled: hardPersistenceGateEnabled,
+      creative: bestCreative,
+      bucket: selectedBucket,
+      offer,
+      attempts,
+    })
 
     // 保存到数据库
     const savedCreative = await createAdCreative(parsedUserId, parsedOfferId, {
@@ -404,6 +298,7 @@ export async function POST(
       keyword_bucket: selectedBucket,
       bucket_intent: bucketIntent,
       adStrength: createCreativeAdStrengthPayload(bestEvaluation, bestCreativeAudit),
+      generation_mode: generationMode,
     })
     await markBucketGenerated(parsedOfferId, selectedBucket)
 
@@ -411,6 +306,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
+      generationMode,
       ...createCreativePublishDecisionPayload(forcePublishRequested),
       qualityGate: createCreativeQualityGatePayload(selectedEvaluation),
       creative: createCreativeResponsePayload({

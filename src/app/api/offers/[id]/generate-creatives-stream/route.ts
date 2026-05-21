@@ -1,35 +1,24 @@
 import { NextRequest } from 'next/server'
 import { findOfferById, markBucketGenerated } from '@/lib/offers'
-import { generateAdCreative } from '@/lib/ad-creative-gen'
-import { createAdCreative, type GeneratedAdCreativeData } from '@/lib/ad-creative'
+import { createAdCreative } from '@/lib/ad-creative'
 import {
-  applyCreativeKeywordSetToCreative,
-  buildPreGenerationCreativeKeywordSet,
-  buildCreativeBrandKeywords,
   createCreativeAdStrengthPayload,
   createCreativeApiRetryHistory,
   createCreativeBucketSummaryPayload,
   createCreativeOptimizationPayload,
   createCreativeOfferSummaryPayload,
   createCreativePublishDecisionPayload,
-  createCreativeQualityEvaluationInput,
   createCreativeQualityGatePayload,
-  evaluateCreativePersistenceHardGate,
   createCreativeResponsePayload,
   createCreativeScoreBreakdown,
-  mergeUsedKeywordsExcludingBrand,
   resolveCreativeKeywordAudit,
-  resolveCreativeKeywordsForRetryExclusion,
 } from '@/lib/creative-keyword-runtime'
-import { getSearchTermFeedbackHints } from '@/lib/search-term-feedback-hints'
 import {
-  AD_CREATIVE_MAX_AUTO_RETRIES,
-  AD_CREATIVE_REQUIRED_MIN_SCORE,
-  evaluateCreativeForQuality,
-  runCreativeGenerationQualityLoop
-} from '@/lib/ad-creative-quality-loop'
+  CREATIVE_GENERATION_MODE_INVALID_MESSAGE,
+  resolveCreativeGenerationRuntime,
+} from '@/lib/ad-creative-generation-mode'
 import { isControllerOpen } from '@/lib/sse-helper'
-import { getAvailableBuckets, getKeywordsByLinkTypeAndBucket } from '@/lib/offer-keyword-pool'
+import { getAvailableBuckets, getOrCreateKeywordPool } from '@/lib/offer-keyword-pool'
 import { getThemeByBucket, type BucketType } from '@/lib/ad-creative-generator'
 import {
   getCreativeTypeForBucketSlot,
@@ -37,6 +26,12 @@ import {
 import { resolveGeneratedBuckets } from '@/lib/creative-generated-buckets'
 import { hasModelAnchorEvidenceFromOffer } from '@/lib/model-anchor-evidence'
 import { normalizeSingleCreativeSelection } from '@/lib/creative-request-normalizer'
+import {
+  assertPostGenerationPersistenceGate,
+  loadSearchTermFeedbackHintsForGeneration,
+  prepareBucketKeywordContext,
+  runBucketCreativeGeneration,
+} from '@/lib/bucket-creative-generation-pipeline'
 
 type CanonicalBucketSlot = 'A' | 'B' | 'D'
 
@@ -46,24 +41,6 @@ function parseBooleanEnv(value: string | undefined, fallback: boolean): boolean 
   if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true
   if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false
   return fallback
-}
-
-function createCreativePersistenceGateError(params: {
-  attempts: number
-  details: ReturnType<typeof evaluateCreativePersistenceHardGate>
-}) {
-  const error = new Error(
-    `创意落库门禁未通过: ${params.details.violations.map((item) => item.code).join(', ')}`
-  ) as Error & {
-    code?: string
-    details?: Record<string, unknown>
-  }
-  error.code = 'CREATIVE_PERSISTENCE_GATE_FAILED'
-  error.details = {
-    attempts: params.attempts,
-    ...params.details,
-  }
-  return error
 }
 
 /**
@@ -86,8 +63,15 @@ export async function POST(
   }
 
   const body = await request.json()
+  const { runtime, invalidMode } = resolveCreativeGenerationRuntime(body)
+  if (invalidMode) {
+    return new Response(JSON.stringify({ error: CREATIVE_GENERATION_MODE_INVALID_MESSAGE }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+  const { mode: generationMode, profile: generationProfile, maxRetries: normalizedMaxRetries } = runtime
   const {
-    maxRetries = AD_CREATIVE_MAX_AUTO_RETRIES,
     targetRating: requestedTargetRating = 'GOOD',
     bucket: explicitBucket,
     creativeType: explicitCreativeType,
@@ -99,13 +83,6 @@ export async function POST(
   const forcePublishRequested = body?.forcePublish === true || body?.force_publish === true
   const parsedOfferId = parseInt(id, 10)
   const parsedUserId = parseInt(userId, 10)
-  const normalizedMaxRetries = Math.max(
-    0,
-    Math.min(
-      AD_CREATIVE_MAX_AUTO_RETRIES,
-      Number.isFinite(Number(maxRetries)) ? Math.floor(Number(maxRetries)) : AD_CREATIVE_MAX_AUTO_RETRIES
-    )
-  )
   const enforcedTargetRating = 'GOOD'
 
   // 验证Offer存在
@@ -123,7 +100,6 @@ export async function POST(
       headers: { 'Content-Type': 'application/json' }
     })
   }
-  const offerAny = offer as any
   const linkType = offer.page_type === 'store' ? 'store' : 'product'
   const availableBuckets = await getAvailableBuckets(parsedOfferId)
   const hasExplicitBucket = explicitBucket !== undefined && explicitBucket !== null && String(explicitBucket).trim() !== ''
@@ -186,27 +162,10 @@ export async function POST(
   const bucketIntent = getThemeByBucket(selectedBucket as BucketType, linkType)
   const bucketIntentEn = bucketIntent.split(' - ')[1] || bucketIntent
 
-  let searchTermFeedbackHints: {
-    hardNegativeTerms?: string[]
-    softSuppressTerms?: string[]
-    highPerformingTerms?: string[]
-  } | undefined
-  try {
-    const hints = await getSearchTermFeedbackHints({
-      offerId: parsedOfferId,
-      userId: parsedUserId
-    })
-    searchTermFeedbackHints = {
-      hardNegativeTerms: hints.hardNegativeTerms,
-      softSuppressTerms: hints.softSuppressTerms,
-      highPerformingTerms: hints.highPerformingTerms
-    }
-    console.log(
-      `🔁 [SSE] 搜索词反馈已加载: high=${hints.highPerformingTerms.length}, hard=${hints.hardNegativeTerms.length}, soft=${hints.softSuppressTerms.length}, rows=${hints.sourceRows}`
-    )
-  } catch (hintError: any) {
-    console.warn(`⚠️ [SSE] 搜索词反馈读取失败，继续默认生成: ${hintError?.message || 'unknown error'}`)
-  }
+  const searchTermFeedbackHints = await loadSearchTermFeedbackHintsForGeneration(
+    parsedOfferId,
+    parsedUserId
+  )
 
   // 创建SSE流
   const encoder = new TextEncoder()
@@ -289,140 +248,112 @@ export async function POST(
           bucketIntent,
         })
 
-        let usedKeywords: string[] = []
-        const brandKeywords = buildCreativeBrandKeywords(offer.brand)
         const generateDurations = new Map<number, number>()
-        let seedCandidates: Array<Record<string, any>> = []
-        try {
-          const bucketResult = await getKeywordsByLinkTypeAndBucket(
-            parsedOfferId,
-            linkType as 'product' | 'store',
-            selectedBucket
-          )
-          seedCandidates = Array.isArray(bucketResult.keywords)
-            ? bucketResult.keywords as Array<Record<string, any>>
-            : []
-        } catch (poolError: any) {
-          console.warn(
-            `⚠️ [generate-creatives-stream] 桶${selectedBucket}关键词同步失败: ${poolError?.message || poolError}`
-          )
-        }
+        const keywordPool = await getOrCreateKeywordPool(parsedOfferId, parsedUserId, false)
 
-        const precomputedKeywordSet = await buildPreGenerationCreativeKeywordSet({
+        const preparedBucketContext = await prepareBucketKeywordContext({
           offer,
           userId: parsedUserId,
-          creativeType,
+          offerId: parsedOfferId,
           bucket: selectedBucket,
-          scopeLabel: `sse-${selectedBucket || 'default'}`,
-          seedCandidates,
-          enableSupplementation: true,
-          continueOnSupplementError: true,
+          generationProfile,
+          scopeLabel: `sse-${selectedBucket}`,
+          linkType: linkType as 'product' | 'store',
+          bucketInfo: {
+            keywords: [],
+            intent: bucketIntent,
+            intentEn: bucketIntentEn,
+          },
         })
 
-        const generationResult = await runCreativeGenerationQualityLoop<GeneratedAdCreativeData>({
+        const generationResult = await runBucketCreativeGeneration({
+          offerId: parsedOfferId,
+          userId: parsedUserId,
+          offer,
+          bucket: selectedBucket,
+          generationProfile,
           maxRetries: normalizedMaxRetries,
-          delayMs: 1000,
-          generate: async ({ attempt, retryFailureType }) => {
-            const attemptBaseProgress = 10 + (attempt - 1) * 25
-            sendProgress('generating', attemptBaseProgress,
-              `第${attempt}次生成: AI正在创作广告文案...`,
-              { attempt, maxRetries: normalizedMaxRetries }
-            )
-
-            startTimer(`generate_${attempt}`)
-            const creative = await generateAdCreative(
-              parsedOfferId,
-              parsedUserId,
-              {
-                theme: bucketIntent,
-                skipCache: attempt > 1,
-                excludeKeywords: attempt > 1 ? usedKeywords : undefined,
-                retryFailureType,
-                searchTermFeedbackHints,
-                bucket: selectedBucket,
-                bucketIntent,
-                bucketIntentEn,
-                deferKeywordPostProcessingToBuilder: true,
-                precomputedKeywordSet,
-              }
-            )
-
-            applyCreativeKeywordSetToCreative(creative, {
-              executableKeywords: precomputedKeywordSet.executableKeywords,
-              keywordsWithVolume: precomputedKeywordSet.keywordsWithVolume,
-              promptKeywords: precomputedKeywordSet.promptKeywords,
-              keywordSupplementation: precomputedKeywordSet.keywordSupplementation,
-              audit: precomputedKeywordSet.audit,
-            })
-            const generateTime = endTimer(`generate_${attempt}`)
-            generateDurations.set(attempt, generateTime)
-
-            sendProgress('evaluating', attemptBaseProgress + 10,
-              `第${attempt}次生成: 评估创意质量... (生成耗时 ${(generateTime / 1000).toFixed(1)}s)`,
-              { attempt, generateTime }
-            )
-
-            usedKeywords = mergeUsedKeywordsExcludingBrand({
-              usedKeywords,
-              candidateKeywords: resolveCreativeKeywordsForRetryExclusion(creative),
-              brandKeywords,
-            })
-
-            return creative
-          },
-          evaluate: async (creative, { attempt }) => {
-            startTimer(`evaluate_${attempt}`)
-            const evaluation = await evaluateCreativeForQuality(createCreativeQualityEvaluationInput({
-              creative,
-              minimumScore: AD_CREATIVE_REQUIRED_MIN_SCORE,
-              offer,
-              userId: parsedUserId,
-              bucket: selectedBucket,
-              productNameFallback: offerAny.product_title || offerAny.name,
-              productTitleFallback: offerAny.title,
-            }))
-            const evaluateTime = endTimer(`evaluate_${attempt}`)
-            const attemptBaseProgress = 10 + (attempt - 1) * 25
-            const generateTime = generateDurations.get(attempt) || 0
-
-            sendProgress('evaluated', attemptBaseProgress + 18,
-              `第${attempt}次生成: ${evaluation.adStrength.finalRating} (${evaluation.adStrength.finalScore}分) gate=${evaluation.passed ? 'PASS' : 'BLOCK'} [评估 ${(evaluateTime / 1000).toFixed(1)}s]`,
-              {
-                attempt,
-                rating: evaluation.adStrength.finalRating,
-                score: evaluation.adStrength.finalScore,
-                gatePassed: evaluation.passed,
-                failureType: evaluation.failureType,
-                generateTime,
-                evaluateTime,
-                reasons: evaluation.reasons.slice(0, 3)
-              }
-            )
-
-            if (evaluation.passed) {
-              sendProgress('target_reached', attemptBaseProgress + 20,
-                '达到目标评级 GOOD 且通过质量门禁！',
+          scopeLabel: `sse-${selectedBucket}`,
+          linkType: linkType as 'product' | 'store',
+          keywordPool,
+          searchTermFeedbackHints,
+          loadSearchTermFeedbackHints: false,
+          skipCacheOnRetryOnly: true,
+          keywordPostProcessMode: 'applyPrecomputed',
+          preparedBucketContext,
+          hardPersistenceGateEnabled,
+          theme: bucketIntent,
+          hooks: {
+            onBeforeGenerate: async ({ attempt }) => {
+              const attemptBaseProgress = 10 + (attempt - 1) * 25
+              sendProgress(
+                'generating',
+                attemptBaseProgress,
+                `第${attempt}次生成: AI正在创作广告文案...`,
+                { attempt, maxRetries: normalizedMaxRetries }
+              )
+              startTimer(`generate_${attempt}`)
+            },
+            onAfterGenerate: async ({ attempt }) => {
+              const generateTime = endTimer(`generate_${attempt}`)
+              generateDurations.set(attempt, generateTime)
+              const attemptBaseProgress = 10 + (attempt - 1) * 25
+              sendProgress(
+                'evaluating',
+                attemptBaseProgress + 10,
+                `第${attempt}次生成: 评估创意质量... (生成耗时 ${(generateTime / 1000).toFixed(1)}s)`,
+                { attempt, generateTime }
+              )
+            },
+            onAfterEvaluate: async ({ attempt, evaluation }) => {
+              const evaluateTime = endTimer(`evaluate_${attempt}`)
+              const attemptBaseProgress = 10 + (attempt - 1) * 25
+              const generateTime = generateDurations.get(attempt) || 0
+              sendProgress(
+                'evaluated',
+                attemptBaseProgress + 18,
+                `第${attempt}次生成: ${evaluation.adStrength.finalRating} (${evaluation.adStrength.finalScore}分) gate=${evaluation.passed ? 'PASS' : 'BLOCK'} [评估 ${(evaluateTime / 1000).toFixed(1)}s]`,
                 {
+                  attempt,
                   rating: evaluation.adStrength.finalRating,
                   score: evaluation.adStrength.finalScore,
-                  gatePassed: true
-                }
-              )
-            } else if (attempt <= normalizedMaxRetries) {
-              sendProgress('retry_prepare', attemptBaseProgress + 20,
-                `未达到GOOD，准备第${attempt + 1}次优化...`,
-                {
-                  currentRating: evaluation.adStrength.finalRating,
-                  gatePassed: false,
+                  gatePassed: evaluation.passed,
                   failureType: evaluation.failureType,
-                  gateReasons: evaluation.reasons.slice(0, 2),
-                  suggestions: evaluation.adStrength.combinedSuggestions.slice(0, 3)
+                  generateTime,
+                  evaluateTime,
+                  reasons: evaluation.reasons.slice(0, 3),
                 }
               )
-            }
-
-            return evaluation
-          }
+              if (evaluation.passed) {
+                sendProgress(
+                  'target_reached',
+                  attemptBaseProgress + 20,
+                  '达到目标评级 GOOD 且通过质量门禁！',
+                  {
+                    rating: evaluation.adStrength.finalRating,
+                    score: evaluation.adStrength.finalScore,
+                    gatePassed: true,
+                  }
+                )
+              } else if (attempt <= normalizedMaxRetries) {
+                sendProgress(
+                  'retry_prepare',
+                  attemptBaseProgress + 20,
+                  `未达到GOOD，准备第${attempt + 1}次优化...`,
+                  {
+                    currentRating: evaluation.adStrength.finalRating,
+                    gatePassed: false,
+                    failureType: evaluation.failureType,
+                    gateReasons: evaluation.reasons.slice(0, 2),
+                    suggestions: evaluation.adStrength.combinedSuggestions.slice(0, 3),
+                  }
+                )
+              }
+            },
+            onBeforeEvaluate: async ({ attempt }) => {
+              startTimer(`evaluate_${attempt}`)
+            },
+          },
         })
 
         const attempts = generationResult.attempts
@@ -443,20 +374,13 @@ export async function POST(
           )
         }
 
-        if (hardPersistenceGateEnabled) {
-          const persistenceGateResult = evaluateCreativePersistenceHardGate({
-            creative: bestCreative,
-            bucket: selectedBucket,
-            targetLanguage: offer.target_language,
-            brandName: offer.brand,
-          })
-          if (!persistenceGateResult.passed) {
-            throw createCreativePersistenceGateError({
-              attempts,
-              details: persistenceGateResult,
-            })
-          }
-        }
+        assertPostGenerationPersistenceGate({
+          enabled: hardPersistenceGateEnabled,
+          creative: bestCreative,
+          bucket: selectedBucket,
+          offer,
+          attempts,
+        })
 
         sendProgress('saving', 85, '正在保存创意到数据库...')
 
@@ -482,6 +406,7 @@ export async function POST(
           keyword_bucket: selectedBucket,
           bucket_intent: bucketIntent,
           adStrength: createCreativeAdStrengthPayload(bestEvaluation, bestCreativeAudit),
+          generation_mode: generationMode,
         })
         await markBucketGenerated(parsedOfferId, selectedBucket)
         endTimer('save')
@@ -492,6 +417,7 @@ export async function POST(
         // 发送最终结果
         sendResult({
           success: true,
+          generationMode,
           ...createCreativePublishDecisionPayload(forcePublishRequested),
           qualityGate: createCreativeQualityGatePayload(selectedEvaluation),
           creative: createCreativeResponsePayload({

@@ -91,6 +91,7 @@ export async function GET(
         keywordBucket,
         finalUrl: c.final_url,
         score: c.score,
+        generationMode: c.generation_mode ?? null,
         creationStatus: c.creation_status,
         createdAt: c.created_at,
       }

@@ -794,6 +794,7 @@ CREATE TABLE creative_tasks (
   
   max_retries INTEGER DEFAULT 3,
   target_rating TEXT DEFAULT 'EXCELLENT',
+  generation_mode TEXT DEFAULT 'original',
 
   
   current_attempt INTEGER DEFAULT 0,
@@ -911,6 +912,7 @@ CREATE TABLE IF NOT EXISTS "ad_creatives" (
   path1 TEXT DEFAULT NULL,
   path2 TEXT DEFAULT NULL,
   creative_type TEXT DEFAULT NULL,
+  generation_mode TEXT DEFAULT 'original',
   keyword_bucket TEXT CHECK(keyword_bucket IN ('A', 'B', 'C', 'D', 'S')),
   keyword_pool_id INTEGER REFERENCES offer_keyword_pools(id),
   bucket_intent TEXT, is_deleted INTEGER NOT NULL DEFAULT 0, deleted_at TIMESTAMP NULL,

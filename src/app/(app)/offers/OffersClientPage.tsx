@@ -36,6 +36,12 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { ResponsivePagination } from '@/components/ui/responsive-pagination'
 import { getScrapeStatusLabel } from '@/lib/i18n-constants'
 import { showError, showInfo, showSuccess } from '@/lib/toast-utils'
+import {
+  getAdCreativeGenerationModeLabel,
+  loadStoredAdCreativeGenerationMode,
+  saveStoredAdCreativeGenerationMode,
+  type AdCreativeGenerationMode,
+} from '@/lib/ad-creative-generation-mode'
 import type { OfferListItem, UnlinkTarget } from './types'
 import { PlayCircle } from 'lucide-react'
 
@@ -141,6 +147,13 @@ export default function OffersClientPage({
   const [batchDeleteError, setBatchDeleteError] = useState<string | null>(null)
   const [isBatchCreativeDialogOpen, setIsBatchCreativeDialogOpen] = useState(false)
   const [batchCreatingCreatives, setBatchCreatingCreatives] = useState(false)
+  const [batchGenerationMode, setBatchGenerationMode] = useState<AdCreativeGenerationMode>(
+    () => loadStoredAdCreativeGenerationMode()
+  )
+  const handleBatchGenerationModeChange = (mode: AdCreativeGenerationMode) => {
+    setBatchGenerationMode(mode)
+    saveStoredAdCreativeGenerationMode(mode)
+  }
   const [isBatchRebuildDialogOpen, setIsBatchRebuildDialogOpen] = useState(false)
   const [batchRebuilding, setBatchRebuilding] = useState(false)
   const MAX_BATCH_CREATIVE_OFFERS = 50
@@ -944,7 +957,7 @@ export default function OffersClientPage({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ offerIds }),
+        body: JSON.stringify({ offerIds, generationMode: batchGenerationMode }),
       })
 
       // 处理401未授权 - 跳转到登录页
@@ -974,7 +987,10 @@ export default function OffersClientPage({
       if (skippedCount > 0) summaryParts.push(`跳过 ${skippedCount} 个`)
       if (failedCount > 0) summaryParts.push(`失败 ${failedCount} 个`)
 
-      showSuccess('已提交批量生成任务', summaryParts.join('，'))
+      showSuccess(
+        '已提交批量生成任务',
+        `${summaryParts.join('，')}（模式：${getAdCreativeGenerationModeLabel(batchGenerationMode)}）`
+      )
       setIsBatchCreativeDialogOpen(false)
     } catch (err: any) {
       showError('批量创建失败', err?.message || '网络错误')
@@ -1887,6 +1903,8 @@ export default function OffersClientPage({
           isBatchCreativeDialogOpen={isBatchCreativeDialogOpen}
           onBatchCreativeDialogOpenChange={setIsBatchCreativeDialogOpen}
           batchCreatingCreatives={batchCreatingCreatives}
+          batchGenerationMode={batchGenerationMode}
+          onBatchGenerationModeChange={handleBatchGenerationModeChange}
           maxBatchCreativeOffers={MAX_BATCH_CREATIVE_OFFERS}
           onConfirmBatchCreateCreatives={handleBatchCreateCreatives}
           isBatchRebuildDialogOpen={isBatchRebuildDialogOpen}

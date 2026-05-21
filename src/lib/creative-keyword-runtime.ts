@@ -42,6 +42,7 @@ interface CreateCreativeKeywordSetBuilderInputOptions {
   scopeLabel: string
   seedCandidates?: BuildCreativeKeywordSetInput['seedCandidates']
   enableSupplementation?: boolean
+  skipSupplementAiRanking?: boolean
   continueOnSupplementError?: boolean
   fallbackMode?: boolean
 }
@@ -54,6 +55,7 @@ interface BuildPreGenerationCreativeKeywordSetOptions {
   scopeLabel: string
   seedCandidates?: BuildCreativeKeywordSetInput['seedCandidates']
   enableSupplementation?: boolean
+  skipSupplementAiRanking?: boolean
   continueOnSupplementError?: boolean
   fallbackMode?: boolean
 }
@@ -100,6 +102,7 @@ interface CreateCreativeQualityEvaluationInputOptions {
   keywords?: string[]
   productNameFallback?: string | null
   productTitleFallback?: string | null
+  skipCompetitivePositioningAi?: boolean
 }
 
 interface CreateCreativeAdStrengthPayloadOptions {
@@ -253,6 +256,7 @@ export function createCreativeKeywordSetBuilderInput(
     promptKeywords: input.creative.promptKeywords,
     seedCandidates: input.seedCandidates,
     enableSupplementation: input.enableSupplementation,
+    skipSupplementAiRanking: input.skipSupplementAiRanking,
     continueOnSupplementError: input.continueOnSupplementError,
     fallbackMode: input.fallbackMode,
   }
@@ -273,6 +277,7 @@ export async function buildPreGenerationCreativeKeywordSet(
     keywordsWithVolume: [],
     seedCandidates: input.seedCandidates,
     enableSupplementation: input.enableSupplementation,
+    skipSupplementAiRanking: input.skipSupplementAiRanking,
     continueOnSupplementError: input.continueOnSupplementError,
     fallbackMode: input.fallbackMode,
   })
@@ -484,6 +489,7 @@ export function createCreativeQualityEvaluationInput(
       bucketType,
       creativeType: normalizedCreativeType,
       userId: input.userId,
+      skipCompetitivePositioningAi: input.skipCompetitivePositioningAi,
     },
     ruleContext: {
       brandName: input.offer.brand,

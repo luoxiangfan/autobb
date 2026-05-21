@@ -56,6 +56,7 @@ export interface BuildCreativeKeywordSetInput {
   seedCandidates?: unknown[]
   fallbackSource?: string
   enableSupplementation?: boolean
+  skipSupplementAiRanking?: boolean
   continueOnSupplementError?: boolean
   fallbackMode?: boolean
   maxKeywords?: number
@@ -2445,6 +2446,7 @@ export async function buildCreativeKeywordSet(
         keywordsWithVolume: contextFilteredCandidates as any,
         poolCandidates,
         bucket: input.bucket,
+        skipAiRanking: input.skipSupplementAiRanking,
       })
       keywordSupplementation = supplemented.keywordSupplementation
       const supplementedCandidates = normalizeCreativeKeywordCandidatesForContextFilter(

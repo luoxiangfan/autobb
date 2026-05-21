@@ -34,6 +34,14 @@ import {
   type CanonicalCreativeType,
 } from '@/lib/creative-type'
 import { normalizeCreativeTaskError } from '@/lib/creative-task-error'
+import {
+  getAdCreativeGenerationModeLabel,
+  loadStoredAdCreativeGenerationMode,
+  resolveGenerationModeInput,
+  saveStoredAdCreativeGenerationMode,
+  type AdCreativeGenerationMode,
+} from '@/lib/ad-creative-generation-mode'
+import { AdCreativeGenerationModeField } from '@/components/creatives/AdCreativeGenerationModeField'
 
 interface Props {
   offer: any
@@ -104,6 +112,7 @@ interface Creative {
   generationRound: number
   theme: string
   aiModel: string
+  generationMode?: AdCreativeGenerationMode | string | null
 
   // 🆕 canonical creativeType（兼容历史旧 key）
   creativeType?: CanonicalCreativeType | 'brand_focus' | 'model_focus' | 'brand_product' | null
@@ -757,6 +766,7 @@ function CreativeGenerationOverviewPanel(props: {
   elapsedTime: number
   sseTimeout: boolean
   taskStatus: 'running' | 'completed' | 'failed' | null
+  activeGenerationMode: AdCreativeGenerationMode
   offer: any
 }) {
   const {
@@ -767,6 +777,7 @@ function CreativeGenerationOverviewPanel(props: {
     elapsedTime,
     sseTimeout,
     taskStatus,
+    activeGenerationMode,
     offer
   } = props
   const completedCount = generatedBuckets.length
@@ -883,6 +894,11 @@ function CreativeGenerationOverviewPanel(props: {
               <span className="text-gray-600">进度 {hasActiveGeneration ? `${activeProgress}%` : isGenerationLimitReached ? '100%' : `${overallProgress}%`}</span>
               <span className="text-gray-600">阶段 {generationProgress?.step || '-'}</span>
               <span className="text-gray-600">重试 {attemptText || '-'}</span>
+              {hasActiveGeneration && (
+                <Badge variant="outline" className="border-purple-200 text-purple-700">
+                  模式 {getAdCreativeGenerationModeLabel(activeGenerationMode)}
+                </Badge>
+              )}
             </div>
             <div className="mt-1.5 space-y-1">
               <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
@@ -917,6 +933,13 @@ function CreativeGenerationOverviewPanel(props: {
 export default function Step1CreativeGeneration({ offer, onCreativeSelected, selectedCreative }: Props) {
   const router = useRouter()
   const [generating, setGenerating] = useState(false)
+  const [generationMode, setGenerationMode] = useState<AdCreativeGenerationMode>(
+    () => loadStoredAdCreativeGenerationMode()
+  )
+  const handleGenerationModeChange = (mode: AdCreativeGenerationMode) => {
+    setGenerationMode(mode)
+    saveStoredAdCreativeGenerationMode(mode)
+  }
   const [creatives, setCreatives] = useState<Creative[]>([])
   const [selectedId, setSelectedId] = useState<number | null>(
     selectedCreative?.id || null
@@ -1018,6 +1041,13 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
 
       const task = await response.json()
       setTaskStatus(task.status)
+
+      const polledMode = resolveGenerationModeInput(
+        String(task.generationMode ?? task.generation_mode ?? '')
+      )
+      if (polledMode) {
+        setGenerationMode(polledMode)
+      }
 
       // 任务仍在运行
       if (task.status === 'running' || task.status === 'pending') {
@@ -1161,6 +1191,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
 
           return {
             ...c,
+            generationMode: c.generationMode ?? c.generation_mode ?? null,
             creativeType: canonicalCreativeType,
             keywordBucket: normalizedBucket || c.keywordBucket || c.keyword_bucket,
             score: numericScore,  // 🔧 确保 score 始终是数字
@@ -1292,8 +1323,8 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
       })
 
       const enqueuePayload: Record<string, unknown> = {
-        maxRetries: 3,
-        targetRating: 'EXCELLENT',
+        generationMode,
+        targetRating: 'GOOD',
       }
       if (bucket) {
         enqueuePayload.bucket = bucket
@@ -1325,9 +1356,14 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
         throw createClientGenerationError(normalizedEnqueueError)
       }
 
-      const { taskId } = await enqueueResponse.json()
+      const enqueueData = await enqueueResponse.json()
+      const { taskId, generationMode: enqueuedGenerationMode } = enqueueData
       queuedTaskId = taskId
       setCurrentTaskId(taskId)  // 🆕 保存taskId用于轮询
+      const enqueuedMode = resolveGenerationModeInput(String(enqueuedGenerationMode ?? ''))
+      if (enqueuedMode) {
+        setGenerationMode(enqueuedMode)
+      }
 
       // 🔥 Step 2: 订阅SSE流
       const response = await fetch(`/api/creative-tasks/${taskId}/stream`, {
@@ -1369,6 +1405,10 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
                   details: data.details
                 })
               } else if (data.type === 'result') {
+                const resultMode = resolveGenerationModeInput(String(data.generationMode ?? ''))
+                if (resultMode) {
+                  setGenerationMode(resultMode)
+                }
                 // 生成成功
                 const rating = data.adStrength.rating
                 const score = data.adStrength.score
@@ -1619,12 +1659,19 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
             AI自动生成广告创意，包含标题、描述、关键词等完整内容，并提供专业评分和解释
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
           {creatives.length > 0 && (
-            <Badge variant="secondary" className="px-3 py-1.5 text-sm font-medium bg-white border border-gray-200 shadow-sm">
+            <Badge variant="secondary" className="px-3 py-1.5 text-sm font-medium bg-white border border-gray-200 shadow-sm self-start sm:self-auto">
               已生成类型: {generationCount}/3 | 展示最佳3个
             </Badge>
           )}
+
+          <AdCreativeGenerationModeField
+            value={generationMode}
+            onChange={handleGenerationModeChange}
+            disabled={generating}
+            className="w-full sm:w-auto"
+          />
 
           <Button
             onClick={() => {
@@ -1661,6 +1708,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
         elapsedTime={elapsedTime}
         sseTimeout={sseTimeout}
         taskStatus={taskStatus}
+        activeGenerationMode={generationMode}
         offer={offer}
       />
 
@@ -1994,8 +2042,13 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
                           {creative.generationRound}
                         </Badge>
                       </CardTitle>
-                      <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                      <div className="text-xs text-muted-foreground mt-1 flex flex-wrap items-center gap-2">
                         <span>{getCreativeTypeLabelFromCreative(creative)}</span>
+                        {creative.generationMode && (
+                          <Badge variant="outline" className="text-[10px] font-normal border-gray-300 text-gray-600">
+                            {getAdCreativeGenerationModeLabel(creative.generationMode)}
+                          </Badge>
+                        )}
                       </div>
                     </div>
 

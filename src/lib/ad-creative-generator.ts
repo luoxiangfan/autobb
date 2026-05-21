@@ -4773,6 +4773,7 @@ interface ApplyKeywordSupplementationOnceInput {
   triggerThreshold?: number
   supplementCap?: number
   bucket?: 'A' | 'B' | 'C' | 'D' | 'S' | null  // 🔥 优化(2026-03-13): 添加 bucket 字段用于意图一致性检查
+  skipAiRanking?: boolean
 }
 
 interface ApplyKeywordSupplementationOnceOutput {
@@ -5061,6 +5062,7 @@ interface RankSupplementCandidatesWithModelInput {
   title: string
   about: string[]
   existingKeywords: KeywordWithVolume[]
+  skipAiRanking?: boolean
 }
 
 interface BuildKeywordSupplementScoringPromptInput {
@@ -5113,7 +5115,7 @@ async function rankSupplementCandidatesWithModel(
 
   if (uniqueCandidates.length === 0) return []
 
-  if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
+  if (input.skipAiRanking || process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
     return uniqueCandidates
   }
 
@@ -5587,6 +5589,7 @@ export async function applyKeywordSupplementationOnce(
     title: rawContextForRelevance.title,
     about: rawContextForRelevance.about,
     existingKeywords: beforeKeywords,
+    skipAiRanking: input.skipAiRanking,
   })
   for (const candidate of orderedPoolCandidates) {
     tryAdd(candidate, 'keyword_pool')
@@ -5609,6 +5612,7 @@ export async function applyKeywordSupplementationOnce(
       title: rawContextForRelevance.title,
       about: rawContextForRelevance.about,
       existingKeywords: [...beforeKeywords, ...supplementWithVolume],
+      skipAiRanking: input.skipAiRanking,
     })
     for (const candidate of titleAboutCandidates) {
       tryAdd(candidate, 'title_about')
