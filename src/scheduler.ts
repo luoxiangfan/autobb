@@ -1227,14 +1227,14 @@ function startScheduler() {
   })
   log(`✅ 数据同步检查任务已启动 (cron: ${dataSyncCheckCron})`)
 
-  // 任务2: 每天凌晨2点执行 Google Ads 数据同步
-  cron.schedule('0 2 * * *', async () => {
+  // 任务2: 每2小时执行一次 Google Ads 数据同步
+  cron.schedule('0 */2 * * *', async () => {
     await runSyncGoogleAdsTaskSafely('cron')
   }, {
     scheduled: true,
     timezone: 'Asia/Shanghai'
   })
-  log('✅ Google Ads 数据同步检查任务已启动 (cron: 0 2 * * *)')
+  log('✅ Google Ads 数据同步检查任务已启动 (cron: 0 */2 * * *)')
   // 任务2: 每天凌晨2点备份数据库
   cron.schedule('0 2 * * *', async () => {
     await backupDatabaseTask()
