@@ -15,7 +15,6 @@ import {
   findLatestGoogleAdsBackupForOffer,
   hasAutoadsLikeBackupForOffer,
 } from './campaign-backups'
-import { updateCampaignConfig } from './google-ads-api-sync'
 import { getCustomerWithCredentials, trackOAuthApiCall } from './google-ads-api'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { getInsertedId } from './db-helpers'
@@ -1430,4 +1429,58 @@ export async function syncAllUsersCampaigns(): Promise<{
     totalSkipped,
     totalErrors,
   }
+}
+
+/**
+ * 更新广告系列的 campaign_config
+ * 只更新尚未配置 ad_creative 的广告系列
+ */
+export async function updateCampaignConfig(
+  campaignId: string,
+  campaignConfig: any,
+  adGroupId: number | null,
+  adId: number | null
+): Promise<boolean> {
+  const db = await getDatabase()
+
+  const campaign = await db.queryOne(`
+    SELECT id, synced_from_google_ads, campaign_config
+    FROM campaigns
+    WHERE campaign_id = ?
+  `, [campaignId]) as {
+    id: number
+    synced_from_google_ads: number | boolean
+    campaign_config: string | null
+    ad_creative_id: number | null
+  } | undefined
+
+  if (!campaign) {
+    console.log(`[Campaign Config] Campaign ${campaignId} not found, skipping config update`)
+    return false
+  }
+
+  const haveConfig = campaign.ad_creative_id && campaign.ad_creative_id != null
+
+  if (haveConfig) {
+    console.log(`[Campaign Config] Campaign ${campaignId} is already configured, skipping config update`)
+    return false
+  }
+
+  await db.exec(`
+    UPDATE campaigns
+    SET campaign_config = ?,
+        updated_at = ?,
+        google_ad_group_id = ?,
+        google_ad_id = ?
+    WHERE campaign_id = ?
+  `, [
+    JSON.stringify(campaignConfig),
+    new Date(),
+    `${adGroupId}` || null,
+    `${adGroupId}~${adId}` || null,
+    campaignId,
+  ])
+
+  console.log(`[Campaign Config] Updated for campaign ${campaignId}`)
+  return true
 }
