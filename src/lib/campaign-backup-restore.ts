@@ -18,6 +18,7 @@ import {
   CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,
   getActiveCampaignConflictForOffer,
   isCampaignOfferUniqueViolation,
+  rollbackPendingCampaignAfterEnqueueFailure,
 } from './campaign-offer-constraint'
 
 export type BatchDbCreateDetail = {
@@ -38,6 +39,7 @@ export type BatchPublishDetail = {
   offerId: number
   campaignId?: number
   error?: string
+  warning?: string
   regeneratedCreative?: boolean
   newAdCreativeId?: number | null
 }
@@ -237,7 +239,7 @@ export async function createCampaignRowFromBackup(params: {
         adCreativeId,
         campaignConfig ? JSON.stringify(campaignConfig) : null,
         'PAUSED',
-        'published',
+        'pending',
         new Date(),
         new Date(),
       ]
@@ -324,6 +326,7 @@ export async function enqueueCampaignPublishFromBackup(params: {
 
     let regeneratedCreative = false
     let newAdCreativeId: number | null = null
+    let warning: string | undefined
 
     if (regenerateCreative) {
       const regenerateResult = await regenerateAdCreative({
@@ -338,9 +341,8 @@ export async function enqueueCampaignPublishFromBackup(params: {
         regeneratedCreative = true
         newAdCreativeId = regenerateResult.adCreativeId || null
       } else {
-        console.warn(
-          `[Backup Restore] 备份 ${backupId} 创意重新生成失败，使用原配置: ${regenerateResult.error}`
-        )
+        warning = `创意重新生成失败，已使用原备份配置${regenerateResult.error ? `：${regenerateResult.error}` : ''}`
+        console.warn(`[Backup Restore] 备份 ${backupId} ${warning}`)
       }
 
       if (regeneratedCreative && newAdCreativeId) {
@@ -485,6 +487,7 @@ export async function enqueueCampaignPublishFromBackup(params: {
       campaignId,
       regeneratedCreative,
       newAdCreativeId,
+      warning,
     }
   } catch (error: any) {
     return {

@@ -18,6 +18,11 @@ export interface BatchProgressErrorDetail {
   error: string
 }
 
+export interface BatchProgressWarningDetail {
+  backupId: number
+  message: string
+}
+
 interface BatchProgressIndicatorProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -28,6 +33,7 @@ interface BatchProgressIndicatorProps {
   completedCount: number
   failedCount: number
   errorDetails?: BatchProgressErrorDetail[]
+  warningDetails?: BatchProgressWarningDetail[]
 }
 
 export function BatchProgressIndicator({
@@ -40,6 +46,7 @@ export function BatchProgressIndicator({
   completedCount,
   failedCount,
   errorDetails = [],
+  warningDetails = [],
 }: BatchProgressIndicatorProps) {
   const [statusText, setStatusText] = useState('准备中...')
 
@@ -168,6 +175,19 @@ export function BatchProgressIndicator({
                 {errorDetails.map((item) => (
                   <li key={item.backupId}>
                     备份 #{item.backupId}：{item.error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {(status === 'completed' || status === 'partial') && warningDetails.length > 0 && (
+            <div className="max-h-40 overflow-y-auto rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-900 space-y-2">
+              <p className="font-medium">警告</p>
+              <ul className="list-disc list-inside space-y-1">
+                {warningDetails.map((item) => (
+                  <li key={`warn-${item.backupId}`}>
+                    备份 #{item.backupId}：{item.message}
                   </li>
                 ))}
               </ul>

@@ -10,14 +10,8 @@
  */
 
 import 'dotenv/config'
+import { getBackupRankOrderSql } from '../src/lib/campaign-backups'
 import { getDatabase, type DatabaseAdapter } from '../src/lib/db'
-
-function hasConfigSql(dbType: 'sqlite' | 'postgres'): string {
-  if (dbType === 'postgres') {
-    return `campaign_config IS NOT NULL AND campaign_config::text NOT IN ('null', '{}')`
-  }
-  return `campaign_config IS NOT NULL AND TRIM(campaign_config) NOT IN ('', '{}', 'null')`
-}
 
 function distinctPairCountSql(dbType: 'sqlite' | 'postgres'): string {
   return dbType === 'postgres'
@@ -26,13 +20,7 @@ function distinctPairCountSql(dbType: 'sqlite' | 'postgres'): string {
 }
 
 function rankOrderSql(dbType: 'sqlite' | 'postgres'): string {
-  const hasConfig = hasConfigSql(dbType)
-  return `
-    backup_version DESC,
-    CASE WHEN ${hasConfig} THEN 0 ELSE 1 END,
-    updated_at DESC,
-    id DESC
-  `
+  return getBackupRankOrderSql(dbType)
 }
 
 async function printPreStats(db: DatabaseAdapter): Promise<number> {

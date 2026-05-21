@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 
+function parseBatchMetadata(raw: unknown): unknown | null {
+  if (raw == null) return null
+  if (typeof raw !== 'string') return raw
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
 /**
  * GET /api/campaign-backups/batch-create/stream/[batchId]
  * 订阅批量创建任务进度（SSE 流）
@@ -65,7 +75,7 @@ export async function GET(
             completed: task.completed_count || 0,
             failed: task.failed_count || 0,
             total: task.total_count,
-            metadata: task.metadata ? JSON.parse(task.metadata) : null,
+            metadata: parseBatchMetadata(task.metadata),
           })
           controller.close()
           return
@@ -109,7 +119,7 @@ export async function GET(
                 completed: updated.completed_count || 0,
                 failed: updated.failed_count || 0,
                 total: updated.total_count,
-                metadata: updated.metadata ? JSON.parse(updated.metadata) : null,
+                metadata: parseBatchMetadata(updated.metadata),
               })
               controller.close()
             }

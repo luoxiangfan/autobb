@@ -9,7 +9,7 @@
  * 🔧 更新 (2026-04-20): 新增 campaign_config 字段备份
  */
 
-import { getDatabase } from './db'
+import { getDatabase, type DatabaseType } from './db'
 import { getInsertedId } from './db-helpers'
 
 /** 历史 publish 来源与 autoads 等价（发布时会归一为 autoads） */
@@ -21,6 +21,16 @@ function serializeJsonField(value: unknown): string | null {
   if (value == null) return null
   if (typeof value === 'string') return value
   return JSON.stringify(value)
+}
+
+function safeParseJsonField(value: unknown): unknown | null {
+  if (value == null) return null
+  if (typeof value !== 'string') return value
+  try {
+    return JSON.parse(value)
+  } catch {
+    return null
+  }
 }
 
 export function backupHasCampaignConfig(value: unknown): boolean {
@@ -177,9 +187,11 @@ export async function listCampaignBackups(
     params.push(filters.offerId)
   }
 
-  if (filters.backupSource !== undefined) {
+  if (filters.backupSource === 'autoads') {
+    whereConditions.push("(backup_source = 'autoads' OR backup_source = 'publish')")
+  } else if (filters.backupSource === 'google_ads') {
     whereConditions.push('backup_source = ?')
-    params.push(filters.backupSource)
+    params.push('google_ads')
   }
 
   if (filters.backupVersion !== undefined) {
@@ -213,13 +225,29 @@ export async function listCampaignBackups(
 /**
  * 获取 Offer 的最新备份
  */
+/** 与 dedup 脚本一致的备份优先级排序（用于 SQL ORDER BY） */
+export function getBackupRankOrderSql(dbType: DatabaseType, tableAlias?: string): string {
+  const p = tableAlias ? `${tableAlias}.` : ''
+  const hasConfig =
+    dbType === 'postgres'
+      ? `${p}campaign_config IS NOT NULL AND ${p}campaign_config::text NOT IN ('null', '{}')`
+      : `${p}campaign_config IS NOT NULL AND TRIM(${p}campaign_config) NOT IN ('', '{}', 'null')`
+  return `
+    ${p}backup_version DESC,
+    CASE WHEN ${hasConfig} THEN 0 ELSE 1 END,
+    ${p}updated_at DESC,
+    ${p}id DESC
+  `
+}
+
 export async function getLatestBackupForOffer(offerId: number, userId: number): Promise<CampaignBackup | null> {
   const db = await getDatabase()
+  const rankOrder = getBackupRankOrderSql(db.type)
 
   const backup = await db.queryOne(`
     SELECT * FROM campaign_backups
     WHERE offer_id = ? AND user_id = ?
-    ORDER BY backup_version DESC, created_at DESC
+    ORDER BY ${rankOrder}
     LIMIT 1
   `, [offerId, userId]) as any
 
@@ -249,26 +277,71 @@ export interface UpsertCampaignBackupAfterPublishInput {
 /**
  * 发布完成后 upsert 备份：每个 Offer 仅保留一条，写入完整 campaign_config
  */
+async function findAutoadsLikeBackupId(
+  offerId: number,
+  userId: number
+): Promise<number | null> {
+  const db = await getDatabase()
+  const rankOrder = getBackupRankOrderSql(db.type)
+  const row = (await db.queryOne(
+    `
+    SELECT id FROM campaign_backups
+    WHERE offer_id = ? AND user_id = ?
+      AND (backup_source = 'autoads' OR backup_source = 'publish')
+    ORDER BY ${rankOrder}
+    LIMIT 1
+  `,
+    [offerId, userId]
+  )) as { id: number } | undefined
+  return row?.id ?? null
+}
+
+async function findLatestGoogleAdsBackup(
+  offerId: number,
+  userId: number
+): Promise<{ id: number; backup_version: number } | null> {
+  const db = await getDatabase()
+  const rankOrder = getBackupRankOrderSql(db.type)
+  const row = (await db.queryOne(
+    `
+    SELECT id, backup_version FROM campaign_backups
+    WHERE offer_id = ? AND user_id = ? AND backup_source = 'google_ads'
+    ORDER BY ${rankOrder}
+    LIMIT 1
+  `,
+    [offerId, userId]
+  )) as { id: number; backup_version: number } | undefined
+  return row ?? null
+}
+
+async function deleteDuplicateAutoadsLikeBackups(
+  offerId: number,
+  userId: number,
+  keepId: number
+): Promise<void> {
+  const db = await getDatabase()
+  await db.exec(
+    `
+    DELETE FROM campaign_backups
+    WHERE offer_id = ? AND user_id = ? AND id != ?
+      AND (backup_source = 'autoads' OR backup_source = 'publish')
+  `,
+    [offerId, userId, keepId]
+  )
+}
+
 export async function upsertCampaignBackupAfterPublish(
   input: UpsertCampaignBackupAfterPublishInput
 ): Promise<void> {
   const db = await getDatabase()
   const now = new Date().toISOString()
 
-  const existing = (await db.queryOne(
-    `
-    SELECT id FROM campaign_backups
-    WHERE offer_id = ? AND user_id = ?
-    ORDER BY created_at DESC
-    LIMIT 1
-  `,
-    [input.offerId, input.userId]
-  )) as { id: number } | undefined
-
   const campaignDataSerialized = serializeJsonField(input.campaignData)
   const campaignConfigSerialized = serializeJsonField(input.campaignConfig)
 
-  if (existing) {
+  const autoadsBackupId = await findAutoadsLikeBackupId(input.offerId, input.userId)
+
+  if (autoadsBackupId) {
     await db.exec(
       `
       UPDATE campaign_backups
@@ -302,21 +375,23 @@ export async function upsertCampaignBackupAfterPublish(
         input.status ?? 'PAUSED',
         input.googleAdsAccountId,
         now,
-        existing.id,
+        autoadsBackupId,
         input.userId,
       ]
     )
 
-    await db.exec(
-      `
-      DELETE FROM campaign_backups
-      WHERE offer_id = ? AND user_id = ? AND id != ?
-    `,
-      [input.offerId, input.userId, existing.id]
-    )
+    await deleteDuplicateAutoadsLikeBackups(input.offerId, input.userId, autoadsBackupId)
 
     console.log(
-      `[Publish Backup] Updated backup id=${existing.id} for offer=${input.offerId}`
+      `[Publish Backup] Updated autoads backup id=${autoadsBackupId} for offer=${input.offerId}`
+    )
+    return
+  }
+
+  const googleBackup = await findLatestGoogleAdsBackup(input.offerId, input.userId)
+  if (googleBackup && googleBackup.backup_version >= 2) {
+    console.log(
+      `[Publish Backup] Skip: google_ads backup v${googleBackup.backup_version} is final for offer=${input.offerId}`
     )
     return
   }
@@ -365,8 +440,8 @@ export function parseCampaignBackup(row: any): CampaignBackup {
     id: row.id,
     userId: row.user_id,
     offerId: row.offer_id,
-    campaignData: typeof row.campaign_data === 'string' ? JSON.parse(row.campaign_data) : row.campaign_data,
-    campaignConfig: row.campaign_config ? (typeof row.campaign_config === 'string' ? JSON.parse(row.campaign_config) : row.campaign_config) : null,  // 🔧 新增
+    campaignData: safeParseJsonField(row.campaign_data) ?? {},
+    campaignConfig: row.campaign_config ? safeParseJsonField(row.campaign_config) : null,
     backupType: row.backup_type,
     backupSource: row.backup_source,
     backupVersion: row.backup_version,

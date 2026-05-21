@@ -109,12 +109,29 @@ export async function POST(request: NextRequest) {
       regenerateCreativeMap,
     }
 
-    // 加入队列
-    const queue = getQueueManager()
-    await queue.enqueue('campaign-batch-create', taskData, userId, {
-      priority: 'normal',
-      maxRetries: 3,
-    })
+    try {
+      const queue = getQueueManager()
+      await queue.enqueue('campaign-batch-create', taskData, userId, {
+        priority: 'normal',
+        maxRetries: 3,
+      })
+    } catch (enqueueError: any) {
+      await db.exec(
+        `
+        UPDATE batch_tasks
+        SET status = 'failed', updated_at = ${nowFunc},
+            metadata = ?
+        WHERE id = ?
+      `,
+        [
+          JSON.stringify({
+            error: enqueueError?.message || '任务入队失败',
+          }),
+          batchId,
+        ]
+      )
+      throw enqueueError
+    }
 
     console.log(
       `✅ 批量创建任务已加入队列：batchId=${batchId}, userId=${userId}, count=${backupIds.length}`

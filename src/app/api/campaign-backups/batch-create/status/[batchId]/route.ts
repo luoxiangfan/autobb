@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 
+function parseBatchMetadata(raw: unknown): unknown | null {
+  if (raw == null) return null
+  if (typeof raw !== 'string') return raw
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
 /**
  * GET /api/campaign-backups/batch-create/status/[batchId]
  * 查询批量创建任务状态（轮询 fallback）
@@ -54,7 +64,7 @@ export async function GET(
       createdAt: task.created_at,
       startedAt: task.started_at,
       completedAt: task.completed_at,
-      metadata: task.metadata ? JSON.parse(task.metadata) : null,
+      metadata: parseBatchMetadata(task.metadata),
     })
   } catch (error: any) {
     console.error('查询任务状态失败:', error)

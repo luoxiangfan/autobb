@@ -97,9 +97,15 @@ sqlite3 data/autoads.db < scripts/cleanup-duplicate-campaign-backups.sqlite.sql
 - 从步骤 1 的数据库备份恢复；或
 - 依赖后续发布触发的 `upsertCampaignBackupAfterPublish` 重建单条备份（无法恢复已删行的完整历史）
 
+## 发布后备份写入规则（代码行为）
+
+- 优先更新同 Offer 的 `autoads` / 历史 `publish` 备份，并仅删除 autoads 类重复行
+- 若仅有 `google_ads` 且 `backup_version >= 2`：不再覆盖（最终版）
+- 若仅有 `google_ads` v1 或无备份：新建 `autoads` 备份，保留 Google 行
+
 ## 相关代码
 
-- `src/lib/campaign-backups.ts` — `upsertCampaignBackupAfterPublish`
+- `src/lib/campaign-backups.ts` — `upsertCampaignBackupAfterPublish`、`getBackupRankOrderSql`
 - `src/app/api/campaigns/publish/route.ts` — 发布时 upsert
 - `scripts/cleanup-duplicate-campaign-backups.ts` — npm 脚本实现
 

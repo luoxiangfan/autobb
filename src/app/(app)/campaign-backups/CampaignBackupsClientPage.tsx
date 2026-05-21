@@ -90,6 +90,9 @@ export default function CampaignBackupsClientPage() {
   const [batchFailedCount, setBatchFailedCount] = useState(0)
   const [isBatchProcessing, setIsBatchProcessing] = useState(false)
   const [batchErrorDetails, setBatchErrorDetails] = useState<BatchProgressErrorDetail[]>([])
+  const [batchWarningDetails, setBatchWarningDetails] = useState<
+    Array<{ backupId: number; message: string }>
+  >([])
   
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1)
@@ -116,6 +119,10 @@ export default function CampaignBackupsClientPage() {
     setCurrentPage(1)
     setSelectedBackupIds([])
   }, [startDate, endDate, backupSource])
+
+  useEffect(() => {
+    setSelectedBackupIds([])
+  }, [currentPage])
 
   useEffect(() => {
     fetchBackups()
@@ -229,6 +236,18 @@ export default function CampaignBackupsClientPage() {
       .map((e) => ({ backupId: e.backupId, error: e.error }))
   }
 
+  const extractBatchWarnings = (
+    metadata: unknown
+  ): Array<{ backupId: number; message: string }> => {
+    if (!metadata || typeof metadata !== 'object') return []
+    const warnings = (metadata as { warnings?: Array<{ backupId: number; message: string }> })
+      .warnings
+    if (!Array.isArray(warnings)) return []
+    return warnings.filter(
+      (w) => typeof w.backupId === 'number' && typeof w.message === 'string'
+    )
+  }
+
   const applyBatchStatusFromApi = (data: {
     status: string
     completed: number
@@ -241,6 +260,7 @@ export default function CampaignBackupsClientPage() {
     setBatchFailedCount(data.failed)
     setBatchProgress(data.progress)
     setBatchErrorDetails(extractBatchErrors(data.metadata))
+    setBatchWarningDetails(extractBatchWarnings(data.metadata))
   }
 
   const handleOpenBatchCreateDialog = () => {
@@ -276,6 +296,7 @@ export default function CampaignBackupsClientPage() {
 
     setIsBatchProcessing(true)
     setBatchErrorDetails([])
+    setBatchWarningDetails([])
     try {
       // 调用新的异步 API
       const response = await fetch('/api/campaign-backups/batch-create', {
@@ -460,7 +481,11 @@ export default function CampaignBackupsClientPage() {
     failed: number,
     metadata?: unknown
   ) => {
-    setBatchErrorDetails(extractBatchErrors(metadata))
+    const errors = extractBatchErrors(metadata)
+    const warnings = extractBatchWarnings(metadata)
+    setBatchErrorDetails(errors)
+    setBatchWarningDetails(warnings)
+
     const message = status === 'completed'
       ? `已成功创建并提交发布 ${completed} 个广告系列`
       : status === 'partial'
@@ -473,6 +498,21 @@ export default function CampaignBackupsClientPage() {
       toast.warning(message, { duration: 10000 })
     } else {
       toast.success(message, { duration: 10000 })
+    }
+
+    if (warnings.length > 0) {
+      const preview = warnings
+        .slice(0, 3)
+        .map((w) => `备份 #${w.backupId}：${w.message}`)
+        .join('\n')
+      toast.warning(
+        warnings.length === 1 ? '部分项有警告' : `${warnings.length} 项有警告`,
+        {
+          description:
+            preview + (warnings.length > 3 ? `\n…另有 ${warnings.length - 3} 项` : ''),
+          duration: 12000,
+        }
+      )
     }
 
     // 刷新列表
@@ -922,6 +962,7 @@ export default function CampaignBackupsClientPage() {
         completedCount={batchCompletedCount}
         failedCount={batchFailedCount}
         errorDetails={batchErrorDetails}
+        warningDetails={batchWarningDetails}
       />
     </div>
   )

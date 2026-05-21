@@ -10,7 +10,7 @@ import {
   enqueueCampaignPublishFromBackup,
   validateGoogleAdsAccountForRestore,
 } from '@/lib/campaign-backup-restore'
-import { getActiveCampaignConflictForOffer } from '@/lib/campaign-offer-constraint'
+import { rollbackPendingCampaignAfterEnqueueFailure } from '@/lib/campaign-offer-constraint'
 
 export interface CampaignBatchCreateTaskData {
   batchId: string
@@ -54,6 +54,7 @@ export async function executeCampaignBatchCreate(
     let completed = 0
     let failed = 0
     const errors: Array<{ backupId: number; error: string }> = []
+    const warnings: Array<{ backupId: number; message: string }> = []
     const createdCampaigns: Array<{ backupId: number; campaignId: number }> = []
 
     for (const backupId of backupIds) {
@@ -70,16 +71,6 @@ export async function executeCampaignBatchCreate(
         }
 
         const backup = parseCampaignBackup(row)
-
-        const existingCampaign = await getActiveCampaignConflictForOffer(
-          backup.offerId,
-          task.userId
-        )
-        if (existingCampaign) {
-          failed++
-          errors.push({ backupId, error: '该 Offer 已有活跃广告系列' })
-          continue
-        }
 
         const dbDetail = await createCampaignRowFromBackup({
           backup,
@@ -110,9 +101,18 @@ export async function executeCampaignBatchCreate(
         if (publishDetail.error) {
           failed++
           errors.push({ backupId, error: publishDetail.error })
+          await rollbackPendingCampaignAfterEnqueueFailure({
+            campaignId: dbDetail.campaignId,
+            offerId: backup.offerId,
+            userId: task.userId,
+            reason: publishDetail.error,
+          })
         } else {
           completed++
           createdCampaigns.push({ backupId, campaignId: dbDetail.campaignId })
+          if (publishDetail.warning) {
+            warnings.push({ backupId, message: publishDetail.warning })
+          }
           console.log(
             `✅ 创建并入队发布：backupId=${backupId}, campaignId=${dbDetail.campaignId}`
           )
@@ -160,6 +160,7 @@ export async function executeCampaignBatchCreate(
         finalStatus,
         JSON.stringify({
           errors: errors.slice(0, 100),
+          warnings: warnings.slice(0, 100),
           createdCampaigns,
         }),
         batchId,
