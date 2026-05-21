@@ -65,7 +65,7 @@ export class GoogleAdsCampaignSyncScheduler {
   private intervalHandle: NodeJS.Timeout | null = null
   private startupTimeoutHandle: NodeJS.Timeout | null = null
   private isRunning: boolean = false
-  private readonly CHECK_INTERVAL_MS = 60 * 60 * 1000  // 每小时检查一次
+  private readonly CHECK_INTERVAL_MS = 60 * 1000  // 每分钟检查一次
   private readonly RUN_ON_START = parseBooleanEnv(
     process.env.QUEUE_GOOGLE_ADS_SYNC_RUN_ON_START,
     true
@@ -76,7 +76,7 @@ export class GoogleAdsCampaignSyncScheduler {
   )
   private readonly SYNC_INTERVAL_HOURS = parseNonNegativeIntEnv(
     process.env.QUEUE_GOOGLE_ADS_SYNC_INTERVAL_HOURS,
-    1
+    2
   )
 
   /**
@@ -110,7 +110,7 @@ export class GoogleAdsCampaignSyncScheduler {
       console.log('⏭️ 已禁用启动时 Google Ads 同步首轮检查')
     }
 
-    // 设置定时检查（每小时）
+    // 设置定时检查（每分钟）
     this.intervalHandle = setInterval(() => {
       this.checkAndScheduleSync()
     }, this.CHECK_INTERVAL_MS)
