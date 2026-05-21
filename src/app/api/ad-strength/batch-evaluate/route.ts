@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
               brandName: creative.brandName,
               targetCountry: creative.targetCountry || 'US',
               targetLanguage: creative.targetLanguage || 'en',
-              userId: userId ? parseInt(userId) : undefined,
+              userId: userId ?? undefined,
               sitelinks: creative.sitelinks,
               callouts: creative.callouts,
               // [NEW] 传递关键词搜索量数据

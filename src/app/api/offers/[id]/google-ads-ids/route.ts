@@ -21,6 +21,7 @@ export async function GET(
       )
     }
     const userIdNum = authResult.user.userId
+    const offerId = parseInt(params.id, 10)
     const db = await getDatabase()
 
     // 验证Offer是否存在且属于该用户

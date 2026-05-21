@@ -1,5 +1,5 @@
 import { verifyAuth } from '@/lib/auth'
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById, markBucketGenerated } from '@/lib/offers'
 import { createAdCreative } from '@/lib/ad-creative'
 import {

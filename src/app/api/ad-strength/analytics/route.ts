@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
       },
       insights,
       metadata: {
-        userId: parseInt(userId),
+        userId,
         dateRange: `${days}天`,
         offerId: offerId || null,
         generatedAt: new Date().toISOString()

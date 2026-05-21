@@ -21,7 +21,7 @@ export async function POST(
       );
     }
 
-    const task = await getClickFarmTaskById(params.id, parseInt(userId!));
+    const task = await getClickFarmTaskById(params.id, userId);
     if (!task) {
       return NextResponse.json(
         { error: 'not_found', message: '任务不存在' },
@@ -36,7 +36,7 @@ export async function POST(
       );
     }
 
-    const updatedTask = await stopClickFarmTask(params.id, parseInt(userId!));
+    const updatedTask = await stopClickFarmTask(params.id, userId);
 
     return NextResponse.json({
       success: true,

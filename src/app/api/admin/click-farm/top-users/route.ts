@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
     }
     const userId = authResult.user.userId;
-    if (!userId || userRole !== 'admin') {
+    if (!userId || authResult.user.role !== 'admin') {
       return NextResponse.json(
         { error: 'forbidden', message: '需要管理员权限' },
         { status: 403 }

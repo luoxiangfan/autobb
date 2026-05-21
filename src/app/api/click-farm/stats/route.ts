@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const stats = await getClickFarmStats(parseInt(userId!), daysBackNum);
+    const stats = await getClickFarmStats(userId, daysBackNum);
 
     return NextResponse.json({
       success: true,

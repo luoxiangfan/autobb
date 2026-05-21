@@ -6,7 +6,6 @@
 
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
 import { deleteKeywordPool } from '@/lib/offer-keyword-pool'
 import {
   assertOfferAvailableForExtractionEnqueue,

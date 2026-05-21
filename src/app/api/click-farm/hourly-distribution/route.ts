@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const distribution = await getHourlyDistribution(parseInt(userId!));
+    const distribution = await getHourlyDistribution(userId);
 
     return NextResponse.json({
       success: true,

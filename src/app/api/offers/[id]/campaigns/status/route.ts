@@ -38,7 +38,7 @@ export async function GET(
       // 向后兼容：某些 OpenClaw 流程会遗漏 campaignId，返回仍占用槽位的 Campaign 状态
       const db = await getDatabase()
       const offerId = parseInt(id)
-      const numericUserId = parseInt(userId)
+      const numericUserId = userId
       const occupyingWhere = offerOccupyingCampaignWhereClause(db.type)
       const latestCampaign = await db.queryOne(
         `SELECT
@@ -85,7 +85,7 @@ export async function GET(
         COALESCE(NULLIF(TRIM(google_campaign_id), ''), NULLIF(TRIM(campaign_id), '')) AS google_campaign_id
       FROM campaigns
       WHERE id = ? AND offer_id = ? AND user_id = ?`,
-      [parseInt(campaignId), parseInt(id), parseInt(userId)]
+      [parseInt(campaignId), parseInt(id), userId]
     ) as any
 
     if (!campaign) {

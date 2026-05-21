@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (userRole !== 'admin') {
+    if (authResult.user.role !== 'admin') {
       return NextResponse.json(
         { error: '需要管理员权限' },
         { status: 403 }

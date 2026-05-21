@@ -64,7 +64,7 @@ export async function GET(
       );
     }
 
-    const task = await getClickFarmTaskById(params.id, parseInt(userId!));
+    const task = await getClickFarmTaskById(params.id, userId);
 
     if (!task) {
       return NextResponse.json(
@@ -107,7 +107,7 @@ export async function PUT(
       );
     }
 
-    const task = await getClickFarmTaskById(params.id, parseInt(userId!));
+    const task = await getClickFarmTaskById(params.id, userId);
     if (!task) {
       return NextResponse.json(
         { error: 'not_found', message: '任务不存在' },
@@ -163,7 +163,7 @@ export async function PUT(
       }
     }
 
-    const updatedTask = await updateClickFarmTask(params.id, parseInt(userId!), body);
+    const updatedTask = await updateClickFarmTask(params.id, userId, body);
 
     // 更新后异步触发调度请求（控制面入队），避免在 API 请求内同步调度
     let triggerResult = null;
@@ -173,7 +173,7 @@ export async function PUT(
       try {
         const trigger = await enqueueClickFarmTriggerRequest({
           clickFarmTaskId: updatedTask.id,
-          userId: parseInt(userId!, 10),
+          userId,
           source: 'update',
           priority: 'high',
           parentRequestId: requestId,
@@ -195,7 +195,7 @@ export async function PUT(
         try {
           const trigger = await enqueueClickFarmTriggerRequest({
             clickFarmTaskId: updatedTask.id,
-            userId: parseInt(userId!, 10),
+            userId,
             source: 'update',
             priority: 'high',
             parentRequestId: requestId,
@@ -249,7 +249,7 @@ export async function DELETE(
       );
     }
 
-    const task = await getClickFarmTaskById(params.id, parseInt(userId!));
+    const task = await getClickFarmTaskById(params.id, userId);
     if (!task) {
       return NextResponse.json(
         { error: 'not_found', message: '任务不存在' },
@@ -257,7 +257,7 @@ export async function DELETE(
       );
     }
 
-    await deleteClickFarmTask(params.id, parseInt(userId!));
+    await deleteClickFarmTask(params.id, userId);
 
     return NextResponse.json({
       success: true,

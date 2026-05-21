@@ -6,7 +6,7 @@
  */
 
 import { verifyAuth } from '@/lib/auth'
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers'
 import { getQueueManager } from '@/lib/queue'
 import { getDatabase } from '@/lib/db'
