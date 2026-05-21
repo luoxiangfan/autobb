@@ -1,5 +1,6 @@
 // GET /api/url-swap/tasks/[id]/history - 获取换链历史
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { getUrlSwapTaskById } from '@/lib/url-swap';
 
@@ -15,7 +16,11 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const userId = request.headers.get('x-user-id');
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json(
         { error: 'unauthorized', message: '未登录' },
@@ -24,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // 验证任务存在
-    const task = await getUrlSwapTaskById(id, parseInt(userId));
+    const task = await getUrlSwapTaskById(id, userId);
     if (!task) {
       return NextResponse.json(
         { error: 'not_found', message: '任务不存在' },

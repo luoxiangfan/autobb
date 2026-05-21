@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { toNumber } from '@/lib/utils'
@@ -11,11 +12,11 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const db = await getDatabase()
 
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
       WHERE c.user_id = ?
         AND cp.date >= ?
         AND cp.date <= ?
-    `, [parseInt(userId, 10), sevenDaysAgoStr, todayStr]) as any
+    `, [userId, sevenDaysAgoStr, todayStr]) as any
 
     // 获取前7天的汇总数据
     const previousStats = await db.queryOne(`
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
       WHERE c.user_id = ?
         AND cp.date >= ?
         AND cp.date < ?
-    `, [parseInt(userId, 10), fourteenDaysAgoStr, sevenDaysAgoStr]) as any
+    `, [userId, fourteenDaysAgoStr, sevenDaysAgoStr]) as any
 
     // 计算变化率（确保返回数字，不是null）
     const calcChange = (recent: number | null | undefined, previous: number | null | undefined): number => {
@@ -105,7 +106,7 @@ export async function GET(request: NextRequest) {
         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_tasks
       FROM optimization_tasks
       WHERE user_id = ?
-    `, [parseInt(userId, 10)]) as any
+    `, [userId]) as any
 
     // 计算成本节省（基于CPC下降）
     const recentCost = toNumber(recentStats?.cost, 0)

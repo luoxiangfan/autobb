@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { updateCampaign } from '@/lib/campaigns'
 import { invalidateDashboardCache } from '@/lib/api-cache'
@@ -10,11 +11,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户 ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const body = await request.json()
     const { customName } = body
@@ -27,7 +28,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       )
     }
 
-    const campaign = await updateCampaign(parseInt(id, 10), parseInt(userId, 10), {
+    const campaign = await updateCampaign(parseInt(id, 10), userId, {
       customName: customName === '' ? null : customName,
     })
 
@@ -40,7 +41,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       )
     }
 
-    invalidateDashboardCache(parseInt(userId, 10))
+    invalidateDashboardCache(userId)
 
     return NextResponse.json({
       success: true,

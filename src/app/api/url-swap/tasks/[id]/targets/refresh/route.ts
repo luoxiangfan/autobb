@@ -1,5 +1,6 @@
 // POST /api/url-swap/tasks/[id]/targets/refresh - 刷新任务目标（回填历史Campaign）
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { getUrlSwapTaskById, refreshUrlSwapTaskTargets, getUrlSwapTaskTargets } from '@/lib/url-swap';
 
@@ -10,7 +11,11 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const userId = request.headers.get('x-user-id');
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json(
         { error: 'unauthorized', message: '未登录' },
@@ -18,7 +23,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const userIdNum = parseInt(userId, 10);
+    const userIdNum = userId;
 
     const existingTask = await getUrlSwapTaskById(id, userIdNum);
     if (!existingTask) {

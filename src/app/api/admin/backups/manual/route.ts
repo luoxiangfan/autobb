@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { backupDatabase } from '@/lib/backup'
 
@@ -8,9 +9,11 @@ import { backupDatabase } from '@/lib/backup'
 export async function POST(request: NextRequest) {
   try {
     // 从中间件注入的请求头中获取用户信息
-    const userId = request.headers.get('x-user-id')
-    const userRole = request.headers.get('x-user-role')
-
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json(
         { error: '未授权' },
@@ -27,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     // 执行手动备份
     console.log('管理员触发手动备份，用户ID:', userId)
-    const result = await backupDatabase('manual', parseInt(userId))
+    const result = await backupDatabase('manual', userId)
 
     if (result.success) {
       return NextResponse.json({

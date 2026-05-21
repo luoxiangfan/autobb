@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 
@@ -10,11 +11,11 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     // 获取limit参数，默认5
     const searchParams = request.nextUrl.searchParams
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
         END DESC,
         COALESCE(SUM(acp.impressions), 0) DESC
       LIMIT ?
-    `, [parseInt(userId, 10), limit]) as any[]
+    `, [userId, limit]) as any[]
 
     // 转换为前端需要的格式
     const creatives = topCreatives.map((creative) => {

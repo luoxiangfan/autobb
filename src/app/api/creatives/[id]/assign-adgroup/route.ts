@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findAdCreativeById, updateAdCreative } from '@/lib/ad-creative'
 import { findAdGroupById } from '@/lib/ad-groups'
@@ -12,11 +13,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const body = await request.json()
     const { adGroupId } = body
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     // 验证参数
     if (!adGroupId) {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // 查找Creative
-    const creative = await findAdCreativeById(parseInt(id, 10), parseInt(userId, 10))
+    const creative = await findAdCreativeById(parseInt(id, 10), userId)
     if (!creative) {
       return NextResponse.json(
         {
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // 验证Ad Group存在并且属于当前用户
-    const adGroup = await findAdGroupById(parseInt(adGroupId, 10), parseInt(userId, 10))
+    const adGroup = await findAdGroupById(parseInt(adGroupId, 10), userId)
     if (!adGroup) {
       return NextResponse.json(
         {
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // 更新Creative的adGroupId
-    const updatedCreative = updateAdCreative(creative.id, parseInt(userId, 10), {
+    const updatedCreative = updateAdCreative(creative.id, userId, {
       ad_group_id: adGroup.id,
     })
 

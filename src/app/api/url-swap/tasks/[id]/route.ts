@@ -2,6 +2,7 @@
 // PUT /api/url-swap/tasks/[id] - 更新任务配置
 // DELETE /api/url-swap/tasks/[id] - 删除任务
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { getUrlSwapTaskById, getUrlSwapTaskStats, updateUrlSwapTask, getUrlSwapTaskTargets } from '@/lib/url-swap';
 import { findInvalidAffiliateLinks, normalizeAffiliateLinksInput } from '@/lib/url-swap-link-utils';
@@ -22,7 +23,11 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const userId = request.headers.get('x-user-id');
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json(
         { error: 'unauthorized', message: '未登录' },
@@ -30,7 +35,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const task = await getUrlSwapTaskById(id, parseInt(userId));
+    const task = await getUrlSwapTaskById(id, userId);
     if (!task) {
       return NextResponse.json(
         { error: 'not_found', message: '任务不存在' },
@@ -39,8 +44,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // 获取统计信息
-    const stats = await getUrlSwapTaskStats(id, parseInt(userId));
-    const targets = await getUrlSwapTaskTargets(id, parseInt(userId));
+    const stats = await getUrlSwapTaskStats(id, userId);
+    const targets = await getUrlSwapTaskTargets(id, userId);
 
     const taskWithTargets = { ...task, targets }
 
@@ -67,7 +72,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const userId = request.headers.get('x-user-id');
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json(
         { error: 'unauthorized', message: '未登录' },
@@ -76,7 +85,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // 验证任务存在
-    const existingTask = await getUrlSwapTaskById(id, parseInt(userId));
+    const existingTask = await getUrlSwapTaskById(id, userId);
     if (!existingTask) {
       return NextResponse.json(
         { error: 'not_found', message: '任务不存在' },
@@ -141,7 +150,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // 更新任务
-    const task = await updateUrlSwapTask(id, parseInt(userId), body);
+    const task = await updateUrlSwapTask(id, userId, body);
 
     // 及时生效：若任务仍为 enabled，立即触发一次调度（使用最新配置入队）
     // - disabled/completed 任务不会被触发（triggerUrlSwapScheduling 内部会 skipped）
@@ -175,7 +184,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const userId = request.headers.get('x-user-id');
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json(
         { error: 'unauthorized', message: '未登录' },
@@ -184,7 +197,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // 验证任务存在
-    const existingTask = await getUrlSwapTaskById(id, parseInt(userId));
+    const existingTask = await getUrlSwapTaskById(id, userId);
     if (!existingTask) {
       return NextResponse.json(
         { error: 'not_found', message: '任务不存在' },
@@ -203,7 +216,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     `, [isDeletedValue, now, now, id]);
 
     try {
-      await removePendingUrlSwapQueueTasksByTaskIds([id], parseInt(userId));
+      await removePendingUrlSwapQueueTasksByTaskIds([id], userId);
     } catch (cleanupError) {
       console.warn(`[url-swap] 删除任务后清理队列失败: ${id}`, cleanupError);
     }

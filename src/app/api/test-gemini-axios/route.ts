@@ -6,6 +6,7 @@
  * 注意：需要登录后才能使用，会使用当前用户的AI配置
  */
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateContent } from '@/lib/gemini-axios'
 import { GEMINI_ACTIVE_MODEL, normalizeGeminiModel } from '@/lib/gemini-models'
@@ -15,7 +16,11 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     // 获取当前登录用户ID（必需）
-    const userId = request.headers.get('x-user-id')
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json({ error: '请先登录后再测试' }, { status: 401 })
     }
@@ -33,7 +38,7 @@ export async function GET(request: NextRequest) {
       prompt: 'Hello, please respond with "Success"',
       temperature: 0.1,
       maxOutputTokens: 50,
-    }, parseInt(userId, 10))
+    }, userId)
 
     const duration = Date.now() - startTime
 

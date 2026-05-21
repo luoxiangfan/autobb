@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findAdCreativesByOfferId } from '@/lib/ad-creative'
 import { findOfferById } from '@/lib/offers'
@@ -39,16 +40,16 @@ export async function GET(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const offerId = parseInt(id, 10)
 
     // 验证Offer存在且属于当前用户
-    const offer = await findOfferById(offerId, parseInt(userId, 10))
+    const offer = await findOfferById(offerId, userId)
     if (!offer) {
       return NextResponse.json(
         { error: 'Offer不存在或无权访问' },
@@ -57,7 +58,7 @@ export async function GET(
     }
 
     // 获取所有创意
-    const creatives = await findAdCreativesByOfferId(offerId, parseInt(userId, 10))
+    const creatives = await findAdCreativesByOfferId(offerId, userId)
 
     const creativesPayload = creatives.map((c: any) => {
       const { creativeType, keywordBucket } = resolveCreativeIdentity(c)

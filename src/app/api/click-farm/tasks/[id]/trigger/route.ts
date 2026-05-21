@@ -1,6 +1,7 @@
 // POST /api/click-farm/tasks/[id]/trigger - 手动触发任务立即执行
 // src/app/api/click-farm/tasks/[id]/trigger/route.ts
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { enqueueClickFarmTriggerRequest } from '@/lib/click-farm/click-farm-scheduler-trigger';
 import { getDatabase } from '@/lib/db';
@@ -35,7 +36,11 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = request.headers.get('x-user-id');
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -108,7 +113,7 @@ export async function POST(
       UPDATE click_farm_tasks
       SET next_run_at = ${oneHourAgoSql}, updated_at = ${nowSql}
       WHERE id = ? AND user_id = ?
-    `, [id, parseInt(userId, 10)]);
+    `, [id, userId]);
 
     if (updated.changes === 0) {
       return NextResponse.json(
@@ -126,7 +131,7 @@ export async function POST(
     const requestId = request.headers.get('x-request-id') || undefined;
     const trigger = await enqueueClickFarmTriggerRequest({
       clickFarmTaskId: id,
-      userId: parseInt(userId, 10),
+      userId: userId,
       source: 'manual',
       priority: 'high',
       parentRequestId: requestId,

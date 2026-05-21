@@ -1,5 +1,6 @@
 // GET /api/admin/click-farm/hourly-distribution - 全局时间分布
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/db';
 import { parseJsonField } from '@/lib/json-field';
@@ -11,8 +12,11 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
-    const userRole = request.headers.get('x-user-role');
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId || userRole !== 'admin') {
       return NextResponse.json(
         { error: 'forbidden', message: '需要管理员权限' },

@@ -24,6 +24,7 @@ export default defineConfig({
     },
     testTimeout: 30000,
     hookTimeout: 10000,
+    setupFiles: ['./src/test-utils/vitest-auth-setup.ts'],
   },
   resolve: {
     alias: {

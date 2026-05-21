@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findAdCreativeById, updateAdCreative, deleteAdCreative } from '@/lib/ad-creative'
 
@@ -14,13 +15,13 @@ export async function GET(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
-    const creative = await findAdCreativeById(parseInt(id, 10), parseInt(userId, 10))
+    const creative = await findAdCreativeById(parseInt(id, 10), userId)
 
     if (!creative) {
       return NextResponse.json(
@@ -58,11 +59,11 @@ export async function PUT(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const body = await request.json()
     const {
@@ -94,7 +95,7 @@ export async function PUT(
     if (final_url !== undefined) updates.final_url = final_url
     if (score !== undefined) updates.score = score
 
-    const creative = updateAdCreative(parseInt(id, 10), parseInt(userId, 10), updates)
+    const creative = updateAdCreative(parseInt(id, 10), userId, updates)
 
     if (!creative) {
       return NextResponse.json(
@@ -132,13 +133,13 @@ export async function DELETE(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
-    const success = deleteAdCreative(parseInt(id, 10), parseInt(userId, 10))
+    const success = deleteAdCreative(parseInt(id, 10), userId)
 
     if (!success) {
       return NextResponse.json(

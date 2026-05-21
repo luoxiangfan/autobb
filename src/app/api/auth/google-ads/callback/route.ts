@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCodeForTokens, getGoogleAdsCredentialsFromDB } from '@/lib/google-ads-api'
 import { createGoogleAdsAccount, findGoogleAdsAccountByCustomerId } from '@/lib/google-ads-accounts'
@@ -31,7 +32,11 @@ export async function GET(request: NextRequest) {
     }
 
     // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_APP_URL}/login?error=unauthorized`
@@ -39,7 +44,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 获取用户的 Google Ads 凭证
-    const credentials = await getGoogleAdsCredentialsFromDB(parseInt(userId, 10))
+    const credentials = await getGoogleAdsCredentialsFromDB(userId)
 
     // 交换authorization code获取tokens
     const tokens = await exchangeCodeForTokens(code, {
@@ -89,7 +94,7 @@ export async function GET(request: NextRequest) {
     const existingAccount = await db.queryOne(`
       SELECT id, is_deleted FROM google_ads_accounts
       WHERE user_id = ? AND customer_id = ?
-    `, [parseInt(userId, 10), customerId]) as { id: number; is_deleted: boolean } | undefined
+    `, [userId, customerId]) as { id: number; is_deleted: boolean } | undefined
 
     if (existingAccount) {
       // 账户已存在，更新tokens
@@ -110,7 +115,7 @@ export async function GET(request: NextRequest) {
         `, [tokens.access_token, tokens.refresh_token, expiresAt, existingAccount.id])
       } else {
         // 正常更新tokens
-        await updateGoogleAdsAccount(existingAccount.id, parseInt(userId, 10), {
+        await updateGoogleAdsAccount(existingAccount.id, userId, {
           accessToken: tokens.access_token,
           refreshToken: tokens.refresh_token,
           tokenExpiresAt: expiresAt,
@@ -119,7 +124,7 @@ export async function GET(request: NextRequest) {
     } else {
       // 账户不存在，创建新账号
       await createGoogleAdsAccount({
-        userId: parseInt(userId, 10),
+        userId: userId,
         customerId,
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,

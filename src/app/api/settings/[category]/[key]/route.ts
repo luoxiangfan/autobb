@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSetting, getUserOnlySetting, updateSetting } from '@/lib/settings'
 import { invalidateProxyPoolCache } from '@/lib/offer-utils'
@@ -16,9 +17,8 @@ export async function GET(
   try {
     const { category, key } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    const userIdNum = userId ? parseInt(userId, 10) : undefined
+    const authResult = await verifyAuth(request)
+    const userIdNum = authResult.authenticated && authResult.user ? authResult.user.userId : undefined
 
     if (category === 'affiliate_sync' && !userIdNum) {
       return NextResponse.json(
@@ -82,9 +82,8 @@ export async function PUT(
   try {
     const { category, key } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    const userIdNum = userId ? parseInt(userId, 10) : undefined
+    const authResult = await verifyAuth(request)
+    const userIdNum = authResult.authenticated && authResult.user ? authResult.user.userId : undefined
 
     const body = await request.json()
 

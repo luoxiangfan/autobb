@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findAdGroupById, updateAdGroup, deleteAdGroup } from '@/lib/ad-groups'
 
@@ -11,13 +12,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
-    const adGroup = await findAdGroupById(parseInt(id, 10), parseInt(userId, 10))
+    const adGroup = await findAdGroupById(parseInt(id, 10), userId)
 
     if (!adGroup) {
       return NextResponse.json(
@@ -52,11 +53,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const body = await request.json()
     const { adGroupName, status, cpcBidMicros } = body
@@ -66,7 +67,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (status !== undefined) updates.status = status
     if (cpcBidMicros !== undefined) updates.cpcBidMicros = cpcBidMicros
 
-    const adGroup = await updateAdGroup(parseInt(id, 10), parseInt(userId, 10), updates)
+    const adGroup = await updateAdGroup(parseInt(id, 10), userId, updates)
 
     if (!adGroup) {
       return NextResponse.json(
@@ -101,13 +102,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
-    const success = await deleteAdGroup(parseInt(id, 10), parseInt(userId, 10))
+    const success = await deleteAdGroup(parseInt(id, 10), userId)
 
     if (!success) {
       return NextResponse.json(

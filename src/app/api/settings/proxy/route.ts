@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllProxyUrls } from '@/lib/settings';
 
@@ -12,8 +13,12 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id');
-    const userIdNum = userId ? parseInt(userId, 10) : undefined;
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
+    const userIdNum = userId ? userId : undefined;
 
     // 获取查询参数
     const searchParams = request.nextUrl.searchParams;

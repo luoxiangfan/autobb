@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { listOffers } from '@/lib/offers'
 import { getDatabase } from '@/lib/db'
@@ -28,10 +29,11 @@ function parseBooleanParam(value: string | null): boolean {
  * 已下线：请使用 /api/offers/extract 或 /api/offers/extract/stream
  */
 async function post(request: NextRequest) {
-  const userId = request.headers.get('x-user-id')
-  if (!userId) {
-    return NextResponse.json({ error: '未授权' }, { status: 401 })
-  }
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    }
+    const userId = authResult.user.userId
 
   return NextResponse.json(
     {
@@ -50,11 +52,11 @@ async function post(request: NextRequest) {
  */
 async function get(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     // 获取查询参数
     const searchParams = request.nextUrl.searchParams
@@ -109,7 +111,7 @@ async function get(request: NextRequest) {
       }
 
       // 批量查询不使用缓存，确保获取最新状态
-      const { offers } = await listOffers(parseInt(userId, 10), {
+      const { offers } = await listOffers(userId, {
         ids, // 传递IDs参数
         limit: ids.length, // 限制返回数量
       })
@@ -132,7 +134,7 @@ async function get(request: NextRequest) {
     // Dashboard等场景：只需要概要统计，避免拉取完整Offer列表
     if (summary) {
       const db = await getDatabase()
-      const userIdNum = parseInt(userId, 10)
+      const userIdNum = userId
       const notDeletedCondition = db.type === 'postgres'
         ? '(is_deleted = false OR is_deleted IS NULL)'
         : '(is_deleted = 0 OR is_deleted IS NULL)'
@@ -166,7 +168,7 @@ async function get(request: NextRequest) {
     }
 
     // 缓存键
-    const cacheKey = generateCacheKey('offers', parseInt(userId, 10), {
+    const cacheKey = generateCacheKey('offers', userId, {
       limit,
       offset,
       isActive,
@@ -180,7 +182,7 @@ async function get(request: NextRequest) {
     })
 
     const buildResult = async () => {
-      const { offers, total } = await listOffers(parseInt(userId, 10), {
+      const { offers, total } = await listOffers(userId, {
         limit,
         offset,
         isActive,

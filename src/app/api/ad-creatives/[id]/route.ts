@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
@@ -41,11 +42,11 @@ export async function GET(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const db = await getDatabase()
     const creative = await db.queryOne(
@@ -61,7 +62,7 @@ export async function GET(
       FROM ad_creatives
       WHERE id = ? AND user_id = ?
     `,
-      [parseInt(id, 10), parseInt(userId, 10)]
+      [parseInt(id, 10), userId]
     )
 
     if (!creative) {
@@ -124,11 +125,11 @@ export async function PUT(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const body = await request.json()
 
@@ -153,7 +154,7 @@ export async function PUT(
     const db = await getDatabase()
     const creative = await db.queryOne(
       'SELECT id, creation_status FROM ad_creatives WHERE id = ? AND user_id = ?',
-      [parseInt(id, 10), parseInt(userId, 10)]
+      [parseInt(id, 10), userId]
     )
 
     if (!creative) {
@@ -291,18 +292,18 @@ export async function DELETE(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const db = await getDatabase()
 
     // 验证广告创意是否存在且属于该用户
     const creative = await db.queryOne(
       'SELECT id, creation_status FROM ad_creatives WHERE id = ? AND user_id = ?',
-      [parseInt(id, 10), parseInt(userId, 10)]
+      [parseInt(id, 10), userId]
     )
 
     if (!creative) {
@@ -326,7 +327,7 @@ export async function DELETE(
     // 检查是否有关联的Campaign
     const campaigns = await db.query(
       'SELECT id FROM campaigns WHERE ad_creative_id = ? AND user_id = ?',
-      [parseInt(id, 10), parseInt(userId, 10)]
+      [parseInt(id, 10), userId]
     )
 
     if ((campaigns as any[]).length > 0) {

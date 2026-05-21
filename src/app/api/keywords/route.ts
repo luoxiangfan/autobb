@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { createKeyword, findKeywordsByUserId, findKeywordsByAdGroupId } from '@/lib/keywords'
 import { findAdGroupById } from '@/lib/ad-groups'
@@ -10,11 +11,11 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const { searchParams } = new URL(request.url)
     const adGroupIdParam = searchParams.get('adGroupId')
@@ -29,11 +30,11 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'adGroupId必须是数字' }, { status: 400 })
       }
 
-      keywords = await findKeywordsByAdGroupId(adGroupId, parseInt(userId, 10))
+      keywords = await findKeywordsByAdGroupId(adGroupId, userId)
     } else {
       // 获取用户的所有Keywords
       const limit = limitParam ? parseInt(limitParam, 10) : undefined
-      keywords = await findKeywordsByUserId(parseInt(userId, 10), limit)
+      keywords = await findKeywordsByUserId(userId, limit)
     }
 
     return NextResponse.json({
@@ -59,11 +60,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const body = await request.json()
     const {
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 验证Ad Group存在且属于当前用户
-    const adGroup = await findAdGroupById(adGroupId, parseInt(userId, 10))
+    const adGroup = await findAdGroupById(adGroupId, userId)
     if (!adGroup) {
       return NextResponse.json(
         {
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     // 创建Keyword
     const keyword = await createKeyword({
-      userId: parseInt(userId, 10),
+      userId: userId,
       adGroupId,
       keywordText,
       matchType,

@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import {
   validateGoogleAdsConfig,
@@ -20,9 +21,8 @@ const validateSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    const userIdNum = userId ? parseInt(userId, 10) : undefined
+    const authResult = await verifyAuth(request)
+    const userIdNum = authResult.authenticated && authResult.user ? authResult.user.userId : undefined
 
     const body = await request.json()
 

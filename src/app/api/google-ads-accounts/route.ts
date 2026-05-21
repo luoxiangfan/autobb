@@ -62,11 +62,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户 ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const body = await request.json()
     const {
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     // 创建账号
     const account = await createGoogleAdsAccount({
-      userId: parseInt(userId, 10),
+      userId: userId,
       customerId,
       accountName,
       currency,

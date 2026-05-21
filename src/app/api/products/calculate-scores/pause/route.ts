@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 import {
@@ -5,19 +6,15 @@ import {
   setProductScoreCalculationPaused,
 } from '@/lib/product-score-control'
 
-function parseUserId(request: NextRequest): number | null {
-  const userIdRaw = request.headers.get('x-user-id')
-  if (!userIdRaw) return null
-
-  const userId = Number(userIdRaw)
-  if (!Number.isFinite(userId) || userId <= 0) return null
-
-  return userId
+async function parseUserId(request: NextRequest): Promise<number | null> {
+  const authResult = await verifyAuth(request)
+  if (!authResult.authenticated || !authResult.user) return null
+  return authResult.user.userId
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = parseUserId(request)
+    const userId = await parseUserId(request)
     if (!userId) {
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
@@ -46,7 +43,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = parseUserId(request)
+    const userId = await parseUserId(request)
     if (!userId) {
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }

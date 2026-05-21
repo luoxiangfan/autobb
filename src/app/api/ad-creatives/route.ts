@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 
@@ -9,11 +10,11 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const { searchParams } = new URL(request.url)
     const offerId = searchParams.get('offer_id')
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
         END DESC,
         created_at DESC
     `,
-      [parseInt(offerId, 10), parseInt(userId, 10)]
+      [parseInt(offerId, 10), userId]
     )
 
     return NextResponse.json({
@@ -92,10 +93,11 @@ export async function GET(request: NextRequest) {
  * 已下线：禁止通过旧写入口直接创建广告创意
  */
 export async function POST(request: NextRequest) {
-  const userId = request.headers.get('x-user-id')
-  if (!userId) {
-    return NextResponse.json({ error: '未授权' }, { status: 401 })
-  }
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    }
+    const userId = authResult.user.userId
 
   return NextResponse.json(
     {

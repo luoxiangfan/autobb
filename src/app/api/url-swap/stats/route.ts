@@ -1,5 +1,6 @@
 // GET /api/url-swap/stats - 获取当前用户的换链统计
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getUrlSwapUserStats } from '@/lib/url-swap'
 
@@ -10,12 +11,16 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id')
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json({ error: 'unauthorized', message: '未登录' }, { status: 401 })
     }
 
-    const stats = await getUrlSwapUserStats(parseInt(userId, 10))
+    const stats = await getUrlSwapUserStats(userId)
 
     // 兼容前端：既返回 data 包装，也保留扁平字段
     return NextResponse.json({ ...stats, success: true, data: stats })

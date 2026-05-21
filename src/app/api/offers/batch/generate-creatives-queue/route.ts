@@ -10,6 +10,7 @@
  * - 若该Offer已生成满3种类型（A/B/D），则跳过
  */
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getDatabase } from '@/lib/db'
@@ -49,14 +50,14 @@ export async function POST(request: NextRequest) {
   const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
 
   try {
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
         { error: 'Unauthorized', message: '请先登录' },
         { status: 401 }
       )
     }
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = authResult.user.userId
 
     const body = await request.json()
     const parsed = requestSchema.safeParse(body)

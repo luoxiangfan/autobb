@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB } from '@/lib/google-ads-api'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
@@ -90,14 +91,14 @@ export async function GET(
     const { id } = params
     const requestId = request.headers.get('x-request-id') || undefined
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const db = await getDatabase()
-    const numericUserId = parseInt(userId, 10)
+    const numericUserId = userId
     const offerId = parseInt(id, 10)
 
     const isDeletedCheck = db.type === 'postgres' ? 'c.is_deleted = FALSE' : 'c.is_deleted = 0'

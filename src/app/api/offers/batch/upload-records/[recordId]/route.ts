@@ -9,6 +9,7 @@
  * 3. 包括关联的batch_tasks信息
  */
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/json-field'
@@ -44,14 +45,14 @@ export async function GET(
 
   try {
     // 验证用户身份
-    const userId = req.headers.get('x-user-id')
-    if (!userId) {
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
         { error: 'Unauthorized', message: '请先登录' },
         { status: 401 }
       )
     }
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = authResult.user.userId
 
     // 查询上传记录详情（联表查询batch_tasks）
     const records = await db.query<UploadRecordDetail>(`

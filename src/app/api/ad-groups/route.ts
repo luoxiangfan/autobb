@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdGroup, findAdGroupsByUserId, findAdGroupsByCampaignId } from '@/lib/ad-groups'
 import { findCampaignById } from '@/lib/campaigns'
@@ -10,11 +11,11 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const { searchParams } = new URL(request.url)
     const campaignIdParam = searchParams.get('campaignId')
@@ -29,11 +30,11 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'campaignId必须是数字' }, { status: 400 })
       }
 
-      adGroups = await findAdGroupsByCampaignId(campaignId, parseInt(userId, 10))
+      adGroups = await findAdGroupsByCampaignId(campaignId, userId)
     } else {
       // 获取用户的所有Ad Groups
       const limit = limitParam ? parseInt(limitParam, 10) : undefined
-      adGroups = await findAdGroupsByUserId(parseInt(userId, 10), limit)
+      adGroups = await findAdGroupsByUserId(userId, limit)
     }
 
     return NextResponse.json({
@@ -59,11 +60,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const body = await request.json()
     const { campaignId, adGroupName, status, cpcBidMicros } = body
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 验证Campaign存在且属于当前用户
-    const campaign = await findCampaignById(campaignId, parseInt(userId, 10))
+    const campaign = await findCampaignById(campaignId, userId)
     if (!campaign) {
       return NextResponse.json(
         {
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     // 创建Ad Group
     const adGroup = await createAdGroup({
-      userId: parseInt(userId, 10),
+      userId: userId,
       campaignId,
       adGroupName,
       status,

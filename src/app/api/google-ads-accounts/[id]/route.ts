@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import {
   findGoogleAdsAccountById,
@@ -48,14 +49,14 @@ export async function GET(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const accountId = parseInt(id, 10)
-    const numericUserId = parseInt(userId, 10)
+    const numericUserId = userId
     const account = await findGoogleAdsAccountById(accountId, numericUserId)
 
     if (!account) {
@@ -111,11 +112,11 @@ export async function PUT(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const body = await request.json()
     const {
@@ -130,7 +131,7 @@ export async function PUT(
     } = body
 
     // 验证账号存在且属于当前用户
-    const existingAccount = await findGoogleAdsAccountById(parseInt(id, 10), parseInt(userId, 10))
+    const existingAccount = await findGoogleAdsAccountById(parseInt(id, 10), userId)
 
     if (!existingAccount) {
       return NextResponse.json(
@@ -153,7 +154,7 @@ export async function PUT(
     if (lastSyncAt !== undefined) updates.lastSyncAt = lastSyncAt
 
     // 更新账号
-    const updatedAccount = await updateGoogleAdsAccount(parseInt(id, 10), parseInt(userId, 10), updates)
+    const updatedAccount = await updateGoogleAdsAccount(parseInt(id, 10), userId, updates)
 
     return NextResponse.json({
       success: true,
@@ -185,14 +186,14 @@ export async function DELETE(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const accountId = parseInt(id, 10)
-    const numericUserId = parseInt(userId, 10)
+    const numericUserId = userId
     if (!Number.isFinite(accountId) || !Number.isFinite(numericUserId)) {
       return NextResponse.json({ error: '无效的账号或用户 ID' }, { status: 400 })
     }

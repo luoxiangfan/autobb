@@ -2,6 +2,7 @@
  * Keyword Search Volume API
  * GET /api/keywords/volume?keywords=kw1,kw2&country=US&language=en
  */
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getKeywordSearchVolumes } from '@/lib/keyword-planner'
 import { getUserAuthType } from '@/lib/google-ads-oauth'
@@ -10,11 +11,11 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const searchParams = request.nextUrl.searchParams
     const keywordsParam = searchParams.get('keywords')
@@ -35,12 +36,12 @@ export async function GET(request: NextRequest) {
     }
 
     // 🔧 修复(2025-12-26): 支持服务账号模式
-    const auth = await getUserAuthType(parseInt(userId, 10))
+    const auth = await getUserAuthType(userId)
     const volumes = await getKeywordSearchVolumes(
       keywords,
       country,
       language,
-      parseInt(userId, 10),
+      userId,
       auth.authType,
       auth.serviceAccountId
     )

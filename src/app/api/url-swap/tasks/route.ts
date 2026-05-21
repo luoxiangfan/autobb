@@ -1,6 +1,7 @@
 // GET /api/url-swap/tasks - 获取换链接任务列表
 // POST /api/url-swap/tasks - 创建换链接任务
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { createUrlSwapTask, getUrlSwapTasks, hasUrlSwapTask } from '@/lib/url-swap';
 import { triggerUrlSwapScheduling } from '@/lib/url-swap-scheduler';
@@ -19,15 +20,14 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
-    if (!userId) {
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
-        { error: 'unauthorized', message: '未登录' },
+        { error: 'unauthorized', message: authResult.error || '未登录' },
         { status: 401 }
       );
     }
-
-    const userIdNum = parseInt(userId);
+    const userIdNum = authResult.user.userId;
     const { searchParams } = new URL(request.url);
 
     // 解析查询参数
@@ -70,15 +70,14 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
-    if (!userId) {
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
-        { error: 'unauthorized', message: '未登录' },
+        { error: 'unauthorized', message: authResult.error || '未登录' },
         { status: 401 }
       );
     }
-
-    const userIdNum = parseInt(userId);
+    const userIdNum = authResult.user.userId;
 
     // 获取原始请求体
     const rawBody = await request.text();

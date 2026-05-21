@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findAdCreativeById, updateAdCreative } from '@/lib/ad-creative'
 import { findAdGroupById } from '@/lib/ad-groups'
@@ -14,14 +15,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     // 查找Creative
-    const creative = await findAdCreativeById(parseInt(id, 10), parseInt(userId, 10))
+    const creative = await findAdCreativeById(parseInt(id, 10), userId)
     if (!creative) {
       return NextResponse.json(
         {
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // 查找Ad Group
-    const adGroup = await findAdGroupById(creative.ad_group_id, parseInt(userId, 10))
+    const adGroup = await findAdGroupById(creative.ad_group_id, userId)
     if (!adGroup) {
       return NextResponse.json(
         {
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // 查找Campaign
-    const campaign = await findCampaignById(adGroup.campaignId, parseInt(userId, 10))
+    const campaign = await findCampaignById(adGroup.campaignId, userId)
     if (!campaign) {
       return NextResponse.json(
         {
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     // 查找Google Ads账号
     const googleAdsAccount = await findGoogleAdsAccountById(
       campaign.googleAdsAccountId,
-      parseInt(userId, 10)
+      userId
     )
 
     if (!googleAdsAccount) {
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // 更新状态为pending
-    updateAdCreative(creative.id, parseInt(userId, 10), {
+    updateAdCreative(creative.id, userId, {
       creation_status: 'pending',
       creation_error: undefined,
     })
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       const finalUrls = [creative.final_url]
 
       // 获取用户授权方式
-      const auth = await getUserAuthType(parseInt(userId, 10))
+      const auth = await getUserAuthType(userId)
 
       // 创建Google Ads Responsive Search Ad
       const adResult = await createGoogleAdsResponsiveSearchAd({
@@ -150,13 +151,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         path1: creative.path_1 || undefined,
         path2: creative.path_2 || undefined,
         accountId: googleAdsAccount.id,
-        userId: parseInt(userId, 10),
+        userId: userId,
         authType: auth.authType,
         serviceAccountId: auth.serviceAccountId,
       })
 
       // 更新Creative，标记为已同步
-      updateAdCreative(creative.id, parseInt(userId, 10), {
+      updateAdCreative(creative.id, userId, {
         ad_id: adResult.adId,
         creation_status: 'synced',
         creation_error: undefined,
@@ -174,7 +175,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       })
     } catch (error: any) {
       // 同步失败，更新错误状态
-      updateAdCreative(creative.id, parseInt(userId, 10), {
+      updateAdCreative(creative.id, userId, {
         creation_status: 'failed',
         creation_error: error.message || '同步到Google Ads失败',
       })

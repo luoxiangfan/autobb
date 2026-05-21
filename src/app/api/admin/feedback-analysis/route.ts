@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateContent } from '@/lib/gemini'
 import { recordTokenUsage, estimateTokenCost } from '@/lib/ai-token-tracker'
@@ -14,9 +15,11 @@ interface Message {
 export async function POST(request: NextRequest) {
   try {
     // 验证管理员权限
-    const userId = request.headers.get('x-user-id')
-    const userRole = request.headers.get('x-user-role')
-
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId || userRole !== 'admin') {
       return NextResponse.json({ error: '无权访问' }, { status: 403 })
     }
@@ -103,7 +106,7 @@ export async function POST(request: NextRequest) {
       prompt: conversationContext,
       temperature: 0.8,
       maxOutputTokens: 8192,  // 🔴 Pro模型统一使用8192
-    }, parseInt(userId, 10))
+    }, userId)
 
     // 记录token使用
     if (analysis.usage) {
@@ -113,7 +116,7 @@ export async function POST(request: NextRequest) {
         analysis.usage.outputTokens
       )
       await recordTokenUsage({
-        userId: parseInt(userId, 10),
+        userId: userId,
         model: analysis.model,
         operationType: 'admin_feedback_analysis',
         inputTokens: analysis.usage.inputTokens,

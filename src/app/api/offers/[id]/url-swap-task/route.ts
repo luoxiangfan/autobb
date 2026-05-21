@@ -1,6 +1,7 @@
 // GET /api/offers/[id]/url-swap-task - 查询 Offer 的换链接任务
 // 返回该 Offer 关联的换链接任务信息（如果有）
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/db';
 
@@ -11,7 +12,11 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const userId = request.headers.get('x-user-id');
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json(
         { error: 'unauthorized', message: '未登录' },
@@ -32,7 +37,7 @@ export async function GET(
     // 验证 Offer 是否存在且属于该用户
     const offer = await db.queryOne<any>(`
       SELECT id FROM offers WHERE id = ? AND user_id = ?
-    `, [offerId, parseInt(userId)]);
+    `, [offerId, userId]);
 
     if (!offer) {
       return NextResponse.json(
@@ -48,7 +53,7 @@ export async function GET(
       WHERE offer_id = ? AND user_id = ? AND is_deleted = FALSE
       ORDER BY created_at DESC
       LIMIT 1
-    `, [offerId, parseInt(userId)]);
+    `, [offerId, userId]);
 
     if (!task) {
       // 没有找到任务，返回 null 表示没有任务

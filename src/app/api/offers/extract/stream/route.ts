@@ -20,6 +20,7 @@
  * - { type: 'error', data: { message, stage, details } }
  */
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { createOfferExtractionTaskForNewOffer } from '@/lib/offer-extraction-task'
@@ -51,14 +52,14 @@ export async function POST(req: NextRequest) {
 
   try {
     // 1. 验证用户身份
-    const userId = req.headers.get('x-user-id')
-    if (!userId) {
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.user) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized', message: '请先登录' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       )
     }
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = authResult.user.userId
 
     let rawBody: unknown
     try {

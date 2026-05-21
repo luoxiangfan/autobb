@@ -1,11 +1,16 @@
 // POST /api/click-farm/distribution/normalize - 归一化分布曲线
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { normalizeDistribution } from '@/lib/click-farm/distribution';
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json(
         { error: 'unauthorized', message: '未登录' },

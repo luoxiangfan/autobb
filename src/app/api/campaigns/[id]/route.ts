@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findCampaignById, updateCampaign, deleteCampaign } from '@/lib/campaigns'
 import { invalidateDashboardCache } from '@/lib/api-cache'
@@ -12,13 +13,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
-    const campaign = await findCampaignById(parseInt(id, 10), parseInt(userId, 10))
+    const campaign = await findCampaignById(parseInt(id, 10), userId)
 
     if (!campaign) {
       return NextResponse.json(
@@ -53,11 +54,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const body = await request.json()
     const {
@@ -81,7 +82,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (startDate !== undefined) updates.startDate = startDate
     if (endDate !== undefined) updates.endDate = endDate
 
-    const campaign = await updateCampaign(parseInt(id, 10), parseInt(userId, 10), updates)
+    const campaign = await updateCampaign(parseInt(id, 10), userId, updates)
 
     if (!campaign) {
       return NextResponse.json(
@@ -92,7 +93,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       )
     }
 
-    invalidateDashboardCache(parseInt(userId, 10))
+    invalidateDashboardCache(userId)
 
     return NextResponse.json({
       success: true,
@@ -118,13 +119,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
-    const result = await deleteCampaign(parseInt(id, 10), parseInt(userId, 10))
+    const result = await deleteCampaign(parseInt(id, 10), userId)
 
     if (!result.success) {
       if (result.reason === 'NOT_DRAFT') {
@@ -153,7 +154,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       )
     }
 
-    invalidateDashboardCache(parseInt(userId, 10))
+    invalidateDashboardCache(userId)
 
     return NextResponse.json({
       success: true,

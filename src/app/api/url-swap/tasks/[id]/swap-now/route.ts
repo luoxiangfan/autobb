@@ -1,5 +1,6 @@
 // POST /api/url-swap/tasks/[id]/swap-now - 立即执行换链（手动触发）
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { getUrlSwapTaskById } from '@/lib/url-swap';
 import { triggerUrlSwapScheduling } from '@/lib/url-swap-scheduler';
@@ -14,7 +15,11 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const userId = request.headers.get('x-user-id');
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json(
         { error: 'unauthorized', message: '未登录' },
@@ -23,7 +28,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // 验证任务存在
-    const existingTask = await getUrlSwapTaskById(id, parseInt(userId));
+    const existingTask = await getUrlSwapTaskById(id, userId);
     if (!existingTask) {
       return NextResponse.json(
         { error: 'not_found', message: '任务不存在' },

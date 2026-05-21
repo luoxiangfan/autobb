@@ -5,6 +5,7 @@
  * 返回taskId供前端轮询进度
  */
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest } from 'next/server'
 import { findOfferById } from '@/lib/offers'
 import { getQueueManager } from '@/lib/queue'
@@ -84,7 +85,11 @@ export async function POST(
   const { id } = params
 
   // 验证用户身份
-  const userId = request.headers.get('x-user-id')
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
   const parentRequestId = request.headers.get('x-request-id') || undefined
   if (!userId) {
     return createQueueErrorResponse({
@@ -177,7 +182,7 @@ export async function POST(
   }
 
   // 验证Offer存在
-  const offer = await findOfferById(parseInt(id, 10), parseInt(userId, 10))
+  const offer = await findOfferById(parseInt(id, 10), userId)
   if (!offer) {
     return createQueueErrorResponse({
       status: 404,
@@ -201,12 +206,12 @@ export async function POST(
   }
 
   // 🔧 修复(2025-12-26): 使用中心化授权方式判断
-  const auth = await getUserAuthType(parseInt(userId, 10))
+  const auth = await getUserAuthType(userId)
 
   // 2. 验证 Google Ads API 配置（支持 OAuth 和服务账号两种模式）
   try {
     const googleAdsConfig = await getGoogleAdsConfig(
-      parseInt(userId, 10),
+      userId,
       auth.authType,
       auth.serviceAccountId
     )
@@ -342,7 +347,7 @@ export async function POST(
         id, user_id, offer_id, status, stage, progress, message,
         max_retries, target_rating, generation_mode, created_at, updated_at
       ) VALUES (?, ?, ?, 'pending', 'init', 0, '准备开始生成...', ?, ?, ?, datetime('now'), datetime('now'))`,
-      [taskId, parseInt(userId, 10), parseInt(id, 10), normalizedMaxRetries, normalizedTargetRating, generationMode]
+      [taskId, userId, parseInt(id, 10), normalizedMaxRetries, normalizedTargetRating, generationMode]
     )
 
     // 将任务加入队列
@@ -360,7 +365,7 @@ export async function POST(
       } : {}),
     }
 
-    await queue.enqueue('ad-creative', taskData, parseInt(userId, 10), {
+    await queue.enqueue('ad-creative', taskData, userId, {
       parentRequestId,
       priority: 'high',
       taskId,

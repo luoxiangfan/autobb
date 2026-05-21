@@ -1,5 +1,6 @@
 // POST /api/url-swap/tasks/[id]/disable - 禁用任务
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { getUrlSwapTaskById, disableUrlSwapTask } from '@/lib/url-swap';
 
@@ -13,7 +14,11 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const userId = request.headers.get('x-user-id');
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json(
         { error: 'unauthorized', message: '未登录' },
@@ -22,7 +27,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // 验证任务存在
-    const existingTask = await getUrlSwapTaskById(id, parseInt(userId));
+    const existingTask = await getUrlSwapTaskById(id, userId);
     if (!existingTask) {
       return NextResponse.json(
         { error: 'not_found', message: '任务不存在' },
@@ -39,7 +44,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // 禁用任务
-    await disableUrlSwapTask(id, parseInt(userId));
+    await disableUrlSwapTask(id, userId);
 
     console.log(`[url-swap] 禁用任务成功: ${id}`);
 

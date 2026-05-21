@@ -2,6 +2,7 @@
  * POST /api/offers/extract — 创建新建 Offer 提取任务（入队 offer-extraction）
  */
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { createOfferExtractionTaskForNewOffer } from '@/lib/offer-extraction-task'
 import {
@@ -15,14 +16,14 @@ export async function POST(req: NextRequest) {
   const parentRequestId = req.headers.get('x-request-id') || undefined
 
   try {
-    const userId = req.headers.get('x-user-id')
-    if (!userId) {
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
         { error: 'Unauthorized', message: '请先登录' },
         { status: 401 }
       )
     }
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = authResult.user.userId
 
     let rawBody: unknown
     try {

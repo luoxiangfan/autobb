@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import {
   listAffiliateProducts,
@@ -78,14 +79,11 @@ const PRODUCT_PAGE_SIZE_MAX = 1000
 
 export async function GET(request: NextRequest) {
   try {
-    const userIdRaw = request.headers.get('x-user-id')
-    if (!userIdRaw) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-    const userId = Number(userIdRaw)
-    if (!Number.isFinite(userId) || userId <= 0) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
+    const userId = authResult.user.userId
 
     const productManagementEnabled = await isProductManagementEnabledForUser(userId)
     if (!productManagementEnabled) {

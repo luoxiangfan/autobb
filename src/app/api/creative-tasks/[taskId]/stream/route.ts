@@ -4,6 +4,7 @@
  * SSE订阅 - 实时推送创意生成任务进度
  */
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import {
@@ -24,11 +25,14 @@ export async function GET(
   const db = getDatabase()
   const { taskId } = params
 
-  const userId = req.headers.get('x-user-id')
-  if (!userId) {
-    return new Response('Unauthorized', { status: 401 })
-  }
-  const userIdNum = parseInt(userId, 10)
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', message: '请先登录' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+    const userIdNum = authResult.user.userId
 
   try {
     const taskRows = await db.query<CreativeTaskStreamRow>(

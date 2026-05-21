@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 
@@ -9,15 +10,11 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户信息
-    const userId = request.headers.get('x-user-id')
-    const userRole = request.headers.get('x-user-role')
-
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-
-    if (userRole !== 'admin') {
+    if (authResult.user.role !== 'admin') {
       return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
     }
 

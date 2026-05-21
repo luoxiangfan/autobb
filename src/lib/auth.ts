@@ -575,29 +575,15 @@ export function withAuth(
 }
 
 /**
- * getUserIdFromRequest - 从请求中快速获取用户ID
- *
- * 优先从中间件注入的header获取，降级到verifyAuth
- * 用于不需要完整用户信息的场景
+ * @deprecated 使用 verifyAuth(request) 代替。x-user-id 请求头可被伪造，不可用于鉴权。
  */
-export function getUserIdFromRequest(request: NextRequest): number | null {
-  const userIdHeader = request.headers.get('x-user-id')
-  if (userIdHeader) {
-    const userId = parseInt(userIdHeader, 10)
-    if (!isNaN(userId)) {
-      return userId
-    }
-  }
+export function getUserIdFromRequest(_request: NextRequest): number | null {
   return null
 }
 
 /**
- * requireUserId - 获取用户ID，未登录则抛出错误
+ * @deprecated 使用 verifyAuth(request) 代替。
  */
-export function requireUserId(request: NextRequest): number {
-  const userId = getUserIdFromRequest(request)
-  if (!userId) {
-    throw new Error('未授权，请先登录')
-  }
-  return userId
+export function requireUserId(_request: NextRequest): number {
+  throw new Error('未授权，请先登录')
 }

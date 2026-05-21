@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { batchOfflineAffiliateProducts } from '@/lib/affiliate-products'
@@ -11,15 +12,11 @@ const bodySchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const userIdRaw = request.headers.get('x-user-id')
-    if (!userIdRaw) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-
-    const userId = Number(userIdRaw)
-    if (!Number.isFinite(userId) || userId <= 0) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
+    const userId = authResult.user.userId
 
     const productManagementEnabled = await isProductManagementEnabledForUser(userId)
     if (!productManagementEnabled) {

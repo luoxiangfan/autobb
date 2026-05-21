@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { parseServiceAccountJson } from '@/lib/google-ads-service-account'
 import { encrypt } from '@/lib/crypto'
-import { getUserIdFromRequest, findUserById } from '@/lib/auth'
+import { verifyAuth, findUserById } from '@/lib/auth'
 
 async function getAuthenticatedUser(request: NextRequest) {
-  const userId = getUserIdFromRequest(request)
-  if (!userId) return null
-  return await findUserById(userId)
+  const authResult = await verifyAuth(request)
+  if (!authResult.authenticated || !authResult.user) return null
+  return await findUserById(authResult.user.userId)
 }
 
 export async function POST(req: NextRequest) {

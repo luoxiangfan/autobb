@@ -4,6 +4,7 @@
  * 轮询查询 - 获取创意生成任务状态（用于SSE断开后的fallback）
  */
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/json-field'
@@ -63,14 +64,14 @@ export async function GET(
   const { taskId } = params
 
   try {
-    const userId = req.headers.get('x-user-id')
-    if (!userId) {
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
         { error: 'Unauthorized', message: '请先登录' },
         { status: 401 }
       )
     }
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = authResult.user.userId
 
     const waitForUpdate = parseBooleanQuery(req.nextUrl.searchParams.get('waitForUpdate'))
     const lastUpdatedAt = req.nextUrl.searchParams.get('lastUpdatedAt')

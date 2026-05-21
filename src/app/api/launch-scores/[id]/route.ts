@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findLaunchScoreById, deleteLaunchScore, parseLaunchScoreAnalysis } from '@/lib/launch-scores'
 
@@ -14,13 +15,13 @@ export async function GET(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
-    const launchScore = await findLaunchScoreById(parseInt(id, 10), parseInt(userId, 10))
+    const launchScore = await findLaunchScoreById(parseInt(id, 10), userId)
 
     if (!launchScore) {
       return NextResponse.json(
@@ -62,13 +63,13 @@ export async function DELETE(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
-    const success = deleteLaunchScore(parseInt(id, 10), parseInt(userId, 10))
+    const success = deleteLaunchScore(parseInt(id, 10), userId)
 
     if (!success) {
       return NextResponse.json(

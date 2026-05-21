@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB } from '@/lib/google-ads-api'
@@ -68,11 +69,11 @@ export async function GET(
 ) {
   try {
     const requestId = request.headers.get('x-request-id') || undefined
-    const userId = request.headers.get('x-user-id')
-    if (!userId) return NextResponse.json({ error: '未授权' }, { status: 401 })
-
-    const numericUserId = Number(userId)
-    if (!Number.isFinite(numericUserId)) return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    }
+    const numericUserId = authResult.user.userId
 
     const executeOAuthGaqlWithTracking = async (customer: any, customerId: string, queryText: string): Promise<any[]> => {
       const startTime = Date.now()

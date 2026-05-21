@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { offerOccupyingCampaignWhereClause } from '@/lib/campaign-offer-constraint'
@@ -27,11 +28,11 @@ export async function GET(
     const { id } = params
     const campaignId = request.nextUrl.searchParams.get('campaignId')
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     if (!campaignId) {
       // 向后兼容：某些 OpenClaw 流程会遗漏 campaignId，返回仍占用槽位的 Campaign 状态

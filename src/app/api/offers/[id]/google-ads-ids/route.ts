@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 
@@ -12,17 +13,14 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: '请先登录' },
+        { status: 401 }
+      )
     }
-
-    const offerId = parseInt(params.id, 10)
-    if (Number.isNaN(offerId)) {
-      return NextResponse.json({ error: '无效的 Offer ID' }, { status: 400 })
-    }
-
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = authResult.user.userId
     const db = await getDatabase()
 
     // 验证Offer是否存在且属于该用户

@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { encrypt } from '@/lib/crypto'
@@ -21,12 +22,14 @@ const importSettingsSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: '请先登录' },
+        { status: 401 }
+      )
     }
-
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = authResult.user.userId
     const body = await request.json()
 
     // 验证输入格式

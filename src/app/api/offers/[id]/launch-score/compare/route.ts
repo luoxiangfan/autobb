@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findLatestLaunchScore, parseLaunchScoreAnalysis } from '@/lib/launch-scores'
 import { findAdCreativeById } from '@/lib/ad-creative'
@@ -11,8 +12,11 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const userId = request.headers.get('x-user-id')
-
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json(
         { error: '未授权访问' },
@@ -50,7 +54,7 @@ export async function POST(
 
     for (const creativeId of creativeIds) {
       // 验证Creative存在且属于该用户
-      const creative = await findAdCreativeById(creativeId, parseInt(userId, 10))
+      const creative = await findAdCreativeById(creativeId, userId)
 
       if (!creative || creative.offer_id !== offerId) {
         return NextResponse.json(
@@ -61,7 +65,7 @@ export async function POST(
 
       // 获取该Creative的最新Launch Score
       // 注意：实际应用中可能需要根据creativeId查询，这里简化为使用offerId的最新评分
-      const score = await findLatestLaunchScore(offerId, parseInt(userId, 10))
+      const score = await findLatestLaunchScore(offerId, userId)
 
       if (score) {
         const analysis = parseLaunchScoreAnalysis(score)

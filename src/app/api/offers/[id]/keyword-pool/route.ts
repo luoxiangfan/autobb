@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers'
 import {
@@ -142,14 +143,14 @@ export async function GET(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const offerId = parseInt(id, 10)
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = userId
 
     // 验证 Offer 存在且属于当前用户
     const offer = await findOfferById(offerId, userIdNum)
@@ -303,14 +304,14 @@ export async function POST(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const offerId = parseInt(id, 10)
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = userId
 
     // 验证 Offer 存在且属于当前用户
     const offer = await findOfferById(offerId, userIdNum)
@@ -413,14 +414,14 @@ export async function DELETE(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const offerId = parseInt(id, 10)
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = userId
 
     // 验证 Offer 存在且属于当前用户
     const offer = await findOfferById(offerId, userIdNum)

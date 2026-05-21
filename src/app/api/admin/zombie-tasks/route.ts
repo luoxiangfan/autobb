@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { detectAndFixZombieSyncTasks, getZombieTaskStats } from '@/lib/queue/affiliate-sync-zombie-detector'
 
@@ -9,11 +10,11 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id')
-    const userRole = request.headers.get('x-user-role')
-
-    // 仅管理员可访问
-    if (userRole !== 'admin') {
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    }
+    if (authResult.user.role !== 'admin') {
       return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
     }
 
@@ -38,11 +39,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id')
-    const userRole = request.headers.get('x-user-role')
-
-    // 仅管理员可访问
-    if (userRole !== 'admin') {
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    }
+    if (authResult.user.role !== 'admin') {
       return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
     }
 

@@ -14,6 +14,7 @@
  * - status: 状态筛选（可选：pending, processing, completed, failed, partial）
  */
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 
@@ -39,14 +40,14 @@ export async function GET(req: NextRequest) {
 
   try {
     // 验证用户身份
-    const userId = req.headers.get('x-user-id')
-    if (!userId) {
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
         { error: 'Unauthorized', message: '请先登录' },
         { status: 401 }
       )
     }
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = authResult.user.userId
 
     // 获取查询参数
     const searchParams = req.nextUrl.searchParams

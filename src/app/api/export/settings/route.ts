@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { decrypt } from '@/lib/crypto'
@@ -11,17 +12,17 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const { searchParams } = new URL(request.url)
     const includeSensitive = searchParams.get('include_sensitive') === 'true'
 
     const db = await getDatabase()
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = userId
 
     // 获取用户的配置（优先用户配置，其次全局配置）
     const settings = await db.query(`

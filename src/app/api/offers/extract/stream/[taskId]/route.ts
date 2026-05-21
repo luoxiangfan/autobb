@@ -15,6 +15,7 @@
  * - data: { type: 'error', error }
  */
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/json-field'
@@ -42,11 +43,14 @@ export async function GET(
   const { taskId } = params
 
   // 验证用户身份
-  const userId = req.headers.get('x-user-id')
-  if (!userId) {
-    return new Response('Unauthorized', { status: 401 })
-  }
-  const userIdNum = parseInt(userId, 10)
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', message: '请先登录' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+    const userIdNum = authResult.user.userId
 
   try {
     // 验证任务存在且属于当前用户

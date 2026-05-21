@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById, deleteOffer } from '@/lib/offers'
 import { invalidateOfferCache } from '@/lib/api-cache'
@@ -225,13 +226,13 @@ export async function GET(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
-    const offer = await findOfferById(parseInt(id, 10), parseInt(userId, 10))
+    const offer = await findOfferById(parseInt(id, 10), userId)
 
     if (!offer) {
       return NextResponse.json(
@@ -368,13 +369,14 @@ export async function PUT(
   try {
     const { id } = params
 
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const offerId = parseInt(id, 10)
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = userId
     const body = await request.json()
 
     const applyResult = await applyOfferUpdateFromBody(offerId, userIdNum, body)
@@ -418,11 +420,11 @@ export async function DELETE(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     // 获取查询参数
     const { searchParams } = new URL(request.url)
@@ -432,13 +434,13 @@ export async function DELETE(
     // 执行删除操作
     const result = await deleteOffer(
       parseInt(id, 10),
-      parseInt(userId, 10),
+      userId,
       autoUnlink,
       removeGoogleAdsCampaigns
     )
 
     // 使缓存失效
-    invalidateOfferCache(parseInt(userId, 10), parseInt(id, 10))
+    invalidateOfferCache(userId, parseInt(id, 10))
 
     // 如果有关联账号且未自动解除，返回409状态码和详情
     if (!result.success && result.hasLinkedAccounts) {

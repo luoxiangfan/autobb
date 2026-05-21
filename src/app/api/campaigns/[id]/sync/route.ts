@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findCampaignById, updateCampaign } from '@/lib/campaigns'
 import { findGoogleAdsAccountById } from '@/lib/google-ads-accounts'
@@ -13,16 +14,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userIdHeader = request.headers.get('x-user-id')
-    if (!userIdHeader) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-
-    const userId = parseInt(userIdHeader, 10)
-    if (!Number.isFinite(userId) || userId <= 0) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
+    const userId = authResult.user.userId
 
     // 查找Campaign
     const campaign = await findCampaignById(parseInt(id, 10), userId)

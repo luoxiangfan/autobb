@@ -1,6 +1,7 @@
 // POST /api/click-farm/tasks - 创建补点击任务
 // GET /api/click-farm/tasks - 获取任务列表
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClickFarmTask, getClickFarmTasks } from '@/lib/click-farm';
 import { generateDefaultDistribution, validateDistribution } from '@/lib/click-farm/distribution';
@@ -24,15 +25,14 @@ function parseBooleanQuery(value: string | null): boolean {
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
-    if (!userId) {
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
-        { error: 'unauthorized', message: '未登录' },
+        { error: 'unauthorized', message: authResult.error || '未登录' },
         { status: 401 }
       );
     }
-
-    const userIdNum = parseInt(userId);
+    const userIdNum = authResult.user.userId;
 
     // 🔧 修复：获取原始请求体文本，并进行详细的调试
     const rawBody = await request.text();
@@ -348,15 +348,14 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
-    if (!userId) {
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
-        { error: 'unauthorized', message: '未登录' },
+        { error: 'unauthorized', message: authResult.error || '未登录' },
         { status: 401 }
       );
     }
-
-    const userIdNum = parseInt(userId);
+    const userIdNum = authResult.user.userId;
 
     const { searchParams } = new URL(request.url);
     const filters: TaskFilters = {

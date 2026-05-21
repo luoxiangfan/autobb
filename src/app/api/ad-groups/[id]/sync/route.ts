@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findAdGroupById, updateAdGroup } from '@/lib/ad-groups'
 import { findCampaignById } from '@/lib/campaigns'
@@ -14,14 +15,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     // 查找Ad Group
-    const adGroup = await findAdGroupById(parseInt(id, 10), parseInt(userId, 10))
+    const adGroup = await findAdGroupById(parseInt(id, 10), userId)
     if (!adGroup) {
       return NextResponse.json(
         {
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // 查找Campaign
-    const campaign = await findCampaignById(adGroup.campaignId, parseInt(userId, 10))
+    const campaign = await findCampaignById(adGroup.campaignId, userId)
     if (!campaign) {
       return NextResponse.json(
         {
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     // 查找Google Ads账号
     const googleAdsAccount = await findGoogleAdsAccountById(
       campaign.googleAdsAccountId,
-      parseInt(userId, 10)
+      userId
     )
 
     if (!googleAdsAccount) {
@@ -88,14 +89,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // 更新状态为pending
-    await updateAdGroup(adGroup.id, parseInt(userId, 10), {
+    await updateAdGroup(adGroup.id, userId, {
       creationStatus: 'pending',
       creationError: null,
     })
 
     try {
       // 获取用户授权方式
-      const auth = await getUserAuthType(parseInt(userId, 10))
+      const auth = await getUserAuthType(userId)
 
       // 创建Google Ads Ad Group
       const adGroupResult = await createGoogleAdsAdGroup({
@@ -106,13 +107,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         cpcBidMicros: adGroup.cpcBidMicros || undefined,
         status: adGroup.status as 'ENABLED' | 'PAUSED',
         accountId: googleAdsAccount.id,
-        userId: parseInt(userId, 10),
+        userId: userId,
         authType: auth.authType,
         serviceAccountId: auth.serviceAccountId,
       })
 
       // 更新Ad Group，标记为已同步
-      await updateAdGroup(adGroup.id, parseInt(userId, 10), {
+      await updateAdGroup(adGroup.id, userId, {
         adGroupId: adGroupResult.adGroupId,
         creationStatus: 'synced',
         creationError: null,
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       })
 
       // 查找Ad Group的所有Keywords
-      const keywords = await findKeywordsByAdGroupId(adGroup.id, parseInt(userId, 10))
+      const keywords = await findKeywordsByAdGroupId(adGroup.id, userId)
 
       let syncedKeywordsCount = 0
 
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           adGroupId: adGroupResult.adGroupId,
           keywords: keywordsBatch,
           accountId: googleAdsAccount.id,
-          userId: parseInt(userId, 10),
+          userId: userId,
           authType: auth.authType,
           serviceAccountId: auth.serviceAccountId,
         })
@@ -155,7 +156,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           const keywordResult = keywordResults[i]
           const keyword = keywords[i]
 
-          await updateKeyword(keyword.id, parseInt(userId, 10), {
+          await updateKeyword(keyword.id, userId, {
             keywordId: keywordResult.keywordId,
             creationStatus: 'synced',
             lastSyncAt: new Date().toISOString(),
@@ -176,7 +177,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       })
     } catch (error: any) {
       // 同步失败，更新错误状态
-      await updateAdGroup(adGroup.id, parseInt(userId, 10), {
+      await updateAdGroup(adGroup.id, userId, {
         creationStatus: 'failed',
         creationError: error.message || '同步到Google Ads失败',
       })

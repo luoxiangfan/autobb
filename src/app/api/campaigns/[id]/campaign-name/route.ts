@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findCampaignById, updateCampaign } from '@/lib/campaigns'
 import { getDatabase } from '@/lib/db'
@@ -30,15 +31,11 @@ function normalizeCampaignName(value: unknown): string | null {
  */
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const userIdHeader = request.headers.get('x-user-id')
-    if (!userIdHeader) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-
-    const userId = Number(userIdHeader)
-    if (!Number.isFinite(userId)) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
+    const userId = authResult.user.userId
 
     const campaignId = Number(params.id)
     if (!Number.isFinite(campaignId)) {

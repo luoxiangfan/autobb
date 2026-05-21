@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { deleteKeywordPool } from '@/lib/offer-keyword-pool'
 import { convertPriorityToEnum } from '@/lib/queue/executors'
@@ -32,7 +33,11 @@ export async function POST(
   }
 
   try {
-    const userId = request.headers.get('x-user-id')
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     const parentRequestId = request.headers.get('x-request-id') || undefined
     if (!userId) {
       return NextResponse.json(
@@ -41,7 +46,7 @@ export async function POST(
       )
     }
 
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = userId
 
     let requestBody: unknown = {}
     let priority: number | undefined

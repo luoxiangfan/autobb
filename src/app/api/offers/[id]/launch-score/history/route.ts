@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findLaunchScoresByOfferId, parseLaunchScoreAnalysis } from '@/lib/launch-scores'
 
@@ -12,8 +13,11 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const userId = request.headers.get('x-user-id')
-
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json(
         { error: '未授权访问' },
@@ -31,7 +35,7 @@ export async function GET(
     }
 
     // 获取所有历史评分
-    const scores = await findLaunchScoresByOfferId(offerId, parseInt(userId, 10))
+    const scores = await findLaunchScoresByOfferId(offerId, userId)
 
     // 转换为前端需要的格式 (v4.0 - 4维度)
     const history = scores.map(score => {

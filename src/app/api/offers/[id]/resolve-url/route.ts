@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveAffiliateLink, getProxyPool } from '@/lib/url-resolver-enhanced'  // 🔥 使用新的增强版API
 import { findOfferById } from '@/lib/offers'
@@ -14,14 +15,14 @@ export async function POST(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     // 验证Offer存在且属于当前用户
-    const offer = await findOfferById(parseInt(id, 10), parseInt(userId, 10))
+    const offer = await findOfferById(parseInt(id, 10), userId)
 
     if (!offer) {
       return NextResponse.json(
@@ -31,7 +32,7 @@ export async function POST(
     }
 
     // 🔥 加载代理池配置（使用新的增强版API）
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = userId
     const targetCountry = offer.target_country || 'US'
 
     const proxySettings = await getAllProxyUrls(userIdNum)
@@ -65,7 +66,7 @@ export async function POST(
     // 🔥 使用新的增强版API，强制skipCache确保获取最新数据
     const resolved = await resolveAffiliateLink(offer.affiliate_link, {
       targetCountry,
-      userId: parseInt(userId, 10),
+      userId: userId,
       skipCache: true,  // 🔥 关键：强制跳过缓存
     })
 

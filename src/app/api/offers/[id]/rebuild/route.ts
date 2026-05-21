@@ -4,7 +4,9 @@
  * 重建 Offer：可选先合并保存表单字段，再入队 offer-extraction
  */
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAuth } from '@/lib/auth'
 import { deleteKeywordPool } from '@/lib/offer-keyword-pool'
 import {
   assertOfferAvailableForExtractionEnqueue,
@@ -34,14 +36,14 @@ export async function POST(
   }
 
   try {
-    const userId = req.headers.get('x-user-id')
-    if (!userId) {
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
         { error: 'Unauthorized', message: '请先登录' },
         { status: 401 }
       )
     }
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = authResult.user.userId
 
     let requestBody: unknown = {}
     try {

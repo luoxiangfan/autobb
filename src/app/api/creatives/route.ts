@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findAdCreativesByOfferId, findAdCreativesByUserId } from '@/lib/ad-creative'
 import {
@@ -78,11 +79,11 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const { searchParams } = new URL(request.url)
     const offerIdParam = searchParams.get('offerId')
@@ -100,11 +101,11 @@ export async function GET(request: NextRequest) {
         )
       }
 
-      creatives = await findAdCreativesByOfferId(offerId, parseInt(userId, 10))
+      creatives = await findAdCreativesByOfferId(offerId, userId)
     } else {
       // 获取用户的所有创意
       const limit = limitParam ? parseInt(limitParam, 10) : undefined
-      creatives = await findAdCreativesByUserId(parseInt(userId, 10), limit)
+      creatives = await findAdCreativesByUserId(userId, limit)
     }
 
     // 🔧 修复(2025-12-11): 转换为 camelCase 响应

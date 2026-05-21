@@ -1,5 +1,6 @@
 // POST /api/click-farm/tasks/[id]/stop - 暂停任务
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { getClickFarmTaskById, stopClickFarmTask } from '@/lib/click-farm';
 
@@ -8,7 +9,11 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const userId = request.headers.get('x-user-id');
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json(
         { error: 'unauthorized', message: '未登录' },

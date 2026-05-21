@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { offlineAffiliateProduct } from '@/lib/affiliate-products'
 import { invalidateOfferCache } from '@/lib/api-cache'
@@ -9,15 +10,11 @@ type RouteParams = {
 }
 
 async function resolveUserAndProductId(request: NextRequest, paramsPromise: Promise<RouteParams>) {
-  const userIdRaw = request.headers.get('x-user-id')
-  if (!userIdRaw) {
-    return { error: NextResponse.json({ error: '未授权' }, { status: 401 }) }
+  const authResult = await verifyAuth(request)
+  if (!authResult.authenticated || !authResult.user) {
+    return { error: NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 }) }
   }
-
-  const userId = Number(userIdRaw)
-  if (!Number.isFinite(userId) || userId <= 0) {
-    return { error: NextResponse.json({ error: '未授权' }, { status: 401 }) }
-  }
+  const userId = authResult.user.userId
 
   const productManagementEnabled = await isProductManagementEnabledForUser(userId)
   if (!productManagementEnabled) {

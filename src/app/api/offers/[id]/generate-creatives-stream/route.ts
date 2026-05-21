@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest } from 'next/server'
 import { findOfferById, markBucketGenerated } from '@/lib/offers'
 import { createAdCreative } from '@/lib/ad-creative'
@@ -54,7 +55,11 @@ export async function POST(
   const { id } = params
 
   // 从中间件注入的请求头中获取用户ID
-  const userId = request.headers.get('x-user-id')
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
   if (!userId) {
     return new Response(JSON.stringify({ error: '未授权' }), {
       status: 401,
@@ -82,7 +87,7 @@ export async function POST(
   )
   const forcePublishRequested = body?.forcePublish === true || body?.force_publish === true
   const parsedOfferId = parseInt(id, 10)
-  const parsedUserId = parseInt(userId, 10)
+  const parsedUserId = userId
   const enforcedTargetRating = 'GOOD'
 
   // 验证Offer存在

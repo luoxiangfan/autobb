@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers'
 import { findAdCreativeById, findAdCreativesByOfferId } from '@/lib/ad-creative'
@@ -15,11 +16,11 @@ export async function POST(
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const body = await request.json()
     const { creativeId } = body
@@ -34,7 +35,7 @@ export async function POST(
     }
 
     // 验证Offer存在且属于当前用户
-    const offer = await findOfferById(parseInt(id, 10), parseInt(userId, 10))
+    const offer = await findOfferById(parseInt(id, 10), userId)
 
     if (!offer) {
       return NextResponse.json(
@@ -56,7 +57,7 @@ export async function POST(
     }
 
     // 验证Creative存在且属于当前Offer
-    const creative = await findAdCreativeById(creativeId, parseInt(userId, 10))
+    const creative = await findAdCreativeById(creativeId, userId)
 
     if (!creative) {
       return NextResponse.json(
@@ -77,10 +78,10 @@ export async function POST(
     }
 
     // 使用AI计算Launch Score
-    const analysis = await calculateLaunchScore(offer, creative, parseInt(userId, 10))
+    const analysis = await calculateLaunchScore(offer, creative, userId)
 
     // 保存到数据库 - 使用scoreAnalysis字段
-    const launchScore = await createLaunchScore(parseInt(userId, 10), offer.id, analysis.scoreAnalysis)
+    const launchScore = await createLaunchScore(userId, offer.id, analysis.scoreAnalysis)
 
     return NextResponse.json({
       success: true,
@@ -115,14 +116,14 @@ export async function GET(
     const { searchParams } = new URL(request.url)
     const autoCalculate = searchParams.get('autoCalculate') === 'true'
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     // 验证Offer存在且属于当前用户
-    const offer = await findOfferById(parseInt(id, 10), parseInt(userId, 10))
+    const offer = await findOfferById(parseInt(id, 10), userId)
 
     if (!offer) {
       return NextResponse.json(
@@ -134,7 +135,7 @@ export async function GET(
     }
 
     // 获取最新的Launch Score
-    let launchScore = await findLatestLaunchScore(offer.id, parseInt(userId, 10))
+    let launchScore = await findLatestLaunchScore(offer.id, userId)
 
     // 如果没有Launch Score且启用自动计算
     if (!launchScore && autoCalculate) {
@@ -149,7 +150,7 @@ export async function GET(
       }
 
       // 查找该Offer的最新创意
-      const creatives = await findAdCreativesByOfferId(offer.id, parseInt(userId, 10))
+      const creatives = await findAdCreativesByOfferId(offer.id, userId)
       if (creatives.length === 0) {
         return NextResponse.json({
           success: true,
@@ -165,8 +166,8 @@ export async function GET(
       )
 
       // 计算Launch Score
-      const analysis = await calculateLaunchScore(offer, bestCreative, parseInt(userId, 10))
-      launchScore = await createLaunchScore(parseInt(userId, 10), offer.id, analysis.scoreAnalysis)
+      const analysis = await calculateLaunchScore(offer, bestCreative, userId)
+      launchScore = await createLaunchScore(userId, offer.id, analysis.scoreAnalysis)
 
       return NextResponse.json({
         success: true,
@@ -178,7 +179,7 @@ export async function GET(
 
     if (!launchScore) {
       // 检查是否可以自动计算
-      const creatives = await findAdCreativesByOfferId(offer.id, parseInt(userId, 10))
+      const creatives = await findAdCreativesByOfferId(offer.id, userId)
       const canAutoCalculate = offer.scrape_status === 'completed' && creatives.length > 0
 
       return NextResponse.json({

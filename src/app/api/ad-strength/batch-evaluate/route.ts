@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { evaluateAdStrength } from '@/lib/ad-strength-evaluator'
 import type { HeadlineAsset, DescriptionAsset } from '@/lib/ad-creative'
@@ -13,11 +14,11 @@ import type { HeadlineAsset, DescriptionAsset } from '@/lib/ad-creative'
  */
 export async function POST(request: NextRequest) {
   try {
-    // 从请求头获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const body = await request.json()
     const { creatives, returnBestOnly = false } = body

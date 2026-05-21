@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { toNumber } from '@/lib/utils'
@@ -16,16 +17,14 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // 从header获取用户ID
-    const userIdHeader = request.headers.get('x-user-id')
-    if (!userIdHeader) {
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
-        { error: '缺少用户认证信息' },
+        { error: authResult.error || '缺少用户认证信息' },
         { status: 401 }
       )
     }
-
-    const userId = parseInt(userIdHeader, 10)
+    const userId = authResult.user.userId
     const searchParams = request.nextUrl.searchParams
     const days = parseInt(searchParams.get('days') || '7', 10)
 

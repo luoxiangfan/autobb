@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findKeywordById, updateKeyword, deleteKeyword } from '@/lib/keywords'
 
@@ -11,13 +12,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
-    const keyword = await findKeywordById(parseInt(id, 10), parseInt(userId, 10))
+    const keyword = await findKeywordById(parseInt(id, 10), userId)
 
     if (!keyword) {
       return NextResponse.json(
@@ -52,11 +53,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const body = await request.json()
     const { keywordText, matchType, status, cpcBidMicros, finalUrl, isNegative } = body
@@ -69,7 +70,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (finalUrl !== undefined) updates.finalUrl = finalUrl
     if (isNegative !== undefined) updates.isNegative = isNegative
 
-    const keyword = await updateKeyword(parseInt(id, 10), parseInt(userId, 10), updates)
+    const keyword = await updateKeyword(parseInt(id, 10), userId, updates)
 
     if (!keyword) {
       return NextResponse.json(
@@ -104,13 +105,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
-    const success = await deleteKeyword(parseInt(id, 10), parseInt(userId, 10))
+    const success = await deleteKeyword(parseInt(id, 10), userId)
 
     if (!success) {
       return NextResponse.json(

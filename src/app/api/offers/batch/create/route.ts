@@ -25,6 +25,7 @@
  * - 缺少必填参数的行会被自动跳过
  */
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue/unified-queue-manager'
@@ -47,14 +48,14 @@ export async function POST(req: NextRequest) {
 
   try {
     // 1. 验证用户身份
-    const userId = req.headers.get('x-user-id')
-    if (!userId) {
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
         { error: 'Unauthorized', message: '请先登录' },
         { status: 401 }
       )
     }
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = authResult.user.userId
 
     // 2. 解析FormData
     const formData = await req.formData()

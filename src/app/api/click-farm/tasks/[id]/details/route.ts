@@ -1,6 +1,7 @@
 // GET /api/click-farm/tasks/[id]/details - 获取任务详情（包含历史记录和offer信息）
 // src/app/api/click-farm/tasks/[id]/details/route.ts
 
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/db';
 import { estimateTraffic } from '@/lib/click-farm/distribution';
@@ -16,7 +17,11 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = request.headers.get('x-user-id');
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+    }
+    const userId = authResult.user.userId;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -35,7 +40,7 @@ export async function GET(
       FROM click_farm_tasks t
       LEFT JOIN offers o ON t.offer_id = o.id
       WHERE t.id = ? AND t.user_id = ? AND t.IS_DELETED_FALSE
-    `, [id, parseInt(userId)]);
+    `, [id, userId]);
 
     if (!task) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });

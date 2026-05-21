@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { createCampaign, findCampaignsByUserId, findCampaignsByOfferId } from '@/lib/campaigns'
 import { findOfferById } from '@/lib/offers'
@@ -12,11 +13,11 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const { searchParams } = new URL(request.url)
     const offerIdParam = searchParams.get('offerId')
@@ -31,11 +32,11 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'offerId必须是数字' }, { status: 400 })
       }
 
-      campaigns = await findCampaignsByOfferId(offerId, parseInt(userId, 10))
+      campaigns = await findCampaignsByOfferId(offerId, userId)
     } else {
       // 获取用户的所有广告系列
       const limit = limitParam ? parseInt(limitParam, 10) : undefined
-      campaigns = await findCampaignsByUserId(parseInt(userId, 10), limit)
+      campaigns = await findCampaignsByUserId(userId, limit)
     }
 
     return NextResponse.json({
@@ -61,11 +62,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const body = await request.json()
     const {
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 验证Offer存在且属于当前用户
-    const offer = await findOfferById(offerId, parseInt(userId, 10))
+    const offer = await findOfferById(offerId, userId)
     if (!offer) {
       return NextResponse.json(
         {
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 验证Google Ads账号存在且属于当前用户
-    const googleAdsAccount = await findGoogleAdsAccountById(googleAdsAccountId, parseInt(userId, 10))
+    const googleAdsAccount = await findGoogleAdsAccountById(googleAdsAccountId, userId)
     if (!googleAdsAccount) {
       return NextResponse.json(
         {
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
 
     // 创建广告系列
     const campaign = await createCampaign({
-      userId: parseInt(userId, 10),
+      userId: userId,
       offerId,
       googleAdsAccountId,
       campaignName,
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
       endDate,
     })
 
-    invalidateOfferCache(parseInt(userId, 10), offerId)
+    invalidateOfferCache(userId, offerId)
 
     return NextResponse.json({
       success: true,

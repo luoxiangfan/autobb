@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getIdleAdsAccounts } from '@/lib/offers'
 import { getDatabase } from '@/lib/db'
@@ -12,14 +13,14 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     // 获取闲置账号列表
-    const accounts = await getIdleAdsAccounts(parseInt(userId, 10))
+    const accounts = await getIdleAdsAccounts(userId)
 
     // 为每个账号添加额外信息（最后使用的Offer、历史统计等）
     const db = await getDatabase()
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
           ORDER BY c.updated_at DESC
           LIMIT 1
           `,
-          [account.id, parseInt(userId, 10)]
+          [account.id, userId]
         )
 
         // 获取该账号的历史Campaign统计
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
           WHERE c.google_ads_account_id = ?
             AND c.user_id = ?
           `,
-          [account.id, parseInt(userId, 10)]
+          [account.id, userId]
         )
 
         return {

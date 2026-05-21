@@ -1,3 +1,4 @@
+import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findAdGroupById } from '@/lib/ad-groups'
 import { findCampaignById } from '@/lib/campaigns'
@@ -18,17 +19,17 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   try {
     const { id } = params
 
-    // 从中间件注入的请求头中获取用户ID
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+    const userId = authResult.user.userId
 
     const body = await request.json()
     const { includeNegativeKeywords = false } = body
 
     // 查找Ad Group
-    const adGroup = await findAdGroupById(parseInt(id, 10), parseInt(userId, 10))
+    const adGroup = await findAdGroupById(parseInt(id, 10), userId)
     if (!adGroup) {
       return NextResponse.json(
         {
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // 查找Campaign
-    const campaign = await findCampaignById(adGroup.campaignId, parseInt(userId, 10))
+    const campaign = await findCampaignById(adGroup.campaignId, userId)
     if (!campaign) {
       return NextResponse.json(
         {
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // 查找Offer
-    const offer = await findOfferById(campaign.offerId, parseInt(userId, 10))
+    const offer = await findOfferById(campaign.offerId, userId)
     if (!offer) {
       return NextResponse.json(
         {
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // 使用统一关键词服务生成关键词
-    const userIdNum = parseInt(userId, 10)
+    const userIdNum = userId
 
     // 从 scraped_data 提取产品信息（如果有的话）
     let productTitle: string | undefined
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     // 将生成的关键词保存到数据库
     const keywordsToCreate: CreateKeywordInput[] = unifiedKeywords.map(kw => ({
-      userId: parseInt(userId, 10),
+      userId: userId,
       adGroupId: adGroup.id,
       keywordText: kw.keyword,
       matchType: kw.matchType,
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     if (negativeKeywords.length > 0) {
       negativeKeywords.forEach(negKw => {
         keywordsToCreate.push({
-          userId: parseInt(userId, 10),
+          userId: userId,
           adGroupId: adGroup.id,
           keywordText: negKw,
           matchType: inferNegativeKeywordMatchType(negKw),
