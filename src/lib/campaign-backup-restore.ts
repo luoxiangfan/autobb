@@ -6,7 +6,6 @@ import { getDatabase, type DatabaseAdapter } from './db'
 import { getInsertedId } from './db-helpers'
 import {
   backupHasCampaignConfig,
-  parseCampaignBackup,
   type CampaignBackup,
 } from './campaign-backups'
 import { generateNamingScheme } from './naming-convention'
@@ -18,7 +17,6 @@ import {
   CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,
   getActiveCampaignConflictForOffer,
   isCampaignOfferUniqueViolation,
-  rollbackPendingCampaignAfterEnqueueFailure,
 } from './campaign-offer-constraint'
 
 export type BatchDbCreateDetail = {
@@ -26,12 +24,6 @@ export type BatchDbCreateDetail = {
   offerId: number
   campaignId?: number
   error?: string
-}
-
-export type BatchDbCreateResult = {
-  success: number
-  failed: number
-  details: BatchDbCreateDetail[]
 }
 
 export type BatchPublishDetail = {
@@ -42,25 +34,6 @@ export type BatchPublishDetail = {
   warning?: string
   regeneratedCreative?: boolean
   newAdCreativeId?: number | null
-}
-
-export type BatchPublishResult = {
-  success: number
-  failed: number
-  skipped: number
-  details: BatchPublishDetail[]
-}
-
-export function normalizeBackupInput(backup: CampaignBackup | Record<string, unknown>): CampaignBackup {
-  if (
-    backup &&
-    typeof backup === 'object' &&
-    'offerId' in backup &&
-    'campaignData' in backup
-  ) {
-    return backup as CampaignBackup
-  }
-  return parseCampaignBackup(backup)
 }
 
 function parseJsonField<T>(value: unknown): T | null {
@@ -256,37 +229,6 @@ export async function createCampaignRowFromBackup(params: {
         : error.message,
     }
   }
-}
-
-export async function batchCreateCampaignsFromBackupsInDatabase(params: {
-  backups: Array<CampaignBackup | Record<string, unknown>>
-  userId: number
-  googleAdsAccountId?: number | null
-  db: DatabaseAdapter
-}): Promise<BatchDbCreateResult> {
-  const results: BatchDbCreateResult = {
-    success: 0,
-    failed: 0,
-    details: [],
-  }
-
-  for (const raw of params.backups) {
-    const backup = normalizeBackupInput(raw)
-    const detail = await createCampaignRowFromBackup({
-      backup,
-      userId: params.userId,
-      googleAdsAccountId: params.googleAdsAccountId,
-      db: params.db,
-    })
-    results.details.push(detail)
-    if (detail.campaignId) {
-      results.success++
-    } else {
-      results.failed++
-    }
-  }
-
-  return results
 }
 
 /**
@@ -499,69 +441,3 @@ export async function enqueueCampaignPublishFromBackup(params: {
   }
 }
 
-export async function batchEnqueuePublishFromBackups(params: {
-  backups: Array<CampaignBackup | Record<string, unknown>>
-  dbCreateDetails: BatchDbCreateDetail[]
-  userId: number
-  googleAdsAccountId: number
-  db: DatabaseAdapter
-  regenerateCreativeMap?: Record<number, boolean>
-  parentRequestId?: string
-}): Promise<BatchPublishResult> {
-  const results: BatchPublishResult = {
-    success: 0,
-    failed: 0,
-    skipped: 0,
-    details: [],
-  }
-
-  const backupById = new Map(
-    params.backups.map((raw) => {
-      const b = normalizeBackupInput(raw)
-      return [b.id, b] as const
-    })
-  )
-
-  for (const detail of params.dbCreateDetails) {
-    if (!detail.campaignId) {
-      results.failed++
-      results.details.push({
-        backupId: detail.backupId,
-        offerId: detail.offerId,
-        error: detail.error || '数据库创建失败',
-      })
-      continue
-    }
-
-    const backup = backupById.get(detail.backupId)
-    if (!backup) {
-      results.failed++
-      results.details.push({
-        backupId: detail.backupId,
-        offerId: detail.offerId,
-        campaignId: detail.campaignId,
-        error: '备份不存在',
-      })
-      continue
-    }
-
-    const publishDetail = await enqueueCampaignPublishFromBackup({
-      backup,
-      campaignId: detail.campaignId,
-      userId: params.userId,
-      googleAdsAccountId: params.googleAdsAccountId,
-      db: params.db,
-      regenerateCreative: params.regenerateCreativeMap?.[detail.backupId] === true,
-      parentRequestId: params.parentRequestId,
-    })
-
-    results.details.push(publishDetail)
-    if (publishDetail.error) {
-      results.failed++
-    } else {
-      results.success++
-    }
-  }
-
-  return results
-}
