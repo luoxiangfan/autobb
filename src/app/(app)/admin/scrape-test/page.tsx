@@ -11,6 +11,13 @@ import { toast } from 'sonner'
 import { Loader2, Search, Wand2, ThumbsUp, ThumbsDown, Info, ChevronDown, ChevronUp, AlertTriangle, Settings } from 'lucide-react'
 import Link from 'next/link'
 import { getCountryOptionsForUI } from '@/lib/language-country-codes'
+import { AdCreativeGenerationModeField } from '@/components/creatives/AdCreativeGenerationModeField'
+import {
+  getAdCreativeGenerationModeLabel,
+  loadStoredAdCreativeGenerationMode,
+  saveStoredAdCreativeGenerationMode,
+  type AdCreativeGenerationMode,
+} from '@/lib/ad-creative-generation-mode'
 
 // 使用全局统一的国家列表（支持69个国家）
 const COUNTRIES = getCountryOptionsForUI()
@@ -74,6 +81,13 @@ export default function ScrapeTestPage() {
   // 操作状态
   const [scraping, setScraping] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [generationMode, setGenerationMode] = useState<AdCreativeGenerationMode>(
+    () => loadStoredAdCreativeGenerationMode()
+  )
+  const handleGenerationModeChange = (mode: AdCreativeGenerationMode) => {
+    setGenerationMode(mode)
+    saveStoredAdCreativeGenerationMode(mode)
+  }
   const [testOfferId, setTestOfferId] = useState<number | null>(null)
 
   // 结果状态
@@ -305,39 +319,46 @@ export default function ScrapeTestPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orientations: ['product'], // 只生成产品导向的创意
+          generationMode,
+          creativeType: 'product_intent',
         }),
       })
 
+      const responseData = await response.json().catch(() => ({}))
+
       if (!response.ok) {
-        throw new Error('AI创意生成失败')
+        throw new Error(responseData.error || responseData.message || 'AI创意生成失败')
       }
 
-      const responseData = await response.json()
-      const { variants } = responseData
-
-      if (variants && variants.length > 0) {
-        const creative = variants[0]
-
-        const result: CreativeResult = {
-          headline1: creative.headline1,
-          headline2: creative.headline2,
-          headline3: creative.headline3,
-          description1: creative.description1,
-          description2: creative.description2,
-          callouts: creative.callouts || [],
-          sitelinks: creative.sitelinks || [],
-          finalUrl: creative.finalUrl || url,
-          qualityScore: creative.qualityScore || 0,
-          prompt: creative.prompt || '未获取到Prompt',
-          timestamp: new Date().toISOString(),
-          modelUsed: 'Gemini API - Gemini 2.5 Pro',
-          orientation: creative.orientation,
+      const creative = responseData.creative
+      const headlines = Array.isArray(creative?.headlines) ? creative.headlines : []
+      const descriptions = Array.isArray(creative?.descriptions) ? creative.descriptions : []
+      const pickText = (item: unknown) => {
+        if (typeof item === 'string') return item
+        if (item && typeof item === 'object' && 'text' in item) {
+          return String((item as { text: unknown }).text)
         }
-
-        setCreativeResult(result)
-        toast.success('✅ 创意生成成功！')
+        return ''
       }
+
+      const result: CreativeResult = {
+        headline1: pickText(headlines[0]) || '—',
+        headline2: pickText(headlines[1]) || '—',
+        headline3: pickText(headlines[2]) || '—',
+        description1: pickText(descriptions[0]) || '—',
+        description2: pickText(descriptions[1]) || '—',
+        callouts: creative?.callouts || [],
+        sitelinks: creative?.sitelinks || [],
+        finalUrl: url,
+        qualityScore: Number(responseData.optimization?.achievedScore ?? creative?.score ?? 0),
+        prompt: creative?.explanation || responseData.creativeType || '同步生成',
+        timestamp: new Date().toISOString(),
+        modelUsed: `Gemini · 模式 ${getAdCreativeGenerationModeLabel(responseData.generationMode ?? generationMode)}`,
+        orientation: responseData.creativeType || 'product_intent',
+      }
+
+      setCreativeResult(result)
+      toast.success('✅ 创意生成成功！')
     } catch (error: any) {
       console.error('生成失败:', error)
       toast.error(error.message || 'AI创意生成失败')
@@ -564,6 +585,14 @@ export default function ScrapeTestPage() {
           {/* 第二部分：操作区 */}
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-6 text-gray-900">⚡ 操作区</h2>
+
+            <div className="mb-4 max-w-sm">
+              <AdCreativeGenerationModeField
+                value={generationMode}
+                onChange={handleGenerationModeChange}
+                disabled={generating || scraping}
+              />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* 数据抓取按钮 */}
