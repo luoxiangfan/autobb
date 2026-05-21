@@ -55,7 +55,7 @@ export async function POST(
       return NextResponse.json(
         {
           error: 'Invalid data',
-          message: '无效的提取模式，可选：fast（快速）、balanced（均衡）、original（完整提取）',
+          message: '无效的提取模式，可选：fast（快速）、balanced（均衡）、original（标准）',
         },
         { status: 400 }
       )

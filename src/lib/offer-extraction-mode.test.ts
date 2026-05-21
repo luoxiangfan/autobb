@@ -17,11 +17,13 @@ describe('offer-extraction-mode', () => {
     expect(normalizeOfferExtractionMode('快速')).toBe('fast')
     expect(normalizeOfferExtractionMode('均衡')).toBe('balanced')
     expect(normalizeOfferExtractionMode('原模式')).toBe('original')
+    expect(normalizeOfferExtractionMode('标准')).toBe('original')
     expect(normalizeOfferExtractionMode('完整提取')).toBe('original')
   })
 
   it('parses extraction mode from request body', () => {
     expect(parseExtractionModeFromRequestBody({ extraction_mode: 'fast' })).toBe('fast')
+    expect(parseExtractionModeFromRequestBody({ extractionMode: '标准' })).toBe('original')
     expect(parseExtractionModeFromRequestBody({ extractionMode: '完整提取' })).toBe('original')
     expect(parseExtractionModeFromRequestBody({})).toBeUndefined()
     expect(getExtractionModeFromRequestBody({ extraction_mode: 'nope' })).toEqual({

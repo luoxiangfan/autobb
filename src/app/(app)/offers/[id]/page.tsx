@@ -454,9 +454,7 @@ export default function OfferDetailPage() {
       setRebuildError(null)
 
       // 显示成功提示
-      const modeLabel = data.extractionMode
-        ? getOfferExtractionModeLabel(data.extractionMode)
-        : '完整提取'
+      const modeLabel = getOfferExtractionModeLabel(data.extractionMode)
       showSuccess(
         '重建任务已创建',
         `已按「${modeLabel}」模式启动重建${data.taskId ? `（任务 ${data.taskId}）` : ''}`

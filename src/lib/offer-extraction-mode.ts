@@ -1,5 +1,5 @@
 /**
- * Offer 提取模式：快速 / 均衡 / 完整提取
+ * Offer 提取模式：快速 / 均衡 / 标准
  */
 
 export type OfferExtractionMode = 'fast' | 'balanced' | 'original'
@@ -12,7 +12,7 @@ export const OFFER_EXTRACTION_MODE_DEFAULT: OfferExtractionMode = 'original'
 export const OFFER_EXTRACTION_MODE_LABELS: Record<OfferExtractionMode, string> = {
   fast: '快速',
   balanced: '均衡',
-  original: '完整提取',
+  original: '标准',
 }
 
 export const OFFER_EXTRACTION_MODE_DESCRIPTIONS: Record<OfferExtractionMode, string> = {
@@ -136,6 +136,7 @@ const MODE_ALIASES: Record<string, OfferExtractionMode> = {
   full: 'original',
   legacy: 'original',
   原模式: 'original',
+  标准: 'original',
   完整提取: 'original',
   完整: 'original',
   原始: 'original',
