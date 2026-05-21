@@ -8,6 +8,7 @@
 import { getDatabase } from '../../db'
 import type { Task } from '../types'
 import { syncCampaignsFromGoogleAds } from '../../google-ads-campaign-sync'
+import { markStaleGoogleAdsCampaignSyncLogs } from '../../google-ads-campaign-sync-pipeline-status'
 import { createRiskAlert } from '../../risk-alerts'
 import { utcNowIso } from '../../db-datetime'
 
@@ -48,6 +49,13 @@ export async function executeGoogleAdsCampaignSyncTask(
   const db = await getDatabase()
 
   try {
+    const staleClosed = await markStaleGoogleAdsCampaignSyncLogs({ userId })
+    if (staleClosed > 0) {
+      console.log(
+        `🧹 [GoogleAdsSyncExecutor] 已关闭用户 #${userId} 的 ${staleClosed} 条超时 running 同步日志`
+      )
+    }
+
     // 🔧 优化：同步开始时写入 running 状态的记录
     try {
       const logResult = await db.exec(

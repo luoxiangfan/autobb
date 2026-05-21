@@ -13,6 +13,11 @@
  */
 
 import { getDatabase } from '../../db'
+import {
+  GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE,
+  markStaleGoogleAdsCampaignSyncLogs,
+  userHasActiveGoogleAdsCampaignSyncWork,
+} from '../../google-ads-campaign-sync-pipeline-status'
 import { getQueueManagerForTaskType } from '../queue-routing'
 import { getUserAuthType, getGoogleAdsCredentials } from '../../google-ads-oauth'
 import { getServiceAccountConfig } from '../../google-ads-service-account'
@@ -88,13 +93,17 @@ export class GoogleAdsCampaignSyncScheduler {
 
     // 启动时执行一次检查（支持延迟，降低冷启动竞争）
     if (this.RUN_ON_START) {
+      if (this.startupTimeoutHandle) {
+        clearTimeout(this.startupTimeoutHandle)
+        this.startupTimeoutHandle = null
+      }
       if (this.STARTUP_DELAY_MS === 0) {
-        this.checkAndScheduleSync()
+        void this.checkAndScheduleSync()
       } else {
         console.log(`⏳ Google Ads 同步首次检查将在 ${Math.round(this.STARTUP_DELAY_MS / 1000)} 秒后执行`)
         this.startupTimeoutHandle = setTimeout(() => {
           this.startupTimeoutHandle = null
-          this.checkAndScheduleSync()
+          void this.checkAndScheduleSync()
         }, this.STARTUP_DELAY_MS)
       }
     } else {
@@ -142,6 +151,11 @@ export class GoogleAdsCampaignSyncScheduler {
     try {
       console.log(`\n[${new Date().toISOString()}] 🔄 检查 Google Ads 广告系列同步任务...`)
 
+      const staleClosed = await markStaleGoogleAdsCampaignSyncLogs()
+      if (staleClosed > 0) {
+        console.log(`  🧹 已自动关闭 ${staleClosed} 条超时的 running 同步日志`)
+      }
+
       const db = await getDatabase()
       const now = new Date()
       const userEligibleCondition = buildUserExecutionEligibleSql({ dbType: db.type, userAlias: 'u' })
@@ -162,9 +176,12 @@ export class GoogleAdsCampaignSyncScheduler {
             '${this.SYNC_INTERVAL_HOURS}'
           ) AS google_ads_sync_interval_hours,
           (
-            SELECT MAX(created_at)
+            SELECT MAX(completed_at)
             FROM sync_logs
-            WHERE user_id = u.id AND sync_type = 'google_ads_campaign_sync'
+            WHERE user_id = u.id
+              AND sync_type = '${GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE}'
+              AND status IN ('success', 'partial', 'failed')
+              AND completed_at IS NOT NULL
           ) AS last_campaign_sync_at
         FROM users u
         WHERE COALESCE(
@@ -187,6 +204,7 @@ export class GoogleAdsCampaignSyncScheduler {
       let triggeredCount = 0
       let skippedCount = 0
       let noCredentialsCount = 0
+      let activeWorkSkippedCount = 0
 
       for (const config of configs) {
         const userId = config.user_id
@@ -200,6 +218,15 @@ export class GoogleAdsCampaignSyncScheduler {
 
         // 如果从未同步过，或者距离上次同步已超过间隔时间，触发同步
         if (hoursSinceLastSync >= intervalHours) {
+          const activeWork = await userHasActiveGoogleAdsCampaignSyncWork(userId)
+          if (activeWork.active) {
+            console.log(
+              `  ⏭️  用户 #${userId}: 已有进行中的同步（${activeWork.reason}, pending=${activeWork.pending}, running=${activeWork.running}），跳过入队`
+            )
+            activeWorkSkippedCount++
+            skippedCount++
+            continue
+          }
           // 验证用户凭证
           let hasValidCredentials = false
           let skipReason = ''
@@ -267,7 +294,9 @@ export class GoogleAdsCampaignSyncScheduler {
       }
 
       const elapsedMs = Date.now() - checkStartAt
-      console.log(`\n✅ 检查完成：触发了 ${triggeredCount}/${configs.length} 个同步任务，跳过 ${skippedCount} 个用户（${noCredentialsCount} 个无凭证）（耗时${elapsedMs}ms）`)
+      console.log(
+        `\n✅ 检查完成：触发了 ${triggeredCount}/${configs.length} 个同步任务，跳过 ${skippedCount} 个用户（${noCredentialsCount} 个无凭证，${activeWorkSkippedCount} 个仍在同步中）（耗时${elapsedMs}ms）`
+      )
     } catch (error) {
       const elapsedMs = Date.now() - checkStartAt
       console.error(`❌ 检查 Google Ads 同步任务失败（耗时${elapsedMs}ms）:`, error)
