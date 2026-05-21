@@ -321,12 +321,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Token有效，在请求头中添加用户信息，供后续API使用
-  requestHeaders.set('x-user-id', String(payload.userId))
-  requestHeaders.set('x-user-email', String(payload.email))
-  requestHeaders.set('x-user-role', String(payload.role))
-  requestHeaders.set('x-user-package', String(payload.packageType))
-
   // 🔐 强制修改密码检查
   // 如果用户需要强制修改密码，只允许访问特定路径
   if (payload.mustChangePassword === true) {
