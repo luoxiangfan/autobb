@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseDbDateTimeAsUtc, normalizeDateOnly, normalizeTimestampToIso } from '../db-datetime'
+import { parseDbDateTimeAsUtc, normalizeDateOnly, normalizeTimestampToIso, utcNowIso } from '../db-datetime'
 
 describe('db-datetime', () => {
   it('parses date-only as UTC midnight', () => {
@@ -26,6 +26,12 @@ describe('db-datetime', () => {
   it('normalizes timestamps to ISO strings', () => {
     expect(normalizeTimestampToIso('2026-01-17 04:00:00')).toBe('2026-01-17T04:00:00.000Z')
     expect(normalizeTimestampToIso(new Date('2026-01-17T04:00:00.000Z'))).toBe('2026-01-17T04:00:00.000Z')
+  })
+
+  it('utcNowIso returns UTC ISO string', () => {
+    const iso = utcNowIso()
+    expect(iso).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+    expect(new Date(iso).toISOString()).toBe(iso)
   })
 })
 

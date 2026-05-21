@@ -9,6 +9,7 @@ import { getDatabase } from '../../db'
 import type { Task } from '../types'
 import { syncCampaignsFromGoogleAds } from '../../google-ads-campaign-sync'
 import { createRiskAlert } from '../../risk-alerts'
+import { utcNowIso } from '../../db-datetime'
 
 /**
  * Google Ads 广告系列同步任务数据
@@ -33,7 +34,7 @@ export async function executeGoogleAdsCampaignSyncTask(
   error?: string
 }> {
   const startTime = Date.now()
-  const startedAt = new Date().toISOString()
+  const startedAt = utcNowIso()
   // const { userId, syncType, customerId, dryRun } = taskData
   const { id: taskId, data: taskData, userId } = task
   const { syncType, customerId, dryRun } = taskData
@@ -50,9 +51,9 @@ export async function executeGoogleAdsCampaignSyncTask(
     // 🔧 优化：同步开始时写入 running 状态的记录
     try {
       const logResult = await db.exec(
-        `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, 'google_ads_campaign_sync', 'running', 0, 0, startedAt, null, isManualSync]
+        `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, created_at, is_manual)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, 'google_ads_campaign_sync', 'running', 0, 0, startedAt, null, startedAt, isManualSync]
       )
       // 🔧 获取插入的 ID（支持 PostgreSQL 和 SQLite）
       syncLogId = logResult.lastInsertRowid || null
@@ -68,7 +69,7 @@ export async function executeGoogleAdsCampaignSyncTask(
     })
 
     const duration = Date.now() - startTime
-    const completedAt = new Date().toISOString()
+    const completedAt = utcNowIso()
 
     // 🔧 优化：同步完成后更新记录（而不是插入新记录）
     if (syncLogId !== null) {
@@ -90,10 +91,10 @@ export async function executeGoogleAdsCampaignSyncTask(
       // 兜底：如果没有获取到 ID，则插入新记录（保持原有逻辑）
       try {
         await db.exec(
-          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, created_at, is_manual)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [userId, 'google_ads_campaign_sync', result.errors.length > 0 ? 'partial' : 'success', 
-           result.syncedCount, duration, startedAt, completedAt, isManualSync]
+           result.syncedCount, duration, startedAt, completedAt, startedAt, isManualSync]
         )
         console.log(`📝 [GoogleAdsSyncExecutor] 同步日志已记录（fallback）：${taskId}`)
       } catch (logError) {
@@ -147,7 +148,7 @@ export async function executeGoogleAdsCampaignSyncTask(
     }
   } catch (error: any) {
     const duration = Date.now() - startTime
-    const completedAt = new Date().toISOString()
+    const completedAt = utcNowIso()
     const errorMessage = error.message || '未知错误'
 
     console.error(
@@ -176,9 +177,9 @@ export async function executeGoogleAdsCampaignSyncTask(
       // 兜底：如果没有获取到 ID，则插入新记录（保持原有逻辑）
       try {
         await db.exec(
-          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [userId, 'google_ads_campaign_sync', 'failed', 0, duration, startedAt, completedAt, isManualSync]
+          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, created_at, is_manual)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [userId, 'google_ads_campaign_sync', 'failed', 0, duration, startedAt, completedAt, startedAt, isManualSync]
         )
       } catch (logError) {
         console.error(`❌ [GoogleAdsSyncExecutor] 记录失败日志失败:`, logError)

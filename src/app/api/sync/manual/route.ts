@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { syncCampaignsFromGoogleAds } from '@/lib/google-ads-campaign-sync'
+import { utcNowIso } from '@/lib/db-datetime'
 
 /**
  * POST /api/sync/manual
@@ -9,7 +10,7 @@ import { syncCampaignsFromGoogleAds } from '@/lib/google-ads-campaign-sync'
  */
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
-  const startedAt = new Date().toISOString()
+  const startedAt = utcNowIso()
   let syncLogId: number | null = null
   let authResult: any = null
   let db: any = null
@@ -29,9 +30,9 @@ export async function POST(request: NextRequest) {
     // 🔧 优化：同步开始时写入 running 状态的记录（is_manual=true）
     try {
       const logResult = await db.exec(
-        `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, 'google_ads_campaign_sync', 'running', 0, 0, startedAt, null, true]  // is_manual=true（手动触发）
+        `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, created_at, is_manual)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, 'google_ads_campaign_sync', 'running', 0, 0, startedAt, null, startedAt, true]  // is_manual=true（手动触发）
       )
       syncLogId = logResult.lastInsertRowid || null
       console.log('[Manual Sync] Created sync log with ID:', syncLogId)
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
     })
     
     const duration = Date.now() - startTime
-    const completedAt = new Date().toISOString()
+    const completedAt = utcNowIso()
 
     console.log('[Manual Sync] Sync completed:', {
       duration: `${duration}ms`,
@@ -76,10 +77,10 @@ export async function POST(request: NextRequest) {
       // 兜底：如果没有获取到 ID，则插入新记录
       try {
         await db.exec(
-          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, created_at, is_manual)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [userId, 'google_ads_campaign_sync', result.errors.length > 0 ? 'partial' : 'success',
-           result.syncedCount, duration, startedAt, completedAt, true]  // is_manual=true
+           result.syncedCount, duration, startedAt, completedAt, startedAt, true]  // is_manual=true
         )
       } catch (logError) {
         console.error('[Manual Sync] Failed to create sync log (fallback):', logError)
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     const duration = Date.now() - startTime
-    const completedAt = new Date().toISOString()
+    const completedAt = utcNowIso()
     console.error('[Manual Sync] Sync error:', error)
 
     // 🔧 优化：同步失败时更新记录
@@ -131,9 +132,9 @@ export async function POST(request: NextRequest) {
           db = await getDatabase()
         }
         await db.exec(
-          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, is_manual)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [authResult?.user?.userId || 0, 'google_ads_campaign_sync', 'failed', 0, duration, startedAt, completedAt, true]
+          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, created_at, is_manual)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [authResult?.user?.userId || 0, 'google_ads_campaign_sync', 'failed', 0, duration, startedAt, completedAt, startedAt, true]
         )
       } catch (logError) {
         console.error('[Manual Sync] Failed to create sync log (fallback):', logError)

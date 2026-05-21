@@ -69,6 +69,11 @@ export function normalizeDateOnly(value: unknown): string | null {
   return String(value).split('T')[0].split(' ')[0]
 }
 
+/** UTC ISO-8601 timestamp for DB writes (sync_logs, etc.). */
+export function utcNowIso(): string {
+  return new Date().toISOString()
+}
+
 export function normalizeTimestampToIso(value: unknown): string | null {
   if (value === null || value === undefined) return null
   if (value instanceof Date) return value.toISOString()
