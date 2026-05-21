@@ -130,42 +130,6 @@ export const pageMetadata = {
     noIndex: true, // 登录页不需要索引
   }),
 
-  // 关于我们
-  about: generateMetadata({
-    title: '关于我们',
-    description:
-      '了解AutoAds团队和使命。我们致力于让Google Ads投放变得简单、高效、智能，帮助每一位Affiliate Marketer轻松驾驭Google Ads。',
-    path: '/about',
-    keywords: ['关于AutoAds', '公司使命', '团队介绍', '核心价值观'],
-  }),
-
-  // 联系我们
-  contact: generateMetadata({
-    title: '联系我们',
-    description:
-      '联系AutoAds团队，获取帮助支持和业务咨询。邮箱：support@autoads.dev，微信：AutoAds_Support。',
-    path: '/contact',
-    keywords: ['联系方式', '客服支持', '技术咨询', '商务合作'],
-  }),
-
-  // 隐私政策
-  privacy: generateMetadata({
-    title: '隐私政策',
-    description:
-      'AutoAds隐私政策。了解我们如何收集、使用和保护您的个人信息，确保数据安全和隐私保护。',
-    path: '/privacy',
-    keywords: ['隐私政策', '数据保护', '个人信息', '用户隐私'],
-  }),
-
-  // 服务条款
-  terms: generateMetadata({
-    title: '服务条款',
-    description:
-      'AutoAds服务条款。了解使用我们服务的相关规定、定价方案、退款政策等重要条款。',
-    path: '/terms',
-    keywords: ['服务条款', '使用协议', '定价方案', '退款政策'],
-  }),
-
   // Dashboard
   dashboard: generateMetadata({
     title: '仪表盘',

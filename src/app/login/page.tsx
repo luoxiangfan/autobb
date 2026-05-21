@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { Loader2, CheckCircle2, ArrowRight, ShieldCheck, Clock3, Target, MessageSquare } from 'lucide-react'
-import { ConsultCustomerDialogTrigger } from '@/components/marketing/ConsultCustomerDialogTrigger'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -261,9 +260,7 @@ function LoginForm() {
                       <Label htmlFor="password" className="text-sm font-medium text-slate-800">
                         密码
                       </Label>
-                      <Link href="/contact" className="text-sm font-medium text-blue-700 hover:text-blue-600">
-                        忘记密码？
-                      </Link>
+                      <span className="text-sm text-slate-500">忘记密码请联系管理员</span>
                     </div>
                     <Input
                       id="password"
