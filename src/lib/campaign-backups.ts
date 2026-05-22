@@ -138,6 +138,35 @@ export function mergeCampaignConfigForBackupSync(
   return Object.keys(base).length > 0 ? base : null
 }
 
+/** 备份表标量字段：合并后的 campaign_config 优先，其次 campaigns 行 */
+export function resolveBackupScalarFieldsForSync(
+  campaign: Record<string, unknown>,
+  campaignConfig: Record<string, unknown> | null
+): {
+  budgetAmount: number
+  budgetType: string
+  maxCpc: number | null
+  targetCpa: number | null
+} {
+  const cfg = campaignConfig ?? {}
+
+  const budgetAmountRaw = cfg.budgetAmount ?? campaign.budget_amount ?? 0
+  const budgetTypeRaw = cfg.budgetType ?? campaign.budget_type ?? 'DAILY'
+  const maxCpcRaw = cfg.maxCpcBid ?? cfg.max_cpc ?? campaign.max_cpc ?? null
+  const targetCpaRaw = cfg.targetCpa ?? cfg.target_cpa ?? campaign.target_cpa ?? null
+
+  const budgetAmount = Number(budgetAmountRaw)
+  const maxCpcNum = Number(maxCpcRaw)
+  const targetCpaNum = Number(targetCpaRaw)
+
+  return {
+    budgetAmount: Number.isFinite(budgetAmount) ? budgetAmount : 0,
+    budgetType: String(budgetTypeRaw || 'DAILY'),
+    maxCpc: Number.isFinite(maxCpcNum) && maxCpcNum > 0 ? maxCpcNum : null,
+    targetCpa: Number.isFinite(targetCpaNum) && targetCpaNum > 0 ? targetCpaNum : null,
+  }
+}
+
 /** 从 campaign-publish 任务上下文构建备份回写快照 */
 export function buildPublishedCampaignBackupSnapshot(input: {
   campaignName: string
@@ -286,9 +315,24 @@ export async function createCampaignBackup(input: CreateCampaignBackupInput): Pr
   const db = await getDatabase()
   const existingId = await findCampaignBackupIdForOffer(input.offerId, input.userId)
   if (existingId != null) {
-    throw new Error(
-      `Campaign backup already exists for user=${input.userId} offer=${input.offerId} (id=${existingId})`
-    )
+    await updateCampaignBackupSnapshot(db, {
+      backupId: existingId,
+      userId: input.userId,
+      adCreativeId: input.adCreativeId ?? null,
+      campaignData: input.campaignData,
+      campaignConfig: input.campaignConfig,
+      campaignName: input.campaignName,
+      budgetAmount: input.budgetAmount,
+      budgetType: input.budgetType,
+      targetCpa: input.targetCpa ?? null,
+      maxCpc: input.maxCpc ?? null,
+      status: input.status,
+      googleAdsAccountId: input.googleAdsAccountId ?? null,
+      customName: input.customName ?? null,
+      backupSource: input.backupSource,
+      backupVersion: input.backupVersion,
+    })
+    return await getCampaignBackupById(existingId, input.userId)
   }
 
   const now = new Date().toISOString()
@@ -710,6 +754,12 @@ export async function syncCampaignBackupAfterPublish(params: {
   const resolvedAdCreativeId =
     snapshot?.creative?.id ?? (campaign.ad_creative_id as number | null) ?? null
 
+  const configRecord =
+    campaignConfig && typeof campaignConfig === 'object' && !Array.isArray(campaignConfig)
+      ? (campaignConfig as Record<string, unknown>)
+      : null
+  const scalars = resolveBackupScalarFieldsForSync(campaign, configRecord)
+
   await updateCampaignBackupSnapshot(db, {
     backupId: params.backupId,
     userId: params.userId,
@@ -719,18 +769,18 @@ export async function syncCampaignBackupAfterPublish(params: {
       offer_id: offerId,
       google_ads_account_id: (campaign.google_ads_account_id as number | null) ?? null,
       campaign_name: resolvedCampaignName,
-      budget_amount: (campaign.budget_amount as number | null) ?? null,
-      budget_type: (campaign.budget_type as string | null) ?? null,
-      max_cpc: (campaign.max_cpc as number | null) ?? null,
-      target_cpa: (campaign.target_cpa as number | null) ?? null,
+      budget_amount: scalars.budgetAmount,
+      budget_type: scalars.budgetType,
+      max_cpc: scalars.maxCpc,
+      target_cpa: scalars.targetCpa,
       status: (campaign.status as string | null) ?? null,
     }),
     campaignConfig,
     campaignName: resolvedCampaignName,
-    budgetAmount: Number(campaign.budget_amount ?? 0),
-    budgetType: String(campaign.budget_type ?? 'DAILY'),
-    targetCpa: (campaign.target_cpa as number | null) ?? null,
-    maxCpc: (campaign.max_cpc as number | null) ?? null,
+    budgetAmount: scalars.budgetAmount,
+    budgetType: scalars.budgetType,
+    targetCpa: scalars.targetCpa,
+    maxCpc: scalars.maxCpc,
     status: String(campaign.status ?? 'PAUSED'),
     googleAdsAccountId: (campaign.google_ads_account_id as number | null) ?? null,
     customName: (campaign.custom_name as string | null) ?? null,

@@ -15,12 +15,14 @@ vi.mock('@/lib/db', () => ({
 
 import {
   buildCampaignBackupDataFromRow,
+  createCampaignBackup,
   getBackupRankOrderSql,
   isAutoadsLikeBackupSource,
   listCampaignBackups,
   mergeCampaignConfigForBackupSync,
   parseCampaignBackup,
   pruneCampaignBackupsForOffer,
+  resolveBackupScalarFieldsForSync,
   syncCampaignBackupAfterPublish,
   trySyncCampaignBackupAfterPublish,
 } from '@/lib/campaign-backups'
@@ -96,6 +98,72 @@ describe('campaign-backups helpers', () => {
     expect(backup.campaignData).toEqual({ offer_id: 9 })
     expect(backup.campaignConfig).toEqual({ x: 1 })
     expect(backup.adCreativeId).toBe(11)
+  })
+})
+
+describe('resolveBackupScalarFieldsForSync', () => {
+  it('prefers merged campaign_config over campaigns row', () => {
+    const scalars = resolveBackupScalarFieldsForSync(
+      { budget_amount: 10, budget_type: 'DAILY', max_cpc: 1, target_cpa: null },
+      { budgetAmount: 99, budgetType: 'TOTAL', maxCpcBid: 3.5, targetCpa: 12 }
+    )
+    expect(scalars).toEqual({
+      budgetAmount: 99,
+      budgetType: 'TOTAL',
+      maxCpc: 3.5,
+      targetCpa: 12,
+    })
+  })
+})
+
+describe('createCampaignBackup', () => {
+  beforeEach(() => {
+    mockQueryOne.mockReset()
+    mockExec.mockReset()
+  })
+
+  it('updates existing row when backup already exists for offer', async () => {
+    mockQueryOne
+      .mockResolvedValueOnce({ id: 42 })
+      .mockResolvedValueOnce({
+        id: 42,
+        user_id: 7,
+        offer_id: 9,
+        campaign_data: '{}',
+        campaign_config: null,
+        backup_type: 'auto',
+        backup_source: 'autoads',
+        backup_version: 1,
+        custom_name: null,
+        campaign_name: 'Existing',
+        budget_amount: 30,
+        budget_type: 'DAILY',
+        target_cpa: null,
+        max_cpc: 2,
+        status: 'PAUSED',
+        google_ads_account_id: 3,
+        created_at: '2026-01-01',
+        updated_at: '2026-01-02',
+        ad_creative_id: null,
+      })
+
+    mockExec.mockResolvedValue({ changes: 1 })
+
+    const backup = await createCampaignBackup({
+      userId: 7,
+      offerId: 9,
+      campaignData: { offer_id: 9 },
+      campaignName: 'Updated',
+      budgetAmount: 30,
+      budgetType: 'DAILY',
+      status: 'PAUSED',
+    })
+
+    expect(backup.id).toBe(42)
+    expect(String(mockExec.mock.calls[0]?.[0] || '')).toContain('UPDATE campaign_backups')
+    expect(
+      mockExec.mock.calls.every((call) => !String(call[0]).includes('INSERT INTO campaign_backups'))
+    ).toBe(true)
   })
 })
 
@@ -201,7 +269,7 @@ describe('syncCampaignBackupAfterPublish', () => {
       publishedSnapshot: {
         campaignName: 'Remote Name',
         googleCampaignId: 'google-999',
-        campaignConfig: { keywords: ['published'] },
+        campaignConfig: { keywords: ['published'], budgetAmount: 99, maxCpcBid: 3.5 },
         creative: { headlines: ['new-h'], descriptions: ['new-d'] },
       },
     })
@@ -220,7 +288,7 @@ describe('syncCampaignBackupAfterPublish', () => {
     expect(data.campaign_name).toBe('Remote Name')
 
     expect(mockExec.mock.calls[0]?.[1]).toEqual(
-      expect.arrayContaining(['Remote Name', 100, 7])
+      expect.arrayContaining(['Remote Name', 99, 'DAILY', 3.5, 100, 7])
     )
   })
 })
