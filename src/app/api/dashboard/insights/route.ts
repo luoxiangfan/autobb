@@ -35,6 +35,27 @@ interface Insight {
  * Query参数：
  * - days: 分析天数（默认7）
  */
+
+/**
+ * 排除「换链接已禁用 + 关联广告系列已暂停」的预期态数据。
+ * 广告系列暂停时会自动禁用同 Offer 的换链接任务，不应作为异常洞察展示。
+ */
+function excludeDisabledUrlSwapWithPausedCampaignSql(dbType: 'postgres' | 'sqlite'): string {
+  const isDeletedFalse = dbType === 'postgres' ? 'FALSE' : '0'
+  return `
+          AND NOT (
+            t.status = 'disabled'
+            AND EXISTS (
+              SELECT 1
+              FROM campaigns c
+              WHERE c.user_id = t.user_id
+                AND c.offer_id = t.offer_id
+                AND c.status = 'PAUSED'
+                AND c.is_deleted = ${isDeletedFalse}
+            )
+          )`
+}
+
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
@@ -585,6 +606,7 @@ export async function GET(request: NextRequest) {
     })
 
     // 规则9: 检测暂停的换链任务（可能需要关注）
+    const urlSwapPausedCampaignFilter = excludeDisabledUrlSwapWithPausedCampaignSql(db.type)
     const urlSwapPausedQuery = db.type === 'postgres'
       ? `
         SELECT
@@ -603,6 +625,7 @@ export async function GET(request: NextRequest) {
           AND t.is_deleted = FALSE
           AND t.updated_at >= CURRENT_TIMESTAMP - INTERVAL '48 hours'
           AND t.failed_swaps > 0
+          ${urlSwapPausedCampaignFilter}
         ORDER BY t.updated_at DESC
         LIMIT 3
       `
@@ -623,6 +646,7 @@ export async function GET(request: NextRequest) {
           AND t.is_deleted = 0
           AND t.updated_at >= datetime('now', '-48 hours')
           AND t.failed_swaps > 0
+          ${urlSwapPausedCampaignFilter}
         ORDER BY t.updated_at DESC
         LIMIT 3
       `
@@ -692,6 +716,7 @@ export async function GET(request: NextRequest) {
             OR t.error_message LIKE '%ECONNREFUSED%'
             OR t.error_message LIKE '%network%'
           )
+          ${urlSwapPausedCampaignFilter}
         ORDER BY t.error_at DESC
         LIMIT 5
       `
@@ -721,6 +746,7 @@ export async function GET(request: NextRequest) {
             OR t.error_message LIKE '%ECONNREFUSED%'
             OR t.error_message LIKE '%network%'
           )
+          ${urlSwapPausedCampaignFilter}
         ORDER BY t.error_at DESC
         LIMIT 5
       `
@@ -804,6 +830,7 @@ export async function GET(request: NextRequest) {
             OR t.error_message LIKE '%campaign%'
             OR t.error_message LIKE '%Customer%'
           )
+          ${urlSwapPausedCampaignFilter}
         ORDER BY t.error_at DESC
         LIMIT 5
       `
@@ -834,6 +861,7 @@ export async function GET(request: NextRequest) {
             OR t.error_message LIKE '%campaign%'
             OR t.error_message LIKE '%Customer%'
           )
+          ${urlSwapPausedCampaignFilter}
         ORDER BY t.error_at DESC
         LIMIT 5
       `
