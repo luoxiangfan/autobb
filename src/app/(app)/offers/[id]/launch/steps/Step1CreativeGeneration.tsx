@@ -1649,54 +1649,68 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
   return (
     <div className="space-y-8">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Wand2 className="w-6 h-6 text-purple-600" />
-            生成广告创意
-          </h2>
-          <p className="text-gray-500 mt-1">
-            AI自动生成广告创意，包含标题、描述、关键词等完整内容，并提供专业评分和解释
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-          {creatives.length > 0 && (
-            <Badge variant="secondary" className="px-3 py-1.5 text-sm font-medium bg-white border border-gray-200 shadow-sm self-start sm:self-auto">
-              已生成类型: {generationCount}/3 | 展示最佳3个
-            </Badge>
-          )}
+      <div className="overflow-hidden rounded-xl border border-purple-100/90 bg-gradient-to-br from-purple-50/70 via-white to-blue-50/50 shadow-sm">
+        <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-1 gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/20">
+              <Wand2 className="h-6 w-6 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-xl font-bold tracking-tight text-gray-900">
+                生成广告创意
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-gray-600">
+                AI 自动生成广告创意，包含标题、描述、关键词等完整内容，并提供专业评分和解释
+              </p>
+            </div>
+          </div>
 
-          <AdCreativeGenerationModeField
-            value={generationMode}
-            onChange={handleGenerationModeChange}
-            disabled={generating}
-            className="w-full sm:w-auto"
-          />
-
-          <Button
-            onClick={() => {
-              void handleGenerate()
-            }}
-            disabled={generating || generatedBuckets.length >= 3}
-            className={`shadow-md border-0 ${
-              generatedBuckets.length >= 3
-                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-amber-500/20'
-                : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-purple-500/20'
-            } text-white`}
-            title={generateButtonTitle}
-          >
-            {generating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                {generateButtonLabel}
-              </>
-            ) : (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2" />
-                {generateButtonLabel}
-              </>
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end lg:shrink-0">
+            {creatives.length > 0 && (
+              <Badge
+                variant="secondary"
+                className="self-start border border-purple-100 bg-white/90 px-3 py-1.5 text-sm font-medium text-purple-800 shadow-sm sm:self-auto"
+              >
+                已生成类型: {generationCount}/3 · 展示最佳 3 个
+              </Badge>
             )}
-          </Button>
+
+            <div className="flex w-full flex-col gap-3 rounded-xl border border-gray-200/70 bg-white/90 p-3.5 shadow-sm backdrop-blur-sm sm:w-auto sm:flex-row sm:items-end">
+              <AdCreativeGenerationModeField
+                value={generationMode}
+                onChange={handleGenerationModeChange}
+                disabled={generating}
+                layout="inline"
+                className="w-full sm:min-w-[200px] sm:w-auto"
+              />
+
+              <Button
+                size="lg"
+                onClick={() => {
+                  void handleGenerate()
+                }}
+                disabled={generating || generatedBuckets.length >= 3}
+                className={`h-10 shrink-0 border-0 px-5 font-medium transition-all duration-200 ${
+                  generatedBuckets.length >= 3
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 shadow-md shadow-amber-500/25 hover:from-amber-600 hover:to-orange-600 hover:shadow-lg hover:shadow-amber-500/30'
+                    : 'bg-gradient-to-r from-purple-600 to-blue-600 shadow-md shadow-purple-500/25 hover:from-purple-700 hover:to-blue-700 hover:shadow-lg hover:shadow-purple-500/30'
+                } text-white disabled:opacity-60`}
+                title={generateButtonTitle}
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {generateButtonLabel}
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    {generateButtonLabel}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
