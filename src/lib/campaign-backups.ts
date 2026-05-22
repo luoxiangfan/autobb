@@ -68,6 +68,102 @@ function parseCampaignBackupJsonField(value: unknown): unknown | null {
   return parseJsonField(value, null)
 }
 
+/** 发布任务侧最终快照（优先于 campaigns 表内可能滞后的 campaign_config） */
+export type PublishedCampaignBackupSnapshot = {
+  campaignName?: string
+  campaignConfig?: Record<string, unknown>
+  creative?: {
+    id?: number
+    headlines?: string[]
+    descriptions?: string[]
+    finalUrl?: string
+    finalUrlSuffix?: string
+    path1?: string
+    path2?: string
+    callouts?: string[]
+    sitelinks?: Array<{
+      text: string
+      url: string
+      description?: string
+    }>
+  }
+  adGroupName?: string
+  adName?: string
+  googleCampaignId?: string
+  googleAdGroupId?: string
+  googleAdId?: string
+}
+
+/**
+ * 将 DB campaign_config 与发布任务最终配置合并（任务字段覆盖 DB，用于备份回写）。
+ */
+export function mergeCampaignConfigForBackupSync(
+  baseConfig: unknown,
+  snapshot: PublishedCampaignBackupSnapshot
+): Record<string, unknown> | null {
+  const base: Record<string, unknown> =
+    baseConfig && typeof baseConfig === 'object' && !Array.isArray(baseConfig)
+      ? { ...(baseConfig as Record<string, unknown>) }
+      : {}
+
+  if (snapshot.campaignConfig && typeof snapshot.campaignConfig === 'object') {
+    Object.assign(base, snapshot.campaignConfig)
+  }
+
+  if (snapshot.campaignName) {
+    base.campaignName = snapshot.campaignName
+  }
+  if (snapshot.adGroupName) {
+    base.adGroupName = snapshot.adGroupName
+  }
+  if (snapshot.adName) {
+    base.adName = snapshot.adName
+  }
+
+  const creative = snapshot.creative
+  if (creative) {
+    if (creative.headlines) base.headlines = creative.headlines
+    if (creative.descriptions) base.descriptions = creative.descriptions
+    if (creative.finalUrl) base.finalUrl = creative.finalUrl
+    if (creative.finalUrlSuffix !== undefined) {
+      base.finalUrlSuffix = creative.finalUrlSuffix
+    }
+    if (creative.path1 !== undefined) base.path1 = creative.path1
+    if (creative.path2 !== undefined) base.path2 = creative.path2
+    if (creative.callouts) base.callouts = creative.callouts
+    if (creative.sitelinks) base.sitelinks = creative.sitelinks
+    if (creative.id != null) base.adCreativeId = creative.id
+  }
+
+  return Object.keys(base).length > 0 ? base : null
+}
+
+/** 从 campaign-publish 任务上下文构建备份回写快照 */
+export function buildPublishedCampaignBackupSnapshot(input: {
+  campaignName: string
+  campaignConfig: Record<string, unknown>
+  creative: PublishedCampaignBackupSnapshot['creative']
+  naming?: {
+    adGroupName?: string
+    adName?: string
+    campaignName?: string
+  }
+  googleCampaignId?: string
+  googleAdGroupId?: string
+  googleAdId?: string
+}): PublishedCampaignBackupSnapshot {
+  return {
+    campaignName: input.campaignName,
+    campaignConfig: input.campaignConfig,
+    creative: input.creative,
+    adGroupName: input.naming?.adGroupName,
+    adName: input.naming?.adName,
+    googleCampaignId: input.googleCampaignId,
+    googleAdGroupId: input.googleAdGroupId,
+    googleAdId: input.googleAdId,
+  }
+}
+
 /**
  * 广告系列备份数据接口
  */
@@ -550,12 +646,13 @@ async function updateCampaignBackupSnapshot(
 }
 
 /**
- * 从备份发布到 Google Ads 成功后，用 campaigns 表最新数据回写备份行
+ * 发布成功后回写备份：以 campaigns 表为准，并用 publishedSnapshot 覆盖任务内最终配置。
  */
 export async function syncCampaignBackupAfterPublish(params: {
   backupId: number
   userId: number
   campaignId: number
+  publishedSnapshot?: PublishedCampaignBackupSnapshot
 }): Promise<void> {
   const db = await getDatabase()
 
@@ -595,17 +692,33 @@ export async function syncCampaignBackupAfterPublish(params: {
     return
   }
 
-  const campaignConfig = parseCampaignBackupJsonField(campaign.campaign_config)
+  const snapshot = params.publishedSnapshot
+  const campaignConfig = snapshot
+    ? mergeCampaignConfigForBackupSync(campaign.campaign_config, snapshot)
+    : parseCampaignBackupJsonField(campaign.campaign_config)
+
+  const resolvedCampaignName = snapshot?.campaignName
+    ? String(snapshot.campaignName)
+    : String(campaign.campaign_name ?? 'Campaign')
+
+  const resolvedGoogleCampaignId =
+    snapshot?.googleCampaignId?.trim() ||
+    (campaign.campaign_id as string | null) ||
+    (campaign.google_campaign_id as string | null) ||
+    null
+
+  const resolvedAdCreativeId =
+    snapshot?.creative?.id ?? (campaign.ad_creative_id as number | null) ?? null
 
   await updateCampaignBackupSnapshot(db, {
     backupId: params.backupId,
     userId: params.userId,
-    adCreativeId: (campaign.ad_creative_id as number | null) ?? null,
+    adCreativeId: resolvedAdCreativeId,
     campaignData: buildCampaignBackupDataFromRow({
-      campaign_id: (campaign.campaign_id as string | null) ?? null,
+      campaign_id: resolvedGoogleCampaignId,
       offer_id: offerId,
       google_ads_account_id: (campaign.google_ads_account_id as number | null) ?? null,
-      campaign_name: (campaign.campaign_name as string | null) ?? null,
+      campaign_name: resolvedCampaignName,
       budget_amount: (campaign.budget_amount as number | null) ?? null,
       budget_type: (campaign.budget_type as string | null) ?? null,
       max_cpc: (campaign.max_cpc as number | null) ?? null,
@@ -613,7 +726,7 @@ export async function syncCampaignBackupAfterPublish(params: {
       status: (campaign.status as string | null) ?? null,
     }),
     campaignConfig,
-    campaignName: String(campaign.campaign_name ?? 'Campaign'),
+    campaignName: resolvedCampaignName,
     budgetAmount: Number(campaign.budget_amount ?? 0),
     budgetType: String(campaign.budget_type ?? 'DAILY'),
     targetCpa: (campaign.target_cpa as number | null) ?? null,
@@ -629,6 +742,42 @@ export async function syncCampaignBackupAfterPublish(params: {
   console.log(
     `[Backup Sync] Updated backup id=${params.backupId} from published campaign id=${params.campaignId}`
   )
+}
+
+/**
+ * 发布成功后尝试回写备份：优先 sourceBackupId，否则查找该 Offer 的唯一条备份。
+ */
+export async function trySyncCampaignBackupAfterPublish(params: {
+  userId: number
+  campaignId: number
+  offerId: number
+  sourceBackupId?: number | null
+  publishedSnapshot?: PublishedCampaignBackupSnapshot
+}): Promise<void> {
+  let backupId: number | null = null
+
+  const explicit = params.sourceBackupId
+  if (explicit != null && Number.isInteger(explicit) && explicit > 0) {
+    backupId = explicit
+  } else {
+    backupId = await findCampaignBackupIdForOffer(params.offerId, params.userId)
+  }
+
+  if (backupId == null) {
+    return
+  }
+
+  try {
+    await syncCampaignBackupAfterPublish({
+      backupId,
+      userId: params.userId,
+      campaignId: params.campaignId,
+      publishedSnapshot: params.publishedSnapshot,
+    })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.warn(`[Backup Sync] Failed after publish backupId=${backupId}:`, message)
+  }
 }
 
 export async function upsertCampaignBackupAfterPublish(

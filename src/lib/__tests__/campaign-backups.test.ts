@@ -18,9 +18,11 @@ import {
   getBackupRankOrderSql,
   isAutoadsLikeBackupSource,
   listCampaignBackups,
+  mergeCampaignConfigForBackupSync,
   parseCampaignBackup,
   pruneCampaignBackupsForOffer,
   syncCampaignBackupAfterPublish,
+  trySyncCampaignBackupAfterPublish,
 } from '@/lib/campaign-backups'
 
 describe('campaign-backups helpers', () => {
@@ -97,6 +99,34 @@ describe('campaign-backups helpers', () => {
   })
 })
 
+describe('mergeCampaignConfigForBackupSync', () => {
+  it('overlays task campaignConfig, creative, and naming onto DB config', () => {
+    const merged = mergeCampaignConfigForBackupSync(
+      { keywords: ['old'], campaignName: 'Stale' },
+      {
+        campaignName: 'Authoritative',
+        campaignConfig: { keywords: ['new'], maxCpcBid: 2 },
+        creative: {
+          headlines: ['H1'],
+          descriptions: ['D1'],
+          finalUrl: 'https://example.com',
+        },
+        adGroupName: 'AG-1',
+      }
+    )
+
+    expect(merged).toEqual({
+      keywords: ['new'],
+      campaignName: 'Authoritative',
+      maxCpcBid: 2,
+      headlines: ['H1'],
+      descriptions: ['D1'],
+      finalUrl: 'https://example.com',
+      adGroupName: 'AG-1',
+    })
+  })
+})
+
 describe('syncCampaignBackupAfterPublish', () => {
   beforeEach(() => {
     mockQueryOne.mockReset()
@@ -138,6 +168,147 @@ describe('syncCampaignBackupAfterPublish', () => {
     expect(mockExec.mock.calls[0]?.[1]).toEqual(
       expect.arrayContaining(['autoads', 1, 100, 7])
     )
+  })
+
+  it('prefers publishedSnapshot over stale campaigns.campaign_config', async () => {
+    mockQueryOne
+      .mockResolvedValueOnce({
+        id: 50,
+        user_id: 7,
+        offer_id: 9,
+        campaign_id: 'local-id',
+        google_campaign_id: null,
+        google_ads_account_id: 3,
+        campaign_name: 'Stale Name',
+        budget_amount: 20,
+        budget_type: 'DAILY',
+        max_cpc: 1.5,
+        target_cpa: null,
+        status: 'PAUSED',
+        custom_name: null,
+        ad_creative_id: 11,
+        campaign_config: { keywords: ['old'], headlines: ['old-h'] },
+      })
+      .mockResolvedValueOnce({ id: 100, offer_id: 9 })
+      .mockResolvedValueOnce({ id: 100 })
+
+    mockExec.mockResolvedValue({ changes: 0 })
+
+    await syncCampaignBackupAfterPublish({
+      backupId: 100,
+      userId: 7,
+      campaignId: 50,
+      publishedSnapshot: {
+        campaignName: 'Remote Name',
+        googleCampaignId: 'google-999',
+        campaignConfig: { keywords: ['published'] },
+        creative: { headlines: ['new-h'], descriptions: ['new-d'] },
+      },
+    })
+
+    const configDb = mockExec.mock.calls[0]?.[1]?.[2]
+    const config =
+      typeof configDb === 'string' ? JSON.parse(configDb) : (configDb as Record<string, unknown>)
+    expect(config.keywords).toEqual(['published'])
+    expect(config.headlines).toEqual(['new-h'])
+    expect(config.campaignName).toBe('Remote Name')
+
+    const dataDb = mockExec.mock.calls[0]?.[1]?.[1]
+    const data =
+      typeof dataDb === 'string' ? JSON.parse(dataDb) : (dataDb as Record<string, unknown>)
+    expect(data.campaign_id).toBe('google-999')
+    expect(data.campaign_name).toBe('Remote Name')
+
+    expect(mockExec.mock.calls[0]?.[1]).toEqual(
+      expect.arrayContaining(['Remote Name', 100, 7])
+    )
+  })
+})
+
+describe('trySyncCampaignBackupAfterPublish', () => {
+  beforeEach(() => {
+    mockQueryOne.mockReset()
+    mockExec.mockReset()
+  })
+
+  it('uses explicit sourceBackupId when provided', async () => {
+    mockQueryOne
+      .mockResolvedValueOnce({
+        id: 50,
+        user_id: 7,
+        offer_id: 9,
+        campaign_id: 'google-camp-1',
+        google_ads_account_id: 3,
+        campaign_name: 'Published',
+        budget_amount: 20,
+        budget_type: 'DAILY',
+        max_cpc: 1.5,
+        target_cpa: null,
+        status: 'PAUSED',
+        custom_name: null,
+        ad_creative_id: 11,
+        campaign_config: { keywords: ['a'] },
+      })
+      .mockResolvedValueOnce({ id: 100, offer_id: 9 })
+      .mockResolvedValueOnce({ id: 100 })
+
+    mockExec.mockResolvedValue({ changes: 0 })
+
+    await trySyncCampaignBackupAfterPublish({
+      userId: 7,
+      campaignId: 50,
+      offerId: 9,
+      sourceBackupId: 100,
+    })
+
+    expect(mockExec).toHaveBeenCalled()
+  })
+
+  it('resolves backup by offer when sourceBackupId is omitted', async () => {
+    mockQueryOne
+      .mockResolvedValueOnce({ id: 200 })
+      .mockResolvedValueOnce({
+        id: 50,
+        user_id: 7,
+        offer_id: 9,
+        campaign_id: 'google-camp-1',
+        google_ads_account_id: 3,
+        campaign_name: 'Published',
+        budget_amount: 20,
+        budget_type: 'DAILY',
+        max_cpc: 1.5,
+        target_cpa: null,
+        status: 'PAUSED',
+        custom_name: null,
+        ad_creative_id: 11,
+        campaign_config: {},
+      })
+      .mockResolvedValueOnce({ id: 200, offer_id: 9 })
+      .mockResolvedValueOnce({ id: 200 })
+
+    mockExec.mockResolvedValue({ changes: 0 })
+
+    await trySyncCampaignBackupAfterPublish({
+      userId: 7,
+      campaignId: 50,
+      offerId: 9,
+    })
+
+    const findSql = String(mockQueryOne.mock.calls[0]?.[0] || '')
+    expect(findSql).toContain('campaign_backups')
+    expect(mockExec).toHaveBeenCalled()
+  })
+
+  it('no-ops when no backup exists for offer', async () => {
+    mockQueryOne.mockResolvedValueOnce(undefined)
+
+    await trySyncCampaignBackupAfterPublish({
+      userId: 7,
+      campaignId: 50,
+      offerId: 9,
+    })
+
+    expect(mockExec).not.toHaveBeenCalled()
   })
 })
 

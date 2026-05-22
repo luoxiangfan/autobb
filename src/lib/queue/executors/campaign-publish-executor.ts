@@ -69,7 +69,10 @@ import {
   pauseOrphanGoogleAdsCampaignAfterPublishFailure,
   type CampaignPublishRollbackContext,
 } from '@/lib/campaign-publish-orphan-cleanup'
-import { syncCampaignBackupAfterPublish } from '@/lib/campaign-backups'
+import {
+  buildPublishedCampaignBackupSnapshot,
+  trySyncCampaignBackupAfterPublish,
+} from '@/lib/campaign-backups'
 
 export type { CampaignPublishRollbackContext } from '@/lib/campaign-publish-orphan-cleanup'
 
@@ -1409,6 +1412,27 @@ export async function executeCampaignPublish(
       (campaignStateBeforePersist?.is_deleted === true || campaignStateBeforePersist?.is_deleted === 1)
       || String(campaignStateBeforePersist?.status || '').toUpperCase() === 'REMOVED'
 
+    const buildBackupSyncSnapshot = () =>
+      buildPublishedCampaignBackupSnapshot({
+        campaignName: authoritativeCampaignName,
+        campaignConfig: campaignConfig as Record<string, unknown>,
+        creative: {
+          id: creative.id,
+          headlines: creative.headlines,
+          descriptions: creative.descriptions,
+          finalUrl: creative.finalUrl,
+          finalUrlSuffix: creative.finalUrlSuffix,
+          path1: creative.path1,
+          path2: creative.path2,
+          callouts: creative.callouts,
+          sitelinks: creative.sitelinks,
+        },
+        naming: naming ?? undefined,
+        googleCampaignId,
+        googleAdGroupId,
+        googleAdId,
+      })
+
     if (wasOfflinedDuringPublish) {
       console.warn(`⚠️ Campaign在发布过程中已下线，跳过成功回写（campaignId=${campaignId}, googleCampaignId=${googleCampaignId}）`)
       try {
@@ -1431,6 +1455,13 @@ export async function executeCampaignPublish(
       }
       orphanGoogleCampaignId = undefined
       apiSuccess = true
+      await trySyncCampaignBackupAfterPublish({
+        userId,
+        campaignId,
+        offerId,
+        sourceBackupId: task.data.sourceBackupId,
+        publishedSnapshot: buildBackupSyncSnapshot(),
+      })
       return { success: true, googleCampaignId, googleAdGroupId, googleAdId }
     }
 
@@ -1544,21 +1575,13 @@ export async function executeCampaignPublish(
 
     apiSuccess = true
 
-    const sourceBackupId = task.data.sourceBackupId
-    if (sourceBackupId != null && Number.isInteger(sourceBackupId) && sourceBackupId > 0) {
-      try {
-        await syncCampaignBackupAfterPublish({
-          backupId: sourceBackupId,
-          userId,
-          campaignId,
-        })
-      } catch (backupSyncError: any) {
-        console.warn(
-          `[Backup Sync] Failed after publish backupId=${sourceBackupId}:`,
-          backupSyncError?.message || backupSyncError
-        )
-      }
-    }
+    await trySyncCampaignBackupAfterPublish({
+      userId,
+      campaignId,
+      offerId,
+      sourceBackupId: task.data.sourceBackupId,
+      publishedSnapshot: buildBackupSyncSnapshot(),
+    })
 
     // 🔧 修复(2026-01-05): 区分完全成功和部分成功
     if (extensionsErrors.length === 0) {
