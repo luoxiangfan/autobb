@@ -307,8 +307,20 @@ export async function enqueueCampaignPublishFromBackup(params: {
           ]
         )
         await db.exec(
-          `UPDATE campaigns SET ad_creative_id = ?, updated_at = ? WHERE id = ? AND user_id = ?`,
-          [newAdCreativeId, new Date(), campaignId, userId]
+          `
+          UPDATE campaigns
+          SET ad_creative_id = ?,
+              campaign_config = ?,
+              updated_at = ?
+          WHERE id = ? AND user_id = ?
+        `,
+          [
+            newAdCreativeId,
+            toDbCampaignConfigTextField(finalCampaignConfig),
+            new Date(),
+            campaignId,
+            userId,
+          ]
         )
       }
     }

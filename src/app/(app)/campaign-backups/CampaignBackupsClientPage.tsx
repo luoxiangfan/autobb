@@ -38,6 +38,7 @@ import {
   BatchProgressIndicator,
   type BatchProgressErrorDetail,
 } from '@/components/BatchProgressIndicator'
+import { backupHasCampaignConfig } from '@/lib/campaign-backup-config'
 
 interface CampaignBackup {
   id: number
@@ -180,28 +181,29 @@ export default function CampaignBackupsClientPage() {
     }
   }
 
-  const backupHasConfig = (config: unknown): boolean => {
-    if (config == null) return false
-    if (typeof config === 'string') {
-      const trimmed = config.trim()
-      if (!trimmed) return false
-      try {
-        const parsed = JSON.parse(trimmed) as Record<string, unknown>
-        return typeof parsed === 'object' && parsed !== null && Object.keys(parsed).length > 0
-      } catch {
-        return false
-      }
-    }
-    return typeof config === 'object' && Object.keys(config as object).length > 0
-  }
+  const selectedOfferIds = new Set(
+    [...selectedBackupMeta.values()].map((meta) => meta.offerId)
+  )
 
-  const selectableBackups = backups.filter((b) => backupHasConfig(b.campaign_config))
+  const selectableBackups = backups.filter((b) =>
+    backupHasCampaignConfig(b.campaign_config)
+  )
+
+  const isOfferBlocked = (offerId: number, backupId: number) =>
+    selectedOfferIds.has(offerId) && !selectedBackupIds.includes(backupId)
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       const nextMeta = new Map(selectedBackupMeta)
       const ids: number[] = []
+      const seenOffers = new Set(
+        [...selectedBackupMeta.values()].map((meta) => meta.offerId)
+      )
       for (const backup of selectableBackups) {
+        if (seenOffers.has(backup.offer_id)) {
+          continue
+        }
+        seenOffers.add(backup.offer_id)
         ids.push(backup.id)
         nextMeta.set(backup.id, {
           offerId: backup.offer_id,
@@ -226,7 +228,13 @@ export default function CampaignBackupsClientPage() {
   }
 
   const handleSelectBackup = (checked: boolean, backup: CampaignBackup) => {
-    if (!backupHasConfig(backup.campaign_config)) {
+    if (!backupHasCampaignConfig(backup.campaign_config)) {
+      return
+    }
+    if (checked && isOfferBlocked(backup.offer_id, backup.id)) {
+      toast.warning('同一 Offer 只能选择一条备份', {
+        description: `Offer ${backup.offer_id} 已有选中项`,
+      })
       return
     }
     if (checked) {
@@ -740,16 +748,17 @@ export default function CampaignBackupsClientPage() {
                   </TableRow>
                 ) : (
                   backups.map((backup) => {
-                    const canSelect = backupHasConfig(backup.campaign_config)
+                    const canSelect = backupHasCampaignConfig(backup.campaign_config)
+                    const offerBlocked = isOfferBlocked(backup.offer_id, backup.id)
                     return (
                     <TableRow
                       key={backup.id}
-                      className={canSelect ? undefined : 'opacity-60'}
+                      className={canSelect && !offerBlocked ? undefined : 'opacity-60'}
                     >
                       <TableCell>
                         <Checkbox
                           checked={selectedBackupIds.includes(backup.id)}
-                          disabled={!canSelect}
+                          disabled={!canSelect || offerBlocked}
                           onCheckedChange={(checked) =>
                             handleSelectBackup(checked as boolean, backup)
                           }
@@ -773,6 +782,16 @@ export default function CampaignBackupsClientPage() {
                         </Badge>
                         {backup.backup_version > 1 && (
                           <span className="text-xs text-gray-500 ml-1">v{backup.backup_version}</span>
+                        )}
+                        {!canSelect && (
+                          <Badge variant="outline" className="ml-1 text-xs">
+                            无配置
+                          </Badge>
+                        )}
+                        {offerBlocked && (
+                          <Badge variant="outline" className="ml-1 text-xs">
+                            Offer 已选
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell>

@@ -18,6 +18,7 @@ import {
 } from './campaign-backups'
 import { getCustomerWithCredentials, trackOAuthApiCall } from './google-ads-api'
 import { executeGAQLQueryPython } from './python-ads-client'
+import { toDbCampaignConfigTextField } from './campaign-backups'
 import { getInsertedId } from './db-helpers'
 import { createRiskAlert } from './risk-alerts'
 import { ApiOperationType } from './google-ads-api-tracker'
@@ -1478,7 +1479,7 @@ export async function updateCampaignConfig(
         google_ad_id = ?
     WHERE campaign_id = ?
   `, [
-    JSON.stringify(campaignConfig),
+    toDbCampaignConfigTextField(campaignConfig),
     new Date(),
     `${adGroupId}` || null,
     `${adGroupId}~${adId}` || null,

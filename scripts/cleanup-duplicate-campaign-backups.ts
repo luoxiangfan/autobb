@@ -71,46 +71,77 @@ async function printPreStats(db: DatabaseAdapter): Promise<number> {
 async function printDeletePreview(db: DatabaseAdapter): Promise<void> {
   const order = rankOrderSql(db.type)
   const rows = await db.query(`
-    WITH ranked AS (
-      SELECT
-        id,
-        user_id,
-        offer_id,
-        backup_source,
-        backup_version,
-        updated_at,
-        ROW_NUMBER() OVER (
-          PARTITION BY user_id, offer_id
-          ORDER BY ${order}
-        ) AS rn
-      FROM campaign_backups
+    WITH canonical AS (
+      SELECT user_id, offer_id, id AS canonical_id
+      FROM (
+        SELECT
+          id,
+          user_id,
+          offer_id,
+          ROW_NUMBER() OVER (
+            PARTITION BY user_id, offer_id
+            ORDER BY ${order}
+          ) AS rn
+        FROM campaign_backups
+      ) ranked
+      WHERE rn = 1
+    ),
+    keeper_ids AS (
+      SELECT cb.id
+      FROM campaign_backups cb
+      INNER JOIN canonical c
+        ON cb.user_id = c.user_id AND cb.offer_id = c.offer_id
+      WHERE cb.id = c.canonical_id
+         OR (cb.backup_source = 'google_ads' AND cb.backup_version >= 2)
     )
-    SELECT id, user_id, offer_id, backup_source, backup_version, updated_at, rn
-    FROM ranked
-    WHERE rn > 1
-    ORDER BY user_id, offer_id, rn
+    SELECT
+      cb.id,
+      cb.user_id,
+      cb.offer_id,
+      cb.backup_source,
+      cb.backup_version,
+      cb.updated_at
+    FROM campaign_backups cb
+    WHERE cb.id NOT IN (SELECT id FROM keeper_ids)
+    ORDER BY cb.user_id, cb.offer_id, cb.id
     LIMIT 100
   `)
 
-  console.log('\n=== 将删除的重复行（预览，最多 100 条）===')
+  console.log('\n=== 将删除的重复行（prune 预览，最多 100 条）===')
   if (rows.length === 0) {
-    console.log('（无重复行）')
+    console.log('（无 prune 将删除的行）')
     return
   }
   console.table(rows)
   const total = await db.queryOne<{ count: number }>(`
-    WITH ranked AS (
-      SELECT
-        id,
-        ROW_NUMBER() OVER (
-          PARTITION BY user_id, offer_id
-          ORDER BY ${order}
-        ) AS rn
-      FROM campaign_backups
+    WITH canonical AS (
+      SELECT user_id, offer_id, id AS canonical_id
+      FROM (
+        SELECT
+          id,
+          user_id,
+          offer_id,
+          ROW_NUMBER() OVER (
+            PARTITION BY user_id, offer_id
+            ORDER BY ${order}
+          ) AS rn
+        FROM campaign_backups
+      ) ranked
+      WHERE rn = 1
+    ),
+    keeper_ids AS (
+      SELECT cb.id
+      FROM campaign_backups cb
+      INNER JOIN canonical c
+        ON cb.user_id = c.user_id AND cb.offer_id = c.offer_id
+      WHERE cb.id = c.canonical_id
+         OR (cb.backup_source = 'google_ads' AND cb.backup_version >= 2)
     )
-    SELECT COUNT(*) AS count FROM ranked WHERE rn > 1
+    SELECT COUNT(*) AS count
+    FROM campaign_backups cb
+    WHERE cb.id NOT IN (SELECT id FROM keeper_ids)
   `)
-  console.log(`合计将删除: ${total?.count ?? 0} 行`)
+  console.log(`合计将删除: ${total?.count ?? 0} 行（保留 canonical + google_ads v2+）`)
 }
 
 async function normalizePublishSources(db: DatabaseAdapter, dryRun: boolean): Promise<number> {

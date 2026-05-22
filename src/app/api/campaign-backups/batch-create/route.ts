@@ -5,6 +5,8 @@ import { getQueueManager } from '@/lib/queue/unified-queue-manager'
 import { validateCampaignBackupsForBatchCreate } from '@/lib/campaign-backup-restore'
 import { createHash } from 'crypto'
 
+const MAX_BATCH_BACKUP_COUNT = 50
+
 /**
  * POST /api/campaign-backups/batch-create
  * 批量从备份创建广告系列（异步队列）
@@ -57,6 +59,13 @@ export async function POST(request: NextRequest) {
       numericBackupIds.push(parsed)
     }
     const uniqueBackupIds = [...new Set(numericBackupIds)]
+
+    if (uniqueBackupIds.length > MAX_BATCH_BACKUP_COUNT) {
+      return NextResponse.json(
+        { error: `单次最多批量创建 ${MAX_BATCH_BACKUP_COUNT} 个备份` },
+        { status: 400 }
+      )
+    }
 
     if (!googleAdsAccountId) {
       return NextResponse.json(

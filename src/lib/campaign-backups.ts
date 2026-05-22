@@ -11,7 +11,35 @@
 
 import { getDatabase, type DatabaseType } from './db'
 import { getInsertedId } from './db-helpers'
+import { backupHasCampaignConfig } from './campaign-backup-config'
 import { parseJsonField, toDbJsonObjectField } from './json-field'
+
+export { backupHasCampaignConfig } from './campaign-backup-config'
+
+/** 写入备份的 campaign_data 快照（与发布 upsert 字段对齐，不含 campaigns 表元数据） */
+export function buildCampaignBackupDataFromRow(campaign: {
+  campaign_id?: string | null
+  offer_id: number
+  google_ads_account_id?: number | null
+  campaign_name?: string | null
+  budget_amount?: number | null
+  budget_type?: string | null
+  max_cpc?: number | null
+  target_cpa?: number | null
+  status?: string | null
+}): Record<string, unknown> {
+  return {
+    campaign_id: campaign.campaign_id ?? null,
+    offer_id: campaign.offer_id,
+    google_ads_account_id: campaign.google_ads_account_id ?? null,
+    campaign_name: campaign.campaign_name ?? null,
+    budget_amount: campaign.budget_amount ?? null,
+    budget_type: campaign.budget_type ?? null,
+    max_cpc: campaign.max_cpc ?? null,
+    target_cpa: campaign.target_cpa ?? null,
+    status: campaign.status ?? null,
+  }
+}
 
 /** 历史 publish 来源与 autoads 等价（发布时会归一为 autoads） */
 export function isAutoadsLikeBackupSource(source: string): boolean {
@@ -35,21 +63,6 @@ export { toDbJsonTextField as toDbCampaignConfigTextField } from './json-field'
 function parseCampaignBackupJsonField(value: unknown): unknown | null {
   if (value == null) return null
   return parseJsonField(value, null)
-}
-
-export function backupHasCampaignConfig(value: unknown): boolean {
-  if (value == null) return false
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-    if (!trimmed) return false
-    try {
-      const parsed = JSON.parse(trimmed) as Record<string, unknown>
-      return typeof parsed === 'object' && parsed !== null && Object.keys(parsed).length > 0
-    } catch {
-      return false
-    }
-  }
-  return typeof value === 'object' && Object.keys(value as object).length > 0
 }
 
 /**
@@ -242,24 +255,6 @@ export function getBackupRankOrderSql(dbType: DatabaseType, tableAlias?: string)
     ${p}updated_at DESC,
     ${p}id DESC
   `
-}
-
-export async function getLatestBackupForOffer(offerId: number, userId: number): Promise<CampaignBackup | null> {
-  const db = await getDatabase()
-  const rankOrder = getBackupRankOrderSql(db.type)
-
-  const backup = await db.queryOne(`
-    SELECT * FROM campaign_backups
-    WHERE offer_id = ? AND user_id = ?
-    ORDER BY ${rankOrder}
-    LIMIT 1
-  `, [offerId, userId]) as any
-
-  if (!backup) {
-    return null
-  }
-
-  return parseCampaignBackup(backup)
 }
 
 export interface UpsertCampaignBackupAfterPublishInput {
@@ -595,7 +590,7 @@ export async function autoBackupCampaign(params: {
     await createCampaignBackup({
       userId: params.userId,
       offerId: campaign.offer_id,
-      campaignData: campaign,
+      campaignData: buildCampaignBackupDataFromRow(campaign),
       campaignConfig: campaign.campaign_config,
       backupType: 'auto',
       backupSource: params.backupSource,
@@ -649,7 +644,7 @@ export async function autoBackupCampaign(params: {
     WHERE id = ? AND user_id = ?
   `,
     [
-      toDbCampaignBackupJsonField(campaign, db.type),
+      toDbCampaignBackupJsonField(buildCampaignBackupDataFromRow(campaign), db.type),
       toDbCampaignBackupJsonField(campaign.campaign_config, db.type),
       'google_ads',
       new Date().toISOString(),
