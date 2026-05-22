@@ -236,16 +236,16 @@ async function printPostStats(db: DatabaseAdapter): Promise<boolean> {
   console.log('\n=== 清理后统计 ===')
   console.log(after)
 
-  const remainingDupes = await db.query(`
+  const overLimitGroups = await db.query(`
     SELECT user_id, offer_id, COUNT(*) AS cnt
     FROM campaign_backups
     GROUP BY user_id, offer_id
-    HAVING COUNT(*) > 1
+    HAVING COUNT(*) > 2
     LIMIT 10
   `)
-  if (remainingDupes.length > 0) {
-    console.error('\n❌ 仍存在重复组合:')
-    console.table(remainingDupes)
+  if (overLimitGroups.length > 0) {
+    console.error('\n❌ 仍有 Offer 备份数超过 2（canonical + google_ads v2 上限）:')
+    console.table(overLimitGroups)
     return false
   }
 

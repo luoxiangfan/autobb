@@ -45,6 +45,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const numericBackupIds: number[] = []
+    for (const id of backupIds) {
+      const parsed = Number(id)
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        return NextResponse.json(
+          { error: '备份 ID 无效' },
+          { status: 400 }
+        )
+      }
+      numericBackupIds.push(parsed)
+    }
+    const uniqueBackupIds = [...new Set(numericBackupIds)]
+
     if (!googleAdsAccountId) {
       return NextResponse.json(
         { error: '请选择 Google Ads 账号' },
@@ -55,15 +68,15 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase()
     
     // 验证所有备份都存在且属于当前用户
-    const placeholders = backupIds.map(() => '?').join(',')
+    const placeholders = uniqueBackupIds.map(() => '?').join(',')
     const validationQuery = `
       SELECT id FROM campaign_backups
       WHERE id IN (${placeholders}) AND user_id = ?
     `
-    const validBackups = await db.query(validationQuery, [...backupIds, userId]) as Array<{ id: number }>
+    const validBackups = await db.query(validationQuery, [...uniqueBackupIds, userId]) as Array<{ id: number }>
     const validBackupIds = new Set(validBackups.map(b => b.id))
 
-    const invalidBackups = backupIds.filter(id => !validBackupIds.has(id))
+    const invalidBackups = uniqueBackupIds.filter(id => !validBackupIds.has(id))
     if (invalidBackups.length > 0) {
       return NextResponse.json(
         { error: `以下备份不存在或无权访问：${invalidBackups.join(', ')}` },
@@ -72,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     const batchValidation = await validateCampaignBackupsForBatchCreate(
-      backupIds,
+      uniqueBackupIds,
       userId,
       Number(googleAdsAccountId)
     )
@@ -99,12 +112,12 @@ export async function POST(request: NextRequest) {
         created_at,
         updated_at
       ) VALUES (?, ?, 'campaign-batch-create', 'pending', ?, ${nowFunc}, ${nowFunc})
-    `, [batchId, userId, backupIds.length])
+    `, [batchId, userId, uniqueBackupIds.length])
 
     // 创建任务数据
     const taskData = {
       batchId,
-      backupIds,
+      backupIds: uniqueBackupIds,
       googleAdsAccountId,
       regenerateCreativeMap,
     }
@@ -134,13 +147,13 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(
-      `✅ 批量创建任务已加入队列：batchId=${batchId}, userId=${userId}, count=${backupIds.length}`
+      `✅ 批量创建任务已加入队列：batchId=${batchId}, userId=${userId}, count=${uniqueBackupIds.length}`
     )
 
     return NextResponse.json({
       success: true,
       batchId,
-      total_count: backupIds.length,
+      total_count: uniqueBackupIds.length,
     })
   } catch (error: any) {
     console.error('批量创建任务失败:', error)

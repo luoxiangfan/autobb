@@ -100,6 +100,18 @@ export default function CampaignBackupsClientPage() {
   const [total, setTotal] = useState(0)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const sseAbortRef = useRef<AbortController | null>(null)
+  const batchFinalizeKeyRef = useRef<string | null>(null)
+  const [selectedBackupMeta, setSelectedBackupMeta] = useState<
+    Map<
+      number,
+      {
+        offerId: number
+        hasConfig: boolean
+        campaignName: string
+        adCreativeId: number | null
+      }
+    >
+  >(new Map())
 
   const clearPolling = useCallback(() => {
     if (pollIntervalRef.current) {
@@ -118,11 +130,8 @@ export default function CampaignBackupsClientPage() {
   useEffect(() => {
     setCurrentPage(1)
     setSelectedBackupIds([])
+    setSelectedBackupMeta(new Map())
   }, [startDate, endDate, backupSource])
-
-  useEffect(() => {
-    setSelectedBackupIds([])
-  }, [currentPage])
 
   useEffect(() => {
     fetchBackups()
@@ -171,22 +180,6 @@ export default function CampaignBackupsClientPage() {
     }
   }
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedBackupIds(backups.map(b => b.id))
-    } else {
-      setSelectedBackupIds([])
-    }
-  }
-
-  const handleSelectBackup = (checked: boolean, backupId: number) => {
-    if (checked) {
-      setSelectedBackupIds([...new Set([...selectedBackupIds, backupId])])
-    } else {
-      setSelectedBackupIds(selectedBackupIds.filter(id => id !== backupId))
-    }
-  }
-
   const backupHasConfig = (config: unknown): boolean => {
     if (config == null) return false
     if (typeof config === 'string') {
@@ -202,13 +195,72 @@ export default function CampaignBackupsClientPage() {
     return typeof config === 'object' && Object.keys(config as object).length > 0
   }
 
+  const selectableBackups = backups.filter((b) => backupHasConfig(b.campaign_config))
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const nextMeta = new Map(selectedBackupMeta)
+      const ids: number[] = []
+      for (const backup of selectableBackups) {
+        ids.push(backup.id)
+        nextMeta.set(backup.id, {
+          offerId: backup.offer_id,
+          hasConfig: true,
+          campaignName: backup.campaign_name,
+          adCreativeId: backup.ad_creative_id,
+        })
+      }
+      setSelectedBackupMeta(nextMeta)
+      setSelectedBackupIds([...new Set([...selectedBackupIds, ...ids])])
+    } else {
+      const pageIds = new Set(backups.map((b) => b.id))
+      setSelectedBackupIds(selectedBackupIds.filter((id) => !pageIds.has(id)))
+      setSelectedBackupMeta((prev) => {
+        const next = new Map(prev)
+        for (const id of pageIds) {
+          next.delete(id)
+        }
+        return next
+      })
+    }
+  }
+
+  const handleSelectBackup = (checked: boolean, backup: CampaignBackup) => {
+    if (!backupHasConfig(backup.campaign_config)) {
+      return
+    }
+    if (checked) {
+      setSelectedBackupIds([...new Set([...selectedBackupIds, backup.id])])
+      setSelectedBackupMeta((prev) => {
+        const next = new Map(prev)
+        next.set(backup.id, {
+          offerId: backup.offer_id,
+          hasConfig: true,
+          campaignName: backup.campaign_name,
+          adCreativeId: backup.ad_creative_id,
+        })
+        return next
+      })
+    } else {
+      setSelectedBackupIds(selectedBackupIds.filter((id) => id !== backup.id))
+      setSelectedBackupMeta((prev) => {
+        const next = new Map(prev)
+        next.delete(backup.id)
+        return next
+      })
+    }
+  }
+
   const validateBatchSelection = (): string | null => {
-    const selected = backups.filter((b) => selectedBackupIds.includes(b.id))
     const offerToIds = new Map<number, number[]>()
-    for (const backup of selected) {
-      const ids = offerToIds.get(backup.offer_id) ?? []
-      ids.push(backup.id)
-      offerToIds.set(backup.offer_id, ids)
+    for (const backupId of selectedBackupIds) {
+      const meta = selectedBackupMeta.get(backupId)
+      if (!meta) {
+        return `备份 #${backupId} 不在当前列表中，请取消选择后重试`
+      }
+      const ids = offerToIds.get(meta.offerId) ?? []
+      ids.push(backupId)
+      offerToIds.set(meta.offerId, ids)
     }
     const duplicateOffers = [...offerToIds.entries()].filter(([, ids]) => ids.length > 1)
     if (duplicateOffers.length > 0) {
@@ -217,10 +269,15 @@ export default function CampaignBackupsClientPage() {
         .join('；')
       return `同一 Offer 不能选择多条备份：${detail}`
     }
-    const missingConfig = selected.filter((b) => !backupHasConfig(b.campaign_config))
+    const missingConfig = selectedBackupIds.filter(
+      (id) => selectedBackupMeta.get(id)?.hasConfig === false
+    )
     if (missingConfig.length > 0) {
       const names = missingConfig
-        .map((b) => `${b.campaign_name} (#${b.id})`)
+        .map((id) => {
+          const meta = selectedBackupMeta.get(id)
+          return `${meta?.campaignName || '备份'} (#${id})`
+        })
         .join('、')
       return `以下备份缺少广告系列配置：${names}`
     }
@@ -266,11 +323,13 @@ export default function CampaignBackupsClientPage() {
   const handleOpenBatchCreateDialog = () => {
     // 🔧 初始化每条记录的选择状态
     const newMap = new Map<number, boolean>()
-    selectedBackupIds.forEach(id => {
-      const backup = backups.find(b => b.id === id)
-      // 只有同时有 ad_creative_id 和 offer_id 的备份才能选择重新生成
-      if (backup?.ad_creative_id && backup?.offer_id) {
-        newMap.set(id, false) // 默认不重新生成
+    selectedBackupIds.forEach((id) => {
+      const backup = backups.find((b) => b.id === id)
+      const meta = selectedBackupMeta.get(id)
+      const adCreativeId = backup?.ad_creative_id ?? meta?.adCreativeId
+      const offerId = backup?.offer_id ?? meta?.offerId
+      if (adCreativeId && offerId) {
+        newMap.set(id, false)
       }
     })
     setRegenerateCreativeMap(newMap)
@@ -319,6 +378,7 @@ export default function CampaignBackupsClientPage() {
       
       // 设置任务状态
       setBatchId(result.batchId)
+      batchFinalizeKeyRef.current = null
       setBatchTotalCount(result.total_count)
       setBatchCompletedCount(0)
       setBatchFailedCount(0)
@@ -481,6 +541,12 @@ export default function CampaignBackupsClientPage() {
     failed: number,
     metadata?: unknown
   ) => {
+    const finalizeKey = `${batchId ?? 'unknown'}:${status}:${completed}:${failed}`
+    if (batchFinalizeKeyRef.current === finalizeKey) {
+      return
+    }
+    batchFinalizeKeyRef.current = finalizeKey
+
     const errors = extractBatchErrors(metadata)
     const warnings = extractBatchWarnings(metadata)
     setBatchErrorDetails(errors)
@@ -520,6 +586,7 @@ export default function CampaignBackupsClientPage() {
     
     // 清空选择
     setSelectedBackupIds([])
+    setSelectedBackupMeta(new Map())
   }
 
   const formatDate = (dateStr: string) => {
@@ -527,8 +594,10 @@ export default function CampaignBackupsClientPage() {
     return new Date(dateStr).toLocaleString('zh-CN')
   }
 
-  const allSelected = backups.length > 0 && selectedBackupIds.length === backups.length
-  const someSelected = selectedBackupIds.length > 0 && !allSelected
+  const pageSelectedCount = backups.filter((b) => selectedBackupIds.includes(b.id)).length
+  const allSelected =
+    selectableBackups.length > 0 && pageSelectedCount === selectableBackups.length
+  const someSelected = pageSelectedCount > 0 && !allSelected
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -609,6 +678,7 @@ export default function CampaignBackupsClientPage() {
                     setEndDate('')
                     setBackupSource('all')
                     setSelectedBackupIds([])
+                    setSelectedBackupMeta(new Map())
                     setCurrentPage(1)
                     setPageSize(20)
                   }}
@@ -625,7 +695,7 @@ export default function CampaignBackupsClientPage() {
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Package className="w-4 h-4" />
             <span>共 {total} 条记录，第 {currentPage} 页，共 {Math.ceil(total / pageSize) || 1} 页</span>
-            <span className="text-xs text-gray-400">切换页码将清空已选备份</span>
+            <span className="text-xs text-gray-400">可跨页选择，筛选变更会清空已选</span>
             {selectedBackupIds.length > 0 && (
               <Badge variant="secondary">已选择 {selectedBackupIds.length} 个</Badge>
             )}
@@ -669,12 +739,20 @@ export default function CampaignBackupsClientPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  backups.map((backup) => (
-                    <TableRow key={backup.id}>
+                  backups.map((backup) => {
+                    const canSelect = backupHasConfig(backup.campaign_config)
+                    return (
+                    <TableRow
+                      key={backup.id}
+                      className={canSelect ? undefined : 'opacity-60'}
+                    >
                       <TableCell>
                         <Checkbox
                           checked={selectedBackupIds.includes(backup.id)}
-                          onCheckedChange={(checked) => handleSelectBackup(checked as boolean, backup.id)}
+                          disabled={!canSelect}
+                          onCheckedChange={(checked) =>
+                            handleSelectBackup(checked as boolean, backup)
+                          }
                         />
                       </TableCell>
                       <TableCell>
@@ -722,8 +800,23 @@ export default function CampaignBackupsClientPage() {
                           <Button
                             variant="outline"
                             size="sm"
+                            disabled={!canSelect}
+                            title={canSelect ? '从该备份创建' : '缺少 campaign_config，无法恢复'}
                             onClick={() => {
                               setSelectedBackupIds([backup.id])
+                              setSelectedBackupMeta(
+                                new Map([
+                                  [
+                                    backup.id,
+                                    {
+                                      offerId: backup.offer_id,
+                                      hasConfig: true,
+                                      campaignName: backup.campaign_name,
+                                      adCreativeId: backup.ad_creative_id,
+                                    },
+                                  ],
+                                ])
+                              )
                               handleOpenBatchCreateDialog()
                             }}
                           >
@@ -732,7 +825,7 @@ export default function CampaignBackupsClientPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
+                  )})
                 )}
               </TableBody>
             </Table>
@@ -831,7 +924,10 @@ export default function CampaignBackupsClientPage() {
               ) : (
                 selectedBackupIds.map(id => {
                   const backup = backups.find(b => b.id === id)
-                  const canRegenerate = backup?.ad_creative_id && backup?.offer_id
+                  const meta = selectedBackupMeta.get(id)
+                  const canRegenerate =
+                    (backup?.ad_creative_id ?? meta?.adCreativeId) &&
+                    (backup?.offer_id ?? meta?.offerId)
                   const shouldRegenerate = regenerateCreativeMap.get(id) || false
                   
                   return (
@@ -839,7 +935,9 @@ export default function CampaignBackupsClientPage() {
                       canRegenerate ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100'
                     }`}>
                       <div className="flex-1">
-                        <div className="text-sm font-medium">{backup?.campaign_name || `备份 #${id}`}</div>
+                        <div className="text-sm font-medium">
+                          {backup?.campaign_name || meta?.campaignName || `备份 #${id}`}
+                        </div>
                         <div className="text-xs text-gray-500">
                           {canRegenerate ? (
                             <span>✅ 支持重新生成</span>

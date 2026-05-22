@@ -108,6 +108,7 @@ export async function GET(
               failed: updated.failed_count || 0,
               total: updated.total_count,
               progress: currentProgress,
+              metadata: parseBatchMetadata(updated.metadata),
             })
 
             // 检查是否完成

@@ -114,6 +114,9 @@ export async function createCampaignBackup(input: CreateCampaignBackupInput): Pr
   const db = await getDatabase()
   const now = new Date().toISOString()
 
+  const campaignDataSerialized = serializeJsonField(input.campaignData)
+  const campaignConfigSerialized = serializeJsonField(input.campaignConfig)
+
   const result = await db.exec(`
     INSERT INTO campaign_backups (
       user_id, offer_id, campaign_data, campaign_config,
@@ -127,8 +130,8 @@ export async function createCampaignBackup(input: CreateCampaignBackupInput): Pr
   `, [
     input.userId,
     input.offerId,
-    input.campaignData,
-    input.campaignConfig ? input.campaignConfig : null,  // 🔧 新增
+    campaignDataSerialized,
+    campaignConfigSerialized,
     input.backupType || 'auto',
     input.backupSource || 'autoads',
     input.backupVersion || 1,
@@ -470,8 +473,9 @@ export async function upsertCampaignBackupAfterPublish(
 
   const googleBackup = await findLatestGoogleAdsBackupForOffer(input.offerId, input.userId)
   if (googleBackup && googleBackup.backup_version >= 2) {
+    const pruned = await pruneCampaignBackupsForOffer(input.offerId, input.userId)
     console.log(
-      `[Publish Backup] Skip: google_ads backup v${googleBackup.backup_version} is final for offer=${input.offerId}`
+      `[Publish Backup] Skip: google_ads backup v${googleBackup.backup_version} is final for offer=${input.offerId}, pruned=${pruned}`
     )
     return
   }
