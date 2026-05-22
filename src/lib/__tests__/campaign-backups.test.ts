@@ -156,6 +156,7 @@ describe('listCampaignBackups', () => {
         updated_at: '2026-01-01',
         offer_name: 'Offer A',
         brand: 'Brand',
+        active_campaign_id: 501,
       },
     ])
 
@@ -173,9 +174,13 @@ describe('listCampaignBackups', () => {
     expect(result.limit).toBe(50)
     expect(result.offset).toBe(10)
     expect(result.backups[0]?.offer_name).toBe('Offer A')
+    expect(result.backups[0]?.has_active_campaign).toBe(true)
+    expect(result.backups[0]?.active_campaign_id).toBe(501)
 
     const countSql = String(mockQueryOne.mock.calls[0]?.[0] || '')
     expect(countSql).toContain('campaign_backups cb LEFT JOIN offers o')
+    const listSql = String(mockQuery.mock.calls[0]?.[0] || '')
+    expect(listSql).toContain('active_campaign_id')
     expect(countSql).toContain('cb.created_at >=')
     expect(countSql).toContain('cb.backup_source = ?')
     expect(mockQueryOne.mock.calls[0]?.[1]).toEqual(

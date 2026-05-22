@@ -12,6 +12,7 @@
 import { getDatabase, type DatabaseType } from './db'
 import { getInsertedId } from './db-helpers'
 import { backupHasCampaignConfig } from './campaign-backup-config'
+import { offerOccupyingCampaignIdSubquerySql } from './campaign-offer-constraint'
 import { parseJsonField, toDbJsonObjectField } from './json-field'
 
 export { backupHasCampaignConfig } from './campaign-backup-config'
@@ -147,6 +148,9 @@ export interface CampaignBackupListItem {
   updated_at: string
   offer_name?: string | null
   brand?: string | null
+  /** Offer 是否已有占用槽位的 campaign（不可再从该备份创建） */
+  has_active_campaign?: boolean
+  active_campaign_id?: number | null
 }
 
 function mapRowToCampaignBackupListItem(row: Record<string, unknown>): CampaignBackupListItem {
@@ -168,6 +172,12 @@ function mapRowToCampaignBackupListItem(row: Record<string, unknown>): CampaignB
     updated_at: String(row.updated_at),
     ...(row.offer_name !== undefined ? { offer_name: row.offer_name as string | null } : {}),
     ...(row.brand !== undefined ? { brand: row.brand as string | null } : {}),
+    ...(row.active_campaign_id !== undefined
+      ? {
+          active_campaign_id: (row.active_campaign_id as number | null) ?? null,
+          has_active_campaign: row.active_campaign_id != null,
+        }
+      : {}),
   }
 }
 
@@ -290,6 +300,10 @@ export async function listCampaignBackups(
   )
   const total = countResult?.count ?? 0
 
+  const occupyingCampaignSubquery = filters.withOfferInfo
+    ? offerOccupyingCampaignIdSubquerySql(db.type, 'cb.offer_id', 'cb.user_id')
+    : null
+
   const selectColumns = filters.withOfferInfo
     ? `
         cb.id,
@@ -308,7 +322,8 @@ export async function listCampaignBackups(
         cb.created_at,
         cb.updated_at,
         o.offer_name,
-        o.brand
+        o.brand,
+        ${occupyingCampaignSubquery} AS active_campaign_id
       `
     : '*'
 
@@ -664,6 +679,13 @@ export async function autoBackupCampaign(params: {
   }
 
   if (await hasAutoadsLikeBackupForOffer(campaign.offer_id, params.userId)) {
+    if (params.backupSource === 'google_ads') {
+      console.log(
+        '[Auto Backup] Skip google_ads backup: autoads-like backup already exists for offer',
+        campaign.offer_id
+      )
+      return
+    }
     await pruneCampaignBackupsForOffer(campaign.offer_id, params.userId)
     console.log('[Auto Backup] Skip update: autoads backup is immutable after creation:', params.campaignId)
     return

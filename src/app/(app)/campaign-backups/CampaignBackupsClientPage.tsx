@@ -59,6 +59,8 @@ interface CampaignBackup {
   offer_name?: string
   brand?: string
   creative_name?: string
+  has_active_campaign?: boolean
+  active_campaign_id?: number | null
 }
 
 export default function CampaignBackupsClientPage() {
@@ -185,9 +187,10 @@ export default function CampaignBackupsClientPage() {
     [...selectedBackupMeta.values()].map((meta) => meta.offerId)
   )
 
-  const selectableBackups = backups.filter((b) =>
-    backupHasCampaignConfig(b.campaign_config)
-  )
+  const backupCanCreateCampaign = (backup: CampaignBackup) =>
+    backupHasCampaignConfig(backup.campaign_config) && !backup.has_active_campaign
+
+  const selectableBackups = backups.filter((b) => backupCanCreateCampaign(b))
 
   const isOfferBlocked = (offerId: number, backupId: number) =>
     selectedOfferIds.has(offerId) && !selectedBackupIds.includes(backupId)
@@ -228,7 +231,14 @@ export default function CampaignBackupsClientPage() {
   }
 
   const handleSelectBackup = (checked: boolean, backup: CampaignBackup) => {
-    if (!backupHasCampaignConfig(backup.campaign_config)) {
+    if (!backupCanCreateCampaign(backup)) {
+      if (checked && backup.has_active_campaign) {
+        toast.warning('该 Offer 已有广告系列', {
+          description: backup.active_campaign_id
+            ? `无法从备份创建（已有 #${backup.active_campaign_id}）`
+            : '无法从备份重复创建',
+        })
+      }
       return
     }
     if (checked && isOfferBlocked(backup.offer_id, backup.id)) {
@@ -748,7 +758,7 @@ export default function CampaignBackupsClientPage() {
                   </TableRow>
                 ) : (
                   backups.map((backup) => {
-                    const canSelect = backupHasCampaignConfig(backup.campaign_config)
+                    const canSelect = backupCanCreateCampaign(backup)
                     const offerBlocked = isOfferBlocked(backup.offer_id, backup.id)
                     return (
                     <TableRow
@@ -783,9 +793,14 @@ export default function CampaignBackupsClientPage() {
                         {backup.backup_version > 1 && (
                           <span className="text-xs text-gray-500 ml-1">v{backup.backup_version}</span>
                         )}
-                        {!canSelect && (
+                        {!backupHasCampaignConfig(backup.campaign_config) && (
                           <Badge variant="outline" className="ml-1 text-xs">
                             无配置
+                          </Badge>
+                        )}
+                        {backup.has_active_campaign && (
+                          <Badge variant="outline" className="ml-1 text-xs">
+                            已有广告系列
                           </Badge>
                         )}
                         {offerBlocked && (
@@ -820,7 +835,13 @@ export default function CampaignBackupsClientPage() {
                             variant="outline"
                             size="sm"
                             disabled={!canSelect}
-                            title={canSelect ? '从该备份创建' : '缺少 campaign_config，无法恢复'}
+                            title={
+                              canSelect
+                                ? '从该备份创建'
+                                : backup.has_active_campaign
+                                  ? '该 Offer 已有广告系列，无法从备份创建'
+                                  : '缺少 campaign_config，无法恢复'
+                            }
                             onClick={() => {
                               setSelectedBackupIds([backup.id])
                               setSelectedBackupMeta(

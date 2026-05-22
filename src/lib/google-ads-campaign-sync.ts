@@ -449,23 +449,33 @@ export async function syncCampaignsFromGoogleAds(
               `[GoogleAds Sync] Synced campaign: ${campaign.campaign_name} (${campaign.campaign_id}), offer: ${offerSyncLabel} (offer_id=${offerResult.offerId})`
             )
 
-            // 🔧 备份广告系列（包含 campaign_config）
-            try {
-              await autoBackupCampaign({
-                userId,
-                offerId: offerResult.offerId,
-                campaignId: campaignId,
-                backupSource: 'google_ads',
-              })
-              console.log(`[GoogleAds Sync] Auto backed up campaign ${campaignId}`)
-            } catch (error) {
-              console.error('[GoogleAds Sync] Failed to auto backup campaign:', error)
-              // 备份失败不影响同步，只记录日志
+            const hasAutoadsBackup = await hasAutoadsLikeBackupForOffer(
+              offerResult.offerId,
+              userId
+            )
+
+            // 已在 AutoAds 发布并生成备份时，不再创建/更新 Google Ads 备份
+            if (!hasAutoadsBackup) {
+              try {
+                await autoBackupCampaign({
+                  userId,
+                  offerId: offerResult.offerId,
+                  campaignId: campaignId,
+                  backupSource: 'google_ads',
+                })
+                console.log(`[GoogleAds Sync] Auto backed up campaign ${campaignId}`)
+              } catch (error) {
+                console.error('[GoogleAds Sync] Failed to auto backup campaign:', error)
+              }
+            } else {
+              console.log(
+                `[GoogleAds Sync] Skip backup for campaign ${campaignId}: autoads-like backup exists for offer ${offerResult.offerId}`
+              )
             }
 
             let shouldSyncComponents = true
 
-            if (await hasAutoadsLikeBackupForOffer(offerResult.offerId, userId)) {
+            if (hasAutoadsBackup) {
               shouldSyncComponents = false
               console.log(
                 `[GoogleAds Sync] Skip sync for campaign ${campaignId}: autoads-like backup exists`

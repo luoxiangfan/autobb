@@ -19,7 +19,11 @@ import {
   CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,
   getActiveCampaignConflictForOffer,
   isCampaignOfferUniqueViolation,
+  type ActiveCampaignConflict,
 } from './campaign-offer-constraint'
+
+export const BACKUP_CREATE_BLOCKED_BY_ACTIVE_CAMPAIGN_MESSAGE =
+  '该备份对应的 Offer 已有广告系列，无法再从备份创建'
 
 export type BatchDbCreateDetail = {
   backupId: number
@@ -119,6 +123,35 @@ export async function validateCampaignBackupsForBatchCreate(
     }
   }
 
+  const uniqueOfferIds = [...new Set(rows.map((row) => row.offer_id))]
+  const blockedByCampaign: Array<{ offerId: number; backupIds: number[]; conflict: ActiveCampaignConflict }> =
+    []
+
+  for (const offerId of uniqueOfferIds) {
+    await abandonStalePendingCampaignsForOffer(offerId, userId)
+    const conflict = await getActiveCampaignConflictForOffer(offerId, userId)
+    if (conflict) {
+      blockedByCampaign.push({
+        offerId,
+        backupIds: offerToBackupIds.get(offerId) ?? [],
+        conflict,
+      })
+    }
+  }
+
+  if (blockedByCampaign.length > 0) {
+    const detail = blockedByCampaign
+      .map(
+        ({ offerId, backupIds, conflict }) =>
+          `Offer ${offerId}（备份 ${backupIds.join(', ')}，已有广告系列 #${conflict.id}「${conflict.campaign_name}」）`
+      )
+      .join('；')
+    return {
+      ok: false,
+      error: `${BACKUP_CREATE_BLOCKED_BY_ACTIVE_CAMPAIGN_MESSAGE}：${detail}`,
+    }
+  }
+
   return { ok: true }
 }
 
@@ -171,7 +204,7 @@ export async function createCampaignRowFromBackup(params: {
       return {
         backupId,
         offerId,
-        error: CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,
+        error: BACKUP_CREATE_BLOCKED_BY_ACTIVE_CAMPAIGN_MESSAGE,
       }
     }
 
