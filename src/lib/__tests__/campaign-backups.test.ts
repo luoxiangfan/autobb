@@ -109,15 +109,20 @@ describe('pruneCampaignBackupsForOffer', () => {
     expect(mockExec).not.toHaveBeenCalled()
   })
 
-  it('keeps canonical and google_ads v2+, deletes others and normalizes publish', async () => {
-    mockQueryOne.mockResolvedValueOnce({ id: 100 })
-    mockQuery.mockResolvedValueOnce([{ id: 100 }, { id: 200 }])
+  it('keeps canonical and at most one google_ads v2+, deletes others and normalizes publish', async () => {
+    mockQueryOne
+      .mockResolvedValueOnce({ id: 100 })
+      .mockResolvedValueOnce({ id: 200 })
     mockExec
       .mockResolvedValueOnce({ changes: 3 })
       .mockResolvedValueOnce({ changes: 1 })
 
     const deleted = await pruneCampaignBackupsForOffer(9, 7)
     expect(deleted).toBe(3)
+
+    const googleFinalSql = String(mockQueryOne.mock.calls[1]?.[0] || '')
+    expect(googleFinalSql).toContain("backup_version >= 2")
+    expect(googleFinalSql).toContain('LIMIT 1')
 
     const deleteSql = String(mockExec.mock.calls[0]?.[0] || '')
     expect(deleteSql).toContain('id NOT IN')

@@ -474,31 +474,33 @@ export async function pruneCampaignBackupsForOffer(
     return 0
   }
 
-  const keepRows = (await db.query(
+  const googleFinal = (await db.queryOne(
     `
     SELECT id FROM campaign_backups
     WHERE offer_id = ? AND user_id = ?
-      AND (
-        id = ?
-        OR (backup_source = 'google_ads' AND backup_version >= 2)
-      )
+      AND backup_source = 'google_ads' AND backup_version >= 2
+    ORDER BY ${rankOrder}
+    LIMIT 1
   `,
-    [offerId, userId, canonical.id]
-  )) as Array<{ id: number }>
+    [offerId, userId]
+  )) as { id: number } | undefined
 
-  const keepIds = [...new Set(keepRows.map((r) => r.id))]
-  if (keepIds.length === 0) {
+  const keepIds = new Set<number>([canonical.id])
+  if (googleFinal && googleFinal.id !== canonical.id) {
+    keepIds.add(googleFinal.id)
+  }
+  const keepIdList = [...keepIds]
+  if (keepIdList.length === 0) {
     return 0
   }
-
-  const placeholders = keepIds.map(() => '?').join(', ')
+  const placeholders = keepIdList.map(() => '?').join(', ')
   const deleteResult = await db.exec(
     `
     DELETE FROM campaign_backups
     WHERE offer_id = ? AND user_id = ?
       AND id NOT IN (${placeholders})
   `,
-    [offerId, userId, ...keepIds]
+    [offerId, userId, ...keepIdList]
   )
 
   await db.exec(
@@ -509,7 +511,7 @@ export async function pruneCampaignBackupsForOffer(
       AND backup_source = 'publish'
       AND id IN (${placeholders})
   `,
-    [new Date().toISOString(), offerId, userId, ...keepIds]
+    [new Date().toISOString(), offerId, userId, ...keepIdList]
   )
 
   return deleteResult.changes ?? 0
@@ -574,15 +576,7 @@ export async function upsertCampaignBackupAfterPublish(
     return
   }
 
-  const googleBackup = await findLatestGoogleAdsBackupForOffer(input.offerId, input.userId)
-  if (googleBackup && googleBackup.backup_version >= 2) {
-    const pruned = await pruneCampaignBackupsForOffer(input.offerId, input.userId)
-    console.log(
-      `[Publish Backup] Skip: google_ads backup v${googleBackup.backup_version} is final for offer=${input.offerId}, pruned=${pruned}`
-    )
-    return
-  }
-
+  // 无 autoads 备份时始终创建（即使已有 Google v2 终态备份，发布配置写入 autoads 行）
   await createCampaignBackup({
     userId: input.userId,
     offerId: input.offerId,

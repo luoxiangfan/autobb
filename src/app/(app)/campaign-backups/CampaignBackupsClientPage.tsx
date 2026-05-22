@@ -290,6 +290,19 @@ export default function CampaignBackupsClientPage() {
     const missingConfig = selectedBackupIds.filter(
       (id) => selectedBackupMeta.get(id)?.hasConfig === false
     )
+    const hasActiveCampaign = selectedBackupIds.filter((id) => {
+      const backup = backups.find((b) => b.id === id)
+      return backup?.has_active_campaign === true
+    })
+    if (hasActiveCampaign.length > 0) {
+      const names = hasActiveCampaign
+        .map((id) => {
+          const backup = backups.find((b) => b.id === id)
+          return `${backup?.campaign_name || '备份'} (#${id})`
+        })
+        .join('、')
+      return `以下备份对应的 Offer 已有广告系列，无法创建：${names}`
+    }
     if (missingConfig.length > 0) {
       const names = missingConfig
         .map((id) => {

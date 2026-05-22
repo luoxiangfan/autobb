@@ -92,6 +92,15 @@ export async function validateCampaignBackupsForBatchCreate(
     campaign_config: unknown
   }>
 
+  if (rows.length !== backupIds.length) {
+    const found = new Set(rows.map((r) => r.id))
+    const missing = backupIds.filter((id) => !found.has(id))
+    return {
+      ok: false,
+      error: `以下备份不存在或无权访问：${missing.join(', ')}`,
+    }
+  }
+
   const offerToBackupIds = new Map<number, number[]>()
   for (const row of rows) {
     const list = offerToBackupIds.get(row.offer_id) ?? []

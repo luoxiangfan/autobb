@@ -10,7 +10,12 @@ import {
   enqueueCampaignPublishFromBackup,
   validateGoogleAdsAccountForRestore,
 } from '@/lib/campaign-backup-restore'
-import { rollbackPendingCampaignAfterEnqueueFailure } from '@/lib/campaign-offer-constraint'
+import { BACKUP_CREATE_BLOCKED_BY_ACTIVE_CAMPAIGN_MESSAGE } from '@/lib/campaign-backup-restore'
+import {
+  abandonStalePendingCampaignsForOffer,
+  getActiveCampaignConflictForOffer,
+  rollbackPendingCampaignAfterEnqueueFailure,
+} from '@/lib/campaign-offer-constraint'
 
 export interface CampaignBatchCreateTaskData {
   batchId: string
@@ -75,6 +80,24 @@ export async function executeCampaignBatchCreate(
 
         const backup = parseCampaignBackup(row)
         pendingOfferId = backup.offerId
+
+        await abandonStalePendingCampaignsForOffer(backup.offerId, task.userId)
+        const activeConflict = await getActiveCampaignConflictForOffer(
+          backup.offerId,
+          task.userId
+        )
+        if (activeConflict) {
+          failed++
+          errors.push({
+            backupId,
+            error: BACKUP_CREATE_BLOCKED_BY_ACTIVE_CAMPAIGN_MESSAGE,
+          })
+          await db.exec(
+            `UPDATE batch_tasks SET failed_count = ?, updated_at = ${nowFunc} WHERE id = ?`,
+            [failed, batchId]
+          )
+          continue
+        }
 
         const dbDetail = await createCampaignRowFromBackup({
           backup,

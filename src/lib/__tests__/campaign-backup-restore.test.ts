@@ -66,6 +66,23 @@ describe('validateCampaignBackupsForBatchCreate', () => {
     expect(mockAbandonStale).toHaveBeenCalledWith(99, 7)
   })
 
+  it('rejects when some backup ids are missing', async () => {
+    mockQuery.mockResolvedValueOnce([
+      {
+        id: 10,
+        offer_id: 99,
+        campaign_name: 'Backup A',
+        campaign_config: { keywords: [] },
+      },
+    ])
+
+    const result = await validateCampaignBackupsForBatchCreate([10, 11], 7, 1)
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toContain('11')
+    }
+  })
+
   it('passes when no active campaign occupies the offer', async () => {
     mockQuery.mockResolvedValueOnce([
       {
