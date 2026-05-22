@@ -176,13 +176,12 @@ export async function markStaleGoogleAdsCampaignSyncLogs(options?: {
       ? `CAST(EXTRACT(EPOCH FROM (NOW() - ${startedAtField})) * 1000 AS INTEGER)`
       : `CAST((strftime('%s', 'now') - strftime('%s', started_at)) * 1000 AS INTEGER)`
 
-  const params: unknown[] = [completedAt, errorMessage]
+  const params: unknown[] = [completedAt, errorMessage, GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE]
   let userFilter = ''
   if (options?.userId !== undefined) {
     userFilter = ' AND user_id = ?'
     params.push(options.userId)
   }
-  params.push(GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE)
 
   const result = await db.exec(
     `
