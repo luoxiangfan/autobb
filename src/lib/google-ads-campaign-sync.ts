@@ -14,6 +14,7 @@ import {
   autoBackupCampaign,
   findLatestGoogleAdsBackupForOffer,
   hasAutoadsLikeBackupForOffer,
+  toDbCampaignBackupJsonField,
 } from './campaign-backups'
 import { getCustomerWithCredentials, trackOAuthApiCall } from './google-ads-api'
 import { executeGAQLQueryPython } from './python-ads-client'
@@ -503,7 +504,10 @@ export async function syncCampaignsFromGoogleAds(
                         WHERE id = ? AND user_id = ?
                       `,
                         [
-                          campaign_config,
+                          toDbCampaignBackupJsonField(
+                            campaign_config,
+                            dbCheck.type
+                          ),
                           new Date(),
                           googleBackup.id,
                           userId,

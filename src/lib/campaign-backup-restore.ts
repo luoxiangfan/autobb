@@ -6,6 +6,7 @@ import { getDatabase, type DatabaseAdapter } from './db'
 import { getInsertedId } from './db-helpers'
 import {
   backupHasCampaignConfig,
+  toDbCampaignBackupJsonField,
   type CampaignBackup,
 } from './campaign-backups'
 import { generateNamingScheme } from './naming-convention'
@@ -210,7 +211,7 @@ export async function createCampaignRowFromBackup(params: {
         campaignData?.target_cpa ?? backup.targetCpa,
         campaignData?.max_cpc ?? backup.maxCpc,
         adCreativeId,
-        campaignConfig ? JSON.stringify(campaignConfig) : null,
+        toDbCampaignBackupJsonField(campaignConfig, db.type),
         'PAUSED',
         'pending',
         new Date(),
@@ -298,7 +299,7 @@ export async function enqueueCampaignPublishFromBackup(params: {
         `,
           [
             newAdCreativeId,
-            JSON.stringify(finalCampaignConfig),
+            toDbCampaignBackupJsonField(finalCampaignConfig, db.type),
             new Date().toISOString(),
             backupId,
             userId,

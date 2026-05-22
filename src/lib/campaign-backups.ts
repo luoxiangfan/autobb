@@ -11,26 +11,24 @@
 
 import { getDatabase, type DatabaseType } from './db'
 import { getInsertedId } from './db-helpers'
+import { parseJsonField, toDbJsonObjectField } from './json-field'
 
 /** 历史 publish 来源与 autoads 等价（发布时会归一为 autoads） */
 export function isAutoadsLikeBackupSource(source: string): boolean {
   return source === 'autoads' || source === 'publish'
 }
 
-function serializeJsonField(value: unknown): string | null {
-  if (value == null) return null
-  if (typeof value === 'string') return value
-  return JSON.stringify(value)
+/** campaign_backups JSON 列：SQLite TEXT，PostgreSQL JSONB */
+export function toDbCampaignBackupJsonField(
+  value: unknown,
+  dbType: DatabaseType
+): unknown {
+  return toDbJsonObjectField(value, dbType, null)
 }
 
-function safeParseJsonField(value: unknown): unknown | null {
+function parseCampaignBackupJsonField(value: unknown): unknown | null {
   if (value == null) return null
-  if (typeof value !== 'string') return value
-  try {
-    return JSON.parse(value)
-  } catch {
-    return null
-  }
+  return parseJsonField(value, null)
 }
 
 export function backupHasCampaignConfig(value: unknown): boolean {
@@ -114,8 +112,8 @@ export async function createCampaignBackup(input: CreateCampaignBackupInput): Pr
   const db = await getDatabase()
   const now = new Date().toISOString()
 
-  const campaignDataSerialized = serializeJsonField(input.campaignData)
-  const campaignConfigSerialized = serializeJsonField(input.campaignConfig)
+  const campaignDataDb = toDbCampaignBackupJsonField(input.campaignData, db.type)
+  const campaignConfigDb = toDbCampaignBackupJsonField(input.campaignConfig, db.type)
 
   const result = await db.exec(`
     INSERT INTO campaign_backups (
@@ -130,8 +128,8 @@ export async function createCampaignBackup(input: CreateCampaignBackupInput): Pr
   `, [
     input.userId,
     input.offerId,
-    campaignDataSerialized,
-    campaignConfigSerialized,
+    campaignDataDb,
+    campaignConfigDb,
     input.backupType || 'auto',
     input.backupSource || 'autoads',
     input.backupVersion || 1,
@@ -418,8 +416,8 @@ export async function upsertCampaignBackupAfterPublish(
   const db = await getDatabase()
   const now = new Date().toISOString()
 
-  const campaignDataSerialized = serializeJsonField(input.campaignData)
-  const campaignConfigSerialized = serializeJsonField(input.campaignConfig)
+  const campaignDataDb = toDbCampaignBackupJsonField(input.campaignData, db.type)
+  const campaignConfigDb = toDbCampaignBackupJsonField(input.campaignConfig, db.type)
 
   const autoadsBackupId = await findAutoadsLikeBackupId(input.offerId, input.userId)
 
@@ -446,8 +444,8 @@ export async function upsertCampaignBackupAfterPublish(
     `,
       [
         input.adCreativeId,
-        campaignDataSerialized,
-        campaignConfigSerialized,
+        campaignDataDb,
+        campaignConfigDb,
         input.customName ?? null,
         input.campaignName,
         input.budgetAmount,
@@ -527,8 +525,8 @@ export function parseCampaignBackup(row: any): CampaignBackup {
     id: row.id,
     userId: row.user_id,
     offerId: row.offer_id,
-    campaignData: safeParseJsonField(row.campaign_data) ?? {},
-    campaignConfig: row.campaign_config ? safeParseJsonField(row.campaign_config) : null,
+    campaignData: parseCampaignBackupJsonField(row.campaign_data) ?? {},
+    campaignConfig: parseCampaignBackupJsonField(row.campaign_config),
     backupType: row.backup_type,
     backupSource: row.backup_source,
     backupVersion: row.backup_version,
@@ -606,6 +604,7 @@ export async function autoBackupCampaign(params: {
       googleAdsAccountId: campaign.google_ads_account_id,
       adCreativeId: campaign.ad_creative_id,
     })
+    await pruneCampaignBackupsForOffer(campaign.offer_id, params.userId)
     return
   }
 
@@ -641,18 +640,16 @@ export async function autoBackupCampaign(params: {
         backup_source = ?,
         backup_version = 2,
         updated_at = ?
-    WHERE id = ?
+    WHERE id = ? AND user_id = ?
   `,
     [
-      typeof campaign === 'string' ? campaign : JSON.stringify(campaign),
-      campaign.campaign_config
-        ? typeof campaign.campaign_config === 'string'
-          ? campaign.campaign_config
-          : JSON.stringify(campaign.campaign_config)
-        : null,
+      toDbCampaignBackupJsonField(campaign, db.type),
+      toDbCampaignBackupJsonField(campaign.campaign_config, db.type),
       'google_ads',
       new Date().toISOString(),
       googleBackup.id,
+      params.userId,
     ]
   )
+  await pruneCampaignBackupsForOffer(campaign.offer_id, params.userId)
 }
