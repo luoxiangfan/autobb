@@ -33,6 +33,7 @@ const cacheFns = vi.hoisted(() => ({
 
 const offerTaskFns = vi.hoisted(() => ({
   pauseOfferTasks: vi.fn(),
+  resumeOfferTasksOnCampaignEnable: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -68,6 +69,7 @@ vi.mock('@/lib/api-cache', () => ({
 
 vi.mock('@/lib/campaign-offer-tasks', () => ({
   pauseOfferTasks: offerTaskFns.pauseOfferTasks,
+  resumeOfferTasksOnCampaignEnable: offerTaskFns.resumeOfferTasksOnCampaignEnable,
 }))
 
 describe('PUT /api/campaigns/:id/toggle-status', () => {
@@ -87,6 +89,15 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
       clickFarmTaskCount: 1,
       urlSwapTaskDisabled: true,
       urlSwapTaskCount: 1,
+    })
+    offerTaskFns.resumeOfferTasksOnCampaignEnable.mockResolvedValue({
+      success: true,
+      partialSuccess: false,
+      clickFarmTasksCreated: 0,
+      clickFarmTasksUpdated: 1,
+      urlSwapTasksCreated: 0,
+      urlSwapTasksUpdated: 1,
+      errors: [],
     })
     campaignFns.findCampaignById.mockResolvedValue({
       id: 1,
@@ -180,7 +191,7 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
     expect(cacheFns.invalidateDashboardCache).toHaveBeenCalledWith(7)
   })
 
-  it('does not pause offer tasks when next status is ENABLED', async () => {
+  it('resumes offer tasks with defaults when next status is ENABLED', async () => {
     const req = new NextRequest('http://localhost/api/campaigns/1/toggle-status', {
       method: 'PUT',
       headers: {
@@ -196,8 +207,57 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
     expect(res.status).toBe(200)
     expect(data.success).toBe(true)
     expect(offerTaskFns.pauseOfferTasks).not.toHaveBeenCalled()
+    expect(offerTaskFns.resumeOfferTasksOnCampaignEnable).toHaveBeenCalledWith(99, 7)
     expect(data.offerTaskPause).toBeNull()
+    expect(data.offerTaskResume).toEqual({
+      attempted: true,
+      success: true,
+      clickFarmTasksCreated: 0,
+      clickFarmTasksUpdated: 1,
+      urlSwapTasksCreated: 0,
+      urlSwapTasksUpdated: 1,
+    })
     expect(data.warnings).toEqual([])
+  })
+
+  it('returns warning when resuming offer tasks fails partially', async () => {
+    offerTaskFns.resumeOfferTasksOnCampaignEnable.mockResolvedValueOnce({
+      success: false,
+      partialSuccess: true,
+      clickFarmTasksCreated: 0,
+      clickFarmTasksUpdated: 1,
+      urlSwapTasksCreated: 0,
+      urlSwapTasksUpdated: 0,
+      errors: [{ offerId: 99, type: 'urlSwap', error: 'queue unavailable' }],
+    })
+
+    const req = new NextRequest('http://localhost/api/campaigns/1/toggle-status', {
+      method: 'PUT',
+      headers: {
+        'x-user-id': '7',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ status: 'ENABLED' }),
+    })
+
+    const res = await PUT(req, { params: { id: '1' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.offerTaskResume).toEqual({
+      attempted: true,
+      success: false,
+      clickFarmTasksCreated: 0,
+      clickFarmTasksUpdated: 1,
+      urlSwapTasksCreated: 0,
+      urlSwapTasksUpdated: 0,
+    })
+    expect(data.warnings).toEqual([
+      {
+        code: 'OFFER_TASK_RESUME_FAILED',
+        message: '换链接: queue unavailable',
+      },
+    ])
   })
 
   it('returns warning when pausing offer tasks fails', async () => {

@@ -30,9 +30,11 @@ vi.mock('@/lib/url-swap/queue-cleanup', () => ({
     queueCleanupFns.removePendingUrlSwapQueueTasksByTaskIds,
 }))
 
-import * as campaignOfferTasks from '@/lib/campaign-offer-tasks'
-
-const { pauseOfferTasks, pauseOfferTasksBatch } = campaignOfferTasks
+import {
+  campaignOfferTaskActions,
+  pauseOfferTasks,
+  pauseOfferTasksBatch,
+} from '@/lib/campaign-offer-tasks'
 
 describe('pauseOfferTasks', () => {
   beforeEach(() => {
@@ -172,7 +174,7 @@ describe('pauseOfferTasksBatch', () => {
     let inFlight = 0
     let maxInFlight = 0
     const spy = vi
-      .spyOn(campaignOfferTasks, 'pauseOfferTasks')
+      .spyOn(campaignOfferTaskActions, 'pauseOfferTasks')
       .mockImplementation(async (offerId: number) => {
         inFlight += 1
         maxInFlight = Math.max(maxInFlight, inFlight)
@@ -202,7 +204,7 @@ describe('pauseOfferTasksBatch', () => {
     let inFlight = 0
     let maxInFlight = 0
     const spy = vi
-      .spyOn(campaignOfferTasks, 'pauseOfferTasks')
+      .spyOn(campaignOfferTaskActions, 'pauseOfferTasks')
       .mockImplementation(async () => {
         inFlight += 1
         maxInFlight = Math.max(maxInFlight, inFlight)
@@ -230,7 +232,7 @@ describe('pauseOfferTasksBatch', () => {
     let inFlight = 0
     let maxInFlight = 0
     const spy = vi
-      .spyOn(campaignOfferTasks, 'pauseOfferTasks')
+      .spyOn(campaignOfferTaskActions, 'pauseOfferTasks')
       .mockImplementation(async () => {
         inFlight += 1
         maxInFlight = Math.max(maxInFlight, inFlight)
@@ -258,7 +260,7 @@ describe('pauseOfferTasksBatch', () => {
     let inFlight = 0
     let maxInFlight = 0
     const spy = vi
-      .spyOn(campaignOfferTasks, 'pauseOfferTasks')
+      .spyOn(campaignOfferTaskActions, 'pauseOfferTasks')
       .mockImplementation(async () => {
         inFlight += 1
         maxInFlight = Math.max(maxInFlight, inFlight)
@@ -282,7 +284,7 @@ describe('pauseOfferTasksBatch', () => {
 
   it('uses environment-based defaults when env override is absent', async () => {
     const spy = vi
-      .spyOn(campaignOfferTasks, 'pauseOfferTasks')
+      .spyOn(campaignOfferTaskActions, 'pauseOfferTasks')
       .mockImplementation(async () => {
         await new Promise((resolve) => setTimeout(resolve, 15))
         return {
@@ -337,7 +339,7 @@ describe('pauseOfferTasksBatch', () => {
 
   it('records per-offer errors without failing whole batch', async () => {
     const spy = vi
-      .spyOn(campaignOfferTasks, 'pauseOfferTasks')
+      .spyOn(campaignOfferTaskActions, 'pauseOfferTasks')
       .mockImplementation(async (offerId: number) => {
         if (offerId === 202) throw new Error('forced failure')
         return {

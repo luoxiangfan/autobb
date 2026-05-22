@@ -1,11 +1,13 @@
 /**
- * 暂停广告系列关联 Offer 的补点击和换链接任务
+ * 广告系列启停时同步处理关联 Offer 的补点击和换链接任务
  *
  * 用于：
- * 1. 广告系列状态修改为暂停时即时触发
- * 2. 定时任务批量检测暂停的广告系列
+ * 1. 暂停：广告系列状态修改为暂停时即时触发
+ * 2. 启用：广告系列恢复投放时，按默认参数恢复/创建任务（复用 batch-start-tasks）
+ * 3. 定时任务批量检测暂停的广告系列
  */
 
+import { batchStartTasksForOffers, type BatchStartTasksResult } from './batch-start-tasks'
 import { getDatabase } from './db'
 import { removePendingClickFarmQueueTasksByTaskIds } from './click-farm/queue-cleanup'
 import { removePendingUrlSwapQueueTasksByTaskIds } from './url-swap/queue-cleanup'
@@ -54,6 +56,38 @@ export interface PauseOfferTasksResult {
   urlSwapTaskDisabled: boolean
   urlSwapTaskId?: string
   urlSwapTaskCount: number
+}
+
+export type ResumeOfferTasksResult = Pick<
+  BatchStartTasksResult,
+  | 'clickFarmTasksCreated'
+  | 'clickFarmTasksUpdated'
+  | 'urlSwapTasksCreated'
+  | 'urlSwapTasksUpdated'
+  | 'errors'
+  | 'success'
+  | 'partialSuccess'
+>
+
+/** 供批处理与测试替换实现的入口（避免 ESM 内部直接绑定导致 spy 无效） */
+export const campaignOfferTaskActions: {
+  pauseOfferTasks: (
+    offerId: number,
+    userId: number,
+    pauseReason?: string,
+    pauseMessage?: string
+  ) => Promise<PauseOfferTasksResult>
+  resumeOfferTasksOnCampaignEnable: (
+    offerId: number,
+    userId: number
+  ) => Promise<ResumeOfferTasksResult>
+} = {
+  pauseOfferTasks: async () => {
+    throw new Error('campaignOfferTaskActions.pauseOfferTasks is not initialized')
+  },
+  resumeOfferTasksOnCampaignEnable: async () => {
+    throw new Error('campaignOfferTaskActions.resumeOfferTasksOnCampaignEnable is not initialized')
+  },
 }
 
 /**
@@ -222,6 +256,46 @@ export async function pauseOfferTasks(
   return result
 }
 
+campaignOfferTaskActions.pauseOfferTasks = pauseOfferTasks
+
+/**
+ * 启用广告系列时，按批量开启任务的默认参数恢复或创建关联 Offer 任务。
+ * - 任务仍存在：更新为默认参数并 restart/enable（调度器会重新入队）
+ * - 任务不存在或已完成：使用默认参数新建
+ */
+export async function resumeOfferTasksOnCampaignEnable(
+  offerId: number,
+  userId: number
+): Promise<ResumeOfferTasksResult> {
+  const db = await getDatabase()
+  const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
+  const offerRow = await db.queryOne<{ target_country: string | null }>(`
+    SELECT target_country
+    FROM offers
+    WHERE id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
+    LIMIT 1
+  `, [offerId, userId])
+
+  const batchResult = await batchStartTasksForOffers({
+    userId,
+    offers: [{ offerId, targetCountry: offerRow?.target_country ?? null }],
+    enableClickFarm: true,
+    enableUrlSwap: true,
+  })
+
+  return {
+    success: batchResult.success,
+    partialSuccess: batchResult.partialSuccess,
+    clickFarmTasksCreated: batchResult.clickFarmTasksCreated,
+    clickFarmTasksUpdated: batchResult.clickFarmTasksUpdated,
+    urlSwapTasksCreated: batchResult.urlSwapTasksCreated,
+    urlSwapTasksUpdated: batchResult.urlSwapTasksUpdated,
+    errors: batchResult.errors,
+  }
+}
+
+campaignOfferTaskActions.resumeOfferTasksOnCampaignEnable = resumeOfferTasksOnCampaignEnable
+
 /**
  * 批量暂停多个 offer 的任务
  * 用于定时任务批量处理
@@ -245,7 +319,12 @@ export async function pauseOfferTasksBatch(
 
       const offerId = offerIds[index]
       try {
-        const result = await pauseOfferTasks(offerId, userId, pauseReason, pauseMessage)
+        const result = await campaignOfferTaskActions.pauseOfferTasks(
+          offerId,
+          userId,
+          pauseReason,
+          pauseMessage
+        )
         results[index] = { offerId, result }
       } catch (error: any) {
         const message = error?.message || String(error)

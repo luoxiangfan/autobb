@@ -8,15 +8,31 @@ import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 import { invalidateDashboardCache } from '@/lib/api-cache'
-import { pauseOfferTasks } from '@/lib/campaign-offer-tasks'
+import { pauseOfferTasks, resumeOfferTasksOnCampaignEnable } from '@/lib/campaign-offer-tasks'
 
 type ToggleStatusBody = {
   status?: string
 }
 
 type ToggleStatusWarning = {
-  code: 'OFFER_TASK_PAUSE_FAILED' | 'OFFER_NOT_BOUND'
+  code: 'OFFER_TASK_PAUSE_FAILED' | 'OFFER_TASK_RESUME_FAILED' | 'OFFER_NOT_BOUND'
   message: string
+}
+
+function formatOfferTaskResumeErrors(
+  errors: Array<{ type?: string; error?: string }>
+): string {
+  return errors
+    .map((item) => {
+      const type = String(item?.type || '').trim()
+      const error = String(item?.error || '').trim()
+      if (!error) return ''
+      const label =
+        type === 'clickFarm' ? '补点击' : type === 'urlSwap' ? '换链接' : '关联任务'
+      return `${label}: ${error}`
+    })
+    .filter(Boolean)
+    .join('；')
 }
 
 function normalizeGoogleCampaignId(value: unknown): string | null {
@@ -265,6 +281,14 @@ export async function PUT(
       clickFarmTaskCount?: number
       urlSwapTaskCount?: number
     } | null = null
+    let offerTaskResume: {
+      attempted: boolean
+      success: boolean
+      clickFarmTasksCreated?: number
+      clickFarmTasksUpdated?: number
+      urlSwapTasksCreated?: number
+      urlSwapTasksUpdated?: number
+    } | null = null
 
     // 如果是暂停操作，同时暂停关联 offer 的补点击和换链接任务
     if (nextStatus === 'PAUSED') {
@@ -300,6 +324,46 @@ export async function PUT(
       }
     }
 
+    // 如果是启用操作，按默认参数恢复或创建关联 offer 的补点击和换链接任务
+    if (nextStatus === 'ENABLED') {
+      try {
+        if (campaignRow.offer_id) {
+          const resumeResult = await resumeOfferTasksOnCampaignEnable(
+            campaignRow.offer_id,
+            userId
+          )
+          const resumeErrors = formatOfferTaskResumeErrors(resumeResult.errors)
+          offerTaskResume = {
+            attempted: true,
+            success: resumeResult.errors.length === 0,
+            clickFarmTasksCreated: resumeResult.clickFarmTasksCreated,
+            clickFarmTasksUpdated: resumeResult.clickFarmTasksUpdated,
+            urlSwapTasksCreated: resumeResult.urlSwapTasksCreated,
+            urlSwapTasksUpdated: resumeResult.urlSwapTasksUpdated,
+          }
+          if (resumeErrors) {
+            warnings.push({
+              code: 'OFFER_TASK_RESUME_FAILED',
+              message: resumeErrors,
+            })
+          }
+        } else {
+          offerTaskResume = { attempted: false, success: false }
+          warnings.push({
+            code: 'OFFER_NOT_BOUND',
+            message: '该广告系列未绑定 Offer，未执行关联任务恢复/创建',
+          })
+        }
+      } catch (taskError: any) {
+        console.error('[toggle-status] 恢复关联 offer 任务失败:', taskError)
+        offerTaskResume = { attempted: true, success: false }
+        warnings.push({
+          code: 'OFFER_TASK_RESUME_FAILED',
+          message: taskError?.message || '恢复关联 Offer 任务失败，请稍后重试',
+        })
+      }
+    }
+
     invalidateDashboardCache(userId)
 
     const updated = await findCampaignById(campaignId, userId)
@@ -309,6 +373,7 @@ export async function PUT(
       status: nextStatus,
       campaign: updated,
       offerTaskPause,
+      offerTaskResume,
       warnings,
     })
   } catch (error: any) {

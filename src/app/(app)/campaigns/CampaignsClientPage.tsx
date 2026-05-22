@@ -69,7 +69,11 @@ import {
 import {
   getCampaignStatusLabel,
 } from '@/lib/i18n-constants'
-import { formatToggleStatusWarnings } from './toggle-status-warning'
+import {
+  ENABLE_CAMPAIGN_OFFER_TASK_HINTS,
+  formatToggleStatusWarnings,
+  PAUSE_CAMPAIGN_OFFER_TASK_HINTS,
+} from './toggle-status-warning'
 import { matchesCampaignSearch } from '@/lib/campaign-search'
 import { convertCurrency, formatCurrency } from '@/lib/currency'
 import { formatCurrency as formatCurrencyDashboard, formatMultiCurrency } from '@/lib/utils'
@@ -4844,8 +4848,14 @@ export default function CampaignsClientPage({
                       <ul className="list-disc list-inside space-y-1 ml-2">
                         <li>停止在 Google Ads 的投放</li>
                         <li>避免继续产生花费</li>
+                        {PAUSE_CAMPAIGN_OFFER_TASK_HINTS.map((hint) => (
+                          <li key={hint}>{hint}</li>
+                        ))}
                         <li>可随时重新启用恢复投放</li>
                       </ul>
+                      <p className="mt-2 text-xs text-yellow-700/90">
+                        若该广告系列未绑定 Offer，将跳过关联任务暂停/禁用。
+                      </p>
                     </div>
                   ) : (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
@@ -4853,8 +4863,14 @@ export default function CampaignsClientPage({
                       <ul className="list-disc list-inside space-y-1 ml-2">
                         <li>恢复在 Google Ads 的投放</li>
                         <li>可能立即开始产生花费</li>
+                        {ENABLE_CAMPAIGN_OFFER_TASK_HINTS.map((hint) => (
+                          <li key={hint}>{hint}</li>
+                        ))}
                         <li>请确认预算与出价设置无误</li>
                       </ul>
+                      <p className="mt-2 text-xs text-green-700/90">
+                        若该广告系列未绑定 Offer，将跳过关联任务恢复/创建。
+                      </p>
                     </div>
                   )}
                 </div>
