@@ -1,4 +1,9 @@
-import { BATCH_URL_SWAP_TASK_DEFAULTS, getBatchClickFarmRuntimeConfig } from '@/lib/batch-task-defaults'
+import {
+  BATCH_URL_SWAP_TASK_DEFAULTS,
+  getBatchClickFarmRuntimeConfig,
+  isClickFarmTaskUsingBatchDefaults,
+  isUrlSwapTaskUsingBatchDefaults,
+} from '@/lib/batch-task-defaults'
 import { createClickFarmTask, getClickFarmTaskByOfferId, restartClickFarmTask, updateClickFarmTask } from '@/lib/click-farm'
 import { createUrlSwapTask, enableUrlSwapTask, getUrlSwapTaskByOfferId, updateUrlSwapTask } from '@/lib/url-swap'
 
@@ -84,7 +89,12 @@ async function processOffer(
       const existingTask = await getClickFarmTaskByOfferId(offer.offerId, input.userId)
 
       if (existingTask) {
-        if (existingTask.status === 'completed') {
+        if (
+          existingTask.status === 'running'
+          && isClickFarmTaskUsingBatchDefaults(existingTask)
+        ) {
+          // 已在运行且配置为批量默认参数，无需重复写入
+        } else if (existingTask.status === 'completed') {
           await createClickFarmTask(input.userId, {
             offer_id: offer.offerId,
             daily_click_count: clickFarmConfig.dailyClickCount,
@@ -142,7 +152,12 @@ async function processOffer(
       const existingTask = await getUrlSwapTaskByOfferId(offer.offerId, input.userId)
 
       if (existingTask) {
-        if (existingTask.status === 'completed') {
+        if (
+          existingTask.status === 'enabled'
+          && isUrlSwapTaskUsingBatchDefaults(existingTask)
+        ) {
+          // 已启用且配置为批量默认参数，无需重复写入
+        } else if (existingTask.status === 'completed') {
           await createUrlSwapTask(input.userId, {
             offer_id: offer.offerId,
             swap_mode: urlSwapConfig.swapMode,

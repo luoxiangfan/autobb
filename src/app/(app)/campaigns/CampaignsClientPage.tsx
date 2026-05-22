@@ -74,6 +74,11 @@ import {
   formatToggleStatusWarnings,
   PAUSE_CAMPAIGN_OFFER_TASK_HINTS,
 } from './toggle-status-warning'
+import {
+  getOfferTasksMenuLabel,
+  resolveOfferTasksToggleAction,
+  type OfferTasksToggleAction,
+} from '@/lib/offer-tasks-toggle'
 import { matchesCampaignSearch } from '@/lib/campaign-search'
 import { convertCurrency, formatCurrency } from '@/lib/currency'
 import { formatCurrency as formatCurrencyDashboard, formatMultiCurrency } from '@/lib/utils'
@@ -522,9 +527,14 @@ export default function CampaignsClientPage({
   const [deleteRemovedTarget, setDeleteRemovedTarget] = useState<Campaign | null>(null)
   const [deleteRemovedSubmitting, setDeleteRemovedSubmitting] = useState(false)
 
-  // 暂停关联 Offer 任务
+  // 暂停/开启关联 Offer 任务
   const [pauseOfferTasksSubmitting, setPauseOfferTasksSubmitting] = useState(false)
-  const [pauseOfferTasksTarget, setPauseOfferTasksTarget] = useState<{ id: number; campaignName: string; offerId: number } | null>(null)
+  const [pauseOfferTasksTarget, setPauseOfferTasksTarget] = useState<{
+    id: number
+    campaignName: string
+    offerId: number
+    action: OfferTasksToggleAction
+  } | null>(null)
   const [isPauseOfferTasksDialogOpen, setIsPauseOfferTasksDialogOpen] = useState(false)
 
   // Offline (下线) dialog states
@@ -1782,10 +1792,15 @@ export default function CampaignsClientPage({
   }
 
   const openPauseOfferTasksDialog = (campaign: Campaign) => {
+    const action = resolveOfferTasksToggleAction(
+      campaign.clickFarmTaskStatus,
+      campaign.urlSwapTaskStatus
+    )
     setPauseOfferTasksTarget({
       id: campaign.id,
       campaignName: campaign.campaignName,
       offerId: campaign.offerId,
+      action,
     })
     setIsPauseOfferTasksDialogOpen(true)
   }
@@ -1793,10 +1808,16 @@ export default function CampaignsClientPage({
   const confirmPauseOfferTasks = async () => {
     if (!pauseOfferTasksTarget || pauseOfferTasksSubmitting) return
 
+    const { action, id, campaignName } = pauseOfferTasksTarget
+    const isPauseAction = action === 'pause'
+    const endpoint = isPauseAction
+      ? `/api/campaigns/${id}/pause-offer-tasks`
+      : `/api/campaigns/${id}/resume-offer-tasks`
+
     setPauseOfferTasksSubmitting(true)
 
     try {
-      const response = await fetch(`/api/campaigns/${pauseOfferTasksTarget.id}/pause-offer-tasks`, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -1807,18 +1828,34 @@ export default function CampaignsClientPage({
         return
       }
 
+      const result = await response.json().catch(() => null)
+
       if (!response.ok) {
-        const data = await response.json().catch(() => null)
-        throw new Error(data?.error || '暂停任务失败')
+        throw new Error(result?.error || (isPauseAction ? '暂停任务失败' : '开启任务失败'))
       }
 
-      const result = await response.json()
-      showSuccess('暂停成功', `补点击：${result.details.clickFarmTask}, 换链接：${result.details.urlSwapTask}`)
-      
-      // 🔧 成功后刷新列表
+      if (isPauseAction) {
+        showSuccess('暂停成功', `补点击：${result.details.clickFarmTask}, 换链接：${result.details.urlSwapTask}`)
+      } else if (result?.partialSuccess || result?.error) {
+        const detailParts = [
+          `补点击新建 ${result.details?.clickFarmTasksCreated ?? 0}、更新 ${result.details?.clickFarmTasksUpdated ?? 0}`,
+          `换链接新建 ${result.details?.urlSwapTasksCreated ?? 0}、更新 ${result.details?.urlSwapTasksUpdated ?? 0}`,
+        ]
+        showInfo(
+          result?.error ? '任务已部分开启' : '开启完成',
+          [detailParts.join('；'), result?.error].filter(Boolean).join('。')
+        )
+      } else {
+        const detailParts = [
+          `补点击新建 ${result.details?.clickFarmTasksCreated ?? 0}、更新 ${result.details?.clickFarmTasksUpdated ?? 0}`,
+          `换链接新建 ${result.details?.urlSwapTasksCreated ?? 0}、更新 ${result.details?.urlSwapTasksUpdated ?? 0}`,
+        ]
+        showSuccess('开启成功', detailParts.join('；'))
+      }
+
       await fetchCampaigns({ silent: true })
     } catch (err: any) {
-      showError('暂停失败', err?.message || '网络错误')
+      showError(isPauseAction ? '暂停失败' : '开启失败', err?.message || '网络错误')
     } finally {
       setPauseOfferTasksSubmitting(false)
       setIsPauseOfferTasksDialogOpen(false)
@@ -4462,15 +4499,33 @@ export default function CampaignsClientPage({
                               <span>换链接任务</span>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className='gap-2'
-                              title='一键暂停关联 Offer 的补点击和换链接任务'
-                              disabled={pauseOfferTasksSubmitting}
-                              onClick={() => openPauseOfferTasksDialog(campaign)}
-                            >
-                              <PauseCircle className="w-4 h-4 text-orange-600" />
-                              <span>暂停关联 Offer 任务</span>
-                            </DropdownMenuItem>
+                            {(() => {
+                              const offerTasksAction = resolveOfferTasksToggleAction(
+                                campaign.clickFarmTaskStatus,
+                                campaign.urlSwapTaskStatus
+                              )
+                              const offerTasksLabel = getOfferTasksMenuLabel(offerTasksAction)
+                              const isPauseOfferTasksAction = offerTasksAction === 'pause'
+                              return (
+                                <DropdownMenuItem
+                                  className='gap-2'
+                                  title={
+                                    isPauseOfferTasksAction
+                                      ? '暂停关联 Offer 任务'
+                                      : '开启关联 Offer 任务'
+                                  }
+                                  disabled={pauseOfferTasksSubmitting}
+                                  onClick={() => openPauseOfferTasksDialog(campaign)}
+                                >
+                                  {isPauseOfferTasksAction ? (
+                                    <PauseCircle className="w-4 h-4 text-orange-600" />
+                                  ) : (
+                                    <PlayCircle className="w-4 h-4 text-green-600" />
+                                  )}
+                                  <span>{offerTasksLabel}</span>
+                                </DropdownMenuItem>
+                              )
+                            })()}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -4891,7 +4946,7 @@ export default function CampaignsClientPage({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      {/* Pause Offer Tasks Confirmation Dialog */}
+      {/* Pause / Start Offer Tasks Confirmation Dialog */}
       <AlertDialog
         open={isPauseOfferTasksDialogOpen}
         onOpenChange={(open) => {
@@ -4903,20 +4958,40 @@ export default function CampaignsClientPage({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认暂停关联 Offer 任务</AlertDialogTitle>
+            <AlertDialogTitle>
+              {pauseOfferTasksTarget?.action === 'start'
+                ? '确认开启关联 Offer 任务'
+                : '确认暂停关联 Offer 任务'}
+            </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p>
-                  确认要暂停广告系列 <strong className="text-gray-900">{pauseOfferTasksTarget?.campaignName || '-'}</strong> 关联 Offer 的任务吗？
+                  确认要为广告系列{' '}
+                  <strong className="text-gray-900">{pauseOfferTasksTarget?.campaignName || '-'}</strong>{' '}
+                  {pauseOfferTasksTarget?.action === 'start'
+                    ? '关联 Offer 按默认配置恢复或新建任务吗？'
+                    : '关联 Offer 暂停/禁用任务吗？'}
                 </p>
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-800">
-                  <p className="font-medium mb-1">暂停后将会：</p>
-                  <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li>补点击任务标记为已停止</li>
-                    <li>换链接任务标记已禁用</li>
-                    <li>可随时重新启用任务</li>
-                  </ul>
-                </div>
+                {pauseOfferTasksTarget?.action === 'start' ? (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
+                    <p className="font-medium mb-1">开启后将会：</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      {ENABLE_CAMPAIGN_OFFER_TASK_HINTS.map((hint) => (
+                        <li key={hint}>{hint}</li>
+                      ))}
+                      <li>已处于运行中且配置已是默认参数的任务将自动跳过</li>
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-800">
+                    <p className="font-medium mb-1">暂停后将会：</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li>补点击任务标记为已停止</li>
+                      <li>换链接任务标记已禁用</li>
+                      <li>已完成任务不会变更</li>
+                    </ul>
+                  </div>
+                )}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -4925,9 +5000,19 @@ export default function CampaignsClientPage({
             <Button
               onClick={() => void confirmPauseOfferTasks()}
               disabled={pauseOfferTasksSubmitting}
-              className="bg-orange-600 hover:bg-orange-700 focus:ring-orange-600"
+              className={
+                pauseOfferTasksTarget?.action === 'start'
+                  ? 'bg-green-600 hover:bg-green-700 focus:ring-green-600'
+                  : 'bg-orange-600 hover:bg-orange-700 focus:ring-orange-600'
+              }
             >
-              {pauseOfferTasksSubmitting ? '暂停中...' : '确认暂停'}
+              {pauseOfferTasksSubmitting
+                ? pauseOfferTasksTarget?.action === 'start'
+                  ? '开启中...'
+                  : '暂停中...'
+                : pauseOfferTasksTarget?.action === 'start'
+                  ? '确认开启'
+                  : '确认暂停'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
