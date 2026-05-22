@@ -51,3 +51,23 @@ export function resolveOfferTasksToggleAction(
 export function getOfferTasksMenuLabel(action: OfferTasksToggleAction): string {
   return action === 'pause' ? '暂停关联 Offer 任务' : '开启关联 Offer 任务'
 }
+
+export function campaignHasBoundOffer(offerId: number | null | undefined): boolean {
+  const id = Number(offerId)
+  return Number.isFinite(id) && id > 0
+}
+
+export function isCampaignEnabled(status: string | null | undefined): boolean {
+  return String(status || '').trim().toUpperCase() === 'ENABLED'
+}
+
+/** 是否展示「暂停/开启关联 Offer 任务」菜单项 */
+export function shouldShowOfferTasksMenuItem(params: {
+  offerId: number | null | undefined
+  campaignStatus: string | null | undefined
+  action: OfferTasksToggleAction
+}): boolean {
+  if (!campaignHasBoundOffer(params.offerId)) return false
+  if (params.action === 'start' && !isCampaignEnabled(params.campaignStatus)) return false
+  return true
+}

@@ -73,6 +73,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       )
     }
 
+    if (String(campaign.status || '').trim().toUpperCase() !== 'ENABLED') {
+      return NextResponse.json(
+        { error: '广告系列未启用，请先启用广告系列后再开启关联任务' },
+        { status: 400 }
+      )
+    }
+
     const resumeResult = await resumeOfferTasksOnCampaignEnable(offerId, userId)
     const errorMessage = formatResumeErrors(resumeResult.errors)
 

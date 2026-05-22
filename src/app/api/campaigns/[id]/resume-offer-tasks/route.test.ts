@@ -49,7 +49,35 @@ describe('POST /api/campaigns/:id/resume-offer-tasks', () => {
     expect(res.status).toBe(401)
   })
 
+  it('returns 400 when campaign is not enabled', async () => {
+    dbFns.queryOne.mockResolvedValueOnce({
+      id: 1,
+      offer_id: 1001,
+      status: 'PAUSED',
+      is_deleted: 0,
+    })
+
+    const req = new NextRequest('http://localhost/api/campaigns/1/resume-offer-tasks', {
+      method: 'POST',
+      headers: { 'x-user-id': '7' },
+    })
+
+    const res = await POST(req, { params: { id: '1' } })
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.error).toContain('未启用')
+    expect(resumeFns.resumeOfferTasksOnCampaignEnable).not.toHaveBeenCalled()
+  })
+
   it('resumes offer tasks with batch defaults', async () => {
+    dbFns.queryOne.mockResolvedValueOnce({
+      id: 1,
+      offer_id: 1001,
+      status: 'ENABLED',
+      is_deleted: 0,
+    })
+
     const req = new NextRequest('http://localhost/api/campaigns/1/resume-offer-tasks', {
       method: 'POST',
       headers: { 'x-user-id': '7' },

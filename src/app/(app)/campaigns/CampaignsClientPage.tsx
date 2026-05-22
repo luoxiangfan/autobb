@@ -75,8 +75,11 @@ import {
   PAUSE_CAMPAIGN_OFFER_TASK_HINTS,
 } from './toggle-status-warning'
 import {
+  campaignHasBoundOffer,
   getOfferTasksMenuLabel,
+  isCampaignEnabled,
   resolveOfferTasksToggleAction,
+  shouldShowOfferTasksMenuItem,
   type OfferTasksToggleAction,
 } from '@/lib/offer-tasks-toggle'
 import { matchesCampaignSearch } from '@/lib/campaign-search'
@@ -1792,10 +1795,20 @@ export default function CampaignsClientPage({
   }
 
   const openPauseOfferTasksDialog = (campaign: Campaign) => {
+    if (!campaignHasBoundOffer(campaign.offerId)) {
+      return
+    }
+
     const action = resolveOfferTasksToggleAction(
       campaign.clickFarmTaskStatus,
       campaign.urlSwapTaskStatus
     )
+
+    if (action === 'start' && !isCampaignEnabled(campaign.status)) {
+      showError('无法开启', '请先启用广告系列后再开启关联 Offer 任务')
+      return
+    }
+
     setPauseOfferTasksTarget({
       id: campaign.id,
       campaignName: campaign.campaignName,
@@ -4498,32 +4511,44 @@ export default function CampaignsClientPage({
                               <span className="text-[10px] font-semibold text-gray-500">URL</span>
                               <span>换链接任务</span>
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
                             {(() => {
                               const offerTasksAction = resolveOfferTasksToggleAction(
                                 campaign.clickFarmTaskStatus,
                                 campaign.urlSwapTaskStatus
                               )
+                              if (
+                                !shouldShowOfferTasksMenuItem({
+                                  offerId: campaign.offerId,
+                                  campaignStatus: campaign.status,
+                                  action: offerTasksAction,
+                                })
+                              ) {
+                                return null
+                              }
+
                               const offerTasksLabel = getOfferTasksMenuLabel(offerTasksAction)
                               const isPauseOfferTasksAction = offerTasksAction === 'pause'
                               return (
-                                <DropdownMenuItem
-                                  className='gap-2'
-                                  title={
-                                    isPauseOfferTasksAction
-                                      ? '暂停关联 Offer 任务'
-                                      : '开启关联 Offer 任务'
-                                  }
-                                  disabled={pauseOfferTasksSubmitting}
-                                  onClick={() => openPauseOfferTasksDialog(campaign)}
-                                >
-                                  {isPauseOfferTasksAction ? (
-                                    <PauseCircle className="w-4 h-4 text-orange-600" />
-                                  ) : (
-                                    <PlayCircle className="w-4 h-4 text-green-600" />
-                                  )}
-                                  <span>{offerTasksLabel}</span>
-                                </DropdownMenuItem>
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className='gap-2'
+                                    title={
+                                      isPauseOfferTasksAction
+                                        ? '暂停关联 Offer 任务'
+                                        : '开启关联 Offer 任务'
+                                    }
+                                    disabled={pauseOfferTasksSubmitting}
+                                    onClick={() => openPauseOfferTasksDialog(campaign)}
+                                  >
+                                    {isPauseOfferTasksAction ? (
+                                      <PauseCircle className="w-4 h-4 text-orange-600" />
+                                    ) : (
+                                      <PlayCircle className="w-4 h-4 text-green-600" />
+                                    )}
+                                    <span>{offerTasksLabel}</span>
+                                  </DropdownMenuItem>
+                                </>
                               )
                             })()}
                           </DropdownMenuContent>
