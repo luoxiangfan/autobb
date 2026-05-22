@@ -18,6 +18,7 @@ import {
   createCampaignBackup,
   getBackupRankOrderSql,
   isAutoadsLikeBackupSource,
+  isCampaignBackupOfferUniqueViolation,
   listCampaignBackups,
   mergeCampaignConfigForBackupSync,
   parseCampaignBackup,
@@ -122,6 +123,21 @@ describe('createCampaignBackup', () => {
     mockExec.mockReset()
   })
 
+  it('isCampaignBackupOfferUniqueViolation detects sqlite and postgres errors', () => {
+    expect(
+      isCampaignBackupOfferUniqueViolation(
+        new Error('UNIQUE constraint failed: campaign_backups.user_id, campaign_backups.offer_id')
+      )
+    ).toBe(true)
+    expect(
+      isCampaignBackupOfferUniqueViolation({
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "idx_campaign_backups_user_offer_unique"',
+      })
+    ).toBe(true)
+    expect(isCampaignBackupOfferUniqueViolation(new Error('other'))).toBe(false)
+  })
+
   it('updates existing row when backup already exists for offer', async () => {
     mockQueryOne
       .mockResolvedValueOnce({ id: 42 })
@@ -164,6 +180,54 @@ describe('createCampaignBackup', () => {
     expect(
       mockExec.mock.calls.every((call) => !String(call[0]).includes('INSERT INTO campaign_backups'))
     ).toBe(true)
+  })
+
+  it('falls back to update when concurrent INSERT hits unique constraint', async () => {
+    mockQueryOne
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce({ id: 99 })
+      .mockResolvedValueOnce({
+        id: 99,
+        user_id: 7,
+        offer_id: 9,
+        campaign_data: '{}',
+        campaign_config: null,
+        backup_type: 'auto',
+        backup_source: 'google_ads',
+        backup_version: 1,
+        custom_name: null,
+        campaign_name: 'Raced',
+        budget_amount: 30,
+        budget_type: 'DAILY',
+        target_cpa: null,
+        max_cpc: 2,
+        status: 'PAUSED',
+        google_ads_account_id: 3,
+        created_at: '2026-01-01',
+        updated_at: '2026-01-02',
+        ad_creative_id: null,
+      })
+
+    mockExec
+      .mockRejectedValueOnce(
+        new Error('UNIQUE constraint failed: campaign_backups.user_id, campaign_backups.offer_id')
+      )
+      .mockResolvedValueOnce({ changes: 1 })
+
+    const backup = await createCampaignBackup({
+      userId: 7,
+      offerId: 9,
+      campaignData: { offer_id: 9 },
+      campaignName: 'Raced',
+      budgetAmount: 30,
+      budgetType: 'DAILY',
+      status: 'PAUSED',
+      backupSource: 'google_ads',
+    })
+
+    expect(backup.id).toBe(99)
+    expect(mockExec).toHaveBeenCalledTimes(2)
+    expect(String(mockExec.mock.calls[1]?.[0] || '')).toContain('UPDATE campaign_backups')
   })
 })
 

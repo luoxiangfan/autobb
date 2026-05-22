@@ -308,6 +308,45 @@ function mapRowToCampaignBackupListItem(row: Record<string, unknown>): CampaignB
   }
 }
 
+/** 并发 INSERT 撞上 (user_id, offer_id) 唯一索引时的错误识别 */
+export function isCampaignBackupOfferUniqueViolation(error: unknown): boolean {
+  const message = String((error as Error)?.message || error || '')
+  const code = String((error as { code?: string })?.code || '')
+  return (
+    code === '23505'
+    || code.startsWith('SQLITE_CONSTRAINT')
+    || message.includes('idx_campaign_backups_user_offer_unique')
+    || (message.includes('UNIQUE constraint failed') && message.includes('campaign_backups'))
+    || (message.includes('duplicate key value violates unique constraint')
+      && message.includes('campaign_backups'))
+  )
+}
+
+async function updateCampaignBackupFromInput(
+  db: Awaited<ReturnType<typeof getDatabase>>,
+  backupId: number,
+  input: CreateCampaignBackupInput
+): Promise<CampaignBackup> {
+  await updateCampaignBackupSnapshot(db, {
+    backupId,
+    userId: input.userId,
+    adCreativeId: input.adCreativeId ?? null,
+    campaignData: input.campaignData,
+    campaignConfig: input.campaignConfig,
+    campaignName: input.campaignName,
+    budgetAmount: input.budgetAmount,
+    budgetType: input.budgetType,
+    targetCpa: input.targetCpa ?? null,
+    maxCpc: input.maxCpc ?? null,
+    status: input.status,
+    googleAdsAccountId: input.googleAdsAccountId ?? null,
+    customName: input.customName ?? null,
+    backupSource: input.backupSource,
+    backupVersion: input.backupVersion,
+  })
+  return await getCampaignBackupById(backupId, input.userId)
+}
+
 /**
  * 创建广告系列备份
  */
@@ -315,24 +354,7 @@ export async function createCampaignBackup(input: CreateCampaignBackupInput): Pr
   const db = await getDatabase()
   const existingId = await findCampaignBackupIdForOffer(input.offerId, input.userId)
   if (existingId != null) {
-    await updateCampaignBackupSnapshot(db, {
-      backupId: existingId,
-      userId: input.userId,
-      adCreativeId: input.adCreativeId ?? null,
-      campaignData: input.campaignData,
-      campaignConfig: input.campaignConfig,
-      campaignName: input.campaignName,
-      budgetAmount: input.budgetAmount,
-      budgetType: input.budgetType,
-      targetCpa: input.targetCpa ?? null,
-      maxCpc: input.maxCpc ?? null,
-      status: input.status,
-      googleAdsAccountId: input.googleAdsAccountId ?? null,
-      customName: input.customName ?? null,
-      backupSource: input.backupSource,
-      backupVersion: input.backupVersion,
-    })
-    return await getCampaignBackupById(existingId, input.userId)
+    return await updateCampaignBackupFromInput(db, existingId, input)
   }
 
   const now = new Date().toISOString()
@@ -340,39 +362,50 @@ export async function createCampaignBackup(input: CreateCampaignBackupInput): Pr
   const campaignDataDb = toDbCampaignBackupJsonField(input.campaignData, db.type)
   const campaignConfigDb = toDbCampaignBackupJsonField(input.campaignConfig, db.type)
 
-  const result = await db.exec(`
-    INSERT INTO campaign_backups (
-      user_id, offer_id, campaign_data, campaign_config,
-      backup_type, backup_source, backup_version,
-      custom_name, campaign_name,
-      budget_amount, budget_type,
-      target_cpa, max_cpc,
-      status, google_ads_account_id,
-      created_at, updated_at, ad_creative_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [
-    input.userId,
-    input.offerId,
-    campaignDataDb,
-    campaignConfigDb,
-    input.backupType || 'auto',
-    input.backupSource || 'autoads',
-    input.backupVersion || 1,
-    input.customName || null,
-    input.campaignName,
-    input.budgetAmount,
-    input.budgetType,
-    input.targetCpa || null,
-    input.maxCpc || null,
-    input.status,
-    input.googleAdsAccountId || null,
-    now,
-    now,
-    input.adCreativeId || null,  // 🔧 新增：广告创意 ID
-  ])
+  try {
+    const result = await db.exec(`
+      INSERT INTO campaign_backups (
+        user_id, offer_id, campaign_data, campaign_config,
+        backup_type, backup_source, backup_version,
+        custom_name, campaign_name,
+        budget_amount, budget_type,
+        target_cpa, max_cpc,
+        status, google_ads_account_id,
+        created_at, updated_at, ad_creative_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      input.userId,
+      input.offerId,
+      campaignDataDb,
+      campaignConfigDb,
+      input.backupType || 'auto',
+      input.backupSource || 'autoads',
+      input.backupVersion || 1,
+      input.customName || null,
+      input.campaignName,
+      input.budgetAmount,
+      input.budgetType,
+      input.targetCpa || null,
+      input.maxCpc || null,
+      input.status,
+      input.googleAdsAccountId || null,
+      now,
+      now,
+      input.adCreativeId || null,
+    ])
 
-  const backupId = getInsertedId(result, db.type)
-  return await getCampaignBackupById(backupId, input.userId)
+    const backupId = getInsertedId(result, db.type)
+    return await getCampaignBackupById(backupId, input.userId)
+  } catch (error) {
+    if (!isCampaignBackupOfferUniqueViolation(error)) {
+      throw error
+    }
+    const racedId = await findCampaignBackupIdForOffer(input.offerId, input.userId)
+    if (racedId == null) {
+      throw error
+    }
+    return await updateCampaignBackupFromInput(db, racedId, input)
+  }
 }
 
 /**
