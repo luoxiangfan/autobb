@@ -198,21 +198,25 @@ export async function createCampaignRowFromBackup(params: {
   userId: number
   googleAdsAccountId?: number | null
   db: DatabaseAdapter
+  /** 调用方已批量做过 abandon + 占用检查时跳过（如 batch-create 执行器） */
+  skipOccupancyPrecheck?: boolean
 }): Promise<BatchDbCreateDetail> {
-  const { backup, userId, googleAdsAccountId, db } = params
+  const { backup, userId, googleAdsAccountId, db, skipOccupancyPrecheck = false } = params
   const backupId = backup.id
   const offerId = backup.offerId
 
   try {
-    await abandonStalePendingCampaignsForOffers([offerId], userId)
-    const existingCampaign =
-      (await getActiveCampaignConflictsForOffers([offerId], userId)).get(offerId) ?? null
+    if (!skipOccupancyPrecheck) {
+      await abandonStalePendingCampaignsForOffers([offerId], userId)
+      const existingCampaign =
+        (await getActiveCampaignConflictsForOffers([offerId], userId)).get(offerId) ?? null
 
-    if (existingCampaign) {
-      return {
-        backupId,
-        offerId,
-        error: BACKUP_CREATE_BLOCKED_BY_ACTIVE_CAMPAIGN_MESSAGE,
+      if (existingCampaign) {
+        return {
+          backupId,
+          offerId,
+          error: BACKUP_CREATE_BLOCKED_BY_ACTIVE_CAMPAIGN_MESSAGE,
+        }
       }
     }
 

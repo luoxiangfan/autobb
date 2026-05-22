@@ -12,8 +12,8 @@ import {
 } from '@/lib/campaign-backup-restore'
 import { BACKUP_CREATE_BLOCKED_BY_ACTIVE_CAMPAIGN_MESSAGE } from '@/lib/campaign-backup-restore'
 import {
-  abandonStalePendingCampaignsForOffer,
-  getActiveCampaignConflictForOffer,
+  abandonStalePendingCampaignsForOffers,
+  getActiveCampaignConflictsForOffers,
   rollbackPendingCampaignAfterEnqueueFailure,
 } from '@/lib/campaign-offer-constraint'
 
@@ -62,31 +62,44 @@ export async function executeCampaignBatchCreate(
     const warnings: Array<{ backupId: number; message: string }> = []
     const createdCampaigns: Array<{ backupId: number; campaignId: number }> = []
 
+    const backupPlaceholders = backupIds.map(() => '?').join(',')
+    const backupRows = (await db.query(
+      `
+      SELECT * FROM campaign_backups
+      WHERE id IN (${backupPlaceholders}) AND user_id = ?
+    `,
+      [...backupIds, task.userId]
+    )) as Array<Record<string, unknown>>
+
+    const backupById = new Map<number, ReturnType<typeof parseCampaignBackup>>()
+    for (const row of backupRows) {
+      backupById.set(Number(row.id), parseCampaignBackup(row))
+    }
+
+    const uniqueOfferIds = [...new Set([...backupById.values()].map((b) => b.offerId))]
+    await abandonStalePendingCampaignsForOffers(uniqueOfferIds, task.userId)
+    const initialConflicts = await getActiveCampaignConflictsForOffers(
+      uniqueOfferIds,
+      task.userId
+    )
+    const blockedOfferIds = new Set(initialConflicts.keys())
+
     for (const backupId of backupIds) {
       let pendingCampaignId: number | undefined
       let pendingOfferId: number | undefined
 
       try {
-        const row = await db.queryOne(
-          `SELECT * FROM campaign_backups WHERE id = ? AND user_id = ?`,
-          [backupId, task.userId]
-        )
+        const backup = backupById.get(backupId)
 
-        if (!row) {
+        if (!backup) {
           failed++
           errors.push({ backupId, error: '备份不存在或无权访问' })
           continue
         }
 
-        const backup = parseCampaignBackup(row)
         pendingOfferId = backup.offerId
 
-        await abandonStalePendingCampaignsForOffer(backup.offerId, task.userId)
-        const activeConflict = await getActiveCampaignConflictForOffer(
-          backup.offerId,
-          task.userId
-        )
-        if (activeConflict) {
+        if (blockedOfferIds.has(backup.offerId)) {
           failed++
           errors.push({
             backupId,
@@ -104,6 +117,7 @@ export async function executeCampaignBatchCreate(
           userId: task.userId,
           googleAdsAccountId,
           db,
+          skipOccupancyPrecheck: true,
         })
 
         if (!dbDetail.campaignId) {
@@ -116,6 +130,7 @@ export async function executeCampaignBatchCreate(
           continue
         }
 
+        blockedOfferIds.add(backup.offerId)
         pendingCampaignId = dbDetail.campaignId
 
         const publishDetail = await enqueueCampaignPublishFromBackup({
