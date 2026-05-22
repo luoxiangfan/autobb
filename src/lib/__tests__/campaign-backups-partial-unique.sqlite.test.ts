@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import { splitSqlStatements } from '@/lib/sql-splitter'
 
 const MIGRATION_SQL = readFileSync(
-  path.join(process.cwd(), 'migrations/249_campaign_backups_partial_unique.sql'),
+  path.join(process.cwd(), 'migrations/249_campaign_backups_user_offer_unique.sql'),
   'utf8'
 )
 
@@ -17,7 +17,7 @@ function execMigrationStatements(db: Database.Database) {
   }
 }
 
-describe('campaign_backups partial unique index (sqlite)', () => {
+describe('campaign_backups (user_id, offer_id) unique (sqlite)', () => {
   let dbPath = ''
   let db: Database.Database
 
@@ -61,7 +61,7 @@ describe('campaign_backups partial unique index (sqlite)', () => {
     }
   })
 
-  it('rejects a second autoads row for the same user_id and offer_id', () => {
+  it('rejects a second row for the same user_id and offer_id (autoads)', () => {
     db.prepare(
       `INSERT INTO campaign_backups (user_id, offer_id, campaign_data, backup_source)
        VALUES (1, 10, '{}', 'autoads')`
@@ -75,19 +75,17 @@ describe('campaign_backups partial unique index (sqlite)', () => {
     ).toThrow(/UNIQUE constraint failed/i)
   })
 
-  it('allows autoads and google_ads v2 on the same user_id and offer_id', () => {
+  it('rejects google_ads row when autoads row already exists for same user_id and offer_id', () => {
     db.prepare(
-      `INSERT INTO campaign_backups (user_id, offer_id, campaign_data, backup_source, backup_version)
-       VALUES (1, 10, '{}', 'autoads', 1)`
-    ).run()
-    db.prepare(
-      `INSERT INTO campaign_backups (user_id, offer_id, campaign_data, backup_source, backup_version)
-       VALUES (1, 10, '{}', 'google_ads', 2)`
+      `INSERT INTO campaign_backups (user_id, offer_id, campaign_data, backup_source)
+       VALUES (1, 10, '{}', 'autoads')`
     ).run()
 
-    const count = db
-      .prepare('SELECT COUNT(*) AS c FROM campaign_backups WHERE user_id = 1 AND offer_id = 10')
-      .get() as { c: number }
-    expect(count.c).toBe(2)
+    expect(() =>
+      db.prepare(
+        `INSERT INTO campaign_backups (user_id, offer_id, campaign_data, backup_source, backup_version)
+         VALUES (1, 10, '{}', 'google_ads', 2)`
+      ).run()
+    ).toThrow(/UNIQUE constraint failed/i)
   })
 })

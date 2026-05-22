@@ -69,6 +69,7 @@ import {
   pauseOrphanGoogleAdsCampaignAfterPublishFailure,
   type CampaignPublishRollbackContext,
 } from '@/lib/campaign-publish-orphan-cleanup'
+import { syncCampaignBackupAfterPublish } from '@/lib/campaign-backups'
 
 export type { CampaignPublishRollbackContext } from '@/lib/campaign-publish-orphan-cleanup'
 
@@ -222,6 +223,8 @@ export interface CampaignPublishTaskData {
   resumePublish?: boolean
   /** @deprecated 暂停旧系列由 publish API 在入队前处理，执行器不再读取 */
   pauseOldCampaigns?: boolean
+  /** 从 campaign_backups 恢复发布时传入，成功后回写备份快照 */
+  sourceBackupId?: number
 }
 
 /**
@@ -1540,6 +1543,22 @@ export async function executeCampaignPublish(
     }
 
     apiSuccess = true
+
+    const sourceBackupId = task.data.sourceBackupId
+    if (sourceBackupId != null && Number.isInteger(sourceBackupId) && sourceBackupId > 0) {
+      try {
+        await syncCampaignBackupAfterPublish({
+          backupId: sourceBackupId,
+          userId,
+          campaignId,
+        })
+      } catch (backupSyncError: any) {
+        console.warn(
+          `[Backup Sync] Failed after publish backupId=${sourceBackupId}:`,
+          backupSyncError?.message || backupSyncError
+        )
+      }
+    }
 
     // 🔧 修复(2026-01-05): 区分完全成功和部分成功
     if (extensionsErrors.length === 0) {

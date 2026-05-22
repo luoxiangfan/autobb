@@ -454,6 +454,7 @@ export async function enqueueCampaignPublishFromBackup(params: {
         offerId,
         googleAdsAccountId,
         userId,
+        sourceBackupId: backupId,
         naming,
         marketingObjective: finalCampaignConfig.marketingObjective || 'WEB_TRAFFIC',
         campaignConfig: {

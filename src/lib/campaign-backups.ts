@@ -5,6 +5,8 @@
  * 1. 创建广告系列时自动备份
  * 2. Google Ads 同步时备份（初始 + 第 7 天）
  * 3. 通过备份快速创建广告系列
+ *
+ * 策略：每个 (user_id, offer_id) 仅一条备份（与 backup_source 无关），由 DB 唯一索引约束。
  * 
  * 🔧 更新 (2026-04-20): 新增 campaign_config 字段备份
  */
@@ -186,6 +188,13 @@ function mapRowToCampaignBackupListItem(row: Record<string, unknown>): CampaignB
  */
 export async function createCampaignBackup(input: CreateCampaignBackupInput): Promise<CampaignBackup> {
   const db = await getDatabase()
+  const existingId = await findCampaignBackupIdForOffer(input.offerId, input.userId)
+  if (existingId != null) {
+    throw new Error(
+      `Campaign backup already exists for user=${input.userId} offer=${input.offerId} (id=${existingId})`
+    )
+  }
+
   const now = new Date().toISOString()
 
   const campaignDataDb = toDbCampaignBackupJsonField(input.campaignData, db.type)
@@ -377,10 +386,8 @@ export interface UpsertCampaignBackupAfterPublishInput {
   status?: string
 }
 
-/**
- * 发布完成后 upsert 备份：每个 Offer 仅保留一条，写入完整 campaign_config
- */
-async function findAutoadsLikeBackupId(
+/** 每个 (user_id, offer_id) 仅允许一条备份时，取排名最高的一条 id */
+export async function findCampaignBackupIdForOffer(
   offerId: number,
   userId: number
 ): Promise<number | null> {
@@ -390,7 +397,6 @@ async function findAutoadsLikeBackupId(
     `
     SELECT id FROM campaign_backups
     WHERE offer_id = ? AND user_id = ?
-      AND (backup_source = 'autoads' OR backup_source = 'publish')
     ORDER BY ${rankOrder}
     LIMIT 1
   `,
@@ -399,6 +405,14 @@ async function findAutoadsLikeBackupId(
   return row?.id ?? null
 }
 
+export async function hasCampaignBackupForOffer(
+  offerId: number,
+  userId: number
+): Promise<boolean> {
+  return (await findCampaignBackupIdForOffer(offerId, userId)) != null
+}
+
+/** 唯一备份行是否为 autoads / publish 来源（用于 Google 同步跳过覆写） */
 export async function hasAutoadsLikeBackupForOffer(
   offerId: number,
   userId: number
@@ -406,14 +420,13 @@ export async function hasAutoadsLikeBackupForOffer(
   const db = await getDatabase()
   const row = await db.queryOne(
     `
-    SELECT id FROM campaign_backups
+    SELECT backup_source FROM campaign_backups
     WHERE offer_id = ? AND user_id = ?
-      AND (backup_source = 'autoads' OR backup_source = 'publish')
     LIMIT 1
   `,
     [offerId, userId]
-  )
-  return row != null
+  ) as { backup_source: string } | undefined
+  return row != null && isAutoadsLikeBackupSource(row.backup_source)
 }
 
 export async function findLatestGoogleAdsBackupForOffer(
@@ -421,86 +434,39 @@ export async function findLatestGoogleAdsBackupForOffer(
   userId: number
 ): Promise<{ id: number; backup_version: number } | null> {
   const db = await getDatabase()
-  const rankOrder = getBackupRankOrderSql(db.type)
-  const row = (await db.queryOne(
+  const row = await db.queryOne(
     `
-    SELECT id, backup_version FROM campaign_backups
-    WHERE offer_id = ? AND user_id = ? AND backup_source = 'google_ads'
-    ORDER BY ${rankOrder}
+    SELECT id, backup_version, backup_source FROM campaign_backups
+    WHERE offer_id = ? AND user_id = ?
     LIMIT 1
   `,
     [offerId, userId]
-  )) as { id: number; backup_version: number } | undefined
-  return row ?? null
-}
-
-async function deleteDuplicateAutoadsLikeBackups(
-  offerId: number,
-  userId: number,
-  keepId: number
-): Promise<void> {
-  const db = await getDatabase()
-  await db.exec(
-    `
-    DELETE FROM campaign_backups
-    WHERE offer_id = ? AND user_id = ? AND id != ?
-      AND (backup_source = 'autoads' OR backup_source = 'publish')
-  `,
-    [offerId, userId, keepId]
-  )
+  ) as { id: number; backup_version: number; backup_source: string } | undefined
+  if (!row || row.backup_source !== 'google_ads') {
+    return null
+  }
+  return { id: row.id, backup_version: row.backup_version }
 }
 
 /**
- * 按统一排名保留 canonical 与 google_ads v2+ 最终备份，删除其余重复行
+ * 每个 (user_id, offer_id) 仅保留排名最高的一条备份（与 backup_source 无关）
  */
 export async function pruneCampaignBackupsForOffer(
   offerId: number,
   userId: number
 ): Promise<number> {
   const db = await getDatabase()
-  const rankOrder = getBackupRankOrderSql(db.type)
-
-  const canonical = (await db.queryOne(
-    `
-    SELECT id FROM campaign_backups
-    WHERE offer_id = ? AND user_id = ?
-    ORDER BY ${rankOrder}
-    LIMIT 1
-  `,
-    [offerId, userId]
-  )) as { id: number } | undefined
-
-  if (!canonical) {
+  const keepId = await findCampaignBackupIdForOffer(offerId, userId)
+  if (keepId == null) {
     return 0
   }
 
-  const googleFinal = (await db.queryOne(
-    `
-    SELECT id FROM campaign_backups
-    WHERE offer_id = ? AND user_id = ?
-      AND backup_source = 'google_ads' AND backup_version >= 2
-    ORDER BY ${rankOrder}
-    LIMIT 1
-  `,
-    [offerId, userId]
-  )) as { id: number } | undefined
-
-  const keepIds = new Set<number>([canonical.id])
-  if (googleFinal && googleFinal.id !== canonical.id) {
-    keepIds.add(googleFinal.id)
-  }
-  const keepIdList = [...keepIds]
-  if (keepIdList.length === 0) {
-    return 0
-  }
-  const placeholders = keepIdList.map(() => '?').join(', ')
   const deleteResult = await db.exec(
     `
     DELETE FROM campaign_backups
-    WHERE offer_id = ? AND user_id = ?
-      AND id NOT IN (${placeholders})
+    WHERE offer_id = ? AND user_id = ? AND id != ?
   `,
-    [offerId, userId, ...keepIdList]
+    [offerId, userId, keepId]
   )
 
   await db.exec(
@@ -509,74 +475,196 @@ export async function pruneCampaignBackupsForOffer(
     SET backup_source = 'autoads', updated_at = ?
     WHERE offer_id = ? AND user_id = ?
       AND backup_source = 'publish'
-      AND id IN (${placeholders})
+      AND id = ?
   `,
-    [new Date().toISOString(), offerId, userId, ...keepIdList]
+    [new Date().toISOString(), offerId, userId, keepId]
   )
 
   return deleteResult.changes ?? 0
+}
+
+async function updateCampaignBackupSnapshot(
+  db: Awaited<ReturnType<typeof getDatabase>>,
+  params: {
+    backupId: number
+    userId: number
+    adCreativeId: number | null
+    campaignData: Record<string, unknown>
+    campaignConfig: unknown
+    campaignName: string
+    budgetAmount: number
+    budgetType: string
+    targetCpa: number | null
+    maxCpc: number | null
+    status: string
+    googleAdsAccountId: number | null
+    customName: string | null
+    backupSource?: 'autoads' | 'google_ads'
+    backupVersion?: number
+  }
+): Promise<void> {
+  const now = new Date().toISOString()
+  const campaignDataDb = toDbCampaignBackupJsonField(params.campaignData, db.type)
+  const campaignConfigDb = toDbCampaignBackupJsonField(params.campaignConfig, db.type)
+
+  await db.exec(
+    `
+    UPDATE campaign_backups
+    SET
+      ad_creative_id = ?,
+      campaign_data = ?,
+      campaign_config = ?,
+      backup_type = 'auto',
+      backup_source = ?,
+      backup_version = ?,
+      custom_name = ?,
+      campaign_name = ?,
+      budget_amount = ?,
+      budget_type = ?,
+      target_cpa = ?,
+      max_cpc = ?,
+      status = ?,
+      google_ads_account_id = ?,
+      updated_at = ?
+    WHERE id = ? AND user_id = ?
+  `,
+    [
+      params.adCreativeId,
+      campaignDataDb,
+      campaignConfigDb,
+      params.backupSource ?? 'autoads',
+      params.backupVersion ?? 1,
+      params.customName,
+      params.campaignName,
+      params.budgetAmount,
+      params.budgetType,
+      params.targetCpa,
+      params.maxCpc,
+      params.status,
+      params.googleAdsAccountId,
+      now,
+      params.backupId,
+      params.userId,
+    ]
+  )
+}
+
+/**
+ * 从备份发布到 Google Ads 成功后，用 campaigns 表最新数据回写备份行
+ */
+export async function syncCampaignBackupAfterPublish(params: {
+  backupId: number
+  userId: number
+  campaignId: number
+}): Promise<void> {
+  const db = await getDatabase()
+
+  const campaign = (await db.queryOne(
+    `
+    SELECT *
+    FROM campaigns
+    WHERE id = ? AND user_id = ?
+  `,
+    [params.campaignId, params.userId]
+  )) as Record<string, unknown> | undefined
+
+  if (!campaign) {
+    console.warn('[Backup Sync] Campaign not found:', params.campaignId)
+    return
+  }
+
+  const backupRow = (await db.queryOne(
+    `
+    SELECT id, offer_id
+    FROM campaign_backups
+    WHERE id = ? AND user_id = ?
+  `,
+    [params.backupId, params.userId]
+  )) as { id: number; offer_id: number } | undefined
+
+  if (!backupRow) {
+    console.warn('[Backup Sync] Backup not found:', params.backupId)
+    return
+  }
+
+  const offerId = campaign.offer_id as number
+  if (backupRow.offer_id !== offerId) {
+    console.warn(
+      `[Backup Sync] Offer mismatch: backup.offer_id=${backupRow.offer_id}, campaign.offer_id=${offerId}`
+    )
+    return
+  }
+
+  const campaignConfig = parseCampaignBackupJsonField(campaign.campaign_config)
+
+  await updateCampaignBackupSnapshot(db, {
+    backupId: params.backupId,
+    userId: params.userId,
+    adCreativeId: (campaign.ad_creative_id as number | null) ?? null,
+    campaignData: buildCampaignBackupDataFromRow({
+      campaign_id: (campaign.campaign_id as string | null) ?? null,
+      offer_id: offerId,
+      google_ads_account_id: (campaign.google_ads_account_id as number | null) ?? null,
+      campaign_name: (campaign.campaign_name as string | null) ?? null,
+      budget_amount: (campaign.budget_amount as number | null) ?? null,
+      budget_type: (campaign.budget_type as string | null) ?? null,
+      max_cpc: (campaign.max_cpc as number | null) ?? null,
+      target_cpa: (campaign.target_cpa as number | null) ?? null,
+      status: (campaign.status as string | null) ?? null,
+    }),
+    campaignConfig,
+    campaignName: String(campaign.campaign_name ?? 'Campaign'),
+    budgetAmount: Number(campaign.budget_amount ?? 0),
+    budgetType: String(campaign.budget_type ?? 'DAILY'),
+    targetCpa: (campaign.target_cpa as number | null) ?? null,
+    maxCpc: (campaign.max_cpc as number | null) ?? null,
+    status: String(campaign.status ?? 'PAUSED'),
+    googleAdsAccountId: (campaign.google_ads_account_id as number | null) ?? null,
+    customName: (campaign.custom_name as string | null) ?? null,
+    backupSource: 'autoads',
+    backupVersion: 1,
+  })
+
+  await pruneCampaignBackupsForOffer(offerId, params.userId)
+  console.log(
+    `[Backup Sync] Updated backup id=${params.backupId} from published campaign id=${params.campaignId}`
+  )
 }
 
 export async function upsertCampaignBackupAfterPublish(
   input: UpsertCampaignBackupAfterPublishInput
 ): Promise<void> {
   const db = await getDatabase()
-  const now = new Date().toISOString()
 
-  const campaignDataDb = toDbCampaignBackupJsonField(input.campaignData, db.type)
-  const campaignConfigDb = toDbCampaignBackupJsonField(input.campaignConfig, db.type)
+  const existingBackupId = await findCampaignBackupIdForOffer(input.offerId, input.userId)
 
-  const autoadsBackupId = await findAutoadsLikeBackupId(input.offerId, input.userId)
+  if (existingBackupId) {
+    await updateCampaignBackupSnapshot(db, {
+      backupId: existingBackupId,
+      userId: input.userId,
+      adCreativeId: input.adCreativeId,
+      campaignData: input.campaignData,
+      campaignConfig: input.campaignConfig,
+      campaignName: input.campaignName,
+      budgetAmount: input.budgetAmount,
+      budgetType: input.budgetType,
+      targetCpa: input.targetCpa ?? null,
+      maxCpc: input.maxCpc ?? null,
+      status: input.status ?? 'PAUSED',
+      googleAdsAccountId: input.googleAdsAccountId,
+      customName: input.customName ?? null,
+      backupSource: 'autoads',
+      backupVersion: 1,
+    })
 
-  if (autoadsBackupId) {
-    await db.exec(
-      `
-      UPDATE campaign_backups
-      SET
-        ad_creative_id = ?,
-        campaign_data = ?,
-        campaign_config = ?,
-        backup_type = 'auto',
-        backup_source = 'autoads',
-        custom_name = ?,
-        campaign_name = ?,
-        budget_amount = ?,
-        budget_type = ?,
-        target_cpa = ?,
-        max_cpc = ?,
-        status = ?,
-        google_ads_account_id = ?,
-        updated_at = ?
-      WHERE id = ? AND user_id = ?
-    `,
-      [
-        input.adCreativeId,
-        campaignDataDb,
-        campaignConfigDb,
-        input.customName ?? null,
-        input.campaignName,
-        input.budgetAmount,
-        input.budgetType,
-        input.targetCpa ?? null,
-        input.maxCpc ?? null,
-        input.status ?? 'PAUSED',
-        input.googleAdsAccountId,
-        now,
-        autoadsBackupId,
-        input.userId,
-      ]
-    )
-
-    await deleteDuplicateAutoadsLikeBackups(input.offerId, input.userId, autoadsBackupId)
     const pruned = await pruneCampaignBackupsForOffer(input.offerId, input.userId)
 
     console.log(
-      `[Publish Backup] Updated autoads backup id=${autoadsBackupId} for offer=${input.offerId}, pruned=${pruned}`
+      `[Publish Backup] Updated backup id=${existingBackupId} for offer=${input.offerId}, pruned=${pruned}`
     )
     return
   }
 
-  // 无 autoads 备份时始终创建（即使已有 Google v2 终态备份，发布配置写入 autoads 行）
   await createCampaignBackup({
     userId: input.userId,
     offerId: input.offerId,
@@ -672,27 +760,13 @@ export async function autoBackupCampaign(params: {
     return
   }
 
-  if (await hasAutoadsLikeBackupForOffer(campaign.offer_id, params.userId)) {
-    if (params.backupSource === 'google_ads') {
-      console.log(
-        '[Auto Backup] Skip google_ads backup: autoads-like backup already exists for offer',
-        campaign.offer_id
-      )
-      return
-    }
-    await pruneCampaignBackupsForOffer(campaign.offer_id, params.userId)
-    console.log('[Auto Backup] Skip update: autoads backup is immutable after creation:', params.campaignId)
-    return
-  }
-
-  const googleBackup = await findLatestGoogleAdsBackupForOffer(
+  const existingBackupId = await findCampaignBackupIdForOffer(
     campaign.offer_id,
     params.userId
   )
 
-  if (!googleBackup) {
+  if (existingBackupId == null) {
     console.log('[Auto Backup] Creating new backup for campaign:', params.campaignId)
-
     await createCampaignBackup({
       userId: params.userId,
       offerId: campaign.offer_id,
@@ -715,24 +789,89 @@ export async function autoBackupCampaign(params: {
     return
   }
 
-  if (googleBackup.backup_version >= 2) {
+  const existingRow = (await db.queryOne(
+    `
+    SELECT backup_source, backup_version, created_at
+    FROM campaign_backups
+    WHERE id = ? AND user_id = ?
+  `,
+    [existingBackupId, params.userId]
+  )) as {
+    backup_source: string
+    backup_version: number
+    created_at: string
+  } | undefined
+
+  if (!existingRow) {
+    return
+  }
+
+  if (isAutoadsLikeBackupSource(existingRow.backup_source)) {
+    if (params.backupSource === 'google_ads') {
+      console.log(
+        '[Auto Backup] Skip google_ads backup: autoads-like backup already exists for offer',
+        campaign.offer_id
+      )
+      return
+    }
+    await pruneCampaignBackupsForOffer(campaign.offer_id, params.userId)
+    console.log('[Auto Backup] Skip update: autoads backup is immutable after creation:', params.campaignId)
+    return
+  }
+
+  if (params.backupSource === 'autoads') {
+    const now = new Date().toISOString()
+    await db.exec(
+      `
+      UPDATE campaign_backups
+      SET
+        campaign_data = ?,
+        campaign_config = ?,
+        backup_type = 'auto',
+        backup_source = 'autoads',
+        backup_version = 1,
+        custom_name = ?,
+        campaign_name = ?,
+        budget_amount = ?,
+        budget_type = ?,
+        target_cpa = ?,
+        max_cpc = ?,
+        status = ?,
+        google_ads_account_id = ?,
+        ad_creative_id = ?,
+        updated_at = ?
+      WHERE id = ? AND user_id = ?
+    `,
+      [
+        toDbCampaignBackupJsonField(buildCampaignBackupDataFromRow(campaign), db.type),
+        toDbCampaignBackupJsonField(campaign.campaign_config, db.type),
+        campaign.custom_name,
+        campaign.campaign_name,
+        campaign.budget_amount,
+        campaign.budget_type,
+        campaign.target_cpa,
+        campaign.max_cpc,
+        campaign.status,
+        campaign.google_ads_account_id,
+        campaign.ad_creative_id,
+        now,
+        existingBackupId,
+        params.userId,
+      ]
+    )
+    await pruneCampaignBackupsForOffer(campaign.offer_id, params.userId)
+    return
+  }
+
+  if (existingRow.backup_version >= 2) {
     await pruneCampaignBackupsForOffer(campaign.offer_id, params.userId)
     console.log('[Auto Backup] Skip update: google_ads backup already upgraded to version 2:', params.campaignId)
     return
   }
 
-  const googleRow = await db.queryOne<{ created_at: string }>(
-    `
-    SELECT created_at FROM campaign_backups
-    WHERE id = ? AND user_id = ?
-  `,
-    [googleBackup.id, params.userId]
-  )
-
-  const createdAtMs = googleRow ? new Date(googleRow.created_at).getTime() : NaN
+  const createdAtMs = new Date(existingRow.created_at).getTime()
   const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
-  const elapsedMs = Date.now() - createdAtMs
-  const hasReachedDay7 = Number.isFinite(createdAtMs) && elapsedMs >= sevenDaysMs
+  const hasReachedDay7 = Number.isFinite(createdAtMs) && Date.now() - createdAtMs >= sevenDaysMs
 
   if (!hasReachedDay7) {
     await pruneCampaignBackupsForOffer(campaign.offer_id, params.userId)
@@ -756,7 +895,7 @@ export async function autoBackupCampaign(params: {
       toDbCampaignBackupJsonField(campaign.campaign_config, db.type),
       'google_ads',
       new Date().toISOString(),
-      googleBackup.id,
+      existingBackupId,
       params.userId,
     ]
   )

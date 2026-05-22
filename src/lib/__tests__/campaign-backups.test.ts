@@ -20,6 +20,7 @@ import {
   listCampaignBackups,
   parseCampaignBackup,
   pruneCampaignBackupsForOffer,
+  syncCampaignBackupAfterPublish,
 } from '@/lib/campaign-backups'
 
 describe('campaign-backups helpers', () => {
@@ -96,6 +97,50 @@ describe('campaign-backups helpers', () => {
   })
 })
 
+describe('syncCampaignBackupAfterPublish', () => {
+  beforeEach(() => {
+    mockQueryOne.mockReset()
+    mockExec.mockReset()
+  })
+
+  it('updates backup snapshot from published campaign row', async () => {
+    mockQueryOne
+      .mockResolvedValueOnce({
+        id: 50,
+        user_id: 7,
+        offer_id: 9,
+        campaign_id: 'google-camp-1',
+        google_ads_account_id: 3,
+        campaign_name: 'Published',
+        budget_amount: 20,
+        budget_type: 'DAILY',
+        max_cpc: 1.5,
+        target_cpa: null,
+        status: 'PAUSED',
+        custom_name: null,
+        ad_creative_id: 11,
+        campaign_config: { keywords: ['a'] },
+      })
+      .mockResolvedValueOnce({ id: 100, offer_id: 9 })
+      .mockResolvedValueOnce({ id: 100 })
+
+    mockExec.mockResolvedValue({ changes: 0 })
+
+    await syncCampaignBackupAfterPublish({
+      backupId: 100,
+      userId: 7,
+      campaignId: 50,
+    })
+
+    const updateSql = String(mockExec.mock.calls[0]?.[0] || '')
+    expect(updateSql).toContain('backup_source = ?')
+    expect(updateSql).toContain('backup_version = ?')
+    expect(mockExec.mock.calls[0]?.[1]).toEqual(
+      expect.arrayContaining(['autoads', 1, 100, 7])
+    )
+  })
+})
+
 describe('pruneCampaignBackupsForOffer', () => {
   beforeEach(() => {
     mockQuery.mockReset()
@@ -104,33 +149,25 @@ describe('pruneCampaignBackupsForOffer', () => {
   })
 
   it('returns 0 when no backups exist', async () => {
-    mockQueryOne.mockResolvedValueOnce(undefined)
+    mockQueryOne.mockResolvedValue(undefined)
     await expect(pruneCampaignBackupsForOffer(9, 7)).resolves.toBe(0)
     expect(mockExec).not.toHaveBeenCalled()
   })
 
-  it('keeps canonical and at most one google_ads v2+, deletes others and normalizes publish', async () => {
-    mockQueryOne
-      .mockResolvedValueOnce({ id: 100 })
-      .mockResolvedValueOnce({ id: 200 })
+  it('keeps only the top-ranked backup for user+offer', async () => {
+    mockQueryOne.mockResolvedValueOnce({ id: 100 })
     mockExec
-      .mockResolvedValueOnce({ changes: 3 })
-      .mockResolvedValueOnce({ changes: 1 })
+      .mockResolvedValueOnce({ changes: 2 })
+      .mockResolvedValueOnce({ changes: 0 })
 
     const deleted = await pruneCampaignBackupsForOffer(9, 7)
-    expect(deleted).toBe(3)
+    expect(deleted).toBe(2)
 
-    const googleFinalSql = String(mockQueryOne.mock.calls[1]?.[0] || '')
-    expect(googleFinalSql).toContain("backup_version >= 2")
-    expect(googleFinalSql).toContain('LIMIT 1')
+    const keepSql = String(mockQueryOne.mock.calls[0]?.[0] || '')
+    expect(keepSql).toContain('ORDER BY')
+    expect(keepSql).not.toContain("backup_source = 'autoads'")
 
-    const deleteSql = String(mockExec.mock.calls[0]?.[0] || '')
-    expect(deleteSql).toContain('id NOT IN')
-    expect(mockExec.mock.calls[0]?.[1]).toEqual([9, 7, 100, 200])
-
-    const publishSql = String(mockExec.mock.calls[1]?.[0] || '')
-    expect(publishSql).toContain("backup_source = 'publish'")
-    expect(publishSql).toContain("backup_source = 'autoads'")
+    expect(mockExec.mock.calls[0]?.[1]).toEqual([9, 7, 100])
   })
 })
 
