@@ -289,39 +289,53 @@ export async function enqueueCampaignPublishFromBackup(params: {
         console.warn(`[Backup Restore] 备份 ${backupId} ${warning}`)
       }
 
-      if (regeneratedCreative && newAdCreativeId) {
-        await db.exec(
-          `
-          UPDATE campaign_backups
-          SET ad_creative_id = ?,
-              campaign_config = ?,
-              updated_at = ?
-          WHERE id = ? AND user_id = ?
-        `,
-          [
-            newAdCreativeId,
-            toDbCampaignBackupJsonField(finalCampaignConfig, db.type),
-            new Date().toISOString(),
-            backupId,
-            userId,
-          ]
+      if (regeneratedCreative) {
+        const configSerialized = toDbCampaignBackupJsonField(
+          finalCampaignConfig,
+          db.type
         )
-        await db.exec(
-          `
-          UPDATE campaigns
-          SET ad_creative_id = ?,
-              campaign_config = ?,
-              updated_at = ?
-          WHERE id = ? AND user_id = ?
-        `,
-          [
-            newAdCreativeId,
-            toDbCampaignConfigTextField(finalCampaignConfig),
-            new Date(),
-            campaignId,
-            userId,
-          ]
-        )
+        const configText = toDbCampaignConfigTextField(finalCampaignConfig)
+        const nowIso = new Date().toISOString()
+
+        if (newAdCreativeId) {
+          await db.exec(
+            `
+            UPDATE campaign_backups
+            SET ad_creative_id = ?,
+                campaign_config = ?,
+                updated_at = ?
+            WHERE id = ? AND user_id = ?
+          `,
+            [newAdCreativeId, configSerialized, nowIso, backupId, userId]
+          )
+          await db.exec(
+            `
+            UPDATE campaigns
+            SET ad_creative_id = ?,
+                campaign_config = ?,
+                updated_at = ?
+            WHERE id = ? AND user_id = ?
+          `,
+            [newAdCreativeId, configText, new Date(), campaignId, userId]
+          )
+        } else {
+          await db.exec(
+            `
+            UPDATE campaign_backups
+            SET campaign_config = ?, updated_at = ?
+            WHERE id = ? AND user_id = ?
+          `,
+            [configSerialized, nowIso, backupId, userId]
+          )
+          await db.exec(
+            `
+            UPDATE campaigns
+            SET campaign_config = ?, updated_at = ?
+            WHERE id = ? AND user_id = ?
+          `,
+            [configText, new Date(), campaignId, userId]
+          )
+        }
       }
     }
 

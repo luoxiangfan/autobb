@@ -116,12 +116,59 @@ export interface CreateCampaignBackupInput {
  * 查询备份的选项
  */
 export interface CampaignBackupFilters {
-  userId?: number
+  userId: number
   offerId?: number
-  backupSource?: 'autoads' | 'google_ads'
+  backupSource?: 'autoads' | 'google_ads' | 'all'
   backupVersion?: number
+  startDate?: string
+  endDate?: string
   limit?: number
   offset?: number
+  /** 关联 offers 表，返回 offer_name / brand（列表 API 使用） */
+  withOfferInfo?: boolean
+}
+
+/** 列表 API / 页面使用的备份行（snake_case，含 JSON 已解析字段） */
+export interface CampaignBackupListItem {
+  id: number
+  user_id: number
+  offer_id: number
+  ad_creative_id: number | null
+  campaign_data: unknown
+  campaign_config: unknown | null
+  backup_type: string
+  backup_source: string
+  backup_version: number
+  custom_name: string | null
+  campaign_name: string
+  budget_amount: number
+  budget_type: string
+  created_at: string
+  updated_at: string
+  offer_name?: string | null
+  brand?: string | null
+}
+
+function mapRowToCampaignBackupListItem(row: Record<string, unknown>): CampaignBackupListItem {
+  return {
+    id: row.id as number,
+    user_id: row.user_id as number,
+    offer_id: row.offer_id as number,
+    ad_creative_id: (row.ad_creative_id as number | null) ?? null,
+    campaign_data: parseCampaignBackupJsonField(row.campaign_data) ?? {},
+    campaign_config: parseCampaignBackupJsonField(row.campaign_config),
+    backup_type: row.backup_type as string,
+    backup_source: row.backup_source as string,
+    backup_version: row.backup_version as number,
+    custom_name: (row.custom_name as string | null) ?? null,
+    campaign_name: row.campaign_name as string,
+    budget_amount: row.budget_amount as number,
+    budget_type: row.budget_type as string,
+    created_at: String(row.created_at),
+    updated_at: String(row.updated_at),
+    ...(row.offer_name !== undefined ? { offer_name: row.offer_name as string | null } : {}),
+    ...(row.brand !== undefined ? { brand: row.brand as string | null } : {}),
+  }
 }
 
 /**
@@ -188,57 +235,99 @@ export async function getCampaignBackupById(id: number, userId: number): Promise
 }
 
 /**
- * 查询备份列表
+ * 查询备份列表（分页、筛选；可选关联 Offer）
  */
 export async function listCampaignBackups(
   filters: CampaignBackupFilters
-): Promise<{ backups: CampaignBackup[]; total: number }> {
+): Promise<{
+  backups: CampaignBackupListItem[]
+  total: number
+  limit: number
+  offset: number
+}> {
   const db = await getDatabase()
-  const whereConditions: string[] = []
-  const params: any[] = []
+  const p = filters.withOfferInfo ? 'cb.' : ''
+  const fromClause = filters.withOfferInfo
+    ? 'campaign_backups cb LEFT JOIN offers o ON cb.offer_id = o.id'
+    : 'campaign_backups'
 
-  if (filters.userId !== undefined) {
-    whereConditions.push('user_id = ?')
-    params.push(filters.userId)
-  }
+  const whereConditions: string[] = [`${p}user_id = ?`]
+  const params: unknown[] = [filters.userId]
 
   if (filters.offerId !== undefined) {
-    whereConditions.push('offer_id = ?')
+    whereConditions.push(`${p}offer_id = ?`)
     params.push(filters.offerId)
   }
 
+  if (filters.startDate) {
+    whereConditions.push(`${p}created_at >= ?`)
+    params.push(`${filters.startDate} 00:00:00.000`)
+  }
+  if (filters.endDate) {
+    whereConditions.push(`${p}created_at <= ?`)
+    params.push(`${filters.endDate} 23:59:59.999`)
+  }
+
   if (filters.backupSource === 'autoads') {
-    whereConditions.push("(backup_source = 'autoads' OR backup_source = 'publish')")
+    whereConditions.push(`(${p}backup_source = 'autoads' OR ${p}backup_source = 'publish')`)
   } else if (filters.backupSource === 'google_ads') {
-    whereConditions.push('backup_source = ?')
+    whereConditions.push(`${p}backup_source = ?`)
     params.push('google_ads')
   }
 
   if (filters.backupVersion !== undefined) {
-    whereConditions.push('backup_version = ?')
+    whereConditions.push(`${p}backup_version = ?`)
     params.push(filters.backupVersion)
   }
 
-  const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
+  const whereClause = `WHERE ${whereConditions.join(' AND ')}`
+  const limit = filters.limit ?? 20
+  const offset = filters.offset ?? 0
 
-  // 查询总数
-  const countQuery = `SELECT COUNT(*) as count FROM campaign_backups ${whereClause}`
-  const countResult = await db.queryOne<{ count: number }>(countQuery, params)
-  const total = countResult?.count || 0
+  const countResult = await db.queryOne<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM ${fromClause} ${whereClause}`,
+    params
+  )
+  const total = countResult?.count ?? 0
 
-  // 查询列表
-  const limit = filters.limit || 20
-  const offset = filters.offset || 0
-  const listQuery = `
-    SELECT * FROM campaign_backups ${whereClause}
-    ORDER BY created_at DESC
+  const selectColumns = filters.withOfferInfo
+    ? `
+        cb.id,
+        cb.user_id,
+        cb.offer_id,
+        cb.ad_creative_id,
+        cb.campaign_data,
+        cb.campaign_config,
+        cb.backup_type,
+        cb.backup_source,
+        cb.backup_version,
+        cb.custom_name,
+        cb.campaign_name,
+        cb.budget_amount,
+        cb.budget_type,
+        cb.created_at,
+        cb.updated_at,
+        o.offer_name,
+        o.brand
+      `
+    : '*'
+
+  const rows = (await db.query(
+    `
+    SELECT ${selectColumns}
+    FROM ${fromClause}
+    ${whereClause}
+    ORDER BY ${p}created_at DESC
     LIMIT ? OFFSET ?
-  `
+  `,
+    [...params, limit, offset]
+  )) as Record<string, unknown>[]
 
-  const backups = await db.query(listQuery, [...params, limit, offset]) as any[]
   return {
-    backups: backups.map(parseCampaignBackup),
+    backups: rows.map(mapRowToCampaignBackupListItem),
     total,
+    limit,
+    offset,
   }
 }
 
@@ -575,6 +664,7 @@ export async function autoBackupCampaign(params: {
   }
 
   if (await hasAutoadsLikeBackupForOffer(campaign.offer_id, params.userId)) {
+    await pruneCampaignBackupsForOffer(campaign.offer_id, params.userId)
     console.log('[Auto Backup] Skip update: autoads backup is immutable after creation:', params.campaignId)
     return
   }
@@ -610,6 +700,7 @@ export async function autoBackupCampaign(params: {
   }
 
   if (googleBackup.backup_version >= 2) {
+    await pruneCampaignBackupsForOffer(campaign.offer_id, params.userId)
     console.log('[Auto Backup] Skip update: google_ads backup already upgraded to version 2:', params.campaignId)
     return
   }
@@ -628,6 +719,7 @@ export async function autoBackupCampaign(params: {
   const hasReachedDay7 = Number.isFinite(createdAtMs) && elapsedMs >= sevenDaysMs
 
   if (!hasReachedDay7) {
+    await pruneCampaignBackupsForOffer(campaign.offer_id, params.userId)
     console.log('[Auto Backup] Skip update: google_ads backup has not reached day 7 yet:', params.campaignId)
     return
   }

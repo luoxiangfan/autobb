@@ -58,6 +58,9 @@ export async function executeCampaignBatchCreate(
     const createdCampaigns: Array<{ backupId: number; campaignId: number }> = []
 
     for (const backupId of backupIds) {
+      let pendingCampaignId: number | undefined
+      let pendingOfferId: number | undefined
+
       try {
         const row = await db.queryOne(
           `SELECT * FROM campaign_backups WHERE id = ? AND user_id = ?`,
@@ -71,6 +74,7 @@ export async function executeCampaignBatchCreate(
         }
 
         const backup = parseCampaignBackup(row)
+        pendingOfferId = backup.offerId
 
         const dbDetail = await createCampaignRowFromBackup({
           backup,
@@ -88,6 +92,8 @@ export async function executeCampaignBatchCreate(
           )
           continue
         }
+
+        pendingCampaignId = dbDetail.campaignId
 
         const publishDetail = await enqueueCampaignPublishFromBackup({
           backup,
@@ -107,9 +113,11 @@ export async function executeCampaignBatchCreate(
             userId: task.userId,
             reason: publishDetail.error,
           })
+          pendingCampaignId = undefined
         } else {
           completed++
           createdCampaigns.push({ backupId, campaignId: dbDetail.campaignId })
+          pendingCampaignId = undefined
           if (publishDetail.warning) {
             warnings.push({ backupId, message: publishDetail.warning })
           }
@@ -127,6 +135,14 @@ export async function executeCampaignBatchCreate(
           [completed, failed, batchId]
         )
       } catch (error: any) {
+        if (pendingCampaignId && pendingOfferId) {
+          await rollbackPendingCampaignAfterEnqueueFailure({
+            campaignId: pendingCampaignId,
+            offerId: pendingOfferId,
+            userId: task.userId,
+            reason: error?.message || '批量创建发生意外错误',
+          })
+        }
         failed++
         errors.push({ backupId, error: error.message })
         console.error(`❌ 创建失败：backupId=${backupId}:`, error.message)
