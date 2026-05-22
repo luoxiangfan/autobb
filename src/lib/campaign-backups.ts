@@ -18,13 +18,19 @@ export function isAutoadsLikeBackupSource(source: string): boolean {
   return source === 'autoads' || source === 'publish'
 }
 
-/** campaign_backups JSON 列：SQLite TEXT，PostgreSQL JSONB */
+/**
+ * campaign_backups.campaign_data / campaign_config：
+ * SQLite TEXT，PostgreSQL JSONB。
+ */
 export function toDbCampaignBackupJsonField(
   value: unknown,
   dbType: DatabaseType
 ): unknown {
   return toDbJsonObjectField(value, dbType, null)
 }
+
+/** campaigns.campaign_config：SQLite / PostgreSQL 均为 TEXT */
+export { toDbJsonTextField as toDbCampaignConfigTextField } from './json-field'
 
 function parseCampaignBackupJsonField(value: unknown): unknown | null {
   if (value == null) return null

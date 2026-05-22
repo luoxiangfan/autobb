@@ -76,6 +76,20 @@ export function toDbJsonField(value: unknown, dbType: DatabaseType): unknown {
 }
 
 /**
+ * TEXT 列 JSON 字段（如 campaigns.campaign_config）：
+ * SQLite / PostgreSQL 均存 JSON 字符串。
+ */
+export function toDbJsonTextField(value: unknown): string | null {
+  if (value === undefined || value === null) return null
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return null
+    return value
+  }
+  return JSON.stringify(value)
+}
+
+/**
  * JSONB 结构化字段专用：
  * PostgreSQL 下强制仅允许对象/数组，避免写入 jsonb string。
  */

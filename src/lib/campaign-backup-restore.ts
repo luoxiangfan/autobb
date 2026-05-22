@@ -7,6 +7,7 @@ import { getInsertedId } from './db-helpers'
 import {
   backupHasCampaignConfig,
   toDbCampaignBackupJsonField,
+  toDbCampaignConfigTextField,
   type CampaignBackup,
 } from './campaign-backups'
 import { generateNamingScheme } from './naming-convention'
@@ -211,7 +212,7 @@ export async function createCampaignRowFromBackup(params: {
         campaignData?.target_cpa ?? backup.targetCpa,
         campaignData?.max_cpc ?? backup.maxCpc,
         adCreativeId,
-        toDbCampaignBackupJsonField(campaignConfig, db.type),
+        toDbCampaignConfigTextField(campaignConfig),
         'PAUSED',
         'pending',
         new Date(),
