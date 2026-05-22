@@ -6,6 +6,7 @@ import {
   getOfferTasksMenuLabel,
   isCampaignEnabled,
   resolveOfferTasksToggleAction,
+  shouldShowIndividualOfferTaskMenuItems,
   shouldShowOfferTasksMenuItem,
   urlSwapTaskNeedsPause,
   urlSwapTaskNeedsStart,
@@ -40,6 +41,17 @@ describe('getOfferTasksMenuLabel', () => {
   it('returns action-specific labels', () => {
     expect(getOfferTasksMenuLabel('pause')).toBe('暂停关联 Offer 任务')
     expect(getOfferTasksMenuLabel('start')).toBe('开启关联 Offer 任务')
+  })
+})
+
+describe('shouldShowIndividualOfferTaskMenuItems', () => {
+  it('hides CLK/URL entries when campaign is paused', () => {
+    expect(shouldShowIndividualOfferTaskMenuItems('PAUSED')).toBe(false)
+    expect(shouldShowIndividualOfferTaskMenuItems('paused')).toBe(false)
+  })
+
+  it('shows CLK/URL entries when campaign is enabled', () => {
+    expect(shouldShowIndividualOfferTaskMenuItems('ENABLED')).toBe(true)
   })
 })
 

@@ -79,6 +79,7 @@ import {
   getOfferTasksMenuLabel,
   isCampaignEnabled,
   resolveOfferTasksToggleAction,
+  shouldShowIndividualOfferTaskMenuItems,
   shouldShowOfferTasksMenuItem,
   type OfferTasksToggleAction,
 } from '@/lib/offer-tasks-toggle'
@@ -4449,68 +4450,73 @@ export default function CampaignsClientPage({
                                 <span>删除草稿</span>
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem
-                              className='gap-2'
-                              title='补点击任务'
-                              disabled={clickFarmLoading}
-                              onClick={
-                                async () => {
-                                  setClickFarmLoading(true)
-                                  try {
-                                    const { resolveClickFarmTaskMode } = await import('../offers/task-modal-helpers')
-                                    const { editTaskId, infoMessage } = await resolveClickFarmTaskMode(campaign.offerId)
-                                    setSelectedOfferForClickFarm(campaign)
-                                    setEditTaskIdForClickFarm(editTaskId)
-                                    if (infoMessage) {
-                                      showInfo(infoMessage)
+                            {shouldShowIndividualOfferTaskMenuItems(campaign.status)
+                              && campaignHasBoundOffer(campaign.offerId) && (
+                              <>
+                                <DropdownMenuItem
+                                  className='gap-2'
+                                  title='补点击任务'
+                                  disabled={clickFarmLoading}
+                                  onClick={
+                                    async () => {
+                                      setClickFarmLoading(true)
+                                      try {
+                                        const { resolveClickFarmTaskMode } = await import('../offers/task-modal-helpers')
+                                        const { editTaskId, infoMessage } = await resolveClickFarmTaskMode(campaign.offerId)
+                                        setSelectedOfferForClickFarm(campaign)
+                                        setEditTaskIdForClickFarm(editTaskId)
+                                        if (infoMessage) {
+                                          showInfo(infoMessage)
+                                        }
+                                        setIsClickFarmModalOpen(true)
+                                      } catch (error) {
+                                        console.error('查询补点击任务出错:', error)
+                                        setSelectedOfferForClickFarm(campaign)
+                                        setEditTaskIdForClickFarm(undefined)
+                                        setIsClickFarmModalOpen(true)
+                                      } finally {
+                                        setClickFarmLoading(false)
+                                      }
                                     }
-                                    setIsClickFarmModalOpen(true)
-                                  } catch (error) {
-                                    console.error('查询补点击任务出错:', error)
-                                    setSelectedOfferForClickFarm(campaign)
-                                    setEditTaskIdForClickFarm(undefined)
-                                    setIsClickFarmModalOpen(true)
-                                  } finally {
-                                    setClickFarmLoading(false)
                                   }
-                                }
-                              }
-                            >
-                              <span className="text-[10px] font-semibold text-gray-500">CLK</span>
-                              <span>补点击任务</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className='gap-2'
-                              title='换链接任务'
-                              disabled={urlSwapLoading || !campaign.adsAccountAvailable}
-                              onClick={
-                                async () => {
-                                  setUrlSwapLoading(true)
-                                  try {
-                                    const { resolveUrlSwapTaskMode } = await import('../offers/task-modal-helpers')
-                                    const { editTaskId, infoMessage } = await resolveUrlSwapTaskMode(campaign.offerId)
-                                    setSelectedOfferForUrlSwap(campaign)
-                                    setEditTaskIdForUrlSwap(
-                                      editTaskId === undefined ? undefined : String(editTaskId)
-                                    )
-                                    if (infoMessage) {
-                                      showInfo(infoMessage)
+                                >
+                                  <span className="text-[10px] font-semibold text-gray-500">CLK</span>
+                                  <span>补点击任务</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className='gap-2'
+                                  title='换链接任务'
+                                  disabled={urlSwapLoading || !campaign.adsAccountAvailable}
+                                  onClick={
+                                    async () => {
+                                      setUrlSwapLoading(true)
+                                      try {
+                                        const { resolveUrlSwapTaskMode } = await import('../offers/task-modal-helpers')
+                                        const { editTaskId, infoMessage } = await resolveUrlSwapTaskMode(campaign.offerId)
+                                        setSelectedOfferForUrlSwap(campaign)
+                                        setEditTaskIdForUrlSwap(
+                                          editTaskId === undefined ? undefined : String(editTaskId)
+                                        )
+                                        if (infoMessage) {
+                                          showInfo(infoMessage)
+                                        }
+                                        setIsUrlSwapModalOpen(true)
+                                      } catch (error) {
+                                        console.error('查询换链接任务出错:', error)
+                                        setSelectedOfferForUrlSwap(campaign)
+                                        setEditTaskIdForUrlSwap(undefined)
+                                        setIsUrlSwapModalOpen(true)
+                                      } finally {
+                                        setUrlSwapLoading(false)
+                                      }
                                     }
-                                    setIsUrlSwapModalOpen(true)
-                                  } catch (error) {
-                                    console.error('查询换链接任务出错:', error)
-                                    setSelectedOfferForUrlSwap(campaign)
-                                    setEditTaskIdForUrlSwap(undefined)
-                                    setIsUrlSwapModalOpen(true)
-                                  } finally {
-                                    setUrlSwapLoading(false)
                                   }
-                                }
-                              }
-                            >
-                              <span className="text-[10px] font-semibold text-gray-500">URL</span>
-                              <span>换链接任务</span>
-                            </DropdownMenuItem>
+                                >
+                                  <span className="text-[10px] font-semibold text-gray-500">URL</span>
+                                  <span>换链接任务</span>
+                                </DropdownMenuItem>
+                              </>
+                            )}
                             {(() => {
                               const offerTasksAction = resolveOfferTasksToggleAction(
                                 campaign.clickFarmTaskStatus,
