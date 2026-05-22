@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const mockQuery = vi.fn()
 const mockQueryOne = vi.fn()
 const mockExec = vi.fn()
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
     type: 'sqlite',
+    query: mockQuery,
     queryOne: mockQueryOne,
     exec: mockExec,
   })),
@@ -13,9 +15,11 @@ vi.mock('@/lib/db', () => ({
 
 import {
   abandonStalePendingCampaignsForOffer,
+  abandonStalePendingCampaignsForOffers,
   assertNoActiveCampaignForOffer,
   CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,
   getActiveCampaignConflictForOffer,
+  getActiveCampaignConflictsForOffers,
   getStaleUpdatedAtThresholdIso,
   hasActiveCampaignForOffer,
   offerOccupyingCampaignFilterSql,
@@ -25,6 +29,7 @@ import {
 
 describe('campaign-offer-constraint', () => {
   beforeEach(() => {
+    mockQuery.mockReset()
     mockQueryOne.mockReset()
     mockExec.mockReset()
   })
@@ -85,6 +90,51 @@ describe('campaign-offer-constraint', () => {
       expect.stringContaining("updated_at < ?"),
       expect.arrayContaining([expect.any(String), 10, 7, expect.any(String)])
     )
+  })
+
+  it('abandons stale pending campaigns for multiple offers in one update', async () => {
+    mockExec.mockResolvedValueOnce({ changes: 3 })
+    await expect(abandonStalePendingCampaignsForOffers([10, 11, 10], 7)).resolves.toBe(3)
+    const sql = String(mockExec.mock.calls[0]?.[0] || '')
+    expect(sql).toContain('offer_id IN (?, ?)')
+    expect(mockExec.mock.calls[0]?.[1]).toEqual(
+      expect.arrayContaining([expect.any(String), 7, 10, 11, expect.any(String)])
+    )
+  })
+
+  it('returns occupying campaigns per offer in one query', async () => {
+    mockQuery.mockResolvedValueOnce([
+      {
+        id: 42,
+        offer_id: 10,
+        campaign_name: 'C10',
+        creation_status: 'published',
+        status: 'PAUSED',
+      },
+      {
+        id: 99,
+        offer_id: 11,
+        campaign_name: 'C11',
+        creation_status: 'pending',
+        status: 'PAUSED',
+      },
+      {
+        id: 1,
+        offer_id: 10,
+        campaign_name: 'Older',
+        creation_status: 'published',
+        status: 'PAUSED',
+      },
+    ])
+
+    const map = await getActiveCampaignConflictsForOffers([10, 11], 7)
+    expect(map.size).toBe(2)
+    expect(map.get(10)).toMatchObject({ id: 42, campaign_name: 'C10' })
+    expect(map.get(11)).toMatchObject({ id: 99 })
+    expect(mockQuery).toHaveBeenCalledTimes(1)
+    const sql = String(mockQuery.mock.calls[0]?.[0] || '')
+    expect(sql).toContain('offer_id IN (?, ?)')
+    expect(sql).toContain('ORDER BY offer_id ASC, updated_at DESC')
   })
 
   it('throws the canonical message when asserting on a occupied offer', async () => {

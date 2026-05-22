@@ -11,17 +11,17 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-const mockAbandonStale = vi.fn()
-const mockGetConflict = vi.fn()
+const mockAbandonStaleForOffers = vi.fn()
+const mockGetConflictsForOffers = vi.fn()
 
 vi.mock('@/lib/campaign-offer-constraint', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/campaign-offer-constraint')>()
   return {
     ...actual,
-    abandonStalePendingCampaignsForOffer: (...args: unknown[]) =>
-      mockAbandonStale(...args),
-    getActiveCampaignConflictForOffer: (...args: unknown[]) =>
-      mockGetConflict(...args),
+    abandonStalePendingCampaignsForOffers: (...args: unknown[]) =>
+      mockAbandonStaleForOffers(...args),
+    getActiveCampaignConflictsForOffers: (...args: unknown[]) =>
+      mockGetConflictsForOffers(...args),
   }
 })
 
@@ -34,9 +34,10 @@ describe('validateCampaignBackupsForBatchCreate', () => {
   beforeEach(() => {
     mockQuery.mockReset()
     mockQueryOne.mockReset()
-    mockAbandonStale.mockReset()
-    mockGetConflict.mockReset()
-    mockAbandonStale.mockResolvedValue(0)
+    mockAbandonStaleForOffers.mockReset()
+    mockGetConflictsForOffers.mockReset()
+    mockAbandonStaleForOffers.mockResolvedValue(0)
+    mockGetConflictsForOffers.mockResolvedValue(new Map())
     mockQueryOne.mockResolvedValue({ is_active: 1, is_deleted: 0 })
   })
 
@@ -49,12 +50,19 @@ describe('validateCampaignBackupsForBatchCreate', () => {
         campaign_config: { keywords: [] },
       },
     ])
-    mockGetConflict.mockResolvedValueOnce({
-      id: 501,
-      campaign_name: 'Live Campaign',
-      creation_status: 'published',
-      status: 'PAUSED',
-    })
+    mockGetConflictsForOffers.mockResolvedValueOnce(
+      new Map([
+        [
+          99,
+          {
+            id: 501,
+            campaign_name: 'Live Campaign',
+            creation_status: 'published',
+            status: 'PAUSED',
+          },
+        ],
+      ])
+    )
 
     const result = await validateCampaignBackupsForBatchCreate([10], 7, 1)
     expect(result.ok).toBe(false)
@@ -63,7 +71,9 @@ describe('validateCampaignBackupsForBatchCreate', () => {
       expect(result.error).toContain('Offer 99')
       expect(result.error).toContain('501')
     }
-    expect(mockAbandonStale).toHaveBeenCalledWith(99, 7)
+    expect(mockAbandonStaleForOffers).toHaveBeenCalledTimes(1)
+    expect(mockAbandonStaleForOffers).toHaveBeenCalledWith([99], 7)
+    expect(mockGetConflictsForOffers).toHaveBeenCalledWith([99], 7)
   })
 
   it('rejects when some backup ids are missing', async () => {
@@ -92,9 +102,36 @@ describe('validateCampaignBackupsForBatchCreate', () => {
         campaign_config: { keywords: [] },
       },
     ])
-    mockGetConflict.mockResolvedValueOnce(null)
-
     const result = await validateCampaignBackupsForBatchCreate([10], 7, 1)
     expect(result).toEqual({ ok: true })
+    expect(mockGetConflictsForOffers).toHaveBeenCalledWith([99], 7)
+  })
+
+  it('batch-checks all unique offers in one query round', async () => {
+    mockQuery.mockResolvedValueOnce([
+      {
+        id: 10,
+        offer_id: 99,
+        campaign_name: 'Backup A',
+        campaign_config: { keywords: [] },
+      },
+      {
+        id: 11,
+        offer_id: 100,
+        campaign_name: 'Backup B',
+        campaign_config: { keywords: [] },
+      },
+    ])
+
+    const result = await validateCampaignBackupsForBatchCreate([10, 11], 7, 1)
+    expect(result).toEqual({ ok: true })
+    expect(mockAbandonStaleForOffers).toHaveBeenCalledWith(
+      expect.arrayContaining([99, 100]),
+      7
+    )
+    expect(mockGetConflictsForOffers).toHaveBeenCalledWith(
+      expect.arrayContaining([99, 100]),
+      7
+    )
   })
 })

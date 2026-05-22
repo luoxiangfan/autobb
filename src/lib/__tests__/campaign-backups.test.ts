@@ -431,8 +431,54 @@ describe('trySyncCampaignBackupAfterPublish', () => {
     expect(mockExec).toHaveBeenCalled()
   })
 
-  it('no-ops when no backup exists for offer', async () => {
-    mockQueryOne.mockResolvedValueOnce(undefined)
+  it('creates backup when none exists after successful publish', async () => {
+    const campaignRow = {
+      id: 50,
+      user_id: 7,
+      offer_id: 9,
+      campaign_id: 'google-1',
+      google_campaign_id: 'google-1',
+      google_ads_account_id: 3,
+      campaign_name: 'Published',
+      budget_amount: 20,
+      budget_type: 'DAILY',
+      max_cpc: 1.5,
+      target_cpa: null,
+      status: 'PAUSED',
+      custom_name: null,
+      ad_creative_id: 11,
+      campaign_config: { budgetAmount: 20, maxCpcBid: 1.5 },
+    }
+    const createdBackupRow = {
+      id: 300,
+      user_id: 7,
+      offer_id: 9,
+      campaign_data: '{}',
+      campaign_config: { budgetAmount: 20 },
+      backup_type: 'auto',
+      backup_source: 'autoads',
+      backup_version: 1,
+      custom_name: null,
+      campaign_name: 'Published',
+      budget_amount: 20,
+      budget_type: 'DAILY',
+      target_cpa: null,
+      max_cpc: 1.5,
+      status: 'PAUSED',
+      google_ads_account_id: 3,
+      created_at: '2026-01-01',
+      updated_at: '2026-01-02',
+      ad_creative_id: 11,
+    }
+
+    mockQueryOne
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(campaignRow)
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(createdBackupRow)
+
+    mockExec.mockResolvedValue({ changes: 1, lastInsertRowid: 300 })
 
     await trySyncCampaignBackupAfterPublish({
       userId: 7,
@@ -440,7 +486,7 @@ describe('trySyncCampaignBackupAfterPublish', () => {
       offerId: 9,
     })
 
-    expect(mockExec).not.toHaveBeenCalled()
+    expect(String(mockExec.mock.calls[0]?.[0] || '')).toContain('INSERT INTO campaign_backups')
   })
 })
 

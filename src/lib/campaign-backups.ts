@@ -546,7 +546,7 @@ export function getBackupRankOrderSql(dbType: DatabaseType, tableAlias?: string)
 export interface UpsertCampaignBackupAfterPublishInput {
   userId: number
   offerId: number
-  adCreativeId: number
+  adCreativeId?: number | null
   campaignData: Record<string, unknown>
   campaignConfig: unknown
   campaignName: string
@@ -722,15 +722,27 @@ async function updateCampaignBackupSnapshot(
   )
 }
 
-/**
- * 发布成功后回写备份：以 campaigns 表为准，并用 publishedSnapshot 覆盖任务内最终配置。
- */
-export async function syncCampaignBackupAfterPublish(params: {
-  backupId: number
+type PublishedCampaignBackupPayload = {
+  offerId: number
+  adCreativeId: number | null
+  campaignData: Record<string, unknown>
+  campaignConfig: unknown
+  campaignName: string
+  budgetAmount: number
+  budgetType: string
+  targetCpa: number | null
+  maxCpc: number | null
+  status: string
+  googleAdsAccountId: number | null
+  customName: string | null
+}
+
+/** 从已发布 campaign 行 + 任务快照构建备份写入载荷 */
+async function buildPublishedCampaignBackupPayload(params: {
   userId: number
   campaignId: number
   publishedSnapshot?: PublishedCampaignBackupSnapshot
-}): Promise<void> {
+}): Promise<PublishedCampaignBackupPayload | null> {
   const db = await getDatabase()
 
   const campaign = (await db.queryOne(
@@ -744,31 +756,10 @@ export async function syncCampaignBackupAfterPublish(params: {
 
   if (!campaign) {
     console.warn('[Backup Sync] Campaign not found:', params.campaignId)
-    return
-  }
-
-  const backupRow = (await db.queryOne(
-    `
-    SELECT id, offer_id
-    FROM campaign_backups
-    WHERE id = ? AND user_id = ?
-  `,
-    [params.backupId, params.userId]
-  )) as { id: number; offer_id: number } | undefined
-
-  if (!backupRow) {
-    console.warn('[Backup Sync] Backup not found:', params.backupId)
-    return
+    return null
   }
 
   const offerId = campaign.offer_id as number
-  if (backupRow.offer_id !== offerId) {
-    console.warn(
-      `[Backup Sync] Offer mismatch: backup.offer_id=${backupRow.offer_id}, campaign.offer_id=${offerId}`
-    )
-    return
-  }
-
   const snapshot = params.publishedSnapshot
   const campaignConfig = snapshot
     ? mergeCampaignConfigForBackupSync(campaign.campaign_config, snapshot)
@@ -793,9 +784,8 @@ export async function syncCampaignBackupAfterPublish(params: {
       : null
   const scalars = resolveBackupScalarFieldsForSync(campaign, configRecord)
 
-  await updateCampaignBackupSnapshot(db, {
-    backupId: params.backupId,
-    userId: params.userId,
+  return {
+    offerId,
     adCreativeId: resolvedAdCreativeId,
     campaignData: buildCampaignBackupDataFromRow({
       campaign_id: resolvedGoogleCampaignId,
@@ -817,18 +807,75 @@ export async function syncCampaignBackupAfterPublish(params: {
     status: String(campaign.status ?? 'PAUSED'),
     googleAdsAccountId: (campaign.google_ads_account_id as number | null) ?? null,
     customName: (campaign.custom_name as string | null) ?? null,
+  }
+}
+
+/**
+ * 发布成功后回写备份：以 campaigns 表为准，并用 publishedSnapshot 覆盖任务内最终配置。
+ */
+export async function syncCampaignBackupAfterPublish(params: {
+  backupId: number
+  userId: number
+  campaignId: number
+  publishedSnapshot?: PublishedCampaignBackupSnapshot
+}): Promise<void> {
+  const db = await getDatabase()
+  const payload = await buildPublishedCampaignBackupPayload({
+    userId: params.userId,
+    campaignId: params.campaignId,
+    publishedSnapshot: params.publishedSnapshot,
+  })
+  if (!payload) {
+    return
+  }
+
+  const backupRow = (await db.queryOne(
+    `
+    SELECT id, offer_id
+    FROM campaign_backups
+    WHERE id = ? AND user_id = ?
+  `,
+    [params.backupId, params.userId]
+  )) as { id: number; offer_id: number } | undefined
+
+  if (!backupRow) {
+    console.warn('[Backup Sync] Backup not found:', params.backupId)
+    return
+  }
+
+  if (backupRow.offer_id !== payload.offerId) {
+    console.warn(
+      `[Backup Sync] Offer mismatch: backup.offer_id=${backupRow.offer_id}, campaign.offer_id=${payload.offerId}`
+    )
+    return
+  }
+
+  await updateCampaignBackupSnapshot(db, {
+    backupId: params.backupId,
+    userId: params.userId,
+    adCreativeId: payload.adCreativeId,
+    campaignData: payload.campaignData,
+    campaignConfig: payload.campaignConfig,
+    campaignName: payload.campaignName,
+    budgetAmount: payload.budgetAmount,
+    budgetType: payload.budgetType,
+    targetCpa: payload.targetCpa,
+    maxCpc: payload.maxCpc,
+    status: payload.status,
+    googleAdsAccountId: payload.googleAdsAccountId,
+    customName: payload.customName,
     backupSource: 'autoads',
     backupVersion: 1,
   })
 
-  await pruneCampaignBackupsForOffer(offerId, params.userId)
+  await pruneCampaignBackupsForOffer(payload.offerId, params.userId)
   console.log(
     `[Backup Sync] Updated backup id=${params.backupId} from published campaign id=${params.campaignId}`
   )
 }
 
 /**
- * 发布成功后尝试回写备份：优先 sourceBackupId，否则查找该 Offer 的唯一条备份。
+ * 发布成功后回写备份（失败路径不调用）：更新已有备份，或首次成功发布时创建。
  */
 export async function trySyncCampaignBackupAfterPublish(params: {
   userId: number
@@ -846,20 +893,53 @@ export async function trySyncCampaignBackupAfterPublish(params: {
     backupId = await findCampaignBackupIdForOffer(params.offerId, params.userId)
   }
 
-  if (backupId == null) {
-    return
-  }
-
   try {
-    await syncCampaignBackupAfterPublish({
-      backupId,
+    if (backupId != null) {
+      await syncCampaignBackupAfterPublish({
+        backupId,
+        userId: params.userId,
+        campaignId: params.campaignId,
+        publishedSnapshot: params.publishedSnapshot,
+      })
+      return
+    }
+
+    const payload = await buildPublishedCampaignBackupPayload({
       userId: params.userId,
       campaignId: params.campaignId,
       publishedSnapshot: params.publishedSnapshot,
     })
+    if (!payload) {
+      return
+    }
+    if (payload.offerId !== params.offerId) {
+      console.warn(
+        `[Backup Sync] Offer mismatch: task.offerId=${params.offerId}, campaign.offer_id=${payload.offerId}`
+      )
+      return
+    }
+
+    await upsertCampaignBackupAfterPublish({
+      userId: params.userId,
+      offerId: payload.offerId,
+      adCreativeId: payload.adCreativeId,
+      campaignData: payload.campaignData,
+      campaignConfig: payload.campaignConfig,
+      campaignName: payload.campaignName,
+      budgetAmount: payload.budgetAmount,
+      budgetType: payload.budgetType,
+      targetCpa: payload.targetCpa,
+      maxCpc: payload.maxCpc,
+      googleAdsAccountId: payload.googleAdsAccountId,
+      customName: payload.customName,
+      status: payload.status,
+    })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
-    console.warn(`[Backup Sync] Failed after publish backupId=${backupId}:`, message)
+    console.warn(
+      `[Backup Sync] Failed after publish backupId=${backupId ?? 'new'}:`,
+      message
+    )
   }
 }
 
@@ -874,7 +954,7 @@ export async function upsertCampaignBackupAfterPublish(
     await updateCampaignBackupSnapshot(db, {
       backupId: existingBackupId,
       userId: input.userId,
-      adCreativeId: input.adCreativeId,
+      adCreativeId: input.adCreativeId ?? null,
       campaignData: input.campaignData,
       campaignConfig: input.campaignConfig,
       campaignName: input.campaignName,

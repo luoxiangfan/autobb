@@ -45,7 +45,6 @@ import {
   isCampaignOfferUniqueViolation,
   rollbackPendingCampaignAfterEnqueueFailure,
 } from '@/lib/campaign-offer-constraint'
-import { upsertCampaignBackupAfterPublish } from '@/lib/campaign-backups'
 import {
   findResumablePublishCampaignForOffer,
   reactivateCampaignForPublishResume,
@@ -1245,37 +1244,6 @@ export async function POST(request: NextRequest) {
         }, { status: 409 })
       }
       throw insertError
-    }
-
-    try {
-      await upsertCampaignBackupAfterPublish({
-        userId,
-        offerId: _offerId,
-        adCreativeId: selectedCreative.id,
-        campaignData: {
-          campaign_id: campaignId,
-          offer_id: _offerId,
-          google_ads_account_id: resolvedGoogleAdsAccountId,
-          campaign_name: publishNaming.associativeCampaignName || publishNaming.campaignName,
-          budget_amount: _campaignConfig.budgetAmount,
-          budget_type: normalizedBudgetType,
-          max_cpc: persistedMaxCpc,
-          target_cpa: null,
-          status: 'PAUSED',
-        },
-        campaignConfig: primaryCampaignConfig,
-        campaignName: publishNaming.associativeCampaignName || publishNaming.campaignName,
-        budgetAmount: _campaignConfig.budgetAmount,
-        budgetType: normalizedBudgetType,
-        maxCpc: persistedMaxCpc,
-        targetCpa: null,
-        googleAdsAccountId: resolvedGoogleAdsAccountId,
-        customName: null,
-        status: 'PAUSED',
-      })
-      console.log(`📦 已更新 Campaign 备份 campaignId=${campaignId}, creativeId=${selectedCreative.id}`)
-    } catch (backupError) {
-      console.error('[Publish] 更新备份失败:', backupError)
     }
 
     const effectiveCreativeForTask = buildEffectiveCreative({

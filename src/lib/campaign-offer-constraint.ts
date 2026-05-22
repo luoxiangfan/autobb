@@ -157,6 +157,104 @@ export async function abandonStalePendingCampaignsForOffer(
 }
 
 /**
+ * 批量放弃多个 Offer 的超时 pending campaign（单次 UPDATE）。
+ */
+export async function abandonStalePendingCampaignsForOffers(
+  offerIds: number[],
+  userId: number
+): Promise<number> {
+  const uniqueOfferIds = [...new Set(offerIds)].filter((id) => Number.isInteger(id) && id > 0)
+  if (uniqueOfferIds.length === 0) {
+    return 0
+  }
+
+  const staleThresholdIso = getStaleUpdatedAtThresholdIso()
+  if (!staleThresholdIso) {
+    return 0
+  }
+
+  const db = await getDatabase()
+  const isDeletedCheck = activeCampaignNotDeletedSql(db.type)
+  const nowExpr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const isDeletedSet = db.type === 'postgres' ? 'TRUE' : '1'
+  const placeholders = uniqueOfferIds.map(() => '?').join(', ')
+
+  const result = await db.exec(
+    `
+    UPDATE campaigns
+    SET
+      is_deleted = ${isDeletedSet},
+      deleted_at = ${nowExpr},
+      creation_status = 'failed',
+      creation_error = ?,
+      status = 'REMOVED',
+      removed_reason = 'stale_pending_abandon',
+      updated_at = ${nowExpr}
+    WHERE user_id = ?
+      AND offer_id IN (${placeholders})
+      AND creation_status = 'pending'
+      AND ${isDeletedCheck}
+      AND updated_at < ?
+  `,
+    [STALE_PENDING_ABANDON_REASON, userId, ...uniqueOfferIds, staleThresholdIso]
+  )
+
+  const abandoned = result.changes || 0
+  if (abandoned > 0) {
+    console.log(
+      `[CampaignOfferConstraint] 已批量放弃 ${abandoned} 条超时 pending campaign（offers=${uniqueOfferIds.length}，阈值=${getStalePendingMinutes()}min）`
+    )
+  }
+
+  return abandoned
+}
+
+type ActiveCampaignConflictRow = ActiveCampaignConflict & { offer_id: number }
+
+/**
+ * 批量查询仍占用 Offer 的 campaign（每个 offer_id 至多一条，取 updated_at 最新）。
+ */
+export async function getActiveCampaignConflictsForOffers(
+  offerIds: number[],
+  userId: number
+): Promise<Map<number, ActiveCampaignConflict>> {
+  const uniqueOfferIds = [...new Set(offerIds)].filter((id) => Number.isInteger(id) && id > 0)
+  const conflicts = new Map<number, ActiveCampaignConflict>()
+  if (uniqueOfferIds.length === 0) {
+    return conflicts
+  }
+
+  const db = await getDatabase()
+  const placeholders = uniqueOfferIds.map(() => '?').join(', ')
+  const occupyingFilter = offerOccupyingCampaignFilterSql(db.type, undefined)
+
+  const rows = (await db.query(
+    `
+    SELECT id, offer_id, campaign_name, creation_status, status
+    FROM campaigns
+    WHERE user_id = ?
+      AND offer_id IN (${placeholders})
+      AND ${occupyingFilter}
+    ORDER BY offer_id ASC, updated_at DESC, id DESC
+  `,
+    [userId, ...uniqueOfferIds]
+  )) as ActiveCampaignConflictRow[]
+
+  for (const row of rows) {
+    if (!conflicts.has(row.offer_id)) {
+      conflicts.set(row.offer_id, {
+        id: row.id,
+        campaign_name: row.campaign_name,
+        creation_status: row.creation_status,
+        status: row.status,
+      })
+    }
+  }
+
+  return conflicts
+}
+
+/**
  * Offer ↔ Campaign 严格一对一：返回仍占用该 Offer 的 campaign（若有）。
  */
 export async function getActiveCampaignConflictForOffer(

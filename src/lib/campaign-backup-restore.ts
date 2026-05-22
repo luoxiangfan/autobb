@@ -15,9 +15,9 @@ import { buildEffectiveCreative } from './campaign-publish/effective-creative'
 import { resolveTaskCampaignKeywords } from './campaign-publish/task-keyword-fallback'
 import { regenerateAdCreative } from './ad-creative-regenerator'
 import {
-  abandonStalePendingCampaignsForOffer,
+  abandonStalePendingCampaignsForOffers,
   CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,
-  getActiveCampaignConflictForOffer,
+  getActiveCampaignConflictsForOffers,
   isCampaignOfferUniqueViolation,
   type ActiveCampaignConflict,
 } from './campaign-offer-constraint'
@@ -133,19 +133,17 @@ export async function validateCampaignBackupsForBatchCreate(
   }
 
   const uniqueOfferIds = [...new Set(rows.map((row) => row.offer_id))]
+  await abandonStalePendingCampaignsForOffers(uniqueOfferIds, userId)
+  const conflictsByOffer = await getActiveCampaignConflictsForOffers(uniqueOfferIds, userId)
+
   const blockedByCampaign: Array<{ offerId: number; backupIds: number[]; conflict: ActiveCampaignConflict }> =
     []
-
-  for (const offerId of uniqueOfferIds) {
-    await abandonStalePendingCampaignsForOffer(offerId, userId)
-    const conflict = await getActiveCampaignConflictForOffer(offerId, userId)
-    if (conflict) {
-      blockedByCampaign.push({
-        offerId,
-        backupIds: offerToBackupIds.get(offerId) ?? [],
-        conflict,
-      })
-    }
+  for (const [offerId, conflict] of conflictsByOffer) {
+    blockedByCampaign.push({
+      offerId,
+      backupIds: offerToBackupIds.get(offerId) ?? [],
+      conflict,
+    })
   }
 
   if (blockedByCampaign.length > 0) {
@@ -206,8 +204,9 @@ export async function createCampaignRowFromBackup(params: {
   const offerId = backup.offerId
 
   try {
-    await abandonStalePendingCampaignsForOffer(offerId, userId)
-    const existingCampaign = await getActiveCampaignConflictForOffer(offerId, userId)
+    await abandonStalePendingCampaignsForOffers([offerId], userId)
+    const existingCampaign =
+      (await getActiveCampaignConflictsForOffers([offerId], userId)).get(offerId) ?? null
 
     if (existingCampaign) {
       return {
