@@ -73,7 +73,9 @@ vi.mock('@/lib/google-ads-api', () => ({
 
 const oauthFns = vi.hoisted(() => ({
   getGoogleAdsCredentials: vi.fn(async () => null),
-  getUserAuthType: vi.fn(async () => ({ authType: 'oauth' as const })),
+  getUserAuthType: vi.fn(async (): Promise<{ authType: 'oauth' | 'service_account'; serviceAccountId?: string }> => ({
+    authType: 'oauth',
+  })),
 }))
 
 vi.mock('@/lib/google-ads-oauth', () => ({
