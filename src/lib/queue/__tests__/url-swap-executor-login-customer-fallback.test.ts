@@ -12,9 +12,15 @@ vi.mock('@/lib/offer-utils', () => ({
   initializeProxyPool: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getGoogleAdsCredentials: vi.fn(),
-  getUserAuthType: vi.fn(),
+vi.mock('@/lib/user-execution-eligibility', () => ({
+  assertUserExecutionAllowed: vi.fn(),
+}))
+
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  getGoogleAdsAuthContext: vi.fn(),
+  hasConfiguredGoogleAdsAuthFromContext: vi.fn(),
+  resolveGoogleAdsApiAuthFromContext: vi.fn(),
+  resolveOAuthInvalidGrantFallbackServiceAccountId: vi.fn(),
 }))
 
 vi.mock('@/lib/google-ads-api', () => ({
@@ -34,8 +40,13 @@ vi.mock('@/lib/url-swap', () => ({
 import { getDatabase } from '@/lib/db'
 import { resolveAffiliateLink } from '@/lib/url-resolver-enhanced'
 import { initializeProxyPool } from '@/lib/offer-utils'
-import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
 import { updateCampaignFinalUrlSuffix } from '@/lib/google-ads-api'
+import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from '@/lib/google-ads-auth-context'
 import {
   getUrlSwapTaskTargets,
   markUrlSwapTargetFailure,
@@ -52,6 +63,21 @@ describe('executeUrlSwapTask login_customer_id fallback', () => {
     vi.resetAllMocks()
     exec.mockReset()
     queryOne.mockReset()
+
+    vi.mocked(assertUserExecutionAllowed).mockResolvedValue(undefined)
+    vi.mocked(getGoogleAdsAuthContext).mockResolvedValue({
+      auth: { authType: 'oauth' },
+      oauthCredentials: { refresh_token: 'refresh-token', login_customer_id: '1111111111' },
+      serviceAccountConfig: null,
+    } as any)
+    vi.mocked(hasConfiguredGoogleAdsAuthFromContext).mockReturnValue(true)
+    vi.mocked(resolveGoogleAdsApiAuthFromContext).mockResolvedValue({
+      authType: 'oauth',
+      refreshToken: 'refresh-token',
+      serviceAccountId: undefined,
+      oauthLoginCustomerId: '1111111111',
+      serviceAccountMccId: undefined,
+    })
 
     vi.mocked(getDatabase).mockReturnValue({
       type: 'sqlite',
@@ -99,19 +125,7 @@ describe('executeUrlSwapTask login_customer_id fallback', () => {
       updated_at: '',
     }])
 
-    vi.mocked(getGoogleAdsCredentials).mockResolvedValueOnce({
-      id: 1,
-      user_id: 1,
-      client_id: 'client-id',
-      client_secret: 'client-secret',
-      refresh_token: 'refresh-token',
-      developer_token: 'developer-token',
-      login_customer_id: '1111111111',
-      is_active: 1,
-      created_at: '',
-      updated_at: '',
-    } as any)
-    vi.mocked(getUserAuthType).mockResolvedValueOnce({ authType: 'oauth' })
+    queryOne.mockResolvedValueOnce({ service_account_id: null })
 
     vi.mocked(updateCampaignFinalUrlSuffix)
       .mockRejectedValueOnce(new Error("User doesn't have permission to access customer. Note: If you're accessing a client customer, the manager's customer id must be set in the 'login-customer-id' header."))

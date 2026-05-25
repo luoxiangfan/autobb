@@ -5,7 +5,6 @@ import {
   getGoogleAdsCredentials,
   deleteGoogleAdsCredentials,
   verifyGoogleAdsCredentials,
-  getUserAuthType
 } from '@/lib/google-ads-oauth'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getDatabase } from '@/lib/db'
@@ -16,6 +15,7 @@ import {
 import { updateApiAccessLevel } from '@/lib/google-ads-access-level-detector'
 import {
   getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsCredentialStatusFields,
 } from '@/lib/google-ads-auth-context'
 
@@ -279,20 +279,19 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const auth = await getUserAuthType(userId)
-
-    if (auth.authType !== 'oauth' && auth.authType !== 'service_account') {
+    const authContext = await getGoogleAdsAuthContext(userId)
+    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
       return NextResponse.json(
         { error: '未找到有效的Google Ads凭证配置' },
         { status: 404 }
       )
     }
 
-    await updateApiAccessLevel(userId, apiAccessLevel, auth.authType)
+    await updateApiAccessLevel(userId, apiAccessLevel, authContext.auth.authType)
 
     console.log(`✅ 已更新API访问级别: ${apiAccessLevel}`)
     console.log(`   用户: ${authResult.user.email}`)
-    console.log(`   认证类型: ${auth.authType}`)
+    console.log(`   认证类型: ${authContext.auth.authType}`)
 
     return NextResponse.json({
       success: true,

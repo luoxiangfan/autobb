@@ -110,9 +110,60 @@ export function getServiceAccountMccFromContext(ctx: GoogleAdsAuthContext): stri
   return mcc ? String(mcc) : undefined
 }
 
+export type GoogleAdsApiAuthValidationError =
+  | 'not_configured'
+  | 'oauth_refresh_missing'
+  | 'service_account_missing'
+
+export function googleAdsApiAuthValidationErrorMessage(
+  reason: GoogleAdsApiAuthValidationError
+): string {
+  switch (reason) {
+    case 'not_configured':
+      return 'Google Ads 认证未配置或已失效，请先在设置中完成 OAuth 授权或配置服务账号'
+    case 'oauth_refresh_missing':
+      return 'Google Ads OAuth未授权或已过期，请先在设置页面重新授权'
+    case 'service_account_missing':
+      return '未找到服务账号配置，请先配置服务账号'
+    default:
+      return 'Google Ads 认证无效'
+  }
+}
+
 /**
- * 从 context 解析 Google Ads API 调用所需的认证字段（含账号级 SA 与 MCC）。
+ * 校验用户级认证并解析账号级 API 字段（共享 OAuth 不依赖 google_ads_accounts.refresh_token）。
  */
+export async function resolveGoogleAdsApiAuthForAccount(
+  userId: number,
+  linkedAccountServiceAccountId?: string | null
+): Promise<
+  | { ok: true; ctx: GoogleAdsAuthContext; apiAuth: GoogleAdsApiAuthFields }
+  | { ok: false; reason: GoogleAdsApiAuthValidationError }
+> {
+  const ctx = await getGoogleAdsAuthContext(userId)
+  if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
+    return { ok: false, reason: 'not_configured' }
+  }
+
+  const apiAuth = await resolveGoogleAdsApiAuthFromContext(ctx, linkedAccountServiceAccountId)
+  if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
+    return { ok: false, reason: 'oauth_refresh_missing' }
+  }
+  if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {
+    return { ok: false, reason: 'service_account_missing' }
+  }
+
+  return { ok: true, ctx, apiAuth }
+}
+
+/** OAuth invalid_grant 时尝试回退的服务账号 ID（账号绑定 → 用户默认 SA）。 */
+export function resolveOAuthInvalidGrantFallbackServiceAccountId(
+  apiAuth: Pick<GoogleAdsApiAuthFields, 'serviceAccountId'>,
+  ctx: Pick<GoogleAdsAuthContext, 'auth' | 'serviceAccountConfig'>
+): string | undefined {
+  return apiAuth.serviceAccountId || ctx.auth.serviceAccountId || ctx.serviceAccountConfig?.id
+}
+
 /**
  * 一次性加载 context 并解析 API 调用字段（无账号绑定时 linked 传 null/undefined）。
  */

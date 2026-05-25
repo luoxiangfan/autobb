@@ -27,6 +27,7 @@ import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsApiAuthFromContext,
+  resolveOAuthInvalidGrantFallbackServiceAccountId,
 } from '@/lib/google-ads-auth-context'
 import { updateCampaignFinalUrlSuffix } from '@/lib/google-ads-api'
 import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
@@ -287,7 +288,12 @@ async function updateTargetsFinalUrlSuffix(params: {
         })
       } catch (firstError: any) {
         const message = firstError?.message || String(firstError)
-        if (attemptAuthType === 'oauth' && isOAuthInvalidGrantError(message) && targetAuth.serviceAccountId) {
+        const fallbackServiceAccountId = resolveOAuthInvalidGrantFallbackServiceAccountId(
+          targetAuth,
+          ctx
+        )
+        if (attemptAuthType === 'oauth' && isOAuthInvalidGrantError(message) && fallbackServiceAccountId) {
+          const fallbackApiAuth = await resolveGoogleAdsApiAuthFromContext(ctx, fallbackServiceAccountId)
           attemptAuthType = 'service_account'
           await updateSingleTargetWithLoginCustomerFallback({
             target,
@@ -295,9 +301,9 @@ async function updateTargetsFinalUrlSuffix(params: {
             userId: params.userId,
             refreshToken: '',
             authType: 'service_account',
-            serviceAccountId: targetAuth.serviceAccountId,
+            serviceAccountId: fallbackApiAuth.serviceAccountId,
             oauthLoginCustomerId: targetAuth.oauthLoginCustomerId,
-            serviceAccountMccId: targetAuth.serviceAccountMccId,
+            serviceAccountMccId: fallbackApiAuth.serviceAccountMccId,
           })
         } else {
           throw firstError

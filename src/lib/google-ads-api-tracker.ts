@@ -144,10 +144,14 @@ export async function trackApiUsage(record: ApiUsageRecord): Promise<void> {
     if (!record.isSuccess && record.errorMessage) {
       try {
         const { detectAndUpdateFromError } = await import('./google-ads-access-level-detector')
-        const { getUserAuthType } = await import('./google-ads-oauth')
+        const { getGoogleAdsAuthContext } = await import('./google-ads-auth-context')
 
-        const auth = await getUserAuthType(record.userId)
-        await detectAndUpdateFromError(record.userId, auth.authType, record.errorMessage)
+        const authContext = await getGoogleAdsAuthContext(record.userId)
+        await detectAndUpdateFromError(
+          record.userId,
+          authContext.auth.authType,
+          record.errorMessage
+        )
       } catch (detectError) {
         // 不影响主流程
         console.debug('尝试从错误检测访问级别失败:', detectError)

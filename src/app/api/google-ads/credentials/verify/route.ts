@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { verifyGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import { autoDetectAndUpdateAccessLevel } from '@/lib/google-ads-access-level-detector'
-import { getUserAuthType } from '@/lib/google-ads-oauth'
+import { getGoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
 
 /**
  * POST /api/google-ads/credentials/verify
@@ -33,10 +33,10 @@ export async function POST(request: NextRequest) {
 
       // 🆕 自动检测并更新API访问级别
       try {
-        const auth = await getUserAuthType(authResult.user.userId)
+        const authContext = await getGoogleAdsAuthContext(authResult.user.userId)
         const accessLevel = await autoDetectAndUpdateAccessLevel(
           authResult.user.userId,
-          auth.authType
+          authContext.auth.authType
         )
         console.log(`   检测到API访问级别: ${accessLevel}`)
       } catch (detectError) {

@@ -12,9 +12,15 @@ vi.mock('@/lib/offer-utils', () => ({
   initializeProxyPool: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getGoogleAdsCredentials: vi.fn(),
-  getUserAuthType: vi.fn(),
+vi.mock('@/lib/user-execution-eligibility', () => ({
+  assertUserExecutionAllowed: vi.fn(),
+}))
+
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  getGoogleAdsAuthContext: vi.fn(),
+  hasConfiguredGoogleAdsAuthFromContext: vi.fn(),
+  resolveGoogleAdsApiAuthFromContext: vi.fn(),
+  resolveOAuthInvalidGrantFallbackServiceAccountId: vi.fn(),
 }))
 
 vi.mock('@/lib/google-ads-api', () => ({
@@ -36,6 +42,12 @@ import { resolveAffiliateLink } from '@/lib/url-resolver-enhanced'
 import { initializeProxyPool } from '@/lib/offer-utils'
 import { updateCampaignFinalUrlSuffix } from '@/lib/google-ads-api'
 import { getUrlSwapTaskTargets, recordSwapHistory, setTaskError } from '@/lib/url-swap'
+import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from '@/lib/google-ads-auth-context'
 import { executeUrlSwapTask } from '@/lib/queue/executors/url-swap-executor'
 
 describe('executeUrlSwapTask (auto)', () => {
@@ -46,6 +58,21 @@ describe('executeUrlSwapTask (auto)', () => {
     vi.resetAllMocks()
     exec.mockReset()
     queryOne.mockReset()
+
+    vi.mocked(assertUserExecutionAllowed).mockResolvedValue(undefined)
+    vi.mocked(getGoogleAdsAuthContext).mockResolvedValue({
+      auth: { authType: 'oauth' },
+      oauthCredentials: { refresh_token: 'rt' },
+      serviceAccountConfig: null,
+    } as any)
+    vi.mocked(hasConfiguredGoogleAdsAuthFromContext).mockReturnValue(true)
+    vi.mocked(resolveGoogleAdsApiAuthFromContext).mockResolvedValue({
+      authType: 'oauth',
+      refreshToken: 'rt',
+      serviceAccountId: undefined,
+      oauthLoginCustomerId: '1111111111',
+      serviceAccountMccId: undefined,
+    })
 
     vi.mocked(getDatabase).mockReturnValue({
       type: 'sqlite',
@@ -58,17 +85,19 @@ describe('executeUrlSwapTask (auto)', () => {
   })
 
   it('URL未变化时应计为成功，不应增加 failed_swaps', async () => {
-    queryOne.mockResolvedValueOnce({
-      status: 'enabled',
-      is_deleted: 0,
-      swap_mode: 'auto',
-      manual_affiliate_links: '[]',
-      manual_suffix_cursor: 0,
-      current_final_url: 'https://example.com/final',
-      current_final_url_suffix: 'x=1',
-      google_customer_id: '123-456-7890',
-      google_campaign_id: '987654321',
-    })
+    queryOne
+      .mockResolvedValueOnce({
+        status: 'enabled',
+        is_deleted: 0,
+        swap_mode: 'auto',
+        manual_affiliate_links: '[]',
+        manual_suffix_cursor: 0,
+        current_final_url: 'https://example.com/final',
+        current_final_url_suffix: 'x=1',
+        google_customer_id: '123-456-7890',
+        google_campaign_id: '987654321',
+      })
+      .mockResolvedValueOnce({ swap_interval_minutes: 60 })
 
     vi.mocked(initializeProxyPool).mockResolvedValueOnce(undefined as any)
     vi.mocked(getUrlSwapTaskTargets).mockResolvedValueOnce([])

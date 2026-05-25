@@ -15,8 +15,8 @@ const adsFns = vi.hoisted(() => ({
   createGoogleAdsCampaign: vi.fn(),
 }))
 
-const oauthFns = vi.hoisted(() => ({
-  getUserAuthType: vi.fn(),
+const authContextFns = vi.hoisted(() => ({
+  resolveGoogleAdsApiAuthForAccount: vi.fn(),
 }))
 
 const cacheFns = vi.hoisted(() => ({
@@ -36,8 +36,9 @@ vi.mock('@/lib/google-ads-api', () => ({
   createGoogleAdsCampaign: adsFns.createGoogleAdsCampaign,
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getUserAuthType: oauthFns.getUserAuthType,
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  googleAdsApiAuthValidationErrorMessage: (reason: string) => reason,
+  resolveGoogleAdsApiAuthForAccount: authContextFns.resolveGoogleAdsApiAuthForAccount,
 }))
 
 vi.mock('@/lib/api-cache', () => ({
@@ -76,12 +77,17 @@ describe('POST /api/campaigns/:id/sync', () => {
     accountFns.findGoogleAdsAccountById.mockResolvedValue({
       id: 9,
       customerId: '1234567890',
-      refreshToken: 'refresh-token',
+      refreshToken: null,
       serviceAccountId: null,
     })
-    oauthFns.getUserAuthType.mockResolvedValue({
-      authType: 'oauth',
-      serviceAccountId: undefined,
+    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
+      ok: true,
+      ctx: { auth: { authType: 'oauth' } },
+      apiAuth: {
+        authType: 'oauth',
+        refreshToken: 'shared-refresh-token',
+        serviceAccountId: undefined,
+      },
     })
     adsFns.createGoogleAdsCampaign.mockResolvedValue({
       campaignId: '99887766',
@@ -95,6 +101,35 @@ describe('POST /api/campaigns/:id/sync', () => {
 
     const res = await POST(req, { params: { id: '19' } })
     expect(res.status).toBe(401)
+  })
+
+  it('syncs with shared oauth when account row has no refresh_token', async () => {
+    const req = new NextRequest('http://localhost/api/campaigns/19/sync', {
+      method: 'POST',
+      headers: { 'x-user-id': '7' },
+    })
+
+    const res = await POST(req, { params: { id: '19' } })
+    expect(res.status).toBe(200)
+    expect(adsFns.createGoogleAdsCampaign).toHaveBeenCalledWith(
+      expect.objectContaining({ refreshToken: 'shared-refresh-token' })
+    )
+  })
+
+  it('returns 400 when shared oauth is not configured', async () => {
+    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValueOnce({
+      ok: false,
+      reason: 'oauth_refresh_missing',
+    })
+
+    const req = new NextRequest('http://localhost/api/campaigns/19/sync', {
+      method: 'POST',
+      headers: { 'x-user-id': '7' },
+    })
+
+    const res = await POST(req, { params: { id: '19' } })
+    expect(res.status).toBe(400)
+    expect(adsFns.createGoogleAdsCampaign).not.toHaveBeenCalled()
   })
 
   it('invalidates offer cache after successful sync', async () => {

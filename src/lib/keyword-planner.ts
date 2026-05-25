@@ -12,6 +12,7 @@ import { refreshAccessToken, getGoogleAdsCredentials } from './google-ads-oauth'
 import {
   getGoogleAdsAuthContext,
   resolveGoogleAdsApiAuthFromContext,
+  type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
 import { resolveGoogleAdsCredentialOwnerId, resolveGoogleAdsApiAccessLevel } from './google-ads-auth-assignment'
 import { getGoogleAdsLanguageIdString, getGoogleAdsGeoTargetId, normalizeCountryCode, normalizeLanguageCode } from './language-country-codes'
@@ -185,7 +186,8 @@ async function getUserCustomerId(db: any, userId: number): Promise<string> {
 export async function getGoogleAdsConfig(
   userId?: number,
   authType?: AuthType,
-  serviceAccountId?: string
+  serviceAccountId?: string,
+  existingContext?: GoogleAdsAuthContext
 ): Promise<KeywordPlannerConfig | null> {
   try {
     if (!userId) {
@@ -193,14 +195,15 @@ export async function getGoogleAdsConfig(
       return null
     }
 
-    const authContext = await getGoogleAdsAuthContext(userId)
+    const authContext = existingContext ?? (await getGoogleAdsAuthContext(userId))
     const apiAuth = await resolveGoogleAdsApiAuthFromContext(authContext, serviceAccountId ?? null)
-    const effectiveAuthType = authType ?? apiAuth.authType
+    const effectiveAuthType: AuthType =
+      authType === 'service_account' || authType === 'oauth' ? authType : apiAuth.authType
     const effectiveServiceAccountId = serviceAccountId ?? apiAuth.serviceAccountId
 
     // 1. OAuth 模式（含管理员共享 OAuth）
-    if (effectiveAuthType === 'oauth' && authType !== 'service_account') {
-      const credentials = await getGoogleAdsCredentials(userId)
+    if (effectiveAuthType === 'oauth') {
+      const credentials = authContext.oauthCredentials ?? (await getGoogleAdsCredentials(userId))
       if (!credentials?.refresh_token) {
         console.error(`[KeywordPlanner] User ${userId} has no refresh token. Please authorize Google Ads API in Settings.`)
         return null

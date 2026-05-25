@@ -5,7 +5,10 @@ import { findCampaignById } from '@/lib/campaigns'
 import { findGoogleAdsAccountById } from '@/lib/google-ads-accounts'
 import { findKeywordsByAdGroupId, updateKeyword } from '@/lib/keywords'
 import { createGoogleAdsAdGroup, createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
-import { resolveGoogleAdsApiAuthFromContext, getGoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
+import {
+  googleAdsApiAuthValidationErrorMessage,
+  resolveGoogleAdsApiAuthForAccount,
+} from '@/lib/google-ads-auth-context'
 
 /**
  * POST /api/ad-groups/:id/sync
@@ -78,15 +81,17 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       )
     }
 
-    // 验证账号是否已授权（OAuth或服务账号）
-    if (!googleAdsAccount.refreshToken && !googleAdsAccount.serviceAccountId) {
+    const authResolved = await resolveGoogleAdsApiAuthForAccount(
+      userId,
+      googleAdsAccount.serviceAccountId
+    )
+    if (!authResolved.ok) {
       return NextResponse.json(
-        {
-          error: 'Google Ads账号未授权，请先完成OAuth授权或配置服务账号',
-        },
+        { error: googleAdsApiAuthValidationErrorMessage(authResolved.reason) },
         { status: 400 }
       )
     }
+    const { apiAuth } = authResolved
 
     // 更新状态为pending
     await updateAdGroup(adGroup.id, userId, {
@@ -95,12 +100,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     })
 
     try {
-      const authContext = await getGoogleAdsAuthContext(userId)
-      const apiAuth = await resolveGoogleAdsApiAuthFromContext(
-        authContext,
-        googleAdsAccount.serviceAccountId
-      )
-
       // 创建Google Ads Ad Group
       const adGroupResult = await createGoogleAdsAdGroup({
         customerId: googleAdsAccount.customerId,

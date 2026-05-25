@@ -15,7 +15,6 @@
 
 import { getKeywordSearchVolumes } from './keyword-planner'
 import { getKeywordIdeas } from './google-ads-keyword-planner'
-import { getUserAuthType } from './google-ads-oauth'
 import { PLATFORMS, BRAND_PATTERNS, DEFAULTS, THRESHOLD_LEVELS, CATEGORY_SYNONYMS } from './keyword-constants'
 import { getKeywordPlannerSiteFilterUrlForOffer } from './keyword-planner-site-filter'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'

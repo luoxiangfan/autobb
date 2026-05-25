@@ -32,8 +32,10 @@ vi.mock('@/lib/google-ads-service-account', () => ({
 
 import {
   getGoogleAdsAuthContext,
+  resolveGoogleAdsApiAuthForAccount,
   resolveGoogleAdsApiAuthFromContext,
   resolveGoogleAdsCredentialStatusFields,
+  resolveOAuthInvalidGrantFallbackServiceAccountId,
 } from '@/lib/google-ads-auth-context'
 
 describe('getGoogleAdsAuthContext', () => {
@@ -132,6 +134,63 @@ describe('resolveGoogleAdsCredentialStatusFields', () => {
     expect(fields.developerToken).toBe('dev-token')
     expect(fields.loginCustomerId).toBe('1112223333')
     expect(fields.apiAccessLevel).toBe('basic')
+  })
+})
+
+describe('resolveGoogleAdsApiAuthForAccount', () => {
+  it('accepts shared oauth when account row has no refresh_token', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 1,
+      isShared: true,
+      assignment: {
+        userId: 2,
+        assignmentMode: 'shared_admin',
+        sharedAdminUserId: 1,
+        authType: 'oauth',
+        configuredBy: 1,
+        createdAt: '',
+        updatedAt: '',
+      },
+    })
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+    oauthFns.getGoogleAdsCredentials.mockResolvedValue({ refresh_token: 'rt-shared' })
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+
+    const result = await resolveGoogleAdsApiAuthForAccount(2, null)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.apiAuth.authType).toBe('oauth')
+      expect(result.apiAuth.refreshToken).toBe('rt-shared')
+    }
+  })
+
+  it('reports not_configured when oauth credentials lack refresh_token', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 2,
+      isShared: false,
+      assignment: null,
+    })
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+    oauthFns.getGoogleAdsCredentials.mockResolvedValue({ refresh_token: null })
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+
+    const result = await resolveGoogleAdsApiAuthForAccount(2, null)
+
+    expect(result).toEqual({ ok: false, reason: 'not_configured' })
+  })
+})
+
+describe('resolveOAuthInvalidGrantFallbackServiceAccountId', () => {
+  it('falls back to user default service account when apiAuth has no linked id', () => {
+    const id = resolveOAuthInvalidGrantFallbackServiceAccountId(
+      { serviceAccountId: undefined },
+      {
+        auth: { authType: 'oauth' },
+        serviceAccountConfig: { id: 'sa-default' },
+      } as any
+    )
+    expect(id).toBe('sa-default')
   })
 })
 

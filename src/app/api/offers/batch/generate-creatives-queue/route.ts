@@ -157,7 +157,8 @@ export async function POST(request: NextRequest) {
       const googleAdsConfig = await getGoogleAdsConfig(
         userIdNum,
         apiAuth.authType,
-        apiAuth.serviceAccountId
+        apiAuth.serviceAccountId,
+        authContext
       )
 
       const isConfigComplete = apiAuth.authType === 'service_account'

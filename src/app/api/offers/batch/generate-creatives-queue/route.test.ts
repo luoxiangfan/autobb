@@ -15,7 +15,8 @@ const queueFns = vi.hoisted(() => ({
 
 const authFns = vi.hoisted(() => ({
   getGoogleAdsConfig: vi.fn(),
-  getUserAuthType: vi.fn(),
+  getGoogleAdsApiAuthForUser: vi.fn(),
+  hasConfiguredGoogleAdsAuthFromContext: vi.fn(),
 }))
 
 const keywordPoolFns = vi.hoisted(() => ({
@@ -40,8 +41,9 @@ vi.mock('@/lib/keyword-planner', () => ({
   getGoogleAdsConfig: authFns.getGoogleAdsConfig,
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getUserAuthType: authFns.getUserAuthType,
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  getGoogleAdsApiAuthForUser: authFns.getGoogleAdsApiAuthForUser,
+  hasConfiguredGoogleAdsAuthFromContext: authFns.hasConfiguredGoogleAdsAuthFromContext,
 }))
 
 vi.mock('@/lib/offer-keyword-pool', () => ({
@@ -69,9 +71,10 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
       enqueue: queueFns.enqueue,
     })
 
-    authFns.getUserAuthType.mockResolvedValue({
-      authType: 'oauth',
-      serviceAccountId: null,
+    authFns.hasConfiguredGoogleAdsAuthFromContext.mockReturnValue(true)
+    authFns.getGoogleAdsApiAuthForUser.mockResolvedValue({
+      ctx: { auth: { authType: 'oauth' } },
+      apiAuth: { authType: 'oauth', serviceAccountId: undefined, refreshToken: 'refresh-token' },
     })
     authFns.getGoogleAdsConfig.mockResolvedValue({
       developerToken: 'dev-token',
