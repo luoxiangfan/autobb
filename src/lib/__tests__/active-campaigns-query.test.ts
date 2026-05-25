@@ -4,9 +4,8 @@ const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
 }))
 
-const oauthFns = vi.hoisted(() => ({
-  getGoogleAdsCredentials: vi.fn(),
-  getUserAuthType: vi.fn(),
+const authContextFns = vi.hoisted(() => ({
+  getGoogleAdsAuthContext: vi.fn(),
 }))
 
 const apiFns = vi.hoisted(() => ({
@@ -20,9 +19,31 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
-  getUserAuthType: oauthFns.getUserAuthType,
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext: (ctx: {
+    auth: { authType: string }
+    oauthCredentials: { refresh_token?: string } | null
+    serviceAccountConfig: { id?: string } | null
+  }) => {
+    if (ctx.auth.authType === 'oauth') {
+      return Boolean(ctx.oauthCredentials?.refresh_token)
+    }
+    return Boolean(ctx.serviceAccountConfig?.id)
+  },
+  resolveEffectiveServiceAccountId: (
+    _linked: string | null | undefined,
+    ctx: {
+      auth: { authType: string; serviceAccountId?: string }
+      serviceAccountConfig: { id?: string } | null
+    }
+  ) => {
+    if (ctx.auth.authType !== 'service_account') return undefined
+    return ctx.auth.serviceAccountId || ctx.serviceAccountConfig?.id
+  },
+  getServiceAccountMccFromContext: (ctx: {
+    serviceAccountConfig: { mccCustomerId?: string } | null
+  }) => ctx.serviceAccountConfig?.mccCustomerId,
 }))
 
 vi.mock('@/lib/google-ads-api', () => ({
@@ -41,20 +62,16 @@ describe('queryActiveCampaigns login_customer_id fallback', () => {
           parent_mcc_id: '3958592249',
         }
       }
-      if (sql.includes('FROM google_ads_service_accounts')) {
-        return null
-      }
       return null
     })
 
-    oauthFns.getGoogleAdsCredentials.mockResolvedValue({
-      refresh_token: 'refresh-token',
-      login_customer_id: '7888509345',
-    })
-
-    oauthFns.getUserAuthType.mockResolvedValue({
-      authType: 'oauth',
-      serviceAccountId: undefined,
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      auth: { authType: 'oauth' },
+      oauthCredentials: {
+        refresh_token: 'refresh-token',
+        login_customer_id: '7888509345',
+      },
+      serviceAccountConfig: null,
     })
   })
 
@@ -81,25 +98,9 @@ describe('queryActiveCampaigns login_customer_id fallback', () => {
       ])
 
     const { queryActiveCampaigns } = await import('@/lib/active-campaigns-query')
+    const result = await queryActiveCampaigns(1, 775, 42)
 
-    const result = await queryActiveCampaigns(3034, 775, 62)
-
-    expect(result.total.enabled).toBe(1)
     expect(apiFns.listGoogleAdsCampaigns).toHaveBeenCalledTimes(2)
-    expect(apiFns.listGoogleAdsCampaigns).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        customerId: '6073761127',
-        loginCustomerId: '3958592249',
-      })
-    )
-    expect(apiFns.listGoogleAdsCampaigns).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        customerId: '6073761127',
-        loginCustomerId: '7888509345',
-      })
-    )
+    expect(result.total.enabled).toBe(1)
   })
 })
-

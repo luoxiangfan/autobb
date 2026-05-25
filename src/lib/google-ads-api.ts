@@ -282,39 +282,6 @@ export function getGoogleAdsClient(credentials: {
 }
 
 /**
- * 生成OAuth授权URL
- *
- * 🔧 修复(2025-12-22): 移除环境变量依赖,从参数获取clientId
- *
- * @param clientId - 用户的Google Ads Client ID(从数据库读取)
- * @param state - OAuth state参数
- * @throws Error 如果未提供clientId
- * @deprecated 请使用 `generateOAuthUrl`（`google-ads-oauth`）与 `getGoogleAdsOAuthRedirectUri`（`google-ads-oauth-redirect`）
- */
-export function getOAuthUrl(clientId: string, state?: string): string {
-  if (!clientId) {
-    throw new Error('缺少 Client ID 配置,必须从数据库提供')
-  }
-
-  const redirectUri = getGoogleAdsOAuthRedirectUri()
-
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: 'code',
-    scope: 'https://www.googleapis.com/auth/adwords',
-    access_type: 'offline',
-    prompt: 'consent',
-  })
-
-  if (state) {
-    params.append('state', state)
-  }
-
-  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
-}
-
-/**
  * 交换authorization code获取tokens
  *
  * 🔧 修复(2025-12-22): 移除环境变量依赖,从参数获取credentials

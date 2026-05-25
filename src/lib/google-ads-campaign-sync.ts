@@ -17,7 +17,10 @@ import {
   toDbCampaignBackupJsonField,
 } from './campaign-backups'
 import { getCustomerWithCredentials, trackOAuthApiCall } from './google-ads-api'
-import { getGoogleAdsCredentials, getUserAuthType } from './google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  resolveEffectiveServiceAccountId,
+} from './google-ads-auth-context'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { toDbCampaignConfigTextField } from './campaign-backups'
 import { getInsertedId } from './db-helpers'
@@ -384,9 +387,9 @@ export async function syncCampaignsFromGoogleAds(
       return result
     }
 
-    const auth = await getUserAuthType(userId)
-    const oauthCredentials =
-      auth.authType === 'oauth' ? await getGoogleAdsCredentials(userId) : null
+    const authContext = await getGoogleAdsAuthContext(userId)
+    const auth = authContext.auth
+    const oauthCredentials = authContext.oauthCredentials
 
     // 3. 对每个账户执行同步
     for (const account of accounts) {
@@ -403,10 +406,10 @@ export async function syncCampaignsFromGoogleAds(
             ? account.service_account_id.trim()
             : ''
         const syncAuthType = auth.authType
-        const syncServiceAccountId =
-          syncAuthType === 'service_account'
-            ? linkedServiceAccountId || auth.serviceAccountId
-            : undefined
+        const syncServiceAccountId = resolveEffectiveServiceAccountId(
+          linkedServiceAccountId || account.service_account_id,
+          authContext
+        )
         const syncRefreshToken =
           syncAuthType === 'oauth'
             ? account.refresh_token || oauthCredentials?.refresh_token || null

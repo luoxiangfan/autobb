@@ -11,11 +11,13 @@ import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getDatabase } from '@/lib/db'
 import {
   assertUserCanModifyGoogleAdsAuth,
-  getGoogleAdsAuthAssignment,
   isGoogleAdsAuthShared,
-  resolveGoogleAdsCredentialOwnerId,
 } from '@/lib/google-ads-auth-assignment'
 import { updateApiAccessLevel } from '@/lib/google-ads-access-level-detector'
+import {
+  getGoogleAdsAuthContext,
+  resolveGoogleAdsCredentialStatusFields,
+} from '@/lib/google-ads-auth-context'
 
 /**
  * POST /api/google-ads/credentials
@@ -117,39 +119,11 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = authResult.user.userId
-    const assignment = await getGoogleAdsAuthAssignment(userId)
-    const { ownerUserId, isShared } = await resolveGoogleAdsCredentialOwnerId(userId)
+    const ctx = await getGoogleAdsAuthContext(userId)
+    const assignment = ctx.assignment
+    const statusFields = await resolveGoogleAdsCredentialStatusFields(ctx)
 
-    // 1. 检查 OAuth 凭证
-    const credentials = await getGoogleAdsCredentials(userId)
-
-    // 2. 检查是否有已激活的服务账号配置
-    let hasServiceAccount = false
-    let serviceAccountId: string | null = null
-    let serviceAccountName: string | null = null
-    let serviceAccountApiAccessLevel: string | null = null
-    try {
-      const db = await getDatabase()
-      const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-      const serviceAccount = await db.queryOne(`
-        SELECT id, name, api_access_level FROM google_ads_service_accounts
-        WHERE user_id = ? AND ${isActiveCondition}
-        ORDER BY created_at DESC
-        LIMIT 1
-      `, [ownerUserId]) as { id: string; name: string; api_access_level?: string } | undefined
-
-      if (serviceAccount) {
-        hasServiceAccount = true
-        serviceAccountId = serviceAccount.id
-        serviceAccountName = serviceAccount.name
-        serviceAccountApiAccessLevel = serviceAccount.api_access_level || null
-      }
-    } catch (err) {
-      console.error('检查服务账号配置失败:', err)
-    }
-
-    // 如果没有 OAuth 凭证且没有服务账号，返回未配置状态
-    if (!credentials && !hasServiceAccount) {
+    if (!statusFields.hasCredentials) {
       return NextResponse.json({
         success: true,
         data: {
@@ -157,61 +131,43 @@ export async function GET(request: NextRequest) {
           hasRefreshToken: false,
           hasServiceAccount: false,
           assignmentMode: assignment?.assignmentMode ?? 'own',
-          canModify: !isGoogleAdsAuthShared(assignment),
-          isShared,
-        }
+          canModify: ctx.canModify,
+          isShared: ctx.isShared,
+        },
       })
-    }
-
-    const auth = await getUserAuthType(userId)
-
-    // 确定 API 访问级别（优先使用 OAuth 凭证的配置，其次使用服务账号的配置）
-    let apiAccessLevel = 'explorer' // 默认值
-    if (credentials) {
-      // 从 google_ads_credentials 表获取
-      const db = await getDatabase()
-      const credRow = await db.queryOne(`
-        SELECT api_access_level FROM google_ads_credentials WHERE user_id = ? LIMIT 1
-      `, [ownerUserId]) as { api_access_level?: string } | undefined
-      if (credRow?.api_access_level) {
-        apiAccessLevel = credRow.api_access_level
-      }
-    } else if (serviceAccountApiAccessLevel) {
-      apiAccessLevel = serviceAccountApiAccessLevel
     }
 
     let sharedAdminEmail: string | null = null
     let sharedAdminUsername: string | null = null
-    if (isShared && assignment?.sharedAdminUserId) {
+    if (ctx.isShared && assignment?.sharedAdminUserId) {
       const adminUser = await findUserById(assignment.sharedAdminUserId)
       sharedAdminEmail = adminUser?.email ?? null
       sharedAdminUsername = adminUser?.username ?? null
     }
 
-    // 返回凭证状态（不返回完整的敏感信息）
     return NextResponse.json({
       success: true,
       data: {
         hasCredentials: true,
-        clientId: credentials?.client_id,
-        developerToken: credentials?.developer_token,
-        loginCustomerId: credentials?.login_customer_id,
-        hasRefreshToken: !!credentials?.refresh_token,
-        hasServiceAccount,
-        serviceAccountId,
-        serviceAccountName,
-        authType: auth.authType,
-        apiAccessLevel,
-        lastVerifiedAt: credentials?.last_verified_at,
-        isActive: credentials?.is_active === 1,
-        createdAt: credentials?.created_at,
-        updatedAt: credentials?.updated_at,
+        clientId: statusFields.clientId,
+        developerToken: statusFields.developerToken,
+        loginCustomerId: statusFields.loginCustomerId,
+        hasRefreshToken: statusFields.hasRefreshToken,
+        hasServiceAccount: statusFields.hasServiceAccount,
+        serviceAccountId: statusFields.serviceAccountId,
+        serviceAccountName: statusFields.serviceAccountName,
+        authType: ctx.auth.authType,
+        apiAccessLevel: statusFields.apiAccessLevel,
+        lastVerifiedAt: statusFields.lastVerifiedAt,
+        isActive: statusFields.isActive === 1,
+        createdAt: statusFields.createdAt,
+        updatedAt: statusFields.updatedAt,
         assignmentMode: assignment?.assignmentMode ?? 'own',
-        canModify: !isGoogleAdsAuthShared(assignment),
-        isShared,
+        canModify: ctx.canModify,
+        isShared: ctx.isShared,
         sharedAdminEmail,
         sharedAdminUsername,
-      }
+      },
     })
 
   } catch (error: any) {

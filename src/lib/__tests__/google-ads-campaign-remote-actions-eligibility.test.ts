@@ -3,11 +3,33 @@ import {
   executeGoogleAdsCampaignRemoteActions,
   queueGoogleAdsCampaignRemoteActions,
 } from '@/lib/google-ads-campaign-remote-actions'
-import { getUserAuthType } from '@/lib/google-ads-oauth'
 
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getUserAuthType: vi.fn(async () => ({ authType: 'oauth' as const })),
-  getGoogleAdsCredentials: vi.fn(async () => ({ refresh_token: 'rt' })),
+const authContextFns = vi.hoisted(() => ({
+  getGoogleAdsAuthContext: vi.fn(),
+}))
+
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext: (ctx: {
+    auth: { authType: string }
+    oauthCredentials: { refresh_token?: string } | null
+    serviceAccountConfig: { id?: string } | null
+  }) => {
+    if (ctx.auth.authType === 'oauth') {
+      return Boolean(ctx.oauthCredentials?.refresh_token)
+    }
+    return Boolean(ctx.serviceAccountConfig?.id)
+  },
+  resolveEffectiveServiceAccountId: (
+    _linked: string | null | undefined,
+    ctx: {
+      auth: { authType: string; serviceAccountId?: string }
+      serviceAccountConfig: { id?: string } | null
+    }
+  ) => {
+    if (ctx.auth.authType !== 'service_account') return undefined
+    return ctx.auth.serviceAccountId || ctx.serviceAccountConfig?.id
+  },
 }))
 
 vi.mock('@/lib/google-ads-api', () => ({
@@ -18,6 +40,11 @@ vi.mock('@/lib/google-ads-api', () => ({
 describe('queueGoogleAdsCampaignRemoteActions eligibility', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      auth: { authType: 'oauth' },
+      oauthCredentials: { refresh_token: 'rt' },
+      serviceAccountConfig: null,
+    })
   })
 
   it('executes remote REMOVE for inactive account when skipAccountEligibilityCheck=true', async () => {
@@ -61,7 +88,11 @@ describe('queueGoogleAdsCampaignRemoteActions eligibility', () => {
   })
 
   it('returns CREDENTIALS_MISSING when service_account has no serviceAccountId', async () => {
-    vi.mocked(getUserAuthType).mockResolvedValueOnce({ authType: 'service_account' })
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValueOnce({
+      auth: { authType: 'service_account' },
+      oauthCredentials: null,
+      serviceAccountConfig: null,
+    })
 
     const result = await executeGoogleAdsCampaignRemoteActions({
       userId: 1,

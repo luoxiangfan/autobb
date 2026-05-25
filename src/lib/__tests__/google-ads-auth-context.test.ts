@@ -17,6 +17,7 @@ const serviceAccountFns = vi.hoisted(() => ({
 vi.mock('@/lib/google-ads-auth-assignment', () => ({
   resolveGoogleAdsCredentialOwnerId: assignmentFns.resolveGoogleAdsCredentialOwnerId,
   isGoogleAdsAuthShared: assignmentFns.isGoogleAdsAuthShared,
+  resolveGoogleAdsApiAccessLevel: vi.fn(async () => 'basic'),
   getGoogleAdsAuthAssignment: vi.fn(),
 }))
 
@@ -29,7 +30,10 @@ vi.mock('@/lib/google-ads-service-account', () => ({
   getServiceAccountConfig: serviceAccountFns.getServiceAccountConfig,
 }))
 
-import { getGoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
+import {
+  getGoogleAdsAuthContext,
+  resolveGoogleAdsCredentialStatusFields,
+} from '@/lib/google-ads-auth-context'
 
 describe('getGoogleAdsAuthContext', () => {
   beforeEach(() => {
@@ -100,5 +104,32 @@ describe('getGoogleAdsAuthContext', () => {
     expect(ctx.serviceAccountConfig?.id).toBe('sa-1')
     expect(oauthFns.getGoogleAdsCredentials).not.toHaveBeenCalled()
     expect(serviceAccountFns.getServiceAccountConfig).toHaveBeenCalledWith(2, 'sa-1')
+  })
+})
+
+describe('resolveGoogleAdsCredentialStatusFields', () => {
+  it('fills developerToken and loginCustomerId from service account config', async () => {
+    const ctx = {
+      userId: 2,
+      ownerUserId: 1,
+      assignment: null,
+      isShared: true,
+      canModify: false,
+      auth: { authType: 'service_account' as const, serviceAccountId: 'sa-1' },
+      oauthCredentials: null,
+      serviceAccountConfig: {
+        id: 'sa-1',
+        name: 'Admin SA',
+        mccCustomerId: '1112223333',
+        developerToken: 'dev-token',
+      },
+    }
+
+    const fields = await resolveGoogleAdsCredentialStatusFields(ctx as any)
+
+    expect(fields.hasServiceAccount).toBe(true)
+    expect(fields.developerToken).toBe('dev-token')
+    expect(fields.loginCustomerId).toBe('1112223333')
+    expect(fields.apiAccessLevel).toBe('basic')
   })
 })

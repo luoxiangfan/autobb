@@ -5,8 +5,11 @@
 
 import { getDatabase } from './db'
 import { getGoogleAdsClient } from './google-ads-api'
-import { getGoogleAdsCredentials } from './google-ads-oauth'
 import { resolveGoogleAdsApiAccessLevel, resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+} from './google-ads-auth-context'
 
 export type ApiAccessLevel = 'test' | 'explorer' | 'basic' | 'standard'
 
@@ -85,7 +88,37 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
   const now = new Date().toISOString()
 
   try {
-    const credentials = await getGoogleAdsCredentials(userId)
+    const ctx = await getGoogleAdsAuthContext(userId)
+
+    if (ctx.auth.authType === 'service_account') {
+      const storedLevel = await resolveGoogleAdsApiAccessLevel(userId)
+      if (
+        storedLevel === 'test' ||
+        storedLevel === 'explorer' ||
+        storedLevel === 'basic' ||
+        storedLevel === 'standard'
+      ) {
+        return {
+          level: storedLevel,
+          detectedAt: now,
+          method: 'default',
+          details: '服务账号认证，使用已存储的 api_access_level',
+        }
+      }
+
+      if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
+        throw new Error('未找到 Google Ads 服务账号配置')
+      }
+
+      return {
+        level: 'explorer',
+        detectedAt: now,
+        method: 'default',
+        details: '服务账号认证，未探测 OAuth API，默认 explorer',
+      }
+    }
+
+    const credentials = ctx.oauthCredentials
 
     if (!credentials?.refresh_token) {
       const storedLevel = await resolveGoogleAdsApiAccessLevel(userId)

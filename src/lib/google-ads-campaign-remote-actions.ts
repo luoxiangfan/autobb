@@ -1,4 +1,8 @@
-import { getGoogleAdsAuthContext } from './google-ads-auth-context'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveEffectiveServiceAccountId,
+} from './google-ads-auth-context'
 import { removeGoogleAdsCampaign, updateGoogleAdsCampaignStatus } from './google-ads-api'
 import { getGoogleAdsAccountDeleteRemoteConfig } from './google-ads-account-delete-config'
 import { runWithConcurrency, withTimeout } from './run-with-concurrency'
@@ -132,31 +136,18 @@ export async function executeGoogleAdsCampaignRemoteActions(
     const auth = ctx.auth
     const refreshToken = ctx.oauthCredentials?.refresh_token || ''
 
-    if (auth.authType === 'oauth' && !refreshToken) {
-      return {
-        ...summary,
-        executed: false,
-        skipReason: 'CREDENTIALS_MISSING',
-        failures: [
-          {
-            campaignId: '*',
-            reason: '缺少 Google Ads OAuth 凭证，无法调用远端 API',
-          },
-        ],
-      }
-    }
+    const serviceAccountId = resolveEffectiveServiceAccountId(undefined, ctx)
 
-    if (auth.authType === 'service_account' && !auth.serviceAccountId) {
+    if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
+      const reason =
+        auth.authType === 'service_account'
+          ? '缺少服务账号配置，无法调用远端 API'
+          : '缺少 Google Ads OAuth 凭证，无法调用远端 API'
       return {
         ...summary,
         executed: false,
         skipReason: 'CREDENTIALS_MISSING',
-        failures: [
-          {
-            campaignId: '*',
-            reason: '缺少服务账号配置，无法调用远端 API',
-          },
-        ],
+        failures: [{ campaignId: '*', reason }],
       }
     }
 
@@ -201,7 +192,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
             userId,
             loginCustomerId,
             authType: auth.authType,
-            serviceAccountId: auth.serviceAccountId,
+            serviceAccountId,
           })
           summary.removed++
         } else {
@@ -214,7 +205,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
             userId,
             loginCustomerId,
             authType: auth.authType,
-            serviceAccountId: auth.serviceAccountId,
+            serviceAccountId,
           })
           summary.paused++
         }
@@ -239,7 +230,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
                 userId,
                 loginCustomerId,
                 authType: auth.authType,
-                serviceAccountId: auth.serviceAccountId,
+                serviceAccountId,
               }),
               remoteConfig.perCampaignTimeoutMs,
               `Campaign ${googleCampaignId} pause fallback`

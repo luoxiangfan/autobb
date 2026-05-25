@@ -16,7 +16,12 @@
 
 import type { Task } from '../types'
 import { getDatabase } from '@/lib/db'
-import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  getServiceAccountMccFromContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveEffectiveServiceAccountId,
+} from '@/lib/google-ads-auth-context'
 import {
   resolveLoginCustomerCandidates,
   isGoogleAdsAccountAccessError,
@@ -578,31 +583,17 @@ export async function executeCampaignPublish(
 
     console.log(`💰 使用账号货币: ${adsAccount.currency}`)
 
-    // 2. 检查OAuth凭证或服务账号配置
-    const credentials = await getGoogleAdsCredentials(userId)
-    const auth = await getUserAuthType(userId)
-    const hasServiceAccount = auth.authType === 'service_account' && Boolean(auth.serviceAccountId)
-
-    if ((!credentials || !credentials.refresh_token) && !hasServiceAccount) {
+    // 2. 检查 OAuth 凭证或服务账号配置（含共享管理员 assignment）
+    const authContext = await getGoogleAdsAuthContext(userId)
+    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
       throw new Error('OAuth refresh token或服务账号配置缺失，请重新授权或配置服务账号')
     }
 
-    // 获取认证类型和服务账号ID
+    const auth = authContext.auth
+    const credentials = authContext.oauthCredentials
     const refreshToken = credentials?.refresh_token || ''
-
-    let serviceAccountMccId: string | undefined
-
-    if (auth.authType === 'service_account') {
-      try {
-        const { getServiceAccountConfig } = await import('@/lib/google-ads-service-account')
-        const saConfig = await getServiceAccountConfig(userId, auth.serviceAccountId)
-        if (saConfig?.mccCustomerId) {
-          serviceAccountMccId = saConfig.mccCustomerId
-        }
-      } catch (error) {
-        console.warn('⚠️ 无法获取服务账号MCC Customer ID:', error)
-      }
-    }
+    const serviceAccountId = resolveEffectiveServiceAccountId(undefined, authContext)
+    const serviceAccountMccId = getServiceAccountMccFromContext(authContext)
 
     const loginCustomerIdCandidates = resolveLoginCustomerCandidates({
       authType: auth.authType,
@@ -669,7 +660,7 @@ export async function executeCampaignPublish(
       accountId: adsAccount.id,
       userId,
       authType: auth.authType,
-      serviceAccountId: auth.serviceAccountId,
+      serviceAccountId,
       runWithLoginCustomerFallbackAndHeartbeat,
     }
 
@@ -839,7 +830,7 @@ export async function executeCampaignPublish(
               userId,
               loginCustomerId,
               authType: auth.authType,
-              serviceAccountId: auth.serviceAccountId,
+              serviceAccountId,
             })
         )
 
@@ -871,7 +862,7 @@ export async function executeCampaignPublish(
               userId,
               loginCustomerId,
               authType: auth.authType,
-              serviceAccountId: auth.serviceAccountId,
+              serviceAccountId,
             })
         )
         console.log(`✅ Campaign预算已更新 (Google ID: ${googleCampaignId})`)
@@ -898,7 +889,7 @@ export async function executeCampaignPublish(
             userId,
             loginCustomerId,
             authType: auth.authType,
-            serviceAccountId: auth.serviceAccountId,
+            serviceAccountId,
           })
       )
       googleCampaignId = createdCampaign.campaignId
@@ -922,7 +913,7 @@ export async function executeCampaignPublish(
           userId,
           loginCustomerId,
           authType: auth.authType,
-          serviceAccountId: auth.serviceAccountId,
+          serviceAccountId,
           skipCache: true,
         })
       )
@@ -1008,7 +999,7 @@ export async function executeCampaignPublish(
             userId,
             loginCustomerId,
             authType: auth.authType,
-            serviceAccountId: auth.serviceAccountId,
+            serviceAccountId,
           })
       )
 
@@ -1040,7 +1031,7 @@ export async function executeCampaignPublish(
           userId,
           loginCustomerId,
           authType: auth.authType,
-          serviceAccountId: auth.serviceAccountId,
+          serviceAccountId,
         })
       )
 
@@ -1140,7 +1131,7 @@ export async function executeCampaignPublish(
           userId,
           loginCustomerId,
           authType: auth.authType,
-          serviceAccountId: auth.serviceAccountId,
+          serviceAccountId,
         })
       )
     }
@@ -1158,7 +1149,7 @@ export async function executeCampaignPublish(
           userId,
           loginCustomerId,
           authType: auth.authType,
-          serviceAccountId: auth.serviceAccountId,
+          serviceAccountId,
         })
       )
     }
@@ -1210,7 +1201,7 @@ export async function executeCampaignPublish(
           userId,
           loginCustomerId,
           authType: auth.authType,
-          serviceAccountId: auth.serviceAccountId,
+          serviceAccountId,
         })
       )
 
@@ -1293,7 +1284,7 @@ export async function executeCampaignPublish(
           userId,
           loginCustomerId,
           authType: auth.authType,
-          serviceAccountId: auth.serviceAccountId
+          serviceAccountId
         })
       )
       console.log(`  ✅ [串行1/2] 成功添加${finalCallouts.length}个Callout扩展`)
@@ -1321,7 +1312,7 @@ export async function executeCampaignPublish(
           userId,
           loginCustomerId,
           authType: auth.authType,
-          serviceAccountId: auth.serviceAccountId
+          serviceAccountId
         })
       )
       console.log(`  ✅ [串行2/2] 成功添加${formattedSitelinks.length}个Sitelink扩展`)
@@ -1347,7 +1338,7 @@ export async function executeCampaignPublish(
           userId,
           loginCustomerId,
           authType: auth.authType,
-          serviceAccountId: auth.serviceAccountId,
+          serviceAccountId,
         })
       )
     } catch (goalError: any) {
@@ -1370,7 +1361,7 @@ export async function executeCampaignPublish(
             userId,
             loginCustomerId,
             authType: auth.authType,
-            serviceAccountId: auth.serviceAccountId,
+            serviceAccountId,
           })
         )
         finalCampaignStatus = 'ENABLED'
@@ -1441,7 +1432,7 @@ export async function executeCampaignPublish(
             userId,
             loginCustomerId,
             authType: auth.authType,
-            serviceAccountId: auth.serviceAccountId,
+            serviceAccountId,
           })
         )
       } catch (pauseError: any) {
