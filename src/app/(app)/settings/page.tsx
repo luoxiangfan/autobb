@@ -747,6 +747,12 @@ export default function SettingsPage() {
       if (response.ok) {
         const data = await response.json()
         setGoogleAdsCredentialStatus(data.data)
+        if (data.data?.authType === 'oauth' || data.data?.authType === 'service_account') {
+          setGoogleAdsAuthMethod(data.data.authType)
+        }
+        if (data.data?.authType === 'service_account' || data.data?.hasServiceAccount) {
+          void fetchServiceAccounts()
+        }
       }
     } catch (err) {
       console.error('Failed to fetch Google Ads credential status:', err)
@@ -816,9 +822,12 @@ export default function SettingsPage() {
 
       // 构建URL参数
       let url = '/api/google-ads/credentials/accounts?refresh=true'
-      if (googleAdsAuthMethod === 'service_account' && serviceAccounts.length > 0) {
-        // 如果有已配置的服务账号，使用第一个服务账号
-        url += `&auth_type=service_account&service_account_id=${serviceAccounts[0].id}`
+      const effectiveAuthMethod =
+        googleAdsCredentialStatus?.authType ?? googleAdsAuthMethod
+      const effectiveServiceAccountId =
+        serviceAccounts[0]?.id ?? googleAdsCredentialStatus?.serviceAccountId
+      if (effectiveAuthMethod === 'service_account' && effectiveServiceAccountId) {
+        url += `&auth_type=service_account&service_account_id=${encodeURIComponent(String(effectiveServiceAccountId))}`
       }
 
       const response = await fetch(url, {
@@ -1918,12 +1927,13 @@ export default function SettingsPage() {
                       <div className="grid grid-cols-2 gap-4">
                         <button
                           type="button"
+                          disabled={googleAdsAuthReadOnly}
                           onClick={() => setGoogleAdsAuthMethod('oauth')}
                           className={`p-4 border-2 rounded-lg text-left transition-all relative ${
                             googleAdsAuthMethod === 'oauth'
                               ? 'border-blue-500 bg-blue-50'
                               : 'border-gray-200 hover:border-gray-300'
-                          }`}
+                          } ${googleAdsAuthReadOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                         >
                           <div className="flex items-center gap-2 mb-1">
                             <div className="font-semibold">OAuth 用户授权</div>
@@ -1936,6 +1946,7 @@ export default function SettingsPage() {
                         </button>
                         <button
                           type="button"
+                          disabled={googleAdsAuthReadOnly}
                           onClick={() => {
                             setGoogleAdsAuthMethod('service_account')
                             fetchServiceAccounts()
@@ -1944,7 +1955,7 @@ export default function SettingsPage() {
                             googleAdsAuthMethod === 'service_account'
                               ? 'border-blue-500 bg-blue-50'
                               : 'border-gray-200 hover:border-gray-300'
-                          }`}
+                          } ${googleAdsAuthReadOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                         >
                           <div className="flex items-center gap-2 mb-1">
                             <div className="font-semibold">服务账号认证</div>

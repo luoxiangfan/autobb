@@ -17,6 +17,7 @@ import {
   toDbCampaignBackupJsonField,
 } from './campaign-backups'
 import { getCustomerWithCredentials, trackOAuthApiCall } from './google-ads-api'
+import { getGoogleAdsCredentials, getUserAuthType } from './google-ads-oauth'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { toDbCampaignConfigTextField } from './campaign-backups'
 import { getInsertedId } from './db-helpers'
@@ -383,6 +384,10 @@ export async function syncCampaignsFromGoogleAds(
       return result
     }
 
+    const auth = await getUserAuthType(userId)
+    const oauthCredentials =
+      auth.authType === 'oauth' ? await getGoogleAdsCredentials(userId) : null
+
     // 3. 对每个账户执行同步
     for (const account of accounts) {
       // 如果指定了 customerId，只同步该账户
@@ -393,14 +398,28 @@ export async function syncCampaignsFromGoogleAds(
       console.log(`[GoogleAds Sync] Syncing account: ${account.customer_id} (${account.account_name || 'N/A'})`)
 
       try {
+        const linkedServiceAccountId =
+          typeof account.service_account_id === 'string'
+            ? account.service_account_id.trim()
+            : ''
+        const syncAuthType = auth.authType
+        const syncServiceAccountId =
+          syncAuthType === 'service_account'
+            ? linkedServiceAccountId || auth.serviceAccountId
+            : undefined
+        const syncRefreshToken =
+          syncAuthType === 'oauth'
+            ? account.refresh_token || oauthCredentials?.refresh_token || null
+            : null
+
         // 4. 从 Google Ads API 获取广告系列列表（聚合后的完整数据）
         const campaigns = await fetchCampaignsFromGoogleAds({
           userId,
           customerId: account.customer_id,
           googleAdsAccountId: account.id,
-          authType: account.auth_type || 'oauth',
-          serviceAccountId: account.auth_type === 'service_account' ? account.service_account_id || undefined : undefined,
-          refreshToken: account.refresh_token,
+          authType: syncAuthType,
+          serviceAccountId: syncServiceAccountId,
+          refreshToken: syncRefreshToken,
           enableAudit: !options?.dryRun,
         })
 

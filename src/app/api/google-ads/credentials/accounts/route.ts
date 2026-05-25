@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { getGoogleAdsCredentials } from '@/lib/google-ads-oauth'
+import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
+import { resolveGoogleAdsCredentialOwnerId } from '@/lib/google-ads-auth-assignment'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getGoogleAdsClient, getCustomer } from '@/lib/google-ads-api'
 import { getDatabase } from '@/lib/db'
@@ -1382,13 +1383,21 @@ async function get(request: NextRequest) {
     }
 
     const userId = authResult.user.userId
+    const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
+    const resolvedAuth = await getUserAuthType(userId)
 
     const { searchParams } = new URL(request.url)
     const forceRefresh = searchParams.get('refresh') === 'true'
     const asyncRefresh = searchParams.get('async') === 'true'
     const offerId = searchParams.get('offerId') ? parseInt(searchParams.get('offerId')!, 10) : null
-    const authType = (searchParams.get('auth_type') as 'oauth' | 'service_account') || 'oauth'
-    const serviceAccountId = searchParams.get('service_account_id')
+    const authTypeParam = searchParams.get('auth_type') as 'oauth' | 'service_account' | null
+    const authType: 'oauth' | 'service_account' =
+      authTypeParam === 'oauth' || authTypeParam === 'service_account'
+        ? authTypeParam
+        : resolvedAuth.authType
+    const serviceAccountId =
+      searchParams.get('service_account_id') ||
+      (authType === 'service_account' ? resolvedAuth.serviceAccountId : null)
 
     console.log(`🔍 [GET /api/google-ads/credentials/accounts] forceRefresh=${forceRefresh}, asyncRefresh=${asyncRefresh}, offerId=${offerId}, authType=${authType}`)
 
@@ -1474,7 +1483,8 @@ async function get(request: NextRequest) {
     if (developerTokenLooksWrong) {
       // 🆕 自愈：用户可能已经在设置里修正了 developer_token，但尚未重新授权（google_ads_credentials 仍是旧值）
       if (authType === 'oauth') {
-        const settingDeveloperToken = (await getUserOnlySetting('google_ads', 'developer_token', userId))?.value || ''
+        const settingDeveloperToken =
+          (await getUserOnlySetting('google_ads', 'developer_token', ownerUserId))?.value || ''
         const settingLooksOk =
           !!settingDeveloperToken &&
           settingDeveloperToken.trim() !== clientSecret.trim() &&
@@ -1495,7 +1505,7 @@ async function get(request: NextRequest) {
           await db
             .exec(
               `UPDATE google_ads_credentials SET developer_token = ? WHERE user_id = ? AND ${isActiveCondition}`,
-              [settingDeveloperToken, userId]
+              [settingDeveloperToken, ownerUserId]
             )
             .catch(() => {})
         } else {
