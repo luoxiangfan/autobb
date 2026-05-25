@@ -6,14 +6,14 @@
  * 3. AI分析结果是否完整
  */
 
-import { getSQLiteDatabase } from '../src/lib/db'
+import { getDatabase } from '../src/lib/db'
 
 async function testBatchUploadConsistency() {
   console.log('========================================')
   console.log('📋 测试批量上传与手动创建的一致性')
   console.log('========================================\n')
 
-  const db = getSQLiteDatabase()
+  const db = getDatabase()
 
   try {
     // 步骤1: 创建测试Offer（模拟批量上传）
@@ -23,13 +23,12 @@ async function testBatchUploadConsistency() {
     const testCountry = 'IT'
     const userId = 1
 
-    // 插入测试Offer
-    const insertResult = db.prepare(`
+    const insertResult = await db.exec(`
       INSERT INTO offers (
         user_id, url, brand, target_country, affiliate_link,
         offer_name, scrape_status, is_active
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       userId,
       testUrl,
       '提取中...',
@@ -38,7 +37,7 @@ async function testBatchUploadConsistency() {
       `Test_Batch_${Date.now()}`,
       'pending',
       1
-    )
+    ])
 
     const offerId = insertResult.lastInsertRowid as number
     console.log(`✅ 创建测试Offer #${offerId}`)
@@ -49,38 +48,41 @@ async function testBatchUploadConsistency() {
 
     const { triggerOfferScraping } = await import('../src/lib/offer-scraping')
 
-    // 触发抓取（异步）
     triggerOfferScraping(offerId, userId, testUrl, '提取中...')
 
     console.log('✅ 抓取任务已触发，等待完成...')
 
-    // 等待抓取完成（最多等待3分钟）
     let attempts = 0
-    const maxAttempts = 36 // 3分钟 / 5秒
+    const maxAttempts = 36
     let scrapeStatus = 'pending'
 
     while (attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 5000)) // 等待5秒
+      await new Promise(resolve => setTimeout(resolve, 5000))
 
-      const offer = db.prepare(`
+      const offer = await db.queryOne<{
+        scrape_status: string
+        brand: string
+        final_url: string
+        scraped_at: string
+      }>(`
         SELECT scrape_status, brand, final_url, scraped_at
         FROM offers
         WHERE id = ?
-      `).get(offerId) as any
+      `, [offerId])
 
-      scrapeStatus = offer.scrape_status
+      scrapeStatus = offer?.scrape_status ?? scrapeStatus
 
       console.log(`   [${attempts + 1}/${maxAttempts}] 状态: ${scrapeStatus}`)
 
       if (scrapeStatus === 'completed' || scrapeStatus === 'failed') {
         console.log(`\n✅ 抓取完成！状态: ${scrapeStatus}`)
-        if (offer.brand) {
+        if (offer?.brand) {
           console.log(`   品牌: ${offer.brand}`)
         }
-        if (offer.final_url) {
+        if (offer?.final_url) {
           console.log(`   Final URL: ${offer.final_url}`)
         }
-        if (offer.scraped_at) {
+        if (offer?.scraped_at) {
           console.log(`   抓取时间: ${offer.scraped_at}`)
         }
         break
@@ -97,14 +99,18 @@ async function testBatchUploadConsistency() {
     // 步骤3: 验证Offer数据
     console.log('\n📊 步骤3: 验证Offer数据...')
 
-    const offer = db.prepare(`
+    const offer = await db.queryOne<Record<string, unknown>>(`
       SELECT
         id, brand, final_url, scrape_status, scraped_at,
         scraped_data, review_analysis, competitor_analysis,
         extracted_keywords, extracted_headlines, extracted_descriptions
       FROM offers
       WHERE id = ?
-    `).get(offerId) as any
+    `, [offerId])
+
+    if (!offer) {
+      throw new Error(`Offer ${offerId} not found`)
+    }
 
     console.log(`   Offer ID: ${offer.id}`)
     console.log(`   品牌: ${offer.brand || '未提取'}`)
@@ -112,7 +118,6 @@ async function testBatchUploadConsistency() {
     console.log(`   抓取状态: ${offer.scrape_status}`)
     console.log(`   抓取时间: ${offer.scraped_at || '未抓取'}`)
 
-    // 检查AI分析结果
     const hasScrapedData = offer.scraped_data && offer.scraped_data !== 'null'
     const hasReviewAnalysis = offer.review_analysis && offer.review_analysis !== 'null'
     const hasCompetitorAnalysis = offer.competitor_analysis && offer.competitor_analysis !== 'null'
@@ -131,14 +136,14 @@ async function testBatchUploadConsistency() {
     // 步骤4: 验证scraped_products表数据
     console.log('\n📦 步骤4: 验证scraped_products表数据...')
 
-    const products = db.prepare(`
+    const products = await db.query<Record<string, unknown>>(`
       SELECT
         id, offer_id, name, asin, price, rating, review_count,
         hot_score, rank, is_hot, hot_label, scrape_source
       FROM scraped_products
       WHERE offer_id = ?
       ORDER BY rank ASC
-    `).all(offerId) as any[]
+    `, [offerId])
 
     if (products.length === 0) {
       console.log('   ❌ 未找到scraped_products数据')
@@ -165,23 +170,23 @@ async function testBatchUploadConsistency() {
     // 步骤5: 对比手动创建的Offer
     console.log('\n🔍 步骤5: 对比手动创建的Offer（参考）...')
 
-    const manualOffer = db.prepare(`
+    const manualOffer = await db.queryOne<{ id: number; brand: string; scrape_status: string }>(`
       SELECT id, brand, scrape_status
       FROM offers
       WHERE user_id = ? AND scrape_status = 'completed'
       ORDER BY id DESC
       LIMIT 1
-    `).get(userId) as any
+    `, [userId])
 
     if (manualOffer) {
       console.log(`   参考Offer ID: ${manualOffer.id}`)
 
-      const manualProducts = db.prepare(`
+      const manualProducts = await db.query<{ count: number; scrape_source: string }>(`
         SELECT COUNT(*) as count, scrape_source
         FROM scraped_products
         WHERE offer_id = ?
         GROUP BY scrape_source
-      `).all(manualOffer.id) as any[]
+      `, [manualOffer.id])
 
       if (manualProducts.length > 0) {
         console.log(`   参考Offer的产品数据:`)
@@ -218,10 +223,9 @@ async function testBatchUploadConsistency() {
       console.log(`\n⚠️  ${totalCount - passedCount} 项检查未通过，需要进一步调查`)
     }
 
-    // 清理测试数据（可选）
     console.log('\n🧹 清理测试数据...')
-    db.prepare('DELETE FROM scraped_products WHERE offer_id = ?').run(offerId)
-    db.prepare('DELETE FROM offers WHERE id = ?').run(offerId)
+    await db.exec('DELETE FROM scraped_products WHERE offer_id = ?', [offerId])
+    await db.exec('DELETE FROM offers WHERE id = ?', [offerId])
     console.log('✅ 测试数据已清理')
 
   } catch (error: any) {
@@ -231,7 +235,6 @@ async function testBatchUploadConsistency() {
   }
 }
 
-// 运行测试
 testBatchUploadConsistency()
   .then(() => {
     console.log('\n✅ 测试完成')

@@ -14,7 +14,7 @@
  */
 
 import cron from 'node-cron'
-import { getDatabase, getSQLiteDatabase } from './lib/db'
+import { getDatabase } from './lib/db'
 import { getQueueManagerForTaskType } from './lib/queue/queue-routing'
 import { getOpenclawSettingsWithAffiliateSyncMap } from './lib/openclaw/settings'
 // 🔄 已迁移到统一队列系统

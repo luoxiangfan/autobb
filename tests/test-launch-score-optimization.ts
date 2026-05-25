@@ -9,7 +9,7 @@
 
 import { generateAdCreative } from '../src/lib/ad-creative-generator'
 import { calculateLaunchScore } from '../src/lib/scoring'
-import { getSQLiteDatabase } from '../src/lib/db'
+import { getDatabase } from '../src/lib/db'
 
 async function testLaunchScoreOptimization() {
   console.log('=' .repeat(60))
@@ -20,8 +20,8 @@ async function testLaunchScoreOptimization() {
   const userId = 1    // autoads用户
 
   // 1. 获取Offer信息
-  const db = getSQLiteDatabase()
-  const offer = db.prepare('SELECT * FROM offers WHERE id = ?').get(offerId) as any
+  const db = getDatabase()
+  const offer = await db.queryOne<Record<string, unknown>>('SELECT * FROM offers WHERE id = ?', [offerId])
 
   if (!offer) {
     console.error('❌ Offer不存在')

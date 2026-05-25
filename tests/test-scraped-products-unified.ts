@@ -3,12 +3,12 @@
  * 验证scraped_products表的数据一致性
  */
 
-import { getSQLiteDatabase } from '../src/lib/db'
+import { getDatabase } from '../src/lib/db'
 
 async function testScrapedProductsUnified() {
   console.log('🧪 开始测试scraped_products统一数据存储...\n')
 
-  const db = getSQLiteDatabase()
+  const db = getDatabase()
 
   // 测试数据：使用真实的Offer ID 245
   const mockProductData = {
@@ -26,7 +26,7 @@ async function testScrapedProductsUnified() {
   try {
     // 步骤1: 清空测试数据
     console.log('📋 步骤1: 清空测试数据...')
-    db.prepare('DELETE FROM scraped_products WHERE offer_id = ?').run(mockProductData.offerId)
+    await db.exec('DELETE FROM scraped_products WHERE offer_id = ?', [mockProductData.offerId])
     console.log('✅ 测试数据已清空\n')
 
     // 步骤2: 模拟单品页面保存逻辑
@@ -41,7 +41,7 @@ async function testScrapedProductsUnified() {
 
     console.log(`   计算热销分数: ${rating} × log10(${reviewCount} + 1) = ${hotScore.toFixed(2)}`)
 
-    const insertStmt = db.prepare(`
+    await db.exec(`
       INSERT INTO scraped_products (
         offer_id, name, asin, price, rating, review_count, image_url,
         promotion, badge, is_prime,
@@ -53,9 +53,7 @@ async function testScrapedProductsUnified() {
         ?, ?, ?, ?,
         ?, datetime('now'), datetime('now')
       )
-    `)
-
-    insertStmt.run(
+    `, [
       mockProductData.offerId,
       mockProductData.productName,
       mockProductData.asin,
@@ -63,23 +61,21 @@ async function testScrapedProductsUnified() {
       mockProductData.rating,
       mockProductData.reviewCount,
       mockProductData.imageUrl,
-      // Phase 3 fields
       mockProductData.discount,
-      null,  // badge
+      null,
       mockProductData.primeEligible ? 1 : 0,
-      // Phase 2 fields
       hotScore,
-      1,  // rank: 单品默认排名第1
-      1,  // is_hot: 单品默认标记为热销
-      '🔥 主推商品',  // hot_label
-      'amazon_product'  // scrape_source
-    )
+      1,
+      1,
+      '🔥 主推商品',
+      'amazon_product'
+    ])
 
     console.log('✅ 单品数据已保存到scraped_products表\n')
 
     // 步骤3: 验证数据完整性
     console.log('📋 步骤3: 验证数据完整性...')
-    const savedProduct = db.prepare(`
+    const savedProduct = await db.queryOne<Record<string, unknown>>(`
       SELECT
         id, offer_id, name, asin, price, rating, review_count,
         promotion, badge, is_prime,
@@ -87,7 +83,7 @@ async function testScrapedProductsUnified() {
         scrape_source
       FROM scraped_products
       WHERE offer_id = ?
-    `).get(mockProductData.offerId) as any
+    `, [mockProductData.offerId])
 
     if (!savedProduct) {
       throw new Error('❌ 未找到保存的产品数据')
@@ -103,7 +99,7 @@ async function testScrapedProductsUnified() {
     console.log(`   - 评论数: ${savedProduct.review_count}`)
     console.log(`   - 促销: ${savedProduct.promotion}`)
     console.log(`   - Prime: ${savedProduct.is_prime ? '✓' : '✗'}`)
-    console.log(`   - 热销分数: ${savedProduct.hot_score?.toFixed(2)}`)
+    console.log(`   - 热销分数: ${(savedProduct.hot_score as number)?.toFixed(2)}`)
     console.log(`   - 排名: ${savedProduct.rank}`)
     console.log(`   - 热销标记: ${savedProduct.is_hot ? '✓' : '✗'}`)
     console.log(`   - 热销标签: ${savedProduct.hot_label}`)
@@ -150,14 +146,14 @@ async function testScrapedProductsUnified() {
     // 步骤6: 验证scrape_source值
     console.log('\n📋 步骤6: 验证scrape_source值...')
     const validSources = ['amazon_store', 'independent_store', 'amazon_product']
-    if (!validSources.includes(savedProduct.scrape_source)) {
+    if (!validSources.includes(savedProduct.scrape_source as string)) {
       throw new Error(`❌ scrape_source值无效: ${savedProduct.scrape_source}`)
     }
     console.log(`✅ scrape_source值有效: ${savedProduct.scrape_source}`)
 
     // 步骤7: 清理测试数据
     console.log('\n📋 步骤7: 清理测试数据...')
-    db.prepare('DELETE FROM scraped_products WHERE offer_id = ?').run(mockProductData.offerId)
+    await db.exec('DELETE FROM scraped_products WHERE offer_id = ?', [mockProductData.offerId])
     console.log('✅ 测试数据已清理')
 
     console.log('\n🎉 所有测试通过！单品和店铺页面的数据存储已统一。')

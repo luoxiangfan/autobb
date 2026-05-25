@@ -11,7 +11,7 @@
  * 7. 验证发布结果
  */
 
-import { getSQLiteDatabase } from '../src/lib/db'
+import { getDatabase } from '../src/lib/db'
 import { generateAdCreative } from '../src/lib/ad-creative-generator'
 import { createAdCreative } from '../src/lib/ad-creative'
 import { scrapeProductData } from '../src/lib/scraper'
@@ -44,7 +44,7 @@ async function runFullPublishFlowTest() {
   console.log('完整广告发布流程测试')
   console.log('========================================\n')
 
-  const db = getSQLiteDatabase()
+  const db = getDatabase()
   const userId = 1 // 测试用户ID
 
   try {
@@ -55,7 +55,7 @@ async function runFullPublishFlowTest() {
     console.log(`   URL: ${TEST_CONFIG.url}`)
     console.log(`   国家: ${TEST_CONFIG.targetCountry}`)
 
-    const offerInsert = db.prepare(`
+    const offerInsert = await db.exec(`
       INSERT INTO offers (
         user_id,
         url,
@@ -66,7 +66,7 @@ async function runFullPublishFlowTest() {
         created_at,
         updated_at
       ) VALUES (?, ?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))
-    `).run(userId, TEST_CONFIG.url, '临时品牌', TEST_CONFIG.targetCountry, TEST_CONFIG.targetLanguage)
+    `, [userId, TEST_CONFIG.url, '临时品牌', TEST_CONFIG.targetCountry, TEST_CONFIG.targetLanguage])
 
     const offerId = Number(offerInsert.lastInsertRowid)
     console.log(`✅ Offer创建成功，ID: ${offerId}`)
@@ -81,7 +81,7 @@ async function runFullPublishFlowTest() {
       const scrapedData = await scrapeProductData(TEST_CONFIG.url)
 
       // 更新Offer数据（映射scraper返回的字段到数据库字段）
-      db.prepare(`
+      await db.exec(`
         UPDATE offers
         SET
           brand = ?,
@@ -94,7 +94,7 @@ async function runFullPublishFlowTest() {
           scraped_at = datetime('now'),
           updated_at = datetime('now')
         WHERE id = ?
-      `).run(
+      `, [
         scrapedData.brandName || '未知品牌',
         scrapedData.productName || '未知产品',
         scrapedData.productName || '未知产品',
@@ -102,7 +102,7 @@ async function runFullPublishFlowTest() {
         JSON.stringify(scrapedData.productFeatures || []),
         scrapedData.productPrice || '',
         offerId
-      )
+      ])
 
       console.timeEnd('⏱️ 抓取耗时')
       console.log(`✅ 产品信息抓取成功`)
@@ -115,11 +115,11 @@ async function runFullPublishFlowTest() {
       console.error(`❌ 抓取失败: ${scrapeError.message}`)
 
       // 更新失败状态
-      db.prepare(`
+      await db.exec(`
         UPDATE offers
         SET scrape_status = 'failed', scrape_error = ?, updated_at = datetime('now')
         WHERE id = ?
-      `).run(scrapeError.message, offerId)
+      `, [scrapeError.message, offerId])
 
       throw new Error(`产品抓取失败: ${scrapeError.message}`)
     }
@@ -165,26 +165,26 @@ async function runFullPublishFlowTest() {
         console.log(`   Final URL Suffix: ${finalUrlSuffix.substring(0, 100)}${finalUrlSuffix.length > 100 ? '...' : ''}`)
 
         // 更新Offer中的final_url和final_url_suffix
-        db.prepare(`
+        await db.exec(`
           UPDATE offers
           SET
             final_url = ?,
             final_url_suffix = ?,
             updated_at = datetime('now')
           WHERE id = ?
-        `).run(finalUrl, finalUrlSuffix, offerId)
+        `, [finalUrl, finalUrlSuffix, offerId])
 
         console.log(`✅ 已更新Offer的Final URL和Suffix`)
       } else {
         console.log(`ℹ️ 非推广链接，跳过URL解析`)
         // 直接使用原始URL作为final_url
-        db.prepare(`
+        await db.exec(`
           UPDATE offers
           SET
             final_url = ?,
             updated_at = datetime('now')
           WHERE id = ?
-        `).run(TEST_CONFIG.url, offerId)
+        `, [TEST_CONFIG.url, offerId])
       }
 
       console.timeEnd('⏱️ URL解析耗时')
@@ -194,13 +194,13 @@ async function runFullPublishFlowTest() {
       console.warn(`   将使用原始URL作为Final URL`)
 
       // 失败时使用原始URL
-      db.prepare(`
+      await db.exec(`
         UPDATE offers
         SET
           final_url = ?,
           updated_at = datetime('now')
         WHERE id = ?
-      `).run(TEST_CONFIG.url, offerId)
+      `, [TEST_CONFIG.url, offerId])
     }
 
     // ============================================
@@ -209,7 +209,10 @@ async function runFullPublishFlowTest() {
     console.log('\n📋 步骤3/8: 生成广告创意...')
     console.time('⏱️ 创意生成耗时')
 
-    const offer = db.prepare(`SELECT * FROM offers WHERE id = ?`).get(offerId) as any
+    const offer = await db.queryOne<Record<string, unknown>>(`SELECT * FROM offers WHERE id = ?`, [offerId])
+    if (!offer) {
+      throw new Error(`Offer ${offerId} not found`)
+    }
     const creativeData = await generateAdCreative(offerId, userId, { skipCache: true })
 
     console.timeEnd('⏱️ 创意生成耗时')
@@ -226,25 +229,25 @@ async function runFullPublishFlowTest() {
 
     const creative = createAdCreative(userId, offerId, {
       ...creativeData,
-      final_url: offer.final_url || offer.url,  // 优先使用解析后的final_url
-      final_url_suffix: offer.final_url_suffix || undefined,
+      final_url: (offer.final_url || offer.url) as string,  // 优先使用解析后的final_url
+      final_url_suffix: (offer.final_url_suffix as string | undefined) || undefined,
       ai_model: creativeData.ai_model || 'gemini-2.5-flash'
     })
 
     console.log(`✅ 创意已保存，ID: ${creative.id}`)
     console.log(`   Final URL: ${offer.final_url || offer.url}`)
-    console.log(`   Final URL Suffix: ${offer.final_url_suffix ? offer.final_url_suffix.substring(0, 50) + '...' : '(无)'}`)
+    console.log(`   Final URL Suffix: ${offer.final_url_suffix ? String(offer.final_url_suffix).substring(0, 50) + '...' : '(无)'}`)
 
     // ============================================
     // 步骤5: 验证广告账号
     // ============================================
     console.log('\n📋 步骤5/8: 验证广告账号...')
 
-    const adsAccount = db.prepare(`
+    const adsAccount = await db.queryOne<Record<string, unknown>>(`
       SELECT id, customer_id, account_name, is_active
       FROM google_ads_accounts
       WHERE customer_id = ? AND user_id = ? AND is_active = 1
-    `).get(String(TEST_CONFIG.adsAccountId), userId) as any
+    `, [String(TEST_CONFIG.adsAccountId), userId])
 
     if (!adsAccount) {
       throw new Error(`广告账号 ${TEST_CONFIG.adsAccountId} 不存在或未激活`)
@@ -267,13 +270,13 @@ async function runFullPublishFlowTest() {
     const publishPayload = {
       offer_id: offerId,
       ad_creative_id: creative.id,
-      google_ads_account_id: adsAccount.id,
+      google_ads_account_id: adsAccount.id as number,
       campaign_config: {
         ...TEST_CONFIG.campaign,
         targetCountry: TEST_CONFIG.targetCountry,
         targetLanguage: TEST_CONFIG.targetLanguage,
-        finalUrlSuffix: offer.url.includes('?')
-          ? offer.url.split('?')[1]
+        finalUrlSuffix: String(offer.url).includes('?')
+          ? String(offer.url).split('?')[1]
           : '',
         keywords: keywords,
         negativeKeywords: negativeKeywords
@@ -391,13 +394,13 @@ async function runFullPublishFlowTest() {
       // ============================================
       console.log('\n📋 验证数据库记录...')
 
-      const campaigns = db.prepare(`
+      const campaigns = await db.query<Record<string, unknown>>(`
         SELECT id, campaign_name, google_campaign_id, status, creation_status, creation_error
         FROM campaigns
         WHERE offer_id = ? AND user_id = ?
         ORDER BY id DESC
         LIMIT 5
-      `).all(offerId, userId) as any[]
+      `, [offerId, userId])
 
       console.log(`\n数据库中的Campaigns (最近5条):`)
       campaigns.forEach((campaign) => {

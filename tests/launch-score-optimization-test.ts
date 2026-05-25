@@ -7,7 +7,7 @@
  * 3. Launch Score评分优化
  */
 
-import { getSQLiteDatabase } from '../src/lib/db'
+import { getDatabase } from '../src/lib/db'
 import { generateAdCreative } from '../src/lib/ad-creative-generator'
 import { calculateLaunchScore } from '../src/lib/scoring'
 import { findOfferById } from '../src/lib/offers'
@@ -16,16 +16,16 @@ import { createAdCreative } from '../src/lib/ad-creative'
 async function runTests() {
   console.log('\n=== Launch Score优化测试 ===\n')
 
-  const db = getSQLiteDatabase()
+  const db = getDatabase()
 
   // 1. 获取测试用Offer（使用第一个已完成抓取的Offer）
   console.log('📋 步骤1: 获取测试Offer...')
-  const testOffer = db.prepare(`
+  const testOffer = await db.queryOne<Record<string, unknown>>(`
     SELECT * FROM offers
     WHERE scrape_status = 'completed'
     ORDER BY id DESC
     LIMIT 1
-  `).get() as any
+  `)
 
   if (!testOffer) {
     console.error('❌ 未找到已完成抓取的Offer，请先创建并抓取一个Offer')
@@ -40,8 +40,8 @@ async function runTests() {
   console.log('\n📋 步骤2: 测试广告创意生成（包括否定关键词）...')
   try {
     const creativeData = await generateAdCreative(
-      testOffer.id,
-      testOffer.user_id,
+      testOffer.id as number,
+      testOffer.user_id as number,
       { skipCache: true }
     )
 
@@ -91,11 +91,11 @@ async function runTests() {
     // 3. 保存创意到数据库
     console.log('\n📋 步骤3: 保存创意到数据库...')
     const creative = createAdCreative(
-      testOffer.user_id,
-      testOffer.id,
+      testOffer.user_id as number,
+      testOffer.id as number,
       {
         ...creativeData,
-        final_url: testOffer.url,
+        final_url: testOffer.url as string,
         ai_model: creativeData.ai_model || 'test'
       }
     )
@@ -103,14 +103,14 @@ async function runTests() {
 
     // 4. 测试Launch Score计算
     console.log('\n📋 步骤4: 测试Launch Score计算...')
-    const offer = findOfferById(testOffer.id, testOffer.user_id)
+    const offer = findOfferById(testOffer.id as number, testOffer.user_id as number)
 
     if (!offer) {
       console.error('❌ Offer查询失败')
       return
     }
 
-    const scoreAnalysis = await calculateLaunchScore(offer, creative, testOffer.user_id)
+    const scoreAnalysis = await calculateLaunchScore(offer, creative, testOffer.user_id as number)
 
     console.log(`✅ Launch Score计算完成`)
     console.log(`   总分: ${

@@ -7,16 +7,18 @@
  * 3. 验证返回数据格式和内容
  */
 
-import { getSQLiteDatabase } from '../src/lib/db'
+import { getDatabase } from '../src/lib/db'
 
 async function testLoginHistory() {
   console.log('\n🔍 开始测试登录记录功能...\n')
 
   try {
-    const db = getSQLiteDatabase()
+    const db = getDatabase()
 
     // 步骤1: 获取第一个测试用户
-    const user = db.prepare('SELECT id, username, email FROM users LIMIT 1').get() as any
+    const user = await db.queryOne<{ id: number; username: string; email: string }>(
+      'SELECT id, username, email FROM users LIMIT 1'
+    )
 
     if (!user) {
       console.log('❌ 没有找到用户，请先创建用户')
@@ -29,23 +31,31 @@ async function testLoginHistory() {
     console.log('\n📝 创建测试登录记录...')
 
     // 成功登录记录
-    db.prepare(`
+    await db.exec(`
       INSERT INTO login_attempts (username_or_email, ip_address, user_agent, success, failure_reason)
       VALUES (?, ?, ?, ?, ?)
-    `).run(user.username, '192.168.1.100', 'Mozilla/5.0 (Test Browser)', 1, null)
+    `, [user.username, '192.168.1.100', 'Mozilla/5.0 (Test Browser)', 1, null])
 
     // 失败登录记录
-    db.prepare(`
+    await db.exec(`
       INSERT INTO login_attempts (username_or_email, ip_address, user_agent, success, failure_reason)
       VALUES (?, ?, ?, ?, ?)
-    `).run(user.username, '192.168.1.101', 'Mozilla/5.0 (Test Browser)', 0, '密码错误')
+    `, [user.username, '192.168.1.101', 'Mozilla/5.0 (Test Browser)', 0, '密码错误'])
 
     console.log('   ✅ 成功创建 2 条测试登录记录')
 
     // 步骤3: 模拟API调用获取登录记录
     console.log('\n🔍 测试API查询登录记录...')
 
-    const loginAttempts = db.prepare(`
+    const loginAttempts = await db.query<{
+      id: number
+      username_or_email: string
+      ip_address: string
+      user_agent: string
+      success: number
+      failure_reason: string | null
+      attempted_at: string
+    }>(`
       SELECT
         id,
         username_or_email,
@@ -58,7 +68,7 @@ async function testLoginHistory() {
       WHERE username_or_email IN (?, ?)
       ORDER BY attempted_at DESC
       LIMIT 10
-    `).all(user.username, user.email || user.username) as any[]
+    `, [user.username, user.email || user.username])
 
     console.log(`   ✅ 查询到 ${loginAttempts.length} 条登录尝试记录`)
 
@@ -72,7 +82,14 @@ async function testLoginHistory() {
     // 步骤4: 测试审计日志查询
     console.log('\n🔍 测试审计日志查询...')
 
-    const auditLogs = db.prepare(`
+    const auditLogs = await db.query<{
+      id: number
+      event_type: string
+      ip_address: string
+      user_agent: string
+      details: string
+      created_at: string
+    }>(`
       SELECT
         id,
         event_type,
@@ -85,7 +102,7 @@ async function testLoginHistory() {
         AND event_type IN ('login_success', 'login_failed', 'account_locked')
       ORDER BY created_at DESC
       LIMIT 10
-    `).all(user.id) as any[]
+    `, [user.id])
 
     console.log(`   ✅ 查询到 ${auditLogs.length} 条审计日志`)
 
@@ -117,7 +134,7 @@ async function testLoginHistory() {
     combinedRecords.slice(0, 3).forEach((record, index) => {
       const status = record.type === 'login_attempt'
         ? (record.success ? '✅ 登录成功' : '❌ 登录失败')
-        : `🔐 ${record.eventType}`
+        : `🔐 ${(record as { eventType: string }).eventType}`
       console.log(`      ${index + 1}. ${status} - IP: ${record.ipAddress} - ${record.timestamp}`)
     })
 

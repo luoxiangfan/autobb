@@ -8,7 +8,7 @@
  * 4. 模拟CAPTCHA验证成功后登录
  */
 
-import { getSQLiteDatabase } from '../src/lib/db'
+import { getDatabase } from '../src/lib/db'
 import { recordFailedLogin, resetFailedAttempts } from '../src/lib/auth-security'
 import { hashPassword } from '../src/lib/crypto'
 
@@ -16,19 +16,19 @@ async function testCaptchaFlow() {
   console.log('\n🔐 开始测试Cloudflare Turnstile CAPTCHA集成...\n')
 
   try {
-    const db = getSQLiteDatabase()
+    const db = getDatabase()
 
     // 步骤1: 创建测试用户
     console.log('📝 步骤1: 创建测试用户...')
 
     // 先删除已存在的测试用户（如果有）
-    db.prepare('DELETE FROM users WHERE username = ?').run('test_captcha_user')
+    await db.exec('DELETE FROM users WHERE username = ?', ['test_captcha_user'])
 
     const passwordHash = await hashPassword('correct_password_123')
-    const testUser = db.prepare(`
+    const testUser = await db.exec(`
       INSERT INTO users (username, email, password_hash, role, package_type, failed_login_count, locked_until)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       'test_captcha_user',
       'captcha.test@example.com',
       passwordHash,
@@ -36,7 +36,7 @@ async function testCaptchaFlow() {
       'trial',
       0,
       null
-    )
+    ])
 
     const testUserId = testUser.lastInsertRowid as number
     console.log(`   ✅ 创建测试用户 (ID: ${testUserId}, username: test_captcha_user)`)
@@ -49,10 +49,13 @@ async function testCaptchaFlow() {
     }
 
     // 验证failed_login_count
-    const userAfterFailures = db.prepare('SELECT failed_login_count FROM users WHERE id = ?').get(testUserId) as any
-    console.log(`   📊 当前失败次数: ${userAfterFailures.failed_login_count}`)
+    const userAfterFailures = await db.queryOne<{ failed_login_count: number }>(
+      'SELECT failed_login_count FROM users WHERE id = ?',
+      [testUserId]
+    )
+    console.log(`   📊 当前失败次数: ${userAfterFailures?.failed_login_count}`)
 
-    if (userAfterFailures.failed_login_count >= 3) {
+    if (userAfterFailures && userAfterFailures.failed_login_count >= 3) {
       console.log('   ✅ 失败次数达到阈值，应触发CAPTCHA要求')
     } else {
       console.log('   ❌ 失败次数未达到阈值')

@@ -4,7 +4,7 @@
  */
 
 import { performScrapeAndAnalysis } from '../src/lib/offer-scraping-core'
-import { getSQLiteDatabase } from '../src/lib/db'
+import { getDatabase } from '../src/lib/db'
 
 async function testOffer245Rescrape() {
   console.log('🧪 开始测试Offer 245重新抓取...\n')
@@ -15,11 +15,11 @@ async function testOffer245Rescrape() {
   const brand = 'Eufy'
 
   try {
+    const db = getDatabase()
+
     // 1. 清空之前的scraped_products数据
     console.log('📋 步骤1: 清空之前的scraped_products数据...')
-    const db = getSQLiteDatabase()
-    const deleteStmt = db.prepare('DELETE FROM scraped_products WHERE offer_id = ?')
-    deleteStmt.run(offerId)
+    await db.exec('DELETE FROM scraped_products WHERE offer_id = ?', [offerId])
     console.log('✅ 已清空\n')
 
     // 2. 执行重新抓取
@@ -35,14 +35,14 @@ async function testOffer245Rescrape() {
 
     // 3. 验证scraped_products数据
     console.log('📋 步骤3: 验证scraped_products数据...')
-    const products = db.prepare(`
+    const products = await db.query(`
       SELECT id, name, price, rating, review_count, hot_score, rank, is_hot,
              promotion, badge, is_prime, scrape_source
       FROM scraped_products
       WHERE offer_id = ?
       ORDER BY hot_score DESC
       LIMIT 10
-    `).all(offerId)
+    `, [offerId])
 
     if (products.length === 0) {
       console.log('❌ 失败：scraped_products表中没有数据')
@@ -67,12 +67,12 @@ async function testOffer245Rescrape() {
 
     // 4. 验证offers表的增强数据
     console.log('\n📋 步骤4: 验证offers表的增强数据...')
-    const offer = db.prepare(`
+    const offer = await db.queryOne<Record<string, unknown>>(`
       SELECT scraped_data, extracted_keywords, extracted_headlines, extracted_descriptions,
              review_analysis, competitor_analysis
       FROM offers
       WHERE id = ?
-    `).get(offerId) as any
+    `, [offerId])
 
     const checks = [
       { name: 'scraped_data', value: offer?.scraped_data },
@@ -85,7 +85,8 @@ async function testOffer245Rescrape() {
 
     console.log('\n增强数据字段检查:')
     checks.forEach(check => {
-      const hasData = check.value && check.value !== 'null' && check.value.length > 10
+      const val = check.value as string | undefined
+      const hasData = val && val !== 'null' && val.length > 10
       console.log(`   ${hasData ? '✅' : '❌'} ${check.name}: ${hasData ? '有数据' : '无数据'}`)
     })
 

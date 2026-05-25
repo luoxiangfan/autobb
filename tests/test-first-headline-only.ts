@@ -3,16 +3,16 @@
  */
 
 import { generateAdCreative } from '../src/lib/ad-creative-generator'
-import { getSQLiteDatabase } from '../src/lib/db'
+import { getDatabase } from '../src/lib/db'
 
 async function main() {
-  const db = getSQLiteDatabase()
+  const db = getDatabase()
 
   // 创建测试Offer
-  const result = db.prepare(`
+  const result = await db.exec(`
     INSERT INTO offers (user_id, url, brand, category, product_name, product_price, target_country, product_highlights, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-  `).run(
+  `, [
     1,
     'https://pboost.me/test',
     'TestBrand',
@@ -21,7 +21,7 @@ async function main() {
     '99.99',
     'US',
     'Feature 1, Feature 2',
-  )
+  ])
 
   const offerId = result.lastInsertRowid as number
   console.log(`创建测试Offer: ID=${offerId}`)
@@ -48,7 +48,7 @@ async function main() {
   }
 
   // 清理
-  db.prepare('DELETE FROM offers WHERE id = ?').run(offerId)
+  await db.exec('DELETE FROM offers WHERE id = ?', [offerId])
   console.log('\n测试完成，已清理测试数据')
 }
 

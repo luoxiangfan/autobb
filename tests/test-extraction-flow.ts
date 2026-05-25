@@ -7,7 +7,7 @@
  * 3. 模拟 AI 创意生成，验证是否正确读取提取数据
  */
 
-import { getSQLiteDatabase } from '../src/lib/db'
+import { getDatabase } from '../src/lib/db'
 
 interface OfferData {
   id: number
@@ -24,11 +24,11 @@ interface OfferData {
 async function testExtractionFlow() {
   console.log('🧪 开始测试需求34数据流...\n')
 
-  const db = getSQLiteDatabase()
+  const db = getDatabase()
 
   // 1. 查询所有已爬取完成的 Offers
   console.log('📋 步骤1: 查询已爬取的 Offers...')
-  const offers = db.prepare(`
+  const offers = await db.query<OfferData>(`
     SELECT id, brand, url, scrape_status,
            extracted_keywords, extracted_headlines, extracted_descriptions,
            extraction_metadata, extracted_at
@@ -36,7 +36,7 @@ async function testExtractionFlow() {
     WHERE scrape_status = 'completed'
     ORDER BY updated_at DESC
     LIMIT 10
-  `).all() as OfferData[]
+  `)
 
   console.log(`   找到 ${offers.length} 个已完成爬取的 Offers\n`)
 

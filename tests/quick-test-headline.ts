@@ -2,17 +2,17 @@
  * 快速测试第一个headline格式
  */
 
-import { getSQLiteDatabase } from '../src/lib/db'
+import { getDatabase } from '../src/lib/db'
 import { generateAdCreative } from '../src/lib/ad-creative-generator'
 
 async function main() {
   console.log('快速测试第一个headline格式...\n')
 
-  const db = getSQLiteDatabase()
+  const db = getDatabase()
 
   // 使用现有的Offer (ID 103 - Reolink)
   const offerId = 103
-  const offer = db.prepare('SELECT * FROM offers WHERE id = ?').get(offerId) as any
+  const offer = await db.queryOne<Record<string, unknown>>('SELECT * FROM offers WHERE id = ?', [offerId])
 
   if (!offer) {
     console.error('Offer不存在')

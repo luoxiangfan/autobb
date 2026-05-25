@@ -18,7 +18,7 @@
  * 用法：npx tsx scripts/fix-keyword-volume-consistency.ts
  */
 
-import { getSQLiteDatabase } from '../src/lib/db'
+import { getDatabase } from '../src/lib/db'
 import { getKeywordSearchVolumes } from '../src/lib/keyword-planner'
 
 interface KeywordWithVolume {
@@ -32,19 +32,19 @@ interface KeywordWithVolume {
 async function fixKeywordVolumeConsistency() {
   console.log('🔧 开始修复关键词搜索量一致性问题\n')
 
-  const db = getSQLiteDatabase()
+  const db = getDatabase()
 
   // 1. 查询需要修复的广告创意
-  const creatives = db.prepare(`
+  const creatives = await db.query<{
+    id: number
+    offer_id: number
+    keywords_with_volume: string
+  }>(`
     SELECT id, offer_id, keywords_with_volume
     FROM ad_creatives
     WHERE id IN (160, 161)
       AND keywords_with_volume IS NOT NULL
-  `).all() as Array<{
-    id: number
-    offer_id: number
-    keywords_with_volume: string
-  }>
+  `)
 
   if (creatives.length === 0) {
     console.log('⚠️  未找到需要修复的广告创意')
@@ -54,15 +54,15 @@ async function fixKeywordVolumeConsistency() {
   console.log(`📊 找到 ${creatives.length} 个需要修复的广告创意\n`)
 
   // 2. 获取offer的国家和语言信息
-  const offer = db.prepare(`
-    SELECT id, target_country, target_language
-    FROM offers
-    WHERE id = ?
-  `).get(250) as {
+  const offer = await db.queryOne<{
     id: number
     target_country: string
     target_language: string
-  } | undefined
+  }>(`
+    SELECT id, target_country, target_language
+    FROM offers
+    WHERE id = ?
+  `, [250])
 
   if (!offer) {
     console.error('❌ 未找到offer 250')
@@ -180,15 +180,15 @@ async function fixKeywordVolumeConsistency() {
       console.log(`   📊 关键词数: ${existingKeywords.length} → ${deduplicatedKeywords.length}`)
 
       // 3.9 更新数据库
-      db.prepare(`
+      await db.exec(`
         UPDATE ad_creatives
         SET keywords_with_volume = ?,
             updated_at = datetime('now')
         WHERE id = ?
-      `).run(
+      `, [
         JSON.stringify(deduplicatedKeywords),
         creative.id
-      )
+      ])
 
       console.log(`   ✅ 广告创意 ${creative.id} 已更新`)
 

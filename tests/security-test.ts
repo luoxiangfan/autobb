@@ -16,10 +16,12 @@ import {
   logLoginAttempt,
 } from '../src/lib/auth-security'
 import { logAuditEvent, AuditEventType, queryAuditLogs } from '../src/lib/audit-logger'
-import { getSQLiteDatabase } from '../src/lib/db'
+import { getDatabase } from '../src/lib/db'
 
 async function runSecurityTests() {
 console.log('\n🔒 开始安全功能测试...\n')
+
+const db = getDatabase()
 
 // ==================== 测试1: 速率限制 ====================
 console.log('📋 测试1: 速率限制功能')
@@ -53,13 +55,11 @@ try {
 // ==================== 测试2: 暴力破解保护 ====================
 console.log('📋 测试2: 暴力破解保护（账户锁定）')
 try {
-  const db = getSQLiteDatabase()
-
   // 创建测试用户
-  const testUser = db.prepare(`
+  const testUser = await db.exec(`
     INSERT INTO users (username, email, password_hash, role, package_type, failed_login_count, locked_until)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(
+  `, [
     'test_security_user',
     'security.test@example.com',
     'dummy_hash',
@@ -67,7 +67,7 @@ try {
     'trial',
     0,
     null
-  )
+  ])
 
   const testUserId = testUser.lastInsertRowid as number
   console.log(`   ✅ 创建测试用户 (ID: ${testUserId})`)
@@ -86,7 +86,10 @@ try {
     console.log('   ✅ 账户已被正确锁定')
 
     // 尝试检查锁定状态
-    const userAfterLock = db.prepare('SELECT * FROM users WHERE id = ?').get(testUserId) as any
+    const userAfterLock = await db.queryOne<Record<string, unknown>>(
+      'SELECT * FROM users WHERE id = ?',
+      [testUserId]
+    )
     try {
       await checkAccountLockout(userAfterLock)
       console.log('   ❌ 失败：锁定检查应该抛出错误')
@@ -98,7 +101,7 @@ try {
   }
 
   // 清理测试用户
-  db.prepare('DELETE FROM users WHERE id = ?').run(testUserId)
+  await db.exec('DELETE FROM users WHERE id = ?', [testUserId])
   console.log('   ✅ 暴力破解保护测试通过\n')
 } catch (error) {
   console.error('   ❌ 暴力破解保护测试失败:', error)
@@ -164,13 +167,15 @@ try {
     '密码错误'
   )
 
-  const db = getSQLiteDatabase()
-  const attempts = db.prepare(`
+  const attempts = await db.query<{
+    success: number
+    failure_reason: string | null
+  }>(`
     SELECT * FROM login_attempts
     WHERE username_or_email = 'test@example.com'
     ORDER BY attempted_at DESC
     LIMIT 2
-  `).all() as any[]
+  `)
 
   if (attempts.length >= 2) {
     console.log(`   ✅ 成功记录 ${attempts.length} 条登录尝试`)

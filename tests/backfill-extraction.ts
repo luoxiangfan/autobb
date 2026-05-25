@@ -6,7 +6,7 @@
  * - 测试提取功能是否正常工作
  */
 
-import { getSQLiteDatabase } from '../src/lib/db'
+import { getDatabase } from '../src/lib/db'
 import { extractAdElements } from '../src/lib/ad-elements-extractor'
 
 interface OfferData {
@@ -26,7 +26,7 @@ interface OfferData {
 async function backfillExtraction(offerId?: number) {
   console.log('🔧 开始补充提取逻辑...\n')
 
-  const db = getSQLiteDatabase()
+  const db = getDatabase()
 
   // 查询需要补充提取的 Offers
   const query = offerId
@@ -34,10 +34,10 @@ async function backfillExtraction(offerId?: number) {
     : `SELECT * FROM offers WHERE scrape_status = 'completed' AND extracted_keywords IS NULL LIMIT 5`
 
   const offers = offerId
-    ? [db.prepare(query).get(offerId)]
-    : db.prepare(query).all()
+    ? [await db.queryOne<OfferData>(query, [offerId])]
+    : await db.query<OfferData>(query)
 
-  const validOffers = offers.filter(o => o !== undefined) as OfferData[]
+  const validOffers = offers.filter((o): o is OfferData => o !== undefined)
 
   console.log(`📋 找到 ${validOffers.length} 个需要补充提取的 Offers\n`)
 
@@ -56,18 +56,18 @@ async function backfillExtraction(offerId?: number) {
 
     try {
       // 检查是否为店铺页面（通过检查 scraped_products 表）
-      const products = db.prepare(`
+      const products = await db.query<{
+        name: string
+        rating: string | null
+        review_count: string | null
+        hot_score: number | null
+      }>(`
         SELECT name, rating, review_count, hot_score
         FROM scraped_products
         WHERE offer_id = ?
         ORDER BY hot_score DESC
         LIMIT 5
-      `).all(offer.id) as Array<{
-        name: string
-        rating: string | null
-        review_count: string | null
-        hot_score: number | null
-      }>
+      `, [offer.id])
 
       const pageType: 'product' | 'store' = products.length > 0 ? 'store' : 'product'
       console.log(`   页面类型: ${pageType}`)
@@ -126,7 +126,7 @@ async function backfillExtraction(offerId?: number) {
       // 保存到数据库
       console.log('   💾 保存提取结果到数据库...')
 
-      db.prepare(`
+      await db.exec(`
         UPDATE offers
         SET extracted_keywords = ?,
             extracted_headlines = ?,
@@ -135,14 +135,14 @@ async function backfillExtraction(offerId?: number) {
             extracted_at = ?,
             updated_at = datetime('now')
         WHERE id = ?
-      `).run(
+      `, [
         JSON.stringify(extractionResult.keywords),
         JSON.stringify(extractionResult.headlines),
         JSON.stringify(extractionResult.descriptions),
         JSON.stringify(extractionResult.sources),
         new Date().toISOString(),
         offer.id
-      )
+      ])
 
       console.log('   ✅ 提取完成')
       console.log(`      - 关键词: ${extractionResult.keywords.length}个`)

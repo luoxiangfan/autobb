@@ -7,7 +7,7 @@
  * 3. 测试管理员解锁功能
  */
 
-import { getSQLiteDatabase } from '../src/lib/db'
+import { getDatabase } from '../src/lib/db'
 import { recordFailedLogin } from '../src/lib/auth-security'
 import { unlockAccount, getLockedAccounts } from '../src/lib/auth-security'
 
@@ -15,14 +15,14 @@ async function testLockUnlock() {
   console.log('\n🔒 开始测试锁定状态和解锁功能...\n')
 
   try {
-    const db = getSQLiteDatabase()
+    const db = getDatabase()
 
     // 步骤1: 创建测试用户
     console.log('📝 创建测试用户...')
-    const testUser = db.prepare(`
+    const testUser = await db.exec(`
       INSERT INTO users (username, email, password_hash, role, package_type, failed_login_count, locked_until)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       'test_lock_user',
       'lock.test@example.com',
       'dummy_hash',
@@ -30,7 +30,7 @@ async function testLockUnlock() {
       'trial',
       0,
       null
-    )
+    ])
 
     const testUserId = testUser.lastInsertRowid as number
     console.log(`   ✅ 创建测试用户 (ID: ${testUserId}, username: test_lock_user)`)
@@ -44,10 +44,13 @@ async function testLockUnlock() {
 
     // 步骤3: 验证用户已被锁定
     console.log('\n🔍 验证锁定状态...')
-    const userAfterLock = db.prepare('SELECT * FROM users WHERE id = ?').get(testUserId) as any
+    const userAfterLock = await db.queryOne<Record<string, unknown>>(
+      'SELECT * FROM users WHERE id = ?',
+      [testUserId]
+    )
 
-    if (userAfterLock.locked_until) {
-      const lockEnd = new Date(userAfterLock.locked_until)
+    if (userAfterLock?.locked_until) {
+      const lockEnd = new Date(userAfterLock.locked_until as string)
       const now = new Date()
       const isLocked = lockEnd > now
 
@@ -84,9 +87,12 @@ async function testLockUnlock() {
     console.log('   ✅ 调用unlockAccount函数完成')
 
     // 步骤6: 验证解锁后的状态
-    const userAfterUnlock = db.prepare('SELECT * FROM users WHERE id = ?').get(testUserId) as any
+    const userAfterUnlock = await db.queryOne<Record<string, unknown>>(
+      'SELECT * FROM users WHERE id = ?',
+      [testUserId]
+    )
 
-    if (!userAfterUnlock.locked_until && userAfterUnlock.failed_login_count === 0) {
+    if (!userAfterUnlock?.locked_until && userAfterUnlock?.failed_login_count === 0) {
       console.log('   ✅ 解锁成功！')
       console.log(`   - locked_until: ${userAfterUnlock.locked_until || 'NULL'}`)
       console.log(`   - failed_login_count: ${userAfterUnlock.failed_login_count}`)
@@ -96,21 +102,21 @@ async function testLockUnlock() {
 
     // 步骤7: 模拟API查询（验证locked_until字段在API中返回）
     console.log('\n🔍 模拟API查询（包含locked_until字段）...')
-    const apiResult = db.prepare(`
+    const apiResult = await db.queryOne<Record<string, unknown>>(`
       SELECT id, username, email, role, package_type, is_active, locked_until, failed_login_count
       FROM users
       WHERE id = ?
-    `).get(testUserId) as any
+    `, [testUserId])
 
     console.log('   ✅ API查询结果:')
-    console.log(`   - username: ${apiResult.username}`)
-    console.log(`   - is_active: ${apiResult.is_active}`)
-    console.log(`   - locked_until: ${apiResult.locked_until || 'NULL'}`)
-    console.log(`   - failed_login_count: ${apiResult.failed_login_count}`)
+    console.log(`   - username: ${apiResult?.username}`)
+    console.log(`   - is_active: ${apiResult?.is_active}`)
+    console.log(`   - locked_until: ${apiResult?.locked_until || 'NULL'}`)
+    console.log(`   - failed_login_count: ${apiResult?.failed_login_count}`)
 
     // 清理测试数据
     console.log('\n🧹 清理测试数据...')
-    db.prepare('DELETE FROM users WHERE id = ?').run(testUserId)
+    await db.exec('DELETE FROM users WHERE id = ?', [testUserId])
     console.log('   ✅ 测试用户已删除')
 
     console.log('\n✅ 所有测试通过！')
