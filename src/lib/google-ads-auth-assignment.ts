@@ -292,3 +292,44 @@ export async function deleteGoogleAdsAuthAssignment(userId: number): Promise<voi
   const db = await getDatabase()
   await db.exec(`DELETE FROM google_ads_auth_assignments WHERE user_id = ?`, [userId])
 }
+
+const GOOGLE_ADS_SETTING_KEYS = [
+  'client_id',
+  'client_secret',
+  'developer_token',
+  'login_customer_id',
+  'use_service_account',
+]
+
+/**
+ * 永久删除用户时清理其 Google Ads 认证相关数据。
+ * 同时移除其他用户对该用户（作为共享管理员）的认证分配。
+ */
+export async function purgeGoogleAdsAuthConfigForUser(userId: number): Promise<void> {
+  const db = await getDatabase()
+
+  await db.exec(
+    `DELETE FROM google_ads_auth_assignments WHERE user_id = ? OR shared_admin_user_id = ?`,
+    [userId, userId]
+  )
+
+  await db.exec(`DELETE FROM google_ads_credentials WHERE user_id = ?`, [userId])
+  await db.exec(`DELETE FROM google_ads_service_accounts WHERE user_id = ?`, [userId])
+
+  try {
+    await db.exec(`DELETE FROM google_ads_test_credentials WHERE user_id = ?`, [userId])
+  } catch {
+    // 表不存在时忽略（兼容旧库或未跑对应 migration）
+  }
+
+  const placeholders = GOOGLE_ADS_SETTING_KEYS.map(() => '?').join(', ')
+  await db.exec(
+    `
+      DELETE FROM system_settings
+      WHERE user_id = ?
+        AND category = 'google_ads'
+        AND key IN (${placeholders})
+    `,
+    [userId, ...GOOGLE_ADS_SETTING_KEYS]
+  )
+}

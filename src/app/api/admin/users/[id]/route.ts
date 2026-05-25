@@ -9,6 +9,7 @@ import {
   UserManagementContext,
 } from '@/lib/audit-logger'
 import { clearUserExecutionEligibilityCache } from '@/lib/user-execution-eligibility'
+import { purgeGoogleAdsAuthConfigForUser } from '@/lib/google-ads-auth-assignment'
 
 // 获取客户端IP地址
 function getClientIP(request: NextRequest): string {
@@ -249,6 +250,7 @@ export async function DELETE(
     }
 
     // Hard delete - permanently remove user from database
+    await purgeGoogleAdsAuthConfigForUser(userId)
     const result = await db.exec('DELETE FROM users WHERE id = ?', [userId])
 
     if (result.changes === 0) {
