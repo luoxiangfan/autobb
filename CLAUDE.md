@@ -2,44 +2,55 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Status
+## Project Overview
 
-This is a new repository initialized for a Next.js/TypeScript project. The `.gitignore` indicates plans for a Next.js application with TypeScript.
+**AutoAds** is a production Next.js/TypeScript application for AI-powered Google Ads automation: offer scraping, creative generation, campaign management, performance analytics, and OpenClaw agent integration.
 
-## Initial Setup Required
+## Technology Stack
 
-This repository does not yet have a working codebase. Before development can begin:
+- **Frontend**: Next.js 14+ (App Router), React, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes, Node.js
+- **Database**: SQLite (local dev), PostgreSQL (production); migrations in `migrations/` and `pg-migrations/`
+- **Auth**: Supabase Auth (Google OAuth); Google Ads OAuth or service account (mutually exclusive — see `AGENTS.md`)
+- **AI**: Database-driven versioned prompts; Claude / Gemini integrations
+- **Testing**: Vitest
 
-1. Initialize the project structure
-2. Install dependencies
-3. Set up configuration files
+## Development Commands
 
-## Expected Technology Stack
+```bash
+npm install          # install dependencies
+npm run db:init      # initialize SQLite (first run)
+npm run db:migrate   # apply incremental migrations
+npm run dev          # development server
+npm run build        # production build
+npm run lint         # ESLint
+npm test             # Vitest
+npm run type-check   # TypeScript
+npm run validate-schema
+```
 
-Based on `.gitignore`:
-- **Framework**: Next.js
-- **Language**: TypeScript
-- **Package Manager**: npm/yarn/pnpm (to be determined)
-- **Deployment**: Vercel (indicated by `.vercel` ignore)
+## Key Directories
 
-## Development Workflow (Once Initialized)
-
-Standard Next.js commands will likely be:
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
-- `npm test` - Run tests (if configured)
+| Path | Purpose |
+|------|---------|
+| `src/app/` | Next.js App Router pages and API routes |
+| `src/lib/` | Core business logic (creatives, offers, Google Ads, OpenClaw, queue) |
+| `src/components/` | React UI components |
+| `migrations/` | SQLite schema and incremental migrations |
+| `pg-migrations/` | PostgreSQL migrations |
+| `scripts/` | DB, validation, and maintenance scripts |
+| `docs/` | Operations and feature documentation |
 
 ## Environment Variables
 
-The project will use environment variables (`.env` files are gitignored). Check for `.env.example` or documentation for required variables.
+Copy `.env.example` to `.env.local` for local development. See `README.md` for the full variable list and deployment notes.
 
-## Notes for Future Development
+## Related Documentation
 
-- This is a fresh repository - establish coding standards and architecture early
-- Consider documenting key architectural decisions as the project grows
-- Update this CLAUDE.md with actual commands and architecture once implemented
+- [README.md](./README.md) — setup, architecture, deployment
+- [AGENTS.md](./AGENTS.md) — agent workflow rules, Google Ads auth conventions, GitNexus usage, issue tracking (bd)
+- [migrations/README.md](./migrations/README.md) — migration naming and recent increments
+- [migrations/DATABASE_INITIALIZATION_GUIDE.md](./migrations/DATABASE_INITIALIZATION_GUIDE.md) — database setup
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
