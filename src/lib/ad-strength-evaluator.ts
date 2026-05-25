@@ -19,7 +19,7 @@ import type {
   QualityMetrics
 } from './ad-creative'
 import { getKeywordSearchVolumes } from './keyword-planner'
-import { getGoogleAdsApiAuthForUser } from './google-ads-auth-context'
+import { tryGetConfiguredGoogleAdsApiAuthForUser } from './google-ads-auth-context'
 import { normalizeLanguageCode } from './language-country-codes'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import { loadPrompt, interpolateTemplate } from './prompt-loader'
@@ -1739,18 +1739,22 @@ async function calculateBrandSearchVolume(
     // ========================================
     const normalizedLanguage = normalizeLanguageCode(targetLanguage)
 
-    // 🔧 修复(2025-12-26): 支持服务账号模式
-    const { apiAuth } = userId
-      ? await getGoogleAdsApiAuthForUser(userId)
-      : { apiAuth: { authType: 'oauth' as const, serviceAccountId: undefined, refreshToken: '' } }
-    const volumeResults = await getKeywordSearchVolumes(
-      [brandName],
-      targetCountry,
-      normalizedLanguage,
-      userId,
-      apiAuth.authType,
-      apiAuth.serviceAccountId
-    )
+    const authResolved = userId ? await tryGetConfiguredGoogleAdsApiAuthForUser(userId) : null
+    const volumeResults = authResolved
+      ? await getKeywordSearchVolumes(
+          [brandName],
+          targetCountry,
+          normalizedLanguage,
+          userId,
+          authResolved.apiAuth.authType,
+          authResolved.apiAuth.serviceAccountId
+        )
+      : [
+          {
+            avgMonthlySearches: 0,
+            volumeUnavailableReason: 'DEV_TOKEN_INSUFFICIENT_ACCESS' as const,
+          },
+        ]
 
     const brandVolume = volumeResults[0]
     const plannerUnavailableReason = isSearchVolumeUnavailableReason((brandVolume as any)?.volumeUnavailableReason)

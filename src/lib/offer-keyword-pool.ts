@@ -20,7 +20,7 @@ import { repairJsonText } from './ai-json'
 import { loadPrompt, interpolateTemplate } from './prompt-loader'
 import { findOfferById, type Offer } from './offers'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
-import { getGoogleAdsApiAuthForUser } from './google-ads-auth-context'
+import { tryGetConfiguredGoogleAdsApiAuthForUser } from './google-ads-auth-context'
 import {
   extractVerifiedKeywordSourcePool,
   type UnifiedKeywordData,
@@ -1446,12 +1446,13 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
 
     if (staleNorms.size > 0) {
       const { getKeywordSearchVolumes } = await import('./keyword-planner')
-      const { apiAuth: auth } = await getGoogleAdsApiAuthForUser(userId)
+      const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userId)
       const refreshKeywords = Array.from(staleNorms)
         .map(norm => keywordMap.get(norm)?.keyword)
         .filter((kw): kw is string => Boolean(kw))
 
-      if (refreshKeywords.length > 0) {
+      if (authResolved && refreshKeywords.length > 0) {
+        const { apiAuth: auth } = authResolved
         const volumes = await getKeywordSearchVolumes(
           refreshKeywords,
           country,
@@ -4432,9 +4433,13 @@ export async function generateOfferKeywordPool(
     // 🔧 修复(2026-01-21): 如果提供了关键词列表，查询搜索量而不是硬编码为 0
     console.log(`📊 查询 ${allKeywords.length} 个提供的关键词的搜索量...`)
     const { getKeywordSearchVolumes } = await import('./keyword-planner')
-    const { apiAuth: auth } = await getGoogleAdsApiAuthForUser(userId)
+    const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userId)
 
     try {
+      if (!authResolved) {
+        throw new Error('Google Ads 认证未配置，无法查询搜索量')
+      }
+      const { apiAuth: auth } = authResolved
       await progress?.({ phase: 'seed-volume', message: `初始关键词搜索量查询中` })
       const volumeProgress = progress
         ? (info: { message: string; current?: number; total?: number }) =>
@@ -4613,9 +4618,10 @@ export async function generateOfferKeywordPool(
     const { getDatabase } = await import('./db')
     const db = await getDatabase()
 
-    // 获取认证类型
-    const { apiAuth: auth } = await getGoogleAdsApiAuthForUser(userId)
-    authType = auth.authType
+    const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userId)
+    if (authResolved) {
+      authType = authResolved.apiAuth.authType
+    }
 
     // 🔧 PostgreSQL兼容性修复: is_active/is_manager_account在PostgreSQL中是BOOLEAN类型
     const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
@@ -4921,7 +4927,11 @@ export async function generateOfferKeywordPool(
     if (needsBrandVolume) {
       try {
         const { getKeywordSearchVolumes } = await import('./keyword-planner')
-        const { apiAuth: auth } = await getGoogleAdsApiAuthForUser(userId)
+        const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userId)
+        if (!authResolved) {
+          throw new Error('Google Ads 认证未配置，无法查询品牌词搜索量')
+        }
+        const { apiAuth: auth } = authResolved
         await progress?.({ phase: 'seed-volume', message: '品牌词搜索量查询中' })
         const volumeProgress = progress
           ? (info: { message: string; current?: number; total?: number }) =>
@@ -5805,7 +5815,11 @@ async function extractKeywordsFromOffer(
 
     try {
       const { getKeywordSearchVolumes } = await import('./keyword-planner')
-      const { apiAuth: auth } = await getGoogleAdsApiAuthForUser(userId)
+      const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userId)
+      if (!authResolved) {
+        throw new Error('Google Ads 认证未配置，无法查询搜索量')
+      }
+      const { apiAuth: auth } = authResolved
 
       // 获取 offer 信息（用于获取 target_country 和 target_language）
       const offer = await db.queryOne<{

@@ -14,6 +14,7 @@ import {
 } from '@/lib/google-ads-auth-assignment'
 import { updateApiAccessLevel } from '@/lib/google-ads-access-level-detector'
 import {
+  assertNoConflictingGoogleAdsAuth,
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsCredentialStatusFields,
@@ -65,6 +66,12 @@ export async function POST(request: NextRequest) {
     console.log(`💾 保存Google Ads凭证`)
     console.log(`   用户: ${authResult.user.email}`)
     console.log(`   Developer Token: ${developer_token.substring(0, 10)}...`)
+
+    try {
+      await assertNoConflictingGoogleAdsAuth(userId, 'oauth')
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
 
     // 保存凭证
     const credentials = await saveGoogleAdsCredentials(authResult.user.userId, {

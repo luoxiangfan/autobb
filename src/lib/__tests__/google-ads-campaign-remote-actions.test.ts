@@ -1,9 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { queueGoogleAdsCampaignRemoteActions } from '@/lib/google-ads-campaign-remote-actions'
 
-const oauthFns = vi.hoisted(() => ({
-  getUserAuthType: vi.fn(async () => ({ authType: 'oauth' as const, serviceAccountId: undefined })),
-  getGoogleAdsCredentials: vi.fn(async () => ({ refresh_token: 'rt', login_customer_id: 'mcc-1' })),
+const authContextFns = vi.hoisted(() => ({
+  resolveGoogleAdsApiAuthForAccount: vi.fn(async () => ({
+    ok: true,
+    ctx: { auth: { authType: 'oauth' as const } },
+    apiAuth: {
+      authType: 'oauth' as const,
+      refreshToken: 'rt',
+      serviceAccountId: undefined,
+      oauthLoginCustomerId: 'mcc-1',
+    },
+  })),
 }))
 
 const apiFns = vi.hoisted(() => ({
@@ -11,7 +19,7 @@ const apiFns = vi.hoisted(() => ({
   updateGoogleAdsCampaignStatus: vi.fn(async () => {}),
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => oauthFns)
+vi.mock('@/lib/google-ads-auth-context', () => authContextFns)
 vi.mock('@/lib/google-ads-api', () => apiFns)
 
 describe('queueGoogleAdsCampaignRemoteActions', () => {

@@ -14,7 +14,13 @@ import {
   resolveGoogleAdsApiAccessLevel,
   type GoogleAdsAuthAssignment,
 } from './google-ads-auth-assignment'
-import { getGoogleAdsCredentials, getUserAuthType } from './google-ads-oauth'
+import { boolCondition } from './db-helpers'
+import { getDatabase } from './db'
+import {
+  getGoogleAdsCredentials,
+  getGoogleAdsCredentialsRaw,
+  getUserAuthType,
+} from './google-ads-oauth'
 import { getServiceAccountConfig } from './google-ads-service-account'
 
 export interface GoogleAdsAuthContext {
@@ -168,6 +174,54 @@ export async function getGoogleAdsApiAuthForUser(
   const ctx = await getGoogleAdsAuthContext(userId)
   const apiAuth = await resolveGoogleAdsApiAuthFromContext(ctx, linkedAccountServiceAccountId)
   return { ctx, apiAuth }
+}
+
+/**
+ * 已配置且可用于 Keyword Planner / API 的认证；未配置时返回 null（不抛错）。
+ */
+export async function tryGetConfiguredGoogleAdsApiAuthForUser(
+  userId: number,
+  linkedAccountServiceAccountId?: string | null
+): Promise<{ ctx: GoogleAdsAuthContext; apiAuth: GoogleAdsApiAuthFields } | null> {
+  const resolved = await resolveGoogleAdsApiAuthForAccount(userId, linkedAccountServiceAccountId)
+  if (!resolved.ok) {
+    return null
+  }
+  return { ctx: resolved.ctx, apiAuth: resolved.apiAuth }
+}
+
+export type GoogleAdsAuthSaveTarget = 'oauth' | 'service_account'
+
+/**
+ * 保存 OAuth / 服务账号前校验互斥（与设置页「二选一」一致）。
+ */
+export async function assertNoConflictingGoogleAdsAuth(
+  userId: number,
+  targetAuthType: GoogleAdsAuthSaveTarget
+): Promise<void> {
+  const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
+  const db = await getDatabase()
+  const isActiveCondition = boolCondition('is_active', true, db.type)
+
+  if (targetAuthType === 'oauth') {
+    const existingSa = await db.queryOne<{ id: string }>(
+      `SELECT id FROM google_ads_service_accounts WHERE user_id = ? AND ${isActiveCondition} LIMIT 1`,
+      [ownerUserId]
+    )
+    if (existingSa) {
+      throw new Error(
+        '当前已配置服务账号认证，请先在设置页删除服务账号后再配置 OAuth。'
+      )
+    }
+    return
+  }
+
+  const credentials = await getGoogleAdsCredentialsRaw(ownerUserId)
+  if (credentials?.refresh_token) {
+    throw new Error(
+      '当前已配置 OAuth 认证，请先在设置页删除 OAuth 后再配置服务账号。'
+    )
+  }
 }
 
 export async function resolveGoogleAdsApiAuthFromContext(

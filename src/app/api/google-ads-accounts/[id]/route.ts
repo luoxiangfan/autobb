@@ -226,6 +226,7 @@ export async function DELETE(
       id: existingAccount.id,
       customer_id: existingAccount.customerId,
       parent_mcc_id: existingAccount.parentMccId ?? null,
+      service_account_id: existingAccount.serviceAccountId ?? null,
       is_active: existingAccount.isActive ? 1 : 0,
       is_deleted: 0,
     }

@@ -4,6 +4,7 @@ import { parseServiceAccountJson } from '@/lib/google-ads-service-account'
 import { encrypt } from '@/lib/crypto'
 import { verifyAuth, findUserById } from '@/lib/auth'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
+import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
 
 async function getAuthenticatedUser(request: NextRequest) {
   const authResult = await verifyAuth(request)
@@ -24,6 +25,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    try {
+      await assertNoConflictingGoogleAdsAuth(user.id, 'service_account')
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
+
     const { name, mccCustomerId, developerToken, serviceAccountJson } = await req.json()
 
     const { clientEmail, privateKey, projectId } = parseServiceAccountJson(serviceAccountJson)

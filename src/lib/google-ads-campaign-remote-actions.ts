@@ -1,8 +1,4 @@
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-  resolveEffectiveServiceAccountId,
-} from './google-ads-auth-context'
+import { resolveGoogleAdsApiAuthForAccount } from './google-ads-auth-context'
 import { removeGoogleAdsCampaign, updateGoogleAdsCampaignStatus } from './google-ads-api'
 import { getGoogleAdsAccountDeleteRemoteConfig } from './google-ads-account-delete-config'
 import { runWithConcurrency, withTimeout } from './run-with-concurrency'
@@ -11,6 +7,7 @@ export interface GoogleAdsAccountRemoteRef {
   id: number
   customer_id: string | null
   parent_mcc_id: string | null
+  service_account_id?: string | null
   is_active: boolean | number | null
   is_deleted: boolean | number | null
 }
@@ -132,15 +129,14 @@ export async function executeGoogleAdsCampaignRemoteActions(
   })
 
   try {
-    const ctx = await getGoogleAdsAuthContext(userId)
-    const auth = ctx.auth
-    const refreshToken = ctx.oauthCredentials?.refresh_token || ''
+    const authResolved = await resolveGoogleAdsApiAuthForAccount(
+      userId,
+      adsAccount.service_account_id
+    )
 
-    const serviceAccountId = resolveEffectiveServiceAccountId(undefined, ctx)
-
-    if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
+    if (!authResolved.ok) {
       const reason =
-        auth.authType === 'service_account'
+        authResolved.reason === 'service_account_missing'
           ? '缺少服务账号配置，无法调用远端 API'
           : '缺少 Google Ads OAuth 凭证，无法调用远端 API'
       return {
@@ -151,9 +147,12 @@ export async function executeGoogleAdsCampaignRemoteActions(
       }
     }
 
-    let loginCustomerId: string | undefined = ctx.oauthCredentials?.login_customer_id
-      ? String(ctx.oauthCredentials.login_customer_id)
-      : undefined
+    const { ctx, apiAuth } = authResolved
+    const auth = ctx.auth
+    const refreshToken = apiAuth.refreshToken
+    const serviceAccountId = apiAuth.serviceAccountId
+
+    let loginCustomerId: string | undefined = apiAuth.oauthLoginCustomerId
     if (!loginCustomerId && adsAccount.parent_mcc_id) {
       loginCustomerId = String(adsAccount.parent_mcc_id)
     }

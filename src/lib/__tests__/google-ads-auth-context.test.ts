@@ -8,6 +8,12 @@ const assignmentFns = vi.hoisted(() => ({
 const oauthFns = vi.hoisted(() => ({
   getUserAuthType: vi.fn(),
   getGoogleAdsCredentials: vi.fn(),
+  getGoogleAdsCredentialsRaw: vi.fn(),
+}))
+
+const dbFns = vi.hoisted(() => ({
+  queryOne: vi.fn(),
+  type: 'sqlite' as const,
 }))
 
 const serviceAccountFns = vi.hoisted(() => ({
@@ -24,6 +30,11 @@ vi.mock('@/lib/google-ads-auth-assignment', () => ({
 vi.mock('@/lib/google-ads-oauth', () => ({
   getUserAuthType: oauthFns.getUserAuthType,
   getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
+  getGoogleAdsCredentialsRaw: oauthFns.getGoogleAdsCredentialsRaw,
+}))
+
+vi.mock('@/lib/db', () => ({
+  getDatabase: vi.fn(async () => dbFns),
 }))
 
 vi.mock('@/lib/google-ads-service-account', () => ({
@@ -31,11 +42,13 @@ vi.mock('@/lib/google-ads-service-account', () => ({
 }))
 
 import {
+  assertNoConflictingGoogleAdsAuth,
   getGoogleAdsAuthContext,
   resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthForAccount,
   resolveGoogleAdsApiAuthFromContext,
   resolveGoogleAdsCredentialStatusFields,
+  tryGetConfiguredGoogleAdsApiAuthForUser,
 } from '@/lib/google-ads-auth-context'
 
 describe('getGoogleAdsAuthContext', () => {
@@ -188,6 +201,56 @@ describe('resolveEffectiveServiceAccountId', () => {
       serviceAccountConfig: null,
     } as any)
     expect(id).toBeUndefined()
+  })
+})
+
+describe('assertNoConflictingGoogleAdsAuth', () => {
+  beforeEach(() => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 2,
+      isShared: false,
+      assignment: null,
+    })
+  })
+
+  it('rejects oauth save when owner has active service account', async () => {
+    dbFns.queryOne.mockResolvedValueOnce({ id: 'sa-1' })
+
+    await expect(assertNoConflictingGoogleAdsAuth(2, 'oauth')).rejects.toThrow(
+      '服务账号'
+    )
+  })
+
+  it('rejects service account save when owner has oauth refresh token', async () => {
+    dbFns.queryOne.mockResolvedValueOnce(null)
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValueOnce({ refresh_token: 'rt' })
+
+    await expect(assertNoConflictingGoogleAdsAuth(2, 'service_account')).rejects.toThrow(
+      'OAuth'
+    )
+  })
+
+  it('allows oauth save when no service account exists', async () => {
+    dbFns.queryOne.mockResolvedValueOnce(null)
+
+    await expect(assertNoConflictingGoogleAdsAuth(2, 'oauth')).resolves.toBeUndefined()
+  })
+})
+
+describe('tryGetConfiguredGoogleAdsApiAuthForUser', () => {
+  it('returns null when oauth credentials lack refresh_token', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 2,
+      isShared: false,
+      assignment: null,
+    })
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+    oauthFns.getGoogleAdsCredentials.mockResolvedValue({ refresh_token: null })
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+
+    const result = await tryGetConfiguredGoogleAdsApiAuthForUser(2)
+
+    expect(result).toBeNull()
   })
 })
 

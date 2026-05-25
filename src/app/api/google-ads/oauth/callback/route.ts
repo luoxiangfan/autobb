@@ -3,6 +3,7 @@ import { exchangeCodeForTokens, saveGoogleAdsCredentials } from '@/lib/google-ad
 import { getUserOnlySetting } from '@/lib/settings'
 import { getGoogleAdsAuthAssignment, isGoogleAdsAuthShared } from '@/lib/google-ads-auth-assignment'
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
+import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
 
 // 强制动态渲染
 export const dynamic = 'force-dynamic'
@@ -107,6 +108,16 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(`🔐 OAuth回调: 用户 ${userId} 使用自己的OAuth配置`)
+
+    try {
+      await assertNoConflictingGoogleAdsAuth(userId, 'oauth')
+    } catch (error: any) {
+      return NextResponse.redirect(
+        createRedirectUrl(
+          `/settings?error=${encodeURIComponent(error.message)}&category=google_ads`
+        )
+      )
+    }
 
     const redirectUri = getGoogleAdsOAuthRedirectUri()
 

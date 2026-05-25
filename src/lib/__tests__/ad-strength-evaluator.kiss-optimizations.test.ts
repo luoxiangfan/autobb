@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   getKeywordSearchVolumesMock,
-  getUserAuthTypeMock,
+  tryGetConfiguredGoogleAdsApiAuthForUserMock,
   generateContentMock,
 } = vi.hoisted(() => ({
   getKeywordSearchVolumesMock: vi.fn(),
-  getUserAuthTypeMock: vi.fn(),
+  tryGetConfiguredGoogleAdsApiAuthForUserMock: vi.fn(),
   generateContentMock: vi.fn(),
 }))
 
@@ -14,8 +14,8 @@ vi.mock('../keyword-planner', () => ({
   getKeywordSearchVolumes: getKeywordSearchVolumesMock,
 }))
 
-vi.mock('../google-ads-oauth', () => ({
-  getUserAuthType: getUserAuthTypeMock,
+vi.mock('../google-ads-auth-context', () => ({
+  tryGetConfiguredGoogleAdsApiAuthForUser: tryGetConfiguredGoogleAdsApiAuthForUserMock,
 }))
 
 vi.mock('../gemini', () => ({
@@ -30,9 +30,13 @@ describe('ad-strength-evaluator KISS optimizations', () => {
     delete process.env.AD_STRENGTH_ENABLE_CP_AI
 
     getKeywordSearchVolumesMock.mockResolvedValue([{ avgMonthlySearches: 0 }])
-    getUserAuthTypeMock.mockResolvedValue({
-      authType: 'oauth',
-      serviceAccountId: undefined,
+    tryGetConfiguredGoogleAdsApiAuthForUserMock.mockResolvedValue({
+      ctx: { auth: { authType: 'oauth' } },
+      apiAuth: {
+        authType: 'oauth',
+        refreshToken: 'rt',
+        serviceAccountId: undefined,
+      },
     })
     generateContentMock.mockResolvedValue({ text: '{}' })
   })
