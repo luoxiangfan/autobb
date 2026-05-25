@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { generateOAuthUrl } from '@/lib/google-ads-oauth'
 import { getUserOnlySetting } from '@/lib/settings'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 
 /**
  * GET /api/google-ads/oauth/start
@@ -26,6 +27,12 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = authResult.user.userId
+
+    try {
+      await assertUserCanModifyGoogleAdsAuth(userId, userId, authResult.user.role)
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message }, { status: 403 })
+    }
 
     console.log(`🔐 [OAuth Start] 用户ID: ${userId}`)
 

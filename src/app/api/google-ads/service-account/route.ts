@@ -3,6 +3,7 @@ import { getDatabase } from '@/lib/db'
 import { parseServiceAccountJson } from '@/lib/google-ads-service-account'
 import { encrypt } from '@/lib/crypto'
 import { verifyAuth, findUserById } from '@/lib/auth'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 
 async function getAuthenticatedUser(request: NextRequest) {
   const authResult = await verifyAuth(request)
@@ -14,6 +15,12 @@ export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser(req)
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    await assertUserCanModifyGoogleAdsAuth(user.id, user.id, user.role)
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 403 })
   }
 
   try {
@@ -67,6 +74,12 @@ export async function DELETE(req: NextRequest) {
   const user = await getAuthenticatedUser(req)
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    await assertUserCanModifyGoogleAdsAuth(user.id, user.id, user.role)
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 403 })
   }
 
   try {

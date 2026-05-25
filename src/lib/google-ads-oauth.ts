@@ -1,9 +1,11 @@
 import { getDatabase } from './db'
 import { boolCondition } from './db-helpers'
+import { resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
 
 /**
  * 获取用户的Google Ads授权方式
  * 优先使用OAuth，无OAuth时使用服务账号
+ * 支持管理员共享认证配置
  * @returns { authType: 'oauth' | 'service_account', serviceAccountId?: string }
  */
 export async function getUserAuthType(userId: number): Promise<{
@@ -11,12 +13,39 @@ export async function getUserAuthType(userId: number): Promise<{
   serviceAccountId?: string
 }> {
   const db = await getDatabase()
+  const { ownerUserId, assignment } = await resolveGoogleAdsCredentialOwnerId(userId)
+  const isActiveCondition = boolCondition('is_active', true, db.type)
+
+  if (assignment?.assignmentMode === 'shared_admin') {
+    if (assignment.authType === 'service_account') {
+      const serviceAccount = await db.queryOne(
+        `SELECT id FROM google_ads_service_accounts
+         WHERE user_id = ? AND ${isActiveCondition}
+         ORDER BY created_at DESC LIMIT 1`,
+        [ownerUserId]
+      ) as { id: string } | undefined
+
+      if (serviceAccount) {
+        return { authType: 'service_account', serviceAccountId: serviceAccount.id }
+      }
+      return { authType: 'service_account' }
+    }
+
+    const credentials = await db.queryOne(
+      `SELECT refresh_token FROM google_ads_credentials WHERE user_id = ? AND ${isActiveCondition}`,
+      [ownerUserId]
+    ) as { refresh_token: string | null } | undefined
+
+    if (credentials?.refresh_token) {
+      return { authType: 'oauth' }
+    }
+    return { authType: 'oauth' }
+  }
 
   // 检查OAuth配置
-  const isActiveCondition = boolCondition('is_active', true, db.type)
   const credentials = await db.queryOne(
     `SELECT refresh_token FROM google_ads_credentials WHERE user_id = ? AND ${isActiveCondition}`,
-    [userId]
+    [ownerUserId]
   ) as { refresh_token: string | null } | undefined
 
   if (credentials?.refresh_token) {
@@ -29,7 +58,7 @@ export async function getUserAuthType(userId: number): Promise<{
     `SELECT id FROM google_ads_service_accounts
      WHERE user_id = ? AND ${serviceAccountIsActiveCondition}
      ORDER BY created_at DESC LIMIT 1`,
-    [userId]
+    [ownerUserId]
   ) as { id: string } | undefined
 
   if (serviceAccount) {
@@ -175,12 +204,10 @@ export async function saveGoogleAdsCredentials(
 }
 
 /**
- * 获取用户的Google Ads凭证
+ * 获取指定用户自身的 Google Ads OAuth 凭证（不解析共享分配）
  */
-export async function getGoogleAdsCredentials(userId: number): Promise<GoogleAdsCredentials | null> {
+export async function getGoogleAdsCredentialsRaw(userId: number): Promise<GoogleAdsCredentials | null> {
   const db = await getDatabase()
-
-  // 🔧 PostgreSQL兼容性修复: is_active在PostgreSQL中是BOOLEAN类型
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
 
   const credentials = await db.queryOne<GoogleAdsCredentials>(`
@@ -189,6 +216,19 @@ export async function getGoogleAdsCredentials(userId: number): Promise<GoogleAds
   `, [userId])
 
   return credentials || null
+}
+
+/**
+ * 获取用户的Google Ads凭证（解析管理员共享配置）
+ */
+export async function getGoogleAdsCredentials(userId: number): Promise<GoogleAdsCredentials | null> {
+  const { ownerUserId, assignment } = await resolveGoogleAdsCredentialOwnerId(userId)
+
+  if (assignment?.assignmentMode === 'shared_admin' && assignment.authType === 'service_account') {
+    return null
+  }
+
+  return getGoogleAdsCredentialsRaw(ownerUserId)
 }
 
 /**
@@ -226,7 +266,8 @@ export async function refreshAccessToken(userId: number): Promise<{
   access_token: string
   expires_at: string
 }> {
-  const credentials = await getGoogleAdsCredentials(userId)
+  const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
+  const credentials = await getGoogleAdsCredentialsRaw(ownerUserId)
   if (!credentials) {
     throw new Error('Google Ads凭证不存在')
   }
@@ -278,7 +319,7 @@ export async function refreshAccessToken(userId: number): Promise<{
         access_token_expires_at = ?,
         updated_at = ${nowFunc}
     WHERE user_id = ?
-  `, [data.access_token, expiresAt, userId])
+  `, [data.access_token, expiresAt, ownerUserId])
 
   return {
     access_token: data.access_token,
@@ -325,21 +366,25 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
 }> {
   try {
     const db = await getDatabase()
+    const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
+    const auth = await getUserAuthType(userId)
 
     // 1. 检查是否有已激活的服务账号配置
     const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-    const serviceAccount = await db.queryOne(`
+    const serviceAccount = auth.authType === 'service_account'
+      ? await db.queryOne(`
       SELECT id, name, mcc_customer_id, developer_token, service_account_email
       FROM google_ads_service_accounts
       WHERE user_id = ? AND ${isActiveCondition}
       ORDER BY created_at DESC LIMIT 1
-    `, [userId]) as {
+    `, [ownerUserId]) as {
       id: string
       name: string
       mcc_customer_id: string
       developer_token: string
       service_account_email: string
     } | undefined
+      : undefined
 
     // 2. 如果有服务账号配置，优先使用服务账号验证
     if (serviceAccount) {
@@ -363,11 +408,10 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
         // 更新验证时间
         const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
         await db.exec(`
-          UPDATE google_ads_credentials
-          SET last_verified_at = ${nowFunc},
-              updated_at = ${nowFunc}
-          WHERE user_id = ?
-        `, [userId]).catch(() => {}) // 忽略更新失败
+          UPDATE google_ads_service_accounts
+          SET updated_at = ${nowFunc}
+          WHERE id = ?
+        `, [serviceAccount.id]).catch(() => {})
 
         return {
           valid: true,
@@ -424,7 +468,7 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
       SET last_verified_at = ${nowFunc},
           updated_at = ${nowFunc}
       WHERE user_id = ?
-    `, [userId])
+    `, [ownerUserId])
 
     return {
       valid: true,

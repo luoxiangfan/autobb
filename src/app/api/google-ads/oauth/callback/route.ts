@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCodeForTokens, saveGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import { getUserOnlySetting } from '@/lib/settings'
+import { getGoogleAdsAuthAssignment, isGoogleAdsAuthShared } from '@/lib/google-ads-auth-assignment'
 
 // 强制动态渲染
 export const dynamic = 'force-dynamic'
@@ -70,6 +71,13 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = stateData.user_id
+
+    const assignment = await getGoogleAdsAuthAssignment(userId)
+    if (isGoogleAdsAuthShared(assignment)) {
+      return NextResponse.redirect(
+        createRedirectUrl('/settings?error=shared_auth_readonly&category=google_ads')
+      )
+    }
 
     // 校验: login_customer_id 必须由用户自己配置（不使用 getSetting，避免回退到全局配置）
     const loginCustomerId = (await getUserOnlySetting('google_ads', 'login_customer_id', userId))?.value || ''

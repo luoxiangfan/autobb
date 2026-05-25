@@ -1,11 +1,12 @@
 import { getDatabase } from './db'
 import { decrypt } from './crypto'
 import { getGoogleAdsClient } from './google-ads-api'
+import { resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
 
 /**
- * 获取服务账号配置（从数据库）
+ * 获取指定用户自身的服务账号配置（不解析共享分配）
  */
-export async function getServiceAccountConfig(userId: number, serviceAccountId?: string) {
+export async function getServiceAccountConfigRaw(userId: number, serviceAccountId?: string) {
   const db = await getDatabase()
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
 
@@ -39,16 +40,30 @@ export async function getServiceAccountConfig(userId: number, serviceAccountId?:
 }
 
 /**
+ * 获取服务账号配置（解析管理员共享配置）
+ */
+export async function getServiceAccountConfig(userId: number, serviceAccountId?: string) {
+  const { ownerUserId, assignment } = await resolveGoogleAdsCredentialOwnerId(userId)
+
+  if (assignment?.assignmentMode === 'shared_admin' && assignment.authType === 'oauth') {
+    return null
+  }
+
+  return getServiceAccountConfigRaw(ownerUserId, serviceAccountId)
+}
+
+/**
  * 列出用户的所有服务账号配置
  */
 export async function listServiceAccounts(userId: number) {
+  const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
   const db = await getDatabase()
   const accounts = await db.query(`
     SELECT id, name, mcc_customer_id, service_account_email, is_active, created_at
     FROM google_ads_service_accounts
     WHERE user_id = ?
     ORDER BY created_at DESC
-  `, [userId])
+  `, [ownerUserId])
 
   return accounts
 }

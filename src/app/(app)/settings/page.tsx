@@ -100,6 +100,11 @@ interface GoogleAdsCredentialStatus {
   apiAccessLevel?: 'test' | 'explorer' | 'basic' | 'standard'
   lastVerifiedAt?: string
   isActive?: boolean
+  assignmentMode?: 'own' | 'shared_admin'
+  canModify?: boolean
+  isShared?: boolean
+  sharedAdminEmail?: string | null
+  sharedAdminUsername?: string | null
 }
 
 // 代理配置支持的国家列表（使用全局映射 + ROW其他地区选项）
@@ -470,6 +475,7 @@ export default function SettingsPage() {
     | null
   >(null)
   const [permissionError, setPermissionError] = useState<any | null>(null)
+  const googleAdsAuthReadOnly = googleAdsCredentialStatus?.canModify === false
 
   /**
    * 处理401未授权错误 - 跳转到登录页
@@ -503,6 +509,7 @@ export default function SettingsPage() {
         'invalid_state': 'OAuth 授权失败：无效的状态参数',
         'state_expired': 'OAuth 授权失败：状态参数已过期',
         'missing_google_ads_config': 'OAuth 授权失败：请先保存 Client ID、Client Secret 和 Developer Token',
+        'shared_auth_readonly': '当前使用管理员共享认证，无法自行完成 OAuth 授权',
       }
       toast.error(errorMessages[errorParam] || `OAuth 授权失败：${errorParam}`)
       // 清除 URL 参数
@@ -1345,6 +1352,7 @@ export default function SettingsPage() {
   }
 
   const isReadOnlySetting = (category: string, key: string): boolean => {
+    if (category === 'google_ads' && googleAdsAuthReadOnly) return true
     if (category === 'ai' && key === 'gemini_endpoint') return true
     return category === 'affiliate_sync' && getFixedAffiliateSyncSettingValue(key) !== undefined
   }
@@ -1741,6 +1749,16 @@ export default function SettingsPage() {
                 {/* 特殊处理 Google Ads 配置分类 */}
                 {category === 'google_ads' ? (
                   <div className="space-y-6">
+                    {googleAdsAuthReadOnly && (
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800 font-medium">当前使用管理员共享的 Google Ads 认证配置</p>
+                        <p className="text-sm text-blue-700 mt-1">
+                          {googleAdsCredentialStatus?.sharedAdminUsername || googleAdsCredentialStatus?.sharedAdminEmail
+                            ? `共享自：${googleAdsCredentialStatus?.sharedAdminUsername ?? ''}${googleAdsCredentialStatus?.sharedAdminEmail ? ` (${googleAdsCredentialStatus.sharedAdminEmail})` : ''}`
+                            : '您无法自行修改或删除此配置，如需变更请联系管理员。'}
+                        </p>
+                      </div>
+                    )}
                     {/* Google Ads 凭证状态 */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {googleAdsCredentialStatus?.hasCredentials ? (
@@ -2510,7 +2528,7 @@ export default function SettingsPage() {
                         handleSave(category)
                       }
                     }}
-                    disabled={saving || savingServiceAccount}
+                    disabled={saving || savingServiceAccount || (category === 'google_ads' && googleAdsAuthReadOnly)}
                   >
                   {(saving || savingServiceAccount) ? '保存中...' : '保存配置'}
                   </Button>
@@ -2521,6 +2539,7 @@ export default function SettingsPage() {
                       variant="destructive"
                       onClick={requestDeleteCurrentGoogleAdsConfig}
                       disabled={
+                        googleAdsAuthReadOnly ||
                         deletingOAuthConfig ||
                         (googleAdsAuthMethod === 'oauth' && !hasOAuthConfigToDelete) ||
                         (googleAdsAuthMethod === 'service_account' &&
@@ -2534,7 +2553,7 @@ export default function SettingsPage() {
                   {category === 'google_ads' && googleAdsAuthMethod === 'oauth' && (
                     <Button
                       onClick={handleStartGoogleAdsOAuth}
-                      disabled={startingOAuth}
+                      disabled={startingOAuth || googleAdsAuthReadOnly}
                       variant="outline"
                     >
                       <Key className="w-4 h-4 mr-2" />

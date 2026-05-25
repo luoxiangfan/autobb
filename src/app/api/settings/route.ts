@@ -14,6 +14,7 @@ import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
 import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
 import { getFixedAffiliateSyncSettingValue } from '@/lib/affiliate-sync-config'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 
 /**
  * GET /api/settings
@@ -205,6 +206,15 @@ export async function PUT(request: NextRequest) {
 
     const { updates } = validationResult.data
 
+  const hasGoogleAdsUpdate = updates.some((update) => update.category === 'google_ads')
+  if (hasGoogleAdsUpdate && userIdNum) {
+    try {
+      await assertUserCanModifyGoogleAdsAuth(userIdNum, userIdNum, authResult.user!.role)
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message }, { status: 403 })
+    }
+  }
+
     // 联盟同步配置必须是用户级，不允许无用户上下文写入
     const hasAffiliateSyncUpdate = updates.some((update) => update.category === 'affiliate_sync')
     if (hasAffiliateSyncUpdate && !userIdNum) {
@@ -333,7 +343,6 @@ export async function PUT(request: NextRequest) {
     }
 
     // 🔥 新增：如果更新了Google Ads配置，清除相关缓存
-    const hasGoogleAdsUpdate = updates.some(u => u.category === 'google_ads')
     if (hasGoogleAdsUpdate && userIdNum) {
       console.log('🔄 检测到Google Ads配置更新，清除API缓存')
       const { gadsApiCache } = await import('@/lib/cache')

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { verifyAuth, findUserById } from '@/lib/auth'
 import {
   saveGoogleAdsCredentials,
   getGoogleAdsCredentials,
@@ -9,6 +9,12 @@ import {
 } from '@/lib/google-ads-oauth'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getDatabase } from '@/lib/db'
+import {
+  assertUserCanModifyGoogleAdsAuth,
+  getGoogleAdsAuthAssignment,
+  isGoogleAdsAuthShared,
+  resolveGoogleAdsCredentialOwnerId,
+} from '@/lib/google-ads-auth-assignment'
 
 /**
  * POST /api/google-ads/credentials
@@ -23,6 +29,14 @@ export async function POST(request: NextRequest) {
         { error: '未授权访问' },
         { status: 401 }
       )
+    }
+
+    const userId = authResult.user.userId
+
+    try {
+      await assertUserCanModifyGoogleAdsAuth(userId, userId, authResult.user.role)
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message }, { status: 403 })
     }
 
     // 解析请求参数
@@ -102,6 +116,8 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = authResult.user.userId
+    const assignment = await getGoogleAdsAuthAssignment(userId)
+    const { ownerUserId, isShared } = await resolveGoogleAdsCredentialOwnerId(userId)
 
     // 1. 检查 OAuth 凭证
     const credentials = await getGoogleAdsCredentials(userId)
@@ -119,7 +135,7 @@ export async function GET(request: NextRequest) {
         WHERE user_id = ? AND ${isActiveCondition}
         ORDER BY created_at DESC
         LIMIT 1
-      `, [userId]) as { id: string; name: string; api_access_level?: string } | undefined
+      `, [ownerUserId]) as { id: string; name: string; api_access_level?: string } | undefined
 
       if (serviceAccount) {
         hasServiceAccount = true
@@ -139,6 +155,9 @@ export async function GET(request: NextRequest) {
           hasCredentials: false,
           hasRefreshToken: false,
           hasServiceAccount: false,
+          assignmentMode: assignment?.assignmentMode ?? 'own',
+          canModify: !isGoogleAdsAuthShared(assignment),
+          isShared,
         }
       })
     }
@@ -152,12 +171,20 @@ export async function GET(request: NextRequest) {
       const db = await getDatabase()
       const credRow = await db.queryOne(`
         SELECT api_access_level FROM google_ads_credentials WHERE user_id = ? LIMIT 1
-      `, [userId]) as { api_access_level?: string } | undefined
+      `, [ownerUserId]) as { api_access_level?: string } | undefined
       if (credRow?.api_access_level) {
         apiAccessLevel = credRow.api_access_level
       }
     } else if (serviceAccountApiAccessLevel) {
       apiAccessLevel = serviceAccountApiAccessLevel
+    }
+
+    let sharedAdminEmail: string | null = null
+    let sharedAdminUsername: string | null = null
+    if (isShared && assignment?.sharedAdminUserId) {
+      const adminUser = await findUserById(assignment.sharedAdminUserId)
+      sharedAdminEmail = adminUser?.email ?? null
+      sharedAdminUsername = adminUser?.username ?? null
     }
 
     // 返回凭证状态（不返回完整的敏感信息）
@@ -177,7 +204,12 @@ export async function GET(request: NextRequest) {
         lastVerifiedAt: credentials?.last_verified_at,
         isActive: credentials?.is_active === 1,
         createdAt: credentials?.created_at,
-        updatedAt: credentials?.updated_at
+        updatedAt: credentials?.updated_at,
+        assignmentMode: assignment?.assignmentMode ?? 'own',
+        canModify: !isGoogleAdsAuthShared(assignment),
+        isShared,
+        sharedAdminEmail,
+        sharedAdminUsername,
       }
     })
 
@@ -210,6 +242,12 @@ export async function DELETE(request: NextRequest) {
     }
 
     const userId = authResult.user.userId
+
+    try {
+      await assertUserCanModifyGoogleAdsAuth(userId, userId, authResult.user.role)
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message }, { status: 403 })
+    }
 
     // 1) 停用/清空 OAuth 凭证（google_ads_credentials）
     await deleteGoogleAdsCredentials(userId)
@@ -266,6 +304,13 @@ export async function PATCH(request: NextRequest) {
     }
 
     const userId = authResult.user.userId
+
+    try {
+      await assertUserCanModifyGoogleAdsAuth(userId, userId, authResult.user.role)
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message }, { status: 403 })
+    }
+
     const body = await request.json()
     const { apiAccessLevel } = body
 

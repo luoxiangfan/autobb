@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Edit, Trash, ChevronLeft, ChevronRight, Wand2, XCircle, CheckCircle, Search, Key, Copy, Check, History, Unlock, ShieldAlert, ArrowUpDown, ArrowUp, ArrowDown, Zap, ZapOff, MoreHorizontal, Boxes, TrendingUp } from 'lucide-react'
+import { Plus, Edit, Trash, ChevronLeft, ChevronRight, Wand2, XCircle, CheckCircle, Search, Key, Copy, Check, History, Unlock, ShieldAlert, ArrowUpDown, ArrowUp, ArrowDown, Zap, ZapOff, MoreHorizontal, Boxes, TrendingUp, Settings2 } from 'lucide-react'
 import { toast } from "sonner"
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
@@ -33,6 +34,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { GoogleAdsAuthManageDialog } from './GoogleAdsAuthManageDialog'
 
 // 动物名列表用于生成用户名
 const ANIMAL_NAMES = [
@@ -111,6 +113,8 @@ export default function UserManagementPage() {
     const [isCreateOpen, setIsCreateOpen] = useState(false)
     const [isEditOpen, setIsEditOpen] = useState(false)
     const [selectedUser, setSelectedUser] = useState<User | null>(null)
+    const [googleAdsAuthUser, setGoogleAdsAuthUser] = useState<User | null>(null)
+    const [isGoogleAdsAuthOpen, setIsGoogleAdsAuthOpen] = useState(false)
 
     // 🔧 新增(2025-12-30): loading状态管理，防止重复提交
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -120,6 +124,40 @@ export default function UserManagementPage() {
     const [createEmail, setCreateEmail] = useState('')
     const [createPackage, setCreatePackage] = useState('trial')
     const [createExpiry, setCreateExpiry] = useState('')
+    type CreateGoogleAdsAuthSetup = 'none' | 'shared_admin' | 'own'
+    const [createGoogleAdsAuthSetup, setCreateGoogleAdsAuthSetup] = useState<CreateGoogleAdsAuthSetup>('none')
+    const [createGoogleAdsAuthType, setCreateGoogleAdsAuthType] = useState<'oauth' | 'service_account'>('service_account')
+    const [createGoogleAdsOauthForm, setCreateGoogleAdsOauthForm] = useState({
+        client_id: '',
+        client_secret: '',
+        developer_token: '',
+        login_customer_id: '',
+        refresh_token: '',
+    })
+    const [createGoogleAdsServiceAccountForm, setCreateGoogleAdsServiceAccountForm] = useState({
+        name: '',
+        mccCustomerId: '',
+        developerToken: '',
+        serviceAccountJson: '',
+    })
+
+    const resetCreateGoogleAdsAuthForm = () => {
+        setCreateGoogleAdsAuthSetup('none')
+        setCreateGoogleAdsAuthType('service_account')
+        setCreateGoogleAdsOauthForm({
+            client_id: '',
+            client_secret: '',
+            developer_token: '',
+            login_customer_id: '',
+            refresh_token: '',
+        })
+        setCreateGoogleAdsServiceAccountForm({
+            name: '',
+            mccCustomerId: '',
+            developerToken: '',
+            serviceAccountJson: '',
+        })
+    }
 
     // 根据套餐类型计算过期时间
     const calculateExpiryDate = (packageType: string): string => {
@@ -179,6 +217,9 @@ export default function UserManagementPage() {
     useEffect(() => {
         if (isCreateOpen && !createExpiry) {
             setCreateExpiry(calculateExpiryDate(createPackage))
+        }
+        if (isCreateOpen) {
+            resetCreateGoogleAdsAuthForm()
         }
     }, [isCreateOpen])
 
@@ -287,6 +328,38 @@ export default function UserManagementPage() {
         }
     }
 
+    const applyGoogleAdsAuthForUser = async (
+        userId: number,
+        setup: CreateGoogleAdsAuthSetup,
+        authType: 'oauth' | 'service_account'
+    ) => {
+        if (setup === 'none') return
+
+        const body: Record<string, unknown> = {
+            assignmentMode: setup,
+            authType,
+        }
+
+        if (setup === 'own') {
+            if (authType === 'oauth') {
+                body.oauth = createGoogleAdsOauthForm
+            } else {
+                body.serviceAccount = createGoogleAdsServiceAccountForm
+            }
+        }
+
+        const res = await fetch(`/api/admin/users/${userId}/google-ads-auth`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        })
+        const text = await res.text()
+        const data = text ? JSON.parse(text) : null
+        if (!res.ok) {
+            throw new Error(data?.error || 'Google Ads 认证配置失败')
+        }
+    }
+
     const handleCreateUser = async () => {
         if (!createUsername) {
             toast.error('请先生成用户名')
@@ -320,6 +393,23 @@ export default function UserManagementPage() {
             const userData = data.data || data  // 兼容新旧格式
             const username = userData.user?.username || data.username
             const password = userData.defaultPassword || data.defaultPassword
+            const newUserId = userData.user?.id
+
+            if (createGoogleAdsAuthSetup !== 'none' && newUserId) {
+                try {
+                    await applyGoogleAdsAuthForUser(newUserId, createGoogleAdsAuthSetup, createGoogleAdsAuthType)
+                } catch (authError: any) {
+                    toast.warning(`用户已创建，但 Google Ads 认证配置失败：${authError.message}`)
+                    setIsCreateOpen(false)
+                    fetchUsers(pagination.page)
+                    setCreateUsername('')
+                    setCreateEmail('')
+                    setCreatePackage('trial')
+                    setCreateExpiry('')
+                    resetCreateGoogleAdsAuthForm()
+                    return
+                }
+            }
 
             toast.success(`用户创建成功! 用户名: ${username}, 默认密码: ${password}`)
             setIsCreateOpen(false)
@@ -329,6 +419,7 @@ export default function UserManagementPage() {
             setCreateEmail('')
             setCreatePackage('trial')
             setCreateExpiry('')
+            resetCreateGoogleAdsAuthForm()
         } catch (error: any) {
             toast.error(error.message)
         } finally {
@@ -980,6 +1071,22 @@ export default function UserManagementPage() {
                                                                     </div>
                                                                 </DropdownMenuItem>
                                                             )}
+                                                            {user.role !== 'admin' && (
+                                                            <DropdownMenuItem
+                                                                onClick={() => {
+                                                                    setGoogleAdsAuthUser(user)
+                                                                    setIsGoogleAdsAuthOpen(true)
+                                                                }}
+                                                                className="items-start gap-2 py-2"
+                                                                title="管理该用户的 Google Ads 认证配置"
+                                                            >
+                                                                <Settings2 className="w-4 h-4 mt-0.5 shrink-0 text-blue-600" />
+                                                                <div>
+                                                                    <div className="font-medium">Google Ads 认证</div>
+                                                                    <div className="text-xs text-muted-foreground">共享管理员配置或单独配置 OAuth/服务账号</div>
+                                                                </div>
+                                                            </DropdownMenuItem>
+                                                            )}
                                                             <DropdownMenuSeparator />
                                                             <DropdownMenuItem
                                                                 onClick={() => handleToggleProductManagement(user.id, user.username, user.productManagementEnabled)}
@@ -1116,7 +1223,7 @@ export default function UserManagementPage() {
 
             {/* Create User Modal */}
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                <DialogContent>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>新建用户</DialogTitle>
                         <DialogDescription>
@@ -1183,6 +1290,92 @@ export default function UserManagementPage() {
                                 value={createEmail}
                                 onChange={(e) => setCreateEmail(e.target.value)}
                             />
+                        </div>
+                        <div className="space-y-3 rounded-lg border p-4">
+                            <Label>Google Ads 认证 <span className="text-caption text-muted-foreground">(可选)</span></Label>
+                            <Select
+                                value={createGoogleAdsAuthSetup}
+                                onValueChange={(v) => setCreateGoogleAdsAuthSetup(v as CreateGoogleAdsAuthSetup)}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">不配置</SelectItem>
+                                    <SelectItem value="shared_admin">共享管理员配置</SelectItem>
+                                    <SelectItem value="own">单独配置</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {createGoogleAdsAuthSetup !== 'none' && (
+                                <div className="space-y-3 pt-1">
+                                    <div className="space-y-2">
+                                        <Label>认证方式</Label>
+                                        <Select
+                                            value={createGoogleAdsAuthType}
+                                            onValueChange={(v) => setCreateGoogleAdsAuthType(v as 'oauth' | 'service_account')}
+                                        >
+                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="oauth">OAuth 用户授权</SelectItem>
+                                                <SelectItem value="service_account">服务账号</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {createGoogleAdsAuthSetup === 'shared_admin' ? (
+                                        <p className="text-sm text-muted-foreground bg-muted rounded-md p-3">
+                                            将使用当前登录管理员的 {createGoogleAdsAuthType === 'oauth' ? 'OAuth' : '服务账号'} 配置。
+                                        </p>
+                                    ) : createGoogleAdsAuthType === 'oauth' ? (
+                                        <div className="space-y-2">
+                                            {(['client_id', 'client_secret', 'developer_token', 'login_customer_id', 'refresh_token'] as const).map((key) => (
+                                                <div key={key}>
+                                                    <Label>{key}</Label>
+                                                    <Input
+                                                        type={key.includes('secret') || key.includes('token') ? 'password' : 'text'}
+                                                        value={createGoogleAdsOauthForm[key]}
+                                                        onChange={(e) => setCreateGoogleAdsOauthForm((prev) => ({ ...prev, [key]: e.target.value }))}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <div>
+                                                <Label>配置名称</Label>
+                                                <Input
+                                                    value={createGoogleAdsServiceAccountForm.name}
+                                                    onChange={(e) => setCreateGoogleAdsServiceAccountForm((p) => ({ ...p, name: e.target.value }))}
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label>MCC Customer ID</Label>
+                                                <Input
+                                                    value={createGoogleAdsServiceAccountForm.mccCustomerId}
+                                                    onChange={(e) => setCreateGoogleAdsServiceAccountForm((p) => ({ ...p, mccCustomerId: e.target.value }))}
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label>Developer Token</Label>
+                                                <Input
+                                                    type="password"
+                                                    value={createGoogleAdsServiceAccountForm.developerToken}
+                                                    onChange={(e) => setCreateGoogleAdsServiceAccountForm((p) => ({ ...p, developerToken: e.target.value }))}
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label>Service Account JSON</Label>
+                                                <Textarea
+                                                    rows={4}
+                                                    value={createGoogleAdsServiceAccountForm.serviceAccountJson}
+                                                    onChange={(e) => setCreateGoogleAdsServiceAccountForm((p) => ({ ...p, serviceAccountJson: e.target.value }))}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                     <DialogFooter>
@@ -1508,6 +1701,11 @@ export default function UserManagementPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            <GoogleAdsAuthManageDialog
+                user={googleAdsAuthUser}
+                open={isGoogleAdsAuthOpen}
+                onOpenChange={setIsGoogleAdsAuthOpen}
+            />
         </div>
     )
 }

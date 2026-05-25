@@ -1,0 +1,294 @@
+import { getDatabase } from './db'
+import { boolCondition } from './db-helpers'
+import type { GoogleAdsCredentials } from './google-ads-oauth'
+
+export type GoogleAdsAuthAssignmentMode = 'own' | 'shared_admin'
+export type GoogleAdsAuthType = 'oauth' | 'service_account'
+
+export interface GoogleAdsAuthAssignment {
+  userId: number
+  assignmentMode: GoogleAdsAuthAssignmentMode
+  sharedAdminUserId: number | null
+  authType: GoogleAdsAuthType
+  configuredBy: number | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface GoogleAdsCredentialOwnerResolution {
+  ownerUserId: number
+  assignment: GoogleAdsAuthAssignment | null
+  isShared: boolean
+}
+
+type AssignmentRow = {
+  user_id: number
+  assignment_mode: GoogleAdsAuthAssignmentMode
+  shared_admin_user_id: number | null
+  auth_type: GoogleAdsAuthType
+  configured_by: number | null
+  created_at: string
+  updated_at: string
+}
+
+function mapAssignmentRow(row: AssignmentRow): GoogleAdsAuthAssignment {
+  return {
+    userId: row.user_id,
+    assignmentMode: row.assignment_mode,
+    sharedAdminUserId: row.shared_admin_user_id,
+    authType: row.auth_type,
+    configuredBy: row.configured_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+export async function getGoogleAdsAuthAssignment(userId: number): Promise<GoogleAdsAuthAssignment | null> {
+  const db = await getDatabase()
+  const row = await db.queryOne<AssignmentRow>(
+    `SELECT user_id, assignment_mode, shared_admin_user_id, auth_type, configured_by, created_at, updated_at
+     FROM google_ads_auth_assignments
+     WHERE user_id = ?`,
+    [userId]
+  )
+  return row ? mapAssignmentRow(row) : null
+}
+
+export async function resolveGoogleAdsCredentialOwnerId(
+  userId: number
+): Promise<GoogleAdsCredentialOwnerResolution> {
+  const assignment = await getGoogleAdsAuthAssignment(userId)
+
+  if (assignment?.assignmentMode === 'shared_admin' && assignment.sharedAdminUserId) {
+    return {
+      ownerUserId: assignment.sharedAdminUserId,
+      assignment,
+      isShared: true,
+    }
+  }
+
+  return {
+    ownerUserId: userId,
+    assignment,
+    isShared: false,
+  }
+}
+
+export function isGoogleAdsAuthShared(assignment: GoogleAdsAuthAssignment | null): boolean {
+  return assignment?.assignmentMode === 'shared_admin'
+}
+
+export async function canUserModifyGoogleAdsAuth(
+  targetUserId: number,
+  actorUserId: number,
+  actorRole: string
+): Promise<boolean> {
+  if (actorRole === 'admin') {
+    return true
+  }
+
+  if (targetUserId !== actorUserId) {
+    return false
+  }
+
+  const assignment = await getGoogleAdsAuthAssignment(targetUserId)
+  return !isGoogleAdsAuthShared(assignment)
+}
+
+export async function assertUserCanModifyGoogleAdsAuth(
+  targetUserId: number,
+  actorUserId: number,
+  actorRole: string
+): Promise<void> {
+  const allowed = await canUserModifyGoogleAdsAuth(targetUserId, actorUserId, actorRole)
+  if (!allowed) {
+    throw new Error('当前 Google Ads 认证配置由管理员共享，无法自行修改或删除')
+  }
+}
+
+async function getRawGoogleAdsCredentials(userId: number): Promise<GoogleAdsCredentials | null> {
+  const db = await getDatabase()
+  const isActiveCondition = boolCondition('is_active', true, db.type)
+  const credentials = await db.queryOne<GoogleAdsCredentials>(
+    `SELECT * FROM google_ads_credentials
+     WHERE user_id = ? AND ${isActiveCondition}`,
+    [userId]
+  )
+  return credentials || null
+}
+
+async function getRawActiveServiceAccount(userId: number): Promise<{
+  id: string
+  mcc_customer_id: string
+  developer_token: string
+  service_account_email: string
+} | null> {
+  const db = await getDatabase()
+  const isActiveCondition = boolCondition('is_active', true, db.type)
+  const account = await db.queryOne<{
+    id: string
+    mcc_customer_id: string
+    developer_token: string
+    service_account_email: string
+  }>(
+    `SELECT id, mcc_customer_id, developer_token, service_account_email
+     FROM google_ads_service_accounts
+     WHERE user_id = ? AND ${isActiveCondition}
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId]
+  )
+  return account || null
+}
+
+export async function assertOwnCredentialsDifferFromAdmin(params: {
+  targetUserId: number
+  adminUserId: number
+  authType: GoogleAdsAuthType
+  oauth?: {
+    client_id: string
+    client_secret: string
+    developer_token: string
+    login_customer_id: string
+    refresh_token?: string
+  }
+  serviceAccount?: {
+    mccCustomerId: string
+    developerToken: string
+    serviceAccountEmail: string
+  }
+}): Promise<void> {
+  const { targetUserId, adminUserId, authType } = params
+
+  if (targetUserId === adminUserId) {
+    return
+  }
+
+  if (authType === 'oauth') {
+    const oauth = params.oauth
+    if (!oauth) {
+      throw new Error('单独配置 OAuth 时必须填写完整凭证信息')
+    }
+
+    const adminOAuth = await getRawGoogleAdsCredentials(adminUserId)
+    if (!adminOAuth?.refresh_token) {
+      return
+    }
+
+    const sameClientId = oauth.client_id.trim() === String(adminOAuth.client_id || '').trim()
+    const sameClientSecret = oauth.client_secret.trim() === String(adminOAuth.client_secret || '').trim()
+    const sameDeveloperToken = oauth.developer_token.trim() === String(adminOAuth.developer_token || '').trim()
+    const sameLoginCustomerId =
+      oauth.login_customer_id.replace(/[\s-]/g, '') ===
+      String(adminOAuth.login_customer_id || '').replace(/[\s-]/g, '')
+    const sameRefreshToken =
+      oauth.refresh_token != null &&
+      oauth.refresh_token.trim() === String(adminOAuth.refresh_token || '').trim()
+
+  if (sameClientId && sameClientSecret && sameDeveloperToken && sameLoginCustomerId && sameRefreshToken) {
+      throw new Error('单独配置的 OAuth 凭证不能与管理员的完全相同')
+    }
+
+    if (sameClientId && sameClientSecret && sameDeveloperToken && sameLoginCustomerId) {
+      throw new Error('单独配置的 OAuth 凭证不能与管理员的完全相同')
+    }
+
+    return
+  }
+
+  const serviceAccount = params.serviceAccount
+  if (!serviceAccount) {
+    throw new Error('单独配置服务账号时必须填写完整凭证信息')
+  }
+
+  const adminServiceAccount = await getRawActiveServiceAccount(adminUserId)
+  if (!adminServiceAccount) {
+    return
+  }
+
+  const sameMcc =
+    serviceAccount.mccCustomerId.replace(/[\s-]/g, '') ===
+    adminServiceAccount.mcc_customer_id.replace(/[\s-]/g, '')
+  const sameDeveloperToken =
+    serviceAccount.developerToken.trim() === adminServiceAccount.developer_token.trim()
+  const sameEmail =
+    serviceAccount.serviceAccountEmail.trim().toLowerCase() ===
+    adminServiceAccount.service_account_email.trim().toLowerCase()
+
+  if (sameMcc && sameDeveloperToken && sameEmail) {
+    throw new Error('单独配置的服务账号凭证不能与管理员的完全相同')
+  }
+}
+
+export async function adminHasConfiguredAuth(
+  adminUserId: number,
+  authType: GoogleAdsAuthType
+): Promise<boolean> {
+  if (authType === 'oauth') {
+    const oauth = await getRawGoogleAdsCredentials(adminUserId)
+    return Boolean(
+      oauth?.refresh_token &&
+        oauth.client_id &&
+        oauth.client_secret &&
+        oauth.developer_token
+    )
+  }
+
+  const serviceAccount = await getRawActiveServiceAccount(adminUserId)
+  return Boolean(serviceAccount)
+}
+
+export async function upsertGoogleAdsAuthAssignment(params: {
+  userId: number
+  assignmentMode: GoogleAdsAuthAssignmentMode
+  authType: GoogleAdsAuthType
+  sharedAdminUserId?: number | null
+  configuredBy: number
+}): Promise<GoogleAdsAuthAssignment> {
+  const db = await getDatabase()
+  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const existing = await getGoogleAdsAuthAssignment(params.userId)
+
+  if (existing) {
+    await db.exec(
+      `UPDATE google_ads_auth_assignments
+       SET assignment_mode = ?,
+           shared_admin_user_id = ?,
+           auth_type = ?,
+           configured_by = ?,
+           updated_at = ${nowFunc}
+       WHERE user_id = ?`,
+      [
+        params.assignmentMode,
+        params.sharedAdminUserId ?? null,
+        params.authType,
+        params.configuredBy,
+        params.userId,
+      ]
+    )
+  } else {
+    await db.exec(
+      `INSERT INTO google_ads_auth_assignments (
+         user_id, assignment_mode, shared_admin_user_id, auth_type, configured_by, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ${nowFunc}, ${nowFunc})`,
+      [
+        params.userId,
+        params.assignmentMode,
+        params.sharedAdminUserId ?? null,
+        params.authType,
+        params.configuredBy,
+      ]
+    )
+  }
+
+  const updated = await getGoogleAdsAuthAssignment(params.userId)
+  if (!updated) {
+    throw new Error('保存 Google Ads 认证分配失败')
+  }
+  return updated
+}
+
+export async function deleteGoogleAdsAuthAssignment(userId: number): Promise<void> {
+  const db = await getDatabase()
+  await db.exec(`DELETE FROM google_ads_auth_assignments WHERE user_id = ?`, [userId])
+}
