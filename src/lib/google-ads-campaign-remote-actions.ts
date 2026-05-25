@@ -121,7 +121,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
   const summary = emptySummary({
     planned,
     action,
-    executed: true,
+    executed: false,
     truncated,
     maxCampaigns,
     concurrency: remoteConfig.concurrency,
@@ -166,6 +166,8 @@ export async function executeGoogleAdsCampaignRemoteActions(
     if (!loginCustomerId && adsAccount.parent_mcc_id) {
       loginCustomerId = String(adsAccount.parent_mcc_id)
     }
+
+    summary.executed = true
 
     const processedCampaignIds = new Set<string>()
     const deadline = Date.now() + remoteConfig.totalTimeoutMs

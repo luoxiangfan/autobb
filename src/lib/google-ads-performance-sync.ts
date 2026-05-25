@@ -229,58 +229,81 @@ export async function syncAllCreativesPerformance(
  */
 export async function syncUserPerformanceData(userId: string): Promise<SyncResult> {
   try {
-    const userIdNum = parseInt(userId)
+    const userIdNum = parseInt(userId, 10)
     if (!userIdNum) {
       throw new Error('Invalid userId')
     }
 
     const db = await getDatabase()
-
-    // 获取用户凭证
-    const credentials = await getGoogleAdsCredentials(userIdNum)
-    if (!credentials) {
-      throw new Error('Google Ads credentials not configured. Please complete API configuration in Settings.')
-    }
-
-    if (!credentials.client_id || !credentials.client_secret || !credentials.developer_token) {
-      throw new Error('Incomplete Google Ads credentials. Please complete API configuration in Settings.')
-    }
-
-    // 检查是否配置了服务账号
-    const serviceAccount = await getServiceAccountConfig(userIdNum)
     const auth = await getUserAuthType(userIdNum)
 
-    // 🔧 PostgreSQL兼容性修复: is_active在PostgreSQL中是BOOLEAN类型
+    let refreshToken = ''
+    let loginCustomerId: string | undefined
+    let serviceAccountId: string | undefined
+
+    if (auth.authType === 'service_account') {
+      const serviceAccount = await getServiceAccountConfig(userIdNum, auth.serviceAccountId)
+      if (!serviceAccount) {
+        throw new Error('未找到服务账号配置，请在设置页面完成配置或联系管理员')
+      }
+      if (!serviceAccount.mccCustomerId || !serviceAccount.developerToken) {
+        throw new Error('服务账号配置不完整（缺少 MCC 或 Developer Token）')
+      }
+      serviceAccountId = serviceAccount.id
+      loginCustomerId = String(serviceAccount.mccCustomerId)
+    } else {
+      const credentials = await getGoogleAdsCredentials(userIdNum)
+      if (!credentials) {
+        throw new Error('Google Ads credentials not configured. Please complete API configuration in Settings.')
+      }
+      if (!credentials.client_id || !credentials.client_secret || !credentials.developer_token) {
+        throw new Error('Incomplete Google Ads credentials. Please complete API configuration in Settings.')
+      }
+      if (!credentials.refresh_token) {
+        throw new Error('Missing refresh token. Please complete OAuth authorization in Settings.')
+      }
+      refreshToken = credentials.refresh_token
+      loginCustomerId = credentials.login_customer_id
+        ? String(credentials.login_customer_id)
+        : undefined
+    }
+
     const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
 
-    // Get user's Google Ads account
-    const account = await db.queryOne<any>(`
-      SELECT customer_id
+    const account = await db.queryOne<{
+      id: number
+      customer_id: string
+      service_account_id: string | null
+    }>(`
+      SELECT id, customer_id, service_account_id
       FROM google_ads_accounts
       WHERE user_id = ? AND ${isActiveCondition}
       LIMIT 1
-    `, [userId])
+    `, [userIdNum])
 
     if (!account) {
       throw new Error('No active Google Ads account found')
     }
 
-    let loginCustomerId: string | undefined
-    if (auth.authType === 'service_account') {
-      loginCustomerId = serviceAccount?.mccCustomerId ? String(serviceAccount.mccCustomerId) : undefined
-    } else {
-      loginCustomerId = credentials.login_customer_id ? String(credentials.login_customer_id) : undefined
+    const linkedServiceAccountId =
+      typeof account.service_account_id === 'string' ? account.service_account_id.trim() : ''
+    const effectiveServiceAccountId =
+      auth.authType === 'service_account'
+        ? linkedServiceAccountId || serviceAccountId || auth.serviceAccountId
+        : undefined
+
+    if (auth.authType === 'service_account' && !effectiveServiceAccountId) {
+      throw new Error('未找到服务账号配置，无法同步效果数据')
     }
 
-    // 使用统一入口获取 Customer 实例（自动选择 OAuth 或服务账号）
     const customer = await getCustomerWithCredentials({
       customerId: account.customer_id,
-      refreshToken: credentials.refresh_token || '',
+      refreshToken,
       accountId: account.id,
       userId: userIdNum,
       loginCustomerId,
       authType: auth.authType,
-      serviceAccountId: auth.serviceAccountId,
+      serviceAccountId: effectiveServiceAccountId,
     })
 
     return await syncAllCreativesPerformance(
@@ -288,7 +311,7 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
       customer,
       account.customer_id,
       auth.authType === 'service_account',
-      auth.serviceAccountId
+      effectiveServiceAccountId
     )
   } catch (error) {
     return {

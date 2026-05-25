@@ -412,6 +412,13 @@ export async function syncCampaignsFromGoogleAds(
             ? account.refresh_token || oauthCredentials?.refresh_token || null
             : null
 
+        if (syncAuthType === 'service_account' && !syncServiceAccountId) {
+          result.warnings.push(
+            `账户 ${account.customer_id}: 缺少服务账号配置，已跳过同步`
+          )
+          continue
+        }
+
         // 4. 从 Google Ads API 获取广告系列列表（聚合后的完整数据）
         const campaigns = await fetchCampaignsFromGoogleAds({
           userId,
