@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCodeForTokens, saveGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import { getUserOnlySetting } from '@/lib/settings'
 import { getGoogleAdsAuthAssignment, isGoogleAdsAuthShared } from '@/lib/google-ads-auth-assignment'
+import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
 
 // 强制动态渲染
 export const dynamic = 'force-dynamic'
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`🔐 OAuth回调: 用户 ${userId} 使用自己的OAuth配置`)
 
-    const redirectUri = `${getBaseUrl()}/api/google-ads/oauth/callback`
+    const redirectUri = getGoogleAdsOAuthRedirectUri()
 
     console.log(`📥 处理OAuth回调`)
     console.log(`   用户: ${userId}`)

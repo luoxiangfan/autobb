@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth'
 import { generateOAuthUrl } from '@/lib/google-ads-oauth'
 import { getUserOnlySetting } from '@/lib/settings'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
+import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
 
 /**
  * GET /api/google-ads/oauth/start
@@ -112,7 +113,7 @@ export async function GET(request: NextRequest) {
     ).toString('base64url')
 
     // 构建redirect URI
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/google-ads/oauth/callback`
+    const redirectUri = getGoogleAdsOAuthRedirectUri()
 
     // 生成授权URL
     const authUrl = generateOAuthUrl(clientId, redirectUri, state)

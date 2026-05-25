@@ -146,6 +146,20 @@ export async function executeGoogleAdsCampaignRemoteActions(
       }
     }
 
+    if (auth.authType === 'service_account' && !auth.serviceAccountId) {
+      return {
+        ...summary,
+        executed: false,
+        skipReason: 'CREDENTIALS_MISSING',
+        failures: [
+          {
+            campaignId: '*',
+            reason: '缺少服务账号配置，无法调用远端 API',
+          },
+        ],
+      }
+    }
+
     let loginCustomerId: string | undefined = credentials?.login_customer_id
       ? String(credentials.login_customer_id)
       : undefined

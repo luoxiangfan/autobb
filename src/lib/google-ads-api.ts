@@ -17,14 +17,11 @@ import {
 } from './google-ads-ad-text'
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { getGoogleAdsGeoTargetId } from './language-country-codes'
+import { getGoogleAdsOAuthRedirectUri } from './google-ads-oauth-redirect'
 
 installGoogleAdsWarningFilter()
 
-const GOOGLE_ADS_OAUTH_REDIRECT_PATH = '/api/google-ads/oauth/callback'
-
-function getGoogleAdsOAuthRedirectUri(): string {
-  return `${process.env.NEXT_PUBLIC_APP_URL}${GOOGLE_ADS_OAUTH_REDIRECT_PATH}`
-}
+export { getGoogleAdsOAuthRedirectUri } from './google-ads-oauth-redirect'
 
 function serializeGoogleAdsError(error: unknown): string {
   const primaryMessage = String((error as any)?.message || '').trim()

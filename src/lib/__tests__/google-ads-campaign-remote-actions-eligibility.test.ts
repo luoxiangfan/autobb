@@ -3,6 +3,7 @@ import {
   executeGoogleAdsCampaignRemoteActions,
   queueGoogleAdsCampaignRemoteActions,
 } from '@/lib/google-ads-campaign-remote-actions'
+import { getUserAuthType } from '@/lib/google-ads-oauth'
 
 vi.mock('@/lib/google-ads-oauth', () => ({
   getUserAuthType: vi.fn(async () => ({ authType: 'oauth' as const })),
@@ -57,6 +58,29 @@ describe('queueGoogleAdsCampaignRemoteActions eligibility', () => {
     })
 
     expect(result).toEqual({ queued: true, planned: 1, action: 'REMOVE' })
+  })
+
+  it('returns CREDENTIALS_MISSING when service_account has no serviceAccountId', async () => {
+    vi.mocked(getUserAuthType).mockResolvedValueOnce({ authType: 'service_account' })
+
+    const result = await executeGoogleAdsCampaignRemoteActions({
+      userId: 1,
+      adsAccount: {
+        id: 9,
+        customer_id: '1234567890',
+        parent_mcc_id: null,
+        is_active: 1,
+        is_deleted: 0,
+      },
+      campaigns: [{ google_campaign_id: '1001' }],
+      shouldRemove: true,
+      logPrefix: 'delete-account',
+      skipAccountEligibilityCheck: true,
+    })
+
+    expect(result.executed).toBe(false)
+    expect(result.skipReason).toBe('CREDENTIALS_MISSING')
+    expect(result.failures[0]?.reason).toContain('服务账号')
   })
 
   it('does not queue for inactive account by default', () => {

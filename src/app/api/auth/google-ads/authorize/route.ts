@@ -1,12 +1,19 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getOAuthUrl } from '@/lib/google-ads-api'
+import { generateOAuthUrl } from '@/lib/google-ads-oauth'
+import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
+import { getUserOnlySetting } from '@/lib/settings'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 
 /**
  * GET /api/auth/google-ads/authorize?customerId=xxx
- * 启动Google Ads OAuth流程
+ * 遗留 OAuth 入口：与 /api/google-ads/oauth/start 对齐，统一走主回调。
  */
 export const dynamic = 'force-dynamic'
+
+function getBaseUrl(): string {
+  return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,33 +21,43 @@ export async function GET(request: NextRequest) {
     if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
+
     const userId = authResult.user.userId
 
-    const { searchParams } = new URL(request.url)
-    const customerId = searchParams.get('customerId')
-
-    // 构建state参数（包含用户信息和customer_id）
-    const stateData = {
-      userId: userId,
-      customerId: customerId || null,
-      timestamp: Date.now(),
+    try {
+      await assertUserCanModifyGoogleAdsAuth(userId, userId, authResult.user.role)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '无法修改 Google Ads 认证配置'
+      return NextResponse.redirect(
+        `${getBaseUrl()}/settings?error=${encodeURIComponent(message)}&category=google_ads`
+      )
     }
 
-    const state = Buffer.from(JSON.stringify(stateData)).toString('base64')
+    const clientId = (await getUserOnlySetting('google_ads', 'client_id', userId))?.value || ''
+    if (!clientId) {
+      return NextResponse.redirect(
+        `${getBaseUrl()}/settings?error=missing_google_ads_config&category=google_ads`
+      )
+    }
 
-    // 获取OAuth URL
-    const authUrl = getOAuthUrl(state)
+    const state = Buffer.from(
+      JSON.stringify({
+        user_id: userId,
+        timestamp: Date.now(),
+      })
+    ).toString('base64url')
 
-    // 重定向到Google OAuth页面
+    const redirectUri = getGoogleAdsOAuthRedirectUri()
+    const authUrl = generateOAuthUrl(clientId, redirectUri, state)
+
     return NextResponse.redirect(authUrl)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Google Ads OAuth authorize error:', error)
 
-    return NextResponse.json(
-      {
-        error: error.message || '启动OAuth流程失败',
-      },
-      { status: 500 }
+    return NextResponse.redirect(
+      `${getBaseUrl()}/settings?error=${encodeURIComponent(
+        error instanceof Error ? error.message : 'oauth_failed'
+      )}&category=google_ads`
     )
   }
 }
