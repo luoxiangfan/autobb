@@ -23,12 +23,15 @@
 
 ## Google Ads 共享认证（开发约定）
 
+**产品规则：OAuth 与服务账号二选一。** 同一用户（或共享管理员）在任意时刻只能生效一种认证方式；切换前须在设置页删除当前方式（见 `settings` 删除确认）。**不要实现「OAuth 失效后自动改用用户级服务账号」或「同时配置两种方式」的兜底。**
+
 调用 Google Ads API 或判断用户是否已配置认证时：
 
 1. 优先 `getGoogleAdsAuthContext(userId)`，勿在同一请求内重复 `getUserAuthType` + `getGoogleAdsCredentials`。
 2. 是否已配置用 `hasConfiguredGoogleAdsAuthFromContext` 或 `hasConfiguredGoogleAdsAuth`；勿仅用 `auth.serviceAccountId` 判断服务账号。
-3. 发起 API 调用时用 `resolveGoogleAdsApiAuthFromContext(ctx, linkedAccountServiceAccountId)`，以支持账号级 `google_ads_accounts.service_account_id` 与共享管理员 assignment。
-4. 模块说明见 `src/lib/google-ads-auth-context.ts` 文件头注释。
+3. 发起 API 调用时用 `resolveGoogleAdsApiAuthFromContext(ctx, linkedAccountServiceAccountId)`。`linkedAccountServiceAccountId` 仅在**当前用户认证类型为服务账号**时参与解析（见 `resolveEffectiveServiceAccountId`）；OAuth 用户不会按账号 SA 改走服务账号 API。
+4. 账号同步/发布等预检用 `resolveGoogleAdsApiAuthForAccount`，勿仅用 `google_ads_accounts.refresh_token` 判断 OAuth 是否可用。
+5. 模块说明见 `src/lib/google-ads-auth-context.ts` 文件头注释。
 
 ## GitNexus 使用规范（本仓库）
 

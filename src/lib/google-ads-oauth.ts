@@ -3,10 +3,11 @@ import { boolCondition } from './db-helpers'
 import { resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
 
 /**
- * 获取用户的Google Ads授权方式
- * 优先使用OAuth，无OAuth时使用服务账号
- * 支持管理员共享认证配置
- * @returns { authType: 'oauth' | 'service_account', serviceAccountId?: string }
+ * 获取用户的 Google Ads 授权方式（产品上 OAuth / 服务账号二选一，切换前须删除另一种配置）。
+ *
+ * 检测顺序：有有效 OAuth refresh_token 则视为 oauth，否则若有活跃服务账号则视为 service_account。
+ * 若 DB 中残留两种凭证（未按设置页删除），会优先判定为 oauth；业务代码应依赖设置页与 assignment，勿实现双栈回退。
+ * 支持管理员共享认证配置。
  */
 export async function getUserAuthType(userId: number): Promise<{
   authType: 'oauth' | 'service_account'

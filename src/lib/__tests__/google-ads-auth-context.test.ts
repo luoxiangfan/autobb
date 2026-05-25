@@ -32,10 +32,10 @@ vi.mock('@/lib/google-ads-service-account', () => ({
 
 import {
   getGoogleAdsAuthContext,
+  resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthForAccount,
   resolveGoogleAdsApiAuthFromContext,
   resolveGoogleAdsCredentialStatusFields,
-  resolveOAuthInvalidGrantFallbackServiceAccountId,
 } from '@/lib/google-ads-auth-context'
 
 describe('getGoogleAdsAuthContext', () => {
@@ -181,16 +181,13 @@ describe('resolveGoogleAdsApiAuthForAccount', () => {
   })
 })
 
-describe('resolveOAuthInvalidGrantFallbackServiceAccountId', () => {
-  it('falls back to user default service account when apiAuth has no linked id', () => {
-    const id = resolveOAuthInvalidGrantFallbackServiceAccountId(
-      { serviceAccountId: undefined },
-      {
-        auth: { authType: 'oauth' },
-        serviceAccountConfig: { id: 'sa-default' },
-      } as any
-    )
-    expect(id).toBe('sa-default')
+describe('resolveEffectiveServiceAccountId', () => {
+  it('ignores linked account SA when user auth type is oauth (mutually exclusive)', () => {
+    const id = resolveEffectiveServiceAccountId('sa-linked', {
+      auth: { authType: 'oauth', serviceAccountId: undefined },
+      serviceAccountConfig: null,
+    } as any)
+    expect(id).toBeUndefined()
   })
 })
 

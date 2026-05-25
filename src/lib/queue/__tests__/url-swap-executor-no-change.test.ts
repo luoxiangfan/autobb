@@ -20,7 +20,6 @@ vi.mock('@/lib/google-ads-auth-context', () => ({
   getGoogleAdsAuthContext: vi.fn(),
   hasConfiguredGoogleAdsAuthFromContext: vi.fn(),
   resolveGoogleAdsApiAuthFromContext: vi.fn(),
-  resolveOAuthInvalidGrantFallbackServiceAccountId: vi.fn(),
 }))
 
 vi.mock('@/lib/google-ads-api', () => ({

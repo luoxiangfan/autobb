@@ -27,7 +27,6 @@ import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsApiAuthFromContext,
-  resolveOAuthInvalidGrantFallbackServiceAccountId,
 } from '@/lib/google-ads-auth-context'
 import { updateCampaignFinalUrlSuffix } from '@/lib/google-ads-api'
 import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
@@ -273,42 +272,18 @@ async function updateTargetsFinalUrlSuffix(params: {
       linkedSaByAccountId,
     })
 
-    let attemptAuthType: 'oauth' | 'service_account' = targetAuth.authType
     try {
-      try {
-        await updateSingleTargetWithLoginCustomerFallback({
-          target,
-          finalUrlSuffix: params.finalUrlSuffix,
-          userId: params.userId,
-          refreshToken: targetAuth.refreshToken,
-          authType: attemptAuthType,
-          serviceAccountId: attemptAuthType === 'service_account' ? targetAuth.serviceAccountId : undefined,
-          oauthLoginCustomerId: targetAuth.oauthLoginCustomerId,
-          serviceAccountMccId: targetAuth.serviceAccountMccId,
-        })
-      } catch (firstError: any) {
-        const message = firstError?.message || String(firstError)
-        const fallbackServiceAccountId = resolveOAuthInvalidGrantFallbackServiceAccountId(
-          targetAuth,
-          ctx
-        )
-        if (attemptAuthType === 'oauth' && isOAuthInvalidGrantError(message) && fallbackServiceAccountId) {
-          const fallbackApiAuth = await resolveGoogleAdsApiAuthFromContext(ctx, fallbackServiceAccountId)
-          attemptAuthType = 'service_account'
-          await updateSingleTargetWithLoginCustomerFallback({
-            target,
-            finalUrlSuffix: params.finalUrlSuffix,
-            userId: params.userId,
-            refreshToken: '',
-            authType: 'service_account',
-            serviceAccountId: fallbackApiAuth.serviceAccountId,
-            oauthLoginCustomerId: targetAuth.oauthLoginCustomerId,
-            serviceAccountMccId: fallbackApiAuth.serviceAccountMccId,
-          })
-        } else {
-          throw firstError
-        }
-      }
+      await updateSingleTargetWithLoginCustomerFallback({
+        target,
+        finalUrlSuffix: params.finalUrlSuffix,
+        userId: params.userId,
+        refreshToken: targetAuth.refreshToken,
+        authType: targetAuth.authType,
+        serviceAccountId:
+          targetAuth.authType === 'service_account' ? targetAuth.serviceAccountId : undefined,
+        oauthLoginCustomerId: targetAuth.oauthLoginCustomerId,
+        serviceAccountMccId: targetAuth.serviceAccountMccId,
+      })
 
       if (target.id) {
         await markUrlSwapTargetSuccess(target.id)

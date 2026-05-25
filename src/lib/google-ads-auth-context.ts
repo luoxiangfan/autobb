@@ -1,9 +1,11 @@
 /**
  * Google Ads 认证上下文（assignment + OAuth / 服务账号凭证）。
  *
+ * 产品规则：OAuth 与服务账号二选一，切换前须删除当前配置（设置页约束）；勿实现双栈或 OAuth→用户级 SA 自动回退。
+ *
  * 约定：
  * - 需要调用 Google Ads API 时，优先 `getGoogleAdsAuthContext(userId)`，勿散落 `getUserAuthType` + `getGoogleAdsCredentials`。
- * - 账号级 SA 绑定请传入 `linkedAccountServiceAccountId`，用 `resolveEffectiveServiceAccountId` / `resolveGoogleAdsApiAuthFromContext`。
+ * - `linkedAccountServiceAccountId` 仅在用户当前为服务账号认证时生效；OAuth 用户传入账号 SA 不会切换为服务账号调用。
  * - 是否已配置：用 `hasConfiguredGoogleAdsAuthFromContext`，勿仅用 `auth.serviceAccountId` 判断。
  */
 import {
@@ -154,14 +156,6 @@ export async function resolveGoogleAdsApiAuthForAccount(
   }
 
   return { ok: true, ctx, apiAuth }
-}
-
-/** OAuth invalid_grant 时尝试回退的服务账号 ID（账号绑定 → 用户默认 SA）。 */
-export function resolveOAuthInvalidGrantFallbackServiceAccountId(
-  apiAuth: Pick<GoogleAdsApiAuthFields, 'serviceAccountId'>,
-  ctx: Pick<GoogleAdsAuthContext, 'auth' | 'serviceAccountConfig'>
-): string | undefined {
-  return apiAuth.serviceAccountId || ctx.auth.serviceAccountId || ctx.serviceAccountConfig?.id
 }
 
 /**
