@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { updateGoogleAdsCampaignStatus, getGoogleAdsCredentialsFromDB, getCustomerWithCredentials } from '@/lib/google-ads-api'
-import { getGoogleAdsCredentials } from '@/lib/google-ads-oauth'
+import { updateGoogleAdsCampaignStatus, getCustomerWithCredentials } from '@/lib/google-ads-api'
+import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { invalidateOfferCache } from '@/lib/api-cache'
 import { pauseUrlSwapTargetsByOfferId } from '@/lib/url-swap'
@@ -377,41 +377,34 @@ export async function POST(
         if (googleCampaignIds.length === 0) {
           googleAdsSummary.skippedReason = '未找到可同步的Google Ads广告系列ID'
         } else {
-          const linkedServiceAccountId =
-            typeof campaignRow.service_account_id === 'string'
-              ? campaignRow.service_account_id.trim()
-              : ''
-          const useServiceAccount = linkedServiceAccountId.length > 0
+          const { authType, serviceAccountId: resolvedServiceAccountId } = await getUserAuthType(userId)
 
-          let credentials: Awaited<ReturnType<typeof getGoogleAdsCredentialsFromDB>> | null = null
-          let authType: 'oauth' | 'service_account' = 'oauth'
           let refreshToken = ''
           let serviceAccountId: string | undefined
           let serviceAccountMccId: string | undefined
+          let oauthLoginCustomerId: string | undefined
 
-          if (useServiceAccount) {
-            authType = 'service_account'
-            const config = await getServiceAccountConfig(userId, linkedServiceAccountId)
-            if (!config) {
+          if (authType === 'service_account') {
+            serviceAccountId = resolvedServiceAccountId
+            if (!serviceAccountId) {
               googleAdsSummary.skippedReason = '未找到服务账号配置'
             } else {
-              serviceAccountId = config.id
-              serviceAccountMccId = config.mccCustomerId ? String(config.mccCustomerId) : undefined
+              const config = await getServiceAccountConfig(userId, serviceAccountId)
+              if (!config) {
+                googleAdsSummary.skippedReason = '未找到服务账号配置'
+              } else {
+                serviceAccountMccId = config.mccCustomerId ? String(config.mccCustomerId) : undefined
+              }
             }
           } else {
-            try {
-              credentials = await getGoogleAdsCredentialsFromDB(userId)
-            } catch (err: any) {
-              googleAdsSummary.skippedReason = err?.message || 'Google Ads 凭证未配置或不可用'
-            }
-
-            if (!googleAdsSummary.skippedReason) {
-              authType = 'oauth'
-              const oauthCredentials = await getGoogleAdsCredentials(userId)
-              refreshToken = oauthCredentials?.refresh_token || ''
-              if (!refreshToken) {
-                googleAdsSummary.skippedReason = 'Google Ads OAuth未授权或已过期'
-              }
+            const oauthCredentials = await getGoogleAdsCredentials(userId)
+            refreshToken = oauthCredentials?.refresh_token || ''
+            if (!refreshToken) {
+              googleAdsSummary.skippedReason = 'Google Ads OAuth未授权或已过期'
+            } else {
+              oauthLoginCustomerId = oauthCredentials?.login_customer_id
+                ? String(oauthCredentials.login_customer_id)
+                : undefined
             }
           }
 
@@ -419,9 +412,7 @@ export async function POST(
           if (authType === 'service_account') {
             loginCustomerId = serviceAccountMccId
           } else {
-            loginCustomerId = credentials?.login_customer_id
-              ? String(credentials.login_customer_id)
-              : undefined
+            loginCustomerId = oauthLoginCustomerId
           }
           if (!loginCustomerId && campaignRow.parent_mcc_id) {
             loginCustomerId = String(campaignRow.parent_mcc_id)

@@ -128,18 +128,6 @@ async function readUserConfigs(db: any, userId: number): Promise<Record<string, 
   return configMap
 }
 
-// Helper: Get refresh_token from google_ads_credentials table
-async function getUserRefreshToken(db: any, userId: number): Promise<string> {
-  const isActiveCondition = boolCondition('is_active', true, db.type)
-  const credentials = await db.queryOne(`
-    SELECT refresh_token
-    FROM google_ads_credentials
-    WHERE user_id = ? AND ${isActiveCondition}
-  `, [userId]) as { refresh_token: string } | undefined
-
-  return credentials?.refresh_token || ''
-}
-
 // Helper: Get customer_id from google_ads_accounts table
 // 🔧 优化(2025-12-17): 优先选择余额最高的账号，确保Keyword Planner API可用
 // 只选择状态为ENABLED且非Manager账号的客户账号

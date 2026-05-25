@@ -2,9 +2,9 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findCampaignById, updateCampaign } from '@/lib/campaigns'
 import { getDatabase } from '@/lib/db'
-import { updateGoogleAdsCampaignName, getGoogleAdsCredentialsFromDB } from '@/lib/google-ads-api'
+import { updateGoogleAdsCampaignName } from '@/lib/google-ads-api'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
-import { getGoogleAdsCredentials } from '@/lib/google-ads-oauth'
+import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
 import { invalidateDashboardCache } from '@/lib/api-cache'
 
 const MAX_CAMPAIGN_NAME_LENGTH = 255
@@ -156,36 +156,26 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           )
         }
 
-        const linkedServiceAccountId =
-          typeof adsAccountRow.service_account_id === 'string'
-            ? adsAccountRow.service_account_id.trim()
-            : ''
-        const useServiceAccount = linkedServiceAccountId.length > 0
+        const { authType, serviceAccountId: resolvedServiceAccountId } = await getUserAuthType(userId)
 
-        let authType: 'oauth' | 'service_account' = 'oauth'
         let refreshToken = ''
         let serviceAccountId: string | undefined
         let serviceAccountMccId: string | undefined
         let loginCustomerId: string | undefined
 
-        if (useServiceAccount) {
-          authType = 'service_account'
-          const config = await getServiceAccountConfig(userId, linkedServiceAccountId)
+        if (authType === 'service_account') {
+          serviceAccountId = resolvedServiceAccountId
+          if (!serviceAccountId) {
+            return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
+          }
+
+          const config = await getServiceAccountConfig(userId, serviceAccountId)
           if (!config) {
             return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
           }
-          serviceAccountId = config.id
           serviceAccountMccId = config.mccCustomerId ? String(config.mccCustomerId) : undefined
           loginCustomerId = serviceAccountMccId
         } else {
-          let credentials: Awaited<ReturnType<typeof getGoogleAdsCredentialsFromDB>> | null = null
-          try {
-            credentials = await getGoogleAdsCredentialsFromDB(userId)
-          } catch (e: unknown) {
-            const message = e instanceof Error ? e.message : 'Google Ads 凭证未配置或不可用'
-            return NextResponse.json({ error: message }, { status: 400 })
-          }
-
           const oauthCredentials = await getGoogleAdsCredentials(userId)
           refreshToken = oauthCredentials?.refresh_token || ''
           if (!refreshToken) {
@@ -195,8 +185,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             )
           }
 
-          loginCustomerId = credentials?.login_customer_id
-            ? String(credentials.login_customer_id)
+          loginCustomerId = oauthCredentials?.login_customer_id
+            ? String(oauthCredentials.login_customer_id)
             : undefined
         }
 

@@ -1,9 +1,9 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB } from '@/lib/google-ads-api'
+import { getCustomerWithCredentials } from '@/lib/google-ads-api'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getDatabase } from '@/lib/db'
-import { getGoogleAdsCredentials } from '@/lib/google-ads-oauth'
+import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
 import { executeGAQLQueryPython } from '@/lib/python-ads-client'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
 
@@ -221,7 +221,10 @@ export async function GET(
       })
     }
 
-    let credentials: Awaited<ReturnType<typeof getGoogleAdsCredentialsFromDB>> | null = null
+    const userAuth = await getUserAuthType(numericUserId)
+    const useServiceAccountAuth = userAuth.authType === 'service_account'
+
+    let oauthLoginCustomerId: string | null = null
     let oauthRefreshToken: string | null = null
     const serviceAccountConfigById = new Map<
       string,
@@ -229,36 +232,38 @@ export async function GET(
     >()
 
     const groupedAccounts = Array.from(campaignsByAccountId.values())
-    const oauthRequired = groupedAccounts.some((account) => {
-      const linkedServiceAccountId =
-        typeof account.serviceAccountId === 'string' ? account.serviceAccountId.trim() : ''
-      return linkedServiceAccountId.length === 0
-    })
-    const requiredServiceAccountIds = Array.from(new Set(
-      groupedAccounts
-        .map((account) => (
-          typeof account.serviceAccountId === 'string' ? account.serviceAccountId.trim() : ''
-        ))
-        .filter(Boolean)
-    ))
 
-    if (oauthRequired) {
-      credentials = await getGoogleAdsCredentialsFromDB(numericUserId)
-      oauthRefreshToken = (await getGoogleAdsCredentials(numericUserId))?.refresh_token || null
+    if (useServiceAccountAuth) {
+      const serviceAccountIds = Array.from(new Set([
+        ...(userAuth.serviceAccountId ? [userAuth.serviceAccountId] : []),
+        ...groupedAccounts
+          .map((account) => (
+            typeof account.serviceAccountId === 'string' ? account.serviceAccountId.trim() : ''
+          ))
+          .filter(Boolean),
+      ]))
+
+      if (serviceAccountIds.length === 0) {
+        return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
+      }
+
+      for (const serviceAccountId of serviceAccountIds) {
+        const config = await getServiceAccountConfig(numericUserId, serviceAccountId)
+        if (!config) {
+          return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
+        }
+        serviceAccountConfigById.set(serviceAccountId, config)
+      }
+    } else {
+      const oauthCredentials = await getGoogleAdsCredentials(numericUserId)
+      oauthRefreshToken = oauthCredentials?.refresh_token || null
+      oauthLoginCustomerId = oauthCredentials?.login_customer_id || null
       if (!oauthRefreshToken) {
         return NextResponse.json({
           error: 'Google Ads OAuth未授权或已过期，请先在设置页面重新授权',
           needsReauth: true,
         }, { status: 400 })
       }
-    }
-
-    for (const serviceAccountId of requiredServiceAccountIds) {
-      const config = await getServiceAccountConfig(numericUserId, serviceAccountId)
-      if (!config) {
-        return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
-      }
-      serviceAccountConfigById.set(serviceAccountId, config)
     }
 
     const gaqlCampaignById = new Map<number, any>()
@@ -338,11 +343,17 @@ export async function GET(
           AND campaign.status != 'REMOVED'
       `
 
-      const linkedServiceAccountId =
-        typeof account.serviceAccountId === 'string' ? account.serviceAccountId.trim() : ''
-      const useServiceAccount = linkedServiceAccountId.length > 0
+      const linkedServiceAccountId = useServiceAccountAuth
+        ? (
+          typeof account.serviceAccountId === 'string' && account.serviceAccountId.trim()
+            ? account.serviceAccountId.trim()
+            : (userAuth.serviceAccountId || '')
+        )
+        : ''
+      const useServiceAccount = useServiceAccountAuth
 
       if (useServiceAccount) {
+        if (!linkedServiceAccountId) continue
         const linkedServiceAccountConfig = serviceAccountConfigById.get(linkedServiceAccountId)
         if (!linkedServiceAccountConfig) continue
         const serviceAccountId = linkedServiceAccountConfig.id
@@ -416,7 +427,7 @@ export async function GET(
           // ignore
         }
       } else {
-        const loginCustomerId = credentials?.login_customer_id || account.parentMccId || undefined
+        const loginCustomerId = oauthLoginCustomerId || account.parentMccId || undefined
         const customer = await getCustomerWithCredentials({
           customerId: account.customerId,
           refreshToken: oauthRefreshToken || undefined,

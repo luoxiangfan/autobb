@@ -1,10 +1,10 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB } from '@/lib/google-ads-api'
+import { getCustomerWithCredentials } from '@/lib/google-ads-api'
 import { getDatabase } from '@/lib/db'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
-import { getGoogleAdsCredentials } from '@/lib/google-ads-oauth'
+import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
 import { getRedisClient } from '@/lib/redis-client'
 import { executeGAQLQueryPython } from '@/lib/python-ads-client'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
@@ -199,24 +199,23 @@ export async function GET(
       return NextResponse.json({ error: '关联的Ads账号不可用（可能已解除关联）' }, { status: 400 })
     }
 
-    const linkedServiceAccountId =
-      typeof linked.service_account_id === 'string' ? linked.service_account_id.trim() : ''
-    const useServiceAccount = linkedServiceAccountId.length > 0
+    const { authType, serviceAccountId: resolvedServiceAccountId } = await getUserAuthType(numericUserId)
+    const useServiceAccount = authType === 'service_account'
 
-    let credentials: Awaited<ReturnType<typeof getGoogleAdsCredentialsFromDB>> | null = null
     let serviceAccountId: string | undefined
 
     if (useServiceAccount) {
-      const config = await getServiceAccountConfig(numericUserId, linkedServiceAccountId)
+      serviceAccountId = resolvedServiceAccountId
+      if (!serviceAccountId) return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
+      const config = await getServiceAccountConfig(numericUserId, serviceAccountId)
       if (!config) return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
-      serviceAccountId = config.id
-    } else {
-      credentials = await getGoogleAdsCredentialsFromDB(numericUserId)
     }
 
-    const oauthRefreshToken = !useServiceAccount
-      ? (await getGoogleAdsCredentials(numericUserId))?.refresh_token || null
+    const oauthCredentials = !useServiceAccount
+      ? await getGoogleAdsCredentials(numericUserId)
       : null
+    const oauthRefreshToken = oauthCredentials?.refresh_token || null
+    const oauthLoginCustomerId = oauthCredentials?.login_customer_id || undefined
 
     if (!useServiceAccount && !oauthRefreshToken) {
       return NextResponse.json({ error: 'Google Ads OAuth未授权或已过期', needsReauth: true }, { status: 400 })
@@ -269,7 +268,7 @@ export async function GET(
         })
         campaignRows = extractSearchResults(fetched)
       } else {
-        const loginCustomerId = credentials?.login_customer_id || linked.parent_mcc_id || undefined
+        const loginCustomerId = oauthLoginCustomerId || linked.parent_mcc_id || undefined
         const customer = await getCustomerWithCredentials({
           customerId: linked.customer_id,
           refreshToken: oauthRefreshToken || undefined,
@@ -328,7 +327,7 @@ export async function GET(
           })
           adGroupRows = extractSearchResults(fetched)
         } else {
-          const loginCustomerId = credentials?.login_customer_id || linked.parent_mcc_id || undefined
+          const loginCustomerId = oauthLoginCustomerId || linked.parent_mcc_id || undefined
           const customer = await getCustomerWithCredentials({
             customerId: linked.customer_id,
             refreshToken: oauthRefreshToken || undefined,

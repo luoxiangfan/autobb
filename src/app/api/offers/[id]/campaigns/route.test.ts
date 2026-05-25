@@ -18,6 +18,7 @@ const serviceAccountFns = vi.hoisted(() => ({
 
 const oauthFns = vi.hoisted(() => ({
   getGoogleAdsCredentials: vi.fn(),
+  getUserAuthType: vi.fn(),
 }))
 
 const pythonFns = vi.hoisted(() => ({
@@ -47,6 +48,7 @@ vi.mock('@/lib/google-ads-service-account', () => ({
 
 vi.mock('@/lib/google-ads-oauth', () => ({
   getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
+  getUserAuthType: oauthFns.getUserAuthType,
 }))
 
 vi.mock('@/lib/python-ads-client', () => ({
@@ -63,6 +65,10 @@ vi.mock('@/lib/google-ads-api-tracker', () => ({
 describe('GET /api/offers/:id/campaigns', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    oauthFns.getUserAuthType.mockResolvedValue({
+      authType: 'service_account',
+      serviceAccountId: 'sa-1',
+    })
 
     dbFns.query.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM campaigns c')) {
@@ -112,7 +118,6 @@ describe('GET /api/offers/:id/campaigns', () => {
     expect(data.campaigns[0].id).toBe('23578044853')
     expect(data.campaigns[0].currentCpc).toBe(0.5)
     expect(serviceAccountFns.getServiceAccountConfig).toHaveBeenCalledWith(1, 'sa-1')
-    expect(googleAdsFns.getGoogleAdsCredentialsFromDB).not.toHaveBeenCalled()
     expect(oauthFns.getGoogleAdsCredentials).not.toHaveBeenCalled()
   })
 })

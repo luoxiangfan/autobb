@@ -12,11 +12,11 @@ const campaignFns = vi.hoisted(() => ({
 
 const adsFns = vi.hoisted(() => ({
   updateGoogleAdsCampaignStatus: vi.fn(),
-  getGoogleAdsCredentialsFromDB: vi.fn(),
 }))
 
 const oauthFns = vi.hoisted(() => ({
   getGoogleAdsCredentials: vi.fn(),
+  getUserAuthType: vi.fn(),
 }))
 
 const serviceAccountFns = vi.hoisted(() => ({
@@ -48,11 +48,11 @@ vi.mock('@/lib/campaigns', () => ({
 
 vi.mock('@/lib/google-ads-api', () => ({
   updateGoogleAdsCampaignStatus: adsFns.updateGoogleAdsCampaignStatus,
-  getGoogleAdsCredentialsFromDB: adsFns.getGoogleAdsCredentialsFromDB,
 }))
 
 vi.mock('@/lib/google-ads-oauth', () => ({
   getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
+  getUserAuthType: oauthFns.getUserAuthType,
 }))
 
 vi.mock('@/lib/google-ads-service-account', () => ({
@@ -75,12 +75,13 @@ vi.mock('@/lib/campaign-offer-tasks', () => ({
 describe('PUT /api/campaigns/:id/toggle-status', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    adsFns.getGoogleAdsCredentialsFromDB.mockResolvedValue({
-      useServiceAccount: false,
-      login_customer_id: '9988776655',
+    oauthFns.getUserAuthType.mockResolvedValue({
+      authType: 'oauth',
+      serviceAccountId: undefined,
     })
     oauthFns.getGoogleAdsCredentials.mockResolvedValue({
       refresh_token: 'oauth-refresh-token',
+      login_customer_id: '9988776655',
     })
     adsFns.updateGoogleAdsCampaignStatus.mockResolvedValue(undefined)
     transitionFns.applyCampaignTransition.mockResolvedValue({ updatedCount: 1 })
@@ -287,9 +288,10 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
   })
 
   it('uses linked service account without requiring OAuth base credentials', async () => {
-    adsFns.getGoogleAdsCredentialsFromDB.mockRejectedValue(
-      new Error('用户(ID=7)未配置完整的 Google Ads 凭证。请在设置页面配置所有必需参数。')
-    )
+    oauthFns.getUserAuthType.mockResolvedValue({
+      authType: 'service_account',
+      serviceAccountId: 'sa-1',
+    })
     serviceAccountFns.getServiceAccountConfig.mockResolvedValue({
       id: 'sa-1',
       mccCustomerId: '2233445566',
@@ -311,7 +313,7 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
           id: 10,
           customer_id: '1122334455',
           parent_mcc_id: null,
-          service_account_id: 'sa-1',
+          service_account_id: null,
           is_active: 1,
           is_deleted: 0,
           status: 'ENABLED',
@@ -335,7 +337,6 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
     expect(res.status).toBe(200)
     expect(data.success).toBe(true)
     expect(serviceAccountFns.getServiceAccountConfig).toHaveBeenCalledWith(7, 'sa-1')
-    expect(adsFns.getGoogleAdsCredentialsFromDB).not.toHaveBeenCalled()
     expect(oauthFns.getGoogleAdsCredentials).not.toHaveBeenCalled()
     expect(adsFns.updateGoogleAdsCampaignStatus).toHaveBeenCalledWith({
       customerId: '1122334455',

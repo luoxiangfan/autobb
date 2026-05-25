@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB } from '@/lib/google-ads-api'
+import { getCustomerWithCredentials } from '@/lib/google-ads-api'
 import { getDatabase } from '@/lib/db'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
-import { getGoogleAdsCredentials } from '@/lib/google-ads-oauth'
+import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
 import { executeGAQLQueryPython, updateCampaignPython, updateAdGroupPython } from '@/lib/python-ads-client'
 import { normalizeGoogleAdsApiUpdateOperations } from '@/lib/google-ads-mutate-helpers'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
@@ -409,19 +409,22 @@ export async function PUT(
       )
     }
 
-    const linkedServiceAccountId =
-      typeof adsAccountRow?.service_account_id === 'string'
-        ? adsAccountRow.service_account_id.trim()
-        : ''
-    const useServiceAccount = linkedServiceAccountId.length > 0
+    const { authType, serviceAccountId: resolvedServiceAccountId } = await getUserAuthType(numericUserId)
+    const useServiceAccount = authType === 'service_account'
 
-    let credentials: Awaited<ReturnType<typeof getGoogleAdsCredentialsFromDB>> | null = null
     let customer: any
     let serviceAccountId: string | undefined
 
     if (useServiceAccount) {
-      // 服务账号模式 - 检查配置是否存在
-      const config = await getServiceAccountConfig(numericUserId, linkedServiceAccountId)
+      serviceAccountId = resolvedServiceAccountId
+      if (!serviceAccountId) {
+        return NextResponse.json(
+          { error: '未找到服务账号配置' },
+          { status: 400 }
+        )
+      }
+
+      const config = await getServiceAccountConfig(numericUserId, serviceAccountId)
 
       if (!config) {
         return NextResponse.json(
@@ -429,10 +432,8 @@ export async function PUT(
           { status: 400 }
         )
       }
-      serviceAccountId = config.id
       const serviceAccountMccId = config.mccCustomerId ? String(config.mccCustomerId) : undefined
 
-      // 使用统一客户端（服务账号模式）
       customer = await getCustomerWithCredentials({
         customerId: adsAccountRow.customer_id,
         accountId: adsAccountRow.id,
@@ -442,10 +443,6 @@ export async function PUT(
         serviceAccountId,
       })
     } else {
-      // OAuth 模式才读取 OAuth 基础凭证，避免服务账号路径触发 OAuth 必填校验
-      credentials = await getGoogleAdsCredentialsFromDB(numericUserId)
-
-      // OAuth 模式
       const oauthCredentials = await getGoogleAdsCredentials(numericUserId)
       if (!oauthCredentials?.refresh_token) {
         return NextResponse.json(
@@ -457,18 +454,12 @@ export async function PUT(
         )
       }
 
-      const loginCustomerId = credentials.login_customer_id || adsAccountRow.parent_mcc_id || undefined
+      const loginCustomerId = oauthCredentials.login_customer_id || adsAccountRow.parent_mcc_id || undefined
 
-      // 使用统一客户端（OAuth模式）
       customer = await getCustomerWithCredentials({
         customerId: adsAccountRow.customer_id,
         refreshToken: oauthCredentials.refresh_token,
         loginCustomerId,
-        credentials: {
-          client_id: credentials.client_id,
-          client_secret: credentials.client_secret,
-          developer_token: credentials.developer_token,
-        },
         accountId: adsAccountRow.id,
         userId: numericUserId,
       })
