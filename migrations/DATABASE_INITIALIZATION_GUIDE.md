@@ -500,9 +500,9 @@ CREATE INDEX idx_offers_new_field ON offers(new_field);
 psql autoads < pg-migrations/058_add_new_feature.pg.sql
 ```
 
-5. **更新迁移报告**
+5. **更新迁移说明**
 
-在 `MIGRATION_CONSOLIDATION_REPORT.md` 中记录新迁移
+在 `migrations/README.md` 的「近期增量迁移」表中记录新迁移
 
 ---
 
@@ -569,7 +569,7 @@ ORDER BY pg_total_relation_size(table_name::regclass) DESC;
 
 ## 📚 相关文档
 
-- [迁移整合报告](./MIGRATION_CONSOLIDATION_REPORT.md) - 完整的迁移历史和映射
+- [迁移规范与增量说明](./README.md) - 命名规范、用法与近期增量迁移
 - [Schema验证脚本](../scripts/validate-db-schema.ts) - 自动化验证工具
 - [SQLite整合Schema](./000_init_schema_consolidated.sqlite.sql) - 本地开发schema
 - [PostgreSQL整合Schema](../pg-migrations/000_init_schema_consolidated.pg.sql) - 生产环境schema

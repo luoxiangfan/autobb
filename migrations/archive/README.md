@@ -23,7 +23,7 @@ psql autoads < pg-migrations/000_init_schema_consolidated.pg.sql
 
 详细说明请查看：
 - [数据库初始化指南](../DATABASE_INITIALIZATION_GUIDE.md)
-- [迁移整合报告](../MIGRATION_CONSOLIDATION_REPORT.md)
+- [迁移规范与增量说明](../README.md)
 
 ---
 
