@@ -32,6 +32,7 @@ vi.mock('@/lib/google-ads-service-account', () => ({
 
 import {
   getGoogleAdsAuthContext,
+  resolveGoogleAdsApiAuthFromContext,
   resolveGoogleAdsCredentialStatusFields,
 } from '@/lib/google-ads-auth-context'
 
@@ -131,5 +132,34 @@ describe('resolveGoogleAdsCredentialStatusFields', () => {
     expect(fields.developerToken).toBe('dev-token')
     expect(fields.loginCustomerId).toBe('1112223333')
     expect(fields.apiAccessLevel).toBe('basic')
+  })
+})
+
+describe('resolveGoogleAdsApiAuthFromContext', () => {
+  it('prefers linked account service account id and loads its MCC', async () => {
+    serviceAccountFns.getServiceAccountConfig.mockImplementation(async (_userId: number, id?: string) => {
+      if (id === 'sa-linked') {
+        return { id: 'sa-linked', mccCustomerId: '9998887777', developerToken: 'tok' }
+      }
+      return { id: 'sa-default', mccCustomerId: '1112223333', developerToken: 'tok' }
+    })
+
+    const fields = await resolveGoogleAdsApiAuthFromContext({
+      userId: 2,
+      ownerUserId: 1,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      auth: { authType: 'service_account', serviceAccountId: 'sa-default' },
+      oauthCredentials: null,
+      serviceAccountConfig: {
+        id: 'sa-default',
+        mccCustomerId: '1112223333',
+        developerToken: 'tok',
+      },
+    } as any, 'sa-linked')
+
+    expect(fields.serviceAccountId).toBe('sa-linked')
+    expect(fields.serviceAccountMccId).toBe('9998887777')
   })
 })

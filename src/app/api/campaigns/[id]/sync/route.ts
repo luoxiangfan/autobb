@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { findCampaignById, updateCampaign } from '@/lib/campaigns'
 import { findGoogleAdsAccountById } from '@/lib/google-ads-accounts'
 import { createGoogleAdsCampaign } from '@/lib/google-ads-api'
-import { getUserAuthType } from '@/lib/google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from '@/lib/google-ads-auth-context'
 import { invalidateOfferCache } from '@/lib/api-cache'
 
 /**
@@ -73,13 +76,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     })
 
     try {
-      // 获取用户授权方式
-      const auth = await getUserAuthType(userId)
+      const authContext = await getGoogleAdsAuthContext(userId)
+      const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+        authContext,
+        googleAdsAccount.serviceAccountId
+      )
 
       // 创建Google Ads广告系列
       const result = await createGoogleAdsCampaign({
         customerId: googleAdsAccount.customerId,
-        refreshToken: googleAdsAccount.refreshToken || '',
+        refreshToken: googleAdsAccount.refreshToken || apiAuth.refreshToken,
         campaignName: campaign.campaignName,
         budgetAmount: campaign.budgetAmount,
         budgetType: campaign.budgetType as 'DAILY' | 'TOTAL',
@@ -88,8 +94,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         endDate: campaign.endDate || undefined,
         accountId: googleAdsAccount.id,
         userId,
-        authType: auth.authType,
-        serviceAccountId: auth.serviceAccountId,
+        authType: apiAuth.authType,
+        serviceAccountId: apiAuth.serviceAccountId,
       })
 
       // 更新Campaign，标记为已同步

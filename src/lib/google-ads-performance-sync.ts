@@ -10,7 +10,10 @@
 import { getDatabase } from './db'
 import { saveCreativePerformance, PerformanceData } from './bonus-score-calculator'
 import { getCustomerWithCredentials } from './google-ads-api'
-import { getGoogleAdsAuthContext } from './google-ads-auth-context'
+import {
+  getGoogleAdsAuthContext,
+  resolveEffectiveServiceAccountId,
+} from './google-ads-auth-context'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 
@@ -287,10 +290,10 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
 
     const linkedServiceAccountId =
       typeof account.service_account_id === 'string' ? account.service_account_id.trim() : ''
-    const effectiveServiceAccountId =
-      auth.authType === 'service_account'
-        ? linkedServiceAccountId || serviceAccountId || auth.serviceAccountId
-        : undefined
+    const effectiveServiceAccountId = resolveEffectiveServiceAccountId(
+      linkedServiceAccountId || account.service_account_id,
+      ctx
+    )
 
     if (auth.authType === 'service_account' && !effectiveServiceAccountId) {
       throw new Error('未找到服务账号配置，无法同步效果数据')

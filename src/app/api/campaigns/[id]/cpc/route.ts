@@ -3,8 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { getCustomerWithCredentials } from '@/lib/google-ads-api'
 import { getDatabase } from '@/lib/db'
-import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
-import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from '@/lib/google-ads-auth-context'
 import { getRedisClient } from '@/lib/redis-client'
 import { executeGAQLQueryPython } from '@/lib/python-ads-client'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
@@ -199,24 +202,23 @@ export async function GET(
       return NextResponse.json({ error: '关联的Ads账号不可用（可能已解除关联）' }, { status: 400 })
     }
 
-    const { authType, serviceAccountId: resolvedServiceAccountId } = await getUserAuthType(numericUserId)
-    const useServiceAccount = authType === 'service_account'
-
-    let serviceAccountId: string | undefined
-
-    if (useServiceAccount) {
-      serviceAccountId = resolvedServiceAccountId
-      if (!serviceAccountId) return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
-      const config = await getServiceAccountConfig(numericUserId, serviceAccountId)
-      if (!config) return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
+    const authContext = await getGoogleAdsAuthContext(numericUserId)
+    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+      return NextResponse.json(
+        { error: 'Google Ads 认证未配置或已失效，请在设置中完成配置' },
+        { status: 400 }
+      )
     }
 
-    const oauthCredentials = !useServiceAccount
-      ? await getGoogleAdsCredentials(numericUserId)
-      : null
-    const oauthRefreshToken = oauthCredentials?.refresh_token || null
-    const oauthLoginCustomerId = oauthCredentials?.login_customer_id || undefined
+    const apiAuth = await resolveGoogleAdsApiAuthFromContext(authContext, linked.service_account_id)
+    const useServiceAccount = apiAuth.authType === 'service_account'
+    const serviceAccountId = apiAuth.serviceAccountId
+    const oauthRefreshToken = useServiceAccount ? null : apiAuth.refreshToken || null
+    const oauthLoginCustomerId = apiAuth.oauthLoginCustomerId
 
+    if (useServiceAccount && !serviceAccountId) {
+      return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
+    }
     if (!useServiceAccount && !oauthRefreshToken) {
       return NextResponse.json({ error: 'Google Ads OAuth未授权或已过期', needsReauth: true }, { status: 400 })
     }

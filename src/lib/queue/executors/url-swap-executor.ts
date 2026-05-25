@@ -23,7 +23,11 @@ import {
 } from '@/lib/url-swap'
 import type { UrlSwapTaskData, UrlSwapTaskTarget } from '@/lib/url-swap-types'
 import { getDatabase } from '@/lib/db'
-import { getGoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from '@/lib/google-ads-auth-context'
 import { updateCampaignFinalUrlSuffix } from '@/lib/google-ads-api'
 import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
 import { resolveLoginCustomerCandidates, isGoogleAdsAccountAccessError } from '@/lib/google-ads-login-customer'
@@ -215,40 +219,18 @@ async function loadGoogleAdsUpdateAuthContext(params: {
   db: Awaited<ReturnType<typeof getDatabase>>
 }): Promise<GoogleAdsUpdateAuthContext> {
   const ctx = await getGoogleAdsAuthContext(params.userId)
-  const auth = ctx.auth
-  const credentials = ctx.oauthCredentials
-
-  const effectiveServiceAccountId = auth.authType === 'service_account'
-    ? auth.serviceAccountId
-    : undefined
-
-  if ((!credentials || !credentials.refresh_token) && !effectiveServiceAccountId) {
+  if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
     throw new Error('OAuth refresh token或服务账号配置缺失，请重新授权或配置服务账号')
   }
 
-  let serviceAccountMccId: string | undefined
-  if (effectiveServiceAccountId) {
-    try {
-      const { getServiceAccountConfig } = await import('@/lib/google-ads-service-account')
-      const serviceAccountConfig = await getServiceAccountConfig(params.userId, effectiveServiceAccountId)
-      serviceAccountMccId = serviceAccountConfig?.mccCustomerId
-        ? String(serviceAccountConfig.mccCustomerId).trim()
-        : undefined
-    } catch (error: any) {
-      console.warn(`[url-swap-executor] 获取服务账号MCC失败: ${error?.message || error}`)
-    }
-  }
-
-  const oauthLoginCustomerId = credentials?.login_customer_id
-    ? String(credentials.login_customer_id).trim()
-    : undefined
+  const apiAuth = await resolveGoogleAdsApiAuthFromContext(ctx)
 
   return {
-    refreshToken: credentials?.refresh_token || '',
-    authType: auth.authType,
-    serviceAccountId: effectiveServiceAccountId,
-    oauthLoginCustomerId,
-    serviceAccountMccId,
+    refreshToken: apiAuth.refreshToken,
+    authType: apiAuth.authType,
+    serviceAccountId: apiAuth.serviceAccountId,
+    oauthLoginCustomerId: apiAuth.oauthLoginCustomerId,
+    serviceAccountMccId: apiAuth.serviceAccountMccId,
   }
 }
 

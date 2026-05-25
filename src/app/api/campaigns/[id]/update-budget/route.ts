@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { updateGoogleAdsCampaignBudget } from '@/lib/google-ads-api'
-import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from '@/lib/google-ads-auth-context'
 import { invalidateDashboardCache, invalidateOfferCache } from '@/lib/api-cache'
 import {
   isGoogleAdsAccountAccessError,
@@ -70,6 +74,7 @@ export async function PUT(
           c.is_deleted,
           gaa.customer_id,
           gaa.parent_mcc_id,
+          gaa.service_account_id,
           gaa.is_active AS account_is_active,
           gaa.is_deleted AS account_is_deleted
         FROM campaigns c
@@ -91,6 +96,7 @@ export async function PUT(
           is_deleted: any
           customer_id: string | null
           parent_mcc_id: string | null
+          service_account_id: string | null
           account_is_active: any
           account_is_deleted: any
         }
@@ -148,17 +154,27 @@ export async function PUT(
       return NextResponse.json({ error: '关联的Ads账号不可用（已停用或已删除）' }, { status: 400 })
     }
 
-    const { authType, serviceAccountId } = await getUserAuthType(userId)
-    let refreshToken = ''
-    let oauthLoginCustomerId: string | undefined
-    if (authType === 'oauth') {
-      const oauthCredentials = await getGoogleAdsCredentials(userId)
-      if (!oauthCredentials?.refresh_token) {
-        return NextResponse.json({ error: 'Google Ads OAuth refresh_token 不存在或已过期' }, { status: 400 })
-      }
-      refreshToken = oauthCredentials.refresh_token
-      oauthLoginCustomerId = oauthCredentials.login_customer_id
+    const authContext = await getGoogleAdsAuthContext(userId)
+    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+      return NextResponse.json(
+        { error: 'Google Ads 认证未配置或已失效，请在设置中完成配置' },
+        { status: 400 }
+      )
     }
+
+    const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+      authContext,
+      linked.service_account_id
+    )
+    if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {
+      return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
+    }
+    if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
+      return NextResponse.json({ error: 'Google Ads OAuth refresh_token 不存在或已过期' }, { status: 400 })
+    }
+
+    const refreshToken = apiAuth.refreshToken
+    const oauthLoginCustomerId = apiAuth.oauthLoginCustomerId
 
     const runUpdateBudget = async (loginCustomerId?: string) => {
       await updateGoogleAdsCampaignBudget({
@@ -170,12 +186,12 @@ export async function PUT(
         accountId: Number(linked.google_ads_account_id),
         userId,
         loginCustomerId,
-        authType,
-        serviceAccountId,
+        authType: apiAuth.authType,
+        serviceAccountId: apiAuth.serviceAccountId,
       })
     }
 
-    if (authType === 'oauth') {
+    if (apiAuth.authType === 'oauth') {
       const loginCustomerIdCandidates = resolveLoginCustomerCandidates({
         authType: 'oauth',
         accountParentMccId: linked.parent_mcc_id,
@@ -205,8 +221,9 @@ export async function PUT(
       }
     } else {
       const loginCustomerId = resolveLoginCustomerId({
-        authType,
+        authType: apiAuth.authType,
         accountParentMccId: linked.parent_mcc_id,
+        serviceAccountMccId: apiAuth.serviceAccountMccId,
       })
       await runUpdateBudget(loginCustomerId)
     }

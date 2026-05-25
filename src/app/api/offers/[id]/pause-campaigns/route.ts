@@ -13,7 +13,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads-api'
 import { getDecryptedCredentials } from '@/lib/google-ads-accounts'
-import { getUserAuthType } from '@/lib/google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveEffectiveServiceAccountId,
+} from '@/lib/google-ads-auth-context'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 
 interface RouteContext {
@@ -105,8 +109,13 @@ export async function POST(
     let pausedCount = 0
     let errorCount = 0
 
-    // 获取用户认证类型
-    const auth = await getUserAuthType(offer.user_id)
+    const authContext = await getGoogleAdsAuthContext(offer.user_id)
+    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+      return NextResponse.json(
+        { error: 'Google Ads 认证未配置或已失效，无法暂停远端广告系列' },
+        { status: 400 }
+      )
+    }
 
     // 4. 按账号批量暂停广告系列
     for (const [accountIdStr, accountCampaigns] of Object.entries(campaignsByAccount)) {
@@ -130,8 +139,13 @@ export async function POST(
           continue
         }
 
+        const serviceAccountId = resolveEffectiveServiceAccountId(
+          accountCredentials.serviceAccountId,
+          authContext
+        )
+
         // 服务账号模式不需要 refreshToken
-        if (auth.authType === 'oauth' && !accountCredentials.refreshToken) {
+        if (authContext.auth.authType === 'oauth' && !accountCredentials.refreshToken) {
           accountCampaigns.forEach(campaign => {
             results.push({
               campaignId: campaign.id,
@@ -155,8 +169,8 @@ export async function POST(
               status: 'PAUSED',
               accountId: accountId,
               userId: offer.user_id,
-              authType: auth.authType,
-              serviceAccountId: auth.serviceAccountId
+              authType: authContext.auth.authType,
+              serviceAccountId
             })
 
             // 更新数据库状态

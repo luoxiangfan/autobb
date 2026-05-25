@@ -3,7 +3,11 @@ import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { boolParam, getInsertedId } from '@/lib/db-helpers'
 import { createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
-import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from '@/lib/google-ads-auth-context'
 import { recommendMatchTypeForKeyword } from '@/lib/keyword-intent'
 import { patchCampaignConfigKeywords, type CampaignConfigKeyword } from '@/lib/campaign-config-keywords'
 import { promoteKeywordsToOfferKeywordPool } from '@/lib/offer-keyword-pool'
@@ -439,17 +443,27 @@ export async function POST(
       campaignName: campaign.campaign_name,
     })
 
-    const auth = await getUserAuthType(userId)
-    let refreshToken = ''
-    if (auth.authType === 'oauth') {
-      const oauthCredentials = await getGoogleAdsCredentials(userId)
-      refreshToken = oauthCredentials?.refresh_token || campaign.account_refresh_token || ''
-      if (!refreshToken) {
-        return NextResponse.json(
-          { error: 'Google Ads OAuth 授权已过期，请重新连接账号' },
-          { status: 400 }
-        )
-      }
+    const authContext = await getGoogleAdsAuthContext(userId)
+    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+      return NextResponse.json(
+        { error: 'Google Ads 认证未配置或已失效，请在设置中完成配置' },
+        { status: 400 }
+      )
+    }
+
+    const apiAuth = await resolveGoogleAdsApiAuthFromContext(authContext)
+    const refreshToken =
+      apiAuth.authType === 'oauth'
+        ? apiAuth.refreshToken || campaign.account_refresh_token || ''
+        : ''
+    if (apiAuth.authType === 'oauth' && !refreshToken) {
+      return NextResponse.json(
+        { error: 'Google Ads OAuth 授权已过期，请重新连接账号' },
+        { status: 400 }
+      )
+    }
+    if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {
+      return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
     }
 
     const status = body.status === 'PAUSED' ? 'PAUSED' : 'ENABLED'
@@ -461,8 +475,8 @@ export async function POST(
       status,
       keywords: toCreate,
       accountId: Number(campaign.google_ads_account_id),
-      authType: auth.authType,
-      serviceAccountId: auth.serviceAccountId,
+      authType: apiAuth.authType,
+      serviceAccountId: apiAuth.serviceAccountId,
     })
 
     const createdKeywordLookup = new Map<string, { keywordId: string; keywordText: string }>()

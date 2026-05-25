@@ -511,6 +511,7 @@ export async function getDecryptedCredentials(
   customerId: string
   accessToken: string | null
   refreshToken: string | null
+  serviceAccountId: string | null
   clientId?: string
   clientSecret?: string
 } | null> {
@@ -525,6 +526,7 @@ export async function getDecryptedCredentials(
     customerId: account.customerId,
     accessToken: account.accessToken,
     refreshToken: account.refreshToken,
+    serviceAccountId: account.serviceAccountId,
   }
 }
 

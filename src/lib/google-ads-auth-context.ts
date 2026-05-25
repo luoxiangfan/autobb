@@ -1,3 +1,11 @@
+/**
+ * Google Ads 认证上下文（assignment + OAuth / 服务账号凭证）。
+ *
+ * 约定：
+ * - 需要调用 Google Ads API 时，优先 `getGoogleAdsAuthContext(userId)`，勿散落 `getUserAuthType` + `getGoogleAdsCredentials`。
+ * - 账号级 SA 绑定请传入 `linkedAccountServiceAccountId`，用 `resolveEffectiveServiceAccountId` / `resolveGoogleAdsApiAuthFromContext`。
+ * - 是否已配置：用 `hasConfiguredGoogleAdsAuthFromContext`，勿仅用 `auth.serviceAccountId` 判断。
+ */
 import {
   isGoogleAdsAuthShared,
   resolveGoogleAdsCredentialOwnerId,
@@ -21,10 +29,17 @@ export interface GoogleAdsAuthContext {
   serviceAccountConfig: Awaited<ReturnType<typeof getServiceAccountConfig>>
 }
 
-/**
- * 一次性解析用户的 Google Ads 认证上下文（assignment + 凭证）。
- */
-export async function getGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthContext> {
+export interface GoogleAdsApiAuthFields {
+  authType: 'oauth' | 'service_account'
+  refreshToken: string
+  serviceAccountId?: string
+  serviceAccountMccId?: string
+  oauthLoginCustomerId?: string
+}
+
+const authContextInflight = new Map<number, Promise<GoogleAdsAuthContext>>()
+
+async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthContext> {
   const { ownerUserId, assignment, isShared } = await resolveGoogleAdsCredentialOwnerId(userId)
   const auth = await getUserAuthType(userId)
 
@@ -47,6 +62,23 @@ export async function getGoogleAdsAuthContext(userId: number): Promise<GoogleAds
     oauthCredentials,
     serviceAccountConfig,
   }
+}
+
+/**
+ * 一次性解析用户的 Google Ads 认证上下文（assignment + 凭证）。
+ * 同一事件循环内对相同 userId 的并发调用会合并为一次加载。
+ */
+export async function getGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthContext> {
+  const inflight = authContextInflight.get(userId)
+  if (inflight) {
+    return inflight
+  }
+
+  const promise = loadGoogleAdsAuthContext(userId).finally(() => {
+    authContextInflight.delete(userId)
+  })
+  authContextInflight.set(userId, promise)
+  return promise
 }
 
 export function resolveEffectiveServiceAccountId(
@@ -76,6 +108,37 @@ export function hasConfiguredGoogleAdsAuthFromContext(ctx: GoogleAdsAuthContext)
 export function getServiceAccountMccFromContext(ctx: GoogleAdsAuthContext): string | undefined {
   const mcc = ctx.serviceAccountConfig?.mccCustomerId
   return mcc ? String(mcc) : undefined
+}
+
+/**
+ * 从 context 解析 Google Ads API 调用所需的认证字段（含账号级 SA 与 MCC）。
+ */
+export async function resolveGoogleAdsApiAuthFromContext(
+  ctx: GoogleAdsAuthContext,
+  linkedAccountServiceAccountId?: string | null
+): Promise<GoogleAdsApiAuthFields> {
+  const serviceAccountId = resolveEffectiveServiceAccountId(linkedAccountServiceAccountId, ctx)
+  let serviceAccountMccId = getServiceAccountMccFromContext(ctx)
+
+  if (serviceAccountId) {
+    const contextSaId = ctx.serviceAccountConfig?.id
+    if (!contextSaId || serviceAccountId !== contextSaId) {
+      const linkedConfig = await getServiceAccountConfig(ctx.userId, serviceAccountId)
+      serviceAccountMccId = linkedConfig?.mccCustomerId
+        ? String(linkedConfig.mccCustomerId)
+        : undefined
+    }
+  }
+
+  return {
+    authType: ctx.auth.authType,
+    refreshToken: ctx.oauthCredentials?.refresh_token || '',
+    serviceAccountId,
+    serviceAccountMccId,
+    oauthLoginCustomerId: ctx.oauthCredentials?.login_customer_id
+      ? String(ctx.oauthCredentials.login_customer_id).trim()
+      : undefined,
+  }
 }
 
 /**

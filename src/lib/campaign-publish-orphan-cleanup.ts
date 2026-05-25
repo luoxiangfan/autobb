@@ -1,6 +1,10 @@
 import { getDatabase } from './db'
 import { updateGoogleAdsCampaignStatus } from './google-ads-api'
-import { getGoogleAdsCredentials, getUserAuthType } from './google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from './google-ads-auth-context'
 import {
   resolveLoginCustomerCandidates,
   isGoogleAdsAccountAccessError,
@@ -165,32 +169,32 @@ export async function buildPublishRollbackContextForAdsAccount(
   const db = await getDatabase()
   const adsAccount = await db.queryOne(
     `
-    SELECT id, customer_id, parent_mcc_id
+    SELECT id, customer_id, parent_mcc_id, service_account_id
     FROM google_ads_accounts
     WHERE id = ? AND user_id = ?
     LIMIT 1
   `,
     [googleAdsAccountId, userId]
-  ) as { id: number; customer_id: string; parent_mcc_id?: string | null } | undefined
+  ) as {
+    id: number
+    customer_id: string
+    parent_mcc_id?: string | null
+    service_account_id?: string | null
+  } | undefined
 
   if (!adsAccount?.customer_id) {
     return null
   }
 
-  const credentials = await getGoogleAdsCredentials(userId)
-  const auth = await getUserAuthType(userId)
-  const refreshToken = credentials?.refresh_token || ''
-
-  let serviceAccountMccId: string | undefined
-  if (auth.authType === 'service_account') {
-    try {
-      const { getServiceAccountConfig } = await import('./google-ads-service-account')
-      const saConfig = await getServiceAccountConfig(userId, auth.serviceAccountId)
-      serviceAccountMccId = saConfig?.mccCustomerId
-    } catch {
-      serviceAccountMccId = undefined
-    }
+  const authContext = await getGoogleAdsAuthContext(userId)
+  if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+    return null
   }
+
+  const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+    authContext,
+    adsAccount.service_account_id
+  )
 
   const runWithLoginCustomerFallbackAndHeartbeat = async <T>(
     actionName: string,
@@ -199,22 +203,22 @@ export async function buildPublishRollbackContextForAdsAccount(
     runWithLoginCustomerFallbackForAccount({
       userId,
       adsAccount,
-      refreshToken,
-      authType: auth.authType,
-      serviceAccountId: auth.serviceAccountId,
-      serviceAccountMccId,
-      oauthLoginCustomerId: credentials?.login_customer_id,
+      refreshToken: apiAuth.refreshToken,
+      authType: apiAuth.authType,
+      serviceAccountId: apiAuth.serviceAccountId,
+      serviceAccountMccId: apiAuth.serviceAccountMccId,
+      oauthLoginCustomerId: apiAuth.oauthLoginCustomerId,
       actionName,
       callback,
     })
 
   return {
     customerId: adsAccount.customer_id,
-    refreshToken,
+    refreshToken: apiAuth.refreshToken,
     accountId: adsAccount.id,
     userId,
-    authType: auth.authType,
-    serviceAccountId: auth.serviceAccountId,
+    authType: apiAuth.authType,
+    serviceAccountId: apiAuth.serviceAccountId,
     runWithLoginCustomerFallbackAndHeartbeat,
   }
 }

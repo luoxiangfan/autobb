@@ -18,9 +18,8 @@ import type { Task } from '../types'
 import { getDatabase } from '@/lib/db'
 import {
   getGoogleAdsAuthContext,
-  getServiceAccountMccFromContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveEffectiveServiceAccountId,
+  resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
 import {
   resolveLoginCustomerCandidates,
@@ -571,7 +570,7 @@ export async function executeCampaignPublish(
 
     // 1. 获取Google Ads账号（包含currency信息）
     const adsAccount = await db.queryOne(
-      `SELECT id, customer_id, currency, parent_mcc_id, is_active
+      `SELECT id, customer_id, currency, parent_mcc_id, service_account_id, is_active
        FROM google_ads_accounts
        WHERE id = ? AND user_id = ? AND is_active = ?`,
       [Number(googleAdsAccountId), Number(userId), 1]
@@ -589,17 +588,18 @@ export async function executeCampaignPublish(
       throw new Error('OAuth refresh token或服务账号配置缺失，请重新授权或配置服务账号')
     }
 
-    const auth = authContext.auth
-    const credentials = authContext.oauthCredentials
-    const refreshToken = credentials?.refresh_token || ''
-    const serviceAccountId = resolveEffectiveServiceAccountId(undefined, authContext)
-    const serviceAccountMccId = getServiceAccountMccFromContext(authContext)
+    const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+      authContext,
+      adsAccount.service_account_id
+    )
+    const refreshToken = apiAuth.refreshToken
+    const serviceAccountId = apiAuth.serviceAccountId
 
     const loginCustomerIdCandidates = resolveLoginCustomerCandidates({
-      authType: auth.authType,
+      authType: apiAuth.authType,
       accountParentMccId: adsAccount.parent_mcc_id,
-      oauthLoginCustomerId: credentials?.login_customer_id,
-      serviceAccountMccId,
+      oauthLoginCustomerId: apiAuth.oauthLoginCustomerId,
+      serviceAccountMccId: apiAuth.serviceAccountMccId,
       targetCustomerId: adsAccount.customer_id,
     })
     let preferredLoginCustomerId = loginCustomerIdCandidates[0]
@@ -659,7 +659,7 @@ export async function executeCampaignPublish(
       refreshToken,
       accountId: adsAccount.id,
       userId,
-      authType: auth.authType,
+      authType: apiAuth.authType,
       serviceAccountId,
       runWithLoginCustomerFallbackAndHeartbeat,
     }
@@ -829,7 +829,7 @@ export async function executeCampaignPublish(
               campaignName: candidateName,
               userId,
               loginCustomerId,
-              authType: auth.authType,
+              authType: apiAuth.authType,
               serviceAccountId,
             })
         )
@@ -861,7 +861,7 @@ export async function executeCampaignPublish(
               accountId: adsAccount.id,
               userId,
               loginCustomerId,
-              authType: auth.authType,
+              authType: apiAuth.authType,
               serviceAccountId,
             })
         )
@@ -888,7 +888,7 @@ export async function executeCampaignPublish(
             accountId: adsAccount.id,
             userId,
             loginCustomerId,
-            authType: auth.authType,
+            authType: apiAuth.authType,
             serviceAccountId,
           })
       )
@@ -912,7 +912,7 @@ export async function executeCampaignPublish(
           accountId: adsAccount.id,
           userId,
           loginCustomerId,
-          authType: auth.authType,
+          authType: apiAuth.authType,
           serviceAccountId,
           skipCache: true,
         })
@@ -998,7 +998,7 @@ export async function executeCampaignPublish(
             adGroupName,
             userId,
             loginCustomerId,
-            authType: auth.authType,
+            authType: apiAuth.authType,
             serviceAccountId,
           })
       )
@@ -1030,7 +1030,7 @@ export async function executeCampaignPublish(
           accountId: adsAccount.id,
           userId,
           loginCustomerId,
-          authType: auth.authType,
+          authType: apiAuth.authType,
           serviceAccountId,
         })
       )
@@ -1130,7 +1130,7 @@ export async function executeCampaignPublish(
           accountId: adsAccount.id,
           userId,
           loginCustomerId,
-          authType: auth.authType,
+          authType: apiAuth.authType,
           serviceAccountId,
         })
       )
@@ -1148,7 +1148,7 @@ export async function executeCampaignPublish(
           accountId: adsAccount.id,
           userId,
           loginCustomerId,
-          authType: auth.authType,
+          authType: apiAuth.authType,
           serviceAccountId,
         })
       )
@@ -1200,7 +1200,7 @@ export async function executeCampaignPublish(
           accountId: adsAccount.id,
           userId,
           loginCustomerId,
-          authType: auth.authType,
+          authType: apiAuth.authType,
           serviceAccountId,
         })
       )
@@ -1283,7 +1283,7 @@ export async function executeCampaignPublish(
           accountId: adsAccount.id,
           userId,
           loginCustomerId,
-          authType: auth.authType,
+          authType: apiAuth.authType,
           serviceAccountId
         })
       )
@@ -1311,7 +1311,7 @@ export async function executeCampaignPublish(
           accountId: adsAccount.id,
           userId,
           loginCustomerId,
-          authType: auth.authType,
+          authType: apiAuth.authType,
           serviceAccountId
         })
       )
@@ -1337,7 +1337,7 @@ export async function executeCampaignPublish(
           campaignId: googleCampaignId,
           userId,
           loginCustomerId,
-          authType: auth.authType,
+          authType: apiAuth.authType,
           serviceAccountId,
         })
       )
@@ -1360,7 +1360,7 @@ export async function executeCampaignPublish(
             accountId: adsAccount.id,
             userId,
             loginCustomerId,
-            authType: auth.authType,
+            authType: apiAuth.authType,
             serviceAccountId,
           })
         )
@@ -1431,7 +1431,7 @@ export async function executeCampaignPublish(
             accountId: adsAccount.id,
             userId,
             loginCustomerId,
-            authType: auth.authType,
+            authType: apiAuth.authType,
             serviceAccountId,
           })
         )

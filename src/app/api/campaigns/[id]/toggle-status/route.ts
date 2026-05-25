@@ -4,8 +4,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { findCampaignById } from '@/lib/campaigns'
 import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads-api'
-import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
-import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from '@/lib/google-ads-auth-context'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 import { invalidateDashboardCache } from '@/lib/api-cache'
 import { pauseOfferTasks, resumeOfferTasksOnCampaignEnable } from '@/lib/campaign-offer-tasks'
@@ -195,50 +198,34 @@ export async function PUT(
       )
     }
 
-    const { authType, serviceAccountId: resolvedServiceAccountId } = await getUserAuthType(userId)
-
-    let refreshToken = ''
-    let serviceAccountId: string | undefined
-    let serviceAccountMccId: string | undefined
-    let oauthLoginCustomerId: string | undefined
-
-    if (authType === 'service_account') {
-      serviceAccountId = resolvedServiceAccountId
-      if (!serviceAccountId) {
-        return NextResponse.json(
-          { error: '未找到服务账号配置' },
-          { status: 400 }
-        )
-      }
-
-      const config = await getServiceAccountConfig(userId, serviceAccountId)
-      if (!config) {
-        return NextResponse.json(
-          { error: '未找到服务账号配置' },
-          { status: 400 }
-        )
-      }
-      serviceAccountMccId = config.mccCustomerId ? String(config.mccCustomerId) : undefined
-    } else {
-      const oauthCredentials = await getGoogleAdsCredentials(userId)
-      refreshToken = oauthCredentials?.refresh_token || ''
-      if (!refreshToken) {
-        return NextResponse.json(
-          { error: 'Google Ads OAuth未授权或已过期', needsReauth: true },
-          { status: 400 }
-        )
-      }
-      oauthLoginCustomerId = oauthCredentials?.login_customer_id
-        ? String(oauthCredentials.login_customer_id)
-        : undefined
+    const authContext = await getGoogleAdsAuthContext(userId)
+    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+      return NextResponse.json(
+        { error: 'Google Ads 认证未配置或已失效，请在设置中完成配置' },
+        { status: 400 }
+      )
     }
 
-    let loginCustomerId: string | undefined
-    if (authType === 'service_account') {
-      loginCustomerId = serviceAccountMccId
-    } else {
-      loginCustomerId = oauthLoginCustomerId
+    const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+      authContext,
+      adsAccountRow.service_account_id
+    )
+    if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {
+      return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
     }
+    if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
+      return NextResponse.json(
+        { error: 'Google Ads OAuth未授权或已过期', needsReauth: true },
+        { status: 400 }
+      )
+    }
+
+    const refreshToken = apiAuth.refreshToken
+    const serviceAccountId = apiAuth.serviceAccountId
+    let loginCustomerId: string | undefined =
+      apiAuth.authType === 'service_account'
+        ? apiAuth.serviceAccountMccId
+        : apiAuth.oauthLoginCustomerId
     if (!loginCustomerId && adsAccountRow.parent_mcc_id) {
       loginCustomerId = String(adsAccountRow.parent_mcc_id)
     }
@@ -252,7 +239,7 @@ export async function PUT(
       accountId: adsAccountRow.id,
       userId,
       loginCustomerId,
-      authType,
+      authType: apiAuth.authType,
       serviceAccountId,
     })
 

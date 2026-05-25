@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { updateGoogleAdsCampaignStatus, getCustomerWithCredentials } from '@/lib/google-ads-api'
-import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
-import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from '@/lib/google-ads-auth-context'
 import { invalidateOfferCache } from '@/lib/api-cache'
 import { pauseUrlSwapTargetsByOfferId } from '@/lib/url-swap'
 import { removePendingClickFarmQueueTasksByTaskIds } from '@/lib/click-farm/queue-cleanup'
@@ -377,42 +380,36 @@ export async function POST(
         if (googleCampaignIds.length === 0) {
           googleAdsSummary.skippedReason = '未找到可同步的Google Ads广告系列ID'
         } else {
-          const { authType, serviceAccountId: resolvedServiceAccountId } = await getUserAuthType(userId)
+          const authContext = await getGoogleAdsAuthContext(userId)
+          if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+            googleAdsSummary.skippedReason = 'Google Ads 认证未配置或已失效'
+          }
 
           let refreshToken = ''
           let serviceAccountId: string | undefined
-          let serviceAccountMccId: string | undefined
-          let oauthLoginCustomerId: string | undefined
+          let authType: 'oauth' | 'service_account' = 'oauth'
+          let loginCustomerId: string | undefined
 
-          if (authType === 'service_account') {
-            serviceAccountId = resolvedServiceAccountId
-            if (!serviceAccountId) {
-              googleAdsSummary.skippedReason = '未找到服务账号配置'
-            } else {
-              const config = await getServiceAccountConfig(userId, serviceAccountId)
-              if (!config) {
+          if (!googleAdsSummary.skippedReason) {
+            const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+              authContext,
+              campaignRow.service_account_id
+            )
+            authType = apiAuth.authType
+            refreshToken = apiAuth.refreshToken
+            serviceAccountId = apiAuth.serviceAccountId
+
+            if (apiAuth.authType === 'service_account') {
+              if (!apiAuth.serviceAccountId) {
                 googleAdsSummary.skippedReason = '未找到服务账号配置'
               } else {
-                serviceAccountMccId = config.mccCustomerId ? String(config.mccCustomerId) : undefined
+                loginCustomerId = apiAuth.serviceAccountMccId
               }
-            }
-          } else {
-            const oauthCredentials = await getGoogleAdsCredentials(userId)
-            refreshToken = oauthCredentials?.refresh_token || ''
-            if (!refreshToken) {
+            } else if (!apiAuth.refreshToken) {
               googleAdsSummary.skippedReason = 'Google Ads OAuth未授权或已过期'
             } else {
-              oauthLoginCustomerId = oauthCredentials?.login_customer_id
-                ? String(oauthCredentials.login_customer_id)
-                : undefined
+              loginCustomerId = apiAuth.oauthLoginCustomerId
             }
-          }
-
-          let loginCustomerId: string | undefined
-          if (authType === 'service_account') {
-            loginCustomerId = serviceAccountMccId
-          } else {
-            loginCustomerId = oauthLoginCustomerId
           }
           if (!loginCustomerId && campaignRow.parent_mcc_id) {
             loginCustomerId = String(campaignRow.parent_mcc_id)
