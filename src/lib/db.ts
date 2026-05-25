@@ -691,18 +691,6 @@ export function getDatabase(): DatabaseAdapter {
 }
 
 /**
- * 获取 SQLite 原始实例（用于兼容现有代码）
- * @deprecated 请使用 getDatabase() 获取适配器
- */
-export function getSQLiteDatabase(): Database.Database {
-  const db = getDatabase()
-  if (db.type === 'sqlite') {
-    return (db as SQLiteAdapter).getRawDatabase()
-  }
-  throw new Error('SQLite operations only supported when using SQLite database')
-}
-
-/**
  * 关闭数据库连接
  */
 export function closeDatabase(): void {
@@ -710,20 +698,6 @@ export function closeDatabase(): void {
     global.__dbAdapter.close()
     global.__dbAdapter = undefined
   }
-}
-
-/**
- * 执行数据库事务（同步版本，仅支持 SQLite）
- * @deprecated 请使用 getDatabase().transaction() 或异步版本
- */
-export function transaction<T>(fn: (db: Database.Database) => T): T {
-  const database = getDatabase()
-  if (database.type === 'sqlite') {
-    const sqliteDb = (database as SQLiteAdapter).getRawDatabase()
-    const transactionFn = sqliteDb.transaction(fn)
-    return transactionFn(sqliteDb)
-  }
-  throw new Error('Synchronous transaction only supported for SQLite. Use async transaction for PostgreSQL.')
 }
 
 /**
