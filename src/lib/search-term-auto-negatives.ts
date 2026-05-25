@@ -1,7 +1,12 @@
 import { getDatabase } from '@/lib/db'
 import { boolCondition, boolParam } from '@/lib/db-helpers'
 import { createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
-import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext,
+  type GoogleAdsAuthContext,
+} from '@/lib/google-ads-auth-context'
 import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keyword-intent'
 import { KEYWORD_POLICY } from '@/lib/keyword-policy'
 
@@ -156,6 +161,72 @@ function parsePositiveNumber(raw: string | undefined, fallback: number): number 
   const parsed = Number(raw)
   if (!Number.isFinite(parsed) || parsed <= 0) return fallback
   return parsed
+}
+
+function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof getDatabase>>) {
+  const contextByUser = new Map<number, GoogleAdsAuthContext>()
+  const linkedServiceAccountByAccountId = new Map<number, string | null>()
+
+  const getContext = async (userId: number) => {
+    const cached = contextByUser.get(userId)
+    if (cached) return cached
+    const ctx = await getGoogleAdsAuthContext(userId)
+    contextByUser.set(userId, ctx)
+    return ctx
+  }
+
+  const getLinkedServiceAccountId = async (accountId: number) => {
+    if (!linkedServiceAccountByAccountId.has(accountId)) {
+      const row = await db.queryOne<{ service_account_id: string | null }>(
+        `SELECT service_account_id FROM google_ads_accounts WHERE id = ? LIMIT 1`,
+        [accountId]
+      )
+      const linked =
+        typeof row?.service_account_id === 'string' ? row.service_account_id.trim() : ''
+      linkedServiceAccountByAccountId.set(accountId, linked || null)
+    }
+    return linkedServiceAccountByAccountId.get(accountId) ?? null
+  }
+
+  return async (action: {
+    userId: number
+    googleAdsAccountId: number
+    refreshToken: string
+  }) => {
+    const ctx = await getContext(action.userId)
+    if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
+      throw new Error('google_ads_auth_not_configured')
+    }
+
+    const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+      ctx,
+      await getLinkedServiceAccountId(action.googleAdsAccountId)
+    )
+
+    if (apiAuth.authType === 'oauth') {
+      const effectiveRefreshToken = String(action.refreshToken || apiAuth.refreshToken || '').trim()
+      if (!effectiveRefreshToken) {
+        throw new Error('missing_refresh_token_for_oauth')
+      }
+      return {
+        authType: apiAuth.authType,
+        serviceAccountId: undefined as string | undefined,
+        refreshToken: effectiveRefreshToken,
+        loginCustomerId: apiAuth.oauthLoginCustomerId,
+      }
+    }
+
+    if (!apiAuth.serviceAccountId) {
+      throw new Error('missing_service_account')
+    }
+
+    return {
+      authType: apiAuth.authType,
+      serviceAccountId: apiAuth.serviceAccountId,
+      refreshToken: '',
+      loginCustomerId: apiAuth.serviceAccountMccId,
+    }
+  }
 }
 
 function toUserStatsArray(
@@ -398,27 +469,7 @@ export async function runSearchTermAutoNegatives(
   }
 
   const db = await getDatabase()
-  const authByUser = new Map<number, Awaited<ReturnType<typeof getUserAuthType>>>()
-  const oauthCredentialsByUser = new Map<
-    number,
-    Awaited<ReturnType<typeof getGoogleAdsCredentials>> | null
-  >()
-
-  const getAuth = async (userId: number) => {
-    if (authByUser.has(userId)) return authByUser.get(userId)!
-    const auth = await getUserAuthType(userId)
-    authByUser.set(userId, auth)
-    return auth
-  }
-
-  const getOAuthCredentials = async (userId: number) => {
-    if (oauthCredentialsByUser.has(userId)) {
-      return oauthCredentialsByUser.get(userId) || null
-    }
-    const credentials = await getGoogleAdsCredentials(userId).catch(() => null)
-    oauthCredentialsByUser.set(userId, credentials)
-    return credentials
-  }
+  const resolveGoogleAdsAuth = createSearchTermGoogleAdsAuthResolver(db)
 
   let applied = 0
   let failed = 0
@@ -429,20 +480,11 @@ export async function runSearchTermAutoNegatives(
     const key = `${action.adGroupId}:${normalizeTermKey(action.searchTerm)}`
 
     try {
-      const auth = await getAuth(action.userId)
-      const oauthCredentials = await getOAuthCredentials(action.userId)
-      const loginCustomerId = String(oauthCredentials?.login_customer_id || '').trim() || undefined
-      const effectiveRefreshToken = String(
-        action.refreshToken || oauthCredentials?.refresh_token || ''
-      ).trim()
-
-      if (auth.authType === 'oauth' && !effectiveRefreshToken) {
-        throw new Error('missing_refresh_token_for_oauth')
-      }
+      const apiAuth = await resolveGoogleAdsAuth(action)
 
       const createResults = await createGoogleAdsKeywordsBatch({
         customerId: action.customerId,
-        refreshToken: effectiveRefreshToken,
+        refreshToken: apiAuth.refreshToken,
         adGroupId: action.googleAdGroupId,
         keywords: [{
           keywordText: action.searchTerm,
@@ -453,9 +495,9 @@ export async function runSearchTermAutoNegatives(
         }],
         accountId: action.googleAdsAccountId,
         userId: action.userId,
-        loginCustomerId,
-        authType: auth.authType,
-        serviceAccountId: auth.serviceAccountId,
+        loginCustomerId: apiAuth.loginCustomerId,
+        authType: apiAuth.authType,
+        serviceAccountId: apiAuth.serviceAccountId,
       })
 
       const keywordId = createResults[0]?.keywordId || null
@@ -662,27 +704,7 @@ export async function runSearchTermAutoPositiveKeywords(
   }
 
   const db = await getDatabase()
-  const authByUser = new Map<number, Awaited<ReturnType<typeof getUserAuthType>>>()
-  const oauthCredentialsByUser = new Map<
-    number,
-    Awaited<ReturnType<typeof getGoogleAdsCredentials>> | null
-  >()
-
-  const getAuth = async (userId: number) => {
-    if (authByUser.has(userId)) return authByUser.get(userId)!
-    const auth = await getUserAuthType(userId)
-    authByUser.set(userId, auth)
-    return auth
-  }
-
-  const getOAuthCredentials = async (userId: number) => {
-    if (oauthCredentialsByUser.has(userId)) {
-      return oauthCredentialsByUser.get(userId) || null
-    }
-    const credentials = await getGoogleAdsCredentials(userId).catch(() => null)
-    oauthCredentialsByUser.set(userId, credentials)
-    return credentials
-  }
+  const resolveGoogleAdsAuth = createSearchTermGoogleAdsAuthResolver(db)
 
   let applied = 0
   let failed = 0
@@ -693,20 +715,11 @@ export async function runSearchTermAutoPositiveKeywords(
     const key = `${action.adGroupId}:${normalizeTermKey(action.searchTerm)}`
 
     try {
-      const auth = await getAuth(action.userId)
-      const oauthCredentials = await getOAuthCredentials(action.userId)
-      const loginCustomerId = String(oauthCredentials?.login_customer_id || '').trim() || undefined
-      const effectiveRefreshToken = String(
-        action.refreshToken || oauthCredentials?.refresh_token || ''
-      ).trim()
-
-      if (auth.authType === 'oauth' && !effectiveRefreshToken) {
-        throw new Error('missing_refresh_token_for_oauth')
-      }
+      const apiAuth = await resolveGoogleAdsAuth(action)
 
       const createResults = await createGoogleAdsKeywordsBatch({
         customerId: action.customerId,
-        refreshToken: effectiveRefreshToken,
+        refreshToken: apiAuth.refreshToken,
         adGroupId: action.googleAdGroupId,
         keywords: [{
           keywordText: action.searchTerm,
@@ -716,9 +729,9 @@ export async function runSearchTermAutoPositiveKeywords(
         }],
         accountId: action.googleAdsAccountId,
         userId: action.userId,
-        loginCustomerId,
-        authType: auth.authType,
-        serviceAccountId: auth.serviceAccountId,
+        loginCustomerId: apiAuth.loginCustomerId,
+        authType: apiAuth.authType,
+        serviceAccountId: apiAuth.serviceAccountId,
       })
 
       const keywordId = createResults[0]?.keywordId || null

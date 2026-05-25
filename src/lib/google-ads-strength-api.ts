@@ -11,8 +11,10 @@
  */
 
 import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB } from './google-ads-api'
-import { getServiceAccountConfig } from './google-ads-service-account'
-import { getUserAuthType, getGoogleAdsCredentials } from './google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from './google-ads-auth-context'
 import { getDatabase } from './db'
 import type { AdStrengthRating } from './ad-strength-evaluator'
 import { executeGAQLQueryPython } from './python-ads-client'
@@ -38,41 +40,32 @@ async function getGoogleAdsClient(
     throw new Error('未找到Google Ads账号')
   }
 
-  const auth = await getUserAuthType(userId)
+  const authContext = await getGoogleAdsAuthContext(userId)
   const linkedServiceAccountId =
     typeof account.service_account_id === 'string' ? account.service_account_id.trim() : ''
+  const apiAuth = await resolveGoogleAdsApiAuthFromContext(authContext, linkedServiceAccountId || null)
 
-  if (auth.authType === 'service_account') {
-    const serviceAccountId = linkedServiceAccountId || auth.serviceAccountId
-    if (!serviceAccountId) {
+  if (apiAuth.authType === 'service_account') {
+    if (!apiAuth.serviceAccountId) {
       throw new Error('未找到服务账号配置')
     }
-
-    const config = await getServiceAccountConfig(userId, serviceAccountId)
-
-    if (!config) {
-      throw new Error('未找到服务账号配置')
-    }
-
-    const serviceAccountMccId = config.mccCustomerId ? String(config.mccCustomerId) : undefined
 
     return {
       customer: await getCustomerWithCredentials({
         customerId,
         accountId: account.id,
         userId,
-        loginCustomerId: serviceAccountMccId || account.parent_mcc_id || undefined,
+        loginCustomerId: apiAuth.serviceAccountMccId || account.parent_mcc_id || undefined,
         authType: 'service_account',
-        serviceAccountId,
+        serviceAccountId: apiAuth.serviceAccountId,
       }),
       useServiceAccount: true,
-      serviceAccountId,
+      serviceAccountId: apiAuth.serviceAccountId,
     }
   }
 
   const credentials = await getGoogleAdsCredentialsFromDB(userId)
-  const oauthCredentials = await getGoogleAdsCredentials(userId)
-  const refreshToken = account.refresh_token || oauthCredentials?.refresh_token || ''
+  const refreshToken = account.refresh_token || apiAuth.refreshToken || ''
 
   if (!refreshToken) {
     throw new Error('Google Ads账号缺少refresh token')

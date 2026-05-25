@@ -16,7 +16,10 @@ import { z } from 'zod'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue'
 import { getGoogleAdsConfig } from '@/lib/keyword-planner'
-import { getUserAuthType } from '@/lib/google-ads-oauth'
+import {
+  getGoogleAdsApiAuthForUser,
+  hasConfiguredGoogleAdsAuthFromContext,
+} from '@/lib/google-ads-auth-context'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
 import { toDbJsonObjectField } from '@/lib/json-field'
 import {
@@ -139,15 +142,25 @@ export async function POST(request: NextRequest) {
     }
 
     // 统一校验 Google Ads API 配置（用户级），避免逐Offer失败
-    const auth = await getUserAuthType(userIdNum)
+    const { ctx: authContext, apiAuth } = await getGoogleAdsApiAuthForUser(userIdNum)
     try {
+      if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+        return NextResponse.json(
+          {
+            error: '广告创意生成需要完整的 Google Ads API 配置',
+            details: '请前往【设置】完成 Google Ads OAuth 授权或服务账号配置。',
+          },
+          { status: 400 }
+        )
+      }
+
       const googleAdsConfig = await getGoogleAdsConfig(
         userIdNum,
-        auth.authType,
-        auth.serviceAccountId
+        apiAuth.authType,
+        apiAuth.serviceAccountId
       )
 
-      const isConfigComplete = auth.authType === 'service_account'
+      const isConfigComplete = apiAuth.authType === 'service_account'
         ? !!(googleAdsConfig?.developerToken && googleAdsConfig?.customerId)
         : !!(googleAdsConfig?.developerToken && googleAdsConfig?.refreshToken && googleAdsConfig?.customerId)
 
@@ -155,10 +168,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             error: '广告创意生成需要完整的 Google Ads API 配置',
-            details: auth.authType === 'service_account'
+            details: apiAuth.authType === 'service_account'
               ? '请前往【设置】→【服务账号配置】页面检查服务账号配置，确保 Developer Token 和 MCC Customer ID 已正确配置。'
               : '请前往【设置】页面配置 Google Ads API 凭证（Developer Token、Refresh Token、Customer ID）以启用关键词搜索量查询功能。',
-            missingFields: auth.authType === 'service_account'
+            missingFields: apiAuth.authType === 'service_account'
               ? [
                   !googleAdsConfig?.developerToken && 'Developer Token',
                   !googleAdsConfig?.customerId && 'MCC Customer ID',
@@ -168,7 +181,7 @@ export async function POST(request: NextRequest) {
                   !googleAdsConfig?.refreshToken && 'Refresh Token / OAuth',
                   !googleAdsConfig?.customerId && 'Customer ID',
                 ].filter(Boolean),
-            authType: auth.authType,
+            authType: apiAuth.authType,
           },
           { status: 400 }
         )

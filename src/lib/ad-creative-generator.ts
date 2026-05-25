@@ -10,7 +10,7 @@ import type {
 import type { Offer } from './offers'
 import { creativeCache, generateCreativeCacheKey } from './cache'
 import { getKeywordSearchVolumes } from './keyword-planner'
-import { getUserAuthType } from './google-ads-oauth'
+import { getGoogleAdsApiAuthForUser } from './google-ads-auth-context'
 import {
   clusterKeywordsByIntent,
   getBucketInfo,
@@ -5955,7 +5955,7 @@ async function mergeExtractedKeywordsWithSingleExit(
     if (keywordsNeedVolume.length > 0) {
       console.log(`   📊 查询 ${keywordsNeedVolume.length} 个关键词的搜索量...`)
       try {
-        const auth = await getUserAuthType(userId)
+        const { apiAuth: auth } = await getGoogleAdsApiAuthForUser(userId)
         const keywordsForVolumeLookup = keywordsNeedVolume
           .map(k => k.keyword)
           .filter((keyword): keyword is string => Boolean(keyword))
@@ -6246,7 +6246,7 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
         brandSearchVolume = row.search_volume
         console.log(`   ✅ 全局缓存查询到搜索量: ${brandSearchVolume}/月`)
       } else {
-        const auth = await getUserAuthType(userId)
+        const { apiAuth: auth } = await getGoogleAdsApiAuthForUser(userId)
         const volumes = await getKeywordSearchVolumes([offerBrand], targetCountry, langCode, userId, auth.authType, auth.serviceAccountId)
         if (volumes.length > 0 && volumes[0].avgMonthlySearches > 0) {
           brandSearchVolume = volumes[0].avgMonthlySearches

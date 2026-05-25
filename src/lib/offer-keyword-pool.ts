@@ -20,7 +20,7 @@ import { repairJsonText } from './ai-json'
 import { loadPrompt, interpolateTemplate } from './prompt-loader'
 import { findOfferById, type Offer } from './offers'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
-import { getUserAuthType } from './google-ads-oauth'
+import { getGoogleAdsApiAuthForUser } from './google-ads-auth-context'
 import {
   extractVerifiedKeywordSourcePool,
   type UnifiedKeywordData,
@@ -1446,7 +1446,7 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
 
     if (staleNorms.size > 0) {
       const { getKeywordSearchVolumes } = await import('./keyword-planner')
-      const auth = await getUserAuthType(userId)
+      const { apiAuth: auth } = await getGoogleAdsApiAuthForUser(userId)
       const refreshKeywords = Array.from(staleNorms)
         .map(norm => keywordMap.get(norm)?.keyword)
         .filter((kw): kw is string => Boolean(kw))
@@ -4432,7 +4432,7 @@ export async function generateOfferKeywordPool(
     // 🔧 修复(2026-01-21): 如果提供了关键词列表，查询搜索量而不是硬编码为 0
     console.log(`📊 查询 ${allKeywords.length} 个提供的关键词的搜索量...`)
     const { getKeywordSearchVolumes } = await import('./keyword-planner')
-    const auth = await getUserAuthType(userId)
+    const { apiAuth: auth } = await getGoogleAdsApiAuthForUser(userId)
 
     try {
       await progress?.({ phase: 'seed-volume', message: `初始关键词搜索量查询中` })
@@ -4614,7 +4614,7 @@ export async function generateOfferKeywordPool(
     const db = await getDatabase()
 
     // 获取认证类型
-    const auth = await getUserAuthType(userId)
+    const { apiAuth: auth } = await getGoogleAdsApiAuthForUser(userId)
     authType = auth.authType
 
     // 🔧 PostgreSQL兼容性修复: is_active/is_manager_account在PostgreSQL中是BOOLEAN类型
@@ -4921,7 +4921,7 @@ export async function generateOfferKeywordPool(
     if (needsBrandVolume) {
       try {
         const { getKeywordSearchVolumes } = await import('./keyword-planner')
-        const auth = await getUserAuthType(userId)
+        const { apiAuth: auth } = await getGoogleAdsApiAuthForUser(userId)
         await progress?.({ phase: 'seed-volume', message: '品牌词搜索量查询中' })
         const volumeProgress = progress
           ? (info: { message: string; current?: number; total?: number }) =>
@@ -5805,8 +5805,7 @@ async function extractKeywordsFromOffer(
 
     try {
       const { getKeywordSearchVolumes } = await import('./keyword-planner')
-      const { getUserAuthType } = await import('./google-ads-oauth')
-      const auth = await getUserAuthType(userId)
+      const { apiAuth: auth } = await getGoogleAdsApiAuthForUser(userId)
 
       // 获取 offer 信息（用于获取 target_country 和 target_language）
       const offer = await db.queryOne<{

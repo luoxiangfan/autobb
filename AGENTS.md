@@ -21,6 +21,15 @@
 
 - 执行破坏性重构：彻底移除历史兼容补丁与逻辑兜底，在确保架构整洁的同时，通过内嵌防御性编程与优雅降级机制，优先保障系统的可用性与容错均衡。
 
+## Google Ads 共享认证（开发约定）
+
+调用 Google Ads API 或判断用户是否已配置认证时：
+
+1. 优先 `getGoogleAdsAuthContext(userId)`，勿在同一请求内重复 `getUserAuthType` + `getGoogleAdsCredentials`。
+2. 是否已配置用 `hasConfiguredGoogleAdsAuthFromContext` 或 `hasConfiguredGoogleAdsAuth`；勿仅用 `auth.serviceAccountId` 判断服务账号。
+3. 发起 API 调用时用 `resolveGoogleAdsApiAuthFromContext(ctx, linkedAccountServiceAccountId)`，以支持账号级 `google_ads_accounts.service_account_id` 与共享管理员 assignment。
+4. 模块说明见 `src/lib/google-ads-auth-context.ts` 文件头注释。
+
 ## GitNexus 使用规范（本仓库）
 
 ### 何时必须使用

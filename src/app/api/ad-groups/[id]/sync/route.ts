@@ -5,7 +5,7 @@ import { findCampaignById } from '@/lib/campaigns'
 import { findGoogleAdsAccountById } from '@/lib/google-ads-accounts'
 import { findKeywordsByAdGroupId, updateKeyword } from '@/lib/keywords'
 import { createGoogleAdsAdGroup, createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
-import { getUserAuthType } from '@/lib/google-ads-oauth'
+import { resolveGoogleAdsApiAuthFromContext, getGoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
 
 /**
  * POST /api/ad-groups/:id/sync
@@ -95,21 +95,24 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     })
 
     try {
-      // 获取用户授权方式
-      const auth = await getUserAuthType(userId)
+      const authContext = await getGoogleAdsAuthContext(userId)
+      const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+        authContext,
+        googleAdsAccount.serviceAccountId
+      )
 
       // 创建Google Ads Ad Group
       const adGroupResult = await createGoogleAdsAdGroup({
         customerId: googleAdsAccount.customerId,
-        refreshToken: googleAdsAccount.refreshToken || '',
+        refreshToken: googleAdsAccount.refreshToken || apiAuth.refreshToken,
         campaignId: campaign.campaignId,
         adGroupName: adGroup.adGroupName,
         cpcBidMicros: adGroup.cpcBidMicros || undefined,
         status: adGroup.status as 'ENABLED' | 'PAUSED',
         accountId: googleAdsAccount.id,
         userId: userId,
-        authType: auth.authType,
-        serviceAccountId: auth.serviceAccountId,
+        authType: apiAuth.authType,
+        serviceAccountId: apiAuth.serviceAccountId,
       })
 
       // 更新Ad Group，标记为已同步
@@ -142,13 +145,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
         const keywordResults = await createGoogleAdsKeywordsBatch({
           customerId: googleAdsAccount.customerId,
-          refreshToken: googleAdsAccount.refreshToken || '',
+          refreshToken: googleAdsAccount.refreshToken || apiAuth.refreshToken,
           adGroupId: adGroupResult.adGroupId,
           keywords: keywordsBatch,
           accountId: googleAdsAccount.id,
           userId: userId,
-          authType: auth.authType,
-          serviceAccountId: auth.serviceAccountId,
+          authType: apiAuth.authType,
+          serviceAccountId: apiAuth.serviceAccountId,
         })
 
         // 更新每个Keyword的Google Ads ID

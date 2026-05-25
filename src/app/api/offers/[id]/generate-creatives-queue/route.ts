@@ -12,7 +12,10 @@ import { getQueueManager } from '@/lib/queue'
 import { getDatabase } from '@/lib/db'
 import { createError } from '@/lib/errors'
 import { getGoogleAdsConfig } from '@/lib/keyword-planner'
-import { getUserAuthType } from '@/lib/google-ads-oauth'
+import {
+  getGoogleAdsApiAuthForUser,
+  hasConfiguredGoogleAdsAuthFromContext,
+} from '@/lib/google-ads-auth-context'
 import { getAvailableBuckets } from '@/lib/offer-keyword-pool'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
 import {
@@ -206,24 +209,35 @@ export async function POST(
   }
 
   // 🔧 修复(2025-12-26): 使用中心化授权方式判断
-  const auth = await getUserAuthType(userId)
+  const { ctx: authContext, apiAuth } = await getGoogleAdsApiAuthForUser(userId)
 
   // 2. 验证 Google Ads API 配置（支持 OAuth 和服务账号两种模式）
   try {
+    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+      console.warn(`[CreativeGeneration] User ${userId} has no configured Google Ads auth`)
+      return createQueueErrorResponse({
+        status: 400,
+        error: '广告创意生成需要完整的 Google Ads API 配置',
+        message: '请前往【设置】完成 Google Ads OAuth 授权或服务账号配置',
+        errorCode: 'CREATIVE_GOOGLE_ADS_NOT_CONFIGURED',
+        errorCategory: 'config',
+        retryable: false,
+      })
+    }
+
     const googleAdsConfig = await getGoogleAdsConfig(
       userId,
-      auth.authType,
-      auth.serviceAccountId
+      apiAuth.authType,
+      apiAuth.serviceAccountId
     )
 
-    // OAuth 模式需要检查 refreshToken，服务账号模式需要检查 serviceAccountId
-    const isConfigComplete = auth.authType === 'service_account'
+    const isConfigComplete = apiAuth.authType === 'service_account'
       ? !!(googleAdsConfig?.developerToken && googleAdsConfig?.customerId)
       : !!(googleAdsConfig?.developerToken && googleAdsConfig?.refreshToken && googleAdsConfig?.customerId)
 
     if (!isConfigComplete) {
-      console.warn(`[CreativeGeneration] User ${userId} has incomplete Google Ads config (authType: ${auth.authType})`)
-      const missingFields = auth.authType === 'service_account'
+      console.warn(`[CreativeGeneration] User ${userId} has incomplete Google Ads config (authType: ${apiAuth.authType})`)
+      const missingFields = apiAuth.authType === 'service_account'
         ? [
             !googleAdsConfig?.developerToken && 'Developer Token',
             !googleAdsConfig?.customerId && 'MCC Customer ID'
@@ -233,7 +247,7 @@ export async function POST(
             !googleAdsConfig?.refreshToken && 'Refresh Token / OAuth',
             !googleAdsConfig?.customerId && 'Customer ID'
           ].filter(Boolean)
-      const details = auth.authType === 'service_account'
+      const details = apiAuth.authType === 'service_account'
         ? '请前往【设置】→【服务账号配置】页面检查服务账号配置，确保 Developer Token 和 MCC Customer ID 已正确配置。'
         : '请前往【设置】页面配置 Google Ads API 凭证（Developer Token、Refresh Token、Customer ID）以启用关键词搜索量查询功能。'
       return createQueueErrorResponse({
@@ -246,7 +260,7 @@ export async function POST(
         retryable: false,
         extra: {
           missingFields,
-          authType: auth.authType,
+          authType: apiAuth.authType,
         },
       })
     }

@@ -214,16 +214,24 @@ async function updateSingleTargetWithLoginCustomerFallback(params: {
   throw lastError || new Error('Google Ads 更新失败')
 }
 
-async function loadGoogleAdsUpdateAuthContext(params: {
+async function resolveUrlSwapTargetApiAuth(params: {
   userId: number
+  target: UrlSwapTaskTarget
   db: Awaited<ReturnType<typeof getDatabase>>
+  ctx: Awaited<ReturnType<typeof getGoogleAdsAuthContext>>
+  linkedSaByAccountId: Map<number, string | null>
 }): Promise<GoogleAdsUpdateAuthContext> {
-  const ctx = await getGoogleAdsAuthContext(params.userId)
-  if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
-    throw new Error('OAuth refresh token或服务账号配置缺失，请重新授权或配置服务账号')
+  const accountId = params.target.google_ads_account_id
+  if (accountId && !params.linkedSaByAccountId.has(accountId)) {
+    const row = await params.db.queryOne<{ service_account_id: string | null }>(
+      'SELECT service_account_id FROM google_ads_accounts WHERE id = ? AND user_id = ?',
+      [accountId, params.userId]
+    )
+    params.linkedSaByAccountId.set(accountId, row?.service_account_id ?? null)
   }
 
-  const apiAuth = await resolveGoogleAdsApiAuthFromContext(ctx)
+  const linkedSa = accountId ? (params.linkedSaByAccountId.get(accountId) ?? null) : null
+  const apiAuth = await resolveGoogleAdsApiAuthFromContext(params.ctx, linkedSa)
 
   return {
     refreshToken: apiAuth.refreshToken,
@@ -238,16 +246,18 @@ async function updateTargetsFinalUrlSuffix(params: {
   targets: UrlSwapTaskTarget[]
   finalUrlSuffix: string
   userId: number
-  refreshToken: string
-  authType: 'oauth' | 'service_account'
-  serviceAccountId?: string
-  oauthLoginCustomerId?: string
-  serviceAccountMccId?: string
+  db: Awaited<ReturnType<typeof getDatabase>>
 }): Promise<{ successCount: number; failureCount: number; failures: string[] }> {
+  const ctx = await getGoogleAdsAuthContext(params.userId)
+  if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
+    throw new Error('OAuth refresh token或服务账号配置缺失，请重新授权或配置服务账号')
+  }
+
   const failures: string[] = []
   let successCount = 0
   let failureCount = 0
 
+  const linkedSaByAccountId = new Map<number, string | null>()
   let forcedAuthType: 'oauth' | 'service_account' | null = null
 
   for (const target of params.targets) {
@@ -255,31 +265,39 @@ async function updateTargetsFinalUrlSuffix(params: {
       source: `url-swap:target-update:${target.google_campaign_id || 'unknown'}`,
     })
 
-    const attemptAuthType = forcedAuthType ?? params.authType
+    const targetAuth = await resolveUrlSwapTargetApiAuth({
+      userId: params.userId,
+      target,
+      db: params.db,
+      ctx,
+      linkedSaByAccountId,
+    })
+
+    const attemptAuthType = forcedAuthType ?? targetAuth.authType
     try {
       try {
         await updateSingleTargetWithLoginCustomerFallback({
           target,
           finalUrlSuffix: params.finalUrlSuffix,
           userId: params.userId,
-          refreshToken: params.refreshToken,
+          refreshToken: targetAuth.refreshToken,
           authType: attemptAuthType,
-          serviceAccountId: attemptAuthType === 'service_account' ? params.serviceAccountId : undefined,
-          oauthLoginCustomerId: params.oauthLoginCustomerId,
-          serviceAccountMccId: params.serviceAccountMccId,
+          serviceAccountId: attemptAuthType === 'service_account' ? targetAuth.serviceAccountId : undefined,
+          oauthLoginCustomerId: targetAuth.oauthLoginCustomerId,
+          serviceAccountMccId: targetAuth.serviceAccountMccId,
         })
       } catch (firstError: any) {
         const message = firstError?.message || String(firstError)
-        if (attemptAuthType === 'oauth' && isOAuthInvalidGrantError(message) && params.serviceAccountId) {
+        if (attemptAuthType === 'oauth' && isOAuthInvalidGrantError(message) && targetAuth.serviceAccountId) {
           await updateSingleTargetWithLoginCustomerFallback({
             target,
             finalUrlSuffix: params.finalUrlSuffix,
             userId: params.userId,
             refreshToken: '',
             authType: 'service_account',
-            serviceAccountId: params.serviceAccountId,
-            oauthLoginCustomerId: params.oauthLoginCustomerId,
-            serviceAccountMccId: params.serviceAccountMccId,
+            serviceAccountId: targetAuth.serviceAccountId,
+            oauthLoginCustomerId: targetAuth.oauthLoginCustomerId,
+            serviceAccountMccId: targetAuth.serviceAccountMccId,
           })
           forcedAuthType = 'service_account'
         } else {
@@ -476,20 +494,11 @@ export async function executeUrlSwapTask(
         let adsApiError: Error | null = null
 
         try {
-          const authContext = await loadGoogleAdsUpdateAuthContext({
-            userId: task.userId,
-            db,
-          })
-
           updateResult = await updateTargetsFinalUrlSuffix({
             targets: targetsToUpdate,
             finalUrlSuffix: resolved.finalUrlSuffix,
             userId: task.userId,
-            refreshToken: authContext.refreshToken,
-            authType: authContext.authType,
-            serviceAccountId: authContext.serviceAccountId,
-            oauthLoginCustomerId: authContext.oauthLoginCustomerId,
-            serviceAccountMccId: authContext.serviceAccountMccId,
+            db,
           })
         } catch (adsError: any) {
           const message = formatGoogleAdsError(adsError)
@@ -593,20 +602,11 @@ export async function executeUrlSwapTask(
       console.log(`[url-swap-executor] URL未变化，尝试重试失败目标: ${retryTargets.length}`)
       let retryResult: { successCount: number; failureCount: number; failures: string[] } | null = null
       try {
-        const authContext = await loadGoogleAdsUpdateAuthContext({
-          userId: task.userId,
-          db,
-        })
-
         retryResult = await updateTargetsFinalUrlSuffix({
           targets: retryTargets,
           finalUrlSuffix: resolved.finalUrlSuffix,
           userId: task.userId,
-          refreshToken: authContext.refreshToken,
-          authType: authContext.authType,
-          serviceAccountId: authContext.serviceAccountId,
-          oauthLoginCustomerId: authContext.oauthLoginCustomerId,
-          serviceAccountMccId: authContext.serviceAccountMccId,
+          db,
         })
       } catch (adsError: any) {
         const message = formatGoogleAdsError(adsError)
@@ -642,20 +642,11 @@ export async function executeUrlSwapTask(
       console.log(`[url-swap-executor] 更新Google Ads目标数: ${targetsToUpdate.length}`)
 
       try {
-        const authContext = await loadGoogleAdsUpdateAuthContext({
-          userId: task.userId,
-          db,
-        })
-
         updateResult = await updateTargetsFinalUrlSuffix({
           targets: targetsToUpdate,
           finalUrlSuffix: resolved.finalUrlSuffix,
           userId: task.userId,
-          refreshToken: authContext.refreshToken,
-          authType: authContext.authType,
-          serviceAccountId: authContext.serviceAccountId,
-          oauthLoginCustomerId: authContext.oauthLoginCustomerId,
-          serviceAccountMccId: authContext.serviceAccountMccId,
+          db,
         })
 
         console.log(`[url-swap-executor] Google Ads更新完成: ${taskId}`)

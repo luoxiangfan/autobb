@@ -3,7 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCustomerWithCredentials } from '@/lib/google-ads-api'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getDatabase } from '@/lib/db'
-import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext,
+  resolveEffectiveServiceAccountId,
+} from '@/lib/google-ads-auth-context'
 import { executeGAQLQueryPython } from '@/lib/python-ads-client'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
 
@@ -221,11 +226,19 @@ export async function GET(
       })
     }
 
-    const userAuth = await getUserAuthType(numericUserId)
-    const useServiceAccountAuth = userAuth.authType === 'service_account'
+    const authContext = await getGoogleAdsAuthContext(numericUserId)
+    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+      return NextResponse.json(
+        { error: 'Google Ads 认证未配置或已失效，请重新连接或配置服务账号' },
+        { status: 400 }
+      )
+    }
 
-    let oauthLoginCustomerId: string | null = null
-    let oauthRefreshToken: string | null = null
+    const defaultApiAuth = await resolveGoogleAdsApiAuthFromContext(authContext)
+    const useServiceAccountAuth = defaultApiAuth.authType === 'service_account'
+
+    let oauthLoginCustomerId: string | null = defaultApiAuth.oauthLoginCustomerId ?? null
+    let oauthRefreshToken: string | null = defaultApiAuth.refreshToken ?? null
     const serviceAccountConfigById = new Map<
       string,
       NonNullable<Awaited<ReturnType<typeof getServiceAccountConfig>>>
@@ -235,12 +248,15 @@ export async function GET(
 
     if (useServiceAccountAuth) {
       const serviceAccountIds = Array.from(new Set([
-        ...(userAuth.serviceAccountId ? [userAuth.serviceAccountId] : []),
+        ...(defaultApiAuth.serviceAccountId ? [defaultApiAuth.serviceAccountId] : []),
         ...groupedAccounts
-          .map((account) => (
-            typeof account.serviceAccountId === 'string' ? account.serviceAccountId.trim() : ''
-          ))
-          .filter(Boolean),
+          .map((account) =>
+            resolveEffectiveServiceAccountId(
+              typeof account.serviceAccountId === 'string' ? account.serviceAccountId.trim() : null,
+              authContext
+            )
+          )
+          .filter((id): id is string => Boolean(id)),
       ]))
 
       if (serviceAccountIds.length === 0) {
@@ -254,16 +270,11 @@ export async function GET(
         }
         serviceAccountConfigById.set(serviceAccountId, config)
       }
-    } else {
-      const oauthCredentials = await getGoogleAdsCredentials(numericUserId)
-      oauthRefreshToken = oauthCredentials?.refresh_token || null
-      oauthLoginCustomerId = oauthCredentials?.login_customer_id || null
-      if (!oauthRefreshToken) {
-        return NextResponse.json({
-          error: 'Google Ads OAuth未授权或已过期，请先在设置页面重新授权',
-          needsReauth: true,
-        }, { status: 400 })
-      }
+    } else if (!oauthRefreshToken) {
+      return NextResponse.json({
+        error: 'Google Ads OAuth未授权或已过期，请先在设置页面重新授权',
+        needsReauth: true,
+      }, { status: 400 })
     }
 
     const gaqlCampaignById = new Map<number, any>()
@@ -344,11 +355,10 @@ export async function GET(
       `
 
       const linkedServiceAccountId = useServiceAccountAuth
-        ? (
-          typeof account.serviceAccountId === 'string' && account.serviceAccountId.trim()
-            ? account.serviceAccountId.trim()
-            : (userAuth.serviceAccountId || '')
-        )
+        ? resolveEffectiveServiceAccountId(
+            typeof account.serviceAccountId === 'string' ? account.serviceAccountId.trim() : null,
+            authContext
+          ) || ''
         : ''
       const useServiceAccount = useServiceAccountAuth
 

@@ -14,7 +14,7 @@
  */
 
 import { getKeywordSearchVolumes } from './keyword-planner'
-import { getUserAuthType } from './google-ads-oauth'
+import { getGoogleAdsApiAuthForUser } from './google-ads-auth-context'
 import { getHighIntentKeywords } from './google-suggestions'
 
 export interface EnhancedKeyword {
@@ -408,7 +408,7 @@ async function enrichKeywordsWithMetrics(
 
   try {
     // 🔧 修复(2025-12-26): 支持服务账号模式
-    const auth = await getUserAuthType(userId)
+    const { apiAuth: auth } = await getGoogleAdsApiAuthForUser(userId)
     const volumes = await getKeywordSearchVolumes(
       keywordTexts,
       targetCountry,

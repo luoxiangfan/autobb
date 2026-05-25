@@ -1,7 +1,10 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getGoogleAdsCredentials } from '@/lib/google-ads-oauth'
-import { getGoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
+import {
+  getGoogleAdsAuthContext,
+  resolveEffectiveServiceAccountId,
+} from '@/lib/google-ads-auth-context'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getGoogleAdsClient, getCustomer } from '@/lib/google-ads-api'
 import { getDatabase } from '@/lib/db'
@@ -1398,7 +1401,9 @@ async function get(request: NextRequest) {
         : resolvedAuth.authType
     const serviceAccountId =
       searchParams.get('service_account_id') ||
-      (authType === 'service_account' ? resolvedAuth.serviceAccountId : null)
+      (authType === 'service_account'
+        ? resolveEffectiveServiceAccountId(null, authContext)
+        : null)
 
     console.log(`🔍 [GET /api/google-ads/credentials/accounts] forceRefresh=${forceRefresh}, asyncRefresh=${asyncRefresh}, offerId=${offerId}, authType=${authType}`)
 

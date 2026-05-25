@@ -16,9 +16,11 @@ const serviceAccountFns = vi.hoisted(() => ({
   getServiceAccountConfig: vi.fn(),
 }))
 
-const oauthFns = vi.hoisted(() => ({
-  getGoogleAdsCredentials: vi.fn(),
-  getUserAuthType: vi.fn(),
+const authContextFns = vi.hoisted(() => ({
+  getGoogleAdsAuthContext: vi.fn(),
+  hasConfiguredGoogleAdsAuthFromContext: vi.fn(),
+  resolveGoogleAdsApiAuthFromContext: vi.fn(),
+  resolveEffectiveServiceAccountId: vi.fn(),
 }))
 
 const pythonFns = vi.hoisted(() => ({
@@ -46,9 +48,11 @@ vi.mock('@/lib/google-ads-service-account', () => ({
   getServiceAccountConfig: serviceAccountFns.getServiceAccountConfig,
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
-  getUserAuthType: oauthFns.getUserAuthType,
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext: authContextFns.hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext: authContextFns.resolveGoogleAdsApiAuthFromContext,
+  resolveEffectiveServiceAccountId: authContextFns.resolveEffectiveServiceAccountId,
 }))
 
 vi.mock('@/lib/python-ads-client', () => ({
@@ -65,10 +69,21 @@ vi.mock('@/lib/google-ads-api-tracker', () => ({
 describe('GET /api/offers/:id/campaigns', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    oauthFns.getUserAuthType.mockResolvedValue({
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+      credentialOwnerId: 1,
+    })
+    authContextFns.hasConfiguredGoogleAdsAuthFromContext.mockReturnValue(true)
+    authContextFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
       authType: 'service_account',
       serviceAccountId: 'sa-1',
+      refreshToken: '',
+      oauthLoginCustomerId: undefined,
+      serviceAccountMccId: '2233445566',
     })
+    authContextFns.resolveEffectiveServiceAccountId.mockImplementation(
+      (linked: string | null | undefined) => (linked && linked.trim() ? linked.trim() : 'sa-1')
+    )
 
     dbFns.query.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM campaigns c')) {
@@ -118,6 +133,6 @@ describe('GET /api/offers/:id/campaigns', () => {
     expect(data.campaigns[0].id).toBe('23578044853')
     expect(data.campaigns[0].currentCpc).toBe(0.5)
     expect(serviceAccountFns.getServiceAccountConfig).toHaveBeenCalledWith(1, 'sa-1')
-    expect(oauthFns.getGoogleAdsCredentials).not.toHaveBeenCalled()
+    expect(authContextFns.getGoogleAdsAuthContext).toHaveBeenCalledWith(1)
   })
 })

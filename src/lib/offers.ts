@@ -1055,10 +1055,18 @@ export async function deleteOffer(
   if (campaignsToProcess.length > 0) {
     const { updateGoogleAdsCampaignStatus, removeGoogleAdsCampaign } = await import('./google-ads-api')
     const { getDecryptedCredentials } = await import('./google-ads-accounts')
-    const { getUserAuthType } = await import('./google-ads-oauth')
+    const {
+      getGoogleAdsAuthContext,
+      hasConfiguredGoogleAdsAuthFromContext,
+      resolveEffectiveServiceAccountId,
+    } = await import('./google-ads-auth-context')
 
-    const auth = await getUserAuthType(userId)
+    const authContext = await getGoogleAdsAuthContext(userId)
     const errors: Array<{ campaignRowId: number; message: string }> = []
+
+    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+      console.warn(`[offers] 用户 ${userId} Google Ads 认证未配置，跳过远端 Campaign 操作`)
+    } else {
 
     const campaignsByAccount = campaignsToProcess.reduce((acc, c) => {
       if (!acc[c.googleAdsAccountId]) acc[c.googleAdsAccountId] = []
@@ -1078,7 +1086,12 @@ export async function deleteOffer(
         continue
       }
 
-      if (auth.authType === 'oauth' && !accountCredentials.refreshToken) {
+      const serviceAccountId = resolveEffectiveServiceAccountId(
+        accountCredentials.serviceAccountId,
+        authContext
+      )
+
+      if (authContext.auth.authType === 'oauth' && !accountCredentials.refreshToken) {
         for (const c of accountCampaigns) {
           errors.push({ campaignRowId: c.campaignRowId, message: 'Google Ads账号认证信息缺失（需要OAuth）' })
         }
@@ -1094,8 +1107,8 @@ export async function deleteOffer(
               campaignId: c.googleCampaignId,
               accountId,
               userId,
-              authType: auth.authType,
-              serviceAccountId: auth.serviceAccountId,
+              authType: authContext.auth.authType,
+              serviceAccountId,
             })
 
             await applyCampaignTransition({
@@ -1112,8 +1125,8 @@ export async function deleteOffer(
               status: 'PAUSED',
               accountId,
               userId,
-              authType: auth.authType,
-              serviceAccountId: auth.serviceAccountId,
+              authType: authContext.auth.authType,
+              serviceAccountId,
             })
 
             await applyCampaignTransition({
@@ -1133,8 +1146,8 @@ export async function deleteOffer(
                 status: 'PAUSED',
                 accountId,
                 userId,
-                authType: auth.authType,
-                serviceAccountId: auth.serviceAccountId,
+                authType: authContext.auth.authType,
+                serviceAccountId,
               })
 
               await applyCampaignTransition({
@@ -1159,6 +1172,7 @@ export async function deleteOffer(
     if (errors.length > 0) {
       const actionLabel = removeGoogleAdsCampaigns ? '删除' : '暂停'
       throw new Error(`自动${actionLabel}关联广告系列失败：${errors.length}/${campaignsToProcess.length} 个未能${actionLabel}，请稍后重试或先手动处理后再删除`)
+    }
     }
   }
 

@@ -1,7 +1,11 @@
 import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB, enums } from './google-ads-api'
 import { getServiceAccountConfig } from './google-ads-service-account'
 import { getDatabase } from './db'
-import { getUserAuthType, getGoogleAdsCredentials } from './google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from './google-ads-auth-context'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { getInsertedId, nowFunc } from './db-helpers'
 import { createRiskAlert } from './risk-alerts'
@@ -302,13 +306,13 @@ export class DataSyncService {
     let syncLogId: number | undefined
 
     try {
-      // 🔧 修复(2025-12-29): 支持两种认证方式 (OAuth + 服务账号)
-      // 先判断用户使用哪种认证方式
-      const auth = await getUserAuthType(userId)
+      const authContext = await getGoogleAdsAuthContext(userId)
+      if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+        throw new Error('Google Ads 认证未配置或已失效，请在设置页面完成配置')
+      }
 
-      // 对于OAuth模式，需要检查system_settings中的凭证
-      // 对于服务账号模式，凭证在google_ads_service_accounts表中，此处无需检查
-      if (auth.authType === 'oauth') {
+      const defaultApiAuth = await resolveGoogleAdsApiAuthFromContext(authContext)
+      if (defaultApiAuth.authType === 'oauth') {
         const credentials = await getGoogleAdsCredentialsFromDB(userId)
         if (!credentials) {
           throw new Error('Google Ads 凭证未配置，请在设置页面完成配置')
@@ -316,28 +320,19 @@ export class DataSyncService {
         if (!credentials.client_id || !credentials.client_secret || !credentials.developer_token) {
           throw new Error('Google Ads 凭证配置不完整，请在设置页面完成配置')
         }
-      } else {
-        // 服务账号模式：验证服务账号配置是否存在
-        const serviceAccount = await getServiceAccountConfig(userId, auth.serviceAccountId)
-        if (!serviceAccount) {
-          throw new Error('未找到服务账号配置，请上传服务账号JSON文件')
-        }
-        if (!serviceAccount.mccCustomerId || !serviceAccount.developerToken || !serviceAccount.serviceAccountEmail || !serviceAccount.privateKey) {
-          throw new Error('服务账号配置不完整，请检查服务账号参数')
-        }
       }
 
-      // 获取凭证（仅OAuth模式需要）
-      const credentials = auth.authType === 'oauth'
-        ? await getGoogleAdsCredentialsFromDB(userId)
-        : null
+      const oauthCredentialsForSync =
+        defaultApiAuth.authType === 'oauth' ? await getGoogleAdsCredentialsFromDB(userId) : null
 
-      const userCredentials = credentials ? {
-        client_id: credentials.client_id,
-        client_secret: credentials.client_secret,
-        developer_token: credentials.developer_token,
-        login_customer_id: credentials.login_customer_id || undefined
-      } : undefined
+      const userCredentials = oauthCredentialsForSync
+        ? {
+            client_id: oauthCredentialsForSync.client_id,
+            client_secret: oauthCredentialsForSync.client_secret,
+            developer_token: oauthCredentialsForSync.developer_token,
+            login_customer_id: oauthCredentialsForSync.login_customer_id || undefined,
+          }
+        : undefined
 
       // 🔧 PostgreSQL兼容性修复: is_active在PostgreSQL中是BOOLEAN类型
       const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
@@ -455,16 +450,13 @@ export class DataSyncService {
           const startDate = new Date()
           startDate.setDate(startDate.getDate() - 7)
 
-          const auth = await getUserAuthType(userId)
+          const accountApiAuth = await resolveGoogleAdsApiAuthFromContext(
+            authContext,
+            account.service_account_id
+          )
 
-          // 🔧 修复(2025-12-28): OAuth模式下需要从google_ads_credentials获取refresh_token
-          let refreshToken = account.refresh_token || undefined
-          if (auth.authType === 'oauth' && !refreshToken) {
-            // 从google_ads_credentials表获取refresh_token
-            const oauthCredentials = await getGoogleAdsCredentials(userId)
-            refreshToken = oauthCredentials?.refresh_token || undefined
-
-            if (!refreshToken) {
+          let refreshToken = account.refresh_token || accountApiAuth.refreshToken || undefined
+          if (accountApiAuth.authType === 'oauth' && !refreshToken) {
               console.warn(`⚠️ 用户 ${userId} OAuth模式下缺少refresh_token，跳过账户 ${account.customer_id}`)
               // 🔧 修复(2025-12-28): 清理因凭证缺失而无法同步的sync_log
               await db.exec(
@@ -481,7 +473,6 @@ export class DataSyncService {
                 ]
               )
               continue
-            }
           }
 
           const startDateStr = this.formatDate(startDate)
@@ -496,8 +487,8 @@ export class DataSyncService {
             userId: userId,
             accountParentMccId: account.parent_mcc_id || undefined,
             credentials: userCredentials,
-            authType: auth.authType,
-            serviceAccountId: auth.serviceAccountId,
+            authType: accountApiAuth.authType,
+            serviceAccountId: accountApiAuth.serviceAccountId,
           })
 
           // 🔧 修复(2026-01-15): 从 Google Ads API 获取账户真实币种/时区并回写到google_ads_accounts
@@ -594,8 +585,8 @@ export class DataSyncService {
               accountId: account.id,
               accountParentMccId: account.parent_mcc_id || undefined,
               credentials: userCredentials,
-              authType: auth.authType,
-              serviceAccountId: auth.serviceAccountId,
+              authType: accountApiAuth.authType,
+              serviceAccountId: accountApiAuth.serviceAccountId,
               campaigns,
               campaignMap,
             })

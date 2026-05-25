@@ -2,7 +2,11 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers'
 import { findEnabledGoogleAdsAccounts } from '@/lib/google-ads-accounts'
-import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from '@/lib/google-ads-auth-context'
 import {
   getKeywordIdeas,
   filterHighQualityKeywords,
@@ -73,18 +77,28 @@ export async function POST(
 
     // 注意：生产环境 OAuth refresh_token 存储在 google_ads_credentials，
     // google_ads_accounts.refresh_token 可能为空，不能据此判断授权过期。
-    const auth = await getUserAuthType(numericUserId)
-    if (auth.authType === 'oauth') {
-      const oauthCredentials = await getGoogleAdsCredentials(numericUserId)
-      if (!oauthCredentials?.refresh_token) {
-        return NextResponse.json(
-          {
-            error: 'Google Ads账号授权已过期，请重新连接或配置服务账号',
-            needsReauth: true,
-          },
-          { status: 400 }
-        )
-      }
+    const authContext = await getGoogleAdsAuthContext(numericUserId)
+    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+      return NextResponse.json(
+        {
+          error: 'Google Ads 认证未配置或已失效，请重新连接或配置服务账号',
+          needsReauth: true,
+        },
+        { status: 400 }
+      )
+    }
+    const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+      authContext,
+      googleAdsAccount.serviceAccountId
+    )
+    if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
+      return NextResponse.json(
+        {
+          error: 'Google Ads账号授权已过期，请重新连接或配置服务账号',
+          needsReauth: true,
+        },
+        { status: 400 }
+      )
     }
 
     // 准备种子关键词
@@ -115,7 +129,7 @@ export async function POST(
 
     // 🔧 修复(2025-12-25): 支持OAuth和服务账号两种认证方式
     const { getGoogleAdsConfig } = await import('@/lib/keyword-planner')
-    const config = await getGoogleAdsConfig(numericUserId, auth.authType, auth.serviceAccountId)
+    const config = await getGoogleAdsConfig(numericUserId, apiAuth.authType, apiAuth.serviceAccountId)
 
     if (!config) {
       return NextResponse.json({ error: 'Google Ads凭证未配置' }, { status: 400 })
@@ -167,8 +181,8 @@ export async function POST(
         targetLanguage: offer.target_language || 'English',
         accountId: googleAdsAccount.id,
         userId: numericUserId,
-        authType: auth.authType,
-        serviceAccountId: auth.serviceAccountId,
+        authType: apiAuth.authType,
+        serviceAccountId: apiAuth.serviceAccountId,
       }),
     ])
 
@@ -189,8 +203,8 @@ export async function POST(
           targetLanguage: offer.target_language || 'English',
           accountId: googleAdsAccount.id,
           userId: numericUserId,
-          authType: auth.authType,
-          serviceAccountId: auth.serviceAccountId,
+          authType: apiAuth.authType,
+          serviceAccountId: apiAuth.serviceAccountId,
         })
 
         // 转换为KeywordIdea格式

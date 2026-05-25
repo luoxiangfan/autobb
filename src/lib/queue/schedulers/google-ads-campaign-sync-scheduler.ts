@@ -19,8 +19,7 @@ import {
   userHasActiveGoogleAdsCampaignSyncWork,
 } from '../../google-ads-campaign-sync-pipeline-status'
 import { getQueueManagerForTaskType } from '../queue-routing'
-import { getUserAuthType, getGoogleAdsCredentials } from '../../google-ads-oauth'
-import { getServiceAccountConfig } from '../../google-ads-service-account'
+import { hasConfiguredGoogleAdsAuth } from '../../google-ads-auth-assignment'
 import { buildUserExecutionEligibleSql } from '../../user-execution-eligibility'
 
 /**
@@ -227,42 +226,18 @@ export class GoogleAdsCampaignSyncScheduler {
             skippedCount++
             continue
           }
-          // 验证用户凭证
           let hasValidCredentials = false
           let skipReason = ''
 
           try {
-            // 1. 判断用户使用哪种认证方式
-            const auth = await getUserAuthType(userId)
-
-            if (auth.authType === 'oauth') {
-              // 2a. OAuth 模式：验证 google_ads_credentials 表
-              const credentials = await getGoogleAdsCredentials(userId)
-              if (!credentials) {
-                skipReason = '未配置 OAuth 凭证（需完成 Google Ads OAuth 授权）'
-              } else if (!credentials.refresh_token) {
-                skipReason = '缺少 refresh_token（需重新完成 OAuth 授权）'
-              } else if (!credentials.client_id || !credentials.client_secret || !credentials.developer_token) {
-                skipReason = '缺少必需的 OAuth 配置参数'
-              } else {
-                hasValidCredentials = true
-              }
-            } else {
-              // 2b. 服务账号模式：验证 google_ads_service_accounts 表
-              const serviceAccount = await getServiceAccountConfig(userId, auth.serviceAccountId)
-              if (!serviceAccount) {
-                skipReason = '未配置服务账号（需上传服务账号 JSON 文件）'
-              } else if (!serviceAccount.mccCustomerId || !serviceAccount.developerToken) {
-                skipReason = '服务账号配置不完整'
-              } else {
-                hasValidCredentials = true
-              }
+            hasValidCredentials = await hasConfiguredGoogleAdsAuth(userId)
+            if (!hasValidCredentials) {
+              skipReason = '未配置 Google Ads 认证（OAuth 或服务账号，含共享管理员配置）'
             }
           } catch (error) {
             skipReason = `凭证验证失败：${error instanceof Error ? error.message : String(error)}`
           }
 
-          // 3. 如果凭证无效，跳过此用户
           if (!hasValidCredentials) {
             console.log(`  ⚠️  用户 #${userId}: ${skipReason}，跳过同步`)
             noCredentialsCount++

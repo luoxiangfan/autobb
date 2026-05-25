@@ -12,7 +12,8 @@ import { saveCreativePerformance, PerformanceData } from './bonus-score-calculat
 import { getCustomerWithCredentials } from './google-ads-api'
 import {
   getGoogleAdsAuthContext,
-  resolveEffectiveServiceAccountId,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
@@ -238,37 +239,8 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
 
     const db = await getDatabase()
     const ctx = await getGoogleAdsAuthContext(userIdNum)
-    const auth = ctx.auth
-
-    let refreshToken = ''
-    let loginCustomerId: string | undefined
-    let serviceAccountId: string | undefined
-
-    if (auth.authType === 'service_account') {
-      const serviceAccount = ctx.serviceAccountConfig
-      if (!serviceAccount) {
-        throw new Error('未找到服务账号配置，请在设置页面完成配置或联系管理员')
-      }
-      if (!serviceAccount.mccCustomerId || !serviceAccount.developerToken) {
-        throw new Error('服务账号配置不完整（缺少 MCC 或 Developer Token）')
-      }
-      serviceAccountId = serviceAccount.id
-      loginCustomerId = String(serviceAccount.mccCustomerId)
-    } else {
-      const credentials = ctx.oauthCredentials
-      if (!credentials) {
-        throw new Error('Google Ads credentials not configured. Please complete API configuration in Settings.')
-      }
-      if (!credentials.client_id || !credentials.client_secret || !credentials.developer_token) {
-        throw new Error('Incomplete Google Ads credentials. Please complete API configuration in Settings.')
-      }
-      if (!credentials.refresh_token) {
-        throw new Error('Missing refresh token. Please complete OAuth authorization in Settings.')
-      }
-      refreshToken = credentials.refresh_token
-      loginCustomerId = credentials.login_customer_id
-        ? String(credentials.login_customer_id)
-        : undefined
+    if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
+      throw new Error('Google Ads 认证未配置或已失效')
     }
 
     const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
@@ -288,33 +260,35 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
       throw new Error('No active Google Ads account found')
     }
 
-    const linkedServiceAccountId =
-      typeof account.service_account_id === 'string' ? account.service_account_id.trim() : ''
-    const effectiveServiceAccountId = resolveEffectiveServiceAccountId(
-      linkedServiceAccountId || account.service_account_id,
-      ctx
-    )
-
-    if (auth.authType === 'service_account' && !effectiveServiceAccountId) {
+    const apiAuth = await resolveGoogleAdsApiAuthFromContext(ctx, account.service_account_id)
+    if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {
       throw new Error('未找到服务账号配置，无法同步效果数据')
     }
+    if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
+      throw new Error('Missing refresh token. Please complete OAuth authorization in Settings.')
+    }
+
+    const loginCustomerId =
+      apiAuth.authType === 'service_account'
+        ? apiAuth.serviceAccountMccId
+        : apiAuth.oauthLoginCustomerId
 
     const customer = await getCustomerWithCredentials({
       customerId: account.customer_id,
-      refreshToken,
+      refreshToken: apiAuth.refreshToken,
       accountId: account.id,
       userId: userIdNum,
       loginCustomerId,
-      authType: auth.authType,
-      serviceAccountId: effectiveServiceAccountId,
+      authType: apiAuth.authType,
+      serviceAccountId: apiAuth.serviceAccountId,
     })
 
     return await syncAllCreativesPerformance(
       userId,
       customer,
       account.customer_id,
-      auth.authType === 'service_account',
-      effectiveServiceAccountId
+      apiAuth.authType === 'service_account',
+      apiAuth.serviceAccountId
     )
   } catch (error) {
     return {

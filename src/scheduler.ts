@@ -19,8 +19,7 @@ import { getQueueManagerForTaskType } from './lib/queue/queue-routing'
 import { getOpenclawSettingsWithAffiliateSyncMap } from './lib/openclaw/settings'
 // 🔄 已迁移到统一队列系统
 import { triggerDataSync, triggerBackup, triggerLinkCheck, triggerCleanup } from './lib/queue-triggers'
-import { getUserAuthType, getGoogleAdsCredentials } from './lib/google-ads-oauth'
-import { getServiceAccountConfig } from './lib/google-ads-service-account'
+import { hasConfiguredGoogleAdsAuth } from './lib/google-ads-auth-assignment'
 import { resolveBackupDir } from './lib/backup'
 import { buildUserExecutionEligibleSql } from './lib/user-execution-eligibility'
 // [已禁用] A/B测试功能当前未使用，暂时注释以避免无意义的定时任务执行
@@ -141,32 +140,12 @@ async function getUsersWithActiveSyncTasks(): Promise<Set<number>> {
 
 async function hasValidSyncCredentials(userId: number): Promise<{ ok: boolean; reason?: string }> {
   try {
-    const auth = await getUserAuthType(userId)
-    if (auth.authType === 'oauth') {
-      const credentials = await getGoogleAdsCredentials(userId)
-      if (!credentials) {
-        return { ok: false, reason: '未配置OAuth凭证（需完成Google Ads OAuth授权）' }
+    const configured = await hasConfiguredGoogleAdsAuth(userId)
+    if (!configured) {
+      return {
+        ok: false,
+        reason: '未配置 Google Ads 认证（OAuth 或服务账号，含共享管理员配置）',
       }
-      if (!credentials.refresh_token) {
-        return { ok: false, reason: '缺少refresh_token（需重新完成OAuth授权）' }
-      }
-      if (!credentials.client_id || !credentials.client_secret || !credentials.developer_token) {
-        return { ok: false, reason: '缺少必需OAuth参数（client_id/client_secret/developer_token）' }
-      }
-      return { ok: true }
-    }
-
-    const serviceAccount = await getServiceAccountConfig(userId, auth.serviceAccountId)
-    if (!serviceAccount) {
-      return { ok: false, reason: '未配置服务账号（需上传服务账号JSON文件）' }
-    }
-    if (
-      !serviceAccount.mccCustomerId
-      || !serviceAccount.developerToken
-      || !serviceAccount.serviceAccountEmail
-      || !serviceAccount.privateKey
-    ) {
-      return { ok: false, reason: '服务账号配置不完整（缺少必需参数）' }
     }
     return { ok: true }
   } catch (error: any) {

@@ -8,7 +8,11 @@ import { boolCondition, dateMinusDays } from './db-helpers'
 import { getCachedKeywordVolume, cacheKeywordVolume, getBatchCachedVolumes, batchCacheVolumes } from './redis'
 import { decrypt } from './crypto'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
-import { refreshAccessToken, getGoogleAdsCredentials, getUserAuthType } from './google-ads-oauth'
+import { refreshAccessToken, getGoogleAdsCredentials } from './google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from './google-ads-auth-context'
 import { resolveGoogleAdsCredentialOwnerId, resolveGoogleAdsApiAccessLevel } from './google-ads-auth-assignment'
 import { getGoogleAdsLanguageIdString, getGoogleAdsGeoTargetId, normalizeCountryCode, normalizeLanguageCode } from './language-country-codes'
 import { getGoogleAdsClient, getCustomerWithCredentials } from './google-ads-api'
@@ -189,10 +193,13 @@ export async function getGoogleAdsConfig(
       return null
     }
 
-    const auth = await getUserAuthType(userId)
+    const authContext = await getGoogleAdsAuthContext(userId)
+    const apiAuth = await resolveGoogleAdsApiAuthFromContext(authContext, serviceAccountId ?? null)
+    const effectiveAuthType = authType ?? apiAuth.authType
+    const effectiveServiceAccountId = serviceAccountId ?? apiAuth.serviceAccountId
 
     // 1. OAuth 模式（含管理员共享 OAuth）
-    if (auth.authType === 'oauth' && authType !== 'service_account') {
+    if (effectiveAuthType === 'oauth' && authType !== 'service_account') {
       const credentials = await getGoogleAdsCredentials(userId)
       if (!credentials?.refresh_token) {
         console.error(`[KeywordPlanner] User ${userId} has no refresh token. Please authorize Google Ads API in Settings.`)
@@ -213,7 +220,7 @@ export async function getGoogleAdsConfig(
     }
 
     // 2. 服务账号模式（含管理员共享服务账号）
-    const serviceAccount = await getServiceAccountConfig(userId, serviceAccountId ?? auth.serviceAccountId)
+    const serviceAccount = await getServiceAccountConfig(userId, effectiveServiceAccountId)
     if (serviceAccount) {
       console.log(`[KeywordPlanner] Using service account authentication for user ${userId}`)
       console.log(`[KeywordPlanner] MCC Customer ID: ${serviceAccount.mccCustomerId}`)

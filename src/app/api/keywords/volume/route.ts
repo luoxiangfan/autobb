@@ -5,7 +5,11 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getKeywordSearchVolumes } from '@/lib/keyword-planner'
-import { getUserAuthType } from '@/lib/google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from '@/lib/google-ads-auth-context'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,15 +39,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Maximum 100 keywords per request' }, { status: 400 })
     }
 
-    // 🔧 修复(2025-12-26): 支持服务账号模式
-    const auth = await getUserAuthType(userId)
+    const authContext = await getGoogleAdsAuthContext(userId)
+    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+      return NextResponse.json(
+        { error: 'Google Ads 认证未配置或已失效，请在设置中完成配置' },
+        { status: 400 }
+      )
+    }
+    const apiAuth = await resolveGoogleAdsApiAuthFromContext(authContext)
     const volumes = await getKeywordSearchVolumes(
       keywords,
       country,
       language,
       userId,
-      auth.authType,
-      auth.serviceAccountId
+      apiAuth.authType,
+      apiAuth.serviceAccountId
     )
 
     return NextResponse.json({

@@ -113,6 +113,18 @@ export function getServiceAccountMccFromContext(ctx: GoogleAdsAuthContext): stri
 /**
  * 从 context 解析 Google Ads API 调用所需的认证字段（含账号级 SA 与 MCC）。
  */
+/**
+ * 一次性加载 context 并解析 API 调用字段（无账号绑定时 linked 传 null/undefined）。
+ */
+export async function getGoogleAdsApiAuthForUser(
+  userId: number,
+  linkedAccountServiceAccountId?: string | null
+): Promise<{ ctx: GoogleAdsAuthContext; apiAuth: GoogleAdsApiAuthFields }> {
+  const ctx = await getGoogleAdsAuthContext(userId)
+  const apiAuth = await resolveGoogleAdsApiAuthFromContext(ctx, linkedAccountServiceAccountId)
+  return { ctx, apiAuth }
+}
+
 export async function resolveGoogleAdsApiAuthFromContext(
   ctx: GoogleAdsAuthContext,
   linkedAccountServiceAccountId?: string | null
