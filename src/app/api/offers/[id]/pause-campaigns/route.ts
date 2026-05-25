@@ -16,7 +16,7 @@ import { getDecryptedCredentials } from '@/lib/google-ads-accounts'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveEffectiveServiceAccountId,
+  resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 
@@ -139,13 +139,12 @@ export async function POST(
           continue
         }
 
-        const serviceAccountId = resolveEffectiveServiceAccountId(
-          accountCredentials.serviceAccountId,
-          authContext
+        const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+          authContext,
+          accountCredentials.serviceAccountId
         )
 
-        // 服务账号模式不需要 refreshToken
-        if (authContext.auth.authType === 'oauth' && !accountCredentials.refreshToken) {
+        if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
           accountCampaigns.forEach(campaign => {
             results.push({
               campaignId: campaign.id,
@@ -164,13 +163,13 @@ export async function POST(
             // 调用Google Ads API暂停广告系列
             await updateGoogleAdsCampaignStatus({
               customerId: accountCredentials.customerId,
-              refreshToken: accountCredentials.refreshToken || '',
+              refreshToken: apiAuth.refreshToken,
               campaignId: campaign.google_campaign_id,
               status: 'PAUSED',
               accountId: accountId,
               userId: offer.user_id,
-              authType: authContext.auth.authType,
-              serviceAccountId
+              authType: apiAuth.authType,
+              serviceAccountId: apiAuth.serviceAccountId,
             })
 
             // 更新数据库状态

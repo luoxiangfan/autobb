@@ -258,7 +258,6 @@ async function updateTargetsFinalUrlSuffix(params: {
   let failureCount = 0
 
   const linkedSaByAccountId = new Map<number, string | null>()
-  let forcedAuthType: 'oauth' | 'service_account' | null = null
 
   for (const target of params.targets) {
     await assertUserExecutionAllowed(params.userId, {
@@ -273,7 +272,7 @@ async function updateTargetsFinalUrlSuffix(params: {
       linkedSaByAccountId,
     })
 
-    const attemptAuthType = forcedAuthType ?? targetAuth.authType
+    let attemptAuthType: 'oauth' | 'service_account' = targetAuth.authType
     try {
       try {
         await updateSingleTargetWithLoginCustomerFallback({
@@ -289,6 +288,7 @@ async function updateTargetsFinalUrlSuffix(params: {
       } catch (firstError: any) {
         const message = firstError?.message || String(firstError)
         if (attemptAuthType === 'oauth' && isOAuthInvalidGrantError(message) && targetAuth.serviceAccountId) {
+          attemptAuthType = 'service_account'
           await updateSingleTargetWithLoginCustomerFallback({
             target,
             finalUrlSuffix: params.finalUrlSuffix,
@@ -299,7 +299,6 @@ async function updateTargetsFinalUrlSuffix(params: {
             oauthLoginCustomerId: targetAuth.oauthLoginCustomerId,
             serviceAccountMccId: targetAuth.serviceAccountMccId,
           })
-          forcedAuthType = 'service_account'
         } else {
           throw firstError
         }

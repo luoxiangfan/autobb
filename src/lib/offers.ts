@@ -1058,7 +1058,7 @@ export async function deleteOffer(
     const {
       getGoogleAdsAuthContext,
       hasConfiguredGoogleAdsAuthFromContext,
-      resolveEffectiveServiceAccountId,
+      resolveGoogleAdsApiAuthFromContext,
     } = await import('./google-ads-auth-context')
 
     const authContext = await getGoogleAdsAuthContext(userId)
@@ -1086,12 +1086,12 @@ export async function deleteOffer(
         continue
       }
 
-      const serviceAccountId = resolveEffectiveServiceAccountId(
-        accountCredentials.serviceAccountId,
-        authContext
+      const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+        authContext,
+        accountCredentials.serviceAccountId
       )
 
-      if (authContext.auth.authType === 'oauth' && !accountCredentials.refreshToken) {
+      if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
         for (const c of accountCampaigns) {
           errors.push({ campaignRowId: c.campaignRowId, message: 'Google Ads账号认证信息缺失（需要OAuth）' })
         }
@@ -1103,12 +1103,12 @@ export async function deleteOffer(
           if (removeGoogleAdsCampaigns) {
             await removeGoogleAdsCampaign({
               customerId: accountCredentials.customerId,
-              refreshToken: accountCredentials.refreshToken || '',
+              refreshToken: apiAuth.refreshToken,
               campaignId: c.googleCampaignId,
               accountId,
               userId,
-              authType: authContext.auth.authType,
-              serviceAccountId,
+              authType: apiAuth.authType,
+              serviceAccountId: apiAuth.serviceAccountId,
             })
 
             await applyCampaignTransition({
@@ -1120,13 +1120,13 @@ export async function deleteOffer(
           } else {
             await updateGoogleAdsCampaignStatus({
               customerId: accountCredentials.customerId,
-              refreshToken: accountCredentials.refreshToken || '',
+              refreshToken: apiAuth.refreshToken,
               campaignId: c.googleCampaignId,
               status: 'PAUSED',
               accountId,
               userId,
-              authType: authContext.auth.authType,
-              serviceAccountId,
+              authType: apiAuth.authType,
+              serviceAccountId: apiAuth.serviceAccountId,
             })
 
             await applyCampaignTransition({
@@ -1141,13 +1141,13 @@ export async function deleteOffer(
             try {
               await updateGoogleAdsCampaignStatus({
                 customerId: accountCredentials.customerId,
-                refreshToken: accountCredentials.refreshToken || '',
+                refreshToken: apiAuth.refreshToken,
                 campaignId: c.googleCampaignId,
                 status: 'PAUSED',
                 accountId,
                 userId,
-                authType: authContext.auth.authType,
-                serviceAccountId,
+                authType: apiAuth.authType,
+                serviceAccountId: apiAuth.serviceAccountId,
               })
 
               await applyCampaignTransition({
