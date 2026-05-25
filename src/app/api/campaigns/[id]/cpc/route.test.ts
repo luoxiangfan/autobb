@@ -27,8 +27,14 @@ vi.mock('@/lib/google-ads-service-account', () => ({
   getServiceAccountConfig: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
+const oauthFns = vi.hoisted(() => ({
   getGoogleAdsCredentials: vi.fn(),
+  getUserAuthType: vi.fn(),
+}))
+
+vi.mock('@/lib/google-ads-oauth', () => ({
+  getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
+  getUserAuthType: oauthFns.getUserAuthType,
 }))
 
 vi.mock('@/lib/redis-client', () => ({
@@ -43,6 +49,10 @@ describe('GET /api/campaigns/:id/cpc', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     dbFns.query.mockResolvedValue([])
+    oauthFns.getUserAuthType.mockResolvedValue({
+      authType: 'oauth',
+      serviceAccountId: undefined,
+    })
   })
 
   it('returns 422 with expected googleCampaignId when local campaign id is used', async () => {
@@ -116,6 +126,10 @@ describe('GET /api/campaigns/:id/cpc', () => {
       return []
     })
 
+    oauthFns.getUserAuthType.mockResolvedValue({
+      authType: 'service_account',
+      serviceAccountId: 'sa-1',
+    })
     vi.mocked(getServiceAccountConfig as any).mockResolvedValue({ id: 'sa-1' })
     vi.mocked(executeGAQLQueryPython as any).mockResolvedValue([
       {

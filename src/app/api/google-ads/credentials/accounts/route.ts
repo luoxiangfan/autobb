@@ -1,7 +1,7 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
-import { resolveGoogleAdsCredentialOwnerId } from '@/lib/google-ads-auth-assignment'
+import { getGoogleAdsCredentials } from '@/lib/google-ads-oauth'
+import { getGoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getGoogleAdsClient, getCustomer } from '@/lib/google-ads-api'
 import { getDatabase } from '@/lib/db'
@@ -1372,7 +1372,7 @@ async function syncAccountsFromAPI(
  * Query params:
  * - refresh=true: 强制从 API 刷新
  * - offerId=number: 当前Offer ID（用于计算账号优先级）
- * - auth_type=oauth|service_account: 认证方式（默认oauth）
+ * - auth_type=oauth|service_account: 认证方式（未传时由 getUserAuthType 决定）
  * - service_account_id=string: 服务账号ID（当auth_type=service_account时必需）
  */
 async function get(request: NextRequest) {
@@ -1383,8 +1383,9 @@ async function get(request: NextRequest) {
     }
 
     const userId = authResult.user.userId
-    const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
-    const resolvedAuth = await getUserAuthType(userId)
+    const authContext = await getGoogleAdsAuthContext(userId)
+    const ownerUserId = authContext.ownerUserId
+    const resolvedAuth = authContext.auth
 
     const { searchParams } = new URL(request.url)
     const forceRefresh = searchParams.get('refresh') === 'true'

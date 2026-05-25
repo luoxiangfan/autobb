@@ -1,4 +1,4 @@
-import { getGoogleAdsCredentials, getUserAuthType } from './google-ads-oauth'
+import { getGoogleAdsAuthContext } from './google-ads-auth-context'
 import { removeGoogleAdsCampaign, updateGoogleAdsCampaignStatus } from './google-ads-api'
 import { getGoogleAdsAccountDeleteRemoteConfig } from './google-ads-account-delete-config'
 import { runWithConcurrency, withTimeout } from './run-with-concurrency'
@@ -128,9 +128,9 @@ export async function executeGoogleAdsCampaignRemoteActions(
   })
 
   try {
-    const auth = await getUserAuthType(userId)
-    const credentials = await getGoogleAdsCredentials(userId)
-    const refreshToken = credentials?.refresh_token || ''
+    const ctx = await getGoogleAdsAuthContext(userId)
+    const auth = ctx.auth
+    const refreshToken = ctx.oauthCredentials?.refresh_token || ''
 
     if (auth.authType === 'oauth' && !refreshToken) {
       return {
@@ -160,8 +160,8 @@ export async function executeGoogleAdsCampaignRemoteActions(
       }
     }
 
-    let loginCustomerId: string | undefined = credentials?.login_customer_id
-      ? String(credentials.login_customer_id)
+    let loginCustomerId: string | undefined = ctx.oauthCredentials?.login_customer_id
+      ? String(ctx.oauthCredentials.login_customer_id)
       : undefined
     if (!loginCustomerId && adsAccount.parent_mcc_id) {
       loginCustomerId = String(adsAccount.parent_mcc_id)

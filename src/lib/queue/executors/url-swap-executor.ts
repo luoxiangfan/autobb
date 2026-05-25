@@ -23,7 +23,7 @@ import {
 } from '@/lib/url-swap'
 import type { UrlSwapTaskData, UrlSwapTaskTarget } from '@/lib/url-swap-types'
 import { getDatabase } from '@/lib/db'
-import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
+import { getGoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
 import { updateCampaignFinalUrlSuffix } from '@/lib/google-ads-api'
 import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
 import { resolveLoginCustomerCandidates, isGoogleAdsAccountAccessError } from '@/lib/google-ads-login-customer'
@@ -214,8 +214,9 @@ async function loadGoogleAdsUpdateAuthContext(params: {
   userId: number
   db: Awaited<ReturnType<typeof getDatabase>>
 }): Promise<GoogleAdsUpdateAuthContext> {
-  const credentials = await getGoogleAdsCredentials(params.userId)
-  const auth = await getUserAuthType(params.userId)
+  const ctx = await getGoogleAdsAuthContext(params.userId)
+  const auth = ctx.auth
+  const credentials = ctx.oauthCredentials
 
   const effectiveServiceAccountId = auth.authType === 'service_account'
     ? auth.serviceAccountId

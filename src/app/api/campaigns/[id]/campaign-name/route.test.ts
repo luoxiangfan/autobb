@@ -26,8 +26,14 @@ vi.mock('@/lib/google-ads-api', () => ({
   getGoogleAdsCredentialsFromDB: googleAdsFns.getGoogleAdsCredentialsFromDB,
 }))
 
+const oauthFns = vi.hoisted(() => ({
+  getGoogleAdsCredentials: vi.fn(),
+  getUserAuthType: vi.fn(),
+}))
+
 vi.mock('@/lib/google-ads-oauth', () => ({
-  getGoogleAdsCredentials: vi.fn().mockResolvedValue({ refresh_token: 'token' }),
+  getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
+  getUserAuthType: oauthFns.getUserAuthType,
 }))
 
 vi.mock('@/lib/google-ads-service-account', () => ({
@@ -58,6 +64,11 @@ function makeRequest(body: unknown, userId = '1') {
 describe('PUT /api/campaigns/:id/campaign-name', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    oauthFns.getUserAuthType.mockResolvedValue({
+      authType: 'oauth',
+      serviceAccountId: undefined,
+    })
+    oauthFns.getGoogleAdsCredentials.mockResolvedValue({ refresh_token: 'token' })
     campaignFns.findCampaignById.mockResolvedValue({
       id: 10,
       campaignName: 'Old Name',

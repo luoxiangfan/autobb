@@ -289,6 +289,7 @@ export function getGoogleAdsClient(credentials: {
  * @param clientId - 用户的Google Ads Client ID(从数据库读取)
  * @param state - OAuth state参数
  * @throws Error 如果未提供clientId
+ * @deprecated 请使用 `generateOAuthUrl`（`google-ads-oauth`）与 `getGoogleAdsOAuthRedirectUri`（`google-ads-oauth-redirect`）
  */
 export function getOAuthUrl(clientId: string, state?: string): string {
   if (!clientId) {

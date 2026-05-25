@@ -71,8 +71,14 @@ vi.mock('@/lib/google-ads-api', () => ({
   getCustomerWithCredentials: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
+const oauthFns = vi.hoisted(() => ({
   getGoogleAdsCredentials: vi.fn(async () => null),
+  getUserAuthType: vi.fn(async () => ({ authType: 'oauth' as const })),
+}))
+
+vi.mock('@/lib/google-ads-oauth', () => ({
+  getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
+  getUserAuthType: oauthFns.getUserAuthType,
 }))
 
 vi.mock('@/lib/google-ads-service-account', () => ({
@@ -95,12 +101,13 @@ const {
   getGoogleAdsCredentialsFromDB,
   getCustomerWithCredentials,
 } = await import('@/lib/google-ads-api')
-const { getGoogleAdsCredentials } = await import('@/lib/google-ads-oauth')
+const { getGoogleAdsCredentials, getUserAuthType } = await import('@/lib/google-ads-oauth')
 const { getServiceAccountConfig } = await import('@/lib/google-ads-service-account')
 
 describe('POST /api/campaigns/:id/offline', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
 
     authFns.verifyAuth.mockResolvedValue({
       authenticated: true,
@@ -367,6 +374,10 @@ describe('POST /api/campaigns/:id/offline', () => {
       ads_account_deleted: false,
       ads_account_status: 'ENABLED',
     })
+    oauthFns.getUserAuthType.mockResolvedValue({
+      authType: 'service_account',
+      serviceAccountId: 'sa-1',
+    })
     vi.mocked(getServiceAccountConfig).mockResolvedValue({
       id: 'sa-1',
       mccCustomerId: '2233445566',
@@ -389,6 +400,7 @@ describe('POST /api/campaigns/:id/offline', () => {
     expect(data.googleAds.paused).toBe(1)
     expect(vi.mocked(getGoogleAdsCredentialsFromDB)).not.toHaveBeenCalled()
     expect(vi.mocked(getGoogleAdsCredentials)).not.toHaveBeenCalled()
+    expect(vi.mocked(getUserAuthType)).toHaveBeenCalled()
     expect(vi.mocked(getServiceAccountConfig)).toHaveBeenCalledWith(1, 'sa-1')
     expect(vi.mocked(updateGoogleAdsCampaignStatus)).toHaveBeenCalledWith(
       expect.objectContaining({

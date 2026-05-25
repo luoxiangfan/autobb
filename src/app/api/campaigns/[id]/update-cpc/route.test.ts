@@ -18,6 +18,7 @@ const googleAdsFns = vi.hoisted(() => ({
 
 const oauthFns = vi.hoisted(() => ({
   getGoogleAdsCredentials: vi.fn(),
+  getUserAuthType: vi.fn(),
 }))
 
 const serviceAccountFns = vi.hoisted(() => ({
@@ -66,6 +67,7 @@ vi.mock('@/lib/google-ads-service-account', () => ({
 
 vi.mock('@/lib/google-ads-oauth', () => ({
   getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
+  getUserAuthType: oauthFns.getUserAuthType,
 }))
 
 vi.mock('@/lib/python-ads-client', () => ({
@@ -106,6 +108,10 @@ describe('PUT /api/campaigns/:id/update-cpc', () => {
       },
     })
     dbFns.exec.mockResolvedValue({ changes: 1 })
+    oauthFns.getUserAuthType.mockResolvedValue({
+      authType: 'oauth',
+      serviceAccountId: undefined,
+    })
   })
 
   it('returns 422 with expected googleCampaignId when local campaign id is used', async () => {
@@ -230,6 +236,10 @@ describe('PUT /api/campaigns/:id/update-cpc', () => {
   })
 
   it('uses linked service account without requiring OAuth base credentials', async () => {
+    oauthFns.getUserAuthType.mockResolvedValue({
+      authType: 'service_account',
+      serviceAccountId: 'sa-1',
+    })
     googleAdsFns.getCustomerWithCredentials.mockResolvedValue({})
     serviceAccountFns.getServiceAccountConfig.mockResolvedValue({
       id: 'sa-1',
@@ -290,6 +300,10 @@ describe('PUT /api/campaigns/:id/update-cpc', () => {
   })
 
   it('handles service-account GAQL response wrapped in results field', async () => {
+    oauthFns.getUserAuthType.mockResolvedValue({
+      authType: 'service_account',
+      serviceAccountId: 'sa-1',
+    })
     googleAdsFns.getCustomerWithCredentials.mockResolvedValue({})
     serviceAccountFns.getServiceAccountConfig.mockResolvedValue({
       id: 'sa-1',

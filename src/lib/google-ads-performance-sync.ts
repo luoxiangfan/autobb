@@ -9,9 +9,8 @@
 
 import { getDatabase } from './db'
 import { saveCreativePerformance, PerformanceData } from './bonus-score-calculator'
-import { getGoogleAdsCredentials, getUserAuthType } from './google-ads-oauth'
 import { getCustomerWithCredentials } from './google-ads-api'
-import { getServiceAccountConfig } from './google-ads-service-account'
+import { getGoogleAdsAuthContext } from './google-ads-auth-context'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 
@@ -235,14 +234,15 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
     }
 
     const db = await getDatabase()
-    const auth = await getUserAuthType(userIdNum)
+    const ctx = await getGoogleAdsAuthContext(userIdNum)
+    const auth = ctx.auth
 
     let refreshToken = ''
     let loginCustomerId: string | undefined
     let serviceAccountId: string | undefined
 
     if (auth.authType === 'service_account') {
-      const serviceAccount = await getServiceAccountConfig(userIdNum, auth.serviceAccountId)
+      const serviceAccount = ctx.serviceAccountConfig
       if (!serviceAccount) {
         throw new Error('未找到服务账号配置，请在设置页面完成配置或联系管理员')
       }
@@ -252,7 +252,7 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
       serviceAccountId = serviceAccount.id
       loginCustomerId = String(serviceAccount.mccCustomerId)
     } else {
-      const credentials = await getGoogleAdsCredentials(userIdNum)
+      const credentials = ctx.oauthCredentials
       if (!credentials) {
         throw new Error('Google Ads credentials not configured. Please complete API configuration in Settings.')
       }

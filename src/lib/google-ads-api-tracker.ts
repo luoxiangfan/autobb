@@ -11,7 +11,10 @@
  */
 
 import { getDatabase } from './db'
-import { resolveGoogleAdsApiAccessLevel } from './google-ads-auth-assignment'
+import {
+  resolveGoogleAdsApiAccessLevel,
+  resolveGoogleAdsCredentialOwnerId,
+} from './google-ads-auth-assignment'
 
 const QUOTA_LIMITS = {
   test: 0,        // Test access: 只能访问测试账号，生产环境配额为0
@@ -33,6 +36,7 @@ async function resolveDailyQuotaLimit(userId: number): Promise<number> {
   if (envLimit) return envLimit
 
   try {
+    const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
     const apiAccessLevel = await resolveGoogleAdsApiAccessLevel(userId)
     if (apiAccessLevel) {
       if (apiAccessLevel === 'test') return QUOTA_LIMITS.test
@@ -52,7 +56,7 @@ async function resolveDailyQuotaLimit(userId: number): Promise<number> {
         CASE WHEN user_id = ? THEN 0 ELSE 1 END,
         created_at DESC
       LIMIT 1
-    `, [userId, userId]) as { value?: unknown } | undefined
+    `, [ownerUserId, ownerUserId]) as { value?: unknown } | undefined
 
     const settingsLimit = parsePositiveInt(row?.value)
     if (settingsLimit) return settingsLimit

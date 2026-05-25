@@ -1921,49 +1921,60 @@ export default function SettingsPage() {
                       </div>
                     )}
 
-                    {/* 认证方式选择 */}
+                    {/* 认证方式 */}
                     <div className="border-t pt-6">
                       <Label className="label-text mb-3 block">认证方式</Label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          type="button"
-                          disabled={googleAdsAuthReadOnly}
-                          onClick={() => setGoogleAdsAuthMethod('oauth')}
-                          className={`p-4 border-2 rounded-lg text-left transition-all relative ${
-                            googleAdsAuthMethod === 'oauth'
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          } ${googleAdsAuthReadOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="font-semibold">OAuth 用户授权</div>
-                            <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 gap-1">
-                              <Star className="w-3 h-3 fill-current" />
-                              强烈推荐
-                            </Badge>
-                          </div>
-                          <div className="text-sm text-gray-600">适合管理自己的 Google Ads 账号</div>
-                        </button>
-                        <button
-                          type="button"
-                          disabled={googleAdsAuthReadOnly}
-                          onClick={() => {
-                            setGoogleAdsAuthMethod('service_account')
-                            fetchServiceAccounts()
-                          }}
-                          className={`p-4 border-2 rounded-lg text-left transition-all ${
-                            googleAdsAuthMethod === 'service_account'
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          } ${googleAdsAuthReadOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="font-semibold">服务账号认证</div>
-                            <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">即将下线</Badge>
-                          </div>
-                          <div className="text-sm text-gray-600">适合 MCC 账号管理多个子账号</div>
-                        </button>
-                      </div>
+                      {googleAdsAuthReadOnly ? (
+                        <div className="p-4 border border-slate-200 rounded-lg bg-slate-50">
+                          <Badge variant="secondary" className="mb-2">
+                            {googleAdsAuthMethod === 'service_account'
+                              ? '服务账号（管理员共享）'
+                              : 'OAuth（管理员共享）'}
+                          </Badge>
+                          <p className="text-sm text-slate-600">
+                            认证方式由管理员配置，此处仅展示当前生效方式。
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-4">
+                          <button
+                            type="button"
+                            onClick={() => setGoogleAdsAuthMethod('oauth')}
+                            className={`p-4 border-2 rounded-lg text-left transition-all relative ${
+                              googleAdsAuthMethod === 'oauth'
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="font-semibold">OAuth 用户授权</div>
+                              <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 gap-1">
+                                <Star className="w-3 h-3 fill-current" />
+                                强烈推荐
+                              </Badge>
+                            </div>
+                            <div className="text-sm text-gray-600">适合管理自己的 Google Ads 账号</div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setGoogleAdsAuthMethod('service_account')
+                              fetchServiceAccounts()
+                            }}
+                            className={`p-4 border-2 rounded-lg text-left transition-all ${
+                              googleAdsAuthMethod === 'service_account'
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="font-semibold">服务账号认证</div>
+                              <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">即将下线</Badge>
+                            </div>
+                            <div className="text-sm text-gray-600">适合 MCC 账号管理多个子账号</div>
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* 基础配置字段 - 2列布局 */}

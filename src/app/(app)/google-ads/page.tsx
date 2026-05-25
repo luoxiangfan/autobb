@@ -42,6 +42,7 @@ interface Credentials {
   hasServiceAccount: boolean
   serviceAccountId?: string
   serviceAccountName?: string
+  authType?: 'oauth' | 'service_account'
 }
 
 export default function GoogleAdsPage() {
@@ -153,10 +154,15 @@ export default function GoogleAdsPage() {
       if (data.success && data.data) {
         setCredentials(data.data)
 
-        if (data.data.hasRefreshToken) {
+        const authType = data.data.authType || (data.data.hasRefreshToken ? 'oauth' : 'service_account')
+        setCurrentAuthType(authType)
+
+        if (authType === 'service_account' && data.data.serviceAccountId) {
+          setCurrentServiceAccountId(String(data.data.serviceAccountId))
+          fetchAccountsWithServiceAccount(String(data.data.serviceAccountId))
+        } else if (data.data.hasRefreshToken) {
           fetchAccounts()
         } else {
-          // 检查是否有服务账号配置
           fetchServiceAccounts()
         }
       }
@@ -282,10 +288,16 @@ export default function GoogleAdsPage() {
       if (!isPoll && !forceRefresh) setAccountsLoading(true)
       if (forceRefresh) setAccountsSyncing(true)
       if (forceRefresh) setAccountsSyncError(null)
-      // 🔧 添加 filterByUserMcc=true 参数，让后端根据用户 MCC 分配过滤账号
-      const url = forceRefresh
-        ? '/api/google-ads/credentials/accounts?refresh=true&async=true&filterByUserMcc=true'
-        : '/api/google-ads/credentials/accounts?filterByUserMcc=true'
+      const params = new URLSearchParams({ filterByUserMcc: 'true' })
+      if (forceRefresh) {
+        params.set('refresh', 'true')
+        params.set('async', 'true')
+      }
+      params.set('auth_type', currentAuthType)
+      if (currentAuthType === 'service_account' && currentServiceAccountId) {
+        params.set('service_account_id', currentServiceAccountId)
+      }
+      const url = `/api/google-ads/credentials/accounts?${params.toString()}`
       const response = await fetch(url, {
         credentials: 'include',
         cache: 'no-store',

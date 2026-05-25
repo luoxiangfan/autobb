@@ -15,6 +15,7 @@ import {
   isGoogleAdsAuthShared,
   resolveGoogleAdsCredentialOwnerId,
 } from '@/lib/google-ads-auth-assignment'
+import { updateApiAccessLevel } from '@/lib/google-ads-access-level-detector'
 
 /**
  * POST /api/google-ads/credentials
@@ -322,31 +323,16 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const db = await getDatabase()
     const auth = await getUserAuthType(userId)
 
-    // 根据认证类型更新对应的表
-    if (auth.authType === 'oauth') {
-      // 更新 OAuth 凭证的 API 访问级别
-      await db.exec(`
-        UPDATE google_ads_credentials
-        SET api_access_level = ?
-        WHERE user_id = ?
-      `, [apiAccessLevel, userId])
-    } else if (auth.authType === 'service_account') {
-      // 更新服务账号的 API 访问级别
-      const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-      await db.exec(`
-        UPDATE google_ads_service_accounts
-        SET api_access_level = ?
-        WHERE user_id = ? AND ${isActiveCondition}
-      `, [apiAccessLevel, userId])
-    } else {
+    if (auth.authType !== 'oauth' && auth.authType !== 'service_account') {
       return NextResponse.json(
         { error: '未找到有效的Google Ads凭证配置' },
         { status: 404 }
       )
     }
+
+    await updateApiAccessLevel(userId, apiAccessLevel, auth.authType)
 
     console.log(`✅ 已更新API访问级别: ${apiAccessLevel}`)
     console.log(`   用户: ${authResult.user.email}`)
