@@ -1,4 +1,4 @@
-import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB, enums } from './google-ads-api'
+import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB } from './google-ads-api'
 import { getServiceAccountConfig } from './google-ads-service-account'
 import { getDatabase } from './db'
 import {

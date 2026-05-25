@@ -15,7 +15,7 @@
 
 import { getKeywordSearchVolumes } from './keyword-planner'
 import { getKeywordIdeas } from './google-ads-keyword-planner'
-import { PLATFORMS, BRAND_PATTERNS, DEFAULTS, THRESHOLD_LEVELS, CATEGORY_SYNONYMS } from './keyword-constants'
+import { PLATFORMS, BRAND_PATTERNS, DEFAULTS } from './keyword-constants'
 import { getKeywordPlannerSiteFilterUrlForOffer } from './keyword-planner-site-filter'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
@@ -1104,8 +1104,6 @@ function extractKeywordsFromProductTitle(productTitle: string, brandName: string
   if (!productTitle || !brandName) return []
 
   const keywords: string[] = []
-  const brandLower = brandName.toLowerCase()
-  const titleLower = productTitle.toLowerCase()
 
   // 移除品牌名，获取产品描述部分
   const titleWithoutBrand = productTitle
@@ -1756,7 +1754,6 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
     country,
     language,
     customerId,
-    refreshToken,
     accountId,
     userId,
     authType = 'oauth',
@@ -2043,7 +2040,6 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
     country,
     language,
     customerId,
-    refreshToken,
     accountId,
     userId,
     authType = 'oauth',
@@ -2061,7 +2057,6 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
 
   const pureBrandKeywords = getPureBrandKeywords(offer.brand)
 
-  const results: UnifiedKeywordData[] = []
   const keywordMap = new Map<string, UnifiedKeywordData>()
   let disableSearchVolumeFilter = false
   let keywordPlannerAvailable = false
@@ -2399,10 +2394,6 @@ export async function getUnifiedKeywordDataWithMultiRounds(params: {
 }): Promise<UnifiedKeywordData[]> {
   console.log('⚠️ getUnifiedKeywordDataWithMultiRounds 已废弃，使用 getUnifiedKeywordData 代替')
 
-  // 合并所有轮次的种子词
-  const allSeeds = params.roundSeeds.flatMap(r => r.seeds)
-  const uniqueSeeds = [...new Set([...params.baseKeywords, ...allSeeds])]
-
   // 构建简化的 offer 对象
   const offer: OfferData = {
     brand: params.brandName,
@@ -2554,11 +2545,7 @@ export async function expandKeywordsWithSeeds(params: {
     brandName,
     pageUrl,
     customerId,
-    refreshToken,
     accountId,
-    clientId,
-    clientSecret,
-    developerToken,
     authType = 'oauth',
     serviceAccountId,
     minSearchVolume = 500,
@@ -2827,8 +2814,6 @@ export function extractGenericHighValueKeywords(
 ): any[] {
   console.log(`\n🆕 通用词提取 - 从已生成关键词中提取高价值通用词`)
   console.log(`================================`)
-
-  const brandLower = brandName.toLowerCase()
 
   // 步骤1：过滤掉所有含品牌名的词
   console.log(`📌 步骤1: 排除含品牌名的词`)

@@ -17,7 +17,6 @@ import { tryGetConfiguredGoogleAdsApiAuthForUser } from './google-ads-auth-conte
 import { getHighIntentKeywords } from './google-suggestions'
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
-import { getHeadlineLanguageInstructions, getDescriptionLanguageInstructions } from './ad-elements-language-instructions'
 import { loadPrompt, interpolateTemplate } from './prompt-loader'
 import { classifyKeywordIntent } from './keyword-intent'
 import { isInvalidKeyword } from './keyword-invalid-filter'
@@ -1789,69 +1788,6 @@ function generateFallbackDescriptionsFromMultiple(products: ProductInfo[]): stri
     descriptions.push(descriptions[descriptions.length % descriptions.length])
   }
   return descriptions.slice(0, 4)
-}
-
-/**
- * 🔥 Helper Function: Expand Product Data for Prompt Inclusion
- *
- * Formats deep analysis data (productInfo, reviewAnalysis, competitorAnalysis)
- * into structured text for AI prompt context enrichment.
- *
- * @param product - EnrichedStoreProduct with deep analysis fields
- * @returns Formatted multi-line string with all available analysis data
- */
-function expandProductDataForPrompt(product: EnrichedStoreProduct): string {
-  const parts = []
-
-  // Basic information
-  parts.push(`Product: ${product.name}`)
-  if (product.rating) parts.push(`Rating: ${product.rating}⭐ (${product.reviewCount || 'N/A'} reviews)`)
-  if (product.price) parts.push(`Price: ${product.price}`)
-
-  // AI product analysis (productInfo)
-  if (product.productInfo) {
-    const info = typeof product.productInfo === 'string' ? JSON.parse(product.productInfo) : product.productInfo
-    parts.push(`\nProduct Analysis:`)
-    if (info.brandDescription) parts.push(`- Brand: ${info.brandDescription}`)
-    if (info.uniqueSellingPoints) parts.push(`- USP: ${info.uniqueSellingPoints}`)
-    if (info.targetAudience) parts.push(`- Target: ${info.targetAudience}`)
-    if (info.productHighlights) parts.push(`- Highlights: ${info.productHighlights}`)
-    if (info.category) parts.push(`- Category: ${info.category}`)
-  }
-
-  // Review analysis (reviewAnalysis)
-  if (product.reviewAnalysis) {
-    const analysis = typeof product.reviewAnalysis === 'string' ? JSON.parse(product.reviewAnalysis) : product.reviewAnalysis
-    parts.push(`\nCustomer Insights:`)
-    if (analysis.sentimentDistribution) {
-      parts.push(`- Sentiment: Positive ${analysis.sentimentDistribution.positive}%, Neutral ${analysis.sentimentDistribution.neutral}%, Negative ${analysis.sentimentDistribution.negative}%`)
-    }
-    if (analysis.topPositiveKeywords && analysis.topPositiveKeywords.length > 0) {
-      parts.push(`- Praise: ${analysis.topPositiveKeywords.slice(0, 5).join(', ')}`)
-    }
-    if (analysis.topNegativeKeywords && analysis.topNegativeKeywords.length > 0) {
-      parts.push(`- Complaints: ${analysis.topNegativeKeywords.slice(0, 3).join(', ')}`)
-    }
-    if (analysis.realUseCases && analysis.realUseCases.length > 0) {
-      parts.push(`- Use Cases: ${analysis.realUseCases.slice(0, 3).join(', ')}`)
-    }
-  }
-
-  // Competitive analysis (competitorAnalysis)
-  if (product.competitorAnalysis) {
-    const compAnalysis = typeof product.competitorAnalysis === 'string' ? JSON.parse(product.competitorAnalysis) : product.competitorAnalysis
-    parts.push(`\nCompetitive Position:`)
-    if (compAnalysis.pricePosition) parts.push(`- Price: ${compAnalysis.pricePosition}`)
-    if (compAnalysis.ratingPosition) parts.push(`- Rating: ${compAnalysis.ratingPosition}`)
-    if (compAnalysis.uniqueSellingPoints && compAnalysis.uniqueSellingPoints.length > 0) {
-      parts.push(`- Advantages: ${compAnalysis.uniqueSellingPoints.slice(0, 3).join(', ')}`)
-    }
-    if (compAnalysis.overallCompetitiveness !== undefined) {
-      parts.push(`- Competitiveness Score: ${compAnalysis.overallCompetitiveness}/100`)
-    }
-  }
-
-  return parts.join('\n')
 }
 
 /**

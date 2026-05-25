@@ -21,10 +21,7 @@ import { loadPrompt, interpolateTemplate } from './prompt-loader'
 import { findOfferById, type Offer } from './offers'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import { tryGetConfiguredGoogleAdsApiAuthForUser } from './google-ads-auth-context'
-import {
-  extractVerifiedKeywordSourcePool,
-  type UnifiedKeywordData,
-} from './unified-keyword-service'
+import { extractVerifiedKeywordSourcePool } from './unified-keyword-service'
 import {
   filterKeywordQuality,
   generateFilterReport,

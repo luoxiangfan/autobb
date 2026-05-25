@@ -257,26 +257,6 @@ const MULTILINGUAL_URGENCY_WORDS: Record<string, string[]> = {
 }
 
 /**
- * 扩展的技术规格词汇（支持更多产品类别）
- */
-const TECH_SPECS_PATTERN = /4k|8k|hd|uhd|fhd|qhd|ai|wifi|wi-fi|bluetooth|5g|lte|4g|3g|poe|nvr|dvr|fps|mp|ghz|mhz|mah|wh|watts|w\b|ip\d{2}|usb|hdmi|type-c|thunderbolt|\d+pa|\d+rpm|\d+db|nfc|gps|oled|amoled|lcd|led|\d+hz|\d+bit|\d+gb|\d+tb|\d+mb|ssd|hdd|ddr\d|ram|rom|\d+mp|\d+mm|\d+cm/i
-
-/**
- * 扩展的独特功能词汇（多语言支持）
- */
-const UNIQUE_FEATURES_PATTERNS: Record<string, RegExp> = {
-  en: /no subscription|subscription.free|solar.powered|battery.powered|wireless|waterproof|water.resistant|night.vision|motion.detection|two.way.audio|cloud.storage|local.storage|voice.control|smart.home|all.in.one|self.cleaning|auto.empty|hands.free/i,
-  zh: /免订阅|免费订阅|太阳能|电池供电|无线|防水|夜视|移动检测|双向语音|云存储|本地存储|语音控制|智能家居|一体机|自清洁|自动清空|免手动/i,
-  ja: /サブスク不要|ソーラー|バッテリー|ワイヤレス|防水|ナイトビジョン|動体検知|双方向音声|クラウド|ローカル|音声制御|スマートホーム|オールインワン|自動清掃|自動ゴミ収集|ハンズフリー/i,
-  ko: /구독 불필요|태양열|배터리|무선|방수|야간 시야|동작 감지|양방향 오디오|클라우드|로컬|음성 제어|스마트홈|올인원|자동 청소|자동 비움|핸즈프리/i,
-  de: /ohne abo|solar|akku|kabellos|wasserdicht|nachtsicht|bewegungserkennung|zwei.wege.audio|cloud|lokal|sprachsteuerung|smart home|all.in.one|selbstreinigend|automatisch/i,
-  fr: /sans abonnement|solaire|batterie|sans fil|étanche|vision nocturne|détection mouvement|audio bidirectionnel|cloud|local|contrôle vocal|maison intelligente|tout.en.un|auto.nettoyant|automatique/i,
-  es: /sin suscripción|solar|batería|inalámbrico|impermeable|visión nocturna|detección movimiento|audio bidireccional|nube|local|control voz|hogar inteligente|todo.en.uno|auto.limpieza|automático/i,
-  it: /senza abbonamento|solare|batteria|wireless|senza fili|impermeabile|visione notturna|rilevamento movimento|audio bidirezionale|cloud|locale|controllo vocale|casa intelligente|all.in.one|tutto.in.uno|auto.pulizia|automatico|svuota|lava|asciuga/i,
-  pt: /sem assinatura|solar|bateria|sem fio|à prova d'água|visão noturna|detecção movimento|áudio bidirecional|nuvem|local|controle voz|casa inteligente|tudo.em.um|auto.limpeza|automático/i
-}
-
-/**
  * 禁用词清单（Google Ads政策违规）
  */
 const FORBIDDEN_WORDS = [
@@ -2077,7 +2057,6 @@ function calculateCopyIntentMetrics(
   const texts = [...headlines.map(h => h.text), ...descriptions.map(d => d.text)]
   const tags = texts.map(text => classifyCopyIntentTag(text, languageKey))
   const count = (tag: CopyIntentTag) => tags.filter(t => t === tag).length
-  const total = Math.max(1, tags.length)
 
   const brandCount = count('brand')
   const scenarioCount = count('scenario')
@@ -2308,18 +2287,6 @@ function calculateTextUniqueness(texts: string[]): number {
 
   const avgSimilarity = comparisons > 0 ? totalSimilarity / comparisons : 0
   return 1 - avgSimilarity // 独特性 = 1 - 相似度
-}
-
-/**
- * 辅助函数：计算关键词密度
- */
-function calculateKeywordDensity(text: string, keywords: string[]): number {
-  const words = text.split(/\s+/)
-  const keywordMatches = words.filter(word =>
-    keywords.some(kw => word.toLowerCase().includes(kw.toLowerCase()))
-  ).length
-
-  return words.length > 0 ? keywordMatches / words.length : 0
 }
 
 /**

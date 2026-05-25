@@ -76,7 +76,6 @@ export async function extractKeywordsEnhanced(
     productName,
     brandName,
     category,
-    description,
     features,
     useCases,
     targetAudience,

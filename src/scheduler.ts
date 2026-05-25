@@ -20,14 +20,10 @@ import { getOpenclawSettingsWithAffiliateSyncMap } from './lib/openclaw/settings
 // 🔄 已迁移到统一队列系统
 import { triggerDataSync, triggerBackup, triggerLinkCheck, triggerCleanup } from './lib/queue-triggers'
 import { hasConfiguredGoogleAdsAuth } from './lib/google-ads-auth-assignment'
-import { resolveBackupDir } from './lib/backup'
 import { buildUserExecutionEligibleSql } from './lib/user-execution-eligibility'
 // [已禁用] A/B测试功能当前未使用，暂时注释以避免无意义的定时任务执行
 // import { runABTestMonitor } from './scheduler/ab-test-monitor'
 import { detectAndFixZombieSyncTasks } from './lib/queue/affiliate-sync-zombie-detector'
-import { getGoogleAdsCampaignSyncScheduler } from './lib/queue/schedulers/google-ads-campaign-sync-scheduler'
-import fs from 'fs'
-import path from 'path'
 
 // 日志函数
 function log(message: string) {
@@ -944,37 +940,6 @@ async function openclawAffiliateRevenueSnapshotTask() {
     log(`🧾 OpenClaw 联盟佣金快照刷新入队完成 - 窗口: ${firstReportDate}~${latestReportDate}(${reportDates.length}天), 入队用户: ${queuedUsers}/${rows.length}, 入队任务: ${queuedTasks}, 跳过未配置平台: ${skippedNoPlatform}, 跳过间隔(按日期): ${skippedIntervalDates}, 失败: ${failedCount}`)
   } catch (error) {
     logError('❌ OpenClaw 联盟佣金快照任务执行失败:', error)
-  }
-}
-
-/**
- * 清理旧备份文件
- */
-async function cleanupOldBackups(daysToKeep: number) {
-  const backupDir = resolveBackupDir()
-
-  if (!fs.existsSync(backupDir)) {
-    return
-  }
-
-  const cutoffTime = Date.now() - daysToKeep * 24 * 60 * 60 * 1000
-  const files = fs.readdirSync(backupDir)
-
-  let deletedCount = 0
-
-  for (const file of files) {
-    const filePath = path.join(backupDir, file)
-    const stats = fs.statSync(filePath)
-
-    if (stats.mtimeMs < cutoffTime) {
-      fs.unlinkSync(filePath)
-      deletedCount++
-      log(`🗑️ 删除旧备份文件: ${file}`)
-    }
-  }
-
-  if (deletedCount > 0) {
-    log(`✅ 清理了 ${deletedCount} 个旧备份文件`)
   }
 }
 

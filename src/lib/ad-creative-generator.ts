@@ -6735,22 +6735,11 @@ async function buildAdCreativePrompt(
   let brand_analysis_section = ''
   // 🆕 v4.10: 关键词池桶section
   let keyword_bucket_section = ''
-  // 🆕 v4.16: 链接类型section
-  let link_type_section = ''
   let link_type_instructions = ''
   let store_creative_instructions = ''
 
   // 🆕 v4.16: 添加链接类型信息
   if (linkType === 'store') {
-    link_type_section = `
-## 🏪 STORE LINK MODE
-This is a STORE link - the creative should drive users to explore the entire store rather than purchase a specific product.
-
-**Store Context:**
-- Target: {{brand}} store
-- Goal: Drive store visits and exploration
-- Audience: Users looking for brand assurance and variety
-`
     link_type_instructions = `
 **⚠️ 店铺链接关键词使用规则：**
 - 品牌词使用比例可适当提高（80%+品牌词）
@@ -6780,14 +6769,6 @@ This is a STORE link - the creative should drive users to explore the entire sto
 
 ⚠️ 兼容性说明：历史桶 \`C→B\`、\`S→D\`，不要在输出中使用/展示 \`C/S\`。`
   } else {
-    link_type_section = `
-## 🏷️ PRODUCT LINK MODE
-This is a PRODUCT link - the creative should drive users to purchase a specific product.
-
-**Product Context:**
-- Target: {{product_name || brand + '' product}}
-- Goal: Drive immediate purchase
-- Audience: Users with purchase intent`
     link_type_instructions = `
 **⚠️ 单品链接关键词使用规则：**
 - 品牌词和非品牌词均衡使用（约50%/50%）
@@ -7184,7 +7165,6 @@ This creative focuses on "${intent || intentEn}" user intent.
   let commonPainPoints: string[] = []
   // 🆕 新增字段
   let topPositiveKeywords: Array<{keyword: string; frequency: number; context?: string}> = []
-  let topNegativeKeywords: Array<{keyword: string; frequency: number; context?: string}> = []
   let userProfiles: Array<{profile: string; indicators?: string[]}> = []
   let sentimentDistribution: {positive: number; neutral: number; negative: number} | null = null
   let totalReviews: number = 0
@@ -7210,7 +7190,6 @@ This creative focuses on "${intent || intentEn}" user intent.
       )
       // 🆕 新增字段提取
       topPositiveKeywords = reviewAnalysis.topPositiveKeywords || []
-      topNegativeKeywords = reviewAnalysis.topNegativeKeywords || []
       userProfiles = reviewAnalysis.userProfiles || []
       sentimentDistribution = reviewAnalysis.sentimentDistribution || null
       totalReviews = reviewAnalysis.totalReviews || 0
@@ -8860,20 +8839,6 @@ function substitutePlaceholders(template: string, variables: Record<string, stri
   }
   return result
 }
-
-/**
- * AI广告创意生成器原有函数继续
- * 以下是 parseAIResponse 及其他函数...
- */
-async function oldBuildAdCreativePrompt_DELETED_v2_8(offer: any, theme?: string, referencePerformance?: any, excludeKeywords?: string[], extractedElements?: any): Promise<string> {
-  // 这个函数已经被重构为上面的 buildAdCreativePrompt，这里保留注释说明历史版本
-  // v2.0-v2.8: 硬编码在源代码中（违反架构规则）
-  // v3.0: 数据库模板 + 占位符替换系统
-  throw new Error('This function has been replaced by buildAdCreativePrompt v3.0')
-}
-
-// 删除旧的hardcoded prompt代码（lines 732-989）
-// 以下代码已被上面的helper functions替换
 
 /**
  * 规范化非ASCII数字为ASCII数字
@@ -10979,9 +10944,7 @@ export async function generateAdCreative(
 
     // 🎯 修复：添加matchType字段（智能分配）+ lowTopPageBid/highTopPageBid竞价数据
     // 注意：这里仅做初始化，会在v4.16优化逻辑（行~2730）中根据品牌/非品牌/品牌相关分类重新分配
-    const brandNameLower = brandName?.toLowerCase() || ''
     keywordsWithVolume = unifiedData.map(v => {
-      const keywordLower = v.keyword.toLowerCase()
       // 🔥 修复(2025-12-18): 不在初始阶段做复杂的品牌分类，改为统一使用PHRASE
       // 这样可以在v4.16优化阶段（行2708-2758）准确地重新分配matchType
       // 纯品牌词 → EXACT
@@ -11004,9 +10967,7 @@ export async function generateAdCreative(
   } catch (error) {
     console.warn('⚠️ 获取关键词搜索量失败，使用默认值:', error)
     // 🎯 修复：即使失败也要添加matchType和竞价数据
-    const brandNameLower = brandName?.toLowerCase() || ''
     keywordsWithVolume = result.keywords.map(kw => {
-      const keywordLower = kw.toLowerCase()
       // 🔥 修复(2025-12-18): 同上，初始化时统一使用PHRASE，让v4.16优化逻辑处理分类
       let matchType: 'BROAD' | 'PHRASE' | 'EXACT' = 'PHRASE'
 
@@ -11046,9 +11007,6 @@ export async function generateAdCreative(
       console.log(`🔍 启动Keyword Planner多角度3轮查询策略`)
       console.time('⏱️ Keyword Planner扩展')
 
-      // 获取Google Ads账号信息
-      const { getKeywordIdeas } = await import('@/lib/google-ads-keyword-planner')
-      const { getGoogleAdsCredentials } = await import('@/lib/google-ads-oauth')
       const { getDatabase } = await import('@/lib/db')
       const db = await getDatabase()
 

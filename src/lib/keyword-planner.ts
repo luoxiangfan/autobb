@@ -2,10 +2,10 @@
  * Google Ads Keyword Planner API Service
  * 获取真实的关键词搜索量数据
  */
-import { GoogleAdsApi, enums } from './google-ads-api'
+import { enums } from './google-ads-api'
 import { getDatabase } from './db'
-import { boolCondition, dateMinusDays } from './db-helpers'
-import { getCachedKeywordVolume, cacheKeywordVolume, getBatchCachedVolumes, batchCacheVolumes } from './redis'
+import { dateMinusDays } from './db-helpers'
+import { getCachedKeywordVolume, getBatchCachedVolumes, batchCacheVolumes } from './redis'
 import { decrypt } from './crypto'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 import { refreshAccessToken, getGoogleAdsCredentials } from './google-ads-oauth'
@@ -16,7 +16,7 @@ import {
 } from './google-ads-auth-context'
 import { resolveGoogleAdsCredentialOwnerId, resolveGoogleAdsApiAccessLevel } from './google-ads-auth-assignment'
 import { getGoogleAdsLanguageIdString, getGoogleAdsGeoTargetId, normalizeCountryCode, normalizeLanguageCode } from './language-country-codes'
-import { getGoogleAdsClient, getCustomerWithCredentials } from './google-ads-api'
+import { getGoogleAdsClient } from './google-ads-api'
 import { getServiceAccountConfig, AuthType } from './google-ads-service-account'
 
 /**
@@ -131,54 +131,6 @@ async function readUserConfigs(db: any, userId: number): Promise<Record<string, 
     }
   }
   return configMap
-}
-
-// Helper: Get customer_id from google_ads_accounts table
-// 🔧 优化(2025-12-17): 优先选择余额最高的账号，确保Keyword Planner API可用
-// 只选择状态为ENABLED且非Manager账号的客户账号
-async function getUserCustomerId(db: any, userId: number): Promise<string> {
-  const isActiveCondition = boolCondition('is_active', true, db.type)
-  const isNotManagerCondition = boolCondition('is_manager_account', false, db.type)
-  const account = await db.queryOne(`
-    SELECT customer_id, account_balance
-    FROM google_ads_accounts
-    WHERE user_id = ?
-      AND ${isActiveCondition}
-      AND status = 'ENABLED'
-      AND ${isNotManagerCondition}
-      AND account_balance IS NOT NULL
-    ORDER BY account_balance DESC, id ASC
-    LIMIT 1
-  `, [userId]) as { customer_id: string; account_balance: number } | undefined
-
-  if (account) {
-    console.log(`[KeywordPlanner] Selected account ${account.customer_id} with balance ${account.account_balance / 1000000} (micros)`)
-    return account.customer_id
-  }
-
-  // Fallback: some billing models don't have an account-specific balance (or it is intentionally omitted).
-  // Still select an enabled non-manager account to keep Keyword Planner working.
-  const fallbackOrder =
-    db.type === 'postgres'
-      ? 'last_sync_at DESC NULLS LAST, id ASC'
-      : "CASE WHEN last_sync_at IS NULL THEN 1 ELSE 0 END, last_sync_at DESC, id ASC"
-
-  const fallback = await db.queryOne(`
-    SELECT customer_id
-    FROM google_ads_accounts
-    WHERE user_id = ?
-      AND ${isActiveCondition}
-      AND status = 'ENABLED'
-      AND ${isNotManagerCondition}
-    ORDER BY ${fallbackOrder}
-    LIMIT 1
-  `, [userId]) as { customer_id: string } | undefined
-
-  if (fallback?.customer_id) {
-    console.log(`[KeywordPlanner] Selected account ${fallback.customer_id} (no balance available)`)
-  }
-
-  return fallback?.customer_id || ''
 }
 
 // 🔧 修复(2025-12-12): 独立账号模式 - 每个用户必须配置自己的完整 OAuth 凭证
