@@ -11,6 +11,7 @@
  */
 
 import { getDatabase } from './db'
+import { resolveGoogleAdsApiAccessLevel } from './google-ads-auth-assignment'
 
 const QUOTA_LIMITS = {
   test: 0,        // Test access: 只能访问测试账号，生产环境配额为0
@@ -32,42 +33,15 @@ async function resolveDailyQuotaLimit(userId: number): Promise<number> {
   if (envLimit) return envLimit
 
   try {
+    const apiAccessLevel = await resolveGoogleAdsApiAccessLevel(userId)
+    if (apiAccessLevel) {
+      if (apiAccessLevel === 'test') return QUOTA_LIMITS.test
+      if (apiAccessLevel === 'basic') return QUOTA_LIMITS.basic
+      if (apiAccessLevel === 'explorer') return QUOTA_LIMITS.explorer
+      if (apiAccessLevel === 'standard') return QUOTA_LIMITS.standard
+    }
+
     const db = getDatabase()
-
-    // 首先尝试从用户的 Google Ads 凭证中获取 API 访问级别
-    const credentialsRow = await db.queryOne(`
-      SELECT api_access_level
-      FROM google_ads_credentials
-      WHERE user_id = ?
-      LIMIT 1
-    `, [userId]) as { api_access_level?: string } | undefined
-
-    if (credentialsRow?.api_access_level) {
-      const level = credentialsRow.api_access_level.toLowerCase()
-      if (level === 'test') return QUOTA_LIMITS.test
-      if (level === 'basic') return QUOTA_LIMITS.basic
-      if (level === 'explorer') return QUOTA_LIMITS.explorer
-      if (level === 'standard') return QUOTA_LIMITS.standard
-    }
-
-    // 如果没有 OAuth 凭证，尝试从服务账号获取
-    const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-    const serviceAccountRow = await db.queryOne(`
-      SELECT api_access_level
-      FROM google_ads_service_accounts
-      WHERE user_id = ? AND ${isActiveCondition}
-      LIMIT 1
-    `, [userId]) as { api_access_level?: string } | undefined
-
-    if (serviceAccountRow?.api_access_level) {
-      const level = serviceAccountRow.api_access_level.toLowerCase()
-      if (level === 'test') return QUOTA_LIMITS.test
-      if (level === 'basic') return QUOTA_LIMITS.basic
-      if (level === 'explorer') return QUOTA_LIMITS.explorer
-      if (level === 'standard') return QUOTA_LIMITS.standard
-    }
-
-    // 最后尝试从 system_settings 获取
     const row = await db.queryOne(`
       SELECT value
       FROM system_settings

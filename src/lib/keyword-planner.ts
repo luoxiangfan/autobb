@@ -8,7 +8,8 @@ import { boolCondition, dateMinusDays } from './db-helpers'
 import { getCachedKeywordVolume, cacheKeywordVolume, getBatchCachedVolumes, batchCacheVolumes } from './redis'
 import { decrypt } from './crypto'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
-import { refreshAccessToken, getGoogleAdsCredentials } from './google-ads-oauth'
+import { refreshAccessToken, getGoogleAdsCredentials, getUserAuthType } from './google-ads-oauth'
+import { resolveGoogleAdsCredentialOwnerId, resolveGoogleAdsApiAccessLevel } from './google-ads-auth-assignment'
 import { getGoogleAdsLanguageIdString, getGoogleAdsGeoTargetId, normalizeCountryCode, normalizeLanguageCode } from './language-country-codes'
 import { getGoogleAdsClient, getCustomerWithCredentials } from './google-ads-api'
 import { getServiceAccountConfig, AuthType } from './google-ads-service-account'
@@ -200,27 +201,22 @@ export async function getGoogleAdsConfig(
       return null
     }
 
-    const db = await getDatabase()
+    const auth = await getUserAuthType(userId)
 
-    // 1. 优先检查 OAuth 配置
-    const userConfigs = await readUserConfigs(db, userId)
-    const hasOAuth = userConfigs.client_id && userConfigs.client_secret && userConfigs.developer_token
-
-    // 2. 如果有 OAuth 配置，优先使用 OAuth
-    if (hasOAuth && authType !== 'service_account') {
-      console.log(`[KeywordPlanner] Using OAuth authentication for user ${userId}`)
-
-      // Get refresh token
+    // 1. OAuth 模式（含管理员共享 OAuth）
+    if (auth.authType === 'oauth' && authType !== 'service_account') {
       const credentials = await getGoogleAdsCredentials(userId)
       if (!credentials?.refresh_token) {
         console.error(`[KeywordPlanner] User ${userId} has no refresh token. Please authorize Google Ads API in Settings.`)
         return null
       }
 
+      console.log(`[KeywordPlanner] Using OAuth authentication for user ${userId}`)
+
       return {
-        clientId: userConfigs.client_id,
-        clientSecret: userConfigs.client_secret,
-        developerToken: userConfigs.developer_token,
+        clientId: credentials.client_id,
+        clientSecret: credentials.client_secret,
+        developerToken: credentials.developer_token,
         customerId: credentials.login_customer_id,
         loginCustomerId: credentials.login_customer_id,
         refreshToken: credentials.refresh_token,
@@ -228,15 +224,20 @@ export async function getGoogleAdsConfig(
       }
     }
 
-    // 3. 否则使用服务账号配置
-    const serviceAccount = await getServiceAccountConfig(userId, serviceAccountId)
+    // 2. 服务账号模式（含管理员共享服务账号）
+    const serviceAccount = await getServiceAccountConfig(userId, serviceAccountId ?? auth.serviceAccountId)
     if (serviceAccount) {
       console.log(`[KeywordPlanner] Using service account authentication for user ${userId}`)
       console.log(`[KeywordPlanner] MCC Customer ID: ${serviceAccount.mccCustomerId}`)
 
+      const db = await getDatabase()
+      const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
+      const userConfigs = await readUserConfigs(db, ownerUserId)
+      const oauthCredentials = await getGoogleAdsCredentials(userId)
+
       return {
-        clientId: userConfigs.client_id,
-        clientSecret: userConfigs.client_secret,
+        clientId: oauthCredentials?.client_id || userConfigs.client_id || 'placeholder-client-id',
+        clientSecret: oauthCredentials?.client_secret || userConfigs.client_secret || 'placeholder-client-secret',
         developerToken: serviceAccount.developerToken,
         customerId: serviceAccount.mccCustomerId,
         authType: 'service_account' as const,
@@ -465,28 +466,10 @@ export async function getKeywordSearchVolumes(
           // 检查 Developer Token 的访问级别
           let apiAccessLevel: string | undefined
           try {
-            // 首先尝试从 OAuth 凭证获取
-            const credentialsRow = await db.queryOne(`
-              SELECT api_access_level
-              FROM google_ads_credentials
-              WHERE user_id = ?
-              LIMIT 1
-            `, [userId]) as { api_access_level?: string } | undefined
-
-            if (credentialsRow?.api_access_level) {
-              apiAccessLevel = credentialsRow.api_access_level.toLowerCase()
-            } else if (config.authType === 'service_account') {
-              // 如果是服务账号模式，从服务账号表获取
-              const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-              const serviceAccountRow = await db.queryOne(`
-                SELECT api_access_level
-                FROM google_ads_service_accounts
-                WHERE user_id = ? AND ${isActiveCondition}
-                LIMIT 1
-              `, [userId]) as { api_access_level?: string } | undefined
-
-              if (serviceAccountRow?.api_access_level) {
-                apiAccessLevel = serviceAccountRow.api_access_level.toLowerCase()
+            if (userId) {
+              const resolvedLevel = await resolveGoogleAdsApiAccessLevel(userId)
+              if (resolvedLevel) {
+                apiAccessLevel = resolvedLevel
               }
             }
           } catch (error) {

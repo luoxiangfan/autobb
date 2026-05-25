@@ -7,6 +7,7 @@ import { isGoogleAdsAccountAccessError } from './google-ads-login-customer'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 import { getDatabase } from './db'
 import { boolCondition } from './db-helpers'
+import { resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
 import { installGoogleAdsWarningFilter } from './google-ads-warning-filter'
 import {
   getGoogleAdsTextEffectiveLength,
@@ -176,6 +177,7 @@ export async function getGoogleAdsCredentialsFromDB(userId: number): Promise<{
   useServiceAccount: boolean
 }> {
   const clean = (value: unknown): string => String(value ?? '').trim()
+  const { ownerUserId, assignment } = await resolveGoogleAdsCredentialOwnerId(userId)
 
   // 优先从 google_ads_credentials 读取（当前生产环境实际存储位置）
   const db = await getDatabase()
@@ -188,7 +190,7 @@ export async function getGoogleAdsCredentialsFromDB(userId: number): Promise<{
       ORDER BY updated_at DESC, created_at DESC
       LIMIT 1
     `,
-    [userId]
+    [ownerUserId]
   ) as
     | {
         client_id: string | null
@@ -210,14 +212,19 @@ export async function getGoogleAdsCredentialsFromDB(userId: number): Promise<{
     loginCustomerIdSetting,
     useServiceAccountSetting,
   ] = await Promise.all([
-    hasDbClientId ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'client_id', userId),
-    hasDbClientSecret ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'client_secret', userId),
-    hasDbDeveloperToken ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'developer_token', userId),
-    hasDbLoginCustomerId ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'login_customer_id', userId),
-    getUserOnlySetting('google_ads', 'use_service_account', userId),
+    hasDbClientId ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'client_id', ownerUserId),
+    hasDbClientSecret ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'client_secret', ownerUserId),
+    hasDbDeveloperToken ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'developer_token', ownerUserId),
+    hasDbLoginCustomerId ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'login_customer_id', ownerUserId),
+    getUserOnlySetting('google_ads', 'use_service_account', ownerUserId),
   ])
 
-  const useServiceAccount = String(useServiceAccountSetting?.value ?? '').toLowerCase() === 'true'
+  let useServiceAccount = String(useServiceAccountSetting?.value ?? '').toLowerCase() === 'true'
+  if (assignment?.authType === 'service_account') {
+    useServiceAccount = true
+  } else if (assignment?.authType === 'oauth') {
+    useServiceAccount = false
+  }
 
   // 🔧 修复(2026-01-15): 去除凭证前后空白，避免无效 token
   const clientId = clean(oauthCredentials?.client_id || clientIdSetting?.value)

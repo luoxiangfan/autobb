@@ -1,8 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDailyUsageStats, getUsageTrend, checkQuotaLimit } from '@/lib/google-ads-api-tracker'
-import { getGoogleAdsCredentials } from '@/lib/google-ads-oauth'
-import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
+import { hasConfiguredGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 import { getDatabase } from '@/lib/db'
 
 type RateLimitEvent = {
@@ -53,17 +52,10 @@ export async function GET(request: NextRequest) {
     const days = parseInt(searchParams.get('days') || '7', 10)
     const currentUserId = userId
 
-    // 🔧 修复(2025-01-05): 同时检查 OAuth 和服务账号凭证
-    const userCredentials = await getGoogleAdsCredentials(currentUserId)
-    const db = await getDatabase()
-    const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-    const serviceAccount = await db.queryOne(
-      `SELECT id FROM google_ads_service_accounts WHERE user_id = ? AND ${isActiveCondition} LIMIT 1`,
-      [currentUserId]
-    ) as { id: string } | undefined
+    const hasCredentials = await hasConfiguredGoogleAdsAuth(currentUserId)
 
     // 如果两种认证模式都没有配置，返回空数据
-    if (!userCredentials && !serviceAccount) {
+    if (!hasCredentials) {
       return NextResponse.json({
         success: true,
         data: {

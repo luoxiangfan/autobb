@@ -5,6 +5,8 @@
 
 import { getDatabase } from './db'
 import { getGoogleAdsClient } from './google-ads-api'
+import { getGoogleAdsCredentials } from './google-ads-oauth'
+import { resolveGoogleAdsApiAccessLevel } from './google-ads-auth-assignment'
 
 export type ApiAccessLevel = 'test' | 'explorer' | 'basic' | 'standard'
 
@@ -80,25 +82,21 @@ function detectLevelFromError(errorMessage: string): ApiAccessLevel | null {
  * 策略：尝试调用一个简单的API，根据响应判断访问级别
  */
 export async function detectApiAccessLevel(userId: number): Promise<AccessLevelDetectionResult> {
-  const db = await getDatabase()
   const now = new Date().toISOString()
 
   try {
-    // 获取用户的 Google Ads 凭证
-    const credentials = await db.queryOne<{
-      client_id: string
-      client_secret: string
-      developer_token: string
-      refresh_token: string
-      login_customer_id?: string
-      api_access_level?: string
-    }>(`
-      SELECT client_id, client_secret, developer_token, refresh_token, login_customer_id, api_access_level
-      FROM google_ads_credentials
-      WHERE user_id = ?
-    `, [userId])
+    const credentials = await getGoogleAdsCredentials(userId)
 
-    if (!credentials) {
+    if (!credentials?.refresh_token) {
+      const storedLevel = await resolveGoogleAdsApiAccessLevel(userId)
+      if (storedLevel === 'test' || storedLevel === 'explorer' || storedLevel === 'basic' || storedLevel === 'standard') {
+        return {
+          level: storedLevel,
+          detectedAt: now,
+          method: 'default',
+          details: 'OAuth 凭证不可用，使用已存储的 api_access_level',
+        }
+      }
       throw new Error('未找到 Google Ads 凭证')
     }
 
@@ -116,7 +114,7 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
 
       // listAccessibleCustomers 返回 { resource_names: ['customers/123', ...] }
       const resourceNames = Array.isArray(response.resource_names) ? response.resource_names : []
-      const storedLevel = String(credentials.api_access_level || '').toLowerCase()
+      const storedLevel = String((credentials as { api_access_level?: string }).api_access_level || '').toLowerCase()
       const storedLevelResolved: ApiAccessLevel | null =
         storedLevel === 'test' || storedLevel === 'explorer' || storedLevel === 'basic' || storedLevel === 'standard'
           ? storedLevel

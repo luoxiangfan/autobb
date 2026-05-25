@@ -122,6 +122,7 @@ async function getRawActiveServiceAccount(userId: number): Promise<{
   mcc_customer_id: string
   developer_token: string
   service_account_email: string
+  api_access_level?: string | null
 } | null> {
   const db = await getDatabase()
   const isActiveCondition = boolCondition('is_active', true, db.type)
@@ -130,8 +131,9 @@ async function getRawActiveServiceAccount(userId: number): Promise<{
     mcc_customer_id: string
     developer_token: string
     service_account_email: string
+    api_access_level?: string | null
   }>(
-    `SELECT id, mcc_customer_id, developer_token, service_account_email
+    `SELECT id, mcc_customer_id, developer_token, service_account_email, api_access_level
      FROM google_ads_service_accounts
      WHERE user_id = ? AND ${isActiveCondition}
      ORDER BY created_at DESC
@@ -139,6 +141,45 @@ async function getRawActiveServiceAccount(userId: number): Promise<{
     [userId]
   )
   return account || null
+}
+
+/**
+ * 解析用户的 Google Ads API 访问级别（支持管理员共享配置）
+ */
+export async function resolveGoogleAdsApiAccessLevel(userId: number): Promise<string | null> {
+  const { ownerUserId, assignment } = await resolveGoogleAdsCredentialOwnerId(userId)
+
+  if (assignment?.authType === 'service_account') {
+    const serviceAccount = await getRawActiveServiceAccount(ownerUserId)
+    return serviceAccount?.api_access_level?.toLowerCase() ?? null
+  }
+
+  const oauth = await getRawGoogleAdsCredentials(ownerUserId)
+  const oauthAccessLevel = (oauth as { api_access_level?: string } | null)?.api_access_level
+  if (oauthAccessLevel) {
+    return String(oauthAccessLevel).toLowerCase()
+  }
+
+  const serviceAccount = await getRawActiveServiceAccount(ownerUserId)
+  return serviceAccount?.api_access_level?.toLowerCase() ?? null
+}
+
+/**
+ * 判断用户是否已配置可用的 Google Ads 认证（支持管理员共享配置）
+ */
+export async function hasConfiguredGoogleAdsAuth(userId: number): Promise<boolean> {
+  const { ownerUserId, assignment } = await resolveGoogleAdsCredentialOwnerId(userId)
+
+  if (assignment?.authType === 'service_account') {
+    return (await getRawActiveServiceAccount(ownerUserId)) !== null
+  }
+
+  const oauth = await getRawGoogleAdsCredentials(ownerUserId)
+  if (oauth?.refresh_token) {
+    return true
+  }
+
+  return (await getRawActiveServiceAccount(ownerUserId)) !== null
 }
 
 export async function assertOwnCredentialsDifferFromAdmin(params: {
