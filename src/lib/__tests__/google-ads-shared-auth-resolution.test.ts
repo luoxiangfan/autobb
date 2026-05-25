@@ -89,7 +89,7 @@ describe('google-ads shared auth resolution helpers', () => {
     await expect(resolveGoogleAdsApiAccessLevel(2)).resolves.toBe('basic')
   })
 
-  it('hasConfiguredGoogleAdsAuth returns false when shared admin has no credentials', async () => {
+  it('hasConfiguredGoogleAdsAuth returns false for shared oauth when admin only has service account', async () => {
     dbMocks.queryOne
       .mockResolvedValueOnce({
         user_id: 2,
@@ -101,8 +101,8 @@ describe('google-ads shared auth resolution helpers', () => {
         updated_at: '',
       })
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null)
 
     await expect(hasConfiguredGoogleAdsAuth(2)).resolves.toBe(false)
+    expect(dbMocks.queryOne).toHaveBeenCalledTimes(2)
   })
 })

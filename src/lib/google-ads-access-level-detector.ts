@@ -6,7 +6,7 @@
 import { getDatabase } from './db'
 import { getGoogleAdsClient } from './google-ads-api'
 import { getGoogleAdsCredentials } from './google-ads-oauth'
-import { resolveGoogleAdsApiAccessLevel } from './google-ads-auth-assignment'
+import { resolveGoogleAdsApiAccessLevel, resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
 
 export type ApiAccessLevel = 'test' | 'explorer' | 'basic' | 'standard'
 
@@ -241,23 +241,28 @@ export async function updateApiAccessLevel(
   authType: 'oauth' | 'service_account'
 ): Promise<void> {
   const db = await getDatabase()
+  const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
 
   if (authType === 'oauth') {
     await db.exec(`
       UPDATE google_ads_credentials
       SET api_access_level = ?, updated_at = CURRENT_TIMESTAMP
       WHERE user_id = ?
-    `, [level, userId])
+    `, [level, ownerUserId])
   } else {
     const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
     await db.exec(`
       UPDATE google_ads_service_accounts
       SET api_access_level = ?, updated_at = CURRENT_TIMESTAMP
       WHERE user_id = ? AND ${isActiveCondition}
-    `, [level, userId])
+    `, [level, ownerUserId])
   }
 
-  console.log(`✅ 已更新用户 ${userId} 的API访问级别: ${level}`)
+  if (ownerUserId !== userId) {
+    console.log(`✅ 已更新共享凭证所有者 ${ownerUserId} 的API访问级别: ${level} (请求用户 ${userId})`)
+  } else {
+    console.log(`✅ 已更新用户 ${userId} 的API访问级别: ${level}`)
+  }
 }
 
 /**

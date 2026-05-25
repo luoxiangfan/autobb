@@ -2,6 +2,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCodeForTokens, getGoogleAdsCredentialsFromDB } from '@/lib/google-ads-api'
 import { createGoogleAdsAccount, findGoogleAdsAccountByCustomerId } from '@/lib/google-ads-accounts'
+import { getGoogleAdsAuthAssignment, isGoogleAdsAuthShared } from '@/lib/google-ads-auth-assignment'
 
 // 强制动态渲染（OAuth回调必须动态处理）
 export const dynamic = 'force-dynamic'
@@ -40,6 +41,13 @@ export async function GET(request: NextRequest) {
     if (!userId) {
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_APP_URL}/login?error=unauthorized`
+      )
+    }
+
+    const assignment = await getGoogleAdsAuthAssignment(userId)
+    if (isGoogleAdsAuthShared(assignment)) {
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/settings?error=shared_auth_readonly&category=google_ads`
       )
     }
 

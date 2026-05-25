@@ -12,6 +12,7 @@
 
 import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB } from './google-ads-api'
 import { getServiceAccountConfig } from './google-ads-service-account'
+import { getUserAuthType, getGoogleAdsCredentials } from './google-ads-oauth'
 import { getDatabase } from './db'
 import type { AdStrengthRating } from './ad-strength-evaluator'
 import { executeGAQLQueryPython } from './python-ads-client'
@@ -37,15 +38,17 @@ async function getGoogleAdsClient(
     throw new Error('未找到Google Ads账号')
   }
 
-  // 获取用户凭证（包含useServiceAccount标志）
-  const credentials = await getGoogleAdsCredentialsFromDB(userId)
+  const auth = await getUserAuthType(userId)
+  const linkedServiceAccountId =
+    typeof account.service_account_id === 'string' ? account.service_account_id.trim() : ''
 
-  // 判断使用服务账号还是OAuth认证
-  const useServiceAccount = account.service_account_id && credentials.useServiceAccount
+  if (auth.authType === 'service_account') {
+    const serviceAccountId = linkedServiceAccountId || auth.serviceAccountId
+    if (!serviceAccountId) {
+      throw new Error('未找到服务账号配置')
+    }
 
-  if (useServiceAccount) {
-    // 服务账号模式
-    const config = await getServiceAccountConfig(userId, account.service_account_id)
+    const config = await getServiceAccountConfig(userId, serviceAccountId)
 
     if (!config) {
       throw new Error('未找到服务账号配置')
@@ -60,32 +63,35 @@ async function getGoogleAdsClient(
         userId,
         loginCustomerId: serviceAccountMccId || account.parent_mcc_id || undefined,
         authType: 'service_account',
-        serviceAccountId: account.service_account_id,
+        serviceAccountId,
       }),
       useServiceAccount: true,
-      serviceAccountId: account.service_account_id
+      serviceAccountId,
     }
-  } else {
-    // OAuth模式
-    if (!account.refresh_token) {
-      throw new Error('Google Ads账号缺少refresh token')
-    }
+  }
 
-    return {
-      customer: await getCustomerWithCredentials({
-        customerId,
-        refreshToken: account.refresh_token,
-        loginCustomerId: credentials.login_customer_id || account.parent_mcc_id || undefined,
-        credentials: {
-          client_id: credentials.client_id,
-          client_secret: credentials.client_secret,
-          developer_token: credentials.developer_token,
-        },
-        accountId: account.id,
-        userId,
-      }),
-      useServiceAccount: false
-    }
+  const credentials = await getGoogleAdsCredentialsFromDB(userId)
+  const oauthCredentials = await getGoogleAdsCredentials(userId)
+  const refreshToken = account.refresh_token || oauthCredentials?.refresh_token || ''
+
+  if (!refreshToken) {
+    throw new Error('Google Ads账号缺少refresh token')
+  }
+
+  return {
+    customer: await getCustomerWithCredentials({
+      customerId,
+      refreshToken,
+      loginCustomerId: credentials.login_customer_id || account.parent_mcc_id || undefined,
+      credentials: {
+        client_id: credentials.client_id,
+        client_secret: credentials.client_secret,
+        developer_token: credentials.developer_token,
+      },
+      accountId: account.id,
+      userId,
+    }),
+    useServiceAccount: false,
   }
 }
 

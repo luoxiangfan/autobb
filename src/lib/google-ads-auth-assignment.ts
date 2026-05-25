@@ -170,8 +170,13 @@ export async function resolveGoogleAdsApiAccessLevel(userId: number): Promise<st
 export async function hasConfiguredGoogleAdsAuth(userId: number): Promise<boolean> {
   const { ownerUserId, assignment } = await resolveGoogleAdsCredentialOwnerId(userId)
 
-  if (assignment?.authType === 'service_account') {
-    return (await getRawActiveServiceAccount(ownerUserId)) !== null
+  if (assignment?.assignmentMode === 'shared_admin') {
+    if (assignment.authType === 'service_account') {
+      return (await getRawActiveServiceAccount(ownerUserId)) !== null
+    }
+
+    const oauth = await getRawGoogleAdsCredentials(ownerUserId)
+    return Boolean(oauth?.refresh_token)
   }
 
   const oauth = await getRawGoogleAdsCredentials(ownerUserId)

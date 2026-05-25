@@ -604,7 +604,7 @@ export async function validateGoogleAdsConfig(
 
     // Step 4: 验证OAuth URL能否正确生成
     try {
-      const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/google-ads/callback`
+      const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/google-ads/oauth/callback`
 
       const params = new URLSearchParams({
         client_id: clientId,
@@ -641,7 +641,7 @@ export async function validateGoogleAdsConfig(
           code: 'invalid_code_for_testing',
           client_id: clientId,
           client_secret: clientSecret,
-          redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/google-ads/callback`,
+          redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/google-ads/oauth/callback`,
           grant_type: 'authorization_code',
         }),
       })

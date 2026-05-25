@@ -20,6 +20,12 @@ import { getGoogleAdsGeoTargetId } from './language-country-codes'
 
 installGoogleAdsWarningFilter()
 
+const GOOGLE_ADS_OAUTH_REDIRECT_PATH = '/api/google-ads/oauth/callback'
+
+function getGoogleAdsOAuthRedirectUri(): string {
+  return `${process.env.NEXT_PUBLIC_APP_URL}${GOOGLE_ADS_OAUTH_REDIRECT_PATH}`
+}
+
 function serializeGoogleAdsError(error: unknown): string {
   const primaryMessage = String((error as any)?.message || '').trim()
   const googleAdsErrors = Array.isArray((error as any)?.errors)
@@ -179,6 +185,10 @@ export async function getGoogleAdsCredentialsFromDB(userId: number): Promise<{
   const clean = (value: unknown): string => String(value ?? '').trim()
   const { ownerUserId, assignment } = await resolveGoogleAdsCredentialOwnerId(userId)
 
+  if (assignment?.authType === 'service_account') {
+    throw new Error(`用户(ID=${userId})当前使用服务账号认证，无法读取 OAuth 基础凭证`)
+  }
+
   // 优先从 google_ads_credentials 读取（当前生产环境实际存储位置）
   const db = await getDatabase()
   const isActiveCondition = boolCondition('is_active', true, db.type)
@@ -220,9 +230,7 @@ export async function getGoogleAdsCredentialsFromDB(userId: number): Promise<{
   ])
 
   let useServiceAccount = String(useServiceAccountSetting?.value ?? '').toLowerCase() === 'true'
-  if (assignment?.authType === 'service_account') {
-    useServiceAccount = true
-  } else if (assignment?.authType === 'oauth') {
+  if (assignment?.authType === 'oauth') {
     useServiceAccount = false
   }
 
@@ -290,7 +298,7 @@ export function getOAuthUrl(clientId: string, state?: string): string {
     throw new Error('缺少 Client ID 配置,必须从数据库提供')
   }
 
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google-ads/callback`
+  const redirectUri = getGoogleAdsOAuthRedirectUri()
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -332,7 +340,7 @@ export async function exchangeCodeForTokens(
     throw new Error('缺少OAuth配置,必须从数据库提供 client_id 和 client_secret')
   }
 
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google-ads/callback`
+  const redirectUri = getGoogleAdsOAuthRedirectUri()
 
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
