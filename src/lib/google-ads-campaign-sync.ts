@@ -19,10 +19,9 @@ import {
 import { getCustomerWithCredentials, trackOAuthApiCall } from './google-ads-api'
 import {
   getGoogleAdsAuthContext,
-  resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
-import { resolveOAuthRefreshToken } from './google-ads-accounts-auth'
+import { resolveSyncAuthForAccount } from './google-ads-accounts-auth'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { toDbCampaignConfigTextField } from './campaign-backups'
 import { getInsertedId } from './db-helpers'
@@ -409,21 +408,23 @@ export async function syncCampaignsFromGoogleAds(
           authContext,
           linkedServiceAccountId || account.service_account_id
         )
-        const syncAuthType = accountApiAuth.authType
-        const syncServiceAccountId =
-          accountApiAuth.serviceAccountId ||
-          resolveEffectiveServiceAccountId(
-            linkedServiceAccountId || account.service_account_id,
-            authContext
-          )
-        const syncRefreshToken =
-          syncAuthType === 'oauth'
-            ? resolveOAuthRefreshToken(accountApiAuth, authContext.oauthCredentials) || null
-            : null
+        const { syncAuthType, syncServiceAccountId, syncRefreshToken } = resolveSyncAuthForAccount(
+          accountApiAuth,
+          authContext.oauthCredentials,
+          account,
+          authContext
+        )
 
         if (syncAuthType === 'service_account' && !syncServiceAccountId) {
           result.warnings.push(
             `账户 ${account.customer_id}: 缺少服务账号配置，已跳过同步`
+          )
+          continue
+        }
+
+        if (syncAuthType === 'oauth' && !syncRefreshToken) {
+          result.warnings.push(
+            `账户 ${account.customer_id}: OAuth 缺少 refresh_token，已跳过同步`
           )
           continue
         }

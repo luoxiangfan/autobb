@@ -4,6 +4,7 @@ import {
   developerTokenLooksInvalid,
   healAccountsRouteDeveloperToken,
   resolveAccountsRouteAuthBundle,
+  resolveAndHealSyncUserCredentials,
   resolveOAuthRefreshToken,
 } from '../google-ads-accounts-auth'
 
@@ -290,5 +291,55 @@ describe('healAccountsRouteDeveloperToken', () => {
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.code).toBe('DEVELOPER_TOKEN_INVALID')
+  })
+})
+
+describe('resolveAndHealSyncUserCredentials', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    authContextFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue(defaultOAuthApiAuth)
+    dbFns.exec.mockResolvedValue(undefined)
+  })
+
+  it('returns healed oauth user credentials', async () => {
+    const result = await resolveAndHealSyncUserCredentials({
+      userId: 1,
+      authContext: oauthAuthContextFull,
+      authType: 'oauth',
+      serviceAccountId: null,
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.userCredentials.developer_token).toBe(oauthCredentialsFull.developer_token)
+    expect(result.userCredentials.login_customer_id).toBe('9988776655')
+  })
+
+  it('returns healed service account user credentials', async () => {
+    authContextFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
+      authType: 'service_account',
+      refreshToken: '',
+      serviceAccountId: 'sa-1',
+      serviceAccountMccId: '1111222233',
+    })
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue({
+      id: 'sa-1',
+      developerToken: 'sa-developer-token-abcdefghijklmnopqrst',
+      mccCustomerId: '1111222233',
+    })
+
+    const result = await resolveAndHealSyncUserCredentials({
+      userId: 1,
+      authContext: oauthAuthContextFull,
+      authType: 'service_account',
+      serviceAccountId: 'sa-1',
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.userCredentials.developer_token).toBe(
+      'sa-developer-token-abcdefghijklmnopqrst'
+    )
+    expect(result.serviceAccountConfig?.id).toBe('sa-1')
   })
 })

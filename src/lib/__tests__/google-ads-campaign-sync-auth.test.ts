@@ -1,52 +1,33 @@
 import { describe, expect, it } from 'vitest'
-import { resolveOAuthRefreshToken } from '../google-ads-accounts-auth'
+import { resolveSyncAuthForAccount } from '../google-ads-accounts-auth'
+import { defaultOAuthAuthContext } from './helpers/campaign-route-auth-context-mock'
 
-/**
- * Mirrors syncCampaignsFromGoogleAds per-account auth resolution.
- */
-function resolveSyncAuthForAccount(
-  accountApiAuth: {
-    authType: 'oauth' | 'service_account'
-    refreshToken: string
-    serviceAccountId?: string
-  },
-  oauthCredentials: { refresh_token?: string } | null,
-  account: { service_account_id: string | null },
-  assignmentServiceAccountId?: string
-) {
-  const linkedServiceAccountId =
-    typeof account.service_account_id === 'string' ? account.service_account_id.trim() : ''
-  const syncAuthType = accountApiAuth.authType
-  const syncServiceAccountId =
-    accountApiAuth.serviceAccountId ||
-    (syncAuthType === 'service_account'
-      ? linkedServiceAccountId || assignmentServiceAccountId
-      : undefined)
-  const syncRefreshToken =
-    syncAuthType === 'oauth'
-      ? resolveOAuthRefreshToken(accountApiAuth, oauthCredentials) || null
-      : null
-  return { syncAuthType, syncServiceAccountId, syncRefreshToken }
+const saAuthContext = {
+  ...defaultOAuthAuthContext,
+  auth: { authType: 'service_account' as const, serviceAccountId: 'sa-admin-1' },
+  oauthCredentials: null,
+  serviceAccountConfig: { id: 'sa-admin-1', mccCustomerId: '111' },
 }
 
-describe('campaign sync auth resolution', () => {
+describe('resolveSyncAuthForAccount', () => {
   it('uses shared service account when account row still says oauth', () => {
     const result = resolveSyncAuthForAccount(
       { authType: 'service_account', refreshToken: '', serviceAccountId: 'sa-admin-1' },
       null,
-      { service_account_id: null }
+      { service_account_id: null },
+      saAuthContext
     )
     expect(result.syncAuthType).toBe('service_account')
     expect(result.syncServiceAccountId).toBe('sa-admin-1')
     expect(result.syncRefreshToken).toBeNull()
   })
 
-  it('prefers linked account service_account_id over assignment default', () => {
+  it('prefers linked account service_account_id over context default', () => {
     const result = resolveSyncAuthForAccount(
       { authType: 'service_account', refreshToken: '', serviceAccountId: 'sa-linked-2' },
       null,
       { service_account_id: 'sa-linked-2' },
-      'sa-admin-1'
+      saAuthContext
     )
     expect(result.syncServiceAccountId).toBe('sa-linked-2')
   })
@@ -55,7 +36,8 @@ describe('campaign sync auth resolution', () => {
     const result = resolveSyncAuthForAccount(
       { authType: 'oauth', refreshToken: 'shared-refresh' },
       { refresh_token: 'oauth-row-refresh' },
-      { service_account_id: null }
+      { service_account_id: null },
+      defaultOAuthAuthContext
     )
     expect(result.syncAuthType).toBe('oauth')
     expect(result.syncRefreshToken).toBe('shared-refresh')
@@ -65,7 +47,8 @@ describe('campaign sync auth resolution', () => {
     const result = resolveSyncAuthForAccount(
       { authType: 'oauth', refreshToken: 'user-level-refresh' },
       { refresh_token: 'oauth-row-refresh' },
-      { service_account_id: null }
+      { service_account_id: null },
+      defaultOAuthAuthContext
     )
     expect(result.syncRefreshToken).toBe('user-level-refresh')
   })
@@ -74,16 +57,18 @@ describe('campaign sync auth resolution', () => {
     const result = resolveSyncAuthForAccount(
       { authType: 'oauth', refreshToken: '' },
       { refresh_token: 'oauth-row-refresh' },
-      { service_account_id: null }
+      { service_account_id: null },
+      defaultOAuthAuthContext
     )
     expect(result.syncRefreshToken).toBe('oauth-row-refresh')
   })
 
-  it('does not use stale account-row refresh_token', () => {
+  it('returns null refresh when user-level and credentials row are both empty', () => {
     const result = resolveSyncAuthForAccount(
       { authType: 'oauth', refreshToken: '' },
       null,
-      { service_account_id: null }
+      { service_account_id: null },
+      defaultOAuthAuthContext
     )
     expect(result.syncRefreshToken).toBeNull()
   })

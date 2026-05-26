@@ -4,6 +4,7 @@
 import { getDatabase } from './db'
 import { getUserOnlySetting } from './settings'
 import {
+  resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthFromContext,
   type GoogleAdsApiAuthFields,
   type GoogleAdsAuthContext,
@@ -50,6 +51,97 @@ export function resolveOAuthRefreshToken(
 ): string {
   if (apiAuth.authType !== 'oauth') return ''
   return apiAuth.refreshToken || oauthCredentials?.refresh_token || ''
+}
+
+/** campaign-sync / 定时任务：按账户解析认证方式与 token（与 syncCampaignsFromGoogleAds 一致） */
+export function resolveSyncAuthForAccount(
+  accountApiAuth: GoogleAdsApiAuthFields,
+  oauthCredentials: GoogleAdsAuthContext['oauthCredentials'],
+  account: { service_account_id: string | null },
+  authContext: GoogleAdsAuthContext
+) {
+  const linkedServiceAccountId =
+    typeof account.service_account_id === 'string' ? account.service_account_id.trim() : ''
+  const syncAuthType = accountApiAuth.authType
+  const syncServiceAccountId =
+    accountApiAuth.serviceAccountId ||
+    (syncAuthType === 'service_account'
+      ? resolveEffectiveServiceAccountId(
+          linkedServiceAccountId || account.service_account_id,
+          authContext
+        )
+      : undefined)
+  const syncRefreshToken =
+    syncAuthType === 'oauth'
+      ? resolveOAuthRefreshToken(accountApiAuth, oauthCredentials) || null
+      : null
+  return { syncAuthType, syncServiceAccountId, syncRefreshToken }
+}
+
+export type SyncUserCredentials = {
+  client_id: string
+  client_secret: string
+  developer_token: string
+  login_customer_id?: string
+}
+
+export function accountsBundleResolveErrorMessage(body: Record<string, unknown>): string {
+  if (typeof body.message === 'string' && body.message.trim()) return body.message
+  if (typeof body.error === 'string' && body.error.trim()) return body.error
+  return 'Google Ads 凭证配置不完整，请在设置页面完成配置'
+}
+
+/**
+ * data-sync 等后台任务：解析并 heal developer_token（OAuth / 服务账号）。
+ */
+export async function resolveAndHealSyncUserCredentials(params: {
+  userId: number
+  authContext: GoogleAdsAuthContext
+  authType: 'oauth' | 'service_account'
+  serviceAccountId: string | null
+}): Promise<
+  | {
+      ok: true
+      userCredentials: SyncUserCredentials
+      serviceAccountConfig: AccountsRouteAuthBundle['serviceAccountConfig']
+    }
+  | { ok: false; message: string }
+> {
+  const resolved = await resolveAccountsRouteAuthBundle({
+    userId: params.userId,
+    authContext: params.authContext,
+    authType: params.authType,
+    serviceAccountId: params.serviceAccountId,
+  })
+  if (!resolved.ok) {
+    return { ok: false, message: accountsBundleResolveErrorMessage(resolved.body) }
+  }
+
+  const bundle = resolved.bundle
+  const creds = bundle.credentials
+  const healResult = await healAccountsRouteDeveloperToken({
+    credentials: creds,
+    authType: params.authType,
+    ownerUserId: params.userId,
+    clientSecret: creds.client_secret,
+    serviceAccountId: bundle.serviceAccountId,
+    serviceAccountConfig: bundle.serviceAccountConfig,
+  })
+  if (!healResult.ok) {
+    return { ok: false, message: healResult.message }
+  }
+
+  return {
+    ok: true,
+    userCredentials: {
+      client_id: creds.client_id,
+      client_secret: creds.client_secret,
+      developer_token: creds.developer_token,
+      login_customer_id:
+        creds.login_customer_id || bundle.loginCustomerId || undefined,
+    },
+    serviceAccountConfig: bundle.serviceAccountConfig,
+  }
 }
 
 export function developerTokenLooksInvalid(developerToken: string, clientSecret: string): boolean {

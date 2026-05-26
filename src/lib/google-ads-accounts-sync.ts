@@ -280,7 +280,7 @@ export async function syncAccountsFromAPI(
             const { executeGAQLQueryPython } = await import('@/lib/python-ads-client')
             searchResult = await executeGAQLQueryPython({
               userId,
-              serviceAccountId: undefined,
+              serviceAccountId: serviceAccountConfig.id.toString(),
               customerId: customerId,
               query: basicAccountInfoQuery
             })
@@ -305,7 +305,7 @@ export async function syncAccountsFromAPI(
               const { executeGAQLQueryPython } = await import('@/lib/python-ads-client')
               statusResult = await executeGAQLQueryPython({
                 userId,
-                serviceAccountId: undefined,
+                serviceAccountId: serviceAccountConfig.id.toString(),
                 customerId: customerId,
                 query: statusQuery
               })
@@ -427,9 +427,8 @@ export async function syncAccountsFromAPI(
           identity_verification_checked_at: identityVerificationCheckedAt,
         }
 
-        // 保存到数据库
-      const { id: dbId, last_sync_at } = await upsertAccount(userId, accountData, authScope)
-      recordAccount(accountData, dbId, last_sync_at)
+        const { id: dbId, last_sync_at } = await upsertAccount(userId, accountData, authScope)
+        recordAccount(accountData, dbId, last_sync_at)
 
         console.log(`   ✓ ${customerId}: ${accountData.descriptive_name} (MCC: ${accountData.manager})`)
 

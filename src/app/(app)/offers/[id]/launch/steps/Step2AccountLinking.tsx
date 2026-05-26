@@ -35,6 +35,12 @@ import {
 } from '@/components/ui/table'
 import { Link2, CheckCircle2, AlertCircle, Plus, RefreshCw, ExternalLink, Loader2, Info } from 'lucide-react'
 import { showError, showSuccess } from '@/lib/toast-utils'
+import {
+  buildGoogleAdsApiErrorMessage,
+  formatNullableErrorMessage,
+  safeReadJson,
+  throwAccountsListFetchError,
+} from '@/lib/google-ads-credentials-errors'
 import Link from 'next/link'
 
 interface Props {
@@ -117,24 +123,6 @@ const getAccountStatusBadge = (status: string | null | undefined) => {
 
 const MAX_SELECTABLE_ACCOUNTS = 10
 
-const formatNullableErrorMessage = (value: unknown): string | null => {
-  if (value == null) return null
-  const text = String(value).trim()
-  return text.length > 0 ? text : null
-}
-
-const buildAccountsFetchErrorMessage = (response: Response, body: any | null): string => {
-  const msgFromBody =
-    formatNullableErrorMessage(body?.message) || formatNullableErrorMessage(body?.error)
-  if (msgFromBody) return msgFromBody
-  if (response.status === 401) return '未登录或登录已过期，请刷新页面或重新登录'
-  if (response.status === 403) return '权限不足'
-  if (response.status === 409 && body?.code === 'AUTH_TYPE_MISMATCH') {
-    return '认证方式与当前配置不一致，请前往设置页确认当前使用的认证类型'
-  }
-  return `请求失败 (HTTP ${response.status})`
-}
-
 export default function Step2AccountLinking({ offer, onAccountsLinked, selectedAccounts }: Props) {
   const [accounts, setAccounts] = useState<GoogleAdsAccount[]>([])
   const [accountStats, setAccountStats] = useState({
@@ -155,6 +143,11 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
   const [refreshError, setRefreshError] = useState<string | null>(null)
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
   const [authConfigWarning, setAuthConfigWarning] = useState<string | null>(null)
+  const [needsReauth, setNeedsReauth] = useState(false)
+  const accountsAuthRef = useRef<{
+    authType: 'oauth' | 'service_account'
+    serviceAccountId?: string
+  } | null>(null)
   const [showGuideDialog, setShowGuideDialog] = useState(false)
 
   useEffect(() => {
@@ -204,26 +197,42 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
         setLoading(true)
       }
       setRefreshFailed(false)
+      setNeedsReauth(false)
 
-      // 🔧 修复(2025-12-26): 检查认证类型，支持服务账号模式
-      const credResponse = await fetch('/api/google-ads/credentials', {
-        credentials: 'include'
-      })
-      const credData = await credResponse.json()
-      const authType = credData.data?.authType || 'oauth'
-      const serviceAccountId = credData.data?.serviceAccountId
+      if (!isPoll || !accountsAuthRef.current) {
+        const credResponse = await fetch('/api/google-ads/credentials', {
+          credentials: 'include',
+        })
+        if (!credResponse.ok) {
+          const errorData = await safeReadJson(credResponse)
+          throw new Error(
+            buildGoogleAdsApiErrorMessage(credResponse, errorData, '获取凭证状态失败')
+          )
+        }
+        const credData = await credResponse.json()
+        const authType: 'oauth' | 'service_account' =
+          credData.data?.authType === 'service_account' ? 'service_account' : 'oauth'
+        accountsAuthRef.current = {
+          authType,
+          serviceAccountId: credData.data?.serviceAccountId
+            ? String(credData.data.serviceAccountId)
+            : undefined,
+        }
+        setHasCredentials(Boolean(credData?.data?.hasCredentials))
+        setAuthConfigWarning(formatNullableErrorMessage(credData?.data?.authConfigWarning))
+      }
 
-      // 构建查询参数
+      const { authType, serviceAccountId } = accountsAuthRef.current!
+
       const params = new URLSearchParams({
         refresh: forceRefresh ? 'true' : 'false',
         offerId: offer.id.toString(),
         auth_type: authType,
       })
-      // async 刷新：先返回缓存/部分结果，后台继续同步，前端通过轮询逐步更新
       if (forceRefresh) {
         params.append('async', 'true')
       }
-      if (serviceAccountId) {
+      if (authType === 'service_account' && serviceAccountId) {
         params.append('service_account_id', serviceAccountId)
       }
 
@@ -234,16 +243,15 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
       })
 
       if (!response.ok) {
-        let errorData: any = null
+        const errorData = await safeReadJson(response)
         try {
-          errorData = await response.json()
-        } catch {
-          errorData = null
+          throwAccountsListFetchError(response, errorData, { fallbackMessage: '获取账号列表失败' })
+        } catch (error) {
+          if (error instanceof Error && (error as Error & { needsReauth?: boolean }).needsReauth) {
+            setNeedsReauth(true)
+          }
+          throw error
         }
-        if (errorData?.needsReauth || errorData?.code === 'OAUTH_TOKEN_EXPIRED') {
-          throw new Error('OAuth授权已过期，请前往设置页重新授权')
-        }
-        throw new Error(buildAccountsFetchErrorMessage(response, errorData))
       }
 
       const data = await response.json()
@@ -458,6 +466,22 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
           )}
         </CardContent>
       </Card>
+
+      {needsReauth && (
+        <Alert className="bg-red-50 border-red-400">
+          <AlertCircle className="h-4 w-4 text-red-700" />
+          <AlertDescription className="text-red-900">
+            <p className="text-sm font-semibold mb-1">Google OAuth 授权已过期</p>
+            <p className="text-sm">请前往设置页重新完成 OAuth 授权后再刷新账号列表。</p>
+            <Link
+              href="/settings"
+              className="inline-block mt-2 text-sm font-medium text-red-950 underline hover:no-underline"
+            >
+              前往设置页重新授权 →
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {authConfigWarning && (
         <Alert className="bg-amber-50 border-amber-400">

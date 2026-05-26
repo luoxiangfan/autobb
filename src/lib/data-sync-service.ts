@@ -7,8 +7,7 @@ import {
   resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
 import {
-  healAccountsRouteDeveloperToken,
-  resolveAccountsRouteAuthBundle,
+  resolveAndHealSyncUserCredentials,
   resolveOAuthRefreshToken,
 } from './google-ads-accounts-auth'
 import { executeGAQLQueryPython } from './python-ads-client'
@@ -317,54 +316,25 @@ export class DataSyncService {
       }
 
       const defaultApiAuth = await resolveGoogleAdsApiAuthFromContext(authContext)
+      const syncAuthType = defaultApiAuth.authType
+      const bundleServiceAccountId =
+        syncAuthType === 'service_account'
+          ? defaultApiAuth.serviceAccountId ||
+            authContext.serviceAccountConfig?.id?.toString() ||
+            null
+          : null
 
-      let userCredentials:
-        | {
-            client_id: string
-            client_secret: string
-            developer_token: string
-            login_customer_id?: string
-          }
-        | undefined
-
-      if (defaultApiAuth.authType === 'oauth') {
-        const oauthResolved = await resolveAccountsRouteAuthBundle({
-          userId,
-          authContext,
-          authType: 'oauth',
-          serviceAccountId: null,
-        })
-        if (!oauthResolved.ok) {
-          const msg =
-            typeof oauthResolved.body.message === 'string'
-              ? oauthResolved.body.message
-              : typeof oauthResolved.body.error === 'string'
-                ? oauthResolved.body.error
-                : 'Google Ads 凭证配置不完整，请在设置页面完成配置'
-          throw new Error(msg)
-        }
-
-        const oauthCreds = oauthResolved.bundle.credentials
-        const healResult = await healAccountsRouteDeveloperToken({
-          credentials: oauthCreds,
-          authType: 'oauth',
-          ownerUserId: userId,
-          clientSecret: oauthCreds.client_secret,
-        })
-        if (!healResult.ok) {
-          throw new Error(healResult.message)
-        }
-
-        userCredentials = {
-          client_id: oauthCreds.client_id,
-          client_secret: oauthCreds.client_secret,
-          developer_token: oauthCreds.developer_token,
-          login_customer_id:
-            oauthCreds.login_customer_id ||
-            oauthResolved.bundle.loginCustomerId ||
-            undefined,
-        }
+      const syncCredentialsResolved = await resolveAndHealSyncUserCredentials({
+        userId,
+        authContext,
+        authType: syncAuthType,
+        serviceAccountId: bundleServiceAccountId,
+      })
+      if (!syncCredentialsResolved.ok) {
+        throw new Error(syncCredentialsResolved.message)
       }
+
+      const userCredentials = syncCredentialsResolved.userCredentials
 
       // 🔧 PostgreSQL兼容性修复: is_active在PostgreSQL中是BOOLEAN类型
       const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'

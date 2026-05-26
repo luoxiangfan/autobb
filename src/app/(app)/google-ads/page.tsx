@@ -2,6 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import {
+  buildGoogleAdsApiErrorMessage,
+  formatErrorMessage,
+  formatNullableErrorMessage,
+  safeReadJson,
+  throwAccountsListFetchError,
+} from '@/lib/google-ads-credentials-errors'
 
 interface GoogleAdsAccount {
   customerId: string
@@ -72,60 +79,15 @@ export default function GoogleAdsPage() {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
 
-  const formatErrorMessage = (value: unknown): string => {
-    if (!value) return ''
-    if (typeof value === 'string') return value
-    if (value instanceof Error) return value.message
-    const maybeMessage = (value as any)?.message
-    if (typeof maybeMessage === 'string') return maybeMessage
+  const throwOnAccountsFetchError = (response: Response, errorData: unknown | null): never => {
     try {
-      return JSON.stringify(value)
-    } catch {
-      return String(value)
+      throwAccountsListFetchError(response, errorData, { fallbackMessage: '获取账户列表失败' })
+    } catch (error) {
+      if (error instanceof Error && (error as Error & { needsReauth?: boolean }).needsReauth) {
+        setNeedsReauth(true)
+      }
+      throw error
     }
-  }
-
-  const formatNullableErrorMessage = (value: unknown): string | null => {
-    const msg = formatErrorMessage(value).trim()
-    return msg ? msg : null
-  }
-
-  const safeReadJson = async (response: Response): Promise<any | null> => {
-    try {
-      return await response.json()
-    } catch {
-      return null
-    }
-  }
-
-  const buildApiErrorMessage = (response: Response, body: any | null): string => {
-    const msgFromBody =
-      formatNullableErrorMessage(body?.message) ||
-      formatNullableErrorMessage(body?.error)
-
-    if (msgFromBody) return msgFromBody
-
-    // 兜底：尽量给出可操作提示
-    if (response.status === 401) return '未登录或登录已过期，请刷新页面或重新登录'
-    if (response.status === 403) return '权限不足'
-    if (response.status === 409 && body?.code === 'AUTH_TYPE_MISMATCH') {
-      return '认证方式与当前配置不一致，请前往设置页确认当前使用的认证类型'
-    }
-    return `请求失败 (HTTP ${response.status})`
-  }
-
-  const throwOnAccountsFetchError = (response: Response, errorData: any | null): never => {
-    if (errorData?.needsReauth || errorData?.code === 'OAUTH_TOKEN_EXPIRED') {
-      setNeedsReauth(true)
-      throw new Error('OAuth授权已过期')
-    }
-    if (errorData?.code === 'AUTH_TYPE_MISMATCH') {
-      throw new Error(
-        formatNullableErrorMessage(errorData.message) ||
-          '认证方式与当前配置不一致，请前往设置页确认当前使用的认证类型。'
-      )
-    }
-    throw new Error(buildApiErrorMessage(response, errorData) || '获取账户列表失败')
   }
 
   useEffect(() => {
@@ -164,7 +126,9 @@ export default function GoogleAdsPage() {
 
       if (!response.ok) {
         const errorData = await safeReadJson(response)
-        throw new Error(buildApiErrorMessage(response, errorData) || '获取凭证状态失败')
+        throw new Error(
+          buildGoogleAdsApiErrorMessage(response, errorData, '获取凭证状态失败')
+        )
       }
 
       const data = await response.json()
