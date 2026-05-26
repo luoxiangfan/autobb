@@ -1,9 +1,11 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { getGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import {
   getGoogleAdsAuthContext,
   resolveEffectiveServiceAccountId,
+  resolveGoogleAdsApiAuthFromContext,
+  type GoogleAdsApiAuthFields,
+  type GoogleAdsAuthContext,
 } from '@/lib/google-ads-auth-context'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getGoogleAdsClient, getCustomer } from '@/lib/google-ads-api'
@@ -67,6 +69,146 @@ function looksLikeOAuthClientSecret(value: string): boolean {
 
 function looksLikeOAuthAccessToken(value: string): boolean {
   return /^ya29\./i.test(value.trim())
+}
+
+/** 账号列表同步/API 客户端所需的扁平凭证（由 auth-context 解析） */
+interface AccountsRouteCredentials {
+  client_id: string
+  client_secret: string
+  developer_token: string
+  refresh_token?: string
+  login_customer_id?: string | null
+}
+
+interface AccountsRouteAuthBundle {
+  authType: 'oauth' | 'service_account'
+  serviceAccountId: string | null
+  serviceAccountConfig: Awaited<ReturnType<typeof getServiceAccountConfig>>
+  credentials: AccountsRouteCredentials
+  loginCustomerId: string | null
+  apiAuth: GoogleAdsApiAuthFields
+}
+
+type AccountsRouteAuthResolveResult =
+  | { ok: true; bundle: AccountsRouteAuthBundle }
+  | { ok: false; status: number; body: Record<string, unknown> }
+
+/**
+ * 从 auth-context 解析账号列表路由所需的凭证与 MCC（OAuth / 服务账号二选一，无自动回退）。
+ */
+async function resolveAccountsRouteAuthBundle(params: {
+  userId: number
+  authContext: GoogleAdsAuthContext
+  authType: 'oauth' | 'service_account'
+  serviceAccountId: string | null
+}): Promise<AccountsRouteAuthResolveResult> {
+  const { userId, authContext, authType } = params
+
+  if (authType === 'service_account') {
+    const serviceAccountId = params.serviceAccountId
+    if (!serviceAccountId) {
+      return {
+        ok: false,
+        status: 400,
+        body: {
+          error: '缺少服务账号ID',
+          message: '使用服务账号认证时必须指定 service_account_id 参数',
+        },
+      }
+    }
+
+    const apiAuth = await resolveGoogleAdsApiAuthFromContext(authContext, serviceAccountId)
+
+    let serviceAccountConfig = authContext.serviceAccountConfig
+    if (!serviceAccountConfig?.id || String(serviceAccountConfig.id) !== String(serviceAccountId)) {
+      serviceAccountConfig = await getServiceAccountConfig(userId, serviceAccountId)
+    }
+    if (!serviceAccountConfig) {
+      return {
+        ok: false,
+        status: 404,
+        body: {
+          error: '服务账号配置不存在或已禁用',
+          message: '请先在设置页面配置服务账号',
+        },
+      }
+    }
+
+    const oauthCredentials = authContext.oauthCredentials
+    if (!oauthCredentials?.client_id) {
+      console.log(
+        '⚠️ 未配置OAuth凭证，使用占位值创建API客户端（服务账号认证不需要OAuth）'
+      )
+    }
+
+    const credentials: AccountsRouteCredentials = {
+      client_id: oauthCredentials?.client_id || 'placeholder-client-id',
+      client_secret: oauthCredentials?.client_secret || 'placeholder-client-secret',
+      developer_token: serviceAccountConfig.developerToken,
+    }
+
+    const loginCustomerId =
+      apiAuth.serviceAccountMccId || serviceAccountConfig.mccCustomerId || null
+
+    return {
+      ok: true,
+      bundle: {
+        authType: 'service_account',
+        serviceAccountId,
+        serviceAccountConfig,
+        credentials,
+        loginCustomerId,
+        apiAuth,
+      },
+    }
+  }
+
+  const apiAuth = await resolveGoogleAdsApiAuthFromContext(authContext, null)
+  const oauthCredentials = authContext.oauthCredentials
+  if (!oauthCredentials) {
+    return {
+      ok: false,
+      status: 404,
+      body: {
+        error: '未配置 Google Ads 凭证',
+        message: '请在设置页面完成 Google Ads API 配置并完成 OAuth 授权',
+        code: 'CREDENTIALS_NOT_CONFIGURED',
+      },
+    }
+  }
+
+  const refreshToken = apiAuth.refreshToken || oauthCredentials.refresh_token || ''
+  if (!refreshToken) {
+    return {
+      ok: false,
+      status: 401,
+      body: { error: '未找到Refresh Token，请先完成OAuth授权' },
+    }
+  }
+
+  const loginCustomerId =
+    apiAuth.oauthLoginCustomerId ||
+    (oauthCredentials.login_customer_id ? String(oauthCredentials.login_customer_id) : null)
+
+  const credentials: AccountsRouteCredentials = {
+    client_id: oauthCredentials.client_id,
+    client_secret: oauthCredentials.client_secret,
+    developer_token: oauthCredentials.developer_token,
+    refresh_token: refreshToken,
+    login_customer_id: loginCustomerId,
+  }
+
+  return {
+    ok: true,
+    bundle: {
+      authType: 'oauth',
+      serviceAccountId: null,
+      serviceAccountConfig: null,
+      credentials,
+      loginCustomerId,
+      apiAuth,
+    },
+  }
 }
 
 function parseStatus(status: any): string {
@@ -1375,7 +1517,7 @@ async function syncAccountsFromAPI(
  * Query params:
  * - refresh=true: 强制从 API 刷新
  * - offerId=number: 当前Offer ID（用于计算账号优先级）
- * - auth_type=oauth|service_account: 认证方式（未传时由 getUserAuthType 决定）
+ * - auth_type=oauth|service_account: 认证方式（未传时由 auth-context 决定）
  * - service_account_id=string: 服务账号ID（当auth_type=service_account时必需）
  */
 async function get(request: NextRequest) {
@@ -1399,74 +1541,25 @@ async function get(request: NextRequest) {
       authTypeParam === 'oauth' || authTypeParam === 'service_account'
         ? authTypeParam
         : resolvedAuth.authType
-    const serviceAccountId =
+    const serviceAccountId: string | null =
       searchParams.get('service_account_id') ||
       (authType === 'service_account'
-        ? resolveEffectiveServiceAccountId(null, authContext)
+        ? resolveEffectiveServiceAccountId(null, authContext) ?? null
         : null)
 
     console.log(`🔍 [GET /api/google-ads/credentials/accounts] forceRefresh=${forceRefresh}, asyncRefresh=${asyncRefresh}, offerId=${offerId}, authType=${authType}`)
 
-    let credentials: any = null
-    let serviceAccountConfig: any = null
-    let loginCustomerId: string | null = null
-
-    if (authType === 'service_account') {
-      // 服务账号认证模式
-      if (!serviceAccountId) {
-        return jsonNoStore({
-          error: '缺少服务账号ID',
-          message: '使用服务账号认证时必须指定 service_account_id 参数'
-        }, { status: 400 })
-      }
-
-      serviceAccountConfig = await getServiceAccountConfig(userId, serviceAccountId)
-      if (!serviceAccountConfig) {
-        return jsonNoStore({
-          error: '服务账号配置不存在或已禁用',
-          message: '请先在设置页面配置服务账号'
-        }, { status: 404 })
-      }
-
-      loginCustomerId = serviceAccountConfig.mccCustomerId
-
-      // 🔧 修复(2025-12-24): 服务账号模式也需要基本的client_id/client_secret用于创建API客户端
-      // 但实际认证使用JWT，如果用户没有OAuth凭证，使用占位值（服务账号认证不需要这些）
-      const oauthCredentials = await getGoogleAdsCredentials(userId)
-      if (oauthCredentials) {
-        credentials = {
-          client_id: oauthCredentials.client_id,
-          client_secret: oauthCredentials.client_secret,
-          developer_token: serviceAccountConfig.developerToken,
-        }
-      } else {
-        // 服务账号认证模式下，如果没有OAuth凭证，使用占位值
-        // client_id和client_secret仅用于创建API客户端，实际认证使用JWT
-        credentials = {
-          client_id: 'placeholder-client-id',
-          client_secret: 'placeholder-client-secret',
-          developer_token: serviceAccountConfig.developerToken,
-        }
-        console.log(`⚠️ 未配置OAuth凭证，使用占位值创建API客户端（服务账号认证不需要OAuth）`)
-      }
-    } else {
-      // OAuth 认证模式
-      credentials = await getGoogleAdsCredentials(userId)
-
-      if (!credentials) {
-        return jsonNoStore({
-          error: '未配置 Google Ads 凭证',
-          message: '请在设置页面完成 Google Ads API 配置并完成 OAuth 授权',
-          code: 'CREDENTIALS_NOT_CONFIGURED'
-        }, { status: 404 })
-      }
-
-      if (!credentials.refresh_token) {
-        return jsonNoStore({ error: '未找到Refresh Token，请先完成OAuth授权' }, { status: 401 })
-      }
-
-      loginCustomerId = credentials.login_customer_id
+    const authResolved = await resolveAccountsRouteAuthBundle({
+      userId,
+      authContext,
+      authType,
+      serviceAccountId: authType === 'service_account' ? serviceAccountId : null,
+    })
+    if (!authResolved.ok) {
+      return jsonNoStore(authResolved.body, { status: authResolved.status })
     }
+
+    let { credentials, serviceAccountConfig, loginCustomerId } = authResolved.bundle
 
     // 校验: login_customer_id 必须存在（MCC账户ID是调用Google Ads API的必填项）
     if (!loginCustomerId) {
