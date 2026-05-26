@@ -312,27 +312,40 @@ export class DataSyncService {
       }
 
       const defaultApiAuth = await resolveGoogleAdsApiAuthFromContext(authContext)
+
+      let userCredentials:
+        | {
+            client_id: string
+            client_secret: string
+            developer_token: string
+            login_customer_id?: string
+          }
+        | undefined
+
       if (defaultApiAuth.authType === 'oauth') {
-        const credentials = await getGoogleAdsCredentialsFromDB(userId)
-        if (!credentials) {
-          throw new Error('Google Ads 凭证未配置，请在设置页面完成配置')
-        }
-        if (!credentials.client_id || !credentials.client_secret || !credentials.developer_token) {
+        const oauth = authContext.oauthCredentials
+        const oauthBundle =
+          oauth?.client_id && oauth.client_secret && oauth.developer_token
+            ? {
+                client_id: oauth.client_id,
+                client_secret: oauth.client_secret,
+                developer_token: oauth.developer_token,
+                login_customer_id:
+                  oauth.login_customer_id || defaultApiAuth.oauthLoginCustomerId || undefined,
+              }
+            : await getGoogleAdsCredentialsFromDB(userId)
+
+        if (!oauthBundle.client_id || !oauthBundle.client_secret || !oauthBundle.developer_token) {
           throw new Error('Google Ads 凭证配置不完整，请在设置页面完成配置')
         }
+
+        userCredentials = {
+          client_id: oauthBundle.client_id,
+          client_secret: oauthBundle.client_secret,
+          developer_token: oauthBundle.developer_token,
+          login_customer_id: oauthBundle.login_customer_id || undefined,
+        }
       }
-
-      const oauthCredentialsForSync =
-        defaultApiAuth.authType === 'oauth' ? await getGoogleAdsCredentialsFromDB(userId) : null
-
-      const userCredentials = oauthCredentialsForSync
-        ? {
-            client_id: oauthCredentialsForSync.client_id,
-            client_secret: oauthCredentialsForSync.client_secret,
-            developer_token: oauthCredentialsForSync.developer_token,
-            login_customer_id: oauthCredentialsForSync.login_customer_id || undefined,
-          }
-        : undefined
 
       // 🔧 PostgreSQL兼容性修复: is_active在PostgreSQL中是BOOLEAN类型
       const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'

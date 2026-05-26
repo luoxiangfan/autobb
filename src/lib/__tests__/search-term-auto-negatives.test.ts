@@ -48,6 +48,14 @@ describe('search-term-auto-negatives', () => {
     expect(config.maxPerUser).toBe(999)
   })
 
+  it('OAuth refresh 解析优先使用用户级 token', () => {
+    const resolve = (apiRefresh: string, accountRefresh: string) =>
+      String(apiRefresh || accountRefresh || '').trim()
+
+    expect(resolve('user-level', 'stale-account')).toBe('user-level')
+    expect(resolve('', 'account-only')).toBe('account-only')
+  })
+
   it('正向加词环境变量解析：非法值回退默认值', () => {
     process.env.AUTO_SEARCH_TERM_POSITIVE_LOOKBACK_DAYS = '0'
     process.env.AUTO_SEARCH_TERM_POSITIVE_MIN_CLICKS = '-5'

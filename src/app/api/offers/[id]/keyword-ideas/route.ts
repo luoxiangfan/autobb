@@ -175,6 +175,7 @@ export async function POST(
       // 2. 调用Keyword Planner API
       getKeywordIdeas({
         customerId: googleAdsAccount.customerId,
+        refreshToken: apiAuth.authType === 'oauth' ? apiAuth.refreshToken : undefined,
         seedKeywords: finalSeedKeywords,
         pageUrl: siteFilterUrl,
         targetCountry: offer.target_country,

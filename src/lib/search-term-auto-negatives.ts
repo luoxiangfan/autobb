@@ -204,7 +204,7 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
     )
 
     if (apiAuth.authType === 'oauth') {
-      const effectiveRefreshToken = String(action.refreshToken || apiAuth.refreshToken || '').trim()
+      const effectiveRefreshToken = String(apiAuth.refreshToken || action.refreshToken || '').trim()
       if (!effectiveRefreshToken) {
         throw new Error('missing_refresh_token_for_oauth')
       }

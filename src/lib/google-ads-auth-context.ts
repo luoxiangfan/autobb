@@ -166,6 +166,9 @@ export async function resolveGoogleAdsApiAuthForAccount(
 
 /**
  * 一次性加载 context 并解析 API 调用字段（无账号绑定时 linked 传 null/undefined）。
+ *
+ * @deprecated Prefer {@link tryGetConfiguredGoogleAdsApiAuthForUser} or
+ * {@link resolveGoogleAdsApiAuthForAccount} for validated auth resolution.
  */
 export async function getGoogleAdsApiAuthForUser(
   userId: number,

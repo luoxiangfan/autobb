@@ -518,14 +518,18 @@ export async function getCustomerWithCredentials(params: {
       throw new Error('refreshToken is required for OAuth authentication')
     }
 
-    // 从数据库获取凭证
-    const creds = await getGoogleAdsCredentialsFromDB(params.userId)
+    const creds =
+      params.credentials ?? (await getGoogleAdsCredentialsFromDB(params.userId))
+    const credsLoginCustomerId =
+      'login_customer_id' in creds && typeof creds.login_customer_id === 'string'
+        ? creds.login_customer_id
+        : undefined
 
     // 显式传入 loginCustomerId（包括 undefined）时，不再回退到凭证，确保支持“省略header”降级路径。
     const hasExplicitLoginCustomerId = Object.prototype.hasOwnProperty.call(params, 'loginCustomerId')
     const loginCustomerId = hasExplicitLoginCustomerId
       ? (params.loginCustomerId ?? null)
-      : creds.login_customer_id
+      : credsLoginCustomerId ?? null
 
     return getCustomer(
       params.customerId,

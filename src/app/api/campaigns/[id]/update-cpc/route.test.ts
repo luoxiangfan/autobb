@@ -22,7 +22,6 @@ const authFns = vi.hoisted(() => ({
 
 const googleAdsFns = vi.hoisted(() => ({
   getCustomerWithCredentials: vi.fn(),
-  getGoogleAdsCredentialsFromDB: vi.fn(),
 }))
 
 const pythonFns = vi.hoisted(() => ({
@@ -58,7 +57,6 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@/lib/google-ads-api', () => ({
   getCustomerWithCredentials: googleAdsFns.getCustomerWithCredentials,
-  getGoogleAdsCredentialsFromDB: googleAdsFns.getGoogleAdsCredentialsFromDB,
 }))
 
 vi.mock('@/lib/google-ads-auth-context', () => ({
@@ -169,13 +167,6 @@ describe('PUT /api/campaigns/:id/update-cpc', () => {
     }
 
     googleAdsFns.getCustomerWithCredentials.mockResolvedValue(customer)
-    googleAdsFns.getGoogleAdsCredentialsFromDB.mockResolvedValue({
-      useServiceAccount: false,
-      login_customer_id: '9988776655',
-      client_id: 'client-id',
-      client_secret: 'client-secret',
-      developer_token: 'dev-token',
-    })
     dbFns.queryOne.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM campaigns') && sql.includes('google_campaign_id = ?')) {
         return {

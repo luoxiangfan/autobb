@@ -1,5 +1,8 @@
 import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB } from './google-ads-api'
-import { getGoogleAdsCredentials } from './google-ads-oauth'
+import {
+  getGoogleAdsAuthContext,
+  resolveGoogleAdsApiAuthFromContext,
+} from './google-ads-auth-context'
 import { getLoginCustomerId, AuthType } from './google-ads-service-account'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 import { getGoogleAdsLanguageCode, getGoogleAdsGeoTargetId } from './language-country-codes'
@@ -9,6 +12,48 @@ import { getGoogleAdsLanguageCode, getGoogleAdsGeoTargetId } from './language-co
  * OAuth 模式使用 customer.keywordPlanIdeas
  * 服务账号模式使用 customer.loadService('KeywordPlanIdeaServiceClient')
  */
+async function resolveKeywordPlannerOAuth(params: {
+  userId: number
+  refreshToken?: string
+  serviceAccountId?: string
+}) {
+  const authContext = await getGoogleAdsAuthContext(params.userId)
+  const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+    authContext,
+    params.serviceAccountId ?? null
+  )
+  if (apiAuth.authType !== 'oauth') {
+    throw new Error('Keyword Planner requires OAuth when authType is oauth')
+  }
+
+  const refreshToken = (params.refreshToken || apiAuth.refreshToken || '').trim()
+  if (!refreshToken) {
+    throw new Error('OAuth refresh token not found')
+  }
+
+  const oauth = authContext.oauthCredentials
+  const credentials =
+    oauth?.client_id && oauth.client_secret && oauth.developer_token
+      ? {
+          client_id: oauth.client_id,
+          client_secret: oauth.client_secret,
+          developer_token: oauth.developer_token,
+          login_customer_id: String(oauth.login_customer_id || apiAuth.oauthLoginCustomerId || ''),
+        }
+      : await getGoogleAdsCredentialsFromDB(params.userId)
+
+  const loginCustomerId = await getLoginCustomerId({
+    authConfig: {
+      authType: 'oauth',
+      userId: params.userId,
+      serviceAccountId: params.serviceAccountId,
+    },
+    oauthCredentials: { login_customer_id: credentials.login_customer_id },
+  })
+
+  return { refreshToken, loginCustomerId, credentials }
+}
+
 function getKeywordPlanIdeaService(customer: any, authType: AuthType | undefined) {
   if (authType === 'service_account') {
     // 服务账号模式：使用 loadService 动态加载服务
@@ -97,35 +142,22 @@ export async function getKeywordIdeas(params: {
     }))
   }
 
-  // OAuth模式：使用原有逻辑
-  const creds = await getGoogleAdsCredentialsFromDB(params.userId)
-  const credentials = {
-    client_id: creds.client_id,
-    client_secret: creds.client_secret,
-    developer_token: creds.developer_token
-  }
-
-  // OAuth模式：获取 refresh_token
-  const oauthCredentials = await getGoogleAdsCredentials(params.userId)
-  if (!oauthCredentials?.refresh_token) {
-    throw new Error('OAuth refresh token not found')
-  }
-
-  const loginCustomerId = await getLoginCustomerId({
-    authConfig: {
-      authType,
-      userId: params.userId,
-      serviceAccountId: params.serviceAccountId
-    },
-    oauthCredentials: { login_customer_id: creds.login_customer_id }
+  const oauthAuth = await resolveKeywordPlannerOAuth({
+    userId: params.userId,
+    refreshToken: params.refreshToken,
+    serviceAccountId: params.serviceAccountId,
   })
 
-  // 使用统一入口获取 Customer 实例
   const customer = await getCustomerWithCredentials({
     customerId: params.customerId,
-    refreshToken: oauthCredentials.refresh_token,
+    refreshToken: oauthAuth.refreshToken,
     userId: params.userId,
-    loginCustomerId,
+    loginCustomerId: oauthAuth.loginCustomerId,
+    credentials: {
+      client_id: oauthAuth.credentials.client_id,
+      client_secret: oauthAuth.credentials.client_secret,
+      developer_token: oauthAuth.credentials.developer_token,
+    },
     authType,
     serviceAccountId: params.serviceAccountId,
   })
@@ -291,16 +323,22 @@ export async function getKeywordMetrics(params: {
     }))
   }
 
-  // OAuth模式：使用统一入口
-  const oauthCredentials = await getGoogleAdsCredentials(params.userId)
-  if (!oauthCredentials?.refresh_token) {
-    throw new Error('OAuth refresh token not found')
-  }
+  const oauthAuth = await resolveKeywordPlannerOAuth({
+    userId: params.userId,
+    refreshToken: params.refreshToken,
+    serviceAccountId: params.serviceAccountId,
+  })
 
   const customer = await getCustomerWithCredentials({
     customerId: params.customerId,
-    refreshToken: oauthCredentials.refresh_token,
+    refreshToken: oauthAuth.refreshToken,
     userId: params.userId,
+    loginCustomerId: oauthAuth.loginCustomerId,
+    credentials: {
+      client_id: oauthAuth.credentials.client_id,
+      client_secret: oauthAuth.credentials.client_secret,
+      developer_token: oauthAuth.credentials.developer_token,
+    },
     authType,
     serviceAccountId: params.serviceAccountId,
   })

@@ -18,7 +18,6 @@ const campaignFns = vi.hoisted(() => ({
 
 const googleAdsFns = vi.hoisted(() => ({
   updateGoogleAdsCampaignName: vi.fn(),
-  getGoogleAdsCredentialsFromDB: vi.fn(),
 }))
 
 const dbFns = vi.hoisted(() => ({
@@ -32,7 +31,6 @@ vi.mock('@/lib/campaigns', () => ({
 
 vi.mock('@/lib/google-ads-api', () => ({
   updateGoogleAdsCampaignName: googleAdsFns.updateGoogleAdsCampaignName,
-  getGoogleAdsCredentialsFromDB: googleAdsFns.getGoogleAdsCredentialsFromDB,
 }))
 
 vi.mock('@/lib/google-ads-auth-context', () => ({
