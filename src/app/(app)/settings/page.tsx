@@ -830,6 +830,8 @@ export default function SettingsPage() {
         serviceAccounts[0]?.id ?? googleAdsCredentialStatus?.serviceAccountId
       if (effectiveAuthMethod === 'service_account' && effectiveServiceAccountId) {
         url += `&auth_type=service_account&service_account_id=${encodeURIComponent(String(effectiveServiceAccountId))}`
+      } else {
+        url += '&auth_type=oauth'
       }
 
       const response = await fetch(url, {

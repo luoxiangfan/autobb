@@ -1,4 +1,8 @@
-import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB } from './google-ads-api'
+import { getCustomerWithCredentials } from './google-ads-api'
+import {
+  resolveAndHealSyncUserCredentials,
+  resolveOAuthRefreshToken,
+} from './google-ads-accounts-auth'
 import {
   getGoogleAdsAuthContext,
   resolveGoogleAdsApiAuthFromContext,
@@ -26,21 +30,33 @@ async function resolveKeywordPlannerOAuth(params: {
     throw new Error('Keyword Planner requires OAuth when authType is oauth')
   }
 
-  const refreshToken = (params.refreshToken || apiAuth.refreshToken || '').trim()
+  const credResolved = await resolveAndHealSyncUserCredentials({
+    userId: params.userId,
+    authContext,
+    authType: 'oauth',
+    serviceAccountId: null,
+  })
+  if (!credResolved.ok) {
+    throw new Error(credResolved.message)
+  }
+
+  const refreshToken = (
+    params.refreshToken ||
+    resolveOAuthRefreshToken(apiAuth, authContext.oauthCredentials) ||
+    ''
+  ).trim()
   if (!refreshToken) {
     throw new Error('OAuth refresh token not found')
   }
 
-  const oauth = authContext.oauthCredentials
-  const credentials =
-    oauth?.client_id && oauth.client_secret && oauth.developer_token
-      ? {
-          client_id: oauth.client_id,
-          client_secret: oauth.client_secret,
-          developer_token: oauth.developer_token,
-          login_customer_id: String(oauth.login_customer_id || apiAuth.oauthLoginCustomerId || ''),
-        }
-      : await getGoogleAdsCredentialsFromDB(params.userId)
+  const credentials = {
+    client_id: credResolved.userCredentials.client_id,
+    client_secret: credResolved.userCredentials.client_secret,
+    developer_token: credResolved.userCredentials.developer_token,
+    login_customer_id: String(
+      credResolved.userCredentials.login_customer_id || apiAuth.oauthLoginCustomerId || ''
+    ),
+  }
 
   const loginCustomerId = await getLoginCustomerId({
     authConfig: {

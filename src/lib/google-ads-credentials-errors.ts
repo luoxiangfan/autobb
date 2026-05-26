@@ -148,3 +148,29 @@ export function credentialsStatusErrorMessage(data: unknown, fallback = '获取�
     fallback
   )
 }
+
+/** 拉取并解析 GET /api/google-ads/credentials（客户端） */
+export async function fetchGoogleAdsCredentialsStatus(): Promise<ParsedGoogleAdsCredentialsStatus> {
+  const credResponse = await fetch('/api/google-ads/credentials', {
+    credentials: 'include',
+  })
+  if (!credResponse.ok) {
+    const errorData = await safeReadJson(credResponse)
+    throw new Error(buildGoogleAdsApiErrorMessage(credResponse, errorData, '获取凭证状态失败'))
+  }
+  const credData = await credResponse.json()
+  if (!credData?.success) {
+    throw new Error(credentialsStatusErrorMessage(credData))
+  }
+  return parseCredentialsStatusResponse(credData)
+}
+
+export function appendAccountsAuthToSearchParams(
+  params: URLSearchParams,
+  auth: Pick<ParsedGoogleAdsCredentialsStatus, 'authType' | 'serviceAccountId'>
+): void {
+  params.set('auth_type', auth.authType)
+  if (auth.authType === 'service_account' && auth.serviceAccountId) {
+    params.set('service_account_id', auth.serviceAccountId)
+  }
+}

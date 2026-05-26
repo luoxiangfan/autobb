@@ -3,14 +3,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
+  appendAccountsAuthToSearchParams,
   buildGoogleAdsApiErrorMessage,
   formatErrorMessage,
   formatNullableErrorMessage,
-  GOOGLE_ADS_CREDENTIALS_POLL_REFRESH_EVERY,
-  parseCredentialsStatusResponse,
   safeReadJson,
   throwAccountsListFetchError,
 } from '@/lib/google-ads-credentials-errors'
+import { useGoogleAdsAccountsAuth } from '@/hooks/useGoogleAdsAccountsAuth'
 
 interface GoogleAdsAccount {
   customerId: string
@@ -65,7 +65,16 @@ export default function GoogleAdsPage() {
   const [accountsSyncing, setAccountsSyncing] = useState(false)
   const [accountsSyncError, setAccountsSyncError] = useState<string | null>(null)
   const accountsPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const accountsPollCountRef = useRef(0)
+
+  const { prepareAuthForAccountsFetch, syncFromCredentialsResponse } = useGoogleAdsAccountsAuth({
+    onCredentialsUpdated: (parsed) => {
+      setCurrentAuthType(parsed.authType)
+      if (parsed.serviceAccountId) {
+        setCurrentServiceAccountId(parsed.serviceAccountId)
+      }
+      setAuthConfigWarning(parsed.authConfigWarning)
+    },
+  })
   const [error, setError] = useState('')
   const [authConfigWarning, setAuthConfigWarning] = useState<string | null>(null)
   const [success, setSuccess] = useState('')
@@ -138,14 +147,12 @@ export default function GoogleAdsPage() {
 
       if (data.success && data.data) {
         setCredentials(data.data)
-        setAuthConfigWarning(formatNullableErrorMessage(data.data.authConfigWarning))
+        const parsed = syncFromCredentialsResponse(data)
 
-        const authType = data.data.authType || (data.data.hasRefreshToken ? 'oauth' : 'service_account')
-        setCurrentAuthType(authType)
-
-        if (authType === 'service_account' && data.data.serviceAccountId) {
-          setCurrentServiceAccountId(String(data.data.serviceAccountId))
-          fetchAccountsWithServiceAccount(String(data.data.serviceAccountId))
+        if (parsed.authType === 'service_account' && parsed.serviceAccountId) {
+          fetchAccountsWithServiceAccount(parsed.serviceAccountId)
+        } else if (parsed.hasCredentials && parsed.authType === 'oauth') {
+          fetchAccounts()
         } else if (data.data.hasRefreshToken) {
           fetchAccounts()
         } else {
@@ -158,20 +165,6 @@ export default function GoogleAdsPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const refreshAuthFromCredentials = async () => {
-    const response = await fetch('/api/google-ads/credentials', { credentials: 'include' })
-    if (!response.ok) return
-    const data = await response.json()
-    if (!data?.success) return
-    const parsed = parseCredentialsStatusResponse(data)
-    setCurrentAuthType(parsed.authType)
-    if (parsed.serviceAccountId) {
-      setCurrentServiceAccountId(parsed.serviceAccountId)
-    }
-    setAuthConfigWarning(parsed.authConfigWarning)
-    return parsed
   }
 
   const scheduleAccountsPoll = (mode: 'oauth' | 'service_account', serviceAccountId?: string | null) => {
@@ -213,21 +206,23 @@ export default function GoogleAdsPage() {
       if (!isPoll && !forceRefresh) setAccountsLoading(true)
       if (forceRefresh) setAccountsSyncing(true)
       if (forceRefresh) setAccountsSyncError(null)
-      if (isPoll) {
-        accountsPollCountRef.current += 1
-        if (accountsPollCountRef.current % GOOGLE_ADS_CREDENTIALS_POLL_REFRESH_EVERY === 0) {
-          const parsed = await refreshAuthFromCredentials()
-          if (parsed?.serviceAccountId) {
-            serviceAccountId = parsed.serviceAccountId
-          }
-        }
-      } else if (forceRefresh) {
-        accountsPollCountRef.current = 0
+
+      const auth = await prepareAuthForAccountsFetch({ forceRefresh, isPoll })
+      const effectiveServiceAccountId =
+        auth.authType === 'service_account' && auth.serviceAccountId
+          ? auth.serviceAccountId
+          : serviceAccountId
+
+      const params = new URLSearchParams({ filterByUserMcc: 'true' })
+      if (forceRefresh) {
+        params.set('refresh', 'true')
+        params.set('async', 'true')
       }
-      // 🔧 添加 filterByUserMcc=true 参数，让后端根据用户 MCC 分配过滤账号
-      const url = forceRefresh
-        ? `/api/google-ads/credentials/accounts?refresh=true&async=true&auth_type=service_account&service_account_id=${serviceAccountId}&filterByUserMcc=true`
-        : `/api/google-ads/credentials/accounts?auth_type=service_account&service_account_id=${serviceAccountId}&filterByUserMcc=true`
+      appendAccountsAuthToSearchParams(params, {
+        authType: 'service_account',
+        serviceAccountId: effectiveServiceAccountId,
+      })
+      const url = `/api/google-ads/credentials/accounts?${params.toString()}`
       const response = await fetch(url, {
         credentials: 'include',
         cache: 'no-store',
@@ -271,7 +266,7 @@ export default function GoogleAdsPage() {
 
         if (forceRefresh || isPoll) {
           if (data.data.refreshInProgress) {
-            scheduleAccountsPoll('service_account', serviceAccountId)
+            scheduleAccountsPoll('service_account', effectiveServiceAccountId)
           } else {
             setAccountsSyncing(false)
           }
@@ -293,23 +288,15 @@ export default function GoogleAdsPage() {
       if (!isPoll && !forceRefresh) setAccountsLoading(true)
       if (forceRefresh) setAccountsSyncing(true)
       if (forceRefresh) setAccountsSyncError(null)
-      if (isPoll) {
-        accountsPollCountRef.current += 1
-        if (accountsPollCountRef.current % GOOGLE_ADS_CREDENTIALS_POLL_REFRESH_EVERY === 0) {
-          await refreshAuthFromCredentials()
-        }
-      } else if (forceRefresh) {
-        accountsPollCountRef.current = 0
-      }
+
+      const auth = await prepareAuthForAccountsFetch({ forceRefresh, isPoll })
+
       const params = new URLSearchParams({ filterByUserMcc: 'true' })
       if (forceRefresh) {
         params.set('refresh', 'true')
         params.set('async', 'true')
       }
-      params.set('auth_type', currentAuthType)
-      if (currentAuthType === 'service_account' && currentServiceAccountId) {
-        params.set('service_account_id', currentServiceAccountId)
-      }
+      appendAccountsAuthToSearchParams(params, auth)
       const url = `/api/google-ads/credentials/accounts?${params.toString()}`
       const response = await fetch(url, {
         credentials: 'include',

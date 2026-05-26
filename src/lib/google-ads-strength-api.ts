@@ -54,6 +54,16 @@ async function getGoogleAdsClient(
       throw new Error('未找到服务账号配置')
     }
 
+    const credResolved = await resolveAndHealSyncUserCredentials({
+      userId,
+      authContext,
+      authType: 'service_account',
+      serviceAccountId: apiAuth.serviceAccountId,
+    })
+    if (!credResolved.ok) {
+      throw new Error(credResolved.message)
+    }
+
     return {
       customer: await getCustomerWithCredentials({
         customerId,

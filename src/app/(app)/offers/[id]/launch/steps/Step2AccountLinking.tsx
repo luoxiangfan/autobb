@@ -36,14 +36,12 @@ import {
 import { Link2, CheckCircle2, AlertCircle, Plus, RefreshCw, ExternalLink, Loader2, Info } from 'lucide-react'
 import { showError, showSuccess } from '@/lib/toast-utils'
 import {
-  buildGoogleAdsApiErrorMessage,
-  credentialsStatusErrorMessage,
+  appendAccountsAuthToSearchParams,
   formatNullableErrorMessage,
-  GOOGLE_ADS_CREDENTIALS_POLL_REFRESH_EVERY,
-  parseCredentialsStatusResponse,
   safeReadJson,
   throwAccountsListFetchError,
 } from '@/lib/google-ads-credentials-errors'
+import { useGoogleAdsAccountsAuth } from '@/hooks/useGoogleAdsAccountsAuth'
 import Link from 'next/link'
 
 interface Props {
@@ -147,12 +145,14 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
   const [authConfigWarning, setAuthConfigWarning] = useState<string | null>(null)
   const [needsReauth, setNeedsReauth] = useState(false)
-  const accountsAuthRef = useRef<{
-    authType: 'oauth' | 'service_account'
-    serviceAccountId?: string
-  } | null>(null)
-  const accountsPollCountRef = useRef(0)
   const [showGuideDialog, setShowGuideDialog] = useState(false)
+
+  const { prepareAuthForAccountsFetch } = useGoogleAdsAccountsAuth({
+    onCredentialsUpdated: (parsed) => {
+      setHasCredentials(parsed.hasCredentials)
+      setAuthConfigWarning(parsed.authConfigWarning)
+    },
+  })
 
   useEffect(() => {
     setSelectedIds(selectedAccounts.map(account => account.customerId))
@@ -168,28 +168,6 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
       }
     }
   }, [])
-
-  const refreshCredentialsStatus = async () => {
-    const credResponse = await fetch('/api/google-ads/credentials', {
-      credentials: 'include',
-    })
-    if (!credResponse.ok) {
-      const errorData = await safeReadJson(credResponse)
-      throw new Error(buildGoogleAdsApiErrorMessage(credResponse, errorData, '获取凭证状态失败'))
-    }
-    const credData = await credResponse.json()
-    if (!credData?.success) {
-      throw new Error(credentialsStatusErrorMessage(credData))
-    }
-    const parsed = parseCredentialsStatusResponse(credData)
-    accountsAuthRef.current = {
-      authType: parsed.authType,
-      serviceAccountId: parsed.serviceAccountId,
-    }
-    setHasCredentials(parsed.hasCredentials)
-    setAuthConfigWarning(parsed.authConfigWarning)
-    return parsed
-  }
 
   const scheduleRefreshPoll = () => {
     if (refreshPollTimerRef.current) clearTimeout(refreshPollTimerRef.current)
@@ -208,38 +186,16 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
       setRefreshFailed(false)
       setNeedsReauth(false)
 
-      if (forceRefresh) {
-        accountsAuthRef.current = null
-        accountsPollCountRef.current = 0
-      }
-
-      if (isPoll) {
-        accountsPollCountRef.current += 1
-      }
-
-      const shouldRefreshCredentials =
-        forceRefresh ||
-        !accountsAuthRef.current ||
-        !isPoll ||
-        accountsPollCountRef.current % GOOGLE_ADS_CREDENTIALS_POLL_REFRESH_EVERY === 0
-
-      if (shouldRefreshCredentials) {
-        await refreshCredentialsStatus()
-      }
-
-      const { authType, serviceAccountId } = accountsAuthRef.current!
+      const auth = await prepareAuthForAccountsFetch({ forceRefresh, isPoll })
 
       const params = new URLSearchParams({
         refresh: forceRefresh ? 'true' : 'false',
         offerId: offer.id.toString(),
-        auth_type: authType,
       })
       if (forceRefresh) {
         params.append('async', 'true')
       }
-      if (authType === 'service_account' && serviceAccountId) {
-        params.append('service_account_id', serviceAccountId)
-      }
+      appendAccountsAuthToSearchParams(params, auth)
 
       // 🔓 KISS优化(2025-12-12): 传入offerId用于计算账号优先级
       // 🔧 添加 filterByUserMcc=true，只获取用户 MCC 下的 Google Ads 账号（非 MCC 账号）
