@@ -30,6 +30,7 @@ import {
 } from '@/lib/gemini-models'
 import { getGeminiEndpoint, type GeminiProvider } from '@/lib/gemini-config'
 import { ServiceAccountPermissionError } from '@/components/ServiceAccountPermissionError'
+import { parseAccountsListFetchFailure, safeReadJson } from '@/lib/google-ads-credentials-errors'
 import {
   DEFAULT_AFFILIATE_SYNC_INTERVAL_HOURS,
   DEFAULT_PARTNERBOOST_BASE_URL,
@@ -836,16 +837,23 @@ export default function SettingsPage() {
       })
 
       if (!response.ok) {
-        const data = await response.json()
+        const data = await safeReadJson(response)
 
-        // 🆕 检测服务账号权限错误
-        if (data.code === 'SERVICE_ACCOUNT_PERMISSION_DENIED' && data.details) {
-          setPermissionError(data.details)
-          setShowGoogleAdsAccounts(true)  // 显示区域以展示错误信息
+        if (
+          data &&
+          typeof data === 'object' &&
+          (data as { code?: string }).code === 'SERVICE_ACCOUNT_PERMISSION_DENIED' &&
+          (data as { details?: unknown }).details
+        ) {
+          setPermissionError((data as { details: unknown }).details)
+          setShowGoogleAdsAccounts(true)
           return
         }
 
-        throw new Error(data.message || data.error || '获取账户列表失败')
+        const { message } = parseAccountsListFetchFailure(response, data, {
+          fallbackMessage: '获取账户列表失败',
+        })
+        throw new Error(message)
       }
 
       const data = await response.json()

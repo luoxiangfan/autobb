@@ -6,6 +6,8 @@ import {
   buildGoogleAdsApiErrorMessage,
   formatErrorMessage,
   formatNullableErrorMessage,
+  GOOGLE_ADS_CREDENTIALS_POLL_REFRESH_EVERY,
+  parseCredentialsStatusResponse,
   safeReadJson,
   throwAccountsListFetchError,
 } from '@/lib/google-ads-credentials-errors'
@@ -63,6 +65,7 @@ export default function GoogleAdsPage() {
   const [accountsSyncing, setAccountsSyncing] = useState(false)
   const [accountsSyncError, setAccountsSyncError] = useState<string | null>(null)
   const accountsPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const accountsPollCountRef = useRef(0)
   const [error, setError] = useState('')
   const [authConfigWarning, setAuthConfigWarning] = useState<string | null>(null)
   const [success, setSuccess] = useState('')
@@ -157,6 +160,20 @@ export default function GoogleAdsPage() {
     }
   }
 
+  const refreshAuthFromCredentials = async () => {
+    const response = await fetch('/api/google-ads/credentials', { credentials: 'include' })
+    if (!response.ok) return
+    const data = await response.json()
+    if (!data?.success) return
+    const parsed = parseCredentialsStatusResponse(data)
+    setCurrentAuthType(parsed.authType)
+    if (parsed.serviceAccountId) {
+      setCurrentServiceAccountId(parsed.serviceAccountId)
+    }
+    setAuthConfigWarning(parsed.authConfigWarning)
+    return parsed
+  }
+
   const scheduleAccountsPoll = (mode: 'oauth' | 'service_account', serviceAccountId?: string | null) => {
     if (accountsPollTimerRef.current) clearTimeout(accountsPollTimerRef.current)
     accountsPollTimerRef.current = setTimeout(() => {
@@ -196,6 +213,17 @@ export default function GoogleAdsPage() {
       if (!isPoll && !forceRefresh) setAccountsLoading(true)
       if (forceRefresh) setAccountsSyncing(true)
       if (forceRefresh) setAccountsSyncError(null)
+      if (isPoll) {
+        accountsPollCountRef.current += 1
+        if (accountsPollCountRef.current % GOOGLE_ADS_CREDENTIALS_POLL_REFRESH_EVERY === 0) {
+          const parsed = await refreshAuthFromCredentials()
+          if (parsed?.serviceAccountId) {
+            serviceAccountId = parsed.serviceAccountId
+          }
+        }
+      } else if (forceRefresh) {
+        accountsPollCountRef.current = 0
+      }
       // 🔧 添加 filterByUserMcc=true 参数，让后端根据用户 MCC 分配过滤账号
       const url = forceRefresh
         ? `/api/google-ads/credentials/accounts?refresh=true&async=true&auth_type=service_account&service_account_id=${serviceAccountId}&filterByUserMcc=true`
@@ -265,6 +293,14 @@ export default function GoogleAdsPage() {
       if (!isPoll && !forceRefresh) setAccountsLoading(true)
       if (forceRefresh) setAccountsSyncing(true)
       if (forceRefresh) setAccountsSyncError(null)
+      if (isPoll) {
+        accountsPollCountRef.current += 1
+        if (accountsPollCountRef.current % GOOGLE_ADS_CREDENTIALS_POLL_REFRESH_EVERY === 0) {
+          await refreshAuthFromCredentials()
+        }
+      } else if (forceRefresh) {
+        accountsPollCountRef.current = 0
+      }
       const params = new URLSearchParams({ filterByUserMcc: 'true' })
       if (forceRefresh) {
         params.set('refresh', 'true')

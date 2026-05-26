@@ -94,3 +94,57 @@ export function throwAccountsListFetchError(
   if (needsReauth) error.needsReauth = true
   throw error
 }
+
+/** 异步轮询时每隔 N 次刷新一次凭证状态，避免 auth_type 长期过期 */
+export const GOOGLE_ADS_CREDENTIALS_POLL_REFRESH_EVERY = 5
+
+export type ParsedGoogleAdsCredentialsStatus = {
+  authType: 'oauth' | 'service_account'
+  serviceAccountId?: string
+  hasCredentials: boolean
+  authConfigWarning: string | null
+}
+
+/** 解析 GET /api/google-ads/credentials 的 JSON（需已校验 response.ok） */
+export function parseCredentialsStatusResponse(data: unknown): ParsedGoogleAdsCredentialsStatus {
+  const record = data && typeof data === 'object' ? (data as Record<string, unknown>) : null
+  const payload =
+    record?.data && typeof record.data === 'object' ? (record.data as Record<string, unknown>) : null
+
+  if (!record?.success || !payload) {
+    return {
+      authType: 'oauth',
+      hasCredentials: false,
+      authConfigWarning: null,
+    }
+  }
+
+  const hasRefreshToken = Boolean(payload.hasRefreshToken)
+  const hasServiceAccount = Boolean(payload.hasServiceAccount)
+  const authType: 'oauth' | 'service_account' =
+    payload.authType === 'service_account'
+      ? 'service_account'
+      : payload.authType === 'oauth'
+        ? 'oauth'
+        : hasRefreshToken
+          ? 'oauth'
+          : hasServiceAccount
+            ? 'service_account'
+            : 'oauth'
+
+  return {
+    authType,
+    serviceAccountId: payload.serviceAccountId ? String(payload.serviceAccountId) : undefined,
+    hasCredentials: Boolean(payload.hasCredentials),
+    authConfigWarning: formatNullableErrorMessage(payload.authConfigWarning),
+  }
+}
+
+export function credentialsStatusErrorMessage(data: unknown, fallback = '获取凭证状态失败'): string {
+  const record = data && typeof data === 'object' ? (data as Record<string, unknown>) : null
+  return (
+    formatNullableErrorMessage(record?.message) ||
+    formatNullableErrorMessage(record?.error) ||
+    fallback
+  )
+}

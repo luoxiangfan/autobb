@@ -10,11 +10,15 @@
  * 依赖：使用现有的google-ads-api.ts OAuth基础设施
  */
 
-import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB } from './google-ads-api'
+import { getCustomerWithCredentials } from './google-ads-api'
 import {
   getGoogleAdsAuthContext,
   resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
+import {
+  resolveAndHealSyncUserCredentials,
+  resolveOAuthRefreshToken,
+} from './google-ads-accounts-auth'
 import { getDatabase } from './db'
 import type { AdStrengthRating } from './ad-strength-evaluator'
 import { executeGAQLQueryPython } from './python-ads-client'
@@ -64,24 +68,22 @@ async function getGoogleAdsClient(
     }
   }
 
-  const refreshToken = apiAuth.refreshToken || authContext.oauthCredentials?.refresh_token || ''
+  const credResolved = await resolveAndHealSyncUserCredentials({
+    userId,
+    authContext,
+    authType: 'oauth',
+    serviceAccountId: null,
+  })
+  if (!credResolved.ok) {
+    throw new Error(credResolved.message)
+  }
 
+  const refreshToken = resolveOAuthRefreshToken(apiAuth, authContext.oauthCredentials)
   if (!refreshToken) {
     throw new Error('Google Ads账号缺少refresh token')
   }
 
-  const oauthCredentials = authContext.oauthCredentials
-  const credentials =
-    oauthCredentials?.client_id &&
-    oauthCredentials.client_secret &&
-    oauthCredentials.developer_token
-      ? {
-          client_id: oauthCredentials.client_id,
-          client_secret: oauthCredentials.client_secret,
-          developer_token: oauthCredentials.developer_token,
-          login_customer_id: oauthCredentials.login_customer_id || '',
-        }
-      : await getGoogleAdsCredentialsFromDB(userId)
+  const credentials = credResolved.userCredentials
 
   return {
     customer: await getCustomerWithCredentials({

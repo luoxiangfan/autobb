@@ -37,7 +37,10 @@ import { Link2, CheckCircle2, AlertCircle, Plus, RefreshCw, ExternalLink, Loader
 import { showError, showSuccess } from '@/lib/toast-utils'
 import {
   buildGoogleAdsApiErrorMessage,
+  credentialsStatusErrorMessage,
   formatNullableErrorMessage,
+  GOOGLE_ADS_CREDENTIALS_POLL_REFRESH_EVERY,
+  parseCredentialsStatusResponse,
   safeReadJson,
   throwAccountsListFetchError,
 } from '@/lib/google-ads-credentials-errors'
@@ -148,6 +151,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
     authType: 'oauth' | 'service_account'
     serviceAccountId?: string
   } | null>(null)
+  const accountsPollCountRef = useRef(0)
   const [showGuideDialog, setShowGuideDialog] = useState(false)
 
   useEffect(() => {
@@ -155,7 +159,6 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
   }, [selectedAccounts])
 
   useEffect(() => {
-    checkCredentials()
     fetchAccounts()
 
     return () => {
@@ -166,20 +169,26 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
     }
   }, [])
 
-  const checkCredentials = async () => {
-    try {
-      const response = await fetch('/api/google-ads/credentials', {
-        credentials: 'include'
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setHasCredentials(Boolean(data?.data?.hasCredentials))
-        setAuthConfigWarning(formatNullableErrorMessage(data?.data?.authConfigWarning))
-      }
-    } catch (error) {
-      console.error('Failed to check credentials:', error)
+  const refreshCredentialsStatus = async () => {
+    const credResponse = await fetch('/api/google-ads/credentials', {
+      credentials: 'include',
+    })
+    if (!credResponse.ok) {
+      const errorData = await safeReadJson(credResponse)
+      throw new Error(buildGoogleAdsApiErrorMessage(credResponse, errorData, '获取凭证状态失败'))
     }
+    const credData = await credResponse.json()
+    if (!credData?.success) {
+      throw new Error(credentialsStatusErrorMessage(credData))
+    }
+    const parsed = parseCredentialsStatusResponse(credData)
+    accountsAuthRef.current = {
+      authType: parsed.authType,
+      serviceAccountId: parsed.serviceAccountId,
+    }
+    setHasCredentials(parsed.hasCredentials)
+    setAuthConfigWarning(parsed.authConfigWarning)
+    return parsed
   }
 
   const scheduleRefreshPoll = () => {
@@ -199,27 +208,23 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
       setRefreshFailed(false)
       setNeedsReauth(false)
 
-      if (!isPoll || !accountsAuthRef.current) {
-        const credResponse = await fetch('/api/google-ads/credentials', {
-          credentials: 'include',
-        })
-        if (!credResponse.ok) {
-          const errorData = await safeReadJson(credResponse)
-          throw new Error(
-            buildGoogleAdsApiErrorMessage(credResponse, errorData, '获取凭证状态失败')
-          )
-        }
-        const credData = await credResponse.json()
-        const authType: 'oauth' | 'service_account' =
-          credData.data?.authType === 'service_account' ? 'service_account' : 'oauth'
-        accountsAuthRef.current = {
-          authType,
-          serviceAccountId: credData.data?.serviceAccountId
-            ? String(credData.data.serviceAccountId)
-            : undefined,
-        }
-        setHasCredentials(Boolean(credData?.data?.hasCredentials))
-        setAuthConfigWarning(formatNullableErrorMessage(credData?.data?.authConfigWarning))
+      if (forceRefresh) {
+        accountsAuthRef.current = null
+        accountsPollCountRef.current = 0
+      }
+
+      if (isPoll) {
+        accountsPollCountRef.current += 1
+      }
+
+      const shouldRefreshCredentials =
+        forceRefresh ||
+        !accountsAuthRef.current ||
+        !isPoll ||
+        accountsPollCountRef.current % GOOGLE_ADS_CREDENTIALS_POLL_REFRESH_EVERY === 0
+
+      if (shouldRefreshCredentials) {
+        await refreshCredentialsStatus()
       }
 
       const { authType, serviceAccountId } = accountsAuthRef.current!
