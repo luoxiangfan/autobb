@@ -5,7 +5,7 @@ const dbFns = vi.hoisted(() => ({
 }))
 
 const authContextFns = vi.hoisted(() => ({
-  getGoogleAdsAuthContext: vi.fn(),
+  resolveGoogleAdsApiAuthForAccount: vi.fn(),
 }))
 
 const apiFns = vi.hoisted(() => ({
@@ -20,30 +20,7 @@ vi.mock('@/lib/db', () => ({
 }))
 
 vi.mock('@/lib/google-ads-auth-context', () => ({
-  getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext: (ctx: {
-    auth: { authType: string }
-    oauthCredentials: { refresh_token?: string } | null
-    serviceAccountConfig: { id?: string } | null
-  }) => {
-    if (ctx.auth.authType === 'oauth') {
-      return Boolean(ctx.oauthCredentials?.refresh_token)
-    }
-    return Boolean(ctx.serviceAccountConfig?.id)
-  },
-  resolveEffectiveServiceAccountId: (
-    _linked: string | null | undefined,
-    ctx: {
-      auth: { authType: string; serviceAccountId?: string }
-      serviceAccountConfig: { id?: string } | null
-    }
-  ) => {
-    if (ctx.auth.authType !== 'service_account') return undefined
-    return ctx.auth.serviceAccountId || ctx.serviceAccountConfig?.id
-  },
-  getServiceAccountMccFromContext: (ctx: {
-    serviceAccountConfig: { mccCustomerId?: string } | null
-  }) => ctx.serviceAccountConfig?.mccCustomerId,
+  resolveGoogleAdsApiAuthForAccount: authContextFns.resolveGoogleAdsApiAuthForAccount,
 }))
 
 vi.mock('@/lib/google-ads-api', () => ({
@@ -60,18 +37,28 @@ describe('queryActiveCampaigns login_customer_id fallback', () => {
           id: 775,
           customer_id: '6073761127',
           parent_mcc_id: '3958592249',
+          service_account_id: null,
         }
       }
       return null
     })
 
-    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
-      auth: { authType: 'oauth' },
-      oauthCredentials: {
-        refresh_token: 'refresh-token',
-        login_customer_id: '7888509345',
+    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
+      ok: true,
+      ctx: {
+        auth: { authType: 'oauth' },
+        oauthCredentials: {
+          refresh_token: 'refresh-token',
+          login_customer_id: '7888509345',
+        },
+        serviceAccountConfig: null,
       },
-      serviceAccountConfig: null,
+      apiAuth: {
+        authType: 'oauth',
+        refreshToken: 'refresh-token',
+        serviceAccountId: undefined,
+        oauthLoginCustomerId: '7888509345',
+      },
     })
   })
 
@@ -100,7 +87,46 @@ describe('queryActiveCampaigns login_customer_id fallback', () => {
     const { queryActiveCampaigns } = await import('@/lib/active-campaigns-query')
     const result = await queryActiveCampaigns(1, 775, 42)
 
+    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledWith(42, null)
     expect(apiFns.listGoogleAdsCampaigns).toHaveBeenCalledTimes(2)
     expect(result.total.enabled).toBe(1)
+  })
+
+  it('resolves auth with linked account service_account_id', async () => {
+    dbFns.queryOne.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM google_ads_accounts')) {
+        return {
+          id: 775,
+          customer_id: '6073761127',
+          parent_mcc_id: '3958592249',
+          service_account_id: 'sa-linked',
+        }
+      }
+      return null
+    })
+
+    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValueOnce({
+      ok: true,
+      ctx: { auth: { authType: 'service_account' } },
+      apiAuth: {
+        authType: 'service_account',
+        refreshToken: '',
+        serviceAccountId: 'sa-linked',
+        serviceAccountMccId: '1112223333',
+      },
+    })
+
+    apiFns.listGoogleAdsCampaigns.mockResolvedValueOnce([])
+
+    const { queryActiveCampaigns } = await import('@/lib/active-campaigns-query')
+    await queryActiveCampaigns(1, 775, 42)
+
+    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledWith(42, 'sa-linked')
+    expect(apiFns.listGoogleAdsCampaigns).toHaveBeenCalledWith(
+      expect.objectContaining({
+        authType: 'service_account',
+        serviceAccountId: 'sa-linked',
+      })
+    )
   })
 })

@@ -7,10 +7,7 @@
 import { enums } from 'google-ads-api'
 import { getDatabase } from './db'
 import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-  resolveEffectiveServiceAccountId,
-  getServiceAccountMccFromContext,
+  resolveGoogleAdsApiAuthForAccount,
   type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
 import { listGoogleAdsCampaigns } from './google-ads-api'
@@ -74,18 +71,25 @@ function normalizeCampaignStatus(status: unknown): 'ENABLED' | 'PAUSED' | 'REMOV
   return 'UNKNOWN'
 }
 
-async function loadGoogleAdsQueryAuth(userId: number) {
-  const ctx = await getGoogleAdsAuthContext(userId)
+async function loadGoogleAdsQueryAuth(
+  userId: number,
+  linkedAccountServiceAccountId?: string | null
+) {
+  const authResolved = await resolveGoogleAdsApiAuthForAccount(
+    userId,
+    linkedAccountServiceAccountId
+  )
 
-  if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
+  if (!authResolved.ok) {
     throw new Error('Google Ads OAuth凭证或服务账号配置无效')
   }
 
+  const { ctx, apiAuth } = authResolved
   return {
     ctx,
-    refreshToken: ctx.oauthCredentials?.refresh_token || '',
-    serviceAccountId: resolveEffectiveServiceAccountId(undefined, ctx),
-    serviceAccountMccId: getServiceAccountMccFromContext(ctx),
+    refreshToken: apiAuth.refreshToken,
+    serviceAccountId: apiAuth.serviceAccountId,
+    serviceAccountMccId: apiAuth.serviceAccountMccId,
   }
 }
 
@@ -121,7 +125,7 @@ export async function queryActiveCampaigns(
   // 1. 获取Google Ads账号信息（包含parent_mcc_id用于MCC子账号权限）
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
   const adsAccount = await db.queryOne(
-    `SELECT id, customer_id, parent_mcc_id FROM google_ads_accounts
+    `SELECT id, customer_id, parent_mcc_id, service_account_id FROM google_ads_accounts
      WHERE id = ? AND user_id = ? AND ${isActiveCondition}`,
     [Number(googleAdsAccountId), Number(userId)]
   ) as any
@@ -131,7 +135,7 @@ export async function queryActiveCampaigns(
   }
 
   const { ctx, refreshToken, serviceAccountId, serviceAccountMccId } =
-    await loadGoogleAdsQueryAuth(userId)
+    await loadGoogleAdsQueryAuth(userId, adsAccount.service_account_id)
 
   const loginCustomerIdCandidates = buildLoginCustomerCandidates(
     adsAccount,
@@ -240,7 +244,7 @@ export async function pauseCampaigns(
 
   // 获取账号信息（包含parent_mcc_id用于MCC子账号权限）
   const adsAccount = await db.queryOne(
-    `SELECT customer_id, parent_mcc_id FROM google_ads_accounts WHERE id = ?`,
+    `SELECT customer_id, parent_mcc_id, service_account_id FROM google_ads_accounts WHERE id = ?`,
     [Number(googleAdsAccountId)]
   ) as any
 
@@ -249,7 +253,7 @@ export async function pauseCampaigns(
   }
 
   const { ctx, refreshToken, serviceAccountId, serviceAccountMccId } =
-    await loadGoogleAdsQueryAuth(userId)
+    await loadGoogleAdsQueryAuth(userId, adsAccount.service_account_id)
 
   const loginCustomerIdCandidates = buildLoginCustomerCandidates(
     adsAccount,
