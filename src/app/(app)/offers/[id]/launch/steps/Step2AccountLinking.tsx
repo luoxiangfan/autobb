@@ -183,8 +183,12 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
       } else if (!isPoll) {
         setLoading(true)
       }
-      setRefreshFailed(false)
-      setNeedsReauth(false)
+      if (!isPoll) {
+        setRefreshFailed(false)
+      }
+      if (forceRefresh) {
+        setNeedsReauth(false)
+      }
 
       const auth = await prepareAuthForAccountsFetch({ forceRefresh, isPoll })
 
@@ -217,6 +221,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
 
       const data = await response.json()
       setAuthConfigWarning(formatNullableErrorMessage(data.data?.authConfigWarning))
+      setNeedsReauth(false)
 
       if (data.success && data.data?.accounts) {
         setIsCached(Boolean(data.data.cached))

@@ -30,7 +30,12 @@ import {
 } from '@/lib/gemini-models'
 import { getGeminiEndpoint, type GeminiProvider } from '@/lib/gemini-config'
 import { ServiceAccountPermissionError } from '@/components/ServiceAccountPermissionError'
-import { parseAccountsListFetchFailure, safeReadJson } from '@/lib/google-ads-credentials-errors'
+import {
+  appendAccountsAuthToSearchParams,
+  parseAccountsListFetchFailure,
+  safeReadJson,
+} from '@/lib/google-ads-credentials-errors'
+import { useGoogleAdsAccountsAuth } from '@/hooks/useGoogleAdsAccountsAuth'
 import {
   DEFAULT_AFFILIATE_SYNC_INTERVAL_HOURS,
   DEFAULT_PARTNERBOOST_BASE_URL,
@@ -460,6 +465,7 @@ export default function SettingsPage() {
   const [verifyingGoogleAds, setVerifyingGoogleAds] = useState(false)
   const [startingOAuth, setStartingOAuth] = useState(false)
   const [googleAdsAuthMethod, setGoogleAdsAuthMethod] = useState<'oauth' | 'service_account'>('oauth')
+  const { prepareAuthForAccountsFetch } = useGoogleAdsAccountsAuth()
   const [serviceAccountForm, setServiceAccountForm] = useState({
     name: '',
     mccCustomerId: '',
@@ -822,17 +828,21 @@ export default function SettingsPage() {
       setLoadingGoogleAdsAccounts(true)
       setShowGoogleAdsAccounts(true)
 
-      // 构建URL参数
-      let url = '/api/google-ads/credentials/accounts?refresh=true'
-      const effectiveAuthMethod =
-        googleAdsCredentialStatus?.authType ?? googleAdsAuthMethod
-      const effectiveServiceAccountId =
-        serviceAccounts[0]?.id ?? googleAdsCredentialStatus?.serviceAccountId
-      if (effectiveAuthMethod === 'service_account' && effectiveServiceAccountId) {
-        url += `&auth_type=service_account&service_account_id=${encodeURIComponent(String(effectiveServiceAccountId))}`
-      } else {
-        url += '&auth_type=oauth'
-      }
+      const auth = await prepareAuthForAccountsFetch({ forceRefresh: true, isPoll: false })
+      const authForRequest =
+        auth.authType === 'service_account'
+          ? {
+              authType: 'service_account' as const,
+              serviceAccountId:
+                auth.serviceAccountId ||
+                serviceAccounts[0]?.id ||
+                googleAdsCredentialStatus?.serviceAccountId,
+            }
+          : auth
+
+      const params = new URLSearchParams({ refresh: 'true' })
+      appendAccountsAuthToSearchParams(params, authForRequest)
+      const url = `/api/google-ads/credentials/accounts?${params.toString()}`
 
       const response = await fetch(url, {
         credentials: 'include',

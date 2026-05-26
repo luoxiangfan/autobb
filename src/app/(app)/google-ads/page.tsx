@@ -9,6 +9,7 @@ import {
   formatNullableErrorMessage,
   safeReadJson,
   throwAccountsListFetchError,
+  type ParsedGoogleAdsCredentialsStatus,
 } from '@/lib/google-ads-credentials-errors'
 import { useGoogleAdsAccountsAuth } from '@/hooks/useGoogleAdsAccountsAuth'
 
@@ -68,7 +69,6 @@ export default function GoogleAdsPage() {
 
   const { prepareAuthForAccountsFetch, syncFromCredentialsResponse } = useGoogleAdsAccountsAuth({
     onCredentialsUpdated: (parsed) => {
-      setCurrentAuthType(parsed.authType)
       if (parsed.serviceAccountId) {
         setCurrentServiceAccountId(parsed.serviceAccountId)
       }
@@ -87,7 +87,6 @@ export default function GoogleAdsPage() {
   const [sortColumn, setSortColumn] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [currentServiceAccountId, setCurrentServiceAccountId] = useState<string | null>(null)
-  const [currentAuthType, setCurrentAuthType] = useState<'oauth' | 'service_account'>('oauth')
   const [searchKeyword, setSearchKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
 
@@ -153,8 +152,6 @@ export default function GoogleAdsPage() {
           fetchAccountsWithServiceAccount(parsed.serviceAccountId)
         } else if (parsed.hasCredentials && parsed.authType === 'oauth') {
           fetchAccounts()
-        } else if (data.data.hasRefreshToken) {
-          fetchAccounts()
         } else {
           fetchServiceAccounts()
         }
@@ -167,11 +164,29 @@ export default function GoogleAdsPage() {
     }
   }
 
-  const scheduleAccountsPoll = (mode: 'oauth' | 'service_account', serviceAccountId?: string | null) => {
+  const enrichAccountsWithMccNames = (allAccounts: GoogleAdsAccount[]): GoogleAdsAccount[] => {
+    const mccMap = new Map<string, string>()
+    allAccounts.forEach((acc) => {
+      if (acc.manager) {
+        mccMap.set(acc.customerId, acc.descriptiveName)
+      }
+    })
+    return allAccounts.map((acc) => ({
+      ...acc,
+      parentMccName: acc.parentMcc ? mccMap.get(acc.parentMcc) : undefined,
+    }))
+  }
+
+  const scheduleAccountsPoll = (
+    auth: Pick<ParsedGoogleAdsCredentialsStatus, 'authType' | 'serviceAccountId'>,
+    fallbackServiceAccountId?: string | null
+  ) => {
     if (accountsPollTimerRef.current) clearTimeout(accountsPollTimerRef.current)
     accountsPollTimerRef.current = setTimeout(() => {
-      if (mode === 'service_account') {
-        if (serviceAccountId) fetchAccountsWithServiceAccount(serviceAccountId, false, true)
+      if (auth.authType === 'service_account') {
+        const saId = auth.serviceAccountId || fallbackServiceAccountId
+        if (saId) fetchAccountsWithServiceAccount(saId, false, true)
+        else fetchAccounts(false, true)
       } else {
         fetchAccounts(false, true)
       }
@@ -189,8 +204,6 @@ export default function GoogleAdsPage() {
         const data = await response.json()
         const accounts = data.accounts || []
         if (accounts.length > 0) {
-          // 有服务账号配置，使用服务账号获取账户
-          setCurrentAuthType('service_account')
           setCurrentServiceAccountId(accounts[0].id)
           fetchAccountsWithServiceAccount(accounts[0].id)
         }
@@ -200,28 +213,37 @@ export default function GoogleAdsPage() {
     }
   }
 
-  // 使用服务账号获取账户
-  const fetchAccountsWithServiceAccount = async (serviceAccountId: string, forceRefresh = false, isPoll = false) => {
+  const fetchAccountsList = async (
+    forceRefresh = false,
+    isPoll = false,
+    opts?: { fallbackServiceAccountId?: string }
+  ) => {
     try {
       if (!isPoll && !forceRefresh) setAccountsLoading(true)
-      if (forceRefresh) setAccountsSyncing(true)
-      if (forceRefresh) setAccountsSyncError(null)
+      if (forceRefresh) {
+        setAccountsSyncing(true)
+        setAccountsSyncError(null)
+      }
 
       const auth = await prepareAuthForAccountsFetch({ forceRefresh, isPoll })
-      const effectiveServiceAccountId =
-        auth.authType === 'service_account' && auth.serviceAccountId
-          ? auth.serviceAccountId
-          : serviceAccountId
+      const authForRequest: Pick<ParsedGoogleAdsCredentialsStatus, 'authType' | 'serviceAccountId'> =
+        auth.authType === 'service_account'
+          ? {
+              authType: 'service_account',
+              serviceAccountId: auth.serviceAccountId || opts?.fallbackServiceAccountId,
+            }
+          : auth
+
+      if (authForRequest.authType === 'service_account' && !authForRequest.serviceAccountId) {
+        throw new Error('未找到服务账号配置，请前往设置页面配置')
+      }
 
       const params = new URLSearchParams({ filterByUserMcc: 'true' })
       if (forceRefresh) {
         params.set('refresh', 'true')
         params.set('async', 'true')
       }
-      appendAccountsAuthToSearchParams(params, {
-        authType: 'service_account',
-        serviceAccountId: effectiveServiceAccountId,
-      })
+      appendAccountsAuthToSearchParams(params, authForRequest)
       const url = `/api/google-ads/credentials/accounts?${params.toString()}`
       const response = await fetch(url, {
         credentials: 'include',
@@ -239,34 +261,18 @@ export default function GoogleAdsPage() {
         setAuthConfigWarning(formatNullableErrorMessage(data.data.authConfigWarning))
         setAccountsSyncError(formatNullableErrorMessage(data.data.refreshError))
         setAccountsSyncing(Boolean(data.data.refreshInProgress))
-        // 处理账号数据，添加 parentMccName
+
         const allAccounts = data.data.accounts || []
-        const mccMap = new Map<string, string>()
-
-        // 先建立 MCC ID -> 名称的映射
-        allAccounts.forEach((acc: GoogleAdsAccount) => {
-          if (acc.manager) {
-            mccMap.set(acc.customerId, acc.descriptiveName)
-          }
-        })
-
-        // 为每个账号添加 parentMccName
-        const enrichedAccounts = allAccounts.map((acc: GoogleAdsAccount) => ({
-          ...acc,
-          parentMccName: acc.parentMcc ? mccMap.get(acc.parentMcc) : undefined
-        }))
-
-        setAccounts(enrichedAccounts)
+        setAccounts(enrichAccountsWithMccNames(allAccounts))
         setIsCached(data.data.cached || false)
 
-        // 获取最新同步时间
         if (allAccounts.length > 0 && allAccounts[0].lastSyncAt) {
           setLastSyncAt(allAccounts[0].lastSyncAt)
         }
 
         if (forceRefresh || isPoll) {
           if (data.data.refreshInProgress) {
-            scheduleAccountsPoll('service_account', effectiveServiceAccountId)
+            scheduleAccountsPoll(authForRequest, opts?.fallbackServiceAccountId)
           } else {
             setAccountsSyncing(false)
           }
@@ -282,118 +288,54 @@ export default function GoogleAdsPage() {
     }
   }
 
-  // OAuth模式获取账户列表
-  const fetchAccounts = async (forceRefresh = false, isPoll = false) => {
-    try {
-      if (!isPoll && !forceRefresh) setAccountsLoading(true)
-      if (forceRefresh) setAccountsSyncing(true)
-      if (forceRefresh) setAccountsSyncError(null)
+  const fetchAccountsWithServiceAccount = async (
+    serviceAccountId: string,
+    forceRefresh = false,
+    isPoll = false
+  ) => fetchAccountsList(forceRefresh, isPoll, { fallbackServiceAccountId: serviceAccountId })
 
-      const auth = await prepareAuthForAccountsFetch({ forceRefresh, isPoll })
+  const fetchAccounts = async (forceRefresh = false, isPoll = false) =>
+    fetchAccountsList(forceRefresh, isPoll)
 
-      const params = new URLSearchParams({ filterByUserMcc: 'true' })
-      if (forceRefresh) {
-        params.set('refresh', 'true')
-        params.set('async', 'true')
-      }
-      appendAccountsAuthToSearchParams(params, auth)
-      const url = `/api/google-ads/credentials/accounts?${params.toString()}`
-      const response = await fetch(url, {
-        credentials: 'include',
-        cache: 'no-store',
-      })
-
-      if (!response.ok) {
-        const errorData = await safeReadJson(response)
-        throwOnAccountsFetchError(response, errorData)
-      }
-
-      const data = await response.json()
-
-      if (data.success && data.data) {
-        setAuthConfigWarning(formatNullableErrorMessage(data.data.authConfigWarning))
-        setAccountsSyncError(formatNullableErrorMessage(data.data.refreshError))
-        setAccountsSyncing(Boolean(data.data.refreshInProgress))
-        // 处理账号数据，添加 parentMccName
-        const allAccounts = data.data.accounts || []
-        const mccMap = new Map<string, string>()
-
-        // 先建立 MCC ID -> 名称的映射
-        allAccounts.forEach((acc: GoogleAdsAccount) => {
-          if (acc.manager) {
-            mccMap.set(acc.customerId, acc.descriptiveName)
-          }
-        })
-
-        // 为每个账号添加 parentMccName
-        const enrichedAccounts = allAccounts.map((acc: GoogleAdsAccount) => ({
-          ...acc,
-          parentMccName: acc.parentMcc ? mccMap.get(acc.parentMcc) : undefined
-        }))
-
-        setAccounts(enrichedAccounts)
-        setIsCached(data.data.cached || false)
-
-        // 获取最新同步时间
-        if (allAccounts.length > 0 && allAccounts[0].lastSyncAt) {
-          setLastSyncAt(allAccounts[0].lastSyncAt)
-        }
-
-        if (forceRefresh || isPoll) {
-          if (data.data.refreshInProgress) {
-            scheduleAccountsPoll('oauth')
-          } else {
-            setAccountsSyncing(false)
-          }
-        }
-      }
-    } catch (err: any) {
-      console.error('获取账户列表失败:', err)
-      setError(formatErrorMessage(err) || '获取账户列表失败')
-      setAccountsSyncing(false)
-      setAccountsSyncError(null)
-    } finally {
-      if (!isPoll && !forceRefresh) setAccountsLoading(false)
-    }
-  }
-
-  // 刷新账户列表（服务账号模式下会重新获取最新的服务账号配置）
   const handleRefreshAccounts = async () => {
     setError('')
     setAccountsSyncError(null)
 
-    // 🔧 优化：服务账号模式下每次刷新都重新获取最新的服务账号配置
-    if (currentAuthType === 'service_account') {
-      try {
-        setAccountsSyncing(true)
-        // 重新获取最新的服务账号
+    try {
+      const auth = await prepareAuthForAccountsFetch({ forceRefresh: true, isPoll: false })
+
+      if (auth.authType === 'service_account') {
+        let serviceAccountId = auth.serviceAccountId || currentServiceAccountId
+
         const saResponse = await fetch('/api/google-ads/service-account', {
           credentials: 'include',
         })
 
         if (saResponse.ok) {
           const saData = await saResponse.json()
-          const accounts = saData.accounts || []
-
-          if (accounts.length > 0) {
-            const latestServiceAccountId = accounts[0].id
-            setCurrentServiceAccountId(latestServiceAccountId)
-            await fetchAccountsWithServiceAccount(latestServiceAccountId, true)
-          } else {
-            // 没有服务账号配置，切换到OAuth模式或提示
-            setError('未找到服务账号配置，请前往设置页面配置')
+          const saList = saData.accounts || []
+          if (saList.length > 0) {
+            serviceAccountId = saList[0].id
+            setCurrentServiceAccountId(serviceAccountId)
           }
         } else {
           throw new Error('获取服务账号配置失败')
         }
-      } catch (err: any) {
-        console.error('刷新账户列表失败:', err)
-        setError(formatErrorMessage(err) || '刷新账户列表失败')
-        setAccountsSyncing(false)
+
+        if (!serviceAccountId) {
+          setError('未找到服务账号配置，请前往设置页面配置')
+          return
+        }
+
+        await fetchAccountsList(true, false, { fallbackServiceAccountId: serviceAccountId })
+        return
       }
-    } else {
-      // OAuth模式
-      fetchAccounts(true)
+
+      await fetchAccountsList(true, false)
+    } catch (err: any) {
+      console.error('刷新账户列表失败:', err)
+      setError(formatErrorMessage(err) || '刷新账户列表失败')
+      setAccountsSyncing(false)
     }
   }
 

@@ -33,9 +33,8 @@ async function getGoogleAdsClient(
 ): Promise<{ customer: any; useServiceAccount: boolean; serviceAccountId?: string }> {
   const db = await getDatabase()
 
-  // 获取账号信息（包含refresh_token和serviceAccountId）
   const account = await db.queryOne(
-    `SELECT id, refresh_token, parent_mcc_id, service_account_id FROM google_ads_accounts
+    `SELECT id, parent_mcc_id, service_account_id FROM google_ads_accounts
      WHERE user_id = ? AND customer_id = ?`,
     [userId, customerId]
   ) as any
