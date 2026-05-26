@@ -38,7 +38,9 @@ import {
   createGoogleAdsCalloutExtensions,
   createGoogleAdsSitelinkExtensions,
   ensureKeywordsInHeadlines,
+  type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-api'
+import { resolveHealedOAuthCredentialsFields } from '@/lib/google-ads-accounts-auth'
 import {
   buildPublishResumePlan,
   collectCampaignNameCandidates,
@@ -595,6 +597,18 @@ export async function executeCampaignPublish(
     const refreshToken = apiAuth.refreshToken
     const serviceAccountId = apiAuth.serviceAccountId
 
+    let oauthCredentials: OAuthApiCredentialsFields | undefined
+    if (apiAuth.authType === 'oauth') {
+      const healed = await resolveHealedOAuthCredentialsFields({
+        userId,
+        authContext,
+      })
+      if (!healed.ok) {
+        throw new Error(healed.message)
+      }
+      oauthCredentials = healed.credentials
+    }
+
     const loginCustomerIdCandidates = resolveLoginCustomerCandidates({
       authType: apiAuth.authType,
       accountParentMccId: adsAccount.parent_mcc_id,
@@ -661,6 +675,7 @@ export async function executeCampaignPublish(
       userId,
       authType: apiAuth.authType,
       serviceAccountId,
+      oauthCredentials,
       runWithLoginCustomerFallbackAndHeartbeat,
     }
 
@@ -831,6 +846,7 @@ export async function executeCampaignPublish(
               loginCustomerId,
               authType: apiAuth.authType,
               serviceAccountId,
+              credentials: oauthCredentials,
             })
         )
 
@@ -863,6 +879,7 @@ export async function executeCampaignPublish(
               loginCustomerId,
               authType: apiAuth.authType,
               serviceAccountId,
+              credentials: oauthCredentials,
             })
         )
         console.log(`✅ Campaign预算已更新 (Google ID: ${googleCampaignId})`)
@@ -890,6 +907,7 @@ export async function executeCampaignPublish(
             loginCustomerId,
             authType: apiAuth.authType,
             serviceAccountId,
+            credentials: oauthCredentials,
           })
       )
       googleCampaignId = createdCampaign.campaignId
@@ -914,6 +932,7 @@ export async function executeCampaignPublish(
           loginCustomerId,
           authType: apiAuth.authType,
           serviceAccountId,
+          credentials: oauthCredentials,
           skipCache: true,
         })
       )
@@ -1000,6 +1019,7 @@ export async function executeCampaignPublish(
             loginCustomerId,
             authType: apiAuth.authType,
             serviceAccountId,
+            credentials: oauthCredentials,
           })
       )
 
@@ -1032,6 +1052,7 @@ export async function executeCampaignPublish(
           loginCustomerId,
           authType: apiAuth.authType,
           serviceAccountId,
+          credentials: oauthCredentials,
         })
       )
 
@@ -1132,6 +1153,7 @@ export async function executeCampaignPublish(
           loginCustomerId,
           authType: apiAuth.authType,
           serviceAccountId,
+          credentials: oauthCredentials,
         })
       )
     }
@@ -1150,6 +1172,7 @@ export async function executeCampaignPublish(
           loginCustomerId,
           authType: apiAuth.authType,
           serviceAccountId,
+          credentials: oauthCredentials,
         })
       )
     }
@@ -1202,6 +1225,7 @@ export async function executeCampaignPublish(
           loginCustomerId,
           authType: apiAuth.authType,
           serviceAccountId,
+          credentials: oauthCredentials,
         })
       )
 
@@ -1284,7 +1308,8 @@ export async function executeCampaignPublish(
           userId,
           loginCustomerId,
           authType: apiAuth.authType,
-          serviceAccountId
+          serviceAccountId,
+          credentials: oauthCredentials,
         })
       )
       console.log(`  ✅ [串行1/2] 成功添加${finalCallouts.length}个Callout扩展`)
@@ -1312,7 +1337,8 @@ export async function executeCampaignPublish(
           userId,
           loginCustomerId,
           authType: apiAuth.authType,
-          serviceAccountId
+          serviceAccountId,
+          credentials: oauthCredentials,
         })
       )
       console.log(`  ✅ [串行2/2] 成功添加${formattedSitelinks.length}个Sitelink扩展`)
@@ -1339,6 +1365,7 @@ export async function executeCampaignPublish(
           loginCustomerId,
           authType: apiAuth.authType,
           serviceAccountId,
+          credentials: oauthCredentials,
         })
       )
     } catch (goalError: any) {
@@ -1362,6 +1389,7 @@ export async function executeCampaignPublish(
             loginCustomerId,
             authType: apiAuth.authType,
             serviceAccountId,
+            credentials: oauthCredentials,
           })
         )
         finalCampaignStatus = 'ENABLED'
@@ -1433,6 +1461,7 @@ export async function executeCampaignPublish(
             loginCustomerId,
             authType: apiAuth.authType,
             serviceAccountId,
+            credentials: oauthCredentials,
           })
         )
       } catch (pauseError: any) {

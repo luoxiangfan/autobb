@@ -11,6 +11,10 @@ import { getDatabase } from './db'
 import { saveCreativePerformance, PerformanceData } from './bonus-score-calculator'
 import { getCustomerWithCredentials } from './google-ads-api'
 import {
+  resolveHealedOAuthCredentialsFields,
+  type OAuthApiCredentialsFields,
+} from './google-ads-accounts-auth'
+import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsApiAuthFromContext,
@@ -273,6 +277,18 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
         ? apiAuth.serviceAccountMccId
         : apiAuth.oauthLoginCustomerId
 
+    let oauthCredentials: OAuthApiCredentialsFields | undefined
+    if (apiAuth.authType === 'oauth') {
+      const healed = await resolveHealedOAuthCredentialsFields({
+        userId: userIdNum,
+        authContext: ctx,
+      })
+      if (!healed.ok) {
+        throw new Error(healed.message)
+      }
+      oauthCredentials = healed.credentials
+    }
+
     const customer = await getCustomerWithCredentials({
       customerId: account.customer_id,
       refreshToken: apiAuth.refreshToken,
@@ -281,6 +297,7 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
       loginCustomerId,
       authType: apiAuth.authType,
       serviceAccountId: apiAuth.serviceAccountId,
+      credentials: oauthCredentials,
     })
 
     return await syncAllCreativesPerformance(

@@ -11,7 +11,7 @@
 
 import { Customer } from 'google-ads-api'
 import { withRetry } from './retry'
-import { getCustomerWithCredentials } from './google-ads-api'
+import { getCustomerWithCredentials, type OAuthApiCredentialsFields } from './google-ads-api'
 
 function getErrorText(error: any): string {
   if (!error) return ''
@@ -62,6 +62,7 @@ export async function setCampaignPageViewGoalWithCredentials(params: {
   loginCustomerId?: string
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
+  credentials?: OAuthApiCredentialsFields
 }): Promise<boolean> {
   try {
     const {customerId, campaignId, authType = 'oauth'} = params

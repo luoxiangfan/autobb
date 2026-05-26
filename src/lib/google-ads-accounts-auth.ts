@@ -145,21 +145,60 @@ export async function resolveAndHealSyncUserCredentials(params: {
   }
 }
 
-/** OAuth API 客户端所需的基础凭证（不含 refresh_token，refresh 由调用方单独传入） */
-export type OAuthApiClientCredentials = {
+/** OAuth API 客户端三元组（不含 refresh_token） */
+export type OAuthApiCredentialsFields = {
   client_id: string
   client_secret: string
   developer_token: string
+}
+
+/** 含 login_customer_id 的 OAuth 客户端凭证 */
+export type OAuthApiClientCredentials = OAuthApiCredentialsFields & {
   login_customer_id: string
+}
+
+function toOAuthApiCredentialsFields(
+  userCredentials: SyncUserCredentials
+): OAuthApiCredentialsFields {
+  return {
+    client_id: userCredentials.client_id,
+    client_secret: userCredentials.client_secret,
+    developer_token: userCredentials.developer_token,
+  }
+}
+
+/**
+ * 在已持有 authContext 时解析并 heal OAuth client 凭证（避免重复 resolve/heal）。
+ */
+export async function resolveHealedOAuthCredentialsFields(params: {
+  userId: number
+  authContext: GoogleAdsAuthContext
+}): Promise<{ ok: true; credentials: OAuthApiCredentialsFields } | { ok: false; message: string }> {
+  if (params.authContext.auth.authType === 'service_account') {
+    return { ok: false, message: `用户(ID=${params.userId})当前使用服务账号认证，无法读取 OAuth 基础凭证` }
+  }
+
+  const credResolved = await resolveAndHealSyncUserCredentials({
+    userId: params.userId,
+    authContext: params.authContext,
+    authType: 'oauth',
+    serviceAccountId: null,
+  })
+  if (!credResolved.ok) {
+    return { ok: false, message: credResolved.message }
+  }
+
+  return { ok: true, credentials: toOAuthApiCredentialsFields(credResolved.userCredentials) }
 }
 
 /**
  * 通过 auth-context 解析 OAuth client 凭证（含 developer_token heal）。
- * 供 getCustomerWithCredentials 等 API 调用方在未显式传入 credentials 时使用。
  */
-export async function resolveOAuthApiCredentialsForUser(
-  userId: number
+export async function resolveOAuthClientCredentialsForUser(
+  userId: number,
+  options: { requireLoginCustomerId?: boolean } = {}
 ): Promise<OAuthApiClientCredentials> {
+  const requireLogin = options.requireLoginCustomerId !== false
   const authContext = await getGoogleAdsAuthContext(userId)
   if (authContext.auth.authType === 'service_account') {
     throw new Error(`用户(ID=${userId})当前使用服务账号认证，无法读取 OAuth 基础凭证`)
@@ -176,16 +215,23 @@ export async function resolveOAuthApiCredentialsForUser(
   }
 
   const loginCustomerId = credResolved.userCredentials.login_customer_id?.trim() || ''
-  if (!loginCustomerId) {
+  if (requireLogin && !loginCustomerId) {
     throw new Error(`用户(ID=${userId})未配置 login_customer_id。OAuth模式需要此参数。`)
   }
 
   return {
-    client_id: credResolved.userCredentials.client_id,
-    client_secret: credResolved.userCredentials.client_secret,
-    developer_token: credResolved.userCredentials.developer_token,
+    ...toOAuthApiCredentialsFields(credResolved.userCredentials),
     login_customer_id: loginCustomerId,
   }
+}
+
+/**
+ * 解析 OAuth 凭证且要求配置 login_customer_id（历史默认行为）。
+ */
+export async function resolveOAuthApiCredentialsForUser(
+  userId: number
+): Promise<OAuthApiClientCredentials> {
+  return resolveOAuthClientCredentialsForUser(userId, { requireLoginCustomerId: true })
 }
 
 export function developerTokenLooksInvalid(developerToken: string, clientSecret: string): boolean {

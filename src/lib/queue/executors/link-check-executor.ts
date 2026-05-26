@@ -24,6 +24,10 @@ import { resolveAffiliateLink } from '@/lib/url-resolver'
 import { getProxyForCountry } from '../user-proxy-loader'
 import { analyzeProxyError } from './proxy-error-handler'
 import { pauseClickFarmTasksByOfferId } from '../../click-farm'
+import {
+  resolveHealedOAuthCredentialsFields,
+  type OAuthApiCredentialsFields,
+} from '@/lib/google-ads-accounts-auth'
 import { resolveGoogleAdsApiAuthForAccount } from '@/lib/google-ads-auth-context'
 import { updateGoogleAdsCampaignStatus } from '../../google-ads-api'
 
@@ -388,6 +392,21 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                         continue
                       }
 
+                      let oauthCredentials: OAuthApiCredentialsFields | undefined
+                      if (apiAuth.authType === 'oauth') {
+                        const healed = await resolveHealedOAuthCredentialsFields({
+                          userId: offer.user_id,
+                          authContext: authResolved.ctx,
+                        })
+                        if (!healed.ok) {
+                          console.warn(
+                            `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: ${healed.message}`
+                          )
+                          continue
+                        }
+                        oauthCredentials = healed.credentials
+                      }
+
                       await updateGoogleAdsCampaignStatus({
                         customerId: adsAccount.customer_id,
                         refreshToken: apiAuth.refreshToken,
@@ -397,6 +416,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                         userId: offer.user_id,
                         authType: apiAuth.authType,
                         serviceAccountId: apiAuth.serviceAccountId,
+                        credentials: oauthCredentials,
                       })
                       pausedInGoogleAds++
                       console.log(`   ⏸️  已暂停 Google Ads 广告系列 ${campaign.campaign_id}`)

@@ -1,5 +1,10 @@
+import { resolveHealedOAuthCredentialsFields } from './google-ads-accounts-auth'
 import { resolveGoogleAdsApiAuthForAccount } from './google-ads-auth-context'
-import { removeGoogleAdsCampaign, updateGoogleAdsCampaignStatus } from './google-ads-api'
+import {
+  removeGoogleAdsCampaign,
+  updateGoogleAdsCampaignStatus,
+  type OAuthApiCredentialsFields,
+} from './google-ads-api'
 import { getGoogleAdsAccountDeleteRemoteConfig } from './google-ads-account-delete-config'
 import { runWithConcurrency, withTimeout } from './run-with-concurrency'
 
@@ -152,6 +157,23 @@ export async function executeGoogleAdsCampaignRemoteActions(
     const refreshToken = apiAuth.refreshToken
     const serviceAccountId = apiAuth.serviceAccountId
 
+    let oauthCredentials: OAuthApiCredentialsFields | undefined
+    if (apiAuth.authType === 'oauth') {
+      const healed = await resolveHealedOAuthCredentialsFields({
+        userId,
+        authContext: ctx,
+      })
+      if (!healed.ok) {
+        return {
+          ...summary,
+          executed: false,
+          skipReason: 'CREDENTIALS_MISSING',
+          failures: [{ campaignId: '*', reason: healed.message }],
+        }
+      }
+      oauthCredentials = healed.credentials
+    }
+
     let loginCustomerId: string | undefined = apiAuth.oauthLoginCustomerId
     if (!loginCustomerId && adsAccount.parent_mcc_id) {
       loginCustomerId = String(adsAccount.parent_mcc_id)
@@ -192,6 +214,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
             loginCustomerId,
             authType: auth.authType,
             serviceAccountId,
+            credentials: oauthCredentials,
           })
           summary.removed++
         } else {
@@ -205,6 +228,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
             loginCustomerId,
             authType: auth.authType,
             serviceAccountId,
+            credentials: oauthCredentials,
           })
           summary.paused++
         }
@@ -230,6 +254,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
                 loginCustomerId,
                 authType: auth.authType,
                 serviceAccountId,
+                credentials: oauthCredentials,
               }),
               remoteConfig.perCampaignTimeoutMs,
               `Campaign ${googleCampaignId} pause fallback`

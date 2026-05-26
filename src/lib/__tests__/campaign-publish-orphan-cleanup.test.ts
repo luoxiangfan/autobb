@@ -8,10 +8,35 @@ vi.mock('@/lib/google-ads-api', () => ({
   updateGoogleAdsCampaignStatus: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getGoogleAdsCredentials: vi.fn(),
-  getUserAuthType: vi.fn(),
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  getGoogleAdsAuthContext: vi.fn(async () => ({
+    auth: { authType: 'oauth' },
+    oauthCredentials: { refresh_token: 'rt', login_customer_id: '111' },
+  })),
+  hasConfiguredGoogleAdsAuthFromContext: vi.fn(() => true),
+  resolveGoogleAdsApiAuthFromContext: vi.fn(async () => ({
+    authType: 'oauth',
+    refreshToken: 'rt',
+    serviceAccountId: undefined,
+    oauthLoginCustomerId: '111',
+    serviceAccountMccId: undefined,
+  })),
 }))
+
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    resolveHealedOAuthCredentialsFields: vi.fn(async () => ({
+      ok: true as const,
+      credentials: {
+        client_id: 'client-id',
+        client_secret: 'client-secret',
+        developer_token: 'developer-token',
+      },
+    })),
+  }
+})
 
 vi.mock('@/lib/google-ads-login-customer', () => ({
   resolveLoginCustomerCandidates: vi.fn(() => ['111']),
@@ -20,7 +45,6 @@ vi.mock('@/lib/google-ads-login-customer', () => ({
 
 import { getDatabase } from '@/lib/db'
 import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads-api'
-import { getGoogleAdsCredentials, getUserAuthType } from '@/lib/google-ads-oauth'
 import {
   findHistoricalOrphanCampaignsForOffer,
   pauseHistoricalOrphanGoogleCampaignsForOffer,
@@ -29,13 +53,6 @@ import {
 describe('campaign-publish-orphan-cleanup', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(getGoogleAdsCredentials).mockResolvedValue({
-      refresh_token: 'rt',
-      login_customer_id: '111',
-    } as any)
-    vi.mocked(getUserAuthType).mockResolvedValue({
-      authType: 'oauth',
-    } as any)
   })
 
   it('findHistoricalOrphanCampaignsForOffer returns orphans across all ads accounts', async () => {

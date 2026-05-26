@@ -203,7 +203,7 @@ async function executeOAuthQueryWithTracking(params: {
  *
  * @param customerId Google Ads客户ID
  * @param campaignId Campaign ID
- * @param userId 用户ID（用于获取refresh_token）
+ * @param userId 用户ID（用于解析 auth-context 与 API 客户端）
  */
 export async function getAdStrength(
   customerId: string,

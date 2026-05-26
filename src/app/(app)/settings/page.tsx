@@ -760,7 +760,8 @@ export default function SettingsPage() {
         if (data.data?.authType === 'oauth' || data.data?.authType === 'service_account') {
           setGoogleAdsAuthMethod(data.data.authType)
         }
-        if (data.data?.authType === 'service_account' || data.data?.hasServiceAccount) {
+        // 仅管理 SA 配置列表；OAuth 为当前认证方式时不因 hasServiceAccount 误触发账号拉取
+        if (data.data?.authType === 'service_account' || (data.data?.hasServiceAccount && data.data?.authType !== 'oauth')) {
           void fetchServiceAccounts()
         }
       }

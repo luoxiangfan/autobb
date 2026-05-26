@@ -10,7 +10,11 @@ import {
   resolveGoogleAdsApiAuthForAccount,
   type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
-import { listGoogleAdsCampaigns } from './google-ads-api'
+import {
+  listGoogleAdsCampaigns,
+  type OAuthApiCredentialsFields,
+} from './google-ads-api'
+import { resolveHealedOAuthCredentialsFields } from './google-ads-accounts-auth'
 import {
   resolveLoginCustomerCandidates,
   isGoogleAdsAccountAccessError,
@@ -85,11 +89,21 @@ async function loadGoogleAdsQueryAuth(
   }
 
   const { ctx, apiAuth } = authResolved
+  let oauthCredentials: OAuthApiCredentialsFields | undefined
+  if (apiAuth.authType === 'oauth') {
+    const healed = await resolveHealedOAuthCredentialsFields({ userId, authContext: ctx })
+    if (!healed.ok) {
+      throw new Error(healed.message)
+    }
+    oauthCredentials = healed.credentials
+  }
+
   return {
     ctx,
     refreshToken: apiAuth.refreshToken,
     serviceAccountId: apiAuth.serviceAccountId,
     serviceAccountMccId: apiAuth.serviceAccountMccId,
+    oauthCredentials,
   }
 }
 
@@ -134,7 +148,7 @@ export async function queryActiveCampaigns(
     throw new Error(`Google Ads账号不存在或未激活: ${googleAdsAccountId}`)
   }
 
-  const { ctx, refreshToken, serviceAccountId, serviceAccountMccId } =
+  const { ctx, refreshToken, serviceAccountId, serviceAccountMccId, oauthCredentials } =
     await loadGoogleAdsQueryAuth(userId, adsAccount.service_account_id)
 
   const loginCustomerIdCandidates = buildLoginCustomerCandidates(
@@ -160,6 +174,7 @@ export async function queryActiveCampaigns(
         loginCustomerId,
         authType: ctx.auth.authType,
         serviceAccountId,
+        credentials: oauthCredentials,
         skipCache: true  // 🔧 修复：暂停操作必须获取最新状态，不能使用缓存
       })
 
@@ -254,7 +269,7 @@ export async function pauseCampaigns(
     throw new Error(`Google Ads账号不存在或未激活: ${googleAdsAccountId}`)
   }
 
-  const { ctx, refreshToken, serviceAccountId, serviceAccountMccId } =
+  const { ctx, refreshToken, serviceAccountId, serviceAccountMccId, oauthCredentials } =
     await loadGoogleAdsQueryAuth(userId, adsAccount.service_account_id)
 
   const loginCustomerIdCandidates = buildLoginCustomerCandidates(
@@ -295,6 +310,7 @@ export async function pauseCampaigns(
             loginCustomerId,
             authType: ctx.auth.authType,
             serviceAccountId,
+            credentials: oauthCredentials,
           })
 
           preferredLoginCustomerId = loginCustomerId

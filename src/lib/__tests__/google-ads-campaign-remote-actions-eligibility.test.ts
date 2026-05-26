@@ -12,6 +12,21 @@ vi.mock('@/lib/google-ads-auth-context', () => ({
   resolveGoogleAdsApiAuthForAccount: authContextFns.resolveGoogleAdsApiAuthForAccount,
 }))
 
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    resolveHealedOAuthCredentialsFields: vi.fn(async () => ({
+      ok: true as const,
+      credentials: {
+        client_id: 'client-id',
+        client_secret: 'client-secret',
+        developer_token: 'developer-token',
+      },
+    })),
+  }
+})
+
 vi.mock('@/lib/google-ads-api', () => ({
   removeGoogleAdsCampaign: vi.fn(async () => {}),
   updateGoogleAdsCampaignStatus: vi.fn(async () => {}),

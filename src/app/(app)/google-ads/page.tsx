@@ -14,6 +14,7 @@ import {
   type ParsedGoogleAdsCredentialsStatus,
 } from '@/lib/google-ads-credentials-errors'
 import { useGoogleAdsAccountsAuth } from '@/hooks/useGoogleAdsAccountsAuth'
+import { runInitialGoogleAdsAccountsLoad } from '@/lib/google-ads-initial-accounts-load'
 
 interface GoogleAdsAccount {
   customerId: string
@@ -198,34 +199,28 @@ export default function GoogleAdsPage() {
     }, 2000)
   }
 
-  // 凭证 API 无 OAuth/SA 时，仅在确认无 OAuth 后再尝试服务账号列表
+  // 凭证未明确为 OAuth/SA 时：先刷新 auth-context，OAuth 优先，再回落首个 SA
   const fetchServiceAccounts = async () => {
     try {
-      const auth = await refreshCredentialsStatus()
-      if (auth.authConfigWarning) {
-        setAuthConfigWarning(auth.authConfigWarning)
-      }
-      if (auth.hasCredentials && auth.authType === 'oauth') {
-        await fetchAccounts(false, false, { skipCredentialsRefresh: true })
-        return
-      }
-
-      const response = await fetch('/api/google-ads/service-account', {
-        credentials: 'include',
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const accounts = data.accounts || []
-        if (accounts.length > 0) {
-          setCurrentServiceAccountId(accounts[0].id)
-          await fetchAccountsWithServiceAccount(accounts[0].id, false, false, {
-            skipCredentialsRefresh: true,
+      await runInitialGoogleAdsAccountsLoad({
+        refreshCredentialsStatus,
+        onAuthConfigWarning: setAuthConfigWarning,
+        fetchOAuthAccounts: (opts) => fetchAccounts(false, false, opts),
+        fetchServiceAccountAccounts: (serviceAccountId, opts) => {
+          setCurrentServiceAccountId(serviceAccountId)
+          return fetchAccountsWithServiceAccount(serviceAccountId, false, false, opts)
+        },
+        listServiceAccounts: async () => {
+          const response = await fetch('/api/google-ads/service-account', {
+            credentials: 'include',
           })
-        }
-      }
+          if (!response.ok) return []
+          const data = await response.json()
+          return (data.accounts || []) as Array<{ id: string }>
+        },
+      })
     } catch (err: any) {
-      console.error('获取服务账号配置失败:', err)
+      console.error('初始加载 Google Ads 账号失败:', err)
     }
   }
 

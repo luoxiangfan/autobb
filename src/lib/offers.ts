@@ -19,6 +19,10 @@ import { removePendingClickFarmQueueTasksByTaskIds } from './click-farm/queue-cl
 import { removePendingUrlSwapQueueTasksByTaskIds } from './url-swap/queue-cleanup'
 import type { OfferExtractionMode } from './offer-extraction-mode'
 import { normalizeOfferExtractionMode } from './offer-extraction-mode'
+import {
+  resolveHealedOAuthCredentialsFields,
+  type OAuthApiCredentialsFields,
+} from './google-ads-accounts-auth'
 
 export interface Offer {
   id: number
@@ -1060,13 +1064,20 @@ export async function deleteOffer(
       hasConfiguredGoogleAdsAuthFromContext,
       resolveGoogleAdsApiAuthFromContext,
     } = await import('./google-ads-auth-context')
-
     const authContext = await getGoogleAdsAuthContext(userId)
     const errors: Array<{ campaignRowId: number; message: string }> = []
 
     if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
       console.warn(`[offers] 用户 ${userId} Google Ads 认证未配置，跳过远端 Campaign 操作`)
     } else {
+    let oauthCredentials: OAuthApiCredentialsFields | undefined
+    if (authContext.auth.authType === 'oauth') {
+      const healed = await resolveHealedOAuthCredentialsFields({ userId, authContext })
+      if (!healed.ok) {
+        throw new Error(healed.message)
+      }
+      oauthCredentials = healed.credentials
+    }
 
     const campaignsByAccount = campaignsToProcess.reduce((acc, c) => {
       if (!acc[c.googleAdsAccountId]) acc[c.googleAdsAccountId] = []
@@ -1109,6 +1120,7 @@ export async function deleteOffer(
               userId,
               authType: apiAuth.authType,
               serviceAccountId: apiAuth.serviceAccountId,
+              credentials: oauthCredentials,
             })
 
             await applyCampaignTransition({
@@ -1127,6 +1139,7 @@ export async function deleteOffer(
               userId,
               authType: apiAuth.authType,
               serviceAccountId: apiAuth.serviceAccountId,
+              credentials: oauthCredentials,
             })
 
             await applyCampaignTransition({
@@ -1148,6 +1161,7 @@ export async function deleteOffer(
                 userId,
                 authType: apiAuth.authType,
                 serviceAccountId: apiAuth.serviceAccountId,
+                credentials: oauthCredentials,
               })
 
               await applyCampaignTransition({

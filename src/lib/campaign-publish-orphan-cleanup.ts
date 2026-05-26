@@ -1,5 +1,8 @@
 import { getDatabase } from './db'
-import { updateGoogleAdsCampaignStatus } from './google-ads-api'
+import { updateGoogleAdsCampaignStatus, type OAuthApiCredentialsFields } from './google-ads-api'
+import {
+  resolveHealedOAuthCredentialsFields,
+} from './google-ads-accounts-auth'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
@@ -17,6 +20,7 @@ export type CampaignPublishRollbackContext = {
   userId: number
   authType: 'oauth' | 'service_account'
   serviceAccountId?: string
+  oauthCredentials?: OAuthApiCredentialsFields
   runWithLoginCustomerFallbackAndHeartbeat: <T>(
     stage: string,
     operation: (loginCustomerId: string | undefined) => Promise<T>
@@ -196,6 +200,18 @@ export async function buildPublishRollbackContextForAdsAccount(
     adsAccount.service_account_id
   )
 
+  let oauthCredentials: OAuthApiCredentialsFields | undefined
+  if (apiAuth.authType === 'oauth') {
+    const healed = await resolveHealedOAuthCredentialsFields({
+      userId,
+      authContext,
+    })
+    if (!healed.ok) {
+      return null
+    }
+    oauthCredentials = healed.credentials
+  }
+
   const runWithLoginCustomerFallbackAndHeartbeat = async <T>(
     actionName: string,
     callback: (loginCustomerId: string | undefined) => Promise<T>
@@ -219,6 +235,7 @@ export async function buildPublishRollbackContextForAdsAccount(
     userId,
     authType: apiAuth.authType,
     serviceAccountId: apiAuth.serviceAccountId,
+    oauthCredentials,
     runWithLoginCustomerFallbackAndHeartbeat,
   }
 }
@@ -242,6 +259,7 @@ export async function pauseOrphanGoogleAdsCampaignAfterPublishFailure(
           loginCustomerId,
           authType: ctx.authType,
           serviceAccountId: ctx.serviceAccountId,
+          credentials: ctx.oauthCredentials,
         })
     )
     console.log(`⏸️ 发布失败已暂停远端孤儿 Campaign ${googleCampaignId}`)
@@ -351,6 +369,7 @@ export async function pauseHistoricalOrphanGoogleCampaignsForOffer(params: {
             loginCustomerId,
             authType: ctx.authType,
             serviceAccountId: ctx.serviceAccountId,
+            credentials: ctx.oauthCredentials,
           })
       )
       paused++
