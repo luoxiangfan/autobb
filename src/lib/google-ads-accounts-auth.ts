@@ -81,6 +81,7 @@ export async function healAccountsRouteDeveloperToken(params: {
   ownerUserId: number
   clientSecret: string
   serviceAccountId?: string | null
+  serviceAccountConfig?: { developerToken?: string } | null
 }): Promise<DeveloperTokenHealResult> {
   const developerToken = String(params.credentials.developer_token || '')
   if (!developerTokenLooksInvalid(developerToken, params.clientSecret)) {
@@ -105,6 +106,9 @@ export async function healAccountsRouteDeveloperToken(params: {
     `[Google Ads] 检测到 ${params.authType === 'service_account' ? '服务账号' : 'OAuth'} developer_token 可能误填，已自动使用设置中的 developer_token`
   )
   params.credentials.developer_token = settingDeveloperToken
+  if (params.serviceAccountConfig && 'developerToken' in params.serviceAccountConfig) {
+    params.serviceAccountConfig.developerToken = settingDeveloperToken
+  }
 
   const db = await getDatabase()
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'

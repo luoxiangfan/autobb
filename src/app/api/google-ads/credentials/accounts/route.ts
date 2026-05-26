@@ -189,6 +189,7 @@ async function get(request: NextRequest) {
     }
 
     const userId = authResult.user.userId
+    const dualStackPromise = detectGoogleAdsDualStackCredentials(userId)
     const authContext = await getGoogleAdsAuthContext(userId)
     const ownerUserId = authContext.ownerUserId
     const resolvedAuth = authContext.auth
@@ -260,6 +261,7 @@ async function get(request: NextRequest) {
       ownerUserId,
       clientSecret,
       serviceAccountId: scopedServiceAccountId,
+      serviceAccountConfig,
     })
     if (!healResult.ok) {
       return jsonNoStore(
@@ -285,7 +287,7 @@ async function get(request: NextRequest) {
     const refreshInProgress = syncState?.status === 'running'
 
     const [dualStack, cachedAccounts] = await Promise.all([
-      detectGoogleAdsDualStackCredentials(userId),
+      dualStackPromise,
       getCachedAccounts({
         userId,
         authType,

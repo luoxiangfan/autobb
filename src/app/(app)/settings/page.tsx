@@ -105,6 +105,7 @@ interface GoogleAdsCredentialStatus {
   isShared?: boolean
   sharedAdminEmail?: string | null
   sharedAdminUsername?: string | null
+  authConfigWarning?: string | null
 }
 
 // 代理配置支持的国家列表（使用全局映射 + ROW其他地区选项）
@@ -1765,6 +1766,17 @@ export default function SettingsPage() {
                           {googleAdsCredentialStatus?.sharedAdminUsername || googleAdsCredentialStatus?.sharedAdminEmail
                             ? `共享自：${googleAdsCredentialStatus?.sharedAdminUsername ?? ''}${googleAdsCredentialStatus?.sharedAdminEmail ? ` (${googleAdsCredentialStatus.sharedAdminEmail})` : ''}`
                             : '您无法自行修改或删除此配置，如需变更请联系管理员。'}
+                        </p>
+                      </div>
+                    )}
+                    {googleAdsCredentialStatus?.authConfigWarning && (
+                      <div className="p-4 bg-amber-50 border border-amber-400 rounded-lg">
+                        <p className="text-sm font-semibold text-amber-900">认证配置提醒</p>
+                        <p className="text-sm text-amber-800 mt-1 whitespace-pre-line">
+                          {googleAdsCredentialStatus.authConfigWarning}
+                        </p>
+                        <p className="text-sm text-amber-900 mt-2">
+                          请在下方删除其中一种认证方式后再继续使用。
                         </p>
                       </div>
                     )}

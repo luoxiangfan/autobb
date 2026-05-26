@@ -316,6 +316,61 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     expect(data.data.accounts).toHaveLength(1)
   })
 
+  it('heals invalid service account developer_token from user settings', async () => {
+    const saConfig = {
+      id: 'sa-1',
+      mccCustomerId: '1122334455',
+      developerToken: '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e',
+      serviceAccountEmail: 'sa@test.iam.gserviceaccount.com',
+    }
+    accountsAuthFns.getGoogleAdsAuthContext.mockResolvedValue({
+      ...defaultOAuthAuthContext,
+      auth: { authType: 'service_account' as const, serviceAccountId: 'sa-1' },
+      oauthCredentials: null,
+      serviceAccountConfig: saConfig,
+    })
+    accountsAuthFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
+      authType: 'service_account' as const,
+      refreshToken: '',
+      serviceAccountId: 'sa-1',
+      serviceAccountMccId: '1122334455',
+      oauthLoginCustomerId: undefined,
+    })
+    settingsFns.getUserOnlySetting.mockResolvedValueOnce({
+      value: 'abcdefghijklmnopqrstuvwxyz1234567890',
+    })
+
+    dbFns.query.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM google_ads_accounts')) {
+        return [
+          {
+            ...cachedOAuthAccount,
+            customer_id: '5555555555',
+            auth_type: 'service_account',
+            service_account_id: 'sa-1',
+            parent_mcc_id: '1122334455',
+          },
+        ]
+      }
+      if (sql.includes('FROM offers o')) {
+        return []
+      }
+      return []
+    })
+
+    const req = new NextRequest(
+      'http://localhost/api/google-ads/credentials/accounts?auth_type=service_account&service_account_id=sa-1'
+    )
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(settingsFns.getUserOnlySetting).toHaveBeenCalled()
+    expect(dbFns.exec).toHaveBeenCalled()
+    expect(saConfig.developerToken).toBe('abcdefghijklmnopqrstuvwxyz1234567890')
+    expect(data.data.loginCustomerId).toBe('1122334455')
+  })
+
   it('syncs from API when refresh=true and cache is empty', async () => {
     dbFns.query.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM google_ads_accounts')) {

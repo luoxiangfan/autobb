@@ -64,8 +64,7 @@ async function getGoogleAdsClient(
     }
   }
 
-  const refreshToken =
-    apiAuth.refreshToken || authContext.oauthCredentials?.refresh_token || account.refresh_token || ''
+  const refreshToken = apiAuth.refreshToken || authContext.oauthCredentials?.refresh_token || ''
 
   if (!refreshToken) {
     throw new Error('Google Ads账号缺少refresh token')
