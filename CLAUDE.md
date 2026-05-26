@@ -31,7 +31,9 @@ npm run validate-schema
 
 ## Agent workflow (mandatory after code edits)
 
-After changing application code, run **`npm run lint`** and **`npm run type-check`** in the repo root; both must pass before reporting work complete. Full rules: [AGENTS.md](./AGENTS.md) — section「代码修改后的质量门禁（必须）」.
+After changing application code, run **`npm run lint`** and **`npm run type-check`** in the repo root; both must pass before reporting work complete.
+
+If the change touches SQL or the database layer (`migrations/`, `pg-migrations/`, raw SQL, `db-helpers`), also run **`npm run db:migrate`**, **`npm run validate-schema`**, and targeted **`npm test`** for dual SQLite/PostgreSQL behavior. See [AGENTS.md](./AGENTS.md) — sections「代码修改后的质量门禁（必须）」and「数据库 / SQL 修改后的双栈兼容性（必须）」.
 
 ## Key Directories
 
