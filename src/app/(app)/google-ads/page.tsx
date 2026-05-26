@@ -57,6 +57,7 @@ export default function GoogleAdsPage() {
   const [accountsSyncError, setAccountsSyncError] = useState<string | null>(null)
   const accountsPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [error, setError] = useState('')
+  const [authConfigWarning, setAuthConfigWarning] = useState<string | null>(null)
   const [success, setSuccess] = useState('')
   const [needsReauth, setNeedsReauth] = useState(false)  // 是否需要重新授权
   const [currentPage, setCurrentPage] = useState(1)
@@ -107,7 +108,24 @@ export default function GoogleAdsPage() {
     // 兜底：尽量给出可操作提示
     if (response.status === 401) return '未登录或登录已过期，请刷新页面或重新登录'
     if (response.status === 403) return '权限不足'
+    if (response.status === 409 && body?.code === 'AUTH_TYPE_MISMATCH') {
+      return '认证方式与当前配置不一致，请前往设置页确认当前使用的认证类型'
+    }
     return `请求失败 (HTTP ${response.status})`
+  }
+
+  const throwOnAccountsFetchError = (response: Response, errorData: any | null): never => {
+    if (errorData?.needsReauth || errorData?.code === 'OAUTH_TOKEN_EXPIRED') {
+      setNeedsReauth(true)
+      throw new Error('OAuth授权已过期')
+    }
+    if (errorData?.code === 'AUTH_TYPE_MISMATCH') {
+      throw new Error(
+        formatNullableErrorMessage(errorData.message) ||
+          '认证方式与当前配置不一致，请前往设置页确认当前使用的认证类型。'
+      )
+    }
+    throw new Error(buildApiErrorMessage(response, errorData) || '获取账户列表失败')
   }
 
   useEffect(() => {
@@ -153,6 +171,7 @@ export default function GoogleAdsPage() {
 
       if (data.success && data.data) {
         setCredentials(data.data)
+        setAuthConfigWarning(formatNullableErrorMessage(data.data.authConfigWarning))
 
         const authType = data.data.authType || (data.data.hasRefreshToken ? 'oauth' : 'service_account')
         setCurrentAuthType(authType)
@@ -224,19 +243,13 @@ export default function GoogleAdsPage() {
 
       if (!response.ok) {
         const errorData = await safeReadJson(response)
-
-        // 检测OAuth授权过期错误
-        if (errorData?.needsReauth || errorData?.code === 'OAUTH_TOKEN_EXPIRED') {
-          setNeedsReauth(true)
-          throw new Error('OAuth授权已过期')
-        }
-
-        throw new Error(buildApiErrorMessage(response, errorData) || '获取账户列表失败')
+        throwOnAccountsFetchError(response, errorData)
       }
 
       const data = await response.json()
 
       if (data.success && data.data) {
+        setAuthConfigWarning(formatNullableErrorMessage(data.data.authConfigWarning))
         setAccountsSyncError(formatNullableErrorMessage(data.data.refreshError))
         setAccountsSyncing(Boolean(data.data.refreshInProgress))
         // 处理账号数据，添加 parentMccName
@@ -305,19 +318,13 @@ export default function GoogleAdsPage() {
 
       if (!response.ok) {
         const errorData = await safeReadJson(response)
-
-        // 检测OAuth授权过期错误
-        if (errorData?.needsReauth || errorData?.code === 'OAUTH_TOKEN_EXPIRED') {
-          setNeedsReauth(true)
-          throw new Error('OAuth授权已过期')
-        }
-
-        throw new Error(buildApiErrorMessage(response, errorData) || '获取账户列表失败')
+        throwOnAccountsFetchError(response, errorData)
       }
 
       const data = await response.json()
 
       if (data.success && data.data) {
+        setAuthConfigWarning(formatNullableErrorMessage(data.data.authConfigWarning))
         setAccountsSyncError(formatNullableErrorMessage(data.data.refreshError))
         setAccountsSyncing(Boolean(data.data.refreshInProgress))
         // 处理账号数据，添加 parentMccName
@@ -700,6 +707,19 @@ export default function GoogleAdsPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {authConfigWarning && (
+            <div className="mb-4 bg-amber-50 border border-amber-400 text-amber-900 px-4 py-3 rounded">
+              <p className="text-sm font-semibold mb-1">认证配置提醒</p>
+              <p className="text-sm whitespace-pre-line">{authConfigWarning}</p>
+              <a
+                href="/settings"
+                className="inline-block mt-2 text-sm font-medium text-amber-950 underline hover:no-underline"
+              >
+                前往设置页处理 →
+              </a>
             </div>
           )}
 

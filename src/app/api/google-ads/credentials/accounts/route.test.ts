@@ -232,6 +232,32 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     )
   })
 
+  it('treats whitespace-only service_account_id as missing', async () => {
+    accountsAuthFns.getGoogleAdsAuthContext.mockResolvedValue({
+      ...defaultOAuthAuthContext,
+      auth: { authType: 'service_account' as const, serviceAccountId: 'sa-1' },
+      oauthCredentials: null,
+      serviceAccountConfig: {
+        id: 'sa-1',
+        mccCustomerId: '1122334455',
+        developerToken: 'abcdefghijklmnopqrstuvwxyz123456',
+      },
+    })
+
+    const req = new NextRequest(
+      'http://localhost/api/google-ads/credentials/accounts?auth_type=service_account&service_account_id=%20%20'
+    )
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(accountsAuthFns.resolveGoogleAdsApiAuthFromContext).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 7 }),
+      'sa-1'
+    )
+    expect(data.data.loginCustomerId).toBe('1122334455')
+  })
+
   it('returns 400 when service_account mode lacks service_account_id', async () => {
     accountsAuthFns.getGoogleAdsAuthContext.mockResolvedValue({
       ...defaultOAuthAuthContext,

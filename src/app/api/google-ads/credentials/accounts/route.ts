@@ -14,7 +14,6 @@ import { getGoogleAdsClient, getCustomer } from '@/lib/google-ads-api'
 import { getDatabase } from '@/lib/db'
 import { getInsertedId } from '@/lib/db-helpers'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
-import { decrypt } from '@/lib/crypto'
 import { toNumber } from '@/lib/utils'
 import { extractCustomerIdFromResourceName } from '@/lib/google-ads-resource-name'
 import { getUserOnlySetting } from '@/lib/settings'
@@ -1564,9 +1563,10 @@ async function get(request: NextRequest) {
       )
     }
 
+    const queryServiceAccountId = searchParams.get('service_account_id')?.trim() || null
     const scopedServiceAccountId: string | null =
       authType === 'service_account'
-        ? searchParams.get('service_account_id') ||
+        ? queryServiceAccountId ||
           resolveEffectiveServiceAccountId(null, authContext) ||
           null
         : null
