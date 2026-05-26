@@ -14,6 +14,7 @@ const authFns = vi.hoisted(() => ({
 const accountsAuthFns = vi.hoisted(() => ({
   getGoogleAdsAuthContext: vi.fn(),
   resolveGoogleAdsApiAuthFromContext: vi.fn(),
+  detectGoogleAdsDualStackCredentials: vi.fn(),
 }))
 
 const dbFns = vi.hoisted(() => ({
@@ -36,6 +37,7 @@ vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
     ...actual,
     getGoogleAdsAuthContext: accountsAuthFns.getGoogleAdsAuthContext,
     resolveGoogleAdsApiAuthFromContext: accountsAuthFns.resolveGoogleAdsApiAuthFromContext,
+    detectGoogleAdsDualStackCredentials: accountsAuthFns.detectGoogleAdsDualStackCredentials,
   }
 })
 
@@ -124,6 +126,11 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     dbFns.queryOne.mockResolvedValue(undefined)
     dbFns.exec.mockResolvedValue(undefined)
     serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+    accountsAuthFns.detectGoogleAdsDualStackCredentials.mockResolvedValue({
+      hasOAuthRefresh: true,
+      hasActiveServiceAccount: false,
+      dualStack: false,
+    })
   })
 
   it('returns 401 when OAuth refresh token is missing from auth-context', async () => {
@@ -170,7 +177,69 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     )
   })
 
+  it('returns 409 when requested auth_type conflicts with configured auth', async () => {
+    accountsAuthFns.getGoogleAdsAuthContext.mockResolvedValue({
+      ...defaultOAuthAuthContext,
+      auth: { authType: 'service_account' as const, serviceAccountId: 'sa-1' },
+      oauthCredentials: null,
+      serviceAccountConfig: {
+        id: 'sa-1',
+        mccCustomerId: '1122334455',
+        developerToken: 'abcdefghijklmnopqrstuvwxyz123456',
+      },
+    })
+
+    const req = new NextRequest(
+      'http://localhost/api/google-ads/credentials/accounts?auth_type=oauth'
+    )
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(409)
+    expect(data.code).toBe('AUTH_TYPE_MISMATCH')
+    expect(data.configuredAuthType).toBe('service_account')
+    expect(accountsAuthFns.resolveGoogleAdsApiAuthFromContext).not.toHaveBeenCalled()
+  })
+
+  it('returns authConfigWarning when OAuth and service account coexist', async () => {
+    const { GOOGLE_ADS_DUAL_STACK_WARNING } = await import('@/lib/google-ads-auth-context')
+    accountsAuthFns.detectGoogleAdsDualStackCredentials.mockResolvedValueOnce({
+      hasOAuthRefresh: true,
+      hasActiveServiceAccount: true,
+      dualStack: true,
+    })
+
+    const req = new NextRequest('http://localhost/api/google-ads/credentials/accounts?auth_type=oauth')
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.data.authConfigWarning).toBe(GOOGLE_ADS_DUAL_STACK_WARNING)
+  })
+
+  it('ignores stray service_account_id in OAuth mode for cached list', async () => {
+    const req = new NextRequest(
+      'http://localhost/api/google-ads/credentials/accounts?auth_type=oauth&service_account_id=orphan-sa'
+    )
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.data.authType).toBe('oauth')
+    expect(accountsAuthFns.resolveGoogleAdsApiAuthFromContext).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 7 }),
+      null
+    )
+  })
+
   it('returns 400 when service_account mode lacks service_account_id', async () => {
+    accountsAuthFns.getGoogleAdsAuthContext.mockResolvedValue({
+      ...defaultOAuthAuthContext,
+      auth: { authType: 'service_account' as const },
+      oauthCredentials: null,
+      serviceAccountConfig: null,
+    })
+
     const req = new NextRequest(
       'http://localhost/api/google-ads/credentials/accounts?auth_type=service_account'
     )

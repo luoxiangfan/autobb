@@ -1,7 +1,9 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import {
+  detectGoogleAdsDualStackCredentials,
   getGoogleAdsAuthContext,
+  GOOGLE_ADS_DUAL_STACK_WARNING,
   resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthFromContext,
   type GoogleAdsApiAuthFields,
@@ -1541,11 +1543,33 @@ async function get(request: NextRequest) {
       authTypeParam === 'oauth' || authTypeParam === 'service_account'
         ? authTypeParam
         : resolvedAuth.authType
-    const serviceAccountId: string | null =
-      searchParams.get('service_account_id') ||
-      (authType === 'service_account'
-        ? resolveEffectiveServiceAccountId(null, authContext) ?? null
-        : null)
+
+    if (
+      authTypeParam &&
+      (authTypeParam === 'oauth' || authTypeParam === 'service_account') &&
+      authTypeParam !== resolvedAuth.authType
+    ) {
+      return jsonNoStore(
+        {
+          error: '认证方式与当前配置不一致',
+          code: 'AUTH_TYPE_MISMATCH',
+          message:
+            resolvedAuth.authType === 'service_account'
+              ? '当前已配置服务账号认证，请使用 auth_type=service_account，或在设置页删除服务账号后再使用 OAuth。'
+              : '当前已配置 OAuth 认证，请使用 auth_type=oauth，或在设置页删除 OAuth 后再使用服务账号。',
+          configuredAuthType: resolvedAuth.authType,
+          requestedAuthType: authTypeParam,
+        },
+        { status: 409 }
+      )
+    }
+
+    const scopedServiceAccountId: string | null =
+      authType === 'service_account'
+        ? searchParams.get('service_account_id') ||
+          resolveEffectiveServiceAccountId(null, authContext) ||
+          null
+        : null
 
     console.log(`🔍 [GET /api/google-ads/credentials/accounts] forceRefresh=${forceRefresh}, asyncRefresh=${asyncRefresh}, offerId=${offerId}, authType=${authType}`)
 
@@ -1553,7 +1577,7 @@ async function get(request: NextRequest) {
       userId,
       authContext,
       authType,
-      serviceAccountId: authType === 'service_account' ? serviceAccountId : null,
+      serviceAccountId: scopedServiceAccountId,
     })
     if (!authResolved.ok) {
       return jsonNoStore(authResolved.body, { status: authResolved.status })
@@ -1635,7 +1659,11 @@ async function get(request: NextRequest) {
 
     const syncStore = getAccountSyncStateStore()
     cleanupExpiredSyncStates(syncStore)
-    const syncKey = buildSyncKey({ userId, authType, serviceAccountId })
+    const syncKey = buildSyncKey({
+      userId,
+      authType,
+      serviceAccountId: scopedServiceAccountId,
+    })
     const syncState = syncStore.get(syncKey)
     const refreshInProgress = syncState?.status === 'running'
 
@@ -1643,7 +1671,7 @@ async function get(request: NextRequest) {
     const cachedAccounts = await getCachedAccounts({
       userId,
       authType,
-      serviceAccountId: authType === 'service_account' ? (serviceAccountId || null) : null,
+      serviceAccountId: scopedServiceAccountId,
     })
     const latestSyncAtMs = getLatestSyncAtMs(cachedAccounts)
     const cacheAgeMs = Number.isNaN(latestSyncAtMs) ? Number.POSITIVE_INFINITY : Date.now() - latestSyncAtMs
@@ -1915,8 +1943,9 @@ async function get(request: NextRequest) {
       console.log(`🔧 filterByUserMcc=true (管理员): 过滤后剩余 ${finalAccounts.length} 个非 MCC 账号`)
     }
 
-    // 🔧 修复 (2025-12-12): 简化响应，移除共享配置相关信息
     const finalSyncState = syncStore.get(syncKey)
+    const dualStack = await detectGoogleAdsDualStackCredentials(userId)
+    const authConfigWarning = dualStack.dualStack ? GOOGLE_ADS_DUAL_STACK_WARNING : null
 
     return jsonNoStore({
       success: true,
@@ -1932,6 +1961,7 @@ async function get(request: NextRequest) {
         lastSyncAt: effectiveLastSyncAtIso,
         loginCustomerId: loginCustomerId,
         authType: authType,
+        authConfigWarning,
       },
     })
 
