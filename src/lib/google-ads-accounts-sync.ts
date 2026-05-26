@@ -4,233 +4,16 @@
 import { getGoogleAdsClient, getCustomer } from './google-ads-api'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 import { extractCustomerIdFromResourceName } from './google-ads-resource-name'
-import type { AccountsRouteCredentials } from './google-ads-accounts-auth'
 import { deactivateMissingAccounts, upsertAccount } from './google-ads-accounts-cache'
-
-const DEBUG_GOOGLE_ADS_ACCOUNTS = process.env.DEBUG_GOOGLE_ADS_ACCOUNTS === '1'
-function debugLog(...args: unknown[]) {
-  if (DEBUG_GOOGLE_ADS_ACCOUNTS) console.log(...args)
-}
-
-const CustomerStatusMap: Record<number | string, string> = {
-  0: 'UNSPECIFIED',
-  1: 'UNKNOWN',
-  2: 'ENABLED',
-  3: 'CANCELED',
-  4: 'SUSPENDED',
-  5: 'CLOSED',
-  UNSPECIFIED: 'UNSPECIFIED',
-  UNKNOWN: 'UNKNOWN',
-  ENABLED: 'ENABLED',
-  CANCELED: 'CANCELED',
-  CANCELLED: 'CANCELED',
-  SUSPENDED: 'SUSPENDED',
-  CLOSED: 'CLOSED',
-}
-
-function formatErrorMessage(value: unknown): string {
-  if (!value) return ''
-  if (typeof value === 'string') return value
-  if (value instanceof Error) return value.message
-  const maybeMessage = (value as { message?: string })?.message
-  if (typeof maybeMessage === 'string') return maybeMessage
-  try {
-    return JSON.stringify(value)
-  } catch {
-    return String(value)
-  }
-}
-
-function parseStatus(status: any): string {
-  if (status === undefined || status === null) {
-    debugLog('[DEBUG] parseStatus: status is undefined or null')
-    return 'UNKNOWN'
-  }
-
-  // 如果是对象，尝试获取枚举值
-  if (typeof status === 'object') {
-    debugLog('[DEBUG] parseStatus: status is object:', JSON.stringify(status))
-    // Google Ads API 可能返回 { value: number, name: string } 格式
-    if ('value' in status) {
-      status = status.value
-    } else if ('name' in status) {
-      status = status.name
-    }
-  }
-
-  debugLog('[DEBUG] parseStatus: processing status:', status, 'type:', typeof status)
-
-  // 尝试映射
-  const mapped = CustomerStatusMap[status]
-  if (mapped) {
-    debugLog('[DEBUG] parseStatus: mapped to:', mapped)
-    return mapped
-  }
-
-  // 如果是字符串且已经是有效状态，直接返回
-  const statusStr = String(status).toUpperCase()
-  debugLog('[DEBUG] parseStatus: fallback to string:', statusStr)
-  return statusStr
-}
-
-/**
- * 提取搜索结果数组（处理不同库的返回结构）
- */
-function extractSearchResults(searchResult: any): any[] {
-  if (!searchResult) return []
-  if (Array.isArray(searchResult)) return searchResult
-  if (typeof searchResult === 'object') {
-    if (Array.isArray(searchResult.results)) return searchResult.results
-    if (Array.isArray(searchResult.data)) return searchResult.data
-    const firstKey = Object.keys(searchResult)[0]
-    if (firstKey && Array.isArray(searchResult[firstKey])) return searchResult[firstKey]
-  }
-  return []
-}
-
-type IdentityVerificationSnapshot = {
-  programStatus: string | null
-  verificationStartDeadlineTime: string | null
-  verificationCompletionDeadlineTime: string | null
-  overdue: boolean
-}
-
-function extractIdentityVerificationSnapshot(rawResponse: any): IdentityVerificationSnapshot {
-  const identityVerificationList =
-    rawResponse?.identity_verification ||
-    rawResponse?.identityVerification ||
-    rawResponse?.identity_verifications ||
-    rawResponse?.identityVerifications ||
-    []
-
-  if (!Array.isArray(identityVerificationList) || identityVerificationList.length === 0) {
-    return {
-      programStatus: null,
-      verificationStartDeadlineTime: null,
-      verificationCompletionDeadlineTime: null,
-      overdue: false,
-    }
-  }
-
-  const advertiserIdentity = identityVerificationList.find((item: any) => {
-    const program = item?.verification_program ?? item?.verificationProgram
-    return program === 'ADVERTISER_IDENTITY_VERIFICATION' || program === 2 || program === '2'
-  }) ?? identityVerificationList[0]
-
-  const requirement = advertiserIdentity?.identity_verification_requirement ?? advertiserIdentity?.identityVerificationRequirement
-  const progress = advertiserIdentity?.verification_progress ?? advertiserIdentity?.verificationProgress
-
-  const programStatusRaw = progress?.program_status ?? progress?.programStatus ?? null
-  const programStatus = programStatusRaw ? String(programStatusRaw).toUpperCase() : null
-
-  const verificationStartDeadlineTime =
-    requirement?.verification_start_deadline_time ??
-    requirement?.verificationStartDeadlineTime ??
-    null
-  const verificationCompletionDeadlineTime =
-    requirement?.verification_completion_deadline_time ??
-    requirement?.verificationCompletionDeadlineTime ??
-    null
-
-  const completionDeadlineMs = verificationCompletionDeadlineTime ? Date.parse(String(verificationCompletionDeadlineTime)) : NaN
-  const deadlinePassed = !Number.isNaN(completionDeadlineMs) && completionDeadlineMs < Date.now()
-
-  const overdue =
-    programStatus !== null &&
-    programStatus !== 'SUCCESS' &&
-    (programStatus === 'FAILURE' || deadlinePassed)
-
-  return {
-    programStatus,
-    verificationStartDeadlineTime: verificationStartDeadlineTime ? String(verificationStartDeadlineTime) : null,
-    verificationCompletionDeadlineTime: verificationCompletionDeadlineTime ? String(verificationCompletionDeadlineTime) : null,
-    overdue,
-  }
-}
-
-async function fetchIdentityVerificationSnapshot(params: {
-  userId: number
-  customerId: string
-  customer?: any
-  authType: 'oauth' | 'service_account'
-  serviceAccountConfig?: any
-}): Promise<IdentityVerificationSnapshot> {
-  const startTime = Date.now()
-  try {
-    if (params.authType === 'service_account') {
-      const { getIdentityVerificationPython } = await import('@/lib/python-ads-client')
-      const resp = await getIdentityVerificationPython({
-        userId: params.userId,
-        serviceAccountId: params.serviceAccountConfig?.id?.toString(),
-        customerId: params.customerId,
-      })
-
-      await trackApiUsage({
-        userId: params.userId,
-        operationType: ApiOperationType.SEARCH,
-        endpoint: 'getIdentityVerification',
-        customerId: params.customerId,
-        requestCount: 1,
-        responseTimeMs: Date.now() - startTime,
-        isSuccess: true,
-      })
-
-      return extractIdentityVerificationSnapshot(resp)
-    }
-
-    const identityVerificationService =
-      params.customer?.identityVerifications ||
-      params.customer?.identityVerification ||
-      params.customer?.identity_verifications ||
-      params.customer?.identity_verification ||
-      null
-
-    const getIdentityVerificationFn = identityVerificationService?.getIdentityVerification
-
-    if (typeof getIdentityVerificationFn !== 'function') {
-      return {
-        programStatus: null,
-        verificationStartDeadlineTime: null,
-        verificationCompletionDeadlineTime: null,
-        overdue: false,
-      }
-    }
-
-    const resp = await getIdentityVerificationFn.call(identityVerificationService, {
-      customer_id: params.customerId,
-    })
-
-    await trackApiUsage({
-      userId: params.userId,
-      operationType: ApiOperationType.SEARCH,
-      endpoint: 'getIdentityVerification',
-      customerId: params.customerId,
-      requestCount: 1,
-      responseTimeMs: Date.now() - startTime,
-      isSuccess: true,
-    })
-
-    return extractIdentityVerificationSnapshot(resp)
-  } catch (error: any) {
-    await trackApiUsage({
-      userId: params.userId,
-      operationType: ApiOperationType.SEARCH,
-      endpoint: 'getIdentityVerification',
-      customerId: params.customerId,
-      requestCount: 1,
-      responseTimeMs: Date.now() - startTime,
-      isSuccess: false,
-      errorMessage: error?.message || String(error),
-    }).catch(() => {})
-
-    return {
-      programStatus: null,
-      verificationStartDeadlineTime: null,
-      verificationCompletionDeadlineTime: null,
-      overdue: false,
-    }
-  }
-}
+import {
+  EMPTY_IDENTITY_VERIFICATION,
+  fetchIdentityVerificationSnapshot,
+} from './google-ads-accounts-identity-verification'
+import {
+  processMccChildAccounts,
+  type MccChildAccountsSyncContext,
+} from './google-ads-accounts-mcc-children'
+import { debugLog, extractSearchResults, formatErrorMessage, parseStatus } from './google-ads-accounts-sync-utils'
 
 export async function syncAccountsFromAPI(
   userId: number,
@@ -314,243 +97,20 @@ export async function syncAccountsFromAPI(
     processedIds.add(accountData.customer_id)
   }
 
-  const processChildAccountsForManager = async (managerId: string, managerCustomer?: any) => {
-    if (!managerId || expandedManagerIds.has(managerId)) return
-    expandedManagerIds.add(managerId)
-
-    console.log(`   🔍 查询MCC ${managerId} 的子账户...`)
-
-    const childAccountsQuery = `
-      SELECT
-        customer_client.id,
-        customer_client.descriptive_name,
-        customer_client.currency_code,
-        customer_client.time_zone,
-        customer_client.manager,
-        customer_client.test_account,
-        customer_client.status,
-        customer_client.level
-      FROM customer_client
-      WHERE customer_client.level = 1
-    `
-
-    // MCC子账户查询追踪
-    const mccApiStartTime = Date.now()
-    let mccApiSuccess = false
-    let mccApiErrorMessage: string | undefined
-    let mccApiRequestCount = 0
-
-    try {
-      const { executeGAQLQueryPython } = await import('@/lib/python-ads-client')
-
-      let customerForQuery = managerCustomer
-      if (!isServiceAccount) {
-        if (!customerForQuery || customerForQuery._isPythonProxy) {
-          customerForQuery = await getCustomer(
-            managerId,
-            credentials.refresh_token,
-            credentials.login_customer_id,
-            {
-              client_id: clientId,
-              client_secret: clientSecret,
-              developer_token: developerToken,
-            },
-            userId,
-            undefined,
-            'oauth'
-          )
-        }
-      }
-
-      let childAccountsRaw: any
-      if (isServiceAccount) {
-        childAccountsRaw = await executeGAQLQueryPython({
-          userId,
-          serviceAccountId: serviceAccountConfig?.id?.toString?.(),
-          customerId: managerId,
-          query: childAccountsQuery,
-        })
-      } else {
-        mccApiRequestCount += 1
-        childAccountsRaw = await customerForQuery.query(childAccountsQuery)
-      }
-      const childAccounts = extractSearchResults(childAccountsRaw)
-      mccApiSuccess = true
-
-      for (const child of childAccounts) {
-        const childId = child.customer_client?.id?.toString()
-        if (!childId) continue
-
-        const isChildManager = child.customer_client?.manager || false
-        const existingAccount = accountMap.get(childId)
-        const shouldRefresh = !existingAccount || existingAccount.parent_mcc !== managerId
-        if (!shouldRefresh) {
-          if (isChildManager) {
-            pendingManagerIds.push(childId)
-          }
-          continue
-        }
-
-        const rawChildStatus = child.customer_client?.status
-        debugLog(`[DEBUG] Child Account ${childId} raw status:`, rawChildStatus, 'type:', typeof rawChildStatus)
-        const parsedChildStatus = parseStatus(rawChildStatus)
-        debugLog(`[DEBUG] Child Account ${childId} parsed status:`, parsedChildStatus)
-
-        // OAuth模式：必须在子账户 customer 上下文内查询身份验证信息
-        // 否则可能会误用MCC customer上下文，导致身份验证状态为空，从而被错误标记为“可投放”
-        let childCustomer: any | null = null
-        if (!isServiceAccount && !isChildManager) {
-          try {
-            childCustomer = await getCustomer(
-              childId,
-              credentials.refresh_token,
-              credentials.login_customer_id,
-              {
-                client_id: clientId,
-                client_secret: clientSecret,
-                developer_token: developerToken,
-              },
-              userId,
-              undefined,
-              'oauth'
-            )
-          } catch {
-            childCustomer = null
-          }
-        }
-
-        const identityVerification = (!isChildManager && parsedChildStatus === 'ENABLED')
-          ? await fetchIdentityVerificationSnapshot({
-            userId,
-            customerId: childId,
-            customer: isServiceAccount ? undefined : (childCustomer ?? customerForQuery),
-            authType: isServiceAccount ? 'service_account' : 'oauth',
-            serviceAccountConfig,
-          })
-          : {
-            programStatus: null,
-            verificationStartDeadlineTime: null,
-            verificationCompletionDeadlineTime: null,
-            overdue: false,
-          }
-
-        const effectiveChildStatus = (parsedChildStatus === 'ENABLED' && identityVerification.overdue)
-          ? 'SUSPENDED'
-          : parsedChildStatus
-        const identityVerificationCheckedAt = (!isChildManager && parsedChildStatus === 'ENABLED') ? new Date().toISOString() : null
-
-        // 查询子账户预算信息获取余额
-        let childBalance: number | null = null
-        if (!isChildManager) {
-          try {
-            const childBudgetQuery = `
-              SELECT
-                account_budget.resource_name,
-                account_budget.billing_setup,
-                account_budget.amount_served_micros,
-                account_budget.approved_spending_limit_micros,
-                account_budget.proposed_spending_limit_micros
-              FROM account_budget
-              WHERE account_budget.status = 'APPROVED'
-              ORDER BY account_budget.id DESC
-              LIMIT 1
-            `
-
-            let childBudgetInfo
-            if (isServiceAccount) {
-              // 🔧 修复(2025-12-26): 使用 Python 服务执行 GAQL 查询
-              const { executeGAQLQueryPython } = await import('@/lib/python-ads-client')
-              const result = await executeGAQLQueryPython({
-                userId,
-                serviceAccountId: serviceAccountConfig?.id?.toString?.(),
-                customerId: childId,
-                query: childBudgetQuery,
-              })
-              childBudgetInfo = result.results || []
-            } else {
-              if (childCustomer) {
-                mccApiRequestCount += 1
-                childBudgetInfo = extractSearchResults(await childCustomer.query(childBudgetQuery))
-              } else {
-                childBudgetInfo = []
-              }
-            }
-
-            if (childBudgetInfo && childBudgetInfo.length > 0) {
-              const budget = childBudgetInfo[0].account_budget
-              const budgetResourceName = budget?.resource_name || budget?.resourceName
-              const billingSetupResourceName = budget?.billing_setup || budget?.billingSetup
-              const budgetOwnerCustomerId = extractCustomerIdFromResourceName(budgetResourceName)
-              const billingOwnerCustomerId = extractCustomerIdFromResourceName(billingSetupResourceName)
-
-              if (billingOwnerCustomerId && billingOwnerCustomerId !== String(childId)) {
-                console.log(`      ⚠️ ${childId} billing_setup 归属不匹配，已跳过余额计算 (billingOwner=${billingOwnerCustomerId})`)
-              } else if (budgetOwnerCustomerId && budgetOwnerCustomerId !== String(childId)) {
-                console.log(`      ⚠️ ${childId} 预算归属不匹配，已跳过余额计算 (budgetOwner=${budgetOwnerCustomerId})`)
-              } else {
-                const amountServed = Number(budget?.amount_served_micros || 0)
-                const spendingLimit = Number(budget?.approved_spending_limit_micros || budget?.proposed_spending_limit_micros || 0)
-                childBalance = spendingLimit > 0 ? spendingLimit - amountServed : null
-                console.log(`      💰 ${childId} 余额: ${childBalance ? parseFloat((childBalance / 1000000).toFixed(2)) : 'N/A'}`)
-              }
-            }
-          } catch (budgetError: any) {
-            // 🔧 修复(2025-12-26): 减少日志噪音，账户状态异常时不需要警告
-            const errorMsg = budgetError?.message || String(budgetError)
-            const isExpectedError = errorMsg.includes('CUSTOMER_NOT_ENABLED') ||
-              errorMsg.includes('PERMISSION_DENIED') ||
-              errorMsg.includes('not yet enabled')
-            if (!isExpectedError) {
-              console.log(`      ⚠️ ${childId} 无法获取预算信息: ${budgetError?.message || budgetError}`)
-            }
-          }
-        }
-
-        const childData = {
-          customer_id: childId,
-          descriptive_name: child.customer_client?.descriptive_name || `客户 ${childId}`,
-          currency_code: child.customer_client?.currency_code || 'USD',
-          time_zone: child.customer_client?.time_zone || 'UTC',
-          manager: isChildManager,
-          test_account: child.customer_client?.test_account || false,
-          status: effectiveChildStatus,
-          account_balance: childBalance,
-          parent_mcc: managerId,
-          identity_verification_program_status: identityVerification.programStatus,
-          identity_verification_start_deadline_time: identityVerification.verificationStartDeadlineTime,
-          identity_verification_completion_deadline_time: identityVerification.verificationCompletionDeadlineTime,
-          identity_verification_overdue: identityVerification.overdue,
-          identity_verification_checked_at: identityVerificationCheckedAt,
-        }
-
-        const { id: dbId, last_sync_at } = await upsertAccount(userId, childData, authScope)
-        recordAccount(childData, dbId, last_sync_at)
-
-        if (isChildManager) {
-          pendingManagerIds.push(childId)
-        }
-
-        console.log(`      ↳ ${childId}: ${childData.descriptive_name}`)
-      }
-
-      console.log(`   ✓ MCC ${managerId} 共有 ${childAccounts.length} 个子账户`)
-    } catch (childError: any) {
-      mccApiSuccess = false
-      mccApiErrorMessage = childError.message
-      console.warn(`   ⚠️ 查询MCC ${managerId} 子账户失败: ${childError.message}`)
-    } finally {
-      // 记录MCC子账户查询API使用
-      await trackApiUsage({
-        userId,
-        operationType: ApiOperationType.SEARCH,
-        endpoint: 'getMccChildAccounts',
-        customerId: managerId,
-        requestCount: Math.max(1, mccApiRequestCount),
-        responseTimeMs: Date.now() - mccApiStartTime,
-        isSuccess: mccApiSuccess,
-        errorMessage: mccApiErrorMessage
-      })
-    }
+  const mccCtx: MccChildAccountsSyncContext = {
+    userId,
+    credentials,
+    authType,
+    serviceAccountConfig,
+    isServiceAccount: Boolean(isServiceAccount),
+    clientId,
+    clientSecret,
+    developerToken,
+    authScope,
+    accountMap,
+    expandedManagerIds,
+    pendingManagerIds,
+    recordAccount,
   }
 
   for (const customerId of customerIds) {
@@ -845,12 +405,7 @@ export async function syncAccountsFromAPI(
             authType: isServiceAccount ? 'service_account' : 'oauth',
             serviceAccountConfig,
           })
-          : {
-            programStatus: null,
-            verificationStartDeadlineTime: null,
-            verificationCompletionDeadlineTime: null,
-            overdue: false,
-          }
+          : { ...EMPTY_IDENTITY_VERIFICATION }
 
         const effectiveStatus = (parsedStatus === 'ENABLED' && identityVerification.overdue) ? 'SUSPENDED' : parsedStatus
         const identityVerificationCheckedAt = (!isManagerAccount && parsedStatus === 'ENABLED') ? new Date().toISOString() : null
@@ -880,7 +435,7 @@ export async function syncAccountsFromAPI(
 
         // 如果是MCC账户，查询其管理的子账户
         if (accountData.manager) {
-          await processChildAccountsForManager(customerId, customer)
+          await processMccChildAccounts(mccCtx, customerId, customer)
         }
       }
     } catch (accountError: any) {
@@ -929,7 +484,7 @@ export async function syncAccountsFromAPI(
   while (pendingManagerIds.length > 0) {
     const managerId = pendingManagerIds.shift()
     if (!managerId || expandedManagerIds.has(managerId)) continue
-    await processChildAccountsForManager(managerId)
+    await processMccChildAccounts(mccCtx, managerId)
   }
 
   // 🔥 清理：如果用户在MCC中解除部分账号关联，API不会返回这些账号

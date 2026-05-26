@@ -25,7 +25,6 @@ export interface AccountsRouteAuthBundle {
   serviceAccountConfig: Awaited<ReturnType<typeof getServiceAccountConfig>>
   credentials: AccountsRouteCredentials
   loginCustomerId: string | null
-  apiAuth: GoogleAdsApiAuthFields
 }
 
 export type AccountsRouteAuthResolveResult =
@@ -42,6 +41,15 @@ export function looksLikeOAuthClientSecret(value: string): boolean {
 
 export function looksLikeOAuthAccessToken(value: string): boolean {
   return /^ya29\./i.test(value.trim())
+}
+
+/** OAuth refresh：仅用户级 token（apiAuth / oauthCredentials），不用账号行 refresh_token */
+export function resolveOAuthRefreshToken(
+  apiAuth: GoogleAdsApiAuthFields,
+  oauthCredentials: GoogleAdsAuthContext['oauthCredentials']
+): string {
+  if (apiAuth.authType !== 'oauth') return ''
+  return apiAuth.refreshToken || oauthCredentials?.refresh_token || ''
 }
 
 export function developerTokenLooksInvalid(developerToken: string, clientSecret: string): boolean {
@@ -198,7 +206,6 @@ export async function resolveAccountsRouteAuthBundle(params: {
         serviceAccountConfig,
         credentials,
         loginCustomerId,
-        apiAuth,
       },
     }
   }
@@ -217,7 +224,7 @@ export async function resolveAccountsRouteAuthBundle(params: {
     }
   }
 
-  const refreshToken = apiAuth.refreshToken || oauthCredentials.refresh_token || ''
+  const refreshToken = resolveOAuthRefreshToken(apiAuth, oauthCredentials)
   if (!refreshToken) {
     return {
       ok: false,
@@ -246,7 +253,6 @@ export async function resolveAccountsRouteAuthBundle(params: {
       serviceAccountConfig: null,
       credentials,
       loginCustomerId,
-      apiAuth,
     },
   }
 }

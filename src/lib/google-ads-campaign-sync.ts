@@ -22,6 +22,7 @@ import {
   resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
+import { resolveOAuthRefreshToken } from './google-ads-accounts-auth'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { toDbCampaignConfigTextField } from './campaign-backups'
 import { getInsertedId } from './db-helpers'
@@ -417,7 +418,7 @@ export async function syncCampaignsFromGoogleAds(
           )
         const syncRefreshToken =
           syncAuthType === 'oauth'
-            ? accountApiAuth.refreshToken || account.refresh_token || null
+            ? resolveOAuthRefreshToken(accountApiAuth, authContext.oauthCredentials) || null
             : null
 
         if (syncAuthType === 'service_account' && !syncServiceAccountId) {

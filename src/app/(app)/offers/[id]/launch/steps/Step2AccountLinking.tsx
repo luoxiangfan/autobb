@@ -117,6 +117,24 @@ const getAccountStatusBadge = (status: string | null | undefined) => {
 
 const MAX_SELECTABLE_ACCOUNTS = 10
 
+const formatNullableErrorMessage = (value: unknown): string | null => {
+  if (value == null) return null
+  const text = String(value).trim()
+  return text.length > 0 ? text : null
+}
+
+const buildAccountsFetchErrorMessage = (response: Response, body: any | null): string => {
+  const msgFromBody =
+    formatNullableErrorMessage(body?.message) || formatNullableErrorMessage(body?.error)
+  if (msgFromBody) return msgFromBody
+  if (response.status === 401) return '未登录或登录已过期，请刷新页面或重新登录'
+  if (response.status === 403) return '权限不足'
+  if (response.status === 409 && body?.code === 'AUTH_TYPE_MISMATCH') {
+    return '认证方式与当前配置不一致，请前往设置页确认当前使用的认证类型'
+  }
+  return `请求失败 (HTTP ${response.status})`
+}
+
 export default function Step2AccountLinking({ offer, onAccountsLinked, selectedAccounts }: Props) {
   const [accounts, setAccounts] = useState<GoogleAdsAccount[]>([])
   const [accountStats, setAccountStats] = useState({
@@ -136,6 +154,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
   const [refreshInProgress, setRefreshInProgress] = useState(false)
   const [refreshError, setRefreshError] = useState<string | null>(null)
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
+  const [authConfigWarning, setAuthConfigWarning] = useState<string | null>(null)
   const [showGuideDialog, setShowGuideDialog] = useState(false)
 
   useEffect(() => {
@@ -163,6 +182,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
       if (response.ok) {
         const data = await response.json()
         setHasCredentials(Boolean(data?.data?.hasCredentials))
+        setAuthConfigWarning(formatNullableErrorMessage(data?.data?.authConfigWarning))
       }
     } catch (error) {
       console.error('Failed to check credentials:', error)
@@ -220,10 +240,14 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
         } catch {
           errorData = null
         }
-        throw new Error(errorData?.message || errorData?.error || '获取账号列表失败')
+        if (errorData?.needsReauth || errorData?.code === 'OAUTH_TOKEN_EXPIRED') {
+          throw new Error('OAuth授权已过期，请前往设置页重新授权')
+        }
+        throw new Error(buildAccountsFetchErrorMessage(response, errorData))
       }
 
       const data = await response.json()
+      setAuthConfigWarning(formatNullableErrorMessage(data.data?.authConfigWarning))
 
       if (data.success && data.data?.accounts) {
         setIsCached(Boolean(data.data.cached))
@@ -434,6 +458,22 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
           )}
         </CardContent>
       </Card>
+
+      {authConfigWarning && (
+        <Alert className="bg-amber-50 border-amber-400">
+          <AlertCircle className="h-4 w-4 text-amber-700" />
+          <AlertDescription className="text-amber-900">
+            <p className="text-sm font-semibold mb-1">认证配置提醒</p>
+            <p className="text-sm whitespace-pre-line">{authConfigWarning}</p>
+            <Link
+              href="/settings"
+              className="inline-block mt-2 text-sm font-medium text-amber-950 underline hover:no-underline"
+            >
+              前往设置页处理 →
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* No Credentials Warning */}
       {!hasCredentials && accounts.length === 0 && (

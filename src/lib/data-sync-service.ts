@@ -1,4 +1,4 @@
-import { getCustomerWithCredentials, getGoogleAdsCredentialsFromDB } from './google-ads-api'
+import { getCustomerWithCredentials } from './google-ads-api'
 import { getServiceAccountConfig } from './google-ads-service-account'
 import { getDatabase } from './db'
 import {
@@ -6,6 +6,11 @@ import {
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
+import {
+  healAccountsRouteDeveloperToken,
+  resolveAccountsRouteAuthBundle,
+  resolveOAuthRefreshToken,
+} from './google-ads-accounts-auth'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { getInsertedId, nowFunc } from './db-helpers'
 import { createRiskAlert } from './risk-alerts'
@@ -323,27 +328,41 @@ export class DataSyncService {
         | undefined
 
       if (defaultApiAuth.authType === 'oauth') {
-        const oauth = authContext.oauthCredentials
-        const oauthBundle =
-          oauth?.client_id && oauth.client_secret && oauth.developer_token
-            ? {
-                client_id: oauth.client_id,
-                client_secret: oauth.client_secret,
-                developer_token: oauth.developer_token,
-                login_customer_id:
-                  oauth.login_customer_id || defaultApiAuth.oauthLoginCustomerId || undefined,
-              }
-            : await getGoogleAdsCredentialsFromDB(userId)
+        const oauthResolved = await resolveAccountsRouteAuthBundle({
+          userId,
+          authContext,
+          authType: 'oauth',
+          serviceAccountId: null,
+        })
+        if (!oauthResolved.ok) {
+          const msg =
+            typeof oauthResolved.body.message === 'string'
+              ? oauthResolved.body.message
+              : typeof oauthResolved.body.error === 'string'
+                ? oauthResolved.body.error
+                : 'Google Ads 凭证配置不完整，请在设置页面完成配置'
+          throw new Error(msg)
+        }
 
-        if (!oauthBundle.client_id || !oauthBundle.client_secret || !oauthBundle.developer_token) {
-          throw new Error('Google Ads 凭证配置不完整，请在设置页面完成配置')
+        const oauthCreds = oauthResolved.bundle.credentials
+        const healResult = await healAccountsRouteDeveloperToken({
+          credentials: oauthCreds,
+          authType: 'oauth',
+          ownerUserId: userId,
+          clientSecret: oauthCreds.client_secret,
+        })
+        if (!healResult.ok) {
+          throw new Error(healResult.message)
         }
 
         userCredentials = {
-          client_id: oauthBundle.client_id,
-          client_secret: oauthBundle.client_secret,
-          developer_token: oauthBundle.developer_token,
-          login_customer_id: oauthBundle.login_customer_id || undefined,
+          client_id: oauthCreds.client_id,
+          client_secret: oauthCreds.client_secret,
+          developer_token: oauthCreds.developer_token,
+          login_customer_id:
+            oauthCreds.login_customer_id ||
+            oauthResolved.bundle.loginCustomerId ||
+            undefined,
         }
       }
 
@@ -470,7 +489,7 @@ export class DataSyncService {
 
           let refreshToken =
             accountApiAuth.authType === 'oauth'
-              ? accountApiAuth.refreshToken || account.refresh_token || undefined
+              ? resolveOAuthRefreshToken(accountApiAuth, authContext.oauthCredentials) || undefined
               : undefined
           if (accountApiAuth.authType === 'oauth' && !refreshToken) {
               console.warn(`⚠️ 用户 ${userId} OAuth模式下缺少refresh_token，跳过账户 ${account.customer_id}`)
