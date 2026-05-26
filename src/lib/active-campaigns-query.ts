@@ -90,12 +90,14 @@ async function loadGoogleAdsQueryAuth(
 
   const { ctx, apiAuth } = authResolved
   let oauthCredentials: OAuthApiCredentialsFields | undefined
+  let oauthLoginCustomerId: string | undefined
   if (apiAuth.authType === 'oauth') {
     const healed = await resolveHealedOAuthCredentialsFields({ userId, authContext: ctx })
     if (!healed.ok) {
       throw new Error(healed.message)
     }
     oauthCredentials = healed.credentials
+    oauthLoginCustomerId = healed.loginCustomerId || apiAuth.oauthLoginCustomerId
   }
 
   return {
@@ -104,18 +106,20 @@ async function loadGoogleAdsQueryAuth(
     serviceAccountId: apiAuth.serviceAccountId,
     serviceAccountMccId: apiAuth.serviceAccountMccId,
     oauthCredentials,
+    oauthLoginCustomerId,
   }
 }
 
 function buildLoginCustomerCandidates(
   adsAccount: { parent_mcc_id: string | null; customer_id: string },
   ctx: GoogleAdsAuthContext,
-  serviceAccountMccId: string | undefined
+  serviceAccountMccId: string | undefined,
+  oauthLoginCustomerId?: string
 ) {
   return resolveLoginCustomerCandidates({
     authType: ctx.auth.authType,
     accountParentMccId: adsAccount.parent_mcc_id,
-    oauthLoginCustomerId: ctx.oauthCredentials?.login_customer_id,
+    oauthLoginCustomerId: oauthLoginCustomerId ?? ctx.oauthCredentials?.login_customer_id,
     serviceAccountMccId,
     targetCustomerId: adsAccount.customer_id,
   })
@@ -148,13 +152,14 @@ export async function queryActiveCampaigns(
     throw new Error(`Google Ads账号不存在或未激活: ${googleAdsAccountId}`)
   }
 
-  const { ctx, refreshToken, serviceAccountId, serviceAccountMccId, oauthCredentials } =
+  const { ctx, refreshToken, serviceAccountId, serviceAccountMccId, oauthCredentials, oauthLoginCustomerId } =
     await loadGoogleAdsQueryAuth(userId, adsAccount.service_account_id)
 
   const loginCustomerIdCandidates = buildLoginCustomerCandidates(
     adsAccount,
     ctx,
-    serviceAccountMccId
+    serviceAccountMccId,
+    oauthLoginCustomerId
   )
 
   // 3. 查询Google Ads账号中的所有广告系列（跳过缓存，获取实时状态）
@@ -269,13 +274,14 @@ export async function pauseCampaigns(
     throw new Error(`Google Ads账号不存在或未激活: ${googleAdsAccountId}`)
   }
 
-  const { ctx, refreshToken, serviceAccountId, serviceAccountMccId, oauthCredentials } =
+  const { ctx, refreshToken, serviceAccountId, serviceAccountMccId, oauthCredentials, oauthLoginCustomerId } =
     await loadGoogleAdsQueryAuth(userId, adsAccount.service_account_id)
 
   const loginCustomerIdCandidates = buildLoginCustomerCandidates(
     adsAccount,
     ctx,
-    serviceAccountMccId
+    serviceAccountMccId,
+    oauthLoginCustomerId
   )
 
   // 动态导入updateGoogleAdsCampaignStatus

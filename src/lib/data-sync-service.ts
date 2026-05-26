@@ -1,4 +1,4 @@
-import { getCustomerWithCredentials } from './google-ads-api'
+import { getCustomerWithCredentials, type OAuthApiCredentialsFields } from './google-ads-api'
 import { getServiceAccountConfig } from './google-ads-service-account'
 import { getDatabase } from './db'
 import {
@@ -9,6 +9,7 @@ import {
 import {
   resolveAndHealSyncUserCredentials,
   resolveOAuthRefreshToken,
+  type SyncUserCredentials,
 } from './google-ads-accounts-auth'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { getInsertedId, nowFunc } from './db-helpers'
@@ -128,6 +129,17 @@ export class DataSyncService {
   private normalizeCurrency(value: unknown): string {
     const normalized = String(value ?? '').trim().toUpperCase()
     return normalized || 'USD'
+  }
+
+  private toOAuthApiCredentialsFields(
+    credentials?: SyncUserCredentials
+  ): OAuthApiCredentialsFields | undefined {
+    if (!credentials) return undefined
+    return {
+      client_id: credentials.client_id,
+      client_secret: credentials.client_secret,
+      developer_token: credentials.developer_token,
+    }
   }
 
   private normalizeSearchTermMatchType(raw: unknown): 'EXACT' | 'PHRASE' | 'BROAD' | 'UNKNOWN' {
@@ -848,11 +860,7 @@ export class DataSyncService {
             customerId,
             refreshToken,
             loginCustomerId: loginCustomerId ?? null,
-            credentials: credentials ? {
-              client_id: credentials.client_id,
-              client_secret: credentials.client_secret,
-              developer_token: credentials.developer_token,
-            } : undefined,
+            credentials: this.toOAuthApiCredentialsFields(credentials),
             accountId,
             userId,
           })
@@ -1012,11 +1020,7 @@ export class DataSyncService {
               customerId,
               refreshToken,
               loginCustomerId: loginCustomerId ?? null,
-              credentials: credentials ? {
-                client_id: credentials.client_id,
-                client_secret: credentials.client_secret,
-                developer_token: credentials.developer_token,
-              } : undefined,
+              credentials: this.toOAuthApiCredentialsFields(credentials),
               accountId,
               userId,
             })
@@ -1154,11 +1158,7 @@ export class DataSyncService {
               customerId,
               refreshToken,
               loginCustomerId: loginCustomerId ?? null,
-              credentials: credentials ? {
-                client_id: credentials.client_id,
-                client_secret: credentials.client_secret,
-                developer_token: credentials.developer_token,
-              } : undefined,
+              credentials: this.toOAuthApiCredentialsFields(credentials),
               accountId,
               userId,
             })

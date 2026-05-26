@@ -173,7 +173,10 @@ function toOAuthApiCredentialsFields(
 export async function resolveHealedOAuthCredentialsFields(params: {
   userId: number
   authContext: GoogleAdsAuthContext
-}): Promise<{ ok: true; credentials: OAuthApiCredentialsFields } | { ok: false; message: string }> {
+}): Promise<
+  | { ok: true; credentials: OAuthApiCredentialsFields; loginCustomerId: string }
+  | { ok: false; message: string }
+> {
   if (params.authContext.auth.authType === 'service_account') {
     return { ok: false, message: `用户(ID=${params.userId})当前使用服务账号认证，无法读取 OAuth 基础凭证` }
   }
@@ -188,7 +191,11 @@ export async function resolveHealedOAuthCredentialsFields(params: {
     return { ok: false, message: credResolved.message }
   }
 
-  return { ok: true, credentials: toOAuthApiCredentialsFields(credResolved.userCredentials) }
+  return {
+    ok: true,
+    credentials: toOAuthApiCredentialsFields(credResolved.userCredentials),
+    loginCustomerId: credResolved.userCredentials.login_customer_id?.trim() || '',
+  }
 }
 
 /**

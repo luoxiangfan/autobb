@@ -2,6 +2,10 @@ import { getDatabase } from '@/lib/db'
 import { boolCondition, boolParam } from '@/lib/db-helpers'
 import { createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
 import {
+  resolveHealedOAuthCredentialsFields,
+  type OAuthApiCredentialsFields,
+} from '@/lib/google-ads-accounts-auth'
+import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsApiAuthFromContext,
@@ -166,6 +170,10 @@ function parsePositiveNumber(raw: string | undefined, fallback: number): number 
 function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof getDatabase>>) {
   const contextByUser = new Map<number, GoogleAdsAuthContext>()
   const linkedServiceAccountByAccountId = new Map<number, string | null>()
+  const oauthHealedByUser = new Map<
+    number,
+    { credentials: OAuthApiCredentialsFields; loginCustomerId: string }
+  >()
 
   const getContext = async (userId: number) => {
     const cached = contextByUser.get(userId)
@@ -208,11 +216,27 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
       if (!effectiveRefreshToken) {
         throw new Error('missing_refresh_token_for_oauth')
       }
+      let healedBundle = oauthHealedByUser.get(action.userId)
+      if (!healedBundle) {
+        const healed = await resolveHealedOAuthCredentialsFields({
+          userId: action.userId,
+          authContext: ctx,
+        })
+        if (!healed.ok) {
+          throw new Error(healed.message)
+        }
+        healedBundle = {
+          credentials: healed.credentials,
+          loginCustomerId: healed.loginCustomerId,
+        }
+        oauthHealedByUser.set(action.userId, healedBundle)
+      }
       return {
         authType: apiAuth.authType,
         serviceAccountId: undefined as string | undefined,
         refreshToken: effectiveRefreshToken,
-        loginCustomerId: apiAuth.oauthLoginCustomerId,
+        loginCustomerId: healedBundle.loginCustomerId || apiAuth.oauthLoginCustomerId,
+        credentials: healedBundle.credentials,
       }
     }
 
@@ -498,6 +522,7 @@ export async function runSearchTermAutoNegatives(
         loginCustomerId: apiAuth.loginCustomerId,
         authType: apiAuth.authType,
         serviceAccountId: apiAuth.serviceAccountId,
+        credentials: 'credentials' in apiAuth ? apiAuth.credentials : undefined,
       })
 
       const keywordId = createResults[0]?.keywordId || null
@@ -732,6 +757,7 @@ export async function runSearchTermAutoPositiveKeywords(
         loginCustomerId: apiAuth.loginCustomerId,
         authType: apiAuth.authType,
         serviceAccountId: apiAuth.serviceAccountId,
+        credentials: 'credentials' in apiAuth ? apiAuth.credentials : undefined,
       })
 
       const keywordId = createResults[0]?.keywordId || null

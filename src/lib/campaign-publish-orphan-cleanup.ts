@@ -21,6 +21,7 @@ export type CampaignPublishRollbackContext = {
   authType: 'oauth' | 'service_account'
   serviceAccountId?: string
   oauthCredentials?: OAuthApiCredentialsFields
+  oauthLoginCustomerId?: string
   runWithLoginCustomerFallbackAndHeartbeat: <T>(
     stage: string,
     operation: (loginCustomerId: string | undefined) => Promise<T>
@@ -201,6 +202,7 @@ export async function buildPublishRollbackContextForAdsAccount(
   )
 
   let oauthCredentials: OAuthApiCredentialsFields | undefined
+  let oauthLoginCustomerId: string | undefined
   if (apiAuth.authType === 'oauth') {
     const healed = await resolveHealedOAuthCredentialsFields({
       userId,
@@ -210,6 +212,7 @@ export async function buildPublishRollbackContextForAdsAccount(
       return null
     }
     oauthCredentials = healed.credentials
+    oauthLoginCustomerId = healed.loginCustomerId || apiAuth.oauthLoginCustomerId
   }
 
   const runWithLoginCustomerFallbackAndHeartbeat = async <T>(
@@ -223,7 +226,7 @@ export async function buildPublishRollbackContextForAdsAccount(
       authType: apiAuth.authType,
       serviceAccountId: apiAuth.serviceAccountId,
       serviceAccountMccId: apiAuth.serviceAccountMccId,
-      oauthLoginCustomerId: apiAuth.oauthLoginCustomerId,
+      oauthLoginCustomerId,
       actionName,
       callback,
     })
@@ -236,6 +239,7 @@ export async function buildPublishRollbackContextForAdsAccount(
     authType: apiAuth.authType,
     serviceAccountId: apiAuth.serviceAccountId,
     oauthCredentials,
+    oauthLoginCustomerId,
     runWithLoginCustomerFallbackAndHeartbeat,
   }
 }

@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { updateGoogleAdsCampaignStatus, getCustomerWithCredentials } from '@/lib/google-ads-api'
+import {
+  updateGoogleAdsCampaignStatus,
+  getCustomerWithCredentials,
+  type OAuthApiCredentialsFields,
+} from '@/lib/google-ads-api'
+import { resolveHealedOAuthCredentialsFields } from '@/lib/google-ads-accounts-auth'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
@@ -389,6 +394,7 @@ export async function POST(
           let serviceAccountId: string | undefined
           let authType: 'oauth' | 'service_account' = 'oauth'
           let loginCustomerId: string | undefined
+          let oauthApiCredentials: OAuthApiCredentialsFields | undefined
 
           if (!googleAdsSummary.skippedReason) {
             const apiAuth = await resolveGoogleAdsApiAuthFromContext(
@@ -408,7 +414,16 @@ export async function POST(
             } else if (!apiAuth.refreshToken) {
               googleAdsSummary.skippedReason = 'Google Ads OAuth未授权或已过期'
             } else {
-              loginCustomerId = apiAuth.oauthLoginCustomerId
+              const healed = await resolveHealedOAuthCredentialsFields({
+                userId,
+                authContext,
+              })
+              if (!healed.ok) {
+                googleAdsSummary.skippedReason = healed.message
+              } else {
+                oauthApiCredentials = healed.credentials
+                loginCustomerId = apiAuth.oauthLoginCustomerId || healed.loginCustomerId || undefined
+              }
             }
           }
           if (!loginCustomerId && campaignRow.parent_mcc_id) {
@@ -440,6 +455,7 @@ export async function POST(
                           userId,
                           loginCustomerId,
                           authType,
+                          credentials: oauthApiCredentials,
                         })
                         const resourceName = `customers/${customerIdValue}/campaigns/${id}`
                         const startTime = Date.now()
@@ -482,6 +498,7 @@ export async function POST(
                           loginCustomerId,
                           authType,
                           serviceAccountId,
+                          credentials: oauthApiCredentials,
                         })
                         googleAdsSummary.pausedFallback += 1
                         console.warn(
@@ -510,6 +527,7 @@ export async function POST(
                       loginCustomerId,
                       authType,
                       serviceAccountId,
+                      credentials: oauthApiCredentials,
                     })
                     googleAdsSummary.paused += 1
                   } catch (err: any) {

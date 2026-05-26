@@ -23,6 +23,7 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
         client_secret: 'client-secret',
         developer_token: 'developer-token',
       },
+      loginCustomerId: '5010618892',
     })),
   }
 })

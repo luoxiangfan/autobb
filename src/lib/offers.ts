@@ -23,6 +23,7 @@ import {
   resolveHealedOAuthCredentialsFields,
   type OAuthApiCredentialsFields,
 } from './google-ads-accounts-auth'
+import { resolveLoginCustomerCandidates } from './google-ads-login-customer'
 
 export interface Offer {
   id: number
@@ -1071,12 +1072,14 @@ export async function deleteOffer(
       console.warn(`[offers] 用户 ${userId} Google Ads 认证未配置，跳过远端 Campaign 操作`)
     } else {
     let oauthCredentials: OAuthApiCredentialsFields | undefined
+    let oauthLoginCustomerId: string | undefined
     if (authContext.auth.authType === 'oauth') {
       const healed = await resolveHealedOAuthCredentialsFields({ userId, authContext })
       if (!healed.ok) {
         throw new Error(healed.message)
       }
       oauthCredentials = healed.credentials
+      oauthLoginCustomerId = healed.loginCustomerId || undefined
     }
 
     const campaignsByAccount = campaignsToProcess.reduce((acc, c) => {
@@ -1109,6 +1112,20 @@ export async function deleteOffer(
         continue
       }
 
+      const adsAccountMeta = await db.queryOne<{ parent_mcc_id: string | null }>(
+        `SELECT parent_mcc_id FROM google_ads_accounts WHERE id = ? AND user_id = ? LIMIT 1`,
+        [accountId, userId]
+      )
+      const loginCustomerId =
+        apiAuth.authType === 'oauth'
+          ? resolveLoginCustomerCandidates({
+              authType: 'oauth',
+              accountParentMccId: adsAccountMeta?.parent_mcc_id ?? null,
+              oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+              targetCustomerId: accountCredentials.customerId,
+            })[0]
+          : undefined
+
       for (const c of accountCampaigns) {
         try {
           if (removeGoogleAdsCampaigns) {
@@ -1118,6 +1135,7 @@ export async function deleteOffer(
               campaignId: c.googleCampaignId,
               accountId,
               userId,
+              loginCustomerId,
               authType: apiAuth.authType,
               serviceAccountId: apiAuth.serviceAccountId,
               credentials: oauthCredentials,
@@ -1137,6 +1155,7 @@ export async function deleteOffer(
               status: 'PAUSED',
               accountId,
               userId,
+              loginCustomerId,
               authType: apiAuth.authType,
               serviceAccountId: apiAuth.serviceAccountId,
               credentials: oauthCredentials,
@@ -1159,6 +1178,7 @@ export async function deleteOffer(
                 status: 'PAUSED',
                 accountId,
                 userId,
+                loginCustomerId,
                 authType: apiAuth.authType,
                 serviceAccountId: apiAuth.serviceAccountId,
                 credentials: oauthCredentials,

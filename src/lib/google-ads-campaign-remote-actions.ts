@@ -158,6 +158,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
     const serviceAccountId = apiAuth.serviceAccountId
 
     let oauthCredentials: OAuthApiCredentialsFields | undefined
+    let healedOAuthLoginCustomerId: string | undefined
     if (apiAuth.authType === 'oauth') {
       const healed = await resolveHealedOAuthCredentialsFields({
         userId,
@@ -172,9 +173,11 @@ export async function executeGoogleAdsCampaignRemoteActions(
         }
       }
       oauthCredentials = healed.credentials
+      healedOAuthLoginCustomerId = healed.loginCustomerId || undefined
     }
 
-    let loginCustomerId: string | undefined = apiAuth.oauthLoginCustomerId
+    let loginCustomerId: string | undefined =
+      apiAuth.oauthLoginCustomerId || healedOAuthLoginCustomerId
     if (!loginCustomerId && adsAccount.parent_mcc_id) {
       loginCustomerId = String(adsAccount.parent_mcc_id)
     }

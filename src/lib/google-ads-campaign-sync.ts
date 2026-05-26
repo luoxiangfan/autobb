@@ -21,7 +21,11 @@ import {
   getGoogleAdsAuthContext,
   resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
-import { resolveSyncAuthForAccount } from './google-ads-accounts-auth'
+import {
+  resolveHealedOAuthCredentialsFields,
+  resolveSyncAuthForAccount,
+  type OAuthApiCredentialsFields,
+} from './google-ads-accounts-auth'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { toDbCampaignConfigTextField } from './campaign-backups'
 import { getInsertedId } from './db-helpers'
@@ -382,6 +386,16 @@ export async function syncCampaignsFromGoogleAds(
 
     const authContext = await getGoogleAdsAuthContext(userId)
 
+    let oauthApiCredentials: OAuthApiCredentialsFields | undefined
+    let oauthLoginCustomerId: string | undefined
+    if (authContext.auth.authType === 'oauth') {
+      const healed = await resolveHealedOAuthCredentialsFields({ userId, authContext })
+      if (healed.ok) {
+        oauthApiCredentials = healed.credentials
+        oauthLoginCustomerId = healed.loginCustomerId || undefined
+      }
+    }
+
     // 3. 对每个账户执行同步
     for (const account of accounts) {
       // 如果指定了 customerId，只同步该账户
@@ -429,6 +443,9 @@ export async function syncCampaignsFromGoogleAds(
           authType: syncAuthType,
           serviceAccountId: syncServiceAccountId,
           refreshToken: syncRefreshToken,
+          parentMccId: account.parent_mcc_id,
+          oauthCredentials: oauthApiCredentials,
+          oauthLoginCustomerId,
           enableAudit: !options?.dryRun,
         })
 
@@ -626,9 +643,23 @@ async function fetchAllDataFromGoogleAds(params: {
   authType: string
   serviceAccountId?: string,
   refreshToken: string | null
+  parentMccId?: string | null
+  oauthCredentials?: OAuthApiCredentialsFields
+  oauthLoginCustomerId?: string
   enableAudit?: boolean
 }): Promise<any[]> {
-  const { userId, customerId, googleAdsAccountId, authType, serviceAccountId, refreshToken, enableAudit = true } = params
+  const {
+    userId,
+    customerId,
+    googleAdsAccountId,
+    authType,
+    serviceAccountId,
+    refreshToken,
+    parentMccId,
+    oauthCredentials,
+    oauthLoginCustomerId,
+    enableAudit = true,
+  } = params
 
   try {
     // 🔧 查询 1：获取广告、广告组、广告系列及预算数据
@@ -755,10 +786,13 @@ async function fetchAllDataFromGoogleAds(params: {
       const r5 = await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query: query5 })
       results5 = r5?.results || []
     } else {
+      const loginCustomerId = oauthLoginCustomerId || parentMccId || undefined
       const customer = await getCustomerWithCredentials({
         userId,
         customerId,
         refreshToken: refreshToken || undefined,
+        loginCustomerId,
+        credentials: oauthCredentials,
       })
       
       // 查询 1
@@ -1077,6 +1111,9 @@ async function fetchCampaignsFromGoogleAds(params: {
   authType: string
   serviceAccountId?: string,
   refreshToken: string | null
+  parentMccId?: string | null
+  oauthCredentials?: OAuthApiCredentialsFields
+  oauthLoginCustomerId?: string
   enableAudit?: boolean
 }): Promise<any[]> {
   return await fetchAllDataFromGoogleAds(params)

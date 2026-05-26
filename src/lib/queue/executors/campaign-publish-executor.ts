@@ -598,6 +598,7 @@ export async function executeCampaignPublish(
     const serviceAccountId = apiAuth.serviceAccountId
 
     let oauthCredentials: OAuthApiCredentialsFields | undefined
+    let oauthLoginCustomerId: string | undefined
     if (apiAuth.authType === 'oauth') {
       const healed = await resolveHealedOAuthCredentialsFields({
         userId,
@@ -607,12 +608,13 @@ export async function executeCampaignPublish(
         throw new Error(healed.message)
       }
       oauthCredentials = healed.credentials
+      oauthLoginCustomerId = healed.loginCustomerId || apiAuth.oauthLoginCustomerId
     }
 
     const loginCustomerIdCandidates = resolveLoginCustomerCandidates({
       authType: apiAuth.authType,
       accountParentMccId: adsAccount.parent_mcc_id,
-      oauthLoginCustomerId: apiAuth.oauthLoginCustomerId,
+      oauthLoginCustomerId,
       serviceAccountMccId: apiAuth.serviceAccountMccId,
       targetCustomerId: adsAccount.customer_id,
     })
@@ -676,6 +678,7 @@ export async function executeCampaignPublish(
       authType: apiAuth.authType,
       serviceAccountId,
       oauthCredentials,
+      oauthLoginCustomerId,
       runWithLoginCustomerFallbackAndHeartbeat,
     }
 

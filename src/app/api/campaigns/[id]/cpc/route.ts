@@ -1,7 +1,8 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { getCustomerWithCredentials } from '@/lib/google-ads-api'
+import { getCustomerWithCredentials, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
+import { resolveHealedOAuthCredentialsFields } from '@/lib/google-ads-accounts-auth'
 import { getDatabase } from '@/lib/db'
 import {
   getGoogleAdsAuthContext,
@@ -214,7 +215,19 @@ export async function GET(
     const useServiceAccount = apiAuth.authType === 'service_account'
     const serviceAccountId = apiAuth.serviceAccountId
     const oauthRefreshToken = useServiceAccount ? null : apiAuth.refreshToken || null
-    const oauthLoginCustomerId = apiAuth.oauthLoginCustomerId
+    let oauthLoginCustomerId = apiAuth.oauthLoginCustomerId
+    let oauthApiCredentials: OAuthApiCredentialsFields | undefined
+    if (!useServiceAccount) {
+      const healed = await resolveHealedOAuthCredentialsFields({
+        userId: numericUserId,
+        authContext,
+      })
+      if (!healed.ok) {
+        return NextResponse.json({ error: healed.message }, { status: 400 })
+      }
+      oauthApiCredentials = healed.credentials
+      oauthLoginCustomerId = oauthLoginCustomerId || healed.loginCustomerId || undefined
+    }
 
     if (useServiceAccount && !serviceAccountId) {
       return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
@@ -277,6 +290,7 @@ export async function GET(
           loginCustomerId,
           accountId: undefined,
           userId: numericUserId,
+          credentials: oauthApiCredentials,
         })
         campaignRows = await executeOAuthGaqlWithTracking(customer, linked.customer_id, campaignQuery)
       }
@@ -336,6 +350,7 @@ export async function GET(
             loginCustomerId,
             accountId: undefined,
             userId: numericUserId,
+            credentials: oauthApiCredentials,
           })
           adGroupRows = await executeOAuthGaqlWithTracking(customer, linked.customer_id, adGroupQuery)
         }

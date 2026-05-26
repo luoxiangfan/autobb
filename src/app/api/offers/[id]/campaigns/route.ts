@@ -1,6 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getCustomerWithCredentials } from '@/lib/google-ads-api'
+import { getCustomerWithCredentials, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
+import { resolveHealedOAuthCredentialsFields } from '@/lib/google-ads-accounts-auth'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getDatabase } from '@/lib/db'
 import {
@@ -277,6 +278,19 @@ export async function GET(
       }, { status: 400 })
     }
 
+    let oauthApiCredentials: OAuthApiCredentialsFields | undefined
+    if (!useServiceAccountAuth) {
+      const healed = await resolveHealedOAuthCredentialsFields({
+        userId: numericUserId,
+        authContext,
+      })
+      if (!healed.ok) {
+        return NextResponse.json({ error: healed.message }, { status: 400 })
+      }
+      oauthApiCredentials = healed.credentials
+      oauthLoginCustomerId = oauthLoginCustomerId || healed.loginCustomerId || null
+    }
+
     const gaqlCampaignById = new Map<number, any>()
     const adGroupCpcMicrosByCampaignId = new Map<number, number>()
     const targetSpendCeilingMicrosByCampaignId = new Map<number, number>()
@@ -444,6 +458,7 @@ export async function GET(
           loginCustomerId,
           accountId: undefined,
           userId: numericUserId,
+          credentials: oauthApiCredentials,
         })
 
         // AdGroup CPC best-effort

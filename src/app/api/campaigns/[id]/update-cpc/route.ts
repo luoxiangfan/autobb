@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { getCustomerWithCredentials } from '@/lib/google-ads-api'
+import { getCustomerWithCredentials, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
+import { resolveHealedOAuthCredentialsFields } from '@/lib/google-ads-accounts-auth'
 import { getDatabase } from '@/lib/db'
 import {
   getGoogleAdsAuthContext,
@@ -450,7 +451,19 @@ export async function PUT(
         )
       }
 
-      const loginCustomerId = apiAuth.oauthLoginCustomerId || adsAccountRow.parent_mcc_id || undefined
+      const healed = await resolveHealedOAuthCredentialsFields({
+        userId: numericUserId,
+        authContext,
+      })
+      if (!healed.ok) {
+        return NextResponse.json(
+          { error: healed.message },
+          { status: 400 }
+        )
+      }
+      const oauthApiCredentials: OAuthApiCredentialsFields = healed.credentials
+      const loginCustomerId =
+        apiAuth.oauthLoginCustomerId || healed.loginCustomerId || adsAccountRow.parent_mcc_id || undefined
 
       customer = await getCustomerWithCredentials({
         customerId: adsAccountRow.customer_id,
@@ -458,6 +471,7 @@ export async function PUT(
         loginCustomerId,
         accountId: adsAccountRow.id,
         userId: numericUserId,
+        credentials: oauthApiCredentials,
       })
     }
 

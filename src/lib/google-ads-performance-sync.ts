@@ -272,7 +272,7 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
       throw new Error('Missing refresh token. Please complete OAuth authorization in Settings.')
     }
 
-    const loginCustomerId =
+    let loginCustomerId =
       apiAuth.authType === 'service_account'
         ? apiAuth.serviceAccountMccId
         : apiAuth.oauthLoginCustomerId
@@ -287,6 +287,9 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
         throw new Error(healed.message)
       }
       oauthCredentials = healed.credentials
+      if (!loginCustomerId && healed.loginCustomerId) {
+        loginCustomerId = healed.loginCustomerId
+      }
     }
 
     const customer = await getCustomerWithCredentials({
