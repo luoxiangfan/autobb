@@ -20,6 +20,7 @@ import {
 import { parseServiceAccountJson } from '@/lib/google-ads-service-account'
 import { encrypt } from '@/lib/crypto'
 import { boolCondition } from '@/lib/db-helpers'
+import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
 
 async function requireAdmin(request: NextRequest) {
   const auth = await verifyAuth(request)
@@ -217,6 +218,12 @@ export async function PUT(
         )
       }
 
+      try {
+        await assertNoConflictingGoogleAdsAuth(userId, 'oauth')
+      } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 409 })
+      }
+
       await saveGoogleAdsCredentials(userId, {
         client_id: oauth.client_id,
         client_secret: oauth.client_secret,
@@ -244,6 +251,12 @@ export async function PUT(
           serviceAccountEmail: clientEmail,
         },
       })
+
+      try {
+        await assertNoConflictingGoogleAdsAuth(userId, 'service_account')
+      } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 409 })
+      }
 
       const db = getDatabase()
       const id = crypto.randomUUID()

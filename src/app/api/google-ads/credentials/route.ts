@@ -15,7 +15,9 @@ import {
 import { updateApiAccessLevel } from '@/lib/google-ads-access-level-detector'
 import {
   assertNoConflictingGoogleAdsAuth,
+  detectGoogleAdsDualStackCredentials,
   getGoogleAdsAuthContext,
+  GOOGLE_ADS_DUAL_STACK_WARNING,
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsCredentialStatusFields,
 } from '@/lib/google-ads-auth-context'
@@ -129,6 +131,8 @@ export async function GET(request: NextRequest) {
     const ctx = await getGoogleAdsAuthContext(userId)
     const assignment = ctx.assignment
     const statusFields = await resolveGoogleAdsCredentialStatusFields(ctx)
+    const dualStack = await detectGoogleAdsDualStackCredentials(userId)
+    const authConfigWarning = dualStack.dualStack ? GOOGLE_ADS_DUAL_STACK_WARNING : null
 
     if (!statusFields.hasCredentials) {
       return NextResponse.json({
@@ -140,6 +144,7 @@ export async function GET(request: NextRequest) {
           assignmentMode: assignment?.assignmentMode ?? 'own',
           canModify: ctx.canModify,
           isShared: ctx.isShared,
+          authConfigWarning,
         },
       })
     }
@@ -174,6 +179,7 @@ export async function GET(request: NextRequest) {
         isShared: ctx.isShared,
         sharedAdminEmail,
         sharedAdminUsername,
+        authConfigWarning,
       },
     })
 

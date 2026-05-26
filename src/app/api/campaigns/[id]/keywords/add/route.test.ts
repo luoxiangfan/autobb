@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import {
+  hasConfiguredGoogleAdsAuthFromContextMock,
+  resetCampaignRouteAuthMocksOAuth,
+} from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import { POST } from '@/app/api/campaigns/[id]/keywords/add/route'
+
+const campaignRouteAuthFns = vi.hoisted(() => ({
+  getGoogleAdsAuthContext: vi.fn(),
+  resolveGoogleAdsApiAuthFromContext: vi.fn(),
+}))
 
 const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
@@ -18,11 +27,6 @@ const dbState = vi.hoisted(() => ({
 
 const adsFns = vi.hoisted(() => ({
   createGoogleAdsKeywordsBatch: vi.fn(),
-}))
-
-const oauthFns = vi.hoisted(() => ({
-  getUserAuthType: vi.fn(),
-  getGoogleAdsCredentials: vi.fn(),
 }))
 
 const keywordPoolFns = vi.hoisted(() => ({
@@ -46,9 +50,10 @@ vi.mock('@/lib/google-ads-api', () => ({
   createGoogleAdsKeywordsBatch: adsFns.createGoogleAdsKeywordsBatch,
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getUserAuthType: oauthFns.getUserAuthType,
-  getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  getGoogleAdsAuthContext: campaignRouteAuthFns.getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext: hasConfiguredGoogleAdsAuthFromContextMock,
+  resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,
 }))
 
 vi.mock('@/lib/offer-keyword-pool', () => ({
@@ -70,13 +75,7 @@ describe('POST /api/campaigns/:id/keywords/add', () => {
       },
     })
 
-    oauthFns.getUserAuthType.mockResolvedValue({
-      authType: 'oauth',
-      serviceAccountId: undefined,
-    })
-    oauthFns.getGoogleAdsCredentials.mockResolvedValue({
-      refresh_token: 'oauth-refresh-token',
-    })
+    resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
     keywordPoolFns.promoteKeywordsToOfferKeywordPool.mockResolvedValue({
       promotedCount: 2,
       skippedCount: 0,

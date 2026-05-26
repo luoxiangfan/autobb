@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import {
+  hasConfiguredGoogleAdsAuthFromContextMock,
+  resetCampaignRouteAuthMocksOAuth,
+} from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import { POST } from '@/app/api/campaigns/[id]/offline/route'
+
+const campaignRouteAuthFns = vi.hoisted(() => ({
+  getGoogleAdsAuthContext: vi.fn(),
+  resolveGoogleAdsApiAuthFromContext: vi.fn(),
+}))
 
 const dbFns = vi.hoisted(() => ({
   exec: vi.fn(),
@@ -71,20 +80,10 @@ vi.mock('@/lib/google-ads-api', () => ({
   getCustomerWithCredentials: vi.fn(),
 }))
 
-const oauthFns = vi.hoisted(() => ({
-  getGoogleAdsCredentials: vi.fn(async () => null),
-  getUserAuthType: vi.fn(async (): Promise<{ authType: 'oauth' | 'service_account'; serviceAccountId?: string }> => ({
-    authType: 'oauth',
-  })),
-}))
-
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
-  getUserAuthType: oauthFns.getUserAuthType,
-}))
-
-vi.mock('@/lib/google-ads-service-account', () => ({
-  getServiceAccountConfig: vi.fn(async () => null),
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  getGoogleAdsAuthContext: campaignRouteAuthFns.getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext: hasConfiguredGoogleAdsAuthFromContextMock,
+  resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,
 }))
 
 vi.mock('@/lib/google-ads-api-tracker', () => ({
@@ -103,13 +102,10 @@ const {
   getGoogleAdsCredentialsFromDB,
   getCustomerWithCredentials,
 } = await import('@/lib/google-ads-api')
-const { getGoogleAdsCredentials, getUserAuthType } = await import('@/lib/google-ads-oauth')
-const { getServiceAccountConfig } = await import('@/lib/google-ads-service-account')
-
 describe('POST /api/campaigns/:id/offline', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+    resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
 
     authFns.verifyAuth.mockResolvedValue({
       authenticated: true,
@@ -219,13 +215,6 @@ describe('POST /api/campaigns/:id/offline', () => {
       ads_account_deleted: false,
       ads_account_status: 'ENABLED',
     })
-    vi.mocked(getGoogleAdsCredentialsFromDB).mockResolvedValue({
-      useServiceAccount: false,
-      login_customer_id: null,
-    } as any)
-    vi.mocked(getGoogleAdsCredentials).mockResolvedValue({
-      refresh_token: 'rtok',
-    } as any)
     vi.mocked(updateGoogleAdsCampaignStatus).mockResolvedValue(undefined)
 
     const req = new NextRequest('http://localhost/api/campaigns/123/offline', {
@@ -267,13 +256,6 @@ describe('POST /api/campaigns/:id/offline', () => {
       ads_account_deleted: false,
       ads_account_status: 'ENABLED',
     })
-    vi.mocked(getGoogleAdsCredentialsFromDB).mockResolvedValue({
-      useServiceAccount: false,
-      login_customer_id: null,
-    } as any)
-    vi.mocked(getGoogleAdsCredentials).mockResolvedValue({
-      refresh_token: 'rtok',
-    } as any)
     vi.mocked(updateGoogleAdsCampaignStatus).mockRejectedValue(new Error('quota limited'))
 
     const req = new NextRequest('http://localhost/api/campaigns/123/offline', {
@@ -314,13 +296,6 @@ describe('POST /api/campaigns/:id/offline', () => {
       ads_account_deleted: false,
       ads_account_status: 'ENABLED',
     })
-    vi.mocked(getGoogleAdsCredentialsFromDB).mockResolvedValue({
-      useServiceAccount: false,
-      login_customer_id: null,
-    } as any)
-    vi.mocked(getGoogleAdsCredentials).mockResolvedValue({
-      refresh_token: 'rtok',
-    } as any)
     vi.mocked(getCustomerWithCredentials).mockResolvedValue({
       campaigns: {
         remove: vi.fn(async () => {
@@ -376,14 +351,22 @@ describe('POST /api/campaigns/:id/offline', () => {
       ads_account_deleted: false,
       ads_account_status: 'ENABLED',
     })
-    oauthFns.getUserAuthType.mockResolvedValue({
-      authType: 'service_account',
-      serviceAccountId: 'sa-1',
+    campaignRouteAuthFns.getGoogleAdsAuthContext.mockResolvedValue({
+      userId: 1,
+      ownerUserId: 1,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+      oauthCredentials: null,
+      serviceAccountConfig: { id: 'sa-1', mccCustomerId: '2233445566' },
     })
-    vi.mocked(getServiceAccountConfig).mockResolvedValue({
-      id: 'sa-1',
-      mccCustomerId: '2233445566',
-    } as any)
+    campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
+      authType: 'service_account',
+      refreshToken: '',
+      serviceAccountId: 'sa-1',
+      serviceAccountMccId: '2233445566',
+    })
     vi.mocked(updateGoogleAdsCampaignStatus).mockResolvedValue(undefined)
 
     const req = new NextRequest('http://localhost/api/campaigns/123/offline', {
@@ -401,9 +384,7 @@ describe('POST /api/campaigns/:id/offline', () => {
     expect(data.success).toBe(true)
     expect(data.googleAds.paused).toBe(1)
     expect(vi.mocked(getGoogleAdsCredentialsFromDB)).not.toHaveBeenCalled()
-    expect(vi.mocked(getGoogleAdsCredentials)).not.toHaveBeenCalled()
-    expect(vi.mocked(getUserAuthType)).toHaveBeenCalled()
-    expect(vi.mocked(getServiceAccountConfig)).toHaveBeenCalledWith(1, 'sa-1')
+    expect(campaignRouteAuthFns.getGoogleAdsAuthContext).toHaveBeenCalled()
     expect(vi.mocked(updateGoogleAdsCampaignStatus)).toHaveBeenCalledWith(
       expect.objectContaining({
         campaignId: '999000111',

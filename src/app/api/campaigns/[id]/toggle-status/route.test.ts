@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import {
+  hasConfiguredGoogleAdsAuthFromContextMock,
+  resetCampaignRouteAuthMocksOAuth,
+} from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import { PUT } from '@/app/api/campaigns/[id]/toggle-status/route'
+
+const campaignRouteAuthFns = vi.hoisted(() => ({
+  getGoogleAdsAuthContext: vi.fn(),
+  resolveGoogleAdsApiAuthFromContext: vi.fn(),
+}))
 
 const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
@@ -12,15 +21,6 @@ const campaignFns = vi.hoisted(() => ({
 
 const adsFns = vi.hoisted(() => ({
   updateGoogleAdsCampaignStatus: vi.fn(),
-}))
-
-const oauthFns = vi.hoisted(() => ({
-  getGoogleAdsCredentials: vi.fn(),
-  getUserAuthType: vi.fn(),
-}))
-
-const serviceAccountFns = vi.hoisted(() => ({
-  getServiceAccountConfig: vi.fn(),
 }))
 
 const transitionFns = vi.hoisted(() => ({
@@ -50,13 +50,10 @@ vi.mock('@/lib/google-ads-api', () => ({
   updateGoogleAdsCampaignStatus: adsFns.updateGoogleAdsCampaignStatus,
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
-  getUserAuthType: oauthFns.getUserAuthType,
-}))
-
-vi.mock('@/lib/google-ads-service-account', () => ({
-  getServiceAccountConfig: serviceAccountFns.getServiceAccountConfig,
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  getGoogleAdsAuthContext: campaignRouteAuthFns.getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext: hasConfiguredGoogleAdsAuthFromContextMock,
+  resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,
 }))
 
 vi.mock('@/lib/campaign-state-machine', () => ({
@@ -75,14 +72,7 @@ vi.mock('@/lib/campaign-offer-tasks', () => ({
 describe('PUT /api/campaigns/:id/toggle-status', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    oauthFns.getUserAuthType.mockResolvedValue({
-      authType: 'oauth',
-      serviceAccountId: undefined,
-    })
-    oauthFns.getGoogleAdsCredentials.mockResolvedValue({
-      refresh_token: 'oauth-refresh-token',
-      login_customer_id: '9988776655',
-    })
+    resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
     adsFns.updateGoogleAdsCampaignStatus.mockResolvedValue(undefined)
     transitionFns.applyCampaignTransition.mockResolvedValue({ updatedCount: 1 })
     offerTaskFns.pauseOfferTasks.mockResolvedValue({
@@ -288,13 +278,21 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
   })
 
   it('uses linked service account without requiring OAuth base credentials', async () => {
-    oauthFns.getUserAuthType.mockResolvedValue({
-      authType: 'service_account',
-      serviceAccountId: 'sa-1',
+    campaignRouteAuthFns.getGoogleAdsAuthContext.mockResolvedValue({
+      userId: 7,
+      ownerUserId: 7,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+      oauthCredentials: null,
+      serviceAccountConfig: { id: 'sa-1', mccCustomerId: '2233445566' },
     })
-    serviceAccountFns.getServiceAccountConfig.mockResolvedValue({
-      id: 'sa-1',
-      mccCustomerId: '2233445566',
+    campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
+      authType: 'service_account',
+      refreshToken: '',
+      serviceAccountId: 'sa-1',
+      serviceAccountMccId: '2233445566',
     })
 
     dbFns.queryOne.mockImplementation(async (sql: string) => {
@@ -336,8 +334,6 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
 
     expect(res.status).toBe(200)
     expect(data.success).toBe(true)
-    expect(serviceAccountFns.getServiceAccountConfig).toHaveBeenCalledWith(7, 'sa-1')
-    expect(oauthFns.getGoogleAdsCredentials).not.toHaveBeenCalled()
     expect(adsFns.updateGoogleAdsCampaignStatus).toHaveBeenCalledWith({
       customerId: '1122334455',
       refreshToken: '',

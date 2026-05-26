@@ -31,6 +31,10 @@ vi.mock('@/lib/campaigns-read-cache', () => ({
   setCachedCampaignPerformance: campaignCacheFns.setCachedCampaignPerformance,
 }))
 
+vi.mock('@/lib/feature-flags', () => ({
+  isPerformanceReleaseEnabled: vi.fn((flag: string) => flag !== 'campaignsParallel'),
+}))
+
 function buildPreviousSummaryRows(params: {
   performance?: Array<{ currency?: string | null; impressions?: number; clicks?: number; cost?: number }>
   attributed?: Array<{ currency?: string | null; amount?: number }>
@@ -126,7 +130,7 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
         return []
       }
-      if (sql.includes('FROM campaigns c')) {
+      if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
         return []
       }
       if (sql.includes('GROUP BY currency')) {
@@ -181,7 +185,7 @@ describe('GET /api/campaigns/performance', () => {
         return [{ currency: 'USD', total_cost: 12 }]
       }
 
-      if (sql.includes('FROM campaigns c')) {
+      if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
         return [
           {
             id: 1,
@@ -225,7 +229,7 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id')) {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
         return [{ campaign_id: 1, currency: 'USD', commission: 5 }]
       }
 
@@ -244,6 +248,10 @@ describe('GET /api/campaigns/performance', () => {
         return buildUnattributedPeriodRows({
           current: [{ currency: 'USD', amount: 1 }],
         })
+      }
+
+      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+        return [{ campaign_id: 1, currency: 'USD', commission: 1 }]
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -330,7 +338,7 @@ describe('GET /api/campaigns/performance', () => {
           }
           return []
         }
-        if (sql.includes('FROM campaigns c')) {
+        if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
           return []
         }
         return []
@@ -371,7 +379,7 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM campaigns c')) {
+      if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
         return [
           {
             id: 1,
@@ -415,7 +423,7 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id')) {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
         return [{ campaign_id: 1, currency: 'CNY', commission: 7 }]
       }
 
@@ -440,6 +448,10 @@ describe('GET /api/campaigns/performance', () => {
           current: [{ currency: 'CNY', amount: 3 }],
           previous: [{ currency: 'CNY', amount: 1 }],
         })
+      }
+
+      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+        return [{ campaign_id: 1, currency: 'CNY', commission: 3 }]
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -515,7 +527,7 @@ describe('GET /api/campaigns/performance', () => {
         return [{ currency: 'USD', total_cost: 80 }]
       }
 
-      if (sql.includes('FROM campaigns c')) {
+      if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
         return [
           {
             id: 1,
@@ -566,7 +578,7 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id')) {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
         return [{ campaign_id: 1, currency: 'USD', commission: 3 }]
       }
 
@@ -582,6 +594,10 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('period_label')) {
         expect(params?.[params.length - 1]).toBe('USD')
         return []
+      }
+
+      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+        return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -634,7 +650,7 @@ describe('GET /api/campaigns/performance', () => {
         return [{ currency: 'USD', total_cost: 24 }]
       }
 
-      if (sql.includes('FROM campaigns c')) {
+      if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
         return [
           {
             id: 1,
@@ -680,7 +696,7 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id')) {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
         return [{ campaign_id: 1, currency: 'USD', commission: 3 }]
       }
 
@@ -695,6 +711,10 @@ describe('GET /api/campaigns/performance', () => {
 
       if (sql.includes('period_label')) {
         return []
+      }
+
+      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+        return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -743,7 +763,7 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM campaigns c')) {
+      if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
         return [
           {
             id: 1,
@@ -801,7 +821,7 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
         return [
           { campaign_id: 1, currency: 'USD', commission: 9 },
           { campaign_id: 1, currency: 'CNY', commission: 4 },
@@ -836,6 +856,13 @@ describe('GET /api/campaigns/performance', () => {
             { currency: 'CNY', amount: 2.5 },
           ],
         })
+      }
+
+      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+        return [
+          { campaign_id: 1, currency: 'USD', commission: 1.5 },
+          { campaign_id: 1, currency: 'CNY', commission: 2.5 },
+        ]
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -898,7 +925,7 @@ describe('GET /api/campaigns/performance', () => {
         return [{ currency: 'CNY', total_cost: 40 }]
       }
 
-      if (sql.includes('FROM campaigns c')) {
+      if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
         return [
           {
             id: 1,
@@ -950,7 +977,7 @@ describe('GET /api/campaigns/performance', () => {
         return [{ currency: 'CNY', impressions: 20, clicks: 2, cost: 8 }]
       }
 
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
         return [{ campaign_id: 1, currency: 'USD', commission: 7 }]
       }
 
@@ -974,6 +1001,10 @@ describe('GET /api/campaigns/performance', () => {
           current: [{ currency: 'USD', amount: 3 }],
           previous: [{ currency: 'USD', amount: 1 }],
         })
+      }
+
+      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+        return [{ campaign_id: 1, currency: 'USD', commission: 3 }]
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -1036,7 +1067,7 @@ describe('GET /api/campaigns/performance', () => {
           { currency: 'CNY', total_cost: 100 },
         ]
       }
-      if (sql.includes('FROM campaigns c')) {
+      if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
         return [
           {
             id: 1,
@@ -1106,7 +1137,7 @@ describe('GET /api/campaigns/performance', () => {
           { currency: 'CNY', impressions: 100, clicks: 10, cost: 100 },
         ]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
         return []
       }
       if (sql.includes('FROM affiliate_commission_attributions') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
@@ -1127,6 +1158,10 @@ describe('GET /api/campaigns/performance', () => {
 
       if (sql.includes('period_label')) {
         return []
+      }
+
+      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+        return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -1172,7 +1207,7 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
         return [{ currency: 'USD', total_cost: 20 }]
       }
-      if (sql.includes('FROM campaigns c')) {
+      if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
         return [
           {
             id: 1,
@@ -1238,7 +1273,7 @@ describe('GET /api/campaigns/performance', () => {
           { campaign_id: 2, currency: 'USD', impressions: 100, clicks: 10, cost: 10 },
         ]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
         return []
       }
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY currency')) {
@@ -1259,6 +1294,10 @@ describe('GET /api/campaigns/performance', () => {
 
       if (sql.includes('period_label')) {
         return []
+      }
+
+      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+        return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -1306,13 +1345,13 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
         return []
       }
-      if (sql.includes('FROM campaigns c')) {
+      if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
         return []
       }
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
         return []
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id')) {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
         return []
       }
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY currency')) {
@@ -1331,6 +1370,10 @@ describe('GET /api/campaigns/performance', () => {
 
       if (sql.includes('period_label')) {
         return []
+      }
+
+      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+        return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -1380,7 +1423,7 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
         return [{ currency: 'USD', total_cost: 30 }]
       }
-      if (sql.includes('FROM campaigns c')) {
+      if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
         return [
           {
             id: 1,
@@ -1444,7 +1487,7 @@ describe('GET /api/campaigns/performance', () => {
           { campaign_id: 2, currency: 'USD', impressions: 10, clicks: 2, cost: 3 },
         ]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id')) {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
         return [
           { campaign_id: 1, commission: 12 },
           { campaign_id: 2, commission: 1 },
@@ -1469,6 +1512,10 @@ describe('GET /api/campaigns/performance', () => {
 
       if (sql.includes('period_label')) {
         return []
+      }
+
+      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+        return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -1514,12 +1561,12 @@ describe('GET /api/campaigns/performance', () => {
       status: 'ENABLED',
     }))
     expect(data.summary).toEqual(expect.objectContaining({
-      totalCampaigns: 2,
+      totalCampaigns: 1,
       activeCampaigns: 1,
       statusDistribution: expect.objectContaining({
         enabled: 1,
-        removed: 1,
-        total: 2,
+        removed: 0,
+        total: 1,
       }),
     }))
   })
@@ -1529,7 +1576,7 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
         return [{ currency: 'USD', total_cost: 60 }]
       }
-      if (sql.includes('FROM campaigns c')) {
+      if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
         return [
           {
             id: 1,
@@ -1621,7 +1668,7 @@ describe('GET /api/campaigns/performance', () => {
           { campaign_id: 3, currency: 'USD', impressions: 50, clicks: 10, cost: 15 },
         ]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id')) {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
         return [
           { campaign_id: 1, commission: 12 },
           { campaign_id: 2, commission: 1 },
@@ -1647,6 +1694,10 @@ describe('GET /api/campaigns/performance', () => {
 
       if (sql.includes('period_label')) {
         return []
+      }
+
+      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+        return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -1686,19 +1737,19 @@ describe('GET /api/campaigns/performance', () => {
     expect(data.campaigns).toHaveLength(2)
     expect(new Set(data.campaigns.map((item: { id: number }) => item.id))).toEqual(new Set([1, 2]))
     expect(data.summary).toEqual(expect.objectContaining({
-      totalCampaigns: 3,
+      totalCampaigns: 2,
       statusDistribution: expect.objectContaining({
         enabled: 1,
-        paused: 1,
+        paused: 0,
         removed: 1,
-        total: 3,
+        total: 2,
       }),
     }))
   })
 
   it('matches search against linked ads account name and ids', async () => {
     const query = vi.fn(async (sql: string) => {
-      if (sql.includes('FROM campaigns c')) {
+      if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
         return [
           {
             id: 1,
@@ -1762,7 +1813,7 @@ describe('GET /api/campaigns/performance', () => {
           { campaign_id: 2, currency: 'USD', impressions: 50, clicks: 10, cost: 15 },
         ]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id')) {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
         return [
           { campaign_id: 1, currency: 'USD', commission: 12 },
           { campaign_id: 2, currency: 'USD', commission: 6 },
@@ -1785,6 +1836,10 @@ describe('GET /api/campaigns/performance', () => {
       }
       if (sql.includes('period_label')) {
         return []
+      }
+
+      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+        return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
       throw new Error(`unexpected query sql: ${sql}`)
@@ -1849,7 +1904,7 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
         return [{ currency: 'USD', total_cost: 30 }]
       }
-      if (sql.includes('FROM campaigns c')) {
+      if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
         return [
           {
             id: 1,
@@ -1883,11 +1938,8 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
         return [{ campaign_id: 1, currency: 'USD', impressions: 100, clicks: 20, cost: 30 }]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY campaign_id')) {
+      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
         return [{ campaign_id: 1, currency: 'USD', commission: 12 }]
-      }
-      if (sql.includes('FROM openclaw_affiliate_attribution_failures f')) {
-        throw new Error('SQLITE_ERROR: no such column: f.campaign_id')
       }
       if (sql.includes('summary_source')) {
         return buildPreviousSummaryRows({
@@ -1898,6 +1950,10 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('period_label')) {
         return []
       }
+      if (sql.includes('scoped_campaigns') && sql.includes('openclaw_affiliate_attribution_failures')) {
+        throw new Error('openclaw_affiliate_attribution_failures: no such column: f.campaign_id')
+      }
+
       throw new Error(`unexpected query sql: ${sql}`)
     })
 

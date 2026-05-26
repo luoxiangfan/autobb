@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
   getDatabase: vi.fn(),
   queryActiveCampaigns: vi.fn(),
-  getGoogleAdsCredentials: vi.fn(),
+  getGoogleAdsAuthContext: vi.fn(),
   findCachedLaunchScore: vi.fn(),
   parseLaunchScoreAnalysis: vi.fn(),
   computeContentHash: vi.fn(),
@@ -27,8 +27,18 @@ vi.mock('@/lib/active-campaigns-query', () => ({
   queryActiveCampaigns: mocks.queryActiveCampaigns,
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getGoogleAdsCredentials: mocks.getGoogleAdsCredentials,
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  getGoogleAdsAuthContext: mocks.getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext: (ctx: {
+    oauthCredentials?: { refresh_token?: string } | null
+    serviceAccountConfig?: { id?: string } | null
+    auth?: { authType?: string }
+  }) => {
+    if (ctx.auth?.authType === 'service_account') {
+      return Boolean(ctx.serviceAccountConfig?.id)
+    }
+    return Boolean(ctx.oauthCredentials?.refresh_token)
+  },
 }))
 
 vi.mock('@/lib/launch-scores', () => ({
@@ -135,8 +145,15 @@ describe('POST /api/campaigns/publish URL alignment', () => {
       total: { enabled: 0, own: 0, manual: 0, other: 0 },
     })
 
-    mocks.getGoogleAdsCredentials.mockResolvedValue({
-      refresh_token: 'refresh-token',
+    mocks.getGoogleAdsAuthContext.mockResolvedValue({
+      userId: 7,
+      ownerUserId: 7,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      auth: { authType: 'oauth' },
+      oauthCredentials: { refresh_token: 'refresh-token' },
+      serviceAccountConfig: null,
     })
 
     mocks.findCachedLaunchScore.mockResolvedValue({

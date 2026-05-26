@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import {
+  hasConfiguredGoogleAdsAuthFromContextMock,
+  resetCampaignRouteAuthMocksOAuth,
+} from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import { PUT } from '@/app/api/campaigns/[id]/update-budget/route'
+
+const campaignRouteAuthFns = vi.hoisted(() => ({
+  getGoogleAdsAuthContext: vi.fn(),
+  resolveGoogleAdsApiAuthFromContext: vi.fn(),
+}))
 
 const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
@@ -13,11 +22,6 @@ const dbFns = vi.hoisted(() => ({
 
 const adsFns = vi.hoisted(() => ({
   updateGoogleAdsCampaignBudget: vi.fn(),
-}))
-
-const oauthFns = vi.hoisted(() => ({
-  getUserAuthType: vi.fn(),
-  getGoogleAdsCredentials: vi.fn(),
 }))
 
 const cacheFns = vi.hoisted(() => ({
@@ -41,9 +45,10 @@ vi.mock('@/lib/google-ads-api', () => ({
   updateGoogleAdsCampaignBudget: adsFns.updateGoogleAdsCampaignBudget,
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getUserAuthType: oauthFns.getUserAuthType,
-  getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  getGoogleAdsAuthContext: campaignRouteAuthFns.getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext: hasConfiguredGoogleAdsAuthFromContextMock,
+  resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,
 }))
 
 vi.mock('@/lib/api-cache', () => ({
@@ -58,13 +63,7 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
       authenticated: true,
       user: { userId: 1 },
     })
-    oauthFns.getUserAuthType.mockResolvedValue({
-      authType: 'oauth',
-      serviceAccountId: undefined,
-    })
-    oauthFns.getGoogleAdsCredentials.mockResolvedValue({
-      refresh_token: 'refresh-token',
-    })
+    resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
     dbFns.exec.mockResolvedValue({ changes: 1 })
     adsFns.updateGoogleAdsCampaignBudget.mockResolvedValue(undefined)
   })
@@ -133,7 +132,7 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
     expect(data.success).toBe(true)
     expect(adsFns.updateGoogleAdsCampaignBudget).toHaveBeenCalledWith({
       customerId: '1234567890',
-      refreshToken: 'refresh-token',
+      refreshToken: 'oauth-refresh-token',
       campaignId: '23578044853',
       budgetAmount: 19.99,
       budgetType: 'DAILY',
@@ -160,9 +159,10 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
       account_is_active: true,
       account_is_deleted: false,
     })
-    oauthFns.getGoogleAdsCredentials.mockResolvedValue({
-      refresh_token: 'refresh-token',
-      login_customer_id: '1122334455',
+    campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
+      authType: 'oauth',
+      refreshToken: 'oauth-refresh-token',
+      oauthLoginCustomerId: '1122334455',
     })
 
     const req = new NextRequest('http://localhost/api/campaigns/23578044853/update-budget', {
@@ -181,7 +181,7 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
     expect(data.success).toBe(true)
     expect(adsFns.updateGoogleAdsCampaignBudget).toHaveBeenCalledWith({
       customerId: '1234567890',
-      refreshToken: 'refresh-token',
+      refreshToken: 'oauth-refresh-token',
       campaignId: '23578044853',
       budgetAmount: 20,
       budgetType: 'DAILY',
@@ -206,9 +206,10 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
       account_is_active: true,
       account_is_deleted: false,
     })
-    oauthFns.getGoogleAdsCredentials.mockResolvedValue({
-      refresh_token: 'refresh-token',
-      login_customer_id: '1122334455',
+    campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
+      authType: 'oauth',
+      refreshToken: 'oauth-refresh-token',
+      oauthLoginCustomerId: '1122334455',
     })
     adsFns.updateGoogleAdsCampaignBudget
       .mockRejectedValueOnce(
@@ -235,7 +236,7 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
     expect(adsFns.updateGoogleAdsCampaignBudget).toHaveBeenCalledTimes(2)
     expect(adsFns.updateGoogleAdsCampaignBudget).toHaveBeenNthCalledWith(1, {
       customerId: '1234567890',
-      refreshToken: 'refresh-token',
+      refreshToken: 'oauth-refresh-token',
       campaignId: '23578044853',
       budgetAmount: 20,
       budgetType: 'DAILY',
@@ -247,7 +248,7 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
     })
     expect(adsFns.updateGoogleAdsCampaignBudget).toHaveBeenNthCalledWith(2, {
       customerId: '1234567890',
-      refreshToken: 'refresh-token',
+      refreshToken: 'oauth-refresh-token',
       campaignId: '23578044853',
       budgetAmount: 20,
       budgetType: 'DAILY',

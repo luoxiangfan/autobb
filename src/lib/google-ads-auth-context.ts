@@ -195,6 +195,36 @@ export type GoogleAdsAuthSaveTarget = 'oauth' | 'service_account'
 /**
  * 保存 OAuth / 服务账号前校验互斥（与设置页「二选一」一致）。
  */
+export const GOOGLE_ADS_DUAL_STACK_WARNING =
+  '检测到 OAuth 与服务账号同时存在，请先在设置页删除其中一种配置后再使用。'
+
+/**
+ * 检测凭证 owner 上是否同时存在 OAuth refresh_token 与活跃服务账号（历史双栈残留）。
+ */
+export async function detectGoogleAdsDualStackCredentials(userId: number): Promise<{
+  hasOAuthRefresh: boolean
+  hasActiveServiceAccount: boolean
+  dualStack: boolean
+}> {
+  const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
+  const db = await getDatabase()
+  const isActiveCondition = boolCondition('is_active', true, db.type)
+
+  const credentials = await getGoogleAdsCredentialsRaw(ownerUserId)
+  const existingSa = await db.queryOne<{ id: string }>(
+    `SELECT id FROM google_ads_service_accounts WHERE user_id = ? AND ${isActiveCondition} LIMIT 1`,
+    [ownerUserId]
+  )
+
+  const hasOAuthRefresh = Boolean(credentials?.refresh_token)
+  const hasActiveServiceAccount = Boolean(existingSa)
+  return {
+    hasOAuthRefresh,
+    hasActiveServiceAccount,
+    dualStack: hasOAuthRefresh && hasActiveServiceAccount,
+  }
+}
+
 export async function assertNoConflictingGoogleAdsAuth(
   userId: number,
   targetAuthType: GoogleAdsAuthSaveTarget

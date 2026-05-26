@@ -12,10 +12,7 @@ import { getQueueManager } from '@/lib/queue'
 import { getDatabase } from '@/lib/db'
 import { createError } from '@/lib/errors'
 import { getGoogleAdsConfig } from '@/lib/keyword-planner'
-import {
-  getGoogleAdsApiAuthForUser,
-  hasConfiguredGoogleAdsAuthFromContext,
-} from '@/lib/google-ads-auth-context'
+import { tryGetConfiguredGoogleAdsApiAuthForUser } from '@/lib/google-ads-auth-context'
 import { getAvailableBuckets } from '@/lib/offer-keyword-pool'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
 import {
@@ -208,12 +205,11 @@ export async function POST(
     })
   }
 
-  // 🔧 修复(2025-12-26): 使用中心化授权方式判断
-  const { ctx: authContext, apiAuth } = await getGoogleAdsApiAuthForUser(userId)
+  const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userId)
 
   // 2. 验证 Google Ads API 配置（支持 OAuth 和服务账号两种模式）
   try {
-    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+    if (!authResolved) {
       console.warn(`[CreativeGeneration] User ${userId} has no configured Google Ads auth`)
       return createQueueErrorResponse({
         status: 400,
@@ -224,6 +220,8 @@ export async function POST(
         retryable: false,
       })
     }
+
+    const { ctx: authContext, apiAuth } = authResolved
 
     const googleAdsConfig = await getGoogleAdsConfig(
       userId,

@@ -1448,6 +1448,12 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
         .map(norm => keywordMap.get(norm)?.keyword)
         .filter((kw): kw is string => Boolean(kw))
 
+      if (!authResolved && refreshKeywords.length > 0) {
+        console.warn(
+          `[offer-keyword-pool] Google Ads 认证未配置，跳过 ${refreshKeywords.length} 个过期关键词的搜索量刷新 (userId=${userId})`
+        )
+      }
+
       if (authResolved && refreshKeywords.length > 0) {
         const { apiAuth: auth } = authResolved
         const volumes = await getKeywordSearchVolumes(

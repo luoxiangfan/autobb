@@ -17,8 +17,7 @@ import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue'
 import { getGoogleAdsConfig } from '@/lib/keyword-planner'
 import {
-  getGoogleAdsApiAuthForUser,
-  hasConfiguredGoogleAdsAuthFromContext,
+  tryGetConfiguredGoogleAdsApiAuthForUser,
 } from '@/lib/google-ads-auth-context'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
 import { toDbJsonObjectField } from '@/lib/json-field'
@@ -141,10 +140,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 统一校验 Google Ads API 配置（用户级），避免逐Offer失败
-    const { ctx: authContext, apiAuth } = await getGoogleAdsApiAuthForUser(userIdNum)
+    const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userIdNum)
     try {
-      if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+      if (!authResolved) {
         return NextResponse.json(
           {
             error: '广告创意生成需要完整的 Google Ads API 配置',
@@ -153,6 +151,8 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
+
+      const { ctx: authContext, apiAuth } = authResolved
 
       const googleAdsConfig = await getGoogleAdsConfig(
         userIdNum,

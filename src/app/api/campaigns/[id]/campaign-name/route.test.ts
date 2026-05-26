@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
+import {
+  hasConfiguredGoogleAdsAuthFromContextMock,
+  resetCampaignRouteAuthMocksOAuth,
+} from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import { PUT } from './route'
+
+const campaignRouteAuthFns = vi.hoisted(() => ({
+  getGoogleAdsAuthContext: vi.fn(),
+  resolveGoogleAdsApiAuthFromContext: vi.fn(),
+}))
 
 const campaignFns = vi.hoisted(() => ({
   findCampaignById: vi.fn(),
@@ -26,18 +35,10 @@ vi.mock('@/lib/google-ads-api', () => ({
   getGoogleAdsCredentialsFromDB: googleAdsFns.getGoogleAdsCredentialsFromDB,
 }))
 
-const oauthFns = vi.hoisted(() => ({
-  getGoogleAdsCredentials: vi.fn(),
-  getUserAuthType: vi.fn(),
-}))
-
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
-  getUserAuthType: oauthFns.getUserAuthType,
-}))
-
-vi.mock('@/lib/google-ads-service-account', () => ({
-  getServiceAccountConfig: vi.fn(),
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  getGoogleAdsAuthContext: campaignRouteAuthFns.getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext: hasConfiguredGoogleAdsAuthFromContextMock,
+  resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -64,11 +65,7 @@ function makeRequest(body: unknown, userId = '1') {
 describe('PUT /api/campaigns/:id/campaign-name', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    oauthFns.getUserAuthType.mockResolvedValue({
-      authType: 'oauth',
-      serviceAccountId: undefined,
-    })
-    oauthFns.getGoogleAdsCredentials.mockResolvedValue({ refresh_token: 'token' })
+    resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
     campaignFns.findCampaignById.mockResolvedValue({
       id: 10,
       campaignName: 'Old Name',

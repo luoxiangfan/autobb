@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import {
+  hasConfiguredGoogleAdsAuthFromContextMock,
+  resetCampaignRouteAuthMocksOAuth,
+} from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import { POST } from '@/app/api/campaigns/[id]/keywords/negatives/add/route'
+
+const campaignRouteAuthFns = vi.hoisted(() => ({
+  getGoogleAdsAuthContext: vi.fn(),
+  resolveGoogleAdsApiAuthFromContext: vi.fn(),
+}))
 
 const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
@@ -14,11 +23,6 @@ const dbFns = vi.hoisted(() => ({
 
 const adsFns = vi.hoisted(() => ({
   createGoogleAdsKeywordsBatch: vi.fn(),
-}))
-
-const oauthFns = vi.hoisted(() => ({
-  getUserAuthType: vi.fn(),
-  getGoogleAdsCredentials: vi.fn(),
 }))
 
 vi.mock('@/lib/auth', () => ({
@@ -38,9 +42,10 @@ vi.mock('@/lib/google-ads-api', () => ({
   createGoogleAdsKeywordsBatch: adsFns.createGoogleAdsKeywordsBatch,
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
-  getUserAuthType: oauthFns.getUserAuthType,
-  getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  getGoogleAdsAuthContext: campaignRouteAuthFns.getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext: hasConfiguredGoogleAdsAuthFromContextMock,
+  resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,
 }))
 
 describe('POST /api/campaigns/:id/keywords/negatives/add', () => {
@@ -55,13 +60,7 @@ describe('POST /api/campaigns/:id/keywords/negatives/add', () => {
         packageType: 'trial',
       },
     })
-    oauthFns.getUserAuthType.mockResolvedValue({
-      authType: 'oauth',
-      serviceAccountId: undefined,
-    })
-    oauthFns.getGoogleAdsCredentials.mockResolvedValue({
-      refresh_token: 'oauth-refresh-token',
-    })
+    resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
     dbFns.queryOne.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM campaigns c')) {
         return {
