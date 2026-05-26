@@ -1,6 +1,6 @@
 import { getCustomerWithCredentials } from './google-ads-api'
 import {
-  resolveAndHealSyncUserCredentials,
+  loadOAuthGoogleAdsCallBundleForContext,
   resolveOAuthRefreshToken,
 } from './google-ads-accounts-auth'
 import {
@@ -30,14 +30,15 @@ async function resolveKeywordPlannerOAuth(params: {
     throw new Error('Keyword Planner requires OAuth when authType is oauth')
   }
 
-  const credResolved = await resolveAndHealSyncUserCredentials({
+  const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
     userId: params.userId,
     authContext,
-    authType: 'oauth',
-    serviceAccountId: null,
   })
-  if (!credResolved.ok) {
-    throw new Error(credResolved.message)
+  if (!oauthBundle.ok) {
+    throw new Error(oauthBundle.message)
+  }
+  if (!oauthBundle.bundle?.oauthCredentials) {
+    throw new Error('OAuth credentials bundle missing')
   }
 
   const refreshToken = (
@@ -49,14 +50,11 @@ async function resolveKeywordPlannerOAuth(params: {
     throw new Error('OAuth refresh token not found')
   }
 
-  const credentials = {
-    client_id: credResolved.userCredentials.client_id,
-    client_secret: credResolved.userCredentials.client_secret,
-    developer_token: credResolved.userCredentials.developer_token,
-    login_customer_id: String(
-      credResolved.userCredentials.login_customer_id || apiAuth.oauthLoginCustomerId || ''
-    ),
-  }
+  const credentials = oauthBundle.bundle.oauthCredentials
+  const loginCustomerHint =
+    oauthBundle.bundle.oauthLoginCustomerId ||
+    apiAuth.oauthLoginCustomerId ||
+    ''
 
   const loginCustomerId = await getLoginCustomerId({
     authConfig: {
@@ -64,7 +62,7 @@ async function resolveKeywordPlannerOAuth(params: {
       userId: params.userId,
       serviceAccountId: params.serviceAccountId,
     },
-    oauthCredentials: { login_customer_id: credentials.login_customer_id },
+    oauthCredentials: { login_customer_id: loginCustomerHint },
   })
 
   return { refreshToken, loginCustomerId, credentials }

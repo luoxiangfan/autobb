@@ -3,10 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { findCampaignById, updateCampaign } from '@/lib/campaigns'
 import { findGoogleAdsAccountById } from '@/lib/google-ads-accounts'
 import { createGoogleAdsCampaign } from '@/lib/google-ads-api'
+import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
 import {
   googleAdsApiAuthValidationErrorMessage,
   resolveGoogleAdsApiAuthForAccount,
 } from '@/lib/google-ads-auth-context'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { invalidateOfferCache } from '@/lib/api-cache'
 
 /**
@@ -23,28 +25,21 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
     const userId = authResult.user.userId
 
-    // 查找Campaign
     const campaign = await findCampaignById(parseInt(id, 10), userId)
     if (!campaign) {
       return NextResponse.json(
-        {
-          error: '广告系列不存在或无权访问',
-        },
+        { error: '广告系列不存在或无权访问' },
         { status: 404 }
       )
     }
 
-    // 检查是否已经同步
     if (campaign.campaignId) {
       return NextResponse.json(
-        {
-          error: '广告系列已同步，不能重复同步',
-        },
+        { error: '广告系列已同步，不能重复同步' },
         { status: 400 }
       )
     }
 
-    // 查找Google Ads账号
     const googleAdsAccount = await findGoogleAdsAccountById(
       campaign.googleAdsAccountId,
       userId
@@ -52,9 +47,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     if (!googleAdsAccount) {
       return NextResponse.json(
-        {
-          error: 'Google Ads账号不存在或无权访问',
-        },
+        { error: 'Google Ads账号不存在或无权访问' },
         { status: 404 }
       )
     }
@@ -69,32 +62,54 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         { status: 400 }
       )
     }
-    const { apiAuth } = authResolved
 
-    // 更新状态为pending
+    const prepared = await prepareGoogleAdsAccountApiCall({
+      authContext: authResolved.ctx,
+      linkedServiceAccountId: googleAdsAccount.serviceAccountId,
+    })
+    if (!prepared.ok) {
+      return NextResponse.json({ error: prepared.message }, { status: 400 })
+    }
+
+    const { apiAuth, refreshToken, oauthCredentials, oauthLoginCustomerId } = prepared
+
     await updateCampaign(campaign.id, userId, {
       creationStatus: 'pending',
       creationError: null,
     })
 
     try {
-      // 创建Google Ads广告系列
-      const result = await createGoogleAdsCampaign({
-        customerId: googleAdsAccount.customerId,
-        refreshToken: googleAdsAccount.refreshToken || apiAuth.refreshToken,
-        campaignName: campaign.campaignName,
-        budgetAmount: campaign.budgetAmount,
-        budgetType: campaign.budgetType as 'DAILY' | 'TOTAL',
-        status: campaign.status as 'ENABLED' | 'PAUSED',
-        startDate: campaign.startDate || undefined,
-        endDate: campaign.endDate || undefined,
-        accountId: googleAdsAccount.id,
-        userId,
+      const result = await runWithLoginCustomerFallbackForAccount({
+        adsAccount: {
+          customer_id: googleAdsAccount.customerId,
+          parent_mcc_id: googleAdsAccount.parentMccId,
+          id: googleAdsAccount.id,
+        },
+        refreshToken,
         authType: apiAuth.authType,
         serviceAccountId: apiAuth.serviceAccountId,
+        serviceAccountMccId: apiAuth.serviceAccountMccId,
+        oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+        actionName: '同步广告系列到 Google Ads',
+        callback: (loginCustomerId) =>
+          createGoogleAdsCampaign({
+            customerId: googleAdsAccount.customerId,
+            refreshToken,
+            campaignName: campaign.campaignName,
+            budgetAmount: campaign.budgetAmount,
+            budgetType: campaign.budgetType as 'DAILY' | 'TOTAL',
+            status: campaign.status as 'ENABLED' | 'PAUSED',
+            startDate: campaign.startDate || undefined,
+            endDate: campaign.endDate || undefined,
+            accountId: googleAdsAccount.id,
+            userId,
+            loginCustomerId,
+            authType: apiAuth.authType,
+            serviceAccountId: apiAuth.serviceAccountId,
+            credentials: oauthCredentials,
+          }),
       })
 
-      // 更新Campaign，标记为已同步
       const updatedCampaign = await updateCampaign(campaign.id, userId, {
         campaignId: result.campaignId,
         creationStatus: 'synced',
@@ -109,7 +124,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         googleAdsCampaignId: result.campaignId,
       })
     } catch (error: any) {
-      // 同步失败，更新错误状态
       await updateCampaign(campaign.id, userId, {
         creationStatus: 'failed',
         creationError: error.message || '同步到Google Ads失败',
@@ -122,9 +136,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     console.error('同步广告系列失败:', error)
 
     return NextResponse.json(
-      {
-        error: error.message || '同步广告系列失败',
-      },
+      { error: error.message || '同步广告系列失败' },
       { status: 500 }
     )
   }

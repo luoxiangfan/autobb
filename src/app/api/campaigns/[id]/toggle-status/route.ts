@@ -4,11 +4,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { findCampaignById } from '@/lib/campaigns'
 import { updateGoogleAdsCampaignStatus, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
-import {
-  loadOAuthGoogleAdsCallBundleForContext,
-  pickOAuthLoginCustomerIdForAccount,
-  pickServiceAccountLoginCustomerIdForAccount,
-} from '@/lib/google-ads-accounts-auth'
+import { loadOAuthGoogleAdsCallBundleForContext } from '@/lib/google-ads-accounts-auth'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
@@ -239,30 +236,31 @@ export async function PUT(
       oauthLoginCustomerId = oauthBundle.bundle?.oauthLoginCustomerId
     }
 
-    const loginCustomerId =
-      apiAuth.authType === 'oauth'
-        ? pickOAuthLoginCustomerIdForAccount({
-            accountParentMccId: adsAccountRow.parent_mcc_id,
-            oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
-            targetCustomerId: adsAccountRow.customer_id,
-          })
-        : pickServiceAccountLoginCustomerIdForAccount({
-            accountParentMccId: adsAccountRow.parent_mcc_id,
-            serviceAccountMccId: apiAuth.serviceAccountMccId,
-            targetCustomerId: adsAccountRow.customer_id,
-          })
-
-    await updateGoogleAdsCampaignStatus({
-      customerId: adsAccountRow.customer_id,
+    await runWithLoginCustomerFallbackForAccount({
+      adsAccount: {
+        customer_id: adsAccountRow.customer_id,
+        parent_mcc_id: adsAccountRow.parent_mcc_id,
+        id: adsAccountRow.id,
+      },
       refreshToken,
-      campaignId: googleCampaignId,
-      status: nextStatus as 'PAUSED' | 'ENABLED',
-      accountId: adsAccountRow.id,
-      userId,
-      loginCustomerId,
       authType: apiAuth.authType,
       serviceAccountId,
-      credentials: oauthCredentials,
+      serviceAccountMccId: apiAuth.serviceAccountMccId,
+      oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+      actionName: '切换广告系列状态',
+      callback: (loginCustomerId) =>
+        updateGoogleAdsCampaignStatus({
+          customerId: adsAccountRow.customer_id,
+          refreshToken,
+          campaignId: googleCampaignId,
+          status: nextStatus as 'PAUSED' | 'ENABLED',
+          accountId: adsAccountRow.id,
+          userId,
+          loginCustomerId,
+          authType: apiAuth.authType,
+          serviceAccountId,
+          credentials: oauthCredentials,
+        }),
     })
 
     // 再更新本地数据库状态

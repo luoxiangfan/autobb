@@ -3,15 +3,11 @@ import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { boolCondition, boolParam, getInsertedId } from '@/lib/db-helpers'
 import { createGoogleAdsKeywordsBatch, updateGoogleAdsKeywordStatus, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
-import {
-  loadOAuthGoogleAdsCallBundleForContext,
-  pickOAuthLoginCustomerIdForAccount,
-  pickServiceAccountLoginCustomerIdForAccount,
-} from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
 import { patchCampaignConfigKeywords, type CampaignConfigKeyword } from '@/lib/campaign-config-keywords'
 
@@ -567,58 +563,43 @@ export async function POST(
       )
     }
 
-    const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+    const prepared = await prepareGoogleAdsAccountApiCall({
       authContext,
-      campaign.service_account_id
-    )
-    const refreshToken = apiAuth.authType === 'oauth' ? apiAuth.refreshToken || '' : ''
-    if (apiAuth.authType === 'oauth' && !refreshToken) {
-      return NextResponse.json(
-        { error: 'Google Ads OAuth 授权已过期，请重新连接账号' },
-        { status: 400 }
-      )
-    }
-    if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {
-      return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
+      linkedServiceAccountId: campaign.service_account_id,
+    })
+    if (!prepared.ok) {
+      return NextResponse.json({ error: prepared.message }, { status: 400 })
     }
 
-    let oauthCredentials: OAuthApiCredentialsFields | undefined
-    let oauthLoginCustomerId: string | undefined
-    if (apiAuth.authType === 'oauth') {
-      const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({ userId, authContext })
-      if (!oauthBundle.ok) {
-        return NextResponse.json({ error: oauthBundle.message }, { status: 400 })
-      }
-      oauthCredentials = oauthBundle.bundle?.oauthCredentials
-      oauthLoginCustomerId = oauthBundle.bundle?.oauthLoginCustomerId
-    }
-
-    const loginCustomerId =
-      apiAuth.authType === 'oauth'
-        ? pickOAuthLoginCustomerIdForAccount({
-            accountParentMccId: campaign.parent_mcc_id,
-            oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
-            targetCustomerId: String(campaign.customer_id),
-          })
-        : pickServiceAccountLoginCustomerIdForAccount({
-            accountParentMccId: campaign.parent_mcc_id,
-            serviceAccountMccId: apiAuth.serviceAccountMccId,
-            targetCustomerId: String(campaign.customer_id),
-          })
+    const { apiAuth, refreshToken, oauthCredentials, oauthLoginCustomerId } = prepared
 
     const status = body.status === 'PAUSED' ? 'PAUSED' : 'ENABLED'
-    const createResult = await createKeywordsByMatchType({
-      userId,
-      customerId: String(campaign.customer_id),
+    const createResult = await runWithLoginCustomerFallbackForAccount({
+      adsAccount: {
+        customer_id: String(campaign.customer_id),
+        parent_mcc_id: campaign.parent_mcc_id,
+        id: Number(campaign.google_ads_account_id),
+      },
       refreshToken,
-      adGroupId: googleAdGroupId,
-      status,
-      keywords: toCreate,
-      accountId: Number(campaign.google_ads_account_id),
       authType: apiAuth.authType,
       serviceAccountId: apiAuth.serviceAccountId,
-      loginCustomerId,
-      credentials: oauthCredentials,
+      serviceAccountMccId: apiAuth.serviceAccountMccId,
+      oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+      actionName: '按匹配类型添加关键词',
+      callback: (loginCustomerId) =>
+        createKeywordsByMatchType({
+          userId,
+          customerId: String(campaign.customer_id),
+          refreshToken,
+          adGroupId: googleAdGroupId,
+          status,
+          keywords: toCreate,
+          accountId: Number(campaign.google_ads_account_id),
+          authType: apiAuth.authType,
+          serviceAccountId: apiAuth.serviceAccountId,
+          loginCustomerId,
+          credentials: oauthCredentials,
+        }),
     })
 
     const now = new Date().toISOString()
@@ -677,21 +658,36 @@ export async function POST(
       .filter((item) => duplicateKeywordSet.has(item.text.toLowerCase()))
       .map((item) => ({ text: item.text, matchType: item.matchType }))
 
-    const pauseResult = replaceMode === 'pause_existing'
-      ? await pauseExistingKeywords({
-        db,
-        userId,
-        customerId: String(campaign.customer_id),
-        refreshToken,
-        accountId: Number(campaign.google_ads_account_id),
-        campaignId,
-        authType: apiAuth.authType,
-        serviceAccountId: apiAuth.serviceAccountId,
-        loginCustomerId,
-        credentials: oauthCredentials,
-        oldKeywords: parsedOldKeywords,
-      })
-      : { pausedCount: 0, pausedKeywords: [], failures: [] as KeywordPauseFailure[] }
+    const pauseResult =
+      replaceMode === 'pause_existing'
+        ? await runWithLoginCustomerFallbackForAccount({
+            adsAccount: {
+              customer_id: String(campaign.customer_id),
+              parent_mcc_id: campaign.parent_mcc_id,
+              id: Number(campaign.google_ads_account_id),
+            },
+            refreshToken,
+            authType: apiAuth.authType,
+            serviceAccountId: apiAuth.serviceAccountId,
+            serviceAccountMccId: apiAuth.serviceAccountMccId,
+            oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+            actionName: '暂停旧关键词',
+            callback: (loginCustomerId) =>
+              pauseExistingKeywords({
+                db,
+                userId,
+                customerId: String(campaign.customer_id),
+                refreshToken,
+                accountId: Number(campaign.google_ads_account_id),
+                campaignId,
+                authType: apiAuth.authType,
+                serviceAccountId: apiAuth.serviceAccountId,
+                loginCustomerId,
+                credentials: oauthCredentials,
+                oldKeywords: parsedOldKeywords,
+              }),
+          })
+        : { pausedCount: 0, pausedKeywords: [], failures: [] as KeywordPauseFailure[] }
 
     if (insertedKeywords.length === 0 && createResult.failures.length > 0) {
       return NextResponse.json(

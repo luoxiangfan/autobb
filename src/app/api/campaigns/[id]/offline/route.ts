@@ -6,12 +6,12 @@ import {
   getCustomerWithCredentials,
   type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-api'
-import { resolveHealedOAuthCredentialsFields } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { invalidateOfferCache } from '@/lib/api-cache'
 import { pauseUrlSwapTargetsByOfferId } from '@/lib/url-swap'
 import { removePendingClickFarmQueueTasksByTaskIds } from '@/lib/click-farm/queue-cleanup'
@@ -393,45 +393,30 @@ export async function POST(
           let refreshToken = ''
           let serviceAccountId: string | undefined
           let authType: 'oauth' | 'service_account' = 'oauth'
-          let loginCustomerId: string | undefined
           let oauthApiCredentials: OAuthApiCredentialsFields | undefined
+          let oauthLoginCustomerId: string | undefined
+          let serviceAccountMccId: string | undefined
 
           if (!googleAdsSummary.skippedReason) {
-            const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+            const prepared = await prepareGoogleAdsAccountApiCall({
               authContext,
-              campaignRow.service_account_id
-            )
-            authType = apiAuth.authType
-            refreshToken = apiAuth.refreshToken
-            serviceAccountId = apiAuth.serviceAccountId
-
-            if (apiAuth.authType === 'service_account') {
-              if (!apiAuth.serviceAccountId) {
-                googleAdsSummary.skippedReason = '未找到服务账号配置'
-              } else {
-                loginCustomerId = apiAuth.serviceAccountMccId
-              }
-            } else if (!apiAuth.refreshToken) {
-              googleAdsSummary.skippedReason = 'Google Ads OAuth未授权或已过期'
+              linkedServiceAccountId: campaignRow.service_account_id,
+            })
+            if (!prepared.ok) {
+              googleAdsSummary.skippedReason = prepared.message
             } else {
-              const healed = await resolveHealedOAuthCredentialsFields({
-                userId,
-                authContext,
-              })
-              if (!healed.ok) {
-                googleAdsSummary.skippedReason = healed.message
-              } else {
-                oauthApiCredentials = healed.credentials
-                loginCustomerId = apiAuth.oauthLoginCustomerId || healed.loginCustomerId || undefined
-              }
+              authType = prepared.apiAuth.authType
+              refreshToken = prepared.refreshToken
+              serviceAccountId = prepared.apiAuth.serviceAccountId
+              serviceAccountMccId = prepared.apiAuth.serviceAccountMccId
+              oauthApiCredentials = prepared.oauthCredentials
+              oauthLoginCustomerId =
+                prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId
             }
           }
-          if (!loginCustomerId && campaignRow.parent_mcc_id) {
-            loginCustomerId = String(campaignRow.parent_mcc_id)
-          }
 
           if (!googleAdsSummary.skippedReason) {
-            const runRemoteUpdates = async () => {
+            const runRemoteUpdates = async (loginCustomerId: string | undefined) => {
                 const toErrorMessage = (error: any): string =>
                   String(error?.message || error || 'Google Ads 更新失败')
 
@@ -539,11 +524,27 @@ export async function POST(
                 }
               }
 
+            const runWithLoginFallback = () =>
+              runWithLoginCustomerFallbackForAccount({
+                adsAccount: {
+                  customer_id: customerIdValue,
+                  parent_mcc_id: campaignRow.parent_mcc_id,
+                  id: campaignRow.google_ads_account_id ?? undefined,
+                },
+                refreshToken,
+                authType,
+                serviceAccountId,
+                serviceAccountMccId,
+                oauthLoginCustomerId,
+                actionName: '广告系列下线',
+                callback: runRemoteUpdates,
+              })
+
             if (waitRemote) {
-              await runRemoteUpdates()
+              await runWithLoginFallback()
             } else {
               googleAdsSummary.queued = true
-              void runRemoteUpdates().catch((err: any) => {
+              void runWithLoginFallback().catch((err: any) => {
                 console.error('[offline] Google Ads update failed:', err?.message || err)
               })
             }

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import {
+  defaultPreparedGoogleAdsAccountApiCall,
   hasConfiguredGoogleAdsAuthFromContextMock,
   resetCampaignRouteAuthMocksOAuth,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
@@ -23,6 +24,10 @@ const dbFns = vi.hoisted(() => ({
 
 const adsFns = vi.hoisted(() => ({
   createGoogleAdsKeywordsBatch: vi.fn(),
+}))
+
+const oauthAccountsAuthFns = vi.hoisted(() => ({
+  prepareGoogleAdsAccountApiCall: vi.fn(),
 }))
 
 vi.mock('@/lib/auth', () => ({
@@ -48,6 +53,14 @@ vi.mock('@/lib/google-ads-auth-context', () => ({
   resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,
 }))
 
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    prepareGoogleAdsAccountApiCall: oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall,
+  }
+})
+
 describe('POST /api/campaigns/:id/keywords/match-type/add', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -61,6 +74,9 @@ describe('POST /api/campaigns/:id/keywords/match-type/add', () => {
       },
     })
     resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
+    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue(
+      defaultPreparedGoogleAdsAccountApiCall
+    )
     dbFns.queryOne.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM campaigns c')) {
         return {
@@ -71,7 +87,8 @@ describe('POST /api/campaigns/:id/keywords/match-type/add', () => {
           google_ads_account_id: 8,
           google_ad_group_id: '9001',
           customer_id: '1234567890',
-          account_refresh_token: null,
+          parent_mcc_id: null,
+          service_account_id: null,
           account_is_active: 1,
           account_is_deleted: 0,
         }

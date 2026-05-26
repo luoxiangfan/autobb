@@ -395,6 +395,9 @@ export async function getCustomerWithCredentials(params: {
   userId: number
   loginCustomerId?: string | null
   credentials?: OAuthApiCredentialsFields
+  /** 已传 credentials 且未显式传 loginCustomerId 时，用于推导 header */
+  accountParentMccId?: string | null
+  oauthLoginCustomerIdHint?: string
   // 服务账号认证参数
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
@@ -432,6 +435,16 @@ export async function getCustomerWithCredentials(params: {
     let resolvedLoginCustomerId: string | null = null
     if (params.credentials) {
       clientCreds = params.credentials
+      if (!hasExplicitLoginCustomerId) {
+        const { resolveLoginCustomerCandidates } = await import('./google-ads-login-customer')
+        resolvedLoginCustomerId =
+          resolveLoginCustomerCandidates({
+            authType: 'oauth',
+            accountParentMccId: params.accountParentMccId,
+            oauthLoginCustomerId: params.oauthLoginCustomerIdHint,
+            targetCustomerId: params.customerId,
+          })[0] ?? null
+      }
     } else {
       const resolved = await resolveOAuthClientCredentialsForUser(params.userId, {
         requireLoginCustomerId: !omitLoginCustomerHeader,

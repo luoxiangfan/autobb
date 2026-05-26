@@ -189,3 +189,56 @@ export function isGoogleAdsAccountAccessError(error: unknown): boolean {
     || combined.includes('not yet enabled')
     || combined.includes('deactivated')
 }
+
+/**
+ * 按 login_customer_id 候选依次执行 Google Ads API 调用；权限类错误时自动切换下一候选。
+ */
+export async function runWithLoginCustomerFallbackForAccount<T>(params: {
+  adsAccount: {
+    customer_id: string
+    parent_mcc_id?: string | null
+    id?: number
+  }
+  refreshToken: string
+  authType: 'oauth' | 'service_account'
+  serviceAccountId?: string
+  serviceAccountMccId?: string
+  oauthLoginCustomerId?: string
+  actionName: string
+  callback: (loginCustomerId: string | undefined) => Promise<T>
+}): Promise<T> {
+  const loginCustomerIdCandidates = resolveLoginCustomerCandidates({
+    authType: params.authType,
+    accountParentMccId: params.adsAccount.parent_mcc_id,
+    oauthLoginCustomerId: params.oauthLoginCustomerId,
+    serviceAccountMccId: params.serviceAccountMccId,
+    targetCustomerId: params.adsAccount.customer_id,
+  })
+
+  let lastError: unknown = null
+
+  for (let i = 0; i < loginCustomerIdCandidates.length; i++) {
+    const loginCustomerId = loginCustomerIdCandidates[i]
+    try {
+      const result = await params.callback(loginCustomerId)
+      if (i > 0) {
+        console.log(
+          `✅ ${params.actionName} 使用备用 login_customer_id=${loginCustomerId ?? 'null(omit)'} 成功`
+        )
+      }
+      return result
+    } catch (error) {
+      lastError = error
+      const hasNextCandidate = i < loginCustomerIdCandidates.length - 1
+      if (hasNextCandidate && isGoogleAdsAccountAccessError(error)) {
+        console.warn(
+          `⚠️ ${params.actionName} login_customer_id=${loginCustomerId ?? 'null(omit)'} 失败，切换候选重试`
+        )
+        continue
+      }
+      throw error
+    }
+  }
+
+  throw lastError || new Error(`${params.actionName} 失败`)
+}

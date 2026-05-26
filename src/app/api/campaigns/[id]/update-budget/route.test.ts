@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import {
+  defaultOAuthApiCredentialsFields,
+  defaultOAuthGoogleAdsCallBundle,
   hasConfiguredGoogleAdsAuthFromContextMock,
   resetCampaignRouteAuthMocksOAuth,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
@@ -29,6 +31,10 @@ const cacheFns = vi.hoisted(() => ({
   invalidateDashboardCache: vi.fn(),
 }))
 
+const oauthAccountsAuthFns = vi.hoisted(() => ({
+  loadOAuthGoogleAdsCallBundleForContext: vi.fn(),
+}))
+
 vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
@@ -51,6 +57,14 @@ vi.mock('@/lib/google-ads-auth-context', () => ({
   resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,
 }))
 
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    loadOAuthGoogleAdsCallBundleForContext: oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext,
+  }
+})
+
 vi.mock('@/lib/api-cache', () => ({
   invalidateOfferCache: cacheFns.invalidateOfferCache,
   invalidateDashboardCache: cacheFns.invalidateDashboardCache,
@@ -64,6 +78,9 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
       user: { userId: 1 },
     })
     resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
+    oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext.mockResolvedValue(
+      defaultOAuthGoogleAdsCallBundle
+    )
     dbFns.exec.mockResolvedValue({ changes: 1 })
     adsFns.updateGoogleAdsCampaignBudget.mockResolvedValue(undefined)
   })
@@ -130,18 +147,21 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
 
     expect(res.status).toBe(200)
     expect(data.success).toBe(true)
-    expect(adsFns.updateGoogleAdsCampaignBudget).toHaveBeenCalledWith({
-      customerId: '1234567890',
-      refreshToken: 'oauth-refresh-token',
-      campaignId: '23578044853',
-      budgetAmount: 19.99,
-      budgetType: 'DAILY',
-      accountId: 9,
-      userId: 1,
-      loginCustomerId: '9988776655',
-      authType: 'oauth',
-      serviceAccountId: undefined,
-    })
+    expect(adsFns.updateGoogleAdsCampaignBudget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customerId: '1234567890',
+        refreshToken: 'oauth-refresh-token',
+        campaignId: '23578044853',
+        budgetAmount: 19.99,
+        budgetType: 'DAILY',
+        accountId: 9,
+        userId: 1,
+        loginCustomerId: '9988776655',
+        authType: 'oauth',
+        serviceAccountId: undefined,
+        credentials: defaultOAuthApiCredentialsFields,
+      })
+    )
     expect(dbFns.exec).toHaveBeenCalled()
     expect(cacheFns.invalidateOfferCache).toHaveBeenCalledWith(1, 77)
     expect(cacheFns.invalidateDashboardCache).not.toHaveBeenCalled()
@@ -164,6 +184,13 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
       refreshToken: 'oauth-refresh-token',
       oauthLoginCustomerId: '1122334455',
     })
+    oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext.mockResolvedValue({
+      ok: true,
+      bundle: {
+        oauthCredentials: defaultOAuthApiCredentialsFields,
+        oauthLoginCustomerId: '1122334455',
+      },
+    })
 
     const req = new NextRequest('http://localhost/api/campaigns/23578044853/update-budget', {
       method: 'PUT',
@@ -179,18 +206,21 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
 
     expect(res.status).toBe(200)
     expect(data.success).toBe(true)
-    expect(adsFns.updateGoogleAdsCampaignBudget).toHaveBeenCalledWith({
-      customerId: '1234567890',
-      refreshToken: 'oauth-refresh-token',
-      campaignId: '23578044853',
-      budgetAmount: 20,
-      budgetType: 'DAILY',
-      accountId: 9,
-      userId: 1,
-      loginCustomerId: '1122334455',
-      authType: 'oauth',
-      serviceAccountId: undefined,
-    })
+    expect(adsFns.updateGoogleAdsCampaignBudget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customerId: '1234567890',
+        refreshToken: 'oauth-refresh-token',
+        campaignId: '23578044853',
+        budgetAmount: 20,
+        budgetType: 'DAILY',
+        accountId: 9,
+        userId: 1,
+        loginCustomerId: '1122334455',
+        authType: 'oauth',
+        serviceAccountId: undefined,
+        credentials: defaultOAuthApiCredentialsFields,
+      })
+    )
     expect(cacheFns.invalidateDashboardCache).toHaveBeenCalledWith(1)
   })
 
@@ -234,30 +264,38 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
     expect(res.status).toBe(200)
     expect(data.success).toBe(true)
     expect(adsFns.updateGoogleAdsCampaignBudget).toHaveBeenCalledTimes(2)
-    expect(adsFns.updateGoogleAdsCampaignBudget).toHaveBeenNthCalledWith(1, {
-      customerId: '1234567890',
-      refreshToken: 'oauth-refresh-token',
-      campaignId: '23578044853',
-      budgetAmount: 20,
-      budgetType: 'DAILY',
-      accountId: 9,
-      userId: 1,
-      loginCustomerId: '9988776655',
-      authType: 'oauth',
-      serviceAccountId: undefined,
-    })
-    expect(adsFns.updateGoogleAdsCampaignBudget).toHaveBeenNthCalledWith(2, {
-      customerId: '1234567890',
-      refreshToken: 'oauth-refresh-token',
-      campaignId: '23578044853',
-      budgetAmount: 20,
-      budgetType: 'DAILY',
-      accountId: 9,
-      userId: 1,
-      loginCustomerId: '1122334455',
-      authType: 'oauth',
-      serviceAccountId: undefined,
-    })
+    expect(adsFns.updateGoogleAdsCampaignBudget).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        customerId: '1234567890',
+        refreshToken: 'oauth-refresh-token',
+        campaignId: '23578044853',
+        budgetAmount: 20,
+        budgetType: 'DAILY',
+        accountId: 9,
+        userId: 1,
+        loginCustomerId: '9988776655',
+        authType: 'oauth',
+        serviceAccountId: undefined,
+        credentials: defaultOAuthApiCredentialsFields,
+      })
+    )
+    expect(adsFns.updateGoogleAdsCampaignBudget).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        customerId: '1234567890',
+        refreshToken: 'oauth-refresh-token',
+        campaignId: '23578044853',
+        budgetAmount: 20,
+        budgetType: 'DAILY',
+        accountId: 9,
+        userId: 1,
+        loginCustomerId: '1234567890',
+        authType: 'oauth',
+        serviceAccountId: undefined,
+        credentials: defaultOAuthApiCredentialsFields,
+      })
+    )
     expect(cacheFns.invalidateOfferCache).toHaveBeenCalledWith(1, 55)
   })
 })

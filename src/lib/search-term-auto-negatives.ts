@@ -85,7 +85,6 @@ interface SearchTermAggregateRow {
   google_ads_account_id: number
   customer_id: string
   parent_mcc_id: string | null
-  refresh_token: string | null
   target_language: string | null
   brand: string | null
 }
@@ -101,7 +100,6 @@ interface SearchTermAutoNegativeAction {
   googleAdsAccountId: number
   customerId: string
   parentMccId: string | null
-  refreshToken: string
 }
 
 interface SearchTermAutoPositiveAction {
@@ -117,7 +115,6 @@ interface SearchTermAutoPositiveAction {
   googleAdsAccountId: number
   customerId: string
   parentMccId: string | null
-  refreshToken: string
 }
 
 const NEGATIVE_DEFAULTS = { ...KEYWORD_POLICY.autoActions.negative }
@@ -221,7 +218,6 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
     googleAdsAccountId: number
     customerId: string
     parentMccId: string | null
-    refreshToken: string
   }) => {
     const ctx = await getContext(action.userId)
     if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
@@ -234,7 +230,7 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
     )
 
     if (apiAuth.authType === 'oauth') {
-      const effectiveRefreshToken = String(apiAuth.refreshToken || action.refreshToken || '').trim()
+      const effectiveRefreshToken = String(apiAuth.refreshToken || '').trim()
       if (!effectiveRefreshToken) {
         throw new Error('missing_refresh_token_for_oauth')
       }
@@ -331,7 +327,6 @@ async function loadSearchTermAggregates(options: {
         c.google_ads_account_id,
         gaa.customer_id,
         gaa.parent_mcc_id,
-        gaa.refresh_token,
         o.target_language,
         o.brand
       FROM search_term_reports str
@@ -359,7 +354,6 @@ async function loadSearchTermAggregates(options: {
         c.google_ads_account_id,
         gaa.customer_id,
         gaa.parent_mcc_id,
-        gaa.refresh_token,
         o.target_language,
         o.brand
       ORDER BY SUM(str.cost) DESC, SUM(str.clicks) DESC
@@ -499,7 +493,6 @@ export async function runSearchTermAutoNegatives(
       googleAdsAccountId: Number(row.google_ads_account_id),
       customerId: String(row.customer_id || '').trim(),
       parentMccId: row.parent_mcc_id,
-      refreshToken: String(row.refresh_token || ''),
     })
 
     selectedPerUser.set(userId, selectedUserCount + 1)
@@ -735,7 +728,6 @@ export async function runSearchTermAutoPositiveKeywords(
       googleAdsAccountId: Number(row.google_ads_account_id),
       customerId: String(row.customer_id || '').trim(),
       parentMccId: row.parent_mcc_id,
-      refreshToken: String(row.refresh_token || ''),
     })
 
     selectedPerUser.set(userId, selectedUserCount + 1)

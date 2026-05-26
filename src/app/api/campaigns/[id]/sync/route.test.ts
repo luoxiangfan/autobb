@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import {
+  defaultOAuthGoogleAdsCallBundle,
+  defaultPreparedGoogleAdsAccountApiCall,
+} from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import { POST } from '@/app/api/campaigns/[id]/sync/route'
 
 const campaignFns = vi.hoisted(() => ({
@@ -17,6 +21,11 @@ const adsFns = vi.hoisted(() => ({
 
 const authContextFns = vi.hoisted(() => ({
   resolveGoogleAdsApiAuthForAccount: vi.fn(),
+}))
+
+const oauthAccountsAuthFns = vi.hoisted(() => ({
+  loadOAuthGoogleAdsCallBundleForContext: vi.fn(),
+  prepareGoogleAdsAccountApiCall: vi.fn(),
 }))
 
 const cacheFns = vi.hoisted(() => ({
@@ -40,6 +49,15 @@ vi.mock('@/lib/google-ads-auth-context', () => ({
   googleAdsApiAuthValidationErrorMessage: (reason: string) => reason,
   resolveGoogleAdsApiAuthForAccount: authContextFns.resolveGoogleAdsApiAuthForAccount,
 }))
+
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    loadOAuthGoogleAdsCallBundleForContext: oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext,
+    prepareGoogleAdsAccountApiCall: oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall,
+  }
+})
 
 vi.mock('@/lib/api-cache', () => ({
   invalidateOfferCache: cacheFns.invalidateOfferCache,
@@ -79,6 +97,18 @@ describe('POST /api/campaigns/:id/sync', () => {
       customerId: '1234567890',
       refreshToken: null,
       serviceAccountId: null,
+      parentMccId: null,
+    })
+    oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext.mockResolvedValue(
+      defaultOAuthGoogleAdsCallBundle
+    )
+    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue({
+      ...defaultPreparedGoogleAdsAccountApiCall,
+      apiAuth: {
+        ...defaultPreparedGoogleAdsAccountApiCall.apiAuth,
+        refreshToken: 'shared-refresh-token',
+      },
+      refreshToken: 'shared-refresh-token',
     })
     authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
       ok: true,

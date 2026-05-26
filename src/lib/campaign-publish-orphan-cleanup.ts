@@ -8,10 +8,7 @@ import {
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
-import {
-  resolveLoginCustomerCandidates,
-  isGoogleAdsAccountAccessError,
-} from './google-ads-login-customer'
+import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 
 export type CampaignPublishRollbackContext = {
   customerId: string
@@ -115,55 +112,6 @@ export async function findHistoricalOrphanGoogleCampaignIds(params: {
     .map(({ id, googleCampaignId }) => ({ id, googleCampaignId }))
 }
 
-async function runWithLoginCustomerFallbackForAccount<T>(params: {
-  userId: number
-  adsAccount: { customer_id: string; parent_mcc_id?: string | null; id: number }
-  refreshToken: string
-  authType: 'oauth' | 'service_account'
-  serviceAccountId?: string
-  serviceAccountMccId?: string
-  oauthLoginCustomerId?: string
-  actionName: string
-  callback: (loginCustomerId: string | undefined) => Promise<T>
-}): Promise<T> {
-  const loginCustomerIdCandidates = resolveLoginCustomerCandidates({
-    authType: params.authType,
-    accountParentMccId: params.adsAccount.parent_mcc_id,
-    oauthLoginCustomerId: params.oauthLoginCustomerId,
-    serviceAccountMccId: params.serviceAccountMccId,
-    targetCustomerId: params.adsAccount.customer_id,
-  })
-
-  let preferredLoginCustomerId = loginCustomerIdCandidates[0]
-  let lastError: unknown = null
-
-  for (let i = 0; i < loginCustomerIdCandidates.length; i++) {
-    const loginCustomerId = loginCustomerIdCandidates[i]
-    try {
-      const result = await params.callback(loginCustomerId)
-      preferredLoginCustomerId = loginCustomerId
-      if (i > 0) {
-        console.log(
-          `✅ ${params.actionName} 使用备用 login_customer_id=${loginCustomerId || 'null(omit)'} 成功`
-        )
-      }
-      return result
-    } catch (error) {
-      lastError = error
-      const hasNextCandidate = i < loginCustomerIdCandidates.length - 1
-      if (hasNextCandidate && isGoogleAdsAccountAccessError(error)) {
-        console.warn(
-          `⚠️ ${params.actionName} login_customer_id=${loginCustomerId || 'null(omit)'} 失败，切换候选重试`
-        )
-        continue
-      }
-      throw error
-    }
-  }
-
-  throw lastError || new Error(`${params.actionName} 失败`)
-}
-
 /**
  * 为指定 Ads 账号构建暂停远端 Campaign 所需的回滚上下文（用于换绑后清理旧账号孤儿）。
  */
@@ -220,7 +168,6 @@ export async function buildPublishRollbackContextForAdsAccount(
     callback: (loginCustomerId: string | undefined) => Promise<T>
   ): Promise<T> =>
     runWithLoginCustomerFallbackForAccount({
-      userId,
       adsAccount,
       refreshToken: apiAuth.refreshToken,
       authType: apiAuth.authType,

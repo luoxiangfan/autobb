@@ -13,11 +13,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { updateGoogleAdsCampaignStatus, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
 import { getDecryptedCredentials } from '@/lib/google-ads-accounts'
-import {
-  loadOAuthGoogleAdsCallBundleForContext,
-  pickOAuthLoginCustomerIdForAccount,
-  pickServiceAccountLoginCustomerIdForAccount,
-} from '@/lib/google-ads-accounts-auth'
+import { loadOAuthGoogleAdsCallBundleForContext } from '@/lib/google-ads-accounts-auth'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
@@ -179,32 +176,33 @@ export async function POST(
           [accountId, offer.user_id]
         )
 
-        const loginCustomerId =
-          apiAuth.authType === 'oauth'
-            ? pickOAuthLoginCustomerIdForAccount({
-                accountParentMccId: adsAccountMeta?.parent_mcc_id ?? null,
-                oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
-                targetCustomerId: accountCredentials.customerId,
-              })
-            : pickServiceAccountLoginCustomerIdForAccount({
-                accountParentMccId: adsAccountMeta?.parent_mcc_id ?? null,
-                serviceAccountMccId: apiAuth.serviceAccountMccId,
-                targetCustomerId: accountCredentials.customerId,
-              })
-
         for (const campaign of accountCampaigns) {
           try {
-            await updateGoogleAdsCampaignStatus({
-              customerId: accountCredentials.customerId,
+            await runWithLoginCustomerFallbackForAccount({
+              adsAccount: {
+                customer_id: accountCredentials.customerId,
+                parent_mcc_id: adsAccountMeta?.parent_mcc_id ?? null,
+                id: accountId,
+              },
               refreshToken: apiAuth.refreshToken,
-              campaignId: campaign.google_campaign_id,
-              status: 'PAUSED',
-              accountId,
-              userId: offer.user_id,
-              loginCustomerId,
               authType: apiAuth.authType,
               serviceAccountId: apiAuth.serviceAccountId,
-              credentials: oauthCredentials,
+              serviceAccountMccId: apiAuth.serviceAccountMccId,
+              oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+              actionName: `暂停 Campaign ${campaign.google_campaign_id}`,
+              callback: (loginCustomerId) =>
+                updateGoogleAdsCampaignStatus({
+                  customerId: accountCredentials.customerId,
+                  refreshToken: apiAuth.refreshToken,
+                  campaignId: campaign.google_campaign_id,
+                  status: 'PAUSED',
+                  accountId,
+                  userId: offer.user_id,
+                  loginCustomerId,
+                  authType: apiAuth.authType,
+                  serviceAccountId: apiAuth.serviceAccountId,
+                  credentials: oauthCredentials,
+                }),
             })
 
             await applyCampaignTransition({

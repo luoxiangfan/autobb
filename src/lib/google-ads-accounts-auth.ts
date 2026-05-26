@@ -258,6 +258,59 @@ export function pickServiceAccountLoginCustomerIdForAccount(params: {
   })[0]
 }
 
+export type PreparedGoogleAdsAccountApiCall = {
+  apiAuth: GoogleAdsApiAuthFields
+  refreshToken: string
+  oauthCredentials?: OAuthApiCredentialsFields
+  oauthLoginCustomerId?: string
+}
+
+/**
+ * 解析账号级 API 调用所需的 refreshToken / heal 凭证（refresh 仅来自 auth-context）。
+ */
+export async function prepareGoogleAdsAccountApiCall(params: {
+  authContext: GoogleAdsAuthContext
+  linkedServiceAccountId?: string | null
+}): Promise<
+  | ({ ok: true } & PreparedGoogleAdsAccountApiCall)
+  | { ok: false; message: string }
+> {
+  const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+    params.authContext,
+    params.linkedServiceAccountId ?? null
+  )
+
+  if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
+    return { ok: false, message: 'Google Ads OAuth 授权已过期，请重新连接账号' }
+  }
+  if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {
+    return { ok: false, message: '未找到服务账号配置' }
+  }
+
+  let oauthCredentials: OAuthApiCredentialsFields | undefined
+  let oauthLoginCustomerId: string | undefined
+  if (apiAuth.authType === 'oauth') {
+    const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
+      userId: params.authContext.userId,
+      authContext: params.authContext,
+    })
+    if (!oauthBundle.ok) {
+      return { ok: false, message: oauthBundle.message }
+    }
+    oauthCredentials = oauthBundle.bundle?.oauthCredentials
+    oauthLoginCustomerId =
+      oauthBundle.bundle?.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+  }
+
+  return {
+    ok: true,
+    apiAuth,
+    refreshToken: apiAuth.refreshToken || '',
+    oauthCredentials,
+    oauthLoginCustomerId,
+  }
+}
+
 /**
  * 通过 auth-context 解析 OAuth client 凭证（含 developer_token heal）。
  */

@@ -53,6 +53,14 @@ export const defaultOAuthGoogleAdsCallBundle = {
   },
 }
 
+export const defaultPreparedGoogleAdsAccountApiCall = {
+  ok: true as const,
+  apiAuth: defaultOAuthApiAuth,
+  refreshToken: defaultOAuthApiAuth.refreshToken,
+  oauthCredentials: defaultOAuthApiCredentialsFields,
+  oauthLoginCustomerId: defaultOAuthApiAuth.oauthLoginCustomerId,
+}
+
 export const defaultCampaignGoogleAdsAccountRow = {
   parent_mcc_id: null as string | null,
   service_account_id: null as string | null,

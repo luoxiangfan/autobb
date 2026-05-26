@@ -4,20 +4,13 @@ import { findAdGroupById, updateAdGroup } from '@/lib/ad-groups'
 import { findCampaignById } from '@/lib/campaigns'
 import { findGoogleAdsAccountById } from '@/lib/google-ads-accounts'
 import { findKeywordsByAdGroupId, updateKeyword } from '@/lib/keywords'
-import {
-  createGoogleAdsAdGroup,
-  createGoogleAdsKeywordsBatch,
-  type OAuthApiCredentialsFields,
-} from '@/lib/google-ads-api'
-import {
-  loadOAuthGoogleAdsCallBundleForContext,
-  pickOAuthLoginCustomerIdForAccount,
-  pickServiceAccountLoginCustomerIdForAccount,
-} from '@/lib/google-ads-accounts-auth'
+import { createGoogleAdsAdGroup, createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
+import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
 import {
   googleAdsApiAuthValidationErrorMessage,
   resolveGoogleAdsApiAuthForAccount,
 } from '@/lib/google-ads-auth-context'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 
 /**
  * POST /api/ad-groups/:id/sync
@@ -100,39 +93,15 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         { status: 400 }
       )
     }
-    const { ctx, apiAuth } = authResolved
-
-    let oauthCredentials: OAuthApiCredentialsFields | undefined
-    let oauthLoginCustomerId: string | undefined
-    if (apiAuth.authType === 'oauth') {
-      const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({ userId, authContext: ctx })
-      if (!oauthBundle.ok) {
-        return NextResponse.json({ error: oauthBundle.message }, { status: 400 })
-      }
-      oauthCredentials = oauthBundle.bundle?.oauthCredentials
-      oauthLoginCustomerId = oauthBundle.bundle?.oauthLoginCustomerId
+    const prepared = await prepareGoogleAdsAccountApiCall({
+      authContext: authResolved.ctx,
+      linkedServiceAccountId: googleAdsAccount.serviceAccountId,
+    })
+    if (!prepared.ok) {
+      return NextResponse.json({ error: prepared.message }, { status: 400 })
     }
 
-    if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
-      return NextResponse.json(
-        { error: 'Google Ads OAuth 授权已过期，请重新连接账号' },
-        { status: 400 }
-      )
-    }
-
-    const refreshToken = apiAuth.refreshToken || ''
-    const loginCustomerId =
-      apiAuth.authType === 'oauth'
-        ? pickOAuthLoginCustomerIdForAccount({
-            accountParentMccId: googleAdsAccount.parentMccId,
-            oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
-            targetCustomerId: googleAdsAccount.customerId,
-          })
-        : pickServiceAccountLoginCustomerIdForAccount({
-            accountParentMccId: googleAdsAccount.parentMccId,
-            serviceAccountMccId: apiAuth.serviceAccountMccId,
-            targetCustomerId: googleAdsAccount.customerId,
-          })
+    const { apiAuth, refreshToken, oauthCredentials, oauthLoginCustomerId } = prepared
 
     // 更新状态为pending
     await updateAdGroup(adGroup.id, userId, {
@@ -141,64 +110,80 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     })
 
     try {
-      // 创建Google Ads Ad Group
-      const adGroupResult = await createGoogleAdsAdGroup({
-        customerId: googleAdsAccount.customerId,
+      const adGroupResult = await runWithLoginCustomerFallbackForAccount({
+        adsAccount: {
+          customer_id: googleAdsAccount.customerId,
+          parent_mcc_id: googleAdsAccount.parentMccId,
+          id: googleAdsAccount.id,
+        },
         refreshToken,
-        campaignId: campaign.campaignId,
-        adGroupName: adGroup.adGroupName,
-        cpcBidMicros: adGroup.cpcBidMicros || undefined,
-        status: adGroup.status as 'ENABLED' | 'PAUSED',
-        accountId: googleAdsAccount.id,
-        userId,
-        loginCustomerId,
         authType: apiAuth.authType,
         serviceAccountId: apiAuth.serviceAccountId,
-        credentials: oauthCredentials,
+        serviceAccountMccId: apiAuth.serviceAccountMccId,
+        oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+        actionName: '同步 Ad Group 到 Google Ads',
+        callback: async (loginCustomerId) => {
+          const created = await createGoogleAdsAdGroup({
+            customerId: googleAdsAccount.customerId,
+            refreshToken,
+            campaignId: campaign.campaignId!,
+            adGroupName: adGroup.adGroupName,
+            cpcBidMicros: adGroup.cpcBidMicros || undefined,
+            status: adGroup.status as 'ENABLED' | 'PAUSED',
+            accountId: googleAdsAccount.id,
+            userId,
+            loginCustomerId,
+            authType: apiAuth.authType,
+            serviceAccountId: apiAuth.serviceAccountId,
+            credentials: oauthCredentials,
+          })
+
+          const keywords = await findKeywordsByAdGroupId(adGroup.id, userId)
+          let keywordResults: Awaited<ReturnType<typeof createGoogleAdsKeywordsBatch>> = []
+          if (keywords.length > 0) {
+            const keywordsBatch = keywords.map((kw) => ({
+              keywordText: kw.keywordText,
+              matchType: kw.matchType as 'BROAD' | 'PHRASE' | 'EXACT',
+              negativeKeywordMatchType: kw.isNegative
+                ? (kw.matchType as 'BROAD' | 'PHRASE' | 'EXACT')
+                : undefined,
+              status: kw.status as 'ENABLED' | 'PAUSED',
+              finalUrl: kw.finalUrl || undefined,
+              isNegative: kw.isNegative,
+            }))
+
+            keywordResults = await createGoogleAdsKeywordsBatch({
+              customerId: googleAdsAccount.customerId,
+              refreshToken,
+              adGroupId: created.adGroupId,
+              keywords: keywordsBatch,
+              accountId: googleAdsAccount.id,
+              userId,
+              loginCustomerId,
+              authType: apiAuth.authType,
+              serviceAccountId: apiAuth.serviceAccountId,
+              credentials: oauthCredentials,
+            })
+          }
+
+          return { created, keywordResults }
+        },
       })
 
-      // 更新Ad Group，标记为已同步
+      const { created: adGroupCreated, keywordResults } = adGroupResult
+
       await updateAdGroup(adGroup.id, userId, {
-        adGroupId: adGroupResult.adGroupId,
+        adGroupId: adGroupCreated.adGroupId,
         creationStatus: 'synced',
         creationError: null,
         lastSyncAt: new Date().toISOString(),
       })
 
-      // 查找Ad Group的所有Keywords
       const keywords = await findKeywordsByAdGroupId(adGroup.id, userId)
 
       let syncedKeywordsCount = 0
 
-      // 如果有Keywords，批量同步到Google Ads
       if (keywords.length > 0) {
-        const keywordsBatch = keywords.map(kw => ({
-          // createGoogleAdsKeywordsBatch 对否定词优先读取 negativeKeywordMatchType，
-          // 不传会回退到 EXACT，这里显式透传以保持数据库策略不丢失。
-          keywordText: kw.keywordText,
-          matchType: kw.matchType as 'BROAD' | 'PHRASE' | 'EXACT',
-          negativeKeywordMatchType: kw.isNegative
-            ? (kw.matchType as 'BROAD' | 'PHRASE' | 'EXACT')
-            : undefined,
-          status: kw.status as 'ENABLED' | 'PAUSED',
-          finalUrl: kw.finalUrl || undefined,
-          isNegative: kw.isNegative,
-        }))
-
-        const keywordResults = await createGoogleAdsKeywordsBatch({
-          customerId: googleAdsAccount.customerId,
-          refreshToken,
-          adGroupId: adGroupResult.adGroupId,
-          keywords: keywordsBatch,
-          accountId: googleAdsAccount.id,
-          userId,
-          loginCustomerId,
-          authType: apiAuth.authType,
-          serviceAccountId: apiAuth.serviceAccountId,
-          credentials: oauthCredentials,
-        })
-
-        // 更新每个Keyword的Google Ads ID
         for (let i = 0; i < keywordResults.length; i++) {
           const keywordResult = keywordResults[i]
           const keyword = keywords[i]
@@ -217,7 +202,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         success: true,
         adGroup: {
           ...adGroup,
-          adGroupId: adGroupResult.adGroupId,
+          adGroupId: adGroupCreated.adGroupId,
           creationStatus: 'synced',
         },
         syncedKeywordsCount,

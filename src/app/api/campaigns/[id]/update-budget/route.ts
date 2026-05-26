@@ -9,11 +9,7 @@ import {
   resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
 import { invalidateDashboardCache, invalidateOfferCache } from '@/lib/api-cache'
-import {
-  isGoogleAdsAccountAccessError,
-  resolveLoginCustomerCandidates,
-  resolveLoginCustomerId,
-} from '@/lib/google-ads-login-customer'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 
 function normalizeGoogleCampaignId(value: unknown): string | null {
   const text = String(value || '').trim()
@@ -186,58 +182,33 @@ export async function PUT(
       oauthLoginCustomerId = oauthBundle.bundle?.oauthLoginCustomerId ?? oauthLoginCustomerId
     }
 
-    const runUpdateBudget = async (loginCustomerId?: string) => {
-      await updateGoogleAdsCampaignBudget({
-        customerId: String(linked.customer_id),
-        refreshToken,
-        campaignId: googleCampaignId,
-        budgetAmount: normalizedBudgetAmount,
-        budgetType,
-        accountId: Number(linked.google_ads_account_id),
-        userId,
-        loginCustomerId,
-        authType: apiAuth.authType,
-        serviceAccountId: apiAuth.serviceAccountId,
-        credentials: oauthCredentials,
-      })
-    }
-
-    if (apiAuth.authType === 'oauth') {
-      const loginCustomerIdCandidates = resolveLoginCustomerCandidates({
-        authType: 'oauth',
-        accountParentMccId: linked.parent_mcc_id,
-        oauthLoginCustomerId,
-        targetCustomerId: linked.customer_id,
-      })
-
-      let lastError: unknown = null
-      for (let i = 0; i < loginCustomerIdCandidates.length; i += 1) {
-        const loginCustomerId = loginCustomerIdCandidates[i]
-        try {
-          await runUpdateBudget(loginCustomerId)
-          lastError = null
-          break
-        } catch (error) {
-          lastError = error
-          const hasNextCandidate = i < loginCustomerIdCandidates.length - 1
-          if (hasNextCandidate && isGoogleAdsAccountAccessError(error)) {
-            continue
-          }
-          throw error
-        }
-      }
-
-      if (lastError) {
-        throw lastError
-      }
-    } else {
-      const loginCustomerId = resolveLoginCustomerId({
-        authType: apiAuth.authType,
-        accountParentMccId: linked.parent_mcc_id,
-        serviceAccountMccId: apiAuth.serviceAccountMccId,
-      })
-      await runUpdateBudget(loginCustomerId)
-    }
+    await runWithLoginCustomerFallbackForAccount({
+      adsAccount: {
+        customer_id: String(linked.customer_id),
+        parent_mcc_id: linked.parent_mcc_id,
+        id: Number(linked.google_ads_account_id),
+      },
+      refreshToken,
+      authType: apiAuth.authType,
+      serviceAccountId: apiAuth.serviceAccountId,
+      serviceAccountMccId: apiAuth.serviceAccountMccId,
+      oauthLoginCustomerId,
+      actionName: '更新广告系列预算',
+      callback: (loginCustomerId) =>
+        updateGoogleAdsCampaignBudget({
+          customerId: String(linked.customer_id),
+          refreshToken,
+          campaignId: googleCampaignId,
+          budgetAmount: normalizedBudgetAmount,
+          budgetType,
+          accountId: Number(linked.google_ads_account_id),
+          userId,
+          loginCustomerId,
+          authType: apiAuth.authType,
+          serviceAccountId: apiAuth.serviceAccountId,
+          credentials: oauthCredentials,
+        }),
+    })
 
     const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
     await db.exec(
