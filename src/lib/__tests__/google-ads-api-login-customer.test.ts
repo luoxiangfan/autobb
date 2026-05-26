@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const customerFactory = vi.fn()
-const queryOne = vi.fn()
-const getUserOnlySetting = vi.fn()
+const accountsAuthFns = vi.hoisted(() => ({
+  resolveOAuthApiCredentialsForUser: vi.fn(),
+}))
 const updateGoogleAdsAccount = vi.fn()
 
 vi.mock('google-ads-api', () => {
@@ -26,16 +27,13 @@ vi.mock('google-ads-api', () => {
   }
 })
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: vi.fn(async () => ({
-    type: 'sqlite',
-    queryOne,
-  })),
-}))
-
-vi.mock('@/lib/settings', () => ({
-  getUserOnlySetting,
-}))
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    resolveOAuthApiCredentialsForUser: accountsAuthFns.resolveOAuthApiCredentialsForUser,
+  }
+})
 
 vi.mock('@/lib/google-ads-accounts', () => ({
   updateGoogleAdsAccount,
@@ -49,14 +47,12 @@ describe('getCustomerWithCredentials login_customer_id fallback', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    queryOne.mockResolvedValue({
+    accountsAuthFns.resolveOAuthApiCredentialsForUser.mockResolvedValue({
       client_id: 'client-id',
       client_secret: 'client-secret',
       developer_token: 'developer-token',
       login_customer_id: '5010618892',
     })
-
-    getUserOnlySetting.mockResolvedValue({ value: 'false' })
 
     vi.stubGlobal('fetch', vi.fn(async () => ({
       ok: true,

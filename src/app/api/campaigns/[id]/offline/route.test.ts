@@ -74,9 +74,16 @@ vi.mock('@/lib/queue/init-queue', () => ({
   })),
 }))
 
+const accountsAuthFns = vi.hoisted(() => ({
+  resolveOAuthApiCredentialsForUser: vi.fn(),
+}))
+
+vi.mock('@/lib/google-ads-accounts-auth', () => ({
+  resolveOAuthApiCredentialsForUser: accountsAuthFns.resolveOAuthApiCredentialsForUser,
+}))
+
 vi.mock('@/lib/google-ads-api', () => ({
   updateGoogleAdsCampaignStatus: vi.fn(),
-  getGoogleAdsCredentialsFromDB: vi.fn(async () => null),
   getCustomerWithCredentials: vi.fn(),
 }))
 
@@ -97,11 +104,7 @@ const { invalidateOfferCache } = await import('@/lib/api-cache')
 const { removePendingClickFarmQueueTasksByTaskIds } = await import('@/lib/click-farm/queue-cleanup')
 const { removePendingUrlSwapQueueTasksByTaskIds } = await import('@/lib/url-swap/queue-cleanup')
 const { applyCampaignTransition } = await import('@/lib/campaign-state-machine')
-const {
-  updateGoogleAdsCampaignStatus,
-  getGoogleAdsCredentialsFromDB,
-  getCustomerWithCredentials,
-} = await import('@/lib/google-ads-api')
+const { updateGoogleAdsCampaignStatus, getCustomerWithCredentials } = await import('@/lib/google-ads-api')
 describe('POST /api/campaigns/:id/offline', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -383,7 +386,7 @@ describe('POST /api/campaigns/:id/offline', () => {
     expect(res.status).toBe(200)
     expect(data.success).toBe(true)
     expect(data.googleAds.paused).toBe(1)
-    expect(vi.mocked(getGoogleAdsCredentialsFromDB)).not.toHaveBeenCalled()
+    expect(accountsAuthFns.resolveOAuthApiCredentialsForUser).not.toHaveBeenCalled()
     expect(campaignRouteAuthFns.getGoogleAdsAuthContext).toHaveBeenCalled()
     expect(vi.mocked(updateGoogleAdsCampaignStatus)).toHaveBeenCalledWith(
       expect.objectContaining({

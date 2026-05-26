@@ -2,12 +2,9 @@ import { GoogleAdsApi, Customer, enums } from 'google-ads-api'
 import { updateGoogleAdsAccount } from './google-ads-accounts'
 import { withRetry } from './retry'
 import { gadsApiCache, generateGadsApiCacheKey } from './cache'
-import { getUserOnlySetting } from './settings'
 import { isGoogleAdsAccountAccessError } from './google-ads-login-customer'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
-import { getDatabase } from './db'
-import { boolCondition } from './db-helpers'
-import { resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
+import { resolveOAuthApiCredentialsForUser } from './google-ads-accounts-auth'
 import { installGoogleAdsWarningFilter } from './google-ads-warning-filter'
 import {
   getGoogleAdsTextEffectiveLength,
@@ -160,98 +157,6 @@ export function sanitizeKeywordForGoogleAds(keyword: string): {
     truncatedByWordLimit,
     truncatedByCharLimit,
     originalWordCount,
-  }
-}
-
-/**
- * 从数据库获取用户的Google Ads凭证
- *
- * 🆕 新增(2025-12-22): 统一的凭证获取函数,确保所有API调用都从数据库读取
- *
- * @param userId - 用户ID
- * @returns Google Ads凭证对象
- * @throws Error 如果配置缺失
- */
-export async function getGoogleAdsCredentialsFromDB(userId: number): Promise<{
-  client_id: string
-  client_secret: string
-  developer_token: string
-  login_customer_id: string
-  useServiceAccount: boolean
-}> {
-  const clean = (value: unknown): string => String(value ?? '').trim()
-  const { ownerUserId, assignment } = await resolveGoogleAdsCredentialOwnerId(userId)
-
-  if (assignment?.authType === 'service_account') {
-    throw new Error(`用户(ID=${userId})当前使用服务账号认证，无法读取 OAuth 基础凭证`)
-  }
-
-  // 优先从 google_ads_credentials 读取（当前生产环境实际存储位置）
-  const db = await getDatabase()
-  const isActiveCondition = boolCondition('is_active', true, db.type)
-  const oauthCredentials = await db.queryOne(
-    `
-      SELECT client_id, client_secret, developer_token, login_customer_id
-      FROM google_ads_credentials
-      WHERE user_id = ? AND ${isActiveCondition}
-      ORDER BY updated_at DESC, created_at DESC
-      LIMIT 1
-    `,
-    [ownerUserId]
-  ) as
-    | {
-        client_id: string | null
-        client_secret: string | null
-        developer_token: string | null
-        login_customer_id: string | null
-      }
-    | undefined
-
-  const hasDbClientId = typeof oauthCredentials?.client_id === 'string' && oauthCredentials.client_id.length > 0
-  const hasDbClientSecret = typeof oauthCredentials?.client_secret === 'string' && oauthCredentials.client_secret.length > 0
-  const hasDbDeveloperToken = typeof oauthCredentials?.developer_token === 'string' && oauthCredentials.developer_token.length > 0
-  const hasDbLoginCustomerId = typeof oauthCredentials?.login_customer_id === 'string' && oauthCredentials.login_customer_id.length > 0
-
-  const [
-    clientIdSetting,
-    clientSecretSetting,
-    developerTokenSetting,
-    loginCustomerIdSetting,
-    useServiceAccountSetting,
-  ] = await Promise.all([
-    hasDbClientId ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'client_id', ownerUserId),
-    hasDbClientSecret ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'client_secret', ownerUserId),
-    hasDbDeveloperToken ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'developer_token', ownerUserId),
-    hasDbLoginCustomerId ? Promise.resolve(null) : getUserOnlySetting('google_ads', 'login_customer_id', ownerUserId),
-    getUserOnlySetting('google_ads', 'use_service_account', ownerUserId),
-  ])
-
-  let useServiceAccount = String(useServiceAccountSetting?.value ?? '').toLowerCase() === 'true'
-  if (assignment?.authType === 'oauth') {
-    useServiceAccount = false
-  }
-
-  // 🔧 修复(2026-01-15): 去除凭证前后空白，避免无效 token
-  const clientId = clean(oauthCredentials?.client_id || clientIdSetting?.value)
-  const clientSecret = clean(oauthCredentials?.client_secret || clientSecretSetting?.value)
-  const developerToken = clean(oauthCredentials?.developer_token || developerTokenSetting?.value)
-  const loginCustomerId = clean(oauthCredentials?.login_customer_id || loginCustomerIdSetting?.value)
-
-  // 🔧 修复(2025-12-25): 服务账号模式不需要login_customer_id
-  if (!clientId || !clientSecret || !developerToken) {
-    throw new Error(`用户(ID=${userId})未配置完整的 Google Ads 凭证。请在设置页面配置所有必需参数。`)
-  }
-
-  if (!useServiceAccount && !loginCustomerId) {
-    throw new Error(`用户(ID=${userId})未配置 login_customer_id。OAuth模式需要此参数。`)
-  }
-
-  return {
-    client_id: clientId,
-    client_secret: clientSecret,
-    developer_token: developerToken,
-    login_customer_id: loginCustomerId,
-    useServiceAccount,
   }
 }
 
@@ -519,7 +424,7 @@ export async function getCustomerWithCredentials(params: {
     }
 
     const creds =
-      params.credentials ?? (await getGoogleAdsCredentialsFromDB(params.userId))
+      params.credentials ?? (await resolveOAuthApiCredentialsForUser(params.userId))
     const credsLoginCustomerId =
       'login_customer_id' in creds && typeof creds.login_customer_id === 'string'
         ? creds.login_customer_id

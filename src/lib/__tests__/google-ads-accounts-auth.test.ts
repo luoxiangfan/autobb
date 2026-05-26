@@ -5,10 +5,12 @@ import {
   healAccountsRouteDeveloperToken,
   resolveAccountsRouteAuthBundle,
   resolveAndHealSyncUserCredentials,
+  resolveOAuthApiCredentialsForUser,
   resolveOAuthRefreshToken,
 } from '../google-ads-accounts-auth'
 
 const authContextFns = vi.hoisted(() => ({
+  getGoogleAdsAuthContext: vi.fn(),
   resolveGoogleAdsApiAuthFromContext: vi.fn(),
 }))
 
@@ -28,6 +30,7 @@ vi.mock('../google-ads-auth-context', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../google-ads-auth-context')>()
   return {
     ...actual,
+    getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
     resolveGoogleAdsApiAuthFromContext: authContextFns.resolveGoogleAdsApiAuthFromContext,
   }
 })
@@ -341,5 +344,48 @@ describe('resolveAndHealSyncUserCredentials', () => {
       'sa-developer-token-abcdefghijklmnopqrst'
     )
     expect(result.serviceAccountConfig?.id).toBe('sa-1')
+  })
+})
+
+describe('resolveOAuthApiCredentialsForUser', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue(oauthAuthContextFull)
+    authContextFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue(defaultOAuthApiAuth)
+    dbFns.exec.mockResolvedValue(undefined)
+  })
+
+  it('returns oauth client credentials with login_customer_id', async () => {
+    const result = await resolveOAuthApiCredentialsForUser(1)
+
+    expect(authContextFns.getGoogleAdsAuthContext).toHaveBeenCalledWith(1)
+    expect(result).toEqual({
+      client_id: oauthCredentialsFull.client_id,
+      client_secret: oauthCredentialsFull.client_secret,
+      developer_token: oauthCredentialsFull.developer_token,
+      login_customer_id: '9988776655',
+    })
+  })
+
+  it('throws when user is configured for service account', async () => {
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      ...oauthAuthContextFull,
+      auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+    })
+
+    await expect(resolveOAuthApiCredentialsForUser(1)).rejects.toThrow(/服务账号认证/)
+  })
+
+  it('throws when login_customer_id is missing', async () => {
+    authContextFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
+      ...defaultOAuthApiAuth,
+      oauthLoginCustomerId: undefined,
+    })
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      ...oauthAuthContextFull,
+      oauthCredentials: { ...oauthCredentialsFull, login_customer_id: '' },
+    })
+
+    await expect(resolveOAuthApiCredentialsForUser(1)).rejects.toThrow(/login_customer_id/)
   })
 })

@@ -10,7 +10,10 @@ const campaignRouteAuthFns = vi.hoisted(() => ({
   getGoogleAdsAuthContext: vi.fn(),
   resolveGoogleAdsApiAuthFromContext: vi.fn(),
 }))
-import { getGoogleAdsCredentialsFromDB } from '@/lib/google-ads-api'
+
+const accountsAuthFns = vi.hoisted(() => ({
+  resolveOAuthApiCredentialsForUser: vi.fn(),
+}))
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { executeGAQLQueryPython } from '@/lib/python-ads-client'
 
@@ -27,9 +30,12 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
+vi.mock('@/lib/google-ads-accounts-auth', () => ({
+  resolveOAuthApiCredentialsForUser: accountsAuthFns.resolveOAuthApiCredentialsForUser,
+}))
+
 vi.mock('@/lib/google-ads-api', () => ({
   getCustomerWithCredentials: vi.fn(),
-  getGoogleAdsCredentialsFromDB: vi.fn(),
 }))
 
 vi.mock('@/lib/google-ads-service-account', () => ({
@@ -170,7 +176,7 @@ describe('GET /api/campaigns/:id/cpc', () => {
     expect(data.currentCpc).toBe(0.58)
     expect(Array.isArray(data.history)).toBe(true)
     expect(data.history[0].value).toBe(0.48)
-    expect(getGoogleAdsCredentialsFromDB).not.toHaveBeenCalled()
+    expect(accountsAuthFns.resolveOAuthApiCredentialsForUser).not.toHaveBeenCalled()
     expect(campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext).toHaveBeenCalledWith(
       expect.objectContaining({
         auth: expect.objectContaining({ authType: 'service_account' }),

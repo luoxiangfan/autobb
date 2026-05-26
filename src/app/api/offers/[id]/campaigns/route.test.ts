@@ -9,7 +9,10 @@ const dbFns = vi.hoisted(() => ({
 
 const googleAdsFns = vi.hoisted(() => ({
   getCustomerWithCredentials: vi.fn(),
-  getGoogleAdsCredentialsFromDB: vi.fn(),
+}))
+
+const accountsAuthFns = vi.hoisted(() => ({
+  resolveOAuthApiCredentialsForUser: vi.fn(),
 }))
 
 const serviceAccountFns = vi.hoisted(() => ({
@@ -39,9 +42,12 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
+vi.mock('@/lib/google-ads-accounts-auth', () => ({
+  resolveOAuthApiCredentialsForUser: accountsAuthFns.resolveOAuthApiCredentialsForUser,
+}))
+
 vi.mock('@/lib/google-ads-api', () => ({
   getCustomerWithCredentials: googleAdsFns.getCustomerWithCredentials,
-  getGoogleAdsCredentialsFromDB: googleAdsFns.getGoogleAdsCredentialsFromDB,
 }))
 
 vi.mock('@/lib/google-ads-service-account', () => ({
@@ -134,5 +140,6 @@ describe('GET /api/offers/:id/campaigns', () => {
     expect(data.campaigns[0].currentCpc).toBe(0.5)
     expect(serviceAccountFns.getServiceAccountConfig).toHaveBeenCalledWith(1, 'sa-1')
     expect(authContextFns.getGoogleAdsAuthContext).toHaveBeenCalledWith(1)
+    expect(accountsAuthFns.resolveOAuthApiCredentialsForUser).not.toHaveBeenCalled()
   })
 })
