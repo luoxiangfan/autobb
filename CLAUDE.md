@@ -33,7 +33,7 @@ npm run validate-schema
 
 After changing application code, run **`npm run lint`** and **`npm run type-check`** in the repo root; both must pass before reporting work complete.
 
-If the change touches SQL or the database layer (`migrations/`, `pg-migrations/`, raw SQL, `db-helpers`), also run **`npm run db:migrate`**, **`npm run validate-schema`**, and targeted **`npm test`** for dual SQLite/PostgreSQL behavior. See [AGENTS.md](./AGENTS.md) — sections「代码修改后的质量门禁（必须）」and「数据库 / SQL 修改后的双栈兼容性（必须）」.
+If the change touches SQL or the database layer (`migrations/`, `pg-migrations/`, raw SQL, `db-helpers`), review SQL correctness (table aliases, `?` placeholders vs `params`, column types) and run **`npm run db:migrate`**, **`npm run validate-schema`**, and targeted **`npm test`** for dual SQLite/PostgreSQL behavior. See [AGENTS.md](./AGENTS.md) —「代码修改后的质量门禁（必须）」and「数据库 / SQL 修改后的检查（必须）」.
 
 ## Key Directories
 
@@ -61,7 +61,7 @@ Copy `.env.example` to `.env.local` for local development. See `README.md` for t
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **autobb** (41147 symbols, 73037 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **autobb** (41191 symbols, 73190 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

@@ -29,9 +29,9 @@ npm run type-check
 3. 仅改文档（如 `*.md`）且未触及上述代码路径时，可跳过；若有疑问则仍应运行。
 4. 向用户说明本次改动时，须简要写明 lint / type-check 已通过（或说明跳过原因）。
 
-## 数据库 / SQL 修改后的双栈兼容性（必须）
+## 数据库 / SQL 修改后的检查（必须）
 
-本仓库同时支持 **SQLite**（本地）与 **PostgreSQL**（生产）。凡改动涉及数据库操作（SQL），在向用户汇报「修改完成」之前，除上文 lint / type-check 外，还须完成下列兼容性检查。
+本仓库同时支持 **SQLite**（本地）与 **PostgreSQL**（生产）。凡改动涉及数据库操作（SQL），在向用户汇报「修改完成」之前，除上文 lint / type-check 外，还须同时满足 **双栈兼容性** 与 **SQL 语法/语义正确性**（见下两节），并完成必跑检查。
 
 ### 适用场景（满足任一则必须执行）
 
@@ -45,6 +45,24 @@ npm run type-check
 1. **Schema 变更须双栈成对**：同一编号的增量迁移须同时存在于 `migrations/{N}_*.sql` 与 `pg-migrations/{N}_*.sql`（或 consolidated 初始化脚本的等价更新）。命名与语义须对齐，见 `migrations/README.md`。
 2. **优先复用** `src/lib/db-helpers.ts`（如 `nowFunc`、`getInsertedId`、日期/布尔兼容表达式），避免散落方言专用 SQL。
 3. **禁止** 仅在一侧数据库可用的语法（如 SQLite 专有函数未在 PG 侧等价实现，或反之）而不加 `db.type` 分支或 helper。
+
+### SQL 语法与语义正确性（必须）
+
+在跑迁移/测试之前，须对新增或修改的 SQL 做 **人工审阅 + 运行验证**，确保语句本身合法且与 schema 一致，不能只依赖 type-check。
+
+**审阅清单（逐项核对）：**
+
+| 类别 | 要求 |
+|------|------|
+| **表与列** | 表名、列名与当前 schema 一致；`JOIN`/`WHERE`/`ORDER BY`/`GROUP BY` 引用的列存在且归属正确 |
+| **表别名** | 多表查询为每张表定义唯一别名；`SELECT`/`ON`/`WHERE` 中只用别名或全限定名，避免歧义列名 |
+| **占位符** | 经 `DatabaseAdapter` 的 SQL 统一用 `?`，`params` 数组顺序与个数与占位符一致（PG 由 `db.ts` 转为 `$1,$2,...`）；勿在双栈共用路径手写 `$1`（除非明确仅 PG 分支） |
+| **数据类型** | 布尔：SQLite 用 `0/1` 或 helper，PG 用 `TRUE/FALSE`；时间用 `db-helpers` 的 `nowFunc` 等，勿混用 `datetime('now')` 与 `NOW()`；JSON/JSONB、数值、UUID 等与列类型匹配 |
+| **INSERT/UPDATE** | PG 需 `RETURNING id` 时与 `getInsertedId` 约定一致；`UPDATE`/`DELETE` 条件完整，避免误伤全表 |
+| **聚合与子查询** | `GROUP BY` 含非聚合列；子查询别名、相关子查询关联字段正确 |
+| **迁移脚本** | `migrations/*.sql` 用 SQLite 语法；`pg-migrations/*.sql` 用 PG 语法；两侧 DDL/DML 语义等价，勿复制粘贴后未改方言 |
+
+**验证方式：** `db:migrate` / `validate-schema` / 相关 `npm test` 报错（如 `no such column`、`syntax error`、`bind message supplies N parameters`）须视为语法或绑定问题并修复后重跑。
 
 ### 必跑检查（按顺序）
 
@@ -66,7 +84,7 @@ npm test -- <受影响模块的 test 文件或路径>
 1. 上述命令与测试均须通过；迁移/校验失败须修复后重跑。
 2. 修改查询/写入逻辑时，相关测试应体现 **sqlite 与 postgres** 差异（可参考同目录下 `type: 'sqlite' | 'postgres'` 的既有用例）；无则补充最小用例。
 3. 无法连接 PostgreSQL 时，仍须完成 SQLite 的 `db:migrate` + `validate-schema`，并在汇报中说明 PG 侧为「未实测 / 已按 pg-migrations 脚本人工对齐」。
-4. 向用户说明时，须写明双栈检查项（迁移编号、validate-schema、所跑测试）及结果。
+4. 向用户说明时，须写明：双栈检查项（迁移编号、validate-schema、所跑测试）、SQL 语法审阅结论（或「已通过 migrate/测试验证」）。
 
 详细操作见 `migrations/DATABASE_INITIALIZATION_GUIDE.md` 中「Schema验证」与 `migrations/README.md`。
 
@@ -120,7 +138,7 @@ gitnexus impact evaluateAdStrength --depth 2
 1. 进入代码修改前，先汇报 `impact` 结果（直接调用方、风险级别、影响模块）。
 2. 若风险为 HIGH/CRITICAL，先给出降风险方案，再实施修改。
 3. 改动完成后，说明是否需要重新 `analyze` 以保持索引新鲜。
-4. 改动完成后，按上文「代码修改后的质量门禁」运行 `npm run lint` 与 `npm run type-check`；若涉及 SQL，另按「数据库 / SQL 修改后的双栈兼容性」执行检查。
+4. 改动完成后，按上文「代码修改后的质量门禁」运行 `npm run lint` 与 `npm run type-check`；若涉及 SQL，另按「数据库 / SQL 修改后的检查」执行兼容性与语法验证。
 
 ### 当前仓库限制
 
@@ -132,7 +150,7 @@ gitnexus impact evaluateAdStrength --depth 2
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **autobb** (41147 symbols, 73037 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **autobb** (41191 symbols, 73190 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -275,7 +293,7 @@ For more details, see README.md and docs/QUICKSTART.md.
 **MANDATORY WORKFLOW:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) — at minimum `npm run lint` and `npm run type-check` (see「代码修改后的质量门禁」); if SQL/DB touched, also `db:migrate`, `validate-schema`, and targeted tests (see「数据库 / SQL 修改后的双栈兼容性」); add full test suite/build as appropriate
+2. **Run quality gates** (if code changed) — at minimum `npm run lint` and `npm run type-check` (see「代码修改后的质量门禁」); if SQL/DB touched, also review SQL syntax/aliases/placeholders/types, then `db:migrate`, `validate-schema`, and targeted tests (see「数据库 / SQL 修改后的检查」); add full test suite/build as appropriate
 3. **Update issue status** - Close finished work, update in-progress items
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
