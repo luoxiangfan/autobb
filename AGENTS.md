@@ -13,6 +13,22 @@
 
 - 若用户明确要求“不要提问、直接给方案/代码”，则按用户要求直接执行。
 
+## 代码修改后的质量门禁（必须）
+
+凡修改了会影响构建/运行的文件（如 `src/`、`scripts/`、`migrations/`、`pg-migrations/`、根目录 TS/JS 配置等），**在向用户汇报「修改完成」之前**，必须在仓库根目录依次执行并通过：
+
+```bash
+npm run lint
+npm run type-check
+```
+
+**执行要求：**
+
+1. 两条命令均须 **exit code 0**；任一有报错须先修复再重跑，直至全部通过。
+2. 可在终端并行执行以节省时间，但汇报前须确认两者均已成功。
+3. 仅改文档（如 `*.md`）且未触及上述代码路径时，可跳过；若有疑问则仍应运行。
+4. 向用户说明本次改动时，须简要写明 lint / type-check 已通过（或说明跳过原因）。
+
 ## 问题修复后复盘规则
 
 - 现在问题解决了，但请你重新Review一下今天的几轮修改，看看是不是补丁叠补丁的修改，如果是的话，重构成最优解。
@@ -63,7 +79,7 @@ gitnexus impact evaluateAdStrength --depth 2
 1. 进入代码修改前，先汇报 `impact` 结果（直接调用方、风险级别、影响模块）。
 2. 若风险为 HIGH/CRITICAL，先给出降风险方案，再实施修改。
 3. 改动完成后，说明是否需要重新 `analyze` 以保持索引新鲜。
-4. 改动完成后，检查是否存在错误
+4. 改动完成后，按上文「代码修改后的质量门禁」运行 `npm run lint` 与 `npm run type-check`。
 
 ### 当前仓库限制
 
@@ -218,7 +234,7 @@ For more details, see README.md and docs/QUICKSTART.md.
 **MANDATORY WORKFLOW:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
+2. **Run quality gates** (if code changed) — at minimum `npm run lint` and `npm run type-check` (see「代码修改后的质量门禁」); add tests/build as appropriate
 3. **Update issue status** - Close finished work, update in-progress items
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash

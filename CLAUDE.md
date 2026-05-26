@@ -29,6 +29,10 @@ npm run type-check   # TypeScript
 npm run validate-schema
 ```
 
+## Agent workflow (mandatory after code edits)
+
+After changing application code, run **`npm run lint`** and **`npm run type-check`** in the repo root; both must pass before reporting work complete. Full rules: [AGENTS.md](./AGENTS.md) — section「代码修改后的质量门禁（必须）」.
+
 ## Key Directories
 
 | Path | Purpose |
