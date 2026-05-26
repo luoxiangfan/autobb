@@ -325,14 +325,7 @@ export async function syncCampaignsFromGoogleAds(
   try {
     console.log(`[GoogleAds Sync] Starting sync for user ${userId}...`)
 
-    // // 1. 获取用户的 Google Ads 账户凭证（单个对象）
-    // const credentials = await getGoogleAdsCredentialsFromDB(userId)
-    // if (!credentials) {
-    //   result.warnings.push('用户未配置 Google Ads 凭证')
-    //   return result
-    // }
-
-    // 2. 🔧 获取该用户的所有活跃 Google Ads 账户（支持 MCC 过滤）
+    // 🔧 获取该用户的所有活跃 Google Ads 账户（支持 MCC 过滤）
     const isActiveCondition = db.type === 'postgres' ? 'is_active = TRUE' : 'is_active = 1'
     const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = FALSE' : 'is_manager_account = 0'
     const isDeletedCondition = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
