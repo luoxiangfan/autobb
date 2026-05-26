@@ -455,7 +455,10 @@ export class DataSyncService {
             account.service_account_id
           )
 
-          let refreshToken = account.refresh_token || accountApiAuth.refreshToken || undefined
+          let refreshToken =
+            accountApiAuth.authType === 'oauth'
+              ? accountApiAuth.refreshToken || account.refresh_token || undefined
+              : undefined
           if (accountApiAuth.authType === 'oauth' && !refreshToken) {
               console.warn(`⚠️ 用户 ${userId} OAuth模式下缺少refresh_token，跳过账户 ${account.customer_id}`)
               // 🔧 修复(2025-12-28): 清理因凭证缺失而无法同步的sync_log

@@ -20,6 +20,7 @@ import { getCustomerWithCredentials, trackOAuthApiCall } from './google-ads-api'
 import {
   getGoogleAdsAuthContext,
   resolveEffectiveServiceAccountId,
+  resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { toDbCampaignConfigTextField } from './campaign-backups'
@@ -388,8 +389,6 @@ export async function syncCampaignsFromGoogleAds(
     }
 
     const authContext = await getGoogleAdsAuthContext(userId)
-    const auth = authContext.auth
-    const oauthCredentials = authContext.oauthCredentials
 
     // 3. 对每个账户执行同步
     for (const account of accounts) {
@@ -405,14 +404,20 @@ export async function syncCampaignsFromGoogleAds(
           typeof account.service_account_id === 'string'
             ? account.service_account_id.trim()
             : ''
-        const syncAuthType = auth.authType
-        const syncServiceAccountId = resolveEffectiveServiceAccountId(
-          linkedServiceAccountId || account.service_account_id,
-          authContext
+        const accountApiAuth = await resolveGoogleAdsApiAuthFromContext(
+          authContext,
+          linkedServiceAccountId || account.service_account_id
         )
+        const syncAuthType = accountApiAuth.authType
+        const syncServiceAccountId =
+          accountApiAuth.serviceAccountId ||
+          resolveEffectiveServiceAccountId(
+            linkedServiceAccountId || account.service_account_id,
+            authContext
+          )
         const syncRefreshToken =
           syncAuthType === 'oauth'
-            ? account.refresh_token || oauthCredentials?.refresh_token || null
+            ? accountApiAuth.refreshToken || account.refresh_token || null
             : null
 
         if (syncAuthType === 'service_account' && !syncServiceAccountId) {

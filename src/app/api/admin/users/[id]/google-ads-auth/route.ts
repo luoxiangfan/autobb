@@ -20,7 +20,11 @@ import {
 import { parseServiceAccountJson } from '@/lib/google-ads-service-account'
 import { encrypt } from '@/lib/crypto'
 import { boolCondition } from '@/lib/db-helpers'
-import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
+import {
+  assertNoConflictingGoogleAdsAuth,
+  detectGoogleAdsDualStackCredentials,
+  GOOGLE_ADS_DUAL_STACK_WARNING,
+} from '@/lib/google-ads-auth-context'
 
 async function requireAdmin(request: NextRequest) {
   const auth = await verifyAuth(request)
@@ -67,6 +71,8 @@ async function buildAuthStatus(userId: number) {
     sharedAdminEmail = adminUser?.email ?? null
   }
 
+  const dualStack = await detectGoogleAdsDualStackCredentials(userId)
+
   return {
     assignment: assignment
       ? {
@@ -93,6 +99,8 @@ async function buildAuthStatus(userId: number) {
     serviceAccountId: serviceAccount?.id ?? null,
     serviceAccountName: serviceAccount?.name ?? null,
     canModify: !isGoogleAdsAuthShared(assignment),
+    dualStack: dualStack.dualStack,
+    authConfigWarning: dualStack.dualStack ? GOOGLE_ADS_DUAL_STACK_WARNING : null,
   }
 }
 

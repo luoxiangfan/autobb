@@ -64,18 +64,35 @@ async function getGoogleAdsClient(
     }
   }
 
-  const credentials = await getGoogleAdsCredentialsFromDB(userId)
-  const refreshToken = account.refresh_token || apiAuth.refreshToken || ''
+  const refreshToken =
+    apiAuth.refreshToken || authContext.oauthCredentials?.refresh_token || account.refresh_token || ''
 
   if (!refreshToken) {
     throw new Error('Google Ads账号缺少refresh token')
   }
 
+  const oauthCredentials = authContext.oauthCredentials
+  const credentials =
+    oauthCredentials?.client_id &&
+    oauthCredentials.client_secret &&
+    oauthCredentials.developer_token
+      ? {
+          client_id: oauthCredentials.client_id,
+          client_secret: oauthCredentials.client_secret,
+          developer_token: oauthCredentials.developer_token,
+          login_customer_id: oauthCredentials.login_customer_id || '',
+        }
+      : await getGoogleAdsCredentialsFromDB(userId)
+
   return {
     customer: await getCustomerWithCredentials({
       customerId,
       refreshToken,
-      loginCustomerId: credentials.login_customer_id || account.parent_mcc_id || undefined,
+      loginCustomerId:
+        apiAuth.oauthLoginCustomerId ||
+        credentials.login_customer_id ||
+        account.parent_mcc_id ||
+        undefined,
       credentials: {
         client_id: credentials.client_id,
         client_secret: credentials.client_secret,
