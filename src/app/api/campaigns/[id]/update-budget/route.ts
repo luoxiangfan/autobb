@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { updateGoogleAdsCampaignBudget } from '@/lib/google-ads-api'
+import { updateGoogleAdsCampaignBudget, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
+import { loadOAuthGoogleAdsCallBundleForContext } from '@/lib/google-ads-accounts-auth'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
@@ -174,7 +175,16 @@ export async function PUT(
     }
 
     const refreshToken = apiAuth.refreshToken
-    const oauthLoginCustomerId = apiAuth.oauthLoginCustomerId
+    let oauthCredentials: OAuthApiCredentialsFields | undefined
+    let oauthLoginCustomerId = apiAuth.oauthLoginCustomerId
+    if (apiAuth.authType === 'oauth') {
+      const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({ userId, authContext })
+      if (!oauthBundle.ok) {
+        return NextResponse.json({ error: oauthBundle.message }, { status: 400 })
+      }
+      oauthCredentials = oauthBundle.bundle?.oauthCredentials
+      oauthLoginCustomerId = oauthBundle.bundle?.oauthLoginCustomerId ?? oauthLoginCustomerId
+    }
 
     const runUpdateBudget = async (loginCustomerId?: string) => {
       await updateGoogleAdsCampaignBudget({
@@ -188,6 +198,7 @@ export async function PUT(
         loginCustomerId,
         authType: apiAuth.authType,
         serviceAccountId: apiAuth.serviceAccountId,
+        credentials: oauthCredentials,
       })
     }
 

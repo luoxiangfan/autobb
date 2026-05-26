@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import {
+  defaultCampaignGoogleAdsAccountRow,
+  defaultOAuthGoogleAdsCallBundle,
   hasConfiguredGoogleAdsAuthFromContextMock,
   resetCampaignRouteAuthMocksOAuth,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
@@ -27,6 +29,10 @@ const dbState = vi.hoisted(() => ({
 
 const adsFns = vi.hoisted(() => ({
   createGoogleAdsKeywordsBatch: vi.fn(),
+}))
+
+const oauthAccountsAuthFns = vi.hoisted(() => ({
+  loadOAuthGoogleAdsCallBundleForContext: vi.fn(),
 }))
 
 const keywordPoolFns = vi.hoisted(() => ({
@@ -56,6 +62,14 @@ vi.mock('@/lib/google-ads-auth-context', () => ({
   resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,
 }))
 
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    loadOAuthGoogleAdsCallBundleForContext: oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext,
+  }
+})
+
 vi.mock('@/lib/offer-keyword-pool', () => ({
   promoteKeywordsToOfferKeywordPool: keywordPoolFns.promoteKeywordsToOfferKeywordPool,
 }))
@@ -76,6 +90,9 @@ describe('POST /api/campaigns/:id/keywords/add', () => {
     })
 
     resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
+    oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext.mockResolvedValue(
+      defaultOAuthGoogleAdsCallBundle
+    )
     keywordPoolFns.promoteKeywordsToOfferKeywordPool.mockResolvedValue({
       promotedCount: 2,
       skippedCount: 0,
@@ -95,7 +112,7 @@ describe('POST /api/campaigns/:id/keywords/add', () => {
           google_ad_group_id: '9001',
           offer_brand: 'Dreo',
           customer_id: '1234567890',
-          account_refresh_token: null,
+          ...defaultCampaignGoogleAdsAccountRow,
           account_is_active: 1,
           account_is_deleted: 0,
         }

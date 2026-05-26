@@ -38,3 +38,22 @@ export function resetCampaignRouteAuthMocksOAuth(fns: {
   fns.getGoogleAdsAuthContext.mockResolvedValue(defaultOAuthAuthContext)
   fns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue(defaultOAuthApiAuth)
 }
+
+export const defaultOAuthApiCredentialsFields = {
+  client_id: 'test-client-id.apps.googleusercontent.com',
+  client_secret: 'GOCSPX-test-client-secret',
+  developer_token: 'abcdefghijklmnopqrstuvwxyz123456',
+}
+
+export const defaultOAuthGoogleAdsCallBundle = {
+  ok: true as const,
+  bundle: {
+    oauthCredentials: defaultOAuthApiCredentialsFields,
+    oauthLoginCustomerId: defaultOAuthApiAuth.oauthLoginCustomerId,
+  },
+}
+
+export const defaultCampaignGoogleAdsAccountRow = {
+  parent_mcc_id: null as string | null,
+  service_account_id: null as string | null,
+}

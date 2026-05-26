@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { boolCondition, boolParam, getInsertedId } from '@/lib/db-helpers'
-import { createGoogleAdsKeywordsBatch, updateGoogleAdsKeywordStatus } from '@/lib/google-ads-api'
+import { createGoogleAdsKeywordsBatch, updateGoogleAdsKeywordStatus, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
+import {
+  loadOAuthGoogleAdsCallBundleForContext,
+  pickOAuthLoginCustomerIdForAccount,
+  pickServiceAccountLoginCustomerIdForAccount,
+} from '@/lib/google-ads-accounts-auth'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
@@ -219,6 +224,8 @@ async function createKeywordsByMatchType(params: {
   accountId: number
   authType: 'oauth' | 'service_account'
   serviceAccountId?: string
+  loginCustomerId?: string
+  credentials?: OAuthApiCredentialsFields
 }): Promise<{
   created: Array<{ keywordId: string; keywordText: string; matchType: 'BROAD' | 'PHRASE' | 'EXACT' }>
   duplicateKeywords: string[]
@@ -244,8 +251,10 @@ async function createKeywordsByMatchType(params: {
         ],
         accountId: params.accountId,
         userId: params.userId,
+        loginCustomerId: params.loginCustomerId,
         authType: params.authType,
         serviceAccountId: params.serviceAccountId,
+        credentials: params.credentials,
       })
 
       const first = rows[0]
@@ -278,6 +287,8 @@ async function pauseExistingKeywords(params: {
   campaignId: number
   authType: 'oauth' | 'service_account'
   serviceAccountId?: string
+  loginCustomerId?: string
+  credentials?: OAuthApiCredentialsFields
   oldKeywords: NormalizedOldKeyword[]
 }): Promise<{
   pausedCount: number
@@ -353,8 +364,10 @@ async function pauseExistingKeywords(params: {
           status: 'PAUSED',
           accountId: params.accountId,
           userId: params.userId,
+          loginCustomerId: params.loginCustomerId,
           authType: params.authType,
           serviceAccountId: params.serviceAccountId,
+          credentials: params.credentials,
         })
       }
 
@@ -421,7 +434,8 @@ export async function POST(
       google_ad_group_id: string | null
       campaign_config: unknown
       customer_id: string | null
-      account_refresh_token: string | null
+      parent_mcc_id: string | null
+      service_account_id: string | null
       account_is_active: number | boolean | null
       account_is_deleted: number | boolean | null
     }>(
@@ -435,7 +449,8 @@ export async function POST(
           c.google_ad_group_id,
           c.campaign_config,
           gaa.customer_id,
-          gaa.refresh_token AS account_refresh_token,
+          gaa.parent_mcc_id,
+          gaa.service_account_id,
           gaa.is_active AS account_is_active,
           gaa.is_deleted AS account_is_deleted
         FROM campaigns c
@@ -552,11 +567,11 @@ export async function POST(
       )
     }
 
-    const apiAuth = await resolveGoogleAdsApiAuthFromContext(authContext)
-    const refreshToken =
-      apiAuth.authType === 'oauth'
-        ? apiAuth.refreshToken || campaign.account_refresh_token || ''
-        : ''
+    const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+      authContext,
+      campaign.service_account_id
+    )
+    const refreshToken = apiAuth.authType === 'oauth' ? apiAuth.refreshToken || '' : ''
     if (apiAuth.authType === 'oauth' && !refreshToken) {
       return NextResponse.json(
         { error: 'Google Ads OAuth 授权已过期，请重新连接账号' },
@@ -566,6 +581,30 @@ export async function POST(
     if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {
       return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
     }
+
+    let oauthCredentials: OAuthApiCredentialsFields | undefined
+    let oauthLoginCustomerId: string | undefined
+    if (apiAuth.authType === 'oauth') {
+      const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({ userId, authContext })
+      if (!oauthBundle.ok) {
+        return NextResponse.json({ error: oauthBundle.message }, { status: 400 })
+      }
+      oauthCredentials = oauthBundle.bundle?.oauthCredentials
+      oauthLoginCustomerId = oauthBundle.bundle?.oauthLoginCustomerId
+    }
+
+    const loginCustomerId =
+      apiAuth.authType === 'oauth'
+        ? pickOAuthLoginCustomerIdForAccount({
+            accountParentMccId: campaign.parent_mcc_id,
+            oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+            targetCustomerId: String(campaign.customer_id),
+          })
+        : pickServiceAccountLoginCustomerIdForAccount({
+            accountParentMccId: campaign.parent_mcc_id,
+            serviceAccountMccId: apiAuth.serviceAccountMccId,
+            targetCustomerId: String(campaign.customer_id),
+          })
 
     const status = body.status === 'PAUSED' ? 'PAUSED' : 'ENABLED'
     const createResult = await createKeywordsByMatchType({
@@ -578,6 +617,8 @@ export async function POST(
       accountId: Number(campaign.google_ads_account_id),
       authType: apiAuth.authType,
       serviceAccountId: apiAuth.serviceAccountId,
+      loginCustomerId,
+      credentials: oauthCredentials,
     })
 
     const now = new Date().toISOString()
@@ -646,6 +687,8 @@ export async function POST(
         campaignId,
         authType: apiAuth.authType,
         serviceAccountId: apiAuth.serviceAccountId,
+        loginCustomerId,
+        credentials: oauthCredentials,
         oldKeywords: parsedOldKeywords,
       })
       : { pausedCount: 0, pausedKeywords: [], failures: [] as KeywordPauseFailure[] }

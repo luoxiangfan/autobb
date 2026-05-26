@@ -2,6 +2,7 @@ import { getDatabase } from '@/lib/db'
 import { boolCondition, boolParam } from '@/lib/db-helpers'
 import { createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
 import {
+  pickOAuthLoginCustomerIdForAccount,
   resolveHealedOAuthCredentialsFields,
   type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-accounts-auth'
@@ -83,6 +84,7 @@ interface SearchTermAggregateRow {
   cost: number | string
   google_ads_account_id: number
   customer_id: string
+  parent_mcc_id: string | null
   refresh_token: string | null
   target_language: string | null
   brand: string | null
@@ -98,6 +100,7 @@ interface SearchTermAutoNegativeAction {
   cost: number
   googleAdsAccountId: number
   customerId: string
+  parentMccId: string | null
   refreshToken: string
 }
 
@@ -113,6 +116,7 @@ interface SearchTermAutoPositiveAction {
   matchType: 'BROAD' | 'PHRASE' | 'EXACT'
   googleAdsAccountId: number
   customerId: string
+  parentMccId: string | null
   refreshToken: string
 }
 
@@ -170,6 +174,7 @@ function parsePositiveNumber(raw: string | undefined, fallback: number): number 
 function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof getDatabase>>) {
   const contextByUser = new Map<number, GoogleAdsAuthContext>()
   const linkedServiceAccountByAccountId = new Map<number, string | null>()
+  const parentMccByAccountId = new Map<number, string | null>()
   const oauthHealedByUser = new Map<
     number,
     { credentials: OAuthApiCredentialsFields; loginCustomerId: string }
@@ -196,9 +201,26 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
     return linkedServiceAccountByAccountId.get(accountId) ?? null
   }
 
+  const getParentMccId = async (accountId: number, fallback: string | null) => {
+    if (!parentMccByAccountId.has(accountId)) {
+      const row = await db.queryOne<{ parent_mcc_id: string | null }>(
+        `SELECT parent_mcc_id FROM google_ads_accounts WHERE id = ? LIMIT 1`,
+        [accountId]
+      )
+      const parent =
+        typeof row?.parent_mcc_id === 'string' && row.parent_mcc_id.trim()
+          ? row.parent_mcc_id.trim()
+          : fallback
+      parentMccByAccountId.set(accountId, parent)
+    }
+    return parentMccByAccountId.get(accountId) ?? fallback
+  }
+
   return async (action: {
     userId: number
     googleAdsAccountId: number
+    customerId: string
+    parentMccId: string | null
     refreshToken: string
   }) => {
     const ctx = await getContext(action.userId)
@@ -231,11 +253,17 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
         }
         oauthHealedByUser.set(action.userId, healedBundle)
       }
+      const parentMccId = await getParentMccId(action.googleAdsAccountId, action.parentMccId)
+      const loginCustomerId = pickOAuthLoginCustomerIdForAccount({
+        accountParentMccId: parentMccId,
+        oauthLoginCustomerId: healedBundle.loginCustomerId || apiAuth.oauthLoginCustomerId,
+        targetCustomerId: action.customerId,
+      })
       return {
         authType: apiAuth.authType,
         serviceAccountId: undefined as string | undefined,
         refreshToken: effectiveRefreshToken,
-        loginCustomerId: healedBundle.loginCustomerId || apiAuth.oauthLoginCustomerId,
+        loginCustomerId,
         credentials: healedBundle.credentials,
       }
     }
@@ -302,6 +330,7 @@ async function loadSearchTermAggregates(options: {
         SUM(str.cost) AS cost,
         c.google_ads_account_id,
         gaa.customer_id,
+        gaa.parent_mcc_id,
         gaa.refresh_token,
         o.target_language,
         o.brand
@@ -329,6 +358,7 @@ async function loadSearchTermAggregates(options: {
         str.search_term,
         c.google_ads_account_id,
         gaa.customer_id,
+        gaa.parent_mcc_id,
         gaa.refresh_token,
         o.target_language,
         o.brand
@@ -468,6 +498,7 @@ export async function runSearchTermAutoNegatives(
       cost,
       googleAdsAccountId: Number(row.google_ads_account_id),
       customerId: String(row.customer_id || '').trim(),
+      parentMccId: row.parent_mcc_id,
       refreshToken: String(row.refresh_token || ''),
     })
 
@@ -703,6 +734,7 @@ export async function runSearchTermAutoPositiveKeywords(
       matchType,
       googleAdsAccountId: Number(row.google_ads_account_id),
       customerId: String(row.customer_id || '').trim(),
+      parentMccId: row.parent_mcc_id,
       refreshToken: String(row.refresh_token || ''),
     })
 

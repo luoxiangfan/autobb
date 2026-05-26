@@ -3,7 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { getDatabase } from '@/lib/db'
 import { findCampaignById } from '@/lib/campaigns'
-import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads-api'
+import { updateGoogleAdsCampaignStatus, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
+import {
+  loadOAuthGoogleAdsCallBundleForContext,
+  pickOAuthLoginCustomerIdForAccount,
+  pickServiceAccountLoginCustomerIdForAccount,
+} from '@/lib/google-ads-accounts-auth'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
@@ -222,15 +227,31 @@ export async function PUT(
 
     const refreshToken = apiAuth.refreshToken
     const serviceAccountId = apiAuth.serviceAccountId
-    let loginCustomerId: string | undefined =
-      apiAuth.authType === 'service_account'
-        ? apiAuth.serviceAccountMccId
-        : apiAuth.oauthLoginCustomerId
-    if (!loginCustomerId && adsAccountRow.parent_mcc_id) {
-      loginCustomerId = String(adsAccountRow.parent_mcc_id)
+
+    let oauthCredentials: OAuthApiCredentialsFields | undefined
+    let oauthLoginCustomerId: string | undefined
+    if (apiAuth.authType === 'oauth') {
+      const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({ userId, authContext })
+      if (!oauthBundle.ok) {
+        return NextResponse.json({ error: oauthBundle.message }, { status: 400 })
+      }
+      oauthCredentials = oauthBundle.bundle?.oauthCredentials
+      oauthLoginCustomerId = oauthBundle.bundle?.oauthLoginCustomerId
     }
 
-    // 先更新 Google Ads 状态
+    const loginCustomerId =
+      apiAuth.authType === 'oauth'
+        ? pickOAuthLoginCustomerIdForAccount({
+            accountParentMccId: adsAccountRow.parent_mcc_id,
+            oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+            targetCustomerId: adsAccountRow.customer_id,
+          })
+        : pickServiceAccountLoginCustomerIdForAccount({
+            accountParentMccId: adsAccountRow.parent_mcc_id,
+            serviceAccountMccId: apiAuth.serviceAccountMccId,
+            targetCustomerId: adsAccountRow.customer_id,
+          })
+
     await updateGoogleAdsCampaignStatus({
       customerId: adsAccountRow.customer_id,
       refreshToken,
@@ -241,6 +262,7 @@ export async function PUT(
       loginCustomerId,
       authType: apiAuth.authType,
       serviceAccountId,
+      credentials: oauthCredentials,
     })
 
     // 再更新本地数据库状态

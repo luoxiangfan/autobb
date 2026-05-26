@@ -4,7 +4,16 @@ import { findAdGroupById, updateAdGroup } from '@/lib/ad-groups'
 import { findCampaignById } from '@/lib/campaigns'
 import { findGoogleAdsAccountById } from '@/lib/google-ads-accounts'
 import { findKeywordsByAdGroupId, updateKeyword } from '@/lib/keywords'
-import { createGoogleAdsAdGroup, createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
+import {
+  createGoogleAdsAdGroup,
+  createGoogleAdsKeywordsBatch,
+  type OAuthApiCredentialsFields,
+} from '@/lib/google-ads-api'
+import {
+  loadOAuthGoogleAdsCallBundleForContext,
+  pickOAuthLoginCustomerIdForAccount,
+  pickServiceAccountLoginCustomerIdForAccount,
+} from '@/lib/google-ads-accounts-auth'
 import {
   googleAdsApiAuthValidationErrorMessage,
   resolveGoogleAdsApiAuthForAccount,
@@ -91,7 +100,39 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         { status: 400 }
       )
     }
-    const { apiAuth } = authResolved
+    const { ctx, apiAuth } = authResolved
+
+    let oauthCredentials: OAuthApiCredentialsFields | undefined
+    let oauthLoginCustomerId: string | undefined
+    if (apiAuth.authType === 'oauth') {
+      const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({ userId, authContext: ctx })
+      if (!oauthBundle.ok) {
+        return NextResponse.json({ error: oauthBundle.message }, { status: 400 })
+      }
+      oauthCredentials = oauthBundle.bundle?.oauthCredentials
+      oauthLoginCustomerId = oauthBundle.bundle?.oauthLoginCustomerId
+    }
+
+    if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
+      return NextResponse.json(
+        { error: 'Google Ads OAuth 授权已过期，请重新连接账号' },
+        { status: 400 }
+      )
+    }
+
+    const refreshToken = apiAuth.refreshToken || ''
+    const loginCustomerId =
+      apiAuth.authType === 'oauth'
+        ? pickOAuthLoginCustomerIdForAccount({
+            accountParentMccId: googleAdsAccount.parentMccId,
+            oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+            targetCustomerId: googleAdsAccount.customerId,
+          })
+        : pickServiceAccountLoginCustomerIdForAccount({
+            accountParentMccId: googleAdsAccount.parentMccId,
+            serviceAccountMccId: apiAuth.serviceAccountMccId,
+            targetCustomerId: googleAdsAccount.customerId,
+          })
 
     // 更新状态为pending
     await updateAdGroup(adGroup.id, userId, {
@@ -103,15 +144,17 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       // 创建Google Ads Ad Group
       const adGroupResult = await createGoogleAdsAdGroup({
         customerId: googleAdsAccount.customerId,
-        refreshToken: googleAdsAccount.refreshToken || apiAuth.refreshToken,
+        refreshToken,
         campaignId: campaign.campaignId,
         adGroupName: adGroup.adGroupName,
         cpcBidMicros: adGroup.cpcBidMicros || undefined,
         status: adGroup.status as 'ENABLED' | 'PAUSED',
         accountId: googleAdsAccount.id,
-        userId: userId,
+        userId,
+        loginCustomerId,
         authType: apiAuth.authType,
         serviceAccountId: apiAuth.serviceAccountId,
+        credentials: oauthCredentials,
       })
 
       // 更新Ad Group，标记为已同步
@@ -144,13 +187,15 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
         const keywordResults = await createGoogleAdsKeywordsBatch({
           customerId: googleAdsAccount.customerId,
-          refreshToken: googleAdsAccount.refreshToken || apiAuth.refreshToken,
+          refreshToken,
           adGroupId: adGroupResult.adGroupId,
           keywords: keywordsBatch,
           accountId: googleAdsAccount.id,
-          userId: userId,
+          userId,
+          loginCustomerId,
           authType: apiAuth.authType,
           serviceAccountId: apiAuth.serviceAccountId,
+          credentials: oauthCredentials,
         })
 
         // 更新每个Keyword的Google Ads ID

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import {
+  defaultOAuthGoogleAdsCallBundle,
   hasConfiguredGoogleAdsAuthFromContextMock,
   resetCampaignRouteAuthMocksOAuth,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
@@ -36,6 +37,10 @@ const offerTaskFns = vi.hoisted(() => ({
   resumeOfferTasksOnCampaignEnable: vi.fn(),
 }))
 
+const oauthAccountsAuthFns = vi.hoisted(() => ({
+  loadOAuthGoogleAdsCallBundleForContext: vi.fn(),
+}))
+
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
     queryOne: dbFns.queryOne,
@@ -56,6 +61,14 @@ vi.mock('@/lib/google-ads-auth-context', () => ({
   resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,
 }))
 
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    loadOAuthGoogleAdsCallBundleForContext: oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext,
+  }
+})
+
 vi.mock('@/lib/campaign-state-machine', () => ({
   applyCampaignTransition: transitionFns.applyCampaignTransition,
 }))
@@ -73,6 +86,9 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
+    oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext.mockResolvedValue(
+      defaultOAuthGoogleAdsCallBundle
+    )
     adsFns.updateGoogleAdsCampaignStatus.mockResolvedValue(undefined)
     transitionFns.applyCampaignTransition.mockResolvedValue({ updatedCount: 1 })
     offerTaskFns.pauseOfferTasks.mockResolvedValue({
@@ -156,17 +172,20 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
       urlSwapTaskCount: 1,
     })
     expect(data.warnings).toEqual([])
-    expect(adsFns.updateGoogleAdsCampaignStatus).toHaveBeenCalledWith({
-      customerId: '1122334455',
-      refreshToken: 'oauth-refresh-token',
-      campaignId: '1234567890',
-      status: 'PAUSED',
-      accountId: 10,
-      userId: 7,
-      loginCustomerId: '9988776655',
-      authType: 'oauth',
-      serviceAccountId: undefined,
-    })
+    expect(adsFns.updateGoogleAdsCampaignStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customerId: '1122334455',
+        refreshToken: 'oauth-refresh-token',
+        campaignId: '1234567890',
+        status: 'PAUSED',
+        accountId: 10,
+        userId: 7,
+        loginCustomerId: '9988776655',
+        authType: 'oauth',
+        serviceAccountId: undefined,
+        credentials: defaultOAuthGoogleAdsCallBundle.bundle?.oauthCredentials,
+      })
+    )
     expect(transitionFns.applyCampaignTransition).toHaveBeenCalledWith({
       userId: 7,
       campaignId: 1,

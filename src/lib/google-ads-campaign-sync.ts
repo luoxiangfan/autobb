@@ -390,10 +390,12 @@ export async function syncCampaignsFromGoogleAds(
     let oauthLoginCustomerId: string | undefined
     if (authContext.auth.authType === 'oauth') {
       const healed = await resolveHealedOAuthCredentialsFields({ userId, authContext })
-      if (healed.ok) {
-        oauthApiCredentials = healed.credentials
-        oauthLoginCustomerId = healed.loginCustomerId || undefined
+      if (!healed.ok) {
+        result.warnings.push(`OAuth 凭证解析失败，已跳过 Google Ads 同步: ${healed.message}`)
+        return result
       }
+      oauthApiCredentials = healed.credentials
+      oauthLoginCustomerId = healed.loginCustomerId || undefined
     }
 
     // 3. 对每个账户执行同步

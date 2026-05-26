@@ -11,8 +11,13 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads-api'
+import { updateGoogleAdsCampaignStatus, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
 import { getDecryptedCredentials } from '@/lib/google-ads-accounts'
+import {
+  loadOAuthGoogleAdsCallBundleForContext,
+  pickOAuthLoginCustomerIdForAccount,
+  pickServiceAccountLoginCustomerIdForAccount,
+} from '@/lib/google-ads-accounts-auth'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
@@ -117,16 +122,28 @@ export async function POST(
       )
     }
 
+    let oauthCredentials: OAuthApiCredentialsFields | undefined
+    let oauthLoginCustomerId: string | undefined
+    if (authContext.auth.authType === 'oauth') {
+      const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
+        userId: offer.user_id,
+        authContext,
+      })
+      if (!oauthBundle.ok) {
+        return NextResponse.json({ error: oauthBundle.message }, { status: 400 })
+      }
+      oauthCredentials = oauthBundle.bundle?.oauthCredentials
+      oauthLoginCustomerId = oauthBundle.bundle?.oauthLoginCustomerId
+    }
+
     // 4. 按账号批量暂停广告系列
     for (const [accountIdStr, accountCampaigns] of Object.entries(campaignsByAccount)) {
       const accountId = parseInt(accountIdStr)
 
       try {
-        // 获取Google Ads账号凭证
         const accountCredentials = await getDecryptedCredentials(accountId, offer.user_id)
 
         if (!accountCredentials) {
-          // 账号凭证不存在，标记失败
           accountCampaigns.forEach(campaign => {
             results.push({
               campaignId: campaign.id,
@@ -157,22 +174,39 @@ export async function POST(
           continue
         }
 
-        // 批量暂停该账号下的所有广告系列
+        const adsAccountMeta = await db.queryOne<{ parent_mcc_id: string | null }>(
+          `SELECT parent_mcc_id FROM google_ads_accounts WHERE id = ? AND user_id = ? LIMIT 1`,
+          [accountId, offer.user_id]
+        )
+
+        const loginCustomerId =
+          apiAuth.authType === 'oauth'
+            ? pickOAuthLoginCustomerIdForAccount({
+                accountParentMccId: adsAccountMeta?.parent_mcc_id ?? null,
+                oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+                targetCustomerId: accountCredentials.customerId,
+              })
+            : pickServiceAccountLoginCustomerIdForAccount({
+                accountParentMccId: adsAccountMeta?.parent_mcc_id ?? null,
+                serviceAccountMccId: apiAuth.serviceAccountMccId,
+                targetCustomerId: accountCredentials.customerId,
+              })
+
         for (const campaign of accountCampaigns) {
           try {
-            // 调用Google Ads API暂停广告系列
             await updateGoogleAdsCampaignStatus({
               customerId: accountCredentials.customerId,
               refreshToken: apiAuth.refreshToken,
               campaignId: campaign.google_campaign_id,
               status: 'PAUSED',
-              accountId: accountId,
+              accountId,
               userId: offer.user_id,
+              loginCustomerId,
               authType: apiAuth.authType,
               serviceAccountId: apiAuth.serviceAccountId,
+              credentials: oauthCredentials,
             })
 
-            // 更新数据库状态
             await applyCampaignTransition({
               userId: offer.user_id,
               campaignId: campaign.id,
@@ -202,7 +236,6 @@ export async function POST(
       } catch (error: any) {
         console.error(`获取账号凭证失败 (Account ID: ${accountId}):`, error)
 
-        // 该账号下所有广告系列都标记为失败
         accountCampaigns.forEach(campaign => {
           results.push({
             campaignId: campaign.id,
@@ -215,12 +248,11 @@ export async function POST(
       }
     }
 
-    // 5. 返回结果
     return NextResponse.json({
       success: errorCount === 0,
       message: `已暂停 ${pausedCount} 个广告系列${errorCount > 0 ? `，${errorCount} 个失败` : ''}`,
-      pausedCount: pausedCount,
-      errorCount: errorCount,
+      pausedCount,
+      errorCount,
       totalCount: campaigns.length,
       campaigns: results
     })

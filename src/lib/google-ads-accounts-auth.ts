@@ -11,6 +11,7 @@ import {
   type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
 import { getServiceAccountConfig } from './google-ads-service-account'
+import { resolveLoginCustomerCandidates } from './google-ads-login-customer'
 
 /** 账号列表同步/API 客户端所需的扁平凭证 */
 export interface AccountsRouteCredentials {
@@ -196,6 +197,65 @@ export async function resolveHealedOAuthCredentialsFields(params: {
     credentials: toOAuthApiCredentialsFields(credResolved.userCredentials),
     loginCustomerId: credResolved.userCredentials.login_customer_id?.trim() || '',
   }
+}
+
+export type OAuthGoogleAdsCallBundle = {
+  oauthCredentials: OAuthApiCredentialsFields
+  oauthLoginCustomerId?: string
+}
+
+/**
+ * OAuth 模式下一次性 heal 并返回可下传的 API 凭证包（非 OAuth 返回 ok 且无 bundle）。
+ */
+export async function loadOAuthGoogleAdsCallBundleForContext(params: {
+  userId: number
+  authContext: GoogleAdsAuthContext
+}): Promise<
+  | { ok: true; bundle?: OAuthGoogleAdsCallBundle }
+  | { ok: false; message: string }
+> {
+  if (params.authContext.auth.authType !== 'oauth') {
+    return { ok: true }
+  }
+
+  const healed = await resolveHealedOAuthCredentialsFields(params)
+  if (!healed.ok) {
+    return { ok: false, message: healed.message }
+  }
+
+  return {
+    ok: true,
+    bundle: {
+      oauthCredentials: healed.credentials,
+      oauthLoginCustomerId: healed.loginCustomerId || undefined,
+    },
+  }
+}
+
+export function pickOAuthLoginCustomerIdForAccount(params: {
+  accountParentMccId?: string | null
+  oauthLoginCustomerId?: string
+  targetCustomerId?: string
+}): string | undefined {
+  return resolveLoginCustomerCandidates({
+    authType: 'oauth',
+    accountParentMccId: params.accountParentMccId,
+    oauthLoginCustomerId: params.oauthLoginCustomerId,
+    targetCustomerId: params.targetCustomerId,
+  })[0]
+}
+
+export function pickServiceAccountLoginCustomerIdForAccount(params: {
+  accountParentMccId?: string | null
+  serviceAccountMccId?: string
+  targetCustomerId?: string
+}): string | undefined {
+  return resolveLoginCustomerCandidates({
+    authType: 'service_account',
+    accountParentMccId: params.accountParentMccId,
+    serviceAccountMccId: params.serviceAccountMccId,
+    targetCustomerId: params.targetCustomerId,
+  })[0]
 }
 
 /**
