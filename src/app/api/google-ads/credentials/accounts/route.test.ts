@@ -27,6 +27,14 @@ const serviceAccountFns = vi.hoisted(() => ({
   getServiceAccountConfig: vi.fn(),
 }))
 
+const syncFns = vi.hoisted(() => ({
+  syncAccountsFromAPI: vi.fn(),
+}))
+
+const settingsFns = vi.hoisted(() => ({
+  getUserOnlySetting: vi.fn(),
+}))
+
 vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
@@ -54,8 +62,12 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
+vi.mock('@/lib/google-ads-accounts-sync', () => ({
+  syncAccountsFromAPI: syncFns.syncAccountsFromAPI,
+}))
+
 vi.mock('@/lib/settings', () => ({
-  getUserOnlySetting: vi.fn(),
+  getUserOnlySetting: settingsFns.getUserOnlySetting,
 }))
 
 vi.mock('@/lib/api-performance', () => ({
@@ -131,6 +143,8 @@ describe('GET /api/google-ads/credentials/accounts', () => {
       hasActiveServiceAccount: false,
       dualStack: false,
     })
+    syncFns.syncAccountsFromAPI.mockResolvedValue([])
+    settingsFns.getUserOnlySetting.mockResolvedValue(null)
   })
 
   it('returns 401 when OAuth refresh token is missing from auth-context', async () => {
@@ -275,6 +289,78 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     expect(res.status).toBe(400)
     expect(data.error).toContain('服务账号ID')
     expect(accountsAuthFns.resolveGoogleAdsApiAuthFromContext).not.toHaveBeenCalled()
+  })
+
+  it('heals invalid oauth developer_token from user settings', async () => {
+    accountsAuthFns.getGoogleAdsAuthContext.mockResolvedValue({
+      ...defaultOAuthAuthContext,
+      oauthCredentials: {
+        ...oauthCredentialsFull,
+        developer_token: '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e',
+      },
+    })
+    settingsFns.getUserOnlySetting.mockResolvedValueOnce({
+      value: 'abcdefghijklmnopqrstuvwxyz1234567890',
+    })
+
+    const req = new NextRequest('http://localhost/api/google-ads/credentials/accounts?auth_type=oauth')
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(settingsFns.getUserOnlySetting).toHaveBeenCalledWith(
+      'google_ads',
+      'developer_token',
+      7
+    )
+    expect(data.data.accounts).toHaveLength(1)
+  })
+
+  it('syncs from API when refresh=true and cache is empty', async () => {
+    dbFns.query.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM google_ads_accounts')) {
+        return []
+      }
+      if (sql.includes('FROM offers o')) {
+        return []
+      }
+      return []
+    })
+
+    syncFns.syncAccountsFromAPI.mockResolvedValueOnce([
+      {
+        customer_id: '9998887776',
+        descriptive_name: 'Synced From API',
+        currency_code: 'USD',
+        time_zone: 'America/Los_Angeles',
+        manager: false,
+        test_account: false,
+        status: 'ENABLED',
+        account_balance: null,
+        parent_mcc: '9988776655',
+        db_account_id: 99,
+        last_sync_at: '2026-03-25 12:00:00',
+      },
+    ])
+
+    const req = new NextRequest(
+      'http://localhost/api/google-ads/credentials/accounts?refresh=true&auth_type=oauth'
+    )
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(syncFns.syncAccountsFromAPI).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({
+        refresh_token: 'oauth-refresh-token',
+        developer_token: expect.any(String),
+      }),
+      'oauth',
+      null
+    )
+    expect(data.data.cached).toBe(false)
+    expect(data.data.accounts[0].customerId).toBe('9998887776')
   })
 
   it('resolves service account auth via auth-context when service_account_id is provided', async () => {
