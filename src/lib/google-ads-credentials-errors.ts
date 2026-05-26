@@ -165,9 +165,34 @@ export async function fetchGoogleAdsCredentialsStatus(): Promise<ParsedGoogleAds
   return parseCredentialsStatusResponse(credData)
 }
 
+export type AccountsRequestAuth = Pick<ParsedGoogleAdsCredentialsStatus, 'authType' | 'serviceAccountId'>
+
+export const GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE =
+  '未找到服务账号配置，请前往设置页面配置'
+
+/** 合并凭证快照与服务账号 fallback，供 accounts 列表请求使用 */
+export function buildAuthForAccountsRequest(
+  auth: ParsedGoogleAdsCredentialsStatus,
+  fallbackServiceAccountId?: string | null
+): AccountsRequestAuth {
+  if (auth.authType !== 'service_account') {
+    return { authType: auth.authType, serviceAccountId: auth.serviceAccountId }
+  }
+  return {
+    authType: 'service_account',
+    serviceAccountId: auth.serviceAccountId || fallbackServiceAccountId || undefined,
+  }
+}
+
+export function assertAccountsRequestAuth(authForRequest: AccountsRequestAuth): void {
+  if (authForRequest.authType === 'service_account' && !authForRequest.serviceAccountId) {
+    throw new Error(GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE)
+  }
+}
+
 export function appendAccountsAuthToSearchParams(
   params: URLSearchParams,
-  auth: Pick<ParsedGoogleAdsCredentialsStatus, 'authType' | 'serviceAccountId'>
+  auth: AccountsRequestAuth
 ): void {
   params.set('auth_type', auth.authType)
   if (auth.authType === 'service_account' && auth.serviceAccountId) {

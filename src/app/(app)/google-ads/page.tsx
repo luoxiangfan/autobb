@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   appendAccountsAuthToSearchParams,
+  assertAccountsRequestAuth,
+  buildAuthForAccountsRequest,
   buildGoogleAdsApiErrorMessage,
   formatErrorMessage,
   formatNullableErrorMessage,
@@ -67,14 +69,15 @@ export default function GoogleAdsPage() {
   const [accountsSyncError, setAccountsSyncError] = useState<string | null>(null)
   const accountsPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const { prepareAuthForAccountsFetch, syncFromCredentialsResponse } = useGoogleAdsAccountsAuth({
-    onCredentialsUpdated: (parsed) => {
-      if (parsed.serviceAccountId) {
-        setCurrentServiceAccountId(parsed.serviceAccountId)
-      }
-      setAuthConfigWarning(parsed.authConfigWarning)
-    },
-  })
+  const { prepareAuthForAccountsFetch, refreshCredentialsStatus, syncFromCredentialsResponse } =
+    useGoogleAdsAccountsAuth({
+      onCredentialsUpdated: (parsed) => {
+        if (parsed.serviceAccountId) {
+          setCurrentServiceAccountId(parsed.serviceAccountId)
+        }
+        setAuthConfigWarning(parsed.authConfigWarning)
+      },
+    })
   const [error, setError] = useState('')
   const [authConfigWarning, setAuthConfigWarning] = useState<string | null>(null)
   const [success, setSuccess] = useState('')
@@ -149,9 +152,11 @@ export default function GoogleAdsPage() {
         const parsed = syncFromCredentialsResponse(data)
 
         if (parsed.authType === 'service_account' && parsed.serviceAccountId) {
-          fetchAccountsWithServiceAccount(parsed.serviceAccountId)
+          fetchAccountsWithServiceAccount(parsed.serviceAccountId, false, false, {
+            skipCredentialsRefresh: true,
+          })
         } else if (parsed.hasCredentials && parsed.authType === 'oauth') {
-          fetchAccounts()
+          fetchAccounts(false, false, { skipCredentialsRefresh: true })
         } else {
           fetchServiceAccounts()
         }
@@ -193,9 +198,18 @@ export default function GoogleAdsPage() {
     }, 2000)
   }
 
-  // 获取服务账号配置
+  // 凭证 API 无 OAuth/SA 时，仅在确认无 OAuth 后再尝试服务账号列表
   const fetchServiceAccounts = async () => {
     try {
+      const auth = await refreshCredentialsStatus()
+      if (auth.authConfigWarning) {
+        setAuthConfigWarning(auth.authConfigWarning)
+      }
+      if (auth.hasCredentials && auth.authType === 'oauth') {
+        await fetchAccounts(false, false, { skipCredentialsRefresh: true })
+        return
+      }
+
       const response = await fetch('/api/google-ads/service-account', {
         credentials: 'include',
       })
@@ -205,7 +219,9 @@ export default function GoogleAdsPage() {
         const accounts = data.accounts || []
         if (accounts.length > 0) {
           setCurrentServiceAccountId(accounts[0].id)
-          fetchAccountsWithServiceAccount(accounts[0].id)
+          await fetchAccountsWithServiceAccount(accounts[0].id, false, false, {
+            skipCredentialsRefresh: true,
+          })
         }
       }
     } catch (err: any) {
@@ -216,7 +232,7 @@ export default function GoogleAdsPage() {
   const fetchAccountsList = async (
     forceRefresh = false,
     isPoll = false,
-    opts?: { fallbackServiceAccountId?: string }
+    opts?: { fallbackServiceAccountId?: string; skipCredentialsRefresh?: boolean }
   ) => {
     try {
       if (!isPoll && !forceRefresh) setAccountsLoading(true)
@@ -225,18 +241,13 @@ export default function GoogleAdsPage() {
         setAccountsSyncError(null)
       }
 
-      const auth = await prepareAuthForAccountsFetch({ forceRefresh, isPoll })
-      const authForRequest: Pick<ParsedGoogleAdsCredentialsStatus, 'authType' | 'serviceAccountId'> =
-        auth.authType === 'service_account'
-          ? {
-              authType: 'service_account',
-              serviceAccountId: auth.serviceAccountId || opts?.fallbackServiceAccountId,
-            }
-          : auth
-
-      if (authForRequest.authType === 'service_account' && !authForRequest.serviceAccountId) {
-        throw new Error('未找到服务账号配置，请前往设置页面配置')
-      }
+      const auth = await prepareAuthForAccountsFetch({
+        forceRefresh,
+        isPoll,
+        skipCredentialsRefresh: opts?.skipCredentialsRefresh,
+      })
+      const authForRequest = buildAuthForAccountsRequest(auth, opts?.fallbackServiceAccountId)
+      assertAccountsRequestAuth(authForRequest)
 
       const params = new URLSearchParams({ filterByUserMcc: 'true' })
       if (forceRefresh) {
@@ -291,11 +302,19 @@ export default function GoogleAdsPage() {
   const fetchAccountsWithServiceAccount = async (
     serviceAccountId: string,
     forceRefresh = false,
-    isPoll = false
-  ) => fetchAccountsList(forceRefresh, isPoll, { fallbackServiceAccountId: serviceAccountId })
+    isPoll = false,
+    listOpts?: { skipCredentialsRefresh?: boolean }
+  ) =>
+    fetchAccountsList(forceRefresh, isPoll, {
+      fallbackServiceAccountId: serviceAccountId,
+      skipCredentialsRefresh: listOpts?.skipCredentialsRefresh,
+    })
 
-  const fetchAccounts = async (forceRefresh = false, isPoll = false) =>
-    fetchAccountsList(forceRefresh, isPoll)
+  const fetchAccounts = async (
+    forceRefresh = false,
+    isPoll = false,
+    listOpts?: { skipCredentialsRefresh?: boolean }
+  ) => fetchAccountsList(forceRefresh, isPoll, listOpts)
 
   const handleRefreshAccounts = async () => {
     setError('')
@@ -303,9 +322,10 @@ export default function GoogleAdsPage() {
 
     try {
       const auth = await prepareAuthForAccountsFetch({ forceRefresh: true, isPoll: false })
+      let fallbackServiceAccountId: string | undefined
 
       if (auth.authType === 'service_account') {
-        let serviceAccountId = auth.serviceAccountId || currentServiceAccountId
+        let serviceAccountId = auth.serviceAccountId || currentServiceAccountId || undefined
 
         const saResponse = await fetch('/api/google-ads/service-account', {
           credentials: 'include',
@@ -316,22 +336,21 @@ export default function GoogleAdsPage() {
           const saList = saData.accounts || []
           if (saList.length > 0) {
             serviceAccountId = saList[0].id
-            setCurrentServiceAccountId(serviceAccountId)
+            setCurrentServiceAccountId(saList[0].id)
           }
         } else {
           throw new Error('获取服务账号配置失败')
         }
 
-        if (!serviceAccountId) {
-          setError('未找到服务账号配置，请前往设置页面配置')
-          return
-        }
-
-        await fetchAccountsList(true, false, { fallbackServiceAccountId: serviceAccountId })
-        return
+        fallbackServiceAccountId = serviceAccountId
+        const authForRequest = buildAuthForAccountsRequest(auth, fallbackServiceAccountId)
+        assertAccountsRequestAuth(authForRequest)
       }
 
-      await fetchAccountsList(true, false)
+      await fetchAccountsList(true, false, {
+        fallbackServiceAccountId,
+        skipCredentialsRefresh: true,
+      })
     } catch (err: any) {
       console.error('刷新账户列表失败:', err)
       setError(formatErrorMessage(err) || '刷新账户列表失败')

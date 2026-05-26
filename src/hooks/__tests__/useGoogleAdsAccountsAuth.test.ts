@@ -48,6 +48,25 @@ describe('useGoogleAdsAccountsAuth', () => {
     expect(fetchGoogleAdsCredentialsStatus).toHaveBeenCalledTimes(1)
   })
 
+  it('skipCredentialsRefresh reuses snapshot without refetching', async () => {
+    const { result } = renderHook(() => useGoogleAdsAccountsAuth())
+
+    await act(async () => {
+      await result.current.prepareAuthForAccountsFetch({ forceRefresh: true, isPoll: false })
+    })
+    expect(fetchGoogleAdsCredentialsStatus).toHaveBeenCalledTimes(1)
+    vi.mocked(fetchGoogleAdsCredentialsStatus).mockClear()
+
+    await act(async () => {
+      await result.current.prepareAuthForAccountsFetch({
+        forceRefresh: true,
+        isPoll: false,
+        skipCredentialsRefresh: true,
+      })
+    })
+    expect(fetchGoogleAdsCredentialsStatus).not.toHaveBeenCalled()
+  })
+
   it('refetches credentials every N poll ticks', async () => {
     const { result } = renderHook(() => useGoogleAdsAccountsAuth())
 

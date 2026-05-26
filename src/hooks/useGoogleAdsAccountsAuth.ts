@@ -47,17 +47,27 @@ export function useGoogleAdsAccountsAuth(options: UseGoogleAdsAccountsAuthOption
    * 按轮询策略刷新凭证并返回当前快照（供本轮 accounts 请求立即使用，避免 React state 滞后）。
    */
   const prepareAuthForAccountsFetch = useCallback(
-    async (opts: { forceRefresh?: boolean; isPoll?: boolean }): Promise<ParsedGoogleAdsCredentialsStatus> => {
+    async (opts: {
+      forceRefresh?: boolean
+      isPoll?: boolean
+      /** 已有快照时跳过 /credentials（如刚 syncFromCredentialsResponse 或上一轮已 forceRefresh） */
+      skipCredentialsRefresh?: boolean
+    }): Promise<ParsedGoogleAdsCredentialsStatus> => {
       const forceRefresh = Boolean(opts.forceRefresh)
       const isPoll = Boolean(opts.isPoll)
+      const skipCredentialsRefresh = Boolean(opts.skipCredentialsRefresh)
 
-      if (forceRefresh) {
+      if (forceRefresh && !skipCredentialsRefresh) {
         authRef.current = null
         pollCountRef.current = 0
       }
 
       if (isPoll) {
         pollCountRef.current += 1
+      }
+
+      if (skipCredentialsRefresh && authRef.current) {
+        return authRef.current
       }
 
       const shouldRefreshCredentials =

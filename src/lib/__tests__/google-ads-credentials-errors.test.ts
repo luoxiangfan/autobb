@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   appendAccountsAuthToSearchParams,
+  assertAccountsRequestAuth,
+  buildAuthForAccountsRequest,
   buildGoogleAdsApiErrorMessage,
+  GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE,
   parseAccountsListFetchFailure,
   parseCredentialsStatusResponse,
 } from '../google-ads-credentials-errors'
@@ -52,13 +55,30 @@ describe('google-ads-credentials-errors', () => {
     expect(parsed.authType).toBe('oauth')
   })
 
+  it('buildAuthForAccountsRequest merges SA fallback id', () => {
+    const built = buildAuthForAccountsRequest(
+      {
+        authType: 'service_account',
+        serviceAccountId: undefined,
+        hasCredentials: true,
+        authConfigWarning: null,
+      },
+      'sa-fallback'
+    )
+    expect(built.serviceAccountId).toBe('sa-fallback')
+  })
+
+  it('assertAccountsRequestAuth throws when SA id missing', () => {
+    expect(() =>
+      assertAccountsRequestAuth({ authType: 'service_account', serviceAccountId: undefined })
+    ).toThrow(GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE)
+  })
+
   it('appendAccountsAuthToSearchParams omits service_account_id for oauth', () => {
     const params = new URLSearchParams({ filterByUserMcc: 'true' })
     appendAccountsAuthToSearchParams(params, {
       authType: 'oauth',
       serviceAccountId: 'sa-should-not-send',
-      hasCredentials: true,
-      authConfigWarning: null,
     })
     expect(params.get('auth_type')).toBe('oauth')
     expect(params.get('service_account_id')).toBeNull()
@@ -69,8 +89,6 @@ describe('google-ads-credentials-errors', () => {
     appendAccountsAuthToSearchParams(params, {
       authType: 'service_account',
       serviceAccountId: 'sa-42',
-      hasCredentials: true,
-      authConfigWarning: null,
     })
     expect(params.get('auth_type')).toBe('service_account')
     expect(params.get('service_account_id')).toBe('sa-42')

@@ -32,6 +32,8 @@ import { getGeminiEndpoint, type GeminiProvider } from '@/lib/gemini-config'
 import { ServiceAccountPermissionError } from '@/components/ServiceAccountPermissionError'
 import {
   appendAccountsAuthToSearchParams,
+  assertAccountsRequestAuth,
+  buildAuthForAccountsRequest,
   parseAccountsListFetchFailure,
   safeReadJson,
 } from '@/lib/google-ads-credentials-errors'
@@ -829,16 +831,11 @@ export default function SettingsPage() {
       setShowGoogleAdsAccounts(true)
 
       const auth = await prepareAuthForAccountsFetch({ forceRefresh: true, isPoll: false })
-      const authForRequest =
-        auth.authType === 'service_account'
-          ? {
-              authType: 'service_account' as const,
-              serviceAccountId:
-                auth.serviceAccountId ||
-                serviceAccounts[0]?.id ||
-                googleAdsCredentialStatus?.serviceAccountId,
-            }
-          : auth
+      const authForRequest = buildAuthForAccountsRequest(
+        auth,
+        serviceAccounts[0]?.id ?? googleAdsCredentialStatus?.serviceAccountId
+      )
+      assertAccountsRequestAuth(authForRequest)
 
       const params = new URLSearchParams({ refresh: 'true' })
       appendAccountsAuthToSearchParams(params, authForRequest)

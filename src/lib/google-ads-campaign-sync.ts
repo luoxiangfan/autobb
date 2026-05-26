@@ -362,7 +362,7 @@ export async function syncCampaignsFromGoogleAds(
     }
     
     const accounts = await db.query(
-      `SELECT id, customer_id, account_name, parent_mcc_id, refresh_token, auth_type, service_account_id FROM google_ads_accounts
+      `SELECT id, customer_id, account_name, parent_mcc_id, auth_type, service_account_id FROM google_ads_accounts
        WHERE user_id = ? AND ${isActiveCondition} AND ${isManagerCondition} AND ${isDeletedCondition} AND status = 'ENABLED' AND customer_id IS NOT NULL AND customer_id != '' ${customerIdsFilter}
        ORDER BY id`,
       [userId, ...(mccCustomerIds.length > 0 ? mccCustomerIds : [])]
@@ -371,7 +371,6 @@ export async function syncCampaignsFromGoogleAds(
       customer_id: string
       account_name: string | null
       parent_mcc_id: string | null
-      refresh_token: string | null
       auth_type: string | null
       service_account_id: string | null
     }>
