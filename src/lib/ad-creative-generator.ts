@@ -10,7 +10,7 @@ import type {
 import type { Offer } from './offers'
 import { creativeCache, generateCreativeCacheKey } from './cache'
 import { getKeywordSearchVolumes } from './keyword-planner'
-import { tryGetConfiguredGoogleAdsApiAuthForUser } from './google-ads-auth-context'
+import { loadKeywordPlannerVolumeAuth } from './google-ads-accounts-auth'
 import {
   clusterKeywordsByIntent,
   getBucketInfo,
@@ -5955,11 +5955,10 @@ async function mergeExtractedKeywordsWithSingleExit(
     if (keywordsNeedVolume.length > 0) {
       console.log(`   📊 查询 ${keywordsNeedVolume.length} 个关键词的搜索量...`)
       try {
-        const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userId)
-        if (!authResolved) {
+        const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
+        if (!volumeAuth) {
           throw new Error('Google Ads 认证未配置，无法查询搜索量')
         }
-        const { apiAuth: auth } = authResolved
         const keywordsForVolumeLookup = keywordsNeedVolume
           .map(k => k.keyword)
           .filter((keyword): keyword is string => Boolean(keyword))
@@ -5968,8 +5967,10 @@ async function mergeExtractedKeywordsWithSingleExit(
           targetCountry,
           language,
           userId,
-          auth.authType,
-          auth.serviceAccountId
+          volumeAuth.authType,
+          volumeAuth.serviceAccountId,
+          undefined,
+          volumeAuth.plannerAuth
         )
 
         keywordsNeedVolume.forEach(kw => {
@@ -6250,16 +6251,17 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
         brandSearchVolume = row.search_volume
         console.log(`   ✅ 全局缓存查询到搜索量: ${brandSearchVolume}/月`)
       } else {
-        const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userId)
-        if (authResolved) {
-          const { apiAuth: auth } = authResolved
+        const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
+        if (volumeAuth) {
           const volumes = await getKeywordSearchVolumes(
             [offerBrand],
             targetCountry,
             langCode,
             userId,
-            auth.authType,
-            auth.serviceAccountId
+            volumeAuth.authType,
+            volumeAuth.serviceAccountId,
+            undefined,
+            volumeAuth.plannerAuth
           )
           if (volumes.length > 0 && volumes[0].avgMonthlySearches > 0) {
             brandSearchVolume = volumes[0].avgMonthlySearches

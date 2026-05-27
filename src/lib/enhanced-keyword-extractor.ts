@@ -14,7 +14,7 @@
  */
 
 import { getKeywordSearchVolumes } from './keyword-planner'
-import { tryGetConfiguredGoogleAdsApiAuthForUser } from './google-ads-auth-context'
+import { loadKeywordPlannerVolumeAuth } from './google-ads-accounts-auth'
 import { getHighIntentKeywords } from './google-suggestions'
 
 export interface EnhancedKeyword {
@@ -407,18 +407,19 @@ async function enrichKeywordsWithMetrics(
 
   try {
     // 🔧 修复(2025-12-26): 支持服务账号模式
-    const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userId)
-    if (!authResolved) {
+    const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
+    if (!volumeAuth) {
       return keywords as EnhancedKeyword[]
     }
-    const { apiAuth: auth } = authResolved
     const volumes = await getKeywordSearchVolumes(
       keywordTexts,
       targetCountry,
       targetLanguage,
       userId,
-      auth.authType,
-      auth.serviceAccountId
+      volumeAuth.authType,
+      volumeAuth.serviceAccountId,
+      undefined,
+      volumeAuth.plannerAuth
     )
 
     // 创建keyword到volume的映射

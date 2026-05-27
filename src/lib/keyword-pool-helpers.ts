@@ -11,6 +11,7 @@ import type { PoolKeywordData } from './offer-keyword-pool'
 import { expandKeywordsWithSeeds } from './unified-keyword-service'
 import { getDatabase } from './db'
 import { getKeywordSearchVolumes } from './keyword-planner'
+import { loadKeywordPlannerVolumeAuth } from './google-ads-accounts-auth'
 // 🔥 2026-03-13: 移除 TRENDS 关键词生成，由 Title/About补充 + 行业通用词替代
 // import { getTrendsKeywords } from './google-trends'
 import { DEFAULTS } from './keyword-constants'
@@ -1126,13 +1127,17 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
     if (brandSeedKeywords.length > 0 && userId) {
       console.log(`\n   📊 查询 ${brandSeedKeywords.length} 个品牌词的真实搜索量...`)
       try {
+        const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
+        if (!volumeAuth) {
+          throw new Error('Google Ads 认证未配置')
+        }
         const brandVolumes = await getKeywordSearchVolumes(
           brandSeedKeywords.map(kw => kw.keyword),
           targetCountry,
           targetLanguage,
           userId,
-          undefined,
-          undefined,
+          volumeAuth.authType,
+          volumeAuth.serviceAccountId,
           progress
             ? (info: { message: string; current?: number; total?: number }) =>
                 progress({
@@ -1141,7 +1146,8 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
                   total: info.total,
                   message: `品牌词搜索量 ${info.current ?? 0}/${info.total ?? 0}`
                 })
-            : undefined
+            : undefined,
+          volumeAuth.plannerAuth
         )
 
         // 更新品牌词搜索量

@@ -21,8 +21,7 @@ import { loadPrompt, interpolateTemplate } from './prompt-loader'
 import { findOfferById, type Offer } from './offers'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import { tryGetConfiguredGoogleAdsApiAuthForUser } from './google-ads-auth-context'
-import { prepareGoogleAdsAccountApiCall } from './google-ads-accounts-auth'
-import type { KeywordPlannerAuthOptions } from './keyword-planner'
+import { loadKeywordPlannerVolumeAuth } from './google-ads-accounts-auth'
 import { extractVerifiedKeywordSourcePool } from './unified-keyword-service'
 import {
   filterKeywordQuality,
@@ -75,42 +74,6 @@ import {
   sanitizePromptInlineValue,
   type InputReview,
 } from './llm-input-guard'
-
-async function loadKeywordPlannerVolumeAuth(
-  userId: number,
-  linkedServiceAccountId?: string | null
-): Promise<{
-  authType: 'oauth' | 'service_account'
-  serviceAccountId?: string
-  plannerAuth: KeywordPlannerAuthOptions
-} | null> {
-  const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(
-    userId,
-    linkedServiceAccountId ?? null
-  )
-  if (!authResolved) return null
-
-  const prepared = await prepareGoogleAdsAccountApiCall({
-    authContext: authResolved.ctx,
-    linkedServiceAccountId: linkedServiceAccountId ?? null,
-  })
-  if (!prepared.ok) return null
-
-  return {
-    authType: prepared.apiAuth.authType,
-    serviceAccountId: prepared.apiAuth.serviceAccountId,
-    plannerAuth: {
-      existingContext: authResolved.ctx,
-      healedOAuth: prepared.oauthCredentials
-        ? {
-            credentials: prepared.oauthCredentials,
-            loginCustomerId: prepared.oauthLoginCustomerId,
-            refreshToken: prepared.refreshToken,
-          }
-        : undefined,
-    },
-  }
-}
 
 const KEYWORD_CLUSTERING_MAX_OUTPUT_TOKENS = 16384
 const KEYWORD_CLUSTERING_TIMEOUT_MS = 90000

@@ -5,11 +5,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getKeywordSearchVolumes } from '@/lib/keyword-planner'
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-} from '@/lib/google-ads-auth-context'
-import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
+import { loadKeywordPlannerVolumeAuth } from '@/lib/google-ads-accounts-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,38 +35,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Maximum 100 keywords per request' }, { status: 400 })
     }
 
-    const authContext = await getGoogleAdsAuthContext(userId)
-    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+    const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
+    if (!volumeAuth) {
       return NextResponse.json(
         { error: 'Google Ads 认证未配置或已失效，请在设置中完成配置' },
         { status: 400 }
       )
-    }
-    const prepared = await prepareGoogleAdsAccountApiCall({
-      authContext,
-      linkedServiceAccountId: null,
-    })
-    if (!prepared.ok) {
-      return NextResponse.json({ error: prepared.message }, { status: 400 })
     }
     const volumes = await getKeywordSearchVolumes(
       keywords,
       country,
       language,
       userId,
-      prepared.apiAuth.authType,
-      prepared.apiAuth.serviceAccountId,
+      volumeAuth.authType,
+      volumeAuth.serviceAccountId,
       undefined,
-      {
-        existingContext: authContext,
-        healedOAuth: prepared.oauthCredentials
-          ? {
-              credentials: prepared.oauthCredentials,
-              loginCustomerId: prepared.oauthLoginCustomerId,
-              refreshToken: prepared.refreshToken,
-            }
-          : undefined,
-      }
+      volumeAuth.plannerAuth
     )
 
     return NextResponse.json({

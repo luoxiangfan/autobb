@@ -14,6 +14,7 @@
  */
 
 import { getKeywordSearchVolumes } from './keyword-planner'
+import { loadKeywordPlannerVolumeAuth } from './google-ads-accounts-auth'
 import { getKeywordIdeas } from './google-ads-keyword-planner'
 import { PLATFORMS, BRAND_PATTERNS, DEFAULTS } from './keyword-constants'
 import { getKeywordPlannerSiteFilterUrlForOffer } from './keyword-planner-site-filter'
@@ -22,6 +23,33 @@ import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { normalizeLanguageCode } from './language-country-codes'
 import { hasModelAnchorEvidence } from './creative-type'
 import { containsAsinLikeToken, extractModelIdentifierTokensFromText } from './model-anchor-evidence'
+
+async function getKeywordSearchVolumesWithPreparedAuth(
+  keywords: string[],
+  country: string,
+  language: string,
+  userId: number | undefined,
+  linkedServiceAccountId?: string | null,
+  onProgress?: (info: { message: string; current?: number; total?: number }) => Promise<void> | void
+) {
+  if (!userId || keywords.length === 0) return []
+
+  const volumeAuth = await loadKeywordPlannerVolumeAuth(userId, linkedServiceAccountId ?? null)
+  if (!volumeAuth) {
+    throw new Error('Google Ads 认证未配置')
+  }
+
+  return getKeywordSearchVolumes(
+    keywords,
+    country,
+    language,
+    userId,
+    volumeAuth.authType,
+    volumeAuth.serviceAccountId,
+    onProgress,
+    volumeAuth.plannerAuth
+  )
+}
 
 // ============================================
 // 类型定义
@@ -1916,11 +1944,12 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
   let disableSearchVolumeFilter = false
   let metricsAvailable = false
   try {
-    const volumes = await getKeywordSearchVolumes(
+    const volumes = await getKeywordSearchVolumesWithPreparedAuth(
       allKeywords.slice(0, 1000).map(kw => kw.keyword),
       country,
       language,
-      userId
+      userId,
+      serviceAccountId
     )
 
     disableSearchVolumeFilter = volumes.some((vol: any) =>
@@ -2177,11 +2206,12 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
   const topKeywordsForVolume = allKeywords.slice(0, 1000).map(kw => kw.keyword)
 
   try {
-    const volumes = await getKeywordSearchVolumes(
+    const volumes = await getKeywordSearchVolumesWithPreparedAuth(
       topKeywordsForVolume,
       country,
       language,
-      userId
+      userId,
+      serviceAccountId
     )
 
     disableSearchVolumeFilter = volumes.some((vol: any) =>
@@ -2226,11 +2256,12 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
 
   if (brandSeedToQuery.length > 0 && userId) {
     try {
-      const volumes = await getKeywordSearchVolumes(
+      const volumes = await getKeywordSearchVolumesWithPreparedAuth(
         brandSeedToQuery,
         country,
         language,
-        userId
+        userId,
+        serviceAccountId
       )
 
       if (volumes.some((vol: any) =>
@@ -2446,7 +2477,7 @@ export async function getKeywordVolumesForExisting(params: {
 
   try {
     // 直接使用 Historical Metrics API 获取精确搜索量
-    const volumes = await getKeywordSearchVolumes(
+    const volumes = await getKeywordSearchVolumesWithPreparedAuth(
       baseKeywords,
       country,
       language,
@@ -2670,13 +2701,12 @@ export async function expandKeywordsWithSeeds(params: {
         console.log(`   📊 查询批次 ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(totalKeywords / BATCH_SIZE)}: ${batchKeywords.length} 个关键词`)
 
         try {
-          const volumes = await getKeywordSearchVolumes(
+          const volumes = await getKeywordSearchVolumesWithPreparedAuth(
             batchKeywords,
             country,
             language,
             userId,
-            undefined,
-            undefined,
+            serviceAccountId,
             onProgress
               ? (info: { message: string; current?: number; total?: number }) =>
                   onProgress({

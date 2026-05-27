@@ -1,9 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import {
-  defaultOAuthGoogleAdsCallBundle,
-  defaultPreparedGoogleAdsAccountApiCall,
-} from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
+import { defaultPreparedGoogleAdsAccountApiCall } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import { POST } from '@/app/api/ad-groups/[id]/sync/route'
 
 const adGroupFns = vi.hoisted(() => ({
@@ -29,13 +26,8 @@ const adsFns = vi.hoisted(() => ({
   createGoogleAdsKeywordsBatch: vi.fn(),
 }))
 
-const authContextFns = vi.hoisted(() => ({
-  resolveGoogleAdsApiAuthForAccount: vi.fn(),
-}))
-
 const oauthAccountsAuthFns = vi.hoisted(() => ({
-  loadOAuthGoogleAdsCallBundleForContext: vi.fn(),
-  prepareGoogleAdsAccountApiCall: vi.fn(),
+  prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
 
 vi.mock('@/lib/ad-groups', () => ({
@@ -61,17 +53,12 @@ vi.mock('@/lib/google-ads-api', () => ({
   createGoogleAdsKeywordsBatch: adsFns.createGoogleAdsKeywordsBatch,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
-  googleAdsApiAuthValidationErrorMessage: (reason: string) => reason,
-  resolveGoogleAdsApiAuthForAccount: authContextFns.resolveGoogleAdsApiAuthForAccount,
-}))
-
 vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    loadOAuthGoogleAdsCallBundleForContext: oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext,
-    prepareGoogleAdsAccountApiCall: oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall,
+    prepareGoogleAdsApiCallForLinkedAccount:
+      oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
   }
 })
 
@@ -101,11 +88,9 @@ describe('POST /api/ad-groups/:id/sync', () => {
       serviceAccountId: null,
       parentMccId: null,
     })
-    oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext.mockResolvedValue(
-      defaultOAuthGoogleAdsCallBundle
-    )
-    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue({
+    oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValue({
       ...defaultPreparedGoogleAdsAccountApiCall,
+      authContext: { auth: { authType: 'oauth' } },
       apiAuth: {
         ...defaultPreparedGoogleAdsAccountApiCall.apiAuth,
         refreshToken: 'shared-refresh-token',
@@ -113,15 +98,6 @@ describe('POST /api/ad-groups/:id/sync', () => {
       refreshToken: 'shared-refresh-token',
     })
     keywordFns.findKeywordsByAdGroupId.mockResolvedValue([])
-    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
-      ok: true,
-      ctx: { auth: { authType: 'oauth' } },
-      apiAuth: {
-        authType: 'oauth',
-        refreshToken: 'shared-refresh-token',
-        serviceAccountId: undefined,
-      },
-    })
     adsFns.createGoogleAdsAdGroup.mockResolvedValue({ adGroupId: '11223344' })
     adGroupFns.updateAdGroup.mockResolvedValue({ id: 5, adGroupId: '11223344' })
   })
@@ -149,9 +125,9 @@ describe('POST /api/ad-groups/:id/sync', () => {
   })
 
   it('returns 400 when shared oauth is not configured', async () => {
-    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValueOnce({
+    oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValueOnce({
       ok: false,
-      reason: 'oauth_refresh_missing',
+      message: 'oauth_refresh_missing',
     })
 
     const req = new NextRequest('http://localhost/api/ad-groups/5/sync', {

@@ -9,6 +9,7 @@ import {
 import {
   prepareGoogleAdsAccountApiCall,
   resolveSyncUserCredentialsForJob,
+  syncUserCredentialsFromPrepared,
   type SyncUserCredentials,
 } from './google-ads-accounts-auth'
 import { executeGAQLQueryPython } from './python-ads-client'
@@ -336,17 +337,19 @@ export class DataSyncService {
             null
           : null
 
-      const syncCredentialsResolved = await resolveSyncUserCredentialsForJob({
-        userId,
-        authContext,
-        authType: syncAuthType,
-        serviceAccountId: bundleServiceAccountId,
-      })
-      if (!syncCredentialsResolved.ok) {
-        throw new Error(syncCredentialsResolved.message)
+      let serviceAccountJobCredentials: SyncUserCredentials | undefined
+      if (syncAuthType === 'service_account') {
+        const syncCredentialsResolved = await resolveSyncUserCredentialsForJob({
+          userId,
+          authContext,
+          authType: syncAuthType,
+          serviceAccountId: bundleServiceAccountId,
+        })
+        if (!syncCredentialsResolved.ok) {
+          throw new Error(syncCredentialsResolved.message)
+        }
+        serviceAccountJobCredentials = syncCredentialsResolved.userCredentials
       }
-
-      const userCredentials = syncCredentialsResolved.userCredentials
 
       // 🔧 PostgreSQL兼容性修复: is_active在PostgreSQL中是BOOLEAN类型
       const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
@@ -490,15 +493,28 @@ export class DataSyncService {
           const accountApiAuth = accountPrepared.apiAuth
           const refreshToken =
             accountApiAuth.authType === 'oauth' ? accountPrepared.refreshToken : undefined
-          const accountSyncCredentials: SyncUserCredentials =
-            accountPrepared.oauthCredentials != null
-              ? {
-                  client_id: accountPrepared.oauthCredentials.client_id,
-                  client_secret: accountPrepared.oauthCredentials.client_secret,
-                  developer_token: accountPrepared.oauthCredentials.developer_token,
-                  login_customer_id: accountPrepared.oauthLoginCustomerId,
-                }
-              : userCredentials
+          const accountSyncCredentials =
+            syncUserCredentialsFromPrepared(accountPrepared) ??
+            serviceAccountJobCredentials
+          if (!accountSyncCredentials) {
+            console.warn(
+              `⚠️ 用户 ${userId} 账户 ${account.customer_id} 缺少 API 客户端凭证，跳过`
+            )
+            await db.exec(
+              `
+                UPDATE sync_logs
+                SET status = 'failed', error_message = ?, duration_ms = ?, completed_at = ?
+                WHERE id = ?
+                `,
+              [
+                '缺少 Google Ads API 客户端凭证，无法同步',
+                Date.now() - startTime,
+                new Date().toISOString(),
+                accountSyncLogId,
+              ]
+            )
+            continue
+          }
 
           if (accountApiAuth.authType === 'oauth' && !refreshToken) {
               console.warn(`⚠️ 用户 ${userId} OAuth模式下缺少refresh_token，跳过账户 ${account.customer_id}`)

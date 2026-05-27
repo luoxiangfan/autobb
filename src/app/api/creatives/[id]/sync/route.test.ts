@@ -1,9 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import {
-  defaultOAuthGoogleAdsCallBundle,
-  defaultPreparedGoogleAdsAccountApiCall,
-} from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
+import { defaultPreparedGoogleAdsAccountApiCall } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import { POST } from '@/app/api/creatives/[id]/sync/route'
 
 const creativeFns = vi.hoisted(() => ({
@@ -27,13 +24,8 @@ const adsFns = vi.hoisted(() => ({
   createGoogleAdsResponsiveSearchAd: vi.fn(),
 }))
 
-const authContextFns = vi.hoisted(() => ({
-  resolveGoogleAdsApiAuthForAccount: vi.fn(),
-}))
-
 const oauthAccountsAuthFns = vi.hoisted(() => ({
-  loadOAuthGoogleAdsCallBundleForContext: vi.fn(),
-  prepareGoogleAdsAccountApiCall: vi.fn(),
+  prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
 
 vi.mock('@/lib/ad-creative', () => ({
@@ -57,17 +49,12 @@ vi.mock('@/lib/google-ads-api', () => ({
   createGoogleAdsResponsiveSearchAd: adsFns.createGoogleAdsResponsiveSearchAd,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
-  googleAdsApiAuthValidationErrorMessage: (reason: string) => reason,
-  resolveGoogleAdsApiAuthForAccount: authContextFns.resolveGoogleAdsApiAuthForAccount,
-}))
-
 vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    loadOAuthGoogleAdsCallBundleForContext: oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext,
-    prepareGoogleAdsAccountApiCall: oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall,
+    prepareGoogleAdsApiCallForLinkedAccount:
+      oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
   }
 })
 
@@ -105,25 +92,14 @@ describe('POST /api/creatives/:id/sync', () => {
       serviceAccountId: null,
       parentMccId: null,
     })
-    oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext.mockResolvedValue(
-      defaultOAuthGoogleAdsCallBundle
-    )
-    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue({
+    oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValue({
       ...defaultPreparedGoogleAdsAccountApiCall,
+      authContext: { auth: { authType: 'oauth' } },
       apiAuth: {
         ...defaultPreparedGoogleAdsAccountApiCall.apiAuth,
         refreshToken: 'shared-refresh-token',
       },
       refreshToken: 'shared-refresh-token',
-    })
-    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
-      ok: true,
-      ctx: { auth: { authType: 'oauth' } },
-      apiAuth: {
-        authType: 'oauth',
-        refreshToken: 'shared-refresh-token',
-        serviceAccountId: undefined,
-      },
     })
     adsFns.createGoogleAdsResponsiveSearchAd.mockResolvedValue({ adId: '55667788' })
     creativeFns.updateAdCreative.mockResolvedValue({ id: 3, ad_id: '55667788' })
@@ -152,9 +128,9 @@ describe('POST /api/creatives/:id/sync', () => {
   })
 
   it('returns 400 when shared oauth is not configured', async () => {
-    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValueOnce({
+    oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValueOnce({
       ok: false,
-      reason: 'oauth_refresh_missing',
+      message: 'oauth_refresh_missing',
     })
 
     const req = new NextRequest('http://localhost/api/creatives/3/sync', {

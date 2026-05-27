@@ -5,11 +5,7 @@ import { findAdGroupById } from '@/lib/ad-groups'
 import { findCampaignById } from '@/lib/campaigns'
 import { findGoogleAdsAccountById } from '@/lib/google-ads-accounts'
 import { createGoogleAdsResponsiveSearchAd } from '@/lib/google-ads-api'
-import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
-import {
-  googleAdsApiAuthValidationErrorMessage,
-  resolveGoogleAdsApiAuthForAccount,
-} from '@/lib/google-ads-auth-context'
+import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 
 /**
@@ -83,21 +79,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       )
     }
 
-    const authResolved = await resolveGoogleAdsApiAuthForAccount(
+    const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
       userId,
       googleAdsAccount.serviceAccountId
     )
-    if (!authResolved.ok) {
-      return NextResponse.json(
-        { error: googleAdsApiAuthValidationErrorMessage(authResolved.reason) },
-        { status: 400 }
-      )
-    }
-
-    const prepared = await prepareGoogleAdsAccountApiCall({
-      authContext: authResolved.ctx,
-      linkedServiceAccountId: googleAdsAccount.serviceAccountId,
-    })
     if (!prepared.ok) {
       return NextResponse.json({ error: prepared.message }, { status: 400 })
     }

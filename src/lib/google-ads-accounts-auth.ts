@@ -5,8 +5,11 @@ import { getDatabase } from './db'
 import { getUserOnlySetting } from './settings'
 import {
   getGoogleAdsAuthContext,
+  googleAdsApiAuthValidationErrorMessage,
   resolveEffectiveServiceAccountId,
+  resolveGoogleAdsApiAuthForAccount,
   resolveGoogleAdsApiAuthFromContext,
+  tryGetConfiguredGoogleAdsApiAuthForUser,
   type GoogleAdsApiAuthFields,
   type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
@@ -283,17 +286,66 @@ export type PreparedGoogleAdsAccountApiCall = {
 /**
  * 解析账号级 API 调用所需的 refreshToken / heal 凭证（refresh 仅来自 auth-context）。
  */
+export function syncUserCredentialsFromPrepared(
+  prepared: PreparedGoogleAdsAccountApiCall
+): SyncUserCredentials | null {
+  if (!prepared.oauthCredentials) return null
+  return {
+    client_id: prepared.oauthCredentials.client_id,
+    client_secret: prepared.oauthCredentials.client_secret,
+    developer_token: prepared.oauthCredentials.developer_token,
+    login_customer_id: prepared.oauthLoginCustomerId,
+  }
+}
+
+/**
+ * 校验用户/账号认证并 prepare（含 OAuth heal）；避免路由层 resolve + prepare 重复编排。
+ */
+export async function prepareGoogleAdsApiCallForLinkedAccount(
+  userId: number,
+  linkedServiceAccountId?: string | null
+): Promise<
+  | ({ ok: true; authContext: GoogleAdsAuthContext } & PreparedGoogleAdsAccountApiCall)
+  | { ok: false; message: string }
+> {
+  const authResolved = await resolveGoogleAdsApiAuthForAccount(
+    userId,
+    linkedServiceAccountId ?? null
+  )
+  if (!authResolved.ok) {
+    return {
+      ok: false,
+      message: googleAdsApiAuthValidationErrorMessage(authResolved.reason),
+    }
+  }
+
+  const prepared = await prepareGoogleAdsAccountApiCall({
+    authContext: authResolved.ctx,
+    linkedServiceAccountId: linkedServiceAccountId ?? null,
+    apiAuth: authResolved.apiAuth,
+  })
+  if (!prepared.ok) {
+    return prepared
+  }
+
+  return { ...prepared, authContext: authResolved.ctx }
+}
+
 export async function prepareGoogleAdsAccountApiCall(params: {
   authContext: GoogleAdsAuthContext
   linkedServiceAccountId?: string | null
+  /** 已由 resolveGoogleAdsApiAuthForAccount 解析时传入，避免重复 resolve */
+  apiAuth?: GoogleAdsApiAuthFields
 }): Promise<
   | ({ ok: true } & PreparedGoogleAdsAccountApiCall)
   | { ok: false; message: string }
 > {
-  const apiAuth = await resolveGoogleAdsApiAuthFromContext(
-    params.authContext,
-    params.linkedServiceAccountId ?? null
-  )
+  const apiAuth =
+    params.apiAuth ??
+    (await resolveGoogleAdsApiAuthFromContext(
+      params.authContext,
+      params.linkedServiceAccountId ?? null
+    ))
 
   if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
     return { ok: false, message: 'Google Ads OAuth 授权已过期，请重新连接账号' }
@@ -323,6 +375,55 @@ export async function prepareGoogleAdsAccountApiCall(params: {
     refreshToken: apiAuth.refreshToken || '',
     oauthCredentials,
     oauthLoginCustomerId,
+  }
+}
+
+/** Keyword Planner Historical Metrics 调用所需的 heal 后凭证（与 keyword-planner KeywordPlannerAuthOptions 同形） */
+export type KeywordPlannerVolumeAuth = {
+  authType: 'oauth' | 'service_account'
+  serviceAccountId?: string
+  plannerAuth: {
+    existingContext: GoogleAdsAuthContext
+    healedOAuth?: {
+      credentials: OAuthApiCredentialsFields
+      loginCustomerId?: string
+      refreshToken?: string
+    }
+  }
+}
+
+/**
+ * 解析 Keyword Planner 搜索量 API 的认证（auth-context + prepare/heal）。
+ */
+export async function loadKeywordPlannerVolumeAuth(
+  userId: number,
+  linkedServiceAccountId?: string | null
+): Promise<KeywordPlannerVolumeAuth | null> {
+  const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(
+    userId,
+    linkedServiceAccountId ?? null
+  )
+  if (!authResolved) return null
+
+  const prepared = await prepareGoogleAdsAccountApiCall({
+    authContext: authResolved.ctx,
+    linkedServiceAccountId: linkedServiceAccountId ?? null,
+  })
+  if (!prepared.ok) return null
+
+  return {
+    authType: prepared.apiAuth.authType,
+    serviceAccountId: prepared.apiAuth.serviceAccountId,
+    plannerAuth: {
+      existingContext: authResolved.ctx,
+      healedOAuth: prepared.oauthCredentials
+        ? {
+            credentials: prepared.oauthCredentials,
+            loginCustomerId: prepared.oauthLoginCustomerId,
+            refreshToken: prepared.refreshToken,
+          }
+        : undefined,
+    },
   }
 }
 
