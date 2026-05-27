@@ -12,7 +12,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { executeGoogleAdsCampaignRemoteActions } from '@/lib/google-ads-campaign-remote-actions'
-import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 
 interface RouteContext {
@@ -100,11 +99,6 @@ export async function POST(
 
     let pausedCount = 0
     let errorCount = 0
-
-    const authPrepared = await prepareGoogleAdsApiCallForLinkedAccount(offer.user_id, null)
-    if (!authPrepared.ok) {
-      return NextResponse.json({ error: authPrepared.message }, { status: 400 })
-    }
 
     const campaignMetaByGoogleId = new Map<
       string,

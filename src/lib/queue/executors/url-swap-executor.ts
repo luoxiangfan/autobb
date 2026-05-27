@@ -30,7 +30,7 @@ import {
 import { updateCampaignFinalUrlSuffix, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
 import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
-import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
 import { initializeProxyPool } from '@/lib/offer-utils'
 import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
 
@@ -198,16 +198,17 @@ async function updateSingleTargetWithLoginCustomerFallback(params: {
   })
 }
 
+type LinkedPreparedGoogleAdsApiCall = Extract<
+  Awaited<ReturnType<typeof prepareGoogleAdsApiCallForLinkedAccount>>,
+  { ok: true }
+>
+
 async function resolveUrlSwapTargetApiAuth(params: {
   userId: number
   target: UrlSwapTaskTarget
   db: Awaited<ReturnType<typeof getDatabase>>
-  ctx: Awaited<ReturnType<typeof getGoogleAdsAuthContext>>
   accountMetaById: Map<number, UrlSwapAccountMeta>
-  preparedByAccountId: Map<
-    number,
-    Awaited<ReturnType<typeof prepareGoogleAdsAccountApiCall>> & { ok: true }
-  >
+  preparedByAccountId: Map<number, LinkedPreparedGoogleAdsApiCall>
 }): Promise<
   GoogleAdsUpdateAuthContext & {
     parentMccId: string | null
@@ -235,10 +236,7 @@ async function resolveUrlSwapTargetApiAuth(params: {
 
   let prepared = params.preparedByAccountId.get(accountId)
   if (!prepared) {
-    const result = await prepareGoogleAdsAccountApiCall({
-      authContext: params.ctx,
-      linkedServiceAccountId: linkedSa,
-    })
+    const result = await prepareGoogleAdsApiCallForLinkedAccount(params.userId, linkedSa)
     if (!result.ok) {
       throw new Error(result.message)
     }
@@ -274,10 +272,7 @@ async function updateTargetsFinalUrlSuffix(params: {
   let failureCount = 0
 
   const accountMetaById = new Map<number, UrlSwapAccountMeta>()
-  const preparedByAccountId = new Map<
-    number,
-    Awaited<ReturnType<typeof prepareGoogleAdsAccountApiCall>> & { ok: true }
-  >()
+  const preparedByAccountId = new Map<number, LinkedPreparedGoogleAdsApiCall>()
 
   for (const target of params.targets) {
     await assertUserExecutionAllowed(params.userId, {
@@ -288,7 +283,6 @@ async function updateTargetsFinalUrlSuffix(params: {
       userId: params.userId,
       target,
       db: params.db,
-      ctx,
       accountMetaById,
       preparedByAccountId,
     })

@@ -22,7 +22,7 @@ vi.mock('@/lib/google-ads-auth-context', () => ({
 }))
 
 vi.mock('@/lib/google-ads-accounts-auth', () => ({
-  prepareGoogleAdsAccountApiCall: vi.fn(),
+  prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
 
 vi.mock('@/lib/google-ads-api', () => ({
@@ -48,8 +48,8 @@ import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
 } from '@/lib/google-ads-auth-context'
-import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
-import { defaultPreparedGoogleAdsAccountApiCall } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
+import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
+import { defaultPreparedGoogleAdsApiCallForLinkedAccount } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import {
   getUrlSwapTaskTargets,
   markUrlSwapTargetFailure,
@@ -74,10 +74,10 @@ describe('executeUrlSwapTask login_customer_id fallback', () => {
       serviceAccountConfig: null,
     } as any)
     vi.mocked(hasConfiguredGoogleAdsAuthFromContext).mockReturnValue(true)
-    vi.mocked(prepareGoogleAdsAccountApiCall).mockResolvedValue({
-      ...defaultPreparedGoogleAdsAccountApiCall,
+    vi.mocked(prepareGoogleAdsApiCallForLinkedAccount).mockResolvedValue({
+      ...defaultPreparedGoogleAdsApiCallForLinkedAccount,
       apiAuth: {
-        ...defaultPreparedGoogleAdsAccountApiCall.apiAuth,
+        ...defaultPreparedGoogleAdsApiCallForLinkedAccount.apiAuth,
         refreshToken: 'refresh-token',
         oauthLoginCustomerId: '1111111111',
       },

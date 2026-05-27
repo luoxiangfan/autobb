@@ -395,7 +395,7 @@ export type KeywordPlannerVolumeAuthLoadResult =
   | { ok: true; volumeAuth: KeywordPlannerVolumeAuth }
   | { ok: false; message: string }
 
-function buildKeywordPlannerVolumeAuth(
+export function keywordPlannerVolumeAuthFromPrepared(
   authContext: GoogleAdsAuthContext,
   prepared: PreparedGoogleAdsAccountApiCall
 ): KeywordPlannerVolumeAuth {
@@ -432,7 +432,7 @@ export async function loadKeywordPlannerVolumeAuth(
 
   return {
     ok: true,
-    volumeAuth: buildKeywordPlannerVolumeAuth(prepared.authContext, prepared),
+    volumeAuth: keywordPlannerVolumeAuthFromPrepared(prepared.authContext, prepared),
   }
 }
 

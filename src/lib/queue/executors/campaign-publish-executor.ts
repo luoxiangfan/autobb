@@ -16,10 +16,6 @@
 
 import type { Task } from '../types'
 import { getDatabase } from '@/lib/db'
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-} from '@/lib/google-ads-auth-context'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import {
   createGoogleAdsCampaign,
@@ -36,7 +32,7 @@ import {
   ensureKeywordsInHeadlines,
   type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-api'
-import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
 import {
   buildPublishResumePlan,
   collectCampaignNameCandidates,
@@ -576,16 +572,10 @@ export async function executeCampaignPublish(
 
     console.log(`💰 使用账号货币: ${adsAccount.currency}`)
 
-    // 2. 检查 OAuth 凭证或服务账号配置（含共享管理员 assignment）
-    const authContext = await getGoogleAdsAuthContext(userId)
-    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-      throw new Error('OAuth refresh token或服务账号配置缺失，请重新授权或配置服务账号')
-    }
-
-    const prepared = await prepareGoogleAdsAccountApiCall({
-      authContext,
-      linkedServiceAccountId: adsAccount.service_account_id,
-    })
+    const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+      userId,
+      adsAccount.service_account_id
+    )
     if (!prepared.ok) {
       throw new Error(prepared.message)
     }

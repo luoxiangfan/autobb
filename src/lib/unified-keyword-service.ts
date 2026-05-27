@@ -15,8 +15,9 @@
 
 import { getKeywordSearchVolumes } from './keyword-planner'
 import {
-  loadKeywordPlannerVolumeAuth,
+  keywordPlannerVolumeAuthFromPrepared,
   prepareGoogleAdsApiCallForLinkedAccount,
+  type KeywordPlannerVolumeAuth,
 } from './google-ads-accounts-auth'
 import {
   getKeywordIdeas,
@@ -30,27 +31,75 @@ import { normalizeLanguageCode } from './language-country-codes'
 import { hasModelAnchorEvidence } from './creative-type'
 import { containsAsinLikeToken, extractModelIdentifierTokensFromText } from './model-anchor-evidence'
 
-async function resolveKeywordIdeasPreparedOAuth(
+type KeywordPlannerSessionAuth = {
+  preparedOAuth?: KeywordIdeasPreparedOAuth
+  volumeAuth: KeywordPlannerVolumeAuth
+}
+
+/** 单次 prepare/heal，供 Keyword Ideas + Historical Metrics 共用 */
+async function prepareKeywordPlannerSessionAuth(
   userId: number | undefined,
   authType: 'oauth' | 'service_account' | undefined,
-  serviceAccountId?: string
-): Promise<KeywordIdeasPreparedOAuth | undefined> {
-  if (!userId || authType === 'service_account') return undefined
+  linkedServiceAccountId?: string | null
+): Promise<
+  | { ok: true; session: KeywordPlannerSessionAuth }
+  | { ok: false; message: string }
+> {
+  if (!userId) {
+    return { ok: false, message: 'userId is required' }
+  }
 
   const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
     userId,
-    serviceAccountId ?? null
+    linkedServiceAccountId ?? null
   )
-  if (!prepared.ok || prepared.apiAuth.authType !== 'oauth' || !prepared.oauthCredentials) {
-    return undefined
+  if (!prepared.ok) {
+    return { ok: false, message: prepared.message }
   }
 
-  return {
-    refreshToken: prepared.refreshToken,
-    credentials: prepared.oauthCredentials,
-    oauthLoginCustomerId:
-      prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId,
+  const volumeAuth = keywordPlannerVolumeAuthFromPrepared(
+    prepared.authContext,
+    prepared
+  )
+
+  let preparedOAuth: KeywordIdeasPreparedOAuth | undefined
+  if (
+    authType !== 'service_account' &&
+    prepared.apiAuth.authType === 'oauth' &&
+    prepared.oauthCredentials
+  ) {
+    preparedOAuth = {
+      refreshToken: prepared.refreshToken,
+      credentials: prepared.oauthCredentials,
+      oauthLoginCustomerId:
+        prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId,
+    }
   }
+
+  return { ok: true, session: { preparedOAuth, volumeAuth } }
+}
+
+async function getKeywordSearchVolumesWithSessionAuth(
+  keywords: string[],
+  country: string,
+  language: string,
+  userId: number | undefined,
+  session: KeywordPlannerSessionAuth,
+  onProgress?: (info: { message: string; current?: number; total?: number }) => Promise<void> | void
+) {
+  if (!userId || keywords.length === 0) return []
+
+  const { volumeAuth } = session
+  return getKeywordSearchVolumes(
+    keywords,
+    country,
+    language,
+    userId,
+    volumeAuth.authType,
+    volumeAuth.serviceAccountId,
+    onProgress,
+    volumeAuth.plannerAuth
+  )
 }
 
 async function getKeywordSearchVolumesWithPreparedAuth(
@@ -61,23 +110,21 @@ async function getKeywordSearchVolumesWithPreparedAuth(
   linkedServiceAccountId?: string | null,
   onProgress?: (info: { message: string; current?: number; total?: number }) => Promise<void> | void
 ) {
-  if (!userId || keywords.length === 0) return []
-
-  const loaded = await loadKeywordPlannerVolumeAuth(userId, linkedServiceAccountId ?? null)
+  const loaded = await prepareKeywordPlannerSessionAuth(
+    userId,
+    undefined,
+    linkedServiceAccountId ?? null
+  )
   if (!loaded.ok) {
     throw new Error(loaded.message)
   }
-
-  const { volumeAuth } = loaded
-  return getKeywordSearchVolumes(
+  return getKeywordSearchVolumesWithSessionAuth(
     keywords,
     country,
     language,
     userId,
-    volumeAuth.authType,
-    volumeAuth.serviceAccountId,
-    onProgress,
-    volumeAuth.plannerAuth
+    loaded.session,
+    onProgress
   )
 }
 
@@ -1829,11 +1876,11 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
   console.log(`认证方式: ${authType}`)
 
   const pureBrandKeywords = getPureBrandKeywords(offer.brand)
-  const preparedOAuth = await resolveKeywordIdeasPreparedOAuth(
-    userId,
-    authType,
-    serviceAccountId
-  )
+  const plannerAuth = userId
+    ? await prepareKeywordPlannerSessionAuth(userId, authType, serviceAccountId ?? null)
+    : null
+  const preparedOAuth = plannerAuth?.ok ? plannerAuth.session.preparedOAuth : undefined
+  const volumeSession = plannerAuth?.ok ? plannerAuth.session : undefined
 
   // 1. 构建意图感知种子词池
   console.log('\n📍 Step 1: 构建意图感知种子词池')
@@ -1980,12 +2027,15 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
   let disableSearchVolumeFilter = false
   let metricsAvailable = false
   try {
-    const volumes = await getKeywordSearchVolumesWithPreparedAuth(
+    if (!volumeSession) {
+      throw new Error(plannerAuth && !plannerAuth.ok ? plannerAuth.message : 'userId is required')
+    }
+    const volumes = await getKeywordSearchVolumesWithSessionAuth(
       allKeywords.slice(0, 1000).map(kw => kw.keyword),
       country,
       language,
       userId,
-      serviceAccountId
+      volumeSession
     )
 
     disableSearchVolumeFilter = volumes.some((vol: any) =>
@@ -2121,11 +2171,11 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
   console.log(`认证方式: ${authType}`)
 
   const pureBrandKeywords = getPureBrandKeywords(offer.brand)
-  const preparedOAuth = await resolveKeywordIdeasPreparedOAuth(
-    userId,
-    authType,
-    serviceAccountId
-  )
+  const plannerAuth = userId
+    ? await prepareKeywordPlannerSessionAuth(userId, authType, serviceAccountId ?? null)
+    : null
+  const preparedOAuth = plannerAuth?.ok ? plannerAuth.session.preparedOAuth : undefined
+  const volumeSession = plannerAuth?.ok ? plannerAuth.session : undefined
 
   const keywordMap = new Map<string, UnifiedKeywordData>()
   let disableSearchVolumeFilter = false
@@ -2248,12 +2298,15 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
   const topKeywordsForVolume = allKeywords.slice(0, 1000).map(kw => kw.keyword)
 
   try {
-    const volumes = await getKeywordSearchVolumesWithPreparedAuth(
+    if (!volumeSession) {
+      throw new Error(plannerAuth && !plannerAuth.ok ? plannerAuth.message : 'userId is required')
+    }
+    const volumes = await getKeywordSearchVolumesWithSessionAuth(
       topKeywordsForVolume,
       country,
       language,
       userId,
-      serviceAccountId
+      volumeSession
     )
 
     disableSearchVolumeFilter = volumes.some((vol: any) =>
@@ -2296,14 +2349,14 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
     return canonical && !topKeywordSet.has(canonical)
   })
 
-  if (brandSeedToQuery.length > 0 && userId) {
+  if (brandSeedToQuery.length > 0 && userId && volumeSession) {
     try {
-      const volumes = await getKeywordSearchVolumesWithPreparedAuth(
+      const volumes = await getKeywordSearchVolumesWithSessionAuth(
         brandSeedToQuery,
         country,
         language,
         userId,
-        serviceAccountId
+        volumeSession
       )
 
       if (volumes.some((vol: any) =>
@@ -2670,11 +2723,11 @@ export async function expandKeywordsWithSeeds(params: {
   finalSeedKeywords.forEach((seed, i) => console.log(`   ${i + 1}. "${seed}"`))
 
   const keywordMap = new Map<string, UnifiedKeywordData>()
-  const preparedOAuth = await resolveKeywordIdeasPreparedOAuth(
-    userId,
-    authType,
-    serviceAccountId
-  )
+  const plannerAuth = userId
+    ? await prepareKeywordPlannerSessionAuth(userId, authType, serviceAccountId ?? null)
+    : null
+  const preparedOAuth = plannerAuth?.ok ? plannerAuth.session.preparedOAuth : undefined
+  const volumeSession = plannerAuth?.ok ? plannerAuth.session : undefined
 
   try {
     // 1. 使用 Keyword Planner 获取扩展关键词
@@ -2749,12 +2802,17 @@ export async function expandKeywordsWithSeeds(params: {
         console.log(`   📊 查询批次 ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(totalKeywords / BATCH_SIZE)}: ${batchKeywords.length} 个关键词`)
 
         try {
-          const volumes = await getKeywordSearchVolumesWithPreparedAuth(
+          if (!volumeSession) {
+            throw new Error(
+              plannerAuth && !plannerAuth.ok ? plannerAuth.message : 'userId is required'
+            )
+          }
+          const volumes = await getKeywordSearchVolumesWithSessionAuth(
             batchKeywords,
             country,
             language,
             userId,
-            serviceAccountId,
+            volumeSession,
             onProgress
               ? (info: { message: string; current?: number; total?: number }) =>
                   onProgress({

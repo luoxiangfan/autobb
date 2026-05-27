@@ -1,10 +1,6 @@
 import { getDatabase } from './db'
 import { updateGoogleAdsCampaignStatus, type OAuthApiCredentialsFields } from './google-ads-api'
-import { prepareGoogleAdsAccountApiCall } from './google-ads-accounts-auth'
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-} from './google-ads-auth-context'
+import { prepareGoogleAdsApiCallForLinkedAccount } from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 
 export type CampaignPublishRollbackContext = {
@@ -136,15 +132,10 @@ export async function buildPublishRollbackContextForAdsAccount(
     return null
   }
 
-  const authContext = await getGoogleAdsAuthContext(userId)
-  if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-    return null
-  }
-
-  const prepared = await prepareGoogleAdsAccountApiCall({
-    authContext,
-    linkedServiceAccountId: adsAccount.service_account_id,
-  })
+  const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+    userId,
+    adsAccount.service_account_id
+  )
   if (!prepared.ok) {
     return null
   }

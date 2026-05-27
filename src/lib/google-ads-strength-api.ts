@@ -11,10 +11,7 @@
  */
 
 import { getCustomerWithCredentials } from './google-ads-api'
-import {
-  getGoogleAdsAuthContext,
-} from './google-ads-auth-context'
-import { prepareGoogleAdsAccountApiCall } from './google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount } from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import { getDatabase } from './db'
 import type { AdStrengthRating } from './ad-strength-evaluator'
@@ -40,13 +37,12 @@ async function getGoogleAdsClient(
     throw new Error('未找到Google Ads账号')
   }
 
-  const authContext = await getGoogleAdsAuthContext(userId)
   const linkedServiceAccountId =
     typeof account.service_account_id === 'string' ? account.service_account_id.trim() : ''
-  const prepared = await prepareGoogleAdsAccountApiCall({
-    authContext,
-    linkedServiceAccountId: linkedServiceAccountId || null,
-  })
+  const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+    userId,
+    linkedServiceAccountId || null
+  )
   if (!prepared.ok) {
     throw new Error(prepared.message)
   }

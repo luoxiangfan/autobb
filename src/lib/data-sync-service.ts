@@ -7,7 +7,7 @@ import {
   resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
 import {
-  prepareGoogleAdsAccountApiCall,
+  prepareGoogleAdsApiCallForLinkedAccount,
   resolveSyncUserCredentialsForJob,
   syncUserCredentialsFromPrepared,
   type SyncUserCredentials,
@@ -466,10 +466,10 @@ export class DataSyncService {
           const startDate = new Date()
           startDate.setDate(startDate.getDate() - 7)
 
-          const accountPrepared = await prepareGoogleAdsAccountApiCall({
-            authContext,
-            linkedServiceAccountId: account.service_account_id,
-          })
+          const accountPrepared = await prepareGoogleAdsApiCallForLinkedAccount(
+            userId,
+            account.service_account_id
+          )
           if (!accountPrepared.ok) {
             console.warn(
               `⚠️ 用户 ${userId} 账户 ${account.customer_id} 凭证不可用: ${accountPrepared.message}`

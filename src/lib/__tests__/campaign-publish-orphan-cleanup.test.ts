@@ -8,19 +8,11 @@ vi.mock('@/lib/google-ads-api', () => ({
   updateGoogleAdsCampaignStatus: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
-  getGoogleAdsAuthContext: vi.fn(async () => ({
-    auth: { authType: 'oauth' },
-    oauthCredentials: { refresh_token: 'rt', login_customer_id: '111' },
-  })),
-  hasConfiguredGoogleAdsAuthFromContext: vi.fn(() => true),
-}))
-
 vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    prepareGoogleAdsAccountApiCall: vi.fn(async () => ({
+    prepareGoogleAdsApiCallForLinkedAccount: vi.fn(async () => ({
       ok: true as const,
       apiAuth: {
         authType: 'oauth' as const,

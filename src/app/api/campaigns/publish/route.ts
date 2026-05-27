@@ -11,7 +11,6 @@ import {
   createGoogleAdsCalloutExtensions,
   createGoogleAdsSitelinkExtensions
 } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
 import { createError, ErrorCode, AppError } from '@/lib/errors'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
 import { calculateLaunchScore } from '@/lib/scoring'
@@ -580,16 +579,6 @@ export async function POST(request: NextRequest) {
           { label: '取消', value: 'cancel', description: '不发布新广告' }
         ]
       }, { status: 422 })
-    }
-
-    // 6.1 检查 OAuth 凭证或服务账号配置（含共享管理员 assignment）
-    const authPrepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, null)
-    if (!authPrepared.ok) {
-      const error = new AppError(ErrorCode.GADS_CREDENTIALS_INVALID, {
-        userId,
-        reason: authPrepared.message,
-      })
-      return NextResponse.json(error.toJSON(), { status: error.httpStatus })
     }
 
     // 7. 暂停旧广告系列（如果请求）- 使用真实的Google Ads查询结果

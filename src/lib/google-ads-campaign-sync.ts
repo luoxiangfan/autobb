@@ -17,9 +17,8 @@ import {
   toDbCampaignBackupJsonField,
 } from './campaign-backups'
 import { getCustomerWithCredentials, trackOAuthApiCall } from './google-ads-api'
-import { getGoogleAdsAuthContext } from './google-ads-auth-context'
 import {
-  prepareGoogleAdsAccountApiCall,
+  prepareGoogleAdsApiCallForLinkedAccount,
   resolveSyncAuthForAccount,
   type OAuthApiCredentialsFields,
 } from './google-ads-accounts-auth'
@@ -382,8 +381,6 @@ export async function syncCampaignsFromGoogleAds(
       return result
     }
 
-    const authContext = await getGoogleAdsAuthContext(userId)
-
     // 3. 对每个账户执行同步
     for (const account of accounts) {
       // 如果指定了 customerId，只同步该账户
@@ -398,10 +395,10 @@ export async function syncCampaignsFromGoogleAds(
           typeof account.service_account_id === 'string'
             ? account.service_account_id.trim()
             : ''
-        const accountPrepared = await prepareGoogleAdsAccountApiCall({
-          authContext,
-          linkedServiceAccountId: linkedServiceAccountId || account.service_account_id,
-        })
+        const accountPrepared = await prepareGoogleAdsApiCallForLinkedAccount(
+          userId,
+          linkedServiceAccountId || account.service_account_id
+        )
         if (!accountPrepared.ok) {
           result.warnings.push(
             `账户 ${account.customer_id}: ${accountPrepared.message}，已跳过同步`
@@ -409,6 +406,7 @@ export async function syncCampaignsFromGoogleAds(
           continue
         }
 
+        const authContext = accountPrepared.authContext
         const accountApiAuth = accountPrepared.apiAuth
         const { syncAuthType, syncServiceAccountId, syncRefreshToken: resolvedRefreshToken } =
           resolveSyncAuthForAccount(

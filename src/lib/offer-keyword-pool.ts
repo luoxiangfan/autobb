@@ -94,6 +94,54 @@ const SEED_INFO_QUERY_PATTERNS = [
   'size chart', 'size guide', 'sizing',
 ]
 
+/** 解析 Offer/用户关联账号的 linked service_account_id，供 Keyword Planner volume 使用 */
+async function resolveLinkedServiceAccountIdForOffer(
+  userId: number,
+  offerId?: number
+): Promise<string | null> {
+  const db = await getDatabase()
+
+  if (offerId) {
+    const fromCampaign = await db.queryOne<{ service_account_id: string | null }>(
+      `SELECT ga.service_account_id
+       FROM google_ads_accounts ga
+       INNER JOIN campaigns c ON c.google_ads_account_id = ga.id AND c.user_id = ?
+       WHERE c.offer_id = ?
+         AND ga.service_account_id IS NOT NULL
+         AND TRIM(ga.service_account_id) <> ''
+       ORDER BY c.updated_at DESC
+       LIMIT 1`,
+      [userId, offerId]
+    )
+    const linkedFromCampaign = fromCampaign?.service_account_id?.trim()
+    if (linkedFromCampaign) return linkedFromCampaign
+  }
+
+  const isActiveCondition =
+    db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const isManagerCondition =
+    db.type === 'postgres' ? 'is_manager_account = false' : 'is_manager_account = 0'
+
+  const account = await db.queryOne<{ service_account_id: string | null }>(
+    `SELECT service_account_id FROM google_ads_accounts
+     WHERE user_id = ? AND ${isActiveCondition} AND status = 'ENABLED' AND ${isManagerCondition}
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId]
+  )
+
+  const linked = account?.service_account_id?.trim()
+  return linked || null
+}
+
+async function loadKeywordPlannerVolumeAuthForOffer(
+  userId: number,
+  offerId?: number
+) {
+  const linkedSa = await resolveLinkedServiceAccountIdForOffer(userId, offerId)
+  return loadKeywordPlannerVolumeAuth(userId, linkedSa)
+}
+
 type GeminiGenerateParams = Parameters<typeof generateContent>[0]
 type GeminiGenerateResult = Awaited<ReturnType<typeof generateContent>>
 type KeywordPoolProgressReporter = (info: {
@@ -1444,7 +1492,7 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
 
     if (staleNorms.size > 0) {
       const { getKeywordSearchVolumes } = await import('./keyword-planner')
-      const volumeLoaded = await loadKeywordPlannerVolumeAuth(userId)
+      const volumeLoaded = await loadKeywordPlannerVolumeAuthForOffer(userId, offer.id)
       const refreshKeywords = Array.from(staleNorms)
         .map(norm => keywordMap.get(norm)?.keyword)
         .filter((kw): kw is string => Boolean(kw))
@@ -4441,7 +4489,7 @@ export async function generateOfferKeywordPool(
     const { getKeywordSearchVolumes } = await import('./keyword-planner')
 
     try {
-      const volumeLoaded = await loadKeywordPlannerVolumeAuth(userId)
+      const volumeLoaded = await loadKeywordPlannerVolumeAuthForOffer(userId, offerId)
       if (!volumeLoaded.ok) {
         throw new Error(volumeLoaded.message)
       }
@@ -4934,7 +4982,7 @@ export async function generateOfferKeywordPool(
     if (needsBrandVolume) {
       try {
         const { getKeywordSearchVolumes } = await import('./keyword-planner')
-        const volumeLoaded = await loadKeywordPlannerVolumeAuth(userId)
+        const volumeLoaded = await loadKeywordPlannerVolumeAuthForOffer(userId, offerId)
         if (!volumeLoaded.ok) {
           throw new Error(volumeLoaded.message)
         }
@@ -5823,7 +5871,7 @@ async function extractKeywordsFromOffer(
 
     try {
       const { getKeywordSearchVolumes } = await import('./keyword-planner')
-      const volumeLoaded = await loadKeywordPlannerVolumeAuth(userId)
+      const volumeLoaded = await loadKeywordPlannerVolumeAuthForOffer(userId, offerId)
       if (!volumeLoaded.ok) {
         throw new Error(volumeLoaded.message)
       }

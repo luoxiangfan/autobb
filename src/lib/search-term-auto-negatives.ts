@@ -2,15 +2,10 @@ import { getDatabase } from '@/lib/db'
 import { boolCondition, boolParam } from '@/lib/db-helpers'
 import { createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
 import {
-  prepareGoogleAdsAccountApiCall,
+  prepareGoogleAdsApiCallForLinkedAccount,
   type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-  type GoogleAdsAuthContext,
-} from '@/lib/google-ads-auth-context'
 import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keyword-intent'
 import { KEYWORD_POLICY } from '@/lib/keyword-policy'
 
@@ -168,21 +163,15 @@ function parsePositiveNumber(raw: string | undefined, fallback: number): number 
 }
 
 function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof getDatabase>>) {
-  const contextByUser = new Map<number, GoogleAdsAuthContext>()
   const linkedServiceAccountByAccountId = new Map<number, string | null>()
   const parentMccByAccountId = new Map<number, string | null>()
   const preparedByAccountId = new Map<
     number,
-    Awaited<ReturnType<typeof prepareGoogleAdsAccountApiCall>> & { ok: true }
+    Extract<
+      Awaited<ReturnType<typeof prepareGoogleAdsApiCallForLinkedAccount>>,
+      { ok: true }
+    >
   >()
-
-  const getContext = async (userId: number) => {
-    const cached = contextByUser.get(userId)
-    if (cached) return cached
-    const ctx = await getGoogleAdsAuthContext(userId)
-    contextByUser.set(userId, ctx)
-    return ctx
-  }
 
   const getLinkedServiceAccountId = async (accountId: number) => {
     if (!linkedServiceAccountByAccountId.has(accountId)) {
@@ -218,18 +207,13 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
     customerId: string
     parentMccId: string | null
   }) => {
-    const ctx = await getContext(action.userId)
-    if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
-      throw new Error('google_ads_auth_not_configured')
-    }
-
     const linkedServiceAccountId = await getLinkedServiceAccountId(action.googleAdsAccountId)
     let prepared = preparedByAccountId.get(action.googleAdsAccountId)
     if (!prepared) {
-      const result = await prepareGoogleAdsAccountApiCall({
-        authContext: ctx,
-        linkedServiceAccountId,
-      })
+      const result = await prepareGoogleAdsApiCallForLinkedAccount(
+        action.userId,
+        linkedServiceAccountId
+      )
       if (!result.ok) {
         throw new Error(result.message)
       }

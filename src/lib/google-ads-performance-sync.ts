@@ -10,12 +10,8 @@
 import { getDatabase } from './db'
 import { saveCreativePerformance, PerformanceData } from './bonus-score-calculator'
 import { getCustomerWithCredentials } from './google-ads-api'
-import { prepareGoogleAdsAccountApiCall } from './google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount } from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-} from './google-ads-auth-context'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 
@@ -239,11 +235,6 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
     }
 
     const db = await getDatabase()
-    const ctx = await getGoogleAdsAuthContext(userIdNum)
-    if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
-      throw new Error('Google Ads 认证未配置或已失效')
-    }
-
     const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
 
     const account = await db.queryOne<{
@@ -262,10 +253,10 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
       throw new Error('No active Google Ads account found')
     }
 
-    const prepared = await prepareGoogleAdsAccountApiCall({
-      authContext: ctx,
-      linkedServiceAccountId: account.service_account_id,
-    })
+    const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+      userIdNum,
+      account.service_account_id
+    )
     if (!prepared.ok) {
       throw new Error(prepared.message)
     }
