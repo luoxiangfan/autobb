@@ -3154,6 +3154,8 @@ export async function updateCampaignFinalUrlSuffix(params: {
   accountId?: number
   userId: number
   loginCustomerId?: string
+  credentials?: OAuthApiCredentialsFields
+  accountParentMccId?: string | null
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
 }): Promise<void> {

@@ -194,6 +194,7 @@ async function updateSingleTargetWithLoginCustomerFallback(params: {
         serviceAccountId: params.authType === 'service_account' ? params.serviceAccountId : undefined,
         loginCustomerId,
         credentials: params.oauthCredentials,
+        accountParentMccId: params.parentMccId,
       }),
   })
 }

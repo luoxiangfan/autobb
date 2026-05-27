@@ -22,6 +22,10 @@ vi.mock('@/lib/google-ads-auth-context', () => ({
   resolveGoogleAdsApiAuthFromContext: vi.fn(),
 }))
 
+vi.mock('@/lib/google-ads-accounts-auth', () => ({
+  prepareGoogleAdsAccountApiCall: vi.fn(),
+}))
+
 vi.mock('@/lib/google-ads-api', () => ({
   updateCampaignFinalUrlSuffix: vi.fn(),
 }))
@@ -46,6 +50,8 @@ import {
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
+import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
+import { defaultPreparedGoogleAdsAccountApiCall } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import {
   getUrlSwapTaskTargets,
   markUrlSwapTargetFailure,
@@ -76,6 +82,16 @@ describe('executeUrlSwapTask login_customer_id fallback', () => {
       serviceAccountId: undefined,
       oauthLoginCustomerId: '1111111111',
       serviceAccountMccId: undefined,
+    })
+    vi.mocked(prepareGoogleAdsAccountApiCall).mockResolvedValue({
+      ...defaultPreparedGoogleAdsAccountApiCall,
+      apiAuth: {
+        ...defaultPreparedGoogleAdsAccountApiCall.apiAuth,
+        refreshToken: 'refresh-token',
+        oauthLoginCustomerId: '1111111111',
+      },
+      refreshToken: 'refresh-token',
+      oauthLoginCustomerId: '1111111111',
     })
 
     vi.mocked(getDatabase).mockReturnValue({
@@ -124,7 +140,7 @@ describe('executeUrlSwapTask login_customer_id fallback', () => {
       updated_at: '',
     }])
 
-    queryOne.mockResolvedValueOnce({ service_account_id: null })
+    queryOne.mockResolvedValueOnce({ service_account_id: null, parent_mcc_id: null })
 
     vi.mocked(updateCampaignFinalUrlSuffix)
       .mockRejectedValueOnce(new Error("User doesn't have permission to access customer. Note: If you're accessing a client customer, the manager's customer id must be set in the 'login-customer-id' header."))

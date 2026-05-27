@@ -845,7 +845,7 @@ export class DataSyncService {
         customerId,
         accountId,
         accountParentMccId,
-        refreshToken,
+        refreshToken: refreshToken!,
         credentials: credentials!,
         actionName: `queryPerformanceData(${customerId})`,
         query: async (customer) => {
