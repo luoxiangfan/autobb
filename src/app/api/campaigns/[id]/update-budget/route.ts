@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { updateGoogleAdsCampaignBudget } from '@/lib/google-ads-api'
-import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-} from '@/lib/google-ads-auth-context'
+import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
 import { invalidateDashboardCache, invalidateOfferCache } from '@/lib/api-cache'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 
@@ -150,18 +146,10 @@ export async function PUT(
       return NextResponse.json({ error: '关联的Ads账号不可用（已停用或已删除）' }, { status: 400 })
     }
 
-    const authContext = await getGoogleAdsAuthContext(userId)
-    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-      return NextResponse.json(
-        { error: 'Google Ads 认证未配置或已失效，请在设置中完成配置' },
-        { status: 400 }
-      )
-    }
-
-    const prepared = await prepareGoogleAdsAccountApiCall({
-      authContext,
-      linkedServiceAccountId: linked.service_account_id,
-    })
+    const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+      userId,
+      linked.service_account_id
+    )
     if (!prepared.ok) {
       const needsReauth = prepared.message.includes('OAuth') || prepared.message.includes('过期')
       return NextResponse.json(

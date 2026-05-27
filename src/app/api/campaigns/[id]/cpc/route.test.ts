@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import {
-  defaultPreparedGoogleAdsAccountApiCall,
+  defaultPreparedGoogleAdsApiCallForLinkedAccount,
   hasConfiguredGoogleAdsAuthFromContextMock,
   resetCampaignRouteAuthMocksOAuth,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
@@ -13,7 +13,7 @@ const campaignRouteAuthFns = vi.hoisted(() => ({
 }))
 
 const oauthAccountsAuthFns = vi.hoisted(() => ({
-  prepareGoogleAdsAccountApiCall: vi.fn(),
+  prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { executeGAQLQueryPython } from '@/lib/python-ads-client'
@@ -35,7 +35,7 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    prepareGoogleAdsAccountApiCall: oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall,
+    prepareGoogleAdsApiCallForLinkedAccount: oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
   }
 })
 
@@ -66,8 +66,8 @@ describe('GET /api/campaigns/:id/cpc', () => {
     vi.clearAllMocks()
     dbFns.query.mockResolvedValue([])
     resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
-    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue(
-      defaultPreparedGoogleAdsAccountApiCall
+    oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValue(
+      defaultPreparedGoogleAdsApiCallForLinkedAccount
     )
   })
 
@@ -152,7 +152,7 @@ describe('GET /api/campaigns/:id/cpc', () => {
       oauthCredentials: null,
       serviceAccountConfig: { id: 'sa-1' },
     })
-    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue({
+    oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValue({
       ok: true,
       apiAuth: {
         authType: 'service_account',
@@ -190,11 +190,9 @@ describe('GET /api/campaigns/:id/cpc', () => {
     expect(data.currentCpc).toBe(0.58)
     expect(Array.isArray(data.history)).toBe(true)
     expect(data.history[0].value).toBe(0.48)
-    expect(oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall).toHaveBeenCalledWith({
-      authContext: expect.objectContaining({
-        auth: expect.objectContaining({ authType: 'service_account' }),
-      }),
-      linkedServiceAccountId: 'sa-1',
-    })
+    expect(oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount).toHaveBeenCalledWith(
+      1,
+      'sa-1'
+    )
   })
 })

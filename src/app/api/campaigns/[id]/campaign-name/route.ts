@@ -3,11 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { findCampaignById, updateCampaign } from '@/lib/campaigns'
 import { getDatabase } from '@/lib/db'
 import { updateGoogleAdsCampaignName } from '@/lib/google-ads-api'
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-} from '@/lib/google-ads-auth-context'
-import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { invalidateDashboardCache } from '@/lib/api-cache'
 
@@ -160,18 +156,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           )
         }
 
-        const authContext = await getGoogleAdsAuthContext(userId)
-        if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-          return NextResponse.json(
-            { error: 'Google Ads 认证未配置或已失效，请在设置中完成配置' },
-            { status: 400 }
-          )
-        }
-
-        const prepared = await prepareGoogleAdsAccountApiCall({
-          authContext,
-          linkedServiceAccountId: adsAccountRow.service_account_id,
-        })
+        const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+          userId,
+          adsAccountRow.service_account_id
+        )
         if (!prepared.ok) {
           return NextResponse.json({ error: prepared.message }, { status: 400 })
         }

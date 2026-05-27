@@ -5955,10 +5955,11 @@ async function mergeExtractedKeywordsWithSingleExit(
     if (keywordsNeedVolume.length > 0) {
       console.log(`   📊 查询 ${keywordsNeedVolume.length} 个关键词的搜索量...`)
       try {
-        const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
-        if (!volumeAuth) {
-          throw new Error('Google Ads 认证未配置，无法查询搜索量')
+        const loaded = await loadKeywordPlannerVolumeAuth(userId)
+        if (!loaded.ok) {
+          throw new Error(loaded.message)
         }
+        const { volumeAuth } = loaded
         const keywordsForVolumeLookup = keywordsNeedVolume
           .map(k => k.keyword)
           .filter((keyword): keyword is string => Boolean(keyword))
@@ -6251,8 +6252,9 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
         brandSearchVolume = row.search_volume
         console.log(`   ✅ 全局缓存查询到搜索量: ${brandSearchVolume}/月`)
       } else {
-        const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
-        if (volumeAuth) {
+        const loaded = await loadKeywordPlannerVolumeAuth(userId)
+        if (loaded.ok) {
+          const { volumeAuth } = loaded
           const volumes = await getKeywordSearchVolumes(
             [offerBrand],
             targetCountry,

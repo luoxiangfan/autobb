@@ -2,16 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import {
   defaultOAuthApiCredentialsFields,
-  defaultPreparedGoogleAdsAccountApiCall,
-  hasConfiguredGoogleAdsAuthFromContextMock,
-  resetCampaignRouteAuthMocksOAuth,
+  defaultPreparedGoogleAdsApiCallForLinkedAccount,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import { PUT } from '@/app/api/campaigns/[id]/toggle-status/route'
-
-const campaignRouteAuthFns = vi.hoisted(() => ({
-  getGoogleAdsAuthContext: vi.fn(),
-  resolveGoogleAdsApiAuthFromContext: vi.fn(),
-}))
 
 const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
@@ -39,7 +32,7 @@ const offerTaskFns = vi.hoisted(() => ({
 }))
 
 const oauthAccountsAuthFns = vi.hoisted(() => ({
-  prepareGoogleAdsAccountApiCall: vi.fn(),
+  prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -56,17 +49,12 @@ vi.mock('@/lib/google-ads-api', () => ({
   updateGoogleAdsCampaignStatus: adsFns.updateGoogleAdsCampaignStatus,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
-  getGoogleAdsAuthContext: campaignRouteAuthFns.getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext: hasConfiguredGoogleAdsAuthFromContextMock,
-  resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,
-}))
-
 vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    prepareGoogleAdsAccountApiCall: oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall,
+    prepareGoogleAdsApiCallForLinkedAccount:
+      oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
   }
 })
 
@@ -86,9 +74,8 @@ vi.mock('@/lib/campaign-offer-tasks', () => ({
 describe('PUT /api/campaigns/:id/toggle-status', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
-    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue(
-      defaultPreparedGoogleAdsAccountApiCall
+    oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValue(
+      defaultPreparedGoogleAdsApiCallForLinkedAccount
     )
     adsFns.updateGoogleAdsCampaignStatus.mockResolvedValue(undefined)
     transitionFns.applyCampaignTransition.mockResolvedValue({ updatedCount: 1 })
@@ -298,24 +285,18 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
   })
 
   it('uses linked service account without requiring OAuth base credentials', async () => {
-    campaignRouteAuthFns.getGoogleAdsAuthContext.mockResolvedValue({
-      userId: 7,
-      ownerUserId: 7,
-      assignment: null,
-      isShared: false,
-      canModify: true,
-      auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
-      oauthCredentials: null,
-      serviceAccountConfig: { id: 'sa-1', mccCustomerId: '2233445566' },
-    })
-    campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
-      authType: 'service_account',
-      refreshToken: '',
-      serviceAccountId: 'sa-1',
-      serviceAccountMccId: '2233445566',
-    })
-    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue({
+    oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValue({
       ok: true,
+      authContext: {
+        userId: 7,
+        ownerUserId: 7,
+        assignment: null,
+        isShared: false,
+        canModify: true,
+        auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+        oauthCredentials: null,
+        serviceAccountConfig: { id: 'sa-1', mccCustomerId: '2233445566' },
+      },
       apiAuth: {
         authType: 'service_account',
         refreshToken: '',

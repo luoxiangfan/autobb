@@ -1127,10 +1127,11 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
     if (brandSeedKeywords.length > 0 && userId) {
       console.log(`\n   📊 查询 ${brandSeedKeywords.length} 个品牌词的真实搜索量...`)
       try {
-        const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
-        if (!volumeAuth) {
-          throw new Error('Google Ads 认证未配置')
+        const loaded = await loadKeywordPlannerVolumeAuth(userId)
+        if (!loaded.ok) {
+          throw new Error(loaded.message)
         }
+        const { volumeAuth } = loaded
         const brandVolumes = await getKeywordSearchVolumes(
           brandSeedKeywords.map(kw => kw.keyword),
           targetCountry,

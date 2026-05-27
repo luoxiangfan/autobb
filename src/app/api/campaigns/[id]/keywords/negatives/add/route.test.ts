@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import {
-  defaultPreparedGoogleAdsAccountApiCall,
+  defaultPreparedGoogleAdsApiCallForLinkedAccount,
   hasConfiguredGoogleAdsAuthFromContextMock,
   resetCampaignRouteAuthMocksOAuth,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
@@ -27,7 +27,7 @@ const adsFns = vi.hoisted(() => ({
 }))
 
 const oauthAccountsAuthFns = vi.hoisted(() => ({
-  prepareGoogleAdsAccountApiCall: vi.fn(),
+  prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
 
 vi.mock('@/lib/auth', () => ({
@@ -57,7 +57,7 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    prepareGoogleAdsAccountApiCall: oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall,
+    prepareGoogleAdsApiCallForLinkedAccount: oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
   }
 })
 
@@ -74,8 +74,8 @@ describe('POST /api/campaigns/:id/keywords/negatives/add', () => {
       },
     })
     resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
-    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue(
-      defaultPreparedGoogleAdsAccountApiCall
+    oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValue(
+      defaultPreparedGoogleAdsApiCallForLinkedAccount
     )
     dbFns.queryOne.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM campaigns c')) {

@@ -2,11 +2,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers'
 import { findEnabledGoogleAdsAccounts } from '@/lib/google-ads-accounts'
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-} from '@/lib/google-ads-auth-context'
-import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
 import {
   getKeywordIdeas,
   filterHighQualityKeywords,
@@ -77,20 +73,10 @@ export async function POST(
 
     // 注意：生产环境 OAuth refresh_token 存储在 google_ads_credentials，
     // google_ads_accounts.refresh_token 可能为空，不能据此判断授权过期。
-    const authContext = await getGoogleAdsAuthContext(numericUserId)
-    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-      return NextResponse.json(
-        {
-          error: 'Google Ads 认证未配置或已失效，请重新连接或配置服务账号',
-          needsReauth: true,
-        },
-        { status: 400 }
-      )
-    }
-    const prepared = await prepareGoogleAdsAccountApiCall({
-      authContext,
-      linkedServiceAccountId: googleAdsAccount.serviceAccountId,
-    })
+    const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+      numericUserId,
+      googleAdsAccount.serviceAccountId
+    )
     if (!prepared.ok) {
       const needsReauth = prepared.message.includes('OAuth') || prepared.message.includes('授权')
       return NextResponse.json(
@@ -102,6 +88,15 @@ export async function POST(
       )
     }
     const { apiAuth, refreshToken: preparedRefreshToken } = prepared
+    const preparedOAuth =
+      apiAuth.authType === 'oauth' && prepared.oauthCredentials
+        ? {
+            refreshToken: preparedRefreshToken,
+            credentials: prepared.oauthCredentials,
+            oauthLoginCustomerId:
+              prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+          }
+        : undefined
 
     // 准备种子关键词
     let finalSeedKeywords = [...seedKeywords]
@@ -186,6 +181,7 @@ export async function POST(
         userId: numericUserId,
         authType: apiAuth.authType,
         serviceAccountId: apiAuth.serviceAccountId,
+        preparedOAuth,
       }),
     ])
 

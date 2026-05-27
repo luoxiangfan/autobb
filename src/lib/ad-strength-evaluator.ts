@@ -1719,7 +1719,8 @@ async function calculateBrandSearchVolume(
     // ========================================
     const normalizedLanguage = normalizeLanguageCode(targetLanguage)
 
-    const volumeAuth = userId ? await loadKeywordPlannerVolumeAuth(userId) : null
+    const volumeLoaded = userId ? await loadKeywordPlannerVolumeAuth(userId) : null
+    const volumeAuth = volumeLoaded?.ok ? volumeLoaded.volumeAuth : null
     const volumeResults = volumeAuth
       ? await getKeywordSearchVolumes(
           [brandName],

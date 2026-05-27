@@ -392,30 +392,19 @@ export type KeywordPlannerVolumeAuth = {
   }
 }
 
-/**
- * 解析 Keyword Planner 搜索量 API 的认证（auth-context + prepare/heal）。
- */
-export async function loadKeywordPlannerVolumeAuth(
-  userId: number,
-  linkedServiceAccountId?: string | null
-): Promise<KeywordPlannerVolumeAuth | null> {
-  const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(
-    userId,
-    linkedServiceAccountId ?? null
-  )
-  if (!authResolved) return null
+export type KeywordPlannerVolumeAuthLoadResult =
+  | { ok: true; volumeAuth: KeywordPlannerVolumeAuth }
+  | { ok: false; message: string }
 
-  const prepared = await prepareGoogleAdsAccountApiCall({
-    authContext: authResolved.ctx,
-    linkedServiceAccountId: linkedServiceAccountId ?? null,
-  })
-  if (!prepared.ok) return null
-
+function buildKeywordPlannerVolumeAuth(
+  authContext: GoogleAdsAuthContext,
+  prepared: PreparedGoogleAdsAccountApiCall
+): KeywordPlannerVolumeAuth {
   return {
     authType: prepared.apiAuth.authType,
     serviceAccountId: prepared.apiAuth.serviceAccountId,
     plannerAuth: {
-      existingContext: authResolved.ctx,
+      existingContext: authContext,
       healedOAuth: prepared.oauthCredentials
         ? {
             credentials: prepared.oauthCredentials,
@@ -424,6 +413,27 @@ export async function loadKeywordPlannerVolumeAuth(
           }
         : undefined,
     },
+  }
+}
+
+/**
+ * 解析 Keyword Planner 搜索量 API 的认证（校验 + prepare/heal，单次入口）。
+ */
+export async function loadKeywordPlannerVolumeAuth(
+  userId: number,
+  linkedServiceAccountId?: string | null
+): Promise<KeywordPlannerVolumeAuthLoadResult> {
+  const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+    userId,
+    linkedServiceAccountId ?? null
+  )
+  if (!prepared.ok) {
+    return { ok: false, message: prepared.message }
+  }
+
+  return {
+    ok: true,
+    volumeAuth: buildKeywordPlannerVolumeAuth(prepared.authContext, prepared),
   }
 }
 

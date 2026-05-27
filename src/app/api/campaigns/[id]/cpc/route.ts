@@ -2,13 +2,9 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { getCustomerWithCredentials } from '@/lib/google-ads-api'
-import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
 import { runOAuthGaqlWithLoginCustomerFallback } from '@/lib/google-ads-oauth-gaql'
 import { getDatabase } from '@/lib/db'
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-} from '@/lib/google-ads-auth-context'
 import { getRedisClient } from '@/lib/redis-client'
 import { executeGAQLQueryPython } from '@/lib/python-ads-client'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
@@ -203,18 +199,10 @@ export async function GET(
       return NextResponse.json({ error: '关联的Ads账号不可用（可能已解除关联）' }, { status: 400 })
     }
 
-    const authContext = await getGoogleAdsAuthContext(numericUserId)
-    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-      return NextResponse.json(
-        { error: 'Google Ads 认证未配置或已失效，请在设置中完成配置' },
-        { status: 400 }
-      )
-    }
-
-    const prepared = await prepareGoogleAdsAccountApiCall({
-      authContext,
-      linkedServiceAccountId: linked.service_account_id,
-    })
+    const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+      numericUserId,
+      linked.service_account_id
+    )
     if (!prepared.ok) {
       const needsReauth = prepared.message.includes('OAuth') || prepared.message.includes('授权')
       return NextResponse.json(

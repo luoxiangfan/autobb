@@ -1,5 +1,8 @@
 import { getCustomerWithCredentials } from './google-ads-api'
-import { prepareGoogleAdsAccountApiCall } from './google-ads-accounts-auth'
+import {
+  prepareGoogleAdsAccountApiCall,
+  type OAuthApiCredentialsFields,
+} from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import { getDatabase } from './db'
 import { getGoogleAdsAuthContext } from './google-ads-auth-context'
@@ -12,34 +15,52 @@ import { getGoogleAdsLanguageCode, getGoogleAdsGeoTargetId } from './language-co
  * OAuth 模式使用 customer.keywordPlanIdeas
  * 服务账号模式使用 customer.loadService('KeywordPlanIdeaServiceClient')
  */
+/** 路由层已 prepare 时传入，避免 getKeywordIdeas 内重复 heal */
+export type KeywordIdeasPreparedOAuth = {
+  refreshToken: string
+  credentials: OAuthApiCredentialsFields
+  oauthLoginCustomerId?: string
+}
+
 async function resolveKeywordPlannerOAuth(params: {
   userId: number
   refreshToken?: string
   serviceAccountId?: string
+  preparedOAuth?: KeywordIdeasPreparedOAuth
 }) {
-  const authContext = await getGoogleAdsAuthContext(params.userId)
-  const prepared = await prepareGoogleAdsAccountApiCall({
-    authContext,
-    linkedServiceAccountId: params.serviceAccountId ?? null,
-  })
-  if (!prepared.ok) {
-    throw new Error(prepared.message)
-  }
-  if (prepared.apiAuth.authType !== 'oauth') {
-    throw new Error('Keyword Planner requires OAuth when authType is oauth')
-  }
-  if (!prepared.oauthCredentials) {
-    throw new Error('OAuth credentials bundle missing')
+  let refreshToken = ''
+  let credentials: OAuthApiCredentialsFields
+  let loginCustomerHint = ''
+
+  if (params.preparedOAuth) {
+    refreshToken = (params.refreshToken || params.preparedOAuth.refreshToken || '').trim()
+    credentials = params.preparedOAuth.credentials
+    loginCustomerHint = params.preparedOAuth.oauthLoginCustomerId || ''
+  } else {
+    const authContext = await getGoogleAdsAuthContext(params.userId)
+    const prepared = await prepareGoogleAdsAccountApiCall({
+      authContext,
+      linkedServiceAccountId: params.serviceAccountId ?? null,
+    })
+    if (!prepared.ok) {
+      throw new Error(prepared.message)
+    }
+    if (prepared.apiAuth.authType !== 'oauth') {
+      throw new Error('Keyword Planner requires OAuth when authType is oauth')
+    }
+    if (!prepared.oauthCredentials) {
+      throw new Error('OAuth credentials bundle missing')
+    }
+
+    refreshToken = (params.refreshToken || prepared.refreshToken || '').trim()
+    credentials = prepared.oauthCredentials
+    loginCustomerHint =
+      prepared.oauthLoginCustomerId || prepared.apiAuth.oauthLoginCustomerId || ''
   }
 
-  const refreshToken = (params.refreshToken || prepared.refreshToken || '').trim()
   if (!refreshToken) {
     throw new Error('OAuth refresh token not found')
   }
-
-  const credentials = prepared.oauthCredentials
-  const loginCustomerHint =
-    prepared.oauthLoginCustomerId || prepared.apiAuth.oauthLoginCustomerId || ''
 
   const loginCustomerId = await getLoginCustomerId({
     authConfig: {
@@ -159,6 +180,8 @@ export async function getKeywordIdeas(params: {
   authType?: AuthType
   // 服务账号ID（当authType='service_account'时需要）
   serviceAccountId?: string
+  /** 路由层已 prepare 的 OAuth 凭证，跳过内部重复 heal */
+  preparedOAuth?: KeywordIdeasPreparedOAuth
 }): Promise<KeywordIdea[]> {
   if (!params.userId) {
     throw new Error('userId is required')
@@ -194,6 +217,7 @@ export async function getKeywordIdeas(params: {
     userId: params.userId,
     refreshToken: params.refreshToken,
     serviceAccountId: params.serviceAccountId,
+    preparedOAuth: params.preparedOAuth,
   })
 
   const customer = await getKeywordPlannerOAuthCustomer({

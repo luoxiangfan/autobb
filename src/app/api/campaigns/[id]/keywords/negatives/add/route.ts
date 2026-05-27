@@ -3,12 +3,8 @@ import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { boolCondition, boolParam, getInsertedId } from '@/lib/db-helpers'
 import { createGoogleAdsKeywordsBatch, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
-import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-} from '@/lib/google-ads-auth-context'
 import { patchCampaignConfigKeywords } from '@/lib/campaign-config-keywords'
 
 type KeywordInput = string | {
@@ -372,18 +368,10 @@ export async function POST(
       campaignName: campaign.campaign_name,
     })
 
-    const authContext = await getGoogleAdsAuthContext(userId)
-    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-      return NextResponse.json(
-        { error: 'Google Ads 认证未配置或已失效，请在设置中完成配置' },
-        { status: 400 }
-      )
-    }
-
-    const prepared = await prepareGoogleAdsAccountApiCall({
-      authContext,
-      linkedServiceAccountId: campaign.service_account_id,
-    })
+    const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+      userId,
+      campaign.service_account_id
+    )
     if (!prepared.ok) {
       return NextResponse.json({ error: prepared.message }, { status: 400 })
     }

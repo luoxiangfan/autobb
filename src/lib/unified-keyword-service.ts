@@ -34,11 +34,12 @@ async function getKeywordSearchVolumesWithPreparedAuth(
 ) {
   if (!userId || keywords.length === 0) return []
 
-  const volumeAuth = await loadKeywordPlannerVolumeAuth(userId, linkedServiceAccountId ?? null)
-  if (!volumeAuth) {
-    throw new Error('Google Ads 认证未配置')
+  const loaded = await loadKeywordPlannerVolumeAuth(userId, linkedServiceAccountId ?? null)
+  if (!loaded.ok) {
+    throw new Error(loaded.message)
   }
 
+  const { volumeAuth } = loaded
   return getKeywordSearchVolumes(
     keywords,
     country,

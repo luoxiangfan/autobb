@@ -61,6 +61,11 @@ export const defaultPreparedGoogleAdsAccountApiCall = {
   oauthLoginCustomerId: defaultOAuthApiAuth.oauthLoginCustomerId,
 }
 
+export const defaultPreparedGoogleAdsApiCallForLinkedAccount = {
+  ...defaultPreparedGoogleAdsAccountApiCall,
+  authContext: defaultOAuthAuthContext,
+}
+
 export const defaultCampaignGoogleAdsAccountRow = {
   parent_mcc_id: null as string | null,
   service_account_id: null as string | null,

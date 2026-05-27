@@ -35,13 +35,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Maximum 100 keywords per request' }, { status: 400 })
     }
 
-    const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
-    if (!volumeAuth) {
-      return NextResponse.json(
-        { error: 'Google Ads 认证未配置或已失效，请在设置中完成配置' },
-        { status: 400 }
-      )
+    const loaded = await loadKeywordPlannerVolumeAuth(userId)
+    if (!loaded.ok) {
+      return NextResponse.json({ error: loaded.message }, { status: 400 })
     }
+    const { volumeAuth } = loaded
     const volumes = await getKeywordSearchVolumes(
       keywords,
       country,

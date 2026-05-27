@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 import {
   defaultCampaignGoogleAdsAccountRow,
   defaultOAuthGoogleAdsCallBundle,
-  defaultPreparedGoogleAdsAccountApiCall,
+  defaultPreparedGoogleAdsApiCallForLinkedAccount,
   hasConfiguredGoogleAdsAuthFromContextMock,
   resetCampaignRouteAuthMocksOAuth,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
@@ -34,7 +34,7 @@ const adsFns = vi.hoisted(() => ({
 
 const oauthAccountsAuthFns = vi.hoisted(() => ({
   loadOAuthGoogleAdsCallBundleForContext: vi.fn(),
-  prepareGoogleAdsAccountApiCall: vi.fn(),
+  prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
 
 const keywordPoolFns = vi.hoisted(() => ({
@@ -69,7 +69,7 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   return {
     ...actual,
     loadOAuthGoogleAdsCallBundleForContext: oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext,
-    prepareGoogleAdsAccountApiCall: oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall,
+    prepareGoogleAdsApiCallForLinkedAccount: oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
   }
 })
 
@@ -96,8 +96,8 @@ describe('POST /api/campaigns/:id/keywords/add', () => {
     oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext.mockResolvedValue(
       defaultOAuthGoogleAdsCallBundle
     )
-    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue(
-      defaultPreparedGoogleAdsAccountApiCall
+    oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValue(
+      defaultPreparedGoogleAdsApiCallForLinkedAccount
     )
     keywordPoolFns.promoteKeywordsToOfferKeywordPool.mockResolvedValue({
       promotedCount: 2,

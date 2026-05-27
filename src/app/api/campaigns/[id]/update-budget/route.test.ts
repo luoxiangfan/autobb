@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import {
   defaultOAuthApiCredentialsFields,
-  defaultPreparedGoogleAdsAccountApiCall,
+  defaultPreparedGoogleAdsApiCallForLinkedAccount,
   hasConfiguredGoogleAdsAuthFromContextMock,
   resetCampaignRouteAuthMocksOAuth,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
@@ -32,7 +32,7 @@ const cacheFns = vi.hoisted(() => ({
 }))
 
 const oauthAccountsAuthFns = vi.hoisted(() => ({
-  prepareGoogleAdsAccountApiCall: vi.fn(),
+  prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
 
 vi.mock('@/lib/auth', () => ({
@@ -61,7 +61,7 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    prepareGoogleAdsAccountApiCall: oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall,
+    prepareGoogleAdsApiCallForLinkedAccount: oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
   }
 })
 
@@ -78,8 +78,8 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
       user: { userId: 1 },
     })
     resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
-    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue(
-      defaultPreparedGoogleAdsAccountApiCall
+    oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValue(
+      defaultPreparedGoogleAdsApiCallForLinkedAccount
     )
     dbFns.exec.mockResolvedValue({ changes: 1 })
     adsFns.updateGoogleAdsCampaignBudget.mockResolvedValue(undefined)
@@ -184,7 +184,7 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
       refreshToken: 'oauth-refresh-token',
       oauthLoginCustomerId: '1122334455',
     })
-    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue({
+    oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValue({
       ok: true,
       apiAuth: {
         authType: 'oauth',

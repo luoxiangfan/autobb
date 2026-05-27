@@ -6,11 +6,7 @@ import {
   getCustomerWithCredentials,
   type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-api'
-import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-} from '@/lib/google-ads-auth-context'
+import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { invalidateOfferCache } from '@/lib/api-cache'
 import { pauseUrlSwapTargetsByOfferId } from '@/lib/url-swap'
@@ -385,11 +381,6 @@ export async function POST(
         if (googleCampaignIds.length === 0) {
           googleAdsSummary.skippedReason = '未找到可同步的Google Ads广告系列ID'
         } else {
-          const authContext = await getGoogleAdsAuthContext(userId)
-          if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-            googleAdsSummary.skippedReason = 'Google Ads 认证未配置或已失效'
-          }
-
           let refreshToken = ''
           let serviceAccountId: string | undefined
           let authType: 'oauth' | 'service_account' = 'oauth'
@@ -398,10 +389,10 @@ export async function POST(
           let serviceAccountMccId: string | undefined
 
           if (!googleAdsSummary.skippedReason) {
-            const prepared = await prepareGoogleAdsAccountApiCall({
-              authContext,
-              linkedServiceAccountId: campaignRow.service_account_id,
-            })
+            const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+              userId,
+              campaignRow.service_account_id
+            )
             if (!prepared.ok) {
               googleAdsSummary.skippedReason = prepared.message
             } else {

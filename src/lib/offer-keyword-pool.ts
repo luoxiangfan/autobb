@@ -1444,18 +1444,19 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
 
     if (staleNorms.size > 0) {
       const { getKeywordSearchVolumes } = await import('./keyword-planner')
-      const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
+      const volumeLoaded = await loadKeywordPlannerVolumeAuth(userId)
       const refreshKeywords = Array.from(staleNorms)
         .map(norm => keywordMap.get(norm)?.keyword)
         .filter((kw): kw is string => Boolean(kw))
 
-      if (!volumeAuth && refreshKeywords.length > 0) {
+      if (!volumeLoaded.ok && refreshKeywords.length > 0) {
         console.warn(
-          `[offer-keyword-pool] Google Ads 认证未配置，跳过 ${refreshKeywords.length} 个过期关键词的搜索量刷新 (userId=${userId})`
+          `[offer-keyword-pool] ${volumeLoaded.message}，跳过 ${refreshKeywords.length} 个过期关键词的搜索量刷新 (userId=${userId})`
         )
       }
 
-      if (volumeAuth && refreshKeywords.length > 0) {
+      if (volumeLoaded.ok && refreshKeywords.length > 0) {
+        const { volumeAuth } = volumeLoaded
         const volumes = await getKeywordSearchVolumes(
           refreshKeywords,
           country,
@@ -4440,10 +4441,11 @@ export async function generateOfferKeywordPool(
     const { getKeywordSearchVolumes } = await import('./keyword-planner')
 
     try {
-      const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
-      if (!volumeAuth) {
-        throw new Error('Google Ads 认证未配置，无法查询搜索量')
+      const volumeLoaded = await loadKeywordPlannerVolumeAuth(userId)
+      if (!volumeLoaded.ok) {
+        throw new Error(volumeLoaded.message)
       }
+      const { volumeAuth } = volumeLoaded
       await progress?.({ phase: 'seed-volume', message: `初始关键词搜索量查询中` })
       const volumeProgress = progress
         ? (info: { message: string; current?: number; total?: number }) =>
@@ -4932,10 +4934,11 @@ export async function generateOfferKeywordPool(
     if (needsBrandVolume) {
       try {
         const { getKeywordSearchVolumes } = await import('./keyword-planner')
-        const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
-        if (!volumeAuth) {
-          throw new Error('Google Ads 认证未配置，无法查询品牌词搜索量')
+        const volumeLoaded = await loadKeywordPlannerVolumeAuth(userId)
+        if (!volumeLoaded.ok) {
+          throw new Error(volumeLoaded.message)
         }
+        const { volumeAuth } = volumeLoaded
         await progress?.({ phase: 'seed-volume', message: '品牌词搜索量查询中' })
         const volumeProgress = progress
           ? (info: { message: string; current?: number; total?: number }) =>
@@ -5820,10 +5823,11 @@ async function extractKeywordsFromOffer(
 
     try {
       const { getKeywordSearchVolumes } = await import('./keyword-planner')
-      const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
-      if (!volumeAuth) {
-        throw new Error('Google Ads 认证未配置，无法查询搜索量')
+      const volumeLoaded = await loadKeywordPlannerVolumeAuth(userId)
+      if (!volumeLoaded.ok) {
+        throw new Error(volumeLoaded.message)
       }
+      const { volumeAuth } = volumeLoaded
 
       // 获取 offer 信息（用于获取 target_country 和 target_language）
       const offer = await db.queryOne<{

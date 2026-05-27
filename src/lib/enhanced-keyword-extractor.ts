@@ -407,10 +407,11 @@ async function enrichKeywordsWithMetrics(
 
   try {
     // 🔧 修复(2025-12-26): 支持服务账号模式
-    const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
-    if (!volumeAuth) {
+    const loaded = await loadKeywordPlannerVolumeAuth(userId)
+    if (!loaded.ok) {
       return keywords as EnhancedKeyword[]
     }
+    const { volumeAuth } = loaded
     const volumes = await getKeywordSearchVolumes(
       keywordTexts,
       targetCountry,

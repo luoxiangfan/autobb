@@ -681,10 +681,11 @@ async function extractFromSingleProduct(
   let keywordsWithVolume: ExtractedKeywordRow[] = []
 
   try {
-    const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
-    if (!volumeAuth) {
-      throw new Error('Google Ads 认证未配置')
+    const loaded = await loadKeywordPlannerVolumeAuth(userId)
+    if (!loaded.ok) {
+      throw new Error(loaded.message)
     }
+    const { volumeAuth } = loaded
     const volumeData = await getKeywordSearchVolumes(
       keywordCandidates,
       targetCountry,
@@ -907,10 +908,11 @@ async function extractFromStore(
   let keywordsWithVolume: ExtractedKeywordRow[] = []
 
   try {
-    const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
-    if (!volumeAuth) {
-      throw new Error('Google Ads 认证未配置')
+    const loaded = await loadKeywordPlannerVolumeAuth(userId)
+    if (!loaded.ok) {
+      throw new Error(loaded.message)
     }
+    const { volumeAuth } = loaded
     const volumeData = await getKeywordSearchVolumes(
       keywordCandidates,
       targetCountry,
