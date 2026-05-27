@@ -13,8 +13,7 @@
  * - 覆盖所有购买阶段
  */
 
-import { getKeywordSearchVolumes } from './keyword-planner'
-import { loadKeywordPlannerVolumeAuthForContext } from './google-ads-accounts-auth'
+import { getKeywordSearchVolumesForPlannerContext } from './google-ads-accounts-auth'
 import { getHighIntentKeywords } from './google-suggestions'
 
 export interface EnhancedKeyword {
@@ -407,21 +406,16 @@ async function enrichKeywordsWithMetrics(
 
   try {
     // 🔧 修复(2025-12-26): 支持服务账号模式
-    const loaded = await loadKeywordPlannerVolumeAuthForContext({ userId })
-    if (!loaded.ok) {
+    const volumeResult = await getKeywordSearchVolumesForPlannerContext({
+      userId,
+      keywords: keywordTexts,
+      country: targetCountry,
+      language: targetLanguage,
+    })
+    if (!volumeResult.ok) {
       return keywords as EnhancedKeyword[]
     }
-    const { volumeAuth } = loaded
-    const volumes = await getKeywordSearchVolumes(
-      keywordTexts,
-      targetCountry,
-      targetLanguage,
-      userId,
-      volumeAuth.authType,
-      volumeAuth.serviceAccountId,
-      undefined,
-      volumeAuth.plannerAuth
-    )
+    const volumes = volumeResult.volumes
 
     // 创建keyword到volume的映射
     const volumeMap = new Map(volumes.map(v => [v.keyword.toLowerCase(), v]))

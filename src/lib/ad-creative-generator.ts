@@ -11005,31 +11005,9 @@ export async function generateAdCreative(
       console.log(`🔍 启动Keyword Planner多角度3轮查询策略`)
       console.time('⏱️ Keyword Planner扩展')
 
-      const { getDatabase } = await import('@/lib/db')
-      const db = await getDatabase()
+      const { hasConfiguredGoogleAdsAuth } = await import('@/lib/google-ads-auth-assignment')
 
-      // 🔧 PostgreSQL兼容性修复: is_active/is_manager_account在PostgreSQL中是BOOLEAN类型
-      const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-      const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = false' : 'is_manager_account = 0'
-
-      // 查询用户的Google Ads账号
-      // 🔧 修复(2025-12-12): Keyword Planner API 必须使用客户账号，不能使用 MCC 账号
-      const adsAccount = await db.queryOne(`
-        SELECT id, customer_id FROM google_ads_accounts
-        WHERE user_id = ?
-          AND ${isActiveCondition}
-          AND status = 'ENABLED'
-          AND ${isManagerCondition}
-        ORDER BY created_at DESC
-        LIMIT 1
-      `, [userId]) as { id: number; customer_id: string } | undefined
-
-      if (adsAccount) {
-        // 🔧 修复(2025-12-25): 支持服务账号和OAuth两种认证方式
-        const { getGoogleAdsConfig } = await import('@/lib/keyword-planner')
-        const config = await getGoogleAdsConfig(userId)
-
-        if (config) {
+      if (await hasConfiguredGoogleAdsAuth(userId)) {
           const country = (offer as { target_country?: string }).target_country || 'US'
           const plannerLanguage = resolveCreativeTargetLanguage(
             (offer as { target_language?: string }).target_language || null,
@@ -11089,11 +11067,8 @@ export async function generateAdCreative(
             console.warn('   ⚠️ 关键词池不存在，跳过关键词扩展')
           }
           } // 闭合 bucketKeywords 条件检查的 else 块
-        } else {
-          console.warn('⚠️ 未找到Google Ads凭证（OAuth或服务账号），跳过Keyword Planner扩展')
-        }
       } else {
-        console.warn('⚠️ 未找到激活的Google Ads账号，跳过Keyword Planner扩展')
+        console.warn('⚠️ 未配置 Google Ads 认证，跳过 Keyword Planner 扩展')
       }
 
       console.timeEnd('⏱️ Keyword Planner扩展')

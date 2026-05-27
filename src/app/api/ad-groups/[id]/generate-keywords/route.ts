@@ -4,6 +4,7 @@ import { findAdGroupById } from '@/lib/ad-groups'
 import { findCampaignById } from '@/lib/campaigns'
 import { findOfferById } from '@/lib/offers'
 import { generateNegativeKeywords } from '@/lib/keyword-generator'
+import { loadKeywordPoolExpandCredentialsForOffer } from '@/lib/google-ads-accounts-auth'
 import { getUnifiedKeywordData } from '@/lib/unified-keyword-service'
 import { createKeywordsBatch, CreateKeywordInput } from '@/lib/keywords'
 import { inferNegativeKeywordMatchType } from '@/lib/campaign-publish/negative-keyword-match-type'
@@ -103,13 +104,22 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       scrapedData: offer.scraped_data || undefined
     }
 
+    const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userIdNum, offer.id)
+
     // 🆕 P0-2优化：获取关键词和竞品品牌
     const { keywords: unifiedKeywords, competitorBrands } = await getUnifiedKeywordData({
       offer: offerData,
+      offerId: offer.id,
       country: offer.target_country,
       language: offer.target_language || 'English',
       userId: userIdNum,
-      minSearchVolume: 10  // 默认最低搜索量
+      customerId: expandLoad.ok ? expandLoad.creds.customerId : undefined,
+      refreshToken: expandLoad.ok ? expandLoad.creds.refreshToken : undefined,
+      accountId: expandLoad.ok ? expandLoad.creds.accountId : undefined,
+      linkedServiceAccountId: expandLoad.ok ? expandLoad.creds.linkedServiceAccountId : undefined,
+      authType: expandLoad.ok ? expandLoad.creds.authType : undefined,
+      plannerSession: expandLoad.ok ? expandLoad.plannerSession : undefined,
+      minSearchVolume: 10, // 默认最低搜索量
     })
 
     // 生成否定关键词（如果需要）

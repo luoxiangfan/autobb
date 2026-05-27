@@ -5,8 +5,7 @@
  */
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getKeywordSearchVolumes } from '@/lib/keyword-planner'
-import { loadKeywordPlannerVolumeAuthForContext } from '@/lib/google-ads-accounts-auth'
+import { getKeywordSearchVolumesForPlannerContext } from '@/lib/google-ads-accounts-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,35 +42,27 @@ export async function GET(request: NextRequest) {
       ? parseInt(googleAdsAccountIdParam, 10)
       : undefined
 
-    const loaded = await loadKeywordPlannerVolumeAuthForContext({
+    const volumeResult = await getKeywordSearchVolumesForPlannerContext({
       userId,
       offerId: Number.isFinite(offerId) && offerId! > 0 ? offerId : undefined,
       googleAdsAccountId:
         Number.isFinite(googleAdsAccountId) && googleAdsAccountId! > 0
           ? googleAdsAccountId
           : undefined,
-    })
-
-    if (!loaded.ok) {
-      return NextResponse.json({ error: loaded.message }, { status: 400 })
-    }
-    const { volumeAuth } = loaded
-    const volumes = await getKeywordSearchVolumes(
       keywords,
       country,
       language,
-      userId,
-      volumeAuth.authType,
-      volumeAuth.serviceAccountId,
-      undefined,
-      volumeAuth.plannerAuth
-    )
+    })
+
+    if (!volumeResult.ok) {
+      return NextResponse.json({ error: volumeResult.message }, { status: 400 })
+    }
 
     return NextResponse.json({
       success: true,
       country,
       language,
-      keywords: volumes.map(v => ({
+      keywords: volumeResult.volumes.map(v => ({
         keyword: v.keyword,
         searchVolume: v.avgMonthlySearches,
         competition: v.competition,

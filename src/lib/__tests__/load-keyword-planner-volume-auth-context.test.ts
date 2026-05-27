@@ -11,7 +11,36 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-import { resolveLinkedServiceAccountIdForKeywordPlannerContext } from '@/lib/google-ads-accounts-auth'
+import {
+  resolveKeywordPlannerLinkedServiceAccountId,
+  resolveLinkedServiceAccountIdForKeywordPlannerContext,
+} from '@/lib/google-ads-accounts-auth'
+
+describe('resolveKeywordPlannerLinkedServiceAccountId', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('matches planner context resolver when only offerId is set', async () => {
+    dbFns.queryOne.mockImplementation(async (sql: string) => {
+      if (sql.includes('INNER JOIN campaigns')) {
+        return { service_account_id: 'sa-same' }
+      }
+      return null
+    })
+
+    const fromPlanner = await resolveKeywordPlannerLinkedServiceAccountId({
+      userId: 42,
+      offerId: 10,
+    })
+    const fromContext = await resolveLinkedServiceAccountIdForKeywordPlannerContext({
+      userId: 42,
+      offerId: 10,
+    })
+    expect(fromPlanner).toBe('sa-same')
+    expect(fromContext).toBe('sa-same')
+  })
+})
 
 describe('resolveLinkedServiceAccountIdForKeywordPlannerContext', () => {
   beforeEach(() => {

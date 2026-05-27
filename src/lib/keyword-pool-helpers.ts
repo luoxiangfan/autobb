@@ -10,7 +10,11 @@
 import type { PoolKeywordData } from './offer-keyword-pool'
 import { expandKeywordsWithSeeds } from './unified-keyword-service'
 import { getDatabase } from './db'
-import { getKeywordSearchVolumesForPlannerContext } from './google-ads-accounts-auth'
+import {
+  getKeywordSearchVolumesForPlannerContext,
+  resolveKeywordPlannerLinkedServiceAccountId,
+  type KeywordPlannerPreparedSession,
+} from './google-ads-accounts-auth'
 // 🔥 2026-03-13: 移除 TRENDS 关键词生成，由 Title/About补充 + 行业通用词替代
 // import { getTrendsKeywords } from './google-trends'
 import { DEFAULTS } from './keyword-constants'
@@ -652,7 +656,9 @@ export async function expandAllKeywords(
   progress?: (info: { phase?: 'seed-volume' | 'expand-round' | 'volume-batch' | 'service-step' | 'filter' | 'cluster' | 'save'; message: string; current?: number; total?: number }) => Promise<void> | void,
   plannerMinSearchVolume?: number,
   allowNonBrandFromPlanner?: boolean | PlannerNonBrandPolicy,
-  plannerDecision?: PlannerDecision
+  plannerDecision?: PlannerDecision,
+  linkedServiceAccountId?: string | null,
+  plannerSession?: KeywordPlannerPreparedSession
 ): Promise<PoolKeywordData[]> {
   console.log(`\n📋 关键词扩展策略 (v2.0 - 认证类型: ${authType}):`)
   console.log(`   初始关键词数量: ${initialKeywords.length}`)
@@ -677,7 +683,9 @@ export async function expandAllKeywords(
       minSearchVolume: plannerMinSearchVolume ?? DEFAULTS.minSearchVolume,
       allowNonBrandFromPlanner,
       plannerDecision,
-      progress
+      progress,
+      linkedServiceAccountId,
+      plannerSession
     })
   } else {
     if (!offer || !userId) {
@@ -719,6 +727,8 @@ interface OAuthExpandParams {
   allowNonBrandFromPlanner?: boolean | PlannerNonBrandPolicy
   plannerDecision?: PlannerDecision
   progress?: (info: { phase?: 'seed-volume' | 'expand-round' | 'volume-batch' | 'service-step' | 'filter' | 'cluster' | 'save'; message: string; current?: number; total?: number }) => Promise<void> | void
+  linkedServiceAccountId?: string | null
+  plannerSession?: KeywordPlannerPreparedSession
 }
 
 /**
@@ -749,8 +759,17 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
     minSearchVolume,
     allowNonBrandFromPlanner,
     plannerDecision,
-    progress
+    progress,
+    linkedServiceAccountId: linkedSaFromParent,
+    plannerSession,
   } = params
+
+  const plannerLinkedServiceAccountId =
+    plannerSession != null
+      ? (linkedSaFromParent ?? null)
+      : userId && offer?.id
+        ? await resolveKeywordPlannerLinkedServiceAccountId({ userId, offerId: offer.id })
+        : null
 
   const pureBrandKeywords = getPureBrandKeywords(brandName)
   const plannerBrandKeywords = buildPlannerBrandKeywords(brandName, category)
@@ -882,6 +901,9 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
         clientId,
         clientSecret,
         developerToken,
+        offerId: offer?.id,
+        linkedServiceAccountId: plannerLinkedServiceAccountId,
+        plannerSession,
         maxKeywords: DEFAULTS.maxKeywords,
         minSearchVolume: minSearchVolume ?? DEFAULTS.minSearchVolume,
         onProgress: progress
@@ -921,6 +943,9 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
           clientId,
           clientSecret,
           developerToken,
+          offerId: offer?.id,
+          linkedServiceAccountId: plannerLinkedServiceAccountId,
+          plannerSession,
           maxKeywords: DEFAULTS.maxKeywords,
           minSearchVolume: minSearchVolume ?? DEFAULTS.minSearchVolume,
           onProgress: progress

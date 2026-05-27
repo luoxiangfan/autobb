@@ -55,7 +55,6 @@ describe('prepareKeywordPlannerSessionAuth', () => {
       7,
       null
     )
-    expect(accountsAuthFns.keywordPlannerVolumeAuthFromPrepared).toHaveBeenCalledTimes(1)
   })
 
   it('returns ok:false when prepare fails (no fallback path)', async () => {
@@ -86,12 +85,6 @@ describe('prepareKeywordPlannerSessionAuth', () => {
       },
       refreshToken: '',
     })
-    accountsAuthFns.keywordPlannerVolumeAuthFromPrepared.mockReturnValueOnce({
-      authType: 'service_account',
-      serviceAccountId: 'sa-1',
-      plannerAuth: { existingContext: defaultOAuthAuthContext },
-    })
-
     const result = await prepareKeywordPlannerSessionAuth(7, 'sa-1')
 
     expect(result.ok).toBe(true)

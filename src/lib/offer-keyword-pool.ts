@@ -21,8 +21,9 @@ import { loadPrompt, interpolateTemplate } from './prompt-loader'
 import { findOfferById, type Offer } from './offers'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import {
-  loadKeywordPlannerVolumeAuthForOffer,
+  getKeywordSearchVolumesForPlannerContext,
   loadKeywordPoolExpandCredentialsForOffer,
+  type KeywordPlannerPreparedSession,
 } from './google-ads-accounts-auth'
 import { extractVerifiedKeywordSourcePool } from './unified-keyword-service'
 import {
@@ -1445,30 +1446,26 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
     }
 
     if (staleNorms.size > 0) {
-      const { getKeywordSearchVolumes } = await import('./keyword-planner')
-      const volumeLoaded = await loadKeywordPlannerVolumeAuthForOffer(userId, offer.id)
       const refreshKeywords = Array.from(staleNorms)
         .map(norm => keywordMap.get(norm)?.keyword)
         .filter((kw): kw is string => Boolean(kw))
 
-      if (!volumeLoaded.ok && refreshKeywords.length > 0) {
+      const volumeResult = await getKeywordSearchVolumesForPlannerContext({
+        userId,
+        offerId: offer.id,
+        keywords: refreshKeywords,
+        country,
+        language: languageCode,
+      })
+
+      if (!volumeResult.ok && refreshKeywords.length > 0) {
         console.warn(
-          `[offer-keyword-pool] ${volumeLoaded.message}，跳过 ${refreshKeywords.length} 个过期关键词的搜索量刷新 (userId=${userId})`
+          `[offer-keyword-pool] ${volumeResult.message}，跳过 ${refreshKeywords.length} 个过期关键词的搜索量刷新 (userId=${userId})`
         )
       }
 
-      if (volumeLoaded.ok && refreshKeywords.length > 0) {
-        const { volumeAuth } = volumeLoaded
-        const volumes = await getKeywordSearchVolumes(
-          refreshKeywords,
-          country,
-          languageCode,
-          userId,
-          volumeAuth.authType,
-          volumeAuth.serviceAccountId,
-          undefined,
-          volumeAuth.plannerAuth
-        )
+      if (volumeResult.ok && refreshKeywords.length > 0) {
+        const volumes = volumeResult.volumes
 
         for (const vol of volumes) {
           const norm = normalizeGoogleAdsKeyword(vol.keyword)
@@ -4440,14 +4437,8 @@ export async function generateOfferKeywordPool(
   if (allKeywords) {
     // 🔧 修复(2026-01-21): 如果提供了关键词列表，查询搜索量而不是硬编码为 0
     console.log(`📊 查询 ${allKeywords.length} 个提供的关键词的搜索量...`)
-    const { getKeywordSearchVolumes } = await import('./keyword-planner')
 
     try {
-      const volumeLoaded = await loadKeywordPlannerVolumeAuthForOffer(userId, offerId)
-      if (!volumeLoaded.ok) {
-        throw new Error(volumeLoaded.message)
-      }
-      const { volumeAuth } = volumeLoaded
       await progress?.({ phase: 'seed-volume', message: `初始关键词搜索量查询中` })
       const volumeProgress = progress
         ? (info: { message: string; current?: number; total?: number }) =>
@@ -4459,16 +4450,18 @@ export async function generateOfferKeywordPool(
             })
         : undefined
 
-      const volumes = await getKeywordSearchVolumes(
-        allKeywords,
-        offer.target_country,
-        offer.target_language || 'en',
+      const volumeResult = await getKeywordSearchVolumesForPlannerContext({
         userId,
-        volumeAuth.authType,
-        volumeAuth.serviceAccountId,
-        volumeProgress,
-        volumeAuth.plannerAuth
-      )
+        offerId,
+        keywords: allKeywords,
+        country: offer.target_country,
+        language: offer.target_language || 'en',
+        onProgress: volumeProgress,
+      })
+      if (!volumeResult.ok) {
+        throw new Error(volumeResult.message)
+      }
+      const volumes = volumeResult.volumes
 
       initialKeywords = volumes.map(v => ({
         keyword: v.keyword,
@@ -4622,19 +4615,27 @@ export async function generateOfferKeywordPool(
   let developerToken: string | undefined
   let authType: 'oauth' | 'service_account' = 'oauth'
 
+  let plannerSession: KeywordPlannerPreparedSession | undefined
+  let linkedServiceAccountId: string | null | undefined
   try {
-    const expandCreds = await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id)
-    if (expandCreds) {
-      authType = expandCreds.authType
-      customerId = expandCreds.customerId
-      refreshToken = expandCreds.refreshToken
-      accountId = expandCreds.accountId
-      clientId = expandCreds.clientId
-      clientSecret = expandCreds.clientSecret
-      developerToken = expandCreds.developerToken
+    const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id)
+    if (!expandLoad.ok) {
+      console.warn(
+        `⚠️ Keyword Planner 扩展认证不可用（prepare 失败），将回退初始种子词 (offerId=${offer.id}, userId=${userId})`
+      )
+    } else {
+      authType = expandLoad.creds.authType
+      customerId = expandLoad.creds.customerId
+      refreshToken = expandLoad.creds.refreshToken
+      accountId = expandLoad.creds.accountId
+      clientId = expandLoad.creds.clientId
+      clientSecret = expandLoad.creds.clientSecret
+      developerToken = expandLoad.creds.developerToken
+      linkedServiceAccountId = expandLoad.creds.linkedServiceAccountId
+      plannerSession = expandLoad.plannerSession
     }
   } catch (error) {
-    console.warn('⚠️ 无法获取Google Ads凭证，跳过关键词扩展')
+    console.warn('⚠️ 无法获取Google Ads凭证，跳过关键词扩展:', (error as Error).message)
   }
 
   const plannerDecision: PlannerDecision = {
@@ -4660,7 +4661,9 @@ export async function generateOfferKeywordPool(
     progress,
     plannerMinSearchVolume,
     plannerNonBrandPolicy,
-    plannerDecision
+    plannerDecision,
+    linkedServiceAccountId,
+    plannerSession
   )
   plannerNonBrandPolicy = plannerDecision.nonBrandPolicy || plannerNonBrandPolicy
   allowPlannerNonBrand = plannerDecision.allowNonBrandFromPlanner ?? allowPlannerNonBrand
@@ -4915,12 +4918,6 @@ export async function generateOfferKeywordPool(
 
     if (needsBrandVolume) {
       try {
-        const { getKeywordSearchVolumes } = await import('./keyword-planner')
-        const volumeLoaded = await loadKeywordPlannerVolumeAuthForOffer(userId, offerId)
-        if (!volumeLoaded.ok) {
-          throw new Error(volumeLoaded.message)
-        }
-        const { volumeAuth } = volumeLoaded
         await progress?.({ phase: 'seed-volume', message: '品牌词搜索量查询中' })
         const volumeProgress = progress
           ? (info: { message: string; current?: number; total?: number }) =>
@@ -4931,16 +4928,18 @@ export async function generateOfferKeywordPool(
                 message: `品牌词搜索量 ${info.current ?? 0}/${info.total ?? 0}`
               })
           : undefined
-        const volumes = await getKeywordSearchVolumes(
-          pureBrandKeywordsForFilter,
-          offer.target_country,
-          offer.target_language || 'en',
+        const volumeResult = await getKeywordSearchVolumesForPlannerContext({
           userId,
-          volumeAuth.authType,
-          volumeAuth.serviceAccountId,
-          volumeProgress,
-          volumeAuth.plannerAuth
-        )
+          offerId,
+          keywords: pureBrandKeywordsForFilter,
+          country: offer.target_country,
+          language: offer.target_language || 'en',
+          onProgress: volumeProgress,
+        })
+        if (!volumeResult.ok) {
+          throw new Error(volumeResult.message)
+        }
+        const volumes = volumeResult.volumes
 
         volumes.forEach(vol => {
           const normalized = normalizeGoogleAdsKeyword(vol.keyword)
@@ -5804,13 +5803,6 @@ async function extractKeywordsFromOffer(
     await progress?.({ phase: 'seed-volume', message: `初始关键词搜索量查询中` })
 
     try {
-      const { getKeywordSearchVolumes } = await import('./keyword-planner')
-      const volumeLoaded = await loadKeywordPlannerVolumeAuthForOffer(userId, offerId)
-      if (!volumeLoaded.ok) {
-        throw new Error(volumeLoaded.message)
-      }
-      const { volumeAuth } = volumeLoaded
-
       // 获取 offer 信息（用于获取 target_country 和 target_language）
       const offer = await db.queryOne<{
         target_country: string
@@ -5831,16 +5823,18 @@ async function extractKeywordsFromOffer(
               })
           : undefined
 
-        const volumes = await getKeywordSearchVolumes(
-          keywords.map(k => k.keyword),
-          offer.target_country,
-          offer.target_language || 'en',
+        const volumeResult = await getKeywordSearchVolumesForPlannerContext({
           userId,
-          volumeAuth.authType,
-          volumeAuth.serviceAccountId,
-          volumeProgress,
-          volumeAuth.plannerAuth
-        )
+          offerId,
+          keywords: keywords.map(k => k.keyword),
+          country: offer.target_country,
+          language: offer.target_language || 'en',
+          onProgress: volumeProgress,
+        })
+        if (!volumeResult.ok) {
+          throw new Error(volumeResult.message)
+        }
+        const volumes = volumeResult.volumes
 
         // 更新搜索量
         const volumeMap = new Map(volumes.map(v => [v.keyword.toLowerCase(), v]))

@@ -12,8 +12,7 @@
 
 import { generateContent } from './gemini'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
-import { getKeywordSearchVolumes } from './keyword-planner'
-import { loadKeywordPlannerVolumeAuthForContext } from './google-ads-accounts-auth'
+import { getKeywordSearchVolumesForPlannerContext } from './google-ads-accounts-auth'
 import { getHighIntentKeywords } from './google-suggestions'
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
@@ -681,21 +680,16 @@ async function extractFromSingleProduct(
   let keywordsWithVolume: ExtractedKeywordRow[] = []
 
   try {
-    const loaded = await loadKeywordPlannerVolumeAuthForContext({ userId })
-    if (!loaded.ok) {
-      throw new Error(loaded.message)
-    }
-    const { volumeAuth } = loaded
-    const volumeData = await getKeywordSearchVolumes(
-      keywordCandidates,
-      targetCountry,
-      targetLanguage,
+    const volumeResult = await getKeywordSearchVolumesForPlannerContext({
       userId,
-      volumeAuth.authType,
-      volumeAuth.serviceAccountId,
-      undefined,
-      volumeAuth.plannerAuth
-    )
+      keywords: keywordCandidates,
+      country: targetCountry,
+      language: targetLanguage,
+    })
+    if (!volumeResult.ok) {
+      throw new Error(volumeResult.message)
+    }
+    const volumeData = volumeResult.volumes
 
     const aboutKeywordSet = new Set(aboutKeywordCandidates.map(k => k.toLowerCase()))
 
@@ -908,21 +902,16 @@ async function extractFromStore(
   let keywordsWithVolume: ExtractedKeywordRow[] = []
 
   try {
-    const loaded = await loadKeywordPlannerVolumeAuthForContext({ userId })
-    if (!loaded.ok) {
-      throw new Error(loaded.message)
-    }
-    const { volumeAuth } = loaded
-    const volumeData = await getKeywordSearchVolumes(
-      keywordCandidates,
-      targetCountry,
-      targetLanguage,
+    const volumeResult = await getKeywordSearchVolumesForPlannerContext({
       userId,
-      volumeAuth.authType,
-      volumeAuth.serviceAccountId,
-      undefined,
-      volumeAuth.plannerAuth
-    )
+      keywords: keywordCandidates,
+      country: targetCountry,
+      language: targetLanguage,
+    })
+    if (!volumeResult.ok) {
+      throw new Error(volumeResult.message)
+    }
+    const volumeData = volumeResult.volumes
 
     keywordsWithVolume = keywordCandidates.map((keyword, index) => {
       const volume = volumeData[index]?.avgMonthlySearches || 0

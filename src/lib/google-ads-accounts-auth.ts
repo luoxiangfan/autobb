@@ -13,6 +13,7 @@ import {
   type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
 import { getServiceAccountConfig } from './google-ads-service-account'
+import type { KeywordIdeasPreparedOAuth } from './google-ads-keyword-planner'
 import { getKeywordSearchVolumes } from './keyword-planner'
 /** 账号列表同步/API 客户端所需的扁平凭证 */
 export interface AccountsRouteCredentials {
@@ -396,6 +397,30 @@ export type KeywordPlannerVolumeAuthLoadResult =
   | { ok: true; volumeAuth: KeywordPlannerVolumeAuth }
   | { ok: false; message: string }
 
+/** Keyword Planner Ideas + Historical Metrics 共用 session（单次 prepare 产物） */
+export type KeywordPlannerPreparedSession = {
+  preparedOAuth?: KeywordIdeasPreparedOAuth
+  volumeAuth: KeywordPlannerVolumeAuth
+}
+
+export function buildKeywordPlannerSessionFromPrepared(
+  prepared: { authContext: GoogleAdsAuthContext } & PreparedGoogleAdsAccountApiCall
+): KeywordPlannerPreparedSession {
+  const volumeAuth = keywordPlannerVolumeAuthFromPrepared(prepared.authContext, prepared)
+
+  let preparedOAuth: KeywordIdeasPreparedOAuth | undefined
+  if (prepared.apiAuth.authType === 'oauth' && prepared.oauthCredentials) {
+    preparedOAuth = {
+      refreshToken: prepared.refreshToken,
+      credentials: prepared.oauthCredentials,
+      oauthLoginCustomerId:
+        prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId,
+    }
+  }
+
+  return { preparedOAuth, volumeAuth }
+}
+
 export function keywordPlannerVolumeAuthFromPrepared(
   authContext: GoogleAdsAuthContext,
   prepared: PreparedGoogleAdsAccountApiCall
@@ -562,12 +587,37 @@ export async function getKeywordSearchVolumesForPlannerContext(
 
 export type KeywordPoolExpandCredentials = {
   authType: 'oauth' | 'service_account'
+  /** 本次 prepare 使用的 linked SA（供 expandKeywordsWithSeeds 复用，避免重复 prepare） */
+  linkedServiceAccountId?: string | null
   customerId?: string
   refreshToken?: string
   accountId?: number
   clientId?: string
   clientSecret?: string
   developerToken?: string
+}
+
+export type ResolveKeywordPlannerLinkedSaParams = {
+  userId: number
+  offerId?: number
+  /** 显式传入时跳过 offerId / serviceAccountId 解析 */
+  linkedServiceAccountId?: string | null
+  /** 与 linkedServiceAccountId 等价的历史字段，仅当 linkedServiceAccountId 未传入时生效 */
+  serviceAccountId?: string | null
+}
+
+/** Keyword Planner session：解析 linked SA（offer 优先于显式 serviceAccountId） */
+export async function resolveKeywordPlannerLinkedServiceAccountId(
+  params: ResolveKeywordPlannerLinkedSaParams
+): Promise<string | null> {
+  if (params.linkedServiceAccountId !== undefined) {
+    return params.linkedServiceAccountId
+  }
+  if (params.offerId) {
+    return resolveLinkedServiceAccountIdForOffer(params.userId, params.offerId)
+  }
+  const legacy = params.serviceAccountId?.trim()
+  return legacy || null
 }
 
 async function queryGoogleAdsAccountForOfferExpand(
@@ -604,36 +654,58 @@ async function queryGoogleAdsAccountForOfferExpand(
   )
 }
 
-/** 关键词池 OAuth 扩展所需的 customerId / OAuth 字段（含 linked SA prepare） */
+export type KeywordPoolExpandLoadResult =
+  | { ok: false }
+  | {
+      ok: true
+      creds: KeywordPoolExpandCredentials
+      plannerSession: KeywordPlannerPreparedSession
+    }
+
+/** 关键词池扩展：单次 prepare，返回 OAuth 字段 + 可复用的 planner session */
 export async function loadKeywordPoolExpandCredentialsForOffer(
   userId: number,
   offerId: number
-): Promise<KeywordPoolExpandCredentials | null> {
+): Promise<KeywordPoolExpandLoadResult> {
   const linkedSa = await resolveLinkedServiceAccountIdForOffer(userId, offerId)
   const prepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, linkedSa)
   if (!prepared.ok) {
-    return null
+    return { ok: false }
   }
 
+  const plannerSession = buildKeywordPlannerSessionFromPrepared(prepared)
   const authType = prepared.apiAuth.authType
   if (authType === 'service_account') {
-    return { authType: 'service_account' }
+    return {
+      ok: true,
+      creds: { authType: 'service_account', linkedServiceAccountId: linkedSa },
+      plannerSession,
+    }
   }
 
   const adsAccount = await queryGoogleAdsAccountForOfferExpand(userId, offerId)
   if (!adsAccount?.customer_id) {
-    return { authType: 'oauth' }
+    return {
+      ok: true,
+      creds: { authType: 'oauth', linkedServiceAccountId: linkedSa },
+      plannerSession,
+    }
   }
 
   const oauthCreds = syncUserCredentialsFromPrepared(prepared)
   return {
-    authType: 'oauth',
-    customerId: adsAccount.customer_id,
-    refreshToken: prepared.refreshToken,
-    accountId: adsAccount.id,
-    clientId: oauthCreds?.client_id,
-    clientSecret: oauthCreds?.client_secret,
-    developerToken: oauthCreds?.developer_token,
+    ok: true,
+    creds: {
+      authType: 'oauth',
+      linkedServiceAccountId: linkedSa,
+      customerId: adsAccount.customer_id,
+      refreshToken: prepared.refreshToken,
+      accountId: adsAccount.id,
+      clientId: oauthCreds?.client_id,
+      clientSecret: oauthCreds?.client_secret,
+      developerToken: oauthCreds?.developer_token,
+    },
+    plannerSession,
   }
 }
 

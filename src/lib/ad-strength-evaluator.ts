@@ -18,8 +18,7 @@ import type {
   DescriptionAsset,
   QualityMetrics
 } from './ad-creative'
-import { getKeywordSearchVolumes } from './keyword-planner'
-import { loadKeywordPlannerVolumeAuthForContext } from './google-ads-accounts-auth'
+import { getKeywordSearchVolumesForPlannerContext } from './google-ads-accounts-auth'
 import { normalizeLanguageCode } from './language-country-codes'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import { loadPrompt, interpolateTemplate } from './prompt-loader'
@@ -1722,21 +1721,18 @@ async function calculateBrandSearchVolume(
     // ========================================
     const normalizedLanguage = normalizeLanguageCode(targetLanguage)
 
-    const volumeLoaded = userId
-      ? await loadKeywordPlannerVolumeAuthForContext({ userId, offerId })
-      : null
-    const volumeAuth = volumeLoaded?.ok ? volumeLoaded.volumeAuth : null
-    const volumeResults = volumeAuth
-      ? await getKeywordSearchVolumes(
-          [brandName],
-          targetCountry,
-          normalizedLanguage,
-          userId,
-          volumeAuth.authType,
-          volumeAuth.serviceAccountId,
-          undefined,
-          volumeAuth.plannerAuth
-        )
+    const volumeResult =
+      userId
+        ? await getKeywordSearchVolumesForPlannerContext({
+            userId,
+            offerId,
+            keywords: [brandName],
+            country: targetCountry,
+            language: normalizedLanguage,
+          })
+        : null
+    const volumeResults = volumeResult?.ok
+      ? volumeResult.volumes
       : [
           {
             avgMonthlySearches: 0,
