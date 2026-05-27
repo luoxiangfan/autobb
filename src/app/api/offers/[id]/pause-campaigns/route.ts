@@ -12,10 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { executeGoogleAdsCampaignRemoteActions } from '@/lib/google-ads-campaign-remote-actions'
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-} from '@/lib/google-ads-auth-context'
+import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 
 interface RouteContext {
@@ -104,12 +101,9 @@ export async function POST(
     let pausedCount = 0
     let errorCount = 0
 
-    const authContext = await getGoogleAdsAuthContext(offer.user_id)
-    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-      return NextResponse.json(
-        { error: 'Google Ads 认证未配置或已失效，无法暂停远端广告系列' },
-        { status: 400 }
-      )
+    const authPrepared = await prepareGoogleAdsApiCallForLinkedAccount(offer.user_id, null)
+    if (!authPrepared.ok) {
+      return NextResponse.json({ error: authPrepared.message }, { status: 400 })
     }
 
     const campaignMetaByGoogleId = new Map<

@@ -33,6 +33,9 @@ async function resolveKeywordPlannerOAuth(params: {
   let loginCustomerHint = ''
 
   if (params.preparedOAuth) {
+    if (!params.preparedOAuth.credentials) {
+      throw new Error('OAuth credentials bundle missing')
+    }
     refreshToken = (params.refreshToken || params.preparedOAuth.refreshToken || '').trim()
     credentials = params.preparedOAuth.credentials
     loginCustomerHint = params.preparedOAuth.oauthLoginCustomerId || ''
@@ -360,6 +363,8 @@ export async function getKeywordMetrics(params: {
   authType?: AuthType
   // 服务账号ID（当authType='service_account'时需要）
   serviceAccountId?: string
+  /** 路由层已 prepare 的 OAuth 凭证，跳过内部重复 heal */
+  preparedOAuth?: KeywordIdeasPreparedOAuth
 }): Promise<KeywordMetrics[]> {
   if (!params.userId) {
     throw new Error('userId is required')
@@ -394,6 +399,7 @@ export async function getKeywordMetrics(params: {
     userId: params.userId,
     refreshToken: params.refreshToken,
     serviceAccountId: params.serviceAccountId,
+    preparedOAuth: params.preparedOAuth,
   })
 
   const customer = await getKeywordPlannerOAuthCustomer({

@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getCustomerWithCredentials } from '@/lib/google-ads-api'
-import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getDatabase } from '@/lib/db'
@@ -256,7 +256,7 @@ export async function GET(
     >()
     const oauthPreparedByAccountId = new Map<
       number,
-      Awaited<ReturnType<typeof prepareGoogleAdsAccountApiCall>> & { ok: true }
+      Awaited<ReturnType<typeof prepareGoogleAdsApiCallForLinkedAccount>> & { ok: true }
     >()
 
     const groupedAccounts = Array.from(campaignsByAccountId.values())
@@ -286,20 +286,6 @@ export async function GET(
           return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
         }
         serviceAccountConfigById.set(serviceAccountId, config)
-      }
-    } else {
-      const oauthGate = await prepareGoogleAdsAccountApiCall({
-        authContext,
-        linkedServiceAccountId: null,
-      })
-      if (!oauthGate.ok) {
-        return NextResponse.json({ error: oauthGate.message }, { status: 400 })
-      }
-      if (!oauthGate.refreshToken) {
-        return NextResponse.json({
-          error: 'Google Ads OAuth未授权或已过期，请先在设置页面重新授权',
-          needsReauth: true,
-        }, { status: 400 })
       }
     }
 
@@ -482,10 +468,10 @@ export async function GET(
           typeof account.serviceAccountId === 'string' ? account.serviceAccountId.trim() : null
         let accountOAuthPrepared = oauthPreparedByAccountId.get(googleAdsAccountId)
         if (!accountOAuthPrepared) {
-          const prepared = await prepareGoogleAdsAccountApiCall({
-            authContext,
-            linkedServiceAccountId: linkedSaForOAuth,
-          })
+          const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+            numericUserId,
+            linkedSaForOAuth
+          )
           if (!prepared.ok) {
             console.warn(
               `[offers/campaigns] 跳过账号 ${googleAdsAccountId} GAQL: ${prepared.message}`

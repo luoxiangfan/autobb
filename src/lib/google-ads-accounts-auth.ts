@@ -9,7 +9,6 @@ import {
   resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthForAccount,
   resolveGoogleAdsApiAuthFromContext,
-  tryGetConfiguredGoogleAdsApiAuthForUser,
   type GoogleAdsApiAuthFields,
   type GoogleAdsAuthContext,
 } from './google-ads-auth-context'

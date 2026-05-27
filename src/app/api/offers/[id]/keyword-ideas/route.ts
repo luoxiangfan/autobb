@@ -204,6 +204,7 @@ export async function POST(
           userId: numericUserId,
           authType: apiAuth.authType,
           serviceAccountId: apiAuth.serviceAccountId,
+          preparedOAuth,
         })
 
         // 转换为KeywordIdea格式

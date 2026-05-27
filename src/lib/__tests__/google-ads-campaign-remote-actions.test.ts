@@ -1,17 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { queueGoogleAdsCampaignRemoteActions } from '@/lib/google-ads-campaign-remote-actions'
 
-const authContextFns = vi.hoisted(() => ({
-  resolveGoogleAdsApiAuthForAccount: vi.fn(async () => ({
-    ok: true,
-    ctx: { auth: { authType: 'oauth' as const } },
-    apiAuth: {
-      authType: 'oauth' as const,
-      refreshToken: 'rt',
-      serviceAccountId: undefined,
-      oauthLoginCustomerId: 'mcc-1',
-    },
-  })),
+const accountsAuthFns = vi.hoisted(() => ({
+  prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
 
 const apiFns = vi.hoisted(() => ({
@@ -19,16 +10,18 @@ const apiFns = vi.hoisted(() => ({
   updateGoogleAdsCampaignStatus: vi.fn(async () => {}),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
-  resolveGoogleAdsApiAuthForAccount: authContextFns.resolveGoogleAdsApiAuthForAccount,
+vi.mock('@/lib/google-ads-accounts-auth', () => ({
+  prepareGoogleAdsApiCallForLinkedAccount: accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
-  return {
-    ...actual,
-    prepareGoogleAdsAccountApiCall: vi.fn(async () => ({
-      ok: true as const,
+vi.mock('@/lib/google-ads-api', () => apiFns)
+
+describe('queueGoogleAdsCampaignRemoteActions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValue({
+      ok: true,
+      authContext: { auth: { authType: 'oauth' as const } },
       apiAuth: {
         authType: 'oauth' as const,
         refreshToken: 'rt',
@@ -42,15 +35,7 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
         developer_token: 'developer-token',
       },
       oauthLoginCustomerId: '5010618892',
-    })),
-  }
-})
-
-vi.mock('@/lib/google-ads-api', () => apiFns)
-
-describe('queueGoogleAdsCampaignRemoteActions', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
+    })
   })
 
   it('does not queue when account is missing customer_id', () => {

@@ -1,5 +1,4 @@
-import { prepareGoogleAdsAccountApiCall } from './google-ads-accounts-auth'
-import { resolveGoogleAdsApiAuthForAccount } from './google-ads-auth-context'
+import { prepareGoogleAdsApiCallForLinkedAccount } from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import {
   removeGoogleAdsCampaign,
@@ -164,49 +163,25 @@ export async function executeGoogleAdsCampaignRemoteActions(
   })
 
   try {
-    const authResolved = await resolveGoogleAdsApiAuthForAccount(
+    const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
       userId,
       adsAccount.service_account_id
     )
-
-    if (!authResolved.ok) {
-      const reason =
-        authResolved.reason === 'service_account_missing'
-          ? '缺少服务账号配置，无法调用远端 API'
-          : '缺少 Google Ads OAuth 凭证，无法调用远端 API'
+    if (!prepared.ok) {
       return {
         ...summary,
         executed: false,
         skipReason: 'CREDENTIALS_MISSING',
-        failures: [{ campaignId: '*', reason }],
+        failures: [{ campaignId: '*', reason: prepared.message }],
       }
     }
 
-    const { ctx, apiAuth } = authResolved
-    const auth = ctx.auth
-    let refreshToken = apiAuth.refreshToken
+    const { apiAuth } = prepared
+    const refreshToken = prepared.refreshToken
     const serviceAccountId = apiAuth.serviceAccountId
-
-    let oauthCredentials: OAuthApiCredentialsFields | undefined
-    let oauthLoginCustomerId: string | undefined
-    if (apiAuth.authType === 'oauth') {
-      const prepared = await prepareGoogleAdsAccountApiCall({
-        authContext: ctx,
-        linkedServiceAccountId: adsAccount.service_account_id,
-      })
-      if (!prepared.ok) {
-        return {
-          ...summary,
-          executed: false,
-          skipReason: 'CREDENTIALS_MISSING',
-          failures: [{ campaignId: '*', reason: prepared.message }],
-        }
-      }
-      refreshToken = prepared.refreshToken
-      oauthCredentials = prepared.oauthCredentials
-      oauthLoginCustomerId =
-        prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId
-    }
+    const oauthCredentials = prepared.oauthCredentials
+    const oauthLoginCustomerId =
+      prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
 
     summary.executed = true
 
@@ -249,7 +224,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
             accountId: adsAccount.id,
             userId,
             loginCustomerId,
-            authType: auth.authType,
+            authType: apiAuth.authType,
             serviceAccountId,
             credentials: oauthCredentials,
           })
@@ -264,7 +239,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
             accountId: adsAccount.id,
             userId,
             loginCustomerId,
-            authType: auth.authType,
+            authType: apiAuth.authType,
             serviceAccountId,
             credentials: oauthCredentials,
           })
@@ -281,7 +256,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
             id: adsAccount.id,
           },
           refreshToken,
-          authType: auth.authType,
+          authType: apiAuth.authType,
           serviceAccountId,
           serviceAccountMccId: apiAuth.serviceAccountMccId,
           oauthLoginCustomerId,
@@ -310,7 +285,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
                   accountId: adsAccount.id,
                   userId,
                   loginCustomerId,
-                  authType: auth.authType,
+                  authType: apiAuth.authType,
                   serviceAccountId,
                   credentials: oauthCredentials,
                 })

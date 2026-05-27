@@ -6,12 +6,8 @@
 
 import { enums } from 'google-ads-api'
 import { getDatabase } from './db'
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-} from './google-ads-auth-context'
 import { listGoogleAdsCampaigns } from './google-ads-api'
-import { prepareGoogleAdsAccountApiCall } from './google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount } from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import {
   categorizeCampaigns,
@@ -69,21 +65,16 @@ async function loadGoogleAdsQueryAuth(
   userId: number,
   linkedAccountServiceAccountId?: string | null
 ) {
-  const ctx = await getGoogleAdsAuthContext(userId)
-  if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
-    throw new Error('Google Ads OAuth凭证或服务账号配置无效')
-  }
-
-  const prepared = await prepareGoogleAdsAccountApiCall({
-    authContext: ctx,
-    linkedServiceAccountId: linkedAccountServiceAccountId ?? null,
-  })
+  const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+    userId,
+    linkedAccountServiceAccountId ?? null
+  )
   if (!prepared.ok) {
     throw new Error(prepared.message)
   }
 
   return {
-    ctx,
+    ctx: prepared.authContext,
     apiAuth: prepared.apiAuth,
     refreshToken: prepared.refreshToken,
     serviceAccountId: prepared.apiAuth.serviceAccountId,

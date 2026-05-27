@@ -14,8 +14,14 @@
  */
 
 import { getKeywordSearchVolumes } from './keyword-planner'
-import { loadKeywordPlannerVolumeAuth } from './google-ads-accounts-auth'
-import { getKeywordIdeas } from './google-ads-keyword-planner'
+import {
+  loadKeywordPlannerVolumeAuth,
+  prepareGoogleAdsApiCallForLinkedAccount,
+} from './google-ads-accounts-auth'
+import {
+  getKeywordIdeas,
+  type KeywordIdeasPreparedOAuth,
+} from './google-ads-keyword-planner'
 import { PLATFORMS, BRAND_PATTERNS, DEFAULTS } from './keyword-constants'
 import { getKeywordPlannerSiteFilterUrlForOffer } from './keyword-planner-site-filter'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
@@ -23,6 +29,29 @@ import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { normalizeLanguageCode } from './language-country-codes'
 import { hasModelAnchorEvidence } from './creative-type'
 import { containsAsinLikeToken, extractModelIdentifierTokensFromText } from './model-anchor-evidence'
+
+async function resolveKeywordIdeasPreparedOAuth(
+  userId: number | undefined,
+  authType: 'oauth' | 'service_account' | undefined,
+  serviceAccountId?: string
+): Promise<KeywordIdeasPreparedOAuth | undefined> {
+  if (!userId || authType === 'service_account') return undefined
+
+  const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+    userId,
+    serviceAccountId ?? null
+  )
+  if (!prepared.ok || prepared.apiAuth.authType !== 'oauth' || !prepared.oauthCredentials) {
+    return undefined
+  }
+
+  return {
+    refreshToken: prepared.refreshToken,
+    credentials: prepared.oauthCredentials,
+    oauthLoginCustomerId:
+      prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId,
+  }
+}
 
 async function getKeywordSearchVolumesWithPreparedAuth(
   keywords: string[],
@@ -1800,6 +1829,11 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
   console.log(`认证方式: ${authType}`)
 
   const pureBrandKeywords = getPureBrandKeywords(offer.brand)
+  const preparedOAuth = await resolveKeywordIdeasPreparedOAuth(
+    userId,
+    authType,
+    serviceAccountId
+  )
 
   // 1. 构建意图感知种子词池
   console.log('\n📍 Step 1: 构建意图感知种子词池')
@@ -1845,6 +1879,7 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
           userId,
           authType,
           serviceAccountId,
+          preparedOAuth,
         })
 
         console.log(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个建议`)
@@ -2086,6 +2121,11 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
   console.log(`认证方式: ${authType}`)
 
   const pureBrandKeywords = getPureBrandKeywords(offer.brand)
+  const preparedOAuth = await resolveKeywordIdeasPreparedOAuth(
+    userId,
+    authType,
+    serviceAccountId
+  )
 
   const keywordMap = new Map<string, UnifiedKeywordData>()
   let disableSearchVolumeFilter = false
@@ -2129,6 +2169,7 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
         userId,
         authType,
         serviceAccountId,
+        preparedOAuth,
       })
 
       console.log(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个关键词建议`)
@@ -2629,6 +2670,11 @@ export async function expandKeywordsWithSeeds(params: {
   finalSeedKeywords.forEach((seed, i) => console.log(`   ${i + 1}. "${seed}"`))
 
   const keywordMap = new Map<string, UnifiedKeywordData>()
+  const preparedOAuth = await resolveKeywordIdeasPreparedOAuth(
+    userId,
+    authType,
+    serviceAccountId
+  )
 
   try {
     // 1. 使用 Keyword Planner 获取扩展关键词
@@ -2643,6 +2689,7 @@ export async function expandKeywordsWithSeeds(params: {
         accountId,
         authType,
         serviceAccountId,
+        preparedOAuth,
       })
 
       console.log(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个关键词建议`)

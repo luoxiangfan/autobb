@@ -4,22 +4,27 @@ import {
   queueGoogleAdsCampaignRemoteActions,
 } from '@/lib/google-ads-campaign-remote-actions'
 
-const authContextFns = vi.hoisted(() => ({
-  resolveGoogleAdsApiAuthForAccount: vi.fn(),
+const accountsAuthFns = vi.hoisted(() => ({
+  prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
-  resolveGoogleAdsApiAuthForAccount: authContextFns.resolveGoogleAdsApiAuthForAccount,
+vi.mock('@/lib/google-ads-accounts-auth', () => ({
+  prepareGoogleAdsApiCallForLinkedAccount: accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
-  return {
-    ...actual,
-    prepareGoogleAdsAccountApiCall: vi.fn(async () => ({
-      ok: true as const,
+vi.mock('@/lib/google-ads-api', () => ({
+  removeGoogleAdsCampaign: vi.fn(async () => {}),
+  updateGoogleAdsCampaignStatus: vi.fn(async () => {}),
+}))
+
+describe('queueGoogleAdsCampaignRemoteActions eligibility', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValue({
+      ok: true,
+      authContext: { auth: { authType: 'oauth' } },
       apiAuth: {
-        authType: 'oauth' as const,
+        authType: 'oauth',
         refreshToken: 'rt',
         serviceAccountId: undefined,
         oauthLoginCustomerId: '5010618892',
@@ -31,26 +36,6 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
         developer_token: 'developer-token',
       },
       oauthLoginCustomerId: '5010618892',
-    })),
-  }
-})
-
-vi.mock('@/lib/google-ads-api', () => ({
-  removeGoogleAdsCampaign: vi.fn(async () => {}),
-  updateGoogleAdsCampaignStatus: vi.fn(async () => {}),
-}))
-
-describe('queueGoogleAdsCampaignRemoteActions eligibility', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
-      ok: true,
-      ctx: { auth: { authType: 'oauth' } },
-      apiAuth: {
-        authType: 'oauth',
-        refreshToken: 'rt',
-        serviceAccountId: undefined,
-      },
     })
   })
 
@@ -73,18 +58,19 @@ describe('queueGoogleAdsCampaignRemoteActions eligibility', () => {
     expect(result.executed).toBe(true)
     expect(result.planned).toBe(1)
     expect(result.action).toBe('REMOVE')
-    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledWith(1, undefined)
+    expect(accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount).toHaveBeenCalledWith(1, undefined)
   })
 
   it('uses linked account service_account_id when resolving auth', async () => {
-    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValueOnce({
+    accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValueOnce({
       ok: true,
-      ctx: { auth: { authType: 'service_account' } },
+      authContext: { auth: { authType: 'service_account' } },
       apiAuth: {
         authType: 'service_account',
         refreshToken: '',
         serviceAccountId: 'sa-linked',
       },
+      refreshToken: '',
     })
 
     await executeGoogleAdsCampaignRemoteActions({
@@ -103,7 +89,7 @@ describe('queueGoogleAdsCampaignRemoteActions eligibility', () => {
       skipAccountEligibilityCheck: true,
     })
 
-    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledWith(1, 'sa-linked')
+    expect(accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount).toHaveBeenCalledWith(1, 'sa-linked')
   })
 
   it('queues remote REMOVE for inactive account when skipAccountEligibilityCheck=true', () => {
@@ -126,9 +112,9 @@ describe('queueGoogleAdsCampaignRemoteActions eligibility', () => {
   })
 
   it('returns CREDENTIALS_MISSING when service_account is not configured', async () => {
-    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValueOnce({
+    accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValueOnce({
       ok: false,
-      reason: 'service_account_missing',
+      message: '未找到服务账号配置',
     })
 
     const result = await executeGoogleAdsCampaignRemoteActions({

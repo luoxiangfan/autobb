@@ -11,10 +11,7 @@ import {
   createGoogleAdsCalloutExtensions,
   createGoogleAdsSitelinkExtensions
 } from '@/lib/google-ads-api'
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-} from '@/lib/google-ads-auth-context'
+import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
 import { createError, ErrorCode, AppError } from '@/lib/errors'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
 import { calculateLaunchScore } from '@/lib/scoring'
@@ -586,11 +583,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 6.1 检查 OAuth 凭证或服务账号配置（含共享管理员 assignment）
-    const authContext = await getGoogleAdsAuthContext(userId)
-    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+    const authPrepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, null)
+    if (!authPrepared.ok) {
       const error = new AppError(ErrorCode.GADS_CREDENTIALS_INVALID, {
         userId,
-        reason: 'OAuth refresh token or service account configuration missing'
+        reason: authPrepared.message,
       })
       return NextResponse.json(error.toJSON(), { status: error.httpStatus })
     }
