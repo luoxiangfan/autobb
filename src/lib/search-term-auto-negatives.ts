@@ -2,7 +2,7 @@ import { getDatabase } from '@/lib/db'
 import { boolCondition, boolParam } from '@/lib/db-helpers'
 import { createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
 import {
-  loadOAuthGoogleAdsCallBundleForContext,
+  prepareGoogleAdsAccountApiCall,
   type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
@@ -172,9 +172,9 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
   const contextByUser = new Map<number, GoogleAdsAuthContext>()
   const linkedServiceAccountByAccountId = new Map<number, string | null>()
   const parentMccByAccountId = new Map<number, string | null>()
-  const oauthHealedByUser = new Map<
+  const preparedByAccountId = new Map<
     number,
-    { credentials: OAuthApiCredentialsFields; oauthLoginCustomerId?: string }
+    Awaited<ReturnType<typeof prepareGoogleAdsAccountApiCall>> & { ok: true }
   >()
 
   const getContext = async (userId: number) => {
@@ -224,52 +224,45 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
       throw new Error('google_ads_auth_not_configured')
     }
 
-    const apiAuth = await resolveGoogleAdsApiAuthFromContext(
-      ctx,
-      await getLinkedServiceAccountId(action.googleAdsAccountId)
-    )
+    const linkedServiceAccountId = await getLinkedServiceAccountId(action.googleAdsAccountId)
+    let prepared = preparedByAccountId.get(action.googleAdsAccountId)
+    if (!prepared) {
+      const result = await prepareGoogleAdsAccountApiCall({
+        authContext: ctx,
+        linkedServiceAccountId,
+      })
+      if (!result.ok) {
+        throw new Error(result.message)
+      }
+      prepared = result
+      preparedByAccountId.set(action.googleAdsAccountId, result)
+    }
+
+    const apiAuth = prepared.apiAuth
+    const parentMccId = await getParentMccId(action.googleAdsAccountId, action.parentMccId)
 
     if (apiAuth.authType === 'oauth') {
-      const effectiveRefreshToken = String(apiAuth.refreshToken || '').trim()
-      if (!effectiveRefreshToken) {
+      if (!prepared.refreshToken) {
         throw new Error('missing_refresh_token_for_oauth')
       }
-      let healedBundle = oauthHealedByUser.get(action.userId)
-      if (!healedBundle) {
-        const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
-          userId: action.userId,
-          authContext: ctx,
-        })
-        if (!oauthBundle.ok) {
-          throw new Error(oauthBundle.message)
-        }
-        if (!oauthBundle.bundle?.oauthCredentials) {
-          throw new Error('OAuth credentials bundle missing')
-        }
-        healedBundle = {
-          credentials: oauthBundle.bundle.oauthCredentials,
-          oauthLoginCustomerId:
-            oauthBundle.bundle.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
-        }
-        oauthHealedByUser.set(action.userId, healedBundle)
+      if (!prepared.oauthCredentials) {
+        throw new Error('OAuth credentials bundle missing')
       }
-      const parentMccId = await getParentMccId(action.googleAdsAccountId, action.parentMccId)
       return {
         authType: apiAuth.authType,
         serviceAccountId: undefined as string | undefined,
         serviceAccountMccId: undefined as string | undefined,
-        refreshToken: effectiveRefreshToken,
+        refreshToken: prepared.refreshToken,
         parentMccId,
-        oauthLoginCustomerId: healedBundle.oauthLoginCustomerId,
-        credentials: healedBundle.credentials,
+        oauthLoginCustomerId:
+          prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+        credentials: prepared.oauthCredentials,
       }
     }
 
     if (!apiAuth.serviceAccountId) {
       throw new Error('missing_service_account')
     }
-
-    const parentMccId = await getParentMccId(action.googleAdsAccountId, action.parentMccId)
 
     return {
       authType: apiAuth.authType,

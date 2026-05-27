@@ -13,12 +13,8 @@
 import { getCustomerWithCredentials } from './google-ads-api'
 import {
   getGoogleAdsAuthContext,
-  resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
-import {
-  loadOAuthGoogleAdsCallBundleForContext,
-  resolveOAuthRefreshToken,
-} from './google-ads-accounts-auth'
+import { prepareGoogleAdsAccountApiCall } from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import { getDatabase } from './db'
 import type { AdStrengthRating } from './ad-strength-evaluator'
@@ -47,7 +43,14 @@ async function getGoogleAdsClient(
   const authContext = await getGoogleAdsAuthContext(userId)
   const linkedServiceAccountId =
     typeof account.service_account_id === 'string' ? account.service_account_id.trim() : ''
-  const apiAuth = await resolveGoogleAdsApiAuthFromContext(authContext, linkedServiceAccountId || null)
+  const prepared = await prepareGoogleAdsAccountApiCall({
+    authContext,
+    linkedServiceAccountId: linkedServiceAccountId || null,
+  })
+  if (!prepared.ok) {
+    throw new Error(prepared.message)
+  }
+  const apiAuth = prepared.apiAuth
 
   if (apiAuth.authType === 'service_account') {
     if (!apiAuth.serviceAccountId) {
@@ -68,24 +71,16 @@ async function getGoogleAdsClient(
     }
   }
 
-  const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
-    userId,
-    authContext,
-  })
-  if (!oauthBundle.ok) {
-    throw new Error(oauthBundle.message)
-  }
-  if (!oauthBundle.bundle?.oauthCredentials) {
+  if (!prepared.oauthCredentials) {
     throw new Error('OAuth credentials bundle missing')
   }
-
-  const refreshToken = resolveOAuthRefreshToken(apiAuth, authContext.oauthCredentials)
-  if (!refreshToken) {
+  if (!prepared.refreshToken) {
     throw new Error('Google Ads账号缺少refresh token')
   }
 
+  const refreshToken = prepared.refreshToken
   const oauthLoginCustomerId =
-    oauthBundle.bundle.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+    prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
 
   const customer = await runWithLoginCustomerFallbackForAccount({
     adsAccount: {
@@ -102,7 +97,7 @@ async function getGoogleAdsClient(
         customerId,
         refreshToken,
         loginCustomerId,
-        credentials: oauthBundle.bundle!.oauthCredentials,
+        credentials: prepared.oauthCredentials,
         accountParentMccId: account.parent_mcc_id,
         oauthLoginCustomerIdHint: oauthLoginCustomerId,
         accountId: account.id,

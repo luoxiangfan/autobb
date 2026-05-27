@@ -10,15 +10,11 @@
 import { getDatabase } from './db'
 import { saveCreativePerformance, PerformanceData } from './bonus-score-calculator'
 import { getCustomerWithCredentials } from './google-ads-api'
-import {
-  loadOAuthGoogleAdsCallBundleForContext,
-  type OAuthApiCredentialsFields,
-} from './google-ads-accounts-auth'
+import { prepareGoogleAdsAccountApiCall } from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
@@ -266,28 +262,24 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
       throw new Error('No active Google Ads account found')
     }
 
-    const apiAuth = await resolveGoogleAdsApiAuthFromContext(ctx, account.service_account_id)
+    const prepared = await prepareGoogleAdsAccountApiCall({
+      authContext: ctx,
+      linkedServiceAccountId: account.service_account_id,
+    })
+    if (!prepared.ok) {
+      throw new Error(prepared.message)
+    }
+    const apiAuth = prepared.apiAuth
     if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {
       throw new Error('未找到服务账号配置，无法同步效果数据')
     }
-    if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
+    if (apiAuth.authType === 'oauth' && !prepared.refreshToken) {
       throw new Error('Missing refresh token. Please complete OAuth authorization in Settings.')
     }
 
-    let oauthCredentials: OAuthApiCredentialsFields | undefined
-    let oauthLoginCustomerId = apiAuth.oauthLoginCustomerId
-    if (apiAuth.authType === 'oauth') {
-      const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
-        userId: userIdNum,
-        authContext: ctx,
-      })
-      if (!oauthBundle.ok) {
-        throw new Error(oauthBundle.message)
-      }
-      oauthCredentials = oauthBundle.bundle?.oauthCredentials
-      oauthLoginCustomerId =
-        oauthBundle.bundle?.oauthLoginCustomerId ?? oauthLoginCustomerId
-    }
+    const oauthCredentials = prepared.oauthCredentials
+    const oauthLoginCustomerId =
+      prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
 
     return await runWithLoginCustomerFallbackForAccount({
       adsAccount: {
@@ -295,7 +287,7 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
         parent_mcc_id: account.parent_mcc_id,
         id: account.id,
       },
-      refreshToken: apiAuth.refreshToken,
+      refreshToken: prepared.refreshToken,
       authType: apiAuth.authType,
       serviceAccountId: apiAuth.serviceAccountId,
       serviceAccountMccId: apiAuth.serviceAccountMccId,
@@ -304,7 +296,7 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
       callback: async (loginCustomerId) => {
         const customer = await getCustomerWithCredentials({
           customerId: account.customer_id,
-          refreshToken: apiAuth.refreshToken,
+          refreshToken: prepared.refreshToken,
           accountId: account.id,
           userId: userIdNum,
           loginCustomerId,

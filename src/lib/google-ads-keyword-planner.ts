@@ -1,14 +1,8 @@
 import { getCustomerWithCredentials } from './google-ads-api'
-import {
-  loadOAuthGoogleAdsCallBundleForContext,
-  resolveOAuthRefreshToken,
-} from './google-ads-accounts-auth'
+import { prepareGoogleAdsAccountApiCall } from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import { getDatabase } from './db'
-import {
-  getGoogleAdsAuthContext,
-  resolveGoogleAdsApiAuthFromContext,
-} from './google-ads-auth-context'
+import { getGoogleAdsAuthContext } from './google-ads-auth-context'
 import { getLoginCustomerId, AuthType } from './google-ads-service-account'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 import { getGoogleAdsLanguageCode, getGoogleAdsGeoTargetId } from './language-country-codes'
@@ -24,39 +18,28 @@ async function resolveKeywordPlannerOAuth(params: {
   serviceAccountId?: string
 }) {
   const authContext = await getGoogleAdsAuthContext(params.userId)
-  const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+  const prepared = await prepareGoogleAdsAccountApiCall({
     authContext,
-    params.serviceAccountId ?? null
-  )
-  if (apiAuth.authType !== 'oauth') {
+    linkedServiceAccountId: params.serviceAccountId ?? null,
+  })
+  if (!prepared.ok) {
+    throw new Error(prepared.message)
+  }
+  if (prepared.apiAuth.authType !== 'oauth') {
     throw new Error('Keyword Planner requires OAuth when authType is oauth')
   }
-
-  const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
-    userId: params.userId,
-    authContext,
-  })
-  if (!oauthBundle.ok) {
-    throw new Error(oauthBundle.message)
-  }
-  if (!oauthBundle.bundle?.oauthCredentials) {
+  if (!prepared.oauthCredentials) {
     throw new Error('OAuth credentials bundle missing')
   }
 
-  const refreshToken = (
-    params.refreshToken ||
-    resolveOAuthRefreshToken(apiAuth, authContext.oauthCredentials) ||
-    ''
-  ).trim()
+  const refreshToken = (params.refreshToken || prepared.refreshToken || '').trim()
   if (!refreshToken) {
     throw new Error('OAuth refresh token not found')
   }
 
-  const credentials = oauthBundle.bundle.oauthCredentials
+  const credentials = prepared.oauthCredentials
   const loginCustomerHint =
-    oauthBundle.bundle.oauthLoginCustomerId ||
-    apiAuth.oauthLoginCustomerId ||
-    ''
+    prepared.oauthLoginCustomerId || prepared.apiAuth.oauthLoginCustomerId || ''
 
   const loginCustomerId = await getLoginCustomerId({
     authConfig: {

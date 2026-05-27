@@ -17,12 +17,9 @@ import {
   toDbCampaignBackupJsonField,
 } from './campaign-backups'
 import { getCustomerWithCredentials, trackOAuthApiCall } from './google-ads-api'
+import { getGoogleAdsAuthContext } from './google-ads-auth-context'
 import {
-  getGoogleAdsAuthContext,
-  resolveGoogleAdsApiAuthFromContext,
-} from './google-ads-auth-context'
-import {
-  loadOAuthGoogleAdsCallBundleForContext,
+  prepareGoogleAdsAccountApiCall,
   resolveSyncAuthForAccount,
   type OAuthApiCredentialsFields,
 } from './google-ads-accounts-auth'
@@ -387,18 +384,6 @@ export async function syncCampaignsFromGoogleAds(
 
     const authContext = await getGoogleAdsAuthContext(userId)
 
-    let oauthApiCredentials: OAuthApiCredentialsFields | undefined
-    let oauthLoginCustomerId: string | undefined
-    if (authContext.auth.authType === 'oauth') {
-      const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({ userId, authContext })
-      if (!oauthBundle.ok) {
-        result.warnings.push(`OAuth 凭证解析失败，已跳过 Google Ads 同步: ${oauthBundle.message}`)
-        return result
-      }
-      oauthApiCredentials = oauthBundle.bundle?.oauthCredentials
-      oauthLoginCustomerId = oauthBundle.bundle?.oauthLoginCustomerId || undefined
-    }
-
     // 3. 对每个账户执行同步
     for (const account of accounts) {
       // 如果指定了 customerId，只同步该账户
@@ -413,16 +398,30 @@ export async function syncCampaignsFromGoogleAds(
           typeof account.service_account_id === 'string'
             ? account.service_account_id.trim()
             : ''
-        const accountApiAuth = await resolveGoogleAdsApiAuthFromContext(
+        const accountPrepared = await prepareGoogleAdsAccountApiCall({
           authContext,
-          linkedServiceAccountId || account.service_account_id
-        )
-        const { syncAuthType, syncServiceAccountId, syncRefreshToken } = resolveSyncAuthForAccount(
-          accountApiAuth,
-          authContext.oauthCredentials,
-          account,
-          authContext
-        )
+          linkedServiceAccountId: linkedServiceAccountId || account.service_account_id,
+        })
+        if (!accountPrepared.ok) {
+          result.warnings.push(
+            `账户 ${account.customer_id}: ${accountPrepared.message}，已跳过同步`
+          )
+          continue
+        }
+
+        const accountApiAuth = accountPrepared.apiAuth
+        const { syncAuthType, syncServiceAccountId, syncRefreshToken: resolvedRefreshToken } =
+          resolveSyncAuthForAccount(
+            accountApiAuth,
+            authContext.oauthCredentials,
+            account,
+            authContext
+          )
+        const syncRefreshToken =
+          syncAuthType === 'oauth' ? accountPrepared.refreshToken : resolvedRefreshToken
+        const oauthApiCredentials = accountPrepared.oauthCredentials
+        const oauthLoginCustomerId =
+          accountPrepared.oauthLoginCustomerId ?? accountApiAuth.oauthLoginCustomerId
 
         if (syncAuthType === 'service_account' && !syncServiceAccountId) {
           result.warnings.push(

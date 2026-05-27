@@ -101,7 +101,7 @@ export async function POST(
         { status: 400 }
       )
     }
-    const { apiAuth } = prepared
+    const { apiAuth, refreshToken: preparedRefreshToken } = prepared
 
     // 准备种子关键词
     let finalSeedKeywords = [...seedKeywords]
@@ -177,7 +177,7 @@ export async function POST(
       // 2. 调用Keyword Planner API
       getKeywordIdeas({
         customerId: googleAdsAccount.customerId,
-        refreshToken: apiAuth.authType === 'oauth' ? apiAuth.refreshToken : undefined,
+        refreshToken: apiAuth.authType === 'oauth' ? preparedRefreshToken : undefined,
         seedKeywords: finalSeedKeywords,
         pageUrl: siteFilterUrl,
         targetCountry: offer.target_country,

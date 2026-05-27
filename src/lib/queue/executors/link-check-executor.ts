@@ -24,11 +24,11 @@ import { resolveAffiliateLink } from '@/lib/url-resolver'
 import { getProxyForCountry } from '../user-proxy-loader'
 import { analyzeProxyError } from './proxy-error-handler'
 import { pauseClickFarmTasksByOfferId } from '../../click-farm'
+import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
 import {
-  prepareGoogleAdsAccountApiCall,
-  type OAuthApiCredentialsFields,
-} from '@/lib/google-ads-accounts-auth'
-import { resolveGoogleAdsApiAuthForAccount } from '@/lib/google-ads-auth-context'
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+} from '@/lib/google-ads-auth-context'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { updateGoogleAdsCampaignStatus } from '../../google-ads-api'
 
@@ -355,6 +355,9 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                 number,
                 Awaited<ReturnType<typeof prepareGoogleAdsAccountApiCall>> & { ok: true }
               >()
+              let linkCheckAuthContext: Awaited<
+                ReturnType<typeof getGoogleAdsAuthContext>
+              > | null = null
               if (pausedInDb > 0 && campaignsToSyncGoogle.length > 0) {
                 for (const campaign of campaignsToSyncGoogle) {
                   try {
@@ -375,23 +378,33 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                       | undefined
 
                     if (adsAccount) {
-                      const authResolved = await resolveGoogleAdsApiAuthForAccount(
-                        offer.user_id,
-                        adsAccount.service_account_id
-                      )
-                      if (!authResolved.ok) {
-                        console.warn(
-                          `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: 凭证无效 (${authResolved.reason})`
-                        )
-                        continue
+                      if (!linkCheckAuthContext) {
+                        linkCheckAuthContext = await getGoogleAdsAuthContext(offer.user_id)
+                        if (!hasConfiguredGoogleAdsAuthFromContext(linkCheckAuthContext)) {
+                          console.warn(
+                            `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: Google Ads 认证未配置`
+                          )
+                          continue
+                        }
                       }
-                      const { apiAuth } = authResolved
-                      if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
-                        console.warn(
-                          `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: OAuth 缺少 refresh_token`
-                        )
-                        continue
+
+                      let prepared = preparedByAccountId.get(campaign.google_ads_account_id)
+                      if (!prepared) {
+                        const result = await prepareGoogleAdsAccountApiCall({
+                          authContext: linkCheckAuthContext,
+                          linkedServiceAccountId: adsAccount.service_account_id,
+                        })
+                        if (!result.ok) {
+                          console.warn(
+                            `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: ${result.message}`
+                          )
+                          continue
+                        }
+                        prepared = result
+                        preparedByAccountId.set(campaign.google_ads_account_id, result)
                       }
+
+                      const { apiAuth } = prepared
                       if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {
                         console.warn(
                           `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: 缺少服务账号配置`
@@ -399,30 +412,10 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                         continue
                       }
 
-                      let oauthCredentials: OAuthApiCredentialsFields | undefined
-                      let oauthLoginCustomerId: string | undefined
-                      let refreshToken = apiAuth.refreshToken
-                      if (apiAuth.authType === 'oauth') {
-                        let prepared = preparedByAccountId.get(campaign.google_ads_account_id)
-                        if (!prepared) {
-                          const result = await prepareGoogleAdsAccountApiCall({
-                            authContext: authResolved.ctx,
-                            linkedServiceAccountId: adsAccount.service_account_id,
-                          })
-                          if (!result.ok) {
-                            console.warn(
-                              `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: ${result.message}`
-                            )
-                            continue
-                          }
-                          prepared = result
-                          preparedByAccountId.set(campaign.google_ads_account_id, result)
-                        }
-                        oauthCredentials = prepared.oauthCredentials
-                        oauthLoginCustomerId =
-                          prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
-                        refreshToken = prepared.refreshToken
-                      }
+                      const refreshToken = prepared.refreshToken
+                      const oauthCredentials = prepared.oauthCredentials
+                      const oauthLoginCustomerId =
+                        prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
 
                       await runWithLoginCustomerFallbackForAccount({
                         adsAccount: {

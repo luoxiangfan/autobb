@@ -11,13 +11,13 @@ import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 import { refreshAccessToken, getGoogleAdsCredentials } from './google-ads-oauth'
 import {
   getGoogleAdsAuthContext,
-  resolveGoogleAdsApiAuthFromContext,
   type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
 import { resolveGoogleAdsCredentialOwnerId, resolveGoogleAdsApiAccessLevel } from './google-ads-auth-assignment'
 import { getGoogleAdsLanguageIdString, getGoogleAdsGeoTargetId, normalizeCountryCode, normalizeLanguageCode } from './language-country-codes'
 import { getGoogleAdsClient } from './google-ads-api'
 import { getServiceAccountConfig, AuthType } from './google-ads-service-account'
+import type { OAuthApiCredentialsFields } from './google-ads-accounts-auth'
 
 /**
  * 🔧 修复(2025-12-24): 获取 KeywordPlanIdeaService
@@ -139,7 +139,12 @@ export async function getGoogleAdsConfig(
   userId?: number,
   authType?: AuthType,
   serviceAccountId?: string,
-  existingContext?: GoogleAdsAuthContext
+  existingContext?: GoogleAdsAuthContext,
+  healedOAuth?: {
+    credentials: OAuthApiCredentialsFields
+    loginCustomerId?: string
+    refreshToken?: string
+  }
 ): Promise<KeywordPlannerConfig | null> {
   try {
     if (!userId) {
@@ -148,13 +153,42 @@ export async function getGoogleAdsConfig(
     }
 
     const authContext = existingContext ?? (await getGoogleAdsAuthContext(userId))
-    const apiAuth = await resolveGoogleAdsApiAuthFromContext(authContext, serviceAccountId ?? null)
     const effectiveAuthType: AuthType =
-      authType === 'service_account' || authType === 'oauth' ? authType : apiAuth.authType
-    const effectiveServiceAccountId = serviceAccountId ?? apiAuth.serviceAccountId
+      authType === 'service_account' || authType === 'oauth'
+        ? authType
+        : authContext.auth.authType
+    const effectiveServiceAccountId =
+      serviceAccountId ?? authContext.serviceAccountConfig?.id?.toString()
 
     // 1. OAuth 模式（含管理员共享 OAuth）
     if (effectiveAuthType === 'oauth') {
+      if (healedOAuth?.credentials) {
+        const refreshToken =
+          healedOAuth.refreshToken ||
+          authContext.oauthCredentials?.refresh_token ||
+          (await getGoogleAdsCredentials(userId))?.refresh_token
+        if (!refreshToken) {
+          console.error(
+            `[KeywordPlanner] User ${userId} has no refresh token. Please authorize Google Ads API in Settings.`
+          )
+          return null
+        }
+        const loginCustomerId =
+          healedOAuth.loginCustomerId ||
+          authContext.oauthCredentials?.login_customer_id ||
+          ''
+        console.log(`[KeywordPlanner] Using OAuth authentication for user ${userId} (healed credentials)`)
+        return {
+          clientId: healedOAuth.credentials.client_id,
+          clientSecret: healedOAuth.credentials.client_secret,
+          developerToken: healedOAuth.credentials.developer_token,
+          customerId: loginCustomerId,
+          loginCustomerId,
+          refreshToken,
+          authType: 'oauth' as const,
+        }
+      }
+
       const credentials = authContext.oauthCredentials ?? (await getGoogleAdsCredentials(userId))
       if (!credentials?.refresh_token) {
         console.error(`[KeywordPlanner] User ${userId} has no refresh token. Please authorize Google Ads API in Settings.`)
@@ -210,6 +244,15 @@ export async function getGoogleAdsConfig(
 /**
  * 从Google Ads Keyword Planner获取关键词搜索量
  */
+export type KeywordPlannerAuthOptions = {
+  existingContext?: GoogleAdsAuthContext
+  healedOAuth?: {
+    credentials: OAuthApiCredentialsFields
+    loginCustomerId?: string
+    refreshToken?: string
+  }
+}
+
 export async function getKeywordSearchVolumes(
   keywords: string[],
   country: string,
@@ -217,7 +260,8 @@ export async function getKeywordSearchVolumes(
   userId?: number,
   authType?: AuthType,
   serviceAccountId?: string,
-  onProgress?: (info: { message: string; current?: number; total?: number }) => Promise<void> | void
+  onProgress?: (info: { message: string; current?: number; total?: number }) => Promise<void> | void,
+  plannerAuth?: KeywordPlannerAuthOptions
 ): Promise<KeywordVolume[]> {
   if (!keywords.length) return []
 
@@ -388,7 +432,13 @@ export async function getKeywordSearchVolumes(
     if (needApiKeywords.length > 0) {
       // 🔧 修复(2025-12-12): 独立账号模式 - 必须传递 userId
       // 支持 OAuth 和服务账号两种认证方式
-      const config = await getGoogleAdsConfig(userId, authType, serviceAccountId)
+      const config = await getGoogleAdsConfig(
+        userId,
+        authType,
+        serviceAccountId,
+        plannerAuth?.existingContext,
+        plannerAuth?.healedOAuth
+      )
 
       // 验证配置（根据认证类型验证不同字段）
       const isConfigValid = config?.developerToken && config?.customerId &&

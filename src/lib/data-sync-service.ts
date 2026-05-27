@@ -7,7 +7,7 @@ import {
   resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
 import {
-  resolveOAuthRefreshToken,
+  prepareGoogleAdsAccountApiCall,
   resolveSyncUserCredentialsForJob,
   type SyncUserCredentials,
 } from './google-ads-accounts-auth'
@@ -356,7 +356,7 @@ export class DataSyncService {
       // 🔧 修复(2026-01-03): 添加account_name字段用于风险警报显示
       const accounts = await db.query(
         `
-        SELECT id, customer_id, parent_mcc_id, account_name, refresh_token, user_id, service_account_id, currency
+        SELECT id, customer_id, parent_mcc_id, account_name, user_id, service_account_id, currency
         FROM google_ads_accounts
         WHERE user_id = ? AND ${isActiveCondition}
       `,
@@ -366,7 +366,6 @@ export class DataSyncService {
         customer_id: string
         parent_mcc_id: string | null
         account_name: string | null
-        refresh_token: string
         user_id: number
         service_account_id: string | null
         currency: string | null
@@ -464,15 +463,43 @@ export class DataSyncService {
           const startDate = new Date()
           startDate.setDate(startDate.getDate() - 7)
 
-          const accountApiAuth = await resolveGoogleAdsApiAuthFromContext(
+          const accountPrepared = await prepareGoogleAdsAccountApiCall({
             authContext,
-            account.service_account_id
-          )
+            linkedServiceAccountId: account.service_account_id,
+          })
+          if (!accountPrepared.ok) {
+            console.warn(
+              `⚠️ 用户 ${userId} 账户 ${account.customer_id} 凭证不可用: ${accountPrepared.message}`
+            )
+            await db.exec(
+              `
+                UPDATE sync_logs
+                SET status = 'failed', error_message = ?, duration_ms = ?, completed_at = ?
+                WHERE id = ?
+                `,
+              [
+                accountPrepared.message,
+                Date.now() - startTime,
+                new Date().toISOString(),
+                accountSyncLogId,
+              ]
+            )
+            continue
+          }
 
-          let refreshToken =
-            accountApiAuth.authType === 'oauth'
-              ? resolveOAuthRefreshToken(accountApiAuth, authContext.oauthCredentials) || undefined
-              : undefined
+          const accountApiAuth = accountPrepared.apiAuth
+          const refreshToken =
+            accountApiAuth.authType === 'oauth' ? accountPrepared.refreshToken : undefined
+          const accountSyncCredentials: SyncUserCredentials =
+            accountPrepared.oauthCredentials != null
+              ? {
+                  client_id: accountPrepared.oauthCredentials.client_id,
+                  client_secret: accountPrepared.oauthCredentials.client_secret,
+                  developer_token: accountPrepared.oauthCredentials.developer_token,
+                  login_customer_id: accountPrepared.oauthLoginCustomerId,
+                }
+              : userCredentials
+
           if (accountApiAuth.authType === 'oauth' && !refreshToken) {
               console.warn(`⚠️ 用户 ${userId} OAuth模式下缺少refresh_token，跳过账户 ${account.customer_id}`)
               // 🔧 修复(2025-12-28): 清理因凭证缺失而无法同步的sync_log
@@ -503,7 +530,7 @@ export class DataSyncService {
             accountId: account.id,
             userId: userId,
             accountParentMccId: account.parent_mcc_id || undefined,
-            credentials: userCredentials,
+            credentials: accountSyncCredentials,
             authType: accountApiAuth.authType,
             serviceAccountId: accountApiAuth.serviceAccountId,
           })
@@ -601,7 +628,7 @@ export class DataSyncService {
               endDate: endDateStr,
               accountId: account.id,
               accountParentMccId: account.parent_mcc_id || undefined,
-              credentials: userCredentials,
+              credentials: accountSyncCredentials,
               authType: accountApiAuth.authType,
               serviceAccountId: accountApiAuth.serviceAccountId,
               campaigns,

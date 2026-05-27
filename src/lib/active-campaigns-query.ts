@@ -6,12 +6,12 @@
 
 import { enums } from 'google-ads-api'
 import { getDatabase } from './db'
-import { resolveGoogleAdsApiAuthForAccount } from './google-ads-auth-context'
 import {
-  listGoogleAdsCampaigns,
-  type OAuthApiCredentialsFields,
-} from './google-ads-api'
-import { loadOAuthGoogleAdsCallBundleForContext } from './google-ads-accounts-auth'
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+} from './google-ads-auth-context'
+import { listGoogleAdsCampaigns } from './google-ads-api'
+import { prepareGoogleAdsAccountApiCall } from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import {
   categorizeCampaigns,
@@ -69,39 +69,28 @@ async function loadGoogleAdsQueryAuth(
   userId: number,
   linkedAccountServiceAccountId?: string | null
 ) {
-  const authResolved = await resolveGoogleAdsApiAuthForAccount(
-    userId,
-    linkedAccountServiceAccountId
-  )
-
-  if (!authResolved.ok) {
+  const ctx = await getGoogleAdsAuthContext(userId)
+  if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
     throw new Error('Google Ads OAuth凭证或服务账号配置无效')
   }
 
-  const { ctx, apiAuth } = authResolved
-  let oauthCredentials: OAuthApiCredentialsFields | undefined
-  let oauthLoginCustomerId: string | undefined
-  if (apiAuth.authType === 'oauth') {
-    const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
-      userId,
-      authContext: ctx,
-    })
-    if (!oauthBundle.ok) {
-      throw new Error(oauthBundle.message)
-    }
-    oauthCredentials = oauthBundle.bundle?.oauthCredentials
-    oauthLoginCustomerId =
-      oauthBundle.bundle?.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+  const prepared = await prepareGoogleAdsAccountApiCall({
+    authContext: ctx,
+    linkedServiceAccountId: linkedAccountServiceAccountId ?? null,
+  })
+  if (!prepared.ok) {
+    throw new Error(prepared.message)
   }
 
   return {
     ctx,
-    apiAuth,
-    refreshToken: apiAuth.refreshToken,
-    serviceAccountId: apiAuth.serviceAccountId,
-    serviceAccountMccId: apiAuth.serviceAccountMccId,
-    oauthCredentials,
-    oauthLoginCustomerId,
+    apiAuth: prepared.apiAuth,
+    refreshToken: prepared.refreshToken,
+    serviceAccountId: prepared.apiAuth.serviceAccountId,
+    serviceAccountMccId: prepared.apiAuth.serviceAccountMccId,
+    oauthCredentials: prepared.oauthCredentials,
+    oauthLoginCustomerId:
+      prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId,
   }
 }
 

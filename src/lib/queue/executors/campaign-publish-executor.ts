@@ -19,7 +19,6 @@ import { getDatabase } from '@/lib/db'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import {

@@ -53,14 +53,24 @@ export async function GET(request: NextRequest) {
     if (!prepared.ok) {
       return NextResponse.json({ error: prepared.message }, { status: 400 })
     }
-    const { apiAuth } = prepared
     const volumes = await getKeywordSearchVolumes(
       keywords,
       country,
       language,
       userId,
-      apiAuth.authType,
-      apiAuth.serviceAccountId
+      prepared.apiAuth.authType,
+      prepared.apiAuth.serviceAccountId,
+      undefined,
+      {
+        existingContext: authContext,
+        healedOAuth: prepared.oauthCredentials
+          ? {
+              credentials: prepared.oauthCredentials,
+              loginCustomerId: prepared.oauthLoginCustomerId,
+              refreshToken: prepared.refreshToken,
+            }
+          : undefined,
+      }
     )
 
     return NextResponse.json({

@@ -26,7 +26,6 @@ import { getDatabase } from '@/lib/db'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
 import { updateCampaignFinalUrlSuffix, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
 import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
@@ -227,11 +226,15 @@ async function resolveUrlSwapTargetApiAuth(params: {
     })
   }
 
-  const accountMeta = accountId ? params.accountMetaById.get(accountId) : undefined
+  if (!accountId) {
+    throw new Error('url-swap 目标缺少 google_ads_account_id，无法解析 Google Ads 凭证')
+  }
+
+  const accountMeta = params.accountMetaById.get(accountId)
   const linkedSa = accountMeta?.service_account_id ?? null
 
-  let prepared = accountId ? params.preparedByAccountId.get(accountId) : undefined
-  if (accountId && !prepared) {
+  let prepared = params.preparedByAccountId.get(accountId)
+  if (!prepared) {
     const result = await prepareGoogleAdsAccountApiCall({
       authContext: params.ctx,
       linkedServiceAccountId: linkedSa,
@@ -243,16 +246,15 @@ async function resolveUrlSwapTargetApiAuth(params: {
     params.preparedByAccountId.set(accountId, result)
   }
 
-  const apiAuth = prepared?.apiAuth ?? (await resolveGoogleAdsApiAuthFromContext(params.ctx, linkedSa))
-
   return {
-    refreshToken: prepared?.refreshToken ?? apiAuth.refreshToken,
-    authType: apiAuth.authType,
-    serviceAccountId: apiAuth.serviceAccountId,
-    oauthLoginCustomerId: prepared?.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
-    serviceAccountMccId: apiAuth.serviceAccountMccId,
+    refreshToken: prepared.refreshToken,
+    authType: prepared.apiAuth.authType,
+    serviceAccountId: prepared.apiAuth.serviceAccountId,
+    oauthLoginCustomerId:
+      prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId,
+    serviceAccountMccId: prepared.apiAuth.serviceAccountMccId,
     parentMccId: accountMeta?.parent_mcc_id ?? null,
-    oauthCredentials: prepared?.oauthCredentials,
+    oauthCredentials: prepared.oauthCredentials,
   }
 }
 

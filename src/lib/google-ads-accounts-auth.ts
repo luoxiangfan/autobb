@@ -11,8 +11,6 @@ import {
   type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
 import { getServiceAccountConfig } from './google-ads-service-account'
-import { resolveLoginCustomerCandidates } from './google-ads-login-customer'
-
 /** 账号列表同步/API 客户端所需的扁平凭证 */
 export interface AccountsRouteCredentials {
   client_id: string
@@ -273,38 +271,6 @@ export async function loadOAuthGoogleAdsCallBundleForContext(params: {
       oauthLoginCustomerId: healed.loginCustomerId || undefined,
     },
   }
-}
-
-/**
- * @deprecated 请使用 `runWithLoginCustomerFallbackForAccount` 或 `runOAuthGaqlWithLoginCustomerFallback`，避免只取首个 login_customer_id 候选。
- */
-export function pickOAuthLoginCustomerIdForAccount(params: {
-  accountParentMccId?: string | null
-  oauthLoginCustomerId?: string
-  targetCustomerId?: string
-}): string | undefined {
-  return resolveLoginCustomerCandidates({
-    authType: 'oauth',
-    accountParentMccId: params.accountParentMccId,
-    oauthLoginCustomerId: params.oauthLoginCustomerId,
-    targetCustomerId: params.targetCustomerId,
-  })[0]
-}
-
-/**
- * @deprecated 请使用 `runWithLoginCustomerFallbackForAccount`，避免只取首个 login_customer_id 候选。
- */
-export function pickServiceAccountLoginCustomerIdForAccount(params: {
-  accountParentMccId?: string | null
-  serviceAccountMccId?: string
-  targetCustomerId?: string
-}): string | undefined {
-  return resolveLoginCustomerCandidates({
-    authType: 'service_account',
-    accountParentMccId: params.accountParentMccId,
-    serviceAccountMccId: params.serviceAccountMccId,
-    targetCustomerId: params.targetCustomerId,
-  })[0]
 }
 
 export type PreparedGoogleAdsAccountApiCall = {
