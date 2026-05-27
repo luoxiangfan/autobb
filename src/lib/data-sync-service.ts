@@ -7,8 +7,8 @@ import {
   resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
 import {
-  resolveAndHealSyncUserCredentials,
   resolveOAuthRefreshToken,
+  resolveSyncUserCredentialsForJob,
   type SyncUserCredentials,
 } from './google-ads-accounts-auth'
 import { executeGAQLQueryPython } from './python-ads-client'
@@ -336,7 +336,7 @@ export class DataSyncService {
             null
           : null
 
-      const syncCredentialsResolved = await resolveAndHealSyncUserCredentials({
+      const syncCredentialsResolved = await resolveSyncUserCredentialsForJob({
         userId,
         authContext,
         authType: syncAuthType,

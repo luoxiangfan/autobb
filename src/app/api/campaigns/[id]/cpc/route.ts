@@ -2,7 +2,8 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { getCustomerWithCredentials, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
-import { resolveHealedOAuthCredentialsFields } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
+import { runOAuthGaqlWithLoginCustomerFallback } from '@/lib/google-ads-oauth-gaql'
 import { getDatabase } from '@/lib/db'
 import {
   getGoogleAdsAuthContext,
@@ -218,15 +219,16 @@ export async function GET(
     let oauthLoginCustomerId = apiAuth.oauthLoginCustomerId
     let oauthApiCredentials: OAuthApiCredentialsFields | undefined
     if (!useServiceAccount) {
-      const healed = await resolveHealedOAuthCredentialsFields({
-        userId: numericUserId,
+      const prepared = await prepareGoogleAdsAccountApiCall({
         authContext,
+        linkedServiceAccountId: linked.service_account_id,
       })
-      if (!healed.ok) {
-        return NextResponse.json({ error: healed.message }, { status: 400 })
+      if (!prepared.ok) {
+        return NextResponse.json({ error: prepared.message }, { status: 400 })
       }
-      oauthApiCredentials = healed.credentials
-      oauthLoginCustomerId = oauthLoginCustomerId || healed.loginCustomerId || undefined
+      oauthApiCredentials = prepared.oauthCredentials
+      oauthLoginCustomerId =
+        prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId
     }
 
     if (useServiceAccount && !serviceAccountId) {
@@ -283,16 +285,22 @@ export async function GET(
         })
         campaignRows = extractSearchResults(fetched)
       } else {
-        const loginCustomerId = oauthLoginCustomerId || linked.parent_mcc_id || undefined
-        const customer = await getCustomerWithCredentials({
-          customerId: linked.customer_id,
-          refreshToken: oauthRefreshToken || undefined,
-          loginCustomerId,
-          accountId: undefined,
-          userId: numericUserId,
-          credentials: oauthApiCredentials,
-        })
-        campaignRows = await executeOAuthGaqlWithTracking(customer, linked.customer_id, campaignQuery)
+        campaignRows = extractSearchResults(
+          await runOAuthGaqlWithLoginCustomerFallback({
+            adsAccount: {
+              customer_id: linked.customer_id,
+              parent_mcc_id: linked.parent_mcc_id,
+              id: linked.google_ads_account_id,
+            },
+            userId: numericUserId,
+            refreshToken: oauthRefreshToken || '',
+            oauthCredentials: oauthApiCredentials!,
+            oauthLoginCustomerId,
+            actionName: '查询广告系列 CPC',
+            query: (customer) =>
+              executeOAuthGaqlWithTracking(customer, linked.customer_id!, campaignQuery),
+          })
+        )
       }
 
       campaign = campaignRows?.[0]?.campaign || null
@@ -343,16 +351,22 @@ export async function GET(
           })
           adGroupRows = extractSearchResults(fetched)
         } else {
-          const loginCustomerId = oauthLoginCustomerId || linked.parent_mcc_id || undefined
-          const customer = await getCustomerWithCredentials({
-            customerId: linked.customer_id,
-            refreshToken: oauthRefreshToken || undefined,
-            loginCustomerId,
-            accountId: undefined,
-            userId: numericUserId,
-            credentials: oauthApiCredentials,
-          })
-          adGroupRows = await executeOAuthGaqlWithTracking(customer, linked.customer_id, adGroupQuery)
+          adGroupRows = extractSearchResults(
+            await runOAuthGaqlWithLoginCustomerFallback({
+              adsAccount: {
+                customer_id: linked.customer_id,
+                parent_mcc_id: linked.parent_mcc_id,
+                id: linked.google_ads_account_id,
+              },
+              userId: numericUserId,
+              refreshToken: oauthRefreshToken || '',
+              oauthCredentials: oauthApiCredentials!,
+              oauthLoginCustomerId,
+              actionName: '查询 Ad Group CPC',
+              query: (customer) =>
+                executeOAuthGaqlWithTracking(customer, linked.customer_id!, adGroupQuery),
+            })
+          )
         }
       } catch {
         // ignore

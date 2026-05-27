@@ -1,12 +1,9 @@
 import { getDatabase } from './db'
 import { updateGoogleAdsCampaignStatus, type OAuthApiCredentialsFields } from './google-ads-api'
-import {
-  resolveHealedOAuthCredentialsFields,
-} from './google-ads-accounts-auth'
+import { prepareGoogleAdsAccountApiCall } from './google-ads-accounts-auth'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 
@@ -144,24 +141,15 @@ export async function buildPublishRollbackContextForAdsAccount(
     return null
   }
 
-  const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+  const prepared = await prepareGoogleAdsAccountApiCall({
     authContext,
-    adsAccount.service_account_id
-  )
-
-  let oauthCredentials: OAuthApiCredentialsFields | undefined
-  let oauthLoginCustomerId: string | undefined
-  if (apiAuth.authType === 'oauth') {
-    const healed = await resolveHealedOAuthCredentialsFields({
-      userId,
-      authContext,
-    })
-    if (!healed.ok) {
-      return null
-    }
-    oauthCredentials = healed.credentials
-    oauthLoginCustomerId = healed.loginCustomerId || apiAuth.oauthLoginCustomerId
+    linkedServiceAccountId: adsAccount.service_account_id,
+  })
+  if (!prepared.ok) {
+    return null
   }
+
+  const { apiAuth, refreshToken, oauthCredentials, oauthLoginCustomerId } = prepared
 
   const runWithLoginCustomerFallbackAndHeartbeat = async <T>(
     actionName: string,
@@ -169,7 +157,7 @@ export async function buildPublishRollbackContextForAdsAccount(
   ): Promise<T> =>
     runWithLoginCustomerFallbackForAccount({
       adsAccount,
-      refreshToken: apiAuth.refreshToken,
+      refreshToken,
       authType: apiAuth.authType,
       serviceAccountId: apiAuth.serviceAccountId,
       serviceAccountMccId: apiAuth.serviceAccountMccId,
@@ -180,7 +168,7 @@ export async function buildPublishRollbackContextForAdsAccount(
 
   return {
     customerId: adsAccount.customer_id,
-    refreshToken: apiAuth.refreshToken,
+    refreshToken,
     accountId: adsAccount.id,
     userId,
     authType: apiAuth.authType,

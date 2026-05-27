@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import {
+  defaultPreparedGoogleAdsAccountApiCall,
   hasConfiguredGoogleAdsAuthFromContextMock,
   resetCampaignRouteAuthMocksOAuth,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
@@ -43,6 +44,10 @@ const redisFns = vi.hoisted(() => ({
   getRedisClient: vi.fn(() => null),
 }))
 
+const oauthAccountsAuthFns = vi.hoisted(() => ({
+  prepareGoogleAdsAccountApiCall: vi.fn(),
+}))
+
 vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
@@ -64,6 +69,14 @@ vi.mock('@/lib/google-ads-auth-context', () => ({
   hasConfiguredGoogleAdsAuthFromContext: hasConfiguredGoogleAdsAuthFromContextMock,
   resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,
 }))
+
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    prepareGoogleAdsAccountApiCall: oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall,
+  }
+})
 
 vi.mock('@/lib/python-ads-client', () => ({
   executeGAQLQueryPython: pythonFns.executeGAQLQueryPython,
@@ -104,6 +117,9 @@ describe('PUT /api/campaigns/:id/update-cpc', () => {
     })
     dbFns.exec.mockResolvedValue({ changes: 1 })
     resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
+    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue(
+      defaultPreparedGoogleAdsAccountApiCall
+    )
   })
 
   it('returns 422 with expected googleCampaignId when local campaign id is used', async () => {

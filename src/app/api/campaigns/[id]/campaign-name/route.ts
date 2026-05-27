@@ -6,8 +6,9 @@ import { updateGoogleAdsCampaignName } from '@/lib/google-ads-api'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
+import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { invalidateDashboardCache } from '@/lib/api-cache'
 
 const MAX_CAMPAIGN_NAME_LENGTH = 255
@@ -167,38 +168,43 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           )
         }
 
-        const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+        const prepared = await prepareGoogleAdsAccountApiCall({
           authContext,
-          adsAccountRow.service_account_id
-        )
-        if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {
-          return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
-        }
-        if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
-          return NextResponse.json(
-            { error: 'Google Ads OAuth未授权或已过期', needsReauth: true },
-            { status: 400 }
-          )
+          linkedServiceAccountId: adsAccountRow.service_account_id,
+        })
+        if (!prepared.ok) {
+          return NextResponse.json({ error: prepared.message }, { status: 400 })
         }
 
-        let loginCustomerId: string | undefined =
-          apiAuth.authType === 'service_account'
-            ? apiAuth.serviceAccountMccId
-            : apiAuth.oauthLoginCustomerId
-        if (!loginCustomerId && adsAccountRow.parent_mcc_id) {
-          loginCustomerId = String(adsAccountRow.parent_mcc_id)
-        }
+        const { apiAuth, refreshToken, oauthCredentials, oauthLoginCustomerId } = prepared
 
-        await updateGoogleAdsCampaignName({
-          customerId: adsAccountRow.customer_id,
-          refreshToken: apiAuth.refreshToken,
-          campaignId: googleCampaignId,
-          name: campaignName,
-          accountId: adsAccountRow.id,
-          userId,
-          loginCustomerId,
+        await runWithLoginCustomerFallbackForAccount({
+          adsAccount: {
+            customer_id: adsAccountRow.customer_id,
+            parent_mcc_id: adsAccountRow.parent_mcc_id,
+            id: adsAccountRow.id,
+          },
+          refreshToken,
           authType: apiAuth.authType,
           serviceAccountId: apiAuth.serviceAccountId,
+          serviceAccountMccId: apiAuth.serviceAccountMccId,
+          oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+          actionName: '更新广告系列名称',
+          callback: (loginCustomerId) =>
+            updateGoogleAdsCampaignName({
+              customerId: adsAccountRow.customer_id,
+              refreshToken,
+              campaignId: googleCampaignId,
+              name: campaignName,
+              accountId: adsAccountRow.id,
+              userId,
+              loginCustomerId,
+              authType: apiAuth.authType,
+              serviceAccountId: apiAuth.serviceAccountId,
+              credentials: oauthCredentials,
+              accountParentMccId: adsAccountRow.parent_mcc_id,
+              oauthLoginCustomerIdHint: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+            }),
         })
         syncedToGoogleAds = true
       }

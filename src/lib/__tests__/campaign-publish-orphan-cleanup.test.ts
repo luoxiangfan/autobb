@@ -14,35 +14,40 @@ vi.mock('@/lib/google-ads-auth-context', () => ({
     oauthCredentials: { refresh_token: 'rt', login_customer_id: '111' },
   })),
   hasConfiguredGoogleAdsAuthFromContext: vi.fn(() => true),
-  resolveGoogleAdsApiAuthFromContext: vi.fn(async () => ({
-    authType: 'oauth',
-    refreshToken: 'rt',
-    serviceAccountId: undefined,
-    oauthLoginCustomerId: '111',
-    serviceAccountMccId: undefined,
-  })),
 }))
 
 vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    resolveHealedOAuthCredentialsFields: vi.fn(async () => ({
+    prepareGoogleAdsAccountApiCall: vi.fn(async () => ({
       ok: true as const,
-      credentials: {
+      apiAuth: {
+        authType: 'oauth' as const,
+        refreshToken: 'rt',
+        serviceAccountId: undefined,
+        oauthLoginCustomerId: '111',
+        serviceAccountMccId: undefined,
+      },
+      refreshToken: 'rt',
+      oauthCredentials: {
         client_id: 'client-id',
         client_secret: 'client-secret',
         developer_token: 'developer-token',
       },
-      loginCustomerId: '111',
+      oauthLoginCustomerId: '111',
     })),
   }
 })
 
-vi.mock('@/lib/google-ads-login-customer', () => ({
-  resolveLoginCustomerCandidates: vi.fn(() => ['111']),
-  isGoogleAdsAccountAccessError: vi.fn(() => false),
-}))
+vi.mock('@/lib/google-ads-login-customer', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-login-customer')>()
+  return {
+    ...actual,
+    resolveLoginCustomerCandidates: vi.fn(() => ['111']),
+    isGoogleAdsAccountAccessError: vi.fn(() => false),
+  }
+})
 
 import { getDatabase } from '@/lib/db'
 import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads-api'

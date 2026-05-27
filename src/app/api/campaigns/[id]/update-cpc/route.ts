@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { getCustomerWithCredentials, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
-import { resolveHealedOAuthCredentialsFields } from '@/lib/google-ads-accounts-auth'
+import { getCustomerWithCredentials } from '@/lib/google-ads-api'
+import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
 import { getDatabase } from '@/lib/db'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { executeGAQLQueryPython, updateCampaignPython, updateAdGroupPython } from '@/lib/python-ads-client'
 import { normalizeGoogleAdsApiUpdateOperations } from '@/lib/google-ads-mutate-helpers'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
@@ -444,34 +445,38 @@ export async function PUT(
         serviceAccountId,
       })
     } else {
-      if (!apiAuth.refreshToken) {
-        return NextResponse.json(
-          { error: 'Google Ads未授权或已过期，请重新授权', needsReauth: true },
-          { status: 400 }
-        )
-      }
-
-      const healed = await resolveHealedOAuthCredentialsFields({
-        userId: numericUserId,
+      const prepared = await prepareGoogleAdsAccountApiCall({
         authContext,
+        linkedServiceAccountId: adsAccountRow.service_account_id,
       })
-      if (!healed.ok) {
-        return NextResponse.json(
-          { error: healed.message },
-          { status: 400 }
-        )
+      if (!prepared.ok) {
+        return NextResponse.json({ error: prepared.message }, { status: 400 })
       }
-      const oauthApiCredentials: OAuthApiCredentialsFields = healed.credentials
-      const loginCustomerId =
-        apiAuth.oauthLoginCustomerId || healed.loginCustomerId || adsAccountRow.parent_mcc_id || undefined
 
-      customer = await getCustomerWithCredentials({
-        customerId: adsAccountRow.customer_id,
-        refreshToken: apiAuth.refreshToken,
-        loginCustomerId,
-        accountId: adsAccountRow.id,
-        userId: numericUserId,
-        credentials: oauthApiCredentials,
+      const { refreshToken, oauthCredentials, oauthLoginCustomerId } = prepared
+
+      customer = await runWithLoginCustomerFallbackForAccount({
+        adsAccount: {
+          customer_id: adsAccountRow.customer_id,
+          parent_mcc_id: adsAccountRow.parent_mcc_id,
+          id: adsAccountRow.id,
+        },
+        refreshToken,
+        authType: apiAuth.authType,
+        serviceAccountId: apiAuth.serviceAccountId,
+        serviceAccountMccId: apiAuth.serviceAccountMccId,
+        oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+        actionName: '更新广告系列 CPC',
+        callback: (loginCustomerId) =>
+          getCustomerWithCredentials({
+            customerId: adsAccountRow.customer_id,
+            refreshToken,
+            loginCustomerId,
+            accountId: adsAccountRow.id,
+            userId: numericUserId,
+            credentials: oauthCredentials,
+            authType: 'oauth',
+          }),
       })
     }
 

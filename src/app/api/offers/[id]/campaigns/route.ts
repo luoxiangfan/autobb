@@ -1,7 +1,8 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getCustomerWithCredentials, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
-import { resolveHealedOAuthCredentialsFields } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getDatabase } from '@/lib/db'
 import {
@@ -280,15 +281,16 @@ export async function GET(
 
     let oauthApiCredentials: OAuthApiCredentialsFields | undefined
     if (!useServiceAccountAuth) {
-      const healed = await resolveHealedOAuthCredentialsFields({
-        userId: numericUserId,
+      const prepared = await prepareGoogleAdsAccountApiCall({
         authContext,
+        linkedServiceAccountId: null,
       })
-      if (!healed.ok) {
-        return NextResponse.json({ error: healed.message }, { status: 400 })
+      if (!prepared.ok) {
+        return NextResponse.json({ error: prepared.message }, { status: 400 })
       }
-      oauthApiCredentials = healed.credentials
-      oauthLoginCustomerId = oauthLoginCustomerId || healed.loginCustomerId || null
+      oauthApiCredentials = prepared.oauthCredentials
+      oauthLoginCustomerId =
+        prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId ?? null
     }
 
     const gaqlCampaignById = new Map<number, any>()
@@ -451,79 +453,90 @@ export async function GET(
           // ignore
         }
       } else {
-        const loginCustomerId = oauthLoginCustomerId || account.parentMccId || undefined
-        const customer = await getCustomerWithCredentials({
-          customerId: account.customerId,
-          refreshToken: oauthRefreshToken || undefined,
-          loginCustomerId,
-          accountId: undefined,
-          userId: numericUserId,
-          credentials: oauthApiCredentials,
-        })
-
-        // AdGroup CPC best-effort
-        try {
-          const fetchedAdGroups = await executeOAuthGaqlWithTracking(
-            customer,
-            account.customerId,
-            adGroupCpcQuery
-          )
-          const adGroupRows = extractSearchResults(fetchedAdGroups)
-          for (const row of adGroupRows) {
-            const campaignId = Number(row?.campaign?.id)
-            if (!Number.isFinite(campaignId)) continue
-            if (adGroupCpcMicrosByCampaignId.has(campaignId)) continue
-            const micros = Number(row?.ad_group?.cpc_bid_micros)
-            if (!Number.isFinite(micros) || micros <= 0) continue
-            adGroupCpcMicrosByCampaignId.set(campaignId, micros)
-          }
-        } catch {
-          // ignore
-        }
-
-        // Campaign info best-effort（失败不阻断，改为使用DB兜底）
-        try {
-          const fetched = await executeOAuthGaqlWithTracking(
-            customer,
-            account.customerId,
-            query
-          )
-          const rows = extractSearchResults(fetched)
-          for (const r of rows) {
-            const cid = Number(r?.campaign?.id)
-            if (!Number.isFinite(cid) || gaqlCampaignById.has(cid)) continue
-            gaqlCampaignById.set(cid, {
-              campaign: r.campaign,
-              __currency: account.currency,
-              __googleAdsAccountId: googleAdsAccountId,
-              __adsCustomerId: account.customerId,
-              __adsAccountName: account.accountName,
+        await runWithLoginCustomerFallbackForAccount({
+          adsAccount: {
+            customer_id: account.customerId,
+            parent_mcc_id: account.parentMccId,
+            id: googleAdsAccountId,
+          },
+          refreshToken: oauthRefreshToken || '',
+          authType: 'oauth',
+          oauthLoginCustomerId: oauthLoginCustomerId ?? undefined,
+          actionName: `拉取 Offer 广告系列 GAQL (账号 ${googleAdsAccountId})`,
+          callback: async (loginCustomerId) => {
+            const customer = await getCustomerWithCredentials({
+              customerId: account.customerId,
+              refreshToken: oauthRefreshToken || undefined,
+              loginCustomerId,
+              accountId: googleAdsAccountId,
+              userId: numericUserId,
+              credentials: oauthApiCredentials,
+              authType: 'oauth',
             })
-          }
-        } catch {
-          // ignore
-        }
 
-        // target_spend ceiling best-effort（我们发布时使用 TARGET_SPEND，即 Maximize Clicks）
-        // 避免依赖 bidding_strategy_type 判断，直接查询 ceiling
-        try {
-          const fetchedTargetSpend = await executeOAuthGaqlWithTracking(
-            customer,
-            account.customerId,
-            targetSpendQuery(uniqueIds)
-          )
-          const tsRows = extractSearchResults(fetchedTargetSpend)
-          for (const row of tsRows) {
-            const cid = Number(row?.campaign?.id)
-            if (!Number.isFinite(cid) || targetSpendCeilingMicrosByCampaignId.has(cid)) continue
-            const micros = Number(row?.campaign?.target_spend?.cpc_bid_ceiling_micros)
-            if (!Number.isFinite(micros) || micros <= 0) continue
-            targetSpendCeilingMicrosByCampaignId.set(cid, micros)
-          }
-        } catch {
-          // ignore
-        }
+            // AdGroup CPC best-effort
+            try {
+              const fetchedAdGroups = await executeOAuthGaqlWithTracking(
+                customer,
+                account.customerId,
+                adGroupCpcQuery
+              )
+              const adGroupRows = extractSearchResults(fetchedAdGroups)
+              for (const row of adGroupRows) {
+                const campaignId = Number(row?.campaign?.id)
+                if (!Number.isFinite(campaignId)) continue
+                if (adGroupCpcMicrosByCampaignId.has(campaignId)) continue
+                const micros = Number(row?.ad_group?.cpc_bid_micros)
+                if (!Number.isFinite(micros) || micros <= 0) continue
+                adGroupCpcMicrosByCampaignId.set(campaignId, micros)
+              }
+            } catch {
+              // ignore
+            }
 
+            // Campaign info best-effort（失败不阻断，改为使用DB兜底）
+            try {
+              const fetched = await executeOAuthGaqlWithTracking(
+                customer,
+                account.customerId,
+                query
+              )
+              const rows = extractSearchResults(fetched)
+              for (const r of rows) {
+                const cid = Number(r?.campaign?.id)
+                if (!Number.isFinite(cid) || gaqlCampaignById.has(cid)) continue
+                gaqlCampaignById.set(cid, {
+                  campaign: r.campaign,
+                  __currency: account.currency,
+                  __googleAdsAccountId: googleAdsAccountId,
+                  __adsCustomerId: account.customerId,
+                  __adsAccountName: account.accountName,
+                })
+              }
+            } catch {
+              // ignore
+            }
+
+            // target_spend ceiling best-effort
+            try {
+              const fetchedTargetSpend = await executeOAuthGaqlWithTracking(
+                customer,
+                account.customerId,
+                targetSpendQuery(uniqueIds)
+              )
+              const tsRows = extractSearchResults(fetchedTargetSpend)
+              for (const row of tsRows) {
+                const cid = Number(row?.campaign?.id)
+                if (!Number.isFinite(cid) || targetSpendCeilingMicrosByCampaignId.has(cid)) continue
+                const micros = Number(row?.campaign?.target_spend?.cpc_bid_ceiling_micros)
+                if (!Number.isFinite(micros) || micros <= 0) continue
+                targetSpendCeilingMicrosByCampaignId.set(cid, micros)
+              }
+            } catch {
+              // ignore
+            }
+          },
+        })
       }
     }
 

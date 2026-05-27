@@ -1162,6 +1162,8 @@ export async function updateGoogleAdsCampaignName(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
+  accountParentMccId?: string | null
+  oauthLoginCustomerIdHint?: string
 }): Promise<void> {
   const trimmedName = String(params.name || '').trim()
   if (!trimmedName) {
@@ -1186,6 +1188,9 @@ export async function updateGoogleAdsCampaignName(params: {
       accountId: params.accountId,
       userId: params.userId,
       loginCustomerId: params.loginCustomerId,
+      credentials: params.credentials,
+      accountParentMccId: params.accountParentMccId,
+      oauthLoginCustomerIdHint: params.oauthLoginCustomerIdHint,
       authType: params.authType,
       serviceAccountId: params.serviceAccountId,
     })

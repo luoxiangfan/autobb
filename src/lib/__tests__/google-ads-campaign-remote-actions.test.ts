@@ -27,14 +27,21 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    resolveHealedOAuthCredentialsFields: vi.fn(async () => ({
+    prepareGoogleAdsAccountApiCall: vi.fn(async () => ({
       ok: true as const,
-      credentials: {
+      apiAuth: {
+        authType: 'oauth' as const,
+        refreshToken: 'rt',
+        serviceAccountId: undefined,
+        oauthLoginCustomerId: '5010618892',
+      },
+      refreshToken: 'rt',
+      oauthCredentials: {
         client_id: 'client-id',
         client_secret: 'client-secret',
         developer_token: 'developer-token',
       },
-      loginCustomerId: '5010618892',
+      oauthLoginCustomerId: '5010618892',
     })),
   }
 })

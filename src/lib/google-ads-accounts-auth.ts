@@ -146,6 +146,49 @@ export async function resolveAndHealSyncUserCredentials(params: {
   }
 }
 
+/**
+ * 后台同步任务凭证：OAuth 使用 loadOAuthGoogleAdsCallBundleForContext；服务账号仍走 resolveAndHealSyncUserCredentials。
+ */
+export async function resolveSyncUserCredentialsForJob(params: {
+  userId: number
+  authContext: GoogleAdsAuthContext
+  authType: 'oauth' | 'service_account'
+  serviceAccountId: string | null
+}): Promise<
+  | {
+      ok: true
+      userCredentials: SyncUserCredentials
+      serviceAccountConfig: AccountsRouteAuthBundle['serviceAccountConfig']
+    }
+  | { ok: false; message: string }
+> {
+  if (params.authType === 'oauth') {
+    const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
+      userId: params.userId,
+      authContext: params.authContext,
+    })
+    if (!oauthBundle.ok) {
+      return { ok: false, message: oauthBundle.message }
+    }
+    const creds = oauthBundle.bundle?.oauthCredentials
+    if (!creds) {
+      return { ok: false, message: 'OAuth credentials bundle missing' }
+    }
+    return {
+      ok: true,
+      userCredentials: {
+        client_id: creds.client_id,
+        client_secret: creds.client_secret,
+        developer_token: creds.developer_token,
+        login_customer_id: oauthBundle.bundle?.oauthLoginCustomerId,
+      },
+      serviceAccountConfig: null,
+    }
+  }
+
+  return resolveAndHealSyncUserCredentials(params)
+}
+
 /** OAuth API 客户端三元组（不含 refresh_token） */
 export type OAuthApiCredentialsFields = {
   client_id: string

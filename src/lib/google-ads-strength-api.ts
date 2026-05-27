@@ -16,7 +16,8 @@ import {
   resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
 import {
-  resolveAndHealSyncUserCredentials,
+  loadOAuthGoogleAdsCallBundleForContext,
+  pickOAuthLoginCustomerIdForAccount,
   resolveOAuthRefreshToken,
 } from './google-ads-accounts-auth'
 import { getDatabase } from './db'
@@ -53,16 +54,6 @@ async function getGoogleAdsClient(
       throw new Error('未找到服务账号配置')
     }
 
-    const credResolved = await resolveAndHealSyncUserCredentials({
-      userId,
-      authContext,
-      authType: 'service_account',
-      serviceAccountId: apiAuth.serviceAccountId,
-    })
-    if (!credResolved.ok) {
-      throw new Error(credResolved.message)
-    }
-
     return {
       customer: await getCustomerWithCredentials({
         customerId,
@@ -77,14 +68,15 @@ async function getGoogleAdsClient(
     }
   }
 
-  const credResolved = await resolveAndHealSyncUserCredentials({
+  const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
     userId,
     authContext,
-    authType: 'oauth',
-    serviceAccountId: null,
   })
-  if (!credResolved.ok) {
-    throw new Error(credResolved.message)
+  if (!oauthBundle.ok) {
+    throw new Error(oauthBundle.message)
+  }
+  if (!oauthBundle.bundle?.oauthCredentials) {
+    throw new Error('OAuth credentials bundle missing')
   }
 
   const refreshToken = resolveOAuthRefreshToken(apiAuth, authContext.oauthCredentials)
@@ -92,24 +84,24 @@ async function getGoogleAdsClient(
     throw new Error('Google Ads账号缺少refresh token')
   }
 
-  const credentials = credResolved.userCredentials
+  const oauthLoginCustomerId =
+    oauthBundle.bundle.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
 
   return {
     customer: await getCustomerWithCredentials({
       customerId,
       refreshToken,
-      loginCustomerId:
-        apiAuth.oauthLoginCustomerId ||
-        credentials.login_customer_id ||
-        account.parent_mcc_id ||
-        undefined,
-      credentials: {
-        client_id: credentials.client_id,
-        client_secret: credentials.client_secret,
-        developer_token: credentials.developer_token,
-      },
+      loginCustomerId: pickOAuthLoginCustomerIdForAccount({
+        accountParentMccId: account.parent_mcc_id,
+        oauthLoginCustomerId,
+        targetCustomerId: customerId,
+      }),
+      credentials: oauthBundle.bundle.oauthCredentials,
+      accountParentMccId: account.parent_mcc_id,
+      oauthLoginCustomerIdHint: oauthLoginCustomerId,
       accountId: account.id,
       userId,
+      authType: 'oauth',
     }),
     useServiceAccount: false,
   }

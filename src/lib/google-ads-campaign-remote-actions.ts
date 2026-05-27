@@ -1,5 +1,6 @@
-import { resolveHealedOAuthCredentialsFields } from './google-ads-accounts-auth'
+import { prepareGoogleAdsAccountApiCall } from './google-ads-accounts-auth'
 import { resolveGoogleAdsApiAuthForAccount } from './google-ads-auth-context'
+import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import {
   removeGoogleAdsCampaign,
   updateGoogleAdsCampaignStatus,
@@ -158,29 +159,28 @@ export async function executeGoogleAdsCampaignRemoteActions(
     const serviceAccountId = apiAuth.serviceAccountId
 
     let oauthCredentials: OAuthApiCredentialsFields | undefined
-    let healedOAuthLoginCustomerId: string | undefined
+    let oauthLoginCustomerId: string | undefined
     if (apiAuth.authType === 'oauth') {
-      const healed = await resolveHealedOAuthCredentialsFields({
-        userId,
+      const prepared = await prepareGoogleAdsAccountApiCall({
         authContext: ctx,
+        linkedServiceAccountId: adsAccount.service_account_id,
       })
-      if (!healed.ok) {
+      if (!prepared.ok) {
         return {
           ...summary,
           executed: false,
           skipReason: 'CREDENTIALS_MISSING',
-          failures: [{ campaignId: '*', reason: healed.message }],
+          failures: [{ campaignId: '*', reason: prepared.message }],
         }
       }
-      oauthCredentials = healed.credentials
-      healedOAuthLoginCustomerId = healed.loginCustomerId || undefined
+      oauthCredentials = prepared.oauthCredentials
+      oauthLoginCustomerId =
+        prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId
     }
 
-    let loginCustomerId: string | undefined =
-      apiAuth.oauthLoginCustomerId || healedOAuthLoginCustomerId
-    if (!loginCustomerId && adsAccount.parent_mcc_id) {
-      loginCustomerId = String(adsAccount.parent_mcc_id)
-    }
+    const serviceAccountLoginCustomerId =
+      apiAuth.serviceAccountMccId ||
+      (adsAccount.parent_mcc_id ? String(adsAccount.parent_mcc_id) : undefined)
 
     summary.executed = true
 
@@ -206,7 +206,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
       processedCampaignIds.add(googleCampaignId)
       summary.attempted++
 
-      const runAction = async () => {
+      const runAction = async (loginCustomerId: string | undefined) => {
         if (shouldRemove) {
           await removeGoogleAdsCampaign({
             customerId: adsAccount.customer_id!,
@@ -237,9 +237,31 @@ export async function executeGoogleAdsCampaignRemoteActions(
         }
       }
 
+      const runWithLoginFallback = (action: (loginCustomerId: string | undefined) => Promise<void>) => {
+        if (auth.authType === 'oauth') {
+          return runWithLoginCustomerFallbackForAccount({
+            adsAccount: {
+              customer_id: adsAccount.customer_id!,
+              parent_mcc_id: adsAccount.parent_mcc_id,
+              id: adsAccount.id,
+            },
+            refreshToken,
+            authType: auth.authType,
+            serviceAccountId,
+            serviceAccountMccId: apiAuth.serviceAccountMccId,
+            oauthLoginCustomerId,
+            actionName: shouldRemove
+              ? `删除 Campaign ${googleCampaignId}`
+              : `暂停 Campaign ${googleCampaignId}`,
+            callback: action,
+          })
+        }
+        return action(serviceAccountLoginCustomerId)
+      }
+
       try {
         await withTimeout(
-          runAction(),
+          runWithLoginFallback(runAction),
           remoteConfig.perCampaignTimeoutMs,
           `Campaign ${googleCampaignId}`
         )
@@ -247,18 +269,20 @@ export async function executeGoogleAdsCampaignRemoteActions(
         if (shouldRemove) {
           try {
             await withTimeout(
-              updateGoogleAdsCampaignStatus({
-                customerId: adsAccount.customer_id!,
-                refreshToken,
-                campaignId: googleCampaignId,
-                status: 'PAUSED',
-                accountId: adsAccount.id,
-                userId,
-                loginCustomerId,
-                authType: auth.authType,
-                serviceAccountId,
-                credentials: oauthCredentials,
-              }),
+              runWithLoginFallback((loginCustomerId) =>
+                updateGoogleAdsCampaignStatus({
+                  customerId: adsAccount.customer_id!,
+                  refreshToken,
+                  campaignId: googleCampaignId,
+                  status: 'PAUSED',
+                  accountId: adsAccount.id,
+                  userId,
+                  loginCustomerId,
+                  authType: auth.authType,
+                  serviceAccountId,
+                  credentials: oauthCredentials,
+                })
+              ),
               remoteConfig.perCampaignTimeoutMs,
               `Campaign ${googleCampaignId} pause fallback`
             )

@@ -2,10 +2,10 @@ import { getDatabase } from '@/lib/db'
 import { boolCondition, boolParam } from '@/lib/db-helpers'
 import { createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
 import {
-  pickOAuthLoginCustomerIdForAccount,
-  resolveHealedOAuthCredentialsFields,
+  loadOAuthGoogleAdsCallBundleForContext,
   type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-accounts-auth'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
@@ -174,7 +174,7 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
   const parentMccByAccountId = new Map<number, string | null>()
   const oauthHealedByUser = new Map<
     number,
-    { credentials: OAuthApiCredentialsFields; loginCustomerId: string }
+    { credentials: OAuthApiCredentialsFields; oauthLoginCustomerId?: string }
   >()
 
   const getContext = async (userId: number) => {
@@ -236,30 +236,31 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
       }
       let healedBundle = oauthHealedByUser.get(action.userId)
       if (!healedBundle) {
-        const healed = await resolveHealedOAuthCredentialsFields({
+        const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
           userId: action.userId,
           authContext: ctx,
         })
-        if (!healed.ok) {
-          throw new Error(healed.message)
+        if (!oauthBundle.ok) {
+          throw new Error(oauthBundle.message)
+        }
+        if (!oauthBundle.bundle?.oauthCredentials) {
+          throw new Error('OAuth credentials bundle missing')
         }
         healedBundle = {
-          credentials: healed.credentials,
-          loginCustomerId: healed.loginCustomerId,
+          credentials: oauthBundle.bundle.oauthCredentials,
+          oauthLoginCustomerId:
+            oauthBundle.bundle.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
         }
         oauthHealedByUser.set(action.userId, healedBundle)
       }
       const parentMccId = await getParentMccId(action.googleAdsAccountId, action.parentMccId)
-      const loginCustomerId = pickOAuthLoginCustomerIdForAccount({
-        accountParentMccId: parentMccId,
-        oauthLoginCustomerId: healedBundle.loginCustomerId || apiAuth.oauthLoginCustomerId,
-        targetCustomerId: action.customerId,
-      })
       return {
         authType: apiAuth.authType,
         serviceAccountId: undefined as string | undefined,
+        serviceAccountMccId: undefined as string | undefined,
         refreshToken: effectiveRefreshToken,
-        loginCustomerId,
+        parentMccId,
+        oauthLoginCustomerId: healedBundle.oauthLoginCustomerId,
         credentials: healedBundle.credentials,
       }
     }
@@ -268,13 +269,80 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
       throw new Error('missing_service_account')
     }
 
+    const parentMccId = await getParentMccId(action.googleAdsAccountId, action.parentMccId)
+
     return {
       authType: apiAuth.authType,
       serviceAccountId: apiAuth.serviceAccountId,
+      serviceAccountMccId: apiAuth.serviceAccountMccId,
       refreshToken: '',
-      loginCustomerId: apiAuth.serviceAccountMccId,
+      parentMccId,
+      oauthLoginCustomerId: undefined,
     }
   }
+}
+
+async function createSearchTermKeywordsWithFallback(params: {
+  action: {
+    userId: number
+    googleAdsAccountId: number
+    customerId: string
+    googleAdGroupId: string
+  }
+  apiAuth: {
+    authType: 'oauth' | 'service_account'
+    refreshToken: string
+    serviceAccountId?: string
+    serviceAccountMccId?: string
+    parentMccId: string | null
+    oauthLoginCustomerId?: string
+    credentials?: OAuthApiCredentialsFields
+  }
+  keywords: Parameters<typeof createGoogleAdsKeywordsBatch>[0]['keywords']
+  actionName: string
+}) {
+  const { action, apiAuth, keywords, actionName } = params
+
+  if (apiAuth.authType === 'service_account') {
+    return createGoogleAdsKeywordsBatch({
+      customerId: action.customerId,
+      refreshToken: apiAuth.refreshToken,
+      adGroupId: action.googleAdGroupId,
+      keywords,
+      accountId: action.googleAdsAccountId,
+      userId: action.userId,
+      loginCustomerId: apiAuth.serviceAccountMccId,
+      authType: apiAuth.authType,
+      serviceAccountId: apiAuth.serviceAccountId,
+    })
+  }
+
+  return runWithLoginCustomerFallbackForAccount({
+    adsAccount: {
+      customer_id: action.customerId,
+      parent_mcc_id: apiAuth.parentMccId,
+      id: action.googleAdsAccountId,
+    },
+    refreshToken: apiAuth.refreshToken,
+    authType: 'oauth',
+    serviceAccountId: apiAuth.serviceAccountId,
+    serviceAccountMccId: apiAuth.serviceAccountMccId,
+    oauthLoginCustomerId: apiAuth.oauthLoginCustomerId,
+    actionName,
+    callback: (loginCustomerId) =>
+      createGoogleAdsKeywordsBatch({
+        customerId: action.customerId,
+        refreshToken: apiAuth.refreshToken,
+        adGroupId: action.googleAdGroupId,
+        keywords,
+        accountId: action.googleAdsAccountId,
+        userId: action.userId,
+        loginCustomerId,
+        authType: apiAuth.authType,
+        serviceAccountId: apiAuth.serviceAccountId,
+        credentials: apiAuth.credentials,
+      }),
+  })
 }
 
 function toUserStatsArray(
@@ -530,10 +598,10 @@ export async function runSearchTermAutoNegatives(
     try {
       const apiAuth = await resolveGoogleAdsAuth(action)
 
-      const createResults = await createGoogleAdsKeywordsBatch({
-        customerId: action.customerId,
-        refreshToken: apiAuth.refreshToken,
-        adGroupId: action.googleAdGroupId,
+      const createResults = await createSearchTermKeywordsWithFallback({
+        action,
+        apiAuth,
+        actionName: '自动添加搜索词否定关键词',
         keywords: [{
           keywordText: action.searchTerm,
           matchType: 'EXACT',
@@ -541,12 +609,6 @@ export async function runSearchTermAutoNegatives(
           status: 'ENABLED',
           isNegative: true,
         }],
-        accountId: action.googleAdsAccountId,
-        userId: action.userId,
-        loginCustomerId: apiAuth.loginCustomerId,
-        authType: apiAuth.authType,
-        serviceAccountId: apiAuth.serviceAccountId,
-        credentials: 'credentials' in apiAuth ? apiAuth.credentials : undefined,
       })
 
       const keywordId = createResults[0]?.keywordId || null
@@ -766,22 +828,16 @@ export async function runSearchTermAutoPositiveKeywords(
     try {
       const apiAuth = await resolveGoogleAdsAuth(action)
 
-      const createResults = await createGoogleAdsKeywordsBatch({
-        customerId: action.customerId,
-        refreshToken: apiAuth.refreshToken,
-        adGroupId: action.googleAdGroupId,
+      const createResults = await createSearchTermKeywordsWithFallback({
+        action,
+        apiAuth,
+        actionName: '自动添加搜索词正向关键词',
         keywords: [{
           keywordText: action.searchTerm,
           matchType: action.matchType,
           status: 'ENABLED',
           isNegative: false,
         }],
-        accountId: action.googleAdsAccountId,
-        userId: action.userId,
-        loginCustomerId: apiAuth.loginCustomerId,
-        authType: apiAuth.authType,
-        serviceAccountId: apiAuth.serviceAccountId,
-        credentials: 'credentials' in apiAuth ? apiAuth.credentials : undefined,
       })
 
       const keywordId = createResults[0]?.keywordId || null
