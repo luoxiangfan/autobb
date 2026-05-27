@@ -49,6 +49,7 @@ import {
 import { getCreativeTypeForBucketSlot } from '@/lib/creative-type'
 import { normalizeCreativeTaskError } from '@/lib/creative-task-error'
 import { getSearchTermFeedbackHints } from '@/lib/search-term-feedback-hints'
+import { loadKeywordPoolExpandCredentialsForOffer } from '@/lib/google-ads-accounts-auth'
 
 /**
  * 验证URL是否为有效的URL
@@ -334,7 +335,14 @@ export async function executeAdCreativeGeneration(
         }
       })()
 
-      keywordPool = await getOrCreateKeywordPool(offerId, task.userId, false, reportKeywordPoolProgress)
+      const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(task.userId, offerId)
+      keywordPool = await getOrCreateKeywordPool(
+        offerId,
+        task.userId,
+        false,
+        reportKeywordPoolProgress,
+        expandLoad.ok ? expandLoad : undefined
+      )
 
       // 🔒 使用事务级 advisory lock + 占位记录防止并发竞态
       // 在事务内完成：加锁 → 查询可用桶 → 插入占位记录

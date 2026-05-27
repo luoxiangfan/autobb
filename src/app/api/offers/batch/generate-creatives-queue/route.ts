@@ -140,6 +140,52 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const authCache = createCreativeGenerationAuthCache()
+    try {
+      const userAuth = await validateGoogleAdsConfigForCreativeGeneration(
+        userIdNum,
+        undefined,
+        authCache
+      )
+      if (!userAuth.ok) {
+        const isNotConfigured =
+          !userAuth.missingFields || userAuth.missingFields.length === 0
+        if (isNotConfigured) {
+          return NextResponse.json(
+            {
+              error: '广告创意生成需要完整的 Google Ads API 配置',
+              message: userAuth.message,
+              errorCode: 'CREATIVE_GOOGLE_ADS_NOT_CONFIGURED',
+            },
+            { status: 400 }
+          )
+        }
+        return NextResponse.json(
+          {
+            error: '广告创意生成需要完整的 Google Ads API 配置',
+            message: userAuth.message,
+            details:
+              userAuth.authType === 'service_account'
+                ? '请前往【设置】→【服务账号配置】页面检查服务账号配置。'
+                : '请前往【设置】页面配置 Google Ads API 凭证。',
+          },
+          { status: 400 }
+        )
+      }
+    } catch (error: any) {
+      console.error(
+        `[BatchCreativeGeneration] User-level Google Ads config check failed (userId=${userIdNum}):`,
+        error?.message || error
+      )
+      return NextResponse.json(
+        {
+          error: '广告创意生成需要完整的 Google Ads API 配置',
+          message: error?.message || 'Google Ads 配置校验失败',
+        },
+        { status: 500 }
+      )
+    }
+
     // 1) 批量读取Offer状态（只处理当前用户且未删除）
     const placeholders = offerIds.map(() => '?').join(',')
     const notDeletedCondition = db.type === 'postgres'
@@ -194,7 +240,6 @@ export async function POST(request: NextRequest) {
     }
 
     const taskIds: string[] = []
-    const authCache = createCreativeGenerationAuthCache()
 
     for (const offerId of offerIds) {
       const offer = offersById.get(offerId)

@@ -25,6 +25,7 @@ import {
 } from '@/lib/ad-creative-generation-mode'
 import { AD_CREATIVE_REQUIRED_MIN_SCORE } from '@/lib/ad-creative-quality-loop'
 import { getAvailableBuckets, getOrCreateKeywordPool } from '@/lib/offer-keyword-pool'
+import { loadKeywordPoolExpandCredentialsForOffer } from '@/lib/google-ads-accounts-auth'
 import { markBucketGenerated } from '@/lib/offers'
 import { getThemeByBucket, type BucketType } from '@/lib/ad-creative-generator'
 import {
@@ -220,7 +221,14 @@ export async function POST(
     console.log(`📌 生成接口 forcePublish 参数: ${forcePublishRequested ? '已传入（本接口忽略）' : '未传入'}`)
     console.time('⏱️ 总生成耗时')
 
-    const keywordPool = await getOrCreateKeywordPool(parsedOfferId, parsedUserId, false)
+    const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(parsedUserId, parsedOfferId)
+    const keywordPool = await getOrCreateKeywordPool(
+      parsedOfferId,
+      parsedUserId,
+      false,
+      undefined,
+      expandLoad.ok ? expandLoad : undefined
+    )
 
     const generationResult = await runBucketCreativeGeneration({
       offerId: parsedOfferId,

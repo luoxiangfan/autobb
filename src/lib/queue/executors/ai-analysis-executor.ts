@@ -71,6 +71,7 @@ export function createAIAnalysisExecutor(): TaskExecutor<AIAnalysisTaskData> {
         targetCountry,
         targetLanguage,
         userId,
+        offerId,
         enableReviewAnalysis: options?.enableReviewAnalysis ?? true,
         enableCompetitorAnalysis: options?.enableCompetitorAnalysis ?? true,
         enableAdExtraction: options?.enableAdExtraction ?? true

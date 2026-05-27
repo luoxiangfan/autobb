@@ -20,6 +20,7 @@ import {
 } from '@/lib/ad-creative-generation-mode'
 import { isControllerOpen } from '@/lib/sse-helper'
 import { getAvailableBuckets, getOrCreateKeywordPool } from '@/lib/offer-keyword-pool'
+import { loadKeywordPoolExpandCredentialsForOffer } from '@/lib/google-ads-accounts-auth'
 import { getThemeByBucket, type BucketType } from '@/lib/ad-creative-generator'
 import {
   getCreativeTypeForBucketSlot,
@@ -254,7 +255,14 @@ export async function POST(
         })
 
         const generateDurations = new Map<number, number>()
-        const keywordPool = await getOrCreateKeywordPool(parsedOfferId, parsedUserId, false)
+        const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(parsedUserId, parsedOfferId)
+        const keywordPool = await getOrCreateKeywordPool(
+          parsedOfferId,
+          parsedUserId,
+          false,
+          undefined,
+          expandLoad.ok ? expandLoad : undefined
+        )
 
         const preparedBucketContext = await prepareBucketKeywordContext({
           offer,

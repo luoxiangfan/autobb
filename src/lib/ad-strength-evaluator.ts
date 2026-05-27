@@ -18,7 +18,11 @@ import type {
   DescriptionAsset,
   QualityMetrics
 } from './ad-creative'
-import { getKeywordSearchVolumesForPlannerContext } from './google-ads-accounts-auth'
+import {
+  getKeywordSearchVolumesForPlannerContext,
+  loadKeywordPoolExpandCredentialsForOffer,
+  type KeywordPlannerPreparedSession,
+} from './google-ads-accounts-auth'
 import { normalizeLanguageCode } from './language-country-codes'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import { loadPrompt, interpolateTemplate } from './prompt-loader'
@@ -1721,6 +1725,14 @@ async function calculateBrandSearchVolume(
     // ========================================
     const normalizedLanguage = normalizeLanguageCode(targetLanguage)
 
+    let plannerSession: KeywordPlannerPreparedSession | undefined
+    if (userId && offerId) {
+      const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
+      if (expandLoad.ok) {
+        plannerSession = expandLoad.plannerSession
+      }
+    }
+
     const volumeResult =
       userId
         ? await getKeywordSearchVolumesForPlannerContext({
@@ -1729,6 +1741,7 @@ async function calculateBrandSearchVolume(
             keywords: [brandName],
             country: targetCountry,
             language: normalizedLanguage,
+            plannerSession,
           })
         : null
     const volumeResults = volumeResult?.ok

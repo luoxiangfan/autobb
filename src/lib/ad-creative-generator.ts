@@ -11040,7 +11040,10 @@ export async function generateAdCreative(
 	              (options?.keywordPool as OfferKeywordPool | undefined)
 	              || await getOrCreateKeywordPool(
 	                offer.id,
-	                userId
+	                userId,
+	                false,
+	                undefined,
+	                expandLoad
 	              )
 
 	            if (keywordPool) {

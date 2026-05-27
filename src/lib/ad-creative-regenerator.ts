@@ -125,9 +125,18 @@ export async function regenerateAdCreative(
       || undefined
     const bucketIntentEn = bucketTheme?.split(' - ')[1] || undefined
 
-    const keywordPool = bucket
-      ? await getOrCreateKeywordPool(offerId, userId, false)
-      : null
+    let keywordPool: Awaited<ReturnType<typeof getOrCreateKeywordPool>> | null = null
+    if (bucket) {
+      const { loadKeywordPoolExpandCredentialsForOffer } = await import('@/lib/google-ads-accounts-auth')
+      const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
+      keywordPool = await getOrCreateKeywordPool(
+        offerId,
+        userId,
+        false,
+        undefined,
+        expandLoad.ok ? expandLoad : undefined
+      )
+    }
 
     console.log(
       `[Ad Creative Regenerator] Generating for offer ${offerId} (mode=${inheritedMode}, bucket=${bucket || 'none'}, generationBucket=${generationBucket || 'none'}, maxRetries=${generationProfile.maxRetries})`

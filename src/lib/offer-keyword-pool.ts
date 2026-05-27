@@ -23,6 +23,7 @@ import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import {
   getKeywordSearchVolumesForPlannerContext,
   loadKeywordPoolExpandCredentialsForOffer,
+  type KeywordPoolExpandLoadResult,
   type KeywordPlannerPreparedSession,
 } from './google-ads-accounts-auth'
 import { extractVerifiedKeywordSourcePool } from './unified-keyword-service'
@@ -4382,7 +4383,8 @@ export async function generateOfferKeywordPool(
   offerId: number,
   userId: number,
   allKeywords?: string[],
-  progress?: KeywordPoolProgressReporter
+  progress?: KeywordPoolProgressReporter,
+  preparedExpand?: KeywordPoolExpandLoadResult
 ): Promise<OfferKeywordPool> {
   console.log(`\n📦 开始生成 Offer #${offerId} 的关键词池`)
   await progress?.({ phase: 'seed-volume', message: '开始生成关键词池' })
@@ -4413,25 +4415,37 @@ export async function generateOfferKeywordPool(
   let plannerSession: KeywordPlannerPreparedSession | undefined
   let linkedServiceAccountId: string | null | undefined
 
-  try {
-    const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id)
-    if (!expandLoad.ok) {
-      console.warn(
-        `⚠️ Keyword Planner 扩展认证不可用（prepare 失败），将回退初始种子词 (offerId=${offer.id}, userId=${userId})`
-      )
-    } else {
-      authType = expandLoad.creds.authType
-      customerId = expandLoad.creds.customerId
-      refreshToken = expandLoad.creds.refreshToken
-      accountId = expandLoad.creds.accountId
-      clientId = expandLoad.creds.clientId
-      clientSecret = expandLoad.creds.clientSecret
-      developerToken = expandLoad.creds.developerToken
-      linkedServiceAccountId = expandLoad.creds.linkedServiceAccountId
-      plannerSession = expandLoad.plannerSession
+  if (preparedExpand?.ok) {
+    authType = preparedExpand.creds.authType
+    customerId = preparedExpand.creds.customerId
+    refreshToken = preparedExpand.creds.refreshToken
+    accountId = preparedExpand.creds.accountId
+    clientId = preparedExpand.creds.clientId
+    clientSecret = preparedExpand.creds.clientSecret
+    developerToken = preparedExpand.creds.developerToken
+    linkedServiceAccountId = preparedExpand.creds.linkedServiceAccountId
+    plannerSession = preparedExpand.plannerSession
+  } else {
+    try {
+      const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id)
+      if (!expandLoad.ok) {
+        console.warn(
+          `⚠️ Keyword Planner 扩展认证不可用（prepare 失败），将回退初始种子词 (offerId=${offer.id}, userId=${userId})`
+        )
+      } else {
+        authType = expandLoad.creds.authType
+        customerId = expandLoad.creds.customerId
+        refreshToken = expandLoad.creds.refreshToken
+        accountId = expandLoad.creds.accountId
+        clientId = expandLoad.creds.clientId
+        clientSecret = expandLoad.creds.clientSecret
+        developerToken = expandLoad.creds.developerToken
+        linkedServiceAccountId = expandLoad.creds.linkedServiceAccountId
+        plannerSession = expandLoad.plannerSession
+      }
+    } catch (error) {
+      console.warn('⚠️ 无法获取Google Ads凭证，跳过关键词扩展:', (error as Error).message)
     }
-  } catch (error) {
-    console.warn('⚠️ 无法获取Google Ads凭证，跳过关键词扩展:', (error as Error).message)
   }
 
   // 1.5 Marketplace场景：尽量补全“品牌官网”，用于Keyword Planner的站点过滤（best-effort）
@@ -5289,7 +5303,8 @@ export async function getOrCreateKeywordPool(
   offerId: number,
   userId: number,
   forceRegenerate: boolean = false,
-  progress?: KeywordPoolProgressReporter
+  progress?: KeywordPoolProgressReporter,
+  preparedExpand?: KeywordPoolExpandLoadResult
 ): Promise<OfferKeywordPool> {
   // 检查现有池
   if (!forceRegenerate) {
@@ -5301,7 +5316,7 @@ export async function getOrCreateKeywordPool(
   }
 
   // 生成新池
-  return generateOfferKeywordPool(offerId, userId, undefined, progress)
+  return generateOfferKeywordPool(offerId, userId, undefined, progress, preparedExpand)
 }
 
 type PromoteKeywordInput = {

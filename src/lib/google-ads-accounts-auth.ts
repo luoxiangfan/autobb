@@ -838,6 +838,9 @@ export type KeywordPoolExpandLoadResult =
       plannerSession: KeywordPlannerPreparedSession
     }
 
+/** 已由 loadKeywordPoolExpandCredentialsForOffer prepare 成功时传入池生成，避免重复 heal */
+export type KeywordPoolPreparedExpand = Extract<KeywordPoolExpandLoadResult, { ok: true }>
+
 /** 关键词池扩展：单次 prepare，返回 OAuth 字段 + 可复用的 planner session */
 export async function loadKeywordPoolExpandCredentialsForOffer(
   userId: number,

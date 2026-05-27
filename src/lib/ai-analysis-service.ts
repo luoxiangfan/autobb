@@ -188,6 +188,8 @@ export interface AIAnalysisInput {
   targetCountry: string
   targetLanguage: string
   userId: number
+  /** 用于 Keyword Planner / 广告元素提取的 linked SA 解析 */
+  offerId?: number
   fallbackBrand?: string
   enableReviewAnalysis?: boolean
   enableCompetitorAnalysis?: boolean
@@ -1851,7 +1853,8 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
           brandForAdExtraction || 'Unknown',
           targetCountry,
           targetLanguage,
-          userId
+          userId,
+          input.offerId != null ? { offerId: input.offerId } : undefined
         )
 
         // 转换keywords为string[]并清洗无效项（unknown/test/null等）
