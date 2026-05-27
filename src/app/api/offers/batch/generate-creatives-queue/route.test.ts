@@ -35,9 +35,13 @@ vi.mock('@/lib/queue', () => ({
   getQueueManager: queueFns.getQueueManager,
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', () => ({
-  validateGoogleAdsConfigForCreativeGeneration: authFns.validateGoogleAdsConfigForCreativeGeneration,
-}))
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    validateGoogleAdsConfigForCreativeGeneration: authFns.validateGoogleAdsConfigForCreativeGeneration,
+  }
+})
 
 vi.mock('@/lib/offer-keyword-pool', () => ({
   getAvailableBuckets: keywordPoolFns.getAvailableBuckets,
@@ -163,7 +167,14 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
       },
       taskIds: ['task-102'],
     })
-    expect(authFns.validateGoogleAdsConfigForCreativeGeneration).toHaveBeenCalledWith(1, 102)
+    expect(authFns.validateGoogleAdsConfigForCreativeGeneration).toHaveBeenCalledWith(
+      1,
+      102,
+      expect.objectContaining({
+        prepareByLinkedSa: expect.any(Map),
+        validationByOfferId: expect.any(Map),
+      })
+    )
   })
 
   it('skips offers when per-offer Google Ads config validation fails', async () => {
@@ -192,7 +203,14 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
     expect(res.status).toBe(200)
     expect(data.enqueuedCount).toBe(0)
     expect(data.skipReasons.googleAdsConfigIncomplete).toBe(1)
-    expect(authFns.validateGoogleAdsConfigForCreativeGeneration).toHaveBeenCalledWith(1, 102)
+    expect(authFns.validateGoogleAdsConfigForCreativeGeneration).toHaveBeenCalledWith(
+      1,
+      102,
+      expect.objectContaining({
+        prepareByLinkedSa: expect.any(Map),
+        validationByOfferId: expect.any(Map),
+      })
+    )
     expect(queueFns.enqueue).not.toHaveBeenCalled()
   })
 

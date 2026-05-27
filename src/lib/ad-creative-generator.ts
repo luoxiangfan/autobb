@@ -9,7 +9,11 @@ import type {
 } from './ad-creative'
 import type { Offer } from './offers'
 import { creativeCache, generateCreativeCacheKey } from './cache'
-import { getKeywordSearchVolumesForPlannerContext } from './google-ads-accounts-auth'
+import {
+  getKeywordSearchVolumesForPlannerContext,
+  loadKeywordPoolExpandCredentialsForOffer,
+  type KeywordPlannerPreparedSession,
+} from './google-ads-accounts-auth'
 import {
   clusterKeywordsByIntent,
   getBucketInfo,
@@ -5699,6 +5703,7 @@ interface MergeExtractedKeywordsInput {
   productCategory: string
   userId: number
   offerId?: number
+  plannerSession?: KeywordPlannerPreparedSession
   targetCountry: string
   language: string
   creativeType?: 'brand_intent' | 'model_intent' | 'product_intent' | null
@@ -5965,6 +5970,7 @@ async function mergeExtractedKeywordsWithSingleExit(
           keywords: keywordsForVolumeLookup,
           country: targetCountry,
           language,
+          plannerSession: input.plannerSession,
         })
         if (!volumeResult.ok) {
           throw new Error(volumeResult.message)
@@ -6113,6 +6119,7 @@ interface KeywordFinalizeInput {
   targetLanguage: string
   userId: number
   offerId?: number
+  plannerSession?: KeywordPlannerPreparedSession
 }
 
 interface KeywordFinalizeOutput {
@@ -6256,6 +6263,7 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
           keywords: [offerBrand],
           country: targetCountry,
           language: langCode,
+          plannerSession: input.plannerSession,
         })
         if (volumeResult.ok) {
           const volumes = volumeResult.volumes
@@ -11000,14 +11008,15 @@ export async function generateAdCreative(
 
   // 🎯 通过Keyword Planner扩展高搜索量关键词（多角度3轮查询策略）
   // 策略: 使用不同角度的种子词进行3轮查询，最大化获取高搜索量关键词提示
+  let plannerSessionForCreative: KeywordPlannerPreparedSession | undefined
   try {
-    if (brandName && userId) {
+    if (brandName && userId && offer?.id) {
       console.log(`🔍 启动Keyword Planner多角度3轮查询策略`)
       console.time('⏱️ Keyword Planner扩展')
 
-      const { hasConfiguredGoogleAdsAuth } = await import('@/lib/google-ads-auth-assignment')
-
-      if (await hasConfiguredGoogleAdsAuth(userId)) {
+      const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id)
+      if (expandLoad.ok) {
+        plannerSessionForCreative = expandLoad.plannerSession
           const country = (offer as { target_country?: string }).target_country || 'US'
           const plannerLanguage = resolveCreativeTargetLanguage(
             (offer as { target_language?: string }).target_language || null,
@@ -11068,13 +11077,15 @@ export async function generateAdCreative(
           }
           } // 闭合 bucketKeywords 条件检查的 else 块
       } else {
-        console.warn('⚠️ 未配置 Google Ads 认证，跳过 Keyword Planner 扩展')
+        console.warn('⚠️ Google Ads 认证不可用，跳过 Keyword Planner 扩展')
       }
 
       console.timeEnd('⏱️ Keyword Planner扩展')
     } else {
       if (!brandName || !userId) {
         console.log('ℹ️ Offer缺少品牌名或userId，跳过Keyword Planner扩展')
+      } else if (!offer?.id) {
+        console.log('ℹ️ Offer缺少 id，跳过Keyword Planner扩展')
       }
     }
   } catch (plannerError: any) {
@@ -11099,6 +11110,7 @@ export async function generateAdCreative(
       productCategory: (offer as { category?: string }).category || '未分类',
       userId,
       offerId: offer.id,
+      plannerSession: plannerSessionForCreative,
       targetCountry,
       language,
       creativeType: resolveCreativeTypeFromBucketForMerge(normalizedBucket),
@@ -11118,6 +11130,7 @@ export async function generateAdCreative(
       targetLanguage: resolvedTargetLanguage,
       userId,
       offerId: offer.id,
+      plannerSession: plannerSessionForCreative,
     })
     keywordsWithVolume = finalizedKeywords.keywordsWithVolume
     result.keywords = finalizedKeywords.keywords

@@ -12,7 +12,11 @@
 
 import { generateContent } from './gemini'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
-import { getKeywordSearchVolumesForPlannerContext } from './google-ads-accounts-auth'
+import {
+  getKeywordSearchVolumesForPlannerContext,
+  loadKeywordPoolExpandCredentialsForOffer,
+  type KeywordPlannerPreparedSession,
+} from './google-ads-accounts-auth'
 import { getHighIntentKeywords } from './google-suggestions'
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
@@ -538,7 +542,8 @@ async function extractFromSingleProduct(
   brand: string,
   targetCountry: string,
   targetLanguage: string,
-  userId: number
+  userId: number,
+  plannerSession?: KeywordPlannerPreparedSession
 ): Promise<ExtractedAdElements> {
   console.log('📦 单商品场景：提取广告元素...')
 
@@ -685,6 +690,7 @@ async function extractFromSingleProduct(
       keywords: keywordCandidates,
       country: targetCountry,
       language: targetLanguage,
+      plannerSession,
     })
     if (!volumeResult.ok) {
       throw new Error(volumeResult.message)
@@ -823,7 +829,8 @@ async function extractFromStore(
   brand: string,
   targetCountry: string,
   targetLanguage: string,
-  userId: number
+  userId: number,
+  plannerSession?: KeywordPlannerPreparedSession
 ): Promise<ExtractedAdElements> {
   console.log(`🏪 店铺场景：从${products.length}个热销商品提取广告元素...`)
   const pureBrandKeywords = getPureBrandKeywords(brand)
@@ -907,6 +914,7 @@ async function extractFromStore(
       keywords: keywordCandidates,
       country: targetCountry,
       language: targetLanguage,
+      plannerSession,
     })
     if (!volumeResult.ok) {
       throw new Error(volumeResult.message)
@@ -1800,7 +1808,8 @@ export async function extractAdElements(
   brand: string,
   targetCountry: string,
   targetLanguage: string,
-  userId: number
+  userId: number,
+  options?: { offerId?: number }
 ): Promise<ExtractedAdElements> {
   console.log('\n🎯 开始提取广告关键元素...')
   console.log(`  - 场景类型: ${scraped.pageType}`)
@@ -1808,13 +1817,22 @@ export async function extractAdElements(
   console.log(`  - 目标国家: ${targetCountry}`)
   console.log(`  - 目标语言: ${targetLanguage}`)
 
+  let plannerSession: KeywordPlannerPreparedSession | undefined
+  if (options?.offerId) {
+    const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, options.offerId)
+    if (expandLoad.ok) {
+      plannerSession = expandLoad.plannerSession
+    }
+  }
+
   if (scraped.pageType === 'product' && scraped.product) {
     return await extractFromSingleProduct(
       scraped.product,
       brand,
       targetCountry,
       targetLanguage,
-      userId
+      userId,
+      plannerSession
     )
   } else if (scraped.pageType === 'store' && scraped.storeProducts && scraped.storeProducts.length > 0) {
     return await extractFromStore(
@@ -1825,7 +1843,8 @@ export async function extractAdElements(
       brand,
       targetCountry,
       targetLanguage,
-      userId
+      userId,
+      plannerSession
     )
   } else {
     throw new Error(`无法提取广告元素：pageType=${scraped.pageType}, 商品数据=${scraped.product ? '有' : '无'}, 店铺商品=${scraped.storeProducts?.length || 0}个`)

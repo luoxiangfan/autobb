@@ -248,7 +248,14 @@ export async function POST(
     }
   } catch (error: any) {
     console.error('[CreativeGeneration] Failed to check Google Ads config:', error)
-    // 不阻止任务继续（允许降级运行，但会记录警告）
+    return createQueueErrorResponse({
+      status: 400,
+      error: '广告创意生成需要完整的 Google Ads API 配置',
+      message: error?.message || 'Google Ads 配置校验失败',
+      errorCode: 'GOOGLE_ADS_CONFIG_CHECK_FAILED',
+      errorCategory: 'config',
+      retryable: false,
+    })
   }
 
   try {

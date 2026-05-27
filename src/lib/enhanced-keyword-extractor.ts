@@ -13,7 +13,11 @@
  * - 覆盖所有购买阶段
  */
 
-import { getKeywordSearchVolumesForPlannerContext } from './google-ads-accounts-auth'
+import {
+  getKeywordSearchVolumesForPlannerContext,
+  loadKeywordPoolExpandCredentialsForOffer,
+  type KeywordPlannerPreparedSession,
+} from './google-ads-accounts-auth'
 import { getHighIntentKeywords } from './google-suggestions'
 
 export interface EnhancedKeyword {
@@ -43,6 +47,8 @@ export interface KeywordExtractionInput {
   competitors: string[]
   targetCountry: string
   targetLanguage: string
+  /** 提供时按 Offer linked SA prepare，供搜索量查询复用 session */
+  offerId?: number
 }
 
 function normalizeEvidencePhrase(raw: string, maxTokens = 4): string | null {
@@ -147,11 +153,20 @@ export async function extractKeywordsEnhanced(
 
     // 查询搜索量和竞争度
     console.log('📊 查询关键词指标...')
+    let plannerSession: KeywordPlannerPreparedSession | undefined
+    if (input.offerId) {
+      const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, input.offerId)
+      if (expandLoad.ok) {
+        plannerSession = expandLoad.plannerSession
+      }
+    }
     const withMetrics = await enrichKeywordsWithMetrics(
       allKeywords,
       targetCountry,
       targetLanguage,
-      userId
+      userId,
+      input.offerId,
+      plannerSession
     )
 
     // 过滤和排序
@@ -400,7 +415,9 @@ async function enrichKeywordsWithMetrics(
   keywords: Partial<EnhancedKeyword>[],
   targetCountry: string,
   targetLanguage: string,  // 添加语言参数
-  userId: number
+  userId: number,
+  offerId?: number,
+  plannerSession?: KeywordPlannerPreparedSession
 ): Promise<EnhancedKeyword[]> {
   const keywordTexts = keywords.map((kw) => kw.keyword || '').filter(Boolean)
 
@@ -408,9 +425,11 @@ async function enrichKeywordsWithMetrics(
     // 🔧 修复(2025-12-26): 支持服务账号模式
     const volumeResult = await getKeywordSearchVolumesForPlannerContext({
       userId,
+      offerId,
       keywords: keywordTexts,
       country: targetCountry,
       language: targetLanguage,
+      plannerSession,
     })
     if (!volumeResult.ok) {
       return keywords as EnhancedKeyword[]

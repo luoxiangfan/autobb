@@ -2201,6 +2201,10 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
  * 3. 按搜索量降序排序
  * 4. 白名单过滤
  * 5. 智能过滤 + 匹配类型分配
+ *
+ * 调用方须传入 `offerId` 或 `linkedServiceAccountId`，并优先传入
+ * `loadKeywordPoolExpandCredentialsForOffer` 的 `plannerSession`，避免重复 prepare/heal。
+ * 当前生产入口：`/api/ad-groups/[id]/generate-keywords`。
  */
 export async function getUnifiedKeywordData(params: KeywordServiceParams): Promise<UnifiedKeywordResult> {
   const {

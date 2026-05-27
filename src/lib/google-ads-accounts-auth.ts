@@ -600,18 +600,71 @@ export type CreativeGenerationGoogleAdsValidationResult =
     }
   | { ok: true; authContext: GoogleAdsAuthContext; apiAuth: GoogleAdsApiAuthFields }
 
-/**
- * 创意生成入队前校验 Google Ads 配置（linked SA + prepare/heal）。
- * 提供 offerId 时按 Offer 关联账号解析 linked SA；批量入队可省略 offerId（用户级 prepare）。
- */
-export async function validateGoogleAdsConfigForCreativeGeneration(
+/** 批量创意入队等场景：复用 linked SA 的 prepare 与按 offer 的校验结果 */
+export type CreativeGenerationAuthCache = {
+  prepareByLinkedSa: Map<
+    string,
+    Awaited<ReturnType<typeof prepareGoogleAdsApiCallForLinkedAccount>>
+  >
+  validationByOfferId: Map<number, CreativeGenerationGoogleAdsValidationResult>
+}
+
+export function createCreativeGenerationAuthCache(): CreativeGenerationAuthCache {
+  return {
+    prepareByLinkedSa: new Map(),
+    validationByOfferId: new Map(),
+  }
+}
+
+function linkedSaPrepareCacheKey(userId: number, linkedSa: string | null): string {
+  return `${userId}\0${linkedSa ?? ''}`
+}
+
+async function prepareGoogleAdsApiCallForLinkedAccountCached(
   userId: number,
-  offerId?: number
+  linkedSa: string | null,
+  cache?: CreativeGenerationAuthCache
+): Promise<Awaited<ReturnType<typeof prepareGoogleAdsApiCallForLinkedAccount>>> {
+  const key = linkedSaPrepareCacheKey(userId, linkedSa)
+  const hit = cache?.prepareByLinkedSa.get(key)
+  if (hit) return hit
+
+  const prepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, linkedSa)
+  cache?.prepareByLinkedSa.set(key, prepared)
+  return prepared
+}
+
+/**
+ * OAuth customerId：与关键词池 expand 一致，优先 Offer 关联 Ads 账号行，否则 login_customer_id。
+ */
+async function resolveOAuthCustomerIdForPlannerContext(
+  userId: number,
+  offerId: number | undefined,
+  googleAdsConfig: Awaited<ReturnType<typeof getGoogleAdsConfig>>
+): Promise<string | null> {
+  if (offerId != null) {
+    const adsAccount = await queryGoogleAdsAccountForOfferExpand(userId, offerId)
+    const fromAccount = adsAccount?.customer_id?.trim()
+    if (fromAccount) return fromAccount
+  }
+  const fromLogin =
+    googleAdsConfig?.customerId?.trim() || googleAdsConfig?.loginCustomerId?.trim() || ''
+  return fromLogin || null
+}
+
+async function validateGoogleAdsConfigForCreativeGenerationInternal(
+  userId: number,
+  offerId: number | undefined,
+  cache?: CreativeGenerationAuthCache
 ): Promise<CreativeGenerationGoogleAdsValidationResult> {
   const linkedSa =
     offerId != null ? await resolveLinkedServiceAccountIdForOffer(userId, offerId) : null
 
-  const prepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, linkedSa)
+  const prepared = await prepareGoogleAdsApiCallForLinkedAccountCached(
+    userId,
+    linkedSa,
+    cache
+  )
   if (!prepared.ok) {
     return { ok: false, message: prepared.message }
   }
@@ -631,37 +684,74 @@ export async function validateGoogleAdsConfigForCreativeGeneration(
       : undefined
   )
 
-  const isConfigComplete =
-    apiAuth.authType === 'service_account'
-      ? !!(googleAdsConfig?.developerToken && googleAdsConfig?.customerId)
-      : !!(
-          googleAdsConfig?.developerToken &&
-          googleAdsConfig?.refreshToken &&
-          googleAdsConfig?.customerId
-        )
+  if (apiAuth.authType === 'service_account') {
+    const isConfigComplete = !!(googleAdsConfig?.developerToken && googleAdsConfig?.customerId)
+    if (!isConfigComplete) {
+      return {
+        ok: false,
+        message: '广告创意生成需要完整的 Google Ads API 配置',
+        authType: apiAuth.authType,
+        missingFields: [
+          !googleAdsConfig?.developerToken && 'Developer Token',
+          !googleAdsConfig?.customerId && 'MCC Customer ID',
+        ].filter(Boolean) as string[],
+      }
+    }
+    return { ok: true, authContext, apiAuth }
+  }
+
+  const oauthCustomerId = await resolveOAuthCustomerIdForPlannerContext(
+    userId,
+    offerId,
+    googleAdsConfig
+  )
+  const isConfigComplete = !!(
+    googleAdsConfig?.developerToken &&
+    googleAdsConfig?.refreshToken &&
+    oauthCustomerId
+  )
 
   if (!isConfigComplete) {
-    const missingFields =
-      apiAuth.authType === 'service_account'
-        ? ([
-            !googleAdsConfig?.developerToken && 'Developer Token',
-            !googleAdsConfig?.customerId && 'MCC Customer ID',
-          ].filter(Boolean) as string[])
-        : ([
-            !googleAdsConfig?.developerToken && 'Developer Token',
-            !googleAdsConfig?.refreshToken && 'Refresh Token / OAuth',
-            !googleAdsConfig?.customerId && 'Customer ID',
-          ].filter(Boolean) as string[])
-
     return {
       ok: false,
       message: '广告创意生成需要完整的 Google Ads API 配置',
       authType: apiAuth.authType,
-      missingFields,
+      missingFields: [
+        !googleAdsConfig?.developerToken && 'Developer Token',
+        !googleAdsConfig?.refreshToken && 'Refresh Token / OAuth',
+        !oauthCustomerId && 'Customer ID',
+      ].filter(Boolean) as string[],
     }
   }
 
   return { ok: true, authContext, apiAuth }
+}
+
+/**
+ * 创意生成入队前校验 Google Ads 配置（linked SA + prepare/heal）。
+ * 提供 offerId 时按 Offer 关联账号解析 linked SA；批量入队可省略 offerId（用户级 prepare）。
+ * 传入 cache 时复用同 linked SA 的 prepare 与同 offerId 的校验结果。
+ */
+export async function validateGoogleAdsConfigForCreativeGeneration(
+  userId: number,
+  offerId?: number,
+  cache?: CreativeGenerationAuthCache
+): Promise<CreativeGenerationGoogleAdsValidationResult> {
+  if (offerId != null && cache?.validationByOfferId.has(offerId)) {
+    return cache.validationByOfferId.get(offerId)!
+  }
+
+  const result = await validateGoogleAdsConfigForCreativeGenerationInternal(
+    userId,
+    offerId,
+    cache
+  )
+
+  if (offerId != null) {
+    cache?.validationByOfferId.set(offerId, result)
+  }
+
+  return result
 }
 
 export type KeywordPoolExpandCredentials = {

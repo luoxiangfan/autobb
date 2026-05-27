@@ -15,7 +15,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue'
-import { validateGoogleAdsConfigForCreativeGeneration } from '@/lib/google-ads-accounts-auth'
+import {
+  createCreativeGenerationAuthCache,
+  validateGoogleAdsConfigForCreativeGeneration,
+} from '@/lib/google-ads-accounts-auth'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
 import { toDbJsonObjectField } from '@/lib/json-field'
 import {
@@ -191,6 +194,7 @@ export async function POST(request: NextRequest) {
     }
 
     const taskIds: string[] = []
+    const authCache = createCreativeGenerationAuthCache()
 
     for (const offerId of offerIds) {
       const offer = offersById.get(offerId)
@@ -223,7 +227,8 @@ export async function POST(request: NextRequest) {
       try {
         const authValidation = await validateGoogleAdsConfigForCreativeGeneration(
           userIdNum,
-          offerId
+          offerId,
+          authCache
         )
         if (!authValidation.ok) {
           stats.skipped++

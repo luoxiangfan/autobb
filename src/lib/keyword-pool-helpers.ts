@@ -1511,6 +1511,7 @@ async function expandForServiceAccount(params: ServiceAccountExpandParams): Prom
         competitors: extractCompetitorsFromOffer(offer),
         targetCountry: targetCountry,
         targetLanguage: targetLanguage,
+        offerId: offer.id,
       }, userId)
 
       console.log(`      增强提取: ${enhancedKeywords.length} 个`)
