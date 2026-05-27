@@ -1,11 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  defaultOAuthAuthContext,
+  defaultOAuthApiCredentialsFields,
+  defaultPreparedGoogleAdsAccountApiCall,
+  hasConfiguredGoogleAdsAuthFromContextMock,
+} from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 
 const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
 }))
 
 const authContextFns = vi.hoisted(() => ({
-  resolveGoogleAdsApiAuthForAccount: vi.fn(),
+  getGoogleAdsAuthContext: vi.fn(),
+  hasConfiguredGoogleAdsAuthFromContext: vi.fn(),
+}))
+
+const accountsAuthFns = vi.hoisted(() => ({
+  prepareGoogleAdsAccountApiCall: vi.fn(),
 }))
 
 const apiFns = vi.hoisted(() => ({
@@ -20,7 +31,12 @@ vi.mock('@/lib/db', () => ({
 }))
 
 vi.mock('@/lib/google-ads-auth-context', () => ({
-  resolveGoogleAdsApiAuthForAccount: authContextFns.resolveGoogleAdsApiAuthForAccount,
+  getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext: authContextFns.hasConfiguredGoogleAdsAuthFromContext,
+}))
+
+vi.mock('@/lib/google-ads-accounts-auth', () => ({
+  prepareGoogleAdsAccountApiCall: accountsAuthFns.prepareGoogleAdsAccountApiCall,
 }))
 
 vi.mock('@/lib/google-ads-api', () => ({
@@ -43,22 +59,20 @@ describe('queryActiveCampaigns login_customer_id fallback', () => {
       return null
     })
 
-    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
-      ok: true,
-      ctx: {
-        auth: { authType: 'oauth' },
-        oauthCredentials: {
-          refresh_token: 'refresh-token',
-          login_customer_id: '7888509345',
-        },
-        serviceAccountConfig: null,
-      },
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue(defaultOAuthAuthContext)
+    authContextFns.hasConfiguredGoogleAdsAuthFromContext.mockImplementation(
+      hasConfiguredGoogleAdsAuthFromContextMock
+    )
+    accountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue({
+      ...defaultPreparedGoogleAdsAccountApiCall,
       apiAuth: {
-        authType: 'oauth',
+        ...defaultPreparedGoogleAdsAccountApiCall.apiAuth,
         refreshToken: 'refresh-token',
-        serviceAccountId: undefined,
         oauthLoginCustomerId: '7888509345',
       },
+      refreshToken: 'refresh-token',
+      oauthLoginCustomerId: '7888509345',
+      oauthCredentials: defaultOAuthApiCredentialsFields,
     })
   })
 
@@ -87,12 +101,26 @@ describe('queryActiveCampaigns login_customer_id fallback', () => {
     const { queryActiveCampaigns } = await import('@/lib/active-campaigns-query')
     const result = await queryActiveCampaigns(1, 775, 42)
 
-    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledWith(42, null)
+    expect(accountsAuthFns.prepareGoogleAdsAccountApiCall).toHaveBeenCalledWith({
+      authContext: defaultOAuthAuthContext,
+      linkedServiceAccountId: null,
+    })
     expect(apiFns.listGoogleAdsCampaigns).toHaveBeenCalledTimes(2)
     expect(result.total.enabled).toBe(1)
   })
 
   it('resolves auth with linked account service_account_id', async () => {
+    const serviceAccountAuthContext = {
+      userId: 42,
+      ownerUserId: 42,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      auth: { authType: 'service_account' as const, serviceAccountId: 'sa-linked' },
+      oauthCredentials: null,
+      serviceAccountConfig: { id: 'sa-linked' },
+    }
+
     dbFns.queryOne.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM google_ads_accounts')) {
         return {
@@ -105,15 +133,16 @@ describe('queryActiveCampaigns login_customer_id fallback', () => {
       return null
     })
 
-    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValueOnce({
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue(serviceAccountAuthContext)
+    accountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue({
       ok: true,
-      ctx: { auth: { authType: 'service_account' } },
       apiAuth: {
         authType: 'service_account',
         refreshToken: '',
         serviceAccountId: 'sa-linked',
         serviceAccountMccId: '1112223333',
       },
+      refreshToken: '',
     })
 
     apiFns.listGoogleAdsCampaigns.mockResolvedValueOnce([])
@@ -121,7 +150,10 @@ describe('queryActiveCampaigns login_customer_id fallback', () => {
     const { queryActiveCampaigns } = await import('@/lib/active-campaigns-query')
     await queryActiveCampaigns(1, 775, 42)
 
-    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledWith(42, 'sa-linked')
+    expect(accountsAuthFns.prepareGoogleAdsAccountApiCall).toHaveBeenCalledWith({
+      authContext: serviceAccountAuthContext,
+      linkedServiceAccountId: 'sa-linked',
+    })
     expect(apiFns.listGoogleAdsCampaigns).toHaveBeenCalledWith(
       expect.objectContaining({
         authType: 'service_account',

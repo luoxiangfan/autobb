@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getCustomerWithCredentials, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
+import { getCustomerWithCredentials } from '@/lib/google-ads-api'
 import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
@@ -8,7 +8,6 @@ import { getDatabase } from '@/lib/db'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
   resolveEffectiveServiceAccountId,
 } from '@/lib/google-ads-auth-context'
 import { executeGAQLQueryPython } from '@/lib/python-ads-client'
@@ -250,21 +249,23 @@ export async function GET(
       )
     }
 
-    const defaultApiAuth = await resolveGoogleAdsApiAuthFromContext(authContext)
-    const useServiceAccountAuth = defaultApiAuth.authType === 'service_account'
-
-    let oauthLoginCustomerId: string | null = defaultApiAuth.oauthLoginCustomerId ?? null
-    let oauthRefreshToken: string | null = defaultApiAuth.refreshToken ?? null
+    const useServiceAccountAuth = authContext.auth.authType === 'service_account'
     const serviceAccountConfigById = new Map<
       string,
       NonNullable<Awaited<ReturnType<typeof getServiceAccountConfig>>>
+    >()
+    const oauthPreparedByAccountId = new Map<
+      number,
+      Awaited<ReturnType<typeof prepareGoogleAdsAccountApiCall>> & { ok: true }
     >()
 
     const groupedAccounts = Array.from(campaignsByAccountId.values())
 
     if (useServiceAccountAuth) {
+      const defaultServiceAccountId =
+        authContext.serviceAccountConfig?.id?.toString() || undefined
       const serviceAccountIds = Array.from(new Set([
-        ...(defaultApiAuth.serviceAccountId ? [defaultApiAuth.serviceAccountId] : []),
+        ...(defaultServiceAccountId ? [defaultServiceAccountId] : []),
         ...groupedAccounts
           .map((account) =>
             resolveEffectiveServiceAccountId(
@@ -286,25 +287,20 @@ export async function GET(
         }
         serviceAccountConfigById.set(serviceAccountId, config)
       }
-    } else if (!oauthRefreshToken) {
-      return NextResponse.json({
-        error: 'Google Ads OAuth未授权或已过期，请先在设置页面重新授权',
-        needsReauth: true,
-      }, { status: 400 })
-    }
-
-    let oauthApiCredentials: OAuthApiCredentialsFields | undefined
-    if (!useServiceAccountAuth) {
-      const prepared = await prepareGoogleAdsAccountApiCall({
+    } else {
+      const oauthGate = await prepareGoogleAdsAccountApiCall({
         authContext,
         linkedServiceAccountId: null,
       })
-      if (!prepared.ok) {
-        return NextResponse.json({ error: prepared.message }, { status: 400 })
+      if (!oauthGate.ok) {
+        return NextResponse.json({ error: oauthGate.message }, { status: 400 })
       }
-      oauthApiCredentials = prepared.oauthCredentials
-      oauthLoginCustomerId =
-        prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId ?? null
+      if (!oauthGate.refreshToken) {
+        return NextResponse.json({
+          error: 'Google Ads OAuth未授权或已过期，请先在设置页面重新授权',
+          needsReauth: true,
+        }, { status: 400 })
+      }
     }
 
     const gaqlCampaignById = new Map<number, any>()
@@ -482,6 +478,30 @@ export async function GET(
           )
         }
       } else {
+        const linkedSaForOAuth =
+          typeof account.serviceAccountId === 'string' ? account.serviceAccountId.trim() : null
+        let accountOAuthPrepared = oauthPreparedByAccountId.get(googleAdsAccountId)
+        if (!accountOAuthPrepared) {
+          const prepared = await prepareGoogleAdsAccountApiCall({
+            authContext,
+            linkedServiceAccountId: linkedSaForOAuth,
+          })
+          if (!prepared.ok) {
+            console.warn(
+              `[offers/campaigns] 跳过账号 ${googleAdsAccountId} GAQL: ${prepared.message}`
+            )
+            continue
+          }
+          accountOAuthPrepared = prepared
+          oauthPreparedByAccountId.set(googleAdsAccountId, prepared)
+        }
+
+        const accountOAuthRefreshToken = accountOAuthPrepared.refreshToken
+        const accountOAuthCredentials = accountOAuthPrepared.oauthCredentials
+        const accountOAuthLoginCustomerId =
+          accountOAuthPrepared.oauthLoginCustomerId ??
+          accountOAuthPrepared.apiAuth.oauthLoginCustomerId
+
         try {
         await runWithLoginCustomerFallbackForAccount({
           adsAccount: {
@@ -489,18 +509,18 @@ export async function GET(
             parent_mcc_id: account.parentMccId,
             id: googleAdsAccountId,
           },
-          refreshToken: oauthRefreshToken || '',
+          refreshToken: accountOAuthRefreshToken,
           authType: 'oauth',
-          oauthLoginCustomerId: oauthLoginCustomerId ?? undefined,
+          oauthLoginCustomerId: accountOAuthLoginCustomerId,
           actionName: `拉取 Offer 广告系列 GAQL (账号 ${googleAdsAccountId})`,
           callback: async (loginCustomerId) => {
             const customer = await getCustomerWithCredentials({
               customerId: account.customerId,
-              refreshToken: oauthRefreshToken || undefined,
+              refreshToken: accountOAuthRefreshToken,
               loginCustomerId,
               accountId: googleAdsAccountId,
               userId: numericUserId,
-              credentials: oauthApiCredentials,
+              credentials: accountOAuthCredentials,
               authType: 'oauth',
             })
 

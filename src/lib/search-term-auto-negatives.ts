@@ -9,7 +9,6 @@ import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-c
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
   type GoogleAdsAuthContext,
 } from '@/lib/google-ads-auth-context'
 import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keyword-intent'

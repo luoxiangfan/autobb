@@ -21,6 +21,8 @@ import { loadPrompt, interpolateTemplate } from './prompt-loader'
 import { findOfferById, type Offer } from './offers'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import { tryGetConfiguredGoogleAdsApiAuthForUser } from './google-ads-auth-context'
+import { prepareGoogleAdsAccountApiCall } from './google-ads-accounts-auth'
+import type { KeywordPlannerAuthOptions } from './keyword-planner'
 import { extractVerifiedKeywordSourcePool } from './unified-keyword-service'
 import {
   filterKeywordQuality,
@@ -73,6 +75,42 @@ import {
   sanitizePromptInlineValue,
   type InputReview,
 } from './llm-input-guard'
+
+async function loadKeywordPlannerVolumeAuth(
+  userId: number,
+  linkedServiceAccountId?: string | null
+): Promise<{
+  authType: 'oauth' | 'service_account'
+  serviceAccountId?: string
+  plannerAuth: KeywordPlannerAuthOptions
+} | null> {
+  const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(
+    userId,
+    linkedServiceAccountId ?? null
+  )
+  if (!authResolved) return null
+
+  const prepared = await prepareGoogleAdsAccountApiCall({
+    authContext: authResolved.ctx,
+    linkedServiceAccountId: linkedServiceAccountId ?? null,
+  })
+  if (!prepared.ok) return null
+
+  return {
+    authType: prepared.apiAuth.authType,
+    serviceAccountId: prepared.apiAuth.serviceAccountId,
+    plannerAuth: {
+      existingContext: authResolved.ctx,
+      healedOAuth: prepared.oauthCredentials
+        ? {
+            credentials: prepared.oauthCredentials,
+            loginCustomerId: prepared.oauthLoginCustomerId,
+            refreshToken: prepared.refreshToken,
+          }
+        : undefined,
+    },
+  }
+}
 
 const KEYWORD_CLUSTERING_MAX_OUTPUT_TOKENS = 16384
 const KEYWORD_CLUSTERING_TIMEOUT_MS = 90000
@@ -1443,26 +1481,27 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
 
     if (staleNorms.size > 0) {
       const { getKeywordSearchVolumes } = await import('./keyword-planner')
-      const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userId)
+      const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
       const refreshKeywords = Array.from(staleNorms)
         .map(norm => keywordMap.get(norm)?.keyword)
         .filter((kw): kw is string => Boolean(kw))
 
-      if (!authResolved && refreshKeywords.length > 0) {
+      if (!volumeAuth && refreshKeywords.length > 0) {
         console.warn(
           `[offer-keyword-pool] Google Ads 认证未配置，跳过 ${refreshKeywords.length} 个过期关键词的搜索量刷新 (userId=${userId})`
         )
       }
 
-      if (authResolved && refreshKeywords.length > 0) {
-        const { apiAuth: auth } = authResolved
+      if (volumeAuth && refreshKeywords.length > 0) {
         const volumes = await getKeywordSearchVolumes(
           refreshKeywords,
           country,
           languageCode,
           userId,
-          auth.authType,
-          auth.serviceAccountId
+          volumeAuth.authType,
+          volumeAuth.serviceAccountId,
+          undefined,
+          volumeAuth.plannerAuth
         )
 
         for (const vol of volumes) {
@@ -4436,13 +4475,12 @@ export async function generateOfferKeywordPool(
     // 🔧 修复(2026-01-21): 如果提供了关键词列表，查询搜索量而不是硬编码为 0
     console.log(`📊 查询 ${allKeywords.length} 个提供的关键词的搜索量...`)
     const { getKeywordSearchVolumes } = await import('./keyword-planner')
-    const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userId)
 
     try {
-      if (!authResolved) {
+      const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
+      if (!volumeAuth) {
         throw new Error('Google Ads 认证未配置，无法查询搜索量')
       }
-      const { apiAuth: auth } = authResolved
       await progress?.({ phase: 'seed-volume', message: `初始关键词搜索量查询中` })
       const volumeProgress = progress
         ? (info: { message: string; current?: number; total?: number }) =>
@@ -4459,9 +4497,10 @@ export async function generateOfferKeywordPool(
         offer.target_country,
         offer.target_language || 'en',
         userId,
-        auth.authType,
-        auth.serviceAccountId,
-        volumeProgress
+        volumeAuth.authType,
+        volumeAuth.serviceAccountId,
+        volumeProgress,
+        volumeAuth.plannerAuth
       )
 
       initialKeywords = volumes.map(v => ({
@@ -4930,11 +4969,10 @@ export async function generateOfferKeywordPool(
     if (needsBrandVolume) {
       try {
         const { getKeywordSearchVolumes } = await import('./keyword-planner')
-        const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userId)
-        if (!authResolved) {
+        const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
+        if (!volumeAuth) {
           throw new Error('Google Ads 认证未配置，无法查询品牌词搜索量')
         }
-        const { apiAuth: auth } = authResolved
         await progress?.({ phase: 'seed-volume', message: '品牌词搜索量查询中' })
         const volumeProgress = progress
           ? (info: { message: string; current?: number; total?: number }) =>
@@ -4950,9 +4988,10 @@ export async function generateOfferKeywordPool(
           offer.target_country,
           offer.target_language || 'en',
           userId,
-          auth.authType,
-          auth.serviceAccountId,
-          volumeProgress
+          volumeAuth.authType,
+          volumeAuth.serviceAccountId,
+          volumeProgress,
+          volumeAuth.plannerAuth
         )
 
         volumes.forEach(vol => {
@@ -5818,11 +5857,10 @@ async function extractKeywordsFromOffer(
 
     try {
       const { getKeywordSearchVolumes } = await import('./keyword-planner')
-      const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userId)
-      if (!authResolved) {
+      const volumeAuth = await loadKeywordPlannerVolumeAuth(userId)
+      if (!volumeAuth) {
         throw new Error('Google Ads 认证未配置，无法查询搜索量')
       }
-      const { apiAuth: auth } = authResolved
 
       // 获取 offer 信息（用于获取 target_country 和 target_language）
       const offer = await db.queryOne<{
@@ -5849,9 +5887,10 @@ async function extractKeywordsFromOffer(
           offer.target_country,
           offer.target_language || 'en',
           userId,
-          auth.authType,
-          auth.serviceAccountId,
-          volumeProgress
+          volumeAuth.authType,
+          volumeAuth.serviceAccountId,
+          volumeProgress,
+          volumeAuth.plannerAuth
         )
 
         // 更新搜索量

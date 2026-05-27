@@ -19,7 +19,6 @@ vi.mock('@/lib/user-execution-eligibility', () => ({
 vi.mock('@/lib/google-ads-auth-context', () => ({
   getGoogleAdsAuthContext: vi.fn(),
   hasConfiguredGoogleAdsAuthFromContext: vi.fn(),
-  resolveGoogleAdsApiAuthFromContext: vi.fn(),
 }))
 
 vi.mock('@/lib/google-ads-accounts-auth', () => ({
@@ -48,7 +47,6 @@ import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
 import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
 import { defaultPreparedGoogleAdsAccountApiCall } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
@@ -76,13 +74,6 @@ describe('executeUrlSwapTask login_customer_id fallback', () => {
       serviceAccountConfig: null,
     } as any)
     vi.mocked(hasConfiguredGoogleAdsAuthFromContext).mockReturnValue(true)
-    vi.mocked(resolveGoogleAdsApiAuthFromContext).mockResolvedValue({
-      authType: 'oauth',
-      refreshToken: 'refresh-token',
-      serviceAccountId: undefined,
-      oauthLoginCustomerId: '1111111111',
-      serviceAccountMccId: undefined,
-    })
     vi.mocked(prepareGoogleAdsAccountApiCall).mockResolvedValue({
       ...defaultPreparedGoogleAdsAccountApiCall,
       apiAuth: {
