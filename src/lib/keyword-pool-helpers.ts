@@ -10,8 +10,7 @@
 import type { PoolKeywordData } from './offer-keyword-pool'
 import { expandKeywordsWithSeeds } from './unified-keyword-service'
 import { getDatabase } from './db'
-import { getKeywordSearchVolumes } from './keyword-planner'
-import { loadKeywordPlannerVolumeAuth } from './google-ads-accounts-auth'
+import { getKeywordSearchVolumesForPlannerContext } from './google-ads-accounts-auth'
 // 🔥 2026-03-13: 移除 TRENDS 关键词生成，由 Title/About补充 + 行业通用词替代
 // import { getTrendsKeywords } from './google-trends'
 import { DEFAULTS } from './keyword-constants'
@@ -1127,19 +1126,13 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
     if (brandSeedKeywords.length > 0 && userId) {
       console.log(`\n   📊 查询 ${brandSeedKeywords.length} 个品牌词的真实搜索量...`)
       try {
-        const loaded = await loadKeywordPlannerVolumeAuth(userId)
-        if (!loaded.ok) {
-          throw new Error(loaded.message)
-        }
-        const { volumeAuth } = loaded
-        const brandVolumes = await getKeywordSearchVolumes(
-          brandSeedKeywords.map(kw => kw.keyword),
-          targetCountry,
-          targetLanguage,
+        const volumeResult = await getKeywordSearchVolumesForPlannerContext({
           userId,
-          volumeAuth.authType,
-          volumeAuth.serviceAccountId,
-          progress
+          offerId: offer?.id,
+          keywords: brandSeedKeywords.map(kw => kw.keyword),
+          country: targetCountry,
+          language: targetLanguage,
+          onProgress: progress
             ? (info: { message: string; current?: number; total?: number }) =>
                 progress({
                   phase: 'seed-volume',
@@ -1148,8 +1141,11 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
                   message: `品牌词搜索量 ${info.current ?? 0}/${info.total ?? 0}`
                 })
             : undefined,
-          volumeAuth.plannerAuth
-        )
+        })
+        if (!volumeResult.ok) {
+          throw new Error(volumeResult.message)
+        }
+        const brandVolumes = volumeResult.volumes
 
         // 更新品牌词搜索量
         let updatedCount = 0

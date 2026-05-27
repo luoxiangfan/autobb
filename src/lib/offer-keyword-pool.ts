@@ -20,8 +20,10 @@ import { repairJsonText } from './ai-json'
 import { loadPrompt, interpolateTemplate } from './prompt-loader'
 import { findOfferById, type Offer } from './offers'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
-import { tryGetConfiguredGoogleAdsApiAuthForUser } from './google-ads-auth-context'
-import { loadKeywordPlannerVolumeAuthForOffer } from './google-ads-accounts-auth'
+import {
+  loadKeywordPlannerVolumeAuthForOffer,
+  loadKeywordPoolExpandCredentialsForOffer,
+} from './google-ads-accounts-auth'
 import { extractVerifiedKeywordSourcePool } from './unified-keyword-service'
 import {
   filterKeywordQuality,
@@ -4621,35 +4623,15 @@ export async function generateOfferKeywordPool(
   let authType: 'oauth' | 'service_account' = 'oauth'
 
   try {
-    const { getGoogleAdsConfig } = await import('./keyword-planner')
-    const { getDatabase } = await import('./db')
-    const db = await getDatabase()
-
-    const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userId)
-    if (authResolved) {
-      authType = authResolved.apiAuth.authType
-    }
-
-    // 🔧 PostgreSQL兼容性修复: is_active/is_manager_account在PostgreSQL中是BOOLEAN类型
-    const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-    const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = false' : 'is_manager_account = 0'
-
-    const adsAccount = await db.queryOne(`
-      SELECT id, customer_id FROM google_ads_accounts
-      WHERE user_id = ? AND ${isActiveCondition} AND status = 'ENABLED' AND ${isManagerCondition}
-      ORDER BY created_at DESC LIMIT 1
-    `, [userId]) as { id: number; customer_id: string } | undefined
-
-    if (adsAccount) {
-      const config = await getGoogleAdsConfig(userId)
-      if (config) {
-        customerId = adsAccount.customer_id
-        refreshToken = config.refreshToken
-        accountId = adsAccount.id
-        clientId = config.clientId
-        clientSecret = config.clientSecret
-        developerToken = config.developerToken
-      }
+    const expandCreds = await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id)
+    if (expandCreds) {
+      authType = expandCreds.authType
+      customerId = expandCreds.customerId
+      refreshToken = expandCreds.refreshToken
+      accountId = expandCreds.accountId
+      clientId = expandCreds.clientId
+      clientSecret = expandCreds.clientSecret
+      developerToken = expandCreds.developerToken
     }
   } catch (error) {
     console.warn('⚠️ 无法获取Google Ads凭证，跳过关键词扩展')

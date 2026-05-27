@@ -13,7 +13,7 @@
 import { generateContent } from './gemini'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import { getKeywordSearchVolumes } from './keyword-planner'
-import { loadKeywordPlannerVolumeAuth } from './google-ads-accounts-auth'
+import { loadKeywordPlannerVolumeAuthForContext } from './google-ads-accounts-auth'
 import { getHighIntentKeywords } from './google-suggestions'
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
@@ -681,7 +681,7 @@ async function extractFromSingleProduct(
   let keywordsWithVolume: ExtractedKeywordRow[] = []
 
   try {
-    const loaded = await loadKeywordPlannerVolumeAuth(userId)
+    const loaded = await loadKeywordPlannerVolumeAuthForContext({ userId })
     if (!loaded.ok) {
       throw new Error(loaded.message)
     }
@@ -908,7 +908,7 @@ async function extractFromStore(
   let keywordsWithVolume: ExtractedKeywordRow[] = []
 
   try {
-    const loaded = await loadKeywordPlannerVolumeAuth(userId)
+    const loaded = await loadKeywordPlannerVolumeAuthForContext({ userId })
     if (!loaded.ok) {
       throw new Error(loaded.message)
     }

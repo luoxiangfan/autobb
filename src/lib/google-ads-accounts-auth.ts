@@ -13,6 +13,7 @@ import {
   type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
 import { getServiceAccountConfig } from './google-ads-service-account'
+import { getKeywordSearchVolumes } from './keyword-planner'
 /** 账号列表同步/API 客户端所需的扁平凭证 */
 export interface AccountsRouteCredentials {
   client_id: string
@@ -473,8 +474,39 @@ export async function loadKeywordPlannerVolumeAuthForOffer(
   userId: number,
   offerId?: number
 ): Promise<KeywordPlannerVolumeAuthLoadResult> {
-  const linkedSa = await resolveLinkedServiceAccountIdForOffer(userId, offerId)
-  return loadKeywordPlannerVolumeAuth(userId, linkedSa)
+  return loadKeywordPlannerVolumeAuthForContext({ userId, offerId })
+}
+
+export type KeywordPlannerVolumeAuthContextParams = {
+  userId: number
+  offerId?: number
+  googleAdsAccountId?: number
+  /** 显式传入时跳过自动解析 */
+  linkedServiceAccountId?: string | null
+}
+
+/** 按 Offer / Ads 账号 / 显式 linked SA 解析 Keyword Planner 用的 linked SA */
+export async function resolveLinkedServiceAccountIdForKeywordPlannerContext(
+  params: KeywordPlannerVolumeAuthContextParams
+): Promise<string | null> {
+  if (params.linkedServiceAccountId !== undefined) {
+    return params.linkedServiceAccountId
+  }
+  if (params.googleAdsAccountId) {
+    return resolveLinkedServiceAccountIdForGoogleAdsAccount(
+      params.userId,
+      params.googleAdsAccountId
+    )
+  }
+  return resolveLinkedServiceAccountIdForOffer(params.userId, params.offerId)
+}
+
+/** 按 Offer / Ads 账号解析 linked SA 后加载 volume 认证 */
+export async function loadKeywordPlannerVolumeAuthForContext(
+  params: KeywordPlannerVolumeAuthContextParams
+): Promise<KeywordPlannerVolumeAuthLoadResult> {
+  const linkedSa = await resolveLinkedServiceAccountIdForKeywordPlannerContext(params)
+  return loadKeywordPlannerVolumeAuth(params.userId, linkedSa)
 }
 
 /**
@@ -495,6 +527,113 @@ export async function loadKeywordPlannerVolumeAuth(
   return {
     ok: true,
     volumeAuth: keywordPlannerVolumeAuthFromPrepared(prepared.authContext, prepared),
+  }
+}
+
+/** Keyword Planner 搜索量查询（linked SA + prepare/heal，单次入口） */
+export async function getKeywordSearchVolumesForPlannerContext(
+  params: KeywordPlannerVolumeAuthContextParams & {
+    keywords: string[]
+    country: string
+    language: string
+    onProgress?: (info: { message: string; current?: number; total?: number }) => Promise<void> | void
+  }
+): Promise<
+  | { ok: true; volumes: Awaited<ReturnType<typeof getKeywordSearchVolumes>> }
+  | { ok: false; message: string }
+> {
+  const loaded = await loadKeywordPlannerVolumeAuthForContext(params)
+  if (!loaded.ok) {
+    return { ok: false, message: loaded.message }
+  }
+  const { volumeAuth } = loaded
+  const volumes = await getKeywordSearchVolumes(
+    params.keywords,
+    params.country,
+    params.language,
+    params.userId,
+    volumeAuth.authType,
+    volumeAuth.serviceAccountId,
+    params.onProgress,
+    volumeAuth.plannerAuth
+  )
+  return { ok: true, volumes }
+}
+
+export type KeywordPoolExpandCredentials = {
+  authType: 'oauth' | 'service_account'
+  customerId?: string
+  refreshToken?: string
+  accountId?: number
+  clientId?: string
+  clientSecret?: string
+  developerToken?: string
+}
+
+async function queryGoogleAdsAccountForOfferExpand(
+  userId: number,
+  offerId: number
+): Promise<{ id: number; customer_id: string } | undefined> {
+  const db = await getDatabase()
+  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const isManagerCondition =
+    db.type === 'postgres' ? 'is_manager_account = false' : 'is_manager_account = 0'
+
+  const fromCampaign = await db.queryOne<{ id: number; customer_id: string }>(
+    `SELECT ga.id, ga.customer_id
+     FROM google_ads_accounts ga
+     INNER JOIN campaigns c ON c.google_ads_account_id = ga.id AND c.user_id = ?
+     WHERE c.offer_id = ?
+       AND ga.status = 'ENABLED'
+       AND ${isActiveCondition}
+       AND ${isManagerCondition}
+     ORDER BY c.updated_at DESC
+     LIMIT 1`,
+    [userId, offerId]
+  )
+  if (fromCampaign?.customer_id) {
+    return fromCampaign
+  }
+
+  return db.queryOne<{ id: number; customer_id: string }>(
+    `SELECT id, customer_id FROM google_ads_accounts
+     WHERE user_id = ? AND ${isActiveCondition} AND status = 'ENABLED' AND ${isManagerCondition}
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId]
+  )
+}
+
+/** 关键词池 OAuth 扩展所需的 customerId / OAuth 字段（含 linked SA prepare） */
+export async function loadKeywordPoolExpandCredentialsForOffer(
+  userId: number,
+  offerId: number
+): Promise<KeywordPoolExpandCredentials | null> {
+  const linkedSa = await resolveLinkedServiceAccountIdForOffer(userId, offerId)
+  const prepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, linkedSa)
+  if (!prepared.ok) {
+    return null
+  }
+
+  const authType = prepared.apiAuth.authType
+  if (authType === 'service_account') {
+    return { authType: 'service_account' }
+  }
+
+  const adsAccount = await queryGoogleAdsAccountForOfferExpand(userId, offerId)
+  if (!adsAccount?.customer_id) {
+    return { authType: 'oauth' }
+  }
+
+  const oauthCreds = syncUserCredentialsFromPrepared(prepared)
+  return {
+    authType: 'oauth',
+    customerId: adsAccount.customer_id,
+    refreshToken: prepared.refreshToken,
+    accountId: adsAccount.id,
+    clientId: oauthCreds?.client_id,
+    clientSecret: oauthCreds?.client_secret,
+    developerToken: oauthCreds?.developer_token,
   }
 }
 

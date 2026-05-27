@@ -44,7 +44,7 @@ describe('prepareKeywordPlannerSessionAuth', () => {
   })
 
   it('returns session with preparedOAuth and volumeAuth on success', async () => {
-    const result = await prepareKeywordPlannerSessionAuth(7, 'oauth', null)
+    const result = await prepareKeywordPlannerSessionAuth(7, null)
 
     expect(result.ok).toBe(true)
     if (!result.ok) return
@@ -64,7 +64,7 @@ describe('prepareKeywordPlannerSessionAuth', () => {
       message: 'Google Ads OAuth 授权已过期',
     })
 
-    const result = await prepareKeywordPlannerSessionAuth(7, 'oauth', null)
+    const result = await prepareKeywordPlannerSessionAuth(7, null)
 
     expect(result).toEqual({
       ok: false,
@@ -92,7 +92,7 @@ describe('prepareKeywordPlannerSessionAuth', () => {
       plannerAuth: { existingContext: defaultOAuthAuthContext },
     })
 
-    const result = await prepareKeywordPlannerSessionAuth(7, 'service_account', 'sa-1')
+    const result = await prepareKeywordPlannerSessionAuth(7, 'sa-1')
 
     expect(result.ok).toBe(true)
     if (!result.ok) return

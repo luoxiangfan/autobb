@@ -14,7 +14,7 @@
  */
 
 import { getKeywordSearchVolumes } from './keyword-planner'
-import { loadKeywordPlannerVolumeAuth } from './google-ads-accounts-auth'
+import { loadKeywordPlannerVolumeAuthForContext } from './google-ads-accounts-auth'
 import { getHighIntentKeywords } from './google-suggestions'
 
 export interface EnhancedKeyword {
@@ -407,7 +407,7 @@ async function enrichKeywordsWithMetrics(
 
   try {
     // 🔧 修复(2025-12-26): 支持服务账号模式
-    const loaded = await loadKeywordPlannerVolumeAuth(userId)
+    const loaded = await loadKeywordPlannerVolumeAuthForContext({ userId })
     if (!loaded.ok) {
       return keywords as EnhancedKeyword[]
     }

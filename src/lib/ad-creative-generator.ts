@@ -9,8 +9,7 @@ import type {
 } from './ad-creative'
 import type { Offer } from './offers'
 import { creativeCache, generateCreativeCacheKey } from './cache'
-import { getKeywordSearchVolumes } from './keyword-planner'
-import { loadKeywordPlannerVolumeAuth } from './google-ads-accounts-auth'
+import { getKeywordSearchVolumesForPlannerContext } from './google-ads-accounts-auth'
 import {
   clusterKeywordsByIntent,
   getBucketInfo,
@@ -5699,6 +5698,7 @@ interface MergeExtractedKeywordsInput {
   brandName: string
   productCategory: string
   userId: number
+  offerId?: number
   targetCountry: string
   language: string
   creativeType?: 'brand_intent' | 'model_intent' | 'product_intent' | null
@@ -5912,6 +5912,7 @@ async function mergeExtractedKeywordsWithSingleExit(
     brandName,
     productCategory,
     userId,
+    offerId,
     targetCountry,
     language,
     creativeType,
@@ -5955,24 +5956,20 @@ async function mergeExtractedKeywordsWithSingleExit(
     if (keywordsNeedVolume.length > 0) {
       console.log(`   📊 查询 ${keywordsNeedVolume.length} 个关键词的搜索量...`)
       try {
-        const loaded = await loadKeywordPlannerVolumeAuth(userId)
-        if (!loaded.ok) {
-          throw new Error(loaded.message)
-        }
-        const { volumeAuth } = loaded
         const keywordsForVolumeLookup = keywordsNeedVolume
           .map(k => k.keyword)
           .filter((keyword): keyword is string => Boolean(keyword))
-        const volumes = await getKeywordSearchVolumes(
-          keywordsForVolumeLookup,
-          targetCountry,
-          language,
+        const volumeResult = await getKeywordSearchVolumesForPlannerContext({
           userId,
-          volumeAuth.authType,
-          volumeAuth.serviceAccountId,
-          undefined,
-          volumeAuth.plannerAuth
-        )
+          offerId,
+          keywords: keywordsForVolumeLookup,
+          country: targetCountry,
+          language,
+        })
+        if (!volumeResult.ok) {
+          throw new Error(volumeResult.message)
+        }
+        const volumes = volumeResult.volumes
 
         keywordsNeedVolume.forEach(kw => {
           if (!kw.keyword) return
@@ -6115,6 +6112,7 @@ interface KeywordFinalizeInput {
   targetCountry: string
   targetLanguage: string
   userId: number
+  offerId?: number
 }
 
 interface KeywordFinalizeOutput {
@@ -6252,19 +6250,15 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
         brandSearchVolume = row.search_volume
         console.log(`   ✅ 全局缓存查询到搜索量: ${brandSearchVolume}/月`)
       } else {
-        const loaded = await loadKeywordPlannerVolumeAuth(userId)
-        if (loaded.ok) {
-          const { volumeAuth } = loaded
-          const volumes = await getKeywordSearchVolumes(
-            [offerBrand],
-            targetCountry,
-            langCode,
-            userId,
-            volumeAuth.authType,
-            volumeAuth.serviceAccountId,
-            undefined,
-            volumeAuth.plannerAuth
-          )
+        const volumeResult = await getKeywordSearchVolumesForPlannerContext({
+          userId,
+          offerId: input.offerId,
+          keywords: [offerBrand],
+          country: targetCountry,
+          language: langCode,
+        })
+        if (volumeResult.ok) {
+          const volumes = volumeResult.volumes
           if (volumes.length > 0 && volumes[0].avgMonthlySearches > 0) {
             brandSearchVolume = volumes[0].avgMonthlySearches
             console.log(`   ✅ Keyword Planner API查询到搜索量: ${brandSearchVolume}/月`)
@@ -11129,6 +11123,7 @@ export async function generateAdCreative(
       brandName,
       productCategory: (offer as { category?: string }).category || '未分类',
       userId,
+      offerId: offer.id,
       targetCountry,
       language,
       creativeType: resolveCreativeTypeFromBucketForMerge(normalizedBucket),
@@ -11147,6 +11142,7 @@ export async function generateAdCreative(
       targetCountry,
       targetLanguage: resolvedTargetLanguage,
       userId,
+      offerId: offer.id,
     })
     keywordsWithVolume = finalizedKeywords.keywordsWithVolume
     result.keywords = finalizedKeywords.keywords

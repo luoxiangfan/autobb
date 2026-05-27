@@ -6,11 +6,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getKeywordSearchVolumes } from '@/lib/keyword-planner'
-import {
-  loadKeywordPlannerVolumeAuth,
-  loadKeywordPlannerVolumeAuthForOffer,
-  resolveLinkedServiceAccountIdForGoogleAdsAccount,
-} from '@/lib/google-ads-accounts-auth'
+import { loadKeywordPlannerVolumeAuthForContext } from '@/lib/google-ads-accounts-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,23 +38,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Maximum 100 keywords per request' }, { status: 400 })
     }
 
-    let loaded: Awaited<ReturnType<typeof loadKeywordPlannerVolumeAuth>>
-    const offerId = offerIdParam ? parseInt(offerIdParam, 10) : NaN
+    const offerId = offerIdParam ? parseInt(offerIdParam, 10) : undefined
     const googleAdsAccountId = googleAdsAccountIdParam
       ? parseInt(googleAdsAccountIdParam, 10)
-      : NaN
+      : undefined
 
-    if (Number.isFinite(offerId) && offerId > 0) {
-      loaded = await loadKeywordPlannerVolumeAuthForOffer(userId, offerId)
-    } else if (Number.isFinite(googleAdsAccountId) && googleAdsAccountId > 0) {
-      const linkedSa = await resolveLinkedServiceAccountIdForGoogleAdsAccount(
-        userId,
-        googleAdsAccountId
-      )
-      loaded = await loadKeywordPlannerVolumeAuth(userId, linkedSa)
-    } else {
-      loaded = await loadKeywordPlannerVolumeAuthForOffer(userId)
-    }
+    const loaded = await loadKeywordPlannerVolumeAuthForContext({
+      userId,
+      offerId: Number.isFinite(offerId) && offerId! > 0 ? offerId : undefined,
+      googleAdsAccountId:
+        Number.isFinite(googleAdsAccountId) && googleAdsAccountId! > 0
+          ? googleAdsAccountId
+          : undefined,
+    })
 
     if (!loaded.ok) {
       return NextResponse.json({ error: loaded.message }, { status: 400 })

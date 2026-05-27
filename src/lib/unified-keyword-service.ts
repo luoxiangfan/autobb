@@ -44,7 +44,6 @@ export type KeywordPlannerSessionAuthResult =
 /** 单次 prepare/heal，供 Keyword Ideas + Historical Metrics 共用 */
 export async function prepareKeywordPlannerSessionAuth(
   userId: number | undefined,
-  authType: 'oauth' | 'service_account' | undefined,
   linkedServiceAccountId?: string | null
 ): Promise<KeywordPlannerSessionAuthResult> {
   if (!userId) {
@@ -66,7 +65,6 @@ export async function prepareKeywordPlannerSessionAuth(
 
   let preparedOAuth: KeywordIdeasPreparedOAuth | undefined
   if (
-    authType !== 'service_account' &&
     prepared.apiAuth.authType === 'oauth' &&
     prepared.oauthCredentials
   ) {
@@ -114,7 +112,6 @@ async function getKeywordSearchVolumesWithPreparedAuth(
 ) {
   const loaded = await prepareKeywordPlannerSessionAuth(
     userId,
-    undefined,
     linkedServiceAccountId ?? null
   )
   if (!loaded.ok) {
@@ -130,14 +127,45 @@ async function getKeywordSearchVolumesWithPreparedAuth(
   )
 }
 
-/** prepare 失败时跳过 Keyword Planner ideas，避免 fallback 内重复 heal */
-function keywordPlannerIdeasBlockedReason(
+/**
+ * prepare 失败或 OAuth ideas 不可用时跳过 Keyword Planner ideas，避免 fallback 内重复 heal。
+ * 以 session.volumeAuth.authType 为准（勿依赖调用方入参 authType，默认 oauth 会误杀 SA 用户）。
+ */
+/** Ideas API 认证字段：以 prepare 后的 session 为准，勿用调用方 authType */
+function keywordPlannerIdeasAuthFromSession(
   plannerAuth: KeywordPlannerSessionAuthResult | null,
-  authType: 'oauth' | 'service_account' | undefined
+  fallback: {
+    authType?: 'oauth' | 'service_account'
+    serviceAccountId?: string | null
+    preparedOAuth?: KeywordIdeasPreparedOAuth
+  }
+): {
+  authType: 'oauth' | 'service_account'
+  serviceAccountId?: string
+  preparedOAuth?: KeywordIdeasPreparedOAuth
+} {
+  if (plannerAuth?.ok) {
+    return {
+      authType: plannerAuth.session.volumeAuth.authType,
+      serviceAccountId: plannerAuth.session.volumeAuth.serviceAccountId,
+      preparedOAuth: plannerAuth.session.preparedOAuth,
+    }
+  }
+  return {
+    authType: fallback.authType ?? 'oauth',
+    serviceAccountId: fallback.serviceAccountId ?? undefined,
+    preparedOAuth: fallback.preparedOAuth,
+  }
+}
+
+export function keywordPlannerIdeasBlockedReason(
+  plannerAuth: KeywordPlannerSessionAuthResult | null
 ): string | null {
   if (!plannerAuth) return null
   if (!plannerAuth.ok) return plannerAuth.message
-  if (authType === 'service_account') return null
+
+  const resolvedAuthType = plannerAuth.session.volumeAuth.authType
+  if (resolvedAuthType === 'service_account') return null
   if (!plannerAuth.session.preparedOAuth) {
     return 'OAuth credentials unavailable for Keyword Planner'
   }
@@ -1893,11 +1921,16 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
 
   const pureBrandKeywords = getPureBrandKeywords(offer.brand)
   const plannerAuth = userId
-    ? await prepareKeywordPlannerSessionAuth(userId, authType, serviceAccountId ?? null)
+    ? await prepareKeywordPlannerSessionAuth(userId, serviceAccountId ?? null)
     : null
   const preparedOAuth = plannerAuth?.ok ? plannerAuth.session.preparedOAuth : undefined
   const volumeSession = plannerAuth?.ok ? plannerAuth.session : undefined
-  const plannerIdeasBlocked = keywordPlannerIdeasBlockedReason(plannerAuth, authType)
+  const plannerIdeasBlocked = keywordPlannerIdeasBlockedReason(plannerAuth)
+  const ideasAuth = keywordPlannerIdeasAuthFromSession(plannerAuth, {
+    authType,
+    serviceAccountId,
+    preparedOAuth,
+  })
 
   // 1. 构建意图感知种子词池
   console.log('\n📍 Step 1: 构建意图感知种子词池')
@@ -1944,9 +1977,9 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
           targetLanguage: language,
           accountId,
           userId,
-          authType,
-          serviceAccountId,
-          preparedOAuth,
+          authType: ideasAuth.authType,
+          serviceAccountId: ideasAuth.serviceAccountId,
+          preparedOAuth: ideasAuth.preparedOAuth,
         })
 
         console.log(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个建议`)
@@ -2193,11 +2226,16 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
 
   const pureBrandKeywords = getPureBrandKeywords(offer.brand)
   const plannerAuth = userId
-    ? await prepareKeywordPlannerSessionAuth(userId, authType, serviceAccountId ?? null)
+    ? await prepareKeywordPlannerSessionAuth(userId, serviceAccountId ?? null)
     : null
   const preparedOAuth = plannerAuth?.ok ? plannerAuth.session.preparedOAuth : undefined
   const volumeSession = plannerAuth?.ok ? plannerAuth.session : undefined
-  const plannerIdeasBlocked = keywordPlannerIdeasBlockedReason(plannerAuth, authType)
+  const plannerIdeasBlocked = keywordPlannerIdeasBlockedReason(plannerAuth)
+  const ideasAuth = keywordPlannerIdeasAuthFromSession(plannerAuth, {
+    authType,
+    serviceAccountId,
+    preparedOAuth,
+  })
 
   const keywordMap = new Map<string, UnifiedKeywordData>()
   let disableSearchVolumeFilter = false
@@ -2242,9 +2280,9 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
         targetLanguage: language,
         accountId,
         userId,
-        authType,
-        serviceAccountId,
-        preparedOAuth,
+        authType: ideasAuth.authType,
+        serviceAccountId: ideasAuth.serviceAccountId,
+        preparedOAuth: ideasAuth.preparedOAuth,
       })
 
       console.log(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个关键词建议`)
@@ -2759,11 +2797,16 @@ export async function expandKeywordsWithSeeds(params: {
 
   const keywordMap = new Map<string, UnifiedKeywordData>()
   const plannerAuth = userId
-    ? await prepareKeywordPlannerSessionAuth(userId, authType, serviceAccountId ?? null)
+    ? await prepareKeywordPlannerSessionAuth(userId, serviceAccountId ?? null)
     : null
   const preparedOAuth = plannerAuth?.ok ? plannerAuth.session.preparedOAuth : undefined
   const volumeSession = plannerAuth?.ok ? plannerAuth.session : undefined
-  const plannerIdeasBlocked = keywordPlannerIdeasBlockedReason(plannerAuth, authType)
+  const plannerIdeasBlocked = keywordPlannerIdeasBlockedReason(plannerAuth)
+  const ideasAuth = keywordPlannerIdeasAuthFromSession(plannerAuth, {
+    authType,
+    serviceAccountId,
+    preparedOAuth,
+  })
 
   try {
     // 1. 使用 Keyword Planner 获取扩展关键词
@@ -2779,9 +2822,9 @@ export async function expandKeywordsWithSeeds(params: {
         targetLanguage: language,
         userId,
         accountId,
-        authType,
-        serviceAccountId,
-        preparedOAuth,
+        authType: ideasAuth.authType,
+        serviceAccountId: ideasAuth.serviceAccountId,
+        preparedOAuth: ideasAuth.preparedOAuth,
       })
 
       console.log(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个关键词建议`)

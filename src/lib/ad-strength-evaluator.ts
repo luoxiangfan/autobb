@@ -19,7 +19,7 @@ import type {
   QualityMetrics
 } from './ad-creative'
 import { getKeywordSearchVolumes } from './keyword-planner'
-import { loadKeywordPlannerVolumeAuth } from './google-ads-accounts-auth'
+import { loadKeywordPlannerVolumeAuthForContext } from './google-ads-accounts-auth'
 import { normalizeLanguageCode } from './language-country-codes'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import { loadPrompt, interpolateTemplate } from './prompt-loader'
@@ -416,6 +416,7 @@ export async function evaluateAdStrength(
     targetCountry?: string
     targetLanguage?: string
     userId?: number
+    offerId?: number
     sitelinks?: Array<{ text: string; url: string; description?: string }>
     callouts?: string[]
     // [NEW] 关键词搜索量数据（用于品牌关键词搜索量评分）
@@ -500,7 +501,8 @@ export async function evaluateAdStrength(
     options?.targetCountry || 'US',
     options?.targetLanguage || 'en',
     options?.userId,
-    options?.keywordsWithVolume
+    options?.keywordsWithVolume,
+    options?.offerId
   )
   const brandSearchVolumeConfig = AD_STRENGTH_DIMENSION_CONFIG.brandSearchVolume
   const brandSearchVolume = {
@@ -1652,7 +1654,8 @@ async function calculateBrandSearchVolume(
     keyword: string
     searchVolume: number
     volumeUnavailableReason?: 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
-  }>
+  }>,
+  offerId?: number
 ) {
   const isSearchVolumeUnavailableReason = (reason: unknown): reason is 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY' =>
     reason === 'DEV_TOKEN_INSUFFICIENT_ACCESS' || reason === 'DEV_TOKEN_TEST_ONLY'
@@ -1719,7 +1722,9 @@ async function calculateBrandSearchVolume(
     // ========================================
     const normalizedLanguage = normalizeLanguageCode(targetLanguage)
 
-    const volumeLoaded = userId ? await loadKeywordPlannerVolumeAuth(userId) : null
+    const volumeLoaded = userId
+      ? await loadKeywordPlannerVolumeAuthForContext({ userId, offerId })
+      : null
     const volumeAuth = volumeLoaded?.ok ? volumeLoaded.volumeAuth : null
     const volumeResults = volumeAuth
       ? await getKeywordSearchVolumes(
