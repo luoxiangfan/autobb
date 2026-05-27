@@ -28,9 +28,10 @@ import {
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
-import { updateCampaignFinalUrlSuffix } from '@/lib/google-ads-api'
+import { updateCampaignFinalUrlSuffix, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
 import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
-import { resolveLoginCustomerCandidates, isGoogleAdsAccountAccessError } from '@/lib/google-ads-login-customer'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
+import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
 import { initializeProxyPool } from '@/lib/offer-utils'
 import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
 
@@ -153,8 +154,9 @@ interface GoogleAdsUpdateAuthContext {
   serviceAccountMccId?: string
 }
 
-function describeLoginCustomerId(loginCustomerId: string | undefined): string {
-  return loginCustomerId || '(omit header)'
+type UrlSwapAccountMeta = {
+  service_account_id: string | null
+  parent_mcc_id: string | null
 }
 
 async function updateSingleTargetWithLoginCustomerFallback(params: {
@@ -166,21 +168,23 @@ async function updateSingleTargetWithLoginCustomerFallback(params: {
   serviceAccountId?: string
   oauthLoginCustomerId?: string
   serviceAccountMccId?: string
+  parentMccId?: string | null
+  oauthCredentials?: OAuthApiCredentialsFields
 }): Promise<void> {
-  const loginCustomerIdCandidates = resolveLoginCustomerCandidates({
+  await runWithLoginCustomerFallbackForAccount({
+    adsAccount: {
+      customer_id: params.target.google_customer_id,
+      parent_mcc_id: params.parentMccId ?? null,
+      id: params.target.google_ads_account_id,
+    },
+    refreshToken: params.refreshToken,
     authType: params.authType,
-    oauthLoginCustomerId: params.oauthLoginCustomerId,
+    serviceAccountId: params.serviceAccountId,
     serviceAccountMccId: params.serviceAccountMccId,
-    targetCustomerId: params.target.google_customer_id,
-  })
-
-  let lastError: any = null
-
-  for (let i = 0; i < loginCustomerIdCandidates.length; i++) {
-    const loginCustomerId = loginCustomerIdCandidates[i]
-
-    try {
-      await updateCampaignFinalUrlSuffix({
+    oauthLoginCustomerId: params.oauthLoginCustomerId,
+    actionName: `url-swap 更新 Campaign ${params.target.google_campaign_id}`,
+    callback: (loginCustomerId) =>
+      updateCampaignFinalUrlSuffix({
         customerId: params.target.google_customer_id,
         refreshToken: params.authType === 'oauth' ? params.refreshToken : '',
         campaignId: params.target.google_campaign_id,
@@ -189,29 +193,9 @@ async function updateSingleTargetWithLoginCustomerFallback(params: {
         authType: params.authType,
         serviceAccountId: params.authType === 'service_account' ? params.serviceAccountId : undefined,
         loginCustomerId,
-      })
-
-      if (i > 0) {
-        console.log(
-          `[url-swap-executor] 目标 ${params.target.google_campaign_id} 使用备用 login_customer_id=${describeLoginCustomerId(loginCustomerId)} 成功`
-        )
-      }
-      return
-    } catch (error: any) {
-      lastError = error
-      const hasNextCandidate = i < loginCustomerIdCandidates.length - 1
-      if (hasNextCandidate && isGoogleAdsAccountAccessError(error)) {
-        const nextLoginCustomerId = loginCustomerIdCandidates[i + 1]
-        console.warn(
-          `[url-swap-executor] 目标 ${params.target.google_campaign_id} login_customer_id=${describeLoginCustomerId(loginCustomerId)} 失败，切换到 ${describeLoginCustomerId(nextLoginCustomerId)} 重试`
-        )
-        continue
-      }
-      throw error
-    }
-  }
-
-  throw lastError || new Error('Google Ads 更新失败')
+        credentials: params.oauthCredentials,
+      }),
+  })
 }
 
 async function resolveUrlSwapTargetApiAuth(params: {
@@ -219,26 +203,55 @@ async function resolveUrlSwapTargetApiAuth(params: {
   target: UrlSwapTaskTarget
   db: Awaited<ReturnType<typeof getDatabase>>
   ctx: Awaited<ReturnType<typeof getGoogleAdsAuthContext>>
-  linkedSaByAccountId: Map<number, string | null>
-}): Promise<GoogleAdsUpdateAuthContext> {
+  accountMetaById: Map<number, UrlSwapAccountMeta>
+  preparedByAccountId: Map<
+    number,
+    Awaited<ReturnType<typeof prepareGoogleAdsAccountApiCall>> & { ok: true }
+  >
+}): Promise<
+  GoogleAdsUpdateAuthContext & {
+    parentMccId: string | null
+    oauthCredentials?: OAuthApiCredentialsFields
+  }
+> {
   const accountId = params.target.google_ads_account_id
-  if (accountId && !params.linkedSaByAccountId.has(accountId)) {
-    const row = await params.db.queryOne<{ service_account_id: string | null }>(
-      'SELECT service_account_id FROM google_ads_accounts WHERE id = ? AND user_id = ?',
+  if (accountId && !params.accountMetaById.has(accountId)) {
+    const row = await params.db.queryOne<UrlSwapAccountMeta>(
+      'SELECT service_account_id, parent_mcc_id FROM google_ads_accounts WHERE id = ? AND user_id = ?',
       [accountId, params.userId]
     )
-    params.linkedSaByAccountId.set(accountId, row?.service_account_id ?? null)
+    params.accountMetaById.set(accountId, {
+      service_account_id: row?.service_account_id ?? null,
+      parent_mcc_id: row?.parent_mcc_id ?? null,
+    })
   }
 
-  const linkedSa = accountId ? (params.linkedSaByAccountId.get(accountId) ?? null) : null
-  const apiAuth = await resolveGoogleAdsApiAuthFromContext(params.ctx, linkedSa)
+  const accountMeta = accountId ? params.accountMetaById.get(accountId) : undefined
+  const linkedSa = accountMeta?.service_account_id ?? null
+
+  let prepared = accountId ? params.preparedByAccountId.get(accountId) : undefined
+  if (accountId && !prepared) {
+    const result = await prepareGoogleAdsAccountApiCall({
+      authContext: params.ctx,
+      linkedServiceAccountId: linkedSa,
+    })
+    if (!result.ok) {
+      throw new Error(result.message)
+    }
+    prepared = result
+    params.preparedByAccountId.set(accountId, result)
+  }
+
+  const apiAuth = prepared?.apiAuth ?? (await resolveGoogleAdsApiAuthFromContext(params.ctx, linkedSa))
 
   return {
-    refreshToken: apiAuth.refreshToken,
+    refreshToken: prepared?.refreshToken ?? apiAuth.refreshToken,
     authType: apiAuth.authType,
     serviceAccountId: apiAuth.serviceAccountId,
-    oauthLoginCustomerId: apiAuth.oauthLoginCustomerId,
+    oauthLoginCustomerId: prepared?.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
     serviceAccountMccId: apiAuth.serviceAccountMccId,
+    parentMccId: accountMeta?.parent_mcc_id ?? null,
+    oauthCredentials: prepared?.oauthCredentials,
   }
 }
 
@@ -257,7 +270,11 @@ async function updateTargetsFinalUrlSuffix(params: {
   let successCount = 0
   let failureCount = 0
 
-  const linkedSaByAccountId = new Map<number, string | null>()
+  const accountMetaById = new Map<number, UrlSwapAccountMeta>()
+  const preparedByAccountId = new Map<
+    number,
+    Awaited<ReturnType<typeof prepareGoogleAdsAccountApiCall>> & { ok: true }
+  >()
 
   for (const target of params.targets) {
     await assertUserExecutionAllowed(params.userId, {
@@ -269,7 +286,8 @@ async function updateTargetsFinalUrlSuffix(params: {
       target,
       db: params.db,
       ctx,
-      linkedSaByAccountId,
+      accountMetaById,
+      preparedByAccountId,
     })
 
     try {
@@ -283,6 +301,8 @@ async function updateTargetsFinalUrlSuffix(params: {
           targetAuth.authType === 'service_account' ? targetAuth.serviceAccountId : undefined,
         oauthLoginCustomerId: targetAuth.oauthLoginCustomerId,
         serviceAccountMccId: targetAuth.serviceAccountMccId,
+        parentMccId: targetAuth.parentMccId,
+        oauthCredentials: targetAuth.oauthCredentials,
       })
 
       if (target.id) {

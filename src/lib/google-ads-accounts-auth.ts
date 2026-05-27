@@ -275,6 +275,9 @@ export async function loadOAuthGoogleAdsCallBundleForContext(params: {
   }
 }
 
+/**
+ * @deprecated 请使用 `runWithLoginCustomerFallbackForAccount` 或 `runOAuthGaqlWithLoginCustomerFallback`，避免只取首个 login_customer_id 候选。
+ */
 export function pickOAuthLoginCustomerIdForAccount(params: {
   accountParentMccId?: string | null
   oauthLoginCustomerId?: string
@@ -288,6 +291,9 @@ export function pickOAuthLoginCustomerIdForAccount(params: {
   })[0]
 }
 
+/**
+ * @deprecated 请使用 `runWithLoginCustomerFallbackForAccount`，避免只取首个 login_customer_id 候选。
+ */
 export function pickServiceAccountLoginCustomerIdForAccount(params: {
   accountParentMccId?: string | null
   serviceAccountMccId?: string

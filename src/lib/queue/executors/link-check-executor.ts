@@ -25,7 +25,7 @@ import { getProxyForCountry } from '../user-proxy-loader'
 import { analyzeProxyError } from './proxy-error-handler'
 import { pauseClickFarmTasksByOfferId } from '../../click-farm'
 import {
-  loadOAuthGoogleAdsCallBundleForContext,
+  prepareGoogleAdsAccountApiCall,
   type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-accounts-auth'
 import { resolveGoogleAdsApiAuthForAccount } from '@/lib/google-ads-auth-context'
@@ -351,9 +351,9 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
 
               const pausedInDb = upd.changes || 0
               let pausedInGoogleAds = 0
-              const oauthHealedByUser = new Map<
+              const preparedByAccountId = new Map<
                 number,
-                { credentials: OAuthApiCredentialsFields; loginCustomerId: string }
+                Awaited<ReturnType<typeof prepareGoogleAdsAccountApiCall>> & { ok: true }
               >()
               if (pausedInDb > 0 && campaignsToSyncGoogle.length > 0) {
                 for (const campaign of campaignsToSyncGoogle) {
@@ -401,29 +401,27 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
 
                       let oauthCredentials: OAuthApiCredentialsFields | undefined
                       let oauthLoginCustomerId: string | undefined
+                      let refreshToken = apiAuth.refreshToken
                       if (apiAuth.authType === 'oauth') {
-                        let healedBundle = oauthHealedByUser.get(offer.user_id)
-                        if (!healedBundle) {
-                          const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
-                            userId: offer.user_id,
+                        let prepared = preparedByAccountId.get(campaign.google_ads_account_id)
+                        if (!prepared) {
+                          const result = await prepareGoogleAdsAccountApiCall({
                             authContext: authResolved.ctx,
+                            linkedServiceAccountId: adsAccount.service_account_id,
                           })
-                          if (!oauthBundle.ok) {
+                          if (!result.ok) {
                             console.warn(
-                              `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: ${oauthBundle.message}`
+                              `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: ${result.message}`
                             )
                             continue
                           }
-                          healedBundle = {
-                            credentials: oauthBundle.bundle!.oauthCredentials,
-                            loginCustomerId:
-                              oauthBundle.bundle?.oauthLoginCustomerId || '',
-                          }
-                          oauthHealedByUser.set(offer.user_id, healedBundle)
+                          prepared = result
+                          preparedByAccountId.set(campaign.google_ads_account_id, result)
                         }
-                        oauthCredentials = healedBundle.credentials
+                        oauthCredentials = prepared.oauthCredentials
                         oauthLoginCustomerId =
-                          healedBundle.loginCustomerId || apiAuth.oauthLoginCustomerId
+                          prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+                        refreshToken = prepared.refreshToken
                       }
 
                       await runWithLoginCustomerFallbackForAccount({
@@ -432,7 +430,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                           parent_mcc_id: adsAccount.parent_mcc_id,
                           id: adsAccount.id,
                         },
-                        refreshToken: apiAuth.refreshToken,
+                        refreshToken,
                         authType: apiAuth.authType,
                         serviceAccountId: apiAuth.serviceAccountId,
                         serviceAccountMccId: apiAuth.serviceAccountMccId,
@@ -441,7 +439,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                         callback: (loginCustomerId) =>
                           updateGoogleAdsCampaignStatus({
                             customerId: adsAccount.customer_id,
-                            refreshToken: apiAuth.refreshToken,
+                            refreshToken,
                             campaignId: campaign.campaign_id,
                             status: 'PAUSED',
                             accountId: campaign.google_ads_account_id,

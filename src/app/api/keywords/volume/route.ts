@@ -8,8 +8,8 @@ import { getKeywordSearchVolumes } from '@/lib/keyword-planner'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
+import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,7 +46,14 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       )
     }
-    const apiAuth = await resolveGoogleAdsApiAuthFromContext(authContext)
+    const prepared = await prepareGoogleAdsAccountApiCall({
+      authContext,
+      linkedServiceAccountId: null,
+    })
+    if (!prepared.ok) {
+      return NextResponse.json({ error: prepared.message }, { status: 400 })
+    }
+    const { apiAuth } = prepared
     const volumes = await getKeywordSearchVolumes(
       keywords,
       country,

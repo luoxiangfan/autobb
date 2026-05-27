@@ -14,7 +14,7 @@ import {
 import { executeGAQLQueryPython } from './python-ads-client'
 import { getInsertedId, nowFunc } from './db-helpers'
 import { createRiskAlert } from './risk-alerts'
-import { resolveLoginCustomerCandidates, isGoogleAdsAccountAccessError } from './google-ads-login-customer'
+import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { normalizeCountryCode, normalizeLanguageCode } from './language-country-codes'
 import { normalizeBrandKey, refreshBrandCoreKeywordCache } from './brand-core-keywords'
@@ -840,31 +840,15 @@ export class DataSyncService {
         return toPerformanceData(results)
       }
 
-      // OAuth模式
-      if (!refreshToken) {
-        throw new Error('Google Ads账号缺少refresh token')
-      }
-
-      const loginCustomerIdCandidates = resolveLoginCustomerCandidates({
-        authType: 'oauth',
+      return await this.runOAuthGaqlWithLoginCustomerFallback({
+        userId,
+        customerId,
+        accountId,
         accountParentMccId,
-        oauthLoginCustomerId: credentials?.login_customer_id,
-        targetCustomerId: customerId,
-      })
-
-      let lastQueryError: unknown = null
-      for (let i = 0; i < loginCustomerIdCandidates.length; i += 1) {
-        const loginCustomerId = loginCustomerIdCandidates[i]
-        try {
-          const customer = await getCustomerWithCredentials({
-            customerId,
-            refreshToken,
-            loginCustomerId: loginCustomerId ?? null,
-            credentials: this.toOAuthApiCredentialsFields(credentials),
-            accountId,
-            userId,
-          })
-
+        refreshToken,
+        credentials: credentials!,
+        actionName: `queryPerformanceData(${customerId})`,
+        query: async (customer) => {
           const results = await this.executeOAuthGaqlWithTracking<any[]>({
             userId,
             customerId,
@@ -872,25 +856,9 @@ export class DataSyncService {
             endpoint: '/api/google-ads/query',
             fn: () => (customer as any).query(query),
           })
-          if (i > 0) {
-            console.log(`✅ 账号 ${customerId} 使用备用 login_customer_id=${this.describeLoginCustomerId(loginCustomerId)} 查询效果成功`)
-          }
           return toPerformanceData(results)
-        } catch (error) {
-          lastQueryError = error
-          const hasNextCandidate = i < loginCustomerIdCandidates.length - 1
-          if (hasNextCandidate && isGoogleAdsAccountAccessError(error)) {
-            const nextLoginCustomerId = loginCustomerIdCandidates[i + 1]
-            console.warn(
-              `⚠️ 账号 ${customerId} login_customer_id=${this.describeLoginCustomerId(loginCustomerId)} 查询失败，切换到 ${this.describeLoginCustomerId(nextLoginCustomerId)} 重试`
-            )
-            continue
-          }
-          throw error
-        }
-      }
-
-      throw lastQueryError || new Error(`Google Ads账号 ${customerId} 查询失败`)
+        },
+      })
     } catch (error) {
       const quotaBackoffRemaining = this.markGoogleAdsQuotaBackoffIfNeeded(
         error,
@@ -998,73 +966,34 @@ export class DataSyncService {
           )
         )
       } else {
-        if (!refreshToken) {
-          throw new Error('Google Ads账号缺少refresh token')
-        }
-
-        const loginCustomerIdCandidates = resolveLoginCustomerCandidates({
-          authType: 'oauth',
+        results = await this.runOAuthGaqlWithLoginCustomerFallback({
+          userId,
+          customerId,
+          accountId,
           accountParentMccId,
-          oauthLoginCustomerId: credentials?.login_customer_id,
-          targetCustomerId: customerId,
+          refreshToken: refreshToken!,
+          credentials: credentials!,
+          actionName: `querySearchTermData(${customerId})`,
+          query: async (customer) =>
+            runQueryWithSchemaFallback(
+              async () =>
+                this.executeOAuthGaqlWithTracking<any[]>({
+                  userId,
+                  customerId,
+                  operationType: ApiOperationType.REPORT,
+                  endpoint: '/api/google-ads/query',
+                  fn: () => (customer as any).query(queryWithMatchType),
+                }),
+              async () =>
+                this.executeOAuthGaqlWithTracking<any[]>({
+                  userId,
+                  customerId,
+                  operationType: ApiOperationType.REPORT,
+                  endpoint: '/api/google-ads/query',
+                  fn: () => (customer as any).query(queryFallback),
+                })
+            ),
         })
-
-        let lastQueryError: unknown = null
-        let querySucceeded = false
-
-        for (let i = 0; i < loginCustomerIdCandidates.length; i += 1) {
-          const loginCustomerId = loginCustomerIdCandidates[i]
-
-          try {
-            const customer = await getCustomerWithCredentials({
-              customerId,
-              refreshToken,
-              loginCustomerId: loginCustomerId ?? null,
-              credentials: this.toOAuthApiCredentialsFields(credentials),
-              accountId,
-              userId,
-            })
-
-            results = await runQueryWithSchemaFallback(
-              async () => await this.executeOAuthGaqlWithTracking<any[]>({
-                userId,
-                customerId,
-                operationType: ApiOperationType.REPORT,
-                endpoint: '/api/google-ads/query',
-                fn: () => (customer as any).query(queryWithMatchType),
-              }),
-              async () => await this.executeOAuthGaqlWithTracking<any[]>({
-                userId,
-                customerId,
-                operationType: ApiOperationType.REPORT,
-                endpoint: '/api/google-ads/query',
-                fn: () => (customer as any).query(queryFallback),
-              })
-            )
-
-            if (i > 0) {
-              console.log(`✅ 账号 ${customerId} 使用备用 login_customer_id=${this.describeLoginCustomerId(loginCustomerId)} 查询搜索词成功`)
-            }
-
-            querySucceeded = true
-            break
-          } catch (error) {
-            lastQueryError = error
-            const hasNextCandidate = i < loginCustomerIdCandidates.length - 1
-            if (hasNextCandidate && isGoogleAdsAccountAccessError(error)) {
-              const nextLoginCustomerId = loginCustomerIdCandidates[i + 1]
-              console.warn(
-                `⚠️ 账号 ${customerId} login_customer_id=${this.describeLoginCustomerId(loginCustomerId)} 查询搜索词失败，切换到 ${this.describeLoginCustomerId(nextLoginCustomerId)} 重试`
-              )
-              continue
-            }
-            throw error
-          }
-        }
-
-        if (!querySucceeded && lastQueryError) {
-          throw lastQueryError
-        }
       }
 
       return results.map((row: any) => {
@@ -1136,64 +1065,23 @@ export class DataSyncService {
         }
         results = (await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query })).results || []
       } else {
-        if (!refreshToken) {
-          throw new Error('Google Ads账号缺少refresh token')
-        }
-
-        const loginCustomerIdCandidates = resolveLoginCustomerCandidates({
-          authType: 'oauth',
+        results = await this.runOAuthGaqlWithLoginCustomerFallback({
+          userId,
+          customerId,
+          accountId,
           accountParentMccId,
-          oauthLoginCustomerId: credentials?.login_customer_id,
-          targetCustomerId: customerId,
-        })
-
-        let lastQueryError: unknown = null
-        let querySucceeded = false
-
-        for (let i = 0; i < loginCustomerIdCandidates.length; i += 1) {
-          const loginCustomerId = loginCustomerIdCandidates[i]
-
-          try {
-            const customer = await getCustomerWithCredentials({
-              customerId,
-              refreshToken,
-              loginCustomerId: loginCustomerId ?? null,
-              credentials: this.toOAuthApiCredentialsFields(credentials),
-              accountId,
-              userId,
-            })
-
-            results = await this.executeOAuthGaqlWithTracking<any[]>({
+          refreshToken: refreshToken!,
+          credentials: credentials!,
+          actionName: `queryKeywordPerformanceData(${customerId})`,
+          query: async (customer) =>
+            this.executeOAuthGaqlWithTracking<any[]>({
               userId,
               customerId,
               operationType: ApiOperationType.REPORT,
               endpoint: '/api/google-ads/query',
               fn: () => (customer as any).query(query),
-            })
-
-            if (i > 0) {
-              console.log(`✅ 账号 ${customerId} 使用备用 login_customer_id=${this.describeLoginCustomerId(loginCustomerId)} 查询关键词成功`)
-            }
-
-            querySucceeded = true
-            break
-          } catch (error) {
-            lastQueryError = error
-            const hasNextCandidate = i < loginCustomerIdCandidates.length - 1
-            if (hasNextCandidate && isGoogleAdsAccountAccessError(error)) {
-              const nextLoginCustomerId = loginCustomerIdCandidates[i + 1]
-              console.warn(
-                `⚠️ 账号 ${customerId} login_customer_id=${this.describeLoginCustomerId(loginCustomerId)} 查询关键词失败，切换到 ${this.describeLoginCustomerId(nextLoginCustomerId)} 重试`
-              )
-              continue
-            }
-            throw error
-          }
-        }
-
-        if (!querySucceeded && lastQueryError) {
-          throw lastQueryError
-        }
+            }),
+        })
       }
 
       return results.map((row: any) => {
@@ -1229,8 +1117,46 @@ export class DataSyncService {
     }
   }
 
-  private describeLoginCustomerId(value: string | undefined): string {
-    return value || 'null(omit)'
+  private async runOAuthGaqlWithLoginCustomerFallback<T>(params: {
+    userId: number
+    customerId: string
+    accountId?: number
+    accountParentMccId?: string | null
+    refreshToken: string
+    credentials: SyncUserCredentials
+    actionName: string
+    query: (customer: Awaited<ReturnType<typeof getCustomerWithCredentials>>) => Promise<T>
+  }): Promise<T> {
+    if (!params.refreshToken) {
+      throw new Error('Google Ads账号缺少refresh token')
+    }
+
+    const oauthLoginCustomerId = params.credentials.login_customer_id
+
+    return runWithLoginCustomerFallbackForAccount({
+      adsAccount: {
+        customer_id: params.customerId,
+        parent_mcc_id: params.accountParentMccId ?? null,
+        id: params.accountId,
+      },
+      refreshToken: params.refreshToken,
+      authType: 'oauth',
+      oauthLoginCustomerId,
+      actionName: params.actionName,
+      callback: async (loginCustomerId) => {
+        const customer = await getCustomerWithCredentials({
+          customerId: params.customerId,
+          refreshToken: params.refreshToken,
+          loginCustomerId: loginCustomerId ?? null,
+          credentials: this.toOAuthApiCredentialsFields(params.credentials),
+          accountId: params.accountId,
+          userId: params.userId,
+          accountParentMccId: params.accountParentMccId,
+          oauthLoginCustomerIdHint: oauthLoginCustomerId,
+        })
+        return params.query(customer)
+      },
+    })
   }
 
   private async executeOAuthGaqlWithTracking<T>(params: {

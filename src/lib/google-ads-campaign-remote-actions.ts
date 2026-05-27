@@ -207,10 +207,6 @@ export async function executeGoogleAdsCampaignRemoteActions(
         prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId
     }
 
-    const serviceAccountLoginCustomerId =
-      apiAuth.serviceAccountMccId ||
-      (adsAccount.parent_mcc_id ? String(adsAccount.parent_mcc_id) : undefined)
-
     summary.executed = true
 
     const processedCampaignIds = new Set<string>()
@@ -270,27 +266,23 @@ export async function executeGoogleAdsCampaignRemoteActions(
         }
       }
 
-      const runWithLoginFallback = (action: (loginCustomerId: string | undefined) => Promise<void>) => {
-        if (auth.authType === 'oauth') {
-          return runWithLoginCustomerFallbackForAccount({
-            adsAccount: {
-              customer_id: adsAccount.customer_id!,
-              parent_mcc_id: adsAccount.parent_mcc_id,
-              id: adsAccount.id,
-            },
-            refreshToken,
-            authType: auth.authType,
-            serviceAccountId,
-            serviceAccountMccId: apiAuth.serviceAccountMccId,
-            oauthLoginCustomerId,
-            actionName: shouldRemove
-              ? `删除 Campaign ${googleCampaignId}`
-              : `暂停 Campaign ${googleCampaignId}`,
-            callback: action,
-          })
-        }
-        return action(serviceAccountLoginCustomerId)
-      }
+      const runWithLoginFallback = (action: (loginCustomerId: string | undefined) => Promise<void>) =>
+        runWithLoginCustomerFallbackForAccount({
+          adsAccount: {
+            customer_id: adsAccount.customer_id!,
+            parent_mcc_id: adsAccount.parent_mcc_id,
+            id: adsAccount.id,
+          },
+          refreshToken,
+          authType: auth.authType,
+          serviceAccountId,
+          serviceAccountMccId: apiAuth.serviceAccountMccId,
+          oauthLoginCustomerId,
+          actionName: shouldRemove
+            ? `删除 Campaign ${googleCampaignId}`
+            : `暂停 Campaign ${googleCampaignId}`,
+          callback: action,
+        })
 
       try {
         await withTimeout(

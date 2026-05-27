@@ -5,8 +5,8 @@ import { findEnabledGoogleAdsAccounts } from '@/lib/google-ads-accounts'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
+import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
 import {
   getKeywordIdeas,
   filterHighQualityKeywords,
@@ -87,19 +87,21 @@ export async function POST(
         { status: 400 }
       )
     }
-    const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+    const prepared = await prepareGoogleAdsAccountApiCall({
       authContext,
-      googleAdsAccount.serviceAccountId
-    )
-    if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
+      linkedServiceAccountId: googleAdsAccount.serviceAccountId,
+    })
+    if (!prepared.ok) {
+      const needsReauth = prepared.message.includes('OAuth') || prepared.message.includes('授权')
       return NextResponse.json(
         {
-          error: 'Google Ads账号授权已过期，请重新连接或配置服务账号',
-          needsReauth: true,
+          error: prepared.message,
+          ...(needsReauth ? { needsReauth: true } : {}),
         },
         { status: 400 }
       )
     }
+    const { apiAuth } = prepared
 
     // 准备种子关键词
     let finalSeedKeywords = [...seedKeywords]
