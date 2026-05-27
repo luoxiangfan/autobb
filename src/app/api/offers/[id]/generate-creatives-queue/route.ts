@@ -11,8 +11,7 @@ import { findOfferById } from '@/lib/offers'
 import { getQueueManager } from '@/lib/queue'
 import { getDatabase } from '@/lib/db'
 import { createError } from '@/lib/errors'
-import { getGoogleAdsConfig } from '@/lib/keyword-planner'
-import { tryGetConfiguredGoogleAdsApiAuthForUser } from '@/lib/google-ads-auth-context'
+import { validateGoogleAdsConfigForCreativeGeneration } from '@/lib/google-ads-accounts-auth'
 import { getAvailableBuckets } from '@/lib/offer-keyword-pool'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
 import {
@@ -205,61 +204,45 @@ export async function POST(
     })
   }
 
-  const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userId)
-
-  // 2. 验证 Google Ads API 配置（支持 OAuth 和服务账号两种模式）
+  // 2. 验证 Google Ads API 配置（Offer linked SA + prepare/heal）
   try {
-    if (!authResolved) {
-      console.warn(`[CreativeGeneration] User ${userId} has no configured Google Ads auth`)
-      return createQueueErrorResponse({
-        status: 400,
-        error: '广告创意生成需要完整的 Google Ads API 配置',
-        message: '请前往【设置】完成 Google Ads OAuth 授权或服务账号配置',
-        errorCode: 'CREATIVE_GOOGLE_ADS_NOT_CONFIGURED',
-        errorCategory: 'config',
-        retryable: false,
-      })
-    }
-
-    const { ctx: authContext, apiAuth } = authResolved
-
-    const googleAdsConfig = await getGoogleAdsConfig(
+    const authValidation = await validateGoogleAdsConfigForCreativeGeneration(
       userId,
-      apiAuth.authType,
-      apiAuth.serviceAccountId,
-      authContext
+      offer.id
     )
+    if (!authValidation.ok) {
+      const isNotConfigured =
+        !authValidation.missingFields || authValidation.missingFields.length === 0
+      if (isNotConfigured) {
+        console.warn(`[CreativeGeneration] User ${userId} has no configured Google Ads auth`)
+        return createQueueErrorResponse({
+          status: 400,
+          error: '广告创意生成需要完整的 Google Ads API 配置',
+          message: authValidation.message,
+          errorCode: 'CREATIVE_GOOGLE_ADS_NOT_CONFIGURED',
+          errorCategory: 'config',
+          retryable: false,
+        })
+      }
 
-    const isConfigComplete = apiAuth.authType === 'service_account'
-      ? !!(googleAdsConfig?.developerToken && googleAdsConfig?.customerId)
-      : !!(googleAdsConfig?.developerToken && googleAdsConfig?.refreshToken && googleAdsConfig?.customerId)
-
-    if (!isConfigComplete) {
-      console.warn(`[CreativeGeneration] User ${userId} has incomplete Google Ads config (authType: ${apiAuth.authType})`)
-      const missingFields = apiAuth.authType === 'service_account'
-        ? [
-            !googleAdsConfig?.developerToken && 'Developer Token',
-            !googleAdsConfig?.customerId && 'MCC Customer ID'
-          ].filter(Boolean)
-        : [
-            !googleAdsConfig?.developerToken && 'Developer Token',
-            !googleAdsConfig?.refreshToken && 'Refresh Token / OAuth',
-            !googleAdsConfig?.customerId && 'Customer ID'
-          ].filter(Boolean)
-      const details = apiAuth.authType === 'service_account'
-        ? '请前往【设置】→【服务账号配置】页面检查服务账号配置，确保 Developer Token 和 MCC Customer ID 已正确配置。'
-        : '请前往【设置】页面配置 Google Ads API 凭证（Developer Token、Refresh Token、Customer ID）以启用关键词搜索量查询功能。'
+      console.warn(
+        `[CreativeGeneration] User ${userId} has incomplete Google Ads config (authType: ${authValidation.authType})`
+      )
+      const details =
+        authValidation.authType === 'service_account'
+          ? '请前往【设置】→【服务账号配置】页面检查服务账号配置，确保 Developer Token 和 MCC Customer ID 已正确配置。'
+          : '请前往【设置】页面配置 Google Ads API 凭证（Developer Token、Refresh Token、Customer ID）以启用关键词搜索量查询功能。'
       return createQueueErrorResponse({
         status: 400,
-        error: '广告创意生成需要完整的 Google Ads API 配置',
-        message: '广告创意生成需要完整的 Google Ads API 配置',
+        error: authValidation.message,
+        message: authValidation.message,
         details,
         errorCode: 'GOOGLE_ADS_CONFIG_INCOMPLETE',
         errorCategory: 'config',
         retryable: false,
         extra: {
-          missingFields,
-          authType: apiAuth.authType,
+          missingFields: authValidation.missingFields,
+          authType: authValidation.authType,
         },
       })
     }

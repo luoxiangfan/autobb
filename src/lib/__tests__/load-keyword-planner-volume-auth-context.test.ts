@@ -21,6 +21,23 @@ describe('resolveKeywordPlannerLinkedServiceAccountId', () => {
     vi.clearAllMocks()
   })
 
+  it('prefers offerId over deprecated serviceAccountId when linkedServiceAccountId omitted', async () => {
+    dbFns.queryOne.mockImplementation(async (sql: string) => {
+      if (sql.includes('INNER JOIN campaigns')) {
+        return { service_account_id: 'sa-from-offer' }
+      }
+      return null
+    })
+
+    const linked = await resolveKeywordPlannerLinkedServiceAccountId({
+      userId: 42,
+      offerId: 10,
+      serviceAccountId: 'sa-legacy-explicit',
+    })
+
+    expect(linked).toBe('sa-from-offer')
+  })
+
   it('matches planner context resolver when only offerId is set', async () => {
     dbFns.queryOne.mockImplementation(async (sql: string) => {
       if (sql.includes('INNER JOIN campaigns')) {

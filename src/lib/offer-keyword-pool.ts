@@ -4402,6 +4402,38 @@ export async function generateOfferKeywordPool(
   })
   const plannerMinSearchVolume = pageType === 'store' ? DEFAULTS.minSearchVolume : undefined
 
+  // 单次 prepare：关键词池扩展与搜索量查询共用
+  let customerId: string | undefined
+  let refreshToken: string | undefined
+  let accountId: number | undefined
+  let clientId: string | undefined
+  let clientSecret: string | undefined
+  let developerToken: string | undefined
+  let authType: 'oauth' | 'service_account' = 'oauth'
+  let plannerSession: KeywordPlannerPreparedSession | undefined
+  let linkedServiceAccountId: string | null | undefined
+
+  try {
+    const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id)
+    if (!expandLoad.ok) {
+      console.warn(
+        `⚠️ Keyword Planner 扩展认证不可用（prepare 失败），将回退初始种子词 (offerId=${offer.id}, userId=${userId})`
+      )
+    } else {
+      authType = expandLoad.creds.authType
+      customerId = expandLoad.creds.customerId
+      refreshToken = expandLoad.creds.refreshToken
+      accountId = expandLoad.creds.accountId
+      clientId = expandLoad.creds.clientId
+      clientSecret = expandLoad.creds.clientSecret
+      developerToken = expandLoad.creds.developerToken
+      linkedServiceAccountId = expandLoad.creds.linkedServiceAccountId
+      plannerSession = expandLoad.plannerSession
+    }
+  } catch (error) {
+    console.warn('⚠️ 无法获取Google Ads凭证，跳过关键词扩展:', (error as Error).message)
+  }
+
   // 1.5 Marketplace场景：尽量补全“品牌官网”，用于Keyword Planner的站点过滤（best-effort）
   try {
     const { ensureOfferBrandOfficialSite } = await import('./offer-official-site')
@@ -4456,6 +4488,7 @@ export async function generateOfferKeywordPool(
         keywords: allKeywords,
         country: offer.target_country,
         language: offer.target_language || 'en',
+        plannerSession,
         onProgress: volumeProgress,
       })
       if (!volumeResult.ok) {
@@ -4605,38 +4638,6 @@ export async function generateOfferKeywordPool(
 
   // 3. 🆕 全量扩展（v2.0：根据认证类型分发）
   const { expandAllKeywords, filterKeywords } = await import('./keyword-pool-helpers')
-
-  // 获取Google Ads凭证和认证类型（用于扩展）
-  let customerId: string | undefined
-  let refreshToken: string | undefined
-  let accountId: number | undefined
-  let clientId: string | undefined
-  let clientSecret: string | undefined
-  let developerToken: string | undefined
-  let authType: 'oauth' | 'service_account' = 'oauth'
-
-  let plannerSession: KeywordPlannerPreparedSession | undefined
-  let linkedServiceAccountId: string | null | undefined
-  try {
-    const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id)
-    if (!expandLoad.ok) {
-      console.warn(
-        `⚠️ Keyword Planner 扩展认证不可用（prepare 失败），将回退初始种子词 (offerId=${offer.id}, userId=${userId})`
-      )
-    } else {
-      authType = expandLoad.creds.authType
-      customerId = expandLoad.creds.customerId
-      refreshToken = expandLoad.creds.refreshToken
-      accountId = expandLoad.creds.accountId
-      clientId = expandLoad.creds.clientId
-      clientSecret = expandLoad.creds.clientSecret
-      developerToken = expandLoad.creds.developerToken
-      linkedServiceAccountId = expandLoad.creds.linkedServiceAccountId
-      plannerSession = expandLoad.plannerSession
-    }
-  } catch (error) {
-    console.warn('⚠️ 无法获取Google Ads凭证，跳过关键词扩展:', (error as Error).message)
-  }
 
   const plannerDecision: PlannerDecision = {
     allowNonBrandFromPlanner: allowPlannerNonBrand,
@@ -4934,6 +4935,7 @@ export async function generateOfferKeywordPool(
           keywords: pureBrandKeywordsForFilter,
           country: offer.target_country,
           language: offer.target_language || 'en',
+          plannerSession,
           onProgress: volumeProgress,
         })
         if (!volumeResult.ok) {

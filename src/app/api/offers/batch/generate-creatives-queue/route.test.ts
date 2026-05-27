@@ -14,8 +14,7 @@ const queueFns = vi.hoisted(() => ({
 }))
 
 const authFns = vi.hoisted(() => ({
-  getGoogleAdsConfig: vi.fn(),
-  tryGetConfiguredGoogleAdsApiAuthForUser: vi.fn(),
+  validateGoogleAdsConfigForCreativeGeneration: vi.fn(),
 }))
 
 const keywordPoolFns = vi.hoisted(() => ({
@@ -36,12 +35,8 @@ vi.mock('@/lib/queue', () => ({
   getQueueManager: queueFns.getQueueManager,
 }))
 
-vi.mock('@/lib/keyword-planner', () => ({
-  getGoogleAdsConfig: authFns.getGoogleAdsConfig,
-}))
-
-vi.mock('@/lib/google-ads-auth-context', () => ({
-  tryGetConfiguredGoogleAdsApiAuthForUser: authFns.tryGetConfiguredGoogleAdsApiAuthForUser,
+vi.mock('@/lib/google-ads-accounts-auth', () => ({
+  validateGoogleAdsConfigForCreativeGeneration: authFns.validateGoogleAdsConfigForCreativeGeneration,
 }))
 
 vi.mock('@/lib/offer-keyword-pool', () => ({
@@ -69,14 +64,10 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
       enqueue: queueFns.enqueue,
     })
 
-    authFns.tryGetConfiguredGoogleAdsApiAuthForUser.mockResolvedValue({
-      ctx: { auth: { authType: 'oauth' } },
+    authFns.validateGoogleAdsConfigForCreativeGeneration.mockResolvedValue({
+      ok: true,
+      authContext: { auth: { authType: 'oauth' } },
       apiAuth: { authType: 'oauth', serviceAccountId: undefined, refreshToken: 'refresh-token' },
-    })
-    authFns.getGoogleAdsConfig.mockResolvedValue({
-      developerToken: 'dev-token',
-      refreshToken: 'refresh-token',
-      customerId: 'customer-id',
     })
 
     vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('task-102')

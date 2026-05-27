@@ -14,7 +14,7 @@ import {
 } from './google-ads-auth-context'
 import { getServiceAccountConfig } from './google-ads-service-account'
 import type { KeywordIdeasPreparedOAuth } from './google-ads-keyword-planner'
-import { getKeywordSearchVolumes } from './keyword-planner'
+import { getGoogleAdsConfig, getKeywordSearchVolumes } from './keyword-planner'
 /** 账号列表同步/API 客户端所需的扁平凭证 */
 export interface AccountsRouteCredentials {
   client_id: string
@@ -561,17 +561,33 @@ export async function getKeywordSearchVolumesForPlannerContext(
     keywords: string[]
     country: string
     language: string
+    /** 已由 loadKeywordPoolExpandCredentialsForOffer 等 prepare 时传入，避免重复 heal */
+    plannerSession?: KeywordPlannerPreparedSession
     onProgress?: (info: { message: string; current?: number; total?: number }) => Promise<void> | void
   }
 ): Promise<
   | { ok: true; volumes: Awaited<ReturnType<typeof getKeywordSearchVolumes>> }
   | { ok: false; message: string }
 > {
-  const loaded = await loadKeywordPlannerVolumeAuthForContext(params)
-  if (!loaded.ok) {
-    return { ok: false, message: loaded.message }
+  const volumeAuth = params.plannerSession?.volumeAuth
+  if (!volumeAuth) {
+    const loaded = await loadKeywordPlannerVolumeAuthForContext(params)
+    if (!loaded.ok) {
+      return { ok: false, message: loaded.message }
+    }
+    const loadedAuth = loaded.volumeAuth
+    const volumes = await getKeywordSearchVolumes(
+      params.keywords,
+      params.country,
+      params.language,
+      params.userId,
+      loadedAuth.authType,
+      loadedAuth.serviceAccountId,
+      params.onProgress,
+      loadedAuth.plannerAuth
+    )
+    return { ok: true, volumes }
   }
-  const { volumeAuth } = loaded
   const volumes = await getKeywordSearchVolumes(
     params.keywords,
     params.country,
@@ -583,6 +599,79 @@ export async function getKeywordSearchVolumesForPlannerContext(
     volumeAuth.plannerAuth
   )
   return { ok: true, volumes }
+}
+
+export type CreativeGenerationGoogleAdsValidationResult =
+  | {
+      ok: false
+      message: string
+      authType?: 'oauth' | 'service_account'
+      missingFields?: string[]
+    }
+  | { ok: true; authContext: GoogleAdsAuthContext; apiAuth: GoogleAdsApiAuthFields }
+
+/**
+ * 创意生成入队前校验 Google Ads 配置（linked SA + prepare/heal）。
+ * 提供 offerId 时按 Offer 关联账号解析 linked SA；批量入队可省略 offerId（用户级 prepare）。
+ */
+export async function validateGoogleAdsConfigForCreativeGeneration(
+  userId: number,
+  offerId?: number
+): Promise<CreativeGenerationGoogleAdsValidationResult> {
+  const linkedSa =
+    offerId != null ? await resolveLinkedServiceAccountIdForOffer(userId, offerId) : null
+
+  const prepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, linkedSa)
+  if (!prepared.ok) {
+    return { ok: false, message: prepared.message }
+  }
+
+  const { authContext, apiAuth } = prepared
+  const googleAdsConfig = await getGoogleAdsConfig(
+    userId,
+    apiAuth.authType,
+    apiAuth.serviceAccountId,
+    authContext,
+    prepared.oauthCredentials
+      ? {
+          credentials: prepared.oauthCredentials,
+          loginCustomerId: prepared.oauthLoginCustomerId,
+          refreshToken: prepared.refreshToken,
+        }
+      : undefined
+  )
+
+  const isConfigComplete =
+    apiAuth.authType === 'service_account'
+      ? !!(googleAdsConfig?.developerToken && googleAdsConfig?.customerId)
+      : !!(
+          googleAdsConfig?.developerToken &&
+          googleAdsConfig?.refreshToken &&
+          googleAdsConfig?.customerId
+        )
+
+  if (!isConfigComplete) {
+    const missingFields =
+      apiAuth.authType === 'service_account'
+        ? ([
+            !googleAdsConfig?.developerToken && 'Developer Token',
+            !googleAdsConfig?.customerId && 'MCC Customer ID',
+          ].filter(Boolean) as string[])
+        : ([
+            !googleAdsConfig?.developerToken && 'Developer Token',
+            !googleAdsConfig?.refreshToken && 'Refresh Token / OAuth',
+            !googleAdsConfig?.customerId && 'Customer ID',
+          ].filter(Boolean) as string[])
+
+    return {
+      ok: false,
+      message: '广告创意生成需要完整的 Google Ads API 配置',
+      authType: apiAuth.authType,
+      missingFields,
+    }
+  }
+
+  return { ok: true, authContext, apiAuth }
 }
 
 export type KeywordPoolExpandCredentials = {
@@ -606,7 +695,14 @@ export type ResolveKeywordPlannerLinkedSaParams = {
   serviceAccountId?: string | null
 }
 
-/** Keyword Planner session：解析 linked SA（offer 优先于显式 serviceAccountId） */
+/**
+ * Keyword Planner session：解析 linked SA。
+ *
+ * 优先级（勿随意调整，调用方可能同时传多个字段）：
+ * 1. `linkedServiceAccountId` 已传入（含显式 `null`）→ 直接使用，不再查库
+ * 2. `offerId` → `resolveLinkedServiceAccountIdForOffer`（campaign 关联账号行 SA，否则用户最近启用账号）
+ * 3. `serviceAccountId`（deprecated）→ 仅作显式 SA 字符串回退
+ */
 export async function resolveKeywordPlannerLinkedServiceAccountId(
   params: ResolveKeywordPlannerLinkedSaParams
 ): Promise<string | null> {

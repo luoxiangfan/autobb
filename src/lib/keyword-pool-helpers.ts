@@ -1157,6 +1157,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
           keywords: brandSeedKeywords.map(kw => kw.keyword),
           country: targetCountry,
           language: targetLanguage,
+          plannerSession,
           onProgress: progress
             ? (info: { message: string; current?: number; total?: number }) =>
                 progress({

@@ -15,10 +15,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue'
-import { getGoogleAdsConfig } from '@/lib/keyword-planner'
-import {
-  tryGetConfiguredGoogleAdsApiAuthForUser,
-} from '@/lib/google-ads-auth-context'
+import { validateGoogleAdsConfigForCreativeGeneration } from '@/lib/google-ads-accounts-auth'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
 import { toDbJsonObjectField } from '@/lib/json-field'
 import {
@@ -140,49 +137,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const authResolved = await tryGetConfiguredGoogleAdsApiAuthForUser(userIdNum)
     try {
-      if (!authResolved) {
+      const authValidation = await validateGoogleAdsConfigForCreativeGeneration(userIdNum)
+      if (!authValidation.ok) {
+        const isNotConfigured =
+          !authValidation.missingFields || authValidation.missingFields.length === 0
+        if (isNotConfigured) {
+          return NextResponse.json(
+            {
+              error: authValidation.message,
+              details: '请前往【设置】完成 Google Ads OAuth 授权或服务账号配置。',
+            },
+            { status: 400 }
+          )
+        }
+
         return NextResponse.json(
           {
-            error: '广告创意生成需要完整的 Google Ads API 配置',
-            details: '请前往【设置】完成 Google Ads OAuth 授权或服务账号配置。',
-          },
-          { status: 400 }
-        )
-      }
-
-      const { ctx: authContext, apiAuth } = authResolved
-
-      const googleAdsConfig = await getGoogleAdsConfig(
-        userIdNum,
-        apiAuth.authType,
-        apiAuth.serviceAccountId,
-        authContext
-      )
-
-      const isConfigComplete = apiAuth.authType === 'service_account'
-        ? !!(googleAdsConfig?.developerToken && googleAdsConfig?.customerId)
-        : !!(googleAdsConfig?.developerToken && googleAdsConfig?.refreshToken && googleAdsConfig?.customerId)
-
-      if (!isConfigComplete) {
-        return NextResponse.json(
-          {
-            error: '广告创意生成需要完整的 Google Ads API 配置',
-            details: apiAuth.authType === 'service_account'
-              ? '请前往【设置】→【服务账号配置】页面检查服务账号配置，确保 Developer Token 和 MCC Customer ID 已正确配置。'
-              : '请前往【设置】页面配置 Google Ads API 凭证（Developer Token、Refresh Token、Customer ID）以启用关键词搜索量查询功能。',
-            missingFields: apiAuth.authType === 'service_account'
-              ? [
-                  !googleAdsConfig?.developerToken && 'Developer Token',
-                  !googleAdsConfig?.customerId && 'MCC Customer ID',
-                ].filter(Boolean)
-              : [
-                  !googleAdsConfig?.developerToken && 'Developer Token',
-                  !googleAdsConfig?.refreshToken && 'Refresh Token / OAuth',
-                  !googleAdsConfig?.customerId && 'Customer ID',
-                ].filter(Boolean),
-            authType: apiAuth.authType,
+            error: authValidation.message,
+            details:
+              authValidation.authType === 'service_account'
+                ? '请前往【设置】→【服务账号配置】页面检查服务账号配置，确保 Developer Token 和 MCC Customer ID 已正确配置。'
+                : '请前往【设置】页面配置 Google Ads API 凭证（Developer Token、Refresh Token、Customer ID）以启用关键词搜索量查询功能。',
+            missingFields: authValidation.missingFields,
+            authType: authValidation.authType,
           },
           { status: 400 }
         )

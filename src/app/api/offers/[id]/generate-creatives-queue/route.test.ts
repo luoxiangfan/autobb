@@ -17,8 +17,7 @@ const dbFns = vi.hoisted(() => ({
 }))
 
 const authFns = vi.hoisted(() => ({
-  getGoogleAdsConfig: vi.fn(),
-  tryGetConfiguredGoogleAdsApiAuthForUser: vi.fn(),
+  validateGoogleAdsConfigForCreativeGeneration: vi.fn(),
 }))
 
 const keywordPoolFns = vi.hoisted(() => ({
@@ -43,12 +42,8 @@ vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
 }))
 
-vi.mock('@/lib/keyword-planner', () => ({
-  getGoogleAdsConfig: authFns.getGoogleAdsConfig,
-}))
-
-vi.mock('@/lib/google-ads-auth-context', () => ({
-  tryGetConfiguredGoogleAdsApiAuthForUser: authFns.tryGetConfiguredGoogleAdsApiAuthForUser,
+vi.mock('@/lib/google-ads-accounts-auth', () => ({
+  validateGoogleAdsConfigForCreativeGeneration: authFns.validateGoogleAdsConfigForCreativeGeneration,
 }))
 
 vi.mock('@/lib/offer-keyword-pool', () => ({
@@ -72,14 +67,10 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       scrape_status: 'completed',
     })
 
-    authFns.tryGetConfiguredGoogleAdsApiAuthForUser.mockResolvedValue({
-      ctx: { auth: { authType: 'oauth' } },
+    authFns.validateGoogleAdsConfigForCreativeGeneration.mockResolvedValue({
+      ok: true,
+      authContext: { auth: { authType: 'oauth' } },
       apiAuth: { authType: 'oauth', serviceAccountId: undefined, refreshToken: 'refresh-token' },
-    })
-    authFns.getGoogleAdsConfig.mockResolvedValue({
-      developerToken: 'dev-token',
-      refreshToken: 'refresh-token',
-      customerId: 'customer-id',
     })
 
     dbFns.getDatabase.mockReturnValue({
@@ -120,6 +111,23 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  it('validates Google Ads config with offer-linked SA before enqueue', async () => {
+    keywordPoolFns.getAvailableBuckets.mockResolvedValue(['A'])
+
+    const req = new NextRequest('http://localhost/api/offers/96/generate-creatives-queue', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '1',
+      },
+      body: JSON.stringify({ bucket: 'A' }),
+    })
+
+    await POST(req, { params: { id: '96' } })
+
+    expect(authFns.validateGoogleAdsConfigForCreativeGeneration).toHaveBeenCalledWith(1, 96)
   })
 
   it('rejects a requested bucket when the canonical available buckets do not include it', async () => {
