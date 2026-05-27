@@ -100,7 +100,6 @@ const ROUTE_RISK_POLICIES: RouteRiskPolicy[] = [
   { method: 'POST', path: '/api/offers/:id/keyword-ideas', riskLevel: 'high' },
   { method: 'POST', path: '/api/offers/:id/keyword-pool', riskLevel: 'high' },
   { method: 'DELETE', path: '/api/offers/:id/keyword-pool', riskLevel: 'high' },
-  { method: 'POST', path: '/api/offers/:id/launch-ads', riskLevel: 'high' },
   { method: 'POST', path: '/api/offers/:id/pause-campaigns', riskLevel: 'high' },
   { method: 'POST', path: '/api/offers/:id/resolve-url', riskLevel: 'high' },
   { method: 'POST', path: '/api/offers/:id/validate-url', riskLevel: 'high' },

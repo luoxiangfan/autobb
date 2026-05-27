@@ -32,37 +32,3 @@ export function verifyToken(token: string): JWTPayload | null {
     return null
   }
 }
-
-/**
- * 从请求头中提取Token
- *
- * ⚠️ DEPRECATED for user authentication - use HttpOnly Cookie only
- * This function is ONLY for system-level operations (e.g., cron job authentication with CRON_SECRET)
- *
- * @deprecated User authentication should ONLY use HttpOnly Cookie (auth_token)
- */
-export function extractTokenFromHeader(authHeader: string | null): string | null {
-  if (!authHeader) return null
-
-  // 支持 "Bearer <token>" 格式
-  const parts = authHeader.split(' ')
-  if (parts.length === 2 && parts[0] === 'Bearer') {
-    return parts[1]
-  }
-
-  // 直接返回token
-  return authHeader
-}
-
-/**
- * 解码Token（不验证签名，仅用于读取payload）
- */
-export function decodeToken(token: string): JWTPayload | null {
-  try {
-    const decoded = jwt.decode(token) as JWTPayload
-    return decoded
-  } catch (error) {
-    console.error('JWT解码失败:', error)
-    return null
-  }
-}

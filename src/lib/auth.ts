@@ -573,17 +573,3 @@ export function withAuth(
     }
   }
 }
-
-/**
- * @deprecated 使用 verifyAuth(request) 代替。x-user-id 请求头可被伪造，不可用于鉴权。
- */
-export function getUserIdFromRequest(_request: NextRequest): number | null {
-  return null
-}
-
-/**
- * @deprecated 使用 verifyAuth(request) 代替。
- */
-export function requireUserId(_request: NextRequest): number {
-  throw new Error('未授权，请先登录')
-}

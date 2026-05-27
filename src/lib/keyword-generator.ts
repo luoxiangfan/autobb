@@ -4,7 +4,7 @@
  * ⚠️ 重要变更 (2025-12-14):
  * - 正向关键词生成已迁移到 unified-keyword-service.ts
  * - 本文件只保留否定关键词生成功能
- * - generateKeywords() 已废弃，请使用 getUnifiedKeywordData()
+ * - 正向关键词请使用 unified-keyword-service.ts 的 getUnifiedKeywordData()
  *
  * @see unified-keyword-service.ts 获取正向关键词
  */
@@ -63,57 +63,6 @@ function getLanguageInstructionForNegativeKeywords(targetLanguage: string): stri
 
   // Default to English
   return `Generate negative keywords in English.`
-}
-
-/**
- * AI生成的关键词数据结构
- * @deprecated 正向关键词请使用 unified-keyword-service.ts 的 UnifiedKeywordData
- */
-export interface GeneratedKeyword {
-  keyword: string
-  matchType: 'BROAD' | 'PHRASE' | 'EXACT'
-  priority: 'HIGH' | 'MEDIUM' | 'LOW'
-  category: string
-  estimatedCpc?: number
-  searchIntent?: string
-  reasoning?: string
-  searchVolume?: number
-}
-
-/**
- * 关键词生成结果
- * @deprecated 正向关键词请使用 unified-keyword-service.ts
- */
-export interface KeywordGenerationResult {
-  keywords: GeneratedKeyword[]
-  totalCount: number
-  categories: string[]
-  estimatedBudget?: {
-    minDaily: number
-    maxDaily: number
-    currency: string
-  }
-  recommendations: string[]
-  filteredCount?: number
-  brandKeywordsCount?: number
-}
-
-/**
- * 使用AI生成关键词
- *
- * @deprecated 已废弃 (2025-12-14)
- * 正向关键词生成已迁移到 unified-keyword-service.ts
- * 请使用 getUnifiedKeywordData() 代替
- *
- * @see unified-keyword-service.ts
- */
-export async function generateKeywords(
-  _offer: Offer,
-  _userId: number,
-  _options?: { minSearchVolume?: number }
-): Promise<KeywordGenerationResult> {
-  console.warn('⚠️ generateKeywords() 已废弃，请使用 getUnifiedKeywordData() 代替')
-  throw new Error('generateKeywords() 已废弃。请使用 unified-keyword-service.ts 的 getUnifiedKeywordData()')
 }
 
 /**
@@ -312,72 +261,3 @@ export async function generateNegativeKeywords(offer: Offer, userId: number): Pr
 
   return dedupedNegatives
 }
-
-/**
- * 关键词扩展（基于已有关键词生成更多变体）
- *
- * @deprecated 已废弃 (2025-12-14)
- * 关键词扩展已迁移到 unified-keyword-service.ts
- * 请使用 getUnifiedKeywordData() 代替
- *
- * @see unified-keyword-service.ts
- */
-export async function expandKeywords(
-  _baseKeywords: string[],
-  _offer: Offer,
-  _userId: number
-): Promise<GeneratedKeyword[]> {
-  console.warn('⚠️ expandKeywords() 已废弃，请使用 getUnifiedKeywordData() 代替')
-  throw new Error('expandKeywords() 已废弃。请使用 unified-keyword-service.ts 的 getUnifiedKeywordData()')
-}
-
-// ============================================
-// 以下函数已迁移到 unified-keyword-service.ts
-// 保留空实现以避免编译错误（向后兼容）
-// ============================================
-
-/**
- * @deprecated 已迁移到 unified-keyword-service.ts
- * @see unified-keyword-service.ts buildSmartSeedPool
- */
-function expandBrandKeywordsWithPlanner(): Promise<GeneratedKeyword[]> {
-  throw new Error('已迁移到 unified-keyword-service.ts')
-}
-
-/**
- * @deprecated 已迁移到 unified-keyword-service.ts
- * @see unified-keyword-service.ts extractKeywordsFromProductTitle
- */
-function extractKeywordsFromProductTitle(_productTitle: string, _brandName: string): string[] {
-  return []
-}
-
-/**
- * @deprecated 已迁移到 unified-keyword-service.ts
- * @see unified-keyword-service.ts aggregateStoreProductSeeds
- */
-function aggregateStoreProductKeywords(
-  _productNames: string[],
-  _brandName: string,
-  _category?: string | null
-): GeneratedKeyword[] {
-  return []
-}
-
-/**
- * @deprecated 已迁移到 unified-keyword-service.ts
- * @see unified-keyword-service.ts extractFeatureSeeds
- */
-function generateKeywordsFromFeatures(
-  _features: string,
-  _brandName: string,
-  _category?: string | null
-): GeneratedKeyword[] {
-  return []
-}
-
-// 防止 unused variable 警告
-void expandBrandKeywordsWithPlanner
-void extractKeywordsFromProductTitle
-void aggregateStoreProductKeywords
-void generateKeywordsFromFeatures

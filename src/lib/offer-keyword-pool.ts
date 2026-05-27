@@ -7578,12 +7578,11 @@ export function determineClusteringStrategy(keywordCount: number): ClusteringStr
 /**
  * 统一的关键词检索 API
  *
- * 简化了以下 5 个重叠函数：
+ * 简化了以下 4 个重叠函数：
  * 1. getKeywordPoolByOfferId()
  * 2. getOrCreateKeywordPool()
  * 3. getMultiRoundIntentAwareKeywords()
  * 4. getUnifiedKeywordData()
- * 5. getUnifiedKeywordDataWithMultiRounds()
  *
  * 使用参数化选项替代多个函数，遵循 KISS 原则
  *

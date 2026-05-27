@@ -165,21 +165,6 @@ export async function resolveGoogleAdsApiAuthForAccount(
 }
 
 /**
- * 一次性加载 context 并解析 API 调用字段（无账号绑定时 linked 传 null/undefined）。
- *
- * @deprecated Prefer {@link tryGetConfiguredGoogleAdsApiAuthForUser} or
- * {@link resolveGoogleAdsApiAuthForAccount} for validated auth resolution.
- */
-export async function getGoogleAdsApiAuthForUser(
-  userId: number,
-  linkedAccountServiceAccountId?: string | null
-): Promise<{ ctx: GoogleAdsAuthContext; apiAuth: GoogleAdsApiAuthFields }> {
-  const ctx = await getGoogleAdsAuthContext(userId)
-  const apiAuth = await resolveGoogleAdsApiAuthFromContext(ctx, linkedAccountServiceAccountId)
-  return { ctx, apiAuth }
-}
-
-/**
  * 已配置且可用于 Keyword Planner / API 的认证；未配置时返回 null（不抛错）。
  */
 export async function tryGetConfiguredGoogleAdsApiAuthForUser(

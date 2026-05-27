@@ -2569,46 +2569,6 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
 }
 
 // ============================================
-// 向后兼容的多轮扩展函数
-// ============================================
-
-/**
- * 多轮扩展查询（保持向后兼容）
- *
- * @deprecated 建议使用 getUnifiedKeywordData 代替
- */
-export async function getUnifiedKeywordDataWithMultiRounds(params: {
-  baseKeywords: string[]
-  country: string
-  language: string
-  customerId: string
-  refreshToken: string
-  accountId: number
-  userId: number
-  brandName: string
-  roundSeeds: Array<{ round: number; name: string; seeds: string[] }>
-}): Promise<UnifiedKeywordData[]> {
-  console.log('⚠️ getUnifiedKeywordDataWithMultiRounds 已废弃，使用 getUnifiedKeywordData 代替')
-
-  // 构建简化的 offer 对象
-  const offer: OfferData = {
-    brand: params.brandName,
-  }
-
-  // 🆕 P0-2: 向后兼容，只返回关键词数组
-  const result = await getUnifiedKeywordData({
-    offer,
-    country: params.country,
-    language: params.language,
-    customerId: params.customerId,
-    refreshToken: params.refreshToken,
-    accountId: params.accountId,
-    userId: params.userId,
-  })
-  return result.keywords
-}
-
-// ============================================
 // 向后兼容：获取现有关键词的搜索量
 // ============================================
 

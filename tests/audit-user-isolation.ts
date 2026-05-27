@@ -152,8 +152,7 @@ async function auditAPIRoutes() {
 
     checkedRoutes++
 
-    // 检查是否有 getUserIdFromRequest
-    const hasUserAuth = content.includes('getUserIdFromRequest') ||
+    const hasUserAuth = content.includes('verifyAuth') ||
       content.includes('requireAuth') ||
       content.includes('authMiddleware')
 

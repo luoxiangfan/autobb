@@ -81,7 +81,7 @@ Please strictly follow JSON format and ensure 4 descriptions.`,
     name: '关键词生成（已废弃）',
     description: '⚠️ 已废弃 (2025-12-14): 正向关键词生成已迁移到Keyword Planner API。请使用 unified-keyword-service.ts',
     filePath: 'src/lib/keyword-generator.ts',
-    functionName: 'generateKeywords',
+    functionName: 'generateNegativeKeywords',
     promptContent: `⚠️ DEPRECATED (2025-12-14)
 
 This prompt is no longer in use.

@@ -143,7 +143,6 @@ const WRITE_ROUTE_DEFINITIONS: CanonicalRouteDefinition[] = [
   { method: 'POST', pattern: '/api/offers/:id/keyword-ideas', feature: 'offer-management' },
   { method: 'POST', pattern: '/api/offers/:id/keyword-pool', feature: 'offer-management' },
   { method: 'DELETE', pattern: '/api/offers/:id/keyword-pool', feature: 'offer-management' },
-  { method: 'POST', pattern: '/api/offers/:id/launch-ads', feature: 'offer-management' },
   { method: 'POST', pattern: '/api/offers/:id/pause-campaigns', feature: 'offer-management' },
   { method: 'POST', pattern: '/api/offers/:id/resolve-url', feature: 'offer-management' },
   { method: 'POST', pattern: '/api/offers/:id/validate-url', feature: 'offer-management' },

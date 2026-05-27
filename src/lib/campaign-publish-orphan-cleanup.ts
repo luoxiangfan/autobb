@@ -84,27 +84,6 @@ export async function findHistoricalOrphanCampaignsForOffer(params: {
   return result
 }
 
-/** @deprecated 使用 findHistoricalOrphanCampaignsForOffer（已支持跨 Ads 账号） */
-export async function findHistoricalOrphanGoogleCampaignIds(params: {
-  offerId: number
-  userId: number
-  googleAdsAccountId: number
-  excludeCampaignId?: number
-}): Promise<Array<{ id: number; googleCampaignId: string }>> {
-  const rows = await findHistoricalOrphanCampaignsForOffer({
-    offerId: params.offerId,
-    userId: params.userId,
-    excludeCampaignId: params.excludeCampaignId,
-  })
-  return rows
-    .filter(
-      (row) =>
-        row.googleAdsAccountId === params.googleAdsAccountId
-        || row.googleAdsAccountId === null
-    )
-    .map(({ id, googleCampaignId }) => ({ id, googleCampaignId }))
-}
-
 /**
  * 为指定 Ads 账号构建暂停远端 Campaign 所需的回滚上下文（用于换绑后清理旧账号孤儿）。
  */

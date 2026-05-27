@@ -149,9 +149,9 @@ describe('openclaw canonical routes', () => {
   })
 
   it('accepts newly-added web write routes', () => {
-    const launchAds = assertOpenclawCommandRouteAllowed({
+    const pauseCampaigns = assertOpenclawCommandRouteAllowed({
       method: 'POST',
-      path: '/api/offers/12/launch-ads',
+      path: '/api/offers/12/pause-campaigns',
     })
     const productCreateOffer = assertOpenclawCommandRouteAllowed({
       method: 'POST',
@@ -166,7 +166,7 @@ describe('openclaw canonical routes', () => {
       path: '/api/campaigns/201/sync',
     })
 
-    expect(launchAds.feature).toBe('offer-management')
+    expect(pauseCampaigns.feature).toBe('offer-management')
     expect(productCreateOffer.feature).toBe('product-sync')
     expect(productLinkOffer.feature).toBe('product-sync')
     expect(campaignSync.feature).toBe('campaign-management')
