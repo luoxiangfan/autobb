@@ -569,25 +569,15 @@ export async function getKeywordSearchVolumesForPlannerContext(
   | { ok: true; volumes: Awaited<ReturnType<typeof getKeywordSearchVolumes>> }
   | { ok: false; message: string }
 > {
-  const volumeAuth = params.plannerSession?.volumeAuth
+  let volumeAuth = params.plannerSession?.volumeAuth
   if (!volumeAuth) {
     const loaded = await loadKeywordPlannerVolumeAuthForContext(params)
     if (!loaded.ok) {
       return { ok: false, message: loaded.message }
     }
-    const loadedAuth = loaded.volumeAuth
-    const volumes = await getKeywordSearchVolumes(
-      params.keywords,
-      params.country,
-      params.language,
-      params.userId,
-      loadedAuth.authType,
-      loadedAuth.serviceAccountId,
-      params.onProgress,
-      loadedAuth.plannerAuth
-    )
-    return { ok: true, volumes }
+    volumeAuth = loaded.volumeAuth
   }
+
   const volumes = await getKeywordSearchVolumes(
     params.keywords,
     params.country,

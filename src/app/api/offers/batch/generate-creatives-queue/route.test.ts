@@ -159,9 +159,41 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
         scrapeNotReady: 0,
         taskAlreadyRunning: 0,
         quotaFull: 1,
+        googleAdsConfigIncomplete: 0,
       },
       taskIds: ['task-102'],
     })
+    expect(authFns.validateGoogleAdsConfigForCreativeGeneration).toHaveBeenCalledWith(1, 102)
+  })
+
+  it('skips offers when per-offer Google Ads config validation fails', async () => {
+    dbFns.query
+      .mockResolvedValueOnce([{ id: 102, scrape_status: 'completed' }])
+      .mockResolvedValueOnce([])
+    keywordPoolFns.getAvailableBuckets.mockResolvedValueOnce(['A'])
+    authFns.validateGoogleAdsConfigForCreativeGeneration.mockResolvedValueOnce({
+      ok: false,
+      message: 'Google Ads OAuth 授权已过期',
+      missingFields: [],
+    })
+
+    const req = new NextRequest('http://localhost/api/offers/batch/generate-creatives-queue', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '1',
+      },
+      body: JSON.stringify({ offerIds: [102] }),
+    })
+
+    const res = await POST(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.enqueuedCount).toBe(0)
+    expect(data.skipReasons.googleAdsConfigIncomplete).toBe(1)
+    expect(authFns.validateGoogleAdsConfigForCreativeGeneration).toHaveBeenCalledWith(1, 102)
+    expect(queueFns.enqueue).not.toHaveBeenCalled()
   })
 
   it('accepts legacy creativeType and maps to canonical bucket slot', async () => {

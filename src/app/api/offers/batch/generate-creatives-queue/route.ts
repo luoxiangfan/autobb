@@ -137,39 +137,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    try {
-      const authValidation = await validateGoogleAdsConfigForCreativeGeneration(userIdNum)
-      if (!authValidation.ok) {
-        const isNotConfigured =
-          !authValidation.missingFields || authValidation.missingFields.length === 0
-        if (isNotConfigured) {
-          return NextResponse.json(
-            {
-              error: authValidation.message,
-              details: '请前往【设置】完成 Google Ads OAuth 授权或服务账号配置。',
-            },
-            { status: 400 }
-          )
-        }
-
-        return NextResponse.json(
-          {
-            error: authValidation.message,
-            details:
-              authValidation.authType === 'service_account'
-                ? '请前往【设置】→【服务账号配置】页面检查服务账号配置，确保 Developer Token 和 MCC Customer ID 已正确配置。'
-                : '请前往【设置】页面配置 Google Ads API 凭证（Developer Token、Refresh Token、Customer ID）以启用关键词搜索量查询功能。',
-            missingFields: authValidation.missingFields,
-            authType: authValidation.authType,
-          },
-          { status: 400 }
-        )
-      }
-    } catch (error: any) {
-      console.error('[BatchCreativeGeneration] Failed to check Google Ads config:', error)
-      // 不阻止任务继续（允许降级运行，但会记录警告）
-    }
-
     // 1) 批量读取Offer状态（只处理当前用户且未删除）
     const placeholders = offerIds.map(() => '?').join(',')
     const notDeletedCondition = db.type === 'postgres'
@@ -219,6 +186,7 @@ export async function POST(request: NextRequest) {
         scrapeNotReady: 0,
         taskAlreadyRunning: 0,
         quotaFull: 0,
+        googleAdsConfigIncomplete: 0,
       }
     }
 
@@ -249,6 +217,26 @@ export async function POST(request: NextRequest) {
       if (availableBuckets.length === 0) {
         stats.skipped++
         stats.skipReasons.quotaFull++
+        continue
+      }
+
+      try {
+        const authValidation = await validateGoogleAdsConfigForCreativeGeneration(
+          userIdNum,
+          offerId
+        )
+        if (!authValidation.ok) {
+          stats.skipped++
+          stats.skipReasons.googleAdsConfigIncomplete++
+          continue
+        }
+      } catch (error: any) {
+        console.error(
+          `[BatchCreativeGeneration] Google Ads config check failed (offerId=${offerId}):`,
+          error?.message || error
+        )
+        stats.skipped++
+        stats.skipReasons.googleAdsConfigIncomplete++
         continue
       }
 

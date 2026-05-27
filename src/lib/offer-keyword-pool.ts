@@ -4520,7 +4520,7 @@ export async function generateOfferKeywordPool(
       }))
     }
   } else {
-    initialKeywords = await extractKeywordsFromOffer(offerId, userId, progress)
+    initialKeywords = await extractKeywordsFromOffer(offerId, userId, progress, plannerSession)
   }
 
   if (initialKeywords.length === 0) {
@@ -5596,7 +5596,8 @@ export async function promoteKeywordsToOfferKeywordPool(params: {
 async function extractKeywordsFromOffer(
   offerId: number,
   userId: number,
-  progress?: KeywordPoolProgressReporter
+  progress?: KeywordPoolProgressReporter,
+  plannerSession?: KeywordPlannerPreparedSession
 ): Promise<PoolKeywordData[]> {
   const db = await getDatabase()
   const offerBrandRow = await db.queryOne<{ brand: string | null }>(
@@ -5831,6 +5832,7 @@ async function extractKeywordsFromOffer(
           keywords: keywords.map(k => k.keyword),
           country: offer.target_country,
           language: offer.target_language || 'en',
+          plannerSession,
           onProgress: volumeProgress,
         })
         if (!volumeResult.ok) {
