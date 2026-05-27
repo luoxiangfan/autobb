@@ -3,6 +3,8 @@ import {
   loadOAuthGoogleAdsCallBundleForContext,
   resolveOAuthRefreshToken,
 } from './google-ads-accounts-auth'
+import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
+import { getDatabase } from './db'
 import {
   getGoogleAdsAuthContext,
   resolveGoogleAdsApiAuthFromContext,
@@ -66,6 +68,55 @@ async function resolveKeywordPlannerOAuth(params: {
   })
 
   return { refreshToken, loginCustomerId, credentials }
+}
+
+async function getKeywordPlannerOAuthCustomer(params: {
+  customerId: string
+  userId: number
+  accountId?: number
+  serviceAccountId?: string
+  authType: AuthType
+  oauthAuth: Awaited<ReturnType<typeof resolveKeywordPlannerOAuth>>
+}) {
+  const db = await getDatabase()
+  const accountRow = params.accountId
+    ? await db.queryOne<{ parent_mcc_id: string | null }>(
+        `SELECT parent_mcc_id FROM google_ads_accounts WHERE id = ? AND user_id = ? LIMIT 1`,
+        [params.accountId, params.userId]
+      )
+    : await db.queryOne<{ parent_mcc_id: string | null }>(
+        `SELECT parent_mcc_id FROM google_ads_accounts WHERE customer_id = ? AND user_id = ? LIMIT 1`,
+        [params.customerId, params.userId]
+      )
+
+  return runWithLoginCustomerFallbackForAccount({
+    adsAccount: {
+      customer_id: params.customerId,
+      parent_mcc_id: accountRow?.parent_mcc_id ?? null,
+      id: params.accountId,
+    },
+    refreshToken: params.oauthAuth.refreshToken,
+    authType: 'oauth',
+    oauthLoginCustomerId: params.oauthAuth.loginCustomerId,
+    actionName: `Keyword Planner getCustomer(${params.customerId})`,
+    callback: (loginCustomerId) =>
+      getCustomerWithCredentials({
+        customerId: params.customerId,
+        refreshToken: params.oauthAuth.refreshToken,
+        userId: params.userId,
+        loginCustomerId,
+        credentials: {
+          client_id: params.oauthAuth.credentials.client_id,
+          client_secret: params.oauthAuth.credentials.client_secret,
+          developer_token: params.oauthAuth.credentials.developer_token,
+        },
+        accountParentMccId: accountRow?.parent_mcc_id ?? null,
+        oauthLoginCustomerIdHint: params.oauthAuth.loginCustomerId,
+        authType: params.authType,
+        serviceAccountId: params.serviceAccountId,
+        accountId: params.accountId,
+      }),
+  })
 }
 
 function getKeywordPlanIdeaService(customer: any, authType: AuthType | undefined) {
@@ -162,18 +213,13 @@ export async function getKeywordIdeas(params: {
     serviceAccountId: params.serviceAccountId,
   })
 
-  const customer = await getCustomerWithCredentials({
+  const customer = await getKeywordPlannerOAuthCustomer({
     customerId: params.customerId,
-    refreshToken: oauthAuth.refreshToken,
     userId: params.userId,
-    loginCustomerId: oauthAuth.loginCustomerId,
-    credentials: {
-      client_id: oauthAuth.credentials.client_id,
-      client_secret: oauthAuth.credentials.client_secret,
-      developer_token: oauthAuth.credentials.developer_token,
-    },
-    authType,
+    accountId: params.accountId,
     serviceAccountId: params.serviceAccountId,
+    authType,
+    oauthAuth,
   })
 
   // API追踪
@@ -343,18 +389,13 @@ export async function getKeywordMetrics(params: {
     serviceAccountId: params.serviceAccountId,
   })
 
-  const customer = await getCustomerWithCredentials({
+  const customer = await getKeywordPlannerOAuthCustomer({
     customerId: params.customerId,
-    refreshToken: oauthAuth.refreshToken,
     userId: params.userId,
-    loginCustomerId: oauthAuth.loginCustomerId,
-    credentials: {
-      client_id: oauthAuth.credentials.client_id,
-      client_secret: oauthAuth.credentials.client_secret,
-      developer_token: oauthAuth.credentials.developer_token,
-    },
-    authType,
+    accountId: params.accountId,
     serviceAccountId: params.serviceAccountId,
+    authType,
+    oauthAuth,
   })
 
   // API追踪

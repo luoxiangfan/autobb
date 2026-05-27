@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import {
+  defaultPreparedGoogleAdsAccountApiCall,
   hasConfiguredGoogleAdsAuthFromContextMock,
   resetCampaignRouteAuthMocksOAuth,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
@@ -11,8 +12,8 @@ const campaignRouteAuthFns = vi.hoisted(() => ({
   resolveGoogleAdsApiAuthFromContext: vi.fn(),
 }))
 
-const accountsAuthFns = vi.hoisted(() => ({
-  resolveOAuthApiCredentialsForUser: vi.fn(),
+const oauthAccountsAuthFns = vi.hoisted(() => ({
+  prepareGoogleAdsAccountApiCall: vi.fn(),
 }))
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { executeGAQLQueryPython } from '@/lib/python-ads-client'
@@ -30,9 +31,13 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', () => ({
-  resolveOAuthApiCredentialsForUser: accountsAuthFns.resolveOAuthApiCredentialsForUser,
-}))
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    prepareGoogleAdsAccountApiCall: oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall,
+  }
+})
 
 vi.mock('@/lib/google-ads-api', () => ({
   getCustomerWithCredentials: vi.fn(),
@@ -61,6 +66,9 @@ describe('GET /api/campaigns/:id/cpc', () => {
     vi.clearAllMocks()
     dbFns.query.mockResolvedValue([])
     resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
+    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue(
+      defaultPreparedGoogleAdsAccountApiCall
+    )
   })
 
   it('returns 422 with expected googleCampaignId when local campaign id is used', async () => {
@@ -144,10 +152,16 @@ describe('GET /api/campaigns/:id/cpc', () => {
       oauthCredentials: null,
       serviceAccountConfig: { id: 'sa-1' },
     })
-    campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
-      authType: 'service_account',
+    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue({
+      ok: true,
+      apiAuth: {
+        authType: 'service_account',
+        refreshToken: '',
+        serviceAccountId: 'sa-1',
+      },
       refreshToken: '',
-      serviceAccountId: 'sa-1',
+      oauthCredentials: undefined,
+      oauthLoginCustomerId: undefined,
     })
     vi.mocked(executeGAQLQueryPython as any).mockResolvedValue([
       {
@@ -176,12 +190,11 @@ describe('GET /api/campaigns/:id/cpc', () => {
     expect(data.currentCpc).toBe(0.58)
     expect(Array.isArray(data.history)).toBe(true)
     expect(data.history[0].value).toBe(0.48)
-    expect(accountsAuthFns.resolveOAuthApiCredentialsForUser).not.toHaveBeenCalled()
-    expect(campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall).toHaveBeenCalledWith({
+      authContext: expect.objectContaining({
         auth: expect.objectContaining({ authType: 'service_account' }),
       }),
-      'sa-1'
-    )
+      linkedServiceAccountId: 'sa-1',
+    })
   })
 })

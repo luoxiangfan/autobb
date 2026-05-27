@@ -17,9 +17,9 @@ import {
 } from './google-ads-auth-context'
 import {
   loadOAuthGoogleAdsCallBundleForContext,
-  pickOAuthLoginCustomerIdForAccount,
   resolveOAuthRefreshToken,
 } from './google-ads-accounts-auth'
+import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import { getDatabase } from './db'
 import type { AdStrengthRating } from './ad-strength-evaluator'
 import { executeGAQLQueryPython } from './python-ads-client'
@@ -87,22 +87,32 @@ async function getGoogleAdsClient(
   const oauthLoginCustomerId =
     oauthBundle.bundle.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
 
-  return {
-    customer: await getCustomerWithCredentials({
-      customerId,
-      refreshToken,
-      loginCustomerId: pickOAuthLoginCustomerIdForAccount({
+  const customer = await runWithLoginCustomerFallbackForAccount({
+    adsAccount: {
+      customer_id: customerId,
+      parent_mcc_id: account.parent_mcc_id,
+      id: account.id,
+    },
+    refreshToken,
+    authType: 'oauth',
+    oauthLoginCustomerId,
+    actionName: `Ad Strength getCustomer(${customerId})`,
+    callback: (loginCustomerId) =>
+      getCustomerWithCredentials({
+        customerId,
+        refreshToken,
+        loginCustomerId,
+        credentials: oauthBundle.bundle!.oauthCredentials,
         accountParentMccId: account.parent_mcc_id,
-        oauthLoginCustomerId,
-        targetCustomerId: customerId,
+        oauthLoginCustomerIdHint: oauthLoginCustomerId,
+        accountId: account.id,
+        userId,
+        authType: 'oauth',
       }),
-      credentials: oauthBundle.bundle.oauthCredentials,
-      accountParentMccId: account.parent_mcc_id,
-      oauthLoginCustomerIdHint: oauthLoginCustomerId,
-      accountId: account.id,
-      userId,
-      authType: 'oauth',
-    }),
+  })
+
+  return {
+    customer,
     useServiceAccount: false,
   }
 }

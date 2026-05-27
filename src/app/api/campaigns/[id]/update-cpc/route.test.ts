@@ -243,11 +243,17 @@ describe('PUT /api/campaigns/:id/update-cpc', () => {
       oauthCredentials: null,
       serviceAccountConfig: { id: 'sa-1', mccCustomerId: '2233445566' },
     })
-    campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
-      authType: 'service_account',
+    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue({
+      ok: true,
+      apiAuth: {
+        authType: 'service_account',
+        refreshToken: '',
+        serviceAccountId: 'sa-1',
+        serviceAccountMccId: '2233445566',
+      },
       refreshToken: '',
-      serviceAccountId: 'sa-1',
-      serviceAccountMccId: '2233445566',
+      oauthCredentials: undefined,
+      oauthLoginCustomerId: undefined,
     })
     googleAdsFns.getCustomerWithCredentials.mockResolvedValue({})
     pythonFns.executeGAQLQueryPython.mockResolvedValue([
@@ -312,11 +318,17 @@ describe('PUT /api/campaigns/:id/update-cpc', () => {
       oauthCredentials: null,
       serviceAccountConfig: { id: 'sa-1', mccCustomerId: '2233445566' },
     })
-    campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
-      authType: 'service_account',
+    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue({
+      ok: true,
+      apiAuth: {
+        authType: 'service_account',
+        refreshToken: '',
+        serviceAccountId: 'sa-1',
+        serviceAccountMccId: '2233445566',
+      },
       refreshToken: '',
-      serviceAccountId: 'sa-1',
-      serviceAccountMccId: '2233445566',
+      oauthCredentials: undefined,
+      oauthLoginCustomerId: undefined,
     })
     googleAdsFns.getCustomerWithCredentials.mockResolvedValue({})
     pythonFns.executeGAQLQueryPython.mockResolvedValue({

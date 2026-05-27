@@ -11,14 +11,10 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { updateGoogleAdsCampaignStatus, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
-import { getDecryptedCredentials } from '@/lib/google-ads-accounts'
-import { loadOAuthGoogleAdsCallBundleForContext } from '@/lib/google-ads-accounts-auth'
-import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
+import { executeGoogleAdsCampaignRemoteActions } from '@/lib/google-ads-campaign-remote-actions'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 
@@ -44,7 +40,6 @@ export async function POST(
 
     const db = await getDatabase()
 
-    // 1. 获取Offer信息和用户ID
     const offer = await db.queryOne(`
       SELECT id, user_id, offer_name
       FROM offers
@@ -58,7 +53,6 @@ export async function POST(
       )
     }
 
-    // 2. 查询该Offer的所有已启用广告系列
     const campaigns = await db.query(`
       SELECT
         c.id,
@@ -91,7 +85,6 @@ export async function POST(
       })
     }
 
-    // 3. 按Google Ads账号分组
     const campaignsByAccount = campaigns.reduce((acc, campaign) => {
       const accountId = campaign.google_ads_account_id
       if (!acc[accountId]) {
@@ -119,127 +112,113 @@ export async function POST(
       )
     }
 
-    let oauthCredentials: OAuthApiCredentialsFields | undefined
-    let oauthLoginCustomerId: string | undefined
-    if (authContext.auth.authType === 'oauth') {
-      const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
-        userId: offer.user_id,
-        authContext,
+    const campaignMetaByGoogleId = new Map<
+      string,
+      { id: number; campaign_name: string }
+    >()
+    for (const campaign of campaigns) {
+      campaignMetaByGoogleId.set(campaign.google_campaign_id, {
+        id: campaign.id,
+        campaign_name: campaign.campaign_name,
       })
-      if (!oauthBundle.ok) {
-        return NextResponse.json({ error: oauthBundle.message }, { status: 400 })
-      }
-      oauthCredentials = oauthBundle.bundle?.oauthCredentials
-      oauthLoginCustomerId = oauthBundle.bundle?.oauthLoginCustomerId
     }
 
-    // 4. 按账号批量暂停广告系列
     for (const [accountIdStr, accountCampaigns] of Object.entries(campaignsByAccount)) {
-      const accountId = parseInt(accountIdStr)
+      const accountId = parseInt(accountIdStr, 10)
 
       try {
-        const accountCredentials = await getDecryptedCredentials(accountId, offer.user_id)
-
-        if (!accountCredentials) {
-          accountCampaigns.forEach(campaign => {
-            results.push({
-              campaignId: campaign.id,
-              campaignName: campaign.campaign_name,
-              success: false,
-              error: 'Google Ads账号凭证不存在'
-            })
-            errorCount++
-          })
-          continue
-        }
-
-        const apiAuth = await resolveGoogleAdsApiAuthFromContext(
-          authContext,
-          accountCredentials.serviceAccountId
-        )
-
-        if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
-          accountCampaigns.forEach(campaign => {
-            results.push({
-              campaignId: campaign.id,
-              campaignName: campaign.campaign_name,
-              success: false,
-              error: 'Google Ads账号认证信息缺失（需要OAuth）'
-            })
-            errorCount++
-          })
-          continue
-        }
-
-        const adsAccountMeta = await db.queryOne<{ parent_mcc_id: string | null }>(
-          `SELECT parent_mcc_id FROM google_ads_accounts WHERE id = ? AND user_id = ? LIMIT 1`,
+        const adsAccountRow = await db.queryOne<{
+          customer_id: string | null
+          parent_mcc_id: string | null
+          service_account_id: string | null
+        }>(
+          `SELECT customer_id, parent_mcc_id, service_account_id
+           FROM google_ads_accounts WHERE id = ? AND user_id = ? LIMIT 1`,
           [accountId, offer.user_id]
         )
 
-        for (const campaign of accountCampaigns) {
-          try {
-            await runWithLoginCustomerFallbackForAccount({
-              adsAccount: {
-                customer_id: accountCredentials.customerId,
-                parent_mcc_id: adsAccountMeta?.parent_mcc_id ?? null,
-                id: accountId,
-              },
-              refreshToken: apiAuth.refreshToken,
-              authType: apiAuth.authType,
-              serviceAccountId: apiAuth.serviceAccountId,
-              serviceAccountMccId: apiAuth.serviceAccountMccId,
-              oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
-              actionName: `暂停 Campaign ${campaign.google_campaign_id}`,
-              callback: (loginCustomerId) =>
-                updateGoogleAdsCampaignStatus({
-                  customerId: accountCredentials.customerId,
-                  refreshToken: apiAuth.refreshToken,
-                  campaignId: campaign.google_campaign_id,
-                  status: 'PAUSED',
-                  accountId,
-                  userId: offer.user_id,
-                  loginCustomerId,
-                  authType: apiAuth.authType,
-                  serviceAccountId: apiAuth.serviceAccountId,
-                  credentials: oauthCredentials,
-                }),
-            })
-
-            await applyCampaignTransition({
-              userId: offer.user_id,
-              campaignId: campaign.id,
-              action: 'PAUSE_OLD_CAMPAIGNS',
-            })
-
-            results.push({
-              campaignId: campaign.id,
-              campaignName: campaign.campaign_name,
-              success: true
-            })
-
-            pausedCount++
-          } catch (error: any) {
-            console.error(`暂停广告系列失败 (Campaign ID: ${campaign.id}):`, error)
-
+        if (!adsAccountRow?.customer_id) {
+          accountCampaigns.forEach((campaign) => {
             results.push({
               campaignId: campaign.id,
               campaignName: campaign.campaign_name,
               success: false,
-              error: error.message || '暂停失败'
+              error: 'Google Ads账号凭证不存在',
             })
-
             errorCount++
-          }
+          })
+          continue
+        }
+
+        const summary = await executeGoogleAdsCampaignRemoteActions({
+          userId: offer.user_id,
+          adsAccount: {
+            id: accountId,
+            customer_id: adsAccountRow.customer_id,
+            parent_mcc_id: adsAccountRow.parent_mcc_id,
+            service_account_id: adsAccountRow.service_account_id,
+            is_active: true,
+            is_deleted: false,
+          },
+          campaigns: accountCampaigns.map((campaign) => ({
+            google_campaign_id: campaign.google_campaign_id,
+          })),
+          shouldRemove: false,
+          logPrefix: '[pause-campaigns]',
+          skipAccountEligibilityCheck: true,
+          onCampaignOutcome: async ({ campaignId, outcome, reason }) => {
+            const meta = campaignMetaByGoogleId.get(campaignId)
+            if (!meta) return
+
+            if (outcome === 'PAUSED') {
+              await applyCampaignTransition({
+                userId: offer.user_id,
+                campaignId: meta.id,
+                action: 'PAUSE_OLD_CAMPAIGNS',
+              })
+              results.push({
+                campaignId: meta.id,
+                campaignName: meta.campaign_name,
+                success: true,
+              })
+              pausedCount++
+              return
+            }
+
+            if (outcome === 'FAILED') {
+              results.push({
+                campaignId: meta.id,
+                campaignName: meta.campaign_name,
+                success: false,
+                error: reason || '暂停失败',
+              })
+              errorCount++
+            }
+          },
+        })
+
+        if (summary.skipReason === 'CREDENTIALS_MISSING') {
+          const accountError =
+            summary.failures.find((item) => item.campaignId === '*')?.reason ||
+            'Google Ads 认证信息缺失'
+          accountCampaigns.forEach((campaign) => {
+            results.push({
+              campaignId: campaign.id,
+              campaignName: campaign.campaign_name,
+              success: false,
+              error: accountError,
+            })
+            errorCount++
+          })
         }
       } catch (error: any) {
-        console.error(`获取账号凭证失败 (Account ID: ${accountId}):`, error)
-
-        accountCampaigns.forEach(campaign => {
+        console.error(`获取账号信息失败 (Account ID: ${accountId}):`, error)
+        accountCampaigns.forEach((campaign) => {
           results.push({
             campaignId: campaign.id,
             campaignName: campaign.campaign_name,
             success: false,
-            error: `账号凭证错误: ${error.message}`
+            error: `账号处理错误: ${error.message}`,
           })
           errorCount++
         })
@@ -252,15 +231,14 @@ export async function POST(
       pausedCount,
       errorCount,
       totalCount: campaigns.length,
-      campaigns: results
+      campaigns: results,
     })
-
   } catch (error: any) {
     console.error('暂停广告系列API错误:', error)
     return NextResponse.json(
       {
         error: '暂停广告系列失败',
-        message: error.message
+        message: error.message,
       },
       { status: 500 }
     )

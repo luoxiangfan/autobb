@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import {
   defaultOAuthApiCredentialsFields,
-  defaultOAuthGoogleAdsCallBundle,
+  defaultPreparedGoogleAdsAccountApiCall,
   hasConfiguredGoogleAdsAuthFromContextMock,
   resetCampaignRouteAuthMocksOAuth,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
@@ -32,7 +32,7 @@ const cacheFns = vi.hoisted(() => ({
 }))
 
 const oauthAccountsAuthFns = vi.hoisted(() => ({
-  loadOAuthGoogleAdsCallBundleForContext: vi.fn(),
+  prepareGoogleAdsAccountApiCall: vi.fn(),
 }))
 
 vi.mock('@/lib/auth', () => ({
@@ -61,7 +61,7 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    loadOAuthGoogleAdsCallBundleForContext: oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext,
+    prepareGoogleAdsAccountApiCall: oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall,
   }
 })
 
@@ -78,8 +78,8 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
       user: { userId: 1 },
     })
     resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
-    oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext.mockResolvedValue(
-      defaultOAuthGoogleAdsCallBundle
+    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue(
+      defaultPreparedGoogleAdsAccountApiCall
     )
     dbFns.exec.mockResolvedValue({ changes: 1 })
     adsFns.updateGoogleAdsCampaignBudget.mockResolvedValue(undefined)
@@ -184,12 +184,16 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
       refreshToken: 'oauth-refresh-token',
       oauthLoginCustomerId: '1122334455',
     })
-    oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext.mockResolvedValue({
+    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue({
       ok: true,
-      bundle: {
-        oauthCredentials: defaultOAuthApiCredentialsFields,
+      apiAuth: {
+        authType: 'oauth',
+        refreshToken: 'oauth-refresh-token',
         oauthLoginCustomerId: '1122334455',
       },
+      refreshToken: 'oauth-refresh-token',
+      oauthCredentials: defaultOAuthApiCredentialsFields,
+      oauthLoginCustomerId: '1122334455',
     })
 
     const req = new NextRequest('http://localhost/api/campaigns/23578044853/update-budget', {

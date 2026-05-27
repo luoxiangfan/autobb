@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import {
-  defaultOAuthGoogleAdsCallBundle,
+  defaultOAuthApiCredentialsFields,
+  defaultPreparedGoogleAdsAccountApiCall,
   hasConfiguredGoogleAdsAuthFromContextMock,
   resetCampaignRouteAuthMocksOAuth,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
@@ -38,7 +39,7 @@ const offerTaskFns = vi.hoisted(() => ({
 }))
 
 const oauthAccountsAuthFns = vi.hoisted(() => ({
-  loadOAuthGoogleAdsCallBundleForContext: vi.fn(),
+  prepareGoogleAdsAccountApiCall: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -65,7 +66,7 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    loadOAuthGoogleAdsCallBundleForContext: oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext,
+    prepareGoogleAdsAccountApiCall: oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall,
   }
 })
 
@@ -86,8 +87,8 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resetCampaignRouteAuthMocksOAuth(campaignRouteAuthFns)
-    oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext.mockResolvedValue(
-      defaultOAuthGoogleAdsCallBundle
+    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue(
+      defaultPreparedGoogleAdsAccountApiCall
     )
     adsFns.updateGoogleAdsCampaignStatus.mockResolvedValue(undefined)
     transitionFns.applyCampaignTransition.mockResolvedValue({ updatedCount: 1 })
@@ -183,7 +184,7 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
         loginCustomerId: '9988776655',
         authType: 'oauth',
         serviceAccountId: undefined,
-        credentials: defaultOAuthGoogleAdsCallBundle.bundle?.oauthCredentials,
+        credentials: defaultOAuthApiCredentialsFields,
       })
     )
     expect(transitionFns.applyCampaignTransition).toHaveBeenCalledWith({
@@ -312,6 +313,18 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
       refreshToken: '',
       serviceAccountId: 'sa-1',
       serviceAccountMccId: '2233445566',
+    })
+    oauthAccountsAuthFns.prepareGoogleAdsAccountApiCall.mockResolvedValue({
+      ok: true,
+      apiAuth: {
+        authType: 'service_account',
+        refreshToken: '',
+        serviceAccountId: 'sa-1',
+        serviceAccountMccId: '2233445566',
+      },
+      refreshToken: '',
+      oauthCredentials: undefined,
+      oauthLoginCustomerId: undefined,
     })
 
     dbFns.queryOne.mockImplementation(async (sql: string) => {

@@ -21,10 +21,7 @@ import {
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
-import {
-  resolveLoginCustomerCandidates,
-  isGoogleAdsAccountAccessError,
-} from '@/lib/google-ads-login-customer'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import {
   createGoogleAdsCampaign,
   createGoogleAdsAdGroup,
@@ -40,7 +37,7 @@ import {
   ensureKeywordsInHeadlines,
   type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-api'
-import { resolveHealedOAuthCredentialsFields } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
 import {
   buildPublishResumePlan,
   collectCampaignNameCandidates,
@@ -81,10 +78,6 @@ import {
 } from '@/lib/campaign-backups'
 
 export type { CampaignPublishRollbackContext } from '@/lib/campaign-publish-orphan-cleanup'
-
-function describeLoginCustomerId(value: string | undefined): string {
-  return value || 'null(omit)'
-}
 
 function parsePositiveIntEnv(value: string | undefined, fallback: number): number {
   if (!value) return fallback
@@ -590,72 +583,45 @@ export async function executeCampaignPublish(
       throw new Error('OAuth refresh token或服务账号配置缺失，请重新授权或配置服务账号')
     }
 
-    const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+    const prepared = await prepareGoogleAdsAccountApiCall({
       authContext,
-      adsAccount.service_account_id
-    )
-    const refreshToken = apiAuth.refreshToken
-    const serviceAccountId = apiAuth.serviceAccountId
-
-    let oauthCredentials: OAuthApiCredentialsFields | undefined
-    let oauthLoginCustomerId: string | undefined
-    if (apiAuth.authType === 'oauth') {
-      const healed = await resolveHealedOAuthCredentialsFields({
-        userId,
-        authContext,
-      })
-      if (!healed.ok) {
-        throw new Error(healed.message)
-      }
-      oauthCredentials = healed.credentials
-      oauthLoginCustomerId = healed.loginCustomerId || apiAuth.oauthLoginCustomerId
+      linkedServiceAccountId: adsAccount.service_account_id,
+    })
+    if (!prepared.ok) {
+      throw new Error(prepared.message)
     }
 
-    const loginCustomerIdCandidates = resolveLoginCustomerCandidates({
-      authType: apiAuth.authType,
-      accountParentMccId: adsAccount.parent_mcc_id,
-      oauthLoginCustomerId,
-      serviceAccountMccId: apiAuth.serviceAccountMccId,
-      targetCustomerId: adsAccount.customer_id,
-    })
-    let preferredLoginCustomerId = loginCustomerIdCandidates[0]
+    const { apiAuth } = prepared
+    const refreshToken = prepared.refreshToken
+    const serviceAccountId = apiAuth.serviceAccountId
+    const oauthCredentials = prepared.oauthCredentials
+    const oauthLoginCustomerId =
+      prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+
+    let preferredLoginCustomerId: string | undefined
 
     const runWithLoginCustomerFallback = async <T>(
       actionName: string,
       callback: (loginCustomerId: string | undefined) => Promise<T>
-    ): Promise<T> => {
-      const orderedCandidates = [
+    ): Promise<T> =>
+      runWithLoginCustomerFallbackForAccount({
+        adsAccount: {
+          customer_id: adsAccount.customer_id,
+          parent_mcc_id: adsAccount.parent_mcc_id,
+          id: adsAccount.id,
+        },
+        refreshToken,
+        authType: apiAuth.authType,
+        serviceAccountId,
+        serviceAccountMccId: apiAuth.serviceAccountMccId,
+        oauthLoginCustomerId,
         preferredLoginCustomerId,
-        ...loginCustomerIdCandidates.filter((candidate) => candidate !== preferredLoginCustomerId)
-      ]
-
-      let lastError: any = null
-
-      for (let i = 0; i < orderedCandidates.length; i++) {
-        const loginCustomerId = orderedCandidates[i]
-        try {
-          const result = await callback(loginCustomerId)
+        onLoginCustomerIdResolved: (loginCustomerId) => {
           preferredLoginCustomerId = loginCustomerId
-          if (i > 0) {
-            console.log(`✅ ${actionName} 使用备用 login_customer_id=${describeLoginCustomerId(loginCustomerId)} 成功`)
-          }
-          return result
-        } catch (error) {
-          lastError = error
-          const hasNextCandidate = i < orderedCandidates.length - 1
-          if (hasNextCandidate && isGoogleAdsAccountAccessError(error)) {
-            const nextLoginCustomerId = orderedCandidates[i + 1]
-            console.warn(
-              `⚠️ ${actionName} login_customer_id=${describeLoginCustomerId(loginCustomerId)} 失败，切换到 ${describeLoginCustomerId(nextLoginCustomerId)} 重试`
-            )
-            continue
-          }
-          throw error
-        }
-      }
-
-      throw lastError || new Error(`${actionName} 失败`)
-    }
+        },
+        actionName,
+        callback,
+      })
 
     const runWithLoginCustomerFallbackAndHeartbeat = async <T>(
       actionName: string,

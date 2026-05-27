@@ -204,10 +204,14 @@ export async function runWithLoginCustomerFallbackForAccount<T>(params: {
   serviceAccountId?: string
   serviceAccountMccId?: string
   oauthLoginCustomerId?: string
+  /** 优先尝试的 login_customer_id（如 publish 流程中已验证成功的候选） */
+  preferredLoginCustomerId?: string
+  /** 某次调用成功后回写，便于后续 API 优先使用同一候选 */
+  onLoginCustomerIdResolved?: (loginCustomerId: string | undefined) => void
   actionName: string
   callback: (loginCustomerId: string | undefined) => Promise<T>
 }): Promise<T> {
-  const loginCustomerIdCandidates = resolveLoginCustomerCandidates({
+  let loginCustomerIdCandidates = resolveLoginCustomerCandidates({
     authType: params.authType,
     accountParentMccId: params.adsAccount.parent_mcc_id,
     oauthLoginCustomerId: params.oauthLoginCustomerId,
@@ -215,12 +219,21 @@ export async function runWithLoginCustomerFallbackForAccount<T>(params: {
     targetCustomerId: params.adsAccount.customer_id,
   })
 
+  if (params.preferredLoginCustomerId !== undefined) {
+    const preferred = params.preferredLoginCustomerId
+    loginCustomerIdCandidates = [
+      preferred,
+      ...loginCustomerIdCandidates.filter((candidate) => candidate !== preferred),
+    ]
+  }
+
   let lastError: unknown = null
 
   for (let i = 0; i < loginCustomerIdCandidates.length; i++) {
     const loginCustomerId = loginCustomerIdCandidates[i]
     try {
       const result = await params.callback(loginCustomerId)
+      params.onLoginCustomerIdResolved?.(loginCustomerId)
       if (i > 0) {
         console.log(
           `✅ ${params.actionName} 使用备用 login_customer_id=${loginCustomerId ?? 'null(omit)'} 成功`

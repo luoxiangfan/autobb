@@ -22,6 +22,18 @@ export interface CampaignRemoteRef {
   google_campaign_id: string
 }
 
+export type GoogleAdsCampaignRemoteActionOutcome =
+  | 'REMOVED'
+  | 'PAUSED'
+  | 'PAUSED_FALLBACK'
+  | 'FAILED'
+
+export type GoogleAdsCampaignRemoteActionOutcomeEvent = {
+  campaignId: string
+  outcome: GoogleAdsCampaignRemoteActionOutcome
+  reason?: string
+}
+
 export interface GoogleAdsCampaignRemoteActionFailure {
   campaignId: string
   reason: string
@@ -56,6 +68,10 @@ export interface ExecuteGoogleAdsCampaignRemoteActionsParams {
     maxCampaigns: number
   }
   remoteConfig?: ReturnType<typeof getGoogleAdsAccountDeleteRemoteConfig>
+  /** 单项远端操作完成时回调（用于同步本地状态，如 Offer 删除） */
+  onCampaignOutcome?: (
+    event: GoogleAdsCampaignRemoteActionOutcomeEvent
+  ) => void | Promise<void>
 }
 
 function resolveAccountEligibility(
@@ -97,7 +113,20 @@ function emptySummary(
 export async function executeGoogleAdsCampaignRemoteActions(
   params: ExecuteGoogleAdsCampaignRemoteActionsParams
 ): Promise<GoogleAdsCampaignRemoteActionSummary> {
-  const { userId, adsAccount, campaigns, shouldRemove, logPrefix, skipAccountEligibilityCheck } = params
+  const {
+    userId,
+    adsAccount,
+    campaigns,
+    shouldRemove,
+    logPrefix,
+    skipAccountEligibilityCheck,
+    onCampaignOutcome,
+  } = params
+
+  const emitOutcome = async (event: GoogleAdsCampaignRemoteActionOutcomeEvent) => {
+    if (!onCampaignOutcome) return
+    await onCampaignOutcome(event)
+  }
   const remoteConfig = params.remoteConfig ?? getGoogleAdsAccountDeleteRemoteConfig()
   const action: 'REMOVE' | 'PAUSE' = shouldRemove ? 'REMOVE' : 'PAUSE'
   const planned = campaigns.length
@@ -194,12 +223,14 @@ export async function executeGoogleAdsCampaignRemoteActions(
       }
 
       if (Date.now() > deadline) {
+        const reason = `整体操作超时（${remoteConfig.totalTimeoutMs}ms），未执行`
         summary.failed++
         summary.failures.push({
           campaignId: googleCampaignId,
-          reason: `整体操作超时（${remoteConfig.totalTimeoutMs}ms），未执行`,
+          reason,
         })
         processedCampaignIds.add(googleCampaignId)
+        await emitOutcome({ campaignId: googleCampaignId, outcome: 'FAILED', reason })
         return
       }
 
@@ -220,6 +251,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
             credentials: oauthCredentials,
           })
           summary.removed++
+          await emitOutcome({ campaignId: googleCampaignId, outcome: 'REMOVED' })
         } else {
           await updateGoogleAdsCampaignStatus({
             customerId: adsAccount.customer_id!,
@@ -234,6 +266,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
             credentials: oauthCredentials,
           })
           summary.paused++
+          await emitOutcome({ campaignId: googleCampaignId, outcome: 'PAUSED' })
         }
       }
 
@@ -287,19 +320,24 @@ export async function executeGoogleAdsCampaignRemoteActions(
               `Campaign ${googleCampaignId} pause fallback`
             )
             summary.pausedFallback++
+            await emitOutcome({ campaignId: googleCampaignId, outcome: 'PAUSED_FALLBACK' })
           } catch (pauseErr: any) {
+            const reason = String(pauseErr?.message || err?.message || 'UNKNOWN_ERROR')
             summary.failed++
             summary.failures.push({
               campaignId: googleCampaignId,
-              reason: String(pauseErr?.message || err?.message || 'UNKNOWN_ERROR'),
+              reason,
             })
+            await emitOutcome({ campaignId: googleCampaignId, outcome: 'FAILED', reason })
           }
         } else {
+          const reason = String(err?.message || 'UNKNOWN_ERROR')
           summary.failed++
           summary.failures.push({
             campaignId: googleCampaignId,
-            reason: String(err?.message || 'UNKNOWN_ERROR'),
+            reason,
           })
+          await emitOutcome({ campaignId: googleCampaignId, outcome: 'FAILED', reason })
         }
       }
     }
@@ -319,23 +357,27 @@ export async function executeGoogleAdsCampaignRemoteActions(
         if (processedCampaignIds.has(googleCampaignId)) {
           continue
         }
+        const reason = String(err?.message || '整体操作超时')
         summary.failed++
         summary.failures.push({
           campaignId: googleCampaignId,
-          reason: String(err?.message || '整体操作超时'),
+          reason,
         })
         processedCampaignIds.add(googleCampaignId)
+        await emitOutcome({ campaignId: googleCampaignId, outcome: 'FAILED', reason })
       }
     }
 
     for (const campaign of campaigns) {
       const googleCampaignId = String(campaign.google_campaign_id)
       if (!processedCampaignIds.has(googleCampaignId)) {
+        const reason = '未执行（整体超时或调度中断）'
         summary.failed++
         summary.failures.push({
           campaignId: googleCampaignId,
-          reason: '未执行（整体超时或调度中断）',
+          reason,
         })
+        await emitOutcome({ campaignId: googleCampaignId, outcome: 'FAILED', reason })
       }
     }
   } catch (err: any) {

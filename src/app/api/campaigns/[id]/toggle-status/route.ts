@@ -3,13 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { getDatabase } from '@/lib/db'
 import { findCampaignById } from '@/lib/campaigns'
-import { updateGoogleAdsCampaignStatus, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
-import { loadOAuthGoogleAdsCallBundleForContext } from '@/lib/google-ads-accounts-auth'
+import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads-api'
+import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 import { invalidateDashboardCache } from '@/lib/api-cache'
@@ -208,33 +207,27 @@ export async function PUT(
       )
     }
 
-    const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+    const prepared = await prepareGoogleAdsAccountApiCall({
       authContext,
-      adsAccountRow.service_account_id
-    )
-    if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {
-      return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
-    }
-    if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
+      linkedServiceAccountId: adsAccountRow.service_account_id,
+    })
+    if (!prepared.ok) {
+      const needsReauth = prepared.message.includes('OAuth') || prepared.message.includes('授权')
       return NextResponse.json(
-        { error: 'Google Ads OAuth未授权或已过期', needsReauth: true },
+        {
+          error: prepared.message,
+          ...(needsReauth ? { needsReauth: true } : {}),
+        },
         { status: 400 }
       )
     }
 
+    const { apiAuth } = prepared
     const refreshToken = apiAuth.refreshToken
     const serviceAccountId = apiAuth.serviceAccountId
-
-    let oauthCredentials: OAuthApiCredentialsFields | undefined
-    let oauthLoginCustomerId: string | undefined
-    if (apiAuth.authType === 'oauth') {
-      const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({ userId, authContext })
-      if (!oauthBundle.ok) {
-        return NextResponse.json({ error: oauthBundle.message }, { status: 400 })
-      }
-      oauthCredentials = oauthBundle.bundle?.oauthCredentials
-      oauthLoginCustomerId = oauthBundle.bundle?.oauthLoginCustomerId
-    }
+    const oauthCredentials = prepared.oauthCredentials
+    const oauthLoginCustomerId =
+      prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
 
     await runWithLoginCustomerFallbackForAccount({
       adsAccount: {

@@ -6,19 +6,13 @@
 
 import { enums } from 'google-ads-api'
 import { getDatabase } from './db'
-import {
-  resolveGoogleAdsApiAuthForAccount,
-  type GoogleAdsAuthContext,
-} from './google-ads-auth-context'
+import { resolveGoogleAdsApiAuthForAccount } from './google-ads-auth-context'
 import {
   listGoogleAdsCampaigns,
   type OAuthApiCredentialsFields,
 } from './google-ads-api'
-import { resolveHealedOAuthCredentialsFields } from './google-ads-accounts-auth'
-import {
-  resolveLoginCustomerCandidates,
-  isGoogleAdsAccountAccessError,
-} from './google-ads-login-customer'
+import { loadOAuthGoogleAdsCallBundleForContext } from './google-ads-accounts-auth'
+import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import {
   categorizeCampaigns,
   type GoogleAdsCampaignInfo
@@ -41,10 +35,6 @@ export interface ActiveCampaignsQueryResult {
     manual: number
     other: number
   }
-}
-
-function describeLoginCustomerId(value: string | undefined): string {
-  return value || 'null(omit)'
 }
 
 function normalizeCampaignStatus(status: unknown): 'ENABLED' | 'PAUSED' | 'REMOVED' | 'UNKNOWN' {
@@ -92,37 +82,27 @@ async function loadGoogleAdsQueryAuth(
   let oauthCredentials: OAuthApiCredentialsFields | undefined
   let oauthLoginCustomerId: string | undefined
   if (apiAuth.authType === 'oauth') {
-    const healed = await resolveHealedOAuthCredentialsFields({ userId, authContext: ctx })
-    if (!healed.ok) {
-      throw new Error(healed.message)
+    const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
+      userId,
+      authContext: ctx,
+    })
+    if (!oauthBundle.ok) {
+      throw new Error(oauthBundle.message)
     }
-    oauthCredentials = healed.credentials
-    oauthLoginCustomerId = healed.loginCustomerId || apiAuth.oauthLoginCustomerId
+    oauthCredentials = oauthBundle.bundle?.oauthCredentials
+    oauthLoginCustomerId =
+      oauthBundle.bundle?.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
   }
 
   return {
     ctx,
+    apiAuth,
     refreshToken: apiAuth.refreshToken,
     serviceAccountId: apiAuth.serviceAccountId,
     serviceAccountMccId: apiAuth.serviceAccountMccId,
     oauthCredentials,
     oauthLoginCustomerId,
   }
-}
-
-function buildLoginCustomerCandidates(
-  adsAccount: { parent_mcc_id: string | null; customer_id: string },
-  ctx: GoogleAdsAuthContext,
-  serviceAccountMccId: string | undefined,
-  oauthLoginCustomerId?: string
-) {
-  return resolveLoginCustomerCandidates({
-    authType: ctx.auth.authType,
-    accountParentMccId: adsAccount.parent_mcc_id,
-    oauthLoginCustomerId: oauthLoginCustomerId ?? ctx.oauthCredentials?.login_customer_id,
-    serviceAccountMccId,
-    targetCustomerId: adsAccount.customer_id,
-  })
 }
 
 /**
@@ -152,26 +132,31 @@ export async function queryActiveCampaigns(
     throw new Error(`Google Ads账号不存在或未激活: ${googleAdsAccountId}`)
   }
 
-  const { ctx, refreshToken, serviceAccountId, serviceAccountMccId, oauthCredentials, oauthLoginCustomerId } =
-    await loadGoogleAdsQueryAuth(userId, adsAccount.service_account_id)
-
-  const loginCustomerIdCandidates = buildLoginCustomerCandidates(
-    adsAccount,
+  const {
     ctx,
+    apiAuth,
+    refreshToken,
+    serviceAccountId,
     serviceAccountMccId,
-    oauthLoginCustomerId
-  )
+    oauthCredentials,
+    oauthLoginCustomerId,
+  } = await loadGoogleAdsQueryAuth(userId, adsAccount.service_account_id)
 
-  // 3. 查询Google Ads账号中的所有广告系列（跳过缓存，获取实时状态）
   console.log(`🔍 查询Google Ads账号 ${adsAccount.customer_id} 中的广告系列...`)
-  let allCampaigns: any[] | null = null
-  let lastLoginError: any = null
-
-  for (let i = 0; i < loginCustomerIdCandidates.length; i++) {
-    const loginCustomerId = loginCustomerIdCandidates[i]
-
-    try {
-      allCampaigns = await listGoogleAdsCampaigns({
+  const allCampaigns = await runWithLoginCustomerFallbackForAccount({
+    adsAccount: {
+      customer_id: adsAccount.customer_id,
+      parent_mcc_id: adsAccount.parent_mcc_id,
+      id: googleAdsAccountId,
+    },
+    refreshToken,
+    authType: apiAuth.authType,
+    serviceAccountId,
+    serviceAccountMccId,
+    oauthLoginCustomerId,
+    actionName: `queryActiveCampaigns(${adsAccount.customer_id})`,
+    callback: (loginCustomerId) =>
+      listGoogleAdsCampaigns({
         customerId: adsAccount.customer_id,
         refreshToken,
         accountId: googleAdsAccountId,
@@ -180,30 +165,9 @@ export async function queryActiveCampaigns(
         authType: ctx.auth.authType,
         serviceAccountId,
         credentials: oauthCredentials,
-        skipCache: true  // 🔧 修复：暂停操作必须获取最新状态，不能使用缓存
-      })
-
-      if (i > 0) {
-        console.log(`✅ 使用备用 login_customer_id=${describeLoginCustomerId(loginCustomerId)} 查询成功`)
-      }
-      break
-    } catch (error) {
-      lastLoginError = error
-      const hasNextCandidate = i < loginCustomerIdCandidates.length - 1
-      if (hasNextCandidate && isGoogleAdsAccountAccessError(error)) {
-        const nextLoginCustomerId = loginCustomerIdCandidates[i + 1]
-        console.warn(
-          `⚠️ login_customer_id=${describeLoginCustomerId(loginCustomerId)} 查询失败，切换到 ${describeLoginCustomerId(nextLoginCustomerId)} 重试`
-        )
-        continue
-      }
-      throw error
-    }
-  }
-
-  if (!allCampaigns) {
-    throw lastLoginError || new Error('查询Google Ads广告系列失败')
-  }
+        skipCache: true,
+      }),
+  })
 
   // 4. 转换为简化格式
   const campaigns: GoogleAdsCampaignInfo[] = allCampaigns.map((c: any) => ({
@@ -274,39 +238,44 @@ export async function pauseCampaigns(
     throw new Error(`Google Ads账号不存在或未激活: ${googleAdsAccountId}`)
   }
 
-  const { ctx, refreshToken, serviceAccountId, serviceAccountMccId, oauthCredentials, oauthLoginCustomerId } =
-    await loadGoogleAdsQueryAuth(userId, adsAccount.service_account_id)
-
-  const loginCustomerIdCandidates = buildLoginCustomerCandidates(
-    adsAccount,
+  const {
     ctx,
+    apiAuth,
+    refreshToken,
+    serviceAccountId,
     serviceAccountMccId,
-    oauthLoginCustomerId
-  )
+    oauthCredentials,
+    oauthLoginCustomerId,
+  } = await loadGoogleAdsQueryAuth(userId, adsAccount.service_account_id)
 
-  // 动态导入updateGoogleAdsCampaignStatus
   const { updateGoogleAdsCampaignStatus } = await import('./google-ads-api')
 
-  // 逐个暂停（串行执行，避免并发冲突）
   const failures: PauseCampaignsResult['failures'] = []
   let pausedCount = 0
-  let preferredLoginCustomerId = loginCustomerIdCandidates[0]
+  let preferredLoginCustomerId: string | undefined
+
   for (const campaign of campaigns) {
     try {
       console.log(`⏸️ 暂停广告系列: ${campaign.name} (${campaign.id})`)
 
-      const orderedCandidates = [
+      await runWithLoginCustomerFallbackForAccount({
+        adsAccount: {
+          customer_id: adsAccount.customer_id,
+          parent_mcc_id: adsAccount.parent_mcc_id,
+          id: googleAdsAccountId,
+        },
+        refreshToken,
+        authType: apiAuth.authType,
+        serviceAccountId,
+        serviceAccountMccId,
+        oauthLoginCustomerId,
         preferredLoginCustomerId,
-        ...loginCustomerIdCandidates.filter((candidate) => candidate !== preferredLoginCustomerId)
-      ]
-
-      let pauseSuccess = false
-      let lastPauseError: any = null
-
-      for (let i = 0; i < orderedCandidates.length; i++) {
-        const loginCustomerId = orderedCandidates[i]
-        try {
-          await updateGoogleAdsCampaignStatus({
+        onLoginCustomerIdResolved: (loginCustomerId) => {
+          preferredLoginCustomerId = loginCustomerId
+        },
+        actionName: `pauseCampaigns(${campaign.id})`,
+        callback: (loginCustomerId) =>
+          updateGoogleAdsCampaignStatus({
             customerId: adsAccount.customer_id,
             refreshToken,
             campaignId: campaign.id,
@@ -317,31 +286,8 @@ export async function pauseCampaigns(
             authType: ctx.auth.authType,
             serviceAccountId,
             credentials: oauthCredentials,
-          })
-
-          preferredLoginCustomerId = loginCustomerId
-          pauseSuccess = true
-          if (i > 0) {
-            console.log(`✅ 使用备用 login_customer_id=${describeLoginCustomerId(loginCustomerId)} 暂停成功`)
-          }
-          break
-        } catch (error) {
-          lastPauseError = error
-          const hasNextCandidate = i < orderedCandidates.length - 1
-          if (hasNextCandidate && isGoogleAdsAccountAccessError(error)) {
-            const nextLoginCustomerId = orderedCandidates[i + 1]
-            console.warn(
-              `⚠️ 暂停时 login_customer_id=${describeLoginCustomerId(loginCustomerId)} 失败，切换到 ${describeLoginCustomerId(nextLoginCustomerId)} 重试`
-            )
-            continue
-          }
-          throw error
-        }
-      }
-
-      if (!pauseSuccess) {
-        throw lastPauseError || new Error('暂停广告系列失败')
-      }
+          }),
+      })
 
       pausedCount++
     } catch (error: any) {

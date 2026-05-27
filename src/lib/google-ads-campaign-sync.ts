@@ -22,10 +22,11 @@ import {
   resolveGoogleAdsApiAuthFromContext,
 } from './google-ads-auth-context'
 import {
-  resolveHealedOAuthCredentialsFields,
+  loadOAuthGoogleAdsCallBundleForContext,
   resolveSyncAuthForAccount,
   type OAuthApiCredentialsFields,
 } from './google-ads-accounts-auth'
+import { runOAuthGaqlWithLoginCustomerFallback } from './google-ads-oauth-gaql'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { toDbCampaignConfigTextField } from './campaign-backups'
 import { getInsertedId } from './db-helpers'
@@ -389,13 +390,13 @@ export async function syncCampaignsFromGoogleAds(
     let oauthApiCredentials: OAuthApiCredentialsFields | undefined
     let oauthLoginCustomerId: string | undefined
     if (authContext.auth.authType === 'oauth') {
-      const healed = await resolveHealedOAuthCredentialsFields({ userId, authContext })
-      if (!healed.ok) {
-        result.warnings.push(`OAuth 凭证解析失败，已跳过 Google Ads 同步: ${healed.message}`)
+      const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({ userId, authContext })
+      if (!oauthBundle.ok) {
+        result.warnings.push(`OAuth 凭证解析失败，已跳过 Google Ads 同步: ${oauthBundle.message}`)
         return result
       }
-      oauthApiCredentials = healed.credentials
-      oauthLoginCustomerId = healed.loginCustomerId || undefined
+      oauthApiCredentials = oauthBundle.bundle?.oauthCredentials
+      oauthLoginCustomerId = oauthBundle.bundle?.oauthLoginCustomerId || undefined
     }
 
     // 3. 对每个账户执行同步
@@ -788,46 +789,46 @@ async function fetchAllDataFromGoogleAds(params: {
       const r5 = await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query: query5 })
       results5 = r5?.results || []
     } else {
-      const loginCustomerId = oauthLoginCustomerId || parentMccId || undefined
-      const customer = await getCustomerWithCredentials({
+      if (!oauthCredentials || !refreshToken) {
+        throw new Error('OAuth 凭证不完整，无法同步广告系列')
+      }
+
+      const oauthQueryResults = await runOAuthGaqlWithLoginCustomerFallback({
+        adsAccount: {
+          customer_id: customerId,
+          parent_mcc_id: parentMccId,
+          id: googleAdsAccountId,
+        },
         userId,
-        customerId,
-        refreshToken: refreshToken || undefined,
-        loginCustomerId,
-        credentials: oauthCredentials,
+        refreshToken,
+        oauthCredentials,
+        oauthLoginCustomerId,
+        actionName: `fetchCampaignsFromGoogleAds(${customerId})`,
+        query: async (customer) => {
+          const r1 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query1))
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          const r2 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query2))
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          const r3 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query3))
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          const r4 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query4))
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          const r5 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query5))
+          return {
+            results1: r1 || [],
+            results2: r2 || [],
+            results3: r3 || [],
+            results4: r4 || [],
+            results5: r5 || [],
+          }
+        },
       })
-      
-      // 查询 1
-      const r1 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query1))
-      results1 = r1 || []
-      
-      // 🔧 等待 1 秒
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // 查询 2
-      const r2 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query2))
-      results2 = r2 || []
-      
-      // 🔧 等待 1 秒
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // 查询 3
-      const r3 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query3))
-      results3 = r3 || []
-      
-      // 🔧 等待 1 秒
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // 查询 4
-      const r4 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query4))
-      results4 = r4 || []
 
-      // 🔧 等待 1 秒
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // 查询 5
-      const r5 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query5))
-      results5 = r5 || []
+      results1 = oauthQueryResults.results1
+      results2 = oauthQueryResults.results2
+      results3 = oauthQueryResults.results3
+      results4 = oauthQueryResults.results4
+      results5 = oauthQueryResults.results5
     }
 
     // 🔧 在内存中处理数据，按 ID 分组

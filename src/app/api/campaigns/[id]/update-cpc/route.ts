@@ -6,7 +6,6 @@ import { getDatabase } from '@/lib/db'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { executeGAQLQueryPython, updateCampaignPython, updateAdGroupPython } from '@/lib/python-ads-client'
@@ -422,10 +421,15 @@ export async function PUT(
       )
     }
 
-    const apiAuth = await resolveGoogleAdsApiAuthFromContext(
+    const prepared = await prepareGoogleAdsAccountApiCall({
       authContext,
-      adsAccountRow.service_account_id
-    )
+      linkedServiceAccountId: adsAccountRow.service_account_id,
+    })
+    if (!prepared.ok) {
+      return NextResponse.json({ error: prepared.message }, { status: 400 })
+    }
+
+    const { apiAuth, refreshToken, oauthCredentials, oauthLoginCustomerId } = prepared
     const useServiceAccount = apiAuth.authType === 'service_account'
     const serviceAccountId = apiAuth.serviceAccountId
 
@@ -445,16 +449,6 @@ export async function PUT(
         serviceAccountId,
       })
     } else {
-      const prepared = await prepareGoogleAdsAccountApiCall({
-        authContext,
-        linkedServiceAccountId: adsAccountRow.service_account_id,
-      })
-      if (!prepared.ok) {
-        return NextResponse.json({ error: prepared.message }, { status: 400 })
-      }
-
-      const { refreshToken, oauthCredentials, oauthLoginCustomerId } = prepared
-
       customer = await runWithLoginCustomerFallbackForAccount({
         adsAccount: {
           customer_id: adsAccountRow.customer_id,

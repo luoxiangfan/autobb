@@ -84,6 +84,20 @@ function safeParseJson<T = any>(value: unknown): T | null {
   }
 }
 
+function logOffersCampaignsGaqlBestEffortFailure(
+  scope: string,
+  googleAdsAccountId: number,
+  customerId: string,
+  error: unknown
+) {
+  const message = error instanceof Error ? error.message : String(error)
+  console.warn(`[offers/campaigns] GAQL best-effort failed (${scope})`, {
+    googleAdsAccountId,
+    customerId,
+    message,
+  })
+}
+
 /**
  * GET /api/offers/:id/campaigns
  * 获取Offer关联的所有Google Ads广告系列
@@ -402,8 +416,13 @@ export async function GET(
             if (!Number.isFinite(micros) || micros <= 0) continue
             adGroupCpcMicrosByCampaignId.set(campaignId, micros)
           }
-        } catch {
-          // ignore
+        } catch (error) {
+          logOffersCampaignsGaqlBestEffortFailure(
+            'service_account ad_group_cpc',
+            googleAdsAccountId,
+            account.customerId,
+            error
+          )
         }
 
         // Campaign info best-effort（失败不阻断，改为使用DB兜底）
@@ -427,8 +446,13 @@ export async function GET(
               __adsAccountName: account.accountName,
             })
           }
-        } catch {
-          // ignore
+        } catch (error) {
+          logOffersCampaignsGaqlBestEffortFailure(
+            'service_account campaign_list',
+            googleAdsAccountId,
+            account.customerId,
+            error
+          )
         }
 
         // target_spend ceiling best-effort（我们发布时使用 TARGET_SPEND，即 Maximize Clicks）
@@ -449,10 +473,16 @@ export async function GET(
             if (!Number.isFinite(micros) || micros <= 0) continue
             targetSpendCeilingMicrosByCampaignId.set(cid, micros)
           }
-        } catch {
-          // ignore
+        } catch (error) {
+          logOffersCampaignsGaqlBestEffortFailure(
+            'service_account target_spend_ceiling',
+            googleAdsAccountId,
+            account.customerId,
+            error
+          )
         }
       } else {
+        try {
         await runWithLoginCustomerFallbackForAccount({
           adsAccount: {
             customer_id: account.customerId,
@@ -490,8 +520,13 @@ export async function GET(
                 if (!Number.isFinite(micros) || micros <= 0) continue
                 adGroupCpcMicrosByCampaignId.set(campaignId, micros)
               }
-            } catch {
-              // ignore
+            } catch (error) {
+              logOffersCampaignsGaqlBestEffortFailure(
+                'oauth ad_group_cpc',
+                googleAdsAccountId,
+                account.customerId,
+                error
+              )
             }
 
             // Campaign info best-effort（失败不阻断，改为使用DB兜底）
@@ -513,8 +548,13 @@ export async function GET(
                   __adsAccountName: account.accountName,
                 })
               }
-            } catch {
-              // ignore
+            } catch (error) {
+              logOffersCampaignsGaqlBestEffortFailure(
+                'oauth campaign_list',
+                googleAdsAccountId,
+                account.customerId,
+                error
+              )
             }
 
             // target_spend ceiling best-effort
@@ -532,11 +572,24 @@ export async function GET(
                 if (!Number.isFinite(micros) || micros <= 0) continue
                 targetSpendCeilingMicrosByCampaignId.set(cid, micros)
               }
-            } catch {
-              // ignore
+            } catch (error) {
+              logOffersCampaignsGaqlBestEffortFailure(
+                'oauth target_spend_ceiling',
+                googleAdsAccountId,
+                account.customerId,
+                error
+              )
             }
           },
         })
+        } catch (error) {
+          logOffersCampaignsGaqlBestEffortFailure(
+            'oauth account_login_customer_fallback',
+            googleAdsAccountId,
+            account.customerId,
+            error
+          )
+        }
       }
     }
 

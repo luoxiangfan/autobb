@@ -1,14 +1,13 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { getCustomerWithCredentials, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
+import { getCustomerWithCredentials } from '@/lib/google-ads-api'
 import { prepareGoogleAdsAccountApiCall } from '@/lib/google-ads-accounts-auth'
 import { runOAuthGaqlWithLoginCustomerFallback } from '@/lib/google-ads-oauth-gaql'
 import { getDatabase } from '@/lib/db'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext,
 } from '@/lib/google-ads-auth-context'
 import { getRedisClient } from '@/lib/redis-client'
 import { executeGAQLQueryPython } from '@/lib/python-ads-client'
@@ -212,24 +211,25 @@ export async function GET(
       )
     }
 
-    const apiAuth = await resolveGoogleAdsApiAuthFromContext(authContext, linked.service_account_id)
+    const prepared = await prepareGoogleAdsAccountApiCall({
+      authContext,
+      linkedServiceAccountId: linked.service_account_id,
+    })
+    if (!prepared.ok) {
+      const needsReauth = prepared.message.includes('OAuth') || prepared.message.includes('授权')
+      return NextResponse.json(
+        { error: prepared.message, ...(needsReauth ? { needsReauth: true } : {}) },
+        { status: 400 }
+      )
+    }
+
+    const { apiAuth } = prepared
     const useServiceAccount = apiAuth.authType === 'service_account'
     const serviceAccountId = apiAuth.serviceAccountId
-    const oauthRefreshToken = useServiceAccount ? null : apiAuth.refreshToken || null
-    let oauthLoginCustomerId = apiAuth.oauthLoginCustomerId
-    let oauthApiCredentials: OAuthApiCredentialsFields | undefined
-    if (!useServiceAccount) {
-      const prepared = await prepareGoogleAdsAccountApiCall({
-        authContext,
-        linkedServiceAccountId: linked.service_account_id,
-      })
-      if (!prepared.ok) {
-        return NextResponse.json({ error: prepared.message }, { status: 400 })
-      }
-      oauthApiCredentials = prepared.oauthCredentials
-      oauthLoginCustomerId =
-        prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId
-    }
+    const oauthRefreshToken = useServiceAccount ? null : prepared.refreshToken || null
+    const oauthLoginCustomerId =
+      prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+    const oauthApiCredentials = prepared.oauthCredentials
 
     if (useServiceAccount && !serviceAccountId) {
       return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })

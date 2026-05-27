@@ -19,11 +19,7 @@ import { removePendingClickFarmQueueTasksByTaskIds } from './click-farm/queue-cl
 import { removePendingUrlSwapQueueTasksByTaskIds } from './url-swap/queue-cleanup'
 import type { OfferExtractionMode } from './offer-extraction-mode'
 import { normalizeOfferExtractionMode } from './offer-extraction-mode'
-import {
-  resolveHealedOAuthCredentialsFields,
-  type OAuthApiCredentialsFields,
-} from './google-ads-accounts-auth'
-import { resolveLoginCustomerCandidates } from './google-ads-login-customer'
+import { executeGoogleAdsCampaignRemoteActions } from './google-ads-campaign-remote-actions'
 
 export interface Offer {
   id: number
@@ -1058,12 +1054,9 @@ export async function deleteOffer(
   }>
 
   if (campaignsToProcess.length > 0) {
-    const { updateGoogleAdsCampaignStatus, removeGoogleAdsCampaign } = await import('./google-ads-api')
-    const { getDecryptedCredentials } = await import('./google-ads-accounts')
     const {
       getGoogleAdsAuthContext,
       hasConfiguredGoogleAdsAuthFromContext,
-      resolveGoogleAdsApiAuthFromContext,
     } = await import('./google-ads-auth-context')
     const authContext = await getGoogleAdsAuthContext(userId)
     const errors: Array<{ campaignRowId: number; message: string }> = []
@@ -1071,142 +1064,104 @@ export async function deleteOffer(
     if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
       console.warn(`[offers] 用户 ${userId} Google Ads 认证未配置，跳过远端 Campaign 操作`)
     } else {
-    let oauthCredentials: OAuthApiCredentialsFields | undefined
-    let oauthLoginCustomerId: string | undefined
-    if (authContext.auth.authType === 'oauth') {
-      const healed = await resolveHealedOAuthCredentialsFields({ userId, authContext })
-      if (!healed.ok) {
-        throw new Error(healed.message)
-      }
-      oauthCredentials = healed.credentials
-      oauthLoginCustomerId = healed.loginCustomerId || undefined
-    }
+      const campaignsByAccount = campaignsToProcess.reduce((acc, c) => {
+        if (!acc[c.googleAdsAccountId]) acc[c.googleAdsAccountId] = []
+        acc[c.googleAdsAccountId].push(c)
+        return acc
+      }, {} as Record<number, typeof campaignsToProcess>)
 
-    const campaignsByAccount = campaignsToProcess.reduce((acc, c) => {
-      if (!acc[c.googleAdsAccountId]) acc[c.googleAdsAccountId] = []
-      acc[c.googleAdsAccountId].push(c)
-      return acc
-    }, {} as Record<number, typeof campaignsToProcess>)
+      const campaignRowIdByGoogleId = new Map<string, number>()
 
-    for (const [accountIdStr, accountCampaigns] of Object.entries(campaignsByAccount)) {
-      const accountId = Number(accountIdStr)
-      if (!Number.isFinite(accountId)) continue
+      for (const [accountIdStr, accountCampaigns] of Object.entries(campaignsByAccount)) {
+        const accountId = Number(accountIdStr)
+        if (!Number.isFinite(accountId)) continue
 
-      const accountCredentials = await getDecryptedCredentials(accountId, userId)
-      if (!accountCredentials?.customerId) {
         for (const c of accountCampaigns) {
-          errors.push({ campaignRowId: c.campaignRowId, message: 'Google Ads账号凭证不存在' })
+          campaignRowIdByGoogleId.set(c.googleCampaignId, c.campaignRowId)
         }
-        continue
-      }
 
-      const apiAuth = await resolveGoogleAdsApiAuthFromContext(
-        authContext,
-        accountCredentials.serviceAccountId
-      )
+        const adsAccountRow = await db.queryOne<{
+          customer_id: string | null
+          parent_mcc_id: string | null
+          service_account_id: string | null
+        }>(
+          `SELECT customer_id, parent_mcc_id, service_account_id
+           FROM google_ads_accounts WHERE id = ? AND user_id = ? LIMIT 1`,
+          [accountId, userId]
+        )
 
-      if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
-        for (const c of accountCampaigns) {
-          errors.push({ campaignRowId: c.campaignRowId, message: 'Google Ads账号认证信息缺失（需要OAuth）' })
-        }
-        continue
-      }
-
-      const adsAccountMeta = await db.queryOne<{ parent_mcc_id: string | null }>(
-        `SELECT parent_mcc_id FROM google_ads_accounts WHERE id = ? AND user_id = ? LIMIT 1`,
-        [accountId, userId]
-      )
-      const loginCustomerId =
-        apiAuth.authType === 'oauth'
-          ? resolveLoginCustomerCandidates({
-              authType: 'oauth',
-              accountParentMccId: adsAccountMeta?.parent_mcc_id ?? null,
-              oauthLoginCustomerId: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
-              targetCustomerId: accountCredentials.customerId,
-            })[0]
-          : undefined
-
-      for (const c of accountCampaigns) {
-        try {
-          if (removeGoogleAdsCampaigns) {
-            await removeGoogleAdsCampaign({
-              customerId: accountCredentials.customerId,
-              refreshToken: apiAuth.refreshToken,
-              campaignId: c.googleCampaignId,
-              accountId,
-              userId,
-              loginCustomerId,
-              authType: apiAuth.authType,
-              serviceAccountId: apiAuth.serviceAccountId,
-              credentials: oauthCredentials,
-            })
-
-            await applyCampaignTransition({
-              userId,
-              campaignId: c.campaignRowId,
-              action: 'OFFER_DELETE',
-            })
-            autoRemovedCampaignCount++
-          } else {
-            await updateGoogleAdsCampaignStatus({
-              customerId: accountCredentials.customerId,
-              refreshToken: apiAuth.refreshToken,
-              campaignId: c.googleCampaignId,
-              status: 'PAUSED',
-              accountId,
-              userId,
-              loginCustomerId,
-              authType: apiAuth.authType,
-              serviceAccountId: apiAuth.serviceAccountId,
-              credentials: oauthCredentials,
-            })
-
-            await applyCampaignTransition({
-              userId,
-              campaignId: c.campaignRowId,
-              action: 'PAUSE_OLD_CAMPAIGNS',
-            })
-            autoPausedCampaignCount++
+        if (!adsAccountRow?.customer_id) {
+          for (const c of accountCampaigns) {
+            errors.push({ campaignRowId: c.campaignRowId, message: 'Google Ads账号凭证不存在' })
           }
-        } catch (e: any) {
-          if (removeGoogleAdsCampaigns) {
-            try {
-              await updateGoogleAdsCampaignStatus({
-                customerId: accountCredentials.customerId,
-                refreshToken: apiAuth.refreshToken,
-                campaignId: c.googleCampaignId,
-                status: 'PAUSED',
-                accountId,
-                userId,
-                loginCustomerId,
-                authType: apiAuth.authType,
-                serviceAccountId: apiAuth.serviceAccountId,
-                credentials: oauthCredentials,
-              })
+          continue
+        }
 
+        const summary = await executeGoogleAdsCampaignRemoteActions({
+          userId,
+          adsAccount: {
+            id: accountId,
+            customer_id: adsAccountRow.customer_id,
+            parent_mcc_id: adsAccountRow.parent_mcc_id,
+            service_account_id: adsAccountRow.service_account_id,
+            is_active: true,
+            is_deleted: false,
+          },
+          campaigns: accountCampaigns.map((c) => ({
+            google_campaign_id: c.googleCampaignId,
+          })),
+          shouldRemove: removeGoogleAdsCampaigns,
+          logPrefix: '[offers]',
+          skipAccountEligibilityCheck: true,
+          onCampaignOutcome: async ({ campaignId, outcome, reason }) => {
+            const campaignRowId = campaignRowIdByGoogleId.get(campaignId)
+            if (!campaignRowId) return
+
+            if (outcome === 'REMOVED') {
               await applyCampaignTransition({
                 userId,
-                campaignId: c.campaignRowId,
+                campaignId: campaignRowId,
+                action: 'OFFER_DELETE',
+              })
+              autoRemovedCampaignCount++
+              return
+            }
+
+            if (outcome === 'PAUSED' || outcome === 'PAUSED_FALLBACK') {
+              await applyCampaignTransition({
+                userId,
+                campaignId: campaignRowId,
                 action: 'PAUSE_OLD_CAMPAIGNS',
               })
               autoPausedCampaignCount++
-            } catch (pauseError: any) {
+              return
+            }
+
+            if (outcome === 'FAILED') {
               errors.push({
-                campaignRowId: c.campaignRowId,
-                message: `${e?.message || '删除失败'}；暂停失败：${pauseError?.message || '未知错误'}`
+                campaignRowId,
+                message: reason || '远端操作失败',
               })
             }
-          } else {
-            errors.push({ campaignRowId: c.campaignRowId, message: e?.message || '暂停失败' })
+          },
+        })
+
+        if (summary.skipReason === 'CREDENTIALS_MISSING') {
+          const accountError =
+            summary.failures.find((item) => item.campaignId === '*')?.reason ||
+            'Google Ads 认证信息缺失'
+          for (const c of accountCampaigns) {
+            errors.push({ campaignRowId: c.campaignRowId, message: accountError })
           }
         }
       }
-    }
 
-    if (errors.length > 0) {
-      const actionLabel = removeGoogleAdsCampaigns ? '删除' : '暂停'
-      throw new Error(`自动${actionLabel}关联广告系列失败：${errors.length}/${campaignsToProcess.length} 个未能${actionLabel}，请稍后重试或先手动处理后再删除`)
-    }
+      if (errors.length > 0) {
+        const actionLabel = removeGoogleAdsCampaigns ? '删除' : '暂停'
+        throw new Error(
+          `自动${actionLabel}关联广告系列失败：${errors.length}/${campaignsToProcess.length} 个未能${actionLabel}，请稍后重试或先手动处理后再删除`
+        )
+      }
     }
   }
 

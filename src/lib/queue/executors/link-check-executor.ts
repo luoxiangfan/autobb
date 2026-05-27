@@ -25,11 +25,11 @@ import { getProxyForCountry } from '../user-proxy-loader'
 import { analyzeProxyError } from './proxy-error-handler'
 import { pauseClickFarmTasksByOfferId } from '../../click-farm'
 import {
-  resolveHealedOAuthCredentialsFields,
+  loadOAuthGoogleAdsCallBundleForContext,
   type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-accounts-auth'
 import { resolveGoogleAdsApiAuthForAccount } from '@/lib/google-ads-auth-context'
-import { resolveLoginCustomerCandidates } from '@/lib/google-ads-login-customer'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { updateGoogleAdsCampaignStatus } from '../../google-ads-api'
 
 /**
@@ -360,13 +360,14 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                   try {
                     const adsAccount = (await dbConn.queryOne(
                       `
-                          SELECT customer_id, service_account_id, parent_mcc_id
+                          SELECT id, customer_id, service_account_id, parent_mcc_id
                           FROM google_ads_accounts
                           WHERE id = ? AND user_id = ?
                         `,
                       [campaign.google_ads_account_id, offer.user_id]
                     )) as
                       | {
+                          id: number
                           customer_id: string
                           service_account_id: string | null
                           parent_mcc_id: string | null
@@ -399,49 +400,57 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                       }
 
                       let oauthCredentials: OAuthApiCredentialsFields | undefined
-                      let loginCustomerId: string | undefined
+                      let oauthLoginCustomerId: string | undefined
                       if (apiAuth.authType === 'oauth') {
                         let healedBundle = oauthHealedByUser.get(offer.user_id)
                         if (!healedBundle) {
-                          const healed = await resolveHealedOAuthCredentialsFields({
+                          const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
                             userId: offer.user_id,
                             authContext: authResolved.ctx,
                           })
-                          if (!healed.ok) {
+                          if (!oauthBundle.ok) {
                             console.warn(
-                              `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: ${healed.message}`
+                              `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: ${oauthBundle.message}`
                             )
                             continue
                           }
                           healedBundle = {
-                            credentials: healed.credentials,
-                            loginCustomerId: healed.loginCustomerId,
+                            credentials: oauthBundle.bundle!.oauthCredentials,
+                            loginCustomerId:
+                              oauthBundle.bundle?.oauthLoginCustomerId || '',
                           }
                           oauthHealedByUser.set(offer.user_id, healedBundle)
                         }
                         oauthCredentials = healedBundle.credentials
-                        loginCustomerId = resolveLoginCustomerCandidates({
-                          authType: 'oauth',
-                          accountParentMccId: adsAccount.parent_mcc_id,
-                          oauthLoginCustomerId:
-                            healedBundle.loginCustomerId || apiAuth.oauthLoginCustomerId,
-                          targetCustomerId: adsAccount.customer_id,
-                        })[0]
-                      } else if (apiAuth.serviceAccountMccId) {
-                        loginCustomerId = apiAuth.serviceAccountMccId
+                        oauthLoginCustomerId =
+                          healedBundle.loginCustomerId || apiAuth.oauthLoginCustomerId
                       }
 
-                      await updateGoogleAdsCampaignStatus({
-                        customerId: adsAccount.customer_id,
+                      await runWithLoginCustomerFallbackForAccount({
+                        adsAccount: {
+                          customer_id: adsAccount.customer_id,
+                          parent_mcc_id: adsAccount.parent_mcc_id,
+                          id: adsAccount.id,
+                        },
                         refreshToken: apiAuth.refreshToken,
-                        campaignId: campaign.campaign_id,
-                        status: 'PAUSED',
-                        accountId: campaign.google_ads_account_id,
-                        userId: offer.user_id,
-                        loginCustomerId,
                         authType: apiAuth.authType,
                         serviceAccountId: apiAuth.serviceAccountId,
-                        credentials: oauthCredentials,
+                        serviceAccountMccId: apiAuth.serviceAccountMccId,
+                        oauthLoginCustomerId,
+                        actionName: `链接检测暂停 Campaign ${campaign.campaign_id}`,
+                        callback: (loginCustomerId) =>
+                          updateGoogleAdsCampaignStatus({
+                            customerId: adsAccount.customer_id,
+                            refreshToken: apiAuth.refreshToken,
+                            campaignId: campaign.campaign_id,
+                            status: 'PAUSED',
+                            accountId: campaign.google_ads_account_id,
+                            userId: offer.user_id,
+                            loginCustomerId,
+                            authType: apiAuth.authType,
+                            serviceAccountId: apiAuth.serviceAccountId,
+                            credentials: oauthCredentials,
+                          }),
                       })
                       pausedInGoogleAds++
                       console.log(`   ⏸️  已暂停 Google Ads 广告系列 ${campaign.campaign_id}`)
