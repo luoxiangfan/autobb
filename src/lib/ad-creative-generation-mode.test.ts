@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   AD_CREATIVE_GENERATION_MODE_DEFAULT,
+  AD_CREATIVE_GENERATION_MODE_SELECT_LABELS,
   getAdCreativeGenerationModeLabel,
   getAdCreativeGenerationModeProfile,
   getGenerationModeFromRequestBody,
@@ -82,6 +83,11 @@ describe('ad-creative-generation-mode', () => {
 
   it('getAdCreativeGenerationModeLabel shows raw value for unknown modes', () => {
     expect(getAdCreativeGenerationModeLabel('legacy_unknown_mode')).toBe('legacy_unknown_mode')
+  })
+
+  it('select labels are short and do not duplicate description prefix', () => {
+    expect(AD_CREATIVE_GENERATION_MODE_SELECT_LABELS.original).toBe('标准（默认）')
+    expect(AD_CREATIVE_GENERATION_MODE_SELECT_LABELS.fast).toBe('快速')
   })
 
   it('resolveCreativeGenerationRuntime applies balanced profile caps', () => {

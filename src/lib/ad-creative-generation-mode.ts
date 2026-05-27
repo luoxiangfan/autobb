@@ -24,6 +24,13 @@ export const AD_CREATIVE_GENERATION_MODE_LABELS: Record<AdCreativeGenerationMode
   original: '标准',
 }
 
+/** 下拉框展示用短文案（避免与描述前半段重复拼接） */
+export const AD_CREATIVE_GENERATION_MODE_SELECT_LABELS: Record<AdCreativeGenerationMode, string> = {
+  fast: '快速',
+  balanced: '均衡',
+  original: '标准（默认）',
+}
+
 export const AD_CREATIVE_GENERATION_MODE_DESCRIPTIONS: Record<AdCreativeGenerationMode, string> = {
   fast: '速度优先：单次生成、跳过关键词 AI 补全与竞争定位 AI 增强，尽量保证可用质量',
   balanced: '速度与质量折中：最多 1 次自动重试，保留关键词补全但跳过部分 AI 增强',

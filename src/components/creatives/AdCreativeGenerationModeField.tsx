@@ -6,13 +6,11 @@ import {
   Select,
   SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   AD_CREATIVE_GENERATION_MODE_DESCRIPTIONS,
-  AD_CREATIVE_GENERATION_MODE_LABELS,
+  AD_CREATIVE_GENERATION_MODE_SELECT_LABELS,
   type AdCreativeGenerationMode,
 } from '@/lib/ad-creative-generation-mode'
 
@@ -27,7 +25,7 @@ type AdCreativeGenerationModeFieldProps = {
   layout?: 'stacked' | 'inline'
 }
 
-const MODES = Object.keys(AD_CREATIVE_GENERATION_MODE_LABELS) as AdCreativeGenerationMode[]
+const MODES = Object.keys(AD_CREATIVE_GENERATION_MODE_SELECT_LABELS) as AdCreativeGenerationMode[]
 
 function ModeDescriptionHint({ description }: { description: string }) {
   return (
@@ -61,9 +59,14 @@ export function AdCreativeGenerationModeField({
 }: AdCreativeGenerationModeFieldProps) {
   const description = AD_CREATIVE_GENERATION_MODE_DESCRIPTIONS[value]
 
+  const selectClassName =
+    layout === 'inline'
+      ? 'h-10 min-w-[11rem] border-gray-200/90 bg-white pr-8 shadow-sm transition-shadow hover:border-purple-200 focus:ring-purple-500/20'
+      : 'h-9 border-gray-200/90 bg-white shadow-sm transition-shadow hover:border-purple-200'
+
   if (layout === 'inline') {
     return (
-      <div className={className ?? 'min-w-[180px]'}>
+      <div className={className ?? 'min-w-[11rem]'}>
         <div className="mb-1.5 flex items-center gap-1.5">
           <Label htmlFor={id} className="text-xs font-medium uppercase tracking-wide text-gray-500">
             生成模式
@@ -71,23 +74,21 @@ export function AdCreativeGenerationModeField({
           <ModeDescriptionHint description={description} />
         </div>
         <Select
+          id={id}
           value={value}
+          title={description}
           onValueChange={(v) => onChange(v as AdCreativeGenerationMode)}
           disabled={disabled}
+          className={selectClassName}
         >
-          <SelectTrigger
-            id={id}
-            className="h-10 border-gray-200/90 bg-white shadow-sm transition-shadow hover:border-purple-200 focus:ring-purple-500/20"
-          >
-            <SelectValue placeholder="选择生成模式" />
-          </SelectTrigger>
           <SelectContent>
             {MODES.map((mode) => (
-              <SelectItem key={mode} value={mode}>
-                <span className="font-medium">{AD_CREATIVE_GENERATION_MODE_LABELS[mode]}</span>
-                <span className="ml-2 text-xs text-gray-500">
-                  {AD_CREATIVE_GENERATION_MODE_DESCRIPTIONS[mode].split('：')[0]}
-                </span>
+              <SelectItem
+                key={mode}
+                value={mode}
+                title={AD_CREATIVE_GENERATION_MODE_DESCRIPTIONS[mode]}
+              >
+                {AD_CREATIVE_GENERATION_MODE_SELECT_LABELS[mode]}
               </SelectItem>
             ))}
           </SelectContent>
@@ -105,20 +106,21 @@ export function AdCreativeGenerationModeField({
         <ModeDescriptionHint description={description} />
       </div>
       <Select
+        id={id}
         value={value}
+        title={description}
         onValueChange={(v) => onChange(v as AdCreativeGenerationMode)}
         disabled={disabled}
+        className={selectClassName}
       >
-        <SelectTrigger
-          id={id}
-          className="h-9 border-gray-200/90 bg-white shadow-sm transition-shadow hover:border-purple-200"
-        >
-          <SelectValue placeholder="选择生成模式" />
-        </SelectTrigger>
         <SelectContent>
           {MODES.map((mode) => (
-            <SelectItem key={mode} value={mode}>
-              {AD_CREATIVE_GENERATION_MODE_LABELS[mode]}
+            <SelectItem
+              key={mode}
+              value={mode}
+              title={AD_CREATIVE_GENERATION_MODE_DESCRIPTIONS[mode]}
+            >
+              {AD_CREATIVE_GENERATION_MODE_SELECT_LABELS[mode]}
             </SelectItem>
           ))}
         </SelectContent>

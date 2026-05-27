@@ -1649,7 +1649,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
   return (
     <div className="space-y-8">
       {/* Header Section */}
-      <div className="overflow-hidden rounded-xl border border-purple-100/90 bg-gradient-to-br from-purple-50/70 via-white to-blue-50/50 shadow-sm">
+      <div className="rounded-xl border border-purple-100/90 bg-gradient-to-br from-purple-50/70 via-white to-blue-50/50 shadow-sm">
         <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-1 gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/20">
@@ -1675,13 +1675,13 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
               </Badge>
             )}
 
-            <div className="flex w-full flex-col gap-3 rounded-xl border border-gray-200/70 bg-white/90 p-3.5 shadow-sm backdrop-blur-sm sm:w-auto sm:flex-row sm:items-end">
+            <div className="flex w-full min-w-0 flex-col gap-3 rounded-xl border border-gray-200/70 bg-white/90 p-3.5 shadow-sm backdrop-blur-sm sm:w-auto sm:flex-row sm:flex-wrap sm:items-end">
               <AdCreativeGenerationModeField
                 value={generationMode}
                 onChange={handleGenerationModeChange}
                 disabled={generating}
                 layout="inline"
-                className="w-full sm:min-w-[200px] sm:w-auto"
+                className="w-full min-w-0 sm:min-w-[11rem] sm:w-auto sm:max-w-[14rem]"
               />
 
               <Button
@@ -1690,7 +1690,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
                   void handleGenerate()
                 }}
                 disabled={generating || generatedBuckets.length >= 3}
-                className={`h-10 shrink-0 border-0 px-5 font-medium transition-all duration-200 ${
+                className={`h-10 min-w-0 shrink border-0 px-5 font-medium transition-all duration-200 sm:shrink-0 ${
                   generatedBuckets.length >= 3
                     ? 'bg-gradient-to-r from-amber-500 to-orange-500 shadow-md shadow-amber-500/25 hover:from-amber-600 hover:to-orange-600 hover:shadow-lg hover:shadow-amber-500/30'
                     : 'bg-gradient-to-r from-purple-600 to-blue-600 shadow-md shadow-purple-500/25 hover:from-purple-700 hover:to-blue-700 hover:shadow-lg hover:shadow-purple-500/30'
