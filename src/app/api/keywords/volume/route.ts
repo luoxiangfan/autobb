@@ -1,11 +1,16 @@
 /**
  * Keyword Search Volume API
  * GET /api/keywords/volume?keywords=kw1,kw2&country=US&language=en
+ * Optional: offerId, googleAdsAccountId (for linked service_account_id)
  */
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getKeywordSearchVolumes } from '@/lib/keyword-planner'
-import { loadKeywordPlannerVolumeAuth } from '@/lib/google-ads-accounts-auth'
+import {
+  loadKeywordPlannerVolumeAuth,
+  loadKeywordPlannerVolumeAuthForOffer,
+  resolveLinkedServiceAccountIdForGoogleAdsAccount,
+} from '@/lib/google-ads-accounts-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,6 +26,8 @@ export async function GET(request: NextRequest) {
     const keywordsParam = searchParams.get('keywords')
     const country = searchParams.get('country') || 'US'
     const language = searchParams.get('language') || 'en'
+    const offerIdParam = searchParams.get('offerId')
+    const googleAdsAccountIdParam = searchParams.get('googleAdsAccountId')
 
     if (!keywordsParam) {
       return NextResponse.json({ error: 'keywords parameter required' }, { status: 400 })
@@ -35,7 +42,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Maximum 100 keywords per request' }, { status: 400 })
     }
 
-    const loaded = await loadKeywordPlannerVolumeAuth(userId)
+    let loaded: Awaited<ReturnType<typeof loadKeywordPlannerVolumeAuth>>
+    const offerId = offerIdParam ? parseInt(offerIdParam, 10) : NaN
+    const googleAdsAccountId = googleAdsAccountIdParam
+      ? parseInt(googleAdsAccountIdParam, 10)
+      : NaN
+
+    if (Number.isFinite(offerId) && offerId > 0) {
+      loaded = await loadKeywordPlannerVolumeAuthForOffer(userId, offerId)
+    } else if (Number.isFinite(googleAdsAccountId) && googleAdsAccountId > 0) {
+      const linkedSa = await resolveLinkedServiceAccountIdForGoogleAdsAccount(
+        userId,
+        googleAdsAccountId
+      )
+      loaded = await loadKeywordPlannerVolumeAuth(userId, linkedSa)
+    } else {
+      loaded = await loadKeywordPlannerVolumeAuthForOffer(userId)
+    }
+
     if (!loaded.ok) {
       return NextResponse.json({ error: loaded.message }, { status: 400 })
     }

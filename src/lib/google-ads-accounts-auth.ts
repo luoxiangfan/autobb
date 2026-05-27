@@ -415,6 +415,68 @@ export function keywordPlannerVolumeAuthFromPrepared(
   }
 }
 
+/** 按 Google Ads 账号行解析 linked service_account_id */
+export async function resolveLinkedServiceAccountIdForGoogleAdsAccount(
+  userId: number,
+  googleAdsAccountId: number
+): Promise<string | null> {
+  const db = await getDatabase()
+  const row = await db.queryOne<{ service_account_id: string | null }>(
+    `SELECT service_account_id FROM google_ads_accounts WHERE id = ? AND user_id = ? LIMIT 1`,
+    [googleAdsAccountId, userId]
+  )
+  const linked = row?.service_account_id?.trim()
+  return linked || null
+}
+
+/** 解析 Offer/用户关联账号的 linked service_account_id，供 Keyword Planner 使用 */
+export async function resolveLinkedServiceAccountIdForOffer(
+  userId: number,
+  offerId?: number
+): Promise<string | null> {
+  const db = await getDatabase()
+
+  if (offerId) {
+    const fromCampaign = await db.queryOne<{ service_account_id: string | null }>(
+      `SELECT ga.service_account_id
+       FROM google_ads_accounts ga
+       INNER JOIN campaigns c ON c.google_ads_account_id = ga.id AND c.user_id = ?
+       WHERE c.offer_id = ?
+         AND ga.service_account_id IS NOT NULL
+         AND TRIM(ga.service_account_id) <> ''
+       ORDER BY c.updated_at DESC
+       LIMIT 1`,
+      [userId, offerId]
+    )
+    const linkedFromCampaign = fromCampaign?.service_account_id?.trim()
+    if (linkedFromCampaign) return linkedFromCampaign
+  }
+
+  const isActiveCondition =
+    db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const isManagerCondition =
+    db.type === 'postgres' ? 'is_manager_account = false' : 'is_manager_account = 0'
+
+  const account = await db.queryOne<{ service_account_id: string | null }>(
+    `SELECT service_account_id FROM google_ads_accounts
+     WHERE user_id = ? AND ${isActiveCondition} AND status = 'ENABLED' AND ${isManagerCondition}
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId]
+  )
+
+  const linked = account?.service_account_id?.trim()
+  return linked || null
+}
+
+export async function loadKeywordPlannerVolumeAuthForOffer(
+  userId: number,
+  offerId?: number
+): Promise<KeywordPlannerVolumeAuthLoadResult> {
+  const linkedSa = await resolveLinkedServiceAccountIdForOffer(userId, offerId)
+  return loadKeywordPlannerVolumeAuth(userId, linkedSa)
+}
+
 /**
  * 解析 Keyword Planner 搜索量 API 的认证（校验 + prepare/heal，单次入口）。
  */

@@ -21,7 +21,7 @@ import { loadPrompt, interpolateTemplate } from './prompt-loader'
 import { findOfferById, type Offer } from './offers'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import { tryGetConfiguredGoogleAdsApiAuthForUser } from './google-ads-auth-context'
-import { loadKeywordPlannerVolumeAuth } from './google-ads-accounts-auth'
+import { loadKeywordPlannerVolumeAuthForOffer } from './google-ads-accounts-auth'
 import { extractVerifiedKeywordSourcePool } from './unified-keyword-service'
 import {
   filterKeywordQuality,
@@ -93,54 +93,6 @@ const SEED_INFO_QUERY_PATTERNS = [
   'logo', 'png', 'jpg', 'jpeg', 'svg', 'icon', 'clipart', 'wallpaper',
   'size chart', 'size guide', 'sizing',
 ]
-
-/** 解析 Offer/用户关联账号的 linked service_account_id，供 Keyword Planner volume 使用 */
-async function resolveLinkedServiceAccountIdForOffer(
-  userId: number,
-  offerId?: number
-): Promise<string | null> {
-  const db = await getDatabase()
-
-  if (offerId) {
-    const fromCampaign = await db.queryOne<{ service_account_id: string | null }>(
-      `SELECT ga.service_account_id
-       FROM google_ads_accounts ga
-       INNER JOIN campaigns c ON c.google_ads_account_id = ga.id AND c.user_id = ?
-       WHERE c.offer_id = ?
-         AND ga.service_account_id IS NOT NULL
-         AND TRIM(ga.service_account_id) <> ''
-       ORDER BY c.updated_at DESC
-       LIMIT 1`,
-      [userId, offerId]
-    )
-    const linkedFromCampaign = fromCampaign?.service_account_id?.trim()
-    if (linkedFromCampaign) return linkedFromCampaign
-  }
-
-  const isActiveCondition =
-    db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-  const isManagerCondition =
-    db.type === 'postgres' ? 'is_manager_account = false' : 'is_manager_account = 0'
-
-  const account = await db.queryOne<{ service_account_id: string | null }>(
-    `SELECT service_account_id FROM google_ads_accounts
-     WHERE user_id = ? AND ${isActiveCondition} AND status = 'ENABLED' AND ${isManagerCondition}
-     ORDER BY created_at DESC
-     LIMIT 1`,
-    [userId]
-  )
-
-  const linked = account?.service_account_id?.trim()
-  return linked || null
-}
-
-async function loadKeywordPlannerVolumeAuthForOffer(
-  userId: number,
-  offerId?: number
-) {
-  const linkedSa = await resolveLinkedServiceAccountIdForOffer(userId, offerId)
-  return loadKeywordPlannerVolumeAuth(userId, linkedSa)
-}
 
 type GeminiGenerateParams = Parameters<typeof generateContent>[0]
 type GeminiGenerateResult = Awaited<ReturnType<typeof generateContent>>

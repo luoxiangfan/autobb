@@ -23,10 +23,6 @@ import {
 } from '@/lib/url-swap'
 import type { UrlSwapTaskData, UrlSwapTaskTarget } from '@/lib/url-swap-types'
 import { getDatabase } from '@/lib/db'
-import {
-  getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
-} from '@/lib/google-ads-auth-context'
 import { updateCampaignFinalUrlSuffix, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
 import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
@@ -262,11 +258,6 @@ async function updateTargetsFinalUrlSuffix(params: {
   userId: number
   db: Awaited<ReturnType<typeof getDatabase>>
 }): Promise<{ successCount: number; failureCount: number; failures: string[] }> {
-  const ctx = await getGoogleAdsAuthContext(params.userId)
-  if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
-    throw new Error('OAuth refresh token或服务账号配置缺失，请重新授权或配置服务账号')
-  }
-
   const failures: string[] = []
   let successCount = 0
   let failureCount = 0

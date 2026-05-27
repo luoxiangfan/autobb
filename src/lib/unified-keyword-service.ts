@@ -17,6 +17,7 @@ import { getKeywordSearchVolumes } from './keyword-planner'
 import {
   keywordPlannerVolumeAuthFromPrepared,
   prepareGoogleAdsApiCallForLinkedAccount,
+  resolveLinkedServiceAccountIdForOffer,
   type KeywordPlannerVolumeAuth,
 } from './google-ads-accounts-auth'
 import {
@@ -31,20 +32,21 @@ import { normalizeLanguageCode } from './language-country-codes'
 import { hasModelAnchorEvidence } from './creative-type'
 import { containsAsinLikeToken, extractModelIdentifierTokensFromText } from './model-anchor-evidence'
 
-type KeywordPlannerSessionAuth = {
+export type KeywordPlannerSessionAuth = {
   preparedOAuth?: KeywordIdeasPreparedOAuth
   volumeAuth: KeywordPlannerVolumeAuth
 }
 
+export type KeywordPlannerSessionAuthResult =
+  | { ok: true; session: KeywordPlannerSessionAuth }
+  | { ok: false; message: string }
+
 /** 单次 prepare/heal，供 Keyword Ideas + Historical Metrics 共用 */
-async function prepareKeywordPlannerSessionAuth(
+export async function prepareKeywordPlannerSessionAuth(
   userId: number | undefined,
   authType: 'oauth' | 'service_account' | undefined,
   linkedServiceAccountId?: string | null
-): Promise<
-  | { ok: true; session: KeywordPlannerSessionAuth }
-  | { ok: false; message: string }
-> {
+): Promise<KeywordPlannerSessionAuthResult> {
   if (!userId) {
     return { ok: false, message: 'userId is required' }
   }
@@ -126,6 +128,20 @@ async function getKeywordSearchVolumesWithPreparedAuth(
     loaded.session,
     onProgress
   )
+}
+
+/** prepare 失败时跳过 Keyword Planner ideas，避免 fallback 内重复 heal */
+function keywordPlannerIdeasBlockedReason(
+  plannerAuth: KeywordPlannerSessionAuthResult | null,
+  authType: 'oauth' | 'service_account' | undefined
+): string | null {
+  if (!plannerAuth) return null
+  if (!plannerAuth.ok) return plannerAuth.message
+  if (authType === 'service_account') return null
+  if (!plannerAuth.session.preparedOAuth) {
+    return 'OAuth credentials unavailable for Keyword Planner'
+  }
+  return null
 }
 
 // ============================================
@@ -1881,6 +1897,7 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
     : null
   const preparedOAuth = plannerAuth?.ok ? plannerAuth.session.preparedOAuth : undefined
   const volumeSession = plannerAuth?.ok ? plannerAuth.session : undefined
+  const plannerIdeasBlocked = keywordPlannerIdeasBlockedReason(plannerAuth, authType)
 
   // 1. 构建意图感知种子词池
   console.log('\n📍 Step 1: 构建意图感知种子词池')
@@ -1911,6 +1928,9 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
     const roundKeywords: UnifiedKeywordData[] = []
 
     if (customerId && userId) {
+      if (plannerIdeasBlocked) {
+        console.warn(`   ⚠️ 跳过 ${roundName} Keyword Planner: ${plannerIdeasBlocked}`)
+      } else {
       try {
         const keywordIdeas = await getKeywordIdeas({
           customerId,
@@ -1945,6 +1965,7 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
         })
       } catch (error: any) {
         console.error(`   ❌ ${roundName} 扩展失败:`, error.message)
+      }
       }
     }
 
@@ -2176,6 +2197,7 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
     : null
   const preparedOAuth = plannerAuth?.ok ? plannerAuth.session.preparedOAuth : undefined
   const volumeSession = plannerAuth?.ok ? plannerAuth.session : undefined
+  const plannerIdeasBlocked = keywordPlannerIdeasBlockedReason(plannerAuth, authType)
 
   const keywordMap = new Map<string, UnifiedKeywordData>()
   let disableSearchVolumeFilter = false
@@ -2209,6 +2231,9 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
   console.log('\n📍 Step 2: Keyword Planner 查询')
 
   if (customerId && userId) {
+    if (plannerIdeasBlocked) {
+      console.warn(`   ⚠️ 跳过 Keyword Planner 查询: ${plannerIdeasBlocked}`)
+    } else {
     try {
       const keywordIdeas = await getKeywordIdeas({
         customerId,
@@ -2242,6 +2267,7 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
       })
     } catch (error: any) {
       console.error(`   ❌ Keyword Planner 查询失败:`, error.message)
+    }
     }
   } else {
     console.log('   ⚠️ 缺少 Google Ads 凭证，跳过 Keyword Planner 查询')
@@ -2560,9 +2586,12 @@ export async function getKeywordVolumesForExisting(params: {
   language: string
   userId?: number
   brandName?: string
+  serviceAccountId?: string
+  offerId?: number
   enableExpansion?: boolean  // 已废弃，忽略
 }): Promise<UnifiedKeywordData[]> {
-  const { baseKeywords, country, language, userId, brandName } = params
+  const { baseKeywords, country, language, userId, brandName, serviceAccountId, offerId } =
+    params
 
   if (!baseKeywords || baseKeywords.length === 0) {
     return []
@@ -2571,12 +2600,18 @@ export async function getKeywordVolumesForExisting(params: {
   console.log(`\n📊 获取 ${baseKeywords.length} 个关键词的搜索量数据`)
 
   try {
+    let linkedSa: string | null = serviceAccountId ?? null
+    if (userId && offerId && !linkedSa) {
+      linkedSa = await resolveLinkedServiceAccountIdForOffer(userId, offerId)
+    }
+
     // 直接使用 Historical Metrics API 获取精确搜索量
     const volumes = await getKeywordSearchVolumesWithPreparedAuth(
       baseKeywords,
       country,
       language,
-      userId
+      userId,
+      linkedSa
     )
 
     // 转换为 UnifiedKeywordData 格式
@@ -2728,10 +2763,14 @@ export async function expandKeywordsWithSeeds(params: {
     : null
   const preparedOAuth = plannerAuth?.ok ? plannerAuth.session.preparedOAuth : undefined
   const volumeSession = plannerAuth?.ok ? plannerAuth.session : undefined
+  const plannerIdeasBlocked = keywordPlannerIdeasBlockedReason(plannerAuth, authType)
 
   try {
     // 1. 使用 Keyword Planner 获取扩展关键词
     if (customerId && userId) {
+      if (plannerIdeasBlocked) {
+        console.warn(`   ⚠️ 跳过 Keyword Planner 扩展: ${plannerIdeasBlocked}`)
+      } else {
       const keywordIdeas = await getKeywordIdeas({
         customerId,
         seedKeywords: finalSeedKeywords,  // 使用增强后的种子词
@@ -2763,6 +2802,7 @@ export async function expandKeywordsWithSeeds(params: {
           })
         }
       })
+      }
     }
 
     // 2. 按搜索量降序排序（关键修复：先排序再截取）

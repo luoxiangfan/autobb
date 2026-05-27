@@ -11,6 +11,10 @@ import {
   createGoogleAdsCalloutExtensions,
   createGoogleAdsSitelinkExtensions
 } from '@/lib/google-ads-api'
+import {
+  getGoogleAdsAuthContext,
+  hasConfiguredGoogleAdsAuthFromContext,
+} from '@/lib/google-ads-auth-context'
 import { createError, ErrorCode, AppError } from '@/lib/errors'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
 import { calculateLaunchScore } from '@/lib/scoring'
@@ -432,6 +436,16 @@ export async function POST(request: NextRequest) {
 	        details: { accountStatus }
 	      }, { status: 422 })
 	    }
+
+    const authContext = await getGoogleAdsAuthContext(userId)
+    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+      const error = new AppError(ErrorCode.GADS_CREDENTIALS_INVALID, {
+        userId,
+        reason:
+          'Google Ads 认证未配置或已失效，请先在设置中完成 OAuth 授权或配置服务账号',
+      })
+      return NextResponse.json(error.toJSON(), { status: error.httpStatus })
+    }
 
 	    // 🔍 验证2：查询Google Ads账号中真实激活的广告系列（使用命名规范关联）
     const { queryActiveCampaigns } = await import('@/lib/active-campaigns-query')

@@ -1,11 +1,10 @@
 import { getCustomerWithCredentials } from './google-ads-api'
 import {
-  prepareGoogleAdsAccountApiCall,
+  prepareGoogleAdsApiCallForLinkedAccount,
   type OAuthApiCredentialsFields,
 } from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import { getDatabase } from './db'
-import { getGoogleAdsAuthContext } from './google-ads-auth-context'
 import { getLoginCustomerId, AuthType } from './google-ads-service-account'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 import { getGoogleAdsLanguageCode, getGoogleAdsGeoTargetId } from './language-country-codes'
@@ -40,11 +39,10 @@ async function resolveKeywordPlannerOAuth(params: {
     credentials = params.preparedOAuth.credentials
     loginCustomerHint = params.preparedOAuth.oauthLoginCustomerId || ''
   } else {
-    const authContext = await getGoogleAdsAuthContext(params.userId)
-    const prepared = await prepareGoogleAdsAccountApiCall({
-      authContext,
-      linkedServiceAccountId: params.serviceAccountId ?? null,
-    })
+    const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+      params.userId,
+      params.serviceAccountId ?? null
+    )
     if (!prepared.ok) {
       throw new Error(prepared.message)
     }
