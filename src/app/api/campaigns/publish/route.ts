@@ -26,10 +26,15 @@ import {
   computeContentHash,
   computeCampaignConfigHash,
   parseLaunchScoreAnalysis,
+  resolveKeywordsWithVolumeForLaunch,
+  mapKeywordVolumeForLaunchScore,
+  parseKeywordsWithVolumeJson,
   type CreativeContentData,
-  type CampaignConfigData,
-  type KeywordVolumeHashInput,
 } from '@/lib/launch-scores'
+import {
+  launchScoreHashConfigFromPublishCampaignConfig,
+  toCampaignConfigHashData,
+} from '@/lib/launch-score-campaign-config'
 import { generateNamingScheme, parseAdGroupName } from '@/lib/naming-convention'
 import { buildEffectiveCreative } from '@/lib/campaign-publish/effective-creative'
 import {
@@ -767,37 +772,14 @@ export async function POST(request: NextRequest) {
     console.log(`[Publish] creativeData.negativeKeywords长度: ${creativeData.negativeKeywords.length}`)
     console.log(`[Publish] creativeData.negativeKeywords示例: ${creativeData.negativeKeywords.slice(0, 5).join(', ')}`)
 
-    const publishKeywordsWithVolume: KeywordVolumeHashInput[] =
-      (_campaignConfig.keywords || []).length > 0
-        ? (_campaignConfig.keywords || []).map((kw: unknown) => {
-            if (typeof kw === 'string') {
-              return { keyword: kw, matchType: 'PHRASE' as const }
-            }
-            const row = kw as {
-              text?: string
-              keyword?: string
-              searchVolume?: number
-              matchType?: string
-              competition?: string
-            }
-            return {
-              keyword: row.text ?? row.keyword,
-              searchVolume: row.searchVolume,
-              matchType: row.matchType,
-              competition: row.competition,
-            }
-          })
-        : primaryCreative.keywords_with_volume
-          ? JSON.parse(primaryCreative.keywords_with_volume)
-          : (creativeData.keywords || []).map((kw: unknown) =>
-              typeof kw === 'string'
-                ? { keyword: kw, matchType: 'PHRASE' as const }
-                : {
-                    keyword: (kw as { keyword?: string; text?: string }).keyword
-                      ?? (kw as { keyword?: string; text?: string }).text,
-                    matchType: (kw as { matchType?: string }).matchType,
-                  }
-            )
+    const publishKeywordsWithVolume = resolveKeywordsWithVolumeForLaunch({
+      configKeywords: _campaignConfig.keywords,
+      keywordsWithVolumeJson: primaryCreative.keywords_with_volume,
+      fallbackKeywords: creativeData.keywords,
+    })
+    const publishHashCampaignConfig = launchScoreHashConfigFromPublishCampaignConfig(
+      _campaignConfig
+    )
 
     const contentHashData: CreativeContentData = {
       headlines: creativeData.headlines,
@@ -807,12 +789,11 @@ export async function POST(request: NextRequest) {
       keywordsWithVolume: publishKeywordsWithVolume,
       finalUrl: creativeData.finalUrl || '',
     }
-    const campaignConfigHashData: CampaignConfigData = {
-      targetCountry: _campaignConfig.targetCountry || '',
-      targetLanguage: _campaignConfig.targetLanguage || '',
-      dailyBudget: _campaignConfig.budgetAmount || 0,
-      maxCpc: _campaignConfig.maxCpcBid || 0
-    }
+    const campaignConfigHashData = toCampaignConfigHashData(
+      publishHashCampaignConfig,
+      offer,
+      { useZeroBudgetFallback: true }
+    )
     const contentHash = computeContentHash(contentHashData)
     const campaignConfigHash = computeCampaignConfigHash(campaignConfigHashData)
     console.log(`📝 内容哈希: ${contentHash}, 配置哈希: ${campaignConfigHash}`)
@@ -848,15 +829,13 @@ export async function POST(request: NextRequest) {
       } else {
         // 🔥 修复(2025-12-18)：使用用户在第2步配置的关键词，而非创意原始数据
         // 关键词及其matchType应该来自campaignConfig（用户配置），而不是创意数据库记录
-        const keywordsWithVolumeFromConfig = (_campaignConfig.keywords || []).map((kw: any) => ({
-          keyword: typeof kw === 'string' ? kw : kw.text,
-          text: typeof kw === 'string' ? kw : kw.text,
-          matchType: typeof kw === 'string' ? 'PHRASE' : (kw.matchType || 'PHRASE'),
-          searchVolume: typeof kw === 'object' ? kw.searchVolume : undefined,
-          competition: typeof kw === 'object' ? kw.competition : undefined,
-          lowTopPageBid: typeof kw === 'object' ? kw.lowTopPageBid : undefined,
-          highTopPageBid: typeof kw === 'object' ? kw.highTopPageBid : undefined
-        }))
+        const keywordsWithVolumeForScoring =
+          (_campaignConfig.keywords || []).length > 0
+            ? (_campaignConfig.keywords || []).map(mapKeywordVolumeForLaunchScore)
+            : resolveKeywordsWithVolumeForLaunch({
+                keywordsWithVolumeJson: primaryCreative.keywords_with_volume,
+                fallbackKeywords: creativeData.keywords,
+              })
 
         // 🔥 修复：明确构建创意对象，避免字段冲突
         const creativeForLaunchScore = {
@@ -867,16 +846,7 @@ export async function POST(request: NextRequest) {
           descriptions: creativeData.descriptions,
           keywords: creativeData.keywords,
           negativeKeywords: creativeData.negativeKeywords,  // 使用解析后的数组
-          keywordsWithVolume: keywordsWithVolumeFromConfig.length > 0 ?
-            keywordsWithVolumeFromConfig :  // 🔥 修复：使用用户配置的关键词
-            (primaryCreative.keywords_with_volume ?
-              JSON.parse(primaryCreative.keywords_with_volume) :
-              (Array.isArray(creativeData.keywords) ?
-                creativeData.keywords.map((kw: any) => ({
-                  keyword: typeof kw === 'string' ? kw : kw.keyword || kw.text || '',
-                  matchType: 'PHRASE'
-                })) :
-                [])),
+          keywordsWithVolume: keywordsWithVolumeForScoring,
           callouts: creativeData.callouts,
           sitelinks: creativeData.sitelinks,
           final_url: creativeData.finalUrl,
@@ -912,15 +882,15 @@ export async function POST(request: NextRequest) {
         // 🔥 新增(2025-12-18)：调试日志 - 追踪关键词matchType一致性
         console.log(`[Publish] 关键词matchType一致性检查:`)
         console.log(`   - 用户配置关键词数量: ${_campaignConfig.keywords?.length || 0}`)
-        if (keywordsWithVolumeFromConfig.length > 0) {
-          const matchTypeDist = keywordsWithVolumeFromConfig.reduce((acc: any, kw: any) => {
+        if (keywordsWithVolumeForScoring.length > 0) {
+          const matchTypeDist = keywordsWithVolumeForScoring.reduce((acc: any, kw: any) => {
             const type = kw.matchType || 'UNKNOWN'
             acc[type] = (acc[type] || 0) + 1
             return acc
           }, {})
           console.log(`   - 用户配置的matchType分布:`, Object.entries(matchTypeDist).map(([type, count]) => `${type}: ${count}`).join(', '))
-          if (keywordsWithVolumeFromConfig.length > 0) {
-            console.log(`   - 示例关键词 #1: ${keywordsWithVolumeFromConfig[0].keyword} (${keywordsWithVolumeFromConfig[0].matchType})`)
+          if (keywordsWithVolumeForScoring.length > 0) {
+            console.log(`   - 示例关键词 #1: ${keywordsWithVolumeForScoring[0].keyword} (${keywordsWithVolumeForScoring[0].matchType})`)
           }
         }
 
@@ -975,12 +945,7 @@ export async function POST(request: NextRequest) {
             offer,
             scoreAnalysis,
             {
-              campaignConfig: {
-                targetCountry: _campaignConfig.targetCountry || '',
-                targetLanguage: _campaignConfig.targetLanguage || '',
-                budgetAmount: _campaignConfig.budgetAmount || 0,
-                maxCpcBid: _campaignConfig.maxCpcBid || 0,
-              },
+              campaignConfig: publishHashCampaignConfig,
               contentHash,
               campaignConfigHash,
             }
@@ -1351,7 +1316,7 @@ export async function POST(request: NextRequest) {
             callouts: effectiveCreativeForTask.callouts,
             sitelinks: effectiveCreativeForTask.sitelinks,
             keywordsWithVolume: selectedCreative.keywords_with_volume
-              ? JSON.parse(selectedCreative.keywords_with_volume)
+              ? parseKeywordsWithVolumeJson(selectedCreative.keywords_with_volume)
               : undefined,
           },
           brandName: offer.brand,

@@ -1,21 +1,19 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import {
-  findLatestLaunchScore,
-  findLatestLaunchScoresByCreativeIds,
-  parseLaunchScoreAnalysis,
-  resolveLaunchScoreForCreativeCompareFromMaps,
-  type LaunchScore,
-  type LaunchScoreCompareSource,
-} from '@/lib/launch-scores'
+import { parseLaunchScoreAnalysis, type LaunchScore } from '@/lib/launch-scores'
 import { findAdCreativeById } from '@/lib/ad-creative'
 import type { AdCreative } from '@/lib/ad-creative'
 import { findOfferById } from '@/lib/offers'
 import type { Offer } from '@/lib/offers'
 import {
-  findCachedLaunchScoreForCreative,
+  findCachedLaunchScoresForCreatives,
+  readLaunchScoresForCreatives,
   saveLaunchScoreWithContentCache,
 } from '@/lib/launch-score-cache'
+import {
+  parseLaunchScoreHashCampaignConfig,
+  toLaunchScoreScoringCampaignConfig,
+} from '@/lib/launch-score-campaign-config'
 import {
   parsePositiveIntegerOfferId,
   parseUniquePositiveIntegerIds,
@@ -30,17 +28,18 @@ import type { LaunchScoreResult } from '@/lib/scoring'
  * Body:
  * - creativeIds: number[]（最多 5，不可重复）
  * - autoCalculate?: boolean — 默认 true；为 true 时现场计算（共享 Planner expand），命中 contentHash 缓存则跳过 AI
+ * - campaignConfig?: { budgetAmount?, maxCpcBid?, targetCountry?, targetLanguage? } — 与 hash/计分一致
  */
 function buildCompareScoreFromStored(
   score: LaunchScore,
-  options?: { scoreSource?: LaunchScoreCompareSource | null; fromCache?: boolean }
+  options?: { fromCache?: boolean; stale?: boolean }
 ) {
   const analysis = parseLaunchScoreAnalysis(score)
   return {
     totalScore: score.totalScore,
     calculatedAt: score.calculatedAt,
-    ...(options?.scoreSource ? { scoreSource: options.scoreSource } : {}),
     ...(options?.fromCache ? { fromCache: true } : {}),
+    ...(options?.stale ? { stale: true } : {}),
     dimensions: {
       launchViability: score.launchViabilityScore,
       adQuality: score.adQualityScore,
@@ -119,6 +118,7 @@ export async function POST(
     const body = await request.json()
     const { creativeIds } = body
     const autoCalculate = body.autoCalculate !== false
+    const hashCampaignConfig = parseLaunchScoreHashCampaignConfig(body.campaignConfig)
 
     if (!Array.isArray(creativeIds) || creativeIds.length === 0) {
       return NextResponse.json(
@@ -160,72 +160,87 @@ export async function POST(
       creatives.push(creative)
     }
 
-    let offer: Offer | null = null
-    if (autoCalculate) {
-      offer = await findOfferById(offerId, userId)
-      if (!offer) {
-        return NextResponse.json({ error: 'Offer不存在或无权访问' }, { status: 404 })
-      }
-      if (offer.scrape_status !== 'completed') {
-        return NextResponse.json(
-          { error: '请先完成产品信息抓取后再计算Launch Score' },
-          { status: 400 }
-        )
-      }
+    let offer: Offer | null = await findOfferById(offerId, userId)
+    if (!offer) {
+      return NextResponse.json({ error: 'Offer不存在或无权访问' }, { status: 404 })
+    }
+
+    if (autoCalculate && offer.scrape_status !== 'completed') {
+      return NextResponse.json(
+        { error: '请先完成产品信息抓取后再计算Launch Score' },
+        { status: 400 }
+      )
     }
 
     const computedByCreativeId = new Map<number, LaunchScoreResult>()
     const storedByCreativeId = new Map<number, LaunchScore>()
     const storedMetaByCreativeId = new Map<
       number,
-      { scoreSource?: LaunchScoreCompareSource | null; fromCache?: boolean }
+      { fromCache?: boolean; stale?: boolean }
     >()
 
-    if (autoCalculate && offer) {
+    if (autoCalculate) {
+      const cachedById = await findCachedLaunchScoresForCreatives(
+        creatives,
+        offer,
+        userId,
+        hashCampaignConfig
+      )
       const creativesToCalculate: AdCreative[] = []
 
       for (const creative of creatives) {
-        const cached = await findCachedLaunchScoreForCreative(creative, offer, userId)
+        const cached = cachedById.get(creative.id)
         if (cached) {
           storedByCreativeId.set(creative.id, cached)
           storedMetaByCreativeId.set(creative.id, { fromCache: true })
-          continue
+        } else {
+          creativesToCalculate.push(creative)
         }
-        creativesToCalculate.push(creative)
       }
 
       if (creativesToCalculate.length > 0) {
+        const scoringConfig = toLaunchScoreScoringCampaignConfig(hashCampaignConfig, offer)
         const analyses = await calculateLaunchScoresForCreatives(
           offer,
           creativesToCalculate,
-          userId
+          userId,
+          scoringConfig
         )
-        for (let index = 0; index < creativesToCalculate.length; index++) {
-          const creative = creativesToCalculate[index]
-          const computed = analyses[index]
-          computedByCreativeId.set(creative.id, computed)
-
-          await saveLaunchScoreWithContentCache(
-            userId,
-            offer.id,
-            creative,
-            offer,
-            computed.scoreAnalysis
-          )
+        await Promise.all(
+          creativesToCalculate.map(async (creative, index) => {
+            const computed = analyses[index]
+            computedByCreativeId.set(creative.id, computed)
+            await saveLaunchScoreWithContentCache(
+              userId,
+              offer!.id,
+              creative,
+              offer!,
+              computed.scoreAnalysis,
+              { campaignConfig: hashCampaignConfig }
+            )
+          })
+        )
+      }
+    } else {
+      const readsById = await readLaunchScoresForCreatives(
+        creatives,
+        offer,
+        userId,
+        hashCampaignConfig
+      )
+      for (const creative of creatives) {
+        const read = readsById.get(creative.id)
+        if (!read) {
+          continue
+        }
+        if (read.score) {
+          storedByCreativeId.set(creative.id, read.score)
+          storedMetaByCreativeId.set(creative.id, { fromCache: true })
+        } else if (read.staleScore) {
+          storedMetaByCreativeId.set(creative.id, { stale: true })
         }
       }
     }
-
-    const offerLatestScore = autoCalculate
-      ? null
-      : await findLatestLaunchScore(offerId, userId)
-    const scoresByCreativeId = autoCalculate
-      ? new Map<number, LaunchScore>()
-      : await findLatestLaunchScoresByCreativeIds(
-          creatives.map((c) => c.id),
-          userId
-        )
-    const compareCreativeCount = creatives.length
 
     const comparisons = []
 
@@ -252,26 +267,22 @@ export async function POST(
         continue
       }
 
-      const { score, scoreSource } = resolveLaunchScoreForCreativeCompareFromMaps(
-        creative.id,
-        scoresByCreativeId,
-        offerLatestScore,
-        compareCreativeCount
-      )
-
-      if (score) {
-        comparisons.push({
-          creativeId: creative.id,
-          creative: buildCreativeSummary(creative),
-          score: buildCompareScoreFromStored(score, { scoreSource }),
-        })
-      } else {
+      if (storedMeta?.stale) {
         comparisons.push({
           creativeId: creative.id,
           creative: buildCreativeSummary(creative),
           score: null,
+          stale: true,
+          message: '创意内容或投放配置已变更，请重新计算',
         })
+        continue
       }
+
+      comparisons.push({
+        creativeId: creative.id,
+        creative: buildCreativeSummary(creative),
+        score: null,
+      })
     }
 
     return NextResponse.json({
@@ -279,6 +290,7 @@ export async function POST(
       data: {
         offerId,
         comparisons,
+        ...(hashCampaignConfig ? { campaignConfig: hashCampaignConfig } : {}),
       },
     })
 

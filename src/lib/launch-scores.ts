@@ -123,6 +123,77 @@ export type KeywordVolumeHashInput = {
   volumeUnavailableReason?: 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
 }
 
+/** 安全解析 DB / 配置中的 keywords_with_volume JSON */
+export function parseKeywordsWithVolumeJson(
+  raw: string | null | undefined
+): KeywordVolumeHashInput[] {
+  if (!raw?.trim()) {
+    return []
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    return Array.isArray(parsed) ? (parsed as KeywordVolumeHashInput[]) : []
+  } catch {
+    return []
+  }
+}
+
+/** 发布/计分：解析 keywordsWithVolume 优先级（配置 > DB JSON > 创意 keywords） */
+export function resolveKeywordsWithVolumeForLaunch(input: {
+  configKeywords?: unknown[] | null
+  keywordsWithVolumeJson?: string | null
+  fallbackKeywords?: unknown[] | null
+}): KeywordVolumeHashInput[] {
+  if (input.configKeywords?.length) {
+    return input.configKeywords.map(mapCampaignKeywordToVolumeInput)
+  }
+  const fromDb = parseKeywordsWithVolumeJson(input.keywordsWithVolumeJson)
+  if (fromDb.length > 0) {
+    return fromDb
+  }
+  if (!input.fallbackKeywords?.length) {
+    return []
+  }
+  return input.fallbackKeywords.map(mapCampaignKeywordToVolumeInput)
+}
+
+/** 计分用：在 mapCampaignKeywordToVolumeInput 基础上保留出价等扩展字段 */
+export function mapKeywordVolumeForLaunchScore(kw: unknown): KeywordVolumeHashInput & {
+  text?: string
+  lowTopPageBid?: unknown
+  highTopPageBid?: unknown
+} {
+  const mapped = mapCampaignKeywordToVolumeInput(kw)
+  const row = typeof kw === 'object' && kw != null ? (kw as Record<string, unknown>) : null
+  return {
+    ...mapped,
+    text: mapped.keyword,
+    matchType: mapped.matchType || 'PHRASE',
+    lowTopPageBid: row?.lowTopPageBid,
+    highTopPageBid: row?.highTopPageBid,
+  }
+}
+
+/** 将发布/配置中的关键词项转为哈希与计分共用的结构 */
+export function mapCampaignKeywordToVolumeInput(kw: unknown): KeywordVolumeHashInput {
+  if (typeof kw === 'string') {
+    return { keyword: kw, matchType: 'PHRASE' }
+  }
+  const row = kw as {
+    text?: string
+    keyword?: string
+    searchVolume?: number
+    matchType?: string
+    competition?: string
+  }
+  return {
+    keyword: row.text ?? row.keyword,
+    searchVolume: row.searchVolume,
+    matchType: row.matchType,
+    competition: row.competition,
+  }
+}
+
 /**
  * 创意内容数据（用于计算哈希）
  */

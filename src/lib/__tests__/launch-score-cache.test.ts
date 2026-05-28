@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const findCachedLaunchScoreMock = vi.fn()
 const createLaunchScoreMock = vi.fn()
+const findLatestLaunchScoreMock = vi.fn()
+const resolveLaunchScoreForCreativeCompareMock = vi.fn()
 
 vi.mock('../launch-scores', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../launch-scores')>()
@@ -9,11 +11,18 @@ vi.mock('../launch-scores', async (importOriginal) => {
     ...actual,
     findCachedLaunchScore: (...args: unknown[]) => findCachedLaunchScoreMock(...args),
     createLaunchScore: (...args: unknown[]) => createLaunchScoreMock(...args),
+    findLatestLaunchScore: (...args: unknown[]) => findLatestLaunchScoreMock(...args),
+    resolveLaunchScoreForCreativeCompare: (...args: unknown[]) =>
+      resolveLaunchScoreForCreativeCompareMock(...args),
   }
 })
 
 import { computeContentHash } from '../launch-scores'
-import { buildLaunchScoreHashes, saveLaunchScoreWithContentCache } from '../launch-score-cache'
+import {
+  buildLaunchScoreHashes,
+  readLaunchScoreForCreative,
+  saveLaunchScoreWithContentCache,
+} from '../launch-score-cache'
 
 describe('buildLaunchScoreHashes', () => {
   const offer = {
@@ -86,6 +95,68 @@ describe('computeContentHash keywordsWithVolume', () => {
       keywordsWithVolume: [{ keyword: 'kw', searchVolume: 99 }],
     })
     expect(changed).not.toBe(base)
+  })
+})
+
+describe('readLaunchScoreForCreative', () => {
+  const offer = {
+    id: 1,
+    target_country: 'US',
+    target_language: 'en',
+    final_url: 'https://example.com/o',
+    url: 'https://example.com/o',
+  } as any
+
+  const creative = {
+    id: 10,
+    headlines: ['H1'],
+    descriptions: ['D1'],
+    keywords: ['kw'],
+    negativeKeywords: [],
+    final_url: 'https://example.com/c',
+  } as any
+
+  beforeEach(() => {
+    findCachedLaunchScoreMock.mockReset()
+    findLatestLaunchScoreMock.mockReset()
+    resolveLaunchScoreForCreativeCompareMock.mockReset()
+  })
+
+  it('returns hash-matched score when cache hits', async () => {
+    const cached = { id: 50, totalScore: 88 }
+    findCachedLaunchScoreMock.mockResolvedValue(cached)
+
+    const result = await readLaunchScoreForCreative(creative, offer, 1)
+
+    expect(result).toEqual({ score: cached, staleScore: null })
+    expect(resolveLaunchScoreForCreativeCompareMock).not.toHaveBeenCalled()
+  })
+
+  it('returns staleScore when cache misses but legacy row exists', async () => {
+    findCachedLaunchScoreMock.mockResolvedValue(null)
+    findLatestLaunchScoreMock.mockResolvedValue({ id: 1, totalScore: 70 })
+    const stale = { id: 40, totalScore: 65 }
+    resolveLaunchScoreForCreativeCompareMock.mockResolvedValue({
+      score: stale,
+      scoreSource: 'creative',
+    })
+
+    const result = await readLaunchScoreForCreative(creative, offer, 1)
+
+    expect(result).toEqual({ score: null, staleScore: stale })
+  })
+
+  it('returns empty when no cache and no stored score', async () => {
+    findCachedLaunchScoreMock.mockResolvedValue(null)
+    findLatestLaunchScoreMock.mockResolvedValue(null)
+    resolveLaunchScoreForCreativeCompareMock.mockResolvedValue({
+      score: null,
+      scoreSource: null,
+    })
+
+    const result = await readLaunchScoreForCreative(creative, offer, 1)
+
+    expect(result).toEqual({ score: null, staleScore: null })
   })
 })
 

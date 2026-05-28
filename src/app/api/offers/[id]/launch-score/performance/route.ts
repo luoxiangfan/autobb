@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { findLatestLaunchScore } from '@/lib/launch-scores'
+import { findAdCreativeById } from '@/lib/ad-creative'
 import { getPerformanceEnhancedAnalysis } from '@/lib/launch-score-performance'
 import { findOfferById } from '@/lib/offers'
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+import { readLaunchScoreForCreative } from '@/lib/launch-score-cache'
+import {
+  parseLaunchScoreHashCampaignConfigFromSearchParams,
+} from '@/lib/launch-score-campaign-config'
+import {
+  parsePositiveIntegerId,
+  parsePositiveIntegerOfferId,
+} from '@/lib/parse-offer-id'
 
 /**
  * GET /api/offers/:id/launch-score/performance
@@ -11,8 +19,10 @@ import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
  * 获取Launch Score预测与实际性能数据的对比分析
  *
  * Query Parameters:
+ * - creativeId: number (可选，按创意 contentHash 匹配 Launch Score)
  * - daysBack: number (可选，默认30天)
  * - avgOrderValue: number (可选，用于ROI计算)
+ * - campaignConfig: JSON 或 budgetAmount / maxCpcBid / targetCountry / targetLanguage
  */
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +31,6 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    // 1. 验证用户身份
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
@@ -36,7 +45,6 @@ export async function GET(
       return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
     }
 
-    // 2. 验证Offer存在且属于当前用户
     const offer = await findOfferById(offerId, userId)
     if (!offer) {
       return NextResponse.json(
@@ -45,29 +53,55 @@ export async function GET(
       )
     }
 
-    // 3. 获取查询参数
     const { searchParams } = new URL(request.url)
     const daysBack = parseInt(searchParams.get('daysBack') || '30')
     const avgOrderValue = searchParams.get('avgOrderValue')
       ? parseFloat(searchParams.get('avgOrderValue')!)
       : undefined
+    const queryCreativeId = parsePositiveIntegerId(searchParams.get('creativeId'))
+    const hashCampaignConfig =
+      parseLaunchScoreHashCampaignConfigFromSearchParams(searchParams)
 
-    // 4. 获取最新的Launch Score
-    const launchScore = await findLatestLaunchScore(offerId, userId)
+    let launchScore = null
+    let stale = false
+
+    if (queryCreativeId != null) {
+      const creative = await findAdCreativeById(queryCreativeId, userId)
+      if (!creative || creative.offer_id !== offer.id) {
+        return NextResponse.json(
+          { error: '创意不存在或无权访问' },
+          { status: 404 }
+        )
+      }
+
+      const read = await readLaunchScoreForCreative(
+        creative,
+        offer,
+        userId,
+        hashCampaignConfig
+      )
+      launchScore = read.score
+      stale = !read.score && read.staleScore != null
+    } else {
+      launchScore = await findLatestLaunchScore(offerId, userId)
+    }
 
     if (!launchScore) {
       return NextResponse.json(
         {
           success: false,
-          message: '暂无Launch Score记录，请先进行投放分析',
+          message: stale
+            ? '创意内容或投放配置已变更，当前 Launch Score 已过期，请重新计算'
+            : '暂无Launch Score记录，请先进行投放分析',
           hasLaunchScore: false,
-          hasPerformanceData: false
+          hasPerformanceData: false,
+          ...(stale ? { stale: true } : {}),
+          ...(queryCreativeId != null ? { creativeId: queryCreativeId } : {}),
         },
         { status: 200 }
       )
     }
 
-    // 5. 获取性能增强的分析结果
     const enhancedAnalysis = await getPerformanceEnhancedAnalysis(
       launchScore,
       userId,
@@ -75,15 +109,16 @@ export async function GET(
       avgOrderValue
     )
 
-    // 6. 返回结果（v4.0 - 4维度）
     return NextResponse.json({
       success: true,
       hasLaunchScore: true,
       hasPerformanceData: enhancedAnalysis.performanceData !== null,
+      ...(queryCreativeId != null ? { creativeId: queryCreativeId } : {}),
       launchScore: {
         id: launchScore.id,
         totalScore: launchScore.totalScore,
         calculatedAt: launchScore.calculatedAt,
+        adCreativeId: launchScore.adCreativeId,
         dimensions: {
           launchViability: launchScore.launchViabilityScore,
           adQuality: launchScore.adQualityScore,

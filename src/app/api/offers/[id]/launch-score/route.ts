@@ -9,18 +9,22 @@ import {
 import {
   findLatestLaunchScore,
   parseLaunchScoreAnalysis,
-  resolveLaunchScoreForCreativeCompare,
 } from '@/lib/launch-scores'
 import {
-  findCachedLaunchScoreForCreative,
-  saveLaunchScoreWithContentCache,
+  ensureLaunchScoreForCreative,
+  readLaunchScoreForCreative,
 } from '@/lib/launch-score-cache'
-import { calculateLaunchScore } from '@/lib/scoring'
+import {
+  parseLaunchScoreHashCampaignConfig,
+  parseLaunchScoreHashCampaignConfigFromSearchParams,
+} from '@/lib/launch-score-campaign-config'
 import { parsePositiveIntegerId, parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 /**
  * POST /api/offers/:id/launch-score
  * 计算指定Offer和Creative的Launch Score
+ *
+ * Body 可选 campaignConfig: { budgetAmount?, maxCpcBid?, targetCountry?, targetLanguage? }
  */
 export async function POST(
   request: NextRequest,
@@ -39,6 +43,7 @@ export async function POST(
     const userId = authResult.user.userId
 
     const body = await request.json()
+    const hashCampaignConfig = parseLaunchScoreHashCampaignConfig(body.campaignConfig)
     const parsedCreativeId = parsePositiveIntegerId(body.creativeId)
 
     if (!parsedCreativeId) {
@@ -93,30 +98,19 @@ export async function POST(
       )
     }
 
-    const cached = await findCachedLaunchScoreForCreative(creative, offer, userId)
-    if (cached) {
-      const scoreAnalysis = parseLaunchScoreAnalysis(cached)
-      return NextResponse.json({
-        success: true,
-        launchScore: cached,
-        analysis: scoreAnalysis,
-        fromCache: true,
-      })
-    }
-
-    const analysis = await calculateLaunchScore(offer, creative, userId)
-    const { launchScore } = await saveLaunchScoreWithContentCache(
+    const { launchScore, fromCache } = await ensureLaunchScoreForCreative(
       userId,
-      offer.id,
-      creative,
       offer,
-      analysis.scoreAnalysis
+      creative,
+      hashCampaignConfig
     )
+    const scoreAnalysis = parseLaunchScoreAnalysis(launchScore)
 
     return NextResponse.json({
       success: true,
       launchScore,
-      analysis: analysis.scoreAnalysis,
+      analysis: scoreAnalysis,
+      ...(fromCache ? { fromCache: true } : {}),
     })
   } catch (error: any) {
     console.error('计算Launch Score失败:', error)
@@ -134,6 +128,7 @@ export async function POST(
  * GET /api/offers/:id/launch-score
  * 获取Offer的最新Launch Score
  * 支持 ?autoCalculate=true 参数自动计算
+ * 可选 campaignConfig（JSON）或 budgetAmount / maxCpcBid / targetCountry / targetLanguage
  */
 export const dynamic = 'force-dynamic'
 
@@ -149,6 +144,8 @@ export async function GET(
     const { searchParams } = new URL(request.url)
     const autoCalculate = searchParams.get('autoCalculate') === 'true'
     const queryCreativeId = parsePositiveIntegerId(searchParams.get('creativeId'))
+    const hashCampaignConfig =
+      parseLaunchScoreHashCampaignConfigFromSearchParams(searchParams)
 
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -179,20 +176,72 @@ export async function GET(
       }
     }
 
-    let launchScore = queryCreativeId
-      ? (
-          await resolveLaunchScoreForCreativeCompare(
-            queryCreativeId,
-            userId,
-            await findLatestLaunchScore(offer.id, userId),
-            1
-          )
-        ).score
-      : await findLatestLaunchScore(offer.id, userId)
+    if (queryCreative) {
+      const read = await readLaunchScoreForCreative(
+        queryCreative,
+        offer,
+        userId,
+        hashCampaignConfig
+      )
+      if (read.score) {
+        return NextResponse.json({
+          success: true,
+          launchScore: read.score,
+        })
+      }
 
-    // 如果没有Launch Score且启用自动计算
+      if (autoCalculate) {
+        if (offer.scrape_status !== 'completed') {
+          return NextResponse.json({
+            success: true,
+            launchScore: null,
+            message: '请先完成产品信息抓取后再计算Launch Score',
+            canAutoCalculate: false,
+          })
+        }
+
+        const { launchScore, fromCache } = await ensureLaunchScoreForCreative(
+          userId,
+          offer,
+          queryCreative
+        )
+        return NextResponse.json({
+          success: true,
+          launchScore,
+          autoCalculated: true,
+          usedCreativeId: queryCreative.id,
+          ...(fromCache ? { fromCache: true } : {}),
+        })
+      }
+
+      const creatives = await findAdCreativesByOfferId(offer.id, userId)
+      const canAutoCalculate =
+        offer.scrape_status === 'completed' && creatives.length > 0
+
+      if (read.staleScore) {
+        return NextResponse.json({
+          success: true,
+          launchScore: null,
+          stale: true,
+          staleLaunchScoreId: read.staleScore.id,
+          message: '创意内容已变更，当前 Launch Score 已过期，请重新计算',
+          canAutoCalculate,
+          hint: canAutoCalculate ? '可使用 ?autoCalculate=true 参数自动计算' : undefined,
+        })
+      }
+
+      return NextResponse.json({
+        success: true,
+        launchScore: null,
+        message: '暂无 Launch Score，请先计算',
+        canAutoCalculate,
+        hint: canAutoCalculate ? '可使用 ?autoCalculate=true 参数自动计算' : undefined,
+      })
+    }
+
+    let launchScore = await findLatestLaunchScore(offer.id, userId)
+
     if (!launchScore && autoCalculate) {
-      // 检查Offer是否已完成抓取
       if (offer.scrape_status !== 'completed') {
         return NextResponse.json({
           success: true,
@@ -202,7 +251,6 @@ export async function GET(
         })
       }
 
-      // 查找该Offer的最新创意
       const creatives = await findAdCreativesByOfferId(offer.id, userId)
       if (creatives.length === 0) {
         return NextResponse.json({
@@ -213,39 +261,31 @@ export async function GET(
         })
       }
 
-      const targetCreative =
-        queryCreative ??
-        creatives.reduce((best: any, current: any) =>
-          (current.score || 0) > (best.score || 0) ? current : best
-        )
+      const targetCreative = creatives.reduce((best, current) =>
+        (current.score || 0) > (best.score || 0) ? current : best
+      )
 
-      const cached = await findCachedLaunchScoreForCreative(targetCreative, offer, userId)
-      if (cached) {
-        launchScore = cached
-      } else {
-        const analysis = await calculateLaunchScore(offer, targetCreative, userId)
-        const saved = await saveLaunchScoreWithContentCache(
-          userId,
-          offer.id,
-          targetCreative,
-          offer,
-          analysis.scoreAnalysis
-        )
-        launchScore = saved.launchScore
-      }
+      const ensured = await ensureLaunchScoreForCreative(
+        userId,
+        offer,
+        targetCreative,
+        hashCampaignConfig
+      )
+      launchScore = ensured.launchScore
 
       return NextResponse.json({
         success: true,
         launchScore,
         autoCalculated: true,
         usedCreativeId: targetCreative.id,
+        ...(ensured.fromCache ? { fromCache: true } : {}),
       })
     }
 
     if (!launchScore) {
-      // 检查是否可以自动计算
       const creatives = await findAdCreativesByOfferId(offer.id, userId)
-      const canAutoCalculate = offer.scrape_status === 'completed' && creatives.length > 0
+      const canAutoCalculate =
+        offer.scrape_status === 'completed' && creatives.length > 0
 
       return NextResponse.json({
         success: true,

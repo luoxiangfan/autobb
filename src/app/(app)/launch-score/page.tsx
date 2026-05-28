@@ -111,6 +111,9 @@ export default function LaunchScorePage() {
         } else {
           setLaunchScore(null)
           setAnalysis(null)
+          if (scoreData.stale && scoreData.message) {
+            setError(scoreData.message)
+          }
         }
       } else {
         const scoreData = await scoreRes.json().catch(() => ({}))
