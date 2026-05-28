@@ -1,24 +1,48 @@
 import { describe, expect, it } from 'vitest'
 import {
   deriveSkipKeywordPoolExpandLoad,
+  parsePositiveIntegerId,
   parsePositiveIntegerOfferId,
   parsePositiveIntegerOfferIdList,
+  parseUniquePositiveIntegerIds,
 } from '../parse-offer-id'
 
-describe('parsePositiveIntegerOfferId', () => {
+describe('parsePositiveIntegerId', () => {
   it('accepts positive integers', () => {
-    expect(parsePositiveIntegerOfferId(42)).toBe(42)
+    expect(parsePositiveIntegerId(42)).toBe(42)
   })
 
   it('accepts numeric strings', () => {
-    expect(parsePositiveIntegerOfferId(' 42 ')).toBe(42)
+    expect(parsePositiveIntegerId(' 42 ')).toBe(42)
   })
 
   it('rejects invalid values', () => {
+    expect(parsePositiveIntegerId(0)).toBeUndefined()
+    expect(parsePositiveIntegerId(-1)).toBeUndefined()
+    expect(parsePositiveIntegerId('42x')).toBeUndefined()
+    expect(parsePositiveIntegerId(null)).toBeUndefined()
+  })
+})
+
+describe('parsePositiveIntegerOfferId', () => {
+  it('delegates to parsePositiveIntegerId', () => {
+    expect(parsePositiveIntegerOfferId(42)).toBe(42)
+    expect(parsePositiveIntegerOfferId(' 42 ')).toBe(42)
     expect(parsePositiveIntegerOfferId(0)).toBeUndefined()
-    expect(parsePositiveIntegerOfferId(-1)).toBeUndefined()
-    expect(parsePositiveIntegerOfferId('42x')).toBeUndefined()
-    expect(parsePositiveIntegerOfferId(null)).toBeUndefined()
+  })
+})
+
+describe('parseUniquePositiveIntegerIds', () => {
+  it('returns unique ids in order', () => {
+    expect(parseUniquePositiveIntegerIds([3, 1, 2])).toEqual({ ok: true, ids: [3, 1, 2] })
+  })
+
+  it('rejects invalid ids', () => {
+    expect(parseUniquePositiveIntegerIds([1, 'x'])).toEqual({ ok: false, reason: 'invalid' })
+  })
+
+  it('rejects duplicate ids', () => {
+    expect(parseUniquePositiveIntegerIds([1, 2, 2])).toEqual({ ok: false, reason: 'duplicate' })
   })
 })
 

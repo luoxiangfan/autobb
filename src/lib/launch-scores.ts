@@ -398,6 +398,50 @@ export async function findLatestLaunchScore(offerId: number, userId: number): Pr
   return mapRowToLaunchScore(row)
 }
 
+export type LaunchScoreCompareSource = 'creative' | 'offer_latest'
+
+/** offer 最新一条记录在 per-creative 未命中时的对比回退（可单测） */
+export function resolveOfferLatestLaunchScoreForCompare(
+  offerLatest: LaunchScore | null,
+  creativeId: number,
+  compareCreativeCount: number
+): { score: LaunchScore | null; scoreSource: LaunchScoreCompareSource | null } {
+  if (!offerLatest) {
+    return { score: null, scoreSource: null }
+  }
+
+  if (offerLatest.adCreativeId === creativeId) {
+    return { score: offerLatest, scoreSource: 'creative' }
+  }
+
+  if (offerLatest.adCreativeId == null && compareCreativeCount === 1) {
+    return { score: offerLatest, scoreSource: 'offer_latest' }
+  }
+
+  return { score: null, scoreSource: null }
+}
+
+/**
+ * 创意对比读库：优先 per-creative 记录；单条对比时允许回退到无 ad_creative_id 的历史 offer 最新分。
+ */
+export async function resolveLaunchScoreForCreativeCompare(
+  creativeId: number,
+  userId: number,
+  offerLatest: LaunchScore | null,
+  compareCreativeCount: number
+): Promise<{ score: LaunchScore | null; scoreSource: LaunchScoreCompareSource | null }> {
+  const byCreative = await findLaunchScoreByCreativeId(creativeId, userId)
+  if (byCreative) {
+    return { score: byCreative, scoreSource: 'creative' }
+  }
+
+  return resolveOfferLatestLaunchScoreForCompare(
+    offerLatest,
+    creativeId,
+    compareCreativeCount
+  )
+}
+
 /**
  * 删除Launch Score
  */

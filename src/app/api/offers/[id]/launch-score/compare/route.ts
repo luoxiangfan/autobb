@@ -1,9 +1,16 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findLatestLaunchScore, parseLaunchScoreAnalysis } from '@/lib/launch-scores'
+import {
+  findLatestLaunchScore,
+  parseLaunchScoreAnalysis,
+  resolveLaunchScoreForCreativeCompare,
+} from '@/lib/launch-scores'
 import { findAdCreativeById } from '@/lib/ad-creative'
 import { findOfferById } from '@/lib/offers'
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+import {
+  parsePositiveIntegerOfferId,
+  parseUniquePositiveIntegerIds,
+} from '@/lib/parse-offer-id'
 import { calculateLaunchScoresForCreatives } from '@/lib/scoring'
 
 /**
@@ -11,8 +18,8 @@ import { calculateLaunchScoresForCreatives } from '@/lib/scoring'
  * 批量获取多个Creative的Launch Score用于对比 (v4.0 - 4维度)
  *
  * Body:
- * - creativeIds: number[]（最多 5）
- * - autoCalculate?: boolean — 为 true 时对每条创意现场计算（共享一次 Planner expand prepare），不读库内最新一条
+ * - creativeIds: number[]（最多 5，不可重复）
+ * - autoCalculate?: boolean — 为 true 时对每条创意现场计算（共享一次 Planner expand prepare），不读库
  */
 export async function POST(
   request: NextRequest,
@@ -56,11 +63,19 @@ export async function POST(
       )
     }
 
-    const parsedCreativeIds = creativeIds.map((raw: unknown) => parsePositiveIntegerOfferId(raw))
-    if (parsedCreativeIds.some((id) => id == null)) {
-      return NextResponse.json({ error: 'creativeIds 含无效 ID' }, { status: 400 })
+    const parsedIds = parseUniquePositiveIntegerIds(creativeIds)
+    if (!parsedIds.ok) {
+      return NextResponse.json(
+        {
+          error:
+            parsedIds.reason === 'duplicate'
+              ? 'creativeIds 含重复 ID'
+              : 'creativeIds 含无效 ID',
+        },
+        { status: 400 }
+      )
     }
-    const creativeIdList = parsedCreativeIds as number[]
+    const creativeIdList = parsedIds.ids
 
     const creatives = []
     for (const creativeId of creativeIdList) {
@@ -85,6 +100,11 @@ export async function POST(
         creatives.map((creative, index) => [creative.id, analyses[index]])
       )
     }
+
+    const offerLatestScore = autoCalculate
+      ? null
+      : await findLatestLaunchScore(offerId, userId)
+    const compareCreativeCount = creatives.length
 
     const comparisons = []
 
@@ -122,7 +142,12 @@ export async function POST(
         continue
       }
 
-      const score = await findLatestLaunchScore(offerId, userId)
+      const { score, scoreSource } = await resolveLaunchScoreForCreativeCompare(
+        creative.id,
+        userId,
+        offerLatestScore,
+        compareCreativeCount
+      )
 
       if (score) {
         const analysis = parseLaunchScoreAnalysis(score)
@@ -139,6 +164,7 @@ export async function POST(
           score: {
             totalScore: score.totalScore,
             calculatedAt: score.calculatedAt,
+            scoreSource,
             dimensions: {
               launchViability: score.launchViabilityScore,
               adQuality: score.adQualityScore,

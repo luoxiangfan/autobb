@@ -4,7 +4,7 @@ import { findOfferById } from '@/lib/offers'
 import { findAdCreativeById, findAdCreativesByOfferId } from '@/lib/ad-creative'
 import { createLaunchScore, findLatestLaunchScore } from '@/lib/launch-scores'
 import { calculateLaunchScore } from '@/lib/scoring'
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+import { parsePositiveIntegerId, parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 /**
  * POST /api/offers/:id/launch-score
@@ -27,12 +27,12 @@ export async function POST(
     const userId = authResult.user.userId
 
     const body = await request.json()
-    const { creativeId } = body
+    const parsedCreativeId = parsePositiveIntegerId(body.creativeId)
 
-    if (!creativeId) {
+    if (!parsedCreativeId) {
       return NextResponse.json(
         {
-          error: '请指定要评分的创意ID',
+          error: '请指定有效的创意ID',
         },
         { status: 400 }
       )
@@ -61,7 +61,7 @@ export async function POST(
     }
 
     // 验证Creative存在且属于当前Offer
-    const creative = await findAdCreativeById(creativeId, userId)
+    const creative = await findAdCreativeById(parsedCreativeId, userId)
 
     if (!creative) {
       return NextResponse.json(
@@ -85,7 +85,9 @@ export async function POST(
     const analysis = await calculateLaunchScore(offer, creative, userId)
 
     // 保存到数据库 - 使用scoreAnalysis字段
-    const launchScore = await createLaunchScore(userId, offer.id, analysis.scoreAnalysis)
+    const launchScore = await createLaunchScore(userId, offer.id, analysis.scoreAnalysis, {
+      adCreativeId: creative.id,
+    })
 
     return NextResponse.json({
       success: true,
@@ -174,7 +176,9 @@ export async function GET(
 
       // 计算Launch Score
       const analysis = await calculateLaunchScore(offer, bestCreative, userId)
-      launchScore = await createLaunchScore(userId, offer.id, analysis.scoreAnalysis)
+      launchScore = await createLaunchScore(userId, offer.id, analysis.scoreAnalysis, {
+        adCreativeId: bestCreative.id,
+      })
 
       return NextResponse.json({
         success: true,
