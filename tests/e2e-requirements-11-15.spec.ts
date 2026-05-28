@@ -386,22 +386,21 @@ test.describe('Requirements 11-15 E2E Testing', () => {
   test('6. Requirement 13 - Verify Data Sync Mechanism', async ({ page }) => {
     console.log('🔄 测试6：需求13 - 验证数据同步机制')
 
-    // Check for cron script
-    const cronScriptPath = path.join(__dirname, '../scripts/cron-sync-data.ts')
-    const cronScriptExists = fs.existsSync(cronScriptPath)
+    const dataSyncSchedulerPath = path.join(__dirname, '../src/lib/queue/schedulers/data-sync-scheduler.ts')
+    const dataSyncSchedulerExists = fs.existsSync(dataSyncSchedulerPath)
 
     // Check for data-sync-service
     const dataSyncServicePath = path.join(__dirname, '../src/lib/data-sync-service.ts')
     const dataSyncServiceExists = fs.existsSync(dataSyncServicePath)
 
     console.log(`\n📊 数据同步机制检查:`)
-    console.log(`✅ Cron脚本 (scripts/cron-sync-data.ts): ${cronScriptExists ? '存在' : '不存在'}`)
+    console.log(`✅ 队列调度器 (src/lib/queue/schedulers/data-sync-scheduler.ts): ${dataSyncSchedulerExists ? '存在' : '不存在'}`)
     console.log(`✅ 数据同步服务 (src/lib/data-sync-service.ts): ${dataSyncServiceExists ? '存在' : '不存在'}`)
 
-    if (cronScriptExists) {
-      const cronContent = fs.readFileSync(cronScriptPath, 'utf-8')
-      const hasSyncFunction = cronContent.includes('syncPerformanceData') || cronContent.includes('dataSyncService')
-      console.log(`✅ Cron脚本包含同步函数: ${hasSyncFunction ? '是' : '否'}`)
+    if (dataSyncSchedulerExists) {
+      const schedulerContent = fs.readFileSync(dataSyncSchedulerPath, 'utf-8')
+      const hasSyncTrigger = schedulerContent.includes('triggerDataSync')
+      console.log(`✅ 数据同步调度器包含 triggerDataSync: ${hasSyncTrigger ? '是' : '否'}`)
     }
 
     if (dataSyncServiceExists) {

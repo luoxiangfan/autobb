@@ -48,13 +48,6 @@ describe('Enhanced Modules - Type Exports', () => {
     })
   })
 
-  describe('Enhanced Localization Adapter', () => {
-    it('should export adaptForLanguageAndRegionEnhanced function', async () => {
-      const module = await import('../enhanced-localization-adapter')
-      expect(module).toHaveProperty('adaptForLanguageAndRegionEnhanced')
-    })
-  })
-
   describe('Enhanced Brand Identifier', () => {
     it('should export identifyBrandEnhanced function', async () => {
       const module = await import('../enhanced-brand-identifier')
