@@ -2,7 +2,13 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers'
 import { findAdCreativeById, findAdCreativesByOfferId } from '@/lib/ad-creative'
-import { createLaunchScore, findLatestLaunchScore } from '@/lib/launch-scores'
+import {
+  createLaunchScore,
+  findLatestLaunchScore,
+  parseLaunchScoreAnalysis,
+  resolveLaunchScoreForCreativeCompare,
+} from '@/lib/launch-scores'
+import { buildLaunchScoreHashes, findCachedLaunchScoreForCreative } from '@/lib/launch-score-cache'
 import { calculateLaunchScore } from '@/lib/scoring'
 import { parsePositiveIntegerId, parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
@@ -81,12 +87,33 @@ export async function POST(
       )
     }
 
-    // 使用AI计算Launch Score
-    const analysis = await calculateLaunchScore(offer, creative, userId)
+    const cached = await findCachedLaunchScoreForCreative(creative, offer, userId)
+    if (cached) {
+      const scoreAnalysis = parseLaunchScoreAnalysis(cached)
+      return NextResponse.json({
+        success: true,
+        launchScore: cached,
+        analysis: {
+          totalScore: cached.totalScore,
+          analysis: {
+            launchViability: scoreAnalysis.launchViability,
+            adQuality: scoreAnalysis.adQuality,
+            keywordStrategy: scoreAnalysis.keywordStrategy,
+            basicConfig: scoreAnalysis.basicConfig,
+          },
+          recommendations: scoreAnalysis.overallRecommendations,
+          scoreAnalysis,
+        },
+        fromCache: true,
+      })
+    }
 
-    // 保存到数据库 - 使用scoreAnalysis字段
+    const analysis = await calculateLaunchScore(offer, creative, userId)
+    const { contentHash, campaignConfigHash } = buildLaunchScoreHashes(creative, offer)
     const launchScore = await createLaunchScore(userId, offer.id, analysis.scoreAnalysis, {
       adCreativeId: creative.id,
+      contentHash,
+      campaignConfigHash,
     })
 
     return NextResponse.json({
@@ -124,6 +151,7 @@ export async function GET(
     }
     const { searchParams } = new URL(request.url)
     const autoCalculate = searchParams.get('autoCalculate') === 'true'
+    const queryCreativeId = parsePositiveIntegerId(searchParams.get('creativeId'))
 
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -143,8 +171,16 @@ export async function GET(
       )
     }
 
-    // 获取最新的Launch Score
-    let launchScore = await findLatestLaunchScore(offer.id, userId)
+    let launchScore = queryCreativeId
+      ? (
+          await resolveLaunchScoreForCreativeCompare(
+            queryCreativeId,
+            userId,
+            await findLatestLaunchScore(offer.id, userId),
+            1
+          )
+        ).score
+      : await findLatestLaunchScore(offer.id, userId)
 
     // 如果没有Launch Score且启用自动计算
     if (!launchScore && autoCalculate) {
@@ -169,22 +205,32 @@ export async function GET(
         })
       }
 
-      // 使用评分最高的创意自动计算
       const bestCreative = creatives.reduce((best: any, current: any) =>
         (current.score || 0) > (best.score || 0) ? current : best
       )
+      const targetCreative =
+        queryCreativeId != null
+          ? creatives.find((c) => c.id === queryCreativeId) ?? bestCreative
+          : bestCreative
 
-      // 计算Launch Score
-      const analysis = await calculateLaunchScore(offer, bestCreative, userId)
-      launchScore = await createLaunchScore(userId, offer.id, analysis.scoreAnalysis, {
-        adCreativeId: bestCreative.id,
-      })
+      const cached = await findCachedLaunchScoreForCreative(targetCreative, offer, userId)
+      if (cached) {
+        launchScore = cached
+      } else {
+        const analysis = await calculateLaunchScore(offer, targetCreative, userId)
+        const { contentHash, campaignConfigHash } = buildLaunchScoreHashes(targetCreative, offer)
+        launchScore = await createLaunchScore(userId, offer.id, analysis.scoreAnalysis, {
+          adCreativeId: targetCreative.id,
+          contentHash,
+          campaignConfigHash,
+        })
+      }
 
       return NextResponse.json({
         success: true,
         launchScore,
         autoCalculated: true,
-        usedCreativeId: bestCreative.id,
+        usedCreativeId: targetCreative.id,
       })
     }
 

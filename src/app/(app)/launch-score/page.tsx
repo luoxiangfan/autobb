@@ -95,8 +95,10 @@ export default function LaunchScorePage() {
         }
       }
 
-      // 获取最新的Launch Score
-      const scoreRes = await fetch(`/api/offers/${offerId}/launch-score`, {
+      const scoreQuery = creativeId
+        ? `?creativeId=${encodeURIComponent(creativeId)}`
+        : ''
+      const scoreRes = await fetch(`/api/offers/${offerId}/launch-score${scoreQuery}`, {
         credentials: 'include',
       })
 

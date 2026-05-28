@@ -51,6 +51,10 @@ describe('parsePositiveIntegerOfferIdList', () => {
     expect(parsePositiveIntegerOfferIdList('1, 2,3')).toEqual([1, 2, 3])
     expect(parsePositiveIntegerOfferIdList('1,,x,4')).toEqual([1, 4])
   })
+
+  it('dedupes ids while preserving first-seen order', () => {
+    expect(parsePositiveIntegerOfferIdList('1,1,2,2,3')).toEqual([1, 2, 3])
+  })
 })
 
 describe('deriveSkipKeywordPoolExpandLoad', () => {

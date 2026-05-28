@@ -422,6 +422,60 @@ export function resolveOfferLatestLaunchScoreForCompare(
 }
 
 /**
+ * 批量取各创意最新 Launch Score（每个 ad_creative_id 一条，已按 calculated_at 降序扫描）。
+ */
+export async function findLatestLaunchScoresByCreativeIds(
+  creativeIds: number[],
+  userId: number
+): Promise<Map<number, LaunchScore>> {
+  const result = new Map<number, LaunchScore>()
+  if (creativeIds.length === 0) {
+    return result
+  }
+
+  const db = await getDatabase()
+  const placeholders = creativeIds.map(() => '?').join(', ')
+  const rows = (await db.query(
+    `
+    SELECT * FROM launch_scores
+    WHERE ad_creative_id IN (${placeholders})
+      AND user_id = ?
+    ORDER BY calculated_at DESC
+  `,
+    [...creativeIds, userId]
+  )) as any[]
+
+  for (const row of rows) {
+    const score = mapRowToLaunchScore(row)
+    const creativeId = score.adCreativeId
+    if (creativeId != null && !result.has(creativeId)) {
+      result.set(creativeId, score)
+    }
+  }
+
+  return result
+}
+
+/** 读库对比：结合批量 per-creative 结果与 offer 最新回退 */
+export function resolveLaunchScoreForCreativeCompareFromMaps(
+  creativeId: number,
+  scoresByCreativeId: Map<number, LaunchScore>,
+  offerLatest: LaunchScore | null,
+  compareCreativeCount: number
+): { score: LaunchScore | null; scoreSource: LaunchScoreCompareSource | null } {
+  const byCreative = scoresByCreativeId.get(creativeId)
+  if (byCreative) {
+    return { score: byCreative, scoreSource: 'creative' }
+  }
+
+  return resolveOfferLatestLaunchScoreForCompare(
+    offerLatest,
+    creativeId,
+    compareCreativeCount
+  )
+}
+
+/**
  * 创意对比读库：优先 per-creative 记录；单条对比时允许回退到无 ad_creative_id 的历史 offer 最新分。
  */
 export async function resolveLaunchScoreForCreativeCompare(
@@ -430,14 +484,11 @@ export async function resolveLaunchScoreForCreativeCompare(
   offerLatest: LaunchScore | null,
   compareCreativeCount: number
 ): Promise<{ score: LaunchScore | null; scoreSource: LaunchScoreCompareSource | null }> {
-  const byCreative = await findLaunchScoreByCreativeId(creativeId, userId)
-  if (byCreative) {
-    return { score: byCreative, scoreSource: 'creative' }
-  }
-
-  return resolveOfferLatestLaunchScoreForCompare(
-    offerLatest,
+  const scoresByCreativeId = await findLatestLaunchScoresByCreativeIds([creativeId], userId)
+  return resolveLaunchScoreForCreativeCompareFromMaps(
     creativeId,
+    scoresByCreativeId,
+    offerLatest,
     compareCreativeCount
   )
 }

@@ -1,6 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findLaunchScoreById, deleteLaunchScore, parseLaunchScoreAnalysis } from '@/lib/launch-scores'
+import { parsePositiveIntegerId } from '@/lib/parse-offer-id'
 
 /**
  * GET /api/launch-scores/:id
@@ -13,7 +14,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params
+    const scoreId = parsePositiveIntegerId(params.id)
+    if (!scoreId) {
+      return NextResponse.json({ error: 'Launch Score ID无效' }, { status: 400 })
+    }
 
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -21,7 +25,7 @@ export async function GET(
     }
     const userId = authResult.user.userId
 
-    const launchScore = await findLaunchScoreById(parseInt(id, 10), userId)
+    const launchScore = await findLaunchScoreById(scoreId, userId)
 
     if (!launchScore) {
       return NextResponse.json(
@@ -61,7 +65,10 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params
+    const scoreId = parsePositiveIntegerId(params.id)
+    if (!scoreId) {
+      return NextResponse.json({ error: 'Launch Score ID无效' }, { status: 400 })
+    }
 
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -69,7 +76,7 @@ export async function DELETE(
     }
     const userId = authResult.user.userId
 
-    const success = deleteLaunchScore(parseInt(id, 10), userId)
+    const success = await deleteLaunchScore(scoreId, userId)
 
     if (!success) {
       return NextResponse.json(

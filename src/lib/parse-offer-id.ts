@@ -29,12 +29,13 @@ export function parsePositiveIntegerOfferId(value: unknown): number | undefined 
   return parsePositiveIntegerId(value)
 }
 
-/** Parse comma-separated offer ids (e.g. query `ids=1,2,3`). */
+/** Parse comma-separated offer ids (e.g. query `ids=1,2,3`); dedupes while preserving order. */
 export function parsePositiveIntegerOfferIdList(raw: string): number[] {
-  return raw
+  const ids = raw
     .split(',')
     .map((part) => parsePositiveIntegerId(part.trim()))
     .filter((id): id is number => id != null)
+  return [...new Set(ids)]
 }
 
 /**
