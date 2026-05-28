@@ -1159,9 +1159,10 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
 
   const fetchExistingCreatives = async () => {
     try {
-      const response = await fetch(`/api/offers/${offer.id}/generate-ad-creative`, {
-        credentials: 'include'
-      })
+      const response = await fetch(
+        `/api/creatives?offerId=${offer.id}&publishableOnly=true`,
+        { credentials: 'include' }
+      )
 
       // 处理401未授权 - 跳转到登录页
       if (response.status === 401) {

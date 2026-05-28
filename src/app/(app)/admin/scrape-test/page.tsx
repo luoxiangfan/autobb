@@ -296,7 +296,15 @@ export default function ScrapeTestPage() {
     }
   }
 
-  // AI创意生成
+  const pickCreativeText = (item: unknown) => {
+    if (typeof item === 'string') return item
+    if (item && typeof item === 'object' && 'text' in item) {
+      return String((item as { text: unknown }).text)
+    }
+    return ''
+  }
+
+  // AI创意生成（异步队列）
   const handleGenerate = async () => {
     if (!testOfferId) {
       toast.error('请先完成数据抓取')
@@ -315,46 +323,83 @@ export default function ScrapeTestPage() {
     setCreativeResult(null)
 
     try {
-      const response = await fetch(`/api/offers/${testOfferId}/generate-creatives`, {
+      const enqueueResponse = await fetch(`/api/offers/${testOfferId}/generate-creatives-queue`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           generationMode,
+          bucket: 'D',
           creativeType: 'product_intent',
         }),
       })
-
-      const responseData = await response.json().catch(() => ({}))
-
-      if (!response.ok) {
-        throw new Error(responseData.error || responseData.message || 'AI创意生成失败')
+      const enqueueData = await enqueueResponse.json().catch(() => ({}))
+      if (!enqueueResponse.ok) {
+        throw new Error(enqueueData.message || enqueueData.error || '创意任务入队失败')
       }
 
-      const creative = responseData.creative
-      const headlines = Array.isArray(creative?.headlines) ? creative.headlines : []
-      const descriptions = Array.isArray(creative?.descriptions) ? creative.descriptions : []
-      const pickText = (item: unknown) => {
-        if (typeof item === 'string') return item
-        if (item && typeof item === 'object' && 'text' in item) {
-          return String((item as { text: unknown }).text)
+      const taskId = typeof enqueueData.taskId === 'string' ? enqueueData.taskId : ''
+      if (!taskId) {
+        throw new Error('任务入队成功但未返回 taskId')
+      }
+
+      toast.success('创意任务已入队，正在生成…')
+
+      let completed = false
+      for (let attempt = 0; attempt < 120; attempt += 1) {
+        await new Promise(resolve => setTimeout(resolve, 3000))
+        const taskResponse = await fetch(`/api/creative-tasks/${taskId}`, { credentials: 'include' })
+        const taskData = await taskResponse.json().catch(() => ({}))
+        if (!taskResponse.ok) {
+          throw new Error(taskData.message || taskData.error || '查询创意任务失败')
         }
-        return ''
+        if (taskData.status === 'failed') {
+          throw new Error(taskData.message || taskData.error || '创意生成失败')
+        }
+        if (taskData.status === 'completed') {
+          completed = true
+          break
+        }
       }
+
+      if (!completed) {
+        throw new Error('创意生成超时，请稍后在创意列表查看')
+      }
+
+      const creativesResponse = await fetch(
+        `/api/creatives?offerId=${testOfferId}&publishableOnly=true`,
+        { credentials: 'include' }
+      )
+      const creativesPayload = await creativesResponse.json().catch(() => ({}))
+      if (!creativesResponse.ok) {
+        throw new Error(creativesPayload.error || creativesPayload.message || '读取生成结果失败')
+      }
+
+      const creatives = Array.isArray(creativesPayload.creatives) ? creativesPayload.creatives : []
+      const creative = creatives.sort(
+        (a: { score?: number }, b: { score?: number }) => Number(b.score || 0) - Number(a.score || 0)
+      )[0]
+      if (!creative) {
+        throw new Error('任务已完成但未找到可展示的创意')
+      }
+
+      const headlines = Array.isArray(creative.headlines) ? creative.headlines : []
+      const descriptions = Array.isArray(creative.descriptions) ? creative.descriptions : []
 
       const result: CreativeResult = {
-        headline1: pickText(headlines[0]) || '—',
-        headline2: pickText(headlines[1]) || '—',
-        headline3: pickText(headlines[2]) || '—',
-        description1: pickText(descriptions[0]) || '—',
-        description2: pickText(descriptions[1]) || '—',
-        callouts: creative?.callouts || [],
-        sitelinks: creative?.sitelinks || [],
+        headline1: pickCreativeText(headlines[0]) || '—',
+        headline2: pickCreativeText(headlines[1]) || '—',
+        headline3: pickCreativeText(headlines[2]) || '—',
+        description1: pickCreativeText(descriptions[0]) || '—',
+        description2: pickCreativeText(descriptions[1]) || '—',
+        callouts: creative.callouts || [],
+        sitelinks: creative.sitelinks || [],
         finalUrl: url,
-        qualityScore: Number(responseData.optimization?.achievedScore ?? creative?.score ?? 0),
-        prompt: creative?.explanation || responseData.creativeType || '同步生成',
+        qualityScore: Number(creative.score ?? 0),
+        prompt: creative.theme || creative.creativeType || '队列生成',
         timestamp: new Date().toISOString(),
-        modelUsed: `Gemini · 模式 ${getAdCreativeGenerationModeLabel(responseData.generationMode ?? generationMode)}`,
-        orientation: responseData.creativeType || 'product_intent',
+        modelUsed: `Gemini · 模式 ${getAdCreativeGenerationModeLabel(generationMode)}`,
+        orientation: creative.creativeType || 'product_intent',
       }
 
       setCreativeResult(result)

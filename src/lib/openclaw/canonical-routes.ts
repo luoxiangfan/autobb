@@ -40,7 +40,7 @@ const READ_ROUTE_DEFINITIONS: CanonicalRouteDefinition[] = [
   { method: 'GET', pattern: '/api/offers/:id/campaigns/status', feature: 'campaign-management' },
   { method: 'GET', pattern: '/api/offers/:id/url-swap-task', feature: 'url-swap' },
   { method: 'GET', pattern: '/api/offers/:id/click-farm-task', feature: 'click-farm' },
-  { method: 'GET', pattern: '/api/offers/:id/generate-ad-creative', feature: 'creative-management' },
+  { method: 'GET', pattern: '/api/creatives', feature: 'creative-management' },
   { method: 'GET', pattern: '/api/offers/:id/keyword-pool', feature: 'offer-management' },
   { method: 'GET', pattern: '/api/offers/:id/google-ads-ids', feature: 'offer-management' },
   { method: 'GET', pattern: '/api/offers/:id/launch-score', feature: 'offer-management' },
@@ -135,7 +135,6 @@ const WRITE_ROUTE_DEFINITIONS: CanonicalRouteDefinition[] = [
   // Offer 管理
   { method: 'PUT', pattern: '/api/offers/:id', feature: 'offer-management' },
   { method: 'DELETE', pattern: '/api/offers/:id', feature: 'offer-management' },
-  { method: 'POST', pattern: '/api/offers/:id/scrape', feature: 'offer-management' },
   { method: 'POST', pattern: '/api/offers/:id/rebuild', feature: 'offer-management' },
   { method: 'POST', pattern: '/api/offers/:id/unlink', feature: 'offer-management' },
   { method: 'POST', pattern: '/api/offers/:id/blacklist', feature: 'offer-management' },

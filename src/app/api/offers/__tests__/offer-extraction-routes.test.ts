@@ -6,7 +6,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { POST as postExtract } from '@/app/api/offers/extract/route'
 import { POST as postRebuild } from '@/app/api/offers/[id]/rebuild/route'
-import { POST as postScrape } from '@/app/api/offers/[id]/scrape/route'
 import { PUT as putOffer } from '@/app/api/offers/[id]/route'
 import { POST as postBatchCreate } from '@/app/api/offers/batch/create/route'
 
@@ -276,67 +275,6 @@ describe('POST /api/offers/:id/rebuild', () => {
     expect(res.status).toBe(409)
     expect(data.error).toBe('Conflict')
     expect(extractionFns.enqueueExistingOfferExtractionAndMarkQueued).not.toHaveBeenCalled()
-  })
-})
-
-describe('POST /api/offers/:id/scrape (deprecated)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    extractionFns.assertOfferAvailableForExtractionEnqueue.mockResolvedValue(undefined)
-    offerFns.updateOfferScrapeStatus.mockResolvedValue(undefined)
-    keywordFns.deleteKeywordPool.mockResolvedValue(undefined)
-    extractionFns.enqueueExistingOfferExtractionAndMarkQueued.mockResolvedValue({
-      taskId: 'task-scrape-1',
-      extractionMode: 'balanced',
-      affiliateLink: 'https://aff.example.com/42',
-      targetCountry: 'FR',
-    })
-  })
-
-  it('returns 400 when offer lacks target_country', async () => {
-    extractionFns.enqueueExistingOfferExtractionAndMarkQueued.mockReset()
-    updateFns.applyOfferUpdateFromBody.mockResolvedValue({
-      offer: makeOffer({ target_country: null, url: 'https://aff.example.com/42' }),
-    })
-    const { OfferExtractRequestError } = await import('@/lib/offer-extract-request')
-    extractionFns.enqueueExistingOfferExtractionAndMarkQueued.mockRejectedValue(
-      new OfferExtractRequestError(400, 'Offer缺少推广国家，无法提取')
-    )
-
-    const req = jsonRequest('http://localhost/api/offers/42/scrape', {})
-    const res = await postScrape(req, { params: { id: '42' } })
-    const data = await res.json()
-
-    expect(res.status).toBe(400)
-    expect(data.message).toContain('推广国家')
-    expect(extractionFns.enqueueExistingOfferExtractionAndMarkQueued).toHaveBeenCalledTimes(1)
-    expect(offerFns.updateOfferScrapeStatus).not.toHaveBeenCalled()
-  })
-
-  it('returns 400 for invalid offer id', async () => {
-    const req = jsonRequest('http://localhost/api/offers/abc/scrape', {})
-    const res = await postScrape(req, { params: { id: 'abc' } })
-    expect(res.status).toBe(400)
-  })
-
-  it('enqueues with explicit targetCountry and marks deprecated', async () => {
-    updateFns.applyOfferUpdateFromBody.mockResolvedValue({
-      offer: makeOffer({ target_country: 'FR' }),
-    })
-
-    const req = jsonRequest('http://localhost/api/offers/42/scrape', {})
-    const res = await postScrape(req, { params: { id: '42' } })
-    const data = await res.json()
-
-    expect(res.status).toBe(200)
-    expect(data.deprecated).toBe(true)
-    expect(data.replacement).toBe('/api/offers/42/rebuild')
-    expect(extractionFns.enqueueExistingOfferExtractionAndMarkQueued).toHaveBeenCalledWith(
-      expect.objectContaining({
-        offerId: 42,
-        offer: expect.objectContaining({ target_country: 'FR' }),
-      })
-    )
   })
 })
 

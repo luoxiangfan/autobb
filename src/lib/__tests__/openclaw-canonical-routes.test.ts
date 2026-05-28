@@ -101,9 +101,14 @@ describe('openclaw canonical routes', () => {
       method: 'GET',
       path: '/api/ad-creatives/99/bonus-score',
     })
+    const offerCreatives = assertOpenclawProxyRouteAllowed({
+      method: 'GET',
+      path: '/api/creatives',
+    })
 
     expect(keywordPool.feature).toBe('offer-management')
     expect(bonusScore.feature).toBe('creative-management')
+    expect(offerCreatives.feature).toBe('creative-management')
   })
 
   it('accepts newly-added dashboard/settings/google-ads/sync read routes', () => {

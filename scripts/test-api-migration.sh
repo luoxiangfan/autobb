@@ -26,17 +26,17 @@ else
 fi
 
 echo ""
-echo "2️⃣ 调用旧API生成广告创意（Offer 51）..."
-echo "   API: POST /api/offers/51/generate-ad-creative"
+echo "2️⃣ 调用创意队列入队 API（Offer 51）..."
+echo "   API: POST /api/offers/51/generate-creatives-queue"
 echo ""
 
-# 2. 调用旧API生成创意
-response=$(curl -s -b /tmp/cookies.txt -X POST http://localhost:3000/api/offers/51/generate-ad-creative \
+# 2. 入队创意生成
+response=$(curl -s -b /tmp/cookies.txt -X POST http://localhost:3000/api/offers/51/generate-creatives-queue \
   -H "Content-Type: application/json" \
-  -d '{"generation_round": 1}')
+  -d '{"generationMode":"balanced"}')
 
 # 检查响应
-if echo "$response" | grep -q '"success":true'; then
+if echo "$response" | grep -q '"taskId"'; then
   echo "   ✅ API调用成功"
   echo ""
 

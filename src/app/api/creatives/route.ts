@@ -1,6 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findAdCreativesByOfferId, findAdCreativesByUserId } from '@/lib/ad-creative'
+import { hasRequiredRsaAssetCounts } from '@/lib/ad-creative-rsa'
 import {
   deriveCanonicalCreativeType,
   mapCreativeTypeToBucketSlot,
@@ -88,6 +89,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const offerIdParam = searchParams.get('offerId')
     const limitParam = searchParams.get('limit')
+    const publishableOnly = ['1', 'true', 'yes'].includes(
+      String(searchParams.get('publishableOnly') || '').trim().toLowerCase()
+    )
 
     let creatives
 
@@ -109,7 +113,10 @@ export async function GET(request: NextRequest) {
     }
 
     // 🔧 修复(2025-12-11): 转换为 camelCase 响应
-    const transformedCreatives = creatives.map(transformCreativeToApiResponse)
+    let transformedCreatives = creatives.map(transformCreativeToApiResponse)
+    if (publishableOnly) {
+      transformedCreatives = transformedCreatives.filter(hasRequiredRsaAssetCounts)
+    }
 
     // 🔧 2025-12-24: 添加 generatedBuckets 聚合逻辑，支持创意类型进度
     const generatedBuckets = Array.from(
@@ -124,7 +131,8 @@ export async function GET(request: NextRequest) {
       success: true,
       creatives: transformedCreatives,
       count: transformedCreatives.length,
-      generatedBuckets,  // 🔧 2025-12-24: 新增字段
+      total: transformedCreatives.length,
+      generatedBuckets,
     })
   } catch (error: any) {
     console.error('获取创意列表失败:', error)

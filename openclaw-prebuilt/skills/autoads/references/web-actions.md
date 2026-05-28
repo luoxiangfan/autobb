@@ -30,7 +30,7 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 
 ### `creative.list`
 - Preferred: `GET /api/offers/:id/creatives`
-- Web legacy read also uses: `GET /api/offers/:id/generate-ad-creative`
+- Launch / 管理页读取：`GET /api/creatives?offerId=:id`（可选 `publishableOnly=true` 过滤 RSA 15/4）
 
 ### `campaign.publish.status.poll`
 - Method/Path: `GET /api/offers/:offerId/campaigns/status`

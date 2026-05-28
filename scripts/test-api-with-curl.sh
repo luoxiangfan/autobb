@@ -29,15 +29,15 @@ fi
 
 # 2. 生成创意
 echo ""
-echo "📝 步骤2: 调用旧API生成创意 (Offer 51)..."
-echo "   API: POST /api/offers/51/generate-ad-creative"
+echo "📝 步骤2: 调用创意队列入队 API (Offer 51)..."
+echo "   API: POST /api/offers/51/generate-creatives-queue"
 echo ""
 
-CREATIVE_RESPONSE=$(curl -s -b /tmp/test_cookies.txt -X POST http://localhost:3000/api/offers/51/generate-ad-creative \
+CREATIVE_RESPONSE=$(curl -s -b /tmp/test_cookies.txt -X POST http://localhost:3000/api/offers/51/generate-creatives-queue \
   -H "Content-Type: application/json" \
-  -d '{"generation_round": 1}')
+  -d '{"generationMode":"balanced"}')
 
-if echo "$CREATIVE_RESPONSE" | grep -q '"success":true'; then
+if echo "$CREATIVE_RESPONSE" | grep -q '"taskId"'; then
   echo "   ✅ 创意生成成功"
 
   # 提取创意ID

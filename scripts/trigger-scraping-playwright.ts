@@ -109,7 +109,7 @@ async function loginAndTriggerScraping() {
           // Fallback: Try API call with authenticated session
           const response = await page.evaluate(async (offerId) => {
             try {
-              const res = await fetch(`/api/offers/${offerId}/scrape`, {
+              const res = await fetch(`/api/offers/${offerId}/rebuild`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json'

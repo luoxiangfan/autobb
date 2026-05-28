@@ -69,13 +69,6 @@ async function runApiChecks(): Promise<void> {
     console.log('  ✓ 重建入队成功')
   }
 
-  const scrape = await apiPost(`/api/offers/${OFFER_ID}/scrape`, {})
-  console.log('scrape (deprecated):', scrape.status, scrape.json)
-  const dep = scrape.json as Record<string, unknown>
-  if (dep?.deprecated === true) {
-    console.log('  ✓ scrape 标记 deprecated')
-  }
-
   const extractStores = await apiPost('/api/offers/extract', {
     affiliate_link: 'https://www.amazon.com/stores/page/SMOKE',
     target_country: 'US',

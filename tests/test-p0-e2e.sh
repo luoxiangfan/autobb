@@ -62,7 +62,7 @@ echo ""
 
 # 触发抓取
 echo "3️⃣  触发抓取（预计30-60秒）..."
-SCRAPE_RESPONSE=$(curl -s -X POST "$API_BASE/offers/$OFFER_ID/scrape")
+SCRAPE_RESPONSE=$(curl -s -X POST "$API_BASE/offers/$OFFER_ID/rebuild")
 
 # 等待抓取完成（轮询检查）
 MAX_WAIT=120  # 最多等待2分钟

@@ -5,7 +5,6 @@
  */
 
 import type { UnifiedQueueManager } from '../unified-queue-manager'
-import { createScrapeExecutor, convertPriorityToEnum } from './scrape-executor'
 import { createSyncExecutor } from './sync-executor'
 import { createAIAnalysisExecutor } from './ai-analysis-executor'
 import { createBackupExecutor } from './backup-executor'
@@ -59,9 +58,6 @@ function shouldRegisterBackgroundExecutors(): { allowed: boolean; reason: string
  * 注册所有任务执行器
  */
 export function registerAllExecutors(queue: UnifiedQueueManager): void {
-  // 注册 scrape 执行器
-  queue.registerExecutor('scrape', createScrapeExecutor())
-
   // 注册 sync 执行器
   queue.registerExecutor('sync', createSyncExecutor())
 
@@ -156,7 +152,6 @@ export function registerBackgroundExecutors(queue: UnifiedQueueManager): void {
   queue.registerExecutor('campaign-batch-create', executeCampaignBatchCreate)
 }
 
-export { createScrapeExecutor, convertPriorityToEnum } from './scrape-executor'
 export { createSyncExecutor } from './sync-executor'
 export { createAIAnalysisExecutor } from './ai-analysis-executor'
 export { createBackupExecutor } from './backup-executor'

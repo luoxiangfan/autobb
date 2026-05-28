@@ -92,7 +92,6 @@ function deriveRiskByHeuristics(method: string, path: string): OpenclawCommandRi
 const ROUTE_RISK_POLICIES: RouteRiskPolicy[] = [
   { method: 'PUT', path: '/api/offers/:id', riskLevel: 'high' },
   { method: 'DELETE', path: '/api/offers/:id', riskLevel: 'high' },
-  { method: 'POST', path: '/api/offers/:id/scrape', riskLevel: 'high' },
   { method: 'POST', path: '/api/offers/:id/rebuild', riskLevel: 'high' },
   { method: 'POST', path: '/api/offers/:id/unlink', riskLevel: 'high' },
   { method: 'POST', path: '/api/offers/:id/blacklist', riskLevel: 'high' },

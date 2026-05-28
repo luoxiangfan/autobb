@@ -40,7 +40,7 @@ async function triggerScrape() {
 
   try {
     // 动态导入并调用爬取函数
-    const scrapeModule = await import('../src/app/api/offers/[id]/scrape/route')
+    const rebuildModule = await import('../src/app/api/offers/[id]/rebuild/route')
 
     // 构造请求对象
     const mockRequest = {
@@ -54,7 +54,7 @@ async function triggerScrape() {
     const mockParams = { params: { id: offerId.toString() } }
 
     // 调用 POST 处理函数
-    const response = await scrapeModule.POST(mockRequest, mockParams)
+    const response = await rebuildModule.POST(mockRequest, mockParams)
     const result = await response.json()
 
     if (response.status === 200) {

@@ -559,12 +559,6 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
   },
   {
     method: 'POST',
-    path: '/api/offers/:id/scrape',
-    canonicalKeys: ['priority'],
-    allowEmptyBody: true,
-  },
-  {
-    method: 'POST',
     path: '/api/offers/:id/pause-campaigns',
     canonicalKeys: [],
     allowEmptyBody: true,

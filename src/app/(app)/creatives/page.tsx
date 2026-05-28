@@ -579,26 +579,35 @@ export default function CreativesPage() {
     ? `${appliedCustomRange.startDate} ~ ${appliedCustomRange.endDate}`
     : '自定义'
 
+  const enqueueCreativeGeneration = async (): Promise<string> => {
+    const response = await fetch(`/api/offers/${offerId}/generate-creatives-queue`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ generationMode }),
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      throw new Error(data.message || data.error || '创意生成任务入队失败')
+    }
+    const taskId = typeof data.taskId === 'string' ? data.taskId : ''
+    if (!taskId) {
+      throw new Error('任务入队成功但未返回 taskId')
+    }
+    return taskId
+  }
+
   const handleGenerateCreatives = async () => {
+    if (!offerId) return
     setGenerating(true)
     setError('')
 
     try {
-      const response = await fetch(`/api/offers/${offerId}/generate-creatives`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ generationMode }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || '生成创意失败')
-      }
-
-      showSuccess('创意生成成功', '创意已生成并保存')
-      fetchOfferAndCreatives()
+      const taskId = await enqueueCreativeGeneration()
+      showSuccess(
+        '已提交创意生成任务',
+        `任务 ${taskId.slice(0, 8)}… 已入队（模式：${getAdCreativeGenerationModeLabel(generationMode)}），完成后请刷新列表`
+      )
     } catch (err: any) {
       setError(err.message || '生成创意失败')
       showError('生成失败', err.message)
@@ -613,27 +622,28 @@ export default function CreativesPage() {
     setError('')
 
     try {
-      const response = await fetch(`/api/offers/${offerId}/creatives/generate-differentiated`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ generationMode }),
-      })
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || data.message || '差异化生成失败')
+      let enqueuedCount = 0
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          await enqueueCreativeGeneration()
+          enqueuedCount += 1
+        } catch (err: any) {
+          const message = String(err?.message || '')
+          if (enqueuedCount > 0 && /全部3种|无需继续|quota|已生成桶/i.test(message)) {
+            break
+          }
+          throw err
+        }
       }
 
-      const successCount = data.data?.totalGenerated ?? 0
-      const failCount = data.data?.totalFailed ?? 0
+      if (enqueuedCount === 0) {
+        throw new Error('没有可入队的差异化创意类型（A/B/D 可能已全部生成）')
+      }
+
       showSuccess(
-        '差异化生成完成',
-        failCount > 0
-          ? `成功 ${successCount} 个，失败 ${failCount} 个（模式：${getAdCreativeGenerationModeLabel(generationMode)}）`
-          : `成功生成 ${successCount} 个差异化创意（模式：${getAdCreativeGenerationModeLabel(generationMode)}）`
+        '已提交差异化生成任务',
+        `已入队 ${enqueuedCount} 个任务（模式：${getAdCreativeGenerationModeLabel(generationMode)}），完成后请刷新列表`
       )
-      fetchOfferAndCreatives()
     } catch (err: any) {
       setError(err.message || '差异化生成失败')
       showError('差异化生成失败', err.message)
