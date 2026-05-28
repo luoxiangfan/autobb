@@ -136,8 +136,91 @@ describe('POST /api/ad-strength/batch-evaluate', () => {
       expect.objectContaining({
         offerId: undefined,
         plannerSession: undefined,
+        skipKeywordPoolExpandLoad: false,
       })
     )
+  })
+
+  it('normalizes string offerId and preloads planner session once', async () => {
+    offerFns.findOfferById.mockResolvedValue({ id: 42, user_id: 1 })
+    authExpandFns.loadKeywordPoolExpandCredentialsForOffer.mockResolvedValue({
+      ok: true,
+      creds: { authType: 'oauth', linkedServiceAccountId: null },
+      plannerSession: mockPlannerSession,
+    })
+
+    const req = new NextRequest('http://localhost/api/ad-strength/batch-evaluate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        creatives: [buildCreativePayload({ offerId: '42' })],
+      }),
+    })
+
+    const res = await POST(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(authExpandFns.loadKeywordPoolExpandCredentialsForOffer).toHaveBeenCalledWith(1, 42)
+    expect(evaluateFns.evaluateAdStrength).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.any(Array),
+      expect.any(Array),
+      expect.objectContaining({
+        offerId: 42,
+        plannerSession: mockPlannerSession,
+        skipKeywordPoolExpandLoad: false,
+      })
+    )
+  })
+
+  it('passes offerId with skipKeywordPoolExpandLoad when expand preload fails', async () => {
+    offerFns.findOfferById.mockResolvedValue({ id: 42, user_id: 1 })
+    authExpandFns.loadKeywordPoolExpandCredentialsForOffer.mockResolvedValue({ ok: false })
+
+    const req = new NextRequest('http://localhost/api/ad-strength/batch-evaluate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        creatives: [buildCreativePayload({ offerId: 42 })],
+      }),
+    })
+
+    const res = await POST(req)
+    expect(res.status).toBe(200)
+    expect(evaluateFns.evaluateAdStrength).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.any(Array),
+      expect.any(Array),
+      expect.objectContaining({
+        offerId: 42,
+        plannerSession: undefined,
+        skipKeywordPoolExpandLoad: true,
+      })
+    )
+  })
+
+  it('returns null averageScore when every creative evaluation fails', async () => {
+    evaluateFns.evaluateAdStrength.mockRejectedValue(new Error('evaluation failed'))
+
+    const req = new NextRequest('http://localhost/api/ad-strength/batch-evaluate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        creatives: [
+          buildCreativePayload({ id: 'a' }),
+          buildCreativePayload({ id: 'b' }),
+        ],
+      }),
+    })
+
+    const res = await POST(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.summary.successCount).toBe(0)
+    expect(data.summary.averageScore).toBeNull()
   })
 
   it('returns 401 when unauthenticated', async () => {

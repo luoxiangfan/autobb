@@ -111,19 +111,21 @@ export async function calculateLaunchScore(
       ? Math.round((uniqueHeadlines.size / headlines.length) * 100)
       : 0
 
-    let launchScorePlannerSession: import('./google-ads-accounts-auth').KeywordPlannerPreparedSession | undefined
-    if (userId && offer.id && offer.brand) {
-      const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id)
-      if (expandLoad.ok) {
-        launchScorePlannerSession = expandLoad.plannerSession
-      }
-    }
-
     // 🎯 获取Ad Strength（优先使用已有的，否则评估）
     let adStrength: AdStrengthRating = 'AVERAGE'
     if ((creative as any).ad_strength) {
       adStrength = (creative as any).ad_strength as AdStrengthRating
     } else if (headlines.length >= 3 && creative.descriptions.length >= 2) {
+      let launchScorePlannerSession:
+        | import('./google-ads-accounts-auth').KeywordPlannerPreparedSession
+        | undefined
+      if (userId && offer.id && offer.brand) {
+        const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id)
+        if (expandLoad.ok) {
+          launchScorePlannerSession = expandLoad.plannerSession
+        }
+      }
+
       // 快速评估Ad Strength（传递品牌信息）
       const headlineAssets: HeadlineAsset[] = headlines.map((h: string) => ({ text: h, length: h.length }))
       const descAssets: DescriptionAsset[] = creative.descriptions.map((d: string) => ({ text: d, length: d.length }))

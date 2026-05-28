@@ -438,6 +438,8 @@ export async function evaluateAdStrength(
     skipCompetitivePositioningAi?: boolean
     /** 创意生成前已 prepare 时传入，避免品牌搜索量查询重复 load */
     plannerSession?: KeywordPlannerPreparedSession
+    /** 批量预加载已尝试过 expand 且失败时传入，避免每个创意重复 loadKeywordPoolExpandCredentialsForOffer */
+    skipKeywordPoolExpandLoad?: boolean
   }
 ): Promise<AdStrengthEvaluation> {
 
@@ -508,7 +510,8 @@ export async function evaluateAdStrength(
     options?.userId,
     options?.keywordsWithVolume,
     options?.offerId,
-    options?.plannerSession
+    options?.plannerSession,
+    options?.skipKeywordPoolExpandLoad
   )
   const brandSearchVolumeConfig = AD_STRENGTH_DIMENSION_CONFIG.brandSearchVolume
   const brandSearchVolume = {
@@ -1662,7 +1665,8 @@ async function calculateBrandSearchVolume(
     volumeUnavailableReason?: 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
   }>,
   offerId?: number,
-  plannerSession?: KeywordPlannerPreparedSession
+  plannerSession?: KeywordPlannerPreparedSession,
+  skipKeywordPoolExpandLoad?: boolean
 ) {
   const isSearchVolumeUnavailableReason = (reason: unknown): reason is 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY' =>
     reason === 'DEV_TOKEN_INSUFFICIENT_ACCESS' || reason === 'DEV_TOKEN_TEST_ONLY'
@@ -1754,7 +1758,7 @@ async function calculateBrandSearchVolume(
         `♻️ 使用创意内精确品牌词搜索量，跳过品牌名 Planner 查询: ${exactBrandKeywordSearchVolume.toLocaleString()}/月`
       )
     } else {
-      if (!resolvedPlannerSession && userId && offerId) {
+      if (!resolvedPlannerSession && userId && offerId && !skipKeywordPoolExpandLoad) {
         const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
         if (expandLoad.ok) {
           resolvedPlannerSession = expandLoad.plannerSession

@@ -536,19 +536,20 @@ export async function generateSyntheticCreative(
 }
 
 /**
- * ✅ 带多样性检查的创意生成
- * TODO: 实现多样性检查逻辑
+ * 无多样性检查的批量生成（splitted 模块遗留入口）。
+ * 生产代码请使用 `@/lib/ad-creative-generator` 的 `generateMultipleCreativesWithDiversityCheck`。
  */
-export async function generateMultipleCreativesWithDiversityCheck(
+export async function generateAdCreativesBatchWithoutDiversityCheck(
   offerId: number,
   userId: number,
   count: number = 3,
   options: GenerateAdCreativeOptions = {}
 ): Promise<Array<GeneratedAdCreativeData & { ai_model: string }>> {
-  console.log(`[generateMultipleCreativesWithDiversityCheck] 开始生成 ${count} 个多样性创意`)
-
-  // TODO: 实现多样性检查逻辑
-  // 确保生成的创意在主题、风格、关键词使用等方面有足够的多样性
-
+  console.log(`[generateAdCreativesBatchWithoutDiversityCheck] 开始生成 ${count} 个创意（无多样性校验）`)
   return generateAdCreativesBatch(offerId, userId, count, options)
 }
+
+/**
+ * @deprecated 请改用 `@/lib/ad-creative-generator` 的 `generateMultipleCreativesWithDiversityCheck`。
+ */
+export const generateMultipleCreativesWithDiversityCheck = generateAdCreativesBatchWithoutDiversityCheck

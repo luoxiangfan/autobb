@@ -8,36 +8,68 @@ import {
   type KeywordPlannerPreparedSession,
 } from '@/lib/google-ads-accounts-auth'
 
+function parsePositiveIntegerOfferId(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+    return value
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (/^\d+$/.test(trimmed)) {
+      const parsed = Number.parseInt(trimmed, 10)
+      return parsed > 0 ? parsed : undefined
+    }
+  }
+  return undefined
+}
+
+type OfferPlannerPreload = {
+  sessionByOfferId: Map<number, KeywordPlannerPreparedSession>
+  validatedOfferIds: Set<number>
+  expandFailedOfferIds: Set<number>
+}
+
 async function preloadPlannerSessionsByOfferId(
   userId: number,
   creatives: Array<{ offerId?: unknown }>
-): Promise<Map<number, KeywordPlannerPreparedSession>> {
+): Promise<OfferPlannerPreload> {
   const offerIds = [
     ...new Set(
       creatives
-        .map((creative) => (
-          typeof creative.offerId === 'number' && Number.isInteger(creative.offerId) && creative.offerId > 0
-            ? creative.offerId
-            : null
-        ))
+        .map((creative) => parsePositiveIntegerOfferId(creative.offerId))
         .filter((offerId): offerId is number => offerId != null)
     ),
   ]
 
   const sessionByOfferId = new Map<number, KeywordPlannerPreparedSession>()
+  const validatedOfferIds = new Set<number>()
+  const expandFailedOfferIds = new Set<number>()
   await Promise.all(
     offerIds.map(async (offerId) => {
       const offer = await findOfferById(offerId, userId)
       if (!offer) {
         return
       }
+      validatedOfferIds.add(offerId)
       const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
       if (expandLoad.ok) {
         sessionByOfferId.set(offerId, expandLoad.plannerSession)
+      } else {
+        expandFailedOfferIds.add(offerId)
       }
     })
   )
-  return sessionByOfferId
+  return { sessionByOfferId, validatedOfferIds, expandFailedOfferIds }
+}
+
+function computeAverageEvaluationScore(
+  evaluations: Array<{ success?: boolean; evaluation?: { score?: number } }>
+): number | null {
+  const scored = evaluations.filter((entry) => entry.success && entry.evaluation)
+  if (scored.length === 0) {
+    return null
+  }
+  const total = scored.reduce((sum, entry) => sum + (entry.evaluation?.score || 0), 0)
+  return total / scored.length
 }
 
 /**
@@ -77,9 +109,10 @@ export async function POST(request: NextRequest) {
 
     console.log(`📊 开始批量评估 ${creatives.length} 个创意...`)
 
-    const plannerSessionByOfferId = await preloadPlannerSessionsByOfferId(userId, creatives)
-    if (plannerSessionByOfferId.size > 0) {
-      console.log(`🔑 已预加载 ${plannerSessionByOfferId.size} 个 Offer 的 Keyword Planner session`)
+    const { sessionByOfferId, validatedOfferIds, expandFailedOfferIds } =
+      await preloadPlannerSessionsByOfferId(userId, creatives)
+    if (sessionByOfferId.size > 0) {
+      console.log(`🔑 已预加载 ${sessionByOfferId.size} 个 Offer 的 Keyword Planner session`)
     }
 
     // 批量评估
@@ -98,14 +131,13 @@ export async function POST(request: NextRequest) {
           const descriptions: DescriptionAsset[] = creative.descriptionsWithMetadata ||
             creative.descriptions.map((text: string) => ({ text, length: text.length }))
 
-          const offerId = typeof creative.offerId === 'number' && Number.isInteger(creative.offerId) && creative.offerId > 0
-            ? creative.offerId
-            : undefined
-          const hasPreloadedPlannerSession = offerId != null && plannerSessionByOfferId.has(offerId)
-          const plannerSession = hasPreloadedPlannerSession
-            ? plannerSessionByOfferId.get(offerId)
-            : undefined
-          const evaluationOfferId = hasPreloadedPlannerSession ? offerId : undefined
+          const offerId = parsePositiveIntegerOfferId(creative.offerId)
+          const evaluationOfferId =
+            offerId != null && validatedOfferIds.has(offerId) ? offerId : undefined
+          const plannerSession =
+            offerId != null ? sessionByOfferId.get(offerId) : undefined
+          const skipKeywordPoolExpandLoad =
+            offerId != null && expandFailedOfferIds.has(offerId)
 
           // 评估
           const evaluation = await evaluateAdStrength(
@@ -119,6 +151,7 @@ export async function POST(request: NextRequest) {
               userId: userId ?? undefined,
               offerId: evaluationOfferId,
               plannerSession,
+              skipKeywordPoolExpandLoad,
               sitelinks: creative.sitelinks,
               callouts: creative.callouts,
               keywordsWithVolume: creative.keywordsWithVolume,
@@ -191,9 +224,7 @@ export async function POST(request: NextRequest) {
           successCount,
           failCount,
           ratingDistribution,
-          averageScore: evaluations
-            .filter(e => e.success && e.evaluation)
-            .reduce((sum, e) => sum + (e.evaluation?.score || 0), 0) / successCount
+          averageScore: computeAverageEvaluationScore(evaluations),
         }
       })
     } else {
@@ -207,9 +238,7 @@ export async function POST(request: NextRequest) {
           successCount,
           failCount,
           ratingDistribution,
-          averageScore: evaluations
-            .filter(e => e.success && e.evaluation)
-            .reduce((sum, e) => sum + (e.evaluation?.score || 0), 0) / successCount
+          averageScore: computeAverageEvaluationScore(evaluations),
         }
       })
     }

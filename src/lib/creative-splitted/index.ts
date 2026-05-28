@@ -10,6 +10,9 @@
  *
  * 使用方式：
  * import { generateAdCreative } from './creative-splitted/creative-orchestrator'
+ *
+ * 多样性批量生成请使用 `@/lib/ad-creative-generator` 的
+ * `generateMultipleCreativesWithDiversityCheck`（非本目录同名 deprecated 导出）。
  */
 
 export * from './creative-types'
