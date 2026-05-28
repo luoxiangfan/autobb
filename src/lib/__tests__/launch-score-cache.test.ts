@@ -12,6 +12,7 @@ vi.mock('../launch-scores', async (importOriginal) => {
   }
 })
 
+import { computeContentHash } from '../launch-scores'
 import { buildLaunchScoreHashes, saveLaunchScoreWithContentCache } from '../launch-score-cache'
 
 describe('buildLaunchScoreHashes', () => {
@@ -45,6 +46,46 @@ describe('buildLaunchScoreHashes', () => {
       offer
     )
     expect(changed.contentHash).not.toBe(base.contentHash)
+  })
+
+  it('changes content hash when keywordsWithVolume searchVolume changes', () => {
+    const base = buildLaunchScoreHashes(
+      {
+        ...creative,
+        keywordsWithVolume: [{ keyword: 'brand', searchVolume: 100, matchType: 'PHRASE' }],
+      },
+      offer
+    )
+    const changed = buildLaunchScoreHashes(
+      {
+        ...creative,
+        keywordsWithVolume: [{ keyword: 'brand', searchVolume: 500, matchType: 'PHRASE' }],
+      },
+      offer
+    )
+    expect(changed.contentHash).not.toBe(base.contentHash)
+  })
+})
+
+describe('computeContentHash keywordsWithVolume', () => {
+  it('includes normalized volume entries in the hash', () => {
+    const base = computeContentHash({
+      headlines: ['h'],
+      descriptions: ['d'],
+      keywords: ['kw'],
+      negativeKeywords: [],
+      finalUrl: 'https://example.com',
+      keywordsWithVolume: [{ keyword: 'kw', searchVolume: 10 }],
+    })
+    const changed = computeContentHash({
+      headlines: ['h'],
+      descriptions: ['d'],
+      keywords: ['kw'],
+      negativeKeywords: [],
+      finalUrl: 'https://example.com',
+      keywordsWithVolume: [{ keyword: 'kw', searchVolume: 99 }],
+    })
+    expect(changed).not.toBe(base)
   })
 })
 

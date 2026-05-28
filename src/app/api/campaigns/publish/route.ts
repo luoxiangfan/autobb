@@ -27,7 +27,8 @@ import {
   computeCampaignConfigHash,
   parseLaunchScoreAnalysis,
   type CreativeContentData,
-  type CampaignConfigData
+  type CampaignConfigData,
+  type KeywordVolumeHashInput,
 } from '@/lib/launch-scores'
 import { generateNamingScheme, parseAdGroupName } from '@/lib/naming-convention'
 import { buildEffectiveCreative } from '@/lib/campaign-publish/effective-creative'
@@ -766,13 +767,45 @@ export async function POST(request: NextRequest) {
     console.log(`[Publish] creativeData.negativeKeywords长度: ${creativeData.negativeKeywords.length}`)
     console.log(`[Publish] creativeData.negativeKeywords示例: ${creativeData.negativeKeywords.slice(0, 5).join(', ')}`)
 
-    // 🔥 新增(2025-12-17): 计算缓存哈希
+    const publishKeywordsWithVolume: KeywordVolumeHashInput[] =
+      (_campaignConfig.keywords || []).length > 0
+        ? (_campaignConfig.keywords || []).map((kw: unknown) => {
+            if (typeof kw === 'string') {
+              return { keyword: kw, matchType: 'PHRASE' as const }
+            }
+            const row = kw as {
+              text?: string
+              keyword?: string
+              searchVolume?: number
+              matchType?: string
+              competition?: string
+            }
+            return {
+              keyword: row.text ?? row.keyword,
+              searchVolume: row.searchVolume,
+              matchType: row.matchType,
+              competition: row.competition,
+            }
+          })
+        : primaryCreative.keywords_with_volume
+          ? JSON.parse(primaryCreative.keywords_with_volume)
+          : (creativeData.keywords || []).map((kw: unknown) =>
+              typeof kw === 'string'
+                ? { keyword: kw, matchType: 'PHRASE' as const }
+                : {
+                    keyword: (kw as { keyword?: string; text?: string }).keyword
+                      ?? (kw as { keyword?: string; text?: string }).text,
+                    matchType: (kw as { matchType?: string }).matchType,
+                  }
+            )
+
     const contentHashData: CreativeContentData = {
       headlines: creativeData.headlines,
       descriptions: creativeData.descriptions,
       keywords: creativeData.keywords,
       negativeKeywords: creativeData.negativeKeywords,
-      finalUrl: creativeData.finalUrl || ''
+      keywordsWithVolume: publishKeywordsWithVolume,
+      finalUrl: creativeData.finalUrl || '',
     }
     const campaignConfigHashData: CampaignConfigData = {
       targetCountry: _campaignConfig.targetCountry || '',

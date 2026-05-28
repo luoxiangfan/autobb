@@ -32,6 +32,7 @@ export function buildLaunchScoreHashes(
     descriptions: creative.descriptions || [],
     keywords: creative.keywords || [],
     negativeKeywords: creative.negativeKeywords || [],
+    keywordsWithVolume: creative.keywordsWithVolume,
     finalUrl: (creative.final_url || offer.final_url || offer.url || '').trim(),
   }
   const campaignConfigHashData: CampaignConfigData = {

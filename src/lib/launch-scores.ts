@@ -105,6 +105,24 @@ export interface ScoreAnalysis {
   overallRecommendations: string[]
 }
 
+/** 纳入内容哈希的关键词量数据（稳定、可排序） */
+export type KeywordVolumeHashEntry = {
+  keyword: string
+  searchVolume: number
+  matchType: string
+  competition?: string
+  volumeUnavailableReason?: string
+}
+
+export type KeywordVolumeHashInput = {
+  keyword?: string
+  text?: string
+  searchVolume?: number
+  matchType?: string
+  competition?: string
+  volumeUnavailableReason?: 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
+}
+
 /**
  * 创意内容数据（用于计算哈希）
  */
@@ -114,6 +132,40 @@ export interface CreativeContentData {
   keywords: string[]
   negativeKeywords: string[]
   finalUrl: string
+  keywordsWithVolume?: KeywordVolumeHashInput[]
+}
+
+/**
+ * 将 keywordsWithVolume 规范化为可比较、可排序的结构（用于 contentHash）。
+ */
+export function normalizeKeywordsWithVolumeForHash(
+  items?: KeywordVolumeHashInput[] | null
+): KeywordVolumeHashEntry[] {
+  if (!items?.length) {
+    return []
+  }
+
+  const normalized: KeywordVolumeHashEntry[] = []
+  for (const kw of items) {
+    const keyword = (kw.keyword ?? kw.text ?? '').trim().toLowerCase()
+    if (!keyword) {
+      continue
+    }
+    const entry: KeywordVolumeHashEntry = {
+      keyword,
+      searchVolume: typeof kw.searchVolume === 'number' ? kw.searchVolume : 0,
+      matchType: kw.matchType ?? 'PHRASE',
+    }
+    if (kw.competition) {
+      entry.competition = kw.competition
+    }
+    if (kw.volumeUnavailableReason) {
+      entry.volumeUnavailableReason = kw.volumeUnavailableReason
+    }
+    normalized.push(entry)
+  }
+
+  return normalized.sort((a, b) => a.keyword.localeCompare(b.keyword))
 }
 
 /**
@@ -136,6 +188,7 @@ export function computeContentHash(content: CreativeContentData): string {
     descriptions: [...content.descriptions].sort(),
     keywords: [...content.keywords].sort(),
     negativeKeywords: [...content.negativeKeywords].sort(),
+    keywordsWithVolume: normalizeKeywordsWithVolumeForHash(content.keywordsWithVolume),
     finalUrl: content.finalUrl.toLowerCase().trim(),
   }
   const str = JSON.stringify(normalized)
