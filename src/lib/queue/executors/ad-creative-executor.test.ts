@@ -29,7 +29,7 @@ const qualityLoopFns = vi.hoisted(() => ({
 }))
 
 const keywordPoolFns = vi.hoisted(() => ({
-  getOrCreateKeywordPool: vi.fn(),
+  resolveKeywordPoolForCreativeGeneration: vi.fn(),
   getAvailableBuckets: vi.fn(),
   getBucketInfo: vi.fn(),
 }))
@@ -46,6 +46,18 @@ const pipelineFns = vi.hoisted(() => ({
 const keywordRuntimeFns = vi.hoisted(() => ({
   buildPreGenerationCreativeKeywordSet: vi.fn(),
 }))
+
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    loadKeywordPoolExpandCredentialsForOffer: vi.fn().mockResolvedValue({ ok: false }),
+    getKeywordSearchVolumesForPlannerContext: vi.fn().mockResolvedValue({
+      ok: true,
+      volumes: [{ avgMonthlySearches: 0 }],
+    }),
+  }
+})
 
 vi.mock('@/lib/db', () => ({
   getDatabase: () => ({
@@ -81,7 +93,7 @@ vi.mock('@/lib/ad-creative-quality-loop', () => ({
 }))
 
 vi.mock('@/lib/offer-keyword-pool', () => ({
-  getOrCreateKeywordPool: keywordPoolFns.getOrCreateKeywordPool,
+  resolveKeywordPoolForCreativeGeneration: keywordPoolFns.resolveKeywordPoolForCreativeGeneration,
   getAvailableBuckets: keywordPoolFns.getAvailableBuckets,
   getBucketInfo: keywordPoolFns.getBucketInfo,
 }))
@@ -154,8 +166,9 @@ describe('executeAdCreativeGeneration', () => {
       affiliate_link: null,
     })
 
-    keywordPoolFns.getOrCreateKeywordPool.mockResolvedValue({
-      id: 77,
+    keywordPoolFns.resolveKeywordPoolForCreativeGeneration.mockResolvedValue({
+      pool: { id: 77 },
+      plannerSession: undefined,
     })
     keywordPoolFns.getAvailableBuckets.mockResolvedValue(['B'])
     keywordPoolFns.getBucketInfo.mockReturnValue({
@@ -461,26 +474,29 @@ describe('executeAdCreativeGeneration', () => {
   })
 
   it('backfills rescue pure-brand keyword volume from keyword pool hints', async () => {
-    keywordPoolFns.getOrCreateKeywordPool.mockResolvedValueOnce({
-      id: 77,
-      brandKeywords: [
-        {
-          keyword: 'novilla',
-          searchVolume: 2400,
-          volumeUnavailableReason: 'DEV_TOKEN_INSUFFICIENT_ACCESS',
-          source: 'BRAND_SEED',
-          sourceType: 'BRAND_SEED',
-        },
-      ],
-      bucketAKeywords: [],
-      bucketBKeywords: [],
-      bucketCKeywords: [],
-      bucketDKeywords: [],
-      storeBucketAKeywords: [],
-      storeBucketBKeywords: [],
-      storeBucketCKeywords: [],
-      storeBucketDKeywords: [],
-      storeBucketSKeywords: [],
+    keywordPoolFns.resolveKeywordPoolForCreativeGeneration.mockResolvedValueOnce({
+      pool: {
+        id: 77,
+        brandKeywords: [
+          {
+            keyword: 'novilla',
+            searchVolume: 2400,
+            volumeUnavailableReason: 'DEV_TOKEN_INSUFFICIENT_ACCESS',
+            source: 'BRAND_SEED',
+            sourceType: 'BRAND_SEED',
+          },
+        ],
+        bucketAKeywords: [],
+        bucketBKeywords: [],
+        bucketCKeywords: [],
+        bucketDKeywords: [],
+        storeBucketAKeywords: [],
+        storeBucketBKeywords: [],
+        storeBucketCKeywords: [],
+        storeBucketDKeywords: [],
+        storeBucketSKeywords: [],
+      },
+      plannerSession: undefined,
     })
     keywordPoolFns.getAvailableBuckets.mockResolvedValueOnce(['D'])
     keywordPoolFns.getBucketInfo.mockReturnValueOnce({

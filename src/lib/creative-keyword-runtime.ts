@@ -78,6 +78,7 @@ interface MergeUsedKeywordsExcludingBrandInput {
 }
 
 interface CreativeEvaluationOfferContext {
+  id?: number
   brand?: string | null
   category?: string | null
   product_name?: string | null
@@ -489,6 +490,7 @@ export function createCreativeQualityEvaluationInput(
       bucketType,
       creativeType: normalizedCreativeType,
       userId: input.userId,
+      offerId: input.offer.id,
       skipCompetitivePositioningAi: input.skipCompetitivePositioningAi,
     },
     ruleContext: {

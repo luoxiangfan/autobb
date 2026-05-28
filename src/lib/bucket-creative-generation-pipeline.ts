@@ -30,6 +30,7 @@ import {
 } from '@/lib/creative-type'
 import { getThemeByBucket } from '@/lib/ad-creative-generator'
 import { getKeywordsByLinkTypeAndBucket } from '@/lib/offer-keyword-pool'
+import type { KeywordPlannerPreparedSession } from '@/lib/google-ads-accounts-auth'
 import type { OfferKeywordPool, PoolKeywordData } from '@/lib/offer-keyword-pool'
 import type { Offer } from '@/lib/offers'
 import { getSearchTermFeedbackHints, type SearchTermFeedbackHints } from '@/lib/search-term-feedback-hints'
@@ -150,6 +151,8 @@ export interface RunBucketCreativeGenerationParams {
   scopeLabel: string
   linkType?: 'product' | 'store'
   keywordPool?: OfferKeywordPool | null
+  /** 与 keywordPool 同次 resolveKeywordPoolForCreativeGeneration prepare，避免 generateAdCreative 重复 load */
+  plannerSession?: KeywordPlannerPreparedSession
   searchTermFeedbackHints?: SearchTermFeedbackHintsInput
   loadSearchTermFeedbackHints?: boolean
   referencePerformance?: unknown
@@ -591,6 +594,7 @@ export function createBucketCreativeGenerationCallbacks(
       bucketIntentEn: bucketContext?.bucketIntentEn,
       deferKeywordPostProcessingToBuilder: Boolean(bucket),
       precomputedKeywordSet: bucketContext?.precomputedKeywordSet,
+      plannerSession: params.plannerSession,
     })
 
     await postProcessGeneratedCreativeKeywords({

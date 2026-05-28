@@ -65,6 +65,7 @@ export interface CreativeQualityEvaluationInput {
     bucketType?: 'A' | 'B' | 'C' | 'D' | 'S' | null
     creativeType?: CanonicalCreativeType | null
     userId?: number
+    offerId?: number
     skipCompetitivePositioningAi?: boolean
   }
 }
@@ -167,6 +168,7 @@ export async function evaluateCreativeForQuality(
       bucketType: adStrengthContext.bucketType || undefined,
       creativeType: adStrengthContext.creativeType || undefined,
       userId: adStrengthContext.userId,
+      offerId: adStrengthContext.offerId,
       keywordsWithVolume: creative.keywordsWithVolume,
       skipCompetitivePositioningAi: adStrengthContext.skipCompetitivePositioningAi,
     }

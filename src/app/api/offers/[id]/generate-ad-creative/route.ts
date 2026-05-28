@@ -26,7 +26,7 @@ import {
 } from '@/lib/ad-creative-generation-mode'
 import { AD_CREATIVE_REQUIRED_MIN_SCORE } from '@/lib/ad-creative-quality-loop'
 import { getThemeByBucket, BucketType } from '@/lib/ad-creative-generator'
-import { getAvailableBuckets, getOrCreateKeywordPool } from '@/lib/offer-keyword-pool'
+import { getAvailableBuckets, resolveKeywordPoolForCreativeGeneration } from '@/lib/offer-keyword-pool'
 import {
   deriveCanonicalCreativeType,
   getCreativeTypeForBucketSlot,
@@ -330,7 +330,10 @@ export async function POST(
     }
     const { mode: generationMode, profile: generationProfile, maxRetries: normalizedMaxRetries } = runtime
     const searchTermFeedbackHints = await loadSearchTermFeedbackHintsForGeneration(offerId, userId)
-    const keywordPool = await getOrCreateKeywordPool(offerId, userId, false)
+    const { pool: keywordPool, plannerSession } = await resolveKeywordPoolForCreativeGeneration(
+      offerId,
+      userId
+    )
     console.log(
       `   生成模式: ${generationMode}，质量策略: 低于 GOOD 不保存，自动重试最多 ${normalizedMaxRetries} 次，失败后保存最佳`
     )
@@ -375,6 +378,7 @@ export async function POST(
           scopeLabel: `generate-ad-creative-batch-${bucket}-${index + 1}`,
           linkType: linkType as 'product' | 'store',
           keywordPool,
+          plannerSession,
           searchTermFeedbackHints,
           loadSearchTermFeedbackHints: false,
           referencePerformance: reference_performance,
@@ -473,6 +477,7 @@ export async function POST(
         scopeLabel: `generate-ad-creative-single-${bucket}`,
         linkType: linkType as 'product' | 'store',
         keywordPool,
+        plannerSession,
         searchTermFeedbackHints,
         loadSearchTermFeedbackHints: false,
         referencePerformance: reference_performance,

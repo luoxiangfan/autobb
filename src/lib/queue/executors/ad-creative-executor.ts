@@ -39,9 +39,9 @@ import {
 } from '@/lib/ad-creative-quality-loop'
 // 🆕 v4.10: 关键词池集成
 import {
-  getOrCreateKeywordPool,
   getAvailableBuckets,
   getBucketInfo,
+  resolveKeywordPoolForCreativeGeneration,
   type BucketType,
   type OfferKeywordPool,
   type PoolKeywordData
@@ -49,7 +49,7 @@ import {
 import { getCreativeTypeForBucketSlot } from '@/lib/creative-type'
 import { normalizeCreativeTaskError } from '@/lib/creative-task-error'
 import { getSearchTermFeedbackHints } from '@/lib/search-term-feedback-hints'
-import { loadKeywordPoolExpandCredentialsForOffer } from '@/lib/google-ads-accounts-auth'
+import type { KeywordPlannerPreparedSession } from '@/lib/google-ads-accounts-auth'
 
 /**
  * 验证URL是否为有效的URL
@@ -263,6 +263,7 @@ export async function executeAdCreativeGeneration(
 
     // 🆕 v4.10: 获取或创建关键词池（复用已有数据，避免重复AI调用）
     let keywordPool: OfferKeywordPool | null = null
+    let plannerSessionForGeneration: KeywordPlannerPreparedSession | undefined
     let selectedBucket: BucketType | null = null
     let bucketInfo: { keywords: PoolKeywordData[]; intent: string; intentEn: string } | null = null
 
@@ -335,14 +336,13 @@ export async function executeAdCreativeGeneration(
         }
       })()
 
-      const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(task.userId, offerId)
-      keywordPool = await getOrCreateKeywordPool(
+      const resolvedPool = await resolveKeywordPoolForCreativeGeneration(
         offerId,
         task.userId,
-        false,
-        reportKeywordPoolProgress,
-        expandLoad.ok ? expandLoad : undefined
+        { progress: reportKeywordPoolProgress }
       )
+      keywordPool = resolvedPool.pool
+      plannerSessionForGeneration = resolvedPool.plannerSession
 
       // 🔒 使用事务级 advisory lock + 占位记录防止并发竞态
       // 在事务内完成：加锁 → 查询可用桶 → 插入占位记录
@@ -515,6 +515,7 @@ export async function executeAdCreativeGeneration(
       maxRetries: effectiveMaxRetries,
       scopeLabel: selectedBucket ? `桶${selectedBucket}` : '默认',
       keywordPool,
+      plannerSession: plannerSessionForGeneration,
       searchTermFeedbackHints,
       loadSearchTermFeedbackHints: false,
       skipCache: true,

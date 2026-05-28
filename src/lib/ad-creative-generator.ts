@@ -13,6 +13,7 @@ import {
   getKeywordSearchVolumesForPlannerContext,
   loadKeywordPoolExpandCredentialsForOffer,
   type KeywordPlannerPreparedSession,
+  type KeywordPoolExpandLoadResult,
 } from './google-ads-accounts-auth'
 import {
   clusterKeywordsByIntent,
@@ -10112,6 +10113,9 @@ export async function generateAdCreative(
     isSyntheticCreative?: boolean
     coverageKeywordsWithVolume?: Array<{ keyword: string; searchVolume: number; isBrand: boolean }>
     syntheticKeywordsWithVolume?: Array<{ keyword: string; searchVolume: number; isBrand: boolean }>
+    /** 上游已 prepare 时传入，避免重复 loadKeywordPoolExpandCredentialsForOffer */
+    plannerSession?: KeywordPlannerPreparedSession
+    preparedExpand?: KeywordPoolExpandLoadResult
   }
 ): Promise<GeneratedAdCreativeData & { ai_model: string }> {
   const isCoverageCreative = Boolean(options?.isCoverageCreative || options?.isSyntheticCreative)
@@ -11008,15 +11012,27 @@ export async function generateAdCreative(
 
   // 🎯 通过Keyword Planner扩展高搜索量关键词（多角度3轮查询策略）
   // 策略: 使用不同角度的种子词进行3轮查询，最大化获取高搜索量关键词提示
-  let plannerSessionForCreative: KeywordPlannerPreparedSession | undefined
+  let plannerSessionForCreative: KeywordPlannerPreparedSession | undefined = options?.plannerSession
   try {
     if (brandName && userId && offer?.id) {
       console.log(`🔍 启动Keyword Planner多角度3轮查询策略`)
       console.time('⏱️ Keyword Planner扩展')
 
-      const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id)
-      if (expandLoad.ok) {
-        plannerSessionForCreative = expandLoad.plannerSession
+      let preparedExpandForPool: KeywordPoolExpandLoadResult | undefined = options?.preparedExpand
+      if (!plannerSessionForCreative) {
+        const expandLoad =
+          preparedExpandForPool ?? (await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id))
+        if (expandLoad.ok) {
+          plannerSessionForCreative = expandLoad.plannerSession
+          preparedExpandForPool = expandLoad
+        }
+      } else if (preparedExpandForPool?.ok) {
+        // plannerSession 已传入，保留 preparedExpand 供建池复用
+      } else if (options?.preparedExpand?.ok) {
+        preparedExpandForPool = options.preparedExpand
+      }
+
+      if (plannerSessionForCreative) {
           const country = (offer as { target_country?: string }).target_country || 'US'
           const plannerLanguage = resolveCreativeTargetLanguage(
             (offer as { target_language?: string }).target_language || null,
@@ -11043,7 +11059,7 @@ export async function generateAdCreative(
 	                userId,
 	                false,
 	                undefined,
-	                expandLoad
+	                preparedExpandForPool?.ok ? preparedExpandForPool : undefined
 	              )
 
 	            if (keywordPool) {

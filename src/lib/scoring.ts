@@ -638,6 +638,7 @@ export async function evaluateCreativeAdStrength(
     bucketType?: 'A' | 'B' | 'C' | 'D' | 'S'
     creativeType?: CanonicalCreativeType
     userId?: number
+    offerId?: number
     keywordsWithVolume?: Array<{
       keyword: string
       searchVolume: number
@@ -656,6 +657,7 @@ export async function evaluateCreativeAdStrength(
     bucketType: options?.bucketType,
     creativeType: options?.creativeType,
     userId: options?.userId,
+    offerId: options?.offerId,
     keywordsWithVolume: options?.keywordsWithVolume,
     skipCompetitivePositioningAi: options?.skipCompetitivePositioningAi,
   })

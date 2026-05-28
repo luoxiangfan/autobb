@@ -31,7 +31,7 @@ const qualityLoopFns = vi.hoisted(() => ({
 const keywordPoolFns = vi.hoisted(() => ({
   getAvailableBuckets: vi.fn(),
   getKeywordsByLinkTypeAndBucket: vi.fn(),
-  getOrCreateKeywordPool: vi.fn(),
+  resolveKeywordPoolForCreativeGeneration: vi.fn(),
 }))
 
 const generatorMetaFns = vi.hoisted(() => ({
@@ -83,7 +83,7 @@ vi.mock('@/lib/ad-creative-quality-loop', () => ({
 vi.mock('@/lib/offer-keyword-pool', () => ({
   getAvailableBuckets: keywordPoolFns.getAvailableBuckets,
   getKeywordsByLinkTypeAndBucket: keywordPoolFns.getKeywordsByLinkTypeAndBucket,
-  getOrCreateKeywordPool: keywordPoolFns.getOrCreateKeywordPool,
+  resolveKeywordPoolForCreativeGeneration: keywordPoolFns.resolveKeywordPoolForCreativeGeneration,
 }))
 
 vi.mock('@/lib/ad-creative-generator', () => ({
@@ -166,7 +166,10 @@ describe('POST /api/offers/:id/generate-creatives', () => {
     })
 
     keywordPoolFns.getAvailableBuckets.mockResolvedValue(['A', 'B', 'D'])
-    keywordPoolFns.getOrCreateKeywordPool.mockResolvedValue({ id: 77, brandKeywords: [] })
+    keywordPoolFns.resolveKeywordPoolForCreativeGeneration.mockResolvedValue({
+      pool: { id: 77, brandKeywords: [] },
+      plannerSession: undefined,
+    })
     keywordPoolFns.getKeywordsByLinkTypeAndBucket.mockResolvedValue({
       keywords: [],
       intent: 'test',

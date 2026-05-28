@@ -28,7 +28,7 @@ vi.mock('./ad-creative-generator', () => ({
 }))
 
 const keywordPoolFns = vi.hoisted(() => ({
-  getOrCreateKeywordPool: vi.fn(),
+  resolveKeywordPoolForCreativeGeneration: vi.fn(),
 }))
 
 const pipelineFns = vi.hoisted(() => ({
@@ -36,7 +36,7 @@ const pipelineFns = vi.hoisted(() => ({
 }))
 
 vi.mock('./offer-keyword-pool', () => ({
-  getOrCreateKeywordPool: keywordPoolFns.getOrCreateKeywordPool,
+  resolveKeywordPoolForCreativeGeneration: keywordPoolFns.resolveKeywordPoolForCreativeGeneration,
 }))
 
 vi.mock('./bucket-creative-generation-pipeline', () => ({
@@ -76,7 +76,10 @@ describe('regenerateAdCreative', () => {
       keyword_bucket: 'A',
     })
     generatorFns.getThemeByBucket.mockReturnValue('Intent - IntentEn')
-    keywordPoolFns.getOrCreateKeywordPool.mockResolvedValue({ id: 77, brandKeywords: [] })
+    keywordPoolFns.resolveKeywordPoolForCreativeGeneration.mockResolvedValue({
+      pool: { id: 77, brandKeywords: [] },
+      plannerSession: undefined,
+    })
     pipelineFns.runBucketCreativeGeneration.mockResolvedValue({
       selectedCreative: generatedPayload,
       accepted: true,

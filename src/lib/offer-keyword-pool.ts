@@ -5319,6 +5319,41 @@ export async function getOrCreateKeywordPool(
   return generateOfferKeywordPool(offerId, userId, undefined, progress, preparedExpand)
 }
 
+/**
+ * 创意生成前解析关键词池：单次 prepare，建池时复用；池已存在则不再在池内 prepare。
+ */
+export async function resolveKeywordPoolForCreativeGeneration(
+  offerId: number,
+  userId: number,
+  options?: {
+    forceRegenerate?: boolean
+    progress?: KeywordPoolProgressReporter
+  }
+): Promise<{
+  pool: OfferKeywordPool
+  plannerSession?: KeywordPlannerPreparedSession
+}> {
+  const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
+  const preparedExpand = expandLoad.ok ? expandLoad : undefined
+  const plannerSession = preparedExpand?.plannerSession
+
+  if (!options?.forceRegenerate) {
+    const existing = await getKeywordPoolByOfferId(offerId)
+    if (existing) {
+      return { pool: existing, plannerSession }
+    }
+  }
+
+  const pool = await generateOfferKeywordPool(
+    offerId,
+    userId,
+    undefined,
+    options?.progress,
+    preparedExpand
+  )
+  return { pool, plannerSession }
+}
+
 type PromoteKeywordInput = {
   text?: string
   keyword?: string

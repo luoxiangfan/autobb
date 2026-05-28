@@ -24,7 +24,7 @@ import {
   type BucketKeywordContext,
 } from '@/lib/bucket-creative-generation-pipeline'
 import {
-  getOrCreateKeywordPool,
+  resolveKeywordPoolForCreativeGeneration,
   getKeywordPoolByOfferId,
   getBucketInfo,
   getAvailableBuckets,
@@ -263,7 +263,10 @@ export async function POST(
 
     // 1. 获取或创建关键词池
     console.log('\n📦 Step 1: 获取关键词池')
-    const pool = await getOrCreateKeywordPool(offerId, userIdNum, false)
+    const { pool, plannerSession } = await resolveKeywordPoolForCreativeGeneration(
+      offerId,
+      userIdNum
+    )
 
     // 2. 确定聚类策略
     const strategy = determineClusteringStrategy(pool.totalKeywords)
@@ -385,6 +388,7 @@ export async function POST(
           userIdNum,
           offer,
           pool,
+          plannerSession,
           bucket,
           bucketInfo,
           normalizedMaxRetries,
@@ -556,6 +560,7 @@ async function runCreativeGenerationPass(params: {
   userId: number
   offer: any
   pool: OfferKeywordPool
+  plannerSession?: import('@/lib/google-ads-accounts-auth').KeywordPlannerPreparedSession
   bucket: BucketType
   bucketInfo: { keywords: PoolKeywordData[]; intent: string; intentEn: string }
   maxRetries: number
@@ -591,6 +596,7 @@ async function runCreativeGenerationPass(params: {
     maxRetries: params.maxRetries,
     scopeLabel: params.scopeLabel,
     keywordPool: params.pool,
+    plannerSession: params.plannerSession,
     loadSearchTermFeedbackHints: false,
     skipCacheOnRetryOnly: true,
     keywordPostProcessMode: 'applyPrecomputed',
@@ -673,6 +679,7 @@ async function generateCreativeWithBucket(
   userId: number,
   offer: any,
   pool: OfferKeywordPool,
+  plannerSession: import('@/lib/google-ads-accounts-auth').KeywordPlannerPreparedSession | undefined,
   bucket: BucketType,
   bucketInfo: { keywords: PoolKeywordData[]; intent: string; intentEn: string },
   maxRetries: number,
@@ -715,6 +722,7 @@ async function generateCreativeWithBucket(
       userId,
       offer,
       pool,
+      plannerSession,
       bucket,
       bucketInfo,
       maxRetries,

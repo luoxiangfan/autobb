@@ -20,7 +20,7 @@ import {
   runBucketCreativeGeneration,
 } from './bucket-creative-generation-pipeline'
 import { findOfferById } from './offers'
-import { getOrCreateKeywordPool } from './offer-keyword-pool'
+import { resolveKeywordPoolForCreativeGeneration } from './offer-keyword-pool'
 import {
   getCreativeTypeForBucketSlot,
   normalizeCreativeBucketSlot,
@@ -125,17 +125,16 @@ export async function regenerateAdCreative(
       || undefined
     const bucketIntentEn = bucketTheme?.split(' - ')[1] || undefined
 
-    let keywordPool: Awaited<ReturnType<typeof getOrCreateKeywordPool>> | null = null
+    let keywordPool: Awaited<
+      ReturnType<typeof resolveKeywordPoolForCreativeGeneration>
+    >['pool'] | null = null
+    let plannerSession: Awaited<
+      ReturnType<typeof resolveKeywordPoolForCreativeGeneration>
+    >['plannerSession']
     if (bucket) {
-      const { loadKeywordPoolExpandCredentialsForOffer } = await import('@/lib/google-ads-accounts-auth')
-      const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
-      keywordPool = await getOrCreateKeywordPool(
-        offerId,
-        userId,
-        false,
-        undefined,
-        expandLoad.ok ? expandLoad : undefined
-      )
+      const resolved = await resolveKeywordPoolForCreativeGeneration(offerId, userId)
+      keywordPool = resolved.pool
+      plannerSession = resolved.plannerSession
     }
 
     console.log(
@@ -153,6 +152,7 @@ export async function regenerateAdCreative(
       scopeLabel: bucket ? `regenerate-ad-creative-${bucket}` : 'regenerate-ad-creative',
       linkType,
       keywordPool,
+      plannerSession,
       loadSearchTermFeedbackHints: true,
       skipCache: true,
       hardPersistenceGateEnabled,
