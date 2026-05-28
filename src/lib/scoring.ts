@@ -52,6 +52,43 @@ export async function prepareLaunchScoreAdStrengthPlannerContext(
   return { skipKeywordPoolExpandLoad: true }
 }
 
+export type LaunchScoreCampaignConfig = {
+  budgetAmount?: number
+  maxCpcBid?: number
+  currencyCode?: string
+  budgetType?: string
+  finalUrl?: string
+  targetCountry?: string
+  targetLanguage?: string
+  adStrengthPlanner?: LaunchScoreAdStrengthPlannerContext
+}
+
+export type LaunchScoreResult = Awaited<ReturnType<typeof calculateLaunchScore>>
+
+/**
+ * 同一 Offer 下多条创意批量算 Launch Score：共享一次 Keyword Planner expand prepare。
+ */
+export async function calculateLaunchScoresForCreatives(
+  offer: Offer,
+  creatives: AdCreative[],
+  userId: number,
+  campaignConfig?: LaunchScoreCampaignConfig
+): Promise<LaunchScoreResult[]> {
+  let sharedPlanner = campaignConfig?.adStrengthPlanner
+  if (sharedPlanner === undefined && userId && offer.id && offer.brand) {
+    sharedPlanner = await prepareLaunchScoreAdStrengthPlannerContext(userId, offer.id, offer.brand)
+  }
+  const sharedConfig: LaunchScoreCampaignConfig | undefined = sharedPlanner
+    ? { ...campaignConfig, adStrengthPlanner: sharedPlanner }
+    : campaignConfig
+
+  const results: LaunchScoreResult[] = []
+  for (const creative of creatives) {
+    results.push(await calculateLaunchScore(offer, creative, userId, sharedConfig))
+  }
+  return results
+}
+
 /**
  * Launch Score 4维度评分系统 v4.0
  *
@@ -65,17 +102,7 @@ export async function calculateLaunchScore(
   offer: Offer,
   creative: AdCreative,
   userId: number,
-  campaignConfig?: {
-    budgetAmount?: number
-    maxCpcBid?: number
-    currencyCode?: string
-    budgetType?: string
-    finalUrl?: string  // 🔧 新增：用户配置的Final URL
-    targetCountry?: string  // 🔧 新增：目标国家
-    targetLanguage?: string  // 🔧 新增：目标语言
-    /** 批量/发布流程可预先 prepare 一次并传入，避免每条创意重复 expand */
-    adStrengthPlanner?: LaunchScoreAdStrengthPlannerContext
-  }
+  campaignConfig?: LaunchScoreCampaignConfig
 ): Promise<{
   totalScore: number
   analysis: {
@@ -103,9 +130,6 @@ export async function calculateLaunchScore(
     console.log(`[LaunchScore] 否定关键词示例: ${negativeKeywords.slice(0, 5).join(', ')}`)
     console.log(`[LaunchScore] creative.negativeKeywords存在: ${!!(creative as any).negativeKeywords}`)
     console.log(`[LaunchScore] creative完整字段: ${Object.keys(creative).join(', ')}`)
-
-    // 📦 加载新版prompt模板 (v4.0)
-    const promptTemplate = await loadPrompt('launch_score')
 
     // 🎯 计算品牌词搜索量（从keywordsWithVolume中提取品牌相关词）
     const brandKeywords = keywordsWithVolume.filter((kw: any) =>
@@ -214,6 +238,9 @@ export async function calculateLaunchScore(
     // 🔥 新增：调试日志 - 追踪prompt中的否定关键词
     console.log(`[LaunchScore] 准备替换到prompt中的否定关键词数量: ${negativeKeywords.length}`)
     console.log(`[LaunchScore] 否定关键词内容: ${negativeKeywords.length > 0 ? negativeKeywords.join(', ') : 'NONE'}`)
+
+    // 📦 加载 Launch Score prompt（放在 Ad Strength 之后，已有 ad_strength 时可跳过）
+    const promptTemplate = await loadPrompt('launch_score')
 
     const reviewedInputs: InputReview[] = []
     const promptVariables = {

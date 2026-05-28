@@ -7,6 +7,7 @@ const poolFns = vi.hoisted(() => ({
 
 const authExpandFns = vi.hoisted(() => ({
   loadKeywordPoolExpandCredentialsForOffer: vi.fn(),
+  resolvePlannerExpandForOffer: vi.fn(),
 }))
 
 const generatorFns = vi.hoisted(() => ({
@@ -18,6 +19,7 @@ vi.mock('../google-ads-accounts-auth', async (importOriginal) => {
   return {
     ...actual,
     loadKeywordPoolExpandCredentialsForOffer: authExpandFns.loadKeywordPoolExpandCredentialsForOffer,
+    resolvePlannerExpandForOffer: authExpandFns.resolvePlannerExpandForOffer,
   }
 })
 
@@ -50,6 +52,26 @@ describe('generateMultipleCreativesWithDiversityCheck', () => {
       ok: true,
       creds: { authType: 'oauth', linkedServiceAccountId: null },
       plannerSession: mockSession,
+    })
+    authExpandFns.resolvePlannerExpandForOffer.mockImplementation(async (_userId, _offerId, existing) => {
+      if (existing?.preparedExpand !== undefined) {
+        return {
+          preparedExpand: existing.preparedExpand,
+          plannerSession:
+            existing.plannerSession ??
+            (existing.preparedExpand.ok ? existing.preparedExpand.plannerSession : undefined),
+        }
+      }
+      if (existing?.plannerSession !== undefined) {
+        return {
+          plannerSession: existing.plannerSession,
+          preparedExpand: existing.preparedExpand,
+        }
+      }
+      return authExpandFns.loadKeywordPoolExpandCredentialsForOffer(_userId, _offerId).then((expandLoad) => ({
+        preparedExpand: expandLoad,
+        plannerSession: expandLoad.ok ? expandLoad.plannerSession : undefined,
+      }))
     })
 
     poolFns.resolveKeywordPoolForCreativeGeneration.mockResolvedValue({
@@ -100,23 +122,27 @@ describe('generateMultipleCreativesWithDiversityCheck', () => {
     })
 
     expect(poolFns.resolveKeywordPoolForCreativeGeneration).not.toHaveBeenCalled()
-    expect(authExpandFns.loadKeywordPoolExpandCredentialsForOffer).toHaveBeenCalledTimes(1)
-    expect(authExpandFns.loadKeywordPoolExpandCredentialsForOffer).toHaveBeenCalledWith(1, 9)
+    expect(authExpandFns.resolvePlannerExpandForOffer).toHaveBeenCalledTimes(1)
+    expect(authExpandFns.resolvePlannerExpandForOffer).toHaveBeenCalledWith(
+      1,
+      9,
+      expect.objectContaining({ plannerSession: undefined, preparedExpand: undefined })
+    )
   })
 
   it('loads expand once when pool is preset without session or preparedExpand', async () => {
     const keywordPool = { id: 2, offerId: 9, totalKeywords: 5 }
-    authExpandFns.loadKeywordPoolExpandCredentialsForOffer.mockResolvedValueOnce({
-      ok: false,
-      reason: 'DEV_TOKEN_INSUFFICIENT_ACCESS',
-    })
+    authExpandFns.resolvePlannerExpandForOffer.mockImplementationOnce(async () => ({
+      preparedExpand: { ok: false as const },
+      plannerSession: undefined,
+    }))
 
     await generateMultipleCreativesWithDiversityCheck(9, 1, 1, 0.2, 3, {
       keywordPool: keywordPool as any,
       skipCache: true,
     })
 
-    expect(authExpandFns.loadKeywordPoolExpandCredentialsForOffer).toHaveBeenCalledTimes(1)
+    expect(authExpandFns.resolvePlannerExpandForOffer).toHaveBeenCalledTimes(1)
   })
 
   it('skips expand when caller already passed preparedExpand', async () => {
@@ -133,6 +159,7 @@ describe('generateMultipleCreativesWithDiversityCheck', () => {
       skipCache: true,
     })
 
+    expect(authExpandFns.resolvePlannerExpandForOffer).toHaveBeenCalledTimes(1)
     expect(authExpandFns.loadKeywordPoolExpandCredentialsForOffer).not.toHaveBeenCalled()
   })
 })

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { deriveSkipKeywordPoolExpandLoad, parsePositiveIntegerOfferId } from '../parse-offer-id'
+import {
+  deriveSkipKeywordPoolExpandLoad,
+  parsePositiveIntegerOfferId,
+  parsePositiveIntegerOfferIdList,
+} from '../parse-offer-id'
 
 describe('parsePositiveIntegerOfferId', () => {
   it('accepts positive integers', () => {
@@ -15,6 +19,13 @@ describe('parsePositiveIntegerOfferId', () => {
     expect(parsePositiveIntegerOfferId(-1)).toBeUndefined()
     expect(parsePositiveIntegerOfferId('42x')).toBeUndefined()
     expect(parsePositiveIntegerOfferId(null)).toBeUndefined()
+  })
+})
+
+describe('parsePositiveIntegerOfferIdList', () => {
+  it('parses comma-separated ids and drops invalid segments', () => {
+    expect(parsePositiveIntegerOfferIdList('1, 2,3')).toEqual([1, 2, 3])
+    expect(parsePositiveIntegerOfferIdList('1,,x,4')).toEqual([1, 4])
   })
 })
 

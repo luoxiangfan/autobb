@@ -12,6 +12,7 @@ import { creativeCache, generateCreativeCacheKey } from './cache'
 import {
   getKeywordSearchVolumesForPlannerContext,
   loadKeywordPoolExpandCredentialsForOffer,
+  resolvePlannerExpandForOffer,
   type KeywordPlannerPreparedSession,
   type KeywordPoolExpandLoadResult,
 } from './google-ads-accounts-auth'
@@ -11471,6 +11472,8 @@ export async function generateSyntheticCreative(
     skipCache?: boolean
     maxNonBrandKeywords?: number
     minSearchVolume?: number
+    plannerSession?: KeywordPlannerPreparedSession
+    preparedExpand?: KeywordPoolExpandLoadResult
   }
 ): Promise<GeneratedAdCreativeData & { ai_model: string }> {
   console.log(`\n🔮 开始生成内部 coverage 广告创意 (Offer #${offerId})...`)
@@ -11513,13 +11516,10 @@ export async function generateSyntheticCreative(
   console.log(`   - 高搜索量非品牌词: ${nonBrandKeywordCount}个`)
   console.log(`   - 总计: ${bucketKeywords.length}个`)
 
-  let plannerSession: KeywordPlannerPreparedSession | undefined
-  let preparedExpand: KeywordPoolExpandLoadResult | undefined
-  const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
-  if (expandLoad.ok) {
-    plannerSession = expandLoad.plannerSession
-    preparedExpand = expandLoad
-  }
+  const { plannerSession, preparedExpand } = await resolvePlannerExpandForOffer(userId, offerId, {
+    plannerSession: options?.plannerSession,
+    preparedExpand: options?.preparedExpand,
+  })
 
   // 4. 调用通用创意生成函数（内部 coverage 模式，统一归一化到 D / product_intent）
   const result = await generateAdCreative(offerId, userId, {
@@ -11794,8 +11794,9 @@ function calculateCreativeKeywordSimilarity(
 }
 
 /**
- * 生成多个创意，确保多样性
- * 如果相似度过高，自动重新生成
+ * 生成多个创意，确保多样性（相似度过高则重试）。
+ *
+ * 仅测试/工具引用；生产批量生成请用 `generateAdCreativesBatch` + 质量环。
  *
  * ✅ 安全修复：userId改为必需参数
  */
@@ -11843,12 +11844,13 @@ export async function generateMultipleCreativesWithDiversityCheck(
     keywordPool = resolved.pool
     plannerSession = plannerSession ?? resolved.plannerSession
     preparedExpand = preparedExpand ?? resolved.preparedExpand
-  } else if (plannerSession === undefined && preparedExpand === undefined) {
-    const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
-    preparedExpand = expandLoad
-    if (expandLoad.ok) {
-      plannerSession = expandLoad.plannerSession
-    }
+  } else {
+    const resolved = await resolvePlannerExpandForOffer(userId, offerId, {
+      plannerSession,
+      preparedExpand,
+    })
+    plannerSession = resolved.plannerSession
+    preparedExpand = resolved.preparedExpand
   }
 
   console.log(`\n🎯 开始生成 ${count} 个多样化创意 (最大相似度: ${maxSimilarity * 100}%)`)

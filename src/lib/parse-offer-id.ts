@@ -19,6 +19,14 @@ export function parsePositiveIntegerOfferId(value: unknown): number | undefined 
   return undefined
 }
 
+/** Parse comma-separated offer ids (e.g. query `ids=1,2,3`). */
+export function parsePositiveIntegerOfferIdList(raw: string): number[] {
+  return raw
+    .split(',')
+    .map((part) => parsePositiveIntegerOfferId(part.trim()))
+    .filter((id): id is number => id != null)
+}
+
 /**
  * When keyword-pool expand prepare did not succeed, skip per-evaluate expand reload in Ad Strength.
  */

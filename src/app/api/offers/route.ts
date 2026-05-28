@@ -6,6 +6,7 @@ import { boolCondition } from '@/lib/db-helpers'
 import { toNumber } from '@/lib/utils'
 import { apiCache, generateCacheKey, invalidateOfferCache } from '@/lib/api-cache'
 import { withPerformanceMonitoring } from '@/lib/api-performance'
+import { parsePositiveIntegerOfferIdList } from '@/lib/parse-offer-id'
 
 const OFFERS_SERVER_SUPPORTED_SORTS = new Set([
   'offerName',
@@ -104,7 +105,7 @@ async function get(request: NextRequest) {
 
     // 如果提供了ids参数，直接查询特定的Offers（用于批量上传进度显示）
     if (idsParam) {
-      const ids = idsParam.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id))
+      const ids = parsePositiveIntegerOfferIdList(idsParam)
 
       if (ids.length === 0) {
         return NextResponse.json({ error: '无效的IDs参数' }, { status: 400 })

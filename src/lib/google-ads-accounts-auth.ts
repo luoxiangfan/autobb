@@ -1135,3 +1135,36 @@ export async function resolveAccountsRouteAuthBundle(params: {
     },
   }
 }
+
+/** 单次 load expand；若调用方已传入 session / preparedExpand 则不再重复请求 */
+export async function resolvePlannerExpandForOffer(
+  userId: number,
+  offerId: number,
+  existing?: {
+    plannerSession?: KeywordPlannerPreparedSession
+    preparedExpand?: KeywordPoolExpandLoadResult
+  }
+): Promise<{
+  plannerSession?: KeywordPlannerPreparedSession
+  preparedExpand?: KeywordPoolExpandLoadResult
+}> {
+  if (existing?.preparedExpand !== undefined) {
+    return {
+      preparedExpand: existing.preparedExpand,
+      plannerSession:
+        existing.plannerSession ??
+        (existing.preparedExpand.ok ? existing.preparedExpand.plannerSession : undefined),
+    }
+  }
+  if (existing?.plannerSession !== undefined) {
+    return {
+      plannerSession: existing.plannerSession,
+      preparedExpand: existing.preparedExpand,
+    }
+  }
+  const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
+  return {
+    preparedExpand: expandLoad,
+    plannerSession: expandLoad.ok ? expandLoad.plannerSession : undefined,
+  }
+}

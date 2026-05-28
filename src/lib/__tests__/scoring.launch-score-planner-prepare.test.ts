@@ -2,9 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const generateContentMock = vi.fn()
 const loadKeywordPoolExpandMock = vi.fn()
+const loadPromptMock = vi.hoisted(() => vi.fn())
 
 vi.mock('../gemini', () => ({
   generateContent: generateContentMock,
+}))
+
+vi.mock('../prompt-loader', () => ({
+  loadPrompt: loadPromptMock,
+  interpolateTemplate: (template: string) => template,
 }))
 
 vi.mock('../ai-token-tracker', () => ({
@@ -87,6 +93,10 @@ describe('calculateLaunchScore planner prepare', () => {
     vi.resetModules()
     generateContentMock.mockReset()
     loadKeywordPoolExpandMock.mockReset()
+    loadPromptMock.mockReset()
+    loadPromptMock.mockResolvedValue(
+      'launch_score test template with marketPotentialScore and {{brand}}'
+    )
     evaluateAdStrengthMock.mockReset()
     evaluateAdStrengthMock.mockResolvedValue({
       rating: 'GOOD',
@@ -133,6 +143,7 @@ describe('calculateLaunchScore planner prepare', () => {
     )
 
     expect(loadKeywordPoolExpandMock).not.toHaveBeenCalled()
+    expect(loadPromptMock).toHaveBeenCalledTimes(1)
   })
 
   it('prepares keyword pool expand only when ad_strength must be evaluated', async () => {
@@ -154,6 +165,38 @@ describe('calculateLaunchScore planner prepare', () => {
         keywords: ['acme filter'],
         keywordsWithVolume: [{ keyword: 'acme filter', searchVolume: 100 }],
       } as any,
+      9
+    )
+
+    expect(loadKeywordPoolExpandMock).toHaveBeenCalledTimes(1)
+    expect(loadKeywordPoolExpandMock).toHaveBeenCalledWith(9, 7)
+    expect(loadPromptMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('calculateLaunchScoresForCreatives prepares expand once for multiple creatives', async () => {
+    const { calculateLaunchScoresForCreatives } = await import('../scoring')
+    loadKeywordPoolExpandMock.mockClear()
+    loadPromptMock.mockClear()
+
+    const offer = {
+      id: 7,
+      brand: 'AcmeBrand',
+      target_country: 'US',
+      target_language: 'English',
+      url: 'https://www.amazon.com/acme-brand',
+      final_url: 'https://www.amazon.com/acme-brand',
+      page_type: 'product',
+    } as any
+    const creativeBase = {
+      headlines: ['One', 'Two', 'Three'],
+      descriptions: ['Desc one', 'Desc two'],
+      keywords: ['acme filter'],
+      ad_strength: 'EXCELLENT',
+    }
+
+    await calculateLaunchScoresForCreatives(
+      offer,
+      [{ ...creativeBase, id: 1 } as any, { ...creativeBase, id: 2 } as any],
       9
     )
 

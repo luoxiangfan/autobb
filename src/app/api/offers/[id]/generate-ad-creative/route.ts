@@ -607,7 +607,7 @@ export async function POST(
     // 通用创意生成错误
     const appError = createError.creativeGenerationFailed({
       originalError: error.message || '未知错误',
-      offerId: parseInt((error as any).offerId) || undefined
+      offerId: parsePositiveIntegerOfferId((error as any).offerId) ?? undefined
     })
     return NextResponse.json(appError.toJSON(), { status: appError.httpStatus })
   }
