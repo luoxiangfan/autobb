@@ -150,7 +150,7 @@ export default function LaunchScorePage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ creativeId: parseInt(creativeId, 10) }),
+        body: JSON.stringify({ creativeId: Number(creativeId) }),
       })
 
       const data = await response.json()
@@ -160,7 +160,11 @@ export default function LaunchScorePage() {
       }
 
       setLaunchScore(data.launchScore)
-      setAnalysis(data.analysis)
+      if (data.launchScore?.id) {
+        await fetchAnalysis(data.launchScore.id)
+      } else if (data.analysis?.overallRecommendations) {
+        setAnalysis(data.analysis)
+      }
       showSuccess('计算完成', 'Launch Score已计算完成')
     } catch (err: any) {
       setError(err.message || '计算失败')

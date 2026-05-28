@@ -115,7 +115,8 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { creativeIds, autoCalculate = true } = body
+    const { creativeIds } = body
+    const autoCalculate = body.autoCalculate !== false
 
     if (!Array.isArray(creativeIds) || creativeIds.length === 0) {
       return NextResponse.json(

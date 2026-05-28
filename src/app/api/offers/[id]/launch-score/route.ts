@@ -93,17 +93,7 @@ export async function POST(
       return NextResponse.json({
         success: true,
         launchScore: cached,
-        analysis: {
-          totalScore: cached.totalScore,
-          analysis: {
-            launchViability: scoreAnalysis.launchViability,
-            adQuality: scoreAnalysis.adQuality,
-            keywordStrategy: scoreAnalysis.keywordStrategy,
-            basicConfig: scoreAnalysis.basicConfig,
-          },
-          recommendations: scoreAnalysis.overallRecommendations,
-          scoreAnalysis,
-        },
+        analysis: scoreAnalysis,
         fromCache: true,
       })
     }
@@ -171,6 +161,16 @@ export async function GET(
       )
     }
 
+    if (queryCreativeId != null) {
+      const queryCreative = await findAdCreativeById(queryCreativeId, userId)
+      if (!queryCreative || queryCreative.offer_id !== offer.id) {
+        return NextResponse.json(
+          { error: '创意不存在或无权访问' },
+          { status: 404 }
+        )
+      }
+    }
+
     let launchScore = queryCreativeId
       ? (
           await resolveLaunchScoreForCreativeCompare(
@@ -205,13 +205,20 @@ export async function GET(
         })
       }
 
-      const bestCreative = creatives.reduce((best: any, current: any) =>
-        (current.score || 0) > (best.score || 0) ? current : best
-      )
-      const targetCreative =
-        queryCreativeId != null
-          ? creatives.find((c) => c.id === queryCreativeId) ?? bestCreative
-          : bestCreative
+      let targetCreative
+      if (queryCreativeId != null) {
+        targetCreative = creatives.find((c) => c.id === queryCreativeId)
+        if (!targetCreative) {
+          return NextResponse.json(
+            { error: '创意不存在或无权访问' },
+            { status: 404 }
+          )
+        }
+      } else {
+        targetCreative = creatives.reduce((best: any, current: any) =>
+          (current.score || 0) > (best.score || 0) ? current : best
+        )
+      }
 
       const cached = await findCachedLaunchScoreForCreative(targetCreative, offer, userId)
       if (cached) {
