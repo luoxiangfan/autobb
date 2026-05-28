@@ -20,19 +20,6 @@ vi.mock('../google-suggestions', () => ({
   ])
 }))
 
-vi.mock('../google-trends', () => ({
-  getTrendsKeywords: vi.fn(async () => [
-    {
-      keyword: 'midland weather alert',
-      searchVolume: 0,
-      competition: 'UNKNOWN',
-      competitionIndex: 0,
-      lowTopPageBid: 0,
-      highTopPageBid: 0,
-    }
-  ])
-}))
-
 vi.mock('../enhanced-keyword-extractor', () => ({
   extractKeywordsEnhanced: vi.fn(async () => [
     { keyword: 'midland all hazards radio', competition: 'UNKNOWN' }

@@ -17,10 +17,6 @@ vi.mock('../keyword-planner', () => ({
   getKeywordSearchVolumes: (...args: any[]) => mockGetKeywordSearchVolumes(...args),
 }))
 
-vi.mock('../google-trends', () => ({
-  getTrendsKeywords: vi.fn(async () => []),
-}))
-
 vi.mock('../google-suggestions', () => ({
   detectCountryInKeyword: vi.fn(() => []),
   filterLowIntentKeywords: vi.fn((keywords: string[]) => keywords),

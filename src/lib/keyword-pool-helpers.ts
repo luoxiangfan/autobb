@@ -16,7 +16,6 @@ import {
   type KeywordPlannerPreparedSession,
 } from './google-ads-accounts-auth'
 // 🔥 2026-03-13: 移除 TRENDS 关键词生成，由 Title/About补充 + 行业通用词替代
-// import { getTrendsKeywords } from './google-trends'
 import { DEFAULTS } from './keyword-constants'
 import { getKeywordPlannerUrlSeedForOffer } from './keyword-planner-site-filter'
 import { getLanguageName, normalizeCountryCode, normalizeLanguageCode } from './language-country-codes'
