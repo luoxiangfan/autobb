@@ -15,6 +15,7 @@ import {
 import { POST as rebuildOfferPost } from '@/app/api/offers/[id]/rebuild/route'
 import { getCreativeTypeForBucketSlot } from '@/lib/creative-type'
 import { loadKeywordPoolExpandCredentialsForOffer } from '@/lib/google-ads-accounts-auth'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 type CanonicalBucketSlot = 'A' | 'B' | 'D'
 
@@ -150,7 +151,10 @@ export async function GET(
     }
     const userId = authResult.user.userId
 
-    const offerId = parseInt(id, 10)
+    const offerId = parsePositiveIntegerOfferId(id)
+    if (!offerId) {
+      return NextResponse.json({ error: '无效的 Offer ID' }, { status: 400 })
+    }
     const userIdNum = userId
 
     // 验证 Offer 存在且属于当前用户
@@ -311,7 +315,10 @@ export async function POST(
     }
     const userId = authResult.user.userId
 
-    const offerId = parseInt(id, 10)
+    const offerId = parsePositiveIntegerOfferId(id)
+    if (!offerId) {
+      return NextResponse.json({ error: '无效的 Offer ID' }, { status: 400 })
+    }
     const userIdNum = userId
 
     // 验证 Offer 存在且属于当前用户
@@ -427,7 +434,10 @@ export async function DELETE(
     }
     const userId = authResult.user.userId
 
-    const offerId = parseInt(id, 10)
+    const offerId = parsePositiveIntegerOfferId(id)
+    if (!offerId) {
+      return NextResponse.json({ error: '无效的 Offer ID' }, { status: 400 })
+    }
     const userIdNum = userId
 
     // 验证 Offer 存在且属于当前用户

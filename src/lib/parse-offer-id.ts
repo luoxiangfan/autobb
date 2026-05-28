@@ -18,3 +18,16 @@ export function parsePositiveIntegerOfferId(value: unknown): number | undefined 
   }
   return undefined
 }
+
+/**
+ * When keyword-pool expand prepare did not succeed, skip per-evaluate expand reload in Ad Strength.
+ */
+export function deriveSkipKeywordPoolExpandLoad(
+  preparedExpand?: { ok: boolean } | undefined,
+  plannerSession?: unknown
+): boolean {
+  if (plannerSession) {
+    return false
+  }
+  return preparedExpand?.ok !== true
+}

@@ -6,6 +6,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getKeywordSearchVolumesForPlannerContext } from '@/lib/google-ads-accounts-auth'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,14 +38,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Maximum 100 keywords per request' }, { status: 400 })
     }
 
-    const offerId = offerIdParam ? parseInt(offerIdParam, 10) : undefined
+    const offerId = offerIdParam ? parsePositiveIntegerOfferId(offerIdParam) : undefined
     const googleAdsAccountId = googleAdsAccountIdParam
       ? parseInt(googleAdsAccountIdParam, 10)
       : undefined
 
     const volumeResult = await getKeywordSearchVolumesForPlannerContext({
       userId,
-      offerId: Number.isFinite(offerId) && offerId! > 0 ? offerId : undefined,
+      offerId,
       googleAdsAccountId:
         Number.isFinite(googleAdsAccountId) && googleAdsAccountId! > 0
           ? googleAdsAccountId

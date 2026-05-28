@@ -27,6 +27,7 @@ import {
 import { AD_CREATIVE_REQUIRED_MIN_SCORE } from '@/lib/ad-creative-quality-loop'
 import { getThemeByBucket, BucketType } from '@/lib/ad-creative-generator'
 import { getAvailableBuckets, resolveKeywordPoolForCreativeGeneration } from '@/lib/offer-keyword-pool'
+import { deriveSkipKeywordPoolExpandLoad, parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 import {
   deriveCanonicalCreativeType,
   getCreativeTypeForBucketSlot,
@@ -162,8 +163,8 @@ export async function POST(
       return NextResponse.json(error.toJSON(), { status: error.httpStatus })
     }
 
-    const offerId = parseInt(params.id)
-    if (isNaN(offerId)) {
+    const offerId = parsePositiveIntegerOfferId(params.id)
+    if (!offerId) {
       const error = createError.invalidParameter({ field: 'id', value: params.id })
       return NextResponse.json(error.toJSON(), { status: error.httpStatus })
     }
@@ -334,6 +335,7 @@ export async function POST(
       offerId,
       userId
     )
+    const skipKeywordPoolExpandLoad = deriveSkipKeywordPoolExpandLoad(preparedExpand, plannerSession)
     console.log(
       `   生成模式: ${generationMode}，质量策略: 低于 GOOD 不保存，自动重试最多 ${normalizedMaxRetries} 次，失败后保存最佳`
     )
@@ -383,6 +385,7 @@ export async function POST(
           keywordPool,
           plannerSession,
           preparedExpand,
+          skipKeywordPoolExpandLoad,
           searchTermFeedbackHints,
           loadSearchTermFeedbackHints: false,
           referencePerformance: reference_performance,
@@ -483,6 +486,7 @@ export async function POST(
         keywordPool,
         plannerSession,
         preparedExpand,
+        skipKeywordPoolExpandLoad,
         searchTermFeedbackHints,
         loadSearchTermFeedbackHints: false,
         referencePerformance: reference_performance,
@@ -627,8 +631,8 @@ export async function GET(
       return NextResponse.json(error.toJSON(), { status: error.httpStatus })
     }
 
-    const offerId = parseInt(params.id)
-    if (isNaN(offerId)) {
+    const offerId = parsePositiveIntegerOfferId(params.id)
+    if (!offerId) {
       const error = createError.invalidParameter({ field: 'id', value: params.id })
       return NextResponse.json(error.toJSON(), { status: error.httpStatus })
     }

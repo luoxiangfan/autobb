@@ -17,6 +17,7 @@ import {
 } from '@/lib/offer-extraction-mode'
 import { applyOfferUpdateFromBody, pickOfferUpdateBody } from '@/lib/offer-update-from-body'
 import { offerExtractApiErrorBody } from '@/lib/offer-extract-request'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 export const maxDuration = 120
 
@@ -25,9 +26,8 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const parentRequestId = req.headers.get('x-request-id') || undefined
-  const offerId = parseInt(params.id, 10)
-
-  if (isNaN(offerId)) {
+  const offerId = parsePositiveIntegerOfferId(params.id)
+  if (!offerId) {
     return NextResponse.json(
       { error: 'Invalid request', message: 'Invalid offer ID' },
       { status: 400 }

@@ -46,6 +46,7 @@ import {
 } from '@/lib/creative-type'
 import { extractModelAnchorTextsFromScrapedData } from '@/lib/model-anchor-evidence'
 import { normalizeSingleCreativeSelection } from '@/lib/creative-request-normalizer'
+import { deriveSkipKeywordPoolExpandLoad, parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 function parseBooleanFlag(value: unknown): boolean {
   if (typeof value === 'boolean') return value
@@ -182,7 +183,10 @@ export async function POST(
     }
     const userId = authResult.user.userId
 
-    const offerId = parseInt(id, 10)
+    const offerId = parsePositiveIntegerOfferId(id)
+    if (!offerId) {
+      return NextResponse.json({ error: '无效的 Offer ID' }, { status: 400 })
+    }
     const userIdNum = userId
 
     // 验证 Offer 存在且属于当前用户
@@ -267,6 +271,7 @@ export async function POST(
       offerId,
       userIdNum
     )
+    const skipKeywordPoolExpandLoad = deriveSkipKeywordPoolExpandLoad(preparedExpand, plannerSession)
 
     // 2. 确定聚类策略
     const strategy = determineClusteringStrategy(pool.totalKeywords)
@@ -390,6 +395,7 @@ export async function POST(
           pool,
           plannerSession,
           preparedExpand,
+          skipKeywordPoolExpandLoad,
           bucket,
           bucketInfo,
           normalizedMaxRetries,
@@ -563,6 +569,7 @@ async function runCreativeGenerationPass(params: {
   pool: OfferKeywordPool
   plannerSession?: import('@/lib/google-ads-accounts-auth').KeywordPlannerPreparedSession
   preparedExpand?: import('@/lib/google-ads-accounts-auth').KeywordPoolPreparedExpand
+  skipKeywordPoolExpandLoad?: boolean
   bucket: BucketType
   bucketInfo: { keywords: PoolKeywordData[]; intent: string; intentEn: string }
   maxRetries: number
@@ -600,6 +607,7 @@ async function runCreativeGenerationPass(params: {
     keywordPool: params.pool,
     plannerSession: params.plannerSession,
     preparedExpand: params.preparedExpand,
+    skipKeywordPoolExpandLoad: params.skipKeywordPoolExpandLoad,
     loadSearchTermFeedbackHints: false,
     skipCacheOnRetryOnly: true,
     keywordPostProcessMode: 'applyPrecomputed',
@@ -684,6 +692,7 @@ async function generateCreativeWithBucket(
   pool: OfferKeywordPool,
   plannerSession: import('@/lib/google-ads-accounts-auth').KeywordPlannerPreparedSession | undefined,
   preparedExpand: import('@/lib/google-ads-accounts-auth').KeywordPoolPreparedExpand | undefined,
+  skipKeywordPoolExpandLoad: boolean,
   bucket: BucketType,
   bucketInfo: { keywords: PoolKeywordData[]; intent: string; intentEn: string },
   maxRetries: number,
@@ -728,6 +737,7 @@ async function generateCreativeWithBucket(
       pool,
       plannerSession,
       preparedExpand,
+      skipKeywordPoolExpandLoad,
       bucket,
       bucketInfo,
       maxRetries,

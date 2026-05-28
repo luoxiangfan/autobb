@@ -172,8 +172,10 @@ describe('creative-keyword-runtime', () => {
       bucket: 'B',
       productNameFallback: 'BrandX X200',
       productTitleFallback: 'BrandX X200 Vacuum',
+      skipKeywordPoolExpandLoad: true,
     })
 
+    expect(input.adStrengthContext.skipKeywordPoolExpandLoad).toBe(true)
     expect(input).toEqual({
       creative,
       minimumScore: 70,
@@ -184,6 +186,7 @@ describe('creative-keyword-runtime', () => {
         bucketType: 'B',
         creativeType: 'model_intent',
         userId: 7,
+        skipKeywordPoolExpandLoad: true,
       },
       ruleContext: {
         brandName: 'BrandX',

@@ -21,6 +21,7 @@ import {
 } from './bucket-creative-generation-pipeline'
 import { findOfferById } from './offers'
 import { resolveKeywordPoolForCreativeGeneration } from './offer-keyword-pool'
+import { deriveSkipKeywordPoolExpandLoad } from './parse-offer-id'
 import {
   getCreativeTypeForBucketSlot,
   normalizeCreativeBucketSlot,
@@ -158,6 +159,7 @@ export async function regenerateAdCreative(
       keywordPool,
       plannerSession,
       preparedExpand,
+      skipKeywordPoolExpandLoad: deriveSkipKeywordPoolExpandLoad(preparedExpand, plannerSession),
       loadSearchTermFeedbackHints: true,
       skipCache: true,
       hardPersistenceGateEnabled,

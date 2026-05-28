@@ -157,6 +157,8 @@ export interface RunBucketCreativeGenerationParams {
   /** 与 keywordPool 同次 resolveKeywordPoolForCreativeGeneration prepare，避免 generateAdCreative 重复 load */
   plannerSession?: KeywordPlannerPreparedSession
   preparedExpand?: KeywordPoolPreparedExpand
+  /** expand prepare 未成功时避免质量评估重复 load */
+  skipKeywordPoolExpandLoad?: boolean
   searchTermFeedbackHints?: SearchTermFeedbackHintsInput
   loadSearchTermFeedbackHints?: boolean
   referencePerformance?: unknown
@@ -492,6 +494,7 @@ export async function evaluateCreativeWithPersistenceGate(params: {
   generationProfile: AdCreativeGenerationModeProfile
   hardPersistenceGateEnabled?: boolean
   plannerSession?: KeywordPlannerPreparedSession
+  skipKeywordPoolExpandLoad?: boolean
 }): Promise<CreativeAttemptEvaluation> {
   const offerRecord = params.offer as unknown as Record<string, unknown>
   const hardPersistenceGateEnabled = params.hardPersistenceGateEnabled ?? parseBooleanEnv(
@@ -512,6 +515,7 @@ export async function evaluateCreativeWithPersistenceGate(params: {
       productTitleFallback: offerRecord.title as string | undefined,
       skipCompetitivePositioningAi: params.generationProfile.skipCompetitivePositioningAi,
       plannerSession: params.plannerSession,
+      skipKeywordPoolExpandLoad: params.skipKeywordPoolExpandLoad,
     })
   )
 
@@ -641,6 +645,7 @@ export function createBucketCreativeGenerationCallbacks(
       generationProfile,
       hardPersistenceGateEnabled: params.hardPersistenceGateEnabled,
       plannerSession: params.plannerSession,
+      skipKeywordPoolExpandLoad: params.skipKeywordPoolExpandLoad,
     })
     await hooks?.onAfterEvaluate?.({ attempt: ctx.attempt, evaluation })
     return evaluation

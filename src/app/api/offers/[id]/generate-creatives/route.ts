@@ -25,6 +25,7 @@ import {
 } from '@/lib/ad-creative-generation-mode'
 import { AD_CREATIVE_REQUIRED_MIN_SCORE } from '@/lib/ad-creative-quality-loop'
 import { getAvailableBuckets, resolveKeywordPoolForCreativeGeneration } from '@/lib/offer-keyword-pool'
+import { deriveSkipKeywordPoolExpandLoad, parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 import { markBucketGenerated } from '@/lib/offers'
 import { getThemeByBucket, type BucketType } from '@/lib/ad-creative-generator'
 import {
@@ -122,7 +123,13 @@ export async function POST(
       true
     )
     const forcePublishRequested = body?.forcePublish === true || body?.force_publish === true
-    const parsedOfferId = parseInt(id, 10)
+    const parsedOfferId = parsePositiveIntegerOfferId(id)
+    if (!parsedOfferId) {
+      return NextResponse.json(
+        { error: 'Invalid offer ID', message: '无效的 Offer ID' },
+        { status: 400 }
+      )
+    }
     const parsedUserId = userId
 
     // 验证Offer存在且属于当前用户
@@ -224,6 +231,7 @@ export async function POST(
       parsedOfferId,
       parsedUserId
     )
+    const skipKeywordPoolExpandLoad = deriveSkipKeywordPoolExpandLoad(preparedExpand, plannerSession)
 
     const generationResult = await runBucketCreativeGeneration({
       offerId: parsedOfferId,
@@ -237,6 +245,7 @@ export async function POST(
       keywordPool,
       plannerSession,
       preparedExpand,
+      skipKeywordPoolExpandLoad,
       searchTermFeedbackHints,
       loadSearchTermFeedbackHints: false,
       skipCacheOnRetryOnly: true,

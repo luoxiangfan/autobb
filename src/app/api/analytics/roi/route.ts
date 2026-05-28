@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
 import { toNumber } from '@/lib/utils'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 function normalizeCurrency(value: unknown): string {
   const normalized = String(value ?? '').trim().toUpperCase()
@@ -36,8 +37,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid campaign_id' }, { status: 400 })
     }
 
-    const offerId = offerIdRaw ? parseInt(offerIdRaw, 10) : null
-    if (offerIdRaw && (offerId === null || isNaN(offerId))) {
+    const offerId = offerIdRaw ? parsePositiveIntegerOfferId(offerIdRaw) ?? null : null
+    if (offerIdRaw && offerId === null) {
       return NextResponse.json({ error: 'Invalid offer_id' }, { status: 400 })
     }
 

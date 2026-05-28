@@ -548,8 +548,3 @@ export async function generateAdCreativesBatchWithoutDiversityCheck(
   console.log(`[generateAdCreativesBatchWithoutDiversityCheck] 开始生成 ${count} 个创意（无多样性校验）`)
   return generateAdCreativesBatch(offerId, userId, count, options)
 }
-
-/**
- * @deprecated 请改用 `@/lib/ad-creative-generator` 的 `generateMultipleCreativesWithDiversityCheck`。
- */
-export const generateMultipleCreativesWithDiversityCheck = generateAdCreativesBatchWithoutDiversityCheck

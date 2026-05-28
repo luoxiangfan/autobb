@@ -19,6 +19,7 @@ import { syncAccountsFromAPI } from '@/lib/google-ads-accounts-sync'
 import { getDatabase } from '@/lib/db'
 import { toNumber } from '@/lib/utils'
 import { withPerformanceMonitoring } from '@/lib/api-performance'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 // 该接口返回用户私有数据（账号列表/关联Offer），必须禁用任何层面的静态缓存
 export const dynamic = 'force-dynamic'
@@ -197,7 +198,8 @@ async function get(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const forceRefresh = searchParams.get('refresh') === 'true'
     const asyncRefresh = searchParams.get('async') === 'true'
-    const offerId = searchParams.get('offerId') ? parseInt(searchParams.get('offerId')!, 10) : null
+    const offerIdParam = searchParams.get('offerId')
+    const offerId = offerIdParam ? parsePositiveIntegerOfferId(offerIdParam) ?? null : null
     const authTypeParam = searchParams.get('auth_type') as 'oauth' | 'service_account' | null
     const authType: 'oauth' | 'service_account' =
       authTypeParam === 'oauth' || authTypeParam === 'service_account'

@@ -46,6 +46,7 @@ import {
   type OfferKeywordPool,
   type PoolKeywordData
 } from '@/lib/offer-keyword-pool'
+import { deriveSkipKeywordPoolExpandLoad } from '@/lib/parse-offer-id'
 import { getCreativeTypeForBucketSlot } from '@/lib/creative-type'
 import { normalizeCreativeTaskError } from '@/lib/creative-task-error'
 import { getSearchTermFeedbackHints } from '@/lib/search-term-feedback-hints'
@@ -521,6 +522,10 @@ export async function executeAdCreativeGeneration(
       keywordPool,
       plannerSession: plannerSessionForGeneration,
       preparedExpand: preparedExpandForGeneration,
+      skipKeywordPoolExpandLoad: deriveSkipKeywordPoolExpandLoad(
+        preparedExpandForGeneration,
+        plannerSessionForGeneration
+      ),
       searchTermFeedbackHints,
       loadSearchTermFeedbackHints: false,
       skipCache: true,
