@@ -20,8 +20,8 @@ import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
 import { calculateLaunchScore } from '@/lib/scoring'
 import type { AdCreative } from '@/lib/ad-creative'
 import type { ScoreAnalysis } from '@/lib/launch-scores'
+import { saveLaunchScoreWithContentCache } from '@/lib/launch-score-cache'
 import {
-  createLaunchScore,
   findCachedLaunchScore,
   computeContentHash,
   computeCampaignConfigHash,
@@ -934,15 +934,29 @@ export async function POST(request: NextRequest) {
         launchScore = launchScoreResult.totalScore
         scoreAnalysis = launchScoreResult.scoreAnalysis
 
-        // 🔥 修复(2025-12-17): 保存Launch Score到数据库（带缓存信息）
         try {
-          // 1. 保存到launch_scores表（带缓存哈希）
-          await createLaunchScore(userId, _offerId, scoreAnalysis, {
-            adCreativeId: primaryCreative.id,
-            contentHash,
-            campaignConfigHash
-          })
-          console.log(`✅ Launch Score已保存到launch_scores表（带缓存信息）`)
+          const { created } = await saveLaunchScoreWithContentCache(
+            userId,
+            _offerId,
+            creativeForLaunchScore,
+            offer,
+            scoreAnalysis,
+            {
+              campaignConfig: {
+                targetCountry: _campaignConfig.targetCountry || '',
+                targetLanguage: _campaignConfig.targetLanguage || '',
+                budgetAmount: _campaignConfig.budgetAmount || 0,
+                maxCpcBid: _campaignConfig.maxCpcBid || 0,
+              },
+              contentHash,
+              campaignConfigHash,
+            }
+          )
+          console.log(
+            created
+              ? `✅ Launch Score已保存到launch_scores表（带缓存信息）`
+              : `♻️ 复用已有 Launch Score 记录（相同内容哈希），跳过重复 INSERT`
+          )
 
           // 2. 更新ad_creatives表的launch_score字段
           await db.exec(`

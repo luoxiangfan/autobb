@@ -1,7 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import {
-  createLaunchScore,
   findLatestLaunchScore,
   findLatestLaunchScoresByCreativeIds,
   parseLaunchScoreAnalysis,
@@ -13,7 +12,10 @@ import { findAdCreativeById } from '@/lib/ad-creative'
 import type { AdCreative } from '@/lib/ad-creative'
 import { findOfferById } from '@/lib/offers'
 import type { Offer } from '@/lib/offers'
-import { buildLaunchScoreHashes, findCachedLaunchScoreForCreative } from '@/lib/launch-score-cache'
+import {
+  findCachedLaunchScoreForCreative,
+  saveLaunchScoreWithContentCache,
+} from '@/lib/launch-score-cache'
 import {
   parsePositiveIntegerOfferId,
   parseUniquePositiveIntegerIds,
@@ -203,12 +205,13 @@ export async function POST(
           const computed = analyses[index]
           computedByCreativeId.set(creative.id, computed)
 
-          const { contentHash, campaignConfigHash } = buildLaunchScoreHashes(creative, offer)
-          await createLaunchScore(userId, offer.id, computed.scoreAnalysis, {
-            adCreativeId: creative.id,
-            contentHash,
-            campaignConfigHash,
-          })
+          await saveLaunchScoreWithContentCache(
+            userId,
+            offer.id,
+            creative,
+            offer,
+            computed.scoreAnalysis
+          )
         }
       }
     }

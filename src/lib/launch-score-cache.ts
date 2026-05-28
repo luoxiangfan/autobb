@@ -3,9 +3,12 @@ import type { Offer } from './offers'
 import {
   computeCampaignConfigHash,
   computeContentHash,
+  createLaunchScore,
   findCachedLaunchScore,
   type CampaignConfigData,
   type CreativeContentData,
+  type LaunchScore,
+  type ScoreAnalysis,
 } from './launch-scores'
 
 /** 与 calculateLaunchScore 默认投放参数一致 */
@@ -51,4 +54,38 @@ export async function findCachedLaunchScoreForCreative(
 ) {
   const { contentHash, campaignConfigHash } = buildLaunchScoreHashes(creative, offer, campaignConfig)
   return findCachedLaunchScore(creative.id, contentHash, campaignConfigHash, userId)
+}
+
+export type SaveLaunchScoreWithContentCacheOptions = {
+  campaignConfig?: LaunchScoreHashCampaignConfig
+  /** 与 findCachedLaunchScore 查询使用相同哈希时可传入，避免发布路径手工哈希不一致 */
+  contentHash?: string
+  campaignConfigHash?: string
+}
+
+/**
+ * 相同 creative + contentHash + campaignConfigHash 时复用已有记录，避免重复 INSERT。
+ */
+export async function saveLaunchScoreWithContentCache(
+  userId: number,
+  offerId: number,
+  creative: AdCreative,
+  offer: Offer,
+  analysis: ScoreAnalysis,
+  options?: SaveLaunchScoreWithContentCacheOptions
+): Promise<{ launchScore: LaunchScore; created: boolean }> {
+  const built = buildLaunchScoreHashes(creative, offer, options?.campaignConfig)
+  const contentHash = options?.contentHash ?? built.contentHash
+  const campaignConfigHash = options?.campaignConfigHash ?? built.campaignConfigHash
+  const existing = await findCachedLaunchScore(creative.id, contentHash, campaignConfigHash, userId)
+  if (existing) {
+    return { launchScore: existing, created: false }
+  }
+
+  const launchScore = await createLaunchScore(userId, offerId, analysis, {
+    adCreativeId: creative.id,
+    contentHash,
+    campaignConfigHash,
+  })
+  return { launchScore, created: true }
 }

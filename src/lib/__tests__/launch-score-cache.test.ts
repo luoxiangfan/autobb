@@ -1,5 +1,18 @@
-import { describe, expect, it } from 'vitest'
-import { buildLaunchScoreHashes } from '../launch-score-cache'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const findCachedLaunchScoreMock = vi.fn()
+const createLaunchScoreMock = vi.fn()
+
+vi.mock('../launch-scores', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../launch-scores')>()
+  return {
+    ...actual,
+    findCachedLaunchScore: (...args: unknown[]) => findCachedLaunchScoreMock(...args),
+    createLaunchScore: (...args: unknown[]) => createLaunchScoreMock(...args),
+  }
+})
+
+import { buildLaunchScoreHashes, saveLaunchScoreWithContentCache } from '../launch-score-cache'
 
 describe('buildLaunchScoreHashes', () => {
   const offer = {
@@ -32,5 +45,58 @@ describe('buildLaunchScoreHashes', () => {
       offer
     )
     expect(changed.contentHash).not.toBe(base.contentHash)
+  })
+})
+
+describe('saveLaunchScoreWithContentCache', () => {
+  const offer = {
+    id: 1,
+    target_country: 'US',
+    target_language: 'en',
+    final_url: 'https://example.com/o',
+    url: 'https://example.com/o',
+  } as any
+
+  const creative = {
+    id: 10,
+    headlines: ['H1'],
+    descriptions: ['D1'],
+    keywords: ['kw'],
+    negativeKeywords: [],
+    final_url: 'https://example.com/c',
+  } as any
+
+  const analysis = {
+    launchViability: { score: 30 },
+    adQuality: { score: 25 },
+    keywordStrategy: { score: 15 },
+    basicConfig: { score: 10 },
+    overallRecommendations: [],
+  } as any
+
+  beforeEach(() => {
+    findCachedLaunchScoreMock.mockReset()
+    createLaunchScoreMock.mockReset()
+  })
+
+  it('returns existing row without insert when hash matches', async () => {
+    const existing = { id: 99, totalScore: 80 }
+    findCachedLaunchScoreMock.mockResolvedValue(existing)
+
+    const result = await saveLaunchScoreWithContentCache(1, 1, creative, offer, analysis)
+
+    expect(result).toEqual({ launchScore: existing, created: false })
+    expect(createLaunchScoreMock).not.toHaveBeenCalled()
+  })
+
+  it('inserts when no cached row exists', async () => {
+    findCachedLaunchScoreMock.mockResolvedValue(null)
+    const inserted = { id: 100, totalScore: 82 }
+    createLaunchScoreMock.mockResolvedValue(inserted)
+
+    const result = await saveLaunchScoreWithContentCache(1, 1, creative, offer, analysis)
+
+    expect(result).toEqual({ launchScore: inserted, created: true })
+    expect(createLaunchScoreMock).toHaveBeenCalledTimes(1)
   })
 })

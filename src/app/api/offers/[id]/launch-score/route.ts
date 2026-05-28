@@ -1,14 +1,20 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers'
-import { findAdCreativeById, findAdCreativesByOfferId } from '@/lib/ad-creative'
 import {
-  createLaunchScore,
+  findAdCreativeById,
+  findAdCreativesByOfferId,
+  type AdCreative,
+} from '@/lib/ad-creative'
+import {
   findLatestLaunchScore,
   parseLaunchScoreAnalysis,
   resolveLaunchScoreForCreativeCompare,
 } from '@/lib/launch-scores'
-import { buildLaunchScoreHashes, findCachedLaunchScoreForCreative } from '@/lib/launch-score-cache'
+import {
+  findCachedLaunchScoreForCreative,
+  saveLaunchScoreWithContentCache,
+} from '@/lib/launch-score-cache'
 import { calculateLaunchScore } from '@/lib/scoring'
 import { parsePositiveIntegerId, parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
@@ -99,17 +105,18 @@ export async function POST(
     }
 
     const analysis = await calculateLaunchScore(offer, creative, userId)
-    const { contentHash, campaignConfigHash } = buildLaunchScoreHashes(creative, offer)
-    const launchScore = await createLaunchScore(userId, offer.id, analysis.scoreAnalysis, {
-      adCreativeId: creative.id,
-      contentHash,
-      campaignConfigHash,
-    })
+    const { launchScore } = await saveLaunchScoreWithContentCache(
+      userId,
+      offer.id,
+      creative,
+      offer,
+      analysis.scoreAnalysis
+    )
 
     return NextResponse.json({
       success: true,
       launchScore,
-      analysis,
+      analysis: analysis.scoreAnalysis,
     })
   } catch (error: any) {
     console.error('计算Launch Score失败:', error)
@@ -161,8 +168,9 @@ export async function GET(
       )
     }
 
+    let queryCreative: AdCreative | null = null
     if (queryCreativeId != null) {
-      const queryCreative = await findAdCreativeById(queryCreativeId, userId)
+      queryCreative = await findAdCreativeById(queryCreativeId, userId)
       if (!queryCreative || queryCreative.offer_id !== offer.id) {
         return NextResponse.json(
           { error: '创意不存在或无权访问' },
@@ -205,32 +213,25 @@ export async function GET(
         })
       }
 
-      let targetCreative
-      if (queryCreativeId != null) {
-        targetCreative = creatives.find((c) => c.id === queryCreativeId)
-        if (!targetCreative) {
-          return NextResponse.json(
-            { error: '创意不存在或无权访问' },
-            { status: 404 }
-          )
-        }
-      } else {
-        targetCreative = creatives.reduce((best: any, current: any) =>
+      const targetCreative =
+        queryCreative ??
+        creatives.reduce((best: any, current: any) =>
           (current.score || 0) > (best.score || 0) ? current : best
         )
-      }
 
       const cached = await findCachedLaunchScoreForCreative(targetCreative, offer, userId)
       if (cached) {
         launchScore = cached
       } else {
         const analysis = await calculateLaunchScore(offer, targetCreative, userId)
-        const { contentHash, campaignConfigHash } = buildLaunchScoreHashes(targetCreative, offer)
-        launchScore = await createLaunchScore(userId, offer.id, analysis.scoreAnalysis, {
-          adCreativeId: targetCreative.id,
-          contentHash,
-          campaignConfigHash,
-        })
+        const saved = await saveLaunchScoreWithContentCache(
+          userId,
+          offer.id,
+          targetCreative,
+          offer,
+          analysis.scoreAnalysis
+        )
+        launchScore = saved.launchScore
       }
 
       return NextResponse.json({

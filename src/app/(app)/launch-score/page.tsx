@@ -65,10 +65,11 @@ export default function LaunchScorePage() {
       setError('缺少offerId参数')
       setLoading(false)
     }
-  }, [offerId])
+  }, [offerId, creativeId])
 
   const fetchData = async () => {
     try {
+      setError('')
       // HttpOnly Cookie自动携带，无需手动操作
 
       // 获取Offer信息
@@ -106,8 +107,17 @@ export default function LaunchScorePage() {
         const scoreData = await scoreRes.json()
         if (scoreData.launchScore) {
           setLaunchScore(scoreData.launchScore)
-          // 获取详细分析
           fetchAnalysis(scoreData.launchScore.id)
+        } else {
+          setLaunchScore(null)
+          setAnalysis(null)
+        }
+      } else {
+        const scoreData = await scoreRes.json().catch(() => ({}))
+        setLaunchScore(null)
+        setAnalysis(null)
+        if (scoreRes.status === 404) {
+          setError(scoreData.error || '创意不存在或无权访问')
         }
       }
     } catch (err: any) {
