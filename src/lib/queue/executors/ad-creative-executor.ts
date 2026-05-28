@@ -264,6 +264,9 @@ export async function executeAdCreativeGeneration(
     // 🆕 v4.10: 获取或创建关键词池（复用已有数据，避免重复AI调用）
     let keywordPool: OfferKeywordPool | null = null
     let plannerSessionForGeneration: KeywordPlannerPreparedSession | undefined
+    let preparedExpandForGeneration: Awaited<
+      ReturnType<typeof resolveKeywordPoolForCreativeGeneration>
+    >['preparedExpand']
     let selectedBucket: BucketType | null = null
     let bucketInfo: { keywords: PoolKeywordData[]; intent: string; intentEn: string } | null = null
 
@@ -343,6 +346,7 @@ export async function executeAdCreativeGeneration(
       )
       keywordPool = resolvedPool.pool
       plannerSessionForGeneration = resolvedPool.plannerSession
+      preparedExpandForGeneration = resolvedPool.preparedExpand
 
       // 🔒 使用事务级 advisory lock + 占位记录防止并发竞态
       // 在事务内完成：加锁 → 查询可用桶 → 插入占位记录
@@ -516,6 +520,7 @@ export async function executeAdCreativeGeneration(
       scopeLabel: selectedBucket ? `桶${selectedBucket}` : '默认',
       keywordPool,
       plannerSession: plannerSessionForGeneration,
+      preparedExpand: preparedExpandForGeneration,
       searchTermFeedbackHints,
       loadSearchTermFeedbackHints: false,
       skipCache: true,

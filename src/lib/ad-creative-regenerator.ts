@@ -131,10 +131,14 @@ export async function regenerateAdCreative(
     let plannerSession: Awaited<
       ReturnType<typeof resolveKeywordPoolForCreativeGeneration>
     >['plannerSession']
+    let preparedExpand: Awaited<
+      ReturnType<typeof resolveKeywordPoolForCreativeGeneration>
+    >['preparedExpand']
     if (bucket) {
       const resolved = await resolveKeywordPoolForCreativeGeneration(offerId, userId)
       keywordPool = resolved.pool
       plannerSession = resolved.plannerSession
+      preparedExpand = resolved.preparedExpand
     }
 
     console.log(
@@ -153,6 +157,7 @@ export async function regenerateAdCreative(
       linkType,
       keywordPool,
       plannerSession,
+      preparedExpand,
       loadSearchTermFeedbackHints: true,
       skipCache: true,
       hardPersistenceGateEnabled,

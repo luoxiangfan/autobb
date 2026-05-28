@@ -220,7 +220,7 @@ export async function POST(
     console.log(`📌 生成接口 forcePublish 参数: ${forcePublishRequested ? '已传入（本接口忽略）' : '未传入'}`)
     console.time('⏱️ 总生成耗时')
 
-    const { pool: keywordPool, plannerSession } = await resolveKeywordPoolForCreativeGeneration(
+    const { pool: keywordPool, plannerSession, preparedExpand } = await resolveKeywordPoolForCreativeGeneration(
       parsedOfferId,
       parsedUserId
     )
@@ -236,6 +236,7 @@ export async function POST(
       linkType: linkType as 'product' | 'store',
       keywordPool,
       plannerSession,
+      preparedExpand,
       searchTermFeedbackHints,
       loadSearchTermFeedbackHints: false,
       skipCacheOnRetryOnly: true,

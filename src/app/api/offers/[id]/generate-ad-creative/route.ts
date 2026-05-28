@@ -330,7 +330,7 @@ export async function POST(
     }
     const { mode: generationMode, profile: generationProfile, maxRetries: normalizedMaxRetries } = runtime
     const searchTermFeedbackHints = await loadSearchTermFeedbackHintsForGeneration(offerId, userId)
-    const { pool: keywordPool, plannerSession } = await resolveKeywordPoolForCreativeGeneration(
+    const { pool: keywordPool, plannerSession, preparedExpand } = await resolveKeywordPoolForCreativeGeneration(
       offerId,
       userId
     )
@@ -357,6 +357,7 @@ export async function POST(
         precomputedKeywordSet: batchSeedContext.precomputedKeywordSet,
         keywordPool,
         plannerSession,
+        preparedExpand,
       })
 
       const batchResults = await Promise.all(initialCreatives.map(async (initialCreative, index) => {
@@ -381,6 +382,7 @@ export async function POST(
           linkType: linkType as 'product' | 'store',
           keywordPool,
           plannerSession,
+          preparedExpand,
           searchTermFeedbackHints,
           loadSearchTermFeedbackHints: false,
           referencePerformance: reference_performance,
@@ -480,6 +482,7 @@ export async function POST(
         linkType: linkType as 'product' | 'store',
         keywordPool,
         plannerSession,
+        preparedExpand,
         searchTermFeedbackHints,
         loadSearchTermFeedbackHints: false,
         referencePerformance: reference_performance,

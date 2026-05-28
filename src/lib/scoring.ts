@@ -124,6 +124,7 @@ export async function calculateLaunchScore(
         targetLanguage: offer.target_language || undefined,
         userId,
         offerId: offer.id,
+        keywordsWithVolume: keywordsWithVolume.length > 0 ? keywordsWithVolume : undefined,
       })
     }
 

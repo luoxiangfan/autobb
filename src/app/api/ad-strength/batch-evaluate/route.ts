@@ -2,6 +2,43 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { evaluateAdStrength } from '@/lib/ad-strength-evaluator'
 import type { HeadlineAsset, DescriptionAsset } from '@/lib/ad-creative'
+import { findOfferById } from '@/lib/offers'
+import {
+  loadKeywordPoolExpandCredentialsForOffer,
+  type KeywordPlannerPreparedSession,
+} from '@/lib/google-ads-accounts-auth'
+
+async function preloadPlannerSessionsByOfferId(
+  userId: number,
+  creatives: Array<{ offerId?: unknown }>
+): Promise<Map<number, KeywordPlannerPreparedSession>> {
+  const offerIds = [
+    ...new Set(
+      creatives
+        .map((creative) => (
+          typeof creative.offerId === 'number' && Number.isInteger(creative.offerId) && creative.offerId > 0
+            ? creative.offerId
+            : null
+        ))
+        .filter((offerId): offerId is number => offerId != null)
+    ),
+  ]
+
+  const sessionByOfferId = new Map<number, KeywordPlannerPreparedSession>()
+  await Promise.all(
+    offerIds.map(async (offerId) => {
+      const offer = await findOfferById(offerId, userId)
+      if (!offer) {
+        return
+      }
+      const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
+      if (expandLoad.ok) {
+        sessionByOfferId.set(offerId, expandLoad.plannerSession)
+      }
+    })
+  )
+  return sessionByOfferId
+}
 
 /**
  * POST /api/ad-strength/batch-evaluate
@@ -40,6 +77,11 @@ export async function POST(request: NextRequest) {
 
     console.log(`📊 开始批量评估 ${creatives.length} 个创意...`)
 
+    const plannerSessionByOfferId = await preloadPlannerSessionsByOfferId(userId, creatives)
+    if (plannerSessionByOfferId.size > 0) {
+      console.log(`🔑 已预加载 ${plannerSessionByOfferId.size} 个 Offer 的 Keyword Planner session`)
+    }
+
     // 批量评估
     const evaluations = await Promise.all(
       creatives.map(async (creative, index) => {
@@ -56,6 +98,11 @@ export async function POST(request: NextRequest) {
           const descriptions: DescriptionAsset[] = creative.descriptionsWithMetadata ||
             creative.descriptions.map((text: string) => ({ text, length: text.length }))
 
+          const offerId = typeof creative.offerId === 'number' && Number.isInteger(creative.offerId) && creative.offerId > 0
+            ? creative.offerId
+            : undefined
+          const plannerSession = offerId != null ? plannerSessionByOfferId.get(offerId) : undefined
+
           // 评估
           const evaluation = await evaluateAdStrength(
             headlines,
@@ -66,7 +113,8 @@ export async function POST(request: NextRequest) {
               targetCountry: creative.targetCountry || 'US',
               targetLanguage: creative.targetLanguage || 'en',
               userId: userId ?? undefined,
-              offerId: typeof creative.offerId === 'number' ? creative.offerId : undefined,
+              offerId,
+              plannerSession,
               sitelinks: creative.sitelinks,
               callouts: creative.callouts,
               keywordsWithVolume: creative.keywordsWithVolume,

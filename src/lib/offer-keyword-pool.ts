@@ -24,6 +24,7 @@ import {
   getKeywordSearchVolumesForPlannerContext,
   loadKeywordPoolExpandCredentialsForOffer,
   type KeywordPoolExpandLoadResult,
+  type KeywordPoolPreparedExpand,
   type KeywordPlannerPreparedSession,
 } from './google-ads-accounts-auth'
 import { extractVerifiedKeywordSourcePool } from './unified-keyword-service'
@@ -5332,6 +5333,7 @@ export async function resolveKeywordPoolForCreativeGeneration(
 ): Promise<{
   pool: OfferKeywordPool
   plannerSession?: KeywordPlannerPreparedSession
+  preparedExpand?: KeywordPoolPreparedExpand
 }> {
   const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
   const preparedExpand = expandLoad.ok ? expandLoad : undefined
@@ -5340,7 +5342,7 @@ export async function resolveKeywordPoolForCreativeGeneration(
   if (!options?.forceRegenerate) {
     const existing = await getKeywordPoolByOfferId(offerId)
     if (existing) {
-      return { pool: existing, plannerSession }
+      return { pool: existing, plannerSession, preparedExpand }
     }
   }
 
@@ -5351,7 +5353,7 @@ export async function resolveKeywordPoolForCreativeGeneration(
     options?.progress,
     preparedExpand
   )
-  return { pool, plannerSession }
+  return { pool, plannerSession, preparedExpand }
 }
 
 type PromoteKeywordInput = {

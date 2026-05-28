@@ -263,7 +263,7 @@ export async function POST(
 
     // 1. 获取或创建关键词池
     console.log('\n📦 Step 1: 获取关键词池')
-    const { pool, plannerSession } = await resolveKeywordPoolForCreativeGeneration(
+    const { pool, plannerSession, preparedExpand } = await resolveKeywordPoolForCreativeGeneration(
       offerId,
       userIdNum
     )
@@ -389,6 +389,7 @@ export async function POST(
           offer,
           pool,
           plannerSession,
+          preparedExpand,
           bucket,
           bucketInfo,
           normalizedMaxRetries,
@@ -561,6 +562,7 @@ async function runCreativeGenerationPass(params: {
   offer: any
   pool: OfferKeywordPool
   plannerSession?: import('@/lib/google-ads-accounts-auth').KeywordPlannerPreparedSession
+  preparedExpand?: import('@/lib/google-ads-accounts-auth').KeywordPoolPreparedExpand
   bucket: BucketType
   bucketInfo: { keywords: PoolKeywordData[]; intent: string; intentEn: string }
   maxRetries: number
@@ -597,6 +599,7 @@ async function runCreativeGenerationPass(params: {
     scopeLabel: params.scopeLabel,
     keywordPool: params.pool,
     plannerSession: params.plannerSession,
+    preparedExpand: params.preparedExpand,
     loadSearchTermFeedbackHints: false,
     skipCacheOnRetryOnly: true,
     keywordPostProcessMode: 'applyPrecomputed',
@@ -680,6 +683,7 @@ async function generateCreativeWithBucket(
   offer: any,
   pool: OfferKeywordPool,
   plannerSession: import('@/lib/google-ads-accounts-auth').KeywordPlannerPreparedSession | undefined,
+  preparedExpand: import('@/lib/google-ads-accounts-auth').KeywordPoolPreparedExpand | undefined,
   bucket: BucketType,
   bucketInfo: { keywords: PoolKeywordData[]; intent: string; intentEn: string },
   maxRetries: number,
@@ -723,6 +727,7 @@ async function generateCreativeWithBucket(
       offer,
       pool,
       plannerSession,
+      preparedExpand,
       bucket,
       bucketInfo,
       maxRetries,
