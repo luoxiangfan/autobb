@@ -487,6 +487,7 @@ export async function evaluateCreativeWithPersistenceGate(params: {
   creativeType?: CanonicalCreativeType | null
   generationProfile: AdCreativeGenerationModeProfile
   hardPersistenceGateEnabled?: boolean
+  plannerSession?: KeywordPlannerPreparedSession
 }): Promise<CreativeAttemptEvaluation> {
   const offerRecord = params.offer as unknown as Record<string, unknown>
   const hardPersistenceGateEnabled = params.hardPersistenceGateEnabled ?? parseBooleanEnv(
@@ -506,6 +507,7 @@ export async function evaluateCreativeWithPersistenceGate(params: {
       productNameFallback: (offerRecord.product_title || offerRecord.name) as string | undefined,
       productTitleFallback: offerRecord.title as string | undefined,
       skipCompetitivePositioningAi: params.generationProfile.skipCompetitivePositioningAi,
+      plannerSession: params.plannerSession,
     })
   )
 
@@ -633,6 +635,7 @@ export function createBucketCreativeGenerationCallbacks(
       creativeType: bucketContext?.creativeType ?? null,
       generationProfile,
       hardPersistenceGateEnabled: params.hardPersistenceGateEnabled,
+      plannerSession: params.plannerSession,
     })
     await hooks?.onAfterEvaluate?.({ attempt: ctx.attempt, evaluation })
     return evaluation

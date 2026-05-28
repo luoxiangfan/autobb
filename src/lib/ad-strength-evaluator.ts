@@ -436,6 +436,8 @@ export async function evaluateAdStrength(
     creativeType?: CanonicalCreativeType
     /** 快速/均衡生成模式：跳过竞争定位 AI 增强 */
     skipCompetitivePositioningAi?: boolean
+    /** 创意生成前已 prepare 时传入，避免品牌搜索量查询重复 load */
+    plannerSession?: KeywordPlannerPreparedSession
   }
 ): Promise<AdStrengthEvaluation> {
 
@@ -505,7 +507,8 @@ export async function evaluateAdStrength(
     options?.targetLanguage || 'en',
     options?.userId,
     options?.keywordsWithVolume,
-    options?.offerId
+    options?.offerId,
+    options?.plannerSession
   )
   const brandSearchVolumeConfig = AD_STRENGTH_DIMENSION_CONFIG.brandSearchVolume
   const brandSearchVolume = {
@@ -1658,7 +1661,8 @@ async function calculateBrandSearchVolume(
     searchVolume: number
     volumeUnavailableReason?: 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
   }>,
-  offerId?: number
+  offerId?: number,
+  plannerSession?: KeywordPlannerPreparedSession
 ) {
   const isSearchVolumeUnavailableReason = (reason: unknown): reason is 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY' =>
     reason === 'DEV_TOKEN_INSUFFICIENT_ACCESS' || reason === 'DEV_TOKEN_TEST_ONLY'
@@ -1725,11 +1729,11 @@ async function calculateBrandSearchVolume(
     // ========================================
     const normalizedLanguage = normalizeLanguageCode(targetLanguage)
 
-    let plannerSession: KeywordPlannerPreparedSession | undefined
-    if (userId && offerId) {
+    let resolvedPlannerSession = plannerSession
+    if (!resolvedPlannerSession && userId && offerId) {
       const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
       if (expandLoad.ok) {
-        plannerSession = expandLoad.plannerSession
+        resolvedPlannerSession = expandLoad.plannerSession
       }
     }
 
@@ -1741,7 +1745,7 @@ async function calculateBrandSearchVolume(
             keywords: [brandName],
             country: targetCountry,
             language: normalizedLanguage,
-            plannerSession,
+            plannerSession: resolvedPlannerSession,
           })
         : null
     const volumeResults = volumeResult?.ok

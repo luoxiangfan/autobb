@@ -67,6 +67,7 @@ export interface CreativeQualityEvaluationInput {
     userId?: number
     offerId?: number
     skipCompetitivePositioningAi?: boolean
+    plannerSession?: import('@/lib/google-ads-accounts-auth').KeywordPlannerPreparedSession
   }
 }
 
@@ -171,6 +172,7 @@ export async function evaluateCreativeForQuality(
       offerId: adStrengthContext.offerId,
       keywordsWithVolume: creative.keywordsWithVolume,
       skipCompetitivePositioningAi: adStrengthContext.skipCompetitivePositioningAi,
+      plannerSession: adStrengthContext.plannerSession,
     }
   )
   const rsaGate = evaluateRsaQualityGate(adStrength, minimumScore)

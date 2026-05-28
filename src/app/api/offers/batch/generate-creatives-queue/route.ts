@@ -38,6 +38,51 @@ type NormalizedCreativeBucket = 'A' | 'B' | 'D'
 const BATCH_FORCE_GENERATE_ON_QUALITY_GATE_DEFAULT = true
 const BATCH_QUALITY_GATE_BYPASS_REASON = 'offers_batch_auto_bypass_quality_gate'
 
+function buildBatchEnqueueWarning(stats: {
+  requested: number
+  enqueued: number
+  skipped: number
+  failed: number
+  skipReasons: {
+    notFoundOrNoAccess: number
+    scrapeNotReady: number
+    taskAlreadyRunning: number
+    quotaFull: number
+    googleAdsConfigIncomplete: number
+  }
+}): string | undefined {
+  if (stats.enqueued > 0 || stats.requested === 0) {
+    return undefined
+  }
+
+  const parts: string[] = []
+  const reasons = stats.skipReasons
+  if (reasons.notFoundOrNoAccess > 0) {
+    parts.push(`${reasons.notFoundOrNoAccess} 个 Offer 不存在或无权限`)
+  }
+  if (reasons.scrapeNotReady > 0) {
+    parts.push(`${reasons.scrapeNotReady} 个 Offer 抓取未完成`)
+  }
+  if (reasons.taskAlreadyRunning > 0) {
+    parts.push(`${reasons.taskAlreadyRunning} 个 Offer 已有进行中的创意任务`)
+  }
+  if (reasons.quotaFull > 0) {
+    parts.push(`${reasons.quotaFull} 个 Offer 创意槽位已满或指定类型不可用`)
+  }
+  if (reasons.googleAdsConfigIncomplete > 0) {
+    parts.push(`${reasons.googleAdsConfigIncomplete} 个 Offer 的 Google Ads 账号配置不完整`)
+  }
+  if (stats.failed > 0) {
+    parts.push(`${stats.failed} 个 Offer 入队失败`)
+  }
+
+  if (parts.length === 0) {
+    return '用户级 Google Ads 配置已通过，但未入队任何创意生成任务'
+  }
+
+  return `用户级 Google Ads 配置已通过，但未入队任何创意生成任务：${parts.join('；')}`
+}
+
 const requestSchema = z.object({
   offerIds: z.array(z.number().int().positive()).min(1).max(50),
   bucket: z.unknown().optional(),
@@ -383,6 +428,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const warning = buildBatchEnqueueWarning(stats)
+
     return NextResponse.json({
       success: true,
       generationMode,
@@ -392,6 +439,7 @@ export async function POST(request: NextRequest) {
       failedCount: stats.failed,
       skipReasons: stats.skipReasons,
       taskIds,
+      ...(warning ? { warning } : {}),
     })
   } catch (error: any) {
     console.error('[BatchCreativeGeneration] Unexpected error:', error)

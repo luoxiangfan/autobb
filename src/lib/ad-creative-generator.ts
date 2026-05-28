@@ -11512,6 +11512,14 @@ export async function generateSyntheticCreative(
   console.log(`   - 高搜索量非品牌词: ${nonBrandKeywordCount}个`)
   console.log(`   - 总计: ${bucketKeywords.length}个`)
 
+  let plannerSession: KeywordPlannerPreparedSession | undefined
+  let preparedExpand: KeywordPoolExpandLoadResult | undefined
+  const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
+  if (expandLoad.ok) {
+    plannerSession = expandLoad.plannerSession
+    preparedExpand = expandLoad
+  }
+
   // 4. 调用通用创意生成函数（内部 coverage 模式，统一归一化到 D / product_intent）
   const result = await generateAdCreative(offerId, userId, {
     theme: '商品需求覆盖导向 - Coverage Creative for Product Demand',
@@ -11523,6 +11531,8 @@ export async function generateSyntheticCreative(
     bucketIntentEn: 'Product Demand Coverage',
     isSyntheticCreative: true,
     syntheticKeywordsWithVolume: coverageKeywords,
+    plannerSession,
+    preparedExpand,
   })
 
   console.log(`✅ 内部 coverage 广告创意生成完成`)

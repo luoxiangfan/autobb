@@ -253,6 +253,8 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
     expect(res.status).toBe(200)
     expect(data.enqueuedCount).toBe(0)
     expect(data.skipReasons.googleAdsConfigIncomplete).toBe(1)
+    expect(data.warning).toContain('用户级 Google Ads 配置已通过')
+    expect(data.warning).toContain('Google Ads 账号配置不完整')
     expect(authFns.validateGoogleAdsConfigForCreativeGeneration).toHaveBeenNthCalledWith(
       2,
       1,

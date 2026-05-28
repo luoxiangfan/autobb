@@ -66,10 +66,10 @@ export async function POST(request: NextRequest) {
               targetCountry: creative.targetCountry || 'US',
               targetLanguage: creative.targetLanguage || 'en',
               userId: userId ?? undefined,
+              offerId: typeof creative.offerId === 'number' ? creative.offerId : undefined,
               sitelinks: creative.sitelinks,
               callouts: creative.callouts,
-              // [NEW] 传递关键词搜索量数据
-              keywordsWithVolume: creative.keywordsWithVolume
+              keywordsWithVolume: creative.keywordsWithVolume,
             }
           )
 
@@ -190,6 +190,7 @@ export async function GET() {
           keywords: ['string[]'],
           // [NEW] 关键词搜索量数据（用于品牌关键词搜索量评分）
           keywordsWithVolume: 'optional [{ keyword, searchVolume }]',
+          offerId: 'optional number — 用于按 Offer 拉取品牌搜索量（Keyword Planner）',
           brandName: 'optional 品牌名称',
           targetCountry: 'optional 默认 US',
           targetLanguage: 'optional 默认 en',

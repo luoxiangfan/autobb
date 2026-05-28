@@ -122,7 +122,8 @@ export async function calculateLaunchScore(
         brandName: offer.brand || undefined,
         targetCountry: offer.target_country || undefined,
         targetLanguage: offer.target_language || undefined,
-        userId
+        userId,
+        offerId: offer.id,
       })
     }
 
@@ -645,6 +646,7 @@ export async function evaluateCreativeAdStrength(
       volumeUnavailableReason?: 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
     }>
     skipCompetitivePositioningAi?: boolean
+    plannerSession?: import('./google-ads-accounts-auth').KeywordPlannerPreparedSession
   }
 ): Promise<ComprehensiveAdStrengthResult> {
   console.log('🎯 开始Ad Strength评估...')
@@ -660,6 +662,7 @@ export async function evaluateCreativeAdStrength(
     offerId: options?.offerId,
     keywordsWithVolume: options?.keywordsWithVolume,
     skipCompetitivePositioningAi: options?.skipCompetitivePositioningAi,
+    plannerSession: options?.plannerSession,
   })
 
   console.log(`📊 本地评估: ${localEvaluation.rating} (${localEvaluation.overallScore}分)`)
@@ -740,6 +743,13 @@ export async function getQuickAdStrength(
     targetCountry?: string
     targetLanguage?: string
     userId?: number
+    offerId?: number
+    keywordsWithVolume?: Array<{
+      keyword: string
+      searchVolume: number
+      volumeUnavailableReason?: 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
+    }>
+    plannerSession?: import('./google-ads-accounts-auth').KeywordPlannerPreparedSession
   }
 ): Promise<AdStrengthRating> {
   const evaluation = await evaluateAdStrength(headlines, descriptions, keywords, brandOptions)

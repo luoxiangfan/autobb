@@ -104,6 +104,7 @@ interface CreateCreativeQualityEvaluationInputOptions {
   productNameFallback?: string | null
   productTitleFallback?: string | null
   skipCompetitivePositioningAi?: boolean
+  plannerSession?: import('@/lib/google-ads-accounts-auth').KeywordPlannerPreparedSession
 }
 
 interface CreateCreativeAdStrengthPayloadOptions {
@@ -492,6 +493,7 @@ export function createCreativeQualityEvaluationInput(
       userId: input.userId,
       offerId: input.offer.id,
       skipCompetitivePositioningAi: input.skipCompetitivePositioningAi,
+      plannerSession: input.plannerSession,
     },
     ruleContext: {
       brandName: input.offer.brand,
