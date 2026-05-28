@@ -42,7 +42,7 @@ const generatorMetaFns = vi.hoisted(() => ({
 const keywordPoolFns = vi.hoisted(() => ({
   getAvailableBuckets: vi.fn(),
   getKeywordsByLinkTypeAndBucket: vi.fn(),
-  getOrCreateKeywordPool: vi.fn(),
+  resolveKeywordPoolForCreativeGeneration: vi.fn(),
 }))
 
 const creativeTypeFns = vi.hoisted(() => ({
@@ -128,7 +128,7 @@ vi.mock('@/lib/ad-creative-generator', () => ({
 vi.mock('@/lib/offer-keyword-pool', () => ({
   getAvailableBuckets: keywordPoolFns.getAvailableBuckets,
   getKeywordsByLinkTypeAndBucket: keywordPoolFns.getKeywordsByLinkTypeAndBucket,
-  getOrCreateKeywordPool: keywordPoolFns.getOrCreateKeywordPool,
+  resolveKeywordPoolForCreativeGeneration: keywordPoolFns.resolveKeywordPoolForCreativeGeneration,
 }))
 
 vi.mock('@/lib/creative-type', () => ({
@@ -177,7 +177,10 @@ describe('POST /api/offers/:id/generate-ad-creative', () => {
       return '品牌意图导向 - 聚焦品牌与核心商品锚点'
     })
     keywordPoolFns.getAvailableBuckets.mockResolvedValue(['B'])
-    keywordPoolFns.getOrCreateKeywordPool.mockResolvedValue({ id: 77, brandKeywords: [] })
+    keywordPoolFns.resolveKeywordPoolForCreativeGeneration.mockResolvedValue({
+      pool: { id: 77, brandKeywords: [] },
+      plannerSession: undefined,
+    })
     keywordPoolFns.getKeywordsByLinkTypeAndBucket.mockResolvedValue({ keywords: [] })
     generatorFns.applyKeywordSupplementationOnce.mockImplementation(async ({ keywordsWithVolume }: any) => ({
       keywords: Array.isArray(keywordsWithVolume) ? keywordsWithVolume.map((item: any) => item.keyword) : [],
@@ -673,6 +676,8 @@ describe('POST /api/offers/:id/generate-ad-creative', () => {
       2,
       expect.objectContaining({
         deferKeywordPostProcessingToBuilder: true,
+        keywordPool: { id: 77, brandKeywords: [] },
+        plannerSession: undefined,
       })
     )
     expect(generatorFns.applyKeywordSupplementationOnce).toHaveBeenCalled()

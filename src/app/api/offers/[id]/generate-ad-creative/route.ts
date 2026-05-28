@@ -355,6 +355,8 @@ export async function POST(
         searchTermFeedbackHints,
         deferKeywordPostProcessingToBuilder: true,
         precomputedKeywordSet: batchSeedContext.precomputedKeywordSet,
+        keywordPool,
+        plannerSession,
       })
 
       const batchResults = await Promise.all(initialCreatives.map(async (initialCreative, index) => {

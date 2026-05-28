@@ -11406,6 +11406,9 @@ export async function generateAdCreativesBatch(
     deferKeywordSupplementation?: boolean
     deferKeywordPostProcessingToBuilder?: boolean
     precomputedKeywordSet?: PrecomputedCreativeKeywordSet | null
+    keywordPool?: OfferKeywordPool
+    plannerSession?: KeywordPlannerPreparedSession
+    preparedExpand?: KeywordPoolExpandLoadResult
   }
 ): Promise<Array<GeneratedAdCreativeData & { ai_model: string }>> {
   // 限制数量在1-3之间
