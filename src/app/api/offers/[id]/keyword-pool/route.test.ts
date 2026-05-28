@@ -21,6 +21,10 @@ const rebuildFns = vi.hoisted(() => ({
   postRebuild: vi.fn(),
 }))
 
+const authFns = vi.hoisted(() => ({
+  loadKeywordPoolExpandCredentialsForOffer: vi.fn(),
+}))
+
 vi.mock('@/lib/offers', () => ({
   findOfferById: offerFns.findOfferById,
 }))
@@ -40,6 +44,10 @@ vi.mock('@/app/api/offers/[id]/rebuild/route', () => ({
   POST: rebuildFns.postRebuild,
 }))
 
+vi.mock('@/lib/google-ads-accounts-auth', () => ({
+  loadKeywordPoolExpandCredentialsForOffer: authFns.loadKeywordPoolExpandCredentialsForOffer,
+}))
+
 describe('POST /api/offers/:id/keyword-pool', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -50,6 +58,7 @@ describe('POST /api/offers/:id/keyword-pool', () => {
     })
 
     keywordPoolFns.getKeywordPoolByOfferId.mockResolvedValue(null)
+    authFns.loadKeywordPoolExpandCredentialsForOffer.mockResolvedValue({ ok: false })
     keywordPoolFns.generateOfferKeywordPool.mockResolvedValue({
       id: 501,
       offerId: 77,
@@ -123,7 +132,14 @@ describe('POST /api/offers/:id/keyword-pool', () => {
 
     expect(res.status).toBe(200)
     expect(rebuildFns.postRebuild).not.toHaveBeenCalled()
-    expect(keywordPoolFns.generateOfferKeywordPool).toHaveBeenCalledWith(77, 1, ['keyword-1'])
+    expect(authFns.loadKeywordPoolExpandCredentialsForOffer).toHaveBeenCalledWith(1, 77)
+    expect(keywordPoolFns.generateOfferKeywordPool).toHaveBeenCalledWith(
+      77,
+      1,
+      ['keyword-1'],
+      undefined,
+      undefined
+    )
     expect(data.success).toBe(true)
     expect(data.message).toBe('关键词池创建成功')
     expect(data.data.bucketBCount).toBe(0)

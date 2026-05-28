@@ -101,7 +101,11 @@ export async function POST(request: NextRequest) {
           const offerId = typeof creative.offerId === 'number' && Number.isInteger(creative.offerId) && creative.offerId > 0
             ? creative.offerId
             : undefined
-          const plannerSession = offerId != null ? plannerSessionByOfferId.get(offerId) : undefined
+          const hasPreloadedPlannerSession = offerId != null && plannerSessionByOfferId.has(offerId)
+          const plannerSession = hasPreloadedPlannerSession
+            ? plannerSessionByOfferId.get(offerId)
+            : undefined
+          const evaluationOfferId = hasPreloadedPlannerSession ? offerId : undefined
 
           // 评估
           const evaluation = await evaluateAdStrength(
@@ -113,7 +117,7 @@ export async function POST(request: NextRequest) {
               targetCountry: creative.targetCountry || 'US',
               targetLanguage: creative.targetLanguage || 'en',
               userId: userId ?? undefined,
-              offerId,
+              offerId: evaluationOfferId,
               plannerSession,
               sitelinks: creative.sitelinks,
               callouts: creative.callouts,

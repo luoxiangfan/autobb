@@ -18,6 +18,7 @@ import {
 import {
   clusterKeywordsByIntent,
   getBucketInfo,
+  resolveKeywordPoolForCreativeGeneration,
   type OfferKeywordPool,
   type PoolKeywordData,
 } from './offer-keyword-pool'  // 🔥 AI语义分类
@@ -11811,6 +11812,9 @@ export async function generateMultipleCreativesWithDiversityCheck(
     excludeKeywords?: string[]
     retryFailureType?: RetryFailureType
     searchTermFeedbackHints?: SearchTermFeedbackHintsInput
+    keywordPool?: OfferKeywordPool
+    plannerSession?: KeywordPlannerPreparedSession
+    preparedExpand?: KeywordPoolExpandLoadResult
   }
 ): Promise<{
   creatives: GeneratedAdCreativeData[]
@@ -11831,6 +11835,16 @@ export async function generateMultipleCreativesWithDiversityCheck(
   let failedAttempts = 0
   const startTime = Date.now()
 
+  let keywordPool = options?.keywordPool
+  let plannerSession = options?.plannerSession
+  let preparedExpand = options?.preparedExpand
+  if (!keywordPool || plannerSession === undefined) {
+    const resolved = await resolveKeywordPoolForCreativeGeneration(offerId, userId)
+    keywordPool = keywordPool ?? resolved.pool
+    plannerSession = plannerSession ?? resolved.plannerSession
+    preparedExpand = preparedExpand ?? resolved.preparedExpand
+  }
+
   console.log(`\n🎯 开始生成 ${count} 个多样化创意 (最大相似度: ${maxSimilarity * 100}%)`)
 
   while (creatives.length < count && failedAttempts < maxRetries) {
@@ -11841,7 +11855,10 @@ export async function generateMultipleCreativesWithDiversityCheck(
       // 生成新创意
       const newCreative = await generateAdCreative(offerId, userId, {
         ...options,
-        skipCache: true
+        keywordPool,
+        plannerSession,
+        preparedExpand,
+        skipCache: true,
       })
 
       // 检查与现有创意的多样性

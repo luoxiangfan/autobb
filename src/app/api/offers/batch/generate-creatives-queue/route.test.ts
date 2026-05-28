@@ -167,6 +167,9 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
       },
       taskIds: ['task-102'],
     })
+    expect(data.partialWarning).toContain('已入队 1 个任务')
+    expect(data.partialWarning).toContain('创意槽位已满')
+    expect(data.warning).toBeUndefined()
     expect(authFns.validateGoogleAdsConfigForCreativeGeneration).toHaveBeenNthCalledWith(
       1,
       1,

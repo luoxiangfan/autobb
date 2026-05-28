@@ -1729,60 +1729,82 @@ async function calculateBrandSearchVolume(
     // ========================================
     const normalizedLanguage = normalizeLanguageCode(targetLanguage)
 
-    let resolvedPlannerSession = plannerSession
-    if (!resolvedPlannerSession && userId && offerId) {
-      const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
-      if (expandLoad.ok) {
-        resolvedPlannerSession = expandLoad.plannerSession
-      }
-    }
-
-    const volumeResult =
-      userId
-        ? await getKeywordSearchVolumesForPlannerContext({
-            userId,
-            offerId,
-            keywords: [brandName],
-            country: targetCountry,
-            language: normalizedLanguage,
-            plannerSession: resolvedPlannerSession,
-          })
-        : null
-    const volumeResults = volumeResult?.ok
-      ? volumeResult.volumes
-      : [
-          {
-            avgMonthlySearches: 0,
-            volumeUnavailableReason: 'DEV_TOKEN_INSUFFICIENT_ACCESS' as const,
-          },
-        ]
-
-    const brandVolume = volumeResults[0]
-    const plannerUnavailableReason = isSearchVolumeUnavailableReason((brandVolume as any)?.volumeUnavailableReason)
-      ? (brandVolume as any).volumeUnavailableReason as 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
-      : undefined
-    const hasPlannerData = typeof brandVolume?.avgMonthlySearches === 'number' && !plannerUnavailableReason
-    const brandNameSearchVolume = hasPlannerData ? (brandVolume?.avgMonthlySearches || 0) : 0
-
-    // 数据来源：区分“真实0量”与“数据不可用”
-    let dataSource: 'keyword_planner' | 'cached' | 'database' | 'unavailable' =
-      hasPlannerData ? 'keyword_planner' : 'unavailable'
-    if (hasPlannerData && brandNameSearchVolume > 0) {
-      dataSource = 'cached'
-    }
-
-    let resolvedBrandNameSearchVolume = brandNameSearchVolume
-    let fallbackMode: 'none' | 'exact_brand_keyword_backfill' = 'none'
-    const shouldBackfillExactBrandVolume = (
-      !hasPlannerData &&
-      Boolean(plannerUnavailableReason || keywordVolumeUnavailable) &&
-      exactBrandKeywordSearchVolume > 0
+    const exactBrandKeywordEntry = normalizedKeywordsWithVolume.find(
+      (kw) => String(kw.keyword || '').toLowerCase() === normalizedBrandName
     )
-    if (shouldBackfillExactBrandVolume) {
+    const exactBrandVolumeMarkedUnavailable = exactBrandKeywordEntry != null
+      && isSearchVolumeUnavailableReason(exactBrandKeywordEntry.volumeUnavailableReason)
+    const canReuseExactBrandVolume =
+      hasExactBrandKeyword
+      && exactBrandKeywordSearchVolume > 0
+      && !exactBrandVolumeMarkedUnavailable
+
+    let resolvedPlannerSession = plannerSession
+    let plannerUnavailableReason: 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY' | undefined
+    let hasPlannerData = false
+    let dataSource: 'keyword_planner' | 'cached' | 'database' | 'unavailable' = 'unavailable'
+    let resolvedBrandNameSearchVolume = 0
+    let fallbackMode: 'none' | 'exact_brand_keyword_backfill' = 'none'
+
+    if (canReuseExactBrandVolume) {
       resolvedBrandNameSearchVolume = exactBrandKeywordSearchVolume
+      hasPlannerData = true
       dataSource = 'database'
-      fallbackMode = 'exact_brand_keyword_backfill'
-      console.log(`♻️ Planner不可用，回填精确品牌词搜索量: ${exactBrandKeywordSearchVolume.toLocaleString()}/月`)
+      console.log(
+        `♻️ 使用创意内精确品牌词搜索量，跳过品牌名 Planner 查询: ${exactBrandKeywordSearchVolume.toLocaleString()}/月`
+      )
+    } else {
+      if (!resolvedPlannerSession && userId && offerId) {
+        const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
+        if (expandLoad.ok) {
+          resolvedPlannerSession = expandLoad.plannerSession
+        }
+      }
+
+      const volumeResult =
+        userId
+          ? await getKeywordSearchVolumesForPlannerContext({
+              userId,
+              offerId,
+              keywords: [brandName],
+              country: targetCountry,
+              language: normalizedLanguage,
+              plannerSession: resolvedPlannerSession,
+            })
+          : null
+      const volumeResults = volumeResult?.ok
+        ? volumeResult.volumes
+        : [
+            {
+              avgMonthlySearches: 0,
+              volumeUnavailableReason: 'DEV_TOKEN_INSUFFICIENT_ACCESS' as const,
+            },
+          ]
+
+      const brandVolume = volumeResults[0]
+      plannerUnavailableReason = isSearchVolumeUnavailableReason((brandVolume as any)?.volumeUnavailableReason)
+        ? (brandVolume as any).volumeUnavailableReason as 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
+        : undefined
+      hasPlannerData = typeof brandVolume?.avgMonthlySearches === 'number' && !plannerUnavailableReason
+      const brandNameSearchVolume = hasPlannerData ? (brandVolume?.avgMonthlySearches || 0) : 0
+
+      dataSource = hasPlannerData ? 'keyword_planner' : 'unavailable'
+      if (hasPlannerData && brandNameSearchVolume > 0) {
+        dataSource = 'cached'
+      }
+
+      resolvedBrandNameSearchVolume = brandNameSearchVolume
+      const shouldBackfillExactBrandVolume = (
+        !hasPlannerData &&
+        Boolean(plannerUnavailableReason || keywordVolumeUnavailable) &&
+        exactBrandKeywordSearchVolume > 0
+      )
+      if (shouldBackfillExactBrandVolume) {
+        resolvedBrandNameSearchVolume = exactBrandKeywordSearchVolume
+        dataSource = 'database'
+        fallbackMode = 'exact_brand_keyword_backfill'
+        console.log(`♻️ Planner不可用，回填精确品牌词搜索量: ${exactBrandKeywordSearchVolume.toLocaleString()}/月`)
+      }
     }
 
     if (normalizedKeywordsWithVolume.length > 0) {

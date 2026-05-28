@@ -23,6 +23,7 @@ import {
   type InputReview,
 } from './llm-input-guard'
 import { USD_BASE_CURRENCY, normalizeCurrencyCode } from './currency'
+import { loadKeywordPoolExpandCredentialsForOffer } from './google-ads-accounts-auth'
 
 /**
  * Launch Score 4维度评分系统 v4.0
@@ -110,6 +111,14 @@ export async function calculateLaunchScore(
       ? Math.round((uniqueHeadlines.size / headlines.length) * 100)
       : 0
 
+    let launchScorePlannerSession: import('./google-ads-accounts-auth').KeywordPlannerPreparedSession | undefined
+    if (userId && offer.id && offer.brand) {
+      const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id)
+      if (expandLoad.ok) {
+        launchScorePlannerSession = expandLoad.plannerSession
+      }
+    }
+
     // 🎯 获取Ad Strength（优先使用已有的，否则评估）
     let adStrength: AdStrengthRating = 'AVERAGE'
     if ((creative as any).ad_strength) {
@@ -125,6 +134,7 @@ export async function calculateLaunchScore(
         userId,
         offerId: offer.id,
         keywordsWithVolume: keywordsWithVolume.length > 0 ? keywordsWithVolume : undefined,
+        plannerSession: launchScorePlannerSession,
       })
     }
 

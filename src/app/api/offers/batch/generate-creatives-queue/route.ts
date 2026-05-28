@@ -38,7 +38,7 @@ type NormalizedCreativeBucket = 'A' | 'B' | 'D'
 const BATCH_FORCE_GENERATE_ON_QUALITY_GATE_DEFAULT = true
 const BATCH_QUALITY_GATE_BYPASS_REASON = 'offers_batch_auto_bypass_quality_gate'
 
-function buildBatchEnqueueWarning(stats: {
+type BatchEnqueueStats = {
   requested: number
   enqueued: number
   skipped: number
@@ -50,11 +50,9 @@ function buildBatchEnqueueWarning(stats: {
     quotaFull: number
     googleAdsConfigIncomplete: number
   }
-}): string | undefined {
-  if (stats.enqueued > 0 || stats.requested === 0) {
-    return undefined
-  }
+}
 
+function formatBatchSkipReasonParts(stats: BatchEnqueueStats): string[] {
   const parts: string[] = []
   const reasons = stats.skipReasons
   if (reasons.notFoundOrNoAccess > 0) {
@@ -75,12 +73,33 @@ function buildBatchEnqueueWarning(stats: {
   if (stats.failed > 0) {
     parts.push(`${stats.failed} 个 Offer 入队失败`)
   }
+  return parts
+}
 
+function buildBatchEnqueueWarning(stats: BatchEnqueueStats): string | undefined {
+  if (stats.enqueued > 0 || stats.requested === 0) {
+    return undefined
+  }
+
+  const parts = formatBatchSkipReasonParts(stats)
   if (parts.length === 0) {
     return '用户级 Google Ads 配置已通过，但未入队任何创意生成任务'
   }
 
   return `用户级 Google Ads 配置已通过，但未入队任何创意生成任务：${parts.join('；')}`
+}
+
+function buildBatchPartialSkipWarning(stats: BatchEnqueueStats): string | undefined {
+  if (stats.enqueued === 0 || stats.skipped === 0) {
+    return undefined
+  }
+
+  const parts = formatBatchSkipReasonParts(stats)
+  if (parts.length === 0) {
+    return `已入队 ${stats.enqueued} 个任务，${stats.skipped} 个 Offer 已跳过`
+  }
+
+  return `已入队 ${stats.enqueued} 个任务；${stats.skipped} 个 Offer 已跳过：${parts.join('；')}`
 }
 
 const requestSchema = z.object({
@@ -429,6 +448,7 @@ export async function POST(request: NextRequest) {
     }
 
     const warning = buildBatchEnqueueWarning(stats)
+    const partialWarning = buildBatchPartialSkipWarning(stats)
 
     return NextResponse.json({
       success: true,
@@ -440,6 +460,7 @@ export async function POST(request: NextRequest) {
       skipReasons: stats.skipReasons,
       taskIds,
       ...(warning ? { warning } : {}),
+      ...(partialWarning ? { partialWarning } : {}),
     })
   } catch (error: any) {
     console.error('[BatchCreativeGeneration] Unexpected error:', error)

@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   getKeywordSearchVolumesMock,
+  getKeywordSearchVolumesForPlannerContextMock,
   tryGetConfiguredGoogleAdsApiAuthForUserMock,
   generateContentMock,
 } = vi.hoisted(() => ({
   getKeywordSearchVolumesMock: vi.fn(),
+  getKeywordSearchVolumesForPlannerContextMock: vi.fn(),
   tryGetConfiguredGoogleAdsApiAuthForUserMock: vi.fn(),
   generateContentMock: vi.fn(),
 }))
@@ -17,6 +19,15 @@ vi.mock('../keyword-planner', () => ({
 vi.mock('../google-ads-auth-context', () => ({
   tryGetConfiguredGoogleAdsApiAuthForUser: tryGetConfiguredGoogleAdsApiAuthForUserMock,
 }))
+
+vi.mock('../google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    getKeywordSearchVolumesForPlannerContext: getKeywordSearchVolumesForPlannerContextMock,
+    loadKeywordPoolExpandCredentialsForOffer: vi.fn().mockResolvedValue({ ok: false }),
+  }
+})
 
 vi.mock('../gemini', () => ({
   generateContent: generateContentMock,
@@ -30,6 +41,19 @@ describe('ad-strength-evaluator KISS optimizations', () => {
     delete process.env.AD_STRENGTH_ENABLE_CP_AI
 
     getKeywordSearchVolumesMock.mockResolvedValue([{ avgMonthlySearches: 0 }])
+    getKeywordSearchVolumesForPlannerContextMock.mockImplementation(async (params) => {
+      const volumes = await getKeywordSearchVolumesMock(
+        params.keywords,
+        params.country,
+        params.language,
+        params.userId,
+        'oauth',
+        undefined,
+        undefined,
+        undefined
+      )
+      return { ok: true, volumes }
+    })
     tryGetConfiguredGoogleAdsApiAuthForUserMock.mockResolvedValue({
       ctx: { auth: { authType: 'oauth' } },
       apiAuth: {
@@ -112,6 +136,29 @@ describe('ad-strength-evaluator KISS optimizations', () => {
     expect(result.dimensions.brandSearchVolume.details.dataSource).toBe('unavailable')
     expect(result.dimensions.brandSearchVolume.details.fallbackMode).toBe('brand_signal_proxy')
     expect(result.dimensions.brandSearchVolume.details.brandKeywordCount).toBeGreaterThan(0)
+  })
+
+  it('reuses exact brand keyword volume without planner brand-name lookup', async () => {
+    const result = await evaluateAdStrength(
+      [{ text: 'Novilla Official', length: 16 }],
+      [{ text: 'Shop Novilla mattress for better sleep.', length: 38 }],
+      ['novilla mattress'],
+      {
+        brandName: 'Novilla',
+        targetCountry: 'US',
+        targetLanguage: 'en',
+        userId: 1,
+        keywordsWithVolume: [
+          { keyword: 'novilla', searchVolume: 5000 },
+          { keyword: 'novilla memory foam mattress', searchVolume: 370 },
+        ],
+      }
+    )
+
+    expect(getKeywordSearchVolumesForPlannerContextMock).not.toHaveBeenCalled()
+    expect(result.dimensions.brandSearchVolume.details.brandNameSearchVolume).toBe(5000)
+    expect(result.dimensions.brandSearchVolume.details.dataSource).toBe('database')
+    expect(result.dimensions.brandSearchVolume.details.fallbackMode).toBe('none')
   })
 
   it('backfills exact brand keyword volume when planner data is unavailable', async () => {

@@ -14,6 +14,7 @@ import {
 } from '@/lib/offer-keyword-pool'
 import { POST as rebuildOfferPost } from '@/app/api/offers/[id]/rebuild/route'
 import { getCreativeTypeForBucketSlot } from '@/lib/creative-type'
+import { loadKeywordPoolExpandCredentialsForOffer } from '@/lib/google-ads-accounts-auth'
 
 type CanonicalBucketSlot = 'A' | 'B' | 'D'
 
@@ -351,8 +352,14 @@ export async function POST(
       })
     }
 
-    // 生成关键词池
-    const pool = await generateOfferKeywordPool(offerId, userIdNum, keywords)
+    const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userIdNum, offerId)
+    const pool = await generateOfferKeywordPool(
+      offerId,
+      userIdNum,
+      keywords,
+      undefined,
+      expandLoad.ok ? expandLoad : undefined
+    )
 
     // 确定聚类策略
     const strategy = determineClusteringStrategy(pool.totalKeywords)
