@@ -7,6 +7,7 @@ import {
   mapCreativeTypeToBucketSlot,
   normalizeCreativeBucketSlot,
 } from '@/lib/creative-type'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 function resolveCreativeIdentity(creative: any): {
   creativeType: 'brand_intent' | 'model_intent' | 'product_intent' | null
@@ -46,7 +47,10 @@ export async function GET(
     }
     const userId = authResult.user.userId
 
-    const offerId = parseInt(id, 10)
+    const offerId = parsePositiveIntegerOfferId(id)
+    if (!offerId) {
+      return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
+    }
 
     // 验证Offer存在且属于当前用户
     const offer = await findOfferById(offerId, userId)

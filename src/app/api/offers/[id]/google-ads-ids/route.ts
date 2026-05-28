@@ -1,6 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 /**
  * GET /api/offers/:id/google-ads-ids
@@ -21,7 +22,10 @@ export async function GET(
       )
     }
     const userIdNum = authResult.user.userId
-    const offerId = parseInt(params.id, 10)
+    const offerId = parsePositiveIntegerOfferId(params.id)
+    if (!offerId) {
+      return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
+    }
     const db = await getDatabase()
 
     // 验证Offer是否存在且属于该用户

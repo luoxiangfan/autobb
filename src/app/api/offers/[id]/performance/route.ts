@@ -7,6 +7,7 @@ import {
   calculateOfferROI,
   getOfferCurrencyInfo
 } from '@/lib/offer-performance'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 /**
  * GET /api/offers/[id]/performance
@@ -37,9 +38,8 @@ export async function GET(
     }
 
     const userId = authResult.user.userId
-    const offerId = parseInt(params.id)
-
-    if (isNaN(offerId)) {
+    const offerId = parsePositiveIntegerOfferId(params.id)
+    if (!offerId) {
       return NextResponse.json(
         { error: '无效的Offer ID' },
         { status: 400 }

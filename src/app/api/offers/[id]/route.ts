@@ -6,6 +6,7 @@ import { compactCategoryLabel, deriveCategoryFromScrapedData } from '@/lib/offer
 import { filterNavigationLabels } from '@/lib/scrape-text-filters'
 import { normalizeOfferExtractionMode } from '@/lib/offer-extraction-mode'
 import { applyOfferUpdateFromBody, mapOfferToPutResponse } from '@/lib/offer-update-from-body'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 function safeParseJson<T>(input: unknown): T | null {
   if (typeof input !== 'string' || !input.trim()) return null
@@ -224,7 +225,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params
+    const offerId = parsePositiveIntegerOfferId(params.id)
+    if (!offerId) {
+      return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
+    }
 
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -232,7 +236,7 @@ export async function GET(
     }
     const userId = authResult.user.userId
 
-    const offer = await findOfferById(parseInt(id, 10), userId)
+    const offer = await findOfferById(offerId, userId)
 
     if (!offer) {
       return NextResponse.json(
@@ -367,7 +371,10 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params
+    const offerId = parsePositiveIntegerOfferId(params.id)
+    if (!offerId) {
+      return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
+    }
 
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -375,7 +382,6 @@ export async function PUT(
     }
     const userId = authResult.user.userId
 
-    const offerId = parseInt(id, 10)
     const userIdNum = userId
     const body = await request.json()
 
@@ -418,7 +424,10 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params
+    const offerId = parsePositiveIntegerOfferId(params.id)
+    if (!offerId) {
+      return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
+    }
 
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -433,14 +442,14 @@ export async function DELETE(
 
     // 执行删除操作
     const result = await deleteOffer(
-      parseInt(id, 10),
+      offerId,
       userId,
       autoUnlink,
       removeGoogleAdsCampaigns
     )
 
     // 使缓存失效
-    invalidateOfferCache(userId, parseInt(id, 10))
+    invalidateOfferCache(userId, offerId)
 
     // 如果有关联账号且未自动解除，返回409状态码和详情
     if (!result.success && result.hasLinkedAccounts) {

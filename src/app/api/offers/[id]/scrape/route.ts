@@ -12,6 +12,7 @@ import {
 } from '@/lib/offer-extraction-mode'
 import { applyOfferUpdateFromBody, pickOfferUpdateBody } from '@/lib/offer-update-from-body'
 import { offerExtractApiErrorBody } from '@/lib/offer-extract-request'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 /**
  * POST /api/offers/:id/scrape
@@ -23,9 +24,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const offerIdNum = parseInt(params.id, 10)
-
-  if (isNaN(offerIdNum)) {
+  const offerIdNum = parsePositiveIntegerOfferId(params.id)
+  if (!offerIdNum) {
     return NextResponse.json(
       { error: 'Invalid request', message: 'Invalid offer ID' },
       { status: 400 }

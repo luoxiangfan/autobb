@@ -20,6 +20,7 @@ import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keywo
 import { getKeywordPlannerSiteFilterUrlForOffer } from '@/lib/keyword-planner-site-filter'
 import { ensureOfferBrandOfficialSite } from '@/lib/offer-official-site'
 import { normalizeLanguageCode } from '@/lib/language-country-codes'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 /**
  * POST /api/offers/:id/keyword-ideas
@@ -30,7 +31,10 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params
+    const offerId = parsePositiveIntegerOfferId(params.id)
+    if (!offerId) {
+      return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
+    }
 
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -47,7 +51,7 @@ export async function POST(
     } = body
 
     // 验证Offer存在且属于当前用户
-    const offer = await findOfferById(parseInt(id, 10), numericUserId)
+    const offer = await findOfferById(offerId, numericUserId)
 
     if (!offer) {
       return NextResponse.json(

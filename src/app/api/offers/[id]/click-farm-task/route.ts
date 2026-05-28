@@ -5,6 +5,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/db';
 import { parseClickFarmTask } from '@/lib/click-farm';
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id';
 
 export const dynamic = 'force-dynamic'
 
@@ -25,8 +26,8 @@ export async function GET(
       );
     }
 
-    const offerId = parseInt(params.id);
-    if (isNaN(offerId)) {
+    const offerId = parsePositiveIntegerOfferId(params.id);
+    if (!offerId) {
       return NextResponse.json(
         { error: 'invalid_params', message: '无效的 Offer ID' },
         { status: 400 }

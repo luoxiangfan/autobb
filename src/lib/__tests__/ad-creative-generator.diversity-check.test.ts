@@ -103,4 +103,36 @@ describe('generateMultipleCreativesWithDiversityCheck', () => {
     expect(authExpandFns.loadKeywordPoolExpandCredentialsForOffer).toHaveBeenCalledTimes(1)
     expect(authExpandFns.loadKeywordPoolExpandCredentialsForOffer).toHaveBeenCalledWith(1, 9)
   })
+
+  it('loads expand once when pool is preset without session or preparedExpand', async () => {
+    const keywordPool = { id: 2, offerId: 9, totalKeywords: 5 }
+    authExpandFns.loadKeywordPoolExpandCredentialsForOffer.mockResolvedValueOnce({
+      ok: false,
+      reason: 'DEV_TOKEN_INSUFFICIENT_ACCESS',
+    })
+
+    await generateMultipleCreativesWithDiversityCheck(9, 1, 1, 0.2, 3, {
+      keywordPool: keywordPool as any,
+      skipCache: true,
+    })
+
+    expect(authExpandFns.loadKeywordPoolExpandCredentialsForOffer).toHaveBeenCalledTimes(1)
+  })
+
+  it('skips expand when caller already passed preparedExpand', async () => {
+    const keywordPool = { id: 2, offerId: 9, totalKeywords: 5 }
+    const preparedExpand = {
+      ok: true,
+      creds: { authType: 'oauth', linkedServiceAccountId: null },
+      plannerSession: mockSession,
+    }
+
+    await generateMultipleCreativesWithDiversityCheck(9, 1, 1, 0.2, 3, {
+      keywordPool: keywordPool as any,
+      preparedExpand: preparedExpand as any,
+      skipCache: true,
+    })
+
+    expect(authExpandFns.loadKeywordPoolExpandCredentialsForOffer).not.toHaveBeenCalled()
+  })
 })

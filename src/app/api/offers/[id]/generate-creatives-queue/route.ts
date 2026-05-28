@@ -24,6 +24,7 @@ import {
 import { extractModelAnchorTextsFromScrapedData } from '@/lib/model-anchor-evidence'
 import { normalizeSingleCreativeSelection } from '@/lib/creative-request-normalizer'
 import { normalizeCreativeTaskError, toCreativeTaskErrorResponseFields, type CreativeTaskErrorCategory } from '@/lib/creative-task-error'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 type NormalizedCreativeBucket = 'A' | 'B' | 'D'
 
@@ -81,7 +82,17 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { id } = params
+  const offerId = parsePositiveIntegerOfferId(params.id)
+  if (!offerId) {
+    return createQueueErrorResponse({
+      status: 400,
+      error: 'Invalid offer ID',
+      message: 'Invalid offer ID',
+      errorCode: 'INVALID_OFFER_ID',
+      errorCategory: 'validation',
+      retryable: false,
+    })
+  }
 
   // 验证用户身份
     const authResult = await verifyAuth(request);
@@ -181,7 +192,7 @@ export async function POST(
   }
 
   // 验证Offer存在
-  const offer = await findOfferById(parseInt(id, 10), userId)
+  const offer = await findOfferById(offerId, userId)
   if (!offer) {
     return createQueueErrorResponse({
       status: 404,
@@ -259,7 +270,7 @@ export async function POST(
   }
 
   try {
-    const availableBuckets = await getAvailableBuckets(parseInt(id, 10))
+    const availableBuckets = await getAvailableBuckets(offerId)
     let requestedType: 'A' | 'B' | 'D' | null = requestedBucketFromCreativeType || requestedBucket || (normalizedCoverage ? 'D' : null)
     if (!requestedBucketFromCreativeType && bucketSelection.legacyModelHint && normalizedSelection.bucketSelection.normalizedBucket === 'B') {
       const offerAny = offer as any
@@ -283,7 +294,7 @@ export async function POST(
 
       if (normalizedLegacyType !== 'model_intent') {
         console.warn(
-          `[CreativeGeneration] Offer ${id}: legacy bucket ${bucketSelection.rawBucket} fallback to D/product_intent because no verifiable model anchor evidence was found`
+          `[CreativeGeneration] Offer ${offerId}: legacy bucket ${bucketSelection.rawBucket} fallback to D/product_intent because no verifiable model anchor evidence was found`
         )
       }
       requestedType = normalizedLegacyType === 'model_intent' ? 'B' : 'D'
@@ -350,12 +361,12 @@ export async function POST(
         id, user_id, offer_id, status, stage, progress, message,
         max_retries, target_rating, generation_mode, created_at, updated_at
       ) VALUES (?, ?, ?, 'pending', 'init', 0, '准备开始生成...', ?, ?, ?, datetime('now'), datetime('now'))`,
-      [taskId, userId, parseInt(id, 10), normalizedMaxRetries, normalizedTargetRating, generationMode]
+      [taskId, userId, offerId, normalizedMaxRetries, normalizedTargetRating, generationMode]
     )
 
     // 将任务加入队列
     const taskData: AdCreativeTaskData = {
-      offerId: parseInt(id, 10),
+      offerId: offerId,
       maxRetries: normalizedMaxRetries,
       targetRating: normalizedTargetRating,
       generationMode,

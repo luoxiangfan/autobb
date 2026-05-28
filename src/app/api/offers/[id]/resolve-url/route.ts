@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { resolveAffiliateLink, getProxyPool } from '@/lib/url-resolver-enhanced'  // 🔥 使用新的增强版API
 import { findOfferById } from '@/lib/offers'
 import { getAllProxyUrls } from '@/lib/settings'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 /**
  * POST /api/offers/:id/resolve-url
@@ -13,7 +14,10 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params
+    const offerId = parsePositiveIntegerOfferId(params.id)
+    if (!offerId) {
+      return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
+    }
 
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -22,7 +26,7 @@ export async function POST(
     const userId = authResult.user.userId
 
     // 验证Offer存在且属于当前用户
-    const offer = await findOfferById(parseInt(id, 10), userId)
+    const offer = await findOfferById(offerId, userId)
 
     if (!offer) {
       return NextResponse.json(

@@ -38,21 +38,19 @@ async function preloadPlannerSessionsByOfferId(
   const sessionByOfferId = new Map<number, KeywordPlannerPreparedSession>()
   const validatedOfferIds = new Set<number>()
   const expandFailedOfferIds = new Set<number>()
-  await Promise.all(
-    offerIds.map(async (offerId) => {
-      const offer = await findOfferById(offerId, userId)
-      if (!offer) {
-        return
-      }
-      validatedOfferIds.add(offerId)
-      const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
-      if (expandLoad.ok) {
-        sessionByOfferId.set(offerId, expandLoad.plannerSession)
-      } else {
-        expandFailedOfferIds.add(offerId)
-      }
-    })
-  )
+  await mapWithConcurrency(offerIds, BATCH_EVALUATE_CONCURRENCY, async (offerId) => {
+    const offer = await findOfferById(offerId, userId)
+    if (!offer) {
+      return
+    }
+    validatedOfferIds.add(offerId)
+    const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
+    if (expandLoad.ok) {
+      sessionByOfferId.set(offerId, expandLoad.plannerSession)
+    } else {
+      expandFailedOfferIds.add(offerId)
+    }
+  })
   return { sessionByOfferId, validatedOfferIds, expandFailedOfferIds }
 }
 
@@ -284,7 +282,8 @@ export async function GET() {
     },
     limits: {
       maxCreatives: 50,
-      rateLimit: '100 requests/hour'
+      rateLimit: '100 requests/hour',
+      evaluateConcurrency: 'BATCH_EVALUATE_CONCURRENCY (1-20, default 8) — 评估与按 offer 预加载 expand 共用',
     },
     responseFormat: {
       success: true,

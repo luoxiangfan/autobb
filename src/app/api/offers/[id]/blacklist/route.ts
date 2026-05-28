@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { verifyAuth } from '@/lib/auth'
 import { invalidateOfferCache } from '@/lib/api-cache'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 export async function POST(
   request: NextRequest,
@@ -21,8 +22,8 @@ export async function POST(
 
     const userId = authResult.user.userId
     const { id } = await params
-    const offerId = parseInt(id)
-    if (isNaN(offerId)) {
+    const offerId = parsePositiveIntegerOfferId(id)
+    if (!offerId) {
       return NextResponse.json({ error: '无效的Offer ID' }, { status: 400 })
     }
 
@@ -86,8 +87,8 @@ export async function DELETE(
 
     const userId = authResult.user.userId
     const { id } = await params
-    const offerId = parseInt(id)
-    if (isNaN(offerId)) {
+    const offerId = parsePositiveIntegerOfferId(id)
+    if (!offerId) {
       return NextResponse.json({ error: '无效的Offer ID' }, { status: 400 })
     }
 

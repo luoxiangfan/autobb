@@ -12,6 +12,7 @@ import {
 } from '@/lib/google-ads-auth-context'
 import { executeGAQLQueryPython } from '@/lib/python-ads-client'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 // Google Ads CampaignStatus 枚举值映射
 // https://developers.google.com/google-ads/api/reference/rpc/latest/CampaignStatusEnum.CampaignStatus
@@ -119,7 +120,10 @@ export async function GET(
 
     const db = await getDatabase()
     const numericUserId = userId
-    const offerId = parseInt(id, 10)
+    const offerId = parsePositiveIntegerOfferId(id)
+    if (!offerId) {
+      return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
+    }
 
     const isDeletedCheck = db.type === 'postgres' ? 'c.is_deleted = FALSE' : 'c.is_deleted = 0'
 

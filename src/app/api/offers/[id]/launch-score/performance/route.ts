@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth'
 import { findLatestLaunchScore } from '@/lib/launch-scores'
 import { getPerformanceEnhancedAnalysis } from '@/lib/launch-score-performance'
 import { findOfferById } from '@/lib/offers'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 /**
  * GET /api/offers/:id/launch-score/performance
@@ -30,7 +31,10 @@ export async function GET(
     }
 
     const userId = authResult.user.userId
-    const offerId = parseInt(params.id)
+    const offerId = parsePositiveIntegerOfferId(params.id)
+    if (!offerId) {
+      return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
+    }
 
     // 2. 验证Offer存在且属于当前用户
     const offer = await findOfferById(offerId, userId)

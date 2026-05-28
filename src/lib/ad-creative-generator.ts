@@ -11843,11 +11843,11 @@ export async function generateMultipleCreativesWithDiversityCheck(
     keywordPool = resolved.pool
     plannerSession = plannerSession ?? resolved.plannerSession
     preparedExpand = preparedExpand ?? resolved.preparedExpand
-  } else if (plannerSession === undefined) {
+  } else if (plannerSession === undefined && preparedExpand === undefined) {
     const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
+    preparedExpand = expandLoad
     if (expandLoad.ok) {
       plannerSession = expandLoad.plannerSession
-      preparedExpand = preparedExpand ?? expandLoad
     }
   }
 

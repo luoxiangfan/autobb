@@ -4,6 +4,7 @@ import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { queueGoogleAdsCampaignRemoteActions } from '@/lib/google-ads-campaign-remote-actions'
 import { parseTruthyFlag } from '@/lib/parse-truthy-flag'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 /**
  * POST /api/offers/:id/unlink
@@ -33,8 +34,14 @@ export async function POST(
       return NextResponse.json({ error: '缺少accountId参数' }, { status: 400 })
     }
 
-    const offerId = parseInt(id, 10)
-    const googleAdsAccountId = parseInt(accountId, 10)
+    const offerId = parsePositiveIntegerOfferId(id)
+    if (!offerId) {
+      return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
+    }
+    const googleAdsAccountId = parsePositiveIntegerOfferId(accountId)
+    if (!googleAdsAccountId) {
+      return NextResponse.json({ error: '无效的 accountId' }, { status: 400 })
+    }
     const db = await getDatabase()
 
     // 先读取该 Offer 在该账号下“已同步”的所有 Campaign（用于后续 best-effort 的 Google Ads 远端暂停）

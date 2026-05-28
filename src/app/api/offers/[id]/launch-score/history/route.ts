@@ -1,6 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findLaunchScoresByOfferId, parseLaunchScoreAnalysis } from '@/lib/launch-scores'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 /**
  * GET /api/offers/[id]/launch-score/history
@@ -25,9 +26,8 @@ export async function GET(
       )
     }
 
-    const offerId = parseInt(params.id, 10)
-
-    if (isNaN(offerId)) {
+    const offerId = parsePositiveIntegerOfferId(params.id)
+    if (!offerId) {
       return NextResponse.json(
         { error: 'Offer ID无效' },
         { status: 400 }

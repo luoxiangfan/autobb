@@ -2,6 +2,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { offerOccupyingCampaignWhereClause } from '@/lib/campaign-offer-constraint'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 /**
  * GET /api/offers/:id/campaigns/status?campaignId=:campaignId
@@ -26,6 +27,10 @@ export async function GET(
 ) {
   try {
     const { id } = params
+    const offerId = parsePositiveIntegerOfferId(id)
+    if (!offerId) {
+      return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
+    }
     const campaignId = request.nextUrl.searchParams.get('campaignId')
 
     const authResult = await verifyAuth(request)
@@ -37,7 +42,6 @@ export async function GET(
     if (!campaignId) {
       // 向后兼容：某些 OpenClaw 流程会遗漏 campaignId，返回仍占用槽位的 Campaign 状态
       const db = await getDatabase()
-      const offerId = parseInt(id)
       const numericUserId = userId
       const occupyingWhere = offerOccupyingCampaignWhereClause(db.type)
       const latestCampaign = await db.queryOne(
@@ -74,6 +78,11 @@ export async function GET(
       })
     }
 
+    const parsedCampaignId = parsePositiveIntegerOfferId(campaignId)
+    if (!parsedCampaignId) {
+      return NextResponse.json({ error: 'Campaign ID无效' }, { status: 400 })
+    }
+
     // 从数据库查询campaign状态
     const db = await getDatabase()
     const campaign = await db.queryOne(
@@ -85,7 +94,7 @@ export async function GET(
         COALESCE(NULLIF(TRIM(google_campaign_id), ''), NULLIF(TRIM(campaign_id), '')) AS google_campaign_id
       FROM campaigns
       WHERE id = ? AND offer_id = ? AND user_id = ?`,
-      [parseInt(campaignId), parseInt(id), userId]
+      [parsedCampaignId, offerId, userId]
     ) as any
 
     if (!campaign) {

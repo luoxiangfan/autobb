@@ -161,6 +161,37 @@ describe('calculateLaunchScore planner prepare', () => {
     expect(loadKeywordPoolExpandMock).toHaveBeenCalledWith(9, 7)
   })
 
+  it('reuses adStrengthPlanner from campaignConfig without calling expand again', async () => {
+    const { calculateLaunchScore } = await import('../scoring')
+
+    const prepared = {
+      plannerSession: { volumeAuth: { authType: 'oauth' } },
+      skipKeywordPoolExpandLoad: false,
+    }
+    loadKeywordPoolExpandMock.mockClear()
+
+    await calculateLaunchScore(
+      {
+        id: 7,
+        brand: 'AcmeBrand',
+        target_country: 'US',
+        target_language: 'English',
+        url: 'https://www.amazon.com/acme-brand',
+        final_url: 'https://www.amazon.com/acme-brand',
+        page_type: 'product',
+      } as any,
+      {
+        headlines: ['One', 'Two', 'Three'],
+        descriptions: ['Desc one', 'Desc two'],
+        keywords: ['acme filter'],
+      } as any,
+      9,
+      { adStrengthPlanner: prepared }
+    )
+
+    expect(loadKeywordPoolExpandMock).not.toHaveBeenCalled()
+  })
+
   it('passes skipKeywordPoolExpandLoad when expand prepare fails', async () => {
     loadKeywordPoolExpandMock.mockResolvedValueOnce({ ok: false })
     evaluateAdStrengthMock.mockClear()

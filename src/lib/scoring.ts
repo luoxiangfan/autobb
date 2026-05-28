@@ -23,7 +23,34 @@ import {
   type InputReview,
 } from './llm-input-guard'
 import { USD_BASE_CURRENCY, normalizeCurrencyCode } from './currency'
-import { loadKeywordPoolExpandCredentialsForOffer } from './google-ads-accounts-auth'
+import {
+  loadKeywordPoolExpandCredentialsForOffer,
+  type KeywordPlannerPreparedSession,
+} from './google-ads-accounts-auth'
+
+/** 同一 Offer 多次 Launch Score 时复用，避免重复 prepare Keyword Planner expand */
+export type LaunchScoreAdStrengthPlannerContext = {
+  plannerSession?: KeywordPlannerPreparedSession
+  skipKeywordPoolExpandLoad: boolean
+}
+
+export async function prepareLaunchScoreAdStrengthPlannerContext(
+  userId: number,
+  offerId: number,
+  brandName?: string | null
+): Promise<LaunchScoreAdStrengthPlannerContext> {
+  if (!userId || !offerId || !brandName) {
+    return { skipKeywordPoolExpandLoad: false }
+  }
+  const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
+  if (expandLoad.ok) {
+    return {
+      plannerSession: expandLoad.plannerSession,
+      skipKeywordPoolExpandLoad: false,
+    }
+  }
+  return { skipKeywordPoolExpandLoad: true }
+}
 
 /**
  * Launch Score 4维度评分系统 v4.0
@@ -46,6 +73,8 @@ export async function calculateLaunchScore(
     finalUrl?: string  // 🔧 新增：用户配置的Final URL
     targetCountry?: string  // 🔧 新增：目标国家
     targetLanguage?: string  // 🔧 新增：目标语言
+    /** 批量/发布流程可预先 prepare 一次并传入，避免每条创意重复 expand */
+    adStrengthPlanner?: LaunchScoreAdStrengthPlannerContext
   }
 ): Promise<{
   totalScore: number
@@ -116,17 +145,17 @@ export async function calculateLaunchScore(
     if ((creative as any).ad_strength) {
       adStrength = (creative as any).ad_strength as AdStrengthRating
     } else if (headlines.length >= 3 && creative.descriptions.length >= 2) {
-      let launchScorePlannerSession:
-        | import('./google-ads-accounts-auth').KeywordPlannerPreparedSession
-        | undefined
-      let skipKeywordPoolExpandLoad = false
-      if (userId && offer.id && offer.brand) {
-        const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id)
-        if (expandLoad.ok) {
-          launchScorePlannerSession = expandLoad.plannerSession
-        } else {
-          skipKeywordPoolExpandLoad = true
-        }
+      let launchScorePlannerSession = campaignConfig?.adStrengthPlanner?.plannerSession
+      let skipKeywordPoolExpandLoad =
+        campaignConfig?.adStrengthPlanner?.skipKeywordPoolExpandLoad ?? false
+      if (campaignConfig?.adStrengthPlanner === undefined && userId && offer.id && offer.brand) {
+        const prepared = await prepareLaunchScoreAdStrengthPlannerContext(
+          userId,
+          offer.id,
+          offer.brand
+        )
+        launchScorePlannerSession = prepared.plannerSession
+        skipKeywordPoolExpandLoad = prepared.skipKeywordPoolExpandLoad
       }
 
       // 快速评估Ad Strength（传递品牌信息）

@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { executeGoogleAdsCampaignRemoteActions } from '@/lib/google-ads-campaign-remote-actions'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 interface RouteContext {
   params: {
@@ -25,9 +26,8 @@ export async function POST(
   context: RouteContext
 ): Promise<NextResponse> {
   try {
-    const offerId = parseInt(context.params.id)
-
-    if (isNaN(offerId)) {
+    const offerId = parsePositiveIntegerOfferId(context.params.id)
+    if (!offerId) {
       return NextResponse.json(
         { error: '无效的Offer ID' },
         { status: 400 }
