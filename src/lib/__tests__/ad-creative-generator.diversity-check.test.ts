@@ -5,9 +5,21 @@ const poolFns = vi.hoisted(() => ({
   resolveKeywordPoolForCreativeGeneration: vi.fn(),
 }))
 
+const authExpandFns = vi.hoisted(() => ({
+  loadKeywordPoolExpandCredentialsForOffer: vi.fn(),
+}))
+
 const generatorFns = vi.hoisted(() => ({
   generateAdCreative: vi.fn(),
 }))
+
+vi.mock('../google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    loadKeywordPoolExpandCredentialsForOffer: authExpandFns.loadKeywordPoolExpandCredentialsForOffer,
+  }
+})
 
 vi.mock('../offer-keyword-pool', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../offer-keyword-pool')>()
@@ -33,6 +45,12 @@ describe('generateMultipleCreativesWithDiversityCheck', () => {
     vi.spyOn(console, 'log').mockImplementation(() => {})
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    authExpandFns.loadKeywordPoolExpandCredentialsForOffer.mockResolvedValue({
+      ok: true,
+      creds: { authType: 'oauth', linkedServiceAccountId: null },
+      plannerSession: mockSession,
+    })
 
     poolFns.resolveKeywordPoolForCreativeGeneration.mockResolvedValue({
       pool: { id: 1, offerId: 9, totalKeywords: 10 },
@@ -71,5 +89,18 @@ describe('generateMultipleCreativesWithDiversityCheck', () => {
     })
 
     expect(poolFns.resolveKeywordPoolForCreativeGeneration).not.toHaveBeenCalled()
+  })
+
+  it('loads expand only when keyword pool is provided without planner session', async () => {
+    const keywordPool = { id: 2, offerId: 9, totalKeywords: 5 }
+
+    await generateMultipleCreativesWithDiversityCheck(9, 1, 1, 0.2, 3, {
+      keywordPool: keywordPool as any,
+      skipCache: true,
+    })
+
+    expect(poolFns.resolveKeywordPoolForCreativeGeneration).not.toHaveBeenCalled()
+    expect(authExpandFns.loadKeywordPoolExpandCredentialsForOffer).toHaveBeenCalledTimes(1)
+    expect(authExpandFns.loadKeywordPoolExpandCredentialsForOffer).toHaveBeenCalledWith(1, 9)
   })
 })

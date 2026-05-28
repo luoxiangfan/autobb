@@ -138,6 +138,50 @@ describe('ad-strength-evaluator KISS optimizations', () => {
     expect(result.dimensions.brandSearchVolume.details.brandKeywordCount).toBeGreaterThan(0)
   })
 
+  it('reuses exact brand keyword with zero volume without planner brand-name lookup', async () => {
+    const result = await evaluateAdStrength(
+      [{ text: 'Novilla Official', length: 16 }],
+      [{ text: 'Shop Novilla mattress for better sleep.', length: 38 }],
+      ['novilla mattress'],
+      {
+        brandName: 'Novilla',
+        targetCountry: 'US',
+        targetLanguage: 'en',
+        userId: 1,
+        keywordsWithVolume: [
+          { keyword: 'novilla', searchVolume: 0 },
+          { keyword: 'novilla memory foam mattress', searchVolume: 370 },
+        ],
+      }
+    )
+
+    expect(getKeywordSearchVolumesForPlannerContextMock).not.toHaveBeenCalled()
+    expect(result.dimensions.brandSearchVolume.details.brandNameSearchVolume).toBe(0)
+    expect(result.dimensions.brandSearchVolume.details.dataSource).toBe('database')
+  })
+
+  it('skips planner brand-name lookup when skipKeywordPoolExpandLoad is set', async () => {
+    const result = await evaluateAdStrength(
+      [{ text: 'Novilla Official', length: 16 }],
+      [{ text: 'Shop Novilla mattress for better sleep.', length: 38 }],
+      ['novilla mattress'],
+      {
+        brandName: 'Novilla',
+        targetCountry: 'US',
+        targetLanguage: 'en',
+        userId: 1,
+        offerId: 42,
+        skipKeywordPoolExpandLoad: true,
+        keywordsWithVolume: [
+          { keyword: 'novilla memory foam mattress', searchVolume: 370 },
+        ],
+      }
+    )
+
+    expect(getKeywordSearchVolumesForPlannerContextMock).not.toHaveBeenCalled()
+    expect(result.dimensions.brandSearchVolume.details.dataSource).toBe('unavailable')
+  })
+
   it('reuses exact brand keyword volume without planner brand-name lookup', async () => {
     const result = await evaluateAdStrength(
       [{ text: 'Novilla Official', length: 16 }],

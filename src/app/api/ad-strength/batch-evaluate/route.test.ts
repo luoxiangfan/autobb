@@ -221,6 +221,7 @@ describe('POST /api/ad-strength/batch-evaluate', () => {
     expect(res.status).toBe(200)
     expect(data.summary.successCount).toBe(0)
     expect(data.summary.averageScore).toBeNull()
+    expect(data.summary.allFailed).toBe(true)
   })
 
   it('returns 401 when unauthenticated', async () => {

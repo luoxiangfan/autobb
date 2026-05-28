@@ -119,10 +119,13 @@ export async function calculateLaunchScore(
       let launchScorePlannerSession:
         | import('./google-ads-accounts-auth').KeywordPlannerPreparedSession
         | undefined
+      let skipKeywordPoolExpandLoad = false
       if (userId && offer.id && offer.brand) {
         const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id)
         if (expandLoad.ok) {
           launchScorePlannerSession = expandLoad.plannerSession
+        } else {
+          skipKeywordPoolExpandLoad = true
         }
       }
 
@@ -137,6 +140,7 @@ export async function calculateLaunchScore(
         offerId: offer.id,
         keywordsWithVolume: keywordsWithVolume.length > 0 ? keywordsWithVolume : undefined,
         plannerSession: launchScorePlannerSession,
+        skipKeywordPoolExpandLoad,
       })
     }
 
@@ -660,6 +664,7 @@ export async function evaluateCreativeAdStrength(
     }>
     skipCompetitivePositioningAi?: boolean
     plannerSession?: import('./google-ads-accounts-auth').KeywordPlannerPreparedSession
+    skipKeywordPoolExpandLoad?: boolean
   }
 ): Promise<ComprehensiveAdStrengthResult> {
   console.log('🎯 开始Ad Strength评估...')
@@ -676,6 +681,7 @@ export async function evaluateCreativeAdStrength(
     keywordsWithVolume: options?.keywordsWithVolume,
     skipCompetitivePositioningAi: options?.skipCompetitivePositioningAi,
     plannerSession: options?.plannerSession,
+    skipKeywordPoolExpandLoad: options?.skipKeywordPoolExpandLoad,
   })
 
   console.log(`📊 本地评估: ${localEvaluation.rating} (${localEvaluation.overallScore}分)`)
@@ -763,6 +769,7 @@ export async function getQuickAdStrength(
       volumeUnavailableReason?: 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
     }>
     plannerSession?: import('./google-ads-accounts-auth').KeywordPlannerPreparedSession
+    skipKeywordPoolExpandLoad?: boolean
   }
 ): Promise<AdStrengthRating> {
   const evaluation = await evaluateAdStrength(headlines, descriptions, keywords, brandOptions)

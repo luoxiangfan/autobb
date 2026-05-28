@@ -7,20 +7,15 @@ import {
   loadKeywordPoolExpandCredentialsForOffer,
   type KeywordPlannerPreparedSession,
 } from '@/lib/google-ads-accounts-auth'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+import {
+  mapWithConcurrency,
+  resolveBatchEvaluateConcurrency,
+} from '@/lib/run-with-concurrency'
 
-function parsePositiveIntegerOfferId(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
-    return value
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-    if (/^\d+$/.test(trimmed)) {
-      const parsed = Number.parseInt(trimmed, 10)
-      return parsed > 0 ? parsed : undefined
-    }
-  }
-  return undefined
-}
+const BATCH_EVALUATE_CONCURRENCY = resolveBatchEvaluateConcurrency(
+  process.env.BATCH_EVALUATE_CONCURRENCY
+)
 
 type OfferPlannerPreload = {
   sessionByOfferId: Map<number, KeywordPlannerPreparedSession>
@@ -115,9 +110,11 @@ export async function POST(request: NextRequest) {
       console.log(`🔑 已预加载 ${sessionByOfferId.size} 个 Offer 的 Keyword Planner session`)
     }
 
-    // 批量评估
-    const evaluations = await Promise.all(
-      creatives.map(async (creative, index) => {
+    // 批量评估（有界并发，避免 50 路同时打 Planner / AI）
+    const evaluations = await mapWithConcurrency(
+      creatives,
+      BATCH_EVALUATE_CONCURRENCY,
+      async (creative, index) => {
         try {
           // 验证创意格式
           if (!creative.headlines || !creative.descriptions || !creative.keywords) {
@@ -183,7 +180,7 @@ export async function POST(request: NextRequest) {
             error: error.message
           }
         }
-      })
+      }
     )
 
     // 统计结果
@@ -223,6 +220,7 @@ export async function POST(request: NextRequest) {
           totalCount: creatives.length,
           successCount,
           failCount,
+          allFailed: successCount === 0,
           ratingDistribution,
           averageScore: computeAverageEvaluationScore(evaluations),
         }
@@ -237,6 +235,7 @@ export async function POST(request: NextRequest) {
           totalCount: creatives.length,
           successCount,
           failCount,
+          allFailed: successCount === 0,
           ratingDistribution,
           averageScore: computeAverageEvaluationScore(evaluations),
         }
@@ -271,7 +270,7 @@ export async function GET() {
           keywords: ['string[]'],
           // [NEW] 关键词搜索量数据（用于品牌关键词搜索量评分）
           keywordsWithVolume: 'optional [{ keyword, searchVolume }]',
-          offerId: 'optional number — 用于按 Offer 拉取品牌搜索量（Keyword Planner）',
+          offerId: 'optional positive integer or numeric string — 用于按 Offer 拉取品牌搜索量（Keyword Planner）',
           brandName: 'optional 品牌名称',
           targetCountry: 'optional 默认 US',
           targetLanguage: 'optional 默认 en',
@@ -315,7 +314,8 @@ export async function GET() {
           AVERAGE: 2,
           POOR: 0
         },
-        averageScore: 85.5
+        averageScore: 85.5,
+        allFailed: false
       }
     }
   })

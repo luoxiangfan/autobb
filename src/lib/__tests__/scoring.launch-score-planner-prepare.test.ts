@@ -16,13 +16,17 @@ vi.mock('../google-ads-accounts-auth', () => ({
   loadKeywordPoolExpandCredentialsForOffer: loadKeywordPoolExpandMock,
 }))
 
-vi.mock('../ad-strength-evaluator', () => ({
-  evaluateAdStrength: vi.fn().mockResolvedValue({
+const evaluateAdStrengthMock = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({
     rating: 'GOOD',
     overallScore: 80,
     dimensions: {},
     suggestions: [],
-  }),
+  })
+)
+
+vi.mock('../ad-strength-evaluator', () => ({
+  evaluateAdStrength: evaluateAdStrengthMock,
 }))
 
 function buildLaunchScoreAiPayload() {
@@ -83,6 +87,13 @@ describe('calculateLaunchScore planner prepare', () => {
     vi.resetModules()
     generateContentMock.mockReset()
     loadKeywordPoolExpandMock.mockReset()
+    evaluateAdStrengthMock.mockReset()
+    evaluateAdStrengthMock.mockResolvedValue({
+      rating: 'GOOD',
+      overallScore: 80,
+      dimensions: {},
+      suggestions: [],
+    })
     generateContentMock.mockResolvedValue({
       text: JSON.stringify(buildLaunchScoreAiPayload()),
       usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
@@ -148,5 +159,40 @@ describe('calculateLaunchScore planner prepare', () => {
 
     expect(loadKeywordPoolExpandMock).toHaveBeenCalledTimes(1)
     expect(loadKeywordPoolExpandMock).toHaveBeenCalledWith(9, 7)
+  })
+
+  it('passes skipKeywordPoolExpandLoad when expand prepare fails', async () => {
+    loadKeywordPoolExpandMock.mockResolvedValueOnce({ ok: false })
+    evaluateAdStrengthMock.mockClear()
+
+    const { calculateLaunchScore } = await import('../scoring')
+
+    await calculateLaunchScore(
+      {
+        id: 7,
+        brand: 'AcmeBrand',
+        target_country: 'US',
+        target_language: 'English',
+        url: 'https://www.amazon.com/acme-brand',
+        final_url: 'https://www.amazon.com/acme-brand',
+        page_type: 'product',
+      } as any,
+      {
+        headlines: ['One', 'Two', 'Three'],
+        descriptions: ['Desc one', 'Desc two'],
+        keywords: ['acme filter'],
+      } as any,
+      9
+    )
+
+    expect(evaluateAdStrengthMock).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.any(Array),
+      expect.any(Array),
+      expect.objectContaining({
+        offerId: 7,
+        skipKeywordPoolExpandLoad: true,
+      })
+    )
   })
 })

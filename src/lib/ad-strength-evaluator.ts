@@ -1740,7 +1740,6 @@ async function calculateBrandSearchVolume(
       && isSearchVolumeUnavailableReason(exactBrandKeywordEntry.volumeUnavailableReason)
     const canReuseExactBrandVolume =
       hasExactBrandKeyword
-      && exactBrandKeywordSearchVolume > 0
       && !exactBrandVolumeMarkedUnavailable
 
     let resolvedPlannerSession = plannerSession
@@ -1765,42 +1764,55 @@ async function calculateBrandSearchVolume(
         }
       }
 
-      const volumeResult =
-        userId
-          ? await getKeywordSearchVolumesForPlannerContext({
-              userId,
-              offerId,
-              keywords: [brandName],
-              country: targetCountry,
-              language: normalizedLanguage,
-              plannerSession: resolvedPlannerSession,
-            })
-          : null
-      const volumeResults = volumeResult?.ok
-        ? volumeResult.volumes
-        : [
-            {
-              avgMonthlySearches: 0,
-              volumeUnavailableReason: 'DEV_TOKEN_INSUFFICIENT_ACCESS' as const,
-            },
-          ]
+      if (skipKeywordPoolExpandLoad) {
+        hasPlannerData = false
+        resolvedBrandNameSearchVolume = 0
+        dataSource = 'unavailable'
+        if (!plannerUnavailableReason) {
+          const unavailableFromKeywords = normalizedKeywordsWithVolume.find((kw) =>
+            isSearchVolumeUnavailableReason(kw.volumeUnavailableReason)
+          )?.volumeUnavailableReason
+          plannerUnavailableReason = isSearchVolumeUnavailableReason(unavailableFromKeywords)
+            ? unavailableFromKeywords
+            : 'DEV_TOKEN_INSUFFICIENT_ACCESS'
+        }
+        console.log('♻️ expand 预加载已失败，跳过品牌名 Planner 查询')
+      } else if (userId) {
+        const volumeResult = await getKeywordSearchVolumesForPlannerContext({
+          userId,
+          offerId,
+          keywords: [brandName],
+          country: targetCountry,
+          language: normalizedLanguage,
+          plannerSession: resolvedPlannerSession,
+        })
+        const volumeResults = volumeResult.ok
+          ? volumeResult.volumes
+          : [
+              {
+                avgMonthlySearches: 0,
+                volumeUnavailableReason: 'DEV_TOKEN_INSUFFICIENT_ACCESS' as const,
+              },
+            ]
 
-      const brandVolume = volumeResults[0]
-      plannerUnavailableReason = isSearchVolumeUnavailableReason((brandVolume as any)?.volumeUnavailableReason)
-        ? (brandVolume as any).volumeUnavailableReason as 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
-        : undefined
-      hasPlannerData = typeof brandVolume?.avgMonthlySearches === 'number' && !plannerUnavailableReason
-      const brandNameSearchVolume = hasPlannerData ? (brandVolume?.avgMonthlySearches || 0) : 0
+        const brandVolume = volumeResults[0]
+        plannerUnavailableReason = isSearchVolumeUnavailableReason((brandVolume as any)?.volumeUnavailableReason)
+          ? (brandVolume as any).volumeUnavailableReason as 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
+          : undefined
+        hasPlannerData = typeof brandVolume?.avgMonthlySearches === 'number' && !plannerUnavailableReason
+        const brandNameSearchVolume = hasPlannerData ? (brandVolume?.avgMonthlySearches || 0) : 0
 
-      dataSource = hasPlannerData ? 'keyword_planner' : 'unavailable'
-      if (hasPlannerData && brandNameSearchVolume > 0) {
-        dataSource = 'cached'
+        dataSource = hasPlannerData ? 'keyword_planner' : 'unavailable'
+        if (hasPlannerData && brandNameSearchVolume > 0) {
+          dataSource = 'cached'
+        }
+
+        resolvedBrandNameSearchVolume = brandNameSearchVolume
       }
 
-      resolvedBrandNameSearchVolume = brandNameSearchVolume
       const shouldBackfillExactBrandVolume = (
         !hasPlannerData &&
-        Boolean(plannerUnavailableReason || keywordVolumeUnavailable) &&
+        Boolean(plannerUnavailableReason || keywordVolumeUnavailable || skipKeywordPoolExpandLoad) &&
         exactBrandKeywordSearchVolume > 0
       )
       if (shouldBackfillExactBrandVolume) {
@@ -1822,7 +1834,9 @@ async function calculateBrandSearchVolume(
     // 3. 计算总分（品牌名搜索量 + 品牌关键词搜索量）
     // ========================================
     const totalBrandSearchVolume = resolvedBrandNameSearchVolume + brandKeywordSearchVolume
-    const volumeUnavailable = Boolean(plannerUnavailableReason || keywordVolumeUnavailable)
+    const volumeUnavailable = Boolean(
+      plannerUnavailableReason || keywordVolumeUnavailable || skipKeywordPoolExpandLoad
+    )
     if (volumeUnavailable && totalBrandSearchVolume <= 0) {
       const proxyScore = calculateUnavailableProxyScore(
         normalizedKeywordsWithVolume.length,

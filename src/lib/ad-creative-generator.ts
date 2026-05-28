@@ -11838,11 +11838,17 @@ export async function generateMultipleCreativesWithDiversityCheck(
   let keywordPool = options?.keywordPool
   let plannerSession = options?.plannerSession
   let preparedExpand = options?.preparedExpand
-  if (!keywordPool || plannerSession === undefined) {
+  if (!keywordPool) {
     const resolved = await resolveKeywordPoolForCreativeGeneration(offerId, userId)
-    keywordPool = keywordPool ?? resolved.pool
+    keywordPool = resolved.pool
     plannerSession = plannerSession ?? resolved.plannerSession
     preparedExpand = preparedExpand ?? resolved.preparedExpand
+  } else if (plannerSession === undefined) {
+    const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, offerId)
+    if (expandLoad.ok) {
+      plannerSession = expandLoad.plannerSession
+      preparedExpand = preparedExpand ?? expandLoad
+    }
   }
 
   console.log(`\n🎯 开始生成 ${count} 个多样化创意 (最大相似度: ${maxSimilarity * 100}%)`)
