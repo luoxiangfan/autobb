@@ -1,5 +1,4 @@
-name: Build and Deploy to GCP
-
+name: Build and Push Docker Image
 on:
   push:
     branches:
@@ -18,32 +17,22 @@ env:
   IMAGE_NAME: ${{ github.repository }}
   # 是否执行可选测试（默认关闭以缩短 deploy 时长）
   RUN_OPTIONAL_TESTS: ${{ vars.RUN_OPTIONAL_TESTS || 'false' }}
-  # build-and-test 是否启用重清理（默认关闭，减少重复耗时）
+  # pre-test 是否启用重清理（默认关闭，减少重复耗时）
   ENABLE_DISK_CLEANUP_BUILD_TEST: ${{ vars.ENABLE_DISK_CLEANUP_BUILD_TEST || 'false' }}
-  # build-and-test 触发重清理阈值（仅在 ENABLE_DISK_CLEANUP_BUILD_TEST=true 时生效）
+  # pre-test 触发重清理阈值（仅在 ENABLE_DISK_CLEANUP_BUILD_TEST=true 时生效）
   DISK_CLEANUP_THRESHOLD_GB_BUILD_TEST: ${{ vars.DISK_CLEANUP_THRESHOLD_GB_BUILD_TEST || '10' }}
-  # build-and-push 触发重清理阈值（runner 磁盘低于该值才清理）
+  # build-push 触发重清理阈值（runner 磁盘低于该值才清理）
   DISK_CLEANUP_THRESHOLD_GB_BUILD_PUSH: ${{ vars.DISK_CLEANUP_THRESHOLD_GB_BUILD_PUSH || '20' }}
   # Docker 构建前最低可用磁盘（不足则执行紧急清理，不满足则快速失败）
   DISK_SAFETY_MIN_GB_BEFORE_DOCKER: ${{ vars.DISK_SAFETY_MIN_GB_BEFORE_DOCKER || '20' }}
   # 是否启用 BuildKit cache export（默认关闭，避免 sending cache export 大开销）
   ENABLE_DOCKER_CACHE_EXPORT: ${{ vars.ENABLE_DOCKER_CACHE_EXPORT || 'false' }}
 
-  # GCP Configuration (MustKnowV1.md #30)
-  GCP_PROJECT_ID: gen-lang-client-0944935873
-  GCP_REGION: asia-northeast1
-  GCP_AR_REPO: autobb
-  GCP_SERVICE_NAME: autobb
-  # Artifact Registry完整路径
-  GCP_AR_IMAGE: asia-northeast1-docker.pkg.dev/gen-lang-client-0944935873/autobb/autobb
-  # 是否推送到GCP Artifact Registry（默认关闭，避免仓库不存在导致发布失败）
-  ENABLE_GCP_AR_PUSH: ${{ vars.ENABLE_GCP_AR_PUSH || 'false' }}
-
 jobs:
   # ============================================
-  # Job 1: 构建和测试
+  # Job 1: 前置测试
   # ============================================
-  build-and-test:
+  pre-test:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -62,7 +51,7 @@ jobs:
       - name: 按需释放磁盘空间（构建前）
         run: |
           if [[ "${ENABLE_DISK_CLEANUP_BUILD_TEST}" != "true" ]]; then
-            echo "✅ build-and-test 默认跳过重清理（ENABLE_DISK_CLEANUP_BUILD_TEST=${ENABLE_DISK_CLEANUP_BUILD_TEST}）"
+            echo "✅ pre-test 默认跳过重清理（ENABLE_DISK_CLEANUP_BUILD_TEST=${ENABLE_DISK_CLEANUP_BUILD_TEST}）"
             df -h
             exit 0
           fi
@@ -117,10 +106,10 @@ jobs:
           df -h
 
   # ============================================
-  # Job 2: 单次构建，推送到GHCR和Artifact Registry
+  # Job 2: 构建并推送到GHCR
   # ============================================
-  build-and-push:
-    needs: build-and-test
+  build-push:
+    needs: pre-test
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -179,25 +168,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 登录 GCP Artifact Registry
-      - name: 认证GCP
-        id: auth
-        if: ${{ env.ENABLE_GCP_AR_PUSH == 'true' || vars.ENABLE_CLOUD_RUN_DEPLOY == 'true' }}
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: 配置Docker认证到Artifact Registry
-        if: ${{ env.ENABLE_GCP_AR_PUSH == 'true' }}
-        run: |
-          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
-
       # 生成镜像标签（仅 main / 版本标签）
       - name: 生成镜像标签
         id: tags
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
-          ENABLE_AR_PUSH="${{ env.ENABLE_GCP_AR_PUSH }}"
 
           # 标签规则：
           # - main: prod-latest / prod-<sha>
@@ -206,33 +181,14 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/v}
             GHCR_TAGS="${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}:prod-${VERSION}"
             GHCR_TAGS="${GHCR_TAGS},${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}:prod-${SHORT_SHA}"
-            if [[ "$ENABLE_AR_PUSH" == "true" ]]; then
-              AR_TAGS="${{ env.GCP_AR_IMAGE }}:prod-${VERSION}"
-              AR_TAGS="${AR_TAGS},${{ env.GCP_AR_IMAGE }}:prod-${SHORT_SHA}"
-            else
-              AR_TAGS=""
-            fi
           else
             GHCR_TAGS="${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}:prod-latest"
             GHCR_TAGS="${GHCR_TAGS},${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}:prod-${SHORT_SHA}"
-
-            if [[ "$ENABLE_AR_PUSH" == "true" ]]; then
-              AR_TAGS="${{ env.GCP_AR_IMAGE }}:prod-latest"
-              AR_TAGS="${AR_TAGS},${{ env.GCP_AR_IMAGE }}:prod-${SHORT_SHA}"
-            else
-              AR_TAGS=""
-            fi
           fi
 
-          # 合并所有标签
-          if [[ -n "$AR_TAGS" ]]; then
-            ALL_TAGS="${GHCR_TAGS},${AR_TAGS}"
-          else
-            ALL_TAGS="${GHCR_TAGS}"
-          fi
+          ALL_TAGS="${GHCR_TAGS}"
           echo "tags=${ALL_TAGS}" >> $GITHUB_OUTPUT
           echo "ghcr_tags=${GHCR_TAGS}" >> $GITHUB_OUTPUT
-          echo "ar_tags=${AR_TAGS}" >> $GITHUB_OUTPUT
 
           echo "📦 将推送以下标签:"
           echo "${ALL_TAGS}" | tr ',' '\n'
@@ -331,7 +287,7 @@ jobs:
 
           df -h
 
-      # 单次构建，推送到两个Registry（默认：禁用 cache export 以减少耗时）
+      # 构建并推送到默认：禁用 cache export 以减少耗时）
       - name: 构建并推送Docker镜像（禁用 cache export）
         if: ${{ env.ENABLE_DOCKER_CACHE_EXPORT != 'true' }}
         uses: docker/build-push-action@v5
@@ -371,135 +327,9 @@ jobs:
           echo ""
           echo "📦 GHCR:"
           echo "${{ steps.tags.outputs.ghcr_tags }}" | tr ',' '\n' | sed 's/^/   - /'
-          if [[ -n "${{ steps.tags.outputs.ar_tags }}" ]]; then
-            echo ""
-            echo "📦 Artifact Registry:"
-            echo "${{ steps.tags.outputs.ar_tags }}" | tr ',' '\n' | sed 's/^/   - /'
-          else
-            echo ""
-            echo "📦 Artifact Registry: skipped (ENABLE_GCP_AR_PUSH != true)"
-          fi
 
-      - name: 清理Docker与临时文件（总是执行）
-        if: always()
+      - name: 清理Docker与临时文件
         run: |
           docker builder prune -af || true
           docker system prune -af --volumes || true
           df -h
-
-  # ============================================
-  # Job 3: 部署到Cloud Run
-  # 条件: ENABLE_CLOUD_RUN_DEPLOY 变量为 'true' 时执行
-  # ============================================
-  deploy-to-cloud-run:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    # 🔧 通过 GitHub Repository Variable 控制是否执行部署
-    # 设置方法: Repository Settings → Secrets and variables → Actions → Variables
-    # 变量名: ENABLE_CLOUD_RUN_DEPLOY, 值: true (启用) 或 false/空 (禁用)
-    if: ${{ vars.ENABLE_CLOUD_RUN_DEPLOY == 'true' && vars.ENABLE_GCP_AR_PUSH == 'true' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) }}
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: 认证GCP
-        id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: 设置gcloud CLI
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ env.GCP_PROJECT_ID }}
-
-      - name: 部署到Cloud Run
-        id: deploy
-        run: |
-          IMAGE_TAG="prod-latest"
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/v}
-            IMAGE_TAG="prod-${VERSION}"
-          fi
-
-          gcloud run deploy ${{ env.GCP_SERVICE_NAME }} \
-            --image=${{ env.GCP_AR_IMAGE }}:${IMAGE_TAG} \
-            --region=${{ env.GCP_REGION }} \
-            --platform=managed \
-            --allow-unauthenticated \
-            --port=80 \
-            --cpu=4 \
-            --memory=8Gi \
-            --min-instances=1 \
-            --max-instances=3 \
-            --timeout=300 \
-            --set-secrets="\
-              DATABASE_URL=DATABASE_URL:latest,\
-              JWT_SECRET=JWT_SECRET:latest,\
-              ENCRYPTION_KEY=ENCRYPTION_KEY:latest,\
-              REDIS_URL=REDIS_URL:latest,\
-              NEXT_PUBLIC_APP_URL=NEXT_PUBLIC_APP_URL:latest,\
-              DEFAULT_ADMIN_PASSWORD=DEFAULT_ADMIN_PASSWORD:latest,\
-              NEXT_PUBLIC_CAPTCHA_ENABLED=NEXT_PUBLIC_CAPTCHA_ENABLED:latest,\
-              NEXT_PUBLIC_TURNSTILE_SITE_KEY=NEXT_PUBLIC_TURNSTILE_SITE_KEY:latest,\
-              TURNSTILE_SECRET_KEY=TURNSTILE_SECRET_KEY:latest,\
-              NODE_ENV=NODE_ENV:latest,\
-              TZ=TZ:latest" \
-            --quiet
-
-      - name: 获取服务URL并验证
-        run: |
-          SERVICE_URL=$(gcloud run services describe ${{ env.GCP_SERVICE_NAME }} \
-            --region=${{ env.GCP_REGION }} \
-            --format='value(status.url)')
-          echo "✅ 部署成功!"
-          echo "🌐 服务URL: $SERVICE_URL"
-
-          # 等待服务启动并健康检查
-          echo "🔍 验证服务健康状态..."
-          sleep 10
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$SERVICE_URL/api/health" || echo "000")
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ 健康检查通过"
-          else
-            echo "⚠️ 健康检查返回: $HTTP_CODE (服务可能仍在启动中)"
-          fi
-
-# ============================================
-# 部署说明
-# ============================================
-#
-# 🚀 优化后的部署流程 (3个Jobs):
-#    build-and-test → build-and-push → deploy-to-cloud-run
-#
-# ⚡ 优化点:
-#    - 单次构建，同时推送到GHCR和Artifact Registry
-#    - 节省约3-5分钟构建时间
-#    - 保证两个仓库镜像完全一致
-#
-# 📋 GitHub Secrets 配置要求:
-#
-# 1. GCP_SA_KEY (必需)
-#    - 内容: GCP服务账号JSON密钥的完整内容
-#    - 服务账号: codex-dev@gen-lang-client-0944935873.iam.gserviceaccount.com
-#    - 获取方式: 复制 secrets/gcp_autoads_dev.json 文件内容
-#    - 所需权限:
-#      * Artifact Registry Writer (roles/artifactregistry.writer)
-#      * Cloud Run Admin (roles/run.admin)
-#      * Service Account User (roles/iam.serviceAccountUser)
-#      * Secret Manager Secret Accessor (roles/secretmanager.secretAccessor)
-#
-# 2. Secret Manager 中已配置的密钥 (2025-12-15):
-#    ✅ DATABASE_URL, JWT_SECRET, ENCRYPTION_KEY, REDIS_URL
-#    ✅ NEXT_PUBLIC_APP_URL, DEFAULT_ADMIN_PASSWORD, NODE_ENV, TZ
-#    ✅ NEXT_PUBLIC_CAPTCHA_ENABLED, NEXT_PUBLIC_TURNSTILE_SITE_KEY, TURNSTILE_SECRET_KEY
-#
-# 3. 如需额外功能，请添加以下密钥到Secret Manager:
-#    - GEMINI_API_KEY, GOOGLE_ADS_*, GOOGLE_CLIENT_*
-#
-# 🔗 相关资源:
-# - GHCR: ghcr.io/xxrenzhe/autobb
-# - Artifact Registry: asia-northeast1-docker.pkg.dev/gen-lang-client-0944935873/autobb
-# - Cloud Run: autobb (asia-northeast1)
-# - Secret Manager: https://console.cloud.google.com/security/secret-manager?project=gen-lang-client-0944935873
