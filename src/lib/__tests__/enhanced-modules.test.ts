@@ -86,10 +86,9 @@ describe('Enhanced Modules - Error Handling', () => {
   })
 })
 
-describe('Enhanced Modules - Integration with offer-extraction', () => {
-  it('should be importable from offer-extraction', async () => {
-    // 验证offer-extraction可以正确导入所有enhanced模块
-    const offerExtraction = await import('../offer-extraction')
-    expect(offerExtraction).toHaveProperty('triggerOfferExtraction')
+describe('Enhanced Modules - Integration with offer-extraction-task', () => {
+  it('should expose enqueue helpers from offer-extraction-task', async () => {
+    const offerExtractionTask = await import('../offer-extraction-task')
+    expect(offerExtractionTask).toHaveProperty('enqueueExistingOfferExtractionAndMarkQueued')
   })
 })

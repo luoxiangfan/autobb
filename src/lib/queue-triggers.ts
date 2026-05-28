@@ -6,7 +6,6 @@
 
 import { getQueueManager } from './queue/unified-queue-manager'
 import type { SyncTaskData } from './queue/executors/sync-executor'
-import type { ScrapeTaskData } from './queue/executors/scrape-executor'
 import type { AIAnalysisTaskData } from './queue/executors/ai-analysis-executor'
 import type { BackupTaskData } from './queue/executors/backup-executor'
 import type { ExportTaskData } from './queue/executors/export-executor'
@@ -53,32 +52,6 @@ export async function triggerDataSync(
   )
 
   console.log(`📥 [SyncTrigger] 同步任务已入队: ${taskId}, 用户 #${userId}, 类型: ${taskData.syncType}`)
-  return taskId
-}
-
-/**
- * 触发网页抓取任务（使用新队列系统）
- *
- * @param data 抓取任务数据
- * @returns 任务ID
- */
-export async function triggerScrapeTask(data: ScrapeTaskData & { userId: number }): Promise<string> {
-  const queue = getQueueManager()
-
-  const { userId, ...scrapeData } = data
-
-  const taskId = await queue.enqueue(
-    'scrape',
-    scrapeData,
-    userId,
-    {
-      priority: 'normal',
-      maxRetries: 3,
-      requireProxy: true
-    }
-  )
-
-  console.log(`📥 [ScrapeTrigger] 抓取任务已入队: ${taskId}, Offer #${scrapeData.offerId}`)
   return taskId
 }
 

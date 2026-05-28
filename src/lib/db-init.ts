@@ -1198,7 +1198,7 @@ declare global {
  * 2. 数据库回退：从offers表查询scrape_status为pending/in_progress的记录
  *
  * 注意：这里只做查询，实际恢复在首次API请求时触发
- * 原因：instrumentation阶段无法安全导入复杂模块（offer-scraping有复杂依赖）
+ * 原因：instrumentation阶段无法安全导入复杂模块（offer-extraction 队列依赖较重）
  *
  * 恢复执行：由 @/lib/queue-recovery.ts 的 executeQueueRecoveryIfNeeded() 函数完成
  *

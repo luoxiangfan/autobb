@@ -198,7 +198,7 @@ export function resolveExtractPageInput(params: {
   }
 }
 
-/** 从 Offer 记录组装提取任务参数（rebuild / scrape / triggerOfferScraping 共用） */
+/** 从 Offer 记录组装提取任务参数（rebuild / scrape 共用） */
 export function buildExtractionTaskParamsFromOffer(
   offer: OfferExtractionOfferInput,
   overrides: Partial<CreateOfferExtractionTaskForExistingOfferParams> & {
