@@ -23,7 +23,7 @@
 
 **运行频率**：每日
 ```bash
-npm run tsx scripts/monitor-attribution-health.ts
+npm run attribution:health
 ```
 
 **告警阈值**：
@@ -45,7 +45,7 @@ npm run tsx scripts/monitor-attribution-health.ts
 
 **运行频率**：每日或产品同步后
 ```bash
-npm run tsx scripts/auto-link-products-to-offers.ts
+npm run attribution:link
 ```
 
 #### `discover-new-products.ts`
@@ -58,7 +58,7 @@ npm run tsx scripts/auto-link-products-to-offers.ts
 
 **运行频率**：每日或检测到未归因佣金时
 ```bash
-npm run tsx scripts/discover-new-products.ts
+npm run attribution:discover
 ```
 
 #### `reattribute-pending-commissions.ts`
@@ -68,10 +68,30 @@ npm run tsx scripts/discover-new-products.ts
 
 **运行频率**：手动触发
 ```bash
-npm run tsx scripts/reattribute-pending-commissions.ts
+npm run attribution:reattribute
 ```
 
-### 3. 调试
+#### `reattribute-affiliate-commission-by-brand.ts`
+**用途**：按品牌与日期范围重跑佣金归因（应急/事故修复）
+
+**运行频率**：手动触发；默认 dry-run，写库需 `--apply true`
+
+```bash
+npm run attribution:reattribute-by-brand -- --userId 1 --brand "ExampleBrand" --startDate 2026-03-01 --endDate 2026-03-07
+npm run attribution:reattribute-by-brand -- --userId 1 --brand "ExampleBrand" --startDate 2026-03-01 --endDate 2026-03-07 --apply true
+```
+
+### 3. 应急工具
+
+#### `repair-redis-pending-index.ts`
+**用途**：修复 Redis 队列 pending 索引不一致（任务卡在 pending 但 worker 取不到）
+
+```bash
+npm run queue:repair-pending-index
+npm run queue:repair-pending-index -- --apply
+```
+
+### 4. 调试
 
 已移除一次性调试脚本；请使用上文 SQL 查询与 `monitor-attribution-health.ts` 输出排查问题。
 
@@ -81,13 +101,13 @@ npm run tsx scripts/reattribute-pending-commissions.ts
 
 ```bash
 # 1. 监控健康状态
-npm run tsx scripts/monitor-attribution-health.ts
+npm run attribution:health
 
 # 2. 发现新产品
-npm run tsx scripts/discover-new-products.ts
+npm run attribution:discover
 
 # 3. 自动建立产品链接
-npm run tsx scripts/auto-link-products-to-offers.ts
+npm run attribution:link
 
 # 4. 如果有告警，发送通知
 # (在脚本中实现 sendAlert 函数)
@@ -171,11 +191,11 @@ OPENCLAW_AFFILIATE_ATTRIBUTION_PENDING_DAYS=7
 
 ```cron
 # 每天早上 8 点运行健康检查
-0 8 * * * cd /path/to/autobb && npm run tsx scripts/monitor-attribution-health.ts
+0 8 * * * cd /path/to/autobb && npm run attribution:health
 
 # 每天早上 9 点运行自动维护
-0 9 * * * cd /path/to/autobb && npm run tsx scripts/discover-new-products.ts
-0 9 * * * cd /path/to/autobb && npm run tsx scripts/auto-link-products-to-offers.ts
+0 9 * * * cd /path/to/autobb && npm run attribution:discover
+0 9 * * * cd /path/to/autobb && npm run attribution:link
 ```
 
 ## 故障排查

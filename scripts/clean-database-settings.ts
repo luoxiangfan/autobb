@@ -152,8 +152,7 @@ try {
     console.log('\n✅ 数据库配置已是最新状态，无需清理。')
   }
 
-  console.log('\n💡 建议: 运行验证脚本确认配置正确性:')
-  console.log('   npm run db:verify-settings')
+  console.log('\n💡 建议: 在设置页确认 system_settings 配置，或运行 npm run validate-schema')
 
 } catch (error) {
   console.error('❌ 清理失败:', error)
