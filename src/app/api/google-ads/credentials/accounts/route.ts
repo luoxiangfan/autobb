@@ -1,7 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import {
-  detectGoogleAdsDualStackCredentials,
   getGoogleAdsAuthContext,
   GOOGLE_ADS_DUAL_STACK_WARNING,
   resolveEffectiveServiceAccountId,
@@ -190,8 +189,18 @@ async function get(request: NextRequest) {
     }
 
     const userId = authResult.user.userId
-    const dualStackPromise = detectGoogleAdsDualStackCredentials(userId)
     const authContext = await getGoogleAdsAuthContext(userId)
+    if (authContext.dualStack) {
+      return jsonNoStore(
+        {
+          error: GOOGLE_ADS_DUAL_STACK_WARNING,
+          code: 'DUAL_STACK_CONFLICT',
+          message: GOOGLE_ADS_DUAL_STACK_WARNING,
+          authConfigWarning: GOOGLE_ADS_DUAL_STACK_WARNING,
+        },
+        { status: 409 }
+      )
+    }
     const ownerUserId = authContext.ownerUserId
     const resolvedAuth = authContext.auth
 
@@ -288,15 +297,12 @@ async function get(request: NextRequest) {
     const syncState = syncStore.get(syncKey)
     const refreshInProgress = syncState?.status === 'running'
 
-    const [dualStack, cachedAccounts] = await Promise.all([
-      dualStackPromise,
-      getCachedAccounts({
-        userId,
-        authType,
-        serviceAccountId: scopedServiceAccountId,
-      }),
-    ])
-    const authConfigWarning = dualStack.dualStack ? GOOGLE_ADS_DUAL_STACK_WARNING : null
+    const cachedAccounts = await getCachedAccounts({
+      userId,
+      authType,
+      serviceAccountId: scopedServiceAccountId,
+    })
+    const authConfigWarning = null
     const latestSyncAtMs = getLatestSyncAtMs(cachedAccounts)
     const cacheAgeMs = Number.isNaN(latestSyncAtMs) ? Number.POSITIVE_INFINITY : Date.now() - latestSyncAtMs
     const cacheStaleBeforeRefresh = cacheAgeMs > GOOGLE_ADS_ACCOUNTS_CACHE_MAX_AGE_MS

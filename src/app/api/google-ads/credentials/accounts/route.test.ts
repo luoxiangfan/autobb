@@ -14,7 +14,6 @@ const authFns = vi.hoisted(() => ({
 const accountsAuthFns = vi.hoisted(() => ({
   getGoogleAdsAuthContext: vi.fn(),
   resolveGoogleAdsApiAuthFromContext: vi.fn(),
-  detectGoogleAdsDualStackCredentials: vi.fn(),
 }))
 
 const dbFns = vi.hoisted(() => ({
@@ -45,7 +44,6 @@ vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
     ...actual,
     getGoogleAdsAuthContext: accountsAuthFns.getGoogleAdsAuthContext,
     resolveGoogleAdsApiAuthFromContext: accountsAuthFns.resolveGoogleAdsApiAuthFromContext,
-    detectGoogleAdsDualStackCredentials: accountsAuthFns.detectGoogleAdsDualStackCredentials,
   }
 })
 
@@ -138,11 +136,6 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     dbFns.queryOne.mockResolvedValue(undefined)
     dbFns.exec.mockResolvedValue(undefined)
     serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
-    accountsAuthFns.detectGoogleAdsDualStackCredentials.mockResolvedValue({
-      hasOAuthRefresh: true,
-      hasActiveServiceAccount: false,
-      dualStack: false,
-    })
     syncFns.syncAccountsFromAPI.mockResolvedValue([])
     settingsFns.getUserOnlySetting.mockResolvedValue(null)
   })
@@ -215,11 +208,11 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     expect(accountsAuthFns.resolveGoogleAdsApiAuthFromContext).not.toHaveBeenCalled()
   })
 
-  it('returns authConfigWarning when OAuth and service account coexist', async () => {
+  it('returns 409 when auth context reports dual-stack credentials', async () => {
     const { GOOGLE_ADS_DUAL_STACK_WARNING } = await import('@/lib/google-ads-auth-context')
-    accountsAuthFns.detectGoogleAdsDualStackCredentials.mockResolvedValueOnce({
-      hasOAuthRefresh: true,
-      hasActiveServiceAccount: true,
+    accountsAuthFns.getGoogleAdsAuthContext.mockResolvedValueOnce({
+      ...defaultOAuthAuthContext,
+      oauthCredentials: oauthCredentialsFull,
       dualStack: true,
     })
 
@@ -227,8 +220,11 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     const res = await GET(req)
     const data = await res.json()
 
-    expect(res.status).toBe(200)
-    expect(data.data.authConfigWarning).toBe(GOOGLE_ADS_DUAL_STACK_WARNING)
+    expect(res.status).toBe(409)
+    expect(data.code).toBe('DUAL_STACK_CONFLICT')
+    expect(data.authConfigWarning).toBe(GOOGLE_ADS_DUAL_STACK_WARNING)
+    expect(accountsAuthFns.resolveGoogleAdsApiAuthFromContext).not.toHaveBeenCalled()
+    expect(syncFns.syncAccountsFromAPI).not.toHaveBeenCalled()
   })
 
   it('ignores stray service_account_id in OAuth mode for cached list', async () => {
