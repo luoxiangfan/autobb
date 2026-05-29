@@ -16,6 +16,3 @@ export {
   useIsTablet,
   useIsDesktop,
 } from './useMediaQuery'
-
-// Offer 提取
-export { useOfferExtraction } from './useOfferExtraction'

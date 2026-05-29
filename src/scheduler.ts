@@ -10,7 +10,6 @@
  * 5. 每天凌晨2点检查链接可用性和账号状态（需求20优化）
  * 6. 每天定时暂停禁用/过期用户的后台任务（补点击/换链接）
  * 7. 每天 UTC 01:00 同步 USD 基准汇率（ExchangeRate-API）
- * 8. [已禁用] A/B测试监控 - 当前业务场景未使用，暂时禁用以减少日志噪音
  */
 
 import cron from 'node-cron'
@@ -21,8 +20,6 @@ import { getOpenclawSettingsWithAffiliateSyncMap } from './lib/openclaw/settings
 import { triggerDataSync, triggerBackup, triggerLinkCheck, triggerCleanup } from './lib/queue-triggers'
 import { hasConfiguredGoogleAdsAuth } from './lib/google-ads-auth-assignment'
 import { buildUserExecutionEligibleSql } from './lib/user-execution-eligibility'
-// [已禁用] A/B测试功能当前未使用，暂时注释以避免无意义的定时任务执行
-// import { runABTestMonitor } from './scheduler/ab-test-monitor'
 import { detectAndFixZombieSyncTasks } from './lib/queue/affiliate-sync-zombie-detector'
 
 // 日志函数
@@ -1339,25 +1336,6 @@ function startScheduler() {
     scheduled: true,
     timezone: 'Asia/Shanghai'
   })
-
-  // [已禁用] 任务5: A/B测试监控
-  // 原因：当前业务场景未使用A/B测试功能，数据库中无测试记录
-  // 禁用以避免无意义的定时任务执行和日志噪音
-  // 如需重新启用，取消以下注释并恢复顶部的import语句
-  /*
-  cron.schedule('0 * * * *', async () => {
-    try {
-      log('🔬 开始A/B测试监控任务...')
-      await runABTestMonitor()
-      log('✅ A/B测试监控任务完成')
-    } catch (error: any) {
-      logError('❌ A/B测试监控任务失败:', error)
-    }
-  }, {
-    scheduled: true,
-    timezone: 'Asia/Shanghai'
-  })
-  */
 
   log('✅ 所有定时任务已启动')
 
