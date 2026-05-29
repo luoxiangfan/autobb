@@ -59,6 +59,20 @@ describe('buildLaunchScoreHashes', () => {
     expect(changed.contentHash).not.toBe(base.contentHash)
   })
 
+  it('uses Step3 config keywords for hash when provided', () => {
+    const withConfig = buildLaunchScoreHashes(creative, offer, {
+      keywords: [{ keyword: 'step3-kw', searchVolume: 200, matchType: 'EXACT' }],
+    })
+    const dbOnly = buildLaunchScoreHashes(
+      {
+        ...creative,
+        keywordsWithVolume: [{ keyword: 'db-kw', searchVolume: 100, matchType: 'PHRASE' }],
+      },
+      offer
+    )
+    expect(withConfig.contentHash).not.toBe(dbOnly.contentHash)
+  })
+
   it('changes content hash when keywordsWithVolume searchVolume changes', () => {
     const base = buildLaunchScoreHashes(
       {

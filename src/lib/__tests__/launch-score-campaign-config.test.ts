@@ -39,6 +39,20 @@ describe('parseLaunchScoreHashCampaignConfig', () => {
   it('returns undefined for empty object', () => {
     expect(parseLaunchScoreHashCampaignConfig({})).toBeUndefined()
   })
+
+  it('parses keywords array', () => {
+    expect(
+      parseLaunchScoreHashCampaignConfig({
+        keywords: ['brand', { text: 'buy', matchType: 'PHRASE' }],
+      })
+    ).toEqual({
+      budgetAmount: undefined,
+      maxCpcBid: undefined,
+      targetCountry: undefined,
+      targetLanguage: undefined,
+      keywords: ['brand', { text: 'buy', matchType: 'PHRASE' }],
+    })
+  })
 })
 
 describe('parseLaunchScoreHashCampaignConfigFromSearchParams', () => {

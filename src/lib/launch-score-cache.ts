@@ -13,6 +13,7 @@ import {
   findCachedLaunchScore,
   findLatestLaunchScore,
   findLatestLaunchScoresByCreativeIds,
+  resolveKeywordsWithVolumeForLaunchScore,
   resolveLaunchScoreForCreativeCompare,
   resolveLaunchScoreForCreativeCompareFromMaps,
   type CreativeContentData,
@@ -28,7 +29,7 @@ export {
   DEFAULT_LAUNCH_SCORE_MAX_CPC,
 } from './launch-score-campaign-config'
 
-/** 按 ad_creatives.score 选最高分创意（无 creativeId 读分回退） */
+/** 按 ad_creatives.score 选最高分创意（无 hash 命中时的回退） */
 export function pickBestAdCreativeByScore(creatives: AdCreative[]): AdCreative | null {
   if (creatives.length === 0) {
     return null
@@ -38,24 +39,81 @@ export function pickBestAdCreativeByScore(creatives: AdCreative[]): AdCreative |
   )
 }
 
-export function buildLaunchScoreHashes(
+/** Step3 关键词优先：构建与发布路径一致的 contentHash 输入 */
+export function buildLaunchScoreCreativeContentData(
   creative: AdCreative,
   offer: Offer,
   campaignConfig?: LaunchScoreHashCampaignConfig
-): { contentHash: string; campaignConfigHash: string } {
-  const contentHashData: CreativeContentData = {
+): CreativeContentData {
+  const keywordsWithVolume = resolveKeywordsWithVolumeForLaunchScore(creative, campaignConfig)
+  return {
     headlines: creative.headlines || [],
     descriptions: creative.descriptions || [],
     keywords: creative.keywords || [],
     negativeKeywords: creative.negativeKeywords || [],
-    keywordsWithVolume: creative.keywordsWithVolume,
+    keywordsWithVolume,
     finalUrl: (creative.final_url || offer.final_url || offer.url || '').trim(),
   }
-  const campaignConfigHashData = toCampaignConfigHashData(campaignConfig, offer)
+}
+
+/** 计分前注入 Step3 解析后的 keywordsWithVolume */
+export function enrichCreativeForLaunchScore(
+  creative: AdCreative,
+  offer: Offer,
+  campaignConfig?: LaunchScoreHashCampaignConfig
+): AdCreative {
+  const keywordsWithVolume = resolveKeywordsWithVolumeForLaunchScore(creative, campaignConfig)
+  return { ...creative, keywordsWithVolume: keywordsWithVolume as AdCreative['keywordsWithVolume'] }
+}
+
+export function buildLaunchScoreHashes(
+  creative: AdCreative,
+  offer: Offer,
+  campaignConfig?: LaunchScoreHashCampaignConfig,
+  options?: { useZeroBudgetFallback?: boolean }
+): { contentHash: string; campaignConfigHash: string } {
+  const contentHashData = buildLaunchScoreCreativeContentData(creative, offer, campaignConfig)
+  const campaignConfigHashData = toCampaignConfigHashData(campaignConfig, offer, {
+    useZeroBudgetFallback: options?.useZeroBudgetFallback,
+  })
   return {
     contentHash: computeContentHash(contentHashData),
     campaignConfigHash: computeCampaignConfigHash(campaignConfigHashData),
   }
+}
+
+/**
+ * 无 creativeId 读分：优先选当前 hash 下 Launch Score 最高的创意，否则回退 ad_creatives.score。
+ */
+export async function pickBestCreativeForLaunchScoreRead(
+  creatives: AdCreative[],
+  offer: Offer,
+  userId: number,
+  campaignConfig?: LaunchScoreHashCampaignConfig
+): Promise<AdCreative | null> {
+  if (creatives.length === 0) {
+    return null
+  }
+  if (creatives.length === 1) {
+    return creatives[0]
+  }
+
+  const cachedById = await findCachedLaunchScoresForCreatives(
+    creatives,
+    offer,
+    userId,
+    campaignConfig
+  )
+  let bestCreative: AdCreative | null = null
+  let bestTotal = -1
+  for (const creative of creatives) {
+    const cached = cachedById.get(creative.id)
+    if (cached && cached.totalScore > bestTotal) {
+      bestTotal = cached.totalScore
+      bestCreative = creative
+    }
+  }
+  return bestCreative ?? pickBestAdCreativeByScore(creatives)
 }
 
 export async function findCachedLaunchScoreForCreative(
@@ -206,7 +264,8 @@ export async function ensureLaunchScoreForCreative(
   }
 
   const scoringConfig = toLaunchScoreScoringCampaignConfig(campaignConfig, offer)
-  const analysis = await calculateLaunchScore(offer, creative, userId, scoringConfig)
+  const creativeForScoring = enrichCreativeForLaunchScore(creative, offer, campaignConfig)
+  const analysis = await calculateLaunchScore(offer, creativeForScoring, userId, scoringConfig)
   const { launchScore } = await saveLaunchScoreWithContentCache(
     userId,
     offer.id,

@@ -6,6 +6,7 @@ import type { AdCreative } from '@/lib/ad-creative'
 import { findOfferById } from '@/lib/offers'
 import type { Offer } from '@/lib/offers'
 import {
+  enrichCreativeForLaunchScore,
   findCachedLaunchScoresForCreatives,
   readLaunchScoresForCreatives,
   saveLaunchScoreWithContentCache,
@@ -147,9 +148,13 @@ export async function POST(
     }
     const creativeIdList = parsedIds.ids
 
+    const loaded = await Promise.all(
+      creativeIdList.map((creativeId) => findAdCreativeById(creativeId, userId))
+    )
     const creatives: AdCreative[] = []
-    for (const creativeId of creativeIdList) {
-      const creative = await findAdCreativeById(creativeId, userId)
+    for (let i = 0; i < creativeIdList.length; i++) {
+      const creative = loaded[i]
+      const creativeId = creativeIdList[i]
       if (!creative || creative.offer_id !== offerId) {
         return NextResponse.json(
           { error: `Creative ${creativeId} 不存在或无权访问` },
@@ -201,9 +206,12 @@ export async function POST(
 
       if (creativesToCalculate.length > 0) {
         const scoringConfig = toLaunchScoreScoringCampaignConfig(hashCampaignConfig, offer)
+        const enrichedToCalculate = creativesToCalculate.map((c) =>
+          enrichCreativeForLaunchScore(c, offer, hashCampaignConfig)
+        )
         const analyses = await calculateLaunchScoresForCreatives(
           offer,
-          creativesToCalculate,
+          enrichedToCalculate,
           userId,
           scoringConfig
         )

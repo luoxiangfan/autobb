@@ -20,21 +20,18 @@ import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
 import { calculateLaunchScore } from '@/lib/scoring'
 import type { AdCreative } from '@/lib/ad-creative'
 import type { ScoreAnalysis } from '@/lib/launch-scores'
-import { saveLaunchScoreWithContentCache } from '@/lib/launch-score-cache'
+import {
+  buildLaunchScoreHashes,
+  enrichCreativeForLaunchScore,
+  saveLaunchScoreWithContentCache,
+} from '@/lib/launch-score-cache'
 import {
   findCachedLaunchScore,
-  computeContentHash,
-  computeCampaignConfigHash,
   parseLaunchScoreAnalysis,
-  resolveKeywordsWithVolumeForLaunch,
   mapKeywordVolumeForLaunchScore,
   parseKeywordsWithVolumeJson,
-  type CreativeContentData,
 } from '@/lib/launch-scores'
-import {
-  launchScoreHashConfigFromPublishCampaignConfig,
-  toCampaignConfigHashData,
-} from '@/lib/launch-score-campaign-config'
+import { launchScoreHashConfigFromPublishCampaignConfig } from '@/lib/launch-score-campaign-config'
 import { generateNamingScheme, parseAdGroupName } from '@/lib/naming-convention'
 import { buildEffectiveCreative } from '@/lib/campaign-publish/effective-creative'
 import {
@@ -772,30 +769,23 @@ export async function POST(request: NextRequest) {
     console.log(`[Publish] creativeData.negativeKeywords长度: ${creativeData.negativeKeywords.length}`)
     console.log(`[Publish] creativeData.negativeKeywords示例: ${creativeData.negativeKeywords.slice(0, 5).join(', ')}`)
 
-    const publishKeywordsWithVolume = resolveKeywordsWithVolumeForLaunch({
-      configKeywords: _campaignConfig.keywords,
-      keywordsWithVolumeJson: primaryCreative.keywords_with_volume,
-      fallbackKeywords: creativeData.keywords,
-    })
     const publishHashCampaignConfig = launchScoreHashConfigFromPublishCampaignConfig(
       _campaignConfig
     )
-
-    const contentHashData: CreativeContentData = {
+    const creativeForHash = {
+      ...primaryCreative,
       headlines: creativeData.headlines,
       descriptions: creativeData.descriptions,
       keywords: creativeData.keywords,
       negativeKeywords: creativeData.negativeKeywords,
-      keywordsWithVolume: publishKeywordsWithVolume,
-      finalUrl: creativeData.finalUrl || '',
-    }
-    const campaignConfigHashData = toCampaignConfigHashData(
-      publishHashCampaignConfig,
+      final_url: creativeData.finalUrl || primaryCreative.final_url,
+    } as AdCreative
+    const { contentHash, campaignConfigHash } = buildLaunchScoreHashes(
+      creativeForHash,
       offer,
+      publishHashCampaignConfig,
       { useZeroBudgetFallback: true }
     )
-    const contentHash = computeContentHash(contentHashData)
-    const campaignConfigHash = computeCampaignConfigHash(campaignConfigHashData)
     console.log(`📝 内容哈希: ${contentHash}, 配置哈希: ${campaignConfigHash}`)
 
     // 🔥 新增(2025-12-17): 检查缓存的Launch Score
@@ -832,13 +822,10 @@ export async function POST(request: NextRequest) {
         const keywordsWithVolumeForScoring =
           (_campaignConfig.keywords || []).length > 0
             ? (_campaignConfig.keywords || []).map(mapKeywordVolumeForLaunchScore)
-            : resolveKeywordsWithVolumeForLaunch({
-                keywordsWithVolumeJson: primaryCreative.keywords_with_volume,
-                fallbackKeywords: creativeData.keywords,
-              })
+            : undefined
 
         // 🔥 修复：明确构建创意对象，避免字段冲突
-        const creativeForLaunchScore = {
+        const creativeForLaunchScoreBase = {
           id: primaryCreative.id,
           offer_id: primaryCreative.offer_id,
           user_id: primaryCreative.user_id,
@@ -846,7 +833,10 @@ export async function POST(request: NextRequest) {
           descriptions: creativeData.descriptions,
           keywords: creativeData.keywords,
           negativeKeywords: creativeData.negativeKeywords,  // 使用解析后的数组
-          keywordsWithVolume: keywordsWithVolumeForScoring,
+          keywords_with_volume: primaryCreative.keywords_with_volume,
+          ...(keywordsWithVolumeForScoring
+            ? { keywordsWithVolume: keywordsWithVolumeForScoring }
+            : {}),
           callouts: creativeData.callouts,
           sitelinks: creativeData.sitelinks,
           final_url: creativeData.finalUrl,
@@ -878,19 +868,25 @@ export async function POST(request: NextRequest) {
           created_at: primaryCreative.created_at,
           updated_at: primaryCreative.updated_at
         } as AdCreative
+        const creativeForLaunchScore = enrichCreativeForLaunchScore(
+          creativeForLaunchScoreBase,
+          offer,
+          publishHashCampaignConfig
+        )
 
         // 🔥 新增(2025-12-18)：调试日志 - 追踪关键词matchType一致性
         console.log(`[Publish] 关键词matchType一致性检查:`)
         console.log(`   - 用户配置关键词数量: ${_campaignConfig.keywords?.length || 0}`)
-        if (keywordsWithVolumeForScoring.length > 0) {
-          const matchTypeDist = keywordsWithVolumeForScoring.reduce((acc: any, kw: any) => {
+        const kwForLog = creativeForLaunchScore.keywordsWithVolume || []
+        if (kwForLog.length > 0) {
+          const matchTypeDist = kwForLog.reduce((acc: any, kw: any) => {
             const type = kw.matchType || 'UNKNOWN'
             acc[type] = (acc[type] || 0) + 1
             return acc
           }, {})
           console.log(`   - 用户配置的matchType分布:`, Object.entries(matchTypeDist).map(([type, count]) => `${type}: ${count}`).join(', '))
-          if (keywordsWithVolumeForScoring.length > 0) {
-            console.log(`   - 示例关键词 #1: ${keywordsWithVolumeForScoring[0].keyword} (${keywordsWithVolumeForScoring[0].matchType})`)
+          if (kwForLog.length > 0) {
+            console.log(`   - 示例关键词 #1: ${kwForLog[0].keyword} (${kwForLog[0].matchType})`)
           }
         }
 

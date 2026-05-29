@@ -3,6 +3,7 @@ import {
   mapCampaignKeywordToVolumeInput,
   parseKeywordsWithVolumeJson,
   resolveKeywordsWithVolumeForLaunch,
+  resolveKeywordsWithVolumeForLaunchScore,
 } from '../launch-scores'
 
 describe('parseKeywordsWithVolumeJson', () => {
@@ -40,6 +41,19 @@ describe('resolveKeywordsWithVolumeForLaunch', () => {
       keywordsWithVolumeJson: JSON.stringify([{ keyword: 'from-db', searchVolume: 1 }]),
     })
     expect(result).toEqual([{ keyword: 'from-db', searchVolume: 1 }])
+  })
+})
+
+describe('resolveKeywordsWithVolumeForLaunchScore', () => {
+  it('prefers Step3 config keywords over creative DB', () => {
+    const result = resolveKeywordsWithVolumeForLaunchScore(
+      {
+        keywords: ['db-fallback'],
+        keywords_with_volume: JSON.stringify([{ keyword: 'from-db', searchVolume: 1 }]),
+      },
+      { keywords: ['step3'] }
+    )
+    expect(result).toEqual([{ keyword: 'step3', matchType: 'PHRASE', text: 'step3' }])
   })
 })
 

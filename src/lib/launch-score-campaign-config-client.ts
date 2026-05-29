@@ -7,6 +7,7 @@ export type LaunchScoreHashCampaignConfigClient = {
   maxCpcBid?: number
   targetCountry?: string
   targetLanguage?: string
+  keywords?: unknown[]
 }
 
 const STORAGE_PREFIX = 'launch-score-campaign-config:'
@@ -28,6 +29,7 @@ export function pickLaunchScoreHashCampaignConfigFromStep3(config: {
   maxCpcBid?: number
   targetCountry?: string
   targetLanguage?: string
+  keywords?: unknown[]
 } | null | undefined): LaunchScoreHashCampaignConfigClient | undefined {
   if (!config) {
     return undefined
@@ -46,12 +48,16 @@ export function pickLaunchScoreHashCampaignConfigFromStep3(config: {
   if (typeof config.targetLanguage === 'string' && config.targetLanguage.trim()) {
     picked.targetLanguage = config.targetLanguage.trim()
   }
+  if (Array.isArray(config.keywords) && config.keywords.length > 0) {
+    picked.keywords = config.keywords
+  }
 
   if (
     picked.budgetAmount == null
     && picked.maxCpcBid == null
     && !picked.targetCountry
     && !picked.targetLanguage
+    && !picked.keywords?.length
   ) {
     return undefined
   }

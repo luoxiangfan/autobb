@@ -2,12 +2,14 @@ import type { Offer } from './offers'
 import type { CampaignConfigData } from './launch-scores'
 import type { LaunchScoreCampaignConfig } from './scoring'
 
-/** 与 contentHash 缓存查询一致的投放配置（预算/国家/语言） */
+/** 与 contentHash 缓存查询一致的投放配置（Step3：预算/国家/语言/关键词） */
 export type LaunchScoreHashCampaignConfig = {
   budgetAmount?: number
   maxCpcBid?: number
   targetCountry?: string
   targetLanguage?: string
+  /** Step3 用户配置关键词（优先于创意 DB 的 keywords_with_volume） */
+  keywords?: unknown[]
 }
 
 export const DEFAULT_LAUNCH_SCORE_DAILY_BUDGET = 10
@@ -60,12 +62,14 @@ export function parseLaunchScoreHashCampaignConfig(
   const maxCpcBid = parseOptionalPositiveNumber(source.maxCpcBid)
   const targetCountry = parseOptionalString(source.targetCountry)
   const targetLanguage = parseOptionalString(source.targetLanguage)
+  const keywords = Array.isArray(source.keywords) ? source.keywords : undefined
 
   if (
     budgetAmount == null
     && maxCpcBid == null
     && !targetCountry
     && !targetLanguage
+    && !keywords?.length
   ) {
     return undefined
   }
@@ -75,6 +79,7 @@ export function parseLaunchScoreHashCampaignConfig(
     maxCpcBid,
     targetCountry,
     targetLanguage,
+    ...(keywords?.length ? { keywords } : {}),
   }
 }
 
@@ -136,11 +141,13 @@ export function launchScoreHashConfigFromPublishCampaignConfig(config: {
   targetLanguage?: string
   budgetAmount?: number
   maxCpcBid?: number
+  keywords?: unknown[]
 }): LaunchScoreHashCampaignConfig {
   return {
     targetCountry: config.targetCountry || '',
     targetLanguage: config.targetLanguage || '',
     budgetAmount: config.budgetAmount ?? 0,
     maxCpcBid: config.maxCpcBid ?? 0,
+    ...(config.keywords?.length ? { keywords: config.keywords } : {}),
   }
 }

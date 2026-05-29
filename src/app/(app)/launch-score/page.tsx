@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { showSuccess } from '@/lib/toast-utils'
 import {
@@ -10,6 +10,8 @@ import {
   serializeLaunchScoreCampaignConfigQueryKey,
   type LaunchScoreHashCampaignConfigClient,
 } from '@/lib/launch-score-campaign-config-client'
+import { useLaunchScorePerformance } from '@/lib/hooks/useAnalytics'
+import type { PredictionComparison } from '@/lib/launch-score-performance'
 
 /**
  * Launch Score v4.0 - 4维度评分系统
@@ -67,6 +69,7 @@ export default function LaunchScorePage() {
   const [stale, setStale] = useState(false)
   const [staleMessage, setStaleMessage] = useState('')
   const [resolvedCreativeId, setResolvedCreativeId] = useState<number | null>(null)
+  const skipNextFetchRef = useRef(false)
 
   const numericOfferId = offerId ? Number(offerId) : NaN
   const campaignConfigQueryKey = serializeLaunchScoreCampaignConfigQueryKey(
@@ -84,6 +87,28 @@ export default function LaunchScorePage() {
 
   const effectiveCreativeId =
     creativeId ?? (resolvedCreativeId != null ? String(resolvedCreativeId) : null)
+
+  const performanceOptions = useMemo(
+    () => ({
+      creativeId: effectiveCreativeId,
+      daysBack: 30,
+      campaignConfig: hashCampaignConfig,
+    }),
+    [effectiveCreativeId, hashCampaignConfig]
+  )
+
+  const {
+    hasPerformanceData,
+    performanceData,
+    comparisons,
+    adjustedRecommendations,
+    accuracyScore,
+    message: performanceMessage,
+    isLoading: performanceLoading,
+  } = useLaunchScorePerformance(
+    launchScore && offerId ? offerId : null,
+    performanceOptions
+  )
 
   const loadCreativeById = useCallback(async (id: string) => {
     const creativeRes = await fetch(`/api/creatives/${id}`, {
@@ -127,6 +152,7 @@ export default function LaunchScorePage() {
         if (apiCreativeId != null) {
           setResolvedCreativeId(apiCreativeId)
           if (!creativeId && offerId) {
+            skipNextFetchRef.current = true
             router.replace(
               buildLaunchScorePagePath({
                 offerId: Number(offerId),
@@ -148,7 +174,11 @@ export default function LaunchScorePage() {
         if (scoreData.launchScore) {
           setLaunchScore(scoreData.launchScore)
           setStale(false)
-          fetchAnalysis(scoreData.launchScore.id)
+          if (scoreData.analysis) {
+            setAnalysis(scoreData.analysis)
+          } else {
+            fetchAnalysis(scoreData.launchScore.id)
+          }
         } else {
           setLaunchScore(null)
           setAnalysis(null)
@@ -175,12 +205,20 @@ export default function LaunchScorePage() {
   }, [offerId, creativeId, hashCampaignConfig, loadCreativeById, router])
 
   useEffect(() => {
-    if (offerId) {
-      fetchData()
-    } else {
+    setResolvedCreativeId(null)
+  }, [offerId])
+
+  useEffect(() => {
+    if (!offerId) {
       setError('缺少offerId参数')
       setLoading(false)
+      return
     }
+    if (skipNextFetchRef.current) {
+      skipNextFetchRef.current = false
+      return
+    }
+    fetchData()
   }, [offerId, creativeId, fetchData])
 
   const fetchAnalysis = async (scoreId: number) => {
@@ -544,6 +582,104 @@ export default function LaunchScorePage() {
                     </ul>
                   </div>
                 )}
+
+              {/* 预测 vs 实际表现（已发布广告） */}
+              <div className="bg-white shadow rounded-lg p-6">
+                <h2 className="text-h4 mb-4">预测 vs 实际表现</h2>
+                {performanceLoading ? (
+                  <p className="text-body-sm text-muted-foreground">加载投放表现数据...</p>
+                ) : hasPerformanceData && performanceData ? (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-caption text-muted-foreground">展示</p>
+                        <p className="text-body font-semibold">
+                          {performanceData.totalImpressions.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-caption text-muted-foreground">点击</p>
+                        <p className="text-body font-semibold">
+                          {performanceData.totalClicks.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-caption text-muted-foreground">转化</p>
+                        <p className="text-body font-semibold">
+                          {performanceData.totalConversions.toFixed(1)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-caption text-muted-foreground">花费</p>
+                        <p className="text-body font-semibold">
+                          ${performanceData.totalCostUsd.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {typeof accuracyScore === 'number' && accuracyScore > 0 && (
+                      <p className="text-body-sm text-muted-foreground">
+                        预测准确度参考：{accuracyScore.toFixed(0)}%
+                      </p>
+                    )}
+
+                    {comparisons && comparisons.length > 0 && (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-body-sm">
+                          <thead>
+                            <tr className="border-b text-left text-muted-foreground">
+                              <th className="py-2 pr-4 font-medium">指标</th>
+                              <th className="py-2 pr-4 font-medium">预测</th>
+                              <th className="py-2 pr-4 font-medium">实际</th>
+                              <th className="py-2 font-medium">说明</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(comparisons as PredictionComparison[]).map(
+                              (row: PredictionComparison, index: number) => (
+                              <tr key={index} className="border-b border-gray-100">
+                                <td className="py-2 pr-4">{row.metric}</td>
+                                <td className="py-2 pr-4">{String(row.predicted)}</td>
+                                <td className="py-2 pr-4">{String(row.actual)}</td>
+                                <td className="py-2 text-muted-foreground">{row.variance}</td>
+                              </tr>
+                            )
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {adjustedRecommendations && adjustedRecommendations.length > 0 && (
+                      <div>
+                        <h3 className="text-body-sm font-medium text-gray-700 mb-2">
+                          基于实际表现的建议
+                        </h3>
+                        <ul className="space-y-2">
+                          {(adjustedRecommendations as string[]).map(
+                            (rec: string, index: number) => (
+                            <li key={index} className="flex items-start text-body-sm text-gray-700">
+                              <span className="flex-shrink-0 text-indigo-600 mr-2">•</span>
+                              {rec}
+                            </li>
+                          )
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    <p className="helper-text">
+                      数据范围：近 {performanceData.dateRange.days} 天（
+                      {performanceData.dateRange.start} ~ {performanceData.dateRange.end}）
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-body-sm text-muted-foreground">
+                    {performanceMessage ||
+                      '暂无投放表现数据。发布广告并同步 Google Ads 数据后可查看预测对比。'}
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>

@@ -4,7 +4,7 @@ import { findAdCreativeById, findAdCreativesByOfferId } from '@/lib/ad-creative'
 import { getPerformanceEnhancedAnalysis } from '@/lib/launch-score-performance'
 import { findOfferById } from '@/lib/offers'
 import {
-  pickBestAdCreativeByScore,
+  pickBestCreativeForLaunchScoreRead,
   readLaunchScoreForCreative,
 } from '@/lib/launch-score-cache'
 import {
@@ -86,7 +86,12 @@ export async function GET(
       resolvedCreativeId = creative.id
     } else {
       const creatives = await findAdCreativesByOfferId(offerId, userId)
-      const bestCreative = pickBestAdCreativeByScore(creatives)
+      const bestCreative = await pickBestCreativeForLaunchScoreRead(
+        creatives,
+        offer,
+        userId,
+        hashCampaignConfig
+      )
       if (bestCreative) {
         const read = await readLaunchScoreForCreative(
           bestCreative,

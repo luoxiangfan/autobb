@@ -9,7 +9,7 @@ import {
 import { parseLaunchScoreAnalysis } from '@/lib/launch-scores'
 import {
   ensureLaunchScoreForCreative,
-  pickBestAdCreativeByScore,
+  pickBestCreativeForLaunchScoreRead,
   resolveLaunchScoreGetForCreative,
 } from '@/lib/launch-score-cache'
 import {
@@ -170,7 +170,12 @@ export async function GET(
       }
     } else {
       const creatives = await findAdCreativesByOfferId(offer.id, userId)
-      targetCreative = pickBestAdCreativeByScore(creatives)
+      targetCreative = await pickBestCreativeForLaunchScoreRead(
+        creatives,
+        offer,
+        userId,
+        hashCampaignConfig
+      )
       if (!targetCreative && autoCalculate) {
         return NextResponse.json({
           success: true,
@@ -202,6 +207,9 @@ export async function GET(
     return NextResponse.json({
       success: true,
       ...resolved,
+      ...(resolved.launchScore
+        ? { analysis: parseLaunchScoreAnalysis(resolved.launchScore) }
+        : {}),
     })
   } catch (error: any) {
     console.error('获取Launch Score失败:', error)

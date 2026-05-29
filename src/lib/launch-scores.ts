@@ -1,6 +1,7 @@
 import { getDatabase } from './db'
 import { getInsertedId } from './db-helpers'
 import crypto from 'crypto'
+import type { LaunchScoreHashCampaignConfig } from './launch-score-campaign-config'
 
 /**
  * Launch Score 数据库记录（v4.0 - 4维度）
@@ -136,6 +137,27 @@ export function parseKeywordsWithVolumeJson(
   } catch {
     return []
   }
+}
+
+/** Step3 优先：与发布路径一致的关键词解析（用于 contentHash 与计分） */
+export function resolveKeywordsWithVolumeForLaunchScore(
+  creative: {
+    keywords?: string[] | null
+    keywords_with_volume?: string | null
+    keywordsWithVolume?: KeywordVolumeHashInput[] | null
+  },
+  campaignConfig?: Pick<LaunchScoreHashCampaignConfig, 'keywords'>
+): KeywordVolumeHashInput[] {
+  if (campaignConfig?.keywords?.length) {
+    return campaignConfig.keywords.map(mapKeywordVolumeForLaunchScore)
+  }
+  if (creative.keywordsWithVolume?.length) {
+    return creative.keywordsWithVolume
+  }
+  return resolveKeywordsWithVolumeForLaunch({
+    keywordsWithVolumeJson: creative.keywords_with_volume,
+    fallbackKeywords: creative.keywords || [],
+  })
 }
 
 /** 发布/计分：解析 keywordsWithVolume 优先级（配置 > DB JSON > 创意 keywords） */
