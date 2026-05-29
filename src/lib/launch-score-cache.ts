@@ -1,4 +1,5 @@
 import type { AdCreative } from './ad-creative'
+import { findAdCreativesByOfferId } from './ad-creative'
 import type { Offer } from './offers'
 import {
   type LaunchScoreHashCampaignConfig,
@@ -25,6 +26,16 @@ export {
   DEFAULT_LAUNCH_SCORE_DAILY_BUDGET,
   DEFAULT_LAUNCH_SCORE_MAX_CPC,
 } from './launch-score-campaign-config'
+
+/** 按 ad_creatives.score 选最高分创意（无 creativeId 读分回退） */
+export function pickBestAdCreativeByScore(creatives: AdCreative[]): AdCreative | null {
+  if (creatives.length === 0) {
+    return null
+  }
+  return creatives.reduce((best, current) =>
+    (current.score || 0) > (best.score || 0) ? current : best
+  )
+}
 
 export function buildLaunchScoreHashes(
   creative: AdCreative,
@@ -190,6 +201,80 @@ export async function ensureLaunchScoreForCreative(
     { campaignConfig }
   )
   return { launchScore, fromCache: false }
+}
+
+export type LaunchScoreGetForCreativeResponse = {
+  launchScore: LaunchScore | null
+  stale?: boolean
+  staleLaunchScoreId?: number
+  autoCalculated?: boolean
+  usedCreativeId?: number
+  fromCache?: boolean
+  message?: string
+  canAutoCalculate?: boolean
+  hint?: string
+}
+
+/** GET 单创意读分：hash 命中 / autoCalculate / stale / 空 */
+export async function resolveLaunchScoreGetForCreative(
+  userId: number,
+  offer: Offer,
+  creative: AdCreative,
+  hashCampaignConfig: LaunchScoreHashCampaignConfig | undefined,
+  autoCalculate: boolean
+): Promise<LaunchScoreGetForCreativeResponse> {
+  const read = await readLaunchScoreForCreative(creative, offer, userId, hashCampaignConfig)
+  if (read.score) {
+    return { launchScore: read.score, usedCreativeId: creative.id }
+  }
+
+  if (autoCalculate) {
+    if (offer.scrape_status !== 'completed') {
+      return {
+        launchScore: null,
+        message: '请先完成产品信息抓取后再计算Launch Score',
+        canAutoCalculate: false,
+        usedCreativeId: creative.id,
+      }
+    }
+
+    const { launchScore, fromCache } = await ensureLaunchScoreForCreative(
+      userId,
+      offer,
+      creative,
+      hashCampaignConfig
+    )
+    return {
+      launchScore,
+      autoCalculated: true,
+      usedCreativeId: creative.id,
+      ...(fromCache ? { fromCache: true } : {}),
+    }
+  }
+
+  const creatives = await findAdCreativesByOfferId(offer.id, userId)
+  const canAutoCalculate =
+    offer.scrape_status === 'completed' && creatives.length > 0
+
+  if (read.staleScore) {
+    return {
+      launchScore: null,
+      stale: true,
+      staleLaunchScoreId: read.staleScore.id,
+      usedCreativeId: creative.id,
+      message: '创意内容或投放配置已变更，当前 Launch Score 已过期，请重新计算',
+      canAutoCalculate,
+      hint: canAutoCalculate ? '可使用 ?autoCalculate=true 参数自动计算' : undefined,
+    }
+  }
+
+  return {
+    launchScore: null,
+    usedCreativeId: creative.id,
+    message: '暂无 Launch Score，请先计算',
+    canAutoCalculate,
+    hint: canAutoCalculate ? '可使用 ?autoCalculate=true 参数自动计算' : undefined,
+  }
 }
 
 export type SaveLaunchScoreWithContentCacheOptions = {

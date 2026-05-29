@@ -180,3 +180,42 @@ export function buildLaunchScoreApiQueryString(
   const query = params.toString()
   return query ? `?${query}` : ''
 }
+
+/** Launch Score 独立页路径（含 offerId / creativeId / Step3 投放配置） */
+export function buildLaunchScorePagePath(input: {
+  offerId: number
+  creativeId?: number | null
+  campaignConfig?: LaunchScoreHashCampaignConfigClient
+}): string {
+  const params = new URLSearchParams()
+  params.set('offerId', String(input.offerId))
+  if (input.creativeId != null) {
+    params.set('creativeId', String(input.creativeId))
+  }
+  appendLaunchScoreCampaignConfigToSearchParams(params, input.campaignConfig)
+  return `/launch-score?${params.toString()}`
+}
+
+export function clearLaunchScoreCampaignConfigForOffer(offerId: number): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+  try {
+    sessionStorage.removeItem(storageKeyForLaunchScoreCampaignConfig(offerId))
+  } catch {
+    // ignore
+  }
+}
+
+/** 稳定序列化 URL 查询中的 campaignConfig 字段（用于 React 依赖） */
+export function serializeLaunchScoreCampaignConfigQueryKey(
+  searchParams: SearchParamsLike
+): string {
+  return [
+    searchParams.get('budgetAmount') ?? '',
+    searchParams.get('maxCpcBid') ?? '',
+    searchParams.get('targetCountry') ?? '',
+    searchParams.get('targetLanguage') ?? '',
+    searchParams.get('campaignConfig') ?? '',
+  ].join('|')
+}

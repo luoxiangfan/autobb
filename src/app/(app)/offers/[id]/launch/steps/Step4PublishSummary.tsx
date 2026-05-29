@@ -8,8 +8,9 @@
  */
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -33,6 +34,11 @@ import {
 } from '@/components/ui/table'
 import { Rocket, CheckCircle2, AlertCircle, Loader2, TrendingUp, Settings, Link2 } from 'lucide-react'
 import { CURRENCY_SYMBOLS } from '@/lib/currency'
+import {
+  buildLaunchScorePagePath,
+  pickLaunchScoreHashCampaignConfigFromStep3,
+} from '@/lib/launch-score-campaign-config-client'
+import { cn } from '@/lib/utils'
 
 interface Props {
   offer: any
@@ -1665,6 +1671,21 @@ export default function Step4PublishSummary({
           <CardDescription>
             请仔细检查以下配置信息，确认无误后点击"发布广告"按钮
           </CardDescription>
+          {selectedCreative?.id && offer?.id && (
+            <div className="pt-2">
+              <Link
+                href={buildLaunchScorePagePath({
+                  offerId: offer.id,
+                  creativeId: selectedCreative.id,
+                  campaignConfig: pickLaunchScoreHashCampaignConfigFromStep3(campaignConfig),
+                })}
+                className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+              >
+                <TrendingUp className="w-4 h-4 mr-2" />
+                查看 Launch Score 详情
+              </Link>
+            </div>
+          )}
         </CardHeader>
       </Card>
 

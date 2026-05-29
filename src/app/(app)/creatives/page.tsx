@@ -51,7 +51,9 @@ import {
   ArrowDown,
   Package,
   CalendarDays,
+  TrendingUp,
 } from 'lucide-react'
+import { buildLaunchScorePagePath } from '@/lib/launch-score-campaign-config-client'
 import { ResponsivePagination } from '@/components/ui/responsive-pagination'
 import { AdCreativeGenerationModeField } from '@/components/creatives/AdCreativeGenerationModeField'
 import {
@@ -1451,7 +1453,24 @@ export default function CreativesPage() {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
+            {offerId && selectedCreative && (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  router.push(
+                    buildLaunchScorePagePath({
+                      offerId: Number(offerId),
+                      creativeId: selectedCreative.id,
+                    })
+                  )
+                  setDetailDialogOpen(false)
+                }}
+              >
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Launch Score
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
               关闭
             </Button>

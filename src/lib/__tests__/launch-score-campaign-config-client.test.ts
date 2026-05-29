@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildLaunchScoreApiQueryString,
+  buildLaunchScorePagePath,
   parseLaunchScoreHashCampaignConfigFromSearchParamsClient,
   pickLaunchScoreHashCampaignConfigFromStep3,
+  serializeLaunchScoreCampaignConfigQueryKey,
 } from '../launch-score-campaign-config-client'
 
 describe('pickLaunchScoreHashCampaignConfigFromStep3', () => {
@@ -50,5 +52,36 @@ describe('parseLaunchScoreHashCampaignConfigFromSearchParamsClient', () => {
       targetCountry: undefined,
       targetLanguage: undefined,
     })
+  })
+})
+
+describe('buildLaunchScorePagePath', () => {
+  it('builds path with offerId and creativeId', () => {
+    expect(
+      buildLaunchScorePagePath({ offerId: 7, creativeId: 42 })
+    ).toBe('/launch-score?offerId=7&creativeId=42')
+  })
+
+  it('appends campaign config query fields', () => {
+    const path = buildLaunchScorePagePath({
+      offerId: 1,
+      creativeId: 2,
+      campaignConfig: { budgetAmount: 20, maxCpcBid: 0.4, targetCountry: 'US' },
+    })
+    expect(path).toContain('offerId=1')
+    expect(path).toContain('creativeId=2')
+    expect(path).toContain('budgetAmount=20')
+    expect(path).toContain('maxCpcBid=0.4')
+    expect(path).toContain('targetCountry=US')
+  })
+})
+
+describe('serializeLaunchScoreCampaignConfigQueryKey', () => {
+  it('serializes campaign config query fields for stable deps', () => {
+    const params = new URLSearchParams({
+      budgetAmount: '10',
+      targetCountry: 'CA',
+    })
+    expect(serializeLaunchScoreCampaignConfigQueryKey(params)).toBe('10||CA||')
   })
 })

@@ -11,7 +11,7 @@
  * 4. 发布广告
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter, useParams } from 'next/navigation'
 import { Stepper, type Step } from '@/components/ui/stepper'
@@ -22,6 +22,7 @@ import { showError } from '@/lib/toast-utils'
 import {
   pickLaunchScoreHashCampaignConfigFromStep3,
   saveLaunchScoreCampaignConfigForOffer,
+  clearLaunchScoreCampaignConfigForOffer,
 } from '@/lib/launch-score-campaign-config-client'
 
 const loadStep1CreativeGeneration = () => import('./steps/Step1CreativeGeneration')
@@ -225,19 +226,20 @@ export default function LaunchAdPage() {
   const handleCreativeSelected = (creative: SelectedCreative) => {
     if (selectedCreative?.id !== creative.id) {
       setCampaignConfig(null)
+      clearLaunchScoreCampaignConfigForOffer(offerId)
     }
     setSelectedCreative(creative)
     setCanProceed(true)
   }
 
-  const handleCampaignConfigured = (config: CampaignConfig) => {
+  const handleCampaignConfigured = useCallback((config: CampaignConfig) => {
     setCampaignConfig(config)
     setCanProceed(true)
     const hashConfig = pickLaunchScoreHashCampaignConfigFromStep3(config)
     if (hashConfig) {
       saveLaunchScoreCampaignConfigForOffer(offerId, hashConfig)
     }
-  }
+  }, [offerId])
 
   const handleAccountsLinked = (accounts: GoogleAdsAccount[]) => {
     setSelectedAccounts(accounts)

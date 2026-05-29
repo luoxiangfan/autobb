@@ -32,14 +32,13 @@ import type { LaunchScoreResult } from '@/lib/scoring'
  */
 function buildCompareScoreFromStored(
   score: LaunchScore,
-  options?: { fromCache?: boolean; stale?: boolean }
+  options?: { fromCache?: boolean }
 ) {
   const analysis = parseLaunchScoreAnalysis(score)
   return {
     totalScore: score.totalScore,
     calculatedAt: score.calculatedAt,
     ...(options?.fromCache ? { fromCache: true } : {}),
-    ...(options?.stale ? { stale: true } : {}),
     dimensions: {
       launchViability: score.launchViabilityScore,
       adQuality: score.adQualityScore,
@@ -174,9 +173,11 @@ export async function POST(
 
     const computedByCreativeId = new Map<number, LaunchScoreResult>()
     const storedByCreativeId = new Map<number, LaunchScore>()
+    const staleCreativeIds = new Set<number>()
+
     const storedMetaByCreativeId = new Map<
       number,
-      { fromCache?: boolean; stale?: boolean }
+      { fromCache?: boolean }
     >()
 
     if (autoCalculate) {
@@ -237,7 +238,7 @@ export async function POST(
           storedByCreativeId.set(creative.id, read.score)
           storedMetaByCreativeId.set(creative.id, { fromCache: true })
         } else if (read.staleScore) {
-          storedMetaByCreativeId.set(creative.id, { stale: true })
+          staleCreativeIds.add(creative.id)
         }
       }
     }
@@ -267,7 +268,7 @@ export async function POST(
         continue
       }
 
-      if (storedMeta?.stale) {
+      if (staleCreativeIds.has(creative.id)) {
         comparisons.push({
           creativeId: creative.id,
           creative: buildCreativeSummary(creative),

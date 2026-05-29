@@ -6,13 +6,11 @@ import {
   findAdCreativesByOfferId,
   type AdCreative,
 } from '@/lib/ad-creative'
-import {
-  findLatestLaunchScore,
-  parseLaunchScoreAnalysis,
-} from '@/lib/launch-scores'
+import { parseLaunchScoreAnalysis } from '@/lib/launch-scores'
 import {
   ensureLaunchScoreForCreative,
-  readLaunchScoreForCreative,
+  pickBestAdCreativeByScore,
+  resolveLaunchScoreGetForCreative,
 } from '@/lib/launch-score-cache'
 import {
   parseLaunchScoreHashCampaignConfig,
@@ -55,7 +53,6 @@ export async function POST(
       )
     }
 
-    // 验证Offer存在且属于当前用户
     const offer = await findOfferById(offerId, userId)
 
     if (!offer) {
@@ -67,7 +64,6 @@ export async function POST(
       )
     }
 
-    // 验证Offer已完成抓取
     if (offer.scrape_status !== 'completed') {
       return NextResponse.json(
         {
@@ -77,7 +73,6 @@ export async function POST(
       )
     }
 
-    // 验证Creative存在且属于当前Offer
     const creative = await findAdCreativeById(parsedCreativeId, userId)
 
     if (!creative) {
@@ -126,8 +121,8 @@ export async function POST(
 
 /**
  * GET /api/offers/:id/launch-score
- * 获取Offer的最新Launch Score
- * 支持 ?autoCalculate=true 参数自动计算
+ * 获取 Launch Score；无 creativeId 时按最高分创意 + contentHash 读分
+ * 支持 ?autoCalculate=true
  * 可选 campaignConfig（JSON）或 budgetAmount / maxCpcBid / targetCountry / targetLanguage
  */
 export const dynamic = 'force-dynamic'
@@ -153,7 +148,6 @@ export async function GET(
     }
     const userId = authResult.user.userId
 
-    // 验证Offer存在且属于当前用户
     const offer = await findOfferById(offerId, userId)
 
     if (!offer) {
@@ -165,95 +159,19 @@ export async function GET(
       )
     }
 
-    let queryCreative: AdCreative | null = null
+    let targetCreative: AdCreative | null = null
     if (queryCreativeId != null) {
-      queryCreative = await findAdCreativeById(queryCreativeId, userId)
-      if (!queryCreative || queryCreative.offer_id !== offer.id) {
+      targetCreative = await findAdCreativeById(queryCreativeId, userId)
+      if (!targetCreative || targetCreative.offer_id !== offer.id) {
         return NextResponse.json(
           { error: '创意不存在或无权访问' },
           { status: 404 }
         )
       }
-    }
-
-    if (queryCreative) {
-      const read = await readLaunchScoreForCreative(
-        queryCreative,
-        offer,
-        userId,
-        hashCampaignConfig
-      )
-      if (read.score) {
-        return NextResponse.json({
-          success: true,
-          launchScore: read.score,
-        })
-      }
-
-      if (autoCalculate) {
-        if (offer.scrape_status !== 'completed') {
-          return NextResponse.json({
-            success: true,
-            launchScore: null,
-            message: '请先完成产品信息抓取后再计算Launch Score',
-            canAutoCalculate: false,
-          })
-        }
-
-        const { launchScore, fromCache } = await ensureLaunchScoreForCreative(
-          userId,
-          offer,
-          queryCreative,
-          hashCampaignConfig
-        )
-        return NextResponse.json({
-          success: true,
-          launchScore,
-          autoCalculated: true,
-          usedCreativeId: queryCreative.id,
-          ...(fromCache ? { fromCache: true } : {}),
-        })
-      }
-
+    } else {
       const creatives = await findAdCreativesByOfferId(offer.id, userId)
-      const canAutoCalculate =
-        offer.scrape_status === 'completed' && creatives.length > 0
-
-      if (read.staleScore) {
-        return NextResponse.json({
-          success: true,
-          launchScore: null,
-          stale: true,
-          staleLaunchScoreId: read.staleScore.id,
-          message: '创意内容或投放配置已变更，当前 Launch Score 已过期，请重新计算',
-          canAutoCalculate,
-          hint: canAutoCalculate ? '可使用 ?autoCalculate=true 参数自动计算' : undefined,
-        })
-      }
-
-      return NextResponse.json({
-        success: true,
-        launchScore: null,
-        message: '暂无 Launch Score，请先计算',
-        canAutoCalculate,
-        hint: canAutoCalculate ? '可使用 ?autoCalculate=true 参数自动计算' : undefined,
-      })
-    }
-
-    let launchScore = await findLatestLaunchScore(offer.id, userId)
-
-    if (!launchScore && autoCalculate) {
-      if (offer.scrape_status !== 'completed') {
-        return NextResponse.json({
-          success: true,
-          launchScore: null,
-          message: '请先完成产品信息抓取后再计算Launch Score',
-          canAutoCalculate: false,
-        })
-      }
-
-      const creatives = await findAdCreativesByOfferId(offer.id, userId)
-      if (creatives.length === 0) {
+      targetCreative = pickBestAdCreativeByScore(creatives)
+      if (!targetCreative && autoCalculate) {
         return NextResponse.json({
           success: true,
           launchScore: null,
@@ -261,45 +179,29 @@ export async function GET(
           canAutoCalculate: false,
         })
       }
-
-      const targetCreative = creatives.reduce((best, current) =>
-        (current.score || 0) > (best.score || 0) ? current : best
-      )
-
-      const ensured = await ensureLaunchScoreForCreative(
-        userId,
-        offer,
-        targetCreative,
-        hashCampaignConfig
-      )
-      launchScore = ensured.launchScore
-
-      return NextResponse.json({
-        success: true,
-        launchScore,
-        autoCalculated: true,
-        usedCreativeId: targetCreative.id,
-        ...(ensured.fromCache ? { fromCache: true } : {}),
-      })
+      if (!targetCreative) {
+        const canAutoCalculate = offer.scrape_status === 'completed' && creatives.length > 0
+        return NextResponse.json({
+          success: true,
+          launchScore: null,
+          message: '暂无Launch Score，请先计算',
+          canAutoCalculate,
+          hint: canAutoCalculate ? '可使用 ?autoCalculate=true 参数自动计算' : undefined,
+        })
+      }
     }
 
-    if (!launchScore) {
-      const creatives = await findAdCreativesByOfferId(offer.id, userId)
-      const canAutoCalculate =
-        offer.scrape_status === 'completed' && creatives.length > 0
-
-      return NextResponse.json({
-        success: true,
-        launchScore: null,
-        message: '暂无Launch Score，请先计算',
-        canAutoCalculate,
-        hint: canAutoCalculate ? '可使用 ?autoCalculate=true 参数自动计算' : undefined,
-      })
-    }
+    const resolved = await resolveLaunchScoreGetForCreative(
+      userId,
+      offer,
+      targetCreative,
+      hashCampaignConfig,
+      autoCalculate
+    )
 
     return NextResponse.json({
       success: true,
-      launchScore,
+      ...resolved,
     })
   } catch (error: any) {
     console.error('获取Launch Score失败:', error)

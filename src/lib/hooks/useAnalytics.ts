@@ -1,4 +1,8 @@
 import useSWR from 'swr'
+import {
+  appendLaunchScoreCampaignConfigToSearchParams,
+  type LaunchScoreHashCampaignConfigClient,
+} from '@/lib/launch-score-campaign-config-client'
 
 // Fetcher function for SWR
 const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then((res) => {
@@ -162,24 +166,58 @@ export function useCampaignTrends(startDate: string, endDate: string, options = 
 }
 
 /**
- * Hook for launch score performance
+ * Hook for launch score performance (GET /api/offers/:id/launch-score/performance)
  */
-export function useLaunchScorePerformance(offerId: string, startDate: string, endDate: string, options = {}) {
-  const params = new URLSearchParams({
-    start_date: startDate,
-    end_date: endDate,
-  })
+export type UseLaunchScorePerformanceOptions = {
+  creativeId?: number | string | null
+  daysBack?: number
+  avgOrderValue?: number
+  campaignConfig?: LaunchScoreHashCampaignConfigClient
+}
+
+export function useLaunchScorePerformance(
+  offerId: string | null | undefined,
+  options: UseLaunchScorePerformanceOptions = {},
+  swrOptions = {}
+) {
+  const params = new URLSearchParams()
+  params.set('daysBack', String(options.daysBack ?? 30))
+  if (options.creativeId != null && options.creativeId !== '') {
+    params.set('creativeId', String(options.creativeId))
+  }
+  if (options.avgOrderValue != null) {
+    params.set('avgOrderValue', String(options.avgOrderValue))
+  }
+  appendLaunchScoreCampaignConfigToSearchParams(params, options.campaignConfig)
+
+  const query = params.toString()
+  const key = offerId
+    ? `/api/offers/${offerId}/launch-score/performance?${query}`
+    : null
 
   const { data, error, isLoading, mutate } = useSWR(
-    offerId ? `/api/offers/${offerId}/launch-score/performance?${params.toString()}` : null,
+    key,
     fetcher,
-    { ...swrConfig, ...options }
+    { ...swrConfig, ...swrOptions }
   )
 
   return {
-    performance: data?.data,
+    data,
+    success: data?.success === true,
+    hasLaunchScore: data?.hasLaunchScore === true,
+    hasPerformanceData: data?.hasPerformanceData === true,
+    creativeId: data?.creativeId as number | undefined,
+    launchScore: data?.launchScore,
+    performanceData: data?.performanceData,
+    comparisons: data?.comparisons,
+    adjustedRecommendations: data?.adjustedRecommendations,
+    accuracyScore: data?.accuracyScore,
+    message: data?.message as string | undefined,
+    stale: data?.stale === true,
     error,
     isLoading,
     refresh: mutate,
+    /** @deprecated API returns flat JSON; use top-level fields or `data` */
+    performance: data,
   }
 }

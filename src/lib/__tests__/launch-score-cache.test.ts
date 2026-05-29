@@ -20,7 +20,9 @@ vi.mock('../launch-scores', async (importOriginal) => {
 import { computeContentHash } from '../launch-scores'
 import {
   buildLaunchScoreHashes,
+  pickBestAdCreativeByScore,
   readLaunchScoreForCreative,
+  resolveLaunchScoreGetForCreative,
   saveLaunchScoreWithContentCache,
 } from '../launch-score-cache'
 
@@ -210,5 +212,109 @@ describe('saveLaunchScoreWithContentCache', () => {
 
     expect(result).toEqual({ launchScore: inserted, created: true })
     expect(createLaunchScoreMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('pickBestAdCreativeByScore', () => {
+  it('returns null for empty list', () => {
+    expect(pickBestAdCreativeByScore([])).toBeNull()
+  })
+
+  it('picks creative with highest score', () => {
+    const creatives = [
+      { id: 1, score: 70 },
+      { id: 2, score: 95 },
+      { id: 3, score: 80 },
+    ] as any[]
+    expect(pickBestAdCreativeByScore(creatives)?.id).toBe(2)
+  })
+
+  it('treats missing score as zero', () => {
+    const creatives = [
+      { id: 1, score: null },
+      { id: 2, score: 1 },
+    ] as any[]
+    expect(pickBestAdCreativeByScore(creatives)?.id).toBe(2)
+  })
+})
+
+const findAdCreativesByOfferIdMock = vi.fn()
+
+vi.mock('../ad-creative', () => ({
+  findAdCreativesByOfferId: (...args: unknown[]) => findAdCreativesByOfferIdMock(...args),
+}))
+
+describe('resolveLaunchScoreGetForCreative', () => {
+  const offer = {
+    id: 1,
+    scrape_status: 'completed',
+    target_country: 'US',
+    target_language: 'en',
+    final_url: 'https://example.com/o',
+    url: 'https://example.com/o',
+  } as any
+
+  const creative = {
+    id: 10,
+    headlines: ['H1'],
+    descriptions: ['D1'],
+    keywords: ['kw'],
+    negativeKeywords: [],
+    final_url: 'https://example.com/c',
+  } as any
+
+  beforeEach(() => {
+    findCachedLaunchScoreMock.mockReset()
+    findLatestLaunchScoreMock.mockReset()
+    resolveLaunchScoreForCreativeCompareMock.mockReset()
+    findAdCreativesByOfferIdMock.mockReset()
+    findAdCreativesByOfferIdMock.mockResolvedValue([creative])
+  })
+
+  it('returns hash-matched score without auto calculate', async () => {
+    const cached = { id: 50, totalScore: 88 }
+    findCachedLaunchScoreMock.mockResolvedValue(cached)
+
+    const result = await resolveLaunchScoreGetForCreative(1, offer, creative, undefined, false)
+
+    expect(result).toEqual({ launchScore: cached, usedCreativeId: 10 })
+  })
+
+  it('returns stale response when content hash misses', async () => {
+    findCachedLaunchScoreMock.mockResolvedValue(null)
+    findLatestLaunchScoreMock.mockResolvedValue({ id: 1, totalScore: 70 })
+    const stale = { id: 40, totalScore: 65 }
+    resolveLaunchScoreForCreativeCompareMock.mockResolvedValue({
+      score: stale,
+      scoreSource: 'creative',
+    })
+
+    const result = await resolveLaunchScoreGetForCreative(1, offer, creative, undefined, false)
+
+    expect(result.launchScore).toBeNull()
+    expect(result.stale).toBe(true)
+    expect(result.staleLaunchScoreId).toBe(40)
+    expect(result.canAutoCalculate).toBe(true)
+  })
+
+  it('blocks auto calculate when scrape is incomplete', async () => {
+    findCachedLaunchScoreMock.mockResolvedValue(null)
+    findLatestLaunchScoreMock.mockResolvedValue(null)
+    resolveLaunchScoreForCreativeCompareMock.mockResolvedValue({
+      score: null,
+      scoreSource: null,
+    })
+
+    const result = await resolveLaunchScoreGetForCreative(
+      1,
+      { ...offer, scrape_status: 'pending' },
+      creative,
+      undefined,
+      true
+    )
+
+    expect(result.launchScore).toBeNull()
+    expect(result.canAutoCalculate).toBe(false)
+    expect(result.message).toContain('抓取')
   })
 })

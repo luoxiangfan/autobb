@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { findLatestLaunchScore } from '@/lib/launch-scores'
-import { findAdCreativeById } from '@/lib/ad-creative'
+import { findAdCreativeById, findAdCreativesByOfferId } from '@/lib/ad-creative'
 import { getPerformanceEnhancedAnalysis } from '@/lib/launch-score-performance'
 import { findOfferById } from '@/lib/offers'
-import { readLaunchScoreForCreative } from '@/lib/launch-score-cache'
+import {
+  pickBestAdCreativeByScore,
+  readLaunchScoreForCreative,
+} from '@/lib/launch-score-cache'
 import {
   parseLaunchScoreHashCampaignConfigFromSearchParams,
 } from '@/lib/launch-score-campaign-config'
@@ -16,10 +18,8 @@ import {
 /**
  * GET /api/offers/:id/launch-score/performance
  *
- * 获取Launch Score预测与实际性能数据的对比分析
- *
  * Query Parameters:
- * - creativeId: number (可选，按创意 contentHash 匹配 Launch Score)
+ * - creativeId: number (可选；缺省时按最高分创意 + contentHash 读分)
  * - daysBack: number (可选，默认30天)
  * - avgOrderValue: number (可选，用于ROI计算)
  * - campaignConfig: JSON 或 budgetAmount / maxCpcBid / targetCountry / targetLanguage
@@ -64,6 +64,7 @@ export async function GET(
 
     let launchScore = null
     let stale = false
+    let resolvedCreativeId: number | undefined
 
     if (queryCreativeId != null) {
       const creative = await findAdCreativeById(queryCreativeId, userId)
@@ -82,8 +83,21 @@ export async function GET(
       )
       launchScore = read.score
       stale = !read.score && read.staleScore != null
+      resolvedCreativeId = creative.id
     } else {
-      launchScore = await findLatestLaunchScore(offerId, userId)
+      const creatives = await findAdCreativesByOfferId(offerId, userId)
+      const bestCreative = pickBestAdCreativeByScore(creatives)
+      if (bestCreative) {
+        const read = await readLaunchScoreForCreative(
+          bestCreative,
+          offer,
+          userId,
+          hashCampaignConfig
+        )
+        launchScore = read.score
+        stale = !read.score && read.staleScore != null
+        resolvedCreativeId = bestCreative.id
+      }
     }
 
     if (!launchScore) {
@@ -96,7 +110,7 @@ export async function GET(
           hasLaunchScore: false,
           hasPerformanceData: false,
           ...(stale ? { stale: true } : {}),
-          ...(queryCreativeId != null ? { creativeId: queryCreativeId } : {}),
+          ...(resolvedCreativeId != null ? { creativeId: resolvedCreativeId } : {}),
         },
         { status: 200 }
       )
@@ -113,7 +127,7 @@ export async function GET(
       success: true,
       hasLaunchScore: true,
       hasPerformanceData: enhancedAnalysis.performanceData !== null,
-      ...(queryCreativeId != null ? { creativeId: queryCreativeId } : {}),
+      ...(resolvedCreativeId != null ? { creativeId: resolvedCreativeId } : {}),
       launchScore: {
         id: launchScore.id,
         totalScore: launchScore.totalScore,

@@ -36,6 +36,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { TrendingUp, DollarSign, Target, Activity, RefreshCcw } from 'lucide-react'
+import { buildLaunchScorePagePath } from '@/lib/launch-score-campaign-config-client'
 import { formatCurrency } from '@/lib/currency'
 import { getCommissionPerConversion, parseCommissionPayoutValue } from '@/lib/offer-monetization'
 import {
@@ -563,6 +564,13 @@ export default function OfferDetailPage() {
               >
                 <RefreshCcw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
                 {syncing ? '同步中...' : '广告数据同步'}
+              </button>
+              <button
+                onClick={() => router.push(buildLaunchScorePagePath({ offerId: Number(offerId) }))}
+                className="px-4 py-2 text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+              >
+                <TrendingUp className="w-4 h-4" />
+                Launch Score
               </button>
               <button
                 onClick={() => router.push(`/offers/${offerId}/edit`)}

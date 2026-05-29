@@ -62,6 +62,7 @@ export default function LaunchScorePage() {
   const [loading, setLoading] = useState(true)
   const [calculating, setCalculating] = useState(false)
   const [error, setError] = useState('')
+  const [stale, setStale] = useState(false)
 
   const numericOfferId = offerId ? Number(offerId) : NaN
   const hashCampaignConfig = useMemo((): LaunchScoreHashCampaignConfigClient | undefined => {
@@ -77,6 +78,7 @@ export default function LaunchScorePage() {
   const fetchData = useCallback(async () => {
     try {
       setError('')
+      setStale(false)
       // HttpOnly Cookie自动携带，无需手动操作
 
       // 获取Offer信息
@@ -112,12 +114,16 @@ export default function LaunchScorePage() {
         const scoreData = await scoreRes.json()
         if (scoreData.launchScore) {
           setLaunchScore(scoreData.launchScore)
+          setStale(false)
           fetchAnalysis(scoreData.launchScore.id)
         } else {
           setLaunchScore(null)
           setAnalysis(null)
-          if (scoreData.stale && scoreData.message) {
-            setError(scoreData.message)
+          if (scoreData.stale) {
+            setStale(true)
+            if (scoreData.message) {
+              setError(scoreData.message)
+            }
           }
         }
       } else {
@@ -190,6 +196,7 @@ export default function LaunchScorePage() {
       }
 
       setLaunchScore(data.launchScore)
+      setStale(false)
       if (data.launchScore?.id) {
         await fetchAnalysis(data.launchScore.id)
       } else if (data.analysis?.overallRecommendations) {
@@ -331,14 +338,16 @@ export default function LaunchScorePage() {
 
           {!launchScore ? (
             <div className="text-center py-12">
-              <p className="text-body-lg text-muted-foreground mb-4">暂无Launch Score评分</p>
+              <p className="text-body-lg text-muted-foreground mb-4">
+                {stale ? '当前评分已过期，请重新计算' : '暂无Launch Score评分'}
+              </p>
               {creativeId && (
                 <button
                   onClick={handleCalculate}
                   disabled={calculating}
                   className="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
                 >
-                  {calculating ? '计算中...' : '开始计算'}
+                  {calculating ? '计算中...' : stale ? '重新计算' : '开始计算'}
                 </button>
               )}
             </div>
