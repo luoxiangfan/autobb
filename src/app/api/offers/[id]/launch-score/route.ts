@@ -203,7 +203,8 @@ export async function GET(
         const { launchScore, fromCache } = await ensureLaunchScoreForCreative(
           userId,
           offer,
-          queryCreative
+          queryCreative,
+          hashCampaignConfig
         )
         return NextResponse.json({
           success: true,
@@ -224,7 +225,7 @@ export async function GET(
           launchScore: null,
           stale: true,
           staleLaunchScoreId: read.staleScore.id,
-          message: '创意内容已变更，当前 Launch Score 已过期，请重新计算',
+          message: '创意内容或投放配置已变更，当前 Launch Score 已过期，请重新计算',
           canAutoCalculate,
           hint: canAutoCalculate ? '可使用 ?autoCalculate=true 参数自动计算' : undefined,
         })

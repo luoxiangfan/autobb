@@ -11,7 +11,9 @@ import {
   createLaunchScore,
   findCachedLaunchScore,
   findLatestLaunchScore,
+  findLatestLaunchScoresByCreativeIds,
   resolveLaunchScoreForCreativeCompare,
+  resolveLaunchScoreForCreativeCompareFromMaps,
   type CreativeContentData,
   type LaunchScore,
   type ScoreAnalysis,
@@ -113,20 +115,49 @@ export async function findCachedLaunchScoresForCreatives(
   return result
 }
 
-/** 并行 readLaunchScoreForCreative（只读对比） */
+/** 并行 readLaunchScoreForCreative（只读对比）；批量复用 offer / per-creative 最新分查询 */
 export async function readLaunchScoresForCreatives(
   creatives: AdCreative[],
   offer: Offer,
   userId: number,
   campaignConfig?: LaunchScoreHashCampaignConfig
 ): Promise<Map<number, CreativeLaunchScoreReadResult>> {
-  const pairs = await Promise.all(
-    creatives.map(async (creative) => {
-      const read = await readLaunchScoreForCreative(creative, offer, userId, campaignConfig)
-      return [creative.id, read] as const
-    })
-  )
-  return new Map(pairs)
+  if (creatives.length === 0) {
+    return new Map()
+  }
+
+  const creativeIds = creatives.map((c) => c.id)
+  const [cacheEntries, offerLatest, scoresByCreativeId] = await Promise.all([
+    Promise.all(
+      creatives.map(async (creative) => {
+        const cached = await findCachedLaunchScoreForCreative(
+          creative,
+          offer,
+          userId,
+          campaignConfig
+        )
+        return [creative.id, cached] as const
+      })
+    ),
+    findLatestLaunchScore(offer.id, userId),
+    findLatestLaunchScoresByCreativeIds(creativeIds, userId),
+  ])
+
+  const result = new Map<number, CreativeLaunchScoreReadResult>()
+  for (const [creativeId, cached] of cacheEntries) {
+    if (cached) {
+      result.set(creativeId, { score: cached, staleScore: null })
+      continue
+    }
+    const { score } = resolveLaunchScoreForCreativeCompareFromMaps(
+      creativeId,
+      scoresByCreativeId,
+      offerLatest,
+      1
+    )
+    result.set(creativeId, { score: null, staleScore: score })
+  }
+  return result
 }
 
 export type EnsureLaunchScoreForCreativeResult = {
