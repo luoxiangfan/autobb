@@ -1,5 +1,5 @@
 import { getDatabase } from './db'
-import type { LaunchScore, ScoreAnalysis } from './launch-scores'
+import type { LaunchScore } from './launch-scores'
 
 /**
  * Launch Score性能数据集成
@@ -11,10 +11,13 @@ export interface PerformanceData {
   totalImpressions: number
   totalClicks: number
   totalConversions: number
-  totalCostUsd: number
+  /** 广告账户原始币种下的总花费 */
+  totalCost: number
+  costCurrency: string
   /** 点击率，0–1 小数（如 0.025 = 2.5%） */
   avgCtr: number
-  avgCpcUsd: number
+  /** 每次点击成本（与 costCurrency 一致） */
+  avgCpc: number
   /** 转化率，0–1 小数 */
   conversionRate: number
   actualRoi: number | null
@@ -38,8 +41,19 @@ export interface PerformanceEnhancedAnalysis {
   performanceData: PerformanceData | null
   comparisons: PredictionComparison[]
   adjustedRecommendations: string[]
-  /** @internal v4 无预测指标，不向 API/UI 暴露 */
-  accuracyScore: number
+}
+
+function formatPerformanceMoney(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency.length === 3 ? currency : 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount)
+  } catch {
+    return `${currency} ${amount.toFixed(2)}`
+  }
 }
 
 /** GET launch-score / performance 接口共用的性能对比载荷（不含 accuracyScore） */
@@ -103,6 +117,7 @@ export async function getPerformanceDataForOffer(
       SUM(cp.clicks) as total_clicks,
       SUM(cp.conversions) as total_conversions,
       SUM(cp.cost) as total_cost,
+      COALESCE(MAX(cp.currency), MAX(gaa.currency), 'CNY') as cost_currency,
       CASE
         WHEN SUM(cp.impressions) > 0 THEN SUM(cp.clicks) * 100.0 / SUM(cp.impressions)
         ELSE 0
@@ -112,6 +127,7 @@ export async function getPerformanceDataForOffer(
         ELSE 0
       END as avg_conversion_rate
     FROM campaigns c
+    LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
     LEFT JOIN campaign_performance cp ON c.id = cp.campaign_id
     WHERE c.offer_id = ?
       AND c.user_id = ?
@@ -123,26 +139,26 @@ export async function getPerformanceDataForOffer(
     return null // 没有性能数据
   }
 
-  const totalCostUsd = result.total_cost || 0
-  const avgCpcUsd = result.total_clicks > 0
-    ? totalCostUsd / result.total_clicks
+  const totalCost = Number(result.total_cost) || 0
+  const costCurrency = String(result.cost_currency || 'CNY')
+  const avgCpc = result.total_clicks > 0
+    ? totalCost / result.total_clicks
     : 0
 
   // SQL 返回百分比 (0–100)，下游阈值/展示统一用小数比率 (0–1)
   const avgCtrPercent = Number(result.avg_ctr) || 0
   const conversionRatePercent = Number(result.avg_conversion_rate) || 0
 
-  // 计算实际ROI (需要假设平均订单价值)
-  // 这里我们只返回null，实际ROI需要在API层面结合用户输入的平均订单价值计算
   const actualRoi = null
 
   return {
     totalImpressions: result.total_impressions || 0,
     totalClicks: result.total_clicks || 0,
     totalConversions: result.total_conversions || 0,
-    totalCostUsd: Math.round(totalCostUsd * 100) / 100,
+    totalCost: Math.round(totalCost * 100) / 100,
+    costCurrency,
     avgCtr: avgCtrPercent / 100,
-    avgCpcUsd: Math.round(avgCpcUsd * 100) / 100,
+    avgCpc: Math.round(avgCpc * 100) / 100,
     conversionRate: conversionRatePercent / 100,
     actualRoi,
     dateRange: {
@@ -191,104 +207,85 @@ export function comparePredictionVsActual(
 
   const avgCtr = performanceData.avgCtr || 0
   const conversionRate = performanceData.conversionRate || 0
-  const avgCpcUsd = performanceData.avgCpcUsd || 0
+  const avgCpc = performanceData.avgCpc || 0
+  const costCurrency = performanceData.costCurrency || 'CNY'
 
-  // v4.0 Launch Score不包含详细的CPC/ROI预测
-  // 主要展示实际数据
-
-  // 1. CTR对比 (Launch Score没有预测CTR，这里显示实际值)
   comparisons.push({
     metric: 'CTR (点击率)',
-    predicted: '未预测',
+    predicted: '—',
     actual: `${(avgCtr * 100).toFixed(2)}%`,
     accuracy: null,
-    variance: '实际表现数据'
+    variance: 'Google Ads 实际数据',
   })
 
-  // 2. 转化率对比
   comparisons.push({
-    metric: '转化率',
-    predicted: '未预测',
+    metric: '转化率 (Ads)',
+    predicted: '—',
     actual: `${(conversionRate * 100).toFixed(2)}%`,
     accuracy: null,
-    variance: '实际表现数据'
+    variance: 'Google Ads 转化，非佣金归因',
   })
 
-  // 3. CPC对比
   comparisons.push({
     metric: 'CPC (每次点击成本)',
-    predicted: '未预测',
-    actual: `$${avgCpcUsd.toFixed(2)}`,
+    predicted: '—',
+    actual: formatPerformanceMoney(avgCpc, costCurrency),
     accuracy: null,
-    variance: '实际表现数据'
+    variance: 'Google Ads 实际数据',
   })
 
   // 4. ROI对比 (如果提供了平均订单价值)
   if (avgOrderValue && avgOrderValue > 0) {
     const revenue = performanceData.totalConversions * avgOrderValue
-    const actualRoi = performanceData.totalCostUsd > 0
-      ? ((revenue - performanceData.totalCostUsd) / performanceData.totalCostUsd) * 100
+    const actualRoi = performanceData.totalCost > 0
+      ? ((revenue - performanceData.totalCost) / performanceData.totalCost) * 100
       : 0
 
     comparisons.push({
       metric: 'ROI (投资回报率)',
-      predicted: '未预测',
+      predicted: '—',
       actual: `${actualRoi.toFixed(1)}%`,
       accuracy: null,
-      variance: '实际表现数据'
+      variance: '基于平均订单价值估算',
     })
   }
 
-  // 5. 展示次数和点击次数 (实际值，无预测)
   comparisons.push({
     metric: '展示次数',
-    predicted: '未预测',
+    predicted: '—',
     actual: performanceData.totalImpressions.toLocaleString(),
     accuracy: null,
-    variance: '实际表现数据'
+    variance: 'Google Ads 实际数据',
   })
 
   comparisons.push({
     metric: '点击次数',
-    predicted: '未预测',
+    predicted: '—',
     actual: performanceData.totalClicks.toLocaleString(),
     accuracy: null,
-    variance: '实际表现数据'
+    variance: 'Google Ads 实际数据',
   })
 
   comparisons.push({
-    metric: '转化次数',
-    predicted: '未预测',
+    metric: '转化次数 (Ads)',
+    predicted: '—',
     actual: performanceData.totalConversions.toFixed(1),
     accuracy: null,
-    variance: '实际表现数据'
+    variance: '非 Offer 佣金口径',
   })
 
   comparisons.push({
     metric: '总花费',
-    predicted: '未预测',
-    actual: `$${(Number(performanceData.totalCostUsd) || 0).toFixed(2)}`,
+    predicted: '—',
+    actual: formatPerformanceMoney(
+      Number(performanceData.totalCost) || 0,
+      costCurrency
+    ),
     accuracy: null,
-    variance: '实际表现数据'
+    variance: '广告账户原始币种',
   })
 
   return comparisons
-}
-
-/**
- * 计算整体预测准确度
- */
-export function calculateOverallAccuracy(comparisons: PredictionComparison[]): number {
-  const validAccuracies = comparisons
-    .map(c => c.accuracy)
-    .filter((a): a is number => a !== null)
-
-  if (validAccuracies.length === 0) {
-    return 0 // 没有可计算的准确度
-  }
-
-  const sum = validAccuracies.reduce((acc, val) => acc + val, 0)
-  return Math.round(sum / validAccuracies.length)
 }
 
 /**
@@ -316,22 +313,23 @@ export function generatePerformanceAdjustedRecommendations(
   }
 
   // 3. 预算使用分析
-  if (performanceData.totalCostUsd > 100) {
+  if (performanceData.totalCost > 100) {
     const costPerConversion = performanceData.totalConversions > 0
-      ? performanceData.totalCostUsd / performanceData.totalConversions
+      ? performanceData.totalCost / performanceData.totalConversions
       : 0
 
     if (costPerConversion > 0) {
-      recommendations.push(`💰 每次转化成本: $${costPerConversion.toFixed(2)}，请评估是否在可接受范围内`)
+      recommendations.push(
+        `💰 每次转化成本: ${formatPerformanceMoney(costPerConversion, performanceData.costCurrency)}，请评估是否在可接受范围内`
+      )
     }
   }
 
-  // 4. 基于Launch Score维度的建议 (v4.0 - 4维度)
   if (performanceData.avgCtr < 0.02 && launchScore.adQualityScore < 20) {
     recommendations.push(`📝 低点击率可能与广告质量得分较低有关 (${launchScore.adQualityScore}/30)，建议重新优化广告文案`)
   }
 
-  if (performanceData.avgCpcUsd > 3 && launchScore.keywordStrategyScore < 15) {
+  if (performanceData.avgCpc > 3 && launchScore.keywordStrategyScore < 15) {
     recommendations.push(`🔑 高CPC可能与关键词策略得分较低有关 (${launchScore.keywordStrategyScore}/20)，建议优化关键词相关性`)
   }
 
@@ -360,23 +358,15 @@ export async function getPerformanceEnhancedAnalysis(
   )
 
   if (!performanceData) {
-    // 没有性能数据，返回原始Launch Score
     return {
       launchScore,
       performanceData: null,
       comparisons: [],
       adjustedRecommendations: ['暂无实际投放数据，无法进行对比分析。请先投放广告后查看此功能。'],
-      accuracyScore: 0
     }
   }
 
-  // 对比预测与实际
   const comparisons = comparePredictionVsActual(launchScore, performanceData, avgOrderValue)
-
-  // 计算整体准确度
-  const accuracyScore = calculateOverallAccuracy(comparisons)
-
-  // 生成调整后的建议
   const adjustedRecommendations = generatePerformanceAdjustedRecommendations(
     launchScore,
     performanceData,
@@ -388,6 +378,5 @@ export async function getPerformanceEnhancedAnalysis(
     performanceData,
     comparisons,
     adjustedRecommendations,
-    accuracyScore
   }
 }

@@ -160,6 +160,29 @@ export function appendLaunchScoreCampaignConfigToSearchParams(
   if (!config) {
     return
   }
+
+  const hasKeywords = Array.isArray(config.keywords) && config.keywords.length > 0
+
+  // 含关键词时用 JSON，便于新标签页/分享链接与发布 hash 对齐（服务端无法读 sessionStorage）
+  if (hasKeywords) {
+    const payload: LaunchScoreHashCampaignConfigClient = {}
+    if (config.budgetAmount != null) {
+      payload.budgetAmount = config.budgetAmount
+    }
+    if (config.maxCpcBid != null) {
+      payload.maxCpcBid = config.maxCpcBid
+    }
+    if (config.targetCountry) {
+      payload.targetCountry = config.targetCountry
+    }
+    if (config.targetLanguage) {
+      payload.targetLanguage = config.targetLanguage
+    }
+    payload.keywords = config.keywords
+    params.set('campaignConfig', JSON.stringify(payload))
+    return
+  }
+
   if (config.budgetAmount != null) {
     params.set('budgetAmount', String(config.budgetAmount))
   }

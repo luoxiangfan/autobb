@@ -36,9 +36,10 @@ const performanceSample: PerformanceData = {
   totalImpressions: 10_000,
   totalClicks: 250,
   totalConversions: 12,
-  totalCostUsd: 120.5,
+  totalCost: 120.5,
+  costCurrency: 'CNY',
   avgCtr: 0.025,
-  avgCpcUsd: 0.48,
+  avgCpc: 0.48,
   conversionRate: 0.048,
   actualRoi: null,
   dateRange: { start: '2026-01-01', end: '2026-01-31', days: 30 },
@@ -52,6 +53,13 @@ describe('comparePredictionVsActual', () => {
     expect(ctr?.actual).toBe('2.50%')
     expect(cvr?.actual).toBe('4.80%')
   })
+
+  it('formats cost with account currency', () => {
+    const comparisons = comparePredictionVsActual(scoreRow({}), performanceSample)
+    const spend = comparisons.find((c) => c.metric.includes('总花费'))
+    expect(spend?.actual).toContain('120.50')
+    expect(spend?.variance).toContain('原始币种')
+  })
 })
 
 describe('toLaunchScorePerformanceApiPayload', () => {
@@ -61,7 +69,6 @@ describe('toLaunchScorePerformanceApiPayload', () => {
       performanceData: performanceSample,
       comparisons: [],
       adjustedRecommendations: ['ok'],
-      accuracyScore: 42,
     })
     expect(payload).not.toHaveProperty('accuracyScore')
     expect(payload.hasPerformanceData).toBe(true)

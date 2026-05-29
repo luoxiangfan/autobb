@@ -24,6 +24,16 @@ describe('pickLaunchScoreHashCampaignConfigFromStep3', () => {
       targetLanguage: 'en',
     })
   })
+
+  it('extracts keywords from step3 config', () => {
+    expect(
+      pickLaunchScoreHashCampaignConfigFromStep3({
+        keywords: [{ keyword: 'boots' }],
+      })
+    ).toEqual({
+      keywords: [{ keyword: 'boots' }],
+    })
+  })
 })
 
 describe('buildLaunchScoreApiQueryString', () => {
@@ -47,19 +57,29 @@ describe('buildLaunchScoreApiQueryString', () => {
     expect(q).toContain('includePerformance=true')
     expect(q).toContain('daysBack=30')
   })
+
+  it('serializes keywords via campaignConfig JSON for server hash alignment', () => {
+    const q = buildLaunchScoreApiQueryString('42', {
+      budgetAmount: 30,
+      keywords: [{ keyword: 'shoes', matchType: 'PHRASE' }],
+    })
+    expect(q).toContain('campaignConfig=')
+    expect(decodeURIComponent(q)).toContain('shoes')
+    expect(q).not.toContain('budgetAmount=30')
+  })
 })
 
 describe('parseLaunchScoreHashCampaignConfigFromSearchParamsClient', () => {
-  it('parses discrete query fields', () => {
+  it('parses campaignConfig JSON with keywords', () => {
     const params = new URLSearchParams({
-      budgetAmount: '15',
-      maxCpcBid: '0.33',
+      campaignConfig: JSON.stringify({
+        budgetAmount: 20,
+        keywords: [{ keyword: 'hat' }],
+      }),
     })
     expect(parseLaunchScoreHashCampaignConfigFromSearchParamsClient(params)).toEqual({
-      budgetAmount: 15,
-      maxCpcBid: 0.33,
-      targetCountry: undefined,
-      targetLanguage: undefined,
+      budgetAmount: 20,
+      keywords: [{ keyword: 'hat' }],
     })
   })
 })
@@ -82,6 +102,19 @@ describe('buildLaunchScorePagePath', () => {
     expect(path).toContain('budgetAmount=20')
     expect(path).toContain('maxCpcBid=0.4')
     expect(path).toContain('targetCountry=US')
+  })
+
+  it('uses campaignConfig JSON when keywords are present', () => {
+    const path = buildLaunchScorePagePath({
+      offerId: 1,
+      creativeId: 2,
+      campaignConfig: {
+        budgetAmount: 20,
+        keywords: [{ keyword: 'bag' }],
+      },
+    })
+    expect(path).toContain('campaignConfig=')
+    expect(decodeURIComponent(path)).toContain('bag')
   })
 })
 

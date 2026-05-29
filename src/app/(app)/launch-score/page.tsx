@@ -13,6 +13,7 @@ import type {
   LaunchScorePerformanceApiPayload,
   PredictionComparison,
 } from '@/lib/launch-score-performance'
+import { formatCurrency } from '@/lib/currency'
 
 /**
  * Launch Score v4.0 - 4维度评分系统
@@ -121,10 +122,17 @@ export default function LaunchScorePage() {
       }
       // HttpOnly Cookie自动携带，无需手动操作
 
-      // 获取Offer信息
-      const offerRes = await fetch(`/api/offers/${offerId}`, {
-        credentials: 'include',
+      // Offer 与 Launch Score（含 performance）并行请求
+      const scoreQuery = buildLaunchScoreApiQueryString(creativeId, hashCampaignConfig, {
+        includePerformance: true,
+        daysBack: 30,
       })
+      const [offerRes, scoreRes] = await Promise.all([
+        fetch(`/api/offers/${offerId}`, { credentials: 'include' }),
+        fetch(`/api/offers/${offerId}/launch-score${scoreQuery}`, {
+          credentials: 'include',
+        }),
+      ])
 
       if (!offerRes.ok) {
         throw new Error('获取Offer失败')
@@ -132,11 +140,6 @@ export default function LaunchScorePage() {
 
       const offerData = await offerRes.json()
       setOffer(offerData.offer)
-
-      const scoreQuery = buildLaunchScoreApiQueryString(creativeId, hashCampaignConfig)
-      const scoreRes = await fetch(`/api/offers/${offerId}/launch-score${scoreQuery}`, {
-        credentials: 'include',
-      })
 
       if (scoreRes.ok) {
         const scoreData = await scoreRes.json()
@@ -591,9 +594,12 @@ export default function LaunchScorePage() {
                   </div>
                 )}
 
-              {/* 预测 vs 实际表现（已发布广告） */}
+              {/* 实际投放表现（Google Ads 同步数据） */}
               <div className="bg-white shadow rounded-lg p-6">
-                <h2 className="text-h4 mb-4">预测 vs 实际表现</h2>
+                <h2 className="text-h4 mb-1">实际投放表现</h2>
+                <p className="text-body-sm text-muted-foreground mb-4">
+                  转化次数来自 Google Ads 报表，与 Offer 详情页的佣金归因口径不同。
+                </p>
                 {loading && launchScore ? (
                   <p className="text-body-sm text-muted-foreground">加载投放表现数据...</p>
                 ) : hasPerformanceData && performanceData ? (
@@ -612,7 +618,7 @@ export default function LaunchScorePage() {
                         </p>
                       </div>
                       <div className="rounded-lg bg-gray-50 p-3">
-                        <p className="text-caption text-muted-foreground">转化</p>
+                        <p className="text-caption text-muted-foreground">转化 (Ads)</p>
                         <p className="text-body font-semibold">
                           {performanceData.totalConversions.toFixed(1)}
                         </p>
@@ -620,7 +626,10 @@ export default function LaunchScorePage() {
                       <div className="rounded-lg bg-gray-50 p-3">
                         <p className="text-caption text-muted-foreground">花费</p>
                         <p className="text-body font-semibold">
-                          ${performanceData.totalCostUsd.toFixed(2)}
+                          {formatCurrency(
+                            performanceData.totalCost,
+                            performanceData.costCurrency
+                          )}
                         </p>
                       </div>
                     </div>
@@ -631,8 +640,7 @@ export default function LaunchScorePage() {
                           <thead>
                             <tr className="border-b text-left text-muted-foreground">
                               <th className="py-2 pr-4 font-medium">指标</th>
-                              <th className="py-2 pr-4 font-medium">预测</th>
-                              <th className="py-2 pr-4 font-medium">实际</th>
+                              <th className="py-2 pr-4 font-medium">数值</th>
                               <th className="py-2 font-medium">说明</th>
                             </tr>
                           </thead>
@@ -641,7 +649,6 @@ export default function LaunchScorePage() {
                               (row: PredictionComparison, index: number) => (
                               <tr key={index} className="border-b border-gray-100">
                                 <td className="py-2 pr-4">{row.metric}</td>
-                                <td className="py-2 pr-4">{String(row.predicted)}</td>
                                 <td className="py-2 pr-4">{String(row.actual)}</td>
                                 <td className="py-2 text-muted-foreground">{row.variance}</td>
                               </tr>
