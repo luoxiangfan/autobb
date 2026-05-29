@@ -160,6 +160,19 @@ describe('readLaunchScoreForCreative', () => {
 
     expect(result).toEqual({ score: null, staleScore: null })
   })
+
+  it('ignores legacy offer-level score when cache misses', async () => {
+    findCachedLaunchScoreMock.mockResolvedValue(null)
+    findLatestLaunchScoreMock.mockResolvedValue({ id: 1, totalScore: 70, adCreativeId: null })
+    resolveLaunchScoreForCreativeCompareMock.mockResolvedValue({
+      score: { id: 40, totalScore: 65, adCreativeId: null },
+      scoreSource: 'offer_latest',
+    })
+
+    const result = await readLaunchScoreForCreative(creative, offer, 1)
+
+    expect(result).toEqual({ score: null, staleScore: null })
+  })
 })
 
 describe('saveLaunchScoreWithContentCache', () => {

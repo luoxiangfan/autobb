@@ -17,6 +17,7 @@ import {
   resolveLaunchScoreForCreativeCompareFromMaps,
   type CreativeContentData,
   type LaunchScore,
+  type LaunchScoreCompareSource,
   type ScoreAnalysis,
 } from './launch-scores'
 import { calculateLaunchScore } from './scoring'
@@ -70,8 +71,19 @@ export async function findCachedLaunchScoreForCreative(
 export type CreativeLaunchScoreReadResult = {
   /** 与当前创意 contentHash 精确匹配的记录 */
   score: LaunchScore | null
-  /** 库中该创意最新一条，但与当前内容哈希不一致 */
+  /** 库中该创意最新一条，但与当前 contentHash / campaignConfigHash 不一致 */
   staleScore: LaunchScore | null
+}
+
+/** 仅 per-creative 旧记录算过期；legacy offer 级分数不算 stale */
+function staleScoreFromCreativeCompare(
+  score: LaunchScore | null,
+  scoreSource: LaunchScoreCompareSource | null
+): LaunchScore | null {
+  if (score && scoreSource === 'creative') {
+    return score
+  }
+  return null
 }
 
 /**
@@ -89,13 +101,13 @@ export async function readLaunchScoreForCreative(
   }
 
   const offerLatest = await findLatestLaunchScore(offer.id, userId)
-  const { score } = await resolveLaunchScoreForCreativeCompare(
+  const { score, scoreSource } = await resolveLaunchScoreForCreativeCompare(
     creative.id,
     userId,
     offerLatest,
     1
   )
-  return { score: null, staleScore: score }
+  return { score: null, staleScore: staleScoreFromCreativeCompare(score, scoreSource) }
 }
 
 /** 并行查询多创意的 contentHash 缓存（compare 等批量场景） */
@@ -160,13 +172,16 @@ export async function readLaunchScoresForCreatives(
       result.set(creativeId, { score: cached, staleScore: null })
       continue
     }
-    const { score } = resolveLaunchScoreForCreativeCompareFromMaps(
+    const { score, scoreSource } = resolveLaunchScoreForCreativeCompareFromMaps(
       creativeId,
       scoresByCreativeId,
       offerLatest,
       1
     )
-    result.set(creativeId, { score: null, staleScore: score })
+    result.set(creativeId, {
+      score: null,
+      staleScore: staleScoreFromCreativeCompare(score, scoreSource),
+    })
   }
   return result
 }

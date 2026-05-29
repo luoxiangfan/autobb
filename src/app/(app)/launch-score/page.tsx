@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { showSuccess } from '@/lib/toast-utils'
 import {
   buildLaunchScoreApiQueryString,
+  buildLaunchScorePagePath,
   resolveLaunchScoreHashCampaignConfigForClient,
+  serializeLaunchScoreCampaignConfigQueryKey,
   type LaunchScoreHashCampaignConfigClient,
 } from '@/lib/launch-score-campaign-config-client'
 
@@ -63,8 +65,13 @@ export default function LaunchScorePage() {
   const [calculating, setCalculating] = useState(false)
   const [error, setError] = useState('')
   const [stale, setStale] = useState(false)
+  const [staleMessage, setStaleMessage] = useState('')
+  const [resolvedCreativeId, setResolvedCreativeId] = useState<number | null>(null)
 
   const numericOfferId = offerId ? Number(offerId) : NaN
+  const campaignConfigQueryKey = serializeLaunchScoreCampaignConfigQueryKey(
+    searchParams ?? new URLSearchParams()
+  )
   const hashCampaignConfig = useMemo((): LaunchScoreHashCampaignConfigClient | undefined => {
     if (!Number.isFinite(numericOfferId)) {
       return undefined
@@ -73,12 +80,26 @@ export default function LaunchScorePage() {
       numericOfferId,
       searchParams ?? new URLSearchParams()
     )
-  }, [numericOfferId, searchParams])
+  }, [numericOfferId, campaignConfigQueryKey])
+
+  const effectiveCreativeId =
+    creativeId ?? (resolvedCreativeId != null ? String(resolvedCreativeId) : null)
+
+  const loadCreativeById = useCallback(async (id: string) => {
+    const creativeRes = await fetch(`/api/creatives/${id}`, {
+      credentials: 'include',
+    })
+    if (creativeRes.ok) {
+      const creativeData = await creativeRes.json()
+      setCreative(creativeData.creative)
+    }
+  }, [])
 
   const fetchData = useCallback(async () => {
     try {
       setError('')
       setStale(false)
+      setStaleMessage('')
       // HttpOnly Cookie自动携带，无需手动操作
 
       // 获取Offer信息
@@ -93,18 +114,6 @@ export default function LaunchScorePage() {
       const offerData = await offerRes.json()
       setOffer(offerData.offer)
 
-      // 如果有creativeId，获取创意信息
-      if (creativeId) {
-        const creativeRes = await fetch(`/api/creatives/${creativeId}`, {
-          credentials: 'include',
-        })
-
-        if (creativeRes.ok) {
-          const creativeData = await creativeRes.json()
-          setCreative(creativeData.creative)
-        }
-      }
-
       const scoreQuery = buildLaunchScoreApiQueryString(creativeId, hashCampaignConfig)
       const scoreRes = await fetch(`/api/offers/${offerId}/launch-score${scoreQuery}`, {
         credentials: 'include',
@@ -112,6 +121,30 @@ export default function LaunchScorePage() {
 
       if (scoreRes.ok) {
         const scoreData = await scoreRes.json()
+        const apiCreativeId =
+          typeof scoreData.usedCreativeId === 'number' ? scoreData.usedCreativeId : null
+
+        if (apiCreativeId != null) {
+          setResolvedCreativeId(apiCreativeId)
+          if (!creativeId && offerId) {
+            router.replace(
+              buildLaunchScorePagePath({
+                offerId: Number(offerId),
+                creativeId: apiCreativeId,
+                campaignConfig: hashCampaignConfig,
+              }),
+              { scroll: false }
+            )
+          }
+        }
+
+        const creativeIdToLoad = creativeId ?? (apiCreativeId != null ? String(apiCreativeId) : null)
+        if (creativeIdToLoad) {
+          await loadCreativeById(creativeIdToLoad)
+        } else {
+          setCreative(null)
+        }
+
         if (scoreData.launchScore) {
           setLaunchScore(scoreData.launchScore)
           setStale(false)
@@ -121,9 +154,9 @@ export default function LaunchScorePage() {
           setAnalysis(null)
           if (scoreData.stale) {
             setStale(true)
-            if (scoreData.message) {
-              setError(scoreData.message)
-            }
+            setStaleMessage(
+              scoreData.message || '创意内容或投放配置已变更，当前 Launch Score 已过期，请重新计算'
+            )
           }
         }
       } else {
@@ -139,7 +172,7 @@ export default function LaunchScorePage() {
     } finally {
       setLoading(false)
     }
-  }, [offerId, creativeId, hashCampaignConfig])
+  }, [offerId, creativeId, hashCampaignConfig, loadCreativeById, router])
 
   useEffect(() => {
     if (offerId) {
@@ -166,13 +199,14 @@ export default function LaunchScorePage() {
   }
 
   const handleCalculate = async () => {
-    if (!creativeId) {
+    if (!effectiveCreativeId) {
       setError('请先选择一个创意进行评分')
       return
     }
 
     setCalculating(true)
     setError('')
+    setStaleMessage('')
 
     try {
       // HttpOnly Cookie自动携带，无需手动操作
@@ -184,7 +218,7 @@ export default function LaunchScorePage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          creativeId: Number(creativeId),
+          creativeId: Number(effectiveCreativeId),
           ...(hashCampaignConfig ? { campaignConfig: hashCampaignConfig } : {}),
         }),
       })
@@ -197,6 +231,7 @@ export default function LaunchScorePage() {
 
       setLaunchScore(data.launchScore)
       setStale(false)
+      setStaleMessage('')
       if (data.launchScore?.id) {
         await fetchAnalysis(data.launchScore.id)
       } else if (data.analysis?.overallRecommendations) {
@@ -290,19 +325,19 @@ export default function LaunchScorePage() {
               </h1>
             </div>
             <div className="flex items-center space-x-3">
-              {!launchScore && creativeId && (
+              {!launchScore && effectiveCreativeId && (
                 <button
                   onClick={handleCalculate}
                   disabled={calculating}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
                 >
-                  {calculating ? '计算中...' : '计算Launch Score'}
+                  {calculating ? '计算中...' : stale ? '重新计算' : '计算Launch Score'}
                 </button>
               )}
               {launchScore && (
                 <button
                   onClick={handleCalculate}
-                  disabled={calculating || !creativeId}
+                  disabled={calculating || !effectiveCreativeId}
                   className="px-4 py-2 border border-indigo-600 text-indigo-600 rounded-md hover:bg-indigo-50 disabled:opacity-50"
                 >
                   {calculating ? '重新计算中...' : '重新计算'}
@@ -321,7 +356,13 @@ export default function LaunchScorePage() {
             </div>
           )}
 
-          {!creativeId && (
+          {staleMessage && (
+            <div className="mb-6 px-4 py-3 bg-yellow-50 border border-yellow-400 text-yellow-800 rounded">
+              {staleMessage}
+            </div>
+          )}
+
+          {!effectiveCreativeId && (
             <div className="mb-6 px-4 py-3 bg-yellow-50 border border-yellow-400 text-yellow-700 rounded">
               请从创意页面选择一个创意进行评分
             </div>
@@ -341,7 +382,7 @@ export default function LaunchScorePage() {
               <p className="text-body-lg text-muted-foreground mb-4">
                 {stale ? '当前评分已过期，请重新计算' : '暂无Launch Score评分'}
               </p>
-              {creativeId && (
+              {effectiveCreativeId && (
                 <button
                   onClick={handleCalculate}
                   disabled={calculating}

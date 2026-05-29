@@ -238,6 +238,8 @@ export default function LaunchAdPage() {
     const hashConfig = pickLaunchScoreHashCampaignConfigFromStep3(config)
     if (hashConfig) {
       saveLaunchScoreCampaignConfigForOffer(offerId, hashConfig)
+    } else {
+      clearLaunchScoreCampaignConfigForOffer(offerId)
     }
   }, [offerId])
 
