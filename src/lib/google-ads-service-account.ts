@@ -120,6 +120,9 @@ export async function getUnifiedGoogleAdsClient(config: {
     developer_token: string
   }
   authConfig: UnifiedAuthConfig
+  /** 路由层已解析时传入，避免重复加载 auth-context */
+  oauthRefreshToken?: string
+  oauthLoginCustomerId?: string
 }): Promise<any> {
   const { authConfig, credentials } = config
 
@@ -152,18 +155,32 @@ export async function getUnifiedGoogleAdsClient(config: {
       throw new Error('OAuth 认证需要提供 credentials 参数')
     }
 
-    const { getGoogleAdsCredentials } = await import('./google-ads-oauth')
-    const oauthCredentials = await getGoogleAdsCredentials(authConfig.userId)
+    let refreshToken = config.oauthRefreshToken?.trim() || ''
+    let loginCustomerId = config.oauthLoginCustomerId?.trim() || ''
 
-    if (!oauthCredentials?.refresh_token) {
+    if (!refreshToken) {
+      const { getGoogleAdsAuthContext, GOOGLE_ADS_DUAL_STACK_WARNING } = await import(
+        './google-ads-auth-context'
+      )
+      const ctx = await getGoogleAdsAuthContext(authConfig.userId)
+      if (ctx.dualStack) {
+        throw new Error(GOOGLE_ADS_DUAL_STACK_WARNING)
+      }
+      refreshToken = ctx.oauthCredentials?.refresh_token || ''
+      if (!loginCustomerId) {
+        loginCustomerId = ctx.oauthCredentials?.login_customer_id || ''
+      }
+    }
+
+    if (!refreshToken) {
       throw new Error('OAuth refresh token not found')
     }
 
     const client = getGoogleAdsClient(credentials)
     return client.Customer({
       customer_id: config.customerId,
-      refresh_token: oauthCredentials.refresh_token,
-      login_customer_id: oauthCredentials.login_customer_id,
+      refresh_token: refreshToken,
+      login_customer_id: loginCustomerId,
     })
   }
 }
@@ -185,7 +202,14 @@ export async function getLoginCustomerId(config: {
       throw new Error('Service account configuration not found')
     }
     return serviceAccount.mccCustomerId
-  } else {
-    return oauthCredentials?.login_customer_id || ''
   }
+
+  const fromParam = oauthCredentials?.login_customer_id?.trim()
+  if (fromParam) {
+    return fromParam
+  }
+
+  const { getGoogleAdsAuthContext } = await import('./google-ads-auth-context')
+  const ctx = await getGoogleAdsAuthContext(authConfig.userId)
+  return ctx.oauthCredentials?.login_customer_id?.trim() || ''
 }

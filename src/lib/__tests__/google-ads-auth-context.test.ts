@@ -43,7 +43,6 @@ vi.mock('@/lib/google-ads-service-account', () => ({
 
 import {
   assertNoConflictingGoogleAdsAuth,
-  detectGoogleAdsDualStackCredentials,
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
   resolveEffectiveServiceAccountId,
@@ -136,6 +135,42 @@ describe('getGoogleAdsAuthContext', () => {
       expect.objectContaining({ ownerUserId: 1, isShared: true })
     )
   })
+
+  it('sets dualStack when owner has oauth refresh and active service account', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 2,
+      isShared: false,
+      assignment: null,
+    })
+    assignmentFns.isGoogleAdsAuthShared.mockReturnValue(false)
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+    oauthFns.getGoogleAdsCredentials.mockResolvedValue({ refresh_token: 'rt' })
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt' })
+    dbFns.queryOne.mockResolvedValue({ id: 'sa-1' })
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+
+    const ctx = await getGoogleAdsAuthContext(2)
+
+    expect(ctx.dualStack).toBe(true)
+  })
+
+  it('sets dualStack false when owner has only oauth', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 2,
+      isShared: false,
+      assignment: null,
+    })
+    assignmentFns.isGoogleAdsAuthShared.mockReturnValue(false)
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+    oauthFns.getGoogleAdsCredentials.mockResolvedValue({ refresh_token: 'rt' })
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt' })
+    dbFns.queryOne.mockResolvedValue(null)
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+
+    const ctx = await getGoogleAdsAuthContext(2)
+
+    expect(ctx.dualStack).toBe(false)
+  })
 })
 
 describe('resolveGoogleAdsCredentialStatusFields', () => {
@@ -213,7 +248,7 @@ describe('hasConfiguredGoogleAdsAuthFromContext', () => {
 })
 
 describe('resolveGoogleAdsApiAuthForAccount', () => {
-  it('reports not_configured when context has dualStack', async () => {
+  it('reports dual_stack when context has dualStack', async () => {
     assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
       ownerUserId: 2,
       isShared: false,
@@ -282,36 +317,6 @@ describe('resolveEffectiveServiceAccountId', () => {
       serviceAccountConfig: null,
     } as any)
     expect(id).toBeUndefined()
-  })
-})
-
-describe('detectGoogleAdsDualStackCredentials', () => {
-  beforeEach(() => {
-    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
-      ownerUserId: 2,
-      isShared: false,
-      assignment: null,
-    })
-  })
-
-  it('reports dualStack when both oauth and active service account exist', async () => {
-    dbFns.queryOne.mockResolvedValueOnce({ id: 'sa-1' })
-    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValueOnce({ refresh_token: 'rt' })
-
-    const result = await detectGoogleAdsDualStackCredentials(2)
-
-    expect(result.dualStack).toBe(true)
-    expect(result.hasOAuthRefresh).toBe(true)
-    expect(result.hasActiveServiceAccount).toBe(true)
-  })
-
-  it('reports no dualStack when only oauth exists', async () => {
-    dbFns.queryOne.mockResolvedValueOnce(null)
-    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValueOnce({ refresh_token: 'rt' })
-
-    const result = await detectGoogleAdsDualStackCredentials(2)
-
-    expect(result.dualStack).toBe(false)
   })
 })
 

@@ -20,11 +20,6 @@ export async function runInitialGoogleAdsAccountsLoad(
   const auth = await handlers.refreshCredentialsStatus()
   if (auth.authConfigWarning) {
     handlers.onAuthConfigWarning?.(auth.authConfigWarning)
-    if (auth.authType === 'service_account' && auth.serviceAccountId) {
-      await handlers.fetchServiceAccountAccounts(auth.serviceAccountId, {
-        skipCredentialsRefresh: true,
-      })
-    }
     return
   }
 

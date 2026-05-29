@@ -73,7 +73,8 @@ describe('runInitialGoogleAdsAccountsLoad', () => {
     expect(listServiceAccounts).not.toHaveBeenCalled()
   })
 
-  it('still loads SA accounts when dual-stack warning but authType is service_account', async () => {
+  it('does not load SA accounts when dual-stack warning even if authType is service_account', async () => {
+    const onAuthConfigWarning = vi.fn()
     const refreshCredentialsStatus = vi.fn(async () => ({
       hasCredentials: true,
       authType: 'service_account' as const,
@@ -89,11 +90,11 @@ describe('runInitialGoogleAdsAccountsLoad', () => {
       fetchOAuthAccounts,
       fetchServiceAccountAccounts,
       listServiceAccounts,
+      onAuthConfigWarning,
     })
 
-    expect(fetchServiceAccountAccounts).toHaveBeenCalledWith('sa-bound', {
-      skipCredentialsRefresh: true,
-    })
+    expect(onAuthConfigWarning).toHaveBeenCalledWith('dual stack warning')
+    expect(fetchServiceAccountAccounts).not.toHaveBeenCalled()
     expect(fetchOAuthAccounts).not.toHaveBeenCalled()
   })
 })

@@ -860,9 +860,14 @@ export default function SettingsPage() {
           return
         }
 
-        const { message } = parseAccountsListFetchFailure(response, data, {
+        const { message, authConfigWarning } = parseAccountsListFetchFailure(response, data, {
           fallbackMessage: '获取账户列表失败',
         })
+        if (authConfigWarning) {
+          setGoogleAdsCredentialStatus((prev) =>
+            prev ? { ...prev, authConfigWarning } : prev
+          )
+        }
         throw new Error(message)
       }
 
