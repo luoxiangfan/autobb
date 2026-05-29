@@ -87,24 +87,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-
-/**
- * POST /api/ad-creatives
- * 已下线：禁止通过旧写入口直接创建广告创意
- */
-export async function POST(request: NextRequest) {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
-
-  return NextResponse.json(
-    {
-      error: '旧写入口已下线',
-      code: 'AD_CREATIVES_WRITE_ENDPOINT_DECOMMISSIONED',
-      message: '请使用 /api/offers/:id/generate-creatives-queue（A/B/D）生成创意',
-    },
-    { status: 410 }
-  )
-}

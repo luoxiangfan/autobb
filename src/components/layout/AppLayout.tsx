@@ -22,7 +22,6 @@ import {
   Shield,
   Key,
   Link2,
-  Beaker,
   TrendingUp,
   FileText,
   Clock,
@@ -264,12 +263,6 @@ const adminNavigationItems: NavItem[] = [
     icon: Activity,
     requireAdmin: true,
   },
-  // {
-  //   label: '抓取与AI测试',
-  //   href: '/admin/scrape-test',
-  //   icon: Beaker,
-  //   requireAdmin: true,
-  // },
   {
     label: 'Prompt管理',
     href: '/admin/prompts',

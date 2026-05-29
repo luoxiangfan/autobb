@@ -71,27 +71,9 @@ npm run tsx scripts/discover-new-products.ts
 npm run tsx scripts/reattribute-pending-commissions.ts
 ```
 
-### 3. 调试工具
+### 3. 调试
 
-#### `debug-attribution-mapping.ts`
-**用途**：调试归因映射关系
-
-**检查项**：
-- 产品品牌信息
-- Offer 品牌信息
-- 广告系列信息
-- Performance 数据
-
-```bash
-npm run tsx scripts/debug-attribution-mapping.ts
-```
-
-#### `test-single-attribution.ts`
-**用途**：测试单个 ASIN 的归因逻辑
-
-```bash
-npm run tsx scripts/test-single-attribution.ts
-```
+已移除一次性调试脚本；请使用上文 SQL 查询与 `monitor-attribution-health.ts` 输出排查问题。
 
 ## 推荐的维护流程
 
@@ -208,7 +190,7 @@ OPENCLAW_AFFILIATE_ATTRIBUTION_PENDING_DAYS=7
 
 1. 检查产品和 Offer 的品牌字段是否填写
 2. 检查品牌名称是否一致（大小写、空格）
-3. 运行 `debug-attribution-mapping.ts` 查看详细信息
+3. 使用上文 SQL 查询核对产品与 Offer 映射
 
 ### 问题：重新归因后数据丢失
 

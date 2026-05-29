@@ -26,27 +26,6 @@ function parseBooleanParam(value: string | null): boolean {
 }
 
 /**
- * POST /api/offers
- * 已下线：请使用 /api/offers/extract 或 /api/offers/extract/stream
- */
-async function post(request: NextRequest) {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
-
-  return NextResponse.json(
-    {
-      error: 'POST /api/offers 已下线，请改用 /api/offers/extract 或 /api/offers/extract/stream',
-      code: 'OFFERS_POST_DEPRECATED',
-      alternatives: ['/api/offers/extract', '/api/offers/extract/stream'],
-    },
-    { status: 410 }
-  )
-}
-
-/**
  * GET /api/offers
  * GET /api/offers?limit=10&offset=0&isActive=true&targetCountry=US&search=brand
  * 获取Offer列表
@@ -265,5 +244,4 @@ async function get(request: NextRequest) {
   }
 }
 
-export const POST = withPerformanceMonitoring<any>(post, { path: '/api/offers' })
 export const GET = withPerformanceMonitoring<any>(get, { path: '/api/offers' })

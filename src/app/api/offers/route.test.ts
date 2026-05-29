@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import { GET, POST } from '@/app/api/offers/route'
+import { GET } from '@/app/api/offers/route'
 
 const offerFns = vi.hoisted(() => ({
   listOffers: vi.fn(),
@@ -363,24 +363,6 @@ describe('GET /api/offers', () => {
       requestedSortBy: 'linkedAccounts',
       appliedSortBy: 'createdAt',
       appliedSortOrder: 'asc',
-    })
-  })
-})
-
-describe('POST /api/offers', () => {
-  it('returns 410 with alternatives for authenticated requests', async () => {
-    const req = new NextRequest('http://localhost/api/offers', {
-      method: 'POST',
-      headers: { 'x-user-id': '7' },
-    })
-    const res = await POST(req)
-    const data = await res.json()
-
-    expect(res.status).toBe(410)
-    expect(data).toEqual({
-      error: 'POST /api/offers 已下线，请改用 /api/offers/extract 或 /api/offers/extract/stream',
-      code: 'OFFERS_POST_DEPRECATED',
-      alternatives: ['/api/offers/extract', '/api/offers/extract/stream'],
     })
   })
 })

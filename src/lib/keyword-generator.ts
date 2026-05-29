@@ -9,61 +9,7 @@
  * @see unified-keyword-service.ts 获取正向关键词
  */
 
-import { generateContent } from './gemini'
-import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import type { Offer } from './offers'
-
-/**
- * 获取否定关键词的语言指令
- */
-function getLanguageInstructionForNegativeKeywords(targetLanguage: string): string {
-  const lang = targetLanguage.toLowerCase()
-
-  if (lang.includes('italian') || lang === 'it') {
-    return `🔴 IMPORTANT: Generate ALL negative keywords in ITALIAN ONLY.
-- Examples: "gratuito", "economico", "tutorial", "come usare", not "free", "cheap", "tutorial"
-- Do NOT use English words or mix languages. Every single word must be in Italian.`
-  } else if (lang.includes('spanish') || lang === 'es') {
-    return `🔴 IMPORTANT: Generate ALL negative keywords in SPANISH ONLY.
-- Examples: "gratis", "barato", "tutorial", "cómo usar", not "free", "cheap", "tutorial"
-- Do NOT use English words or mix languages. Every single word must be in Spanish.`
-  } else if (lang.includes('french') || lang === 'fr') {
-    return `🔴 IMPORTANT: Generate ALL negative keywords in FRENCH ONLY.
-- Examples: "gratuit", "bon marché", "tutoriel", "comment utiliser", not "free", "cheap", "tutorial"
-- Do NOT use English words or mix languages. Every single word must be in French.`
-  } else if (lang.includes('german') || lang === 'de') {
-    return `🔴 IMPORTANT: Generate ALL negative keywords in GERMAN ONLY.
-- Examples: "kostenlos", "billig", "anleitung", "wie man benutzt", not "free", "cheap", "tutorial"
-- Do NOT use English words or mix languages. Every single word must be in German.`
-  } else if (lang.includes('portuguese') || lang === 'pt') {
-    return `🔴 IMPORTANT: Generate ALL negative keywords in PORTUGUESE ONLY.
-- Examples: "grátis", "barato", "tutorial", "como usar", not "free", "cheap", "tutorial"
-- Do NOT use English words or mix languages. Every single word must be in Portuguese.`
-  } else if (lang.includes('japanese') || lang === 'ja') {
-    return `🔴 IMPORTANT: Generate ALL negative keywords in JAPANESE ONLY.
-- Examples: "無料", "安い", "チュートリアル", "使い方", not "free", "cheap", "tutorial"
-- Do NOT use English words or mix languages. Every single word must be in Japanese.`
-  } else if (lang.includes('korean') || lang === 'ko') {
-    return `🔴 IMPORTANT: Generate ALL negative keywords in KOREAN ONLY.
-- Examples: "무료", "싼", "튜토리얼", "사용 방법", not "free", "cheap", "tutorial"
-- Do NOT use English words or mix languages. Every single word must be in Korean.`
-  } else if (lang.includes('russian') || lang === 'ru') {
-    return `🔴 IMPORTANT: Generate ALL negative keywords in RUSSIAN ONLY.
-- Examples: "бесплатно", "дешево", "учебник", "как использовать", not "free", "cheap", "tutorial"
-- Do NOT use English words or mix languages. Every single word must be in Russian.`
-  } else if (lang.includes('arabic') || lang === 'ar') {
-    return `🔴 IMPORTANT: Generate ALL negative keywords in ARABIC ONLY.
-- Examples: "مجاني", "رخيص", "درس تعليمي", "كيفية الاستخدام", not "free", "cheap", "tutorial"
-- Do NOT use English words or mix languages. Every single word must be in Arabic.`
-  } else if (lang.includes('chinese') || lang === 'zh') {
-    return `🔴 IMPORTANT: Generate ALL negative keywords in CHINESE ONLY.
-- Examples: "免费", "便宜", "教程", "如何使用", not "free", "cheap", "tutorial"
-- Do NOT use English words or mix languages. Every single word must be in Chinese.`
-  }
-
-  // Default to English
-  return `Generate negative keywords in English.`
-}
 
 /**
  * 生成否定关键词（排除不相关流量）
