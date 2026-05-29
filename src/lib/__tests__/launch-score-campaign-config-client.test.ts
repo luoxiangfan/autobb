@@ -38,6 +38,15 @@ describe('buildLaunchScoreApiQueryString', () => {
     expect(q).toContain('maxCpcBid=0.2')
     expect(q).toContain('targetCountry=CA')
   })
+
+  it('can request merged performance on GET launch-score', () => {
+    const q = buildLaunchScoreApiQueryString('42', undefined, {
+      includePerformance: true,
+      daysBack: 30,
+    })
+    expect(q).toContain('includePerformance=true')
+    expect(q).toContain('daysBack=30')
+  })
 })
 
 describe('parseLaunchScoreHashCampaignConfigFromSearchParamsClient', () => {

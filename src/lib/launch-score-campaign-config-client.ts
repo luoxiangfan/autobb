@@ -176,13 +176,20 @@ export function appendLaunchScoreCampaignConfigToSearchParams(
 
 export function buildLaunchScoreApiQueryString(
   creativeId: string | null | undefined,
-  config?: LaunchScoreHashCampaignConfigClient
+  config?: LaunchScoreHashCampaignConfigClient,
+  options?: { includePerformance?: boolean; daysBack?: number }
 ): string {
   const params = new URLSearchParams()
   if (creativeId) {
     params.set('creativeId', creativeId)
   }
   appendLaunchScoreCampaignConfigToSearchParams(params, config)
+  if (options?.includePerformance) {
+    params.set('includePerformance', 'true')
+    if (options.daysBack != null) {
+      params.set('daysBack', String(options.daysBack))
+    }
+  }
   const query = params.toString()
   return query ? `?${query}` : ''
 }

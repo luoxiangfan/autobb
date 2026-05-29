@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { findAdCreativeById, findAdCreativesByOfferId } from '@/lib/ad-creative'
-import { getPerformanceEnhancedAnalysis } from '@/lib/launch-score-performance'
+import { buildLaunchScorePerformanceApiPayload } from '@/lib/launch-score-performance'
+import { resolveLaunchScoreForPerformanceApi } from '@/lib/launch-score-cache'
 import { findOfferById } from '@/lib/offers'
-import {
-  pickBestCreativeForLaunchScoreRead,
-  readLaunchScoreForCreative,
-} from '@/lib/launch-score-cache'
 import {
   parseLaunchScoreHashCampaignConfigFromSearchParams,
 } from '@/lib/launch-score-campaign-config'
@@ -18,11 +14,8 @@ import {
 /**
  * GET /api/offers/:id/launch-score/performance
  *
- * Query Parameters:
- * - creativeId: number (可选；缺省时按最高分创意 + contentHash 读分)
- * - daysBack: number (可选，默认30天)
- * - avgOrderValue: number (可选，用于ROI计算)
- * - campaignConfig: JSON 或 budgetAmount / maxCpcBid / targetCountry / targetLanguage
+ * 独立性能对比。已有分数时请传 ?launchScoreId= 跳过 hash 读分。
+ * Launch Score 页请用 GET /launch-score?includePerformance=true（与读分合并）。
  */
 export const dynamic = 'force-dynamic'
 
@@ -54,106 +47,114 @@ export async function GET(
     }
 
     const { searchParams } = new URL(request.url)
-    const daysBack = parseInt(searchParams.get('daysBack') || '30')
+    const daysBack = parseInt(searchParams.get('daysBack') || '30', 10)
     const avgOrderValue = searchParams.get('avgOrderValue')
       ? parseFloat(searchParams.get('avgOrderValue')!)
       : undefined
+    const launchScoreId = parsePositiveIntegerId(searchParams.get('launchScoreId'))
     const queryCreativeId = parsePositiveIntegerId(searchParams.get('creativeId'))
     const hashCampaignConfig =
       parseLaunchScoreHashCampaignConfigFromSearchParams(searchParams)
 
-    let launchScore = null
-    let stale = false
-    let resolvedCreativeId: number | undefined
-
-    if (queryCreativeId != null) {
-      const creative = await findAdCreativeById(queryCreativeId, userId)
-      if (!creative || creative.offer_id !== offer.id) {
+    if (launchScoreId != null) {
+      const lookup = await resolveLaunchScoreForPerformanceApi(offer, userId, {
+        launchScoreId,
+      })
+      if (!lookup.launchScore) {
         return NextResponse.json(
-          { error: '创意不存在或无权访问' },
+          { error: 'Launch Score 不存在或无权访问' },
           { status: 404 }
         )
       }
-
-      const read = await readLaunchScoreForCreative(
-        creative,
-        offer,
+      const performance = await buildLaunchScorePerformanceApiPayload(
+        lookup.launchScore,
         userId,
-        hashCampaignConfig
+        Number.isFinite(daysBack) ? daysBack : 30,
+        avgOrderValue
       )
-      launchScore = read.score
-      stale = !read.score && read.staleScore != null
-      resolvedCreativeId = creative.id
-    } else {
-      const creatives = await findAdCreativesByOfferId(offerId, userId)
-      const bestCreative = await pickBestCreativeForLaunchScoreRead(
-        creatives,
-        offer,
-        userId,
-        hashCampaignConfig
-      )
-      if (bestCreative) {
-        const read = await readLaunchScoreForCreative(
-          bestCreative,
-          offer,
-          userId,
-          hashCampaignConfig
-        )
-        launchScore = read.score
-        stale = !read.score && read.staleScore != null
-        resolvedCreativeId = bestCreative.id
-      }
+      return NextResponse.json({
+        success: true,
+        hasLaunchScore: true,
+        launchScoreId: lookup.launchScore.id,
+        ...(lookup.resolvedCreativeId != null
+          ? { creativeId: lookup.resolvedCreativeId }
+          : {}),
+        launchScore: {
+          id: lookup.launchScore.id,
+          totalScore: lookup.launchScore.totalScore,
+          calculatedAt: lookup.launchScore.calculatedAt,
+          adCreativeId: lookup.launchScore.adCreativeId,
+          dimensions: {
+            launchViability: lookup.launchScore.launchViabilityScore,
+            adQuality: lookup.launchScore.adQualityScore,
+            keywordStrategy: lookup.launchScore.keywordStrategyScore,
+            basicConfig: lookup.launchScore.basicConfigScore,
+          },
+        },
+        ...performance,
+        offer: {
+          id: offer.id,
+          offerName: offer.offer_name,
+          brand: offer.brand,
+        },
+      })
     }
 
-    if (!launchScore) {
+    const lookup = await resolveLaunchScoreForPerformanceApi(offer, userId, {
+      creativeId: queryCreativeId,
+      hashCampaignConfig,
+    })
+
+    if (!lookup.launchScore) {
       return NextResponse.json(
         {
           success: false,
-          message: stale
+          message: lookup.stale
             ? '创意内容或投放配置已变更，当前 Launch Score 已过期，请重新计算'
             : '暂无Launch Score记录，请先进行投放分析',
           hasLaunchScore: false,
           hasPerformanceData: false,
-          ...(stale ? { stale: true } : {}),
-          ...(resolvedCreativeId != null ? { creativeId: resolvedCreativeId } : {}),
+          ...(lookup.stale ? { stale: true } : {}),
+          ...(lookup.resolvedCreativeId != null
+            ? { creativeId: lookup.resolvedCreativeId }
+            : {}),
         },
         { status: 200 }
       )
     }
 
-    const enhancedAnalysis = await getPerformanceEnhancedAnalysis(
-      launchScore,
+    const performance = await buildLaunchScorePerformanceApiPayload(
+      lookup.launchScore,
       userId,
-      daysBack,
+      Number.isFinite(daysBack) ? daysBack : 30,
       avgOrderValue
     )
 
     return NextResponse.json({
       success: true,
       hasLaunchScore: true,
-      hasPerformanceData: enhancedAnalysis.performanceData !== null,
-      ...(resolvedCreativeId != null ? { creativeId: resolvedCreativeId } : {}),
+      launchScoreId: lookup.launchScore.id,
+      ...(lookup.resolvedCreativeId != null
+        ? { creativeId: lookup.resolvedCreativeId }
+        : {}),
       launchScore: {
-        id: launchScore.id,
-        totalScore: launchScore.totalScore,
-        calculatedAt: launchScore.calculatedAt,
-        adCreativeId: launchScore.adCreativeId,
+        id: lookup.launchScore.id,
+        totalScore: lookup.launchScore.totalScore,
+        calculatedAt: lookup.launchScore.calculatedAt,
+        adCreativeId: lookup.launchScore.adCreativeId,
         dimensions: {
-          launchViability: launchScore.launchViabilityScore,
-          adQuality: launchScore.adQualityScore,
-          keywordStrategy: launchScore.keywordStrategyScore,
-          basicConfig: launchScore.basicConfigScore
-        }
+          launchViability: lookup.launchScore.launchViabilityScore,
+          adQuality: lookup.launchScore.adQualityScore,
+          keywordStrategy: lookup.launchScore.keywordStrategyScore,
+          basicConfig: lookup.launchScore.basicConfigScore,
+        },
       },
-      performanceData: enhancedAnalysis.performanceData,
-      comparisons: enhancedAnalysis.comparisons,
-      adjustedRecommendations: enhancedAnalysis.adjustedRecommendations,
-      accuracyScore: enhancedAnalysis.accuracyScore,
+      ...performance,
       offer: {
         id: offer.id,
         offerName: offer.offer_name,
-        brand: offer.brand
-      }
+        brand: offer.brand,
+      },
     })
   } catch (error: any) {
     console.error('Get Launch Score performance comparison error:', error)

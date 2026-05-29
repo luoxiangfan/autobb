@@ -12,8 +12,10 @@ export interface PerformanceData {
   totalClicks: number
   totalConversions: number
   totalCostUsd: number
+  /** 点击率，0–1 小数（如 0.025 = 2.5%） */
   avgCtr: number
   avgCpcUsd: number
+  /** 转化率，0–1 小数 */
   conversionRate: number
   actualRoi: number | null
   dateRange: {
@@ -36,7 +38,48 @@ export interface PerformanceEnhancedAnalysis {
   performanceData: PerformanceData | null
   comparisons: PredictionComparison[]
   adjustedRecommendations: string[]
-  accuracyScore: number // 整体预测准确度 (0-100)
+  /** @internal v4 无预测指标，不向 API/UI 暴露 */
+  accuracyScore: number
+}
+
+/** GET launch-score / performance 接口共用的性能对比载荷（不含 accuracyScore） */
+export type LaunchScorePerformanceApiPayload = {
+  hasPerformanceData: boolean
+  performanceData: PerformanceData | null
+  comparisons: PredictionComparison[]
+  adjustedRecommendations: string[]
+  message?: string
+}
+
+/** 基于已解析的 Launch Score 构建 performance 载荷（不再 readLaunchScoreForCreative） */
+export async function buildLaunchScorePerformanceApiPayload(
+  launchScore: LaunchScore,
+  userId: number,
+  daysBack: number = 30,
+  avgOrderValue?: number
+): Promise<LaunchScorePerformanceApiPayload> {
+  const enhanced = await getPerformanceEnhancedAnalysis(
+    launchScore,
+    userId,
+    daysBack,
+    avgOrderValue
+  )
+  return toLaunchScorePerformanceApiPayload(enhanced)
+}
+
+export function toLaunchScorePerformanceApiPayload(
+  enhanced: PerformanceEnhancedAnalysis
+): LaunchScorePerformanceApiPayload {
+  const hasPerformanceData = enhanced.performanceData !== null
+  return {
+    hasPerformanceData,
+    performanceData: enhanced.performanceData,
+    comparisons: enhanced.comparisons,
+    adjustedRecommendations: enhanced.adjustedRecommendations,
+    ...(!hasPerformanceData && enhanced.adjustedRecommendations[0]
+      ? { message: enhanced.adjustedRecommendations[0] }
+      : {}),
+  }
 }
 
 /**
@@ -85,6 +128,10 @@ export async function getPerformanceDataForOffer(
     ? totalCostUsd / result.total_clicks
     : 0
 
+  // SQL 返回百分比 (0–100)，下游阈值/展示统一用小数比率 (0–1)
+  const avgCtrPercent = Number(result.avg_ctr) || 0
+  const conversionRatePercent = Number(result.avg_conversion_rate) || 0
+
   // 计算实际ROI (需要假设平均订单价值)
   // 这里我们只返回null，实际ROI需要在API层面结合用户输入的平均订单价值计算
   const actualRoi = null
@@ -94,9 +141,9 @@ export async function getPerformanceDataForOffer(
     totalClicks: result.total_clicks || 0,
     totalConversions: result.total_conversions || 0,
     totalCostUsd: Math.round(totalCostUsd * 100) / 100,
-    avgCtr: result.avg_ctr || 0,
+    avgCtr: avgCtrPercent / 100,
     avgCpcUsd: Math.round(avgCpcUsd * 100) / 100,
-    conversionRate: result.avg_conversion_rate || 0,
+    conversionRate: conversionRatePercent / 100,
     actualRoi,
     dateRange: {
       start: cutoffDateStr,

@@ -1,5 +1,5 @@
 import type { AdCreative } from './ad-creative'
-import { findAdCreativesByOfferId } from './ad-creative'
+import { findAdCreativeById, findAdCreativesByOfferId } from './ad-creative'
 import type { Offer } from './offers'
 import {
   type LaunchScoreHashCampaignConfig,
@@ -11,6 +11,7 @@ import {
   computeContentHash,
   createLaunchScore,
   findCachedLaunchScore,
+  findLaunchScoreById,
   findLatestLaunchScore,
   findLatestLaunchScoresByCreativeIds,
   resolveKeywordsWithVolumeForLaunchScore,
@@ -275,6 +276,80 @@ export async function ensureLaunchScoreForCreative(
     { campaignConfig }
   )
   return { launchScore, fromCache: false }
+}
+
+export type LaunchScorePerformanceLookupResult = {
+  launchScore: LaunchScore | null
+  stale: boolean
+  resolvedCreativeId?: number
+}
+
+/**
+ * Performance API 读分：优先 launchScoreId（跳过 hash 读分），否则按创意 + campaignConfig 读分。
+ */
+export async function resolveLaunchScoreForPerformanceApi(
+  offer: Offer,
+  userId: number,
+  options: {
+    launchScoreId?: number | null
+    creativeId?: number | null
+    hashCampaignConfig?: LaunchScoreHashCampaignConfig
+  }
+): Promise<LaunchScorePerformanceLookupResult> {
+  const { launchScoreId, creativeId, hashCampaignConfig } = options
+
+  if (launchScoreId != null) {
+    const byId = await findLaunchScoreById(launchScoreId, userId)
+    if (!byId || byId.offerId !== offer.id) {
+      return { launchScore: null, stale: false }
+    }
+    return {
+      launchScore: byId,
+      stale: false,
+      resolvedCreativeId: byId.adCreativeId ?? undefined,
+    }
+  }
+
+  if (creativeId != null) {
+    const creative = await findAdCreativeById(creativeId, userId)
+    if (!creative || creative.offer_id !== offer.id) {
+      return { launchScore: null, stale: false }
+    }
+    const read = await readLaunchScoreForCreative(
+      creative,
+      offer,
+      userId,
+      hashCampaignConfig
+    )
+    return {
+      launchScore: read.score,
+      stale: !read.score && read.staleScore != null,
+      resolvedCreativeId: creative.id,
+    }
+  }
+
+  const creatives = await findAdCreativesByOfferId(offer.id, userId)
+  const bestCreative = await pickBestCreativeForLaunchScoreRead(
+    creatives,
+    offer,
+    userId,
+    hashCampaignConfig
+  )
+  if (!bestCreative) {
+    return { launchScore: null, stale: false }
+  }
+
+  const read = await readLaunchScoreForCreative(
+    bestCreative,
+    offer,
+    userId,
+    hashCampaignConfig
+  )
+  return {
+    launchScore: read.score,
+    stale: !read.score && read.staleScore != null,
+    resolvedCreativeId: bestCreative.id,
+  }
 }
 
 export type LaunchScoreGetForCreativeResponse = {

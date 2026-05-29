@@ -6,6 +6,7 @@ import {
   findAdCreativesByOfferId,
   type AdCreative,
 } from '@/lib/ad-creative'
+import { buildLaunchScorePerformanceApiPayload } from '@/lib/launch-score-performance'
 import { parseLaunchScoreAnalysis } from '@/lib/launch-scores'
 import {
   ensureLaunchScoreForCreative,
@@ -22,7 +23,7 @@ import { parsePositiveIntegerId, parsePositiveIntegerOfferId } from '@/lib/parse
  * POST /api/offers/:id/launch-score
  * 计算指定Offer和Creative的Launch Score
  *
- * Body 可选 campaignConfig: { budgetAmount?, maxCpcBid?, targetCountry?, targetLanguage? }
+ * Body 可选 campaignConfig、includePerformance、daysBack、avgOrderValue
  */
 export async function POST(
   request: NextRequest,
@@ -101,11 +102,28 @@ export async function POST(
     )
     const scoreAnalysis = parseLaunchScoreAnalysis(launchScore)
 
+    const includePerformance = body.includePerformance === true
+    const postDaysBack = parseInt(String(body.daysBack ?? '30'), 10)
+    const postAvgOrderValue =
+      body.avgOrderValue != null ? Number(body.avgOrderValue) : undefined
+
+    let performance = undefined
+    if (includePerformance) {
+      performance = await buildLaunchScorePerformanceApiPayload(
+        launchScore,
+        userId,
+        Number.isFinite(postDaysBack) ? postDaysBack : 30,
+        Number.isFinite(postAvgOrderValue) ? postAvgOrderValue : undefined
+      )
+    }
+
     return NextResponse.json({
       success: true,
       launchScore,
+      launchScoreId: launchScore.id,
       analysis: scoreAnalysis,
       ...(fromCache ? { fromCache: true } : {}),
+      ...(performance !== undefined ? { performance } : {}),
     })
   } catch (error: any) {
     console.error('计算Launch Score失败:', error)
@@ -123,6 +141,7 @@ export async function POST(
  * GET /api/offers/:id/launch-score
  * 获取 Launch Score；无 creativeId 时按最高分创意 + contentHash 读分
  * 支持 ?autoCalculate=true
+ * 支持 ?includePerformance=true（与读分同请求返回 performance，避免二次读分）
  * 可选 campaignConfig（JSON）或 budgetAmount / maxCpcBid / targetCountry / targetLanguage
  */
 export const dynamic = 'force-dynamic'
@@ -138,6 +157,11 @@ export async function GET(
     }
     const { searchParams } = new URL(request.url)
     const autoCalculate = searchParams.get('autoCalculate') === 'true'
+    const includePerformance = searchParams.get('includePerformance') === 'true'
+    const daysBack = parseInt(searchParams.get('daysBack') || '30', 10)
+    const avgOrderValue = searchParams.get('avgOrderValue')
+      ? parseFloat(searchParams.get('avgOrderValue')!)
+      : undefined
     const queryCreativeId = parsePositiveIntegerId(searchParams.get('creativeId'))
     const hashCampaignConfig =
       parseLaunchScoreHashCampaignConfigFromSearchParams(searchParams)
@@ -204,12 +228,26 @@ export async function GET(
       autoCalculate
     )
 
+    let performance = undefined
+    if (includePerformance && resolved.launchScore) {
+      performance = await buildLaunchScorePerformanceApiPayload(
+        resolved.launchScore,
+        userId,
+        Number.isFinite(daysBack) ? daysBack : 30,
+        avgOrderValue
+      )
+    }
+
     return NextResponse.json({
       success: true,
       ...resolved,
       ...(resolved.launchScore
-        ? { analysis: parseLaunchScoreAnalysis(resolved.launchScore) }
+        ? {
+            launchScoreId: resolved.launchScore.id,
+            analysis: parseLaunchScoreAnalysis(resolved.launchScore),
+          }
         : {}),
+      ...(performance !== undefined ? { performance } : {}),
     })
   } catch (error: any) {
     console.error('获取Launch Score失败:', error)

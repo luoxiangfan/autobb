@@ -7,11 +7,12 @@ import {
   buildLaunchScoreApiQueryString,
   buildLaunchScorePagePath,
   resolveLaunchScoreHashCampaignConfigForClient,
-  serializeLaunchScoreCampaignConfigQueryKey,
   type LaunchScoreHashCampaignConfigClient,
 } from '@/lib/launch-score-campaign-config-client'
-import { useLaunchScorePerformance } from '@/lib/hooks/useAnalytics'
-import type { PredictionComparison } from '@/lib/launch-score-performance'
+import type {
+  LaunchScorePerformanceApiPayload,
+  PredictionComparison,
+} from '@/lib/launch-score-performance'
 
 /**
  * Launch Score v4.0 - 4维度评分系统
@@ -69,12 +70,11 @@ export default function LaunchScorePage() {
   const [stale, setStale] = useState(false)
   const [staleMessage, setStaleMessage] = useState('')
   const [resolvedCreativeId, setResolvedCreativeId] = useState<number | null>(null)
+  const [performance, setPerformance] = useState<LaunchScorePerformanceApiPayload | null>(null)
   const skipNextFetchRef = useRef(false)
+  const lastFetchedOfferIdRef = useRef<string | null>(null)
 
   const numericOfferId = offerId ? Number(offerId) : NaN
-  const campaignConfigQueryKey = serializeLaunchScoreCampaignConfigQueryKey(
-    searchParams ?? new URLSearchParams()
-  )
   const hashCampaignConfig = useMemo((): LaunchScoreHashCampaignConfigClient | undefined => {
     if (!Number.isFinite(numericOfferId)) {
       return undefined
@@ -83,32 +83,16 @@ export default function LaunchScorePage() {
       numericOfferId,
       searchParams ?? new URLSearchParams()
     )
-  }, [numericOfferId, campaignConfigQueryKey])
+  }, [numericOfferId, searchParams])
 
   const effectiveCreativeId =
     creativeId ?? (resolvedCreativeId != null ? String(resolvedCreativeId) : null)
 
-  const performanceOptions = useMemo(
-    () => ({
-      creativeId: effectiveCreativeId,
-      daysBack: 30,
-      campaignConfig: hashCampaignConfig,
-    }),
-    [effectiveCreativeId, hashCampaignConfig]
-  )
-
-  const {
-    hasPerformanceData,
-    performanceData,
-    comparisons,
-    adjustedRecommendations,
-    accuracyScore,
-    message: performanceMessage,
-    isLoading: performanceLoading,
-  } = useLaunchScorePerformance(
-    launchScore && offerId ? offerId : null,
-    performanceOptions
-  )
+  const hasPerformanceData = performance?.hasPerformanceData === true
+  const performanceData = performance?.performanceData ?? null
+  const comparisons = performance?.comparisons
+  const adjustedRecommendations = performance?.adjustedRecommendations
+  const performanceMessage = performance?.message
 
   const loadCreativeById = useCallback(async (id: string) => {
     const creativeRes = await fetch(`/api/creatives/${id}`, {
@@ -122,9 +106,19 @@ export default function LaunchScorePage() {
 
   const fetchData = useCallback(async () => {
     try {
+      setLoading(true)
       setError('')
       setStale(false)
       setStaleMessage('')
+      setPerformance(null)
+
+      if (offerId && lastFetchedOfferIdRef.current !== offerId) {
+        setResolvedCreativeId(null)
+        lastFetchedOfferIdRef.current = offerId
+      }
+      if (!creativeId) {
+        setResolvedCreativeId(null)
+      }
       // HttpOnly Cookie自动携带，无需手动操作
 
       // 获取Offer信息
@@ -174,6 +168,11 @@ export default function LaunchScorePage() {
         if (scoreData.launchScore) {
           setLaunchScore(scoreData.launchScore)
           setStale(false)
+          if (scoreData.performance) {
+            setPerformance(scoreData.performance)
+          } else {
+            setPerformance(null)
+          }
           if (scoreData.analysis) {
             setAnalysis(scoreData.analysis)
           } else {
@@ -182,6 +181,7 @@ export default function LaunchScorePage() {
         } else {
           setLaunchScore(null)
           setAnalysis(null)
+          setPerformance(null)
           if (scoreData.stale) {
             setStale(true)
             setStaleMessage(
@@ -193,6 +193,7 @@ export default function LaunchScorePage() {
         const scoreData = await scoreRes.json().catch(() => ({}))
         setLaunchScore(null)
         setAnalysis(null)
+        setPerformance(null)
         if (scoreRes.status === 404) {
           setError(scoreData.error || '创意不存在或无权访问')
         }
@@ -203,10 +204,6 @@ export default function LaunchScorePage() {
       setLoading(false)
     }
   }, [offerId, creativeId, hashCampaignConfig, loadCreativeById, router])
-
-  useEffect(() => {
-    setResolvedCreativeId(null)
-  }, [offerId])
 
   useEffect(() => {
     if (!offerId) {
@@ -257,6 +254,8 @@ export default function LaunchScorePage() {
         },
         body: JSON.stringify({
           creativeId: Number(effectiveCreativeId),
+          includePerformance: true,
+          daysBack: 30,
           ...(hashCampaignConfig ? { campaignConfig: hashCampaignConfig } : {}),
         }),
       })
@@ -270,10 +269,13 @@ export default function LaunchScorePage() {
       setLaunchScore(data.launchScore)
       setStale(false)
       setStaleMessage('')
-      if (data.launchScore?.id) {
-        await fetchAnalysis(data.launchScore.id)
-      } else if (data.analysis?.overallRecommendations) {
+      if (data.performance) {
+        setPerformance(data.performance)
+      }
+      if (data.analysis) {
         setAnalysis(data.analysis)
+      } else if (data.launchScore?.id) {
+        await fetchAnalysis(data.launchScore.id)
       }
       showSuccess('计算完成', 'Launch Score已计算完成')
     } catch (err: any) {
@@ -397,6 +399,12 @@ export default function LaunchScorePage() {
           {staleMessage && (
             <div className="mb-6 px-4 py-3 bg-yellow-50 border border-yellow-400 text-yellow-800 rounded">
               {staleMessage}
+            </div>
+          )}
+
+          {!hashCampaignConfig && effectiveCreativeId && (
+            <div className="mb-6 px-4 py-3 bg-blue-50 border border-blue-200 text-blue-800 rounded text-body-sm">
+              未携带 Step3 投放配置（预算/关键词）。评分与缓存将使用默认配置，可能与发布时的分数不一致；建议从投放流程 Step4 进入或先完成 Step3 配置。
             </div>
           )}
 
@@ -586,7 +594,7 @@ export default function LaunchScorePage() {
               {/* 预测 vs 实际表现（已发布广告） */}
               <div className="bg-white shadow rounded-lg p-6">
                 <h2 className="text-h4 mb-4">预测 vs 实际表现</h2>
-                {performanceLoading ? (
+                {loading && launchScore ? (
                   <p className="text-body-sm text-muted-foreground">加载投放表现数据...</p>
                 ) : hasPerformanceData && performanceData ? (
                   <div className="space-y-6">
@@ -616,12 +624,6 @@ export default function LaunchScorePage() {
                         </p>
                       </div>
                     </div>
-
-                    {typeof accuracyScore === 'number' && accuracyScore > 0 && (
-                      <p className="text-body-sm text-muted-foreground">
-                        预测准确度参考：{accuracyScore.toFixed(0)}%
-                      </p>
-                    )}
 
                     {comparisons && comparisons.length > 0 && (
                       <div className="overflow-x-auto">
