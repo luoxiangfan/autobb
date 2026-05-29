@@ -88,7 +88,22 @@ describe('regenerateAdCreative', () => {
       history: [],
       selectedEvaluation: {
         passed: true,
-        adStrength: { finalScore: 80, finalRating: 'GOOD' },
+        adStrength: {
+          finalScore: 80,
+          finalRating: 'GOOD',
+          localEvaluation: {
+            dimensions: {
+              relevance: { score: 10 },
+              quality: { score: 10 },
+              completeness: { score: 10 },
+              diversity: { score: 10 },
+              compliance: { score: 10 },
+              brandSearchVolume: { score: 10 },
+              competitivePositioning: { score: 10 },
+            },
+          },
+          combinedSuggestions: [],
+        },
         reasons: [],
       },
     })
@@ -117,6 +132,15 @@ describe('regenerateAdCreative', () => {
       96,
       expect.objectContaining({
         generation_mode: 'fast',
+        score: 80,
+        score_breakdown: expect.objectContaining({
+          relevance: 10,
+          quality: 10,
+        }),
+        adStrength: expect.objectContaining({
+          rating: 'GOOD',
+          score: 80,
+        }),
       })
     )
     expect(result.campaignConfig).toMatchObject({

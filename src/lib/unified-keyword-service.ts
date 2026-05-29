@@ -1666,17 +1666,6 @@ export function filterByWhitelist<T extends { keyword: string }>(
   }
 }
 
-/**
- * 白名单过滤（简化版，向后兼容）
- * @deprecated 建议使用 filterByWhitelist 获取完整结果
- */
-export function filterByWhitelistSimple<T extends { keyword: string }>(
-  keywords: T[],
-  brandName: string
-): T[] {
-  return filterByWhitelist(keywords, brandName).filtered
-}
-
 // ============================================
 // 智能过滤和排序
 // ============================================
@@ -2204,7 +2193,7 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
  *
  * 调用方须传入 `offerId` 或 `linkedServiceAccountId`，并优先传入
  * `loadKeywordPoolExpandCredentialsForOffer` 的 `plannerSession`，避免重复 prepare/heal。
- * 当前生产入口：`/api/ad-groups/[id]/generate-keywords`。
+ * 生产入口：Launch 创意生成 / 发布流程（`getUnifiedKeywordData` 由 offer-keyword-pool 与发布链路调用）。
  */
 export async function getUnifiedKeywordData(params: KeywordServiceParams): Promise<UnifiedKeywordResult> {
   const {
@@ -2941,7 +2930,7 @@ export async function expandKeywordsWithSeeds(params: {
 
     // 白名单过滤（如果有品牌名）
     if (brandName) {
-      results = filterByWhitelistSimple(results, brandName)
+      results = filterByWhitelist(results, brandName).filtered
     }
 
     // 搜索量过滤

@@ -896,15 +896,17 @@ export async function createAdCreative(
       ? JSON.stringify(finalKeywordsWithVolume)
       : null
 
-  // 如果外部传入了score，优先使用（来自Ad Strength评估）
-  // 否则使用旧的评分算法计算（向后兼容）
-  const scoreResult = data.score && data.score_breakdown
-    ? {
-        total_score: data.score,
-        breakdown: data.score_breakdown,
-        explanation: data.explanation || '由Ad Strength评估系统生成'
-      }
-    : await calculateAdCreativeScore(data, offerId)
+  if (data.score == null || !data.score_breakdown) {
+    throw new Error(
+      'createAdCreative 需要 Ad Strength 评分（score 与 score_breakdown），请先完成 evaluateCreativeAdStrength'
+    )
+  }
+
+  const scoreResult = {
+    total_score: data.score,
+    breakdown: data.score_breakdown,
+    explanation: data.explanation || '由Ad Strength评估系统生成',
+  }
 
   const isDeletedFalseSql = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
   const isDeletedFalseValueSql = db.type === 'sqlite' ? '0' : 'FALSE'
@@ -1367,158 +1369,6 @@ export function normalizeCallouts(input: unknown): string[] | undefined {
     .map((v) => v.substring(0, 25)) // Callout text max length
 
   return normalized.length > 0 ? normalized : undefined
-}
-
-/**
- * 计算广告创意评分
- *
- * @deprecated 该评分算法已废弃，请使用 evaluateCreativeAdStrength (Ad Strength评估系统)
- * @see evaluateCreativeAdStrength in @/lib/scoring
- *
- * 评分维度（旧版）：
- * 1. 相关性 (30分) - 与Offer产品的相关程度
- * 2. 质量 (25分) - Headlines和Descriptions的质量
- * 3. 吸引力 (25分) - 用户点击的吸引程度
- * 4. 多样性 (10分) - Headlines和Descriptions的多样性
- * 5. 清晰度 (10分) - 信息传达的清晰程度
- */
-export async function calculateAdCreativeScore(
-  data: GeneratedAdCreativeData & { final_url: string },
-  offerId: number
-): Promise<{
-  total_score: number
-  breakdown: {
-    relevance: number
-    quality: number
-    engagement: number
-    diversity: number
-    clarity: number
-  }
-  explanation: string
-}> {
-  // 警告：旧评分算法已废弃
-  console.warn('⚠️ calculateAdCreativeScore已废弃，建议使用Ad Strength评估系统 (evaluateCreativeAdStrength)')
-
-  const db = await getDatabase()
-
-  // 获取Offer数据用于相关性评分
-  const offer = await db.queryOne(`
-    SELECT brand, category, brand_description, unique_selling_points,
-           product_highlights, target_audience
-    FROM offers WHERE id = ?
-  `, [offerId]) as any
-
-  // 1. 相关性评分 (0-30分)
-  let relevanceScore = 0
-  const offerKeywords = [
-    offer.brand,
-    offer.category,
-    ...(offer.unique_selling_points || '').split(/[,;、]/),
-    ...(offer.product_highlights || '').split(/[,;、]/)
-  ].filter(k => k && k.trim().length > 0)
-
-  // 检查headlines和descriptions是否包含Offer关键信息
-  const allCreativeText = [
-    ...data.headlines,
-    ...data.descriptions,
-    ...data.keywords
-  ].join(' ').toLowerCase()
-
-  let matchCount = 0
-  for (const keyword of offerKeywords) {
-    if (keyword && allCreativeText.includes(keyword.toLowerCase().trim())) {
-      matchCount++
-    }
-  }
-  relevanceScore = Math.min(30, (matchCount / Math.max(offerKeywords.length, 1)) * 30)
-
-  // 2. 质量评分 (0-25分)
-  let qualityScore = 0
-
-  // Headlines质量：长度适中（15-30字符）、包含数字或特殊符号、无重复
-  const headlineQuality = data.headlines.reduce((sum, h) => {
-    let score = 5
-    const len = h.length
-    if (len >= 15 && len <= 30) score += 2
-    if (/\d/.test(h)) score += 1 // 包含数字
-    if (/[%$￥€£!]/.test(h)) score += 1 // 包含特殊符号
-    return sum + Math.min(score, 10)
-  }, 0) / data.headlines.length
-
-  // Descriptions质量：长度适中（60-90字符）、包含行动号召
-  const descQuality = data.descriptions.reduce((sum, d) => {
-    let score = 5
-    const len = d.length
-    if (len >= 60 && len <= 90) score += 3
-    if (/立即|马上|现在|限时|免费|优惠|buy now|order|get/i.test(d)) score += 2
-    return sum + Math.min(score, 10)
-  }, 0) / data.descriptions.length
-
-  qualityScore = (headlineQuality + descQuality) / 2 * 2.5 // 转换为25分制
-
-  // 3. 吸引力评分 (0-25分)
-  let engagementScore = 15 // 基础分
-
-  // 使用问句或感叹号
-  if (data.headlines.some(h => /[?？!！]/.test(h))) engagementScore += 3
-
-  // 包含优惠相关词汇
-  const promoWords = ['优惠', '折扣', '免费', '限时', 'sale', 'discount', 'free', 'limited']
-  if (promoWords.some(w => allCreativeText.includes(w))) engagementScore += 3
-
-  // 包含紧迫感词汇
-  const urgencyWords = ['现在', '立即', '今日', '仅限', 'now', 'today', 'only']
-  if (urgencyWords.some(w => allCreativeText.includes(w))) engagementScore += 4
-
-  engagementScore = Math.min(25, engagementScore)
-
-  // 4. 多样性评分 (0-10分)
-  const uniqueHeadlines = new Set(data.headlines).size
-  const uniqueDescriptions = new Set(data.descriptions).size
-  const diversityScore = Math.min(10,
-    (uniqueHeadlines / data.headlines.length) * 5 +
-    (uniqueDescriptions / data.descriptions.length) * 5
-  )
-
-  // 5. 清晰度评分 (0-10分)
-  let clarityScore = 10
-
-  // Headlines过长扣分
-  if (data.headlines.some(h => h.length > 30)) clarityScore -= 2
-
-  // Descriptions过长扣分
-  if (data.descriptions.some(d => d.length > 90)) clarityScore -= 2
-
-  // 关键词过多扣分
-  if (data.keywords.length > 20) clarityScore -= 2
-
-  clarityScore = Math.max(0, clarityScore)
-
-  // 计算总分
-  const totalScore = Math.round(
-    relevanceScore + qualityScore + engagementScore + diversityScore + clarityScore
-  )
-
-  // 生成评分说明
-  const explanation = `
-相关性 ${relevanceScore.toFixed(1)}/30: ${relevanceScore >= 24 ? '与产品高度相关' : relevanceScore >= 18 ? '相关性良好' : '相关性有待提升'}
-质量 ${qualityScore.toFixed(1)}/25: ${qualityScore >= 20 ? '文案质量优秀' : qualityScore >= 15 ? '文案质量良好' : '文案质量需优化'}
-吸引力 ${engagementScore.toFixed(1)}/25: ${engagementScore >= 20 ? '极具吸引力' : engagementScore >= 15 ? '有一定吸引力' : '吸引力不足'}
-多样性 ${diversityScore.toFixed(1)}/10: ${diversityScore >= 8 ? '变化丰富' : diversityScore >= 6 ? '变化适中' : '变化较少'}
-清晰度 ${clarityScore.toFixed(1)}/10: ${clarityScore >= 8 ? '表达清晰' : clarityScore >= 6 ? '表达尚可' : '表达不够清晰'}
-  `.trim()
-
-  return {
-    total_score: totalScore,
-    breakdown: {
-      relevance: Math.round(relevanceScore * 10) / 10,
-      quality: Math.round(qualityScore * 10) / 10,
-      engagement: Math.round(engagementScore * 10) / 10,
-      diversity: Math.round(diversityScore * 10) / 10,
-      clarity: Math.round(clarityScore * 10) / 10,
-    },
-    explanation
-  }
 }
 
 /**

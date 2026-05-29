@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/auth'
-import { unlockAccount } from '@/lib/auth-security'
+import { enableAccount } from '@/lib/auth-security'
 import { logAuditEvent, AuditEventType } from '@/lib/audit-logger'
 
 /**
@@ -16,7 +16,7 @@ export const POST = withAuth(
       }
 
       // 执行解锁
-      await unlockAccount(userId)
+      await enableAccount(userId)
 
       // 记录审计日志
       const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'

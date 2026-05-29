@@ -45,8 +45,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 注意：已移除CAPTCHA验证逻辑，改为3次失败后直接禁用账户（需管理员手动启用）
-
     // 登录 (支持用户名或邮箱，增强安全版本)
     const result = await loginWithPassword(username, password, ipAddress, userAgent)
 

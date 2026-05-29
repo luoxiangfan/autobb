@@ -581,7 +581,7 @@ async function scrapeStorePageContent(
 
   if (needPhase2) {
     console.log(`📦 阶段2: 批量抓取产品详情页`)
-    await batchScrapeProductDetails(page, products, productAsins, effectiveProxyUrl)
+    await scrapeStoreProductDetailsIntoList(products, productAsins, effectiveProxyUrl)
   }
 
   // Phase 3: If still no products, try scraping from categories
@@ -615,7 +615,7 @@ async function scrapeStorePageContent(
 
       if (productAsins.size > 0) {
         console.log(`📦 阶段3: 批量抓取产品详情页`)
-        await batchScrapeProductDetails(page, products, productAsins, effectiveProxyUrl)
+        await scrapeStoreProductDetailsIntoList(products, productAsins, effectiveProxyUrl)
       }
     }
   }
@@ -1119,18 +1119,12 @@ async function batchScrapeProductDetailsComplete(
   return results
 }
 
-/**
- * @deprecated 旧版轻量级抓取函数，已被 batchScrapeProductDetailsComplete 替代
- * 保留以兼容旧代码，但建议使用新函数
- */
-async function batchScrapeProductDetails(
-  page: Page,
+async function scrapeStoreProductDetailsIntoList(
   products: AmazonStoreData['products'],
   productAsins: Set<string>,
   effectiveProxyUrl: string,
   targetCountry?: string
 ): Promise<void> {
-  // 调用新的完整抓取函数
   const completeProducts = await batchScrapeProductDetailsComplete(
     productAsins,
     effectiveProxyUrl,
@@ -1138,7 +1132,6 @@ async function batchScrapeProductDetails(
     10
   )
 
-  // 转换为旧格式并添加到products数组
   for (const p of completeProducts) {
     products.push({
       name: p.productName || `Product ${p.asin}`,
@@ -1149,7 +1142,6 @@ async function batchScrapeProductDetails(
       promotion: null,
       badge: p.badge || null,
       isPrime: p.primeEligible || false,
-      // 🔥 新增：保留完整数据用于hotScore计算
       salesRank: p.salesRank || null,
       features: p.features || [],
     })

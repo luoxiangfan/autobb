@@ -206,14 +206,6 @@ export async function enableAccount(userId: number): Promise<void> {
 }
 
 /**
- * @deprecated 使用 enableAccount 代替
- * 保留此函数以兼容旧代码
- */
-export async function unlockAccount(userId: number): Promise<void> {
-  return enableAccount(userId)
-}
-
-/**
  * 获取IP的登录尝试次数（用于IP级别的速率限制检测）
  */
 export async function getIpLoginAttempts(

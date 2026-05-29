@@ -23,6 +23,11 @@ import { findOfferById } from './offers'
 import { resolveKeywordPoolForCreativeGeneration } from './offer-keyword-pool'
 import { deriveSkipKeywordPoolExpandLoad } from './parse-offer-id'
 import {
+  createCreativeAdStrengthPayload,
+  createCreativeScoreBreakdown,
+  resolveCreativeKeywordAudit,
+} from './creative-keyword-runtime'
+import {
   getCreativeTypeForBucketSlot,
   normalizeCreativeBucketSlot,
   type CreativeBucketSlot,
@@ -197,6 +202,10 @@ export async function regenerateAdCreative(
 
     console.log('[Ad Creative Regenerator] Saving new creative to database...')
 
+    const selectedEvaluation = generationResult.selectedEvaluation
+    const bestEvaluation = selectedEvaluation.adStrength
+    const creativeAudit = resolveCreativeKeywordAudit(generatedCreative)
+
     const newCreative = await createAdCreative(
       userId,
       offerId,
@@ -208,6 +217,9 @@ export async function regenerateAdCreative(
         keyword_bucket: bucket ?? generatedCreative.keyword_bucket ?? undefined,
         bucket_intent: bucketIntent ?? generatedCreative.bucket_intent ?? undefined,
         creative_type: bucket ? getCreativeTypeForBucketSlot(bucket) : undefined,
+        score: bestEvaluation.finalScore,
+        score_breakdown: createCreativeScoreBreakdown(bestEvaluation, { allowPartialMetrics: true }),
+        adStrength: createCreativeAdStrengthPayload(bestEvaluation, creativeAudit),
       }
     )
 
