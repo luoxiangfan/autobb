@@ -56,7 +56,6 @@ async function main() {
 
     // 删除所有 pending 队列
     const taskTypes = [
-      'scrape',
       'offer-extraction',
       'batch-offer-creation',
       'offer-creation',

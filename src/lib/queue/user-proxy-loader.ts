@@ -97,7 +97,7 @@ type ParsedProxyEndpoint = {
 
 /**
  * 需要代理的任务类型
- * - scrape: 网页抓取需要代理以避免IP封禁
+ * - offer-extraction: 网页抓取需要代理以避免 IP 封禁
  *
  * 不需要代理的任务类型：
  * - ai-analysis: AI分析调用内部API，不需要代理

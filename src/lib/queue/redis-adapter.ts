@@ -689,7 +689,6 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
 
     // 4. 删除所有类型的pending队列
     const taskTypes = [
-      'scrape',
       'ai-analysis',
       'offer-extraction',
       'batch-offer-creation',

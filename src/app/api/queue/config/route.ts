@@ -26,7 +26,6 @@ const DEFAULT_QUEUE_CONFIG = {
   globalConcurrency: 999,  // 🔥 全局并发提升至999（补点击需求）
   perUserConcurrency: 999,  // 🔥 单用户并发提升至999（补点击需求）
   perTypeConcurrency: {
-    scrape: 3,
     'ai-analysis': 2,
     sync: 1,
     backup: 1,
@@ -58,7 +57,6 @@ const DEFAULT_QUEUE_CONFIG = {
 }
 
 const ALL_TASK_TYPES = [
-  'scrape',
   'ai-analysis',
   'sync',
   'backup',

@@ -50,7 +50,6 @@ async function clearRedisQueue() {
       `${KEY_PREFIX}pending:all`,
       `${KEY_PREFIX}pending:offer-extraction`,
       `${KEY_PREFIX}pending:batch-offer-creation`,
-      `${KEY_PREFIX}pending:scrape`,
       `${KEY_PREFIX}pending:sync`,
       `${KEY_PREFIX}pending:ai-analysis`,
       `${KEY_PREFIX}pending:backup`,

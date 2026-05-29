@@ -11,15 +11,14 @@
  * await queue.start()
  *
  * // 2. 注册执行器
- * queue.registerExecutor('scrape', async (task) => {
- *   // 执行网页抓取
+ * queue.registerExecutor('offer-extraction', async (task) => {
+ *   // 执行 Offer 提取
  *   return result
  * })
  *
  * // 3. 添加任务
- * await queue.enqueue('scrape', { url: 'https://example.com' }, userId, {
+ * await queue.enqueue('offer-extraction', { offerId: 1 }, userId, {
  *   priority: 'high',
- *   requireProxy: true
  * })
  * ```
  */

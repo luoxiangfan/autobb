@@ -1366,7 +1366,6 @@ async function clearRedisAllUnfinishedTasks(): Promise<{
 
     // 4. 删除所有类型的pending队列
     const taskTypes = [
-      'scrape',
       'offer-extraction',
       'batch-offer-creation',
       'offer-creation',

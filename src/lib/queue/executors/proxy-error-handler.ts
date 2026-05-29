@@ -6,7 +6,7 @@
  * - url-swap-executor（换链接任务）
  * - click-farm-executor（补点击任务）
  * - link-check-executor（链接检查任务）
- * - scrape-executor（网页抓取任务）
+ * - offer-extraction-executor（Offer 提取任务）
  */
 
 export interface ProxyErrorAnalysis {

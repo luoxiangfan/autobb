@@ -158,7 +158,6 @@ export class UnifiedQueueManager {
       globalConcurrency: config.globalConcurrency || 999,    // 🔥 全局并发提升至999（补点击需求）
       perUserConcurrency: config.perUserConcurrency || 999,  // 🔥 单用户并发提升至999（补点击需求）
       perTypeConcurrency: config.perTypeConcurrency || {
-        scrape: 3,
         'ai-analysis': 2,
         sync: 1,
         backup: 1,

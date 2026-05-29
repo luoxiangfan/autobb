@@ -54,7 +54,6 @@ interface QueueStats {
 
 // 任务类型并发配置
 interface PerTypeConcurrency {
-  scrape: number
   'ai-analysis': number
   sync: number
   backup: number
@@ -78,7 +77,6 @@ interface PerTypeConcurrency {
 
 // 任务类型中文名称映射
 const TASK_TYPE_LABELS: Record<string, string> = {
-  'scrape': '网页抓取',
   'ai-analysis': 'AI分析',
   'sync': '数据同步',
   'backup': '数据备份',
@@ -399,7 +397,6 @@ export default function QueueManagementPage() {
       globalConcurrency: optimalGlobalConcurrency,
       perUserConcurrency: optimalPerUserConcurrency,
       perTypeConcurrency: {
-        scrape: 3,
         'ai-analysis': 2,
         sync: 1,
         backup: 1,
