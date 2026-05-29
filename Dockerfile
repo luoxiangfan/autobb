@@ -3,7 +3,7 @@
 # 使用supervisord管理所有进程，对外只暴露80端口
 
 # ============================================
-# Stage 1: 依赖阶段
+# Stage 1: 生产依赖（原生模块编译）
 # ============================================
 FROM node:20-bookworm-slim AS deps
 
@@ -11,8 +11,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     make \
     g++ \
-    bash \
-    git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -20,30 +18,35 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --only=production && \
-    npm cache clean --force
+    npm ci --omit=dev
 
 # ============================================
-# Stage 2: 构建阶段
+# Stage 2: 构建阶段（与 deps 同基础镜像，避免 alpine 原生模块差异）
 # ============================================
-FROM node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# 安装所有依赖（包括devDependencies）
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
-# 复制源代码
-COPY . .
+# 先复制构建配置与源码，依赖层在仅改业务代码时可复用
+COPY next.config.js tsconfig.json tailwind.config.ts postcss.config.js build-scheduler.js ./
+COPY public ./public
+COPY src ./src
+COPY openclaw/package.json openclaw/.source-commit ./openclaw/
+COPY openclaw-prebuilt/.build-meta.json ./openclaw-prebuilt/
 
-# Next.js环境变量
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# 构建Next.js应用
 RUN npm run build
-
-# 构建调度器
 RUN node build-scheduler.js
 
 # ============================================
@@ -59,8 +62,6 @@ FROM node:20-bookworm-slim AS openclaw-runtime
 WORKDIR /opt/openclaw
 ARG TARGETARCH
 
-# 先在中间层清理非 Linux 平台依赖，再拷贝到最终镜像。
-# 这样被删除文件不会进入最终镜像层，能直接减少拉取体积。
 COPY openclaw-prebuilt ./openclaw-prebuilt
 
 RUN set -eux; \
@@ -110,7 +111,7 @@ FROM node:20-bookworm-slim AS runner
 
 WORKDIR /app
 
-# 安装Nginx、Supervisor、Python和Playwright依赖
+# Playwright 系统依赖（与下方 install chromium 配合，勿使用 --with-deps 避免重复安装）
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
@@ -119,7 +120,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
     python3-venv \
-    # Playwright浏览器依赖
     libnss3 \
     libnspr4 \
     libatk1.0-0 \
@@ -140,11 +140,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxshmfence1 \
     && rm -rf /var/lib/apt/lists/*
 
-# 设置时区为上海
 ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# 设置生产环境
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
@@ -154,72 +152,52 @@ ENV NODE_MAX_OLD_SPACE_SIZE_SCHEDULER=2048
 ENV NODE_MAX_OLD_SPACE_SIZE_BACKGROUND_WORKER=2048
 ENV NODE_MAX_OLD_SPACE_SIZE_OPENCLAW=1536
 
-# 创建非root用户
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# 复制Nginx配置
 COPY --chown=root:root nginx.conf /etc/nginx/nginx.conf
-
-# 复制Supervisord配置
 COPY --chown=root:root supervisord.conf /etc/supervisord.conf
 
-# 复制Next.js standalone输出
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# 复制打包后的调度器
 COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
 
-# 复制 OpenClaw 预编译产物（dist + openclaw.mjs）
-# 使用瘦身阶段产物，避免把非 Linux 依赖带入生产镜像。
 COPY --from=openclaw-runtime --chown=nextjs:nodejs /opt/openclaw/openclaw-prebuilt /app/openclaw
-
-# 复制 Node 22 二进制（用于 OpenClaw Gateway）
 COPY --from=node22 /usr/local/bin/node /usr/local/bin/node22
 
-# 校验 OpenClaw 预编译产物存在
 RUN test -f /app/openclaw/dist/entry.js && \
     (test -f /app/openclaw/docs/reference/templates/AGENTS.md \
       || test -f /app/openclaw/workspace-templates/AGENTS.md)
 
-# 复制数据库迁移文件（初始化需要）
-COPY --from=builder --chown=nextjs:nodejs /app/migrations ./migrations
-COPY --from=builder --chown=nextjs:nodejs /app/pg-migrations ./pg-migrations
+# 迁移文件直接从构建上下文复制，避免无关源码变更使 builder 层失效
+COPY --chown=nextjs:nodejs migrations ./migrations
+COPY --chown=nextjs:nodejs pg-migrations ./pg-migrations
 
-# 复制启动脚本
-COPY --from=builder --chown=root:root /app/scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY --chown=root:root scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# 复制生产依赖（调度器需要better-sqlite3等原生模块）
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
-# 设置Playwright缓存目录到应用目录
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright
 
-# 安装Playwright浏览器（使用node_modules中的playwright）
-RUN node ./node_modules/playwright/cli.js install chromium --with-deps && \
+# 系统库已由 apt 安装；省略 --with-deps 可显著减小层体积并缩短构建时间
+RUN node ./node_modules/playwright/cli.js install chromium && \
     chown -R nextjs:nodejs /app/.playwright
 
-# 安装Python依赖（Google Ads API服务）
 COPY python-service/requirements.txt /app/python-service/
-RUN python3 -m pip install --no-cache-dir --break-system-packages -r /app/python-service/requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python3 -m pip install --no-cache-dir --break-system-packages -r /app/python-service/requirements.txt
 
-# 复制Python服务代码
 COPY --chown=nextjs:nodejs python-service /app/python-service
 
-# 创建必要的目录（避免对 /app 整体递归 chown 产生超大 layer）
 RUN mkdir -p /var/log/nginx /var/lib/nginx/tmp /var/run /app/data /app/.openclaw/workspace && \
     chown -R www-data:www-data /var/log/nginx /var/lib/nginx /var/run && \
     chown -R nextjs:nodejs /app/data /app/.openclaw
 
-# 暴露80端口（Nginx）
 EXPOSE 80
 
-# 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
     CMD curl -fsS http://localhost/api/health >/dev/null || exit 1
 
-# 使用入口脚本启动（先初始化数据库，再启动supervisord）
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
