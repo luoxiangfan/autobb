@@ -15,6 +15,7 @@ export const defaultOAuthAuthContext = {
   assignment: null,
   isShared: false,
   canModify: true,
+  dualStack: false,
   auth: { authType: 'oauth' as const },
   oauthCredentials: {
     refresh_token: 'oauth-refresh-token',

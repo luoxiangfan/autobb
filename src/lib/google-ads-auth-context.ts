@@ -29,12 +29,35 @@ export interface GoogleAdsAuthContext {
   assignment: GoogleAdsAuthAssignment | null
   isShared: boolean
   canModify: boolean
+  /** OAuth refresh_token 与活跃服务账号同时存在（历史双栈残留） */
+  dualStack: boolean
   auth: {
     authType: 'oauth' | 'service_account'
     serviceAccountId?: string
   }
   oauthCredentials: Awaited<ReturnType<typeof getGoogleAdsCredentials>>
   serviceAccountConfig: Awaited<ReturnType<typeof getServiceAccountConfig>>
+}
+
+async function resolveDualStackOnOwner(ownerUserId: number): Promise<{
+  hasOAuthRefresh: boolean
+  hasActiveServiceAccount: boolean
+  dualStack: boolean
+}> {
+  const credentials = await getGoogleAdsCredentialsRaw(ownerUserId)
+  const db = await getDatabase()
+  const isActiveCondition = boolCondition('is_active', true, db.type)
+  const existingSa = await db.queryOne<{ id: string }>(
+    `SELECT id FROM google_ads_service_accounts WHERE user_id = ? AND ${isActiveCondition} LIMIT 1`,
+    [ownerUserId]
+  )
+  const hasOAuthRefresh = Boolean(credentials?.refresh_token)
+  const hasActiveServiceAccount = Boolean(existingSa)
+  return {
+    hasOAuthRefresh,
+    hasActiveServiceAccount,
+    dualStack: hasOAuthRefresh && hasActiveServiceAccount,
+  }
 }
 
 export interface GoogleAdsApiAuthFields {
@@ -61,12 +84,15 @@ async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthCo
     serviceAccountConfig = await getServiceAccountConfig(userId, auth.serviceAccountId, resolution)
   }
 
+  const { dualStack } = await resolveDualStackOnOwner(ownerUserId)
+
   return {
     userId,
     ownerUserId,
     assignment,
     isShared,
     canModify: !isGoogleAdsAuthShared(assignment),
+    dualStack,
     auth,
     oauthCredentials,
     serviceAccountConfig,
@@ -107,11 +133,30 @@ export function resolveEffectiveServiceAccountId(
 }
 
 export function hasConfiguredGoogleAdsAuthFromContext(ctx: GoogleAdsAuthContext): boolean {
+  if (ctx.dualStack) {
+    return false
+  }
+
+  if (ctx.assignment?.assignmentMode === 'shared_admin') {
+    if (ctx.assignment.authType === 'service_account') {
+      return Boolean(resolveEffectiveServiceAccountId(undefined, ctx))
+    }
+    return Boolean(ctx.oauthCredentials?.refresh_token)
+  }
+
   if (ctx.auth.authType === 'oauth') {
     return Boolean(ctx.oauthCredentials?.refresh_token)
   }
 
   return Boolean(resolveEffectiveServiceAccountId(undefined, ctx))
+}
+
+/**
+ * 是否已配置可用认证（与 FromContext 一致，含双栈与共享 assignment 语义）。
+ */
+export async function hasConfiguredGoogleAdsAuth(userId: number): Promise<boolean> {
+  const ctx = await getGoogleAdsAuthContext(userId)
+  return hasConfiguredGoogleAdsAuthFromContext(ctx)
 }
 
 export function getServiceAccountMccFromContext(ctx: GoogleAdsAuthContext): string | undefined {
@@ -196,22 +241,7 @@ export async function detectGoogleAdsDualStackCredentials(userId: number): Promi
   dualStack: boolean
 }> {
   const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
-  const db = await getDatabase()
-  const isActiveCondition = boolCondition('is_active', true, db.type)
-
-  const credentials = await getGoogleAdsCredentialsRaw(ownerUserId)
-  const existingSa = await db.queryOne<{ id: string }>(
-    `SELECT id FROM google_ads_service_accounts WHERE user_id = ? AND ${isActiveCondition} LIMIT 1`,
-    [ownerUserId]
-  )
-
-  const hasOAuthRefresh = Boolean(credentials?.refresh_token)
-  const hasActiveServiceAccount = Boolean(existingSa)
-  return {
-    hasOAuthRefresh,
-    hasActiveServiceAccount,
-    dualStack: hasOAuthRefresh && hasActiveServiceAccount,
-  }
+  return resolveDualStackOnOwner(ownerUserId)
 }
 
 export async function assertNoConflictingGoogleAdsAuth(
@@ -292,7 +322,9 @@ export async function resolveGoogleAdsCredentialStatusFields(ctx: GoogleAdsAuthC
   const credentials = ctx.oauthCredentials
   const serviceAccount = ctx.serviceAccountConfig
   const hasServiceAccount = Boolean(serviceAccount)
-  const hasCredentials = Boolean(credentials?.refresh_token || hasServiceAccount)
+  const hasCredentials = ctx.dualStack
+    ? false
+    : Boolean(credentials?.refresh_token || hasServiceAccount)
 
   let developerToken = credentials?.developer_token ?? null
   let loginCustomerId = credentials?.login_customer_id ?? null

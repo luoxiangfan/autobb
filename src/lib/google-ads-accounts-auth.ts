@@ -1048,7 +1048,11 @@ export async function resolveAccountsRouteAuthBundle(params: {
 
     let serviceAccountConfig = authContext.serviceAccountConfig
     if (!serviceAccountConfig?.id || String(serviceAccountConfig.id) !== String(serviceAccountId)) {
-      serviceAccountConfig = await getServiceAccountConfig(userId, serviceAccountId)
+      serviceAccountConfig = await getServiceAccountConfig(userId, serviceAccountId, {
+        ownerUserId: authContext.ownerUserId,
+        assignment: authContext.assignment,
+        isShared: authContext.isShared,
+      })
     }
     if (!serviceAccountConfig) {
       return {

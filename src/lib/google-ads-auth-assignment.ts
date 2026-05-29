@@ -173,33 +173,14 @@ export async function resolveGoogleAdsApiAccessLevel(userId: number): Promise<st
 }
 
 /**
- * 判断用户是否已配置可用的 Google Ads 认证（支持管理员共享配置）。
- * 与 hasConfiguredGoogleAdsAuthFromContext 对齐：双栈残留视为未配置；共享用户按 assignment.authType 判定。
+ * 是否已配置可用认证（委托 auth-context，与 FromContext / 双栈 / 共享语义一致）。
  */
 export async function hasConfiguredGoogleAdsAuth(userId: number): Promise<boolean> {
-  const { ownerUserId, assignment } = await resolveGoogleAdsCredentialOwnerId(userId)
-
-  const oauth = await getRawGoogleAdsCredentials(ownerUserId)
-  const serviceAccount = await getRawActiveServiceAccount(ownerUserId)
-  const hasOAuthRefresh = Boolean(oauth?.refresh_token)
-  const hasActiveServiceAccount = serviceAccount !== null
-
-  if (hasOAuthRefresh && hasActiveServiceAccount) {
-    return false
-  }
-
-  if (assignment?.assignmentMode === 'shared_admin') {
-    if (assignment.authType === 'service_account') {
-      return hasActiveServiceAccount
-    }
-    return hasOAuthRefresh
-  }
-
-  if (hasOAuthRefresh) {
-    return true
-  }
-
-  return hasActiveServiceAccount
+  const { getGoogleAdsAuthContext, hasConfiguredGoogleAdsAuthFromContext } = await import(
+    './google-ads-auth-context'
+  )
+  const ctx = await getGoogleAdsAuthContext(userId)
+  return hasConfiguredGoogleAdsAuthFromContext(ctx)
 }
 
 export async function assertOwnCredentialsDifferFromAdmin(params: {

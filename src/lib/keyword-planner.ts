@@ -8,7 +8,7 @@ import { dateMinusDays } from './db-helpers'
 import { getCachedKeywordVolume, getBatchCachedVolumes, batchCacheVolumes } from './redis'
 import { decrypt } from './crypto'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
-import { refreshAccessToken, getGoogleAdsCredentials } from './google-ads-oauth'
+import { refreshAccessToken } from './google-ads-oauth'
 import {
   getGoogleAdsAuthContext,
   type GoogleAdsAuthContext,
@@ -164,9 +164,7 @@ export async function getGoogleAdsConfig(
     if (effectiveAuthType === 'oauth') {
       if (healedOAuth?.credentials) {
         const refreshToken =
-          healedOAuth.refreshToken ||
-          authContext.oauthCredentials?.refresh_token ||
-          (await getGoogleAdsCredentials(userId))?.refresh_token
+          healedOAuth.refreshToken || authContext.oauthCredentials?.refresh_token || ''
         if (!refreshToken) {
           console.error(
             `[KeywordPlanner] User ${userId} has no refresh token. Please authorize Google Ads API in Settings.`
@@ -189,7 +187,7 @@ export async function getGoogleAdsConfig(
         }
       }
 
-      const credentials = authContext.oauthCredentials ?? (await getGoogleAdsCredentials(userId))
+      const credentials = authContext.oauthCredentials
       if (!credentials?.refresh_token) {
         console.error(`[KeywordPlanner] User ${userId} has no refresh token. Please authorize Google Ads API in Settings.`)
         return null
@@ -209,15 +207,25 @@ export async function getGoogleAdsConfig(
     }
 
     // 2. 服务账号模式（含管理员共享服务账号）
-    const serviceAccount = await getServiceAccountConfig(userId, effectiveServiceAccountId)
+    const serviceAccount = await getServiceAccountConfig(
+      userId,
+      effectiveServiceAccountId,
+      existingContext
+        ? {
+            ownerUserId: authContext.ownerUserId,
+            assignment: authContext.assignment,
+            isShared: authContext.isShared,
+          }
+        : undefined
+    )
     if (serviceAccount) {
       console.log(`[KeywordPlanner] Using service account authentication for user ${userId}`)
       console.log(`[KeywordPlanner] MCC Customer ID: ${serviceAccount.mccCustomerId}`)
 
       const db = await getDatabase()
-      const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
+      const ownerUserId = authContext.ownerUserId
       const userConfigs = await readUserConfigs(db, ownerUserId)
-      const oauthCredentials = await getGoogleAdsCredentials(userId)
+      const oauthCredentials = authContext.oauthCredentials
 
       return {
         clientId: oauthCredentials?.client_id || userConfigs.client_id || 'placeholder-client-id',

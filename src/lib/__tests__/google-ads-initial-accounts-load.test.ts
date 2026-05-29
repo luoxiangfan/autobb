@@ -25,7 +25,7 @@ describe('runInitialGoogleAdsAccountsLoad', () => {
     expect(listServiceAccounts).not.toHaveBeenCalled()
   })
 
-  it('falls back to first service account when OAuth is not configured', async () => {
+  it('does not fall back to service account when OAuth is not configured', async () => {
     const refreshCredentialsStatus = vi.fn(async () => ({
       hasCredentials: false,
       authType: 'oauth' as const,
@@ -43,8 +43,57 @@ describe('runInitialGoogleAdsAccountsLoad', () => {
     })
 
     expect(fetchOAuthAccounts).not.toHaveBeenCalled()
-    expect(fetchServiceAccountAccounts).toHaveBeenCalledWith('sa-first', {
+    expect(fetchServiceAccountAccounts).not.toHaveBeenCalled()
+    expect(listServiceAccounts).not.toHaveBeenCalled()
+  })
+
+  it('stops after dual-stack warning without implicit SA fallback', async () => {
+    const onAuthConfigWarning = vi.fn()
+    const refreshCredentialsStatus = vi.fn(async () => ({
+      hasCredentials: true,
+      authType: 'oauth' as const,
+      serviceAccountId: null,
+      authConfigWarning: 'dual stack warning',
+    }))
+    const fetchOAuthAccounts = vi.fn(async () => {})
+    const fetchServiceAccountAccounts = vi.fn(async () => {})
+    const listServiceAccounts = vi.fn(async () => [{ id: 'sa-1' }])
+
+    await runInitialGoogleAdsAccountsLoad({
+      refreshCredentialsStatus,
+      fetchOAuthAccounts,
+      fetchServiceAccountAccounts,
+      listServiceAccounts,
+      onAuthConfigWarning,
+    })
+
+    expect(onAuthConfigWarning).toHaveBeenCalledWith('dual stack warning')
+    expect(fetchOAuthAccounts).not.toHaveBeenCalled()
+    expect(fetchServiceAccountAccounts).not.toHaveBeenCalled()
+    expect(listServiceAccounts).not.toHaveBeenCalled()
+  })
+
+  it('still loads SA accounts when dual-stack warning but authType is service_account', async () => {
+    const refreshCredentialsStatus = vi.fn(async () => ({
+      hasCredentials: true,
+      authType: 'service_account' as const,
+      serviceAccountId: 'sa-bound',
+      authConfigWarning: 'dual stack warning',
+    }))
+    const fetchOAuthAccounts = vi.fn(async () => {})
+    const fetchServiceAccountAccounts = vi.fn(async () => {})
+    const listServiceAccounts = vi.fn(async () => [])
+
+    await runInitialGoogleAdsAccountsLoad({
+      refreshCredentialsStatus,
+      fetchOAuthAccounts,
+      fetchServiceAccountAccounts,
+      listServiceAccounts,
+    })
+
+    expect(fetchServiceAccountAccounts).toHaveBeenCalledWith('sa-bound', {
       skipCredentialsRefresh: true,
     })
+    expect(fetchOAuthAccounts).not.toHaveBeenCalled()
   })
 })
