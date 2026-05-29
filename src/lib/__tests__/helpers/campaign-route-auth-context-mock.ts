@@ -2,7 +2,11 @@ export function hasConfiguredGoogleAdsAuthFromContextMock(ctx: {
   auth: { authType: string }
   oauthCredentials: { refresh_token?: string } | null
   serviceAccountConfig: { id?: string } | null
+  dualStack?: boolean
 }): boolean {
+  if (ctx.dualStack) {
+    return false
+  }
   if (ctx.auth.authType === 'oauth') {
     return Boolean(ctx.oauthCredentials?.refresh_token)
   }

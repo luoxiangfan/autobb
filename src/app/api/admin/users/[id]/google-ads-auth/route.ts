@@ -21,7 +21,6 @@ import { encrypt } from '@/lib/crypto'
 import { boolCondition } from '@/lib/db-helpers'
 import {
   assertNoConflictingGoogleAdsAuth,
-  detectGoogleAdsDualStackCredentials,
   getGoogleAdsAuthContext,
   GOOGLE_ADS_DUAL_STACK_WARNING,
   hasConfiguredGoogleAdsAuthFromContext,
@@ -40,7 +39,6 @@ async function buildAuthStatus(userId: number) {
   const ctx = await getGoogleAdsAuthContext(userId)
   const assignment = ctx.assignment
   const statusFields = await resolveGoogleAdsCredentialStatusFields(ctx)
-  const dualStack = await detectGoogleAdsDualStackCredentials(userId)
 
   let sharedAdminUsername: string | null = null
   let sharedAdminEmail: string | null = null
@@ -79,8 +77,8 @@ async function buildAuthStatus(userId: number) {
     serviceAccountName: statusFields.serviceAccountName,
     hasConfigured: configured,
     canModify: ctx.canModify,
-    dualStack: dualStack.dualStack,
-    authConfigWarning: dualStack.dualStack ? GOOGLE_ADS_DUAL_STACK_WARNING : null,
+    dualStack: ctx.dualStack,
+    authConfigWarning: ctx.dualStack ? GOOGLE_ADS_DUAL_STACK_WARNING : null,
   }
 }
 

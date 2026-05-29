@@ -153,6 +153,13 @@ export async function getGoogleAdsConfig(
     }
 
     const authContext = existingContext ?? (await getGoogleAdsAuthContext(userId))
+    if (authContext.dualStack) {
+      console.error(
+        `[KeywordPlanner] User ${userId} has dual-stack Google Ads credentials; configure only one auth method in Settings.`
+      )
+      return null
+    }
+
     const effectiveAuthType: AuthType =
       authType === 'service_account' || authType === 'oauth'
         ? authType
@@ -948,6 +955,7 @@ export async function getKeywordVolume(
 /**
  * 获取关键词建议（基于种子关键词）
  * 🔧 修复(2025-12-12): 独立账号模式 - 添加 userId 参数
+ * @remarks 当前无仓库内调用方；经 getGoogleAdsConfig 会拒绝双栈凭证。
  */
 export async function getKeywordSuggestions(
   seedKeywords: string[],

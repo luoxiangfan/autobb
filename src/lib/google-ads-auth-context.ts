@@ -39,19 +39,24 @@ export interface GoogleAdsAuthContext {
   serviceAccountConfig: Awaited<ReturnType<typeof getServiceAccountConfig>>
 }
 
-async function resolveDualStackOnOwner(ownerUserId: number): Promise<{
+async function resolveDualStackOnOwner(
+  ownerUserId: number,
+  options?: { oauthRefreshAlreadyLoaded?: boolean }
+): Promise<{
   hasOAuthRefresh: boolean
   hasActiveServiceAccount: boolean
   dualStack: boolean
 }> {
-  const credentials = await getGoogleAdsCredentialsRaw(ownerUserId)
+  const hasOAuthRefresh =
+    options?.oauthRefreshAlreadyLoaded ??
+    Boolean((await getGoogleAdsCredentialsRaw(ownerUserId))?.refresh_token)
+
   const db = await getDatabase()
   const isActiveCondition = boolCondition('is_active', true, db.type)
   const existingSa = await db.queryOne<{ id: string }>(
     `SELECT id FROM google_ads_service_accounts WHERE user_id = ? AND ${isActiveCondition} LIMIT 1`,
     [ownerUserId]
   )
-  const hasOAuthRefresh = Boolean(credentials?.refresh_token)
   const hasActiveServiceAccount = Boolean(existingSa)
   return {
     hasOAuthRefresh,
@@ -84,7 +89,10 @@ async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthCo
     serviceAccountConfig = await getServiceAccountConfig(userId, auth.serviceAccountId, resolution)
   }
 
-  const { dualStack } = await resolveDualStackOnOwner(ownerUserId)
+  const { dualStack } = await resolveDualStackOnOwner(ownerUserId, {
+    oauthRefreshAlreadyLoaded:
+      auth.authType === 'oauth' ? Boolean(oauthCredentials?.refresh_token) : undefined,
+  })
 
   return {
     userId,

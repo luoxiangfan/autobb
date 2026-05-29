@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const authContextFns = vi.hoisted(() => ({
-  detectGoogleAdsDualStackCredentials: vi.fn(),
+  getGoogleAdsAuthContext: vi.fn(),
   resolveGoogleAdsApiAuthForAccount: vi.fn(),
 }))
 
@@ -23,7 +23,7 @@ const DUAL_STACK_WARNING =
   '检测到 OAuth 与服务账号同时存在，请先在设置页删除其中一种配置后再使用。'
 
 vi.mock('@/lib/google-ads-auth-context', () => ({
-  detectGoogleAdsDualStackCredentials: authContextFns.detectGoogleAdsDualStackCredentials,
+  getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
   resolveGoogleAdsApiAuthForAccount: authContextFns.resolveGoogleAdsApiAuthForAccount,
   googleAdsApiAuthValidationErrorMessage: (reason: string) => {
     if (reason === 'not_configured') {
@@ -79,9 +79,8 @@ const saCtx = {
 describe('verifyGoogleAdsCredentials', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authContextFns.detectGoogleAdsDualStackCredentials.mockResolvedValue({
-      hasOAuthRefresh: false,
-      hasActiveServiceAccount: false,
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      ...oauthCtx,
       dualStack: false,
     })
     dbFns.exec.mockResolvedValue(undefined)
@@ -90,17 +89,21 @@ describe('verifyGoogleAdsCredentials', () => {
     })
   })
 
-  it('returns invalid when dual-stack credentials detected', async () => {
-    authContextFns.detectGoogleAdsDualStackCredentials.mockResolvedValue({
-      hasOAuthRefresh: true,
-      hasActiveServiceAccount: true,
+  it('returns dual-stack warning when resolve fails and context is dual-stack', async () => {
+    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
+      ok: false,
+      reason: 'not_configured',
+    })
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      ...oauthCtx,
       dualStack: true,
     })
 
     const result = await verifyGoogleAdsCredentials(2)
 
     expect(result).toEqual({ valid: false, error: DUAL_STACK_WARNING })
-    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).not.toHaveBeenCalled()
+    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledWith(2, null)
+    expect(authContextFns.getGoogleAdsAuthContext).toHaveBeenCalledWith(2)
   })
 
   it('returns invalid when resolveGoogleAdsApiAuthForAccount fails', async () => {
@@ -296,7 +299,7 @@ describe('verifyGoogleAdsCredentials', () => {
   })
 
   it('returns invalid with message when unexpected error is thrown', async () => {
-    authContextFns.detectGoogleAdsDualStackCredentials.mockRejectedValue(
+    authContextFns.resolveGoogleAdsApiAuthForAccount.mockRejectedValue(
       new Error('database unavailable')
     )
 
