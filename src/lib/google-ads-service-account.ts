@@ -1,7 +1,10 @@
 import { getDatabase } from './db'
 import { decrypt } from './crypto'
 import { getGoogleAdsClient } from './google-ads-api'
-import { resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
+import {
+  resolveGoogleAdsCredentialOwnerId,
+  type GoogleAdsCredentialOwnerResolutionInput,
+} from './google-ads-auth-assignment'
 
 /**
  * 获取指定用户自身的服务账号配置（不解析共享分配）
@@ -42,8 +45,13 @@ export async function getServiceAccountConfigRaw(userId: number, serviceAccountI
 /**
  * 获取服务账号配置（解析管理员共享配置）
  */
-export async function getServiceAccountConfig(userId: number, serviceAccountId?: string) {
-  const { ownerUserId, assignment } = await resolveGoogleAdsCredentialOwnerId(userId)
+export async function getServiceAccountConfig(
+  userId: number,
+  serviceAccountId?: string,
+  resolved?: GoogleAdsCredentialOwnerResolutionInput
+) {
+  const { ownerUserId, assignment } =
+    resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
 
   if (assignment?.assignmentMode === 'shared_admin' && assignment.authType === 'oauth') {
     return null

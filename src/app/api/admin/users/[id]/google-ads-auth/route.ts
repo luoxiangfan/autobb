@@ -15,7 +15,6 @@ import {
   deleteGoogleAdsCredentials,
   getGoogleAdsCredentialsRaw,
   saveGoogleAdsCredentials,
-  getUserAuthType,
 } from '@/lib/google-ads-oauth'
 import { parseServiceAccountJson } from '@/lib/google-ads-service-account'
 import { encrypt } from '@/lib/crypto'
@@ -23,7 +22,10 @@ import { boolCondition } from '@/lib/db-helpers'
 import {
   assertNoConflictingGoogleAdsAuth,
   detectGoogleAdsDualStackCredentials,
+  getGoogleAdsAuthContext,
   GOOGLE_ADS_DUAL_STACK_WARNING,
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsCredentialStatusFields,
 } from '@/lib/google-ads-auth-context'
 
 async function requireAdmin(request: NextRequest) {
@@ -35,43 +37,20 @@ async function requireAdmin(request: NextRequest) {
 }
 
 async function buildAuthStatus(userId: number) {
-  const assignment = await getGoogleAdsAuthAssignment(userId)
-  const auth = await getUserAuthType(userId)
-  const db = await getDatabase()
-  const isActiveCondition = boolCondition('is_active', true, db.type)
+  const ctx = await getGoogleAdsAuthContext(userId)
+  const assignment = ctx.assignment
+  const statusFields = await resolveGoogleAdsCredentialStatusFields(ctx)
+  const dualStack = await detectGoogleAdsDualStackCredentials(userId)
 
-  let hasOAuth = false
-  let hasServiceAccount = false
   let sharedAdminUsername: string | null = null
   let sharedAdminEmail: string | null = null
-
-  const oauth = await getGoogleAdsCredentialsRaw(
-    assignment?.assignmentMode === 'shared_admin' && assignment.sharedAdminUserId
-      ? assignment.sharedAdminUserId
-      : userId
-  )
-  hasOAuth = Boolean(oauth?.refresh_token)
-
-  const serviceAccountOwnerId =
-    assignment?.assignmentMode === 'shared_admin' && assignment.sharedAdminUserId
-      ? assignment.sharedAdminUserId
-      : userId
-
-  const serviceAccount = await db.queryOne<{ id: string; name: string }>(
-    `SELECT id, name FROM google_ads_service_accounts
-     WHERE user_id = ? AND ${isActiveCondition}
-     ORDER BY created_at DESC LIMIT 1`,
-    [serviceAccountOwnerId]
-  )
-  hasServiceAccount = Boolean(serviceAccount)
-
   if (assignment?.sharedAdminUserId) {
     const adminUser = await findUserById(assignment.sharedAdminUserId)
     sharedAdminUsername = adminUser?.username ?? null
     sharedAdminEmail = adminUser?.email ?? null
   }
 
-  const dualStack = await detectGoogleAdsDualStackCredentials(userId)
+  const configured = hasConfiguredGoogleAdsAuthFromContext(ctx)
 
   return {
     assignment: assignment
@@ -86,19 +65,20 @@ async function buildAuthStatus(userId: number) {
         }
       : {
           assignmentMode: 'own' as GoogleAdsAuthAssignmentMode,
-          authType: auth.authType,
+          authType: ctx.auth.authType,
           sharedAdminUserId: null,
           sharedAdminUsername: null,
           sharedAdminEmail: null,
           configuredBy: null,
           updatedAt: null,
         },
-    authType: auth.authType,
-    hasOAuth,
-    hasServiceAccount,
-    serviceAccountId: serviceAccount?.id ?? null,
-    serviceAccountName: serviceAccount?.name ?? null,
-    canModify: !isGoogleAdsAuthShared(assignment),
+    authType: ctx.auth.authType,
+    hasOAuth: statusFields.hasRefreshToken,
+    hasServiceAccount: statusFields.hasServiceAccount,
+    serviceAccountId: statusFields.serviceAccountId,
+    serviceAccountName: statusFields.serviceAccountName,
+    hasConfigured: configured,
+    canModify: ctx.canModify,
     dualStack: dualStack.dualStack,
     authConfigWarning: dualStack.dualStack ? GOOGLE_ADS_DUAL_STACK_WARNING : null,
   }

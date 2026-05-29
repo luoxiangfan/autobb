@@ -190,9 +190,17 @@ export default function GoogleAdsPage() {
     if (accountsPollTimerRef.current) clearTimeout(accountsPollTimerRef.current)
     accountsPollTimerRef.current = setTimeout(() => {
       if (auth.authType === 'service_account') {
-        const saId = auth.serviceAccountId || fallbackServiceAccountId
-        if (saId) fetchAccountsWithServiceAccount(saId, false, true)
-        else fetchAccounts(false, true)
+        try {
+          assertAccountsRequestAuth({
+            authType: 'service_account',
+            serviceAccountId: auth.serviceAccountId || fallbackServiceAccountId || undefined,
+          })
+          const saId = auth.serviceAccountId || fallbackServiceAccountId
+          if (!saId) return
+          fetchAccountsWithServiceAccount(saId, false, true)
+        } catch {
+          return
+        }
       } else {
         fetchAccounts(false, true)
       }

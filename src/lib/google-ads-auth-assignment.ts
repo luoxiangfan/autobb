@@ -21,6 +21,9 @@ export interface GoogleAdsCredentialOwnerResolution {
   isShared: boolean
 }
 
+/** Optional pre-resolved owner (avoids duplicate assignment queries in auth-context load). */
+export type GoogleAdsCredentialOwnerResolutionInput = GoogleAdsCredentialOwnerResolution
+
 type AssignmentRow = {
   user_id: number
   assignment_mode: GoogleAdsAuthAssignmentMode
@@ -160,31 +163,43 @@ export async function resolveGoogleAdsApiAccessLevel(userId: number): Promise<st
     return String(oauthAccessLevel).toLowerCase()
   }
 
+  // assignment 明确为 OAuth 时勿回退到服务账号级别（避免共享 OAuth 用户误展示 SA 配额）
+  if (assignment?.authType === 'oauth') {
+    return null
+  }
+
   const serviceAccount = await getRawActiveServiceAccount(ownerUserId)
   return serviceAccount?.api_access_level?.toLowerCase() ?? null
 }
 
 /**
- * 判断用户是否已配置可用的 Google Ads 认证（支持管理员共享配置）
+ * 判断用户是否已配置可用的 Google Ads 认证（支持管理员共享配置）。
+ * 与 hasConfiguredGoogleAdsAuthFromContext 对齐：双栈残留视为未配置；共享用户按 assignment.authType 判定。
  */
 export async function hasConfiguredGoogleAdsAuth(userId: number): Promise<boolean> {
   const { ownerUserId, assignment } = await resolveGoogleAdsCredentialOwnerId(userId)
 
-  if (assignment?.assignmentMode === 'shared_admin') {
-    if (assignment.authType === 'service_account') {
-      return (await getRawActiveServiceAccount(ownerUserId)) !== null
-    }
+  const oauth = await getRawGoogleAdsCredentials(ownerUserId)
+  const serviceAccount = await getRawActiveServiceAccount(ownerUserId)
+  const hasOAuthRefresh = Boolean(oauth?.refresh_token)
+  const hasActiveServiceAccount = serviceAccount !== null
 
-    const oauth = await getRawGoogleAdsCredentials(ownerUserId)
-    return Boolean(oauth?.refresh_token)
+  if (hasOAuthRefresh && hasActiveServiceAccount) {
+    return false
   }
 
-  const oauth = await getRawGoogleAdsCredentials(ownerUserId)
-  if (oauth?.refresh_token) {
+  if (assignment?.assignmentMode === 'shared_admin') {
+    if (assignment.authType === 'service_account') {
+      return hasActiveServiceAccount
+    }
+    return hasOAuthRefresh
+  }
+
+  if (hasOAuthRefresh) {
     return true
   }
 
-  return (await getRawActiveServiceAccount(ownerUserId)) !== null
+  return hasActiveServiceAccount
 }
 
 export async function assertOwnCredentialsDifferFromAdmin(params: {

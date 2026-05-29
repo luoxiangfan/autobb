@@ -48,16 +48,17 @@ export interface GoogleAdsApiAuthFields {
 const authContextInflight = new Map<number, Promise<GoogleAdsAuthContext>>()
 
 async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthContext> {
-  const { ownerUserId, assignment, isShared } = await resolveGoogleAdsCredentialOwnerId(userId)
-  const auth = await getUserAuthType(userId)
+  const resolution = await resolveGoogleAdsCredentialOwnerId(userId)
+  const { ownerUserId, assignment, isShared } = resolution
+  const auth = await getUserAuthType(userId, resolution)
 
   let oauthCredentials: Awaited<ReturnType<typeof getGoogleAdsCredentials>> = null
   let serviceAccountConfig: Awaited<ReturnType<typeof getServiceAccountConfig>> = null
 
   if (auth.authType === 'oauth') {
-    oauthCredentials = await getGoogleAdsCredentials(userId)
+    oauthCredentials = await getGoogleAdsCredentials(userId, resolution)
   } else {
-    serviceAccountConfig = await getServiceAccountConfig(userId, auth.serviceAccountId)
+    serviceAccountConfig = await getServiceAccountConfig(userId, auth.serviceAccountId, resolution)
   }
 
   return {

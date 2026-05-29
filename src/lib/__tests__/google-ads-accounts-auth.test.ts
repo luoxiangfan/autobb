@@ -318,6 +318,41 @@ describe('resolveAndHealSyncUserCredentials', () => {
     expect(result.userCredentials.login_customer_id).toBe('9988776655')
   })
 
+  it('heals developer_token using credential ownerUserId for shared auth', async () => {
+    const sharedAuthContext = {
+      ...oauthAuthContextFull,
+      userId: 2,
+      ownerUserId: 1,
+      isShared: true,
+      canModify: false,
+      oauthCredentials: {
+        ...oauthCredentialsFull,
+        developer_token: 'GOCSPX-wrong-secret-used-as-token',
+      },
+    }
+    settingsFns.getUserOnlySetting.mockResolvedValue({
+      value: 'abcdefghijklmnopqrstuvwxyz1234567890',
+    })
+
+    const result = await resolveAndHealSyncUserCredentials({
+      userId: 2,
+      authContext: sharedAuthContext,
+      authType: 'oauth',
+      serviceAccountId: null,
+    })
+
+    expect(result.ok).toBe(true)
+    expect(settingsFns.getUserOnlySetting).toHaveBeenCalledWith(
+      'google_ads',
+      'developer_token',
+      1
+    )
+    expect(dbFns.exec).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE google_ads_credentials'),
+      expect.arrayContaining(['abcdefghijklmnopqrstuvwxyz1234567890', 1])
+    )
+  })
+
   it('returns healed service account user credentials', async () => {
     authContextFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
       authType: 'service_account',

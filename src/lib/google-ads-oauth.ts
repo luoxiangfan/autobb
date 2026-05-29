@@ -1,6 +1,9 @@
 import { getDatabase } from './db'
 import { boolCondition } from './db-helpers'
-import { resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
+import {
+  resolveGoogleAdsCredentialOwnerId,
+  type GoogleAdsCredentialOwnerResolutionInput,
+} from './google-ads-auth-assignment'
 
 /**
  * 获取用户的 Google Ads 授权方式（产品上 OAuth / 服务账号二选一，切换前须删除另一种配置）。
@@ -9,12 +12,16 @@ import { resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
  * 若 DB 中残留两种凭证（未按设置页删除），会优先判定为 oauth；业务代码应依赖设置页与 assignment，勿实现双栈回退。
  * 支持管理员共享认证配置。
  */
-export async function getUserAuthType(userId: number): Promise<{
+export async function getUserAuthType(
+  userId: number,
+  resolved?: GoogleAdsCredentialOwnerResolutionInput
+): Promise<{
   authType: 'oauth' | 'service_account'
   serviceAccountId?: string
 }> {
   const db = await getDatabase()
-  const { ownerUserId, assignment } = await resolveGoogleAdsCredentialOwnerId(userId)
+  const { ownerUserId, assignment } =
+    resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
   const isActiveCondition = boolCondition('is_active', true, db.type)
 
   if (assignment?.assignmentMode === 'shared_admin') {
@@ -43,7 +50,6 @@ export async function getUserAuthType(userId: number): Promise<{
     return { authType: 'oauth' }
   }
 
-  // 检查OAuth配置
   const credentials = await db.queryOne(
     `SELECT refresh_token FROM google_ads_credentials WHERE user_id = ? AND ${isActiveCondition}`,
     [ownerUserId]
@@ -53,11 +59,9 @@ export async function getUserAuthType(userId: number): Promise<{
     return { authType: 'oauth' }
   }
 
-  // 检查服务账号配置
-  const serviceAccountIsActiveCondition = boolCondition('is_active', true, db.type)
   const serviceAccount = await db.queryOne(
     `SELECT id FROM google_ads_service_accounts
-     WHERE user_id = ? AND ${serviceAccountIsActiveCondition}
+     WHERE user_id = ? AND ${isActiveCondition}
      ORDER BY created_at DESC LIMIT 1`,
     [ownerUserId]
   ) as { id: string } | undefined
@@ -66,7 +70,10 @@ export async function getUserAuthType(userId: number): Promise<{
     return { authType: 'service_account', serviceAccountId: serviceAccount.id }
   }
 
-  // 默认返回OAuth（即使未配置）
+  if (assignment?.authType === 'service_account') {
+    return { authType: 'service_account' }
+  }
+
   return { authType: 'oauth' }
 }
 
@@ -222,8 +229,12 @@ export async function getGoogleAdsCredentialsRaw(userId: number): Promise<Google
 /**
  * 获取用户的Google Ads凭证（解析管理员共享配置）
  */
-export async function getGoogleAdsCredentials(userId: number): Promise<GoogleAdsCredentials | null> {
-  const { ownerUserId, assignment } = await resolveGoogleAdsCredentialOwnerId(userId)
+export async function getGoogleAdsCredentials(
+  userId: number,
+  resolved?: GoogleAdsCredentialOwnerResolutionInput
+): Promise<GoogleAdsCredentials | null> {
+  const { ownerUserId, assignment } =
+    resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
 
   if (assignment?.assignmentMode === 'shared_admin' && assignment.authType === 'service_account') {
     return null
@@ -356,8 +367,7 @@ export async function getValidAccessToken(userId: number): Promise<string> {
 }
 
 /**
- * 验证Google Ads凭证是否有效
- * 支持 OAuth 和服务账号两种认证模式
+ * 验证 Google Ads 凭证是否有效（OAuth / 服务账号二选一，经 auth-context 解析）。
  */
 export async function verifyGoogleAdsCredentials(userId: number): Promise<{
   valid: boolean
@@ -366,38 +376,45 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
   authType?: 'oauth' | 'service_account'
 }> {
   try {
+    const {
+      detectGoogleAdsDualStackCredentials,
+      googleAdsApiAuthValidationErrorMessage,
+      resolveGoogleAdsApiAuthForAccount,
+      GOOGLE_ADS_DUAL_STACK_WARNING,
+    } = await import('./google-ads-auth-context')
+
+    const dualStack = await detectGoogleAdsDualStackCredentials(userId)
+    if (dualStack.dualStack) {
+      return { valid: false, error: GOOGLE_ADS_DUAL_STACK_WARNING }
+    }
+
+    const resolved = await resolveGoogleAdsApiAuthForAccount(userId, null)
+    if (!resolved.ok) {
+      return {
+        valid: false,
+        error: googleAdsApiAuthValidationErrorMessage(resolved.reason),
+        authType: undefined,
+      }
+    }
+
+    const { ctx, apiAuth } = resolved
     const db = await getDatabase()
-    const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
-    const auth = await getUserAuthType(userId)
+    const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
 
-    // 1. 检查是否有已激活的服务账号配置
-    const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-    const serviceAccount = auth.authType === 'service_account'
-      ? await db.queryOne(`
-      SELECT id, name, mcc_customer_id, developer_token, service_account_email
-      FROM google_ads_service_accounts
-      WHERE user_id = ? AND ${isActiveCondition}
-      ORDER BY created_at DESC LIMIT 1
-    `, [ownerUserId]) as {
-      id: string
-      name: string
-      mcc_customer_id: string
-      developer_token: string
-      service_account_email: string
-    } | undefined
-      : undefined
+    if (apiAuth.authType === 'service_account') {
+      const serviceAccount = ctx.serviceAccountConfig
+      if (!serviceAccount?.id) {
+        return { valid: false, error: '未找到服务账号配置', authType: 'service_account' }
+      }
 
-    // 2. 如果有服务账号配置，优先使用服务账号验证
-    if (serviceAccount) {
-      console.log(`[Verify] 发现服务账号配置: ${serviceAccount.name}，使用服务账号验证`)
+      console.log(`[Verify] 服务账号: ${serviceAccount.name ?? serviceAccount.id}`)
 
-      // 🔧 修复(2025-12-26): 使用 Python 服务验证服务账号
       const { listAccessibleCustomersPython } = await import('./python-ads-client')
 
       try {
         const resourceNames = await listAccessibleCustomersPython({
           userId,
-          serviceAccountId: serviceAccount.id.toString(),
+          serviceAccountId: String(serviceAccount.id),
         })
 
         if (!resourceNames || resourceNames.length === 0) {
@@ -406,82 +423,74 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
 
         const firstCustomerId = resourceNames[0].split('/').pop() || ''
 
-        // 更新验证时间
-        const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-        await db.exec(`
-          UPDATE google_ads_service_accounts
-          SET updated_at = ${nowFunc}
-          WHERE id = ?
-        `, [serviceAccount.id]).catch(() => {})
+        await db
+          .exec(
+            `UPDATE google_ads_service_accounts SET updated_at = ${nowFunc} WHERE id = ?`,
+            [serviceAccount.id]
+          )
+          .catch(() => {})
 
         return {
           valid: true,
           customer_id: firstCustomerId,
-          authType: 'service_account'
+          authType: 'service_account',
         }
       } catch (error: any) {
         console.error('[Verify] 服务账号验证失败:', error)
-        return { valid: false, error: error.message || '服务账号验证失败', authType: 'service_account' }
+        return {
+          valid: false,
+          error: error.message || '服务账号验证失败',
+          authType: 'service_account',
+        }
       }
     }
 
-    // 3. OAuth 模式验证
-    const credentials = await getGoogleAdsCredentials(userId)
-    if (!credentials) {
-      return { valid: false, error: '凭证不存在，请完成 OAuth 授权或配置服务账号' }
-    }
-
-    if (!credentials.refresh_token) {
+    const credentials = ctx.oauthCredentials
+    if (!credentials?.refresh_token) {
       return { valid: false, error: '缺少Refresh Token，请完成 OAuth 授权', authType: 'oauth' }
     }
 
-    // 🔧 修复(2025-12-12): 独立账号模式 - 必须使用用户自己的凭证
     if (!credentials.client_id || !credentials.client_secret || !credentials.developer_token) {
-      return { valid: false, error: '凭证配置不完整，请在设置中完成 Google Ads API 配置', authType: 'oauth' }
+      return {
+        valid: false,
+        error: '凭证配置不完整，请在设置中完成 Google Ads API 配置',
+        authType: 'oauth',
+      }
     }
 
-    // 使用 google-ads-api 库验证凭证 - 传入用户自己的凭证
     const { getGoogleAdsClient } = await import('./google-ads-api')
     const client = getGoogleAdsClient({
       client_id: credentials.client_id,
       client_secret: credentials.client_secret,
-      developer_token: credentials.developer_token
+      developer_token: credentials.developer_token,
     })
 
-    // 调用 listAccessibleCustomers 测试凭证
     const response = await client.listAccessibleCustomers(credentials.refresh_token)
-
-    // listAccessibleCustomers 返回 { resource_names: ['customers/123', 'customers/456'] }
     const resourceNames = response.resource_names || []
 
     if (!resourceNames || resourceNames.length === 0) {
       return { valid: false, error: '无可访问的账户', authType: 'oauth' }
     }
 
-    // 从第一个 resource_name 中提取 customer ID (格式: "customers/1234567890")
     const firstCustomerId = resourceNames[0].split('/').pop() || ''
 
-    // 更新验证时间
-    const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-
-    await db.exec(`
-      UPDATE google_ads_credentials
-      SET last_verified_at = ${nowFunc},
-          updated_at = ${nowFunc}
-      WHERE user_id = ?
-    `, [ownerUserId])
+    await db.exec(
+      `UPDATE google_ads_credentials
+       SET last_verified_at = ${nowFunc}, updated_at = ${nowFunc}
+       WHERE user_id = ?`,
+      [ctx.ownerUserId]
+    )
 
     return {
       valid: true,
       customer_id: firstCustomerId,
-      authType: 'oauth'
+      authType: 'oauth',
     }
-
   } catch (error: any) {
     console.error('验证Google Ads凭证失败:', error)
     return {
       valid: false,
-      error: error.message || '未知错误'
+      error: error.message || '未知错误',
     }
   }
 }

@@ -126,7 +126,7 @@ export async function resolveAndHealSyncUserCredentials(params: {
   const healResult = await healAccountsRouteDeveloperToken({
     credentials: creds,
     authType: params.authType,
-    ownerUserId: params.userId,
+    ownerUserId: params.authContext.ownerUserId,
     clientSecret: creds.client_secret,
     serviceAccountId: bundle.serviceAccountId,
     serviceAccountConfig: bundle.serviceAccountConfig,

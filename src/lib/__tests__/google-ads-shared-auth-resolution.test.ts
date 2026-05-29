@@ -36,6 +36,7 @@ describe('google-ads shared auth resolution helpers', () => {
         created_at: '',
         updated_at: '',
       })
+      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({
         id: 'sa-1',
         mcc_customer_id: '1234567890',
@@ -44,7 +45,7 @@ describe('google-ads shared auth resolution helpers', () => {
       })
 
     await expect(hasConfiguredGoogleAdsAuth(2)).resolves.toBe(true)
-    expect(dbMocks.queryOne).toHaveBeenCalledTimes(2)
+    expect(dbMocks.queryOne).toHaveBeenCalledTimes(3)
   })
 
   it('hasConfiguredGoogleAdsAuth returns true for shared oauth user via admin refresh token', async () => {
@@ -63,6 +64,7 @@ describe('google-ads shared auth resolution helpers', () => {
         refresh_token: 'refresh-token',
         is_active: 1,
       })
+      .mockResolvedValueOnce(null)
 
     await expect(hasConfiguredGoogleAdsAuth(2)).resolves.toBe(true)
   })
@@ -101,8 +103,44 @@ describe('google-ads shared auth resolution helpers', () => {
         updated_at: '',
       })
       .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'sa-1',
+        mcc_customer_id: '1234567890',
+        developer_token: 'token',
+        service_account_email: 'sa@test.iam.gserviceaccount.com',
+      })
 
     await expect(hasConfiguredGoogleAdsAuth(2)).resolves.toBe(false)
+  })
+
+  it('hasConfiguredGoogleAdsAuth returns false when owner has dual-stack credentials', async () => {
+    dbMocks.queryOne
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ refresh_token: 'refresh-token', is_active: 1 })
+      .mockResolvedValueOnce({
+        id: 'sa-1',
+        mcc_customer_id: '1234567890',
+        developer_token: 'token',
+        service_account_email: 'sa@test.iam.gserviceaccount.com',
+      })
+
+    await expect(hasConfiguredGoogleAdsAuth(2)).resolves.toBe(false)
+  })
+
+  it('resolveGoogleAdsApiAccessLevel returns null for shared oauth when admin has no oauth row', async () => {
+    dbMocks.queryOne
+      .mockResolvedValueOnce({
+        user_id: 2,
+        assignment_mode: 'shared_admin',
+        shared_admin_user_id: 1,
+        auth_type: 'oauth',
+        configured_by: 1,
+        created_at: '',
+        updated_at: '',
+      })
+      .mockResolvedValueOnce(null)
+
+    await expect(resolveGoogleAdsApiAccessLevel(2)).resolves.toBeNull()
     expect(dbMocks.queryOne).toHaveBeenCalledTimes(2)
   })
 })

@@ -86,7 +86,10 @@ describe('getGoogleAdsAuthContext', () => {
     expect(ctx.canModify).toBe(false)
     expect(ctx.oauthCredentials?.refresh_token).toBe('rt-admin')
     expect(ctx.serviceAccountConfig).toBeNull()
-    expect(oauthFns.getGoogleAdsCredentials).toHaveBeenCalledWith(2)
+    expect(oauthFns.getGoogleAdsCredentials).toHaveBeenCalledWith(
+      2,
+      expect.objectContaining({ ownerUserId: 1, isShared: true })
+    )
     expect(serviceAccountFns.getServiceAccountConfig).not.toHaveBeenCalled()
   })
 
@@ -120,7 +123,11 @@ describe('getGoogleAdsAuthContext', () => {
     expect(ctx.oauthCredentials).toBeNull()
     expect(ctx.serviceAccountConfig?.id).toBe('sa-1')
     expect(oauthFns.getGoogleAdsCredentials).not.toHaveBeenCalled()
-    expect(serviceAccountFns.getServiceAccountConfig).toHaveBeenCalledWith(2, 'sa-1')
+    expect(serviceAccountFns.getServiceAccountConfig).toHaveBeenCalledWith(
+      2,
+      'sa-1',
+      expect.objectContaining({ ownerUserId: 1, isShared: true })
+    )
   })
 })
 
