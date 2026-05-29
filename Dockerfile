@@ -41,8 +41,6 @@ RUN --mount=type=cache,target=/root/.npm \
 COPY next.config.js tsconfig.json tailwind.config.ts postcss.config.js build-scheduler.js ./
 COPY public ./public
 COPY src ./src
-# perf:flags:check、verify-meta、build-scheduler 打包 db-init 等均依赖 scripts/
-COPY scripts ./scripts
 COPY openclaw/package.json openclaw/.source-commit ./openclaw/
 COPY openclaw-prebuilt/.build-meta.json ./openclaw-prebuilt/
 
