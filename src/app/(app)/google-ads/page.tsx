@@ -98,8 +98,17 @@ export default function GoogleAdsPage() {
     try {
       throwAccountsListFetchError(response, errorData, { fallbackMessage: '获取账户列表失败' })
     } catch (error) {
-      if (error instanceof Error && (error as Error & { needsReauth?: boolean }).needsReauth) {
-        setNeedsReauth(true)
+      if (error instanceof Error) {
+        const enriched = error as Error & {
+          needsReauth?: boolean
+          authConfigWarning?: string | null
+        }
+        if (enriched.needsReauth) {
+          setNeedsReauth(true)
+        }
+        if (enriched.authConfigWarning) {
+          setAuthConfigWarning(enriched.authConfigWarning)
+        }
       }
       throw error
     }
@@ -295,6 +304,13 @@ export default function GoogleAdsPage() {
     } catch (err: any) {
       console.error('获取账户列表失败:', err)
       setError(formatErrorMessage(err) || '获取账户列表失败')
+      const warning =
+        err instanceof Error
+          ? (err as Error & { authConfigWarning?: string | null }).authConfigWarning
+          : null
+      if (warning) {
+        setAuthConfigWarning(warning)
+      }
       setAccountsSyncing(false)
       setAccountsSyncError(null)
     } finally {

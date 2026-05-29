@@ -25,6 +25,31 @@ describe('google-ads-credentials-errors', () => {
     const result = parseAccountsListFetchFailure(response, { code: 'OAUTH_TOKEN_EXPIRED' })
     expect(result.needsReauth).toBe(true)
     expect(result.message).toContain('OAuth')
+    expect(result.authConfigWarning).toBeNull()
+  })
+
+  it('parseAccountsListFetchFailure surfaces dual-stack warning and authConfigWarning', () => {
+    const response = new Response(null, { status: 409 })
+    const warning = '检测到 OAuth 与服务账号同时存在，请先在设置页删除其中一种配置后再使用。'
+    const result = parseAccountsListFetchFailure(response, {
+      code: 'DUAL_STACK_CONFLICT',
+      message: warning,
+      authConfigWarning: warning,
+    })
+    expect(result.needsReauth).toBe(false)
+    expect(result.message).toBe(warning)
+    expect(result.authConfigWarning).toBe(warning)
+  })
+
+  it('buildGoogleAdsApiErrorMessage handles DUAL_STACK_CONFLICT', () => {
+    const response = new Response(null, { status: 409 })
+    const warning = '双栈提示'
+    expect(
+      buildGoogleAdsApiErrorMessage(response, {
+        code: 'DUAL_STACK_CONFLICT',
+        authConfigWarning: warning,
+      })
+    ).toBe(warning)
   })
 
   it('parseCredentialsStatusResponse infers service_account when only SA configured', () => {

@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const authContextFns = vi.hoisted(() => ({
-  getGoogleAdsAuthContext: vi.fn(),
   resolveGoogleAdsApiAuthForAccount: vi.fn(),
 }))
 
@@ -23,9 +22,11 @@ const DUAL_STACK_WARNING =
   '检测到 OAuth 与服务账号同时存在，请先在设置页删除其中一种配置后再使用。'
 
 vi.mock('@/lib/google-ads-auth-context', () => ({
-  getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
   resolveGoogleAdsApiAuthForAccount: authContextFns.resolveGoogleAdsApiAuthForAccount,
   googleAdsApiAuthValidationErrorMessage: (reason: string) => {
+    if (reason === 'dual_stack') {
+      return DUAL_STACK_WARNING
+    }
     if (reason === 'not_configured') {
       return 'Google Ads 认证未配置或已失效，请先在设置中完成 OAuth 授权或配置服务账号'
     }
@@ -79,31 +80,22 @@ const saCtx = {
 describe('verifyGoogleAdsCredentials', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
-      ...oauthCtx,
-      dualStack: false,
-    })
     dbFns.exec.mockResolvedValue(undefined)
     apiFns.getGoogleAdsClient.mockReturnValue({
       listAccessibleCustomers: apiFns.listAccessibleCustomers,
     })
   })
 
-  it('returns dual-stack warning when resolve fails and context is dual-stack', async () => {
+  it('returns dual-stack warning when resolve reports dual_stack', async () => {
     authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
       ok: false,
-      reason: 'not_configured',
-    })
-    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
-      ...oauthCtx,
-      dualStack: true,
+      reason: 'dual_stack',
     })
 
     const result = await verifyGoogleAdsCredentials(2)
 
     expect(result).toEqual({ valid: false, error: DUAL_STACK_WARNING })
     expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledWith(2, null)
-    expect(authContextFns.getGoogleAdsAuthContext).toHaveBeenCalledWith(2)
   })
 
   it('returns invalid when resolveGoogleAdsApiAuthForAccount fails', async () => {

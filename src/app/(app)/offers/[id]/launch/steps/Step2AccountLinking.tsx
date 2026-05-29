@@ -212,8 +212,17 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
         try {
           throwAccountsListFetchError(response, errorData, { fallbackMessage: '获取账号列表失败' })
         } catch (error) {
-          if (error instanceof Error && (error as Error & { needsReauth?: boolean }).needsReauth) {
-            setNeedsReauth(true)
+          if (error instanceof Error) {
+            const enriched = error as Error & {
+              needsReauth?: boolean
+              authConfigWarning?: string | null
+            }
+            if (enriched.needsReauth) {
+              setNeedsReauth(true)
+            }
+            if (enriched.authConfigWarning) {
+              setAuthConfigWarning(enriched.authConfigWarning)
+            }
           }
           throw error
         }

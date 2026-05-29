@@ -173,6 +173,7 @@ export function getServiceAccountMccFromContext(ctx: GoogleAdsAuthContext): stri
 }
 
 export type GoogleAdsApiAuthValidationError =
+  | 'dual_stack'
   | 'not_configured'
   | 'oauth_refresh_missing'
   | 'service_account_missing'
@@ -181,6 +182,8 @@ export function googleAdsApiAuthValidationErrorMessage(
   reason: GoogleAdsApiAuthValidationError
 ): string {
   switch (reason) {
+    case 'dual_stack':
+      return GOOGLE_ADS_DUAL_STACK_WARNING
     case 'not_configured':
       return 'Google Ads 认证未配置或已失效，请先在设置中完成 OAuth 授权或配置服务账号'
     case 'oauth_refresh_missing':
@@ -203,6 +206,9 @@ export async function resolveGoogleAdsApiAuthForAccount(
   | { ok: false; reason: GoogleAdsApiAuthValidationError }
 > {
   const ctx = await getGoogleAdsAuthContext(userId)
+  if (ctx.dualStack) {
+    return { ok: false, reason: 'dual_stack' }
+  }
   if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
     return { ok: false, reason: 'not_configured' }
   }
@@ -242,6 +248,7 @@ export const GOOGLE_ADS_DUAL_STACK_WARNING =
 
 /**
  * 检测凭证 owner 上是否同时存在 OAuth refresh_token 与活跃服务账号（历史双栈残留）。
+ * @deprecated 优先使用 `getGoogleAdsAuthContext(userId).dualStack`（单次加载、与业务语义一致）。
  */
 export async function detectGoogleAdsDualStackCredentials(userId: number): Promise<{
   hasOAuthRefresh: boolean

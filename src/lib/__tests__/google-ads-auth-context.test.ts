@@ -184,6 +184,16 @@ describe('resolveGoogleAdsCredentialStatusFields', () => {
   })
 })
 
+describe('googleAdsApiAuthValidationErrorMessage', () => {
+  it('returns dual-stack warning for dual_stack reason', async () => {
+    const { googleAdsApiAuthValidationErrorMessage, GOOGLE_ADS_DUAL_STACK_WARNING } =
+      await import('@/lib/google-ads-auth-context')
+    expect(googleAdsApiAuthValidationErrorMessage('dual_stack')).toBe(
+      GOOGLE_ADS_DUAL_STACK_WARNING
+    )
+  })
+})
+
 describe('hasConfiguredGoogleAdsAuthFromContext', () => {
   it('returns false when dualStack is true even with oauth refresh', () => {
     expect(
@@ -217,7 +227,7 @@ describe('resolveGoogleAdsApiAuthForAccount', () => {
 
     const result = await resolveGoogleAdsApiAuthForAccount(2, null)
 
-    expect(result).toEqual({ ok: false, reason: 'not_configured' })
+    expect(result).toEqual({ ok: false, reason: 'dual_stack' })
   })
 
   it('accepts shared oauth when account row has no refresh_token', async () => {

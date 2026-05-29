@@ -139,6 +139,7 @@ export async function GET(request: NextRequest) {
           hasCredentials: false,
           hasRefreshToken: false,
           hasServiceAccount: false,
+          authType: ctx.auth.authType,
           assignmentMode: assignment?.assignmentMode ?? 'own',
           canModify: ctx.canModify,
           isShared: ctx.isShared,

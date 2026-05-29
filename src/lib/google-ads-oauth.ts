@@ -377,20 +377,15 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
 }> {
   try {
     const {
-      getGoogleAdsAuthContext,
       googleAdsApiAuthValidationErrorMessage,
       resolveGoogleAdsApiAuthForAccount,
-      GOOGLE_ADS_DUAL_STACK_WARNING,
     } = await import('./google-ads-auth-context')
 
     const resolved = await resolveGoogleAdsApiAuthForAccount(userId, null)
     if (!resolved.ok) {
-      const ctx = await getGoogleAdsAuthContext(userId)
       return {
         valid: false,
-        error: ctx.dualStack
-          ? GOOGLE_ADS_DUAL_STACK_WARNING
-          : googleAdsApiAuthValidationErrorMessage(resolved.reason),
+        error: googleAdsApiAuthValidationErrorMessage(resolved.reason),
         authType: undefined,
       }
     }

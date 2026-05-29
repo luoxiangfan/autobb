@@ -44,13 +44,34 @@ export function buildGoogleAdsApiErrorMessage(
   if (response.status === 409 && record?.code === 'AUTH_TYPE_MISMATCH') {
     return '认证方式与当前配置不一致，请前往设置页确认当前使用的认证类型'
   }
+  if (response.status === 409 && record?.code === 'DUAL_STACK_CONFLICT') {
+    return (
+      formatNullableErrorMessage(record.authConfigWarning) ||
+      formatNullableErrorMessage(record.message) ||
+      formatNullableErrorMessage(record.error) ||
+      '检测到 OAuth 与服务账号同时存在，请先在设置页删除其中一种配置后再使用。'
+    )
+  }
 
   return fallbackMessage || `请求失败 (HTTP ${response.status})`
+}
+
+export function parseAuthConfigWarningFromResponseBody(body: unknown): string | null {
+  const record = body && typeof body === 'object' ? (body as Record<string, unknown>) : null
+  if (!record) return null
+  const topLevel = formatNullableErrorMessage(record.authConfigWarning)
+  if (topLevel) return topLevel
+  const nested =
+    record.data && typeof record.data === 'object'
+      ? formatNullableErrorMessage((record.data as Record<string, unknown>).authConfigWarning)
+      : null
+  return nested
 }
 
 export type AccountsListFetchFailure = {
   message: string
   needsReauth: boolean
+  authConfigWarning: string | null
 }
 
 export function parseAccountsListFetchFailure(
@@ -61,7 +82,11 @@ export function parseAccountsListFetchFailure(
   const record = body && typeof body === 'object' ? (body as Record<string, unknown>) : null
 
   if (record?.needsReauth || record?.code === 'OAUTH_TOKEN_EXPIRED') {
-    return { message: 'OAuth授权已过期，请前往设置页重新授权', needsReauth: true }
+    return {
+      message: 'OAuth授权已过期，请前往设置页重新授权',
+      needsReauth: true,
+      authConfigWarning: null,
+    }
   }
 
   if (record?.code === 'AUTH_TYPE_MISMATCH') {
@@ -70,6 +95,18 @@ export function parseAccountsListFetchFailure(
         formatNullableErrorMessage(record.message) ||
         '认证方式与当前配置不一致，请前往设置页确认当前使用的认证类型。',
       needsReauth: false,
+      authConfigWarning: null,
+    }
+  }
+
+  if (record?.code === 'DUAL_STACK_CONFLICT') {
+    const warning =
+      parseAuthConfigWarningFromResponseBody(body) ||
+      '检测到 OAuth 与服务账号同时存在，请先在设置页删除其中一种配置后再使用。'
+    return {
+      message: warning,
+      needsReauth: false,
+      authConfigWarning: warning,
     }
   }
 
@@ -80,6 +117,7 @@ export function parseAccountsListFetchFailure(
       options?.fallbackMessage || '获取账号列表失败'
     ),
     needsReauth: false,
+    authConfigWarning: parseAuthConfigWarningFromResponseBody(body),
   }
 }
 
@@ -89,9 +127,17 @@ export function throwAccountsListFetchError(
   body: unknown | null,
   options?: { fallbackMessage?: string }
 ): never {
-  const { message, needsReauth } = parseAccountsListFetchFailure(response, body, options)
-  const error = new Error(message) as Error & { needsReauth?: boolean }
+  const { message, needsReauth, authConfigWarning } = parseAccountsListFetchFailure(
+    response,
+    body,
+    options
+  )
+  const error = new Error(message) as Error & {
+    needsReauth?: boolean
+    authConfigWarning?: string | null
+  }
   if (needsReauth) error.needsReauth = true
+  if (authConfigWarning) error.authConfigWarning = authConfigWarning
   throw error
 }
 
