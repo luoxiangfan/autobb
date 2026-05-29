@@ -12,20 +12,26 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # GitHub Container Registry
   GHCR_REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  # 默认 amd64；多架构可在仓库变量 DOCKER_PLATFORMS 中设置，如 linux/amd64,linux/arm64
-  DOCKER_PLATFORMS: ${{ vars.DOCKER_PLATFORMS || 'linux/amd64' }}
+  # 是否执行可选测试（默认关闭以缩短 deploy 时长）
   RUN_OPTIONAL_TESTS: ${{ vars.RUN_OPTIONAL_TESTS || 'false' }}
+  # pre-test 是否启用重清理（默认关闭，减少重复耗时）
   ENABLE_DISK_CLEANUP_BUILD_TEST: ${{ vars.ENABLE_DISK_CLEANUP_BUILD_TEST || 'false' }}
+  # pre-test 触发重清理阈值（仅在 ENABLE_DISK_CLEANUP_BUILD_TEST=true 时生效）
   DISK_CLEANUP_THRESHOLD_GB_BUILD_TEST: ${{ vars.DISK_CLEANUP_THRESHOLD_GB_BUILD_TEST || '10' }}
+  # build-push 触发重清理阈值（runner 磁盘低于该值才清理）
   DISK_CLEANUP_THRESHOLD_GB_BUILD_PUSH: ${{ vars.DISK_CLEANUP_THRESHOLD_GB_BUILD_PUSH || '20' }}
+  # Docker 构建前最低可用磁盘（不足则执行紧急清理，不满足则快速失败）
   DISK_SAFETY_MIN_GB_BEFORE_DOCKER: ${{ vars.DISK_SAFETY_MIN_GB_BEFORE_DOCKER || '20' }}
+  # 是否启用 BuildKit cache export（默认关闭，避免 sending cache export 大开销）
   ENABLE_DOCKER_CACHE_EXPORT: ${{ vars.ENABLE_DOCKER_CACHE_EXPORT || 'false' }}
-  # 构建后是否强制 prune（默认仅磁盘不足时清理，避免每次都浪费数分钟）
-  FORCE_POST_BUILD_DOCKER_PRUNE: ${{ vars.FORCE_POST_BUILD_DOCKER_PRUNE || 'false' }}
 
 jobs:
+  # ============================================
+  # Job 1: 前置测试
+  # ============================================
   pre-test:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -96,9 +102,12 @@ jobs:
       - name: 清理构建临时文件（总是执行）
         if: always()
         run: |
-          rm -rf .next/cache node_modules/.cache || true
+          rm -rf .next/cache || true
           df -h
 
+  # ============================================
+  # Job 2: 构建并推送到GHCR
+  # ============================================
   build-push:
     needs: pre-test
     runs-on: ubuntu-latest
@@ -139,11 +148,10 @@ jobs:
         id: vars
         run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      - name: 设置Node.js（OpenClaw 预编译）
+      - name: 设置Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
 
       - name: 设置Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -152,6 +160,7 @@ jobs:
         env:
           DOCKER_BUILD_RECORD_UPLOAD: false
 
+      # 登录 GitHub Container Registry
       - name: 登录GHCR
         uses: docker/login-action@v3
         with:
@@ -159,11 +168,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # 生成镜像标签（仅 main / 版本标签）
       - name: 生成镜像标签
         id: tags
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
 
+          # 标签规则：
+          # - main: prod-latest / prod-<sha>
+          # - tags(v*): prod-<version> / prod-<sha>
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             VERSION=${GITHUB_REF#refs/tags/v}
             GHCR_TAGS="${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}:prod-${VERSION}"
@@ -173,12 +186,12 @@ jobs:
             GHCR_TAGS="${GHCR_TAGS},${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}:prod-${SHORT_SHA}"
           fi
 
-          echo "tags=${GHCR_TAGS}" >> $GITHUB_OUTPUT
+          ALL_TAGS="${GHCR_TAGS}"
+          echo "tags=${ALL_TAGS}" >> $GITHUB_OUTPUT
           echo "ghcr_tags=${GHCR_TAGS}" >> $GITHUB_OUTPUT
-          echo "registry_cache_ref=${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}:prod-latest" >> $GITHUB_OUTPUT
 
           echo "📦 将推送以下标签:"
-          echo "${GHCR_TAGS}" | tr ',' '\n'
+          echo "${ALL_TAGS}" | tr ',' '\n'
 
       - name: 恢复 OpenClaw 预编译缓存
         id: openclaw-prebuilt-cache
@@ -274,43 +287,39 @@ jobs:
 
           df -h
 
-      - name: 构建并推送 Docker 镜像（默认：inline 缓存 + registry 拉取）
+      # 构建并推送到默认：禁用 cache export 以减少耗时）
+      - name: 构建并推送Docker镜像（禁用 cache export）
         if: ${{ env.ENABLE_DOCKER_CACHE_EXPORT != 'true' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
           context: .
           file: ./Dockerfile
           push: true
-          platforms: ${{ env.DOCKER_PLATFORMS }}
           tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha,scope=autobb-deploy
           provenance: false
           sbom: false
-          cache-from: |
-            type=gha,scope=autobb-deploy
-            type=registry,ref=${{ steps.tags.outputs.registry_cache_ref }}
-          cache-to: type=inline
+          build-args: |
+            NODE_ENV=production
 
-      - name: 构建并推送 Docker 镜像（额外导出 GHA 缓存）
+      - name: 构建并推送Docker镜像（启用 cache export）
         if: ${{ env.ENABLE_DOCKER_CACHE_EXPORT == 'true' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
           context: .
           file: ./Dockerfile
           push: true
-          platforms: ${{ env.DOCKER_PLATFORMS }}
           tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha,scope=autobb-deploy
+          cache-to: type=gha,mode=min,scope=autobb-deploy
           provenance: false
           sbom: false
-          cache-from: |
-            type=gha,scope=autobb-deploy
-            type=registry,ref=${{ steps.tags.outputs.registry_cache_ref }}
-          cache-to: |
-            type=inline
-            type=gha,mode=min,scope=autobb-deploy
+          build-args: |
+            NODE_ENV=production
 
       - name: 输出镜像信息
         run: |
@@ -319,16 +328,8 @@ jobs:
           echo "📦 GHCR:"
           echo "${{ steps.tags.outputs.ghcr_tags }}" | tr ',' '\n' | sed 's/^/   - /'
 
-      - name: 清理 Docker 与临时文件
-        if: always()
+      - name: 清理Docker与临时文件
         run: |
-          FREE_GB=$(df -BG / | awk 'NR==2 {gsub("G","",$4); print $4}')
-          THRESHOLD_GB="${DISK_CLEANUP_THRESHOLD_GB_BUILD_PUSH:-20}"
-          if [[ "${FORCE_POST_BUILD_DOCKER_PRUNE}" == "true" ]] || [ "${FREE_GB}" -lt "${THRESHOLD_GB}" ]; then
-            echo "执行构建后 Docker 清理（FORCE=${FORCE_POST_BUILD_DOCKER_PRUNE}, free=${FREE_GB}GB）"
-            docker builder prune -af || true
-            docker system prune -af --volumes || true
-          else
-            echo "✅ 磁盘充足且未强制 prune，跳过构建后 Docker 清理（free=${FREE_GB}GB）"
-          fi
+          docker builder prune -af || true
+          docker system prune -af --volumes || true
           df -h
