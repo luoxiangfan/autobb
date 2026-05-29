@@ -19,6 +19,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react'
 import { showError } from '@/lib/toast-utils'
+import {
+  pickLaunchScoreHashCampaignConfigFromStep3,
+  saveLaunchScoreCampaignConfigForOffer,
+} from '@/lib/launch-score-campaign-config-client'
 
 const loadStep1CreativeGeneration = () => import('./steps/Step1CreativeGeneration')
 const loadStep2AccountLinking = () => import('./steps/Step2AccountLinking')
@@ -229,6 +233,10 @@ export default function LaunchAdPage() {
   const handleCampaignConfigured = (config: CampaignConfig) => {
     setCampaignConfig(config)
     setCanProceed(true)
+    const hashConfig = pickLaunchScoreHashCampaignConfigFromStep3(config)
+    if (hashConfig) {
+      saveLaunchScoreCampaignConfigForOffer(offerId, hashConfig)
+    }
   }
 
   const handleAccountsLinked = (accounts: GoogleAdsAccount[]) => {

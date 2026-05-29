@@ -1,8 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { showSuccess } from '@/lib/toast-utils'
+import {
+  buildLaunchScoreApiQueryString,
+  resolveLaunchScoreHashCampaignConfigForClient,
+  type LaunchScoreHashCampaignConfigClient,
+} from '@/lib/launch-score-campaign-config-client'
 
 /**
  * Launch Score v4.0 - 4维度评分系统
@@ -58,16 +63,18 @@ export default function LaunchScorePage() {
   const [calculating, setCalculating] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    if (offerId) {
-      fetchData()
-    } else {
-      setError('缺少offerId参数')
-      setLoading(false)
+  const numericOfferId = offerId ? Number(offerId) : NaN
+  const hashCampaignConfig = useMemo((): LaunchScoreHashCampaignConfigClient | undefined => {
+    if (!Number.isFinite(numericOfferId)) {
+      return undefined
     }
-  }, [offerId, creativeId])
+    return resolveLaunchScoreHashCampaignConfigForClient(
+      numericOfferId,
+      searchParams ?? new URLSearchParams()
+    )
+  }, [numericOfferId, searchParams])
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setError('')
       // HttpOnly Cookie自动携带，无需手动操作
@@ -96,9 +103,7 @@ export default function LaunchScorePage() {
         }
       }
 
-      const scoreQuery = creativeId
-        ? `?creativeId=${encodeURIComponent(creativeId)}`
-        : ''
+      const scoreQuery = buildLaunchScoreApiQueryString(creativeId, hashCampaignConfig)
       const scoreRes = await fetch(`/api/offers/${offerId}/launch-score${scoreQuery}`, {
         credentials: 'include',
       })
@@ -128,7 +133,16 @@ export default function LaunchScorePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [offerId, creativeId, hashCampaignConfig])
+
+  useEffect(() => {
+    if (offerId) {
+      fetchData()
+    } else {
+      setError('缺少offerId参数')
+      setLoading(false)
+    }
+  }, [offerId, creativeId, fetchData])
 
   const fetchAnalysis = async (scoreId: number) => {
     try {
@@ -163,7 +177,10 @@ export default function LaunchScorePage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ creativeId: Number(creativeId) }),
+        body: JSON.stringify({
+          creativeId: Number(creativeId),
+          ...(hashCampaignConfig ? { campaignConfig: hashCampaignConfig } : {}),
+        }),
       })
 
       const data = await response.json()
