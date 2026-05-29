@@ -197,46 +197,6 @@ export function learnFromPerformanceData(performanceData: any[]): OptimizationRu
 }
 
 /**
- * 从A/B测试结果中学习
- */
-export function learnFromABTest(
-  variantA: any,
-  variantB: any,
-  performanceA: any,
-  performanceB: any
-): OptimizationRule[] {
-  const newRules: OptimizationRule[] = []
-
-  // 计算综合得分
-  const scoreA = (performanceA.ctr || 0) * 0.4 + (performanceA.conversionRate || 0) * 0.4 + ((performanceA.qualityScore || 0) / 10) * 0.2
-  const scoreB = (performanceB.ctr || 0) * 0.4 + (performanceB.conversionRate || 0) * 0.4 + ((performanceB.qualityScore || 0) / 10) * 0.2
-
-  const improvement = ((scoreB - scoreA) / scoreA) * 100
-
-  if (Math.abs(improvement) > 10) { // 10%以上的差异才认为显著
-    const winner = improvement > 0 ? variantB : variantA
-    const loser = improvement > 0 ? variantA : variantB
-
-    // 识别差异点并生成规则
-    if (winner.headline1 !== loser.headline1) {
-      newRules.push({
-        id: `opt_${Date.now()}_ab_headline`,
-        type: 'enhance',
-        category: 'headline',
-        rule: `参考使用类似"${winner.headline1}"的标题结构`,
-        reason: `A/B测试显示该标题结构比"${loser.headline1}"表现好${Math.abs(improvement).toFixed(1)}%`,
-        impact: 'high',
-        source: 'ab_test',
-        createdAt: new Date().toISOString(),
-        enabled: true
-      })
-    }
-  }
-
-  return newRules
-}
-
-/**
  * 获取最频繁出现的值
  */
 function getMostFrequent<T>(arr: T[]): T | null {

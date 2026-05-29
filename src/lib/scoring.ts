@@ -833,36 +833,6 @@ export async function getQuickAdStrength(
 }
 
 /**
- * 转换旧格式创意为新格式（向后兼容）
- *
- * @param creative 旧格式创意
- * @returns 新格式的headlines和descriptions
- */
-export function convertLegacyCreativeFormat(creative: {
-  headline1: string
-  headline2: string
-  headline3: string
-  description1: string
-  description2: string
-}): {
-  headlines: HeadlineAsset[]
-  descriptions: DescriptionAsset[]
-} {
-  const headlines: HeadlineAsset[] = [
-    { text: creative.headline1, length: creative.headline1.length },
-    { text: creative.headline2, length: creative.headline2.length },
-    { text: creative.headline3, length: creative.headline3.length }
-  ]
-
-  const descriptions: DescriptionAsset[] = [
-    { text: creative.description1, length: creative.description1.length },
-    { text: creative.description2, length: creative.description2.length }
-  ]
-
-  return { headlines, descriptions }
-}
-
-/**
  * ========================================
  * Pre-Generation Keyword Gap Analysis
  * ========================================

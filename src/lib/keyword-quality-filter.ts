@@ -2101,27 +2101,6 @@ export function filterKeywordQuality(
   return { filtered, removed }
 }
 
-/**
- * 简单关键词过滤（字符串数组版本）
- *
- * @param keywords - 关键词字符串数组
- * @param brandName - 品牌名称
- * @returns 过滤后的关键词
- */
-export function filterKeywordsSimple(
-  keywords: string[],
-  brandName: string
-): string[] {
-  const poolKeywords: PoolKeywordData[] = keywords.map(kw => ({
-    keyword: kw,
-    searchVolume: 0,
-    source: 'FILTERED',
-  }))
-
-  const result = filterKeywordQuality(poolKeywords, { brandName })
-  return result.filtered.map(kw => typeof kw === 'string' ? kw : kw.keyword)
-}
-
 // ============================================
 // 统计报告
 // ============================================

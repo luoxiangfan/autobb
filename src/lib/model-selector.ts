@@ -214,37 +214,6 @@ export function canUseFlash(operationType: string): boolean {
 }
 
 /**
- * A/B测试配置
- */
-export interface ABTestConfig {
-  enabled: boolean
-  operationType: string
-  flashPercentage: number // 0-100, Flash流量百分比
-}
-
-/**
- * 判断当前请求是否应使用Flash（灰度发布）
- *
- * @param operationType - 操作类型
- * @param userId - 用户ID（用于流量分割）
- * @param config - A/B测试配置
- * @returns 是否使用Flash
- */
-export function shouldUseFlashForABTest(
-  operationType: string,
-  userId: number,
-  config: ABTestConfig
-): boolean {
-  if (!config.enabled || config.operationType !== operationType) {
-    return false
-  }
-
-  // 基于用户ID的稳定哈希分流
-  const hash = userId % 100
-  return hash < config.flashPercentage
-}
-
-/**
  * 获取模型成本倍数（相对于Flash）
  */
 export function getModelCostMultiplier(model: ModelType): number {
