@@ -395,7 +395,7 @@ export async function getCustomer(
  * - 业务入口应优先 `prepareGoogleAdsApiCallForLinkedAccount` / `resolveGoogleAdsApiAuthForAccount`，
  *   勿在双栈（`dualStack`）或仅残留凭证时直接传入 `authType: 'service_account'` 绕过校验。
  * - OAuth 且未传 `credentials` 时会经 `resolveOAuthClientCredentialsForUser`（含双栈拦截）。
- * - 服务账号走 `getUnifiedGoogleAdsClient`，同样会校验 auth-context 双栈。
+ * - 服务账号走 `getUnifiedGoogleAdsClient`（复用本函数已 assert 的 authContext，避免重复加载）。
  */
 export async function getCustomerWithCredentials(params: {
   customerId: string
@@ -416,7 +416,7 @@ export async function getCustomerWithCredentials(params: {
   }
 
   const { assertGoogleAdsAuthReadyForApi } = await import('./google-ads-auth-context')
-  await assertGoogleAdsAuthReadyForApi(params.userId)
+  const authCtx = await assertGoogleAdsAuthReadyForApi(params.userId)
 
   const authType = params.authType || 'oauth'
 
@@ -431,7 +431,8 @@ export async function getCustomerWithCredentials(params: {
         authType: 'service_account',
         userId: params.userId,
         serviceAccountId: params.serviceAccountId
-      }
+      },
+      authContext: authCtx,
     })
   } else {
     // OAuth认证模式

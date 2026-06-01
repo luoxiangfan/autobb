@@ -276,13 +276,17 @@ async function get(request: NextRequest) {
       authContext,
     })
     if (!healResult.ok) {
+      const isDualStack = healResult.code === 'DUAL_STACK_CONFLICT'
       return jsonNoStore(
         {
-          error: 'Google Ads Developer Token 配置无效',
+          error: isDualStack
+            ? GOOGLE_ADS_DUAL_STACK_WARNING
+            : 'Google Ads Developer Token 配置无效',
           code: healResult.code,
           message: healResult.message,
+          ...(isDualStack ? { authConfigWarning: healResult.message } : {}),
         },
-        { status: 400 }
+        { status: isDualStack ? 409 : 400 }
       )
     }
 

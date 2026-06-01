@@ -242,6 +242,7 @@ describe('healAccountsRouteDeveloperToken', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) return
+    expect(result.code).toBe('DUAL_STACK_CONFLICT')
     expect(result.message).toContain('OAuth 与服务账号同时存在')
     expect(settingsFns.getUserOnlySetting).not.toHaveBeenCalled()
   })

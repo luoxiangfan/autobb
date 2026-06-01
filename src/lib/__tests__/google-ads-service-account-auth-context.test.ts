@@ -48,6 +48,35 @@ describe('google-ads-service-account auth-context integration', () => {
     expect(authContextFns.getGoogleAdsAuthContext).toHaveBeenCalledWith(7)
   })
 
+  it('getUnifiedGoogleAdsClient skips auth reload when authContext is passed', async () => {
+    const customer = await getUnifiedGoogleAdsClient({
+      customerId: '1234567890',
+      credentials: {
+        client_id: 'cid.apps.googleusercontent.com',
+        client_secret: 'secret',
+        developer_token: 'dev-token',
+      },
+      authConfig: { authType: 'oauth', userId: 7 },
+      authContext: {
+        dualStack: false,
+        oauthCredentials: {
+          refresh_token: 'rt-inline',
+          login_customer_id: '5566778899',
+        },
+      } as any,
+    })
+
+    expect(authContextFns.getGoogleAdsAuthContext).not.toHaveBeenCalled()
+    expect(customer).toEqual({
+      kind: 'oauth-customer',
+      opts: {
+        customer_id: '1234567890',
+        refresh_token: 'rt-inline',
+        login_customer_id: '5566778899',
+      },
+    })
+  })
+
   it('getUnifiedGoogleAdsClient uses auth context for oauth refresh when not passed in', async () => {
     authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
       dualStack: false,

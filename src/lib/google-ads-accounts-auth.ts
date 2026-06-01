@@ -978,9 +978,11 @@ function settingDeveloperTokenLooksOk(settingDeveloperToken: string, clientSecre
   )
 }
 
+export type DeveloperTokenHealCode = 'DEVELOPER_TOKEN_INVALID' | 'DUAL_STACK_CONFLICT'
+
 export type DeveloperTokenHealResult =
   | { ok: true }
-  | { ok: false; code: 'DEVELOPER_TOKEN_INVALID'; message: string }
+  | { ok: false; code: DeveloperTokenHealCode; message: string }
 
 const DEVELOPER_TOKEN_INVALID_MESSAGE =
   '当前 Developer Token 看起来不是有效的 Google Ads Developer Token（常见原因：误填为 OAuth Client Secret/Client ID/Access Token）。请在设置页面填写 Google Ads API Center 提供的 Developer Token 后重试。'
@@ -1002,7 +1004,7 @@ export async function healAccountsRouteDeveloperToken(params: {
     ? googleAdsAuthContextDualStackError(params.authContext)
     : null
   if (dualStackError) {
-    return { ok: false, code: 'DEVELOPER_TOKEN_INVALID', message: dualStackError }
+    return { ok: false, code: 'DUAL_STACK_CONFLICT', message: dualStackError }
   }
 
   const developerToken = String(params.credentials.developer_token || '')

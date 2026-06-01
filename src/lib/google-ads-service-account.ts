@@ -5,6 +5,7 @@ import {
   resolveGoogleAdsCredentialOwnerId,
   type GoogleAdsCredentialOwnerResolutionInput,
 } from './google-ads-auth-assignment'
+import type { GoogleAdsAuthContext } from './google-ads-auth-context'
 
 /**
  * 获取指定用户自身的服务账号配置（不解析共享分配）
@@ -110,6 +111,21 @@ async function loadGoogleAdsAuthContextForUnifiedClient(userId: number) {
   return assertGoogleAdsAuthReadyForApi(userId)
 }
 
+async function resolveAuthContextForUnifiedClient(
+  userId: number,
+  authContext?: GoogleAdsAuthContext
+): Promise<GoogleAdsAuthContext> {
+  if (authContext) {
+    const { googleAdsAuthContextDualStackError } = await import('./google-ads-auth-context')
+    const dualStackError = googleAdsAuthContextDualStackError(authContext)
+    if (dualStackError) {
+      throw new Error(dualStackError)
+    }
+    return authContext
+  }
+  return loadGoogleAdsAuthContextForUnifiedClient(userId)
+}
+
 /**
  * 获取统一的 Google Ads 客户端
  * 根据认证类型自动选择 OAuth 或服务账号认证
@@ -129,9 +145,14 @@ export async function getUnifiedGoogleAdsClient(config: {
   /** 路由层已解析时传入，避免重复加载 auth-context */
   oauthRefreshToken?: string
   oauthLoginCustomerId?: string
+  /** 调用方已 assert 时传入，避免重复加载 auth-context */
+  authContext?: GoogleAdsAuthContext
 }): Promise<any> {
   const { authConfig, credentials } = config
-  const authCtx = await loadGoogleAdsAuthContextForUnifiedClient(authConfig.userId)
+  const authCtx = await resolveAuthContextForUnifiedClient(
+    authConfig.userId,
+    config.authContext
+  )
 
   if (authConfig.authType === 'service_account') {
     const serviceAccount = await getServiceAccountConfig(authConfig.userId, authConfig.serviceAccountId)
@@ -188,9 +209,13 @@ export async function getLoginCustomerId(config: {
   oauthCredentials?: {
     login_customer_id: string
   }
+  authContext?: GoogleAdsAuthContext
 }): Promise<string> {
   const { authConfig, oauthCredentials } = config
-  const authCtx = await loadGoogleAdsAuthContextForUnifiedClient(authConfig.userId)
+  const authCtx = await resolveAuthContextForUnifiedClient(
+    authConfig.userId,
+    config.authContext
+  )
 
   if (authConfig.authType === 'service_account') {
     const serviceAccount = await getServiceAccountConfig(authConfig.userId, authConfig.serviceAccountId)

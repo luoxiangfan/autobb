@@ -32,10 +32,13 @@ interface AuthStatus {
     updatedAt: string | null
     configuredBy?: number | null
   }
-  authType: 'oauth' | 'service_account'
+  authType: 'oauth' | 'service_account' | null
   hasOAuth: boolean
   hasServiceAccount: boolean
+  hasConfigured?: boolean
   canModify: boolean
+  dualStack?: boolean
+  authConfigWarning?: string | null
 }
 
 function isAuthConfigured(status: AuthStatus | null): boolean {
@@ -169,17 +172,49 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
           <p className="text-sm text-muted-foreground py-6">加载中...</p>
         ) : (
           <div className="space-y-5">
+            {status?.authConfigWarning && (
+              <div className="p-4 bg-amber-50 border border-amber-400 rounded-lg space-y-2">
+                <p className="text-sm font-semibold text-amber-900">认证配置冲突</p>
+                <p className="text-sm text-amber-800 whitespace-pre-line">
+                  {status.authConfigWarning}
+                </p>
+                <p className="text-sm text-amber-900">
+                  凭证所有者须删除 OAuth 或服务账号其中一种后，该用户的 Google Ads API 才能正常使用。
+                  {status.dualStack && isAuthConfigured(status) && (
+                    <>
+                      {' '}
+                      下方「分配记录」为
+                      {status.assignment.authType === 'oauth' ? ' OAuth ' : ' 服务账号 '}
+                      ，与当前有效认证方式不一致，请勿仅依据分配记录判断。
+                    </>
+                  )}
+                </p>
+              </div>
+            )}
+
             {status && (
               <div className="rounded-lg border p-3 text-sm space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium">当前状态</span>
-                  {isAuthConfigured(status) ? (
+                  {status.dualStack ? (
+                    <Badge variant="destructive">双栈冲突</Badge>
+                  ) : status.hasConfigured === false && (status.hasOAuth || status.hasServiceAccount) ? (
+                    <Badge variant="outline" className="text-muted-foreground">
+                      未就绪
+                    </Badge>
+                  ) : isAuthConfigured(status) ? (
                     <>
                       <Badge variant={status.assignment.assignmentMode === 'shared_admin' ? 'secondary' : 'outline'}>
                         {status.assignment.assignmentMode === 'shared_admin' ? '共享管理员' : '独立配置'}
                       </Badge>
                       <Badge variant="outline">
-                        {status.assignment.authType === 'oauth' ? 'OAuth' : '服务账号'}
+                        {status.authType === 'oauth'
+                          ? 'OAuth'
+                          : status.authType === 'service_account'
+                            ? '服务账号'
+                            : status.assignment.authType === 'oauth'
+                              ? 'OAuth（分配）'
+                              : '服务账号（分配）'}
                       </Badge>
                     </>
                   ) : (
@@ -191,11 +226,13 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
                 {isAuthConfigured(status) && status.assignment.assignmentMode === 'shared_admin' && status.assignment.sharedAdminEmail && (
                   <p className="text-muted-foreground">
                     共享自：{status.assignment.sharedAdminUsername}
+                    {status.assignment.sharedAdminEmail ? ` (${status.assignment.sharedAdminEmail})` : ''}
                   </p>
                 )}
-                {isAuthConfigured(status) && (
+                {(status.hasOAuth || status.hasServiceAccount) && (
                   <p className="text-muted-foreground">
                     OAuth：{status.hasOAuth ? '已配置' : '未配置'} · 服务账号：{status.hasServiceAccount ? '已配置' : '未配置'}
+                    {status.hasConfigured === false && !status.dualStack && ' · 尚未满足「二选一」可用条件'}
                   </p>
                 )}
               </div>
