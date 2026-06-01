@@ -41,6 +41,7 @@ vi.mock('@/lib/google-ads-service-account', () => ({
   getServiceAccountConfig: serviceAccountFns.getServiceAccountConfig,
 }))
 
+import { defaultOAuthAuthContext } from './helpers/campaign-route-auth-context-mock'
 import {
   assertNoConflictingGoogleAdsAuth,
   getGoogleAdsAuthContext,
@@ -399,7 +400,37 @@ describe('tryGetConfiguredGoogleAdsApiAuthForUser', () => {
   })
 })
 
+describe('assertGoogleAdsAuthReadyForApi', () => {
+  it('throws dual-stack warning when context has dualStack', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 2,
+      isShared: false,
+      assignment: null,
+    })
+    assignmentFns.isGoogleAdsAuthShared.mockReturnValue(false)
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+    oauthFns.getGoogleAdsCredentials.mockResolvedValue({ refresh_token: 'rt' })
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt' })
+    dbFns.queryOne.mockResolvedValue({ id: 'sa-1' })
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+
+    const { assertGoogleAdsAuthReadyForApi } = await import('@/lib/google-ads-auth-context')
+    await expect(assertGoogleAdsAuthReadyForApi(2)).rejects.toThrow(/OAuth 与服务账号同时存在/)
+  })
+})
+
 describe('resolveGoogleAdsApiAuthFromContext', () => {
+  it('throws when context has dualStack', async () => {
+    const { resolveGoogleAdsApiAuthFromContext } = await import('@/lib/google-ads-auth-context')
+    await expect(
+      resolveGoogleAdsApiAuthFromContext({
+        ...defaultOAuthAuthContext,
+        dualStack: true,
+        oauthCredentials: { refresh_token: 'rt' },
+      } as any)
+    ).rejects.toThrow(/OAuth 与服务账号同时存在/)
+  })
+
   it('prefers linked account service account id and loads its MCC', async () => {
     serviceAccountFns.getServiceAccountConfig.mockImplementation(async (_userId: number, id?: string) => {
       if (id === 'sa-linked') {

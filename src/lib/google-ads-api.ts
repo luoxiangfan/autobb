@@ -409,6 +409,9 @@ export async function getCustomerWithCredentials(params: {
     throw new Error('userId is required to fetch Google Ads credentials')
   }
 
+  const { assertGoogleAdsAuthReadyForApi } = await import('./google-ads-auth-context')
+  await assertGoogleAdsAuthReadyForApi(params.userId)
+
   const authType = params.authType || 'oauth'
 
   if (authType === 'service_account') {

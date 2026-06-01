@@ -106,15 +106,8 @@ export interface UnifiedAuthConfig {
 
 /** 双栈等无效配置时抛错；OAuth 路径可复用返回的 context 避免重复加载。 */
 async function loadGoogleAdsAuthContextForUnifiedClient(userId: number) {
-  const { getGoogleAdsAuthContext, googleAdsAuthContextDualStackError } = await import(
-    './google-ads-auth-context'
-  )
-  const ctx = await getGoogleAdsAuthContext(userId)
-  const dualStackError = googleAdsAuthContextDualStackError(ctx)
-  if (dualStackError) {
-    throw new Error(dualStackError)
-  }
-  return ctx
+  const { assertGoogleAdsAuthReadyForApi } = await import('./google-ads-auth-context')
+  return assertGoogleAdsAuthReadyForApi(userId)
 }
 
 /**

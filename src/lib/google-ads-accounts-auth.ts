@@ -136,6 +136,7 @@ export async function resolveAndHealSyncUserCredentials(params: {
     clientSecret: creds.client_secret,
     serviceAccountId: bundle.serviceAccountId,
     serviceAccountConfig: bundle.serviceAccountConfig,
+    authContext: params.authContext,
   })
   if (!healResult.ok) {
     return { ok: false, message: healResult.message }
@@ -994,7 +995,16 @@ export async function healAccountsRouteDeveloperToken(params: {
   clientSecret: string
   serviceAccountId?: string | null
   serviceAccountConfig?: { developerToken?: string } | null
+  /** 传入时用于双栈拦截，避免误写 developer_token */
+  authContext?: GoogleAdsAuthContext
 }): Promise<DeveloperTokenHealResult> {
+  const dualStackError = params.authContext
+    ? googleAdsAuthContextDualStackError(params.authContext)
+    : null
+  if (dualStackError) {
+    return { ok: false, code: 'DEVELOPER_TOKEN_INVALID', message: dualStackError }
+  }
+
   const developerToken = String(params.credentials.developer_token || '')
   if (!developerTokenLooksInvalid(developerToken, params.clientSecret)) {
     return { ok: true }

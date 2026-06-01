@@ -221,6 +221,31 @@ describe('healAccountsRouteDeveloperToken', () => {
     settingsFns.getUserOnlySetting.mockResolvedValue({ value: validSettingToken })
   })
 
+  it('returns dual-stack error when authContext has dualStack', async () => {
+    const result = await healAccountsRouteDeveloperToken({
+      credentials: { ...oauthCredentialsFull },
+      authType: 'oauth',
+      ownerUserId: 7,
+      clientSecret: oauthCredentialsFull.client_secret,
+      authContext: {
+        userId: 7,
+        ownerUserId: 7,
+        assignment: null,
+        isShared: false,
+        canModify: true,
+        dualStack: true,
+        auth: { authType: 'oauth' as const },
+        oauthCredentials: oauthCredentialsFull,
+        serviceAccountConfig: null,
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.message).toContain('OAuth 与服务账号同时存在')
+    expect(settingsFns.getUserOnlySetting).not.toHaveBeenCalled()
+  })
+
   it('passes when developer token already looks valid', async () => {
     const credentials = {
       client_id: oauthCredentialsFull.client_id,

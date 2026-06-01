@@ -4,12 +4,21 @@ const authContextFns = vi.hoisted(() => ({
   getGoogleAdsAuthContext: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
-  getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
-  GOOGLE_ADS_DUAL_STACK_WARNING: 'dual-stack-warning',
-  googleAdsAuthContextDualStackError: (ctx: { dualStack?: boolean }) =>
-    ctx.dualStack ? 'dual-stack-warning' : null,
-}))
+vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+  return {
+    ...actual,
+    getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
+    assertGoogleAdsAuthReadyForApi: async (userId: number) => {
+      const ctx = await authContextFns.getGoogleAdsAuthContext(userId)
+      const err = actual.googleAdsAuthContextDualStackError(ctx)
+      if (err) {
+        throw new Error(err)
+      }
+      return ctx
+    },
+  }
+})
 
 vi.mock('@/lib/google-ads-api', () => ({
   getGoogleAdsClient: vi.fn(() => ({
@@ -85,7 +94,7 @@ describe('google-ads-service-account auth-context integration', () => {
         },
         authConfig: { authType: 'oauth', userId: 7 },
       })
-    ).rejects.toThrow('dual-stack-warning')
+    ).rejects.toThrow(/OAuth 与服务账号同时存在/)
   })
 
   it('getUnifiedGoogleAdsClient rejects dual-stack even when oauthRefreshToken is passed in', async () => {
@@ -105,7 +114,7 @@ describe('google-ads-service-account auth-context integration', () => {
         authConfig: { authType: 'oauth', userId: 7 },
         oauthRefreshToken: 'rt-passed-in',
       })
-    ).rejects.toThrow('dual-stack-warning')
+    ).rejects.toThrow(/OAuth 与服务账号同时存在/)
   })
 
   it('getUnifiedGoogleAdsClient rejects dual-stack for service_account', async () => {
@@ -119,7 +128,7 @@ describe('google-ads-service-account auth-context integration', () => {
         customerId: '1234567890',
         authConfig: { authType: 'service_account', userId: 7, serviceAccountId: 'sa-1' },
       })
-    ).rejects.toThrow('dual-stack-warning')
+    ).rejects.toThrow(/OAuth 与服务账号同时存在/)
   })
 
   it('getLoginCustomerId rejects dual-stack for service_account', async () => {
@@ -129,6 +138,6 @@ describe('google-ads-service-account auth-context integration', () => {
       getLoginCustomerId({
         authConfig: { authType: 'service_account', userId: 7, serviceAccountId: 'sa-1' },
       })
-    ).rejects.toThrow('dual-stack-warning')
+    ).rejects.toThrow(/OAuth 与服务账号同时存在/)
   })
 })

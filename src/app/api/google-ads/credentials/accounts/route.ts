@@ -273,6 +273,7 @@ async function get(request: NextRequest) {
       clientSecret,
       serviceAccountId: scopedServiceAccountId,
       serviceAccountConfig,
+      authContext,
     })
     if (!healResult.ok) {
       return jsonNoStore(
