@@ -28,6 +28,7 @@ vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
 })
 
 import {
+  adminHasConfiguredAuth,
   hasConfiguredGoogleAdsAuth,
   resolveGoogleAdsApiAccessLevel,
 } from '@/lib/google-ads-auth-assignment'
@@ -137,6 +138,50 @@ describe('google-ads shared auth resolution helpers', () => {
     })
 
     await expect(hasConfiguredGoogleAdsAuth(2)).resolves.toBe(false)
+  })
+
+  it('adminHasConfiguredAuth returns false when admin has dualStack even with oauth tokens', async () => {
+    contextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      userId: 1,
+      ownerUserId: 1,
+      isShared: false,
+      canModify: true,
+      dualStack: true,
+      assignment: null,
+      auth: { authType: 'oauth' as const },
+      oauthCredentials: {
+        refresh_token: 'rt',
+        client_id: 'cid',
+        client_secret: 'secret',
+        developer_token: 'dev-token',
+      },
+      serviceAccountConfig: { id: 'sa-1' },
+    })
+
+    await expect(adminHasConfiguredAuth(1, 'oauth')).resolves.toBe(false)
+    await expect(adminHasConfiguredAuth(1, 'service_account')).resolves.toBe(false)
+  })
+
+  it('adminHasConfiguredAuth returns true when admin oauth is configured and not dualStack', async () => {
+    contextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      userId: 1,
+      ownerUserId: 1,
+      isShared: false,
+      canModify: true,
+      dualStack: false,
+      assignment: null,
+      auth: { authType: 'oauth' as const },
+      oauthCredentials: {
+        refresh_token: 'rt',
+        client_id: 'cid',
+        client_secret: 'secret',
+        developer_token: 'dev-token',
+      },
+      serviceAccountConfig: null,
+    })
+
+    await expect(adminHasConfiguredAuth(1, 'oauth')).resolves.toBe(true)
+    await expect(adminHasConfiguredAuth(1, 'service_account')).resolves.toBe(false)
   })
 
   it('resolveGoogleAdsApiAccessLevel returns null for shared oauth when admin has no oauth row', async () => {

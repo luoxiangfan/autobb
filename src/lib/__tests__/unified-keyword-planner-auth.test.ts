@@ -21,6 +21,7 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   }
 })
 
+import { buildKeywordPlannerSessionFromPrepared } from '@/lib/google-ads-accounts-auth'
 import { prepareKeywordPlannerSessionAuth } from '@/lib/unified-keyword-service'
 
 describe('prepareKeywordPlannerSessionAuth', () => {
@@ -50,6 +51,11 @@ describe('prepareKeywordPlannerSessionAuth', () => {
     if (!result.ok) return
 
     expect(result.session.preparedOAuth?.refreshToken).toBe('oauth-refresh-token')
+    const built = buildKeywordPlannerSessionFromPrepared({
+      ...defaultPreparedGoogleAdsApiCallForLinkedAccount,
+      authContext: defaultOAuthAuthContext,
+    })
+    expect(built.preparedOAuth?.authContext).toBe(defaultOAuthAuthContext)
     expect(result.session.volumeAuth.authType).toBe('oauth')
     expect(accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount).toHaveBeenCalledWith(
       7,

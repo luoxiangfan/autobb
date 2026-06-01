@@ -208,6 +208,28 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     expect(accountsAuthFns.resolveGoogleAdsApiAuthFromContext).not.toHaveBeenCalled()
   })
 
+  it('returns 409 when heal reports DUAL_STACK_CONFLICT', async () => {
+    const { GOOGLE_ADS_DUAL_STACK_WARNING } = await import('@/lib/google-ads-auth-context')
+    const accountsAuth = await import('@/lib/google-ads-accounts-auth')
+    const healSpy = vi
+      .spyOn(accountsAuth, 'healAccountsRouteDeveloperToken')
+      .mockResolvedValueOnce({
+        ok: false,
+        code: 'DUAL_STACK_CONFLICT',
+        message: GOOGLE_ADS_DUAL_STACK_WARNING,
+      })
+
+    const req = new NextRequest('http://localhost/api/google-ads/credentials/accounts?auth_type=oauth')
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(409)
+    expect(data.code).toBe('DUAL_STACK_CONFLICT')
+    expect(data.authConfigWarning).toBe(GOOGLE_ADS_DUAL_STACK_WARNING)
+    expect(syncFns.syncAccountsFromAPI).not.toHaveBeenCalled()
+    healSpy.mockRestore()
+  })
+
   it('returns 409 when auth context reports dual-stack credentials', async () => {
     const { GOOGLE_ADS_DUAL_STACK_WARNING } = await import('@/lib/google-ads-auth-context')
     accountsAuthFns.getGoogleAdsAuthContext.mockResolvedValueOnce({

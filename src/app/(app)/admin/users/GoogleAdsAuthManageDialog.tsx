@@ -316,7 +316,12 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             取消
           </Button>
-          <Button type="button" onClick={handleSave} disabled={saving || loading}>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || loading || Boolean(status?.dualStack)}
+            title={status?.dualStack ? '请先清理凭证所有者的双栈认证配置' : undefined}
+          >
             {saving ? '保存中...' : '保存'}
           </Button>
         </DialogFooter>

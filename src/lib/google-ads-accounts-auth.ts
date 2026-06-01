@@ -437,6 +437,7 @@ export function buildKeywordPlannerSessionFromPrepared(
       credentials: prepared.oauthCredentials,
       oauthLoginCustomerId:
         prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId,
+      authContext: prepared.authContext,
     }
   }
 
@@ -1000,9 +1001,13 @@ export async function healAccountsRouteDeveloperToken(params: {
   /** 传入时用于双栈拦截，避免误写 developer_token */
   authContext?: GoogleAdsAuthContext
 }): Promise<DeveloperTokenHealResult> {
-  const dualStackError = params.authContext
-    ? googleAdsAuthContextDualStackError(params.authContext)
-    : null
+  let authContext = params.authContext
+  if (!authContext) {
+    const { getGoogleAdsAuthContext } = await import('./google-ads-auth-context')
+    authContext = await getGoogleAdsAuthContext(params.ownerUserId)
+  }
+
+  const dualStackError = googleAdsAuthContextDualStackError(authContext)
   if (dualStackError) {
     return { ok: false, code: 'DUAL_STACK_CONFLICT', message: dualStackError }
   }

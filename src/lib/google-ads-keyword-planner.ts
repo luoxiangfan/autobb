@@ -6,6 +6,7 @@ import {
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import { getDatabase } from './db'
 import { getLoginCustomerId, AuthType } from './google-ads-service-account'
+import type { GoogleAdsAuthContext } from './google-ads-auth-context'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 import { getGoogleAdsLanguageCode, getGoogleAdsGeoTargetId } from './language-country-codes'
 
@@ -19,6 +20,8 @@ export type KeywordIdeasPreparedOAuth = {
   refreshToken: string
   credentials: OAuthApiCredentialsFields
   oauthLoginCustomerId?: string
+  /** 路由层 prepare 时传入，避免 getLoginCustomerId 重复加载 auth-context */
+  authContext?: GoogleAdsAuthContext
 }
 
 async function resolveKeywordPlannerOAuth(params: {
@@ -30,6 +33,7 @@ async function resolveKeywordPlannerOAuth(params: {
   let refreshToken = ''
   let credentials: OAuthApiCredentialsFields
   let loginCustomerHint = ''
+  let authContext: GoogleAdsAuthContext | undefined
 
   if (params.preparedOAuth) {
     if (!params.preparedOAuth.credentials) {
@@ -38,6 +42,7 @@ async function resolveKeywordPlannerOAuth(params: {
     refreshToken = (params.refreshToken || params.preparedOAuth.refreshToken || '').trim()
     credentials = params.preparedOAuth.credentials
     loginCustomerHint = params.preparedOAuth.oauthLoginCustomerId || ''
+    authContext = params.preparedOAuth.authContext
   } else {
     const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
       params.userId,
@@ -57,6 +62,7 @@ async function resolveKeywordPlannerOAuth(params: {
     credentials = prepared.oauthCredentials
     loginCustomerHint =
       prepared.oauthLoginCustomerId || prepared.apiAuth.oauthLoginCustomerId || ''
+    authContext = prepared.authContext
   }
 
   if (!refreshToken) {
@@ -70,6 +76,7 @@ async function resolveKeywordPlannerOAuth(params: {
       serviceAccountId: params.serviceAccountId,
     },
     oauthCredentials: { login_customer_id: loginCustomerHint },
+    authContext,
   })
 
   return { refreshToken, loginCustomerId, credentials }

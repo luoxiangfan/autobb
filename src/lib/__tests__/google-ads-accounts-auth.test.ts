@@ -219,6 +219,39 @@ describe('healAccountsRouteDeveloperToken', () => {
     vi.clearAllMocks()
     dbFns.exec.mockResolvedValue(undefined)
     settingsFns.getUserOnlySetting.mockResolvedValue({ value: validSettingToken })
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      ...defaultOAuthAuthContext,
+      userId: 1,
+      ownerUserId: 1,
+      dualStack: false,
+    })
+  })
+
+  it('loads owner auth context and returns DUAL_STACK_CONFLICT when authContext omitted', async () => {
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      userId: 7,
+      ownerUserId: 7,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      dualStack: true,
+      auth: { authType: 'oauth' as const },
+      oauthCredentials: oauthCredentialsFull,
+      serviceAccountConfig: { id: 'sa-1' },
+    })
+
+    const result = await healAccountsRouteDeveloperToken({
+      credentials: { ...oauthCredentialsFull },
+      authType: 'oauth',
+      ownerUserId: 7,
+      clientSecret: oauthCredentialsFull.client_secret,
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.code).toBe('DUAL_STACK_CONFLICT')
+    expect(authContextFns.getGoogleAdsAuthContext).toHaveBeenCalledWith(7)
+    expect(settingsFns.getUserOnlySetting).not.toHaveBeenCalled()
   })
 
   it('returns dual-stack error when authContext has dualStack', async () => {
