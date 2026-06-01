@@ -27,6 +27,7 @@ import { updateCampaignFinalUrlSuffix, type OAuthApiCredentialsFields } from '@/
 import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
+import type { GoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
 import { initializeProxyPool } from '@/lib/offer-utils'
 import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
 
@@ -147,6 +148,7 @@ interface GoogleAdsUpdateAuthContext {
   serviceAccountId?: string
   oauthLoginCustomerId?: string
   serviceAccountMccId?: string
+  authContext?: GoogleAdsAuthContext
 }
 
 type UrlSwapAccountMeta = {
@@ -165,6 +167,7 @@ async function updateSingleTargetWithLoginCustomerFallback(params: {
   serviceAccountMccId?: string
   parentMccId?: string | null
   oauthCredentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
 }): Promise<void> {
   await runWithLoginCustomerFallbackForAccount({
     adsAccount: {
@@ -190,6 +193,7 @@ async function updateSingleTargetWithLoginCustomerFallback(params: {
         loginCustomerId,
         credentials: params.oauthCredentials,
         accountParentMccId: params.parentMccId,
+        authContext: params.authContext,
       }),
   })
 }
@@ -249,6 +253,7 @@ async function resolveUrlSwapTargetApiAuth(params: {
     serviceAccountMccId: prepared.apiAuth.serviceAccountMccId,
     parentMccId: accountMeta?.parent_mcc_id ?? null,
     oauthCredentials: prepared.oauthCredentials,
+    authContext: prepared.authContext,
   }
 }
 
@@ -291,6 +296,7 @@ async function updateTargetsFinalUrlSuffix(params: {
         serviceAccountMccId: targetAuth.serviceAccountMccId,
         parentMccId: targetAuth.parentMccId,
         oauthCredentials: targetAuth.oauthCredentials,
+        authContext: targetAuth.authContext,
       })
 
       if (target.id) {

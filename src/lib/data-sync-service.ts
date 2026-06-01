@@ -5,6 +5,7 @@ import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsApiAuthFromContext,
+  type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
@@ -72,6 +73,8 @@ export interface GAQLQueryParams {
   }
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
+  /** prepare 后传入，避免 OAuth GAQL 重复 assert */
+  authContext?: GoogleAdsAuthContext
 }
 
 /**
@@ -549,6 +552,7 @@ export class DataSyncService {
             credentials: accountSyncCredentials,
             authType: accountApiAuth.authType,
             serviceAccountId: accountApiAuth.serviceAccountId,
+            authContext: accountPrepared.authContext,
           })
 
           // 🔧 修复(2026-01-15): 从 Google Ads API 获取账户真实币种/时区并回写到google_ads_accounts
@@ -647,6 +651,7 @@ export class DataSyncService {
               credentials: accountSyncCredentials,
               authType: accountApiAuth.authType,
               serviceAccountId: accountApiAuth.serviceAccountId,
+              authContext: accountPrepared.authContext,
               campaigns,
               campaignMap,
             })
@@ -822,7 +827,19 @@ export class DataSyncService {
   private async queryPerformanceData(
     params: GAQLQueryParams
   ): Promise<CampaignPerformanceData[]> {
-    const { customerId, refreshToken, startDate, endDate, accountId, userId, credentials, authType, serviceAccountId, accountParentMccId } = params
+    const {
+      customerId,
+      refreshToken,
+      startDate,
+      endDate,
+      accountId,
+      userId,
+      credentials,
+      authType,
+      serviceAccountId,
+      accountParentMccId,
+      authContext,
+    } = params
 
     try {
       const query = `
@@ -890,6 +907,7 @@ export class DataSyncService {
         accountParentMccId,
         refreshToken: refreshToken!,
         credentials: credentials!,
+        authContext,
         actionName: `queryPerformanceData(${customerId})`,
         query: async (customer) => {
           const results = await this.executeOAuthGaqlWithTracking<any[]>({
@@ -925,7 +943,19 @@ export class DataSyncService {
   private async querySearchTermData(
     params: GAQLQueryParams
   ): Promise<SearchTermPerformanceData[]> {
-    const { customerId, refreshToken, startDate, endDate, accountId, userId, credentials, authType, serviceAccountId, accountParentMccId } = params
+    const {
+      customerId,
+      refreshToken,
+      startDate,
+      endDate,
+      accountId,
+      userId,
+      credentials,
+      authType,
+      serviceAccountId,
+      accountParentMccId,
+      authContext,
+    } = params
 
     try {
       const queryWithMatchType = `
@@ -1016,6 +1046,7 @@ export class DataSyncService {
           accountParentMccId,
           refreshToken: refreshToken!,
           credentials: credentials!,
+          authContext,
           actionName: `querySearchTermData(${customerId})`,
           query: async (customer) =>
             runQueryWithSchemaFallback(
@@ -1079,7 +1110,19 @@ export class DataSyncService {
   private async queryKeywordPerformanceData(
     params: GAQLQueryParams
   ): Promise<KeywordPerformanceData[]> {
-    const { customerId, refreshToken, startDate, endDate, accountId, userId, credentials, authType, serviceAccountId, accountParentMccId } = params
+    const {
+      customerId,
+      refreshToken,
+      startDate,
+      endDate,
+      accountId,
+      userId,
+      credentials,
+      authType,
+      serviceAccountId,
+      accountParentMccId,
+      authContext,
+    } = params
 
     try {
       const query = `
@@ -1115,6 +1158,7 @@ export class DataSyncService {
           accountParentMccId,
           refreshToken: refreshToken!,
           credentials: credentials!,
+          authContext,
           actionName: `queryKeywordPerformanceData(${customerId})`,
           query: async (customer) =>
             this.executeOAuthGaqlWithTracking<any[]>({
@@ -1168,6 +1212,7 @@ export class DataSyncService {
     refreshToken: string
     credentials: SyncUserCredentials
     actionName: string
+    authContext?: GoogleAdsAuthContext
     query: (customer: Awaited<ReturnType<typeof getCustomerWithCredentials>>) => Promise<T>
   }): Promise<T> {
     if (!params.refreshToken) {
@@ -1196,6 +1241,7 @@ export class DataSyncService {
           userId: params.userId,
           accountParentMccId: params.accountParentMccId,
           oauthLoginCustomerIdHint: oauthLoginCustomerId,
+          authContext: params.authContext,
         })
         return params.query(customer)
       },
@@ -1301,6 +1347,7 @@ export class DataSyncService {
     }
     authType?: 'oauth' | 'service_account'
     serviceAccountId?: string
+    authContext?: GoogleAdsAuthContext
     campaigns: Array<{
       id: number
       google_campaign_id: string
@@ -1331,6 +1378,7 @@ export class DataSyncService {
       credentials,
       authType,
       serviceAccountId,
+      authContext,
       campaigns,
       campaignMap,
     } = params
@@ -1347,6 +1395,7 @@ export class DataSyncService {
         credentials,
         authType,
         serviceAccountId,
+        authContext,
       }),
       this.queryKeywordPerformanceData({
         customerId,
@@ -1359,6 +1408,7 @@ export class DataSyncService {
         credentials,
         authType,
         serviceAccountId,
+        authContext,
       }),
     ])
 

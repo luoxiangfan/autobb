@@ -190,6 +190,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
               authType: apiAuth.authType,
               serviceAccountId: apiAuth.serviceAccountId,
               credentials: oauthCredentials,
+              authContext: prepared.authContext,
               accountParentMccId: adsAccountRow.parent_mcc_id,
               oauthLoginCustomerIdHint: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
             }),

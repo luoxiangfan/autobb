@@ -63,6 +63,7 @@ export async function setCampaignPageViewGoalWithCredentials(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: import('./google-ads-auth-context').GoogleAdsAuthContext
 }): Promise<boolean> {
   try {
     const {customerId, campaignId, authType = 'oauth'} = params

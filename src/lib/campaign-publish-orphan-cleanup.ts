@@ -1,5 +1,6 @@
 import { getDatabase } from './db'
 import { updateGoogleAdsCampaignStatus, type OAuthApiCredentialsFields } from './google-ads-api'
+import type { GoogleAdsAuthContext } from './google-ads-auth-context'
 import { prepareGoogleAdsApiCallForLinkedAccount } from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 
@@ -12,6 +13,7 @@ export type CampaignPublishRollbackContext = {
   serviceAccountId?: string
   oauthCredentials?: OAuthApiCredentialsFields
   oauthLoginCustomerId?: string
+  authContext?: GoogleAdsAuthContext
   runWithLoginCustomerFallbackAndHeartbeat: <T>(
     stage: string,
     operation: (loginCustomerId: string | undefined) => Promise<T>
@@ -145,6 +147,7 @@ export async function buildPublishRollbackContextForAdsAccount(
     serviceAccountId: apiAuth.serviceAccountId,
     oauthCredentials,
     oauthLoginCustomerId,
+    authContext: prepared.authContext,
     runWithLoginCustomerFallbackAndHeartbeat,
   }
 }
@@ -169,6 +172,7 @@ export async function pauseOrphanGoogleAdsCampaignAfterPublishFailure(
           authType: ctx.authType,
           serviceAccountId: ctx.serviceAccountId,
           credentials: ctx.oauthCredentials,
+          authContext: ctx.authContext,
         })
     )
     console.log(`⏸️ 发布失败已暂停远端孤儿 Campaign ${googleCampaignId}`)
@@ -279,6 +283,7 @@ export async function pauseHistoricalOrphanGoogleCampaignsForOffer(params: {
             authType: ctx.authType,
             serviceAccountId: ctx.serviceAccountId,
             credentials: ctx.oauthCredentials,
+            authContext: ctx.authContext,
           })
       )
       paused++

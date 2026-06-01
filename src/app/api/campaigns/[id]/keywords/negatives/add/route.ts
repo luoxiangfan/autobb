@@ -171,6 +171,7 @@ async function createNegativeKeywords(params: {
   serviceAccountId?: string
   loginCustomerId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: import('@/lib/google-ads-auth-context').GoogleAdsAuthContext
 }): Promise<{
   created: Array<{ keywordId: string; keywordText: string; matchType: 'BROAD' | 'PHRASE' | 'EXACT' }>
   duplicateKeywords: string[]
@@ -201,6 +202,7 @@ async function createNegativeKeywords(params: {
         authType: params.authType,
         serviceAccountId: params.serviceAccountId,
         credentials: params.credentials,
+        authContext: params.authContext,
       })
 
       const first = rows[0]
@@ -402,6 +404,7 @@ export async function POST(
           serviceAccountId: apiAuth.serviceAccountId,
           loginCustomerId,
           credentials: oauthCredentials,
+          authContext: prepared.authContext,
         }),
     })
 

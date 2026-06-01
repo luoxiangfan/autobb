@@ -427,6 +427,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                             authType: apiAuth.authType,
                             serviceAccountId: apiAuth.serviceAccountId,
                             credentials: oauthCredentials,
+                            authContext: prepared.authContext,
                           }),
                       })
                       pausedInGoogleAds++

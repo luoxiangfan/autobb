@@ -61,6 +61,7 @@ async function getGoogleAdsClient(
         loginCustomerId: apiAuth.serviceAccountMccId || account.parent_mcc_id || undefined,
         authType: 'service_account',
         serviceAccountId: apiAuth.serviceAccountId,
+        authContext: prepared.authContext,
       }),
       useServiceAccount: true,
       serviceAccountId: apiAuth.serviceAccountId,
@@ -99,6 +100,7 @@ async function getGoogleAdsClient(
         accountId: account.id,
         userId,
         authType: 'oauth',
+        authContext: prepared.authContext,
       }),
   })
 

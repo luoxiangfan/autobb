@@ -227,6 +227,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
             authType: apiAuth.authType,
             serviceAccountId,
             credentials: oauthCredentials,
+            authContext: prepared.authContext,
           })
           summary.removed++
           await recordOutcome({ campaignId: googleCampaignId, outcome: 'REMOVED' })
@@ -242,6 +243,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
             authType: apiAuth.authType,
             serviceAccountId,
             credentials: oauthCredentials,
+            authContext: prepared.authContext,
           })
           summary.paused++
           await recordOutcome({ campaignId: googleCampaignId, outcome: 'PAUSED' })
@@ -288,6 +290,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
                   authType: apiAuth.authType,
                   serviceAccountId,
                   credentials: oauthCredentials,
+                  authContext: prepared.authContext,
                 })
               ),
               remoteConfig.perCampaignTimeoutMs,

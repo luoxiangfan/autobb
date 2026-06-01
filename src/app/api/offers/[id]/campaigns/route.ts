@@ -512,6 +512,7 @@ export async function GET(
               userId: numericUserId,
               credentials: accountOAuthCredentials,
               authType: 'oauth',
+              authContext: accountOAuthPrepared.authContext,
             })
 
             // AdGroup CPC best-effort

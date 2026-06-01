@@ -241,6 +241,7 @@ export async function PUT(
           authType: apiAuth.authType,
           serviceAccountId,
           credentials: oauthCredentials,
+          authContext: prepared.authContext,
         }),
     })
 

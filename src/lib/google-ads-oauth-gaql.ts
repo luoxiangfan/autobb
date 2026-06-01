@@ -1,4 +1,5 @@
 import { getCustomerWithCredentials, type OAuthApiCredentialsFields } from './google-ads-api'
+import type { GoogleAdsAuthContext } from './google-ads-auth-context'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 
 type GoogleAdsCustomer = Awaited<ReturnType<typeof getCustomerWithCredentials>>
@@ -20,6 +21,8 @@ export async function runOAuthGaqlWithLoginCustomerFallback<T>(params: {
   oauthLoginCustomerId?: string
   serviceAccountMccId?: string
   serviceAccountId?: string
+  /** prepare 后传入，避免重复 assert / 加载 auth-context */
+  authContext?: GoogleAdsAuthContext
   actionName: string
   query: (customer: GoogleAdsCustomer) => Promise<T>
 }): Promise<T> {
@@ -41,6 +44,7 @@ export async function runOAuthGaqlWithLoginCustomerFallback<T>(params: {
         accountParentMccId: params.adsAccount.parent_mcc_id,
         oauthLoginCustomerIdHint: params.oauthLoginCustomerId,
         authType: 'oauth',
+        authContext: params.authContext,
       })
       return params.query(customer)
     },

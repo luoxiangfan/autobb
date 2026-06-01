@@ -284,6 +284,7 @@ export async function GET(
             refreshToken: oauthRefreshToken || '',
             oauthCredentials: oauthApiCredentials!,
             oauthLoginCustomerId,
+            authContext: prepared.authContext,
             actionName: '查询广告系列 CPC',
             query: (customer) =>
               executeOAuthGaqlWithTracking(customer, linked.customer_id!, campaignQuery),
@@ -350,6 +351,7 @@ export async function GET(
               refreshToken: oauthRefreshToken || '',
               oauthCredentials: oauthApiCredentials!,
               oauthLoginCustomerId,
+              authContext: prepared.authContext,
               actionName: '查询 Ad Group CPC',
               query: (customer) =>
                 executeOAuthGaqlWithTracking(customer, linked.customer_id!, adGroupQuery),

@@ -22,6 +22,7 @@ import {
   resolveSyncAuthForAccount,
   type OAuthApiCredentialsFields,
 } from './google-ads-accounts-auth'
+import type { GoogleAdsAuthContext } from './google-ads-auth-context'
 import { runOAuthGaqlWithLoginCustomerFallback } from './google-ads-oauth-gaql'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { toDbCampaignConfigTextField } from './campaign-backups'
@@ -446,6 +447,7 @@ export async function syncCampaignsFromGoogleAds(
           parentMccId: account.parent_mcc_id,
           oauthCredentials: oauthApiCredentials,
           oauthLoginCustomerId,
+          authContext,
           enableAudit: !options?.dryRun,
         })
 
@@ -646,6 +648,7 @@ async function fetchAllDataFromGoogleAds(params: {
   parentMccId?: string | null
   oauthCredentials?: OAuthApiCredentialsFields
   oauthLoginCustomerId?: string
+  authContext?: GoogleAdsAuthContext
   enableAudit?: boolean
 }): Promise<any[]> {
   const {
@@ -658,6 +661,7 @@ async function fetchAllDataFromGoogleAds(params: {
     parentMccId,
     oauthCredentials,
     oauthLoginCustomerId,
+    authContext,
     enableAudit = true,
   } = params
 
@@ -800,6 +804,7 @@ async function fetchAllDataFromGoogleAds(params: {
         refreshToken,
         oauthCredentials,
         oauthLoginCustomerId,
+        authContext,
         actionName: `fetchCampaignsFromGoogleAds(${customerId})`,
         query: async (customer) => {
           const r1 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query1))
@@ -1114,6 +1119,7 @@ async function fetchCampaignsFromGoogleAds(params: {
   parentMccId?: string | null
   oauthCredentials?: OAuthApiCredentialsFields
   oauthLoginCustomerId?: string
+  authContext?: GoogleAdsAuthContext
   enableAudit?: boolean
 }): Promise<any[]> {
   return await fetchAllDataFromGoogleAds(params)

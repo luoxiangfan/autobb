@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import {
+  removeGoogleAdsCampaign as removeGoogleAdsCampaignRemote,
   updateGoogleAdsCampaignStatus,
-  getCustomerWithCredentials,
   type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-api'
 import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
@@ -13,7 +13,6 @@ import { pauseUrlSwapTargetsByOfferId } from '@/lib/url-swap'
 import { removePendingClickFarmQueueTasksByTaskIds } from '@/lib/click-farm/queue-cleanup'
 import { removePendingUrlSwapQueueTasksByTaskIds } from '@/lib/url-swap/queue-cleanup'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
-import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
 
 type OfflineBody = {
   blacklistOffer?: boolean
@@ -387,6 +386,9 @@ export async function POST(
           let oauthApiCredentials: OAuthApiCredentialsFields | undefined
           let oauthLoginCustomerId: string | undefined
           let serviceAccountMccId: string | undefined
+          let preparedAuthContext:
+            | import('@/lib/google-ads-auth-context').GoogleAdsAuthContext
+            | undefined
 
           if (!googleAdsSummary.skippedReason) {
             const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
@@ -403,6 +405,7 @@ export async function POST(
               oauthApiCredentials = prepared.oauthCredentials
               oauthLoginCustomerId =
                 prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId
+              preparedAuthContext = prepared.authContext
             }
           }
 
@@ -424,41 +427,18 @@ export async function POST(
                           campaignResourceName: resourceName,
                         })
                       } else {
-                        const customer = await getCustomerWithCredentials({
+                        await removeGoogleAdsCampaignRemote({
                           customerId: customerIdValue,
                           refreshToken,
+                          campaignId: id,
                           accountId: campaignRow.google_ads_account_id!,
                           userId,
                           loginCustomerId,
                           authType,
+                          serviceAccountId,
                           credentials: oauthApiCredentials,
+                          authContext: preparedAuthContext,
                         })
-                        const resourceName = `customers/${customerIdValue}/campaigns/${id}`
-                        const startTime = Date.now()
-                        try {
-                          await customer.campaigns.remove([resourceName])
-                          await trackApiUsage({
-                            userId,
-                            operationType: ApiOperationType.MUTATE,
-                            endpoint: '/api/google-ads/campaign/remove',
-                            customerId: customerIdValue,
-                            requestCount: 1,
-                            responseTimeMs: Date.now() - startTime,
-                            isSuccess: true,
-                          })
-                        } catch (error: any) {
-                          await trackApiUsage({
-                            userId,
-                            operationType: ApiOperationType.MUTATE,
-                            endpoint: '/api/google-ads/campaign/remove',
-                            customerId: customerIdValue,
-                            requestCount: 1,
-                            responseTimeMs: Date.now() - startTime,
-                            isSuccess: false,
-                            errorMessage: toErrorMessage(error),
-                          }).catch(() => {})
-                          throw error
-                        }
                       }
                       googleAdsSummary.removed += 1
                     } catch (removeError: any) {
@@ -475,6 +455,7 @@ export async function POST(
                           authType,
                           serviceAccountId,
                           credentials: oauthApiCredentials,
+                          authContext: preparedAuthContext,
                         })
                         googleAdsSummary.pausedFallback += 1
                         console.warn(
@@ -504,6 +485,7 @@ export async function POST(
                       authType,
                       serviceAccountId,
                       credentials: oauthApiCredentials,
+                      authContext: preparedAuthContext,
                     })
                     googleAdsSummary.paused += 1
                   } catch (err: any) {

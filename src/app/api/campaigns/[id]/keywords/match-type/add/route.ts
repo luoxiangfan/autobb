@@ -218,6 +218,7 @@ async function createKeywordsByMatchType(params: {
   serviceAccountId?: string
   loginCustomerId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: import('@/lib/google-ads-auth-context').GoogleAdsAuthContext
 }): Promise<{
   created: Array<{ keywordId: string; keywordText: string; matchType: 'BROAD' | 'PHRASE' | 'EXACT' }>
   duplicateKeywords: string[]
@@ -247,6 +248,7 @@ async function createKeywordsByMatchType(params: {
         authType: params.authType,
         serviceAccountId: params.serviceAccountId,
         credentials: params.credentials,
+        authContext: params.authContext,
       })
 
       const first = rows[0]
@@ -281,6 +283,7 @@ async function pauseExistingKeywords(params: {
   serviceAccountId?: string
   loginCustomerId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: import('@/lib/google-ads-auth-context').GoogleAdsAuthContext
   oldKeywords: NormalizedOldKeyword[]
 }): Promise<{
   pausedCount: number
@@ -360,6 +363,7 @@ async function pauseExistingKeywords(params: {
           authType: params.authType,
           serviceAccountId: params.serviceAccountId,
           credentials: params.credentials,
+          authContext: params.authContext,
         })
       }
 
@@ -587,6 +591,7 @@ export async function POST(
           serviceAccountId: apiAuth.serviceAccountId,
           loginCustomerId,
           credentials: oauthCredentials,
+          authContext: prepared.authContext,
         }),
     })
 
@@ -672,6 +677,7 @@ export async function POST(
                 serviceAccountId: apiAuth.serviceAccountId,
                 loginCustomerId,
                 credentials: oauthCredentials,
+                authContext: prepared.authContext,
                 oldKeywords: parsedOldKeywords,
               }),
           })

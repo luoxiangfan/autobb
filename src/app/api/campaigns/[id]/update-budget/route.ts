@@ -192,6 +192,7 @@ export async function PUT(
           authType: apiAuth.authType,
           serviceAccountId: apiAuth.serviceAccountId,
           credentials: oauthCredentials,
+          authContext: prepared.authContext,
         }),
     })
 

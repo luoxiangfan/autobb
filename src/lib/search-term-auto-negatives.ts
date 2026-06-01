@@ -5,6 +5,7 @@ import {
   prepareGoogleAdsApiCallForLinkedAccount,
   type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-accounts-auth'
+import type { GoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keyword-intent'
 import { KEYWORD_POLICY } from '@/lib/keyword-policy'
@@ -240,6 +241,7 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
         oauthLoginCustomerId:
           prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
         credentials: prepared.oauthCredentials,
+        authContext: prepared.authContext,
       }
     }
 
@@ -254,6 +256,7 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
       refreshToken: '',
       parentMccId,
       oauthLoginCustomerId: undefined,
+      authContext: prepared.authContext,
     }
   }
 }
@@ -273,6 +276,7 @@ async function createSearchTermKeywordsWithFallback(params: {
     parentMccId: string | null
     oauthLoginCustomerId?: string
     credentials?: OAuthApiCredentialsFields
+    authContext?: GoogleAdsAuthContext
   }
   keywords: Parameters<typeof createGoogleAdsKeywordsBatch>[0]['keywords']
   actionName: string
@@ -290,6 +294,7 @@ async function createSearchTermKeywordsWithFallback(params: {
       loginCustomerId: apiAuth.serviceAccountMccId,
       authType: apiAuth.authType,
       serviceAccountId: apiAuth.serviceAccountId,
+      authContext: apiAuth.authContext,
     })
   }
 
@@ -317,6 +322,7 @@ async function createSearchTermKeywordsWithFallback(params: {
         authType: apiAuth.authType,
         serviceAccountId: apiAuth.serviceAccountId,
         credentials: apiAuth.credentials,
+        authContext: apiAuth.authContext,
       }),
   })
 }

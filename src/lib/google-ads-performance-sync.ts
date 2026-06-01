@@ -296,6 +296,7 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
           credentials: oauthCredentials,
           accountParentMccId: account.parent_mcc_id,
           oauthLoginCustomerIdHint: oauthLoginCustomerId,
+          authContext: prepared.authContext,
         })
 
         return syncAllCreativesPerformance(

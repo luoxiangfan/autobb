@@ -213,6 +213,7 @@ async function createKeywordsWithDuplicateTolerance(params: {
   serviceAccountId?: string
   loginCustomerId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: import('@/lib/google-ads-auth-context').GoogleAdsAuthContext
 }) {
   const created: Array<{ keywordId: string; keywordText: string }> = []
   const duplicateKeywords: string[] = []
@@ -234,6 +235,7 @@ async function createKeywordsWithDuplicateTolerance(params: {
       authType: params.authType,
       serviceAccountId: params.serviceAccountId,
       credentials: params.credentials,
+      authContext: params.authContext,
     })
 
     for (const item of batch) {
@@ -267,6 +269,7 @@ async function createKeywordsWithDuplicateTolerance(params: {
         authType: params.authType,
         serviceAccountId: params.serviceAccountId,
         credentials: params.credentials,
+        authContext: params.authContext,
       })
 
       for (const row of single) {
@@ -484,6 +487,7 @@ export async function POST(
           serviceAccountId: apiAuth.serviceAccountId,
           loginCustomerId,
           credentials: oauthCredentials,
+          authContext: prepared.authContext,
         }),
     })
 

@@ -145,6 +145,7 @@ export async function queryActiveCampaigns(
         authType: ctx.auth.authType,
         serviceAccountId,
         credentials: oauthCredentials,
+        authContext: ctx,
         skipCache: true,
       }),
   })

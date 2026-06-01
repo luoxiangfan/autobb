@@ -137,6 +137,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
             authType: apiAuth.authType,
             serviceAccountId: apiAuth.serviceAccountId,
             credentials: oauthCredentials,
+            authContext: prepared.authContext,
           }),
       })
 

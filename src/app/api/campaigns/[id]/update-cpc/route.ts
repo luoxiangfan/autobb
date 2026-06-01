@@ -435,6 +435,7 @@ export async function PUT(
         loginCustomerId: apiAuth.serviceAccountMccId || adsAccountRow.parent_mcc_id || undefined,
         authType: 'service_account',
         serviceAccountId,
+        authContext: prepared.authContext,
       })
     } else {
       customer = await runWithLoginCustomerFallbackForAccount({
@@ -458,6 +459,7 @@ export async function PUT(
             userId: numericUserId,
             credentials: oauthCredentials,
             authType: 'oauth',
+            authContext: prepared.authContext,
           }),
       })
     }

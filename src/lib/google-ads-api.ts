@@ -8,8 +8,14 @@ import {
   resolveOAuthClientCredentialsForUser,
   type OAuthApiCredentialsFields,
 } from './google-ads-accounts-auth'
+import type { GoogleAdsAuthContext } from './google-ads-auth-context'
 
 export type { OAuthApiCredentialsFields }
+
+/** prepare 后可选传入，高层 API 透传至 getCustomerWithCredentials */
+export type GoogleAdsApiAuthContextField = {
+  authContext?: GoogleAdsAuthContext
+}
 import { installGoogleAdsWarningFilter } from './google-ads-warning-filter'
 import {
   getGoogleAdsTextEffectiveLength,
@@ -429,7 +435,7 @@ export async function getCustomerWithCredentials(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   /** 调用方已校验双栈时传入，避免重复加载 auth-context */
-  authContext?: import('./google-ads-auth-context').GoogleAdsAuthContext
+  authContext?: GoogleAdsAuthContext
 }): Promise<Customer> {
   if (!params.userId) {
     throw new Error('userId is required to fetch Google Ads credentials')
@@ -640,6 +646,7 @@ export async function findGoogleAdsCampaignByName(params: {
   serviceAccountId?: string
   customer?: Customer
   credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
 }): Promise<{ campaignId: string; resourceName: string } | null> {
   const nameLiteral = escapeGaqlStringLiteral(params.campaignName)
   const query = `
@@ -675,6 +682,7 @@ export async function findGoogleAdsCampaignByName(params: {
       authType: params.authType,
       serviceAccountId: params.serviceAccountId,
       credentials: params.credentials,
+      authContext: params.authContext,
     })
     results = await trackOAuthApiCall(
       params.userId,
@@ -714,6 +722,7 @@ export async function createGoogleAdsCampaign(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
 }): Promise<{ campaignId: string; resourceName: string }> {
   const authType = params.authType || 'oauth'
   const sanitizedFinalUrlSuffix = params.finalUrlSuffix && params.finalUrlSuffix.trim() !== ''
@@ -1124,6 +1133,7 @@ export async function updateGoogleAdsCampaignStatus(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
 }): Promise<void> {
   const requestedStatus = params.status
   const effectiveStatus = requestedStatus === 'REMOVED' ? 'PAUSED' : requestedStatus
@@ -1197,6 +1207,7 @@ export async function updateGoogleAdsCampaignName(params: {
   credentials?: OAuthApiCredentialsFields
   accountParentMccId?: string | null
   oauthLoginCustomerIdHint?: string
+  authContext?: GoogleAdsAuthContext
 }): Promise<void> {
   const trimmedName = String(params.name || '').trim()
   if (!trimmedName) {
@@ -1226,6 +1237,7 @@ export async function updateGoogleAdsCampaignName(params: {
       oauthLoginCustomerIdHint: params.oauthLoginCustomerIdHint,
       authType: params.authType,
       serviceAccountId: params.serviceAccountId,
+      authContext: params.authContext,
     })
 
     await trackOAuthApiCall(
@@ -1271,6 +1283,7 @@ export async function updateGoogleAdsKeywordStatus(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
 }): Promise<void> {
   const authType = params.authType || 'oauth'
   if (authType === 'service_account') {
@@ -1285,6 +1298,8 @@ export async function updateGoogleAdsKeywordStatus(params: {
     loginCustomerId: params.loginCustomerId,
     authType,
     serviceAccountId: params.serviceAccountId,
+    credentials: params.credentials,
+    authContext: params.authContext,
   })
 
   const resourceName = `customers/${params.customerId}/adGroupCriteria/${params.adGroupId}~${params.keywordId}`
@@ -1322,6 +1337,7 @@ export async function removeGoogleAdsCampaign(params: {
   serviceAccountId?: string
   customer?: Customer
   credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
 }): Promise<void> {
   const authType = params.authType || 'oauth'
   const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
@@ -1343,6 +1359,8 @@ export async function removeGoogleAdsCampaign(params: {
       loginCustomerId: params.loginCustomerId,
       authType,
       serviceAccountId: params.serviceAccountId,
+      credentials: params.credentials,
+      authContext: params.authContext,
     })
 
     await trackOAuthApiCall(
@@ -1385,6 +1403,7 @@ export async function updateGoogleAdsCampaignBudget(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
 }): Promise<void> {
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
   if (params.authType === 'service_account') {
@@ -1456,6 +1475,7 @@ export async function getGoogleAdsCampaign(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
 }): Promise<any> {
   const cacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, {
     campaignId: params.campaignId
@@ -1551,6 +1571,7 @@ export async function listGoogleAdsCampaigns(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
 }): Promise<any[]> {
   // 生成缓存键
   const cacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId)
@@ -1649,6 +1670,7 @@ export async function findGoogleAdsAdGroupByName(params: {
   serviceAccountId?: string
   customer?: Customer
   credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
 }): Promise<{ adGroupId: string; resourceName: string } | null> {
   const nameLiteral = escapeGaqlStringLiteral(params.adGroupName)
   const query = `
@@ -1685,6 +1707,7 @@ export async function findGoogleAdsAdGroupByName(params: {
       authType: params.authType,
       serviceAccountId: params.serviceAccountId,
       credentials: params.credentials,
+      authContext: params.authContext,
     })
     results = await trackOAuthApiCall(
       params.userId,
@@ -1733,6 +1756,7 @@ export async function createGoogleAdsAdGroup(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
 }): Promise<{ adGroupId: string; resourceName: string }> {
   const authType = params.authType || 'oauth'
 
@@ -1866,6 +1890,7 @@ export async function createGoogleAdsKeywordsBatch(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
 }): Promise<Array<{ keywordId: string; resourceName: string; keywordText: string }>> {
   const authType = params.authType || 'oauth'
 
@@ -2151,6 +2176,7 @@ export async function createGoogleAdsResponsiveSearchAd(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
 }): Promise<{ adId: string; resourceName: string }> {
   const authType = params.authType || 'oauth'
 
@@ -2298,6 +2324,7 @@ export async function getCampaignPerformance(params: {
   loginCustomerId?: string
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
+  authContext?: GoogleAdsAuthContext
 }): Promise<Array<{
   date: string
   impressions: number
@@ -2389,6 +2416,7 @@ export async function getAdGroupPerformance(params: {
   loginCustomerId?: string
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
+  authContext?: GoogleAdsAuthContext
 }): Promise<Array<{
   date: string
   impressions: number
@@ -2480,6 +2508,7 @@ export async function getAdPerformance(params: {
   loginCustomerId?: string
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
+  authContext?: GoogleAdsAuthContext
 }): Promise<Array<{
   date: string
   impressions: number
@@ -2571,6 +2600,7 @@ export async function getBatchCampaignPerformance(params: {
   loginCustomerId?: string
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
+  authContext?: GoogleAdsAuthContext
 }): Promise<Record<string, Array<{
   date: string
   impressions: number
@@ -2675,6 +2705,7 @@ export async function createGoogleAdsCalloutExtensions(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
 }): Promise<{ assetIds: string[] }> {
   try {
     const normalizedCallouts = Array.from(new Set(
@@ -2812,6 +2843,7 @@ export async function createGoogleAdsSitelinkExtensions(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
 }): Promise<{ assetIds: string[] }> {
   const sanitizedSitelinks = params.sitelinks.map((sitelink) => {
     const sanitizedText = sanitizeGoogleAdsAdText(sitelink.text, 25).trim()
@@ -3191,6 +3223,7 @@ export async function updateCampaignFinalUrlSuffix(params: {
   accountParentMccId?: string | null
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
+  authContext?: GoogleAdsAuthContext
 }): Promise<void> {
   const sanitizedFinalUrlSuffix = sanitizeGoogleAdsFinalUrlSuffix(params.finalUrlSuffix)
   // 🔧 修复(2025-01-03): 服务账号模式使用Python服务
