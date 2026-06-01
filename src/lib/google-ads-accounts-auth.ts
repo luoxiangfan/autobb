@@ -1051,6 +1051,20 @@ export async function resolveAccountsRouteAuthBundle(params: {
 }): Promise<AccountsRouteAuthResolveResult> {
   const { userId, authContext, authType } = params
 
+  const dualStackError = googleAdsAuthContextDualStackError(authContext)
+  if (dualStackError) {
+    return {
+      ok: false,
+      status: 409,
+      body: {
+        error: dualStackError,
+        code: 'DUAL_STACK_CONFLICT',
+        message: dualStackError,
+        authConfigWarning: dualStackError,
+      },
+    }
+  }
+
   if (authType === 'service_account') {
     const serviceAccountId = params.serviceAccountId
     if (!serviceAccountId) {

@@ -19,6 +19,7 @@ import {
   GOOGLE_ADS_DUAL_STACK_WARNING,
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsCredentialStatusFields,
+  resolveGoogleAdsDisplayAuthType,
 } from '@/lib/google-ads-auth-context'
 
 /**
@@ -131,6 +132,7 @@ export async function GET(request: NextRequest) {
     const assignment = ctx.assignment
     const statusFields = await resolveGoogleAdsCredentialStatusFields(ctx)
     const authConfigWarning = ctx.dualStack ? GOOGLE_ADS_DUAL_STACK_WARNING : null
+    const displayAuthType = resolveGoogleAdsDisplayAuthType(ctx)
 
     if (!statusFields.hasCredentials) {
       return NextResponse.json({
@@ -139,7 +141,7 @@ export async function GET(request: NextRequest) {
           hasCredentials: false,
           hasRefreshToken: false,
           hasServiceAccount: false,
-          authType: ctx.auth.authType,
+          ...(displayAuthType != null ? { authType: displayAuthType } : {}),
           assignmentMode: assignment?.assignmentMode ?? 'own',
           canModify: ctx.canModify,
           isShared: ctx.isShared,
@@ -167,7 +169,7 @@ export async function GET(request: NextRequest) {
         hasServiceAccount: statusFields.hasServiceAccount,
         serviceAccountId: statusFields.serviceAccountId,
         serviceAccountName: statusFields.serviceAccountName,
-        authType: ctx.auth.authType,
+        ...(displayAuthType != null ? { authType: displayAuthType } : {}),
         apiAccessLevel: statusFields.apiAccessLevel,
         lastVerifiedAt: statusFields.lastVerifiedAt,
         isActive: statusFields.isActive === 1,

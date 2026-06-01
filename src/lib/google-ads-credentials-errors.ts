@@ -167,22 +167,25 @@ export function parseCredentialsStatusResponse(data: unknown): ParsedGoogleAdsCr
 
   const hasRefreshToken = Boolean(payload.hasRefreshToken)
   const hasServiceAccount = Boolean(payload.hasServiceAccount)
+  const authConfigWarning = formatNullableErrorMessage(payload.authConfigWarning)
   const authType: 'oauth' | 'service_account' =
     payload.authType === 'service_account'
       ? 'service_account'
       : payload.authType === 'oauth'
         ? 'oauth'
-        : hasRefreshToken
+        : authConfigWarning
           ? 'oauth'
-          : hasServiceAccount
-            ? 'service_account'
-            : 'oauth'
+          : hasRefreshToken
+            ? 'oauth'
+            : hasServiceAccount
+              ? 'service_account'
+              : 'oauth'
 
   return {
     authType,
     serviceAccountId: payload.serviceAccountId ? String(payload.serviceAccountId) : undefined,
     hasCredentials: Boolean(payload.hasCredentials),
-    authConfigWarning: formatNullableErrorMessage(payload.authConfigWarning),
+    authConfigWarning,
   }
 }
 

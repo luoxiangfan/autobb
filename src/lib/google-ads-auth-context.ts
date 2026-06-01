@@ -160,6 +160,18 @@ export function hasConfiguredGoogleAdsAuthFromContext(ctx: GoogleAdsAuthContext)
   return Boolean(resolveEffectiveServiceAccountId(undefined, ctx))
 }
 
+/**
+ * 凭证状态 / 管理端展示用 authType：双栈时不返回 getUserAuthType 偏好的 oauth，避免 UI 误判为已选 OAuth。
+ */
+export function resolveGoogleAdsDisplayAuthType(
+  ctx: GoogleAdsAuthContext
+): 'oauth' | 'service_account' | null {
+  if (ctx.dualStack) {
+    return null
+  }
+  return ctx.auth.authType
+}
+
 export function getServiceAccountMccFromContext(ctx: GoogleAdsAuthContext): string | undefined {
   const mcc = ctx.serviceAccountConfig?.mccCustomerId
   return mcc ? String(mcc) : undefined

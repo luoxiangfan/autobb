@@ -219,6 +219,24 @@ describe('resolveGoogleAdsCredentialStatusFields', () => {
   })
 })
 
+describe('resolveGoogleAdsDisplayAuthType', () => {
+  it('returns null when dualStack is true', async () => {
+    const { resolveGoogleAdsDisplayAuthType } = await import('@/lib/google-ads-auth-context')
+    expect(
+      resolveGoogleAdsDisplayAuthType({
+        dualStack: true,
+        auth: { authType: 'oauth' },
+      } as Parameters<typeof resolveGoogleAdsDisplayAuthType>[0])
+    ).toBeNull()
+    expect(
+      resolveGoogleAdsDisplayAuthType({
+        dualStack: false,
+        auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+      } as Parameters<typeof resolveGoogleAdsDisplayAuthType>[0])
+    ).toBe('service_account')
+  })
+})
+
 describe('googleAdsAuthContextDualStackError', () => {
   it('returns warning when dualStack is true', async () => {
     const { googleAdsAuthContextDualStackError, GOOGLE_ADS_DUAL_STACK_WARNING } =

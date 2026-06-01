@@ -8,8 +8,14 @@ import { getGoogleAdsClient } from './google-ads-api'
 import { resolveGoogleAdsApiAccessLevel, resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
 import {
   getGoogleAdsAuthContext,
+  GOOGLE_ADS_DUAL_STACK_WARNING,
+  googleAdsAuthContextDualStackError,
   hasConfiguredGoogleAdsAuthFromContext,
 } from './google-ads-auth-context'
+
+function isGoogleAdsDualStackError(error: unknown): boolean {
+  return error instanceof Error && error.message === GOOGLE_ADS_DUAL_STACK_WARNING
+}
 
 export type ApiAccessLevel = 'test' | 'explorer' | 'basic' | 'standard'
 
@@ -89,6 +95,10 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
 
   try {
     const ctx = await getGoogleAdsAuthContext(userId)
+    const dualStackError = googleAdsAuthContextDualStackError(ctx)
+    if (dualStackError) {
+      throw new Error(dualStackError)
+    }
 
     if (ctx.auth.authType === 'service_account') {
       const storedLevel = await resolveGoogleAdsApiAccessLevel(userId)
@@ -240,6 +250,10 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
       }
     }
   } catch (error: any) {
+    if (isGoogleAdsDualStackError(error)) {
+      throw error
+    }
+
     console.error('检测API访问级别失败:', error)
 
     // 尝试从错误中检测

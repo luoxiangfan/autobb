@@ -66,6 +66,24 @@ describe('google-ads-credentials-errors', () => {
     expect(parsed.serviceAccountId).toBe('sa-99')
   })
 
+  it('parseCredentialsStatusResponse does not infer SA when dual-stack warning without authType', () => {
+    const warning = '检测到 OAuth 与服务账号同时存在，请先在设置页删除其中一种配置后再使用。'
+    const parsed = parseCredentialsStatusResponse({
+      success: true,
+      data: {
+        hasCredentials: false,
+        hasRefreshToken: false,
+        hasServiceAccount: true,
+        serviceAccountId: 'sa-99',
+        authConfigWarning: warning,
+      },
+    })
+    expect(parsed.hasCredentials).toBe(false)
+    expect(parsed.authConfigWarning).toBe(warning)
+    expect(parsed.authType).toBe('oauth')
+    expect(parsed.serviceAccountId).toBe('sa-99')
+  })
+
   it('parseCredentialsStatusResponse prefers explicit authType', () => {
     const parsed = parseCredentialsStatusResponse({
       success: true,

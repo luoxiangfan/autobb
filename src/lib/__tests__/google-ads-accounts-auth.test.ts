@@ -96,6 +96,21 @@ describe('resolveAccountsRouteAuthBundle', () => {
     dbFns.exec.mockResolvedValue(undefined)
   })
 
+  it('returns 409 when auth context has dual stack', async () => {
+    const result = await resolveAccountsRouteAuthBundle({
+      userId: 1,
+      authContext: { ...oauthAuthContextFull, dualStack: true },
+      authType: 'oauth',
+      serviceAccountId: null,
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.status).toBe(409)
+    expect(result.body.code).toBe('DUAL_STACK_CONFLICT')
+    expect(authContextFns.resolveGoogleAdsApiAuthFromContext).not.toHaveBeenCalled()
+  })
+
   it('resolves OAuth bundle with user-level refresh token', async () => {
     const result = await resolveAccountsRouteAuthBundle({
       userId: 1,

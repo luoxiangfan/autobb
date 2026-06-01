@@ -25,6 +25,7 @@ import {
   GOOGLE_ADS_DUAL_STACK_WARNING,
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsCredentialStatusFields,
+  resolveGoogleAdsDisplayAuthType,
 } from '@/lib/google-ads-auth-context'
 
 async function requireAdmin(request: NextRequest) {
@@ -49,6 +50,7 @@ async function buildAuthStatus(userId: number) {
   }
 
   const configured = hasConfiguredGoogleAdsAuthFromContext(ctx)
+  const displayAuthType = resolveGoogleAdsDisplayAuthType(ctx)
 
   return {
     assignment: assignment
@@ -63,14 +65,14 @@ async function buildAuthStatus(userId: number) {
         }
       : {
           assignmentMode: 'own' as GoogleAdsAuthAssignmentMode,
-          authType: ctx.auth.authType,
+          authType: displayAuthType ?? ctx.auth.authType,
           sharedAdminUserId: null,
           sharedAdminUsername: null,
           sharedAdminEmail: null,
           configuredBy: null,
           updatedAt: null,
         },
-    authType: ctx.auth.authType,
+    authType: displayAuthType,
     hasOAuth: statusFields.hasRefreshToken,
     hasServiceAccount: statusFields.hasServiceAccount,
     serviceAccountId: statusFields.serviceAccountId,
