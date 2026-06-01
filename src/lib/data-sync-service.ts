@@ -12,6 +12,7 @@ import {
   resolveSyncUserCredentialsForJob,
   syncUserCredentialsFromPrepared,
   type SyncUserCredentials,
+  preparedAuthContextField,
 } from './google-ads-accounts-auth'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { getInsertedId, nowFunc } from './db-helpers'
@@ -552,7 +553,7 @@ export class DataSyncService {
             credentials: accountSyncCredentials,
             authType: accountApiAuth.authType,
             serviceAccountId: accountApiAuth.serviceAccountId,
-            authContext: accountPrepared.authContext,
+            ...preparedAuthContextField(accountPrepared),
           })
 
           // 🔧 修复(2026-01-15): 从 Google Ads API 获取账户真实币种/时区并回写到google_ads_accounts
@@ -651,7 +652,7 @@ export class DataSyncService {
               credentials: accountSyncCredentials,
               authType: accountApiAuth.authType,
               serviceAccountId: accountApiAuth.serviceAccountId,
-              authContext: accountPrepared.authContext,
+              ...preparedAuthContextField(accountPrepared),
               campaigns,
               campaignMap,
             })

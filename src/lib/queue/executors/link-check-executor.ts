@@ -24,7 +24,7 @@ import { resolveAffiliateLink } from '@/lib/url-resolver'
 import { getProxyForCountry } from '../user-proxy-loader'
 import { analyzeProxyError } from './proxy-error-handler'
 import { pauseClickFarmTasksByOfferId } from '../../click-farm'
-import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { updateGoogleAdsCampaignStatus } from '../../google-ads-api'
 
@@ -427,7 +427,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                             authType: apiAuth.authType,
                             serviceAccountId: apiAuth.serviceAccountId,
                             credentials: oauthCredentials,
-                            authContext: prepared.authContext,
+                            ...preparedAuthContextField(prepared),
                           }),
                       })
                       pausedInGoogleAds++

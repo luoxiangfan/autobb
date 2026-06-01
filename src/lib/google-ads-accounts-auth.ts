@@ -301,6 +301,20 @@ export type PreparedGoogleAdsAccountApiCall = {
   oauthLoginCustomerId?: string
 }
 
+/** 与 Google Ads API 调用成对 spread，复用已 assert 的 auth-context */
+export function googleAdsAuthContextParam(
+  authContext: GoogleAdsAuthContext
+): { authContext: GoogleAdsAuthContext } {
+  return { authContext }
+}
+
+/** prepare 成功后 spread 入内，避免漏传 authContext */
+export function preparedAuthContextField(
+  prepared: { authContext: GoogleAdsAuthContext }
+): { authContext: GoogleAdsAuthContext } {
+  return googleAdsAuthContextParam(prepared.authContext)
+}
+
 /**
  * 解析账号级 API 调用所需的 refreshToken / heal 凭证（refresh 仅来自 auth-context）。
  */
@@ -437,7 +451,7 @@ export function buildKeywordPlannerSessionFromPrepared(
       credentials: prepared.oauthCredentials,
       oauthLoginCustomerId:
         prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId,
-      authContext: prepared.authContext,
+      ...preparedAuthContextField(prepared),
     }
   }
 

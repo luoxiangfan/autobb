@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getCustomerWithCredentials } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getDatabase } from '@/lib/db'
@@ -512,7 +512,7 @@ export async function GET(
               userId: numericUserId,
               credentials: accountOAuthCredentials,
               authType: 'oauth',
-              authContext: accountOAuthPrepared.authContext,
+              ...preparedAuthContextField(accountOAuthPrepared),
             })
 
             // AdGroup CPC best-effort

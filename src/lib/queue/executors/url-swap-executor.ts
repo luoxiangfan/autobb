@@ -26,7 +26,7 @@ import { getDatabase } from '@/lib/db'
 import { updateCampaignFinalUrlSuffix, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
 import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
-import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
 import type { GoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
 import { initializeProxyPool } from '@/lib/offer-utils'
 import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
@@ -253,7 +253,7 @@ async function resolveUrlSwapTargetApiAuth(params: {
     serviceAccountMccId: prepared.apiAuth.serviceAccountMccId,
     parentMccId: accountMeta?.parent_mcc_id ?? null,
     oauthCredentials: prepared.oauthCredentials,
-    authContext: prepared.authContext,
+    ...preparedAuthContextField(prepared),
   }
 }
 

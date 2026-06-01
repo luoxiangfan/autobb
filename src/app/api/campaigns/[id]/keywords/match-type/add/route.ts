@@ -3,7 +3,7 @@ import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { boolCondition, boolParam, getInsertedId } from '@/lib/db-helpers'
 import { createGoogleAdsKeywordsBatch, updateGoogleAdsKeywordStatus, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { patchCampaignConfigKeywords, type CampaignConfigKeyword } from '@/lib/campaign-config-keywords'
 
@@ -591,7 +591,7 @@ export async function POST(
           serviceAccountId: apiAuth.serviceAccountId,
           loginCustomerId,
           credentials: oauthCredentials,
-          authContext: prepared.authContext,
+          ...preparedAuthContextField(prepared),
         }),
     })
 
@@ -677,7 +677,7 @@ export async function POST(
                 serviceAccountId: apiAuth.serviceAccountId,
                 loginCustomerId,
                 credentials: oauthCredentials,
-                authContext: prepared.authContext,
+                ...preparedAuthContextField(prepared),
                 oldKeywords: parsedOldKeywords,
               }),
           })

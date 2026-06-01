@@ -1772,6 +1772,7 @@ export async function createGoogleAdsAdGroup(params: {
         authType,
         serviceAccountId: params.serviceAccountId,
         credentials: params.credentials,
+        authContext: params.authContext,
       })
     } catch (lookupError: any) {
       console.warn(`⚠️ Ad Group存在性检查失败，将继续尝试创建: ${lookupError?.message || lookupError}`)

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   defaultOAuthApiCredentialsFields,
+  defaultOAuthAuthContext,
   defaultPreparedGoogleAdsApiCallForLinkedAccount,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 
@@ -14,7 +15,9 @@ const accountsAuthFns = vi.hoisted(() => ({
 
 const apiFns = vi.hoisted(() => ({
   listGoogleAdsCampaigns: vi.fn(),
+  updateGoogleAdsCampaignStatus: vi.fn(),
 }))
+
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
@@ -23,12 +26,18 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', () => ({
-  prepareGoogleAdsApiCallForLinkedAccount: accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
-}))
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    prepareGoogleAdsApiCallForLinkedAccount:
+      accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
+  }
+})
 
 vi.mock('@/lib/google-ads-api', () => ({
   listGoogleAdsCampaigns: apiFns.listGoogleAdsCampaigns,
+  updateGoogleAdsCampaignStatus: apiFns.updateGoogleAdsCampaignStatus,
 }))
 
 describe('queryActiveCampaigns login_customer_id fallback', () => {
@@ -137,6 +146,59 @@ describe('queryActiveCampaigns login_customer_id fallback', () => {
       expect.objectContaining({
         authType: 'service_account',
         serviceAccountId: 'sa-linked',
+      })
+    )
+  })
+})
+
+describe('pauseCampaigns authContext forwarding', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks()
+
+    const loginCustomer = await import('@/lib/google-ads-login-customer')
+    vi.spyOn(loginCustomer, 'runWithLoginCustomerFallbackForAccount').mockImplementation(
+      async ({ callback }) => callback('7888509345')
+    )
+
+    dbFns.queryOne.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM google_ads_accounts')) {
+        return {
+          customer_id: '6073761127',
+          parent_mcc_id: '3958592249',
+          service_account_id: null,
+        }
+      }
+      return null
+    })
+
+    accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValue({
+      ...defaultPreparedGoogleAdsApiCallForLinkedAccount,
+      authContext: defaultOAuthAuthContext,
+      apiAuth: {
+        ...defaultPreparedGoogleAdsApiCallForLinkedAccount.apiAuth,
+        refreshToken: 'refresh-token',
+      },
+      refreshToken: 'refresh-token',
+      oauthCredentials: defaultOAuthApiCredentialsFields,
+    })
+
+    apiFns.updateGoogleAdsCampaignStatus.mockResolvedValue(undefined)
+  })
+
+  it('passes prepared authContext to updateGoogleAdsCampaignStatus', async () => {
+    const { pauseCampaigns } = await import('@/lib/active-campaigns-query')
+
+    await pauseCampaigns(
+      [{ id: '123', name: 'Test-Campaign', status: 'ENABLED' }],
+      775,
+      42
+    )
+
+    expect(apiFns.updateGoogleAdsCampaignStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        authContext: defaultOAuthAuthContext,
+        campaignId: '123',
+        status: 'PAUSED',
       })
     )
   })

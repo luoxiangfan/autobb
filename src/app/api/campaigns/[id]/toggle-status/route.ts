@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { findCampaignById } from '@/lib/campaigns'
 import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 import { invalidateDashboardCache } from '@/lib/api-cache'
@@ -241,7 +241,7 @@ export async function PUT(
           authType: apiAuth.authType,
           serviceAccountId,
           credentials: oauthCredentials,
-          authContext: prepared.authContext,
+          ...preparedAuthContextField(prepared),
         }),
     })
 

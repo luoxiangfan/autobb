@@ -10,7 +10,10 @@
 import { getDatabase } from './db'
 import { saveCreativePerformance, PerformanceData } from './bonus-score-calculator'
 import { getCustomerWithCredentials } from './google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount } from './google-ads-accounts-auth'
+import {
+  prepareGoogleAdsApiCallForLinkedAccount,
+  preparedAuthContextField,
+} from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
@@ -296,7 +299,7 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
           credentials: oauthCredentials,
           accountParentMccId: account.parent_mcc_id,
           oauthLoginCustomerIdHint: oauthLoginCustomerId,
-          authContext: prepared.authContext,
+          ...preparedAuthContextField(prepared),
         })
 
         return syncAllCreativesPerformance(

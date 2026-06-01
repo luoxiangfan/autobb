@@ -3,6 +3,7 @@ import { boolCondition, boolParam } from '@/lib/db-helpers'
 import { createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
+  preparedAuthContextField,
   type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-accounts-auth'
 import type { GoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
@@ -241,7 +242,7 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
         oauthLoginCustomerId:
           prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
         credentials: prepared.oauthCredentials,
-        authContext: prepared.authContext,
+        ...preparedAuthContextField(prepared),
       }
     }
 
@@ -256,7 +257,7 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
       refreshToken: '',
       parentMccId,
       oauthLoginCustomerId: undefined,
-      authContext: prepared.authContext,
+      ...preparedAuthContextField(prepared),
     }
   }
 }

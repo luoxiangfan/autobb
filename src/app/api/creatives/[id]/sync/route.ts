@@ -5,7 +5,7 @@ import { findAdGroupById } from '@/lib/ad-groups'
 import { findCampaignById } from '@/lib/campaigns'
 import { findGoogleAdsAccountById } from '@/lib/google-ads-accounts'
 import { createGoogleAdsResponsiveSearchAd } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 
 /**
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
             authType: apiAuth.authType,
             serviceAccountId: apiAuth.serviceAccountId,
             credentials: oauthCredentials,
-            authContext: prepared.authContext,
+            ...preparedAuthContextField(prepared),
           }),
       })
 

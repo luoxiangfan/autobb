@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { updateGoogleAdsCampaignBudget } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
 import { invalidateDashboardCache, invalidateOfferCache } from '@/lib/api-cache'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 
@@ -192,7 +192,7 @@ export async function PUT(
           authType: apiAuth.authType,
           serviceAccountId: apiAuth.serviceAccountId,
           credentials: oauthCredentials,
-          authContext: prepared.authContext,
+          ...preparedAuthContextField(prepared),
         }),
     })
 

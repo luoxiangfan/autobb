@@ -1,4 +1,7 @@
-import { prepareGoogleAdsApiCallForLinkedAccount } from './google-ads-accounts-auth'
+import {
+  prepareGoogleAdsApiCallForLinkedAccount,
+  preparedAuthContextField,
+} from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import {
   removeGoogleAdsCampaign,
@@ -227,7 +230,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
             authType: apiAuth.authType,
             serviceAccountId,
             credentials: oauthCredentials,
-            authContext: prepared.authContext,
+            ...preparedAuthContextField(prepared),
           })
           summary.removed++
           await recordOutcome({ campaignId: googleCampaignId, outcome: 'REMOVED' })
@@ -243,7 +246,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
             authType: apiAuth.authType,
             serviceAccountId,
             credentials: oauthCredentials,
-            authContext: prepared.authContext,
+            ...preparedAuthContextField(prepared),
           })
           summary.paused++
           await recordOutcome({ campaignId: googleCampaignId, outcome: 'PAUSED' })
@@ -290,7 +293,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
                   authType: apiAuth.authType,
                   serviceAccountId,
                   credentials: oauthCredentials,
-                  authContext: prepared.authContext,
+                  ...preparedAuthContextField(prepared),
                 })
               ),
               remoteConfig.perCampaignTimeoutMs,

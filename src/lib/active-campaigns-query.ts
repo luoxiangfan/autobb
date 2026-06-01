@@ -7,7 +7,10 @@
 import { enums } from 'google-ads-api'
 import { getDatabase } from './db'
 import { listGoogleAdsCampaigns } from './google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount } from './google-ads-accounts-auth'
+import {
+  googleAdsAuthContextParam,
+  prepareGoogleAdsApiCallForLinkedAccount,
+} from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import {
   categorizeCampaigns,
@@ -145,7 +148,7 @@ export async function queryActiveCampaigns(
         authType: ctx.auth.authType,
         serviceAccountId,
         credentials: oauthCredentials,
-        authContext: ctx,
+        ...googleAdsAuthContextParam(ctx),
         skipCache: true,
       }),
   })
@@ -267,6 +270,7 @@ export async function pauseCampaigns(
             authType: ctx.auth.authType,
             serviceAccountId,
             credentials: oauthCredentials,
+            ...googleAdsAuthContextParam(ctx),
           }),
       })
 

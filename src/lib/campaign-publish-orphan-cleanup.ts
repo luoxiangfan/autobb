@@ -1,7 +1,11 @@
 import { getDatabase } from './db'
 import { updateGoogleAdsCampaignStatus, type OAuthApiCredentialsFields } from './google-ads-api'
 import type { GoogleAdsAuthContext } from './google-ads-auth-context'
-import { prepareGoogleAdsApiCallForLinkedAccount } from './google-ads-accounts-auth'
+import {
+  googleAdsAuthContextParam,
+  prepareGoogleAdsApiCallForLinkedAccount,
+  preparedAuthContextField,
+} from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 
 export type CampaignPublishRollbackContext = {
@@ -147,7 +151,7 @@ export async function buildPublishRollbackContextForAdsAccount(
     serviceAccountId: apiAuth.serviceAccountId,
     oauthCredentials,
     oauthLoginCustomerId,
-    authContext: prepared.authContext,
+    ...preparedAuthContextField(prepared),
     runWithLoginCustomerFallbackAndHeartbeat,
   }
 }
@@ -172,7 +176,7 @@ export async function pauseOrphanGoogleAdsCampaignAfterPublishFailure(
           authType: ctx.authType,
           serviceAccountId: ctx.serviceAccountId,
           credentials: ctx.oauthCredentials,
-          authContext: ctx.authContext,
+          ...(ctx.authContext ? googleAdsAuthContextParam(ctx.authContext) : {}),
         })
     )
     console.log(`⏸️ 发布失败已暂停远端孤儿 Campaign ${googleCampaignId}`)

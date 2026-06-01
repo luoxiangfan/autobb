@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { findCampaignById, updateCampaign } from '@/lib/campaigns'
 import { getDatabase } from '@/lib/db'
 import { updateGoogleAdsCampaignName } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { invalidateDashboardCache } from '@/lib/api-cache'
 
@@ -190,7 +190,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
               authType: apiAuth.authType,
               serviceAccountId: apiAuth.serviceAccountId,
               credentials: oauthCredentials,
-              authContext: prepared.authContext,
+              ...preparedAuthContextField(prepared),
               accountParentMccId: adsAccountRow.parent_mcc_id,
               oauthLoginCustomerIdHint: oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
             }),

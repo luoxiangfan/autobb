@@ -2,7 +2,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers'
 import { findEnabledGoogleAdsAccounts } from '@/lib/google-ads-accounts'
-import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
 import {
   getKeywordIdeas,
   filterHighQualityKeywords,
@@ -99,6 +99,7 @@ export async function POST(
             credentials: prepared.oauthCredentials,
             oauthLoginCustomerId:
               prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+            ...preparedAuthContextField(prepared),
           }
         : undefined
 

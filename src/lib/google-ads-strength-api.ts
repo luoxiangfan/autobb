@@ -11,7 +11,7 @@
  */
 
 import { getCustomerWithCredentials } from './google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount } from './google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import { getDatabase } from './db'
 import type { AdStrengthRating } from './ad-strength-evaluator'
@@ -61,7 +61,7 @@ async function getGoogleAdsClient(
         loginCustomerId: apiAuth.serviceAccountMccId || account.parent_mcc_id || undefined,
         authType: 'service_account',
         serviceAccountId: apiAuth.serviceAccountId,
-        authContext: prepared.authContext,
+        ...preparedAuthContextField(prepared),
       }),
       useServiceAccount: true,
       serviceAccountId: apiAuth.serviceAccountId,
@@ -100,7 +100,7 @@ async function getGoogleAdsClient(
         accountId: account.id,
         userId,
         authType: 'oauth',
-        authContext: prepared.authContext,
+        ...preparedAuthContextField(prepared),
       }),
   })
 

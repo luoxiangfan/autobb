@@ -2,7 +2,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { getCustomerWithCredentials } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
 import { runOAuthGaqlWithLoginCustomerFallback } from '@/lib/google-ads-oauth-gaql'
 import { getDatabase } from '@/lib/db'
 import { getRedisClient } from '@/lib/redis-client'
@@ -284,7 +284,7 @@ export async function GET(
             refreshToken: oauthRefreshToken || '',
             oauthCredentials: oauthApiCredentials!,
             oauthLoginCustomerId,
-            authContext: prepared.authContext,
+            ...preparedAuthContextField(prepared),
             actionName: '查询广告系列 CPC',
             query: (customer) =>
               executeOAuthGaqlWithTracking(customer, linked.customer_id!, campaignQuery),
@@ -351,7 +351,7 @@ export async function GET(
               refreshToken: oauthRefreshToken || '',
               oauthCredentials: oauthApiCredentials!,
               oauthLoginCustomerId,
-              authContext: prepared.authContext,
+              ...preparedAuthContextField(prepared),
               actionName: '查询 Ad Group CPC',
               query: (customer) =>
                 executeOAuthGaqlWithTracking(customer, linked.customer_id!, adGroupQuery),

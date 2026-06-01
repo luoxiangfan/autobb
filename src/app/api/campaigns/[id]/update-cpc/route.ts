@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getCustomerWithCredentials } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
+import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
 import { getDatabase } from '@/lib/db'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { executeGAQLQueryPython, updateCampaignPython, updateAdGroupPython } from '@/lib/python-ads-client'
@@ -435,7 +435,7 @@ export async function PUT(
         loginCustomerId: apiAuth.serviceAccountMccId || adsAccountRow.parent_mcc_id || undefined,
         authType: 'service_account',
         serviceAccountId,
-        authContext: prepared.authContext,
+        ...preparedAuthContextField(prepared),
       })
     } else {
       customer = await runWithLoginCustomerFallbackForAccount({
@@ -459,7 +459,7 @@ export async function PUT(
             userId: numericUserId,
             credentials: oauthCredentials,
             authType: 'oauth',
-            authContext: prepared.authContext,
+            ...preparedAuthContextField(prepared),
           }),
       })
     }
