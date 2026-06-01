@@ -381,14 +381,19 @@ const getHandler = withPerformanceMonitoring<any>(async (request: NextRequest) =
         start: previousStartDate,
         end: previousEndDate,
       })
-      const currentUnattributedCommissionTotal = await queryUnattributedCommissionTotals({
-        start: currentStartDate,
-        end: currentEndDate,
-      })
-      const previousUnattributedCommissionTotal = await queryUnattributedCommissionTotals({
-        start: previousStartDate,
-        end: previousEndDate,
-      })
+      // Admin dashboard commission uses attributed records only (excludes attribution failures).
+      const currentUnattributedCommissionTotal = isAdmin
+        ? 0
+        : await queryUnattributedCommissionTotals({
+            start: currentStartDate,
+            end: currentEndDate,
+          })
+      const previousUnattributedCommissionTotal = isAdmin
+        ? 0
+        : await queryUnattributedCommissionTotals({
+            start: previousStartDate,
+            end: previousEndDate,
+          })
 
       const totalImpressions = currentData.reduce((sum, row) => sum + (Number(row?.impressions) || 0), 0)
       const totalClicks = currentData.reduce((sum, row) => sum + (Number(row?.clicks) || 0), 0)

@@ -104,6 +104,67 @@ describe('GET /api/dashboard/kpis', () => {
     )
   })
 
+  it('excludes unattributed failures for admin commission totals', async () => {
+    cacheFns.getOrSet.mockReset()
+
+    authFns.verifyAuth.mockResolvedValue({
+      authenticated: true,
+      user: { userId: 1, role: 'admin' },
+    })
+
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes('SELECT DISTINCT currency') && sql.includes('FROM campaign_performance')) {
+        return [{ currency: 'USD' }]
+      }
+      if (sql.includes('GROUP BY COALESCE(currency, \'USD\')')) {
+        return [{ currency: 'USD', impressions: 800, clicks: 80, cost: 40 }]
+      }
+
+      throw new Error(`unexpected query sql: ${sql}`)
+    })
+
+    let periodCallCount = 0
+    let attributedCallCount = 0
+
+    const queryOne = vi.fn(async (sql: string) => {
+      if (sql.includes('FROM campaign_performance') && sql.includes('SUM(impressions) as impressions')) {
+        periodCallCount += 1
+        if (periodCallCount === 1) {
+          return { impressions: 1000, clicks: 100, cost: 50 }
+        }
+        return { impressions: 800, clicks: 80, cost: 40 }
+      }
+
+      if (sql.includes('FROM affiliate_commission_attributions')) {
+        attributedCallCount += 1
+        if (attributedCallCount === 1) {
+          return { total_commission: 8 }
+        }
+        return { total_commission: 4 }
+      }
+
+      if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
+        throw new Error('admin KPI commission should not query attribution failures')
+      }
+
+      throw new Error(`unexpected queryOne sql: ${sql}`)
+    })
+
+    dbFns.getDatabase.mockResolvedValue({
+      query,
+      queryOne,
+    })
+
+    const req = new NextRequest('http://localhost/api/dashboard/kpis?days=7&refresh=true')
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(data.data?.current?.commission).toBe(8)
+    expect(data.data?.previous?.commission).toBe(4)
+  })
+
   it('includes all unattributed failures when calculating commission totals', async () => {
     cacheFns.getOrSet.mockReset()
 
