@@ -79,7 +79,7 @@ async function resolveKeywordPlannerOAuth(params: {
     authContext,
   })
 
-  return { refreshToken, loginCustomerId, credentials }
+  return { refreshToken, loginCustomerId, credentials, authContext }
 }
 
 async function getKeywordPlannerOAuthCustomer(params: {
@@ -127,6 +127,7 @@ async function getKeywordPlannerOAuthCustomer(params: {
         authType: params.authType,
         serviceAccountId: params.serviceAccountId,
         accountId: params.accountId,
+        authContext: params.oauthAuth.authContext,
       }),
   })
 }

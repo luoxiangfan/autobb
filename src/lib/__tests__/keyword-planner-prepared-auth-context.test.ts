@@ -83,5 +83,11 @@ describe('Keyword Planner authContext reuse', () => {
         authContext: defaultOAuthAuthContext,
       })
     )
+
+    expect(vi.mocked(getCustomerWithCredentials).mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        authContext: defaultOAuthAuthContext,
+      })
+    )
   })
 })

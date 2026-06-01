@@ -7,6 +7,7 @@ const accountsAuthFns = vi.hoisted(() => ({
 
 const authContextFns = vi.hoisted(() => ({
   assertGoogleAdsAuthReadyForApi: vi.fn(),
+  getGoogleAdsAuthContext: vi.fn(),
 }))
 const updateGoogleAdsAccount = vi.fn()
 
@@ -43,9 +44,14 @@ vi.mock('@/lib/google-ads-accounts', () => ({
   updateGoogleAdsAccount,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
-  assertGoogleAdsAuthReadyForApi: authContextFns.assertGoogleAdsAuthReadyForApi,
-}))
+vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+  return {
+    ...actual,
+    assertGoogleAdsAuthReadyForApi: authContextFns.assertGoogleAdsAuthReadyForApi,
+    getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
+  }
+})
 
 describe('getCustomerWithCredentials login_customer_id fallback', () => {
   afterEach(() => {
@@ -106,6 +112,32 @@ describe('getCustomerWithCredentials login_customer_id fallback', () => {
     const customerParams = customerFactory.mock.calls[0]?.[0] as Record<string, unknown>
     expect(customerParams).toBeTruthy()
     expect(customerParams.login_customer_id).toBe('5010618892')
+  })
+
+  it('skips assert and resolveOAuth when authContext and credentials are passed', async () => {
+    const { getCustomerWithCredentials } = await import('@/lib/google-ads-api')
+
+    await getCustomerWithCredentials({
+      customerId: '3178223819',
+      refreshToken: 'refresh-token',
+      userId: 1,
+      loginCustomerId: '5010618892',
+      credentials: {
+        client_id: 'client-id',
+        client_secret: 'client-secret',
+        developer_token: 'developer-token',
+      },
+      authContext: {
+        dualStack: false,
+        auth: { authType: 'oauth' },
+        oauthCredentials: { login_customer_id: '5010618892' },
+      } as any,
+    })
+
+    expect(authContextFns.assertGoogleAdsAuthReadyForApi).not.toHaveBeenCalled()
+    expect(authContextFns.getGoogleAdsAuthContext).not.toHaveBeenCalled()
+    expect(accountsAuthFns.resolveOAuthClientCredentialsForUser).not.toHaveBeenCalled()
+    expect(customerFactory).toHaveBeenCalled()
   })
 
   it('rejects dual-stack before OAuth customer creation even with refreshToken passed', async () => {

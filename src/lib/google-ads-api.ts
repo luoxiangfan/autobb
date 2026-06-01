@@ -387,6 +387,23 @@ export async function getCustomer(
   }
 }
 
+/** 发起 Customer 调用前校验双栈；已持有 context 时复用，避免重复加载。 */
+async function ensureGoogleAdsAuthReadyForApi(
+  userId: number,
+  authContext?: import('./google-ads-auth-context').GoogleAdsAuthContext
+): Promise<import('./google-ads-auth-context').GoogleAdsAuthContext> {
+  if (authContext) {
+    const { googleAdsAuthContextDualStackError } = await import('./google-ads-auth-context')
+    const dualStackError = googleAdsAuthContextDualStackError(authContext)
+    if (dualStackError) {
+      throw new Error(dualStackError)
+    }
+    return authContext
+  }
+  const { assertGoogleAdsAuthReadyForApi } = await import('./google-ads-auth-context')
+  return assertGoogleAdsAuthReadyForApi(userId)
+}
+
 /**
  * 辅助函数：从数据库获取凭证并创建 Customer 实例。
  * 支持 OAuth 与服务账号；服务账号模式不需要 client_id/client_secret。
@@ -396,6 +413,7 @@ export async function getCustomer(
  *   勿在双栈（`dualStack`）或仅残留凭证时直接传入 `authType: 'service_account'` 绕过校验。
  * - OAuth 且未传 `credentials` 时会经 `resolveOAuthClientCredentialsForUser`（含双栈拦截）。
  * - 服务账号走 `getUnifiedGoogleAdsClient`（复用本函数已 assert 的 authContext，避免重复加载）。
+ * - OAuth 可传 `authContext`（如 Keyword Planner prepare 后），避免重复 assert / 加载。
  */
 export async function getCustomerWithCredentials(params: {
   customerId: string
@@ -410,13 +428,14 @@ export async function getCustomerWithCredentials(params: {
   // 服务账号认证参数
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
+  /** 调用方已校验双栈时传入，避免重复加载 auth-context */
+  authContext?: import('./google-ads-auth-context').GoogleAdsAuthContext
 }): Promise<Customer> {
   if (!params.userId) {
     throw new Error('userId is required to fetch Google Ads credentials')
   }
 
-  const { assertGoogleAdsAuthReadyForApi } = await import('./google-ads-auth-context')
-  const authCtx = await assertGoogleAdsAuthReadyForApi(params.userId)
+  const authCtx = await ensureGoogleAdsAuthReadyForApi(params.userId, params.authContext)
 
   const authType = params.authType || 'oauth'
 
@@ -461,6 +480,7 @@ export async function getCustomerWithCredentials(params: {
     } else {
       const resolved = await resolveOAuthClientCredentialsForUser(params.userId, {
         requireLoginCustomerId: !omitLoginCustomerHeader,
+        existingAuthContext: authCtx,
       })
       clientCreds = resolved
       resolvedLoginCustomerId = resolved.login_customer_id?.trim() || null

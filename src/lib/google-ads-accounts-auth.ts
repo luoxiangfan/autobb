@@ -916,10 +916,15 @@ export async function loadKeywordPoolExpandCredentialsForOffer(
  */
 export async function resolveOAuthClientCredentialsForUser(
   userId: number,
-  options: { requireLoginCustomerId?: boolean } = {}
+  options: {
+    requireLoginCustomerId?: boolean
+    /** 调用方已 assert 时传入，避免重复加载 auth-context */
+    existingAuthContext?: GoogleAdsAuthContext
+  } = {}
 ): Promise<OAuthApiClientCredentials> {
   const requireLogin = options.requireLoginCustomerId !== false
-  const authContext = await getGoogleAdsAuthContext(userId)
+  const authContext =
+    options.existingAuthContext ?? (await getGoogleAdsAuthContext(userId))
   const dualStackError = googleAdsAuthContextDualStackError(authContext)
   if (dualStackError) {
     throw new Error(dualStackError)

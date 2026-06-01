@@ -155,6 +155,18 @@ export async function PUT(
   }
 
   try {
+    const targetCtx = await getGoogleAdsAuthContext(userId)
+    if (targetCtx.dualStack) {
+      return NextResponse.json(
+        {
+          error: GOOGLE_ADS_DUAL_STACK_WARNING,
+          code: 'DUAL_STACK_CONFLICT',
+          authConfigWarning: GOOGLE_ADS_DUAL_STACK_WARNING,
+        },
+        { status: 409 }
+      )
+    }
+
     if (assignmentMode === 'shared_admin') {
       const adminHasAuth = await adminHasConfiguredAuth(admin.userId, authType)
       if (!adminHasAuth) {
