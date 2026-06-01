@@ -147,6 +147,9 @@ export async function trackApiUsage(record: ApiUsageRecord): Promise<void> {
         const { getGoogleAdsAuthContext } = await import('./google-ads-auth-context')
 
         const authContext = await getGoogleAdsAuthContext(record.userId)
+        if (authContext.dualStack) {
+          return
+        }
         await detectAndUpdateFromError(
           record.userId,
           authContext.auth.authType,

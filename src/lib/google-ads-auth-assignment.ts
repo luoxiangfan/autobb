@@ -1,3 +1,10 @@
+/**
+ * Google Ads 认证分配（共享管理员 / 自有凭证 owner 解析）。
+ *
+ * - 按 userId 判断是否已配置：请用 `hasConfiguredGoogleAdsAuth`（委托 `google-ads-auth-context`）。
+ * - 发起 Google Ads API 调用：请用 `prepareGoogleAdsApiCallForLinkedAccount` / `resolveGoogleAdsApiAuthForAccount`。
+ * - 已持有 `GoogleAdsAuthContext` 时：heal/sync 前须 `googleAdsAuthContextDualStackError`。
+ */
 import { getDatabase } from './db'
 import { boolCondition } from './db-helpers'
 import type { GoogleAdsCredentials } from './google-ads-oauth'

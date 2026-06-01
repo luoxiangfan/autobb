@@ -104,6 +104,19 @@ export interface UnifiedAuthConfig {
   serviceAccountId?: string
 }
 
+/** 双栈等无效配置时抛错；OAuth 路径可复用返回的 context 避免重复加载。 */
+async function loadGoogleAdsAuthContextForUnifiedClient(userId: number) {
+  const { getGoogleAdsAuthContext, googleAdsAuthContextDualStackError } = await import(
+    './google-ads-auth-context'
+  )
+  const ctx = await getGoogleAdsAuthContext(userId)
+  const dualStackError = googleAdsAuthContextDualStackError(ctx)
+  if (dualStackError) {
+    throw new Error(dualStackError)
+  }
+  return ctx
+}
+
 /**
  * 获取统一的 Google Ads 客户端
  * 根据认证类型自动选择 OAuth 或服务账号认证
@@ -125,6 +138,7 @@ export async function getUnifiedGoogleAdsClient(config: {
   oauthLoginCustomerId?: string
 }): Promise<any> {
   const { authConfig, credentials } = config
+  const authCtx = await loadGoogleAdsAuthContextForUnifiedClient(authConfig.userId)
 
   if (authConfig.authType === 'service_account') {
     const serviceAccount = await getServiceAccountConfig(authConfig.userId, authConfig.serviceAccountId)
@@ -155,18 +169,10 @@ export async function getUnifiedGoogleAdsClient(config: {
       throw new Error('OAuth 认证需要提供 credentials 参数')
     }
 
-    const { getGoogleAdsAuthContext, googleAdsAuthContextDualStackError } = await import(
-      './google-ads-auth-context'
-    )
-    const ctx = await getGoogleAdsAuthContext(authConfig.userId)
-    const dualStackError = googleAdsAuthContextDualStackError(ctx)
-    if (dualStackError) {
-      throw new Error(dualStackError)
-    }
-
-    let refreshToken = config.oauthRefreshToken?.trim() || ctx.oauthCredentials?.refresh_token || ''
+    let refreshToken =
+      config.oauthRefreshToken?.trim() || authCtx.oauthCredentials?.refresh_token || ''
     let loginCustomerId =
-      config.oauthLoginCustomerId?.trim() || ctx.oauthCredentials?.login_customer_id || ''
+      config.oauthLoginCustomerId?.trim() || authCtx.oauthCredentials?.login_customer_id || ''
 
     if (!refreshToken) {
       throw new Error('OAuth refresh token not found')
@@ -191,6 +197,7 @@ export async function getLoginCustomerId(config: {
   }
 }): Promise<string> {
   const { authConfig, oauthCredentials } = config
+  const authCtx = await loadGoogleAdsAuthContextForUnifiedClient(authConfig.userId)
 
   if (authConfig.authType === 'service_account') {
     const serviceAccount = await getServiceAccountConfig(authConfig.userId, authConfig.serviceAccountId)
@@ -205,13 +212,5 @@ export async function getLoginCustomerId(config: {
     return fromParam
   }
 
-  const { getGoogleAdsAuthContext, googleAdsAuthContextDualStackError } = await import(
-    './google-ads-auth-context'
-  )
-  const ctx = await getGoogleAdsAuthContext(authConfig.userId)
-  const dualStackError = googleAdsAuthContextDualStackError(ctx)
-  if (dualStackError) {
-    throw new Error(dualStackError)
-  }
-  return ctx.oauthCredentials?.login_customer_id?.trim() || ''
+  return authCtx.oauthCredentials?.login_customer_id?.trim() || ''
 }

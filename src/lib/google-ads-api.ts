@@ -382,11 +382,14 @@ export async function getCustomer(
 }
 
 /**
- * 辅助函数：从数据库获取凭证并创建Customer实例
- * 简化调用者代码，避免每次都手动获取credentials
- * 支持OAuth和服务账号两种认证方式
+ * 辅助函数：从数据库获取凭证并创建 Customer 实例。
+ * 支持 OAuth 与服务账号；服务账号模式不需要 client_id/client_secret。
  *
- * 🔧 修复(2025-12-24): 服务账号模式下不需要 client_id/client_secret
+ * 调用约定（与「OAuth / 服务账号二选一」一致）：
+ * - 业务入口应优先 `prepareGoogleAdsApiCallForLinkedAccount` / `resolveGoogleAdsApiAuthForAccount`，
+ *   勿在双栈（`dualStack`）或仅残留凭证时直接传入 `authType: 'service_account'` 绕过校验。
+ * - OAuth 且未传 `credentials` 时会经 `resolveOAuthClientCredentialsForUser`（含双栈拦截）。
+ * - 服务账号走 `getUnifiedGoogleAdsClient`，同样会校验 auth-context 双栈。
  */
 export async function getCustomerWithCredentials(params: {
   customerId: string

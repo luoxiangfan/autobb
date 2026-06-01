@@ -4,6 +4,7 @@ import {
   developerTokenLooksInvalid,
   healAccountsRouteDeveloperToken,
   resolveAccountsRouteAuthBundle,
+  prepareGoogleAdsAccountApiCall,
   resolveAndHealSyncUserCredentials,
   resolveOAuthApiCredentialsForUser,
   resolveOAuthRefreshToken,
@@ -463,5 +464,36 @@ describe('resolveOAuthApiCredentialsForUser', () => {
     })
 
     await expect(resolveOAuthApiCredentialsForUser(1)).rejects.toThrow(/login_customer_id/)
+  })
+})
+
+describe('prepareGoogleAdsAccountApiCall', () => {
+  beforeEach(() => {
+    authContextFns.resolveGoogleAdsApiAuthFromContext.mockClear()
+  })
+
+  it('returns dual-stack error at entry without resolving api auth', async () => {
+    const dualStackContext = {
+      userId: 7,
+      ownerUserId: 7,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      dualStack: true,
+      auth: { authType: 'oauth' as const },
+      oauthCredentials: { ...oauthCredentialsFull },
+      serviceAccountConfig: null,
+    }
+
+    const result = await prepareGoogleAdsAccountApiCall({
+      authContext: dualStackContext,
+      linkedServiceAccountId: null,
+    })
+
+    expect(result).toEqual({
+      ok: false,
+      message: expect.stringContaining('OAuth 与服务账号同时存在'),
+    })
+    expect(authContextFns.resolveGoogleAdsApiAuthFromContext).not.toHaveBeenCalled()
   })
 })

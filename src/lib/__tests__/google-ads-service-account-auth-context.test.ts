@@ -107,4 +107,28 @@ describe('google-ads-service-account auth-context integration', () => {
       })
     ).rejects.toThrow('dual-stack-warning')
   })
+
+  it('getUnifiedGoogleAdsClient rejects dual-stack for service_account', async () => {
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      dualStack: true,
+      oauthCredentials: null,
+    })
+
+    await expect(
+      getUnifiedGoogleAdsClient({
+        customerId: '1234567890',
+        authConfig: { authType: 'service_account', userId: 7, serviceAccountId: 'sa-1' },
+      })
+    ).rejects.toThrow('dual-stack-warning')
+  })
+
+  it('getLoginCustomerId rejects dual-stack for service_account', async () => {
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({ dualStack: true })
+
+    await expect(
+      getLoginCustomerId({
+        authConfig: { authType: 'service_account', userId: 7, serviceAccountId: 'sa-1' },
+      })
+    ).rejects.toThrow('dual-stack-warning')
+  })
 })

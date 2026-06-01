@@ -357,6 +357,11 @@ export async function prepareGoogleAdsAccountApiCall(params: {
   | ({ ok: true } & PreparedGoogleAdsAccountApiCall)
   | { ok: false; message: string }
 > {
+  const dualStackError = googleAdsAuthContextDualStackError(params.authContext)
+  if (dualStackError) {
+    return { ok: false, message: dualStackError }
+  }
+
   const apiAuth =
     params.apiAuth ??
     (await resolveGoogleAdsApiAuthFromContext(
