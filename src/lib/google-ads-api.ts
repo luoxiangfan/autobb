@@ -289,6 +289,12 @@ export async function refreshAccessToken(
  * 获取Google Ads Customer实例
  * 自动处理token刷新，支持OAuth和服务账号两种认证方式
  *
+ * **调用约定（勿绕过 auth-context 校验）：**
+ * - 业务 API 应使用 {@link getCustomerWithCredentials}（入口会 `assertGoogleAdsAuthReadyForApi`）。
+ * - 本函数仅允许由 `getCustomerWithCredentials` 调用，或由已通过
+ *   `assertGoogleAdsAuthReadyForApi` 的账号同步链（如 `syncAccountsFromAPI` → `processMccChildAccounts`）调用。
+ * - 不要在新代码中直接调用本函数，否则 OAuth/服务账号双栈等配置错误可能漏检。
+ *
  * 🔧 修复(2025-12-22): 移除环境变量依赖,强制要求传入credentials和loginCustomerId
  * 🆕 新增(2025-12-23): 支持服务账号认证
  *

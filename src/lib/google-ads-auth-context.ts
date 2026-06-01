@@ -8,7 +8,7 @@
  * - `linkedAccountServiceAccountId` 仅在用户当前为服务账号认证时生效；OAuth 用户传入账号 SA 不会切换为服务账号调用。
  * - 是否已配置：用 `hasConfiguredGoogleAdsAuthFromContext`（按 userId 查请用 `google-ads-auth-assignment.hasConfiguredGoogleAdsAuth`），勿仅用 `auth.serviceAccountId` 判断。
  * - 已持有 context 做 heal/sync 前须 `googleAdsAuthContextDualStackError`；禁止在 `dualStack` 时绕过 `resolve` 直接调 API。
- * - 按 userId 发起 API 前可用 `assertGoogleAdsAuthReadyForApi`（`getCustomerWithCredentials` / 统一客户端已用）。
+ * - 按 userId 发起 API 前可用 `assertGoogleAdsAuthReadyForApi`（`getCustomerWithCredentials` / 统一客户端 / `syncAccountsFromAPI` 已用）。
  */
 import {
   isGoogleAdsAuthShared,

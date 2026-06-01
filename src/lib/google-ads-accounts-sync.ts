@@ -14,6 +14,7 @@ import {
   type MccChildAccountsSyncContext,
 } from './google-ads-accounts-mcc-children'
 import { debugLog, extractSearchResults, formatErrorMessage, parseStatus } from './google-ads-accounts-sync-utils'
+import { assertGoogleAdsAuthReadyForApi } from './google-ads-auth-context'
 
 export async function syncAccountsFromAPI(
   userId: number,
@@ -21,6 +22,8 @@ export async function syncAccountsFromAPI(
   authType: 'oauth' | 'service_account' = 'oauth',
   serviceAccountConfig: any = null
 ): Promise<any[]> {
+  await assertGoogleAdsAuthReadyForApi(userId)
+
   console.log(`🔄 从 Google Ads API 同步账号...`)
   console.log(`   认证方式: ${authType}`)
 
