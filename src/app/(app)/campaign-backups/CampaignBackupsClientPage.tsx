@@ -691,7 +691,7 @@ export default function CampaignBackupsClientPage() {
                 />
               </div>
               <div className="flex items-center gap-x-2">
-                <Label>备份来源</Label>
+                <Label className='whitespace-nowrap'>备份来源</Label>
                 <Select value={backupSource} onValueChange={setBackupSource}>
                   <SelectTrigger className="w-[160px]">
                     <SelectValue />
