@@ -3,6 +3,7 @@ import {
   type AffiliateCommissionRawEntry,
   type AffiliatePlatform,
 } from '@/lib/openclaw/affiliate-commission-attribution'
+import { nowFunc } from '@/lib/db-helpers'
 import { getDatabase } from '@/lib/db'
 import { toDbJsonObjectField } from '@/lib/json-field'
 import { getOpenclawSettingsWithAffiliateSyncMap, parseNumber } from '@/lib/openclaw/settings'
@@ -509,7 +510,8 @@ async function persistAffiliateCommissionRawSnapshots(params: {
         `
           UPDATE openclaw_affiliate_commission_raw_sync_payloads
           SET request_payload = ?,
-              response_payload = ?
+              response_payload = ?,
+              updated_at = ${nowFunc(db.type)}
           WHERE user_id = ?
             AND report_date = ?
             AND platform = ?
