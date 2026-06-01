@@ -21,6 +21,7 @@ vi.mock('@/lib/google-ads-auth-assignment', () => ({
 
 vi.mock('@/lib/google-ads-auth-context', () => ({
   assertNoConflictingGoogleAdsAuth: authContextFns.assertNoConflictingGoogleAdsAuth,
+  invalidateGoogleAdsAuthContextCache: vi.fn(),
 }))
 
 vi.mock('@/lib/auth', () => ({

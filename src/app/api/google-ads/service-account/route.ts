@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { parseServiceAccountJson } from '@/lib/google-ads-service-account'
+import { parseServiceAccountJson, listServiceAccounts } from '@/lib/google-ads-service-account'
 import { encrypt } from '@/lib/crypto'
 import { verifyAuth, findUserById } from '@/lib/auth'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
-import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
+import {
+  assertNoConflictingGoogleAdsAuth,
+  invalidateGoogleAdsAuthContextCache,
+} from '@/lib/google-ads-auth-context'
 
 async function getAuthenticatedUser(request: NextRequest) {
   const authResult = await verifyAuth(request)
@@ -54,6 +57,8 @@ export async function POST(req: NextRequest) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc}, ${nowFunc})
     `, [id, user.id, name, mccCustomerId, developerToken, clientEmail, encryptedPrivateKey, projectId])
 
+    invalidateGoogleAdsAuthContextCache(user.id)
+
     return NextResponse.json({ success: true, id })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 })
@@ -66,13 +71,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const db = getDatabase()
-  const accounts = await db.query(`
-    SELECT id, name, mcc_customer_id, service_account_email, is_active, created_at
-    FROM google_ads_service_accounts
-    WHERE user_id = ?
-    ORDER BY created_at DESC
-  `, [user.id])
+  const accounts = await listServiceAccounts(user.id)
 
   return NextResponse.json({ accounts })
 }
@@ -102,6 +101,8 @@ export async function DELETE(req: NextRequest) {
       DELETE FROM google_ads_service_accounts
       WHERE id = ? AND user_id = ?
     `, [id, user.id])
+
+    invalidateGoogleAdsAuthContextCache(user.id)
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

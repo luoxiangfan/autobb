@@ -15,7 +15,8 @@ export async function getServiceAccountConfigRaw(userId: number, serviceAccountI
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
 
   let query = `
-    SELECT id, name, mcc_customer_id, developer_token, service_account_email, private_key, project_id
+    SELECT id, name, mcc_customer_id, developer_token, service_account_email, private_key, project_id,
+           api_access_level, created_at, updated_at
     FROM google_ads_service_accounts
     WHERE user_id = ? AND ${isActiveCondition}
   `
@@ -40,6 +41,11 @@ export async function getServiceAccountConfigRaw(userId: number, serviceAccountI
     serviceAccountEmail: account.service_account_email,
     privateKey: decrypt(account.private_key),
     projectId: account.project_id,
+    apiAccessLevel: account.api_access_level
+      ? String(account.api_access_level).toLowerCase()
+      : undefined,
+    createdAt: account.created_at as string | undefined,
+    updatedAt: account.updated_at as string | undefined,
   }
 }
 

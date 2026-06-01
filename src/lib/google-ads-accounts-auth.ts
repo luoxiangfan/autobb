@@ -239,20 +239,44 @@ export async function resolveHealedOAuthCredentialsFields(params: {
     return { ok: false, message: `用户(ID=${params.userId})当前使用服务账号认证，无法读取 OAuth 基础凭证` }
   }
 
-  const credResolved = await resolveAndHealSyncUserCredentials({
-    userId: params.userId,
-    authContext: params.authContext,
-    authType: 'oauth',
-    serviceAccountId: null,
-  })
-  if (!credResolved.ok) {
-    return { ok: false, message: credResolved.message }
+  const oauthCredentials = params.authContext.oauthCredentials
+  if (!oauthCredentials?.client_id || !oauthCredentials.client_secret) {
+    return {
+      ok: false,
+      message: 'Google Ads OAuth 凭证配置不完整，请在设置页面完成配置',
+    }
   }
+
+  const routeCredentials: AccountsRouteCredentials = {
+    client_id: oauthCredentials.client_id,
+    client_secret: oauthCredentials.client_secret,
+    developer_token: oauthCredentials.developer_token,
+    refresh_token: oauthCredentials.refresh_token,
+    login_customer_id: oauthCredentials.login_customer_id,
+  }
+
+  const healResult = await healAccountsRouteDeveloperToken({
+    credentials: routeCredentials,
+    authType: 'oauth',
+    ownerUserId: params.authContext.ownerUserId,
+    clientSecret: routeCredentials.client_secret,
+    authContext: params.authContext,
+  })
+  if (!healResult.ok) {
+    return { ok: false, message: healResult.message }
+  }
+
+  const loginCustomerId = routeCredentials.login_customer_id?.trim() || ''
 
   return {
     ok: true,
-    credentials: toOAuthApiCredentialsFields(credResolved.userCredentials),
-    loginCustomerId: credResolved.userCredentials.login_customer_id?.trim() || '',
+    credentials: toOAuthApiCredentialsFields({
+      client_id: routeCredentials.client_id,
+      client_secret: routeCredentials.client_secret,
+      developer_token: routeCredentials.developer_token,
+      login_customer_id: loginCustomerId,
+    }),
+    loginCustomerId,
   }
 }
 
@@ -637,38 +661,56 @@ export type CreativeGenerationGoogleAdsValidationResult =
     }
   | { ok: true; authContext: GoogleAdsAuthContext; apiAuth: GoogleAdsApiAuthFields }
 
+export type GoogleAdsLinkedAccountPrepareResult = Awaited<
+  ReturnType<typeof prepareGoogleAdsApiCallForLinkedAccount>
+>
+
+/** 批量任务：按 userId + linked SA 复用 prepare 结果 */
+export type GoogleAdsLinkedAccountPrepareCache = {
+  prepareByLinkedSa: Map<string, GoogleAdsLinkedAccountPrepareResult>
+}
+
+export function createGoogleAdsLinkedAccountPrepareCache(): GoogleAdsLinkedAccountPrepareCache {
+  return { prepareByLinkedSa: new Map() }
+}
+
+export function linkedSaPrepareCacheKey(userId: number, linkedSa: string | null): string {
+  return `${userId}\0${linkedSa ?? ''}`
+}
+
+function normalizeLinkedSaForPrepareCache(
+  linkedSa: string | null | undefined
+): string | null {
+  if (linkedSa == null) return null
+  const trimmed = String(linkedSa).trim()
+  return trimmed || null
+}
+
+export async function prepareGoogleAdsApiCallForLinkedAccountCached(
+  userId: number,
+  linkedSa: string | null | undefined,
+  cache?: GoogleAdsLinkedAccountPrepareCache
+): Promise<GoogleAdsLinkedAccountPrepareResult> {
+  const normalizedSa = normalizeLinkedSaForPrepareCache(linkedSa)
+  const key = linkedSaPrepareCacheKey(userId, normalizedSa)
+  const hit = cache?.prepareByLinkedSa.get(key)
+  if (hit) return hit
+
+  const prepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, normalizedSa)
+  cache?.prepareByLinkedSa.set(key, prepared)
+  return prepared
+}
+
 /** 批量创意入队等场景：复用 linked SA 的 prepare 与按 offer 的校验结果 */
-export type CreativeGenerationAuthCache = {
-  prepareByLinkedSa: Map<
-    string,
-    Awaited<ReturnType<typeof prepareGoogleAdsApiCallForLinkedAccount>>
-  >
+export type CreativeGenerationAuthCache = GoogleAdsLinkedAccountPrepareCache & {
   validationByOfferId: Map<number, CreativeGenerationGoogleAdsValidationResult>
 }
 
 export function createCreativeGenerationAuthCache(): CreativeGenerationAuthCache {
   return {
-    prepareByLinkedSa: new Map(),
+    ...createGoogleAdsLinkedAccountPrepareCache(),
     validationByOfferId: new Map(),
   }
-}
-
-function linkedSaPrepareCacheKey(userId: number, linkedSa: string | null): string {
-  return `${userId}\0${linkedSa ?? ''}`
-}
-
-async function prepareGoogleAdsApiCallForLinkedAccountCached(
-  userId: number,
-  linkedSa: string | null,
-  cache?: CreativeGenerationAuthCache
-): Promise<Awaited<ReturnType<typeof prepareGoogleAdsApiCallForLinkedAccount>>> {
-  const key = linkedSaPrepareCacheKey(userId, linkedSa)
-  const hit = cache?.prepareByLinkedSa.get(key)
-  if (hit) return hit
-
-  const prepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, linkedSa)
-  cache?.prepareByLinkedSa.set(key, prepared)
-  return prepared
 }
 
 /**

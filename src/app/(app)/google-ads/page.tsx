@@ -346,19 +346,24 @@ export default function GoogleAdsPage() {
       if (auth.authType === 'service_account') {
         let serviceAccountId = auth.serviceAccountId || currentServiceAccountId || undefined
 
-        const saResponse = await fetch('/api/google-ads/service-account', {
-          credentials: 'include',
-        })
+        if (!serviceAccountId) {
+          const saResponse = await fetch('/api/google-ads/service-account', {
+            credentials: 'include',
+          })
 
-        if (saResponse.ok) {
+          if (!saResponse.ok) {
+            throw new Error('获取服务账号配置失败')
+          }
+
           const saData = await saResponse.json()
           const saList = saData.accounts || []
           if (saList.length > 0) {
             serviceAccountId = saList[0].id
-            setCurrentServiceAccountId(saList[0].id)
           }
-        } else {
-          throw new Error('获取服务账号配置失败')
+        }
+
+        if (serviceAccountId) {
+          setCurrentServiceAccountId(serviceAccountId)
         }
 
         fallbackServiceAccountId = serviceAccountId

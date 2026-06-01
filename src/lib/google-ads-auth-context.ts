@@ -13,10 +13,10 @@
 import {
   isGoogleAdsAuthShared,
   resolveGoogleAdsCredentialOwnerId,
-  resolveGoogleAdsApiAccessLevel,
+  resolveGoogleAdsApiAccessLevelFromContext,
   type GoogleAdsAuthAssignment,
 } from './google-ads-auth-assignment'
-import { boolCondition } from './db-helpers'
+import { boolCondition, isDbRowActive } from './db-helpers'
 import { getDatabase } from './db'
 import {
   getGoogleAdsCredentials,
@@ -39,6 +39,8 @@ export interface GoogleAdsAuthContext {
   }
   oauthCredentials: Awaited<ReturnType<typeof getGoogleAdsCredentials>>
   serviceAccountConfig: Awaited<ReturnType<typeof getServiceAccountConfig>>
+  /** 与 assignment / 凭证行一致的 API 访问级别（加载 context 时解析一次） */
+  apiAccessLevel: string | null
 }
 
 async function resolveDualStackOnOwner(
@@ -75,7 +77,13 @@ export interface GoogleAdsApiAuthFields {
   oauthLoginCustomerId?: string
 }
 
+const AUTH_CONTEXT_CACHE_TTL_MS = 2000
+
 const authContextInflight = new Map<number, Promise<GoogleAdsAuthContext>>()
+const authContextCache = new Map<
+  number,
+  { expiresAt: number; ctx: GoogleAdsAuthContext }
+>()
 
 async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthContext> {
   const resolution = await resolveGoogleAdsCredentialOwnerId(userId)
@@ -96,16 +104,22 @@ async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthCo
       auth.authType === 'oauth' ? Boolean(oauthCredentials?.refresh_token) : undefined,
   })
 
-  return {
+  const partialCtx = {
     userId,
     ownerUserId,
     assignment,
     isShared,
-    canModify: !isGoogleAdsAuthShared(assignment),
-    dualStack,
     auth,
     oauthCredentials,
     serviceAccountConfig,
+  }
+  const apiAccessLevel = resolveGoogleAdsApiAccessLevelFromContext(partialCtx)
+
+  return {
+    ...partialCtx,
+    canModify: !isGoogleAdsAuthShared(assignment),
+    dualStack,
+    apiAccessLevel,
   }
 }
 
@@ -114,16 +128,38 @@ async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthCo
  * 同一事件循环内对相同 userId 的并发调用会合并为一次加载。
  */
 export async function getGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthContext> {
+  const cached = authContextCache.get(userId)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.ctx
+  }
+  if (cached) {
+    authContextCache.delete(userId)
+  }
+
   const inflight = authContextInflight.get(userId)
   if (inflight) {
     return inflight
   }
 
-  const promise = loadGoogleAdsAuthContext(userId).finally(() => {
-    authContextInflight.delete(userId)
-  })
+  const promise = loadGoogleAdsAuthContext(userId)
+    .then((ctx) => {
+      authContextCache.set(userId, {
+        ctx,
+        expiresAt: Date.now() + AUTH_CONTEXT_CACHE_TTL_MS,
+      })
+      return ctx
+    })
+    .finally(() => {
+      authContextInflight.delete(userId)
+    })
   authContextInflight.set(userId, promise)
   return promise
+}
+
+/** 保存/删除凭证后使短时缓存失效 */
+export function invalidateGoogleAdsAuthContextCache(userId: number): void {
+  authContextCache.delete(userId)
+  authContextInflight.delete(userId)
 }
 
 export function resolveEffectiveServiceAccountId(
@@ -168,6 +204,9 @@ export function resolveGoogleAdsDisplayAuthType(
   ctx: GoogleAdsAuthContext
 ): 'oauth' | 'service_account' | null {
   if (ctx.dualStack) {
+    return null
+  }
+  if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
     return null
   }
   return ctx.auth.authType
@@ -336,7 +375,7 @@ export async function resolveGoogleAdsApiAuthFromContext(
 /**
  * 解析凭证状态 API 的展示字段（共享服务账号回填 MCC / developer token）。
  */
-export async function resolveGoogleAdsCredentialStatusFields(ctx: GoogleAdsAuthContext): Promise<{
+export function resolveGoogleAdsCredentialStatusFields(ctx: GoogleAdsAuthContext): {
   hasCredentials: boolean
   hasRefreshToken: boolean
   hasServiceAccount: boolean
@@ -350,23 +389,22 @@ export async function resolveGoogleAdsCredentialStatusFields(ctx: GoogleAdsAuthC
   isActive: boolean | number | undefined
   createdAt: string | undefined
   updatedAt: string | undefined
-}> {
+} {
   const credentials = ctx.oauthCredentials
   const serviceAccount = ctx.serviceAccountConfig
   const hasServiceAccount = Boolean(serviceAccount)
   const hasCredentials = ctx.dualStack
     ? false
     : Boolean(credentials?.refresh_token || hasServiceAccount)
+  const isServiceAccountAuth = ctx.auth.authType === 'service_account'
 
   let developerToken = credentials?.developer_token ?? null
   let loginCustomerId = credentials?.login_customer_id ?? null
 
-  if (ctx.auth.authType === 'service_account' && serviceAccount) {
+  if (isServiceAccountAuth && serviceAccount) {
     developerToken = serviceAccount.developerToken
     loginCustomerId = serviceAccount.mccCustomerId
   }
-
-  const storedAccessLevel = await resolveGoogleAdsApiAccessLevel(ctx.userId)
 
   return {
     hasCredentials,
@@ -377,10 +415,18 @@ export async function resolveGoogleAdsCredentialStatusFields(ctx: GoogleAdsAuthC
     clientId: credentials?.client_id,
     developerToken,
     loginCustomerId,
-    apiAccessLevel: storedAccessLevel || 'explorer',
-    lastVerifiedAt: credentials?.last_verified_at ?? null,
-    isActive: credentials?.is_active,
-    createdAt: credentials?.created_at,
-    updatedAt: credentials?.updated_at,
+    apiAccessLevel: ctx.apiAccessLevel || 'explorer',
+    lastVerifiedAt: isServiceAccountAuth
+      ? serviceAccount?.updatedAt ?? null
+      : credentials?.last_verified_at ?? null,
+    isActive: isServiceAccountAuth
+      ? Boolean(serviceAccount)
+      : isDbRowActive(credentials?.is_active),
+    createdAt: isServiceAccountAuth
+      ? serviceAccount?.createdAt
+      : credentials?.created_at,
+    updatedAt: isServiceAccountAuth
+      ? serviceAccount?.updatedAt
+      : credentials?.updated_at,
   }
 }

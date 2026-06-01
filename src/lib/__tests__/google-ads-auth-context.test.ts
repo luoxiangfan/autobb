@@ -20,12 +20,15 @@ const serviceAccountFns = vi.hoisted(() => ({
   getServiceAccountConfig: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-assignment', () => ({
-  resolveGoogleAdsCredentialOwnerId: assignmentFns.resolveGoogleAdsCredentialOwnerId,
-  isGoogleAdsAuthShared: assignmentFns.isGoogleAdsAuthShared,
-  resolveGoogleAdsApiAccessLevel: vi.fn(async () => 'basic'),
-  getGoogleAdsAuthAssignment: vi.fn(),
-}))
+vi.mock('@/lib/google-ads-auth-assignment', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-assignment')>()
+  return {
+    ...actual,
+    resolveGoogleAdsCredentialOwnerId: assignmentFns.resolveGoogleAdsCredentialOwnerId,
+    isGoogleAdsAuthShared: assignmentFns.isGoogleAdsAuthShared,
+    getGoogleAdsAuthAssignment: vi.fn(),
+  }
+})
 
 vi.mock('@/lib/google-ads-oauth', () => ({
   getUserAuthType: oauthFns.getUserAuthType,
@@ -46,6 +49,7 @@ import {
   assertNoConflictingGoogleAdsAuth,
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
+  invalidateGoogleAdsAuthContextCache,
   resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthForAccount,
   resolveGoogleAdsApiAuthFromContext,
@@ -53,8 +57,15 @@ import {
   tryGetConfiguredGoogleAdsApiAuthForUser,
 } from '@/lib/google-ads-auth-context'
 
+function clearGoogleAdsAuthContextTestCache(): void {
+  for (const userId of [1, 2, 7]) {
+    invalidateGoogleAdsAuthContextCache(userId)
+  }
+}
+
 describe('getGoogleAdsAuthContext', () => {
   beforeEach(() => {
+    clearGoogleAdsAuthContextTestCache()
     vi.clearAllMocks()
     assignmentFns.isGoogleAdsAuthShared.mockReturnValue(true)
   })
@@ -175,8 +186,8 @@ describe('getGoogleAdsAuthContext', () => {
 })
 
 describe('resolveGoogleAdsCredentialStatusFields', () => {
-  it('reports hasCredentials false when dualStack', async () => {
-    const fields = await resolveGoogleAdsCredentialStatusFields({
+  it('reports hasCredentials false when dualStack', () => {
+    const fields = resolveGoogleAdsCredentialStatusFields({
       userId: 2,
       ownerUserId: 2,
       assignment: null,
@@ -186,6 +197,7 @@ describe('resolveGoogleAdsCredentialStatusFields', () => {
       auth: { authType: 'oauth' },
       oauthCredentials: { refresh_token: 'rt' },
       serviceAccountConfig: { id: 'sa-1', developerToken: 'tok', mccCustomerId: '111' },
+      apiAccessLevel: null,
     } as any)
 
     expect(fields.hasCredentials).toBe(false)
@@ -193,7 +205,7 @@ describe('resolveGoogleAdsCredentialStatusFields', () => {
     expect(fields.hasServiceAccount).toBe(true)
   })
 
-  it('fills developerToken and loginCustomerId from service account config', async () => {
+  it('fills developerToken and loginCustomerId from service account config', () => {
     const ctx = {
       userId: 2,
       ownerUserId: 1,
@@ -208,15 +220,41 @@ describe('resolveGoogleAdsCredentialStatusFields', () => {
         name: 'Admin SA',
         mccCustomerId: '1112223333',
         developerToken: 'dev-token',
+        updatedAt: '2026-01-01 00:00:00',
       },
+      apiAccessLevel: 'basic',
     }
 
-    const fields = await resolveGoogleAdsCredentialStatusFields(ctx as any)
+    const fields = resolveGoogleAdsCredentialStatusFields(ctx as any)
 
     expect(fields.hasServiceAccount).toBe(true)
     expect(fields.developerToken).toBe('dev-token')
     expect(fields.loginCustomerId).toBe('1112223333')
     expect(fields.apiAccessLevel).toBe('basic')
+    expect(fields.lastVerifiedAt).toBe('2026-01-01 00:00:00')
+    expect(fields.isActive).toBe(true)
+  })
+
+  it('normalizes oauth is_active for postgres boolean', () => {
+    const fields = resolveGoogleAdsCredentialStatusFields({
+      userId: 2,
+      ownerUserId: 2,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      dualStack: false,
+      auth: { authType: 'oauth' },
+      oauthCredentials: {
+        refresh_token: 'rt',
+        is_active: true,
+        last_verified_at: '2026-01-02',
+      },
+      serviceAccountConfig: null,
+      apiAccessLevel: 'explorer',
+    } as any)
+
+    expect(fields.isActive).toBe(true)
+    expect(fields.lastVerifiedAt).toBe('2026-01-02')
   })
 })
 
@@ -229,10 +267,28 @@ describe('resolveGoogleAdsDisplayAuthType', () => {
         auth: { authType: 'oauth' },
       } as Parameters<typeof resolveGoogleAdsDisplayAuthType>[0])
     ).toBeNull()
+  })
+
+  it('returns null when auth is not configured', async () => {
+    const { resolveGoogleAdsDisplayAuthType } = await import('@/lib/google-ads-auth-context')
+    expect(
+      resolveGoogleAdsDisplayAuthType({
+        dualStack: false,
+        auth: { authType: 'oauth' },
+        oauthCredentials: null,
+        serviceAccountConfig: null,
+      } as Parameters<typeof resolveGoogleAdsDisplayAuthType>[0])
+    ).toBeNull()
+  })
+
+  it('returns authType when configured', async () => {
+    const { resolveGoogleAdsDisplayAuthType } = await import('@/lib/google-ads-auth-context')
     expect(
       resolveGoogleAdsDisplayAuthType({
         dualStack: false,
         auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+        oauthCredentials: null,
+        serviceAccountConfig: { id: 'sa-1' },
       } as Parameters<typeof resolveGoogleAdsDisplayAuthType>[0])
     ).toBe('service_account')
   })
@@ -278,6 +334,11 @@ describe('hasConfiguredGoogleAdsAuthFromContext', () => {
 })
 
 describe('resolveGoogleAdsApiAuthForAccount', () => {
+  beforeEach(() => {
+    clearGoogleAdsAuthContextTestCache()
+    vi.clearAllMocks()
+  })
+
   it('reports dual_stack when context has dualStack', async () => {
     assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
       ownerUserId: 2,
@@ -384,6 +445,11 @@ describe('assertNoConflictingGoogleAdsAuth', () => {
 })
 
 describe('tryGetConfiguredGoogleAdsApiAuthForUser', () => {
+  beforeEach(() => {
+    clearGoogleAdsAuthContextTestCache()
+    vi.clearAllMocks()
+  })
+
   it('returns null when oauth credentials lack refresh_token', async () => {
     assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
       ownerUserId: 2,
@@ -401,6 +467,11 @@ describe('tryGetConfiguredGoogleAdsApiAuthForUser', () => {
 })
 
 describe('assertGoogleAdsAuthReadyForApi', () => {
+  beforeEach(() => {
+    clearGoogleAdsAuthContextTestCache()
+    vi.clearAllMocks()
+  })
+
   it('throws dual-stack warning when context has dualStack', async () => {
     assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
       ownerUserId: 2,

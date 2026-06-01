@@ -18,7 +18,8 @@ import {
 } from './campaign-backups'
 import { getCustomerWithCredentials, trackOAuthApiCall } from './google-ads-api'
 import {
-  prepareGoogleAdsApiCallForLinkedAccount,
+  createGoogleAdsLinkedAccountPrepareCache,
+  prepareGoogleAdsApiCallForLinkedAccountCached,
   resolveSyncAuthForAccount,
   type OAuthApiCredentialsFields,
 } from './google-ads-accounts-auth'
@@ -382,6 +383,8 @@ export async function syncCampaignsFromGoogleAds(
       return result
     }
 
+    const linkedAccountPrepareCache = createGoogleAdsLinkedAccountPrepareCache()
+
     // 3. 对每个账户执行同步
     for (const account of accounts) {
       // 如果指定了 customerId，只同步该账户
@@ -392,13 +395,10 @@ export async function syncCampaignsFromGoogleAds(
       console.log(`[GoogleAds Sync] Syncing account: ${account.customer_id} (${account.account_name || 'N/A'})`)
 
       try {
-        const linkedServiceAccountId =
-          typeof account.service_account_id === 'string'
-            ? account.service_account_id.trim()
-            : ''
-        const accountPrepared = await prepareGoogleAdsApiCallForLinkedAccount(
+        const accountPrepared = await prepareGoogleAdsApiCallForLinkedAccountCached(
           userId,
-          linkedServiceAccountId || account.service_account_id
+          account.service_account_id,
+          linkedAccountPrepareCache
         )
         if (!accountPrepared.ok) {
           result.warnings.push(

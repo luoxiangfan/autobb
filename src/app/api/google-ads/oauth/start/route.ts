@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth'
 import { generateOAuthUrl } from '@/lib/google-ads-oauth'
 import { getUserOnlySetting } from '@/lib/settings'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
+import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
 
 /**
@@ -99,6 +100,12 @@ export async function GET(request: NextRequest) {
         },
         { status: 400 }
       )
+    }
+
+    try {
+      await assertNoConflictingGoogleAdsAuth(userId, 'oauth')
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
     }
 
     const clientId = userClientId

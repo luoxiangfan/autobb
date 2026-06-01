@@ -26,6 +26,7 @@ export const defaultOAuthAuthContext = {
     login_customer_id: '9988776655',
   },
   serviceAccountConfig: null,
+  apiAccessLevel: 'explorer' as const,
 }
 
 export const defaultOAuthApiAuth = {

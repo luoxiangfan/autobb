@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultOAuthApiAuth, defaultOAuthAuthContext } from './helpers/campaign-route-auth-context-mock'
 import {
+  createGoogleAdsLinkedAccountPrepareCache,
   developerTokenLooksInvalid,
   healAccountsRouteDeveloperToken,
+  linkedSaPrepareCacheKey,
+  prepareGoogleAdsApiCallForLinkedAccountCached,
   resolveAccountsRouteAuthBundle,
   prepareGoogleAdsAccountApiCall,
   resolveAndHealSyncUserCredentials,
@@ -13,6 +16,7 @@ import {
 const authContextFns = vi.hoisted(() => ({
   getGoogleAdsAuthContext: vi.fn(),
   resolveGoogleAdsApiAuthFromContext: vi.fn(),
+  resolveGoogleAdsApiAuthForAccount: vi.fn(),
 }))
 
 const serviceAccountFns = vi.hoisted(() => ({
@@ -33,6 +37,7 @@ vi.mock('../google-ads-auth-context', async (importOriginal) => {
     ...actual,
     getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
     resolveGoogleAdsApiAuthFromContext: authContextFns.resolveGoogleAdsApiAuthFromContext,
+    resolveGoogleAdsApiAuthForAccount: authContextFns.resolveGoogleAdsApiAuthForAccount,
   }
 })
 
@@ -554,5 +559,46 @@ describe('prepareGoogleAdsAccountApiCall', () => {
       message: expect.stringContaining('OAuth 与服务账号同时存在'),
     })
     expect(authContextFns.resolveGoogleAdsApiAuthFromContext).not.toHaveBeenCalled()
+  })
+})
+
+describe('GoogleAdsLinkedAccountPrepareCache', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
+      ok: true,
+      ctx: oauthAuthContextFull,
+      apiAuth: defaultOAuthApiAuth,
+    })
+    settingsFns.getUserOnlySetting.mockResolvedValue({
+      value: 'abcdefghijklmnopqrstuvwxyz1234567890ab',
+    })
+  })
+
+  it('linkedSaPrepareCacheKey isolates userId and linked SA', () => {
+    expect(linkedSaPrepareCacheKey(2, 'sa-1')).toBe('2\0sa-1')
+    expect(linkedSaPrepareCacheKey(2, null)).toBe('2\0')
+    expect(linkedSaPrepareCacheKey(3, 'sa-1')).not.toBe(linkedSaPrepareCacheKey(2, 'sa-1'))
+  })
+
+  it('prepareGoogleAdsApiCallForLinkedAccountCached reuses result for same linked SA', async () => {
+    const cache = createGoogleAdsLinkedAccountPrepareCache()
+
+    const first = await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
+    const second = await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
+
+    expect(first).toBe(second)
+    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledTimes(1)
+    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledWith(1, 'sa-1')
+  })
+
+  it('prepareGoogleAdsApiCallForLinkedAccountCached treats blank linked SA as null', async () => {
+    const cache = createGoogleAdsLinkedAccountPrepareCache()
+
+    await prepareGoogleAdsApiCallForLinkedAccountCached(1, null, cache)
+    await prepareGoogleAdsApiCallForLinkedAccountCached(1, '   ', cache)
+
+    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledTimes(1)
+    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledWith(1, null)
   })
 })

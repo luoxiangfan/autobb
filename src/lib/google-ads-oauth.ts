@@ -108,6 +108,7 @@ export interface GoogleAdsCredentials {
   access_token_expires_at?: string
   is_active: number
   last_verified_at?: string
+  api_access_level?: string
   created_at: string
   updated_at: string
 }

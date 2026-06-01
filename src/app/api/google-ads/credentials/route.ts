@@ -18,6 +18,7 @@ import {
   getGoogleAdsAuthContext,
   GOOGLE_ADS_DUAL_STACK_WARNING,
   hasConfiguredGoogleAdsAuthFromContext,
+  invalidateGoogleAdsAuthContextCache,
   resolveGoogleAdsCredentialStatusFields,
   resolveGoogleAdsDisplayAuthType,
 } from '@/lib/google-ads-auth-context'
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 保存凭证
-    const credentials = await saveGoogleAdsCredentials(authResult.user.userId, {
+    const credentials =     await saveGoogleAdsCredentials(authResult.user.userId, {
       client_id,
       client_secret,
       refresh_token,
@@ -85,6 +86,8 @@ export async function POST(request: NextRequest) {
       access_token,
       access_token_expires_at
     })
+
+    invalidateGoogleAdsAuthContextCache(userId)
 
     console.log(`✅ Google Ads凭证已保存`)
 
@@ -130,7 +133,7 @@ export async function GET(request: NextRequest) {
     const userId = authResult.user.userId
     const ctx = await getGoogleAdsAuthContext(userId)
     const assignment = ctx.assignment
-    const statusFields = await resolveGoogleAdsCredentialStatusFields(ctx)
+    const statusFields = resolveGoogleAdsCredentialStatusFields(ctx)
     const authConfigWarning = ctx.dualStack ? GOOGLE_ADS_DUAL_STACK_WARNING : null
     const displayAuthType = resolveGoogleAdsDisplayAuthType(ctx)
 
@@ -172,7 +175,7 @@ export async function GET(request: NextRequest) {
         ...(displayAuthType != null ? { authType: displayAuthType } : {}),
         apiAccessLevel: statusFields.apiAccessLevel,
         lastVerifiedAt: statusFields.lastVerifiedAt,
-        isActive: statusFields.isActive === 1,
+        isActive: statusFields.isActive,
         createdAt: statusFields.createdAt,
         updatedAt: statusFields.updatedAt,
         assignmentMode: assignment?.assignmentMode ?? 'own',
@@ -222,6 +225,8 @@ export async function DELETE(request: NextRequest) {
 
     // 1) 停用/清空 OAuth 凭证（google_ads_credentials）
     await deleteGoogleAdsCredentials(userId)
+
+    invalidateGoogleAdsAuthContextCache(userId)
 
     // 2) 同步清除 Settings 页保存的 OAuth 配置（system_settings 的用户实例）
     // 注意：必须限定 user_id = ?，避免误删全局模板记录(user_id IS NULL)

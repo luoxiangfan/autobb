@@ -154,6 +154,32 @@ async function getRawActiveServiceAccount(userId: number): Promise<{
 }
 
 /**
+ * 从已加载的 auth-context 解析 API 访问级别（避免 status 展示重复查库）。
+ */
+export function resolveGoogleAdsApiAccessLevelFromContext(ctx: {
+  userId: number
+  assignment: GoogleAdsAuthAssignment | null
+  auth: { authType: GoogleAdsAuthType }
+  oauthCredentials: { api_access_level?: string } | null
+  serviceAccountConfig: { apiAccessLevel?: string } | null
+}): string | null {
+  if (ctx.assignment?.authType === 'service_account' || ctx.auth.authType === 'service_account') {
+    return ctx.serviceAccountConfig?.apiAccessLevel?.toLowerCase() ?? null
+  }
+
+  const oauthAccessLevel = ctx.oauthCredentials?.api_access_level
+  if (oauthAccessLevel) {
+    return String(oauthAccessLevel).toLowerCase()
+  }
+
+  if (ctx.assignment?.authType === 'oauth') {
+    return null
+  }
+
+  return ctx.serviceAccountConfig?.apiAccessLevel?.toLowerCase() ?? null
+}
+
+/**
  * 解析用户的 Google Ads API 访问级别（支持管理员共享配置）
  */
 export async function resolveGoogleAdsApiAccessLevel(userId: number): Promise<string | null> {

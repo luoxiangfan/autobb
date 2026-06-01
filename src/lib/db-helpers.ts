@@ -75,6 +75,11 @@ export function getInsertedId(
  * // SQLite: "is_active = 1"
  * ```
  */
+/** SQLite INTEGER (0/1) 与 PostgreSQL BOOLEAN 双栈兼容 */
+export function isDbRowActive(value: unknown): boolean {
+  return value === true || value === 1
+}
+
 export function boolCondition(
   field: string,
   value: boolean,

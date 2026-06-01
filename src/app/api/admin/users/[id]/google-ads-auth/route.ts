@@ -24,6 +24,7 @@ import {
   getGoogleAdsAuthContext,
   GOOGLE_ADS_DUAL_STACK_WARNING,
   hasConfiguredGoogleAdsAuthFromContext,
+  invalidateGoogleAdsAuthContextCache,
   resolveGoogleAdsCredentialStatusFields,
   resolveGoogleAdsDisplayAuthType,
 } from '@/lib/google-ads-auth-context'
@@ -39,7 +40,7 @@ async function requireAdmin(request: NextRequest) {
 async function buildAuthStatus(userId: number) {
   const ctx = await getGoogleAdsAuthContext(userId)
   const assignment = ctx.assignment
-  const statusFields = await resolveGoogleAdsCredentialStatusFields(ctx)
+  const statusFields = resolveGoogleAdsCredentialStatusFields(ctx)
 
   let sharedAdminUsername: string | null = null
   let sharedAdminEmail: string | null = null
@@ -184,6 +185,8 @@ export async function PUT(
         configuredBy: admin.userId,
       })
 
+      invalidateGoogleAdsAuthContextCache(userId)
+
       return NextResponse.json({
         success: true,
         message: '已设置为共享管理员认证配置',
@@ -282,6 +285,8 @@ export async function PUT(
       configuredBy: admin.userId,
     })
 
+    invalidateGoogleAdsAuthContextCache(userId)
+
     return NextResponse.json({
       success: true,
       message: '已保存用户独立认证配置',
@@ -322,6 +327,8 @@ export async function DELETE(
     }
 
     await deleteGoogleAdsAuthAssignment(userId)
+
+    invalidateGoogleAdsAuthContextCache(userId)
 
     return NextResponse.json({
       success: true,

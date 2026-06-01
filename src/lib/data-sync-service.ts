@@ -8,7 +8,8 @@ import {
   type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
 import {
-  prepareGoogleAdsApiCallForLinkedAccount,
+  createGoogleAdsLinkedAccountPrepareCache,
+  prepareGoogleAdsApiCallForLinkedAccountCached,
   resolveSyncUserCredentialsForJob,
   syncUserCredentialsFromPrepared,
   type SyncUserCredentials,
@@ -382,6 +383,8 @@ export class DataSyncService {
         throw new Error('未找到活跃的Google Ads账户')
       }
 
+      const linkedAccountPrepareCache = createGoogleAdsLinkedAccountPrepareCache()
+
       // 2. 为每个账户同步数据
       for (const account of accounts) {
         let accountSyncLogId: number | undefined
@@ -470,9 +473,10 @@ export class DataSyncService {
           const startDate = new Date()
           startDate.setDate(startDate.getDate() - 7)
 
-          const accountPrepared = await prepareGoogleAdsApiCallForLinkedAccount(
+          const accountPrepared = await prepareGoogleAdsApiCallForLinkedAccountCached(
             userId,
-            account.service_account_id
+            account.service_account_id,
+            linkedAccountPrepareCache
           )
           if (!accountPrepared.ok) {
             console.warn(

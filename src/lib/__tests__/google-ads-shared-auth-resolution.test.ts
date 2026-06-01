@@ -31,6 +31,7 @@ import {
   adminHasConfiguredAuth,
   hasConfiguredGoogleAdsAuth,
   resolveGoogleAdsApiAccessLevel,
+  resolveGoogleAdsApiAccessLevelFromContext,
 } from '@/lib/google-ads-auth-assignment'
 import { hasConfiguredGoogleAdsAuthFromContext } from '@/lib/google-ads-auth-context'
 
@@ -53,6 +54,7 @@ function sharedSaContext() {
     auth: { authType: 'service_account' as const, serviceAccountId: 'sa-1' },
     oauthCredentials: null,
     serviceAccountConfig: { id: 'sa-1', mccCustomerId: '1234567890', developerToken: 'token' },
+    apiAccessLevel: 'basic',
   }
 }
 
@@ -82,6 +84,18 @@ describe('google-ads shared auth resolution helpers', () => {
         serviceAccountConfig: null,
       } as any)
     ).toBe(true)
+  })
+
+  it('resolveGoogleAdsApiAccessLevelFromContext reads oauth level without db', () => {
+    expect(
+      resolveGoogleAdsApiAccessLevelFromContext({
+        userId: 2,
+        assignment: null,
+        auth: { authType: 'oauth' },
+        oauthCredentials: { api_access_level: 'Standard' },
+        serviceAccountConfig: null,
+      })
+    ).toBe('standard')
   })
 
   it('resolveGoogleAdsApiAccessLevel reads service account level from admin for shared user', async () => {
