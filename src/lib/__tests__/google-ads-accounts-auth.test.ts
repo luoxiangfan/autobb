@@ -304,6 +304,21 @@ describe('resolveAndHealSyncUserCredentials', () => {
     dbFns.exec.mockResolvedValue(undefined)
   })
 
+  it('returns dual-stack error without calling accounts bundle', async () => {
+    const result = await resolveAndHealSyncUserCredentials({
+      userId: 1,
+      authContext: { ...oauthAuthContextFull, dualStack: true },
+      authType: 'oauth',
+      serviceAccountId: null,
+    })
+
+    expect(result).toEqual({
+      ok: false,
+      message: expect.stringContaining('OAuth 与服务账号同时存在'),
+    })
+    expect(authContextFns.resolveGoogleAdsApiAuthFromContext).not.toHaveBeenCalled()
+  })
+
   it('returns healed oauth user credentials', async () => {
     const result = await resolveAndHealSyncUserCredentials({
       userId: 1,
@@ -409,6 +424,17 @@ describe('resolveOAuthApiCredentialsForUser', () => {
     })
 
     await expect(resolveOAuthApiCredentialsForUser(1)).rejects.toThrow(/服务账号认证/)
+  })
+
+  it('throws dual-stack error before heal', async () => {
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      ...oauthAuthContextFull,
+      dualStack: true,
+    })
+
+    await expect(resolveOAuthApiCredentialsForUser(1)).rejects.toThrow(
+      /OAuth 与服务账号同时存在/
+    )
   })
 
   it('throws when login_customer_id is missing', async () => {

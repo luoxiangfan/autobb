@@ -340,33 +340,6 @@ export async function refreshAccessToken(userId: number): Promise<{
 }
 
 /**
- * 获取有效的Access Token（如果过期则自动刷新）
- */
-export async function getValidAccessToken(userId: number): Promise<string> {
-  const credentials = await getGoogleAdsCredentials(userId)
-  if (!credentials) {
-    throw new Error('Google Ads凭证不存在')
-  }
-
-  // 检查是否需要刷新
-  if (!credentials.access_token || !credentials.access_token_expires_at) {
-    const refreshed = await refreshAccessToken(userId)
-    return refreshed.access_token
-  }
-
-  const expiresAt = new Date(credentials.access_token_expires_at)
-  const now = new Date()
-
-  // 提前5分钟刷新
-  if (expiresAt.getTime() - now.getTime() < 5 * 60 * 1000) {
-    const refreshed = await refreshAccessToken(userId)
-    return refreshed.access_token
-  }
-
-  return credentials.access_token
-}
-
-/**
  * 验证 Google Ads 凭证是否有效（OAuth / 服务账号二选一，经 auth-context 解析）。
  */
 export async function verifyGoogleAdsCredentials(userId: number): Promise<{

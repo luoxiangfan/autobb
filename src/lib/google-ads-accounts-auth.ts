@@ -6,6 +6,7 @@ import { getUserOnlySetting } from './settings'
 import {
   getGoogleAdsAuthContext,
   googleAdsApiAuthValidationErrorMessage,
+  googleAdsAuthContextDualStackError,
   resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthForAccount,
   resolveGoogleAdsApiAuthFromContext,
@@ -111,6 +112,11 @@ export async function resolveAndHealSyncUserCredentials(params: {
     }
   | { ok: false; message: string }
 > {
+  const dualStackError = googleAdsAuthContextDualStackError(params.authContext)
+  if (dualStackError) {
+    return { ok: false, message: dualStackError }
+  }
+
   const resolved = await resolveAccountsRouteAuthBundle({
     userId: params.userId,
     authContext: params.authContext,
@@ -223,6 +229,11 @@ export async function resolveHealedOAuthCredentialsFields(params: {
   | { ok: true; credentials: OAuthApiCredentialsFields; loginCustomerId: string }
   | { ok: false; message: string }
 > {
+  const dualStackError = googleAdsAuthContextDualStackError(params.authContext)
+  if (dualStackError) {
+    return { ok: false, message: dualStackError }
+  }
+
   if (params.authContext.auth.authType === 'service_account') {
     return { ok: false, message: `用户(ID=${params.userId})当前使用服务账号认证，无法读取 OAuth 基础凭证` }
   }
@@ -259,6 +270,11 @@ export async function loadOAuthGoogleAdsCallBundleForContext(params: {
   | { ok: true; bundle?: OAuthGoogleAdsCallBundle }
   | { ok: false; message: string }
 > {
+  const dualStackError = googleAdsAuthContextDualStackError(params.authContext)
+  if (dualStackError) {
+    return { ok: false, message: dualStackError }
+  }
+
   if (params.authContext.auth.authType !== 'oauth') {
     return { ok: true }
   }
@@ -897,6 +913,10 @@ export async function resolveOAuthClientCredentialsForUser(
 ): Promise<OAuthApiClientCredentials> {
   const requireLogin = options.requireLoginCustomerId !== false
   const authContext = await getGoogleAdsAuthContext(userId)
+  const dualStackError = googleAdsAuthContextDualStackError(authContext)
+  if (dualStackError) {
+    throw new Error(dualStackError)
+  }
   if (authContext.auth.authType === 'service_account') {
     throw new Error(`用户(ID=${userId})当前使用服务账号认证，无法读取 OAuth 基础凭证`)
   }

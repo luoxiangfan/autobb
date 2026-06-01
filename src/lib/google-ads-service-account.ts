@@ -155,22 +155,18 @@ export async function getUnifiedGoogleAdsClient(config: {
       throw new Error('OAuth 认证需要提供 credentials 参数')
     }
 
-    let refreshToken = config.oauthRefreshToken?.trim() || ''
-    let loginCustomerId = config.oauthLoginCustomerId?.trim() || ''
-
-    if (!refreshToken) {
-      const { getGoogleAdsAuthContext, GOOGLE_ADS_DUAL_STACK_WARNING } = await import(
-        './google-ads-auth-context'
-      )
-      const ctx = await getGoogleAdsAuthContext(authConfig.userId)
-      if (ctx.dualStack) {
-        throw new Error(GOOGLE_ADS_DUAL_STACK_WARNING)
-      }
-      refreshToken = ctx.oauthCredentials?.refresh_token || ''
-      if (!loginCustomerId) {
-        loginCustomerId = ctx.oauthCredentials?.login_customer_id || ''
-      }
+    const { getGoogleAdsAuthContext, googleAdsAuthContextDualStackError } = await import(
+      './google-ads-auth-context'
+    )
+    const ctx = await getGoogleAdsAuthContext(authConfig.userId)
+    const dualStackError = googleAdsAuthContextDualStackError(ctx)
+    if (dualStackError) {
+      throw new Error(dualStackError)
     }
+
+    let refreshToken = config.oauthRefreshToken?.trim() || ctx.oauthCredentials?.refresh_token || ''
+    let loginCustomerId =
+      config.oauthLoginCustomerId?.trim() || ctx.oauthCredentials?.login_customer_id || ''
 
     if (!refreshToken) {
       throw new Error('OAuth refresh token not found')
@@ -209,7 +205,13 @@ export async function getLoginCustomerId(config: {
     return fromParam
   }
 
-  const { getGoogleAdsAuthContext } = await import('./google-ads-auth-context')
+  const { getGoogleAdsAuthContext, googleAdsAuthContextDualStackError } = await import(
+    './google-ads-auth-context'
+  )
   const ctx = await getGoogleAdsAuthContext(authConfig.userId)
+  const dualStackError = googleAdsAuthContextDualStackError(ctx)
+  if (dualStackError) {
+    throw new Error(dualStackError)
+  }
   return ctx.oauthCredentials?.login_customer_id?.trim() || ''
 }

@@ -219,6 +219,17 @@ describe('resolveGoogleAdsCredentialStatusFields', () => {
   })
 })
 
+describe('googleAdsAuthContextDualStackError', () => {
+  it('returns warning when dualStack is true', async () => {
+    const { googleAdsAuthContextDualStackError, GOOGLE_ADS_DUAL_STACK_WARNING } =
+      await import('@/lib/google-ads-auth-context')
+    expect(googleAdsAuthContextDualStackError({ dualStack: true })).toBe(
+      GOOGLE_ADS_DUAL_STACK_WARNING
+    )
+    expect(googleAdsAuthContextDualStackError({ dualStack: false })).toBeNull()
+  })
+})
+
 describe('googleAdsApiAuthValidationErrorMessage', () => {
   it('returns dual-stack warning for dual_stack reason', async () => {
     const { googleAdsApiAuthValidationErrorMessage, GOOGLE_ADS_DUAL_STACK_WARNING } =

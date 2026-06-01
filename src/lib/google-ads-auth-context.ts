@@ -6,7 +6,8 @@
  * 约定：
  * - 需要调用 Google Ads API 时，优先 `getGoogleAdsAuthContext(userId)`，勿散落 `getUserAuthType` + `getGoogleAdsCredentials`。
  * - `linkedAccountServiceAccountId` 仅在用户当前为服务账号认证时生效；OAuth 用户传入账号 SA 不会切换为服务账号调用。
- * - 是否已配置：用 `hasConfiguredGoogleAdsAuthFromContext`，勿仅用 `auth.serviceAccountId` 判断。
+ * - 是否已配置：用 `hasConfiguredGoogleAdsAuthFromContext`（按 userId 查请用 `google-ads-auth-assignment.hasConfiguredGoogleAdsAuth`），勿仅用 `auth.serviceAccountId` 判断。
+ * - 已持有 context 做 heal/sync 前须 `googleAdsAuthContextDualStackError`；禁止在 `dualStack` 时绕过 `resolve` 直接调 API。
  */
 import {
   isGoogleAdsAuthShared,
@@ -159,14 +160,6 @@ export function hasConfiguredGoogleAdsAuthFromContext(ctx: GoogleAdsAuthContext)
   return Boolean(resolveEffectiveServiceAccountId(undefined, ctx))
 }
 
-/**
- * 是否已配置可用认证（与 FromContext 一致，含双栈与共享 assignment 语义）。
- */
-export async function hasConfiguredGoogleAdsAuth(userId: number): Promise<boolean> {
-  const ctx = await getGoogleAdsAuthContext(userId)
-  return hasConfiguredGoogleAdsAuthFromContext(ctx)
-}
-
 export function getServiceAccountMccFromContext(ctx: GoogleAdsAuthContext): string | undefined {
   const mcc = ctx.serviceAccountConfig?.mccCustomerId
   return mcc ? String(mcc) : undefined
@@ -245,6 +238,13 @@ export type GoogleAdsAuthSaveTarget = 'oauth' | 'service_account'
  */
 export const GOOGLE_ADS_DUAL_STACK_WARNING =
   '检测到 OAuth 与服务账号同时存在，请先在设置页删除其中一种配置后再使用。'
+
+/** 双栈时返回统一警告文案，否则 null（供 heal/sync 等已持有 context 的路径使用）。 */
+export function googleAdsAuthContextDualStackError(
+  ctx: Pick<GoogleAdsAuthContext, 'dualStack'>
+): string | null {
+  return ctx.dualStack ? GOOGLE_ADS_DUAL_STACK_WARNING : null
+}
 
 export async function assertNoConflictingGoogleAdsAuth(
   userId: number,

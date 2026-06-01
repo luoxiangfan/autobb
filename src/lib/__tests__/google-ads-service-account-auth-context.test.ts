@@ -7,6 +7,8 @@ const authContextFns = vi.hoisted(() => ({
 vi.mock('@/lib/google-ads-auth-context', () => ({
   getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
   GOOGLE_ADS_DUAL_STACK_WARNING: 'dual-stack-warning',
+  googleAdsAuthContextDualStackError: (ctx: { dualStack?: boolean }) =>
+    ctx.dualStack ? 'dual-stack-warning' : null,
 }))
 
 vi.mock('@/lib/google-ads-api', () => ({
@@ -24,6 +26,7 @@ describe('google-ads-service-account auth-context integration', () => {
 
   it('getLoginCustomerId loads login_customer_id from auth context when param is empty', async () => {
     authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      dualStack: false,
       oauthCredentials: { login_customer_id: '9988776655' },
     })
 
@@ -81,6 +84,26 @@ describe('google-ads-service-account auth-context integration', () => {
           developer_token: 'dev',
         },
         authConfig: { authType: 'oauth', userId: 7 },
+      })
+    ).rejects.toThrow('dual-stack-warning')
+  })
+
+  it('getUnifiedGoogleAdsClient rejects dual-stack even when oauthRefreshToken is passed in', async () => {
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      dualStack: true,
+      oauthCredentials: { refresh_token: 'rt', login_customer_id: '1122334455' },
+    })
+
+    await expect(
+      getUnifiedGoogleAdsClient({
+        customerId: '1234567890',
+        credentials: {
+          client_id: 'cid',
+          client_secret: 'secret',
+          developer_token: 'dev',
+        },
+        authConfig: { authType: 'oauth', userId: 7 },
+        oauthRefreshToken: 'rt-passed-in',
       })
     ).rejects.toThrow('dual-stack-warning')
   })
