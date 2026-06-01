@@ -38,6 +38,7 @@ import {
   BatchProgressIndicator,
   type BatchProgressErrorDetail,
 } from '@/components/BatchProgressIndicator'
+import { ResponsivePagination } from '@/components/ui/responsive-pagination'
 import { backupHasCampaignConfig } from '@/lib/campaign-backup-config'
 
 interface CampaignBackup {
@@ -99,8 +100,9 @@ export default function CampaignBackupsClientPage() {
   
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(50)
   const [total, setTotal] = useState(0)
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const sseAbortRef = useRef<AbortController | null>(null)
   const batchFinalizeKeyRef = useRef<string | null>(null)
@@ -711,7 +713,7 @@ export default function CampaignBackupsClientPage() {
                     setSelectedBackupIds([])
                     setSelectedBackupMeta(new Map())
                     setCurrentPage(1)
-                    setPageSize(20)
+                    setPageSize(50)
                   }}
                 >
                   重置筛选
@@ -725,7 +727,7 @@ export default function CampaignBackupsClientPage() {
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Package className="w-4 h-4" />
-            <span>共 {total} 条记录，第 {currentPage} 页，共 {Math.ceil(total / pageSize) || 1} 页</span>
+            <span>共 {total} 条记录</span>
             <span className="text-xs text-gray-400">可跨页选择，筛选变更会清空已选</span>
             {selectedBackupIds.length > 0 && (
               <Badge variant="secondary">已选择 {selectedBackupIds.length} 个</Badge>
@@ -883,69 +885,23 @@ export default function CampaignBackupsClientPage() {
               </TableBody>
             </Table>
           </div>
-        </Card>
-
-        {/* 分页 */}
-        {total > 0 && (
-          <div className="flex items-center justify-between mt-6">
-            <div className="text-sm text-gray-600">
-              显示 {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, total)} 条，共 {total} 条
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm whitespace-nowrap">每页显示</Label>
-                <Select value={pageSize.toString()} onValueChange={(value) => {
-                  setPageSize(Number(value))
+          {total > 0 && (
+            <div className="px-4 py-3 border-t border-gray-200">
+              <ResponsivePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={total}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(size) => {
+                  setPageSize(size)
                   setCurrentPage(1)
-                }}>
-                  <SelectTrigger className="w-[100px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10 条</SelectItem>
-                    <SelectItem value="20">20 条</SelectItem>
-                    <SelectItem value="50">50 条</SelectItem>
-                    <SelectItem value="100">100 条</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                >
-                  首页
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  上一页
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage >= Math.ceil(total / pageSize)}
-                >
-                  下一页
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(Math.ceil(total / pageSize))}
-                  disabled={currentPage >= Math.ceil(total / pageSize)}
-                >
-                  末页
-                </Button>
-              </div>
+                }}
+                pageSizeOptions={[10, 20, 50, 100, 500, 1000]}
+              />
             </div>
-          </div>
-        )}
+          )}
+        </Card>
       </div>
 
       {/* 批量创建对话框 */}
