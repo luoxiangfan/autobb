@@ -383,6 +383,13 @@ function CampaignsTrendsSectionSkeleton() {
 const MAX_SELECTED_CAMPAIGNS = 500
 const BATCH_OPERATION_CHUNK_SIZE = 100
 
+function areUserFilterSelectionsEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false
+  const sortedA = [...a].sort()
+  const sortedB = [...b].sort()
+  return sortedA.every((id, index) => id === sortedB[index])
+}
+
 export default function CampaignsClientPage({
   campaignsReqDedupEnabled = false,
   campaignsServerPagingEnabled = false,
@@ -408,6 +415,8 @@ export default function CampaignsClientPage({
   const [needsOfferCompletionFilter, setNeedsOfferCompletionFilter] = useState<string>('all') // 'all' | 'true' | 'false'
   const [statusCategoryFilter, setStatusCategoryFilter] = useState<string>('all') // 'all' | 'pending' | 'watching' | 'qualified'
   const [selectedUserFilters, setSelectedUserFilters] = useState<string[]>([]) // [] => all users
+  const [pendingUserFilters, setPendingUserFilters] = useState<string[]>([])
+  const [userFilterMenuOpen, setUserFilterMenuOpen] = useState(false)
   const [users, setUsers] = useState<Array<{ id: number; username: string; email: string }>>([])
   const [usersLoading, setUsersLoading] = useState(false)
   const [isAdmin, setIsAdmin] = useState<boolean>(false)
@@ -997,7 +1006,9 @@ export default function CampaignsClientPage({
           setUsers(fetchedUsers)
           // 默认全选一次，避免后续用户手动取消后被再次覆盖
           if (!userSelectionInitializedRef.current && fetchedUsers.length > 0) {
-            setSelectedUserFilters(fetchedUsers.map((user) => String(user.id)))
+            const initialUserIds = fetchedUsers.map((user) => String(user.id))
+            setSelectedUserFilters(initialUserIds)
+            setPendingUserFilters(initialUserIds)
             userSelectionInitializedRef.current = true
           }
           setIsAdmin(true)
@@ -1109,7 +1120,9 @@ export default function CampaignsClientPage({
     setStatusFilter('all')
     setStatusCategoryFilter('all')
     setNeedsOfferCompletionFilter('all')
-    setSelectedUserFilters(users.map((user) => String(user.id)))
+    const allUserIds = users.map((user) => String(user.id))
+    setSelectedUserFilters(allUserIds)
+    setPendingUserFilters(allUserIds)
     setAffiliateFilter('all')
     if (currentPage !== 1) {
       setCurrentPage(1)
@@ -3927,7 +3940,15 @@ export default function CampaignsClientPage({
               {/* 🔧 新增：用户筛选（管理员功能） */}
               {isAdmin && (
                 <div className="w-auto">
-                  <DropdownMenu>
+                  <DropdownMenu
+                    open={userFilterMenuOpen}
+                    onOpenChange={(open) => {
+                      if (open) {
+                        setPendingUserFilters(selectedUserFilters.slice())
+                      }
+                      setUserFilterMenuOpen(open)
+                    }}
+                  >
                     <DropdownMenuTrigger asChild>
                       <Button
                         type="button"
@@ -3938,50 +3959,88 @@ export default function CampaignsClientPage({
                         {selectedUsersLabel}
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto">
-                      <DropdownMenuItem
-                        onSelect={(event) => {
-                          event.preventDefault()
-                          setSelectedUserFilters(() => {
-                            if (allUsersSelected) {
-                              return []
-                            }
-                            return users.map((user) => String(user.id))
-                          })
-                          if (isServerPagingMode && currentPage !== 1) {
-                            setCurrentPage(1)
-                          }
-                        }}
-                      >
-                        <Checkbox checked={allUsersSelected} className="mr-2" />
-                        {allUsersSelected ? '取消全选' : '全选'}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      {users.map((user) => {
-                        const userId = String(user.id)
-                        const checked = selectedUserFilters.includes(userId)
-                        return (
-                          <DropdownMenuItem
-                            key={user.id}
-                            onSelect={(event) => {
-                              event.preventDefault()
-                              setSelectedUserFilters((prev) => {
-                                const exists = prev.includes(userId)
-                                if (exists) {
-                                  return prev.filter((id) => id !== userId)
-                                }
-                                return [...prev, userId]
-                              })
-                              if (isServerPagingMode && currentPage !== 1) {
-                                setCurrentPage(1)
+                    <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto p-0">
+                      <div className="max-h-64 overflow-y-auto p-1">
+                        <DropdownMenuItem
+                          onSelect={(event) => {
+                            event.preventDefault()
+                            setPendingUserFilters((prev) => {
+                              const pendingAllSelected = users.length > 0
+                                && prev.length === users.length
+                                && users.every((user) => prev.includes(String(user.id)))
+                              if (pendingAllSelected) {
+                                return []
                               }
-                            }}
-                          >
-                            <Checkbox checked={checked} className="mr-2" />
-                            {user.username}
-                          </DropdownMenuItem>
-                        )
-                      })}
+                              return users.map((user) => String(user.id))
+                            })
+                          }}
+                        >
+                          <Checkbox
+                            checked={
+                              users.length > 0
+                              && pendingUserFilters.length === users.length
+                              && users.every((user) => pendingUserFilters.includes(String(user.id)))
+                            }
+                            className="mr-2"
+                          />
+                          {users.length > 0
+                            && pendingUserFilters.length === users.length
+                            && users.every((user) => pendingUserFilters.includes(String(user.id)))
+                            ? '取消全选'
+                            : '全选'}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {users.map((user) => {
+                          const userId = String(user.id)
+                          const checked = pendingUserFilters.includes(userId)
+                          return (
+                            <DropdownMenuItem
+                              key={user.id}
+                              onSelect={(event) => {
+                                event.preventDefault()
+                                setPendingUserFilters((prev) => {
+                                  const exists = prev.includes(userId)
+                                  if (exists) {
+                                    return prev.filter((id) => id !== userId)
+                                  }
+                                  return [...prev, userId]
+                                })
+                              }}
+                            >
+                              <Checkbox checked={checked} className="mr-2" />
+                              {user.username}
+                            </DropdownMenuItem>
+                          )
+                        })}
+                      </div>
+                      <div className="flex justify-end gap-2 border-t p-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setUserFilterMenuOpen(false)}
+                        >
+                          取消
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            const nextFilters = pendingUserFilters.slice()
+                            const changed = !areUserFilterSelectionsEqual(
+                              nextFilters,
+                              selectedUserFilters,
+                            )
+                            setSelectedUserFilters(nextFilters)
+                            if (changed && isServerPagingMode && currentPage !== 1) {
+                              setCurrentPage(1)
+                            }
+                            setUserFilterMenuOpen(false)
+                          }}
+                        >
+                          确认
+                        </Button>
+                      </div>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
