@@ -54,8 +54,14 @@ export type AffiliateCommissionReportResult = {
   currency: string
   totalCommission: number
   showUserScope: boolean
+  dateBounds: AffiliateCommissionDateBounds
   brandSummaries: AffiliateCommissionBrandSummary[]
   dateSummaries: AffiliateCommissionDateSummary[]
+}
+
+export type AffiliateCommissionDateBounds = {
+  minDate: string | null
+  maxDate: string | null
 }
 
 export type ActiveNonAdminUser = {
@@ -78,6 +84,30 @@ type RawSyncPayloadRow = {
 
 function roundTo2(value: number): number {
   return Math.round(value * 100) / 100
+}
+
+export function normalizeReportDate(value: unknown): string {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10)
+  }
+
+  const text = String(value ?? '').trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    return text
+  }
+
+  if (text) {
+    const parsed = new Date(text)
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString().slice(0, 10)
+    }
+  }
+
+  return text.slice(0, 10)
+}
+
+function compareReportDatesDesc(left: string, right: string): number {
+  return normalizeReportDate(right).localeCompare(normalizeReportDate(left))
 }
 
 function parseNumberish(value: unknown, fallback = 0): number {
@@ -339,7 +369,95 @@ async function loadRawSyncPayloadRows(params: {
       ORDER BY user_id ASC, report_date ASC, platform ASC, source_api ASC, page_no ASC
     `,
     queryParams
+  ).then((rows) => rows.map((row) => ({
+    ...row,
+    report_date: normalizeReportDate(row.report_date),
+  })))
+}
+
+function buildSupportedSourceClause(platform: AffiliateCommissionReportPlatformFilter): {
+  clause: string
+  params: unknown[]
+} {
+  if (platform === 'yeahpromos') {
+    return {
+      clause: `AND platform = 'yeahpromos' AND source_api = 'getorder'`,
+      params: [],
+    }
+  }
+  if (platform === 'partnerboost') {
+    return {
+      clause: `AND platform = 'partnerboost' AND source_api = 'amazon_report'`,
+      params: [],
+    }
+  }
+
+  return {
+    clause: `
+      AND (
+        (platform = 'yeahpromos' AND source_api = 'getorder')
+        OR (platform = 'partnerboost' AND source_api = 'amazon_report')
+      )
+    `,
+    params: [],
+  }
+}
+
+export async function getAffiliateCommissionDateBounds(params: {
+  userIds: number[]
+  platform?: AffiliateCommissionReportPlatformFilter
+}): Promise<AffiliateCommissionDateBounds> {
+  if (params.userIds.length === 0) {
+    return { minDate: null, maxDate: null }
+  }
+
+  const db = await getDatabase()
+  const userPlaceholders = params.userIds.map(() => '?').join(', ')
+  const platform = params.platform || 'all'
+  const sourceFilter = buildSupportedSourceClause(platform)
+
+  const row = await db.queryOne<{ min_date: unknown; max_date: unknown }>(
+    `
+      SELECT MIN(report_date) AS min_date, MAX(report_date) AS max_date
+      FROM openclaw_affiliate_commission_raw_sync_payloads
+      WHERE user_id IN (${userPlaceholders})
+        ${sourceFilter.clause}
+    `,
+    [...params.userIds, ...sourceFilter.params]
   )
+
+  const minDateRaw = row?.min_date
+  const maxDateRaw = row?.max_date
+  const minDate = minDateRaw ? normalizeReportDate(minDateRaw) : null
+  const maxDate = maxDateRaw ? normalizeReportDate(maxDateRaw) : null
+
+  return {
+    minDate: minDate || null,
+    maxDate: maxDate || null,
+  }
+}
+
+export function clampDateRangeToBounds(params: {
+  startDate: string
+  endDate: string
+  bounds: AffiliateCommissionDateBounds
+}): { startDate: string; endDate: string } {
+  const { bounds } = params
+  if (!bounds.minDate || !bounds.maxDate) {
+    return { startDate: params.startDate, endDate: params.endDate }
+  }
+
+  let startDate = params.startDate
+  let endDate = params.endDate
+
+  if (startDate < bounds.minDate) startDate = bounds.minDate
+  if (endDate > bounds.maxDate) endDate = bounds.maxDate
+  if (startDate > endDate) {
+    startDate = bounds.minDate
+    endDate = bounds.maxDate
+  }
+
+  return { startDate, endDate }
 }
 
 export async function listActiveNonAdminUsers(): Promise<ActiveNonAdminUser[]> {
@@ -494,20 +612,21 @@ function buildDateSummaries(items: AffiliateCommissionLineItem[]): AffiliateComm
   const summaryMap = new Map<string, AffiliateCommissionDateSummary>()
 
   for (const item of items) {
-    const existing = summaryMap.get(item.reportDate)
+    const reportDate = normalizeReportDate(item.reportDate)
+    const existing = summaryMap.get(reportDate)
     if (existing) {
       existing.totalCommission = roundTo2(existing.totalCommission + item.commission)
       continue
     }
 
-    summaryMap.set(item.reportDate, {
-      reportDate: item.reportDate,
+    summaryMap.set(reportDate, {
+      reportDate,
       totalCommission: item.commission,
     })
   }
 
   return Array.from(summaryMap.values())
-    .sort((left, right) => right.reportDate.localeCompare(left.reportDate))
+    .sort((left, right) => compareReportDatesDesc(left.reportDate, right.reportDate))
 }
 
 export async function getAffiliateCommissionReport(params: {
@@ -522,11 +641,20 @@ export async function getAffiliateCommissionReport(params: {
   const platform = params.platform || 'all'
   const viewMode = params.viewMode || 'brand'
   const showUserScope = params.showUserScope ?? params.userIds.length > 1
+  const dateBounds = await getAffiliateCommissionDateBounds({
+    userIds: params.userIds,
+    platform,
+  })
+  const clampedRange = clampDateRangeToBounds({
+    startDate: params.startDate,
+    endDate: params.endDate,
+    bounds: dateBounds,
+  })
   const lineItems = await loadAffiliateCommissionLineItems({
     userIds: params.userIds,
     userLabels: params.userLabels,
-    startDate: params.startDate,
-    endDate: params.endDate,
+    startDate: clampedRange.startDate,
+    endDate: clampedRange.endDate,
     platform,
     showUserScope,
   })
@@ -536,13 +664,14 @@ export async function getAffiliateCommissionReport(params: {
   )
 
   return {
-    startDate: params.startDate,
-    endDate: params.endDate,
+    startDate: clampedRange.startDate,
+    endDate: clampedRange.endDate,
     platform,
     viewMode,
     currency: 'USD',
     totalCommission,
     showUserScope,
+    dateBounds,
     brandSummaries: buildBrandSummaries(lineItems, showUserScope),
     dateSummaries: buildDateSummaries(lineItems),
   }
@@ -571,12 +700,13 @@ export async function getAffiliateCommissionBrandDetail(params: {
   const detailMap = new Map<string, number>()
   for (const item of lineItems) {
     if (item.brandKey !== params.brandKey) continue
-    detailMap.set(item.reportDate, roundTo2((detailMap.get(item.reportDate) || 0) + item.commission))
+    const reportDate = normalizeReportDate(item.reportDate)
+    detailMap.set(reportDate, roundTo2((detailMap.get(reportDate) || 0) + item.commission))
   }
 
   return Array.from(detailMap.entries())
     .map(([reportDate, commission]) => ({ reportDate, commission }))
-    .sort((left, right) => right.reportDate.localeCompare(left.reportDate))
+    .sort((left, right) => compareReportDatesDesc(left.reportDate, right.reportDate))
 }
 
 export async function getAffiliateCommissionDateDetail(params: {

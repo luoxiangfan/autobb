@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { format, subDays } from 'date-fns'
+import { format, parseISO, subDays } from 'date-fns'
 import { ArrowLeft, Coins, Loader2, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -59,6 +59,11 @@ type DateSummary = {
   totalCommission: number
 }
 
+type DateBounds = {
+  minDate: string | null
+  maxDate: string | null
+}
+
 type ReportPayload = {
   success: boolean
   isAdmin?: boolean
@@ -70,9 +75,15 @@ type ReportPayload = {
     currency: string
     totalCommission: number
     showUserScope: boolean
+    dateBounds: DateBounds
     brandSummaries: BrandSummary[]
     dateSummaries: DateSummary[]
   }
+}
+
+type BoundsPayload = {
+  success: boolean
+  dateBounds: DateBounds
 }
 
 type BrandDetailPayload = {
@@ -98,18 +109,44 @@ const PLATFORM_LABELS: Record<'yeahpromos' | 'partnerboost', string> = {
   partnerboost: 'PartnerBoost',
 }
 
-function buildDefaultDateRange(): DateRange {
-  const to = new Date()
-  const from = subDays(to, 29)
-  return { from, to }
-}
-
 function formatYmd(date: Date): string {
   return format(date, 'yyyy-MM-dd')
 }
 
+function parseYmd(value: string): Date {
+  return parseISO(value)
+}
+
+function buildInitialDateRange(bounds: DateBounds): DateRange | undefined {
+  if (!bounds.minDate || !bounds.maxDate) return undefined
+
+  const min = parseYmd(bounds.minDate)
+  const max = parseYmd(bounds.maxDate)
+  const preferredFrom = subDays(max, 29)
+  const from = preferredFrom < min ? min : preferredFrom
+
+  return { from, to: max }
+}
+
+function clampRangeToBounds(range: DateRange | undefined, bounds: DateBounds): DateRange | undefined {
+  if (!range?.from || !bounds.minDate || !bounds.maxDate) return range
+
+  const min = parseYmd(bounds.minDate)
+  const max = parseYmd(bounds.maxDate)
+  let from = range.from < min ? min : range.from
+  let to = range.to && range.to > max ? max : (range.to || range.from)
+  if (to < min) to = min
+  if (from > max) from = max
+  if (from > to) return { from: min, to: max }
+
+  return { from, to }
+}
+
 export default function AffiliateCommissionReportPage() {
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(buildDefaultDateRange)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
+  const [dateBounds, setDateBounds] = useState<DateBounds | null>(null)
+  const [boundsLoading, setBoundsLoading] = useState(true)
+  const dateRangeInitializedRef = useRef(false)
   const [platform, setPlatform] = useState<PlatformFilter>('all')
   const [viewMode, setViewMode] = useState<ViewMode>('brand')
   const [loading, setLoading] = useState(true)
@@ -140,6 +177,16 @@ export default function AffiliateCommissionReportPage() {
   const selectedUsersLabel = userFilterApplied
     ? `用户(${selectedUserFilters.length})`
     : '所有用户'
+
+  const boundsQueryString = useMemo(() => {
+    const params = new URLSearchParams()
+    params.set('meta', 'bounds')
+    params.set('platform', platform)
+    if (isAdmin && selectedUserFilters.length > 0 && !allUsersSelected) {
+      params.set('userIds', selectedUserFilters.join(','))
+    }
+    return params.toString()
+  }, [platform, isAdmin, selectedUserFilters, allUsersSelected])
 
   useEffect(() => {
     const checkAdminAndLoadUsers = async () => {
@@ -181,6 +228,48 @@ export default function AffiliateCommissionReportPage() {
     void checkAdminAndLoadUsers()
   }, [])
 
+  useEffect(() => {
+    if (!accessResolved) return
+
+    const loadDateBounds = async () => {
+      setBoundsLoading(true)
+      try {
+        const response = await fetch(
+          `/api/openclaw/affiliate-commission-report?${boundsQueryString}`,
+          { credentials: 'include' }
+        )
+        const payload = await response.json() as BoundsPayload & { error?: string }
+        if (!response.ok) {
+          throw new Error(payload.error || '加载可选日期范围失败')
+        }
+
+        const nextBounds = payload.dateBounds
+        setDateBounds(nextBounds)
+
+        if (!nextBounds.minDate || !nextBounds.maxDate) {
+          setDateRange(undefined)
+          dateRangeInitializedRef.current = true
+          return
+        }
+
+        setDateRange((current) => {
+          if (!dateRangeInitializedRef.current) {
+            dateRangeInitializedRef.current = true
+            return buildInitialDateRange(nextBounds)
+          }
+          return clampRangeToBounds(current, nextBounds)
+        })
+      } catch (error: any) {
+        showError('加载日期范围失败', error?.message || '无法获取数据日期范围')
+        setDateBounds(null)
+      } finally {
+        setBoundsLoading(false)
+      }
+    }
+
+    void loadDateBounds()
+  }, [accessResolved, boundsQueryString])
+
   const queryString = useMemo(() => {
     const params = new URLSearchParams()
     if (startDate) params.set('startDate', startDate)
@@ -205,7 +294,7 @@ export default function AffiliateCommissionReportPage() {
   }, [startDate, endDate, platform, isAdmin, selectedUserFilters, allUsersSelected])
 
   const loadReport = useCallback(async () => {
-    if (!startDate || !endDate || !accessResolved) return
+    if (!startDate || !endDate || !accessResolved || boundsLoading) return
     if (isAdmin && usersLoading) return
 
     setLoading(true)
@@ -225,11 +314,28 @@ export default function AffiliateCommissionReportPage() {
     } finally {
       setLoading(false)
     }
-  }, [queryString, startDate, endDate, isAdmin, usersLoading, accessResolved])
+  }, [queryString, startDate, endDate, isAdmin, usersLoading, accessResolved, boundsLoading])
 
   useEffect(() => {
     void loadReport()
   }, [loadReport])
+
+  const pickerMinDate = useMemo(
+    () => (dateBounds?.minDate ? parseYmd(dateBounds.minDate) : undefined),
+    [dateBounds?.minDate]
+  )
+  const pickerMaxDate = useMemo(
+    () => (dateBounds?.maxDate ? parseYmd(dateBounds.maxDate) : undefined),
+    [dateBounds?.maxDate]
+  )
+
+  const handleDateRangeChange = useCallback((range: DateRange | undefined) => {
+    if (!range || !dateBounds?.minDate || !dateBounds?.maxDate) {
+      setDateRange(range)
+      return
+    }
+    setDateRange(clampRangeToBounds(range, dateBounds))
+  }, [dateBounds])
 
   const openBrandDetail = async (item: BrandSummary) => {
     setDetailOpen(true)
@@ -355,9 +461,22 @@ export default function AffiliateCommissionReportPage() {
                 <div className="text-sm font-medium">日期范围</div>
                 <DateRangePicker
                   value={dateRange}
-                  onChange={setDateRange}
-                  placeholder="选择日期范围"
+                  onChange={handleDateRangeChange}
+                  placeholder={boundsLoading ? '加载可选日期...' : '选择日期范围'}
+                  minDate={pickerMinDate}
+                  maxDate={pickerMaxDate}
+                  showPresets={false}
                 />
+                {dateBounds?.minDate && dateBounds?.maxDate && (
+                  <div className="text-xs text-muted-foreground">
+                    可选范围：{dateBounds.minDate} 至 {dateBounds.maxDate}
+                  </div>
+                )}
+                {!boundsLoading && dateBounds && !dateBounds.minDate && (
+                  <div className="text-xs text-muted-foreground">
+                    当前筛选条件下暂无可用日期
+                  </div>
+                )}
               </div>
               <div className="space-y-2 min-w-[180px]">
                 <div className="text-sm font-medium">联盟</div>

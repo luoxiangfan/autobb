@@ -5,6 +5,7 @@ import {
   buildUserLabelMap,
   getAffiliateCommissionBrandDetail,
   getAffiliateCommissionDateDetail,
+  getAffiliateCommissionDateBounds,
   getAffiliateCommissionReport,
   parseRequestedUserIds,
   resolveTargetUserIds,
@@ -108,6 +109,19 @@ export async function GET(request: NextRequest) {
     })
     const userLabels = await buildUserLabelMap(targetUserIds)
     const showUserScope = access.isAdmin
+
+    if (searchParams.get('meta') === 'bounds') {
+      const dateBounds = await getAffiliateCommissionDateBounds({
+        userIds: targetUserIds,
+        platform,
+      })
+
+      return NextResponse.json({
+        success: true,
+        isAdmin: access.isAdmin,
+        dateBounds,
+      })
+    }
 
     if (detailType === 'brand') {
       const brandKey = String(searchParams.get('brandKey') || searchParams.get('brand_key') || '').trim()

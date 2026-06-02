@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const hoisted = vi.hoisted(() => ({
   getDatabaseMock: vi.fn(),
   dbQueryMock: vi.fn(),
+  dbQueryOneMock: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -14,6 +15,7 @@ import {
   getAffiliateCommissionDateDetail,
   getAffiliateCommissionReport,
   isSupportedAffiliateCommissionSource,
+  normalizeReportDate,
   resolveTargetUserIds,
 } from './affiliate-commission-raw-report'
 
@@ -21,10 +23,62 @@ describe('affiliate-commission-raw-report', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     hoisted.dbQueryMock.mockReset()
+    hoisted.dbQueryOneMock.mockReset()
     hoisted.getDatabaseMock.mockResolvedValue({
       type: 'sqlite',
       query: hoisted.dbQueryMock,
+      queryOne: hoisted.dbQueryOneMock,
     })
+  })
+
+  it('normalizes postgres date values to YYYY-MM-DD strings', () => {
+    expect(normalizeReportDate(new Date('2026-05-11T00:00:00.000Z'))).toBe('2026-05-11')
+    expect(normalizeReportDate('2026-05-11')).toBe('2026-05-11')
+  })
+
+  it('sorts date summaries when report_date is a Date object', async () => {
+    hoisted.dbQueryOneMock.mockResolvedValueOnce({
+      min_date: new Date('2026-05-10T00:00:00.000Z'),
+      max_date: new Date('2026-05-11T00:00:00.000Z'),
+    })
+    hoisted.dbQueryMock
+      .mockResolvedValueOnce([{ id: 1, username: 'alice' }])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          report_date: new Date('2026-05-10T00:00:00.000Z'),
+          platform: 'yeahpromos',
+          source_api: 'getorder',
+          response_payload: JSON.stringify({
+            data: {
+              Data: [{ advert_id: 100, advert_name: 'Brand A', sale_comm: 5 }],
+            },
+          }),
+        },
+        {
+          user_id: 1,
+          report_date: new Date('2026-05-11T00:00:00.000Z'),
+          platform: 'yeahpromos',
+          source_api: 'getorder',
+          response_payload: JSON.stringify({
+            data: {
+              Data: [{ advert_id: 100, advert_name: 'Brand A', sale_comm: 7.5 }],
+            },
+          }),
+        },
+      ])
+
+    const report = await getAffiliateCommissionReport({
+      userIds: [1],
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+      showUserScope: false,
+    })
+
+    expect(report.dateSummaries).toEqual([
+      { reportDate: '2026-05-11', totalCommission: 7.5 },
+      { reportDate: '2026-05-10', totalCommission: 5 },
+    ])
   })
 
   it('recognizes supported affiliate commission sources', () => {
@@ -34,6 +88,10 @@ describe('affiliate-commission-raw-report', () => {
   })
 
   it('aggregates yeahpromos rows by advert_id and partnerboost rows by asin+brand', async () => {
+    hoisted.dbQueryOneMock.mockResolvedValueOnce({
+      min_date: '2026-05-11',
+      max_date: '2026-05-11',
+    })
     hoisted.dbQueryMock
       .mockResolvedValueOnce([
         { id: 1, username: 'alice' },
@@ -121,6 +179,10 @@ describe('affiliate-commission-raw-report', () => {
   })
 
   it('scopes brand keys and user labels for admin multi-user view', async () => {
+    hoisted.dbQueryOneMock.mockResolvedValueOnce({
+      min_date: '2026-05-11',
+      max_date: '2026-05-11',
+    })
     hoisted.dbQueryMock
       .mockResolvedValueOnce([
         { id: 2, username: 'bob' },
