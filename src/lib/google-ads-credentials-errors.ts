@@ -145,10 +145,37 @@ export function throwAccountsListFetchError(
 export const GOOGLE_ADS_CREDENTIALS_POLL_REFRESH_EVERY = 5
 
 export type ParsedGoogleAdsCredentialsStatus = {
-  authType: 'oauth' | 'service_account'
+  /** 未配置或双栈时服务端不下发，客户端也不应默认 oauth */
+  authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   hasCredentials: boolean
   authConfigWarning: string | null
+}
+
+function resolveParsedCredentialsAuthType(payload: Record<string, unknown>): {
+  authType?: 'oauth' | 'service_account'
+} {
+  if (payload.authType === 'service_account' || payload.authType === 'oauth') {
+    return { authType: payload.authType }
+  }
+
+  const authConfigWarning = formatNullableErrorMessage(payload.authConfigWarning)
+  if (authConfigWarning) {
+    return {}
+  }
+
+  if (!payload.hasCredentials) {
+    return {}
+  }
+
+  if (payload.hasRefreshToken) {
+    return { authType: 'oauth' }
+  }
+  if (payload.hasServiceAccount) {
+    return { authType: 'service_account' }
+  }
+
+  return {}
 }
 
 /** 解析 GET /api/google-ads/credentials 的 JSON（需已校验 response.ok） */
@@ -159,30 +186,16 @@ export function parseCredentialsStatusResponse(data: unknown): ParsedGoogleAdsCr
 
   if (!record?.success || !payload) {
     return {
-      authType: 'oauth',
       hasCredentials: false,
       authConfigWarning: null,
     }
   }
 
-  const hasRefreshToken = Boolean(payload.hasRefreshToken)
-  const hasServiceAccount = Boolean(payload.hasServiceAccount)
   const authConfigWarning = formatNullableErrorMessage(payload.authConfigWarning)
-  const authType: 'oauth' | 'service_account' =
-    payload.authType === 'service_account'
-      ? 'service_account'
-      : payload.authType === 'oauth'
-        ? 'oauth'
-        : authConfigWarning
-          ? 'oauth'
-          : hasRefreshToken
-            ? 'oauth'
-            : hasServiceAccount
-              ? 'service_account'
-              : 'oauth'
+  const { authType } = resolveParsedCredentialsAuthType(payload)
 
   return {
-    authType,
+    ...(authType ? { authType } : {}),
     serviceAccountId: payload.serviceAccountId ? String(payload.serviceAccountId) : undefined,
     hasCredentials: Boolean(payload.hasCredentials),
     authConfigWarning,
@@ -214,7 +227,10 @@ export async function fetchGoogleAdsCredentialsStatus(): Promise<ParsedGoogleAds
   return parseCredentialsStatusResponse(credData)
 }
 
-export type AccountsRequestAuth = Pick<ParsedGoogleAdsCredentialsStatus, 'authType' | 'serviceAccountId'>
+export type AccountsRequestAuth = {
+  authType: 'oauth' | 'service_account'
+  serviceAccountId?: string
+}
 
 export const GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE =
   '未找到服务账号配置，请前往设置页面配置'
@@ -225,7 +241,10 @@ export function buildAuthForAccountsRequest(
   fallbackServiceAccountId?: string | null
 ): AccountsRequestAuth {
   if (auth.authType !== 'service_account') {
-    return { authType: auth.authType, serviceAccountId: auth.serviceAccountId }
+    return {
+      authType: auth.authType ?? 'oauth',
+      serviceAccountId: auth.serviceAccountId,
+    }
   }
   return {
     authType: 'service_account',

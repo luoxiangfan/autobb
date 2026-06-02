@@ -1,7 +1,11 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getCustomerWithCredentials } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
+import {
+  createGoogleAdsLinkedAccountPrepareCache,
+  prepareGoogleAdsApiCallForLinkedAccountCached,
+  preparedAuthContextField,
+} from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getDatabase } from '@/lib/db'
@@ -258,10 +262,7 @@ export async function GET(
       string,
       NonNullable<Awaited<ReturnType<typeof getServiceAccountConfig>>>
     >()
-    const oauthPreparedByAccountId = new Map<
-      number,
-      Awaited<ReturnType<typeof prepareGoogleAdsApiCallForLinkedAccount>> & { ok: true }
-    >()
+    const oauthPrepareCache = createGoogleAdsLinkedAccountPrepareCache()
 
     const groupedAccounts = Array.from(campaignsByAccountId.values())
 
@@ -470,21 +471,18 @@ export async function GET(
       } else {
         const linkedSaForOAuth =
           typeof account.serviceAccountId === 'string' ? account.serviceAccountId.trim() : null
-        let accountOAuthPrepared = oauthPreparedByAccountId.get(googleAdsAccountId)
-        if (!accountOAuthPrepared) {
-          const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
-            numericUserId,
-            linkedSaForOAuth
+        const prepared = await prepareGoogleAdsApiCallForLinkedAccountCached(
+          numericUserId,
+          linkedSaForOAuth,
+          oauthPrepareCache
+        )
+        if (!prepared.ok) {
+          console.warn(
+            `[offers/campaigns] 跳过账号 ${googleAdsAccountId} GAQL: ${prepared.message}`
           )
-          if (!prepared.ok) {
-            console.warn(
-              `[offers/campaigns] 跳过账号 ${googleAdsAccountId} GAQL: ${prepared.message}`
-            )
-            continue
-          }
-          accountOAuthPrepared = prepared
-          oauthPreparedByAccountId.set(googleAdsAccountId, prepared)
+          continue
         }
+        const accountOAuthPrepared = prepared
 
         const accountOAuthRefreshToken = accountOAuthPrepared.refreshToken
         const accountOAuthCredentials = accountOAuthPrepared.oauthCredentials

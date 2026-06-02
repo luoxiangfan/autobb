@@ -310,6 +310,9 @@ export async function updateApiAccessLevel(
   } else {
     console.log(`✅ 已更新用户 ${userId} 的API访问级别: ${level}`)
   }
+
+  const { invalidateGoogleAdsAuthContextCacheForOwner } = await import('./google-ads-auth-context')
+  await invalidateGoogleAdsAuthContextCacheForOwner(ownerUserId)
 }
 
 /**

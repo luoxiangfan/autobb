@@ -13,6 +13,7 @@ const oauthFns = vi.hoisted(() => ({
 
 const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
+  query: vi.fn(),
   type: 'sqlite' as const,
 }))
 
@@ -50,6 +51,7 @@ import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
   invalidateGoogleAdsAuthContextCache,
+  invalidateGoogleAdsAuthContextCacheForOwner,
   resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthForAccount,
   resolveGoogleAdsApiAuthFromContext,
@@ -528,5 +530,40 @@ describe('resolveGoogleAdsApiAuthFromContext', () => {
 
     expect(fields.serviceAccountId).toBe('sa-linked')
     expect(fields.serviceAccountMccId).toBe('9998887777')
+  })
+})
+
+describe('invalidateGoogleAdsAuthContextCacheForOwner', () => {
+  beforeEach(() => {
+    clearGoogleAdsAuthContextTestCache()
+    vi.clearAllMocks()
+    dbFns.query.mockResolvedValue([{ user_id: 2 }, { user_id: 7 }])
+  })
+
+  it('busts owner and shared_admin dependents', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 1,
+      isShared: false,
+      assignment: null,
+    })
+    oauthFns.getUserAuthType.mockResolvedValue('oauth')
+    oauthFns.getGoogleAdsCredentials.mockResolvedValue({ refresh_token: 'rt' })
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue(null)
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+
+    await getGoogleAdsAuthContext(1)
+    await getGoogleAdsAuthContext(2)
+    expect(assignmentFns.resolveGoogleAdsCredentialOwnerId).toHaveBeenCalledTimes(2)
+
+    await invalidateGoogleAdsAuthContextCacheForOwner(1)
+
+    expect(dbFns.query).toHaveBeenCalledWith(
+      expect.stringContaining('shared_admin_user_id'),
+      [1]
+    )
+
+    await getGoogleAdsAuthContext(1)
+    await getGoogleAdsAuthContext(2)
+    expect(assignmentFns.resolveGoogleAdsCredentialOwnerId).toHaveBeenCalledTimes(4)
   })
 })

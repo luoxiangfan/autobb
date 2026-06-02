@@ -24,7 +24,11 @@ import { resolveAffiliateLink } from '@/lib/url-resolver'
 import { getProxyForCountry } from '../user-proxy-loader'
 import { analyzeProxyError } from './proxy-error-handler'
 import { pauseClickFarmTasksByOfferId } from '../../click-farm'
-import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
+import {
+  createGoogleAdsLinkedAccountPrepareCache,
+  prepareGoogleAdsApiCallForLinkedAccountCached,
+  preparedAuthContextField,
+} from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { updateGoogleAdsCampaignStatus } from '../../google-ads-api'
 
@@ -347,13 +351,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
 
               const pausedInDb = upd.changes || 0
               let pausedInGoogleAds = 0
-              const preparedByAccountId = new Map<
-                number,
-                Extract<
-                  Awaited<ReturnType<typeof prepareGoogleAdsApiCallForLinkedAccount>>,
-                  { ok: true }
-                >
-              >()
+              const prepareCache = createGoogleAdsLinkedAccountPrepareCache()
               if (pausedInDb > 0 && campaignsToSyncGoogle.length > 0) {
                 for (const campaign of campaignsToSyncGoogle) {
                   try {
@@ -374,21 +372,18 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                       | undefined
 
                     if (adsAccount) {
-                      let prepared = preparedByAccountId.get(campaign.google_ads_account_id)
-                      if (!prepared) {
-                        const result = await prepareGoogleAdsApiCallForLinkedAccount(
-                          offer.user_id,
-                          adsAccount.service_account_id
+                      const result = await prepareGoogleAdsApiCallForLinkedAccountCached(
+                        offer.user_id,
+                        adsAccount.service_account_id,
+                        prepareCache
+                      )
+                      if (!result.ok) {
+                        console.warn(
+                          `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: ${result.message}`
                         )
-                        if (!result.ok) {
-                          console.warn(
-                            `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: ${result.message}`
-                          )
-                          continue
-                        }
-                        prepared = result
-                        preparedByAccountId.set(campaign.google_ads_account_id, result)
+                        continue
                       }
+                      const prepared = result
 
                       const { apiAuth } = prepared
                       if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {

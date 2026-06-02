@@ -2,7 +2,8 @@ import { getDatabase } from '@/lib/db'
 import { boolCondition, boolParam } from '@/lib/db-helpers'
 import { createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
 import {
-  prepareGoogleAdsApiCallForLinkedAccount,
+  createGoogleAdsLinkedAccountPrepareCache,
+  prepareGoogleAdsApiCallForLinkedAccountCached,
   preparedAuthContextField,
   type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-accounts-auth'
@@ -167,13 +168,7 @@ function parsePositiveNumber(raw: string | undefined, fallback: number): number 
 function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof getDatabase>>) {
   const linkedServiceAccountByAccountId = new Map<number, string | null>()
   const parentMccByAccountId = new Map<number, string | null>()
-  const preparedByAccountId = new Map<
-    number,
-    Extract<
-      Awaited<ReturnType<typeof prepareGoogleAdsApiCallForLinkedAccount>>,
-      { ok: true }
-    >
-  >()
+  const prepareCache = createGoogleAdsLinkedAccountPrepareCache()
 
   const getLinkedServiceAccountId = async (accountId: number) => {
     if (!linkedServiceAccountByAccountId.has(accountId)) {
@@ -210,18 +205,15 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
     parentMccId: string | null
   }) => {
     const linkedServiceAccountId = await getLinkedServiceAccountId(action.googleAdsAccountId)
-    let prepared = preparedByAccountId.get(action.googleAdsAccountId)
-    if (!prepared) {
-      const result = await prepareGoogleAdsApiCallForLinkedAccount(
-        action.userId,
-        linkedServiceAccountId
-      )
-      if (!result.ok) {
-        throw new Error(result.message)
-      }
-      prepared = result
-      preparedByAccountId.set(action.googleAdsAccountId, result)
+    const result = await prepareGoogleAdsApiCallForLinkedAccountCached(
+      action.userId,
+      linkedServiceAccountId,
+      prepareCache
+    )
+    if (!result.ok) {
+      throw new Error(result.message)
     }
+    const prepared = result
 
     const apiAuth = prepared.apiAuth
     const parentMccId = await getParentMccId(action.googleAdsAccountId, action.parentMccId)

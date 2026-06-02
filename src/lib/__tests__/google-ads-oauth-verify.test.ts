@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const authContextFns = vi.hoisted(() => ({
   resolveGoogleAdsApiAuthForAccount: vi.fn(),
+  invalidateGoogleAdsAuthContextCacheForOwner: vi.fn(async () => {}),
 }))
 
 const pythonFns = vi.hoisted(() => ({
@@ -23,6 +24,8 @@ const DUAL_STACK_WARNING =
 
 vi.mock('@/lib/google-ads-auth-context', () => ({
   resolveGoogleAdsApiAuthForAccount: authContextFns.resolveGoogleAdsApiAuthForAccount,
+  invalidateGoogleAdsAuthContextCacheForOwner:
+    authContextFns.invalidateGoogleAdsAuthContextCacheForOwner,
   googleAdsApiAuthValidationErrorMessage: (reason: string) => {
     if (reason === 'dual_stack') {
       return DUAL_STACK_WARNING
@@ -138,6 +141,7 @@ describe('verifyGoogleAdsCredentials', () => {
       expect.stringContaining('UPDATE google_ads_service_accounts'),
       ['sa-1']
     )
+    expect(authContextFns.invalidateGoogleAdsAuthContextCacheForOwner).toHaveBeenCalledWith(1)
   })
 
   it('returns invalid when service account config is missing', async () => {
@@ -228,6 +232,7 @@ describe('verifyGoogleAdsCredentials', () => {
       expect.stringContaining('UPDATE google_ads_credentials'),
       [oauthCtx.ownerUserId]
     )
+    expect(authContextFns.invalidateGoogleAdsAuthContextCacheForOwner).toHaveBeenCalledWith(1)
   })
 
   it('returns invalid when OAuth credentials lack refresh_token', async () => {

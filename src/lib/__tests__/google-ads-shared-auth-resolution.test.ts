@@ -99,25 +99,10 @@ describe('google-ads shared auth resolution helpers', () => {
   })
 
   it('resolveGoogleAdsApiAccessLevel reads service account level from admin for shared user', async () => {
-    dbMocks.queryOne
-      .mockResolvedValueOnce({
-        user_id: 2,
-        assignment_mode: 'shared_admin',
-        shared_admin_user_id: 1,
-        auth_type: 'service_account',
-        configured_by: 1,
-        created_at: '',
-        updated_at: '',
-      })
-      .mockResolvedValueOnce({
-        id: 'sa-1',
-        mcc_customer_id: '1234567890',
-        developer_token: 'token',
-        service_account_email: 'sa@test.iam.gserviceaccount.com',
-        api_access_level: 'basic',
-      })
+    contextFns.getGoogleAdsAuthContext.mockResolvedValue(sharedSaContext())
 
     await expect(resolveGoogleAdsApiAccessLevel(2)).resolves.toBe('basic')
+    expect(contextFns.getGoogleAdsAuthContext).toHaveBeenCalledWith(2)
   })
 
   it('hasConfiguredGoogleAdsAuth returns false for shared oauth when admin only has service account', async () => {
@@ -199,19 +184,19 @@ describe('google-ads shared auth resolution helpers', () => {
   })
 
   it('resolveGoogleAdsApiAccessLevel returns null for shared oauth when admin has no oauth row', async () => {
-    dbMocks.queryOne
-      .mockResolvedValueOnce({
-        user_id: 2,
-        assignment_mode: 'shared_admin',
-        shared_admin_user_id: 1,
-        auth_type: 'oauth',
-        configured_by: 1,
-        created_at: '',
-        updated_at: '',
-      })
-      .mockResolvedValueOnce(null)
+    contextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      ...sharedSaContext(),
+      assignment: {
+        ...sharedSaContext().assignment!,
+        authType: 'oauth',
+      },
+      auth: { authType: 'oauth' },
+      oauthCredentials: null,
+      serviceAccountConfig: { id: 'sa-1' },
+      apiAccessLevel: null,
+    })
 
     await expect(resolveGoogleAdsApiAccessLevel(2)).resolves.toBeNull()
-    expect(dbMocks.queryOne).toHaveBeenCalledTimes(2)
+    expect(contextFns.getGoogleAdsAuthContext).toHaveBeenCalledWith(2)
   })
 })

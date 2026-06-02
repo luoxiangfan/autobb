@@ -397,6 +397,11 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
           )
           .catch(() => {})
 
+        const { invalidateGoogleAdsAuthContextCacheForOwner } = await import(
+          './google-ads-auth-context'
+        )
+        await invalidateGoogleAdsAuthContextCacheForOwner(ctx.ownerUserId)
+
         return {
           valid: true,
           customer_id: firstCustomerId,
@@ -447,6 +452,11 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
        WHERE user_id = ?`,
       [ctx.ownerUserId]
     )
+
+    const { invalidateGoogleAdsAuthContextCacheForOwner } = await import(
+      './google-ads-auth-context'
+    )
+    await invalidateGoogleAdsAuthContextCacheForOwner(ctx.ownerUserId)
 
     return {
       valid: true,

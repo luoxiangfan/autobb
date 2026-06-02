@@ -18,7 +18,7 @@ import {
   getGoogleAdsAuthContext,
   GOOGLE_ADS_DUAL_STACK_WARNING,
   hasConfiguredGoogleAdsAuthFromContext,
-  invalidateGoogleAdsAuthContextCache,
+  invalidateGoogleAdsAuthContextCacheForOwner,
   resolveGoogleAdsCredentialStatusFields,
   resolveGoogleAdsDisplayAuthType,
 } from '@/lib/google-ads-auth-context'
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       access_token_expires_at
     })
 
-    invalidateGoogleAdsAuthContextCache(userId)
+    await invalidateGoogleAdsAuthContextCacheForOwner(userId)
 
     console.log(`✅ Google Ads凭证已保存`)
 
@@ -226,7 +226,7 @@ export async function DELETE(request: NextRequest) {
     // 1) 停用/清空 OAuth 凭证（google_ads_credentials）
     await deleteGoogleAdsCredentials(userId)
 
-    invalidateGoogleAdsAuthContextCache(userId)
+    await invalidateGoogleAdsAuthContextCacheForOwner(userId)
 
     // 2) 同步清除 Settings 页保存的 OAuth 配置（system_settings 的用户实例）
     // 注意：必须限定 user_id = ?，避免误删全局模板记录(user_id IS NULL)

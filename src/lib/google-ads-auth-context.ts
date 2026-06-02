@@ -162,6 +162,25 @@ export function invalidateGoogleAdsAuthContextCache(userId: number): void {
   authContextInflight.delete(userId)
 }
 
+/**
+ * 凭证 owner 变更时失效 owner 及所有共享该 owner 的子用户缓存。
+ */
+export async function invalidateGoogleAdsAuthContextCacheForOwner(
+  ownerUserId: number
+): Promise<void> {
+  invalidateGoogleAdsAuthContextCache(ownerUserId)
+
+  const db = await getDatabase()
+  const dependents = await db.query<{ user_id: number }>(
+    `SELECT user_id FROM google_ads_auth_assignments
+     WHERE shared_admin_user_id = ? AND assignment_mode = 'shared_admin'`,
+    [ownerUserId]
+  )
+  for (const row of dependents) {
+    invalidateGoogleAdsAuthContextCache(row.user_id)
+  }
+}
+
 export function resolveEffectiveServiceAccountId(
   linkedAccountServiceAccountId: string | null | undefined,
   ctx: Pick<GoogleAdsAuthContext, 'auth' | 'serviceAccountConfig'>
@@ -386,7 +405,7 @@ export function resolveGoogleAdsCredentialStatusFields(ctx: GoogleAdsAuthContext
   loginCustomerId: string | null | undefined
   apiAccessLevel: string
   lastVerifiedAt: string | null | undefined
-  isActive: boolean | number | undefined
+  isActive: boolean
   createdAt: string | undefined
   updatedAt: string | undefined
 } {

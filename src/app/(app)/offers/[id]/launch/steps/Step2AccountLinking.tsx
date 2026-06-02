@@ -37,6 +37,7 @@ import { Link2, CheckCircle2, AlertCircle, Plus, RefreshCw, ExternalLink, Loader
 import { showError, showSuccess } from '@/lib/toast-utils'
 import {
   appendAccountsAuthToSearchParams,
+  buildAuthForAccountsRequest,
   formatNullableErrorMessage,
   safeReadJson,
   throwAccountsListFetchError,
@@ -199,7 +200,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
       if (forceRefresh) {
         params.append('async', 'true')
       }
-      appendAccountsAuthToSearchParams(params, auth)
+      appendAccountsAuthToSearchParams(params, buildAuthForAccountsRequest(auth))
 
       // 🔓 KISS优化(2025-12-12): 传入offerId用于计算账号优先级
       // 🔧 添加 filterByUserMcc=true，只获取用户 MCC 下的 Google Ads 账号（非 MCC 账号）

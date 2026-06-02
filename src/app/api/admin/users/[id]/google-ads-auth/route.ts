@@ -25,6 +25,7 @@ import {
   GOOGLE_ADS_DUAL_STACK_WARNING,
   hasConfiguredGoogleAdsAuthFromContext,
   invalidateGoogleAdsAuthContextCache,
+  invalidateGoogleAdsAuthContextCacheForOwner,
   resolveGoogleAdsCredentialStatusFields,
   resolveGoogleAdsDisplayAuthType,
 } from '@/lib/google-ads-auth-context'
@@ -285,7 +286,7 @@ export async function PUT(
       configuredBy: admin.userId,
     })
 
-    invalidateGoogleAdsAuthContextCache(userId)
+    await invalidateGoogleAdsAuthContextCacheForOwner(userId)
 
     return NextResponse.json({
       success: true,
@@ -324,6 +325,7 @@ export async function DELETE(
         const db = getDatabase()
         await db.exec(`DELETE FROM google_ads_service_accounts WHERE user_id = ?`, [userId])
       }
+      await invalidateGoogleAdsAuthContextCacheForOwner(userId)
     }
 
     await deleteGoogleAdsAuthAssignment(userId)

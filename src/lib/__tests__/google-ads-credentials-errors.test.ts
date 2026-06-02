@@ -80,8 +80,21 @@ describe('google-ads-credentials-errors', () => {
     })
     expect(parsed.hasCredentials).toBe(false)
     expect(parsed.authConfigWarning).toBe(warning)
-    expect(parsed.authType).toBe('oauth')
+    expect(parsed.authType).toBeUndefined()
     expect(parsed.serviceAccountId).toBe('sa-99')
+  })
+
+  it('parseCredentialsStatusResponse omits authType when unconfigured', () => {
+    const parsed = parseCredentialsStatusResponse({
+      success: true,
+      data: {
+        hasCredentials: false,
+        hasRefreshToken: false,
+        hasServiceAccount: false,
+      },
+    })
+    expect(parsed.hasCredentials).toBe(false)
+    expect(parsed.authType).toBeUndefined()
   })
 
   it('parseCredentialsStatusResponse prefers explicit authType', () => {

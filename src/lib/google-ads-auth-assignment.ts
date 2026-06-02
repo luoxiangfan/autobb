@@ -180,29 +180,12 @@ export function resolveGoogleAdsApiAccessLevelFromContext(ctx: {
 }
 
 /**
- * 解析用户的 Google Ads API 访问级别（支持管理员共享配置）
+ * 解析用户的 Google Ads API 访问级别（支持管理员共享配置；复用 auth-context 缓存）。
  */
 export async function resolveGoogleAdsApiAccessLevel(userId: number): Promise<string | null> {
-  const { ownerUserId, assignment } = await resolveGoogleAdsCredentialOwnerId(userId)
-
-  if (assignment?.authType === 'service_account') {
-    const serviceAccount = await getRawActiveServiceAccount(ownerUserId)
-    return serviceAccount?.api_access_level?.toLowerCase() ?? null
-  }
-
-  const oauth = await getRawGoogleAdsCredentials(ownerUserId)
-  const oauthAccessLevel = (oauth as { api_access_level?: string } | null)?.api_access_level
-  if (oauthAccessLevel) {
-    return String(oauthAccessLevel).toLowerCase()
-  }
-
-  // assignment 明确为 OAuth 时勿回退到服务账号级别（避免共享 OAuth 用户误展示 SA 配额）
-  if (assignment?.authType === 'oauth') {
-    return null
-  }
-
-  const serviceAccount = await getRawActiveServiceAccount(ownerUserId)
-  return serviceAccount?.api_access_level?.toLowerCase() ?? null
+  const { getGoogleAdsAuthContext } = await import('./google-ads-auth-context')
+  const ctx = await getGoogleAdsAuthContext(userId)
+  return ctx.apiAccessLevel
 }
 
 /**
