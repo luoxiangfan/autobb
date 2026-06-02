@@ -289,18 +289,20 @@ export async function updateApiAccessLevel(
 ): Promise<void> {
   const db = await getDatabase()
   const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
+  const { nowFunc } = await import('./db-helpers')
+  const updatedAt = nowFunc(db.type)
 
   if (authType === 'oauth') {
     await db.exec(`
       UPDATE google_ads_credentials
-      SET api_access_level = ?, updated_at = CURRENT_TIMESTAMP
+      SET api_access_level = ?, updated_at = ${updatedAt}
       WHERE user_id = ?
     `, [level, ownerUserId])
   } else {
     const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
     await db.exec(`
       UPDATE google_ads_service_accounts
-      SET api_access_level = ?, updated_at = CURRENT_TIMESTAMP
+      SET api_access_level = ?, updated_at = ${updatedAt}
       WHERE user_id = ? AND ${isActiveCondition}
     `, [level, ownerUserId])
   }

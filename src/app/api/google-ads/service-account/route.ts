@@ -6,7 +6,7 @@ import { verifyAuth, findUserById } from '@/lib/auth'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 import {
   assertNoConflictingGoogleAdsAuth,
-  invalidateGoogleAdsAuthContextCacheForOwner,
+  invalidateGoogleAdsAuthContextForCredentialUser,
 } from '@/lib/google-ads-auth-context'
 
 async function getAuthenticatedUser(request: NextRequest) {
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc}, ${nowFunc})
     `, [id, user.id, name, mccCustomerId, developerToken, clientEmail, encryptedPrivateKey, projectId])
 
-    await invalidateGoogleAdsAuthContextCacheForOwner(user.id)
+    await invalidateGoogleAdsAuthContextForCredentialUser(user.id)
 
     return NextResponse.json({ success: true, id })
   } catch (error: any) {
@@ -102,7 +102,7 @@ export async function DELETE(req: NextRequest) {
       WHERE id = ? AND user_id = ?
     `, [id, user.id])
 
-    await invalidateGoogleAdsAuthContextCacheForOwner(user.id)
+    await invalidateGoogleAdsAuthContextForCredentialUser(user.id)
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

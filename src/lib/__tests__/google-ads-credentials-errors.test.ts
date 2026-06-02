@@ -7,6 +7,7 @@ import {
   GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE,
   parseAccountsListFetchFailure,
   parseCredentialsStatusResponse,
+  resolveAccountsRequestAuth,
 } from '../google-ads-credentials-errors'
 
 describe('google-ads-credentials-errors', () => {
@@ -148,5 +149,52 @@ describe('google-ads-credentials-errors', () => {
     })
     expect(params.get('auth_type')).toBe('service_account')
     expect(params.get('service_account_id')).toBe('sa-42')
+  })
+
+  it('resolveAccountsRequestAuth blocks dual-stack warning', () => {
+    const warning = '双栈冲突'
+    const result = resolveAccountsRequestAuth({
+      hasCredentials: false,
+      authConfigWarning: warning,
+    })
+    expect(result).toEqual({
+      ok: false,
+      reason: 'auth_config_warning',
+      authConfigWarning: warning,
+    })
+  })
+
+  it('resolveAccountsRequestAuth blocks when not configured', () => {
+    expect(
+      resolveAccountsRequestAuth({
+        hasCredentials: false,
+        authConfigWarning: null,
+      })
+    ).toEqual({ ok: false, reason: 'not_configured' })
+  })
+
+  it('resolveAccountsRequestAuth returns authForRequest when valid', () => {
+    const result = resolveAccountsRequestAuth({
+      authType: 'oauth',
+      hasCredentials: true,
+      authConfigWarning: null,
+    })
+    expect(result).toEqual({
+      ok: true,
+      authForRequest: { authType: 'oauth', serviceAccountId: undefined },
+    })
+  })
+
+  it('resolveAccountsRequestAuth blocks when SA id missing', () => {
+    const result = resolveAccountsRequestAuth({
+      authType: 'service_account',
+      hasCredentials: true,
+      authConfigWarning: null,
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.reason).toBe('invalid_auth')
+      expect(result.message).toBe(GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE)
+    }
   })
 })

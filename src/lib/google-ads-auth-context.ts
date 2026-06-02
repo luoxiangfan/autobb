@@ -189,6 +189,16 @@ export async function invalidateGoogleAdsAuthContextCacheForOwner(
   }
 }
 
+/**
+ * 按凭证 userId 解析 owner 后级联失效 auth-context（OAuth save/delete、服务账号 mutations 等）。
+ */
+export async function invalidateGoogleAdsAuthContextForCredentialUser(
+  credentialUserId: number
+): Promise<void> {
+  const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(credentialUserId)
+  await invalidateGoogleAdsAuthContextCacheForOwner(ownerUserId)
+}
+
 export function resolveEffectiveServiceAccountId(
   linkedAccountServiceAccountId: string | null | undefined,
   ctx: Pick<GoogleAdsAuthContext, 'auth' | 'serviceAccountConfig'>

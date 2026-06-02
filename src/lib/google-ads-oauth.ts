@@ -211,6 +211,11 @@ export async function saveGoogleAdsCredentials(
     throw new Error('保存Google Ads凭证失败')
   }
 
+  const { invalidateGoogleAdsAuthContextForCredentialUser } = await import(
+    './google-ads-auth-context'
+  )
+  await invalidateGoogleAdsAuthContextForCredentialUser(userId)
+
   return updated
 }
 
@@ -272,6 +277,11 @@ export async function deleteGoogleAdsCredentials(userId: number): Promise<void> 
         updated_at = ${nowFunc}
     WHERE user_id = ?
   `, [isActiveValue, userId])
+
+  const { invalidateGoogleAdsAuthContextForCredentialUser } = await import(
+    './google-ads-auth-context'
+  )
+  await invalidateGoogleAdsAuthContextForCredentialUser(userId)
 }
 
 /**

@@ -32,9 +32,8 @@ import { getGeminiEndpoint, type GeminiProvider } from '@/lib/gemini-config'
 import { ServiceAccountPermissionError } from '@/components/ServiceAccountPermissionError'
 import {
   appendAccountsAuthToSearchParams,
-  assertAccountsRequestAuth,
-  buildAuthForAccountsRequest,
   parseAccountsListFetchFailure,
+  resolveAccountsRequestAuth,
   safeReadJson,
 } from '@/lib/google-ads-credentials-errors'
 import { useGoogleAdsAccountsAuth } from '@/hooks/useGoogleAdsAccountsAuth'
@@ -832,11 +831,23 @@ export default function SettingsPage() {
       setShowGoogleAdsAccounts(true)
 
       const auth = await prepareAuthForAccountsFetch({ forceRefresh: true, isPoll: false })
-      const authForRequest = buildAuthForAccountsRequest(
+      const resolved = resolveAccountsRequestAuth(
         auth,
         serviceAccounts[0]?.id ?? googleAdsCredentialStatus?.serviceAccountId
       )
-      assertAccountsRequestAuth(authForRequest)
+      if (!resolved.ok) {
+        if (resolved.reason === 'auth_config_warning') {
+          setGoogleAdsCredentialStatus((prev) =>
+            prev ? { ...prev, authConfigWarning: resolved.authConfigWarning } : prev
+          )
+        }
+        throw new Error(
+          resolved.reason === 'invalid_auth'
+            ? resolved.message
+            : 'Google Ads 认证未配置'
+        )
+      }
+      const authForRequest = resolved.authForRequest
 
       const params = new URLSearchParams({ refresh: 'true' })
       appendAccountsAuthToSearchParams(params, authForRequest)

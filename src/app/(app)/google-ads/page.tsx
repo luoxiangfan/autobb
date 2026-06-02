@@ -5,10 +5,10 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import {
   appendAccountsAuthToSearchParams,
   assertAccountsRequestAuth,
-  buildAuthForAccountsRequest,
   buildGoogleAdsApiErrorMessage,
   formatErrorMessage,
   formatNullableErrorMessage,
+  resolveAccountsRequestAuth,
   safeReadJson,
   throwAccountsListFetchError,
   type ParsedGoogleAdsCredentialsStatus,
@@ -258,8 +258,16 @@ export default function GoogleAdsPage() {
         isPoll,
         skipCredentialsRefresh: opts?.skipCredentialsRefresh,
       })
-      const authForRequest = buildAuthForAccountsRequest(auth, opts?.fallbackServiceAccountId)
-      assertAccountsRequestAuth(authForRequest)
+      const resolved = resolveAccountsRequestAuth(auth, opts?.fallbackServiceAccountId)
+      if (!resolved.ok) {
+        if (resolved.reason === 'auth_config_warning') {
+          setAuthConfigWarning(resolved.authConfigWarning)
+        } else if (resolved.reason === 'invalid_auth') {
+          setError(resolved.message)
+        }
+        return
+      }
+      const authForRequest = resolved.authForRequest
 
       const params = new URLSearchParams({ filterByUserMcc: 'true' })
       if (forceRefresh) {
@@ -367,8 +375,16 @@ export default function GoogleAdsPage() {
         }
 
         fallbackServiceAccountId = serviceAccountId
-        const authForRequest = buildAuthForAccountsRequest(auth, fallbackServiceAccountId)
-        assertAccountsRequestAuth(authForRequest)
+      }
+
+      if (auth.authType === 'service_account') {
+        const resolved = resolveAccountsRequestAuth(auth, fallbackServiceAccountId)
+        if (!resolved.ok) {
+          if (resolved.reason === 'invalid_auth') {
+            throw new Error(resolved.message)
+          }
+          return
+        }
       }
 
       await fetchAccountsList(true, false, {

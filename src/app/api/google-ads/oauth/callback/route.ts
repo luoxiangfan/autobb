@@ -5,7 +5,6 @@ import { getGoogleAdsAuthAssignment, isGoogleAdsAuthShared } from '@/lib/google-
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
 import {
   assertNoConflictingGoogleAdsAuth,
-  invalidateGoogleAdsAuthContextCacheForOwner,
 } from '@/lib/google-ads-auth-context'
 
 // 强制动态渲染
@@ -154,8 +153,6 @@ export async function GET(request: NextRequest) {
       access_token: tokens.access_token,
       access_token_expires_at: expiresAt,
     })
-
-    await invalidateGoogleAdsAuthContextCacheForOwner(userId)
 
     console.log(`💾 已保存Google Ads凭证到数据库`)
     console.log(`   Credentials ID: ${savedCredentials.id}`)

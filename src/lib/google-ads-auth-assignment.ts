@@ -180,7 +180,8 @@ export function resolveGoogleAdsApiAccessLevelFromContext(ctx: {
 }
 
 /**
- * 解析用户的 Google Ads API 访问级别（支持管理员共享配置；复用 auth-context 缓存）。
+ * Re-export：实现位于 google-ads-auth-context（避免 assignment ↔ context 静态循环依赖）。
+ * 新代码请优先从 `@/lib/google-ads-auth-context` 导入 `resolveGoogleAdsApiAccessLevel`。
  */
 export { resolveGoogleAdsApiAccessLevel } from './google-ads-auth-context'
 

@@ -258,6 +258,37 @@ export function assertAccountsRequestAuth(authForRequest: AccountsRequestAuth): 
   }
 }
 
+export type AccountsRequestAuthResolution =
+  | { ok: false; reason: 'auth_config_warning'; authConfigWarning: string }
+  | { ok: false; reason: 'not_configured' }
+  | { ok: false; reason: 'invalid_auth'; message: string }
+  | { ok: true; authForRequest: AccountsRequestAuth }
+
+/** 拉 accounts 前的统一预检：双栈 / 未配置 / SA id 缺失 */
+export function resolveAccountsRequestAuth(
+  auth: ParsedGoogleAdsCredentialsStatus,
+  fallbackServiceAccountId?: string | null
+): AccountsRequestAuthResolution {
+  if (auth.authConfigWarning) {
+    return { ok: false, reason: 'auth_config_warning', authConfigWarning: auth.authConfigWarning }
+  }
+  if (!auth.hasCredentials) {
+    return { ok: false, reason: 'not_configured' }
+  }
+  try {
+    const authForRequest = buildAuthForAccountsRequest(auth, fallbackServiceAccountId)
+    assertAccountsRequestAuth(authForRequest)
+    return { ok: true, authForRequest }
+  } catch (error) {
+    return {
+      ok: false,
+      reason: 'invalid_auth',
+      message:
+        error instanceof Error ? error.message : GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE,
+    }
+  }
+}
+
 export function appendAccountsAuthToSearchParams(
   params: URLSearchParams,
   auth: AccountsRequestAuth

@@ -52,6 +52,7 @@ import {
   hasConfiguredGoogleAdsAuthFromContext,
   invalidateGoogleAdsAuthContextCache,
   invalidateGoogleAdsAuthContextCacheForOwner,
+  invalidateGoogleAdsAuthContextForCredentialUser,
   resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthForAccount,
   resolveGoogleAdsApiAuthFromContext,
@@ -565,5 +566,33 @@ describe('invalidateGoogleAdsAuthContextCacheForOwner', () => {
     await getGoogleAdsAuthContext(1)
     await getGoogleAdsAuthContext(2)
     expect(assignmentFns.resolveGoogleAdsCredentialOwnerId).toHaveBeenCalledTimes(4)
+  })
+})
+
+describe('invalidateGoogleAdsAuthContextForCredentialUser', () => {
+  beforeEach(() => {
+    clearGoogleAdsAuthContextTestCache()
+    vi.clearAllMocks()
+    dbFns.query.mockResolvedValue([])
+  })
+
+  it('resolves owner then cascades cache bust', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 5,
+      isShared: false,
+      assignment: null,
+    })
+    oauthFns.getUserAuthType.mockResolvedValue('oauth')
+    oauthFns.getGoogleAdsCredentials.mockResolvedValue({ refresh_token: 'rt' })
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue(null)
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+
+    await getGoogleAdsAuthContext(5)
+    expect(assignmentFns.resolveGoogleAdsCredentialOwnerId).toHaveBeenCalledTimes(1)
+
+    await invalidateGoogleAdsAuthContextForCredentialUser(5)
+
+    await getGoogleAdsAuthContext(5)
+    expect(assignmentFns.resolveGoogleAdsCredentialOwnerId).toHaveBeenCalledTimes(3)
   })
 })

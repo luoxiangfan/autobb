@@ -37,9 +37,8 @@ import { Link2, CheckCircle2, AlertCircle, Plus, RefreshCw, ExternalLink, Loader
 import { showError, showSuccess } from '@/lib/toast-utils'
 import {
   appendAccountsAuthToSearchParams,
-  assertAccountsRequestAuth,
-  buildAuthForAccountsRequest,
   formatNullableErrorMessage,
+  resolveAccountsRequestAuth,
   safeReadJson,
   throwAccountsListFetchError,
 } from '@/lib/google-ads-credentials-errors'
@@ -194,22 +193,16 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
 
       const auth = await prepareAuthForAccountsFetch({ forceRefresh, isPoll })
 
-      if (auth.authConfigWarning) {
-        setAuthConfigWarning(auth.authConfigWarning)
+      const resolved = resolveAccountsRequestAuth(auth)
+      if (!resolved.ok) {
+        if (resolved.reason === 'auth_config_warning') {
+          setAuthConfigWarning(resolved.authConfigWarning)
+        } else if (resolved.reason === 'invalid_auth') {
+          showError(resolved.message)
+        }
         return
       }
-      if (!auth.hasCredentials) {
-        return
-      }
-
-      let authForRequest
-      try {
-        authForRequest = buildAuthForAccountsRequest(auth)
-        assertAccountsRequestAuth(authForRequest)
-      } catch (error) {
-        showError(error instanceof Error ? error.message : 'Google Ads 认证未配置')
-        return
-      }
+      const authForRequest = resolved.authForRequest
 
       const params = new URLSearchParams({
         refresh: forceRefresh ? 'true' : 'false',
