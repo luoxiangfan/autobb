@@ -75,6 +75,15 @@ export function DateRangePicker({
   const contentRef = React.useRef<HTMLDivElement | null>(null)
 
   const monthCount = compact ? 1 : (showTwoMonths ? 2 : 1)
+  const popoverWidthClass = React.useMemo(() => {
+    if (compact) {
+      return isMobile ? 'w-[min(96vw,360px)]' : 'w-[176px]'
+    }
+    if (!showPresets) {
+      return showTwoMonths ? 'w-[min(92vw,580px)]' : 'w-[min(92vw,320px)]'
+    }
+    return 'w-[min(92vw,760px)]'
+  }, [compact, isMobile, showPresets, showTwoMonths])
   const normalizedMinDate = React.useMemo(() => (minDate ? startOfDay(minDate) : undefined), [minDate])
   const normalizedMaxDate = React.useMemo(() => (maxDate ? endOfDay(maxDate) : undefined), [maxDate])
   const minMonth = React.useMemo(
@@ -182,7 +191,16 @@ export function DateRangePicker({
   }
 
   const handleSelect = (range: DateRange | undefined) => {
-    setDraftDate(normalizeRange(range))
+    const nextRange = normalizeRange(range)
+    setDraftDate(nextRange)
+    if (nextRange?.from && nextRange?.to) {
+      window.requestAnimationFrame(() => {
+        const active = document.activeElement
+        if (active instanceof HTMLElement && active.classList.contains('rdp-day_button')) {
+          active.blur()
+        }
+      })
+    }
   }
 
   const handlePresetClick = (preset: typeof presetRanges[0]) => {
@@ -251,10 +269,7 @@ export function DateRangePicker({
         ref={contentRef}
         align={isMobile ? 'center' : 'start'}
         sideOffset={8}
-        className={cn(
-          compact ? (isMobile ? 'w-[min(96vw,360px)]' : 'w-[176px]') : 'w-[min(92vw,760px)]',
-          'p-0'
-        )}
+        className={cn(popoverWidthClass, 'p-0')}
         onOpenAutoFocus={(event) => {
           event.preventDefault()
           window.requestAnimationFrame(() => {
@@ -268,7 +283,11 @@ export function DateRangePicker({
           })
         }}
       >
-        <div className={cn(compact ? (isMobile ? 'max-h-[340px]' : 'max-h-[206px]') : 'max-h-[75vh]', 'flex flex-col overflow-auto', !compact && 'lg:flex-row')}>
+        <div className={cn(
+          compact ? (isMobile ? 'max-h-[340px]' : 'max-h-[206px]') : 'max-h-[75vh]',
+          'flex flex-col overflow-auto',
+          !compact && showPresets && 'lg:flex-row'
+        )}>
           {showPresets && (
             <div className="flex flex-wrap gap-1 border-b p-3 lg:w-[132px] lg:flex-col lg:border-b-0 lg:border-r">
               <div className="mb-1 text-xs font-medium text-muted-foreground">快捷选择</div>
@@ -299,7 +318,9 @@ export function DateRangePicker({
               })}
             </div>
           )}
-          <div className={cn(compact ? 'w-full p-1' : 'flex-1 p-3')}>
+          <div className={cn(
+            compact ? 'w-full p-1' : cn('p-3', showPresets ? 'flex-1 min-w-0' : 'w-fit shrink-0')
+          )}>
             <DayPicker
               mode="range"
               month={visibleMonth}
@@ -336,8 +357,10 @@ export function DateRangePicker({
                 return false
               }}
               classNames={{
-                months: compact ? 'flex flex-col' : 'flex flex-col gap-4 xl:flex-row xl:gap-5',
-                month: compact ? (isMobile ? 'relative space-y-0.5' : 'relative space-y-0') : 'space-y-2',
+                months: compact
+                  ? 'flex flex-col'
+                  : cn('flex flex-col gap-4 xl:flex-row xl:gap-3', !showPresets && 'w-fit'),
+                month: compact ? (isMobile ? 'relative space-y-0.5' : 'relative space-y-0') : 'space-y-2 shrink-0',
                 month_caption: compact
                   ? (isMobile
                     ? 'pointer-events-none relative mb-1 flex h-[26px] items-center justify-end pl-[58px] pr-1'
@@ -375,18 +398,19 @@ export function DateRangePicker({
                 day_button: cn(
                   compact ? (isMobile ? 'h-[26px] w-[26px] rounded-[6px] p-0 text-xs' : 'h-[18px] w-[18px] rounded-[4px] p-0 text-[10px]') : 'h-8 w-8 p-0',
                   'font-normal transition-colors hover:bg-accent hover:text-accent-foreground',
-                  'aria-selected:bg-primary aria-selected:text-primary-foreground aria-selected:font-semibold'
+                  'aria-selected:bg-primary aria-selected:text-primary-foreground aria-selected:font-semibold',
+                  'aria-selected:hover:bg-primary aria-selected:hover:text-primary-foreground'
                 ),
                 selected: compact
                   ? 'drp-range-selected'
-                  : 'bg-primary text-primary-foreground',
+                  : 'drp-range-selected bg-primary text-primary-foreground',
                 range_start: 'drp-range-start',
                 range_end: 'drp-range-end',
                 range_middle: 'drp-range-middle',
                 today: compact ? 'text-primary font-medium' : 'bg-accent text-accent-foreground font-semibold',
                 outside: compact
                   ? 'pointer-events-none select-none drp-outside-hidden'
-                  : 'text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30',
+                  : 'drp-outside-day text-muted-foreground opacity-50',
                 disabled: 'text-muted-foreground opacity-50 cursor-not-allowed',
                 hidden: 'invisible',
               }}
@@ -422,39 +446,73 @@ export function DateRangePicker({
           </div>
         </div>
       </PopoverContent>
-      {compact && (
-        <style jsx global>{`
-          .drp-range-selected,
-          .drp-range-start,
-          .drp-range-end,
-          .drp-range-middle {
-            border-radius: 0 !important;
-            background: rgba(37, 99, 235, 0.24) !important;
-            color: rgb(15, 23, 42) !important;
-          }
+      <style jsx global>{`
+        .drp-range-selected,
+        .drp-range-start,
+        .drp-range-end,
+        .drp-range-middle {
+          border-radius: 0 !important;
+          background: rgba(37, 99, 235, 0.24) !important;
+          color: rgb(15, 23, 42) !important;
+        }
 
-          .drp-range-selected > button,
-          .drp-range-start > button,
-          .drp-range-end > button,
-          .drp-range-middle > button {
-            border-radius: 0 !important;
-            background: transparent !important;
-            color: rgb(15, 23, 42) !important;
-            font-weight: 500 !important;
-          }
+        .drp-range-start,
+        .drp-range-end,
+        .rdp-selected.drp-range-selected {
+          background: hsl(var(--primary)) !important;
+          color: hsl(var(--primary-foreground)) !important;
+        }
 
-          .drp-outside-hidden {
-            background: transparent !important;
-            color: transparent !important;
-          }
+        .drp-range-selected > button,
+        .drp-range-start > button,
+        .drp-range-end > button,
+        .drp-range-middle > button {
+          border-radius: 0 !important;
+          background: transparent !important;
+          color: inherit !important;
+          font-weight: 500 !important;
+        }
 
-          .drp-outside-hidden > button {
-            background: transparent !important;
-            color: transparent !important;
-            border-radius: 0 !important;
-          }
-        `}</style>
-      )}
+        .drp-range-start > button,
+        .drp-range-end > button,
+        .rdp-selected.drp-range-selected > button {
+          border-radius: 6px !important;
+          font-weight: 600 !important;
+        }
+
+        .drp-range-start > button:hover,
+        .drp-range-end > button:hover,
+        .drp-range-middle > button:hover,
+        .drp-range-selected > button:hover,
+        .rdp-selected > button:hover {
+          background: transparent !important;
+          color: inherit !important;
+        }
+
+        .drp-outside-day.drp-range-start,
+        .drp-outside-day.drp-range-end,
+        .drp-outside-day.drp-range-middle,
+        .drp-outside-day.drp-range-selected,
+        .drp-outside-day.rdp-selected {
+          opacity: 1 !important;
+          color: hsl(var(--primary-foreground)) !important;
+        }
+
+        .drp-outside-day.drp-range-middle {
+          color: rgb(15, 23, 42) !important;
+        }
+
+        .drp-outside-hidden {
+          background: transparent !important;
+          color: transparent !important;
+        }
+
+        .drp-outside-hidden > button {
+          background: transparent !important;
+          color: transparent !important;
+          border-radius: 0 !important;
+        }
+      `}</style>
     </Popover>
   )
 }

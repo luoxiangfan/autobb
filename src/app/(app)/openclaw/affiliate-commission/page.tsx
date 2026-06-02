@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { format, parseISO, subDays } from 'date-fns'
-import { ArrowLeft, Coins, Loader2, RefreshCw } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Coins, LayoutGrid, Loader2, RefreshCw, Users } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -107,6 +107,11 @@ type DateDetailPayload = {
 const PLATFORM_LABELS: Record<'yeahpromos' | 'partnerboost', string> = {
   yeahpromos: 'YeahPromos',
   partnerboost: 'PartnerBoost',
+}
+
+const PLATFORM_BADGE_CLASS: Record<'yeahpromos' | 'partnerboost', string> = {
+  yeahpromos: 'border-sky-200 bg-sky-50 text-sky-700',
+  partnerboost: 'border-orange-200 bg-orange-50 text-orange-700',
 }
 
 function formatYmd(date: Date): string {
@@ -404,61 +409,111 @@ export default function AffiliateCommissionReportPage() {
 
   const currency = report?.currency || 'USD'
 
-  const filterSummaryText = useMemo(() => {
-    const parts: string[] = []
-    if (startDate && endDate) {
-      parts.push(`${startDate} 至 ${endDate}`)
-    }
-    parts.push(platform === 'all' ? '全部联盟' : PLATFORM_LABELS[platform])
-    if (isAdmin) {
-      parts.push(userFilterApplied ? selectedUsersLabel : '所有活跃用户')
-    } else {
-      parts.push('仅本人数据')
-    }
-    return parts.join(' · ')
-  }, [startDate, endDate, platform, isAdmin, userFilterApplied, selectedUsersLabel])
-
   const filteredCommissionTotal = report?.totalCommission ?? 0
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-h-screen bg-slate-50/80">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
             <Link
               href="/openclaw"
-              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
               返回 OpenClaw
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">联盟佣金原始数据</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                基于 openclaw_affiliate_commission_raw_sync_payloads 聚合展示 YeahPromos / PartnerBoost 佣金
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900">联盟佣金原始数据</h1>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                基于 raw sync payloads 聚合展示 YeahPromos / PartnerBoost 佣金，支持按品牌或日期下钻
               </p>
             </div>
           </div>
-          <Button variant="outline" onClick={() => void loadReport()} disabled={loading}>
+          <Button
+            variant="outline"
+            className="shrink-0 bg-white shadow-sm"
+            onClick={() => void loadReport()}
+            disabled={loading}
+          >
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
             刷新
           </Button>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>筛选条件</CardTitle>
+        <Card className="overflow-hidden border-violet-200/70 bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 shadow-sm">
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-4">
+                <div className="rounded-2xl bg-white/80 p-3 shadow-sm ring-1 ring-violet-100">
+                  <Coins className="h-6 w-6 text-violet-600" />
+                </div>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-sm font-medium text-violet-900/80">当前筛选佣金总和</p>
+                    <p className="mt-1 text-xs text-violet-700/70">
+                      {isAdmin
+                        ? '管理员视图 · 默认包含所有活跃非管理员用户'
+                        : '个人视图 · 仅展示您自己的佣金数据'}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {startDate && endDate && (
+                      <Badge variant="secondary" className="border border-violet-200/80 bg-white/70 text-violet-800">
+                        {startDate} ~ {endDate}
+                      </Badge>
+                    )}
+                    <Badge variant="secondary" className="border border-violet-200/80 bg-white/70 text-violet-800">
+                      {platform === 'all' ? '全部联盟' : PLATFORM_LABELS[platform]}
+                    </Badge>
+                    <Badge variant="secondary" className="border border-violet-200/80 bg-white/70 text-violet-800">
+                      {isAdmin
+                        ? (userFilterApplied ? selectedUsersLabel : '所有活跃用户')
+                        : '仅本人数据'}
+                    </Badge>
+                    <Badge variant="secondary" className="border border-violet-200/80 bg-white/70 text-violet-800">
+                      {viewMode === 'brand' ? '按品牌' : '按日期'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              <div className="sm:text-right">
+                {loading ? (
+                  <span className="inline-flex items-center text-base text-violet-600">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    计算中...
+                  </span>
+                ) : (
+                  <p className="text-3xl font-bold tabular-nums tracking-tight text-violet-700 sm:text-4xl">
+                    {formatCurrency(filteredCommissionTotal, currency)}
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base">筛选与视图</CardTitle>
             <CardDescription>
-              {isAdmin
-                ? '默认按品牌展示；管理员默认展示所有活跃非管理员用户的数据'
-                : '默认按品牌展示；仅展示您自己的佣金数据'}
+              调整日期、联盟与用户范围；切换下方表格的聚合维度
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
-              <div className="space-y-2">
-                <div className="text-sm font-medium">日期范围</div>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto] xl:items-end">
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    日期范围
+                  </div>
+                  {dateBounds?.minDate && dateBounds?.maxDate && (
+                    <span className="text-[11px] text-muted-foreground">
+                      可选 {dateBounds.minDate} ~ {dateBounds.maxDate}
+                    </span>
+                  )}
+                </div>
                 <DateRangePicker
                   value={dateRange}
                   onChange={handleDateRangeChange}
@@ -466,22 +521,20 @@ export default function AffiliateCommissionReportPage() {
                   minDate={pickerMinDate}
                   maxDate={pickerMaxDate}
                   showPresets={false}
+                  className="w-full bg-white"
                 />
-                {dateBounds?.minDate && dateBounds?.maxDate && (
-                  <div className="text-xs text-muted-foreground">
-                    可选范围：{dateBounds.minDate} 至 {dateBounds.maxDate}
-                  </div>
-                )}
                 {!boundsLoading && dateBounds && !dateBounds.minDate && (
-                  <div className="text-xs text-muted-foreground">
-                    当前筛选条件下暂无可用日期
-                  </div>
+                  <p className="mt-2 text-xs text-amber-600">当前筛选条件下暂无可用日期</p>
                 )}
               </div>
-              <div className="space-y-2 min-w-[180px]">
-                <div className="text-sm font-medium">联盟</div>
+
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5">
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  联盟
+                </div>
                 <Select value={platform} onValueChange={(value) => setPlatform(value as PlatformFilter)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white">
                     <SelectValue placeholder="选择联盟" />
                   </SelectTrigger>
                   <SelectContent>
@@ -491,9 +544,13 @@ export default function AffiliateCommissionReportPage() {
                   </SelectContent>
                 </Select>
               </div>
+
               {isAdmin && (
-                <div className="space-y-2 min-w-[180px]">
-                  <div className="text-sm font-medium">用户</div>
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5">
+                  <div className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <Users className="h-3.5 w-3.5" />
+                    用户
+                  </div>
                   <DropdownMenu
                     open={userFilterMenuOpen}
                     onOpenChange={(open) => {
@@ -507,7 +564,7 @@ export default function AffiliateCommissionReportPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="w-full justify-between font-normal"
+                        className="w-full justify-between bg-white font-normal"
                         disabled={usersLoading}
                       >
                         {selectedUsersLabel}
@@ -592,58 +649,47 @@ export default function AffiliateCommissionReportPage() {
                   </DropdownMenu>
                 </div>
               )}
-            </div>
-            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
-              <TabsList>
-                <TabsTrigger value="brand">按品牌</TabsTrigger>
-                <TabsTrigger value="date">按日期</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            </div>
 
-            <div className="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="text-sm font-medium text-purple-900">当前筛选佣金总和</div>
-                <div className="text-xs text-purple-700 mt-0.5">{filterSummaryText}</div>
-              </div>
-              <div className="text-2xl font-semibold text-purple-700 tabular-nums">
-                {loading ? (
-                  <span className="inline-flex items-center text-base text-purple-600">
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    计算中...
-                  </span>
-                ) : (
-                  formatCurrency(filteredCommissionTotal, currency)
-                )}
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5 xl:min-w-[180px]">
+                <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  展示维度
+                </div>
+                <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)} className="w-full">
+                  <TabsList className="grid h-10 w-full grid-cols-2 bg-white">
+                    <TabsTrigger value="brand">按品牌</TabsTrigger>
+                    <TabsTrigger value="date">按日期</TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardHeader className="pb-4">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Coins className="h-5 w-5 text-purple-600" />
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Coins className="h-5 w-5 text-violet-600" />
                 {viewMode === 'brand' ? '品牌佣金明细' : '日期佣金明细'}
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="mt-1">
                 {viewMode === 'brand'
                   ? '点击品牌行可查看按日期的佣金明细'
                   : '点击日期行可查看该日各品牌佣金明细'}
               </CardDescription>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {loading ? (
-              <div className="flex items-center justify-center py-16 text-muted-foreground">
+              <div className="flex items-center justify-center rounded-xl border border-dashed py-16 text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin mr-2" />
                 加载中...
               </div>
             ) : viewMode === 'brand' ? (
+              <div className="overflow-hidden rounded-xl border">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
                     {showUserScope && <TableHead>所属用户</TableHead>}
                     <TableHead>品牌名称</TableHead>
                     <TableHead>所属联盟</TableHead>
@@ -656,26 +702,28 @@ export default function AffiliateCommissionReportPage() {
                     <TableRow>
                       <TableCell
                         colSpan={showUserScope ? 5 : 4}
-                        className="text-center text-muted-foreground py-10"
+                        className="py-12 text-center text-muted-foreground"
                       >
                         所选范围内暂无佣金数据
                       </TableCell>
                     </TableRow>
                   ) : (
                     report?.brandSummaries.map((item) => (
-                      <TableRow key={item.brandKey}>
+                      <TableRow key={item.brandKey} className="transition-colors hover:bg-violet-50/40">
                         {showUserScope && (
-                          <TableCell>{item.username || '-'}</TableCell>
+                          <TableCell className="text-muted-foreground">{item.username || '-'}</TableCell>
                         )}
                         <TableCell className="font-medium">{item.brandName}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{PLATFORM_LABELS[item.platform]}</Badge>
+                          <Badge variant="outline" className={PLATFORM_BADGE_CLASS[item.platform]}>
+                            {PLATFORM_LABELS[item.platform]}
+                          </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right font-medium tabular-nums">
                           {formatCurrency(item.totalCommission, currency)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => void openBrandDetail(item)}>
+                          <Button variant="ghost" size="sm" className="text-violet-700 hover:text-violet-800 hover:bg-violet-50" onClick={() => void openBrandDetail(item)}>
                             查看明细
                           </Button>
                         </TableCell>
@@ -684,10 +732,12 @@ export default function AffiliateCommissionReportPage() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             ) : (
+              <div className="overflow-hidden rounded-xl border">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
                     <TableHead>日期</TableHead>
                     <TableHead className="text-right">佣金总和</TableHead>
                     <TableHead className="text-right">操作</TableHead>
@@ -696,19 +746,19 @@ export default function AffiliateCommissionReportPage() {
                 <TableBody>
                   {(report?.dateSummaries || []).length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground py-10">
+                      <TableCell colSpan={3} className="py-12 text-center text-muted-foreground">
                         所选范围内暂无佣金数据
                       </TableCell>
                     </TableRow>
                   ) : (
                     report?.dateSummaries.map((item) => (
-                      <TableRow key={item.reportDate}>
+                      <TableRow key={item.reportDate} className="transition-colors hover:bg-violet-50/40">
                         <TableCell className="font-medium">{item.reportDate}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right font-medium tabular-nums">
                           {formatCurrency(item.totalCommission, currency)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => void openDateDetail(item)}>
+                          <Button variant="ghost" size="sm" className="text-violet-700 hover:text-violet-800 hover:bg-violet-50" onClick={() => void openDateDetail(item)}>
                             查看明细
                           </Button>
                         </TableCell>
@@ -717,6 +767,7 @@ export default function AffiliateCommissionReportPage() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -789,7 +840,9 @@ export default function AffiliateCommissionReportPage() {
                       )}
                       <TableCell>{row.brandName}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{PLATFORM_LABELS[row.platform]}</Badge>
+                        <Badge variant="outline" className={PLATFORM_BADGE_CLASS[row.platform]}>
+                          {PLATFORM_LABELS[row.platform]}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-right">{formatCurrency(row.commission, currency)}</TableCell>
                     </TableRow>
