@@ -35,54 +35,9 @@ env:
 
 jobs:
   # ============================================
-  # Job 0: 变更检测（paths 过滤失效时的兜底，避免仅文档改动跑完整 CI）
-  # ============================================
-  should-deploy:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      run: ${{ steps.check.outputs.run }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: 判断是否应执行部署流水线
-        id: check
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          BEFORE="${{ github.event.before }}"
-          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          while IFS= read -r file; do
-            [ -z "$file" ] && continue
-            case "$file" in
-              AGENTS.md|CLAUDE.md) ;;
-              *)
-                echo "run=true" >> "$GITHUB_OUTPUT"
-                echo "检测到非文档变更: $file"
-                exit 0
-                ;;
-            esac
-          done < <(git diff --name-only "$BEFORE" "${{ github.sha }}")
-          echo "run=false" >> "$GITHUB_OUTPUT"
-          echo "仅根目录 AGENTS.md / CLAUDE.md 变更，跳过部署流水线"
-
-  # ============================================
   # Job 1: 前置测试
   # ============================================
   pre-test:
-    needs: should-deploy
-    if: needs.should-deploy.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -159,8 +114,7 @@ jobs:
   # Job 2: 构建并推送到GHCR
   # ============================================
   build-push:
-    needs: [should-deploy, pre-test]
-    if: needs.should-deploy.outputs.run == 'true'
+    needs: pre-test
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
