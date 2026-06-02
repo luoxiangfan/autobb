@@ -48,7 +48,7 @@ describe('upsertGoogleAdsAuthAssignment cache invalidation', () => {
     vi.clearAllMocks()
   })
 
-  it('invalidates sub-user cache for shared_admin assignment only', async () => {
+  it('invalidates user cache for shared_admin assignment', async () => {
     dbFns.queryOne.mockResolvedValueOnce(null).mockResolvedValueOnce(sharedAssignmentRow)
 
     await upsertGoogleAdsAuthAssignment({
@@ -63,7 +63,7 @@ describe('upsertGoogleAdsAuthAssignment cache invalidation', () => {
     expect(authContextFns.invalidateGoogleAdsAuthContextForCredentialUser).not.toHaveBeenCalled()
   })
 
-  it('does not bust owner cache for own assignment (credential libs handle it)', async () => {
+  it('invalidates user cache for own assignment (assignment-only changes)', async () => {
     dbFns.queryOne.mockResolvedValueOnce(null).mockResolvedValueOnce(ownAssignmentRow)
 
     await upsertGoogleAdsAuthAssignment({
@@ -74,7 +74,7 @@ describe('upsertGoogleAdsAuthAssignment cache invalidation', () => {
       configuredBy: 5,
     })
 
-    expect(authContextFns.invalidateGoogleAdsAuthContextCache).not.toHaveBeenCalled()
+    expect(authContextFns.invalidateGoogleAdsAuthContextCache).toHaveBeenCalledWith(5)
     expect(authContextFns.invalidateGoogleAdsAuthContextForCredentialUser).not.toHaveBeenCalled()
   })
 })

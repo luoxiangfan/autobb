@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth, findUserById } from '@/lib/auth'
-import {
-  saveGoogleAdsCredentials,
-  getGoogleAdsCredentials,
-  deleteGoogleAdsCredentials,
-  verifyGoogleAdsCredentials,
-} from '@/lib/google-ads-oauth'
-import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
+import { saveGoogleAdsCredentials, deleteGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import { getDatabase } from '@/lib/db'
 import {
   assertUserCanModifyGoogleAdsAuth,

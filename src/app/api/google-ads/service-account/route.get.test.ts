@@ -3,6 +3,10 @@ import { NextRequest } from 'next/server'
 import { GET } from '@/app/api/google-ads/service-account/route'
 
 const listServiceAccountsFn = vi.hoisted(() => vi.fn())
+const authContextFns = vi.hoisted(() => ({
+  getGoogleAdsAuthContext: vi.fn(),
+  resolveGoogleAdsDisplayAuthType: vi.fn(),
+}))
 
 vi.mock('@/lib/auth', () => ({
   verifyAuth: vi.fn(async () => ({
@@ -10,6 +14,12 @@ vi.mock('@/lib/auth', () => ({
     user: { userId: 2, email: 'shared@test.com', role: 'user' },
   })),
   findUserById: vi.fn(async () => ({ id: 2, role: 'user' })),
+}))
+
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
+  resolveGoogleAdsDisplayAuthType: authContextFns.resolveGoogleAdsDisplayAuthType,
+  assertNoConflictingGoogleAdsAuth: vi.fn(async () => {}),
 }))
 
 vi.mock('@/lib/google-ads-service-account', async (importOriginal) => {
@@ -23,9 +33,22 @@ vi.mock('@/lib/google-ads-service-account', async (importOriginal) => {
 describe('GET /api/google-ads/service-account', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({ userId: 2 })
   })
 
-  it('lists service accounts via shared owner resolution', async () => {
+  it('returns empty list when effective auth is not service_account', async () => {
+    authContextFns.resolveGoogleAdsDisplayAuthType.mockReturnValue('oauth')
+
+    const response = await GET(new NextRequest('http://localhost/api/google-ads/service-account'))
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.accounts).toEqual([])
+    expect(listServiceAccountsFn).not.toHaveBeenCalled()
+  })
+
+  it('lists service accounts when effective auth is service_account', async () => {
+    authContextFns.resolveGoogleAdsDisplayAuthType.mockReturnValue('service_account')
     listServiceAccountsFn.mockResolvedValue([
       { id: 'sa-admin', name: 'Admin SA', mcc_customer_id: '111', service_account_email: 'sa@test.com' },
     ])

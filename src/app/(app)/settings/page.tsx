@@ -32,9 +32,9 @@ import { getGeminiEndpoint, type GeminiProvider } from '@/lib/gemini-config'
 import { ServiceAccountPermissionError } from '@/components/ServiceAccountPermissionError'
 import {
   appendAccountsAuthToSearchParams,
-  accountsRequestBlockedMessage,
   GOOGLE_ADS_NOT_CONFIGURED_MESSAGE,
   parseAccountsListFetchFailure,
+  resolveAccountsFetchBlockedUiEffects,
   resolveAccountsRequestAuth,
   safeReadJson,
 } from '@/lib/google-ads-credentials-errors'
@@ -838,13 +838,16 @@ export default function SettingsPage() {
         serviceAccounts[0]?.id ?? googleAdsCredentialStatus?.serviceAccountId
       )
       if (!resolved.ok) {
-        if (resolved.reason === 'auth_config_warning') {
+        const effects = resolveAccountsFetchBlockedUiEffects(resolved, { forceRefresh: true })
+        if (effects.authConfigWarning) {
           setGoogleAdsCredentialStatus((prev) =>
-            prev ? { ...prev, authConfigWarning: resolved.authConfigWarning } : prev
+            prev ? { ...prev, authConfigWarning: effects.authConfigWarning } : prev
           )
         }
         throw new Error(
-          accountsRequestBlockedMessage(resolved) ?? GOOGLE_ADS_NOT_CONFIGURED_MESSAGE
+          effects.errorMessage ??
+            effects.authConfigWarning ??
+            GOOGLE_ADS_NOT_CONFIGURED_MESSAGE
         )
       }
       const authForRequest = resolved.authForRequest

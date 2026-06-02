@@ -2,6 +2,7 @@
  * Google Ads 账号列表 / API 调用所需的认证解析（auth-context 之上）。
  */
 import { getDatabase } from './db'
+import { nowFunc } from './db-helpers'
 import { getUserOnlySetting } from './settings'
 import {
   getGoogleAdsAuthContext,
@@ -697,7 +698,9 @@ export async function prepareGoogleAdsApiCallForLinkedAccountCached(
   if (hit) return hit
 
   const prepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, normalizedSa)
-  cache?.prepareByLinkedSa.set(key, prepared)
+  if (prepared.ok) {
+    cache?.prepareByLinkedSa.set(key, prepared)
+  }
   return prepared
 }
 
@@ -1111,10 +1114,10 @@ export async function healAccountsRouteDeveloperToken(params: {
       )
       .catch(() => {})
   } else if (params.serviceAccountId) {
-    const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+    const nowSql = nowFunc(db.type)
     await db
       .exec(
-        `UPDATE google_ads_service_accounts SET developer_token = ?, updated_at = ${nowFunc} WHERE user_id = ? AND id = ? AND ${isActiveCondition}`,
+        `UPDATE google_ads_service_accounts SET developer_token = ?, updated_at = ${nowSql} WHERE user_id = ? AND id = ? AND ${isActiveCondition}`,
         [settingDeveloperToken, params.ownerUserId, params.serviceAccountId]
       )
       .catch(() => {})

@@ -338,28 +338,11 @@ export default function GoogleAdsPage() {
     setAccountsSyncError(null)
 
     try {
-      let fallbackServiceAccountId = currentServiceAccountId || undefined
       const auth = await prepareAuthForAccountsFetch({ forceRefresh: true, isPoll: false })
+      let fallbackServiceAccountId = currentServiceAccountId || undefined
 
       if (auth.authType === 'service_account') {
-        let serviceAccountId = auth.serviceAccountId || fallbackServiceAccountId
-
-        if (!serviceAccountId) {
-          const saResponse = await fetch('/api/google-ads/service-account', {
-            credentials: 'include',
-          })
-
-          if (!saResponse.ok) {
-            throw new Error('获取服务账号配置失败')
-          }
-
-          const saData = await saResponse.json()
-          const saList = saData.accounts || []
-          if (saList.length > 0) {
-            serviceAccountId = saList[0].id
-          }
-        }
-
+        const serviceAccountId = auth.serviceAccountId || fallbackServiceAccountId
         if (serviceAccountId) {
           setCurrentServiceAccountId(serviceAccountId)
           fallbackServiceAccountId = serviceAccountId

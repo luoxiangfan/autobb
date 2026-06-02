@@ -350,9 +350,7 @@ export async function upsertGoogleAdsAuthAssignment(params: {
   }
 
   const { invalidateGoogleAdsAuthContextCache } = await import('./google-ads-auth-context')
-  if (params.assignmentMode === 'shared_admin') {
-    invalidateGoogleAdsAuthContextCache(params.userId)
-  }
+  invalidateGoogleAdsAuthContextCache(params.userId)
 
   return updated
 }

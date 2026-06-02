@@ -8,7 +8,11 @@ import {
 import { encrypt } from '@/lib/crypto'
 import { verifyAuth, findUserById } from '@/lib/auth'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
-import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
+import {
+  assertNoConflictingGoogleAdsAuth,
+  getGoogleAdsAuthContext,
+  resolveGoogleAdsDisplayAuthType,
+} from '@/lib/google-ads-auth-context'
 
 async function getAuthenticatedUser(request: NextRequest) {
   const authResult = await verifyAuth(request)
@@ -59,6 +63,11 @@ export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser(req)
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const ctx = await getGoogleAdsAuthContext(user.id)
+  if (resolveGoogleAdsDisplayAuthType(ctx) !== 'service_account') {
+    return NextResponse.json({ accounts: [] })
   }
 
   const accounts = await listServiceAccounts(user.id)

@@ -601,4 +601,18 @@ describe('GoogleAdsLinkedAccountPrepareCache', () => {
     expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledTimes(1)
     expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledWith(1, null)
   })
+
+  it('prepareGoogleAdsApiCallForLinkedAccountCached does not cache failures', async () => {
+    authContextFns.resolveGoogleAdsApiAuthForAccount
+      .mockResolvedValueOnce({ ok: false, reason: 'not_configured' })
+      .mockResolvedValueOnce({ ok: false, reason: 'not_configured' })
+    const cache = createGoogleAdsLinkedAccountPrepareCache()
+
+    const first = await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
+    const second = await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
+
+    expect(first).toEqual({ ok: false, message: expect.any(String) })
+    expect(second).toEqual({ ok: false, message: expect.any(String) })
+    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledTimes(2)
+  })
 })

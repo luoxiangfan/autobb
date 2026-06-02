@@ -4,8 +4,10 @@ import {
   getGoogleAdsAuthContext,
   GOOGLE_ADS_DUAL_STACK_WARNING,
   hasConfiguredGoogleAdsAuthFromContext,
+  resolveConfiguredGoogleAdsAuthType,
   resolveEffectiveServiceAccountId,
 } from '@/lib/google-ads-auth-context'
+import { formatErrorMessage } from '@/lib/google-ads-credentials-errors'
 import {
   healAccountsRouteDeveloperToken,
   resolveAccountsRouteAuthBundle,
@@ -49,19 +51,6 @@ type AccountSyncState = {
 }
 
 const ACCOUNT_SYNC_STATE_TTL_MS = 10 * 60 * 1000
-
-function formatErrorMessage(value: unknown): string {
-  if (!value) return ''
-  if (typeof value === 'string') return value
-  if (value instanceof Error) return value.message
-  const maybeMessage = (value as any)?.message
-  if (typeof maybeMessage === 'string') return maybeMessage
-  try {
-    return JSON.stringify(value)
-  } catch {
-    return String(value)
-  }
-}
 
 function getAccountSyncStateStore(): Map<string, AccountSyncState> {
   const g = globalThis as any
@@ -213,7 +202,6 @@ async function get(request: NextRequest) {
       )
     }
     const ownerUserId = authContext.ownerUserId
-    const resolvedAuth = authContext.auth
 
     const { searchParams } = new URL(request.url)
     const forceRefresh = searchParams.get('refresh') === 'true'
@@ -221,17 +209,11 @@ async function get(request: NextRequest) {
     const offerIdParam = searchParams.get('offerId')
     const offerId = offerIdParam ? parsePositiveIntegerOfferId(offerIdParam) ?? null : null
     const authTypeParam = searchParams.get('auth_type') as 'oauth' | 'service_account' | null
-    const configuredAuthType =
-      resolvedAuth.authType ??
-      (authContext.oauthCredentials?.refresh_token
-        ? 'oauth'
-        : authContext.serviceAccountConfig
-          ? 'service_account'
-          : undefined)
+    const configuredAuthType = resolveConfiguredGoogleAdsAuthType(authContext)
     const authType: 'oauth' | 'service_account' =
       authTypeParam === 'oauth' || authTypeParam === 'service_account'
         ? authTypeParam
-        : (configuredAuthType ?? 'oauth')
+        : configuredAuthType
 
     if (
       authTypeParam &&
