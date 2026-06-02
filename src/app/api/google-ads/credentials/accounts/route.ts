@@ -28,6 +28,7 @@ import {
   isGoogleAdsAccountRefreshInProgress,
   startGoogleAdsAccountAsyncRefreshHeartbeat,
   tryStartGoogleAdsAccountAsyncRefresh,
+  waitForGoogleAdsAccountAsyncRefreshToSettle,
 } from '@/lib/google-ads-accounts-async-refresh-state'
 import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
@@ -280,7 +281,7 @@ async function get(request: NextRequest) {
     const cacheStaleBeforeRefresh = cacheAgeMs > GOOGLE_ADS_ACCOUNTS_CACHE_MAX_AGE_MS
     console.log(`📦 缓存中有 ${cachedAccounts.length} 个账号`)
 
-	    const mapCachedAccounts = () => cachedAccounts.map(acc => {
+	    const mapCachedAccounts = (accounts: CachedAccount[] = cachedAccounts) => accounts.map(acc => {
 	      const identityVerificationOverdue = toNumber(acc.identity_verification_overdue, 0) === 1
 	      const status = acc.status || 'UNKNOWN'
 
@@ -308,40 +309,51 @@ async function get(request: NextRequest) {
     let refreshFailed = false
     let effectiveLastSyncAtIso: string | null = Number.isNaN(latestSyncAtMs) ? null : new Date(latestSyncAtMs).toISOString()
 
+    const syncKeyParams = {
+      userId,
+      authType,
+      serviceAccountId: scopedServiceAccountId,
+    }
+
+    const runAccountsSyncJob = async (startedAtMs: number): Promise<any[]> => {
+      const stopHeartbeat = startGoogleAdsAccountAsyncRefreshHeartbeat(
+        syncKey,
+        syncKeyParams,
+        startedAtMs
+      )
+      try {
+        const accounts = await syncAccountsFromAPI(
+          userId,
+          credentials,
+          authType,
+          serviceAccountConfig
+        )
+        await completeGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams, {
+          status: 'completed',
+        })
+        return accounts
+      } catch (err: any) {
+        await completeGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams, {
+          status: 'failed',
+          errorMessage: formatErrorMessage(err) || '同步失败',
+        })
+        throw err
+      } finally {
+        stopHeartbeat()
+      }
+    }
+
     if (forceRefresh && asyncRefresh) {
       // 异步刷新：立即返回缓存（或空列表），后台继续同步，前端可通过轮询拿到逐步写入的账号数据
       usedCache = true
       allAccounts = cachedAccounts.length > 0 ? mapCachedAccounts() : []
 
-      const syncKeyParams = {
-        userId,
-        authType,
-        serviceAccountId: scopedServiceAccountId,
-      }
-      const shouldRunSync = await tryStartGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams)
+      const startResult = await tryStartGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams)
 
-      if (shouldRunSync) {
-        const startedAtMs = Date.now()
-        void (async () => {
-          const stopHeartbeat = startGoogleAdsAccountAsyncRefreshHeartbeat(
-            syncKey,
-            syncKeyParams,
-            startedAtMs
-          )
-          try {
-            await syncAccountsFromAPI(userId, credentials, authType, serviceAccountConfig)
-            await completeGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams, {
-              status: 'completed',
-            })
-          } catch (err: any) {
-            await completeGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams, {
-              status: 'failed',
-              errorMessage: formatErrorMessage(err) || '同步失败',
-            })
-          } finally {
-            stopHeartbeat()
-          }
-        })()
+      if (startResult.started) {
+        void runAccountsSyncJob(startResult.startedAtMs).catch((err) => {
+          console.error('后台账号同步失败:', err)
+        })
       }
     } else if (!forceRefresh && cachedAccounts.length > 0) {
       // 使用缓存数据（即使缓存已过期也先返回，避免请求阻塞/网关超时；由 refresh=true 显式触发同步）
@@ -349,21 +361,47 @@ async function get(request: NextRequest) {
       console.log(`✅ 使用缓存的 ${cachedAccounts.length} 个账号 (ageMs=${cacheAgeMs})`)
       allAccounts = mapCachedAccounts()
     } else {
-      // 从 API 获取并同步（仅在 refresh=true 或无缓存时执行）
+      // 从 API 获取并同步（refresh=true 无 async，或无缓存）；与 async 路径共用互斥锁
       console.log(`🔄 从 Google Ads API 同步账号... (forceRefresh=${forceRefresh}, cacheStale=${cacheStaleBeforeRefresh})`)
-      try {
-        allAccounts = await syncAccountsFromAPI(userId, credentials, authType, serviceAccountConfig)
-        console.log(`✅ 同步完成，获取到 ${allAccounts.length} 个账号`)
-        effectiveLastSyncAtIso = new Date().toISOString()
-      } catch (err) {
-        // 降级：如果刷新失败但有缓存，允许继续使用缓存（避免发布流程完全阻塞）
-        if (cachedAccounts.length > 0) {
-          refreshFailed = true
+      const startResult = await tryStartGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams)
+
+      if (startResult.started) {
+        try {
+          allAccounts = await runAccountsSyncJob(startResult.startedAtMs)
+          console.log(`✅ 同步完成，获取到 ${allAccounts.length} 个账号`)
+          effectiveLastSyncAtIso = new Date().toISOString()
+        } catch (err) {
+          if (cachedAccounts.length > 0) {
+            refreshFailed = true
+            usedCache = true
+            console.warn(`⚠️ 同步账号失败，回退使用缓存账号列表:`, err)
+            allAccounts = mapCachedAccounts()
+          } else {
+            throw err
+          }
+        }
+      } else if (cachedAccounts.length > 0) {
+        usedCache = true
+        console.log(`⏳ 其它请求正在同步，使用缓存的 ${cachedAccounts.length} 个账号`)
+        allAccounts = mapCachedAccounts()
+      } else {
+        await waitForGoogleAdsAccountAsyncRefreshToSettle(syncKey, { timeoutMs: 120_000 })
+        const waitedAccounts = await getCachedAccounts({
+          userId,
+          authType,
+          serviceAccountId: scopedServiceAccountId,
+        })
+        if (waitedAccounts.length > 0) {
           usedCache = true
-          console.warn(`⚠️ 同步账号失败，回退使用缓存账号列表:`, err)
-          allAccounts = mapCachedAccounts()
+          allAccounts = mapCachedAccounts(waitedAccounts)
+          effectiveLastSyncAtIso = new Date().toISOString()
         } else {
-          throw err
+          const retryStart = await tryStartGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams)
+          if (!retryStart.started) {
+            throw new Error('账号同步正在进行中，请稍后重试')
+          }
+          allAccounts = await runAccountsSyncJob(retryStart.startedAtMs)
+          effectiveLastSyncAtIso = new Date().toISOString()
         }
       }
     }

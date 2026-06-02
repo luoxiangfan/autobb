@@ -107,7 +107,7 @@ describe('google-ads-accounts-async-refresh-state', () => {
 
     const acquired = await tryStartGoogleAdsAccountAsyncRefresh('7:oauth:', syncKeyParams)
 
-    expect(acquired).toBe(true)
+    expect(acquired).toEqual({ started: true, startedAtMs: expect.any(Number) })
     expect(redisFns.set).toHaveBeenCalledWith(
       expect.stringContaining('google-ads:accounts-async-refresh:7:oauth:'),
       expect.any(String),
@@ -124,7 +124,7 @@ describe('google-ads-accounts-async-refresh-state', () => {
 
     const acquired = await tryStartGoogleAdsAccountAsyncRefresh('7:oauth:', syncKeyParams)
 
-    expect(acquired).toBe(false)
+    expect(acquired).toEqual({ started: false })
     expect(redisFns.del).toHaveBeenCalledWith(
       expect.stringContaining('google-ads:accounts-async-refresh:7:oauth:')
     )
@@ -136,7 +136,7 @@ describe('google-ads-accounts-async-refresh-state', () => {
 
     const acquired = await tryStartGoogleAdsAccountAsyncRefresh('7:oauth:', syncKeyParams)
 
-    expect(acquired).toBe(true)
+    expect(acquired).toEqual({ started: true, startedAtMs: expect.any(Number) })
     const insertCall = dbFns.exec.mock.calls.find(([sql]) => String(sql).includes('INSERT'))
     const insertParams = insertCall?.[1] as unknown[] | undefined
     expect(insertParams?.[4]).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
@@ -156,7 +156,7 @@ describe('google-ads-accounts-async-refresh-state', () => {
 
     const acquired = await tryStartGoogleAdsAccountAsyncRefresh('7:oauth:', syncKeyParams)
 
-    expect(acquired).toBe(false)
+    expect(acquired).toEqual({ started: false })
     const lockInsert = dbFns.exec.mock.calls.find(([sql]) => String(sql).includes('INSERT'))
     expect(lockInsert).toBeUndefined()
   })
@@ -186,7 +186,7 @@ describe('google-ads-accounts-async-refresh-state', () => {
       expect.stringContaining('7:oauth:'),
       expect.stringContaining('"status":"completed"'),
       'EX',
-      expect.any(Number)
+      60
     )
     expect(dbFns.exec).toHaveBeenCalled()
   })

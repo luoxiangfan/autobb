@@ -57,6 +57,7 @@ import {
   invalidateGoogleAdsAuthContextCache,
   invalidateGoogleAdsAuthContextCacheForOwner,
   invalidateGoogleAdsAuthContextForCredentialUser,
+  resetGoogleAdsAuthContextGenerationForTests,
   resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthForAccount,
   resolveGoogleAdsApiAuthFromContext,
@@ -65,6 +66,7 @@ import {
 } from '@/lib/google-ads-auth-context'
 
 function clearGoogleAdsAuthContextTestCache(): void {
+  resetGoogleAdsAuthContextGenerationForTests()
   for (const userId of [1, 2, 7]) {
     invalidateGoogleAdsAuthContextCache(userId)
   }
@@ -223,6 +225,36 @@ describe('getGoogleAdsAuthContext', () => {
     const ctx = await getGoogleAdsAuthContext(2)
 
     expect(ctx.dualStack).toBe(false)
+  })
+
+  it('reloads fresh context when invalidated during in-flight load', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 2,
+      isShared: false,
+      assignment: null,
+    })
+    assignmentFns.isGoogleAdsAuthShared.mockReturnValue(false)
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue(null)
+    dbFns.queryOne.mockResolvedValue(undefined)
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+
+    let resolveSlow: (value: { refresh_token: string }) => void = () => {}
+    oauthFns.getGoogleAdsCredentials.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSlow = resolve
+        })
+    )
+
+    const loadPromise = getGoogleAdsAuthContext(2)
+    invalidateGoogleAdsAuthContextCache(2)
+    oauthFns.getGoogleAdsCredentials.mockResolvedValue({ refresh_token: 'fresh-rt' })
+    resolveSlow({ refresh_token: 'stale-rt' })
+
+    const ctx = await loadPromise
+
+    expect(ctx.oauthCredentials?.refresh_token).toBe('fresh-rt')
   })
 
   it('detects dualStack when oauth snapshot lacks refresh but owner DB has refresh and SA', async () => {

@@ -856,7 +856,7 @@ export default function SettingsPage() {
       }
       const authForRequest = resolved.authForRequest
 
-      const params = new URLSearchParams({ refresh: 'true' })
+      const params = new URLSearchParams({ refresh: 'true', async: 'true' })
       appendAccountsAuthToSearchParams(params, authForRequest)
       const url = `/api/google-ads/credentials/accounts?${params.toString()}`
 
@@ -892,7 +892,11 @@ export default function SettingsPage() {
       const data = await response.json()
       setPermissionError(null)  // 清除之前的权限错误
       setGoogleAdsAccounts(data.data.accounts || [])
-      toast.success(`找到${data.data.total}个可访问的 Google Ads 账户`)
+      if (data.data?.refreshInProgress) {
+        toast.message('账号正在后台同步，列表将逐步更新；也可稍后再次点击刷新')
+      } else {
+        toast.success(`找到${data.data.total}个可访问的 Google Ads 账户`)
+      }
     } catch (err: any) {
       toast.error(err.message || '获取失败')
       setShowGoogleAdsAccounts(false)

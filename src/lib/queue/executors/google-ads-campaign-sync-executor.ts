@@ -7,7 +7,7 @@
 
 import { getDatabase } from '../../db'
 import type { Task } from '../types'
-import { syncCampaignsFromGoogleAds } from '../../google-ads-campaign-sync'
+import { syncCampaignsFromGoogleAds, resolveGoogleAdsCampaignSyncLogOutcome } from '../../google-ads-campaign-sync'
 import { markStaleGoogleAdsCampaignSyncLogs } from '../../google-ads-campaign-sync-pipeline-status'
 import { createRiskAlert } from '../../risk-alerts'
 import { utcNowIso } from '../../db-datetime'
@@ -76,6 +76,7 @@ export async function executeGoogleAdsCampaignSyncTask(
       dryRun,
     })
 
+    const logOutcome = resolveGoogleAdsCampaignSyncLogOutcome(result)
     const duration = Date.now() - startTime
     const completedAt = utcNowIso()
 
@@ -87,9 +88,17 @@ export async function executeGoogleAdsCampaignSyncTask(
            SET status = ?, 
                record_count = ?, 
                duration_ms = ?, 
-               completed_at = ?
+               completed_at = ?,
+               error_message = ?
            WHERE id = ?`,
-          [result.errors.length > 0 ? 'partial' : 'success', result.syncedCount, duration, completedAt, syncLogId]
+          [
+            logOutcome.status,
+            result.syncedCount,
+            duration,
+            completedAt,
+            logOutcome.errorMessage,
+            syncLogId,
+          ]
         )
         console.log(`📝 [GoogleAdsSyncExecutor] 更新同步日志记录 ID: ${syncLogId}`)
       } catch (logError) {
@@ -99,10 +108,20 @@ export async function executeGoogleAdsCampaignSyncTask(
       // 兜底：如果没有获取到 ID，则插入新记录（保持原有逻辑）
       try {
         await db.exec(
-          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, created_at, is_manual)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [userId, 'google_ads_campaign_sync', result.errors.length > 0 ? 'partial' : 'success', 
-           result.syncedCount, duration, startedAt, completedAt, startedAt, isManualSync]
+          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, created_at, is_manual, error_message)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            userId,
+            'google_ads_campaign_sync',
+            logOutcome.status,
+            result.syncedCount,
+            duration,
+            startedAt,
+            completedAt,
+            startedAt,
+            isManualSync,
+            logOutcome.errorMessage,
+          ]
         )
         console.log(`📝 [GoogleAdsSyncExecutor] 同步日志已记录（fallback）：${taskId}`)
       } catch (logError) {
@@ -110,7 +129,7 @@ export async function executeGoogleAdsCampaignSyncTask(
       }
     }
 
-    // 3. 如果有错误，创建风险预警
+    // 3. 如果有错误或阻断性 warnings，创建风险预警
     if (result.errors.length > 0) {
       try {
         const errorMessage = result.errors
@@ -132,6 +151,22 @@ export async function executeGoogleAdsCampaignSyncTask(
         console.log(`⚠️  [GoogleAdsSyncExecutor] 风险预警已创建：${taskId}`)
       } catch (alertError) {
         console.error(`❌ [GoogleAdsSyncExecutor] 创建风险预警失败:`, alertError)
+      }
+    } else if (logOutcome.status === 'partial' && logOutcome.errorMessage) {
+      try {
+        await createRiskAlert(
+          userId,
+          'google_ads_sync_failed',
+          'warning',
+          'Google Ads 广告系列同步未执行',
+          logOutcome.errorMessage,
+          {
+            resourceType: 'campaign',
+            resourceId: undefined,
+          }
+        )
+      } catch (alertError) {
+        console.error(`❌ [GoogleAdsSyncExecutor] 创建同步阻断预警失败:`, alertError)
       }
     }
 

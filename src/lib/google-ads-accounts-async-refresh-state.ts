@@ -7,6 +7,12 @@ import { getRedisClient } from '@/lib/redis-client'
 /** 异步账号刷新状态 TTL（与 Redis key 过期、running  freshness 一致） */
 export const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_TTL_MS = 10 * 60 * 1000
 
+/** 已完成刷新在 Redis 中的短 TTL（running 互斥已结束） */
+export const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_COMPLETED_TTL_SEC = 60
+
+/** 失败状态保留更久，供 UI 展示 refreshError */
+export const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_FAILED_TTL_SEC = 600
+
 /** 长 sync 期间续期锁的间隔（须小于 TTL） */
 export const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_HEARTBEAT_MS = 3 * 60 * 1000
 
@@ -37,6 +43,16 @@ function buildRedisKey(syncKey: string): string {
 
 function redisTtlSeconds(): number {
   return Math.ceil(GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_TTL_MS / 1000)
+}
+
+function redisTtlSecondsForState(state: GoogleAdsAccountAsyncRefreshState): number {
+  if (state.status === 'completed') {
+    return GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_COMPLETED_TTL_SEC
+  }
+  if (state.status === 'failed') {
+    return GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_FAILED_TTL_SEC
+  }
+  return redisTtlSeconds()
 }
 
 /** SQLite 与 datetime('now') 可比较；PG 用 ISO */
@@ -118,7 +134,12 @@ async function writeStateToRedis(
   if (!client) return
 
   try {
-    await client.set(buildRedisKey(syncKey), serializeState(state), 'EX', redisTtlSeconds())
+    await client.set(
+      buildRedisKey(syncKey),
+      serializeState(state),
+      'EX',
+      redisTtlSecondsForState(state)
+    )
   } catch {
     // Redis 不可用时由 DB 兜底
   }
@@ -366,15 +387,42 @@ export function startGoogleAdsAccountAsyncRefreshHeartbeat(
   return () => clearInterval(timer)
 }
 
+export type GoogleAdsAccountAsyncRefreshStartResult =
+  | { started: true; startedAtMs: number }
+  | { started: false }
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+export async function waitForGoogleAdsAccountAsyncRefreshToSettle(
+  syncKey: string,
+  options?: { timeoutMs?: number; pollMs?: number }
+): Promise<GoogleAdsAccountAsyncRefreshState | null> {
+  const timeoutMs = options?.timeoutMs ?? GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_TTL_MS
+  const pollMs = options?.pollMs ?? 1000
+  const deadline = Date.now() + timeoutMs
+
+  while (Date.now() < deadline) {
+    const state = await getGoogleAdsAccountAsyncRefreshState(syncKey)
+    if (!isGoogleAdsAccountRefreshInProgress(state)) {
+      return state
+    }
+    await sleep(pollMs)
+  }
+
+  return getGoogleAdsAccountAsyncRefreshState(syncKey)
+}
+
 export async function tryStartGoogleAdsAccountAsyncRefresh(
   syncKey: string,
   params: GoogleAdsAccountSyncKeyParams
-): Promise<boolean> {
+): Promise<GoogleAdsAccountAsyncRefreshStartResult> {
   void cleanupStaleGoogleAdsAccountAsyncRefreshRows()
 
   const existing = await getGoogleAdsAccountAsyncRefreshState(syncKey)
   if (existing && isRunningStateFresh(existing)) {
-    return false
+    return { started: false }
   }
 
   const acquiredInRedis = await tryAcquireLockInRedis(syncKey)
@@ -387,14 +435,14 @@ export async function tryStartGoogleAdsAccountAsyncRefresh(
     }
     try {
       await writeStateToDb(syncKey, params, runningState)
-      return true
+      return { started: true, startedAtMs: nowMs }
     } catch {
       await releaseGoogleAdsAccountAsyncRefreshLock(syncKey)
     }
   } else if (getRedisClient()) {
     const afterRedisRace = await getGoogleAdsAccountAsyncRefreshState(syncKey)
     if (afterRedisRace && isRunningStateFresh(afterRedisRace)) {
-      return false
+      return { started: false }
     }
   }
 
@@ -406,8 +454,9 @@ export async function tryStartGoogleAdsAccountAsyncRefresh(
       startedAtMs: nowMs,
       updatedAtMs: nowMs,
     })
+    return { started: true, startedAtMs: nowMs }
   }
-  return acquiredInDb
+  return { started: false }
 }
 
 export async function completeGoogleAdsAccountAsyncRefresh(

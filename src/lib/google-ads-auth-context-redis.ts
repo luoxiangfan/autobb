@@ -5,6 +5,10 @@ import type { GoogleAdsAuthContext } from './google-ads-auth-context'
 /** 与进程内 authContextCache TTL 对齐 */
 export const GOOGLE_ADS_AUTH_CONTEXT_REDIS_CACHE_TTL_SEC = 2
 
+/** 进程内 auth-context 缓存 TTL（毫秒），须与 Redis EX 一致 */
+export const GOOGLE_ADS_AUTH_CONTEXT_CACHE_TTL_MS =
+  GOOGLE_ADS_AUTH_CONTEXT_REDIS_CACHE_TTL_SEC * 1000
+
 /** 跨实例 inflight 锁 TTL（加载应在数秒内完成） */
 export const GOOGLE_ADS_AUTH_CONTEXT_INFLIGHT_LOCK_TTL_SEC = 8
 

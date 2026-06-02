@@ -17,6 +17,8 @@ vi.mock('@/lib/redis-client', () => ({
 
 import { getRedisClient } from '@/lib/redis-client'
 import {
+  GOOGLE_ADS_AUTH_CONTEXT_CACHE_TTL_MS,
+  GOOGLE_ADS_AUTH_CONTEXT_REDIS_CACHE_TTL_SEC,
   invalidateGoogleAdsAuthContextRedis,
   readGoogleAdsAuthContextFromRedis,
   tryAcquireGoogleAdsAuthContextInflightLock,
@@ -42,6 +44,9 @@ describe('google-ads-auth-context-redis', () => {
   it('writes auth context JSON with short TTL', async () => {
     await writeGoogleAdsAuthContextToRedis(7, defaultOAuthAuthContext)
 
+    expect(GOOGLE_ADS_AUTH_CONTEXT_CACHE_TTL_MS).toBe(
+      GOOGLE_ADS_AUTH_CONTEXT_REDIS_CACHE_TTL_SEC * 1000
+    )
     expect(redisFns.set).toHaveBeenCalledWith(
       expect.stringContaining('google-ads:auth-context:7'),
       expect.any(String),
