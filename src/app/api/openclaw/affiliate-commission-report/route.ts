@@ -8,8 +8,8 @@ import {
   getAffiliateCommissionDateBounds,
   getAffiliateCommissionReport,
   parseRequestedUserIds,
+  resolveAffiliateCommissionPlatformFilter,
   resolveTargetUserIds,
-  type AffiliateCommissionReportPlatformFilter,
   type AffiliateCommissionReportViewMode,
 } from '@/lib/openclaw/affiliate-commission-raw-report'
 
@@ -25,12 +25,8 @@ function parseIsoDateQuery(value: string | null, fieldName: string): string | un
   return normalized
 }
 
-function parsePlatformFilter(value: string | null): AffiliateCommissionReportPlatformFilter {
-  const normalized = String(value || 'all').trim().toLowerCase()
-  if (normalized === 'yeahpromos' || normalized === 'partnerboost') {
-    return normalized
-  }
-  return 'all'
+function parsePlatformFilter(value: string | null) {
+  return resolveAffiliateCommissionPlatformFilter(value)
 }
 
 function parseViewMode(value: string | null): AffiliateCommissionReportViewMode {

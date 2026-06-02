@@ -16,7 +16,9 @@ import {
   getAffiliateCommissionReport,
   isSupportedAffiliateCommissionSource,
   normalizeReportDate,
+  resolveAffiliateCommissionPlatformFilter,
   resolveTargetUserIds,
+  filterAffiliatesWithRawCommissionSupport,
 } from './affiliate-commission-raw-report'
 
 describe('affiliate-commission-raw-report', () => {
@@ -361,5 +363,23 @@ describe('affiliate-commission-raw-report', () => {
     })
 
     expect(userIds).toEqual([2, 3])
+  })
+
+  it('maps affiliate display names to raw commission platform filters', () => {
+    expect(resolveAffiliateCommissionPlatformFilter('all')).toBe('all')
+    expect(resolveAffiliateCommissionPlatformFilter('YeahPromos')).toBe('yeahpromos')
+    expect(resolveAffiliateCommissionPlatformFilter('PartnerBoost')).toBe('partnerboost')
+    expect(resolveAffiliateCommissionPlatformFilter('CJ')).toBe('all')
+  })
+
+  it('keeps only affiliates with raw commission support', () => {
+    expect(filterAffiliatesWithRawCommissionSupport([
+      { name: 'YeahPromos', count: 3 },
+      { name: 'CJ', count: 1 },
+      { name: 'PartnerBoost', count: 2 },
+    ])).toEqual([
+      { name: 'YeahPromos', count: 3 },
+      { name: 'PartnerBoost', count: 2 },
+    ])
   })
 })

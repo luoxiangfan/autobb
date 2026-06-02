@@ -41,9 +41,13 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
 import { showError } from '@/lib/toast-utils'
 import { formatCurrency } from '@/lib/currency'
+import {
+  filterAffiliatesWithRawCommissionSupport,
+  getAffiliatePlatformDisplayName,
+  type AffiliateCommissionReportPlatformFilter,
+} from '@/lib/openclaw/affiliate-commission-raw-report'
 
 type ViewMode = 'brand' | 'date'
-type PlatformFilter = 'all' | 'yeahpromos' | 'partnerboost'
 
 type BrandSummary = {
   brandKey: string
@@ -70,7 +74,7 @@ type ReportPayload = {
   report: {
     startDate: string
     endDate: string
-    platform: PlatformFilter
+    platform: AffiliateCommissionReportPlatformFilter
     viewMode: ViewMode
     currency: string
     totalCommission: number
@@ -102,11 +106,6 @@ type DateDetailPayload = {
     userId?: number
     username?: string
   }>
-}
-
-const PLATFORM_LABELS: Record<'yeahpromos' | 'partnerboost', string> = {
-  yeahpromos: 'YeahPromos',
-  partnerboost: 'PartnerBoost',
 }
 
 const PLATFORM_BADGE_CLASS: Record<'yeahpromos' | 'partnerboost', string> = {
@@ -152,7 +151,9 @@ export default function AffiliateCommissionReportPage() {
   const [dateBounds, setDateBounds] = useState<DateBounds | null>(null)
   const [boundsLoading, setBoundsLoading] = useState(true)
   const dateRangeInitializedRef = useRef(false)
-  const [platform, setPlatform] = useState<PlatformFilter>('all')
+  const [affiliateFilter, setAffiliateFilter] = useState<string>('all')
+  const [affiliates, setAffiliates] = useState<Array<{ name: string; count: number }>>([])
+  const [affiliatesLoading, setAffiliatesLoading] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('brand')
   const [loading, setLoading] = useState(true)
   const [report, setReport] = useState<ReportPayload['report'] | null>(null)
@@ -175,6 +176,11 @@ export default function AffiliateCommissionReportPage() {
   const startDate = dateRange?.from ? formatYmd(dateRange.from) : ''
   const endDate = dateRange?.to ? formatYmd(dateRange.to) : startDate
 
+  const commissionAffiliates = useMemo(
+    () => filterAffiliatesWithRawCommissionSupport(affiliates),
+    [affiliates]
+  )
+
   const allUsersSelected = users.length > 0
     && selectedUserFilters.length === users.length
     && users.every((user) => selectedUserFilters.includes(String(user.id)))
@@ -186,12 +192,12 @@ export default function AffiliateCommissionReportPage() {
   const boundsQueryString = useMemo(() => {
     const params = new URLSearchParams()
     params.set('meta', 'bounds')
-    params.set('platform', platform)
+    params.set('platform', affiliateFilter)
     if (isAdmin && selectedUserFilters.length > 0 && !allUsersSelected) {
       params.set('userIds', selectedUserFilters.join(','))
     }
     return params.toString()
-  }, [platform, isAdmin, selectedUserFilters, allUsersSelected])
+  }, [affiliateFilter, isAdmin, selectedUserFilters, allUsersSelected])
 
   useEffect(() => {
     const checkAdminAndLoadUsers = async () => {
@@ -232,6 +238,33 @@ export default function AffiliateCommissionReportPage() {
 
     void checkAdminAndLoadUsers()
   }, [])
+
+  useEffect(() => {
+    const loadAffiliates = async () => {
+      setAffiliatesLoading(true)
+      try {
+        const response = await fetch('/api/campaigns/affiliate-platforms', { credentials: 'include' })
+        if (response.ok) {
+          const data = await response.json()
+          setAffiliates(data.affiliates || [])
+        }
+      } catch (error) {
+        console.error('加载联盟平台列表失败:', error)
+      } finally {
+        setAffiliatesLoading(false)
+      }
+    }
+
+    void loadAffiliates()
+  }, [])
+
+  useEffect(() => {
+    if (affiliateFilter === 'all') return
+    const stillAvailable = commissionAffiliates.some((affiliate) => affiliate.name === affiliateFilter)
+    if (!stillAvailable) {
+      setAffiliateFilter('all')
+    }
+  }, [affiliateFilter, commissionAffiliates])
 
   useEffect(() => {
     if (!accessResolved) return
@@ -279,24 +312,24 @@ export default function AffiliateCommissionReportPage() {
     const params = new URLSearchParams()
     if (startDate) params.set('startDate', startDate)
     if (endDate) params.set('endDate', endDate)
-    params.set('platform', platform)
+    params.set('platform', affiliateFilter)
     params.set('viewMode', viewMode)
     if (isAdmin && selectedUserFilters.length > 0 && !allUsersSelected) {
       params.set('userIds', selectedUserFilters.join(','))
     }
     return params.toString()
-  }, [startDate, endDate, platform, viewMode, isAdmin, selectedUserFilters, allUsersSelected])
+  }, [startDate, endDate, affiliateFilter, viewMode, isAdmin, selectedUserFilters, allUsersSelected])
 
   const buildScopedQueryString = useCallback((extra: Record<string, string>) => {
     const params = new URLSearchParams(extra)
     if (startDate) params.set('startDate', startDate)
     if (endDate) params.set('endDate', endDate)
-    params.set('platform', platform)
+    params.set('platform', affiliateFilter)
     if (isAdmin && selectedUserFilters.length > 0 && !allUsersSelected) {
       params.set('userIds', selectedUserFilters.join(','))
     }
     return params.toString()
-  }, [startDate, endDate, platform, isAdmin, selectedUserFilters, allUsersSelected])
+  }, [startDate, endDate, affiliateFilter, isAdmin, selectedUserFilters, allUsersSelected])
 
   const loadReport = useCallback(async () => {
     if (!startDate || !endDate || !accessResolved || boundsLoading) return
@@ -348,8 +381,8 @@ export default function AffiliateCommissionReportPage() {
     setDetailType('brand')
     setDetailTitle(
       showUserScope && item.username
-        ? `${item.username} · ${item.brandName} · ${PLATFORM_LABELS[item.platform]}`
-        : `${item.brandName} · ${PLATFORM_LABELS[item.platform]}`
+        ? `${item.username} · ${item.brandName} · ${getAffiliatePlatformDisplayName(item.platform)}`
+        : `${item.brandName} · ${getAffiliatePlatformDisplayName(item.platform)}`
     )
     setBrandDetailRows([])
     setDateDetailRows([])
@@ -464,7 +497,7 @@ export default function AffiliateCommissionReportPage() {
                       </Badge>
                     )}
                     <Badge variant="secondary" className="border border-violet-200/80 bg-white/70 text-violet-800">
-                      {platform === 'all' ? '全部联盟' : PLATFORM_LABELS[platform]}
+                      {affiliateFilter === 'all' ? '全部联盟' : affiliateFilter}
                     </Badge>
                     <Badge variant="secondary" className="border border-violet-200/80 bg-white/70 text-violet-800">
                       {isAdmin
@@ -533,14 +566,21 @@ export default function AffiliateCommissionReportPage() {
                   <LayoutGrid className="h-3.5 w-3.5" />
                   联盟
                 </div>
-                <Select value={platform} onValueChange={(value) => setPlatform(value as PlatformFilter)}>
+                <Select
+                  value={affiliateFilter}
+                  onValueChange={setAffiliateFilter}
+                  disabled={affiliatesLoading}
+                >
                   <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="选择联盟" />
+                    <SelectValue placeholder={affiliatesLoading ? '加载联盟...' : '选择联盟'} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">全部联盟</SelectItem>
-                    <SelectItem value="yeahpromos">YeahPromos</SelectItem>
-                    <SelectItem value="partnerboost">PartnerBoost</SelectItem>
+                    {commissionAffiliates.map((affiliate) => (
+                      <SelectItem key={affiliate.name} value={affiliate.name}>
+                        {affiliate.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -716,7 +756,7 @@ export default function AffiliateCommissionReportPage() {
                         <TableCell className="font-medium">{item.brandName}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className={PLATFORM_BADGE_CLASS[item.platform]}>
-                            {PLATFORM_LABELS[item.platform]}
+                            {getAffiliatePlatformDisplayName(item.platform)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-medium tabular-nums">
@@ -841,7 +881,7 @@ export default function AffiliateCommissionReportPage() {
                       <TableCell>{row.brandName}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={PLATFORM_BADGE_CLASS[row.platform]}>
-                          {PLATFORM_LABELS[row.platform]}
+                          {getAffiliatePlatformDisplayName(row.platform)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">{formatCurrency(row.commission, currency)}</TableCell>
