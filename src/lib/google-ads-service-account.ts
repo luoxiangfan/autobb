@@ -1,4 +1,5 @@
 import { getDatabase } from './db'
+import { boolCondition } from './db-helpers'
 import { decrypt } from './crypto'
 import { getGoogleAdsClient } from './google-ads-api'
 import {
@@ -73,10 +74,11 @@ export async function getServiceAccountConfig(
 export async function listServiceAccounts(userId: number) {
   const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
   const db = await getDatabase()
+  const isActiveCondition = boolCondition('is_active', true, db.type)
   const accounts = await db.query(`
     SELECT id, name, mcc_customer_id, service_account_email, is_active, created_at
     FROM google_ads_service_accounts
-    WHERE user_id = ?
+    WHERE user_id = ? AND ${isActiveCondition}
     ORDER BY created_at DESC
   `, [ownerUserId])
 

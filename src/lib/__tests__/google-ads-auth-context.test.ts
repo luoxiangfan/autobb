@@ -162,11 +162,17 @@ describe('getGoogleAdsAuthContext', () => {
     oauthFns.getGoogleAdsCredentials.mockResolvedValue({ refresh_token: 'rt' })
     oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt' })
     dbFns.queryOne.mockResolvedValue({ id: 'sa-1' })
-    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue({ id: 'sa-1', name: 'Dual SA' })
 
     const ctx = await getGoogleAdsAuthContext(2)
 
     expect(ctx.dualStack).toBe(true)
+    expect(ctx.serviceAccountConfig).toEqual({ id: 'sa-1', name: 'Dual SA' })
+    expect(serviceAccountFns.getServiceAccountConfig).toHaveBeenCalledWith(
+      2,
+      undefined,
+      expect.objectContaining({ ownerUserId: 2 })
+    )
   })
 
   it('sets dualStack false when owner has only oauth', async () => {
@@ -206,11 +212,12 @@ describe('getGoogleAdsAuthContext', () => {
     oauthFns.getGoogleAdsCredentials.mockResolvedValue(null)
     oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt' })
     dbFns.queryOne.mockResolvedValue({ id: 'sa-1' })
-    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue({ id: 'sa-1', name: 'Dual SA' })
 
     const ctx = await getGoogleAdsAuthContext(2)
 
     expect(ctx.dualStack).toBe(true)
+    expect(ctx.serviceAccountConfig).toEqual({ id: 'sa-1', name: 'Dual SA' })
     expect(oauthFns.getGoogleAdsCredentialsRaw).toHaveBeenCalled()
   })
 })

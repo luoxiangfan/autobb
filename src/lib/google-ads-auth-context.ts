@@ -105,6 +105,11 @@ async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthCo
       auth.authType === 'oauth' && oauthCredentials?.refresh_token ? true : undefined,
   })
 
+  // 双栈清理 UI 需同时展示 OAuth / SA 元数据；仍禁止 API 调用（dualStack 门禁不变）
+  if (dualStack && !serviceAccountConfig) {
+    serviceAccountConfig = await getServiceAccountConfig(userId, undefined, resolution)
+  }
+
   const partialCtx = {
     userId,
     ownerUserId,
@@ -235,23 +240,38 @@ export function hasConfiguredGoogleAdsAuthFromContext(ctx: GoogleAdsAuthContext)
   return Boolean(resolveEffectiveServiceAccountId(undefined, ctx))
 }
 
+type GoogleAdsAuthTypeHintContext = Pick<
+  GoogleAdsAuthContext,
+  'auth' | 'oauthCredentials' | 'serviceAccountConfig' | 'assignment'
+>
+
+/** 从 auth / 凭证 / assignment 推断 authType（不含 dualStack / hasConfigured 门禁） */
+function resolveGoogleAdsAuthTypeFromCredentialHints(
+  ctx: GoogleAdsAuthTypeHintContext,
+  options?: { unconfiguredDefault?: 'oauth' | null }
+): 'oauth' | 'service_account' | null {
+  if (ctx.auth.authType) {
+    return ctx.auth.authType
+  }
+  if (ctx.oauthCredentials?.refresh_token) {
+    return 'oauth'
+  }
+  if (ctx.serviceAccountConfig) {
+    return 'service_account'
+  }
+  if (ctx.assignment?.authType) {
+    return ctx.assignment.authType
+  }
+  return options?.unconfiguredDefault ?? null
+}
+
 /**
  * 凭证状态 / 管理端展示用 authType：双栈时不返回 getUserAuthType 偏好的 oauth，避免 UI 误判为已选 OAuth。
  */
 export function resolveConfiguredGoogleAdsAuthType(
-  ctx: Pick<
-    GoogleAdsAuthContext,
-    'auth' | 'oauthCredentials' | 'serviceAccountConfig' | 'assignment'
-  >
+  ctx: GoogleAdsAuthTypeHintContext
 ): 'oauth' | 'service_account' {
-  return (
-    ctx.auth.authType ??
-    (ctx.oauthCredentials?.refresh_token
-      ? 'oauth'
-      : ctx.serviceAccountConfig
-        ? 'service_account'
-        : ctx.assignment?.authType ?? 'oauth')
-  )
+  return resolveGoogleAdsAuthTypeFromCredentialHints(ctx, { unconfiguredDefault: 'oauth' }) ?? 'oauth'
 }
 
 export function resolveGoogleAdsDisplayAuthType(
@@ -263,14 +283,7 @@ export function resolveGoogleAdsDisplayAuthType(
   if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
     return null
   }
-  return (
-    ctx.auth.authType ??
-    (ctx.oauthCredentials?.refresh_token
-      ? 'oauth'
-      : ctx.serviceAccountConfig
-        ? 'service_account'
-        : null)
-  )
+  return resolveGoogleAdsAuthTypeFromCredentialHints(ctx, { unconfiguredDefault: null })
 }
 
 export function getServiceAccountMccFromContext(ctx: GoogleAdsAuthContext): string | undefined {

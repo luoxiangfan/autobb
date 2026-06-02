@@ -134,8 +134,14 @@ export async function GET(request: NextRequest) {
         success: true,
         data: {
           hasCredentials: false,
-          hasRefreshToken: false,
-          hasServiceAccount: false,
+          hasRefreshToken: statusFields.hasRefreshToken,
+          hasServiceAccount: statusFields.hasServiceAccount,
+          ...(statusFields.serviceAccountId
+            ? { serviceAccountId: statusFields.serviceAccountId }
+            : {}),
+          ...(statusFields.serviceAccountName
+            ? { serviceAccountName: statusFields.serviceAccountName }
+            : {}),
           ...(displayAuthType != null ? { authType: displayAuthType } : {}),
           assignmentMode: assignment?.assignmentMode ?? 'own',
           canModify: ctx.canModify,

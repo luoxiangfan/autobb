@@ -38,6 +38,27 @@ describe('GET /api/google-ads/service-account', () => {
 
   it('returns empty list when effective auth is not service_account', async () => {
     authContextFns.resolveGoogleAdsDisplayAuthType.mockReturnValue('oauth')
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      userId: 2,
+      dualStack: false,
+      canModify: true,
+    })
+
+    const response = await GET(new NextRequest('http://localhost/api/google-ads/service-account'))
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.accounts).toEqual([])
+    expect(listServiceAccountsFn).not.toHaveBeenCalled()
+  })
+
+  it('returns empty list for dual-stack shared user without modify access', async () => {
+    authContextFns.resolveGoogleAdsDisplayAuthType.mockReturnValue(null)
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      userId: 2,
+      dualStack: true,
+      canModify: false,
+    })
 
     const response = await GET(new NextRequest('http://localhost/api/google-ads/service-account'))
     const body = await response.json()
@@ -49,6 +70,11 @@ describe('GET /api/google-ads/service-account', () => {
 
   it('lists service accounts when effective auth is service_account', async () => {
     authContextFns.resolveGoogleAdsDisplayAuthType.mockReturnValue('service_account')
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      userId: 2,
+      dualStack: false,
+      canModify: true,
+    })
     listServiceAccountsFn.mockResolvedValue([
       { id: 'sa-admin', name: 'Admin SA', mcc_customer_id: '111', service_account_email: 'sa@test.com' },
     ])
@@ -60,5 +86,25 @@ describe('GET /api/google-ads/service-account', () => {
     expect(listServiceAccountsFn).toHaveBeenCalledWith(2)
     expect(body.accounts).toHaveLength(1)
     expect(body.accounts[0].id).toBe('sa-admin')
+  })
+
+  it('lists service accounts for dual-stack owner cleanup when canModify', async () => {
+    authContextFns.resolveGoogleAdsDisplayAuthType.mockReturnValue(null)
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      userId: 2,
+      dualStack: true,
+      canModify: true,
+    })
+    listServiceAccountsFn.mockResolvedValue([
+      { id: 'sa-dual', name: 'Dual SA', mcc_customer_id: '111', service_account_email: 'sa@test.com' },
+    ])
+
+    const response = await GET(new NextRequest('http://localhost/api/google-ads/service-account'))
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(listServiceAccountsFn).toHaveBeenCalledWith(2)
+    expect(body.accounts).toHaveLength(1)
+    expect(body.accounts[0].id).toBe('sa-dual')
   })
 })

@@ -347,28 +347,23 @@ export async function syncCampaignsFromGoogleAds(
     
     // 🔧 构建 customer_id 过滤条件
     let customerIdsFilter = ''
+    const accountQueryParams: unknown[] = [userId]
+
     if (mccCustomerIds.length > 0) {
-      // 如果分配了 MCC，只获取这些 MCC 下的 customer_id
-      // 需要查询 google_ads_accounts 表中 parent_mcc_id 在 MCC 列表中的账户
       const mccPlaceholders = mccCustomerIds.map(() => '?').join(',')
       customerIdsFilter = `AND parent_mcc_id IN (${mccPlaceholders})`
+      accountQueryParams.push(...mccCustomerIds)
     } else {
-      // 如果没有分配 MCC，使用硬编码的 customerIds（向后兼容）
-      let customerIds: string = ','
-      if (userId == 2) {
-        customerIds = `'3647422686','3530335491'`
-      }
-      if (userId == 3) {
-        customerIds = `'3087435596','8642496427','8623761154'`
-      }
-      customerIdsFilter = `AND customer_id IN (${customerIds})`
+      console.log(
+        `[GoogleAds Sync] User ${userId} has no MCC assignments; syncing all active linked accounts`
+      )
     }
-    
+
     const accounts = await db.query(
       `SELECT id, customer_id, account_name, parent_mcc_id, auth_type, service_account_id FROM google_ads_accounts
        WHERE user_id = ? AND ${isActiveCondition} AND ${isManagerCondition} AND ${isDeletedCondition} AND status = 'ENABLED' AND customer_id IS NOT NULL AND customer_id != '' ${customerIdsFilter}
        ORDER BY id`,
-      [userId, ...(mccCustomerIds.length > 0 ? mccCustomerIds : [])]
+      accountQueryParams
     ) as Array<{
       id: number
       customer_id: string

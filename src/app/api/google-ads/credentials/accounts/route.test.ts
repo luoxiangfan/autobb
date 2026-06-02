@@ -72,6 +72,10 @@ vi.mock('@/lib/api-performance', () => ({
   withPerformanceMonitoring: (handler: unknown) => handler,
 }))
 
+vi.mock('@/lib/redis-client', () => ({
+  getRedisClient: vi.fn(() => null),
+}))
+
 const oauthCredentialsFull = {
   refresh_token: 'oauth-refresh-token',
   login_customer_id: '9988776655',
@@ -115,11 +119,19 @@ function mockCachedAccountsQuery() {
   })
 }
 
+function mockAsyncRefreshDb() {
+  dbFns.queryOne.mockImplementation(async (sql: string) => {
+    if (sql.includes('google_ads_accounts_async_refresh_state')) {
+      return undefined
+    }
+    return undefined
+  })
+  dbFns.exec.mockResolvedValue({ changes: 1 })
+}
+
 describe('GET /api/google-ads/credentials/accounts', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    delete (globalThis as { __googleAdsAccountSyncStates?: Map<string, unknown> })
-      .__googleAdsAccountSyncStates
 
     authFns.verifyAuth.mockResolvedValue({
       authenticated: true,
@@ -133,7 +145,7 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     })
 
     mockCachedAccountsQuery()
-    dbFns.queryOne.mockResolvedValue(undefined)
+    mockAsyncRefreshDb()
     dbFns.exec.mockResolvedValue(undefined)
     serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
     syncFns.syncAccountsFromAPI.mockResolvedValue([])

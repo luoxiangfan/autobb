@@ -21,6 +21,13 @@ import { syncAccountsFromAPI } from '@/lib/google-ads-accounts-sync'
 import { getDatabase } from '@/lib/db'
 import { toNumber } from '@/lib/utils'
 import { withPerformanceMonitoring } from '@/lib/api-performance'
+import {
+  buildGoogleAdsAccountSyncKey,
+  completeGoogleAdsAccountAsyncRefresh,
+  getGoogleAdsAccountAsyncRefreshState,
+  isGoogleAdsAccountRefreshInProgress,
+  tryStartGoogleAdsAccountAsyncRefresh,
+} from '@/lib/google-ads-accounts-async-refresh-state'
 import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 // 该接口返回用户私有数据（账号列表/关联Offer），必须禁用任何层面的静态缓存
@@ -37,44 +44,6 @@ function jsonNoStore(body: any, init?: { status?: number }) {
 }
 
 const IS_DELETED_TRUE = 'IS_DELETED_TRUE'
-
-// ==========================
-// Async refresh state (memory)
-// ==========================
-// 用于“先返回缓存/部分结果、后台继续同步”的体验优化。
-// 注意：这是进程内状态，适用于单实例或粘性会话；多实例场景需要改为DB/Redis存储。
-type AccountSyncState = {
-  status: 'running' | 'completed' | 'failed'
-  startedAtMs: number
-  updatedAtMs: number
-  errorMessage?: string
-}
-
-const ACCOUNT_SYNC_STATE_TTL_MS = 10 * 60 * 1000
-
-function getAccountSyncStateStore(): Map<string, AccountSyncState> {
-  const g = globalThis as any
-  if (!g.__googleAdsAccountSyncStates) {
-    g.__googleAdsAccountSyncStates = new Map<string, AccountSyncState>()
-  }
-  return g.__googleAdsAccountSyncStates as Map<string, AccountSyncState>
-}
-
-function cleanupExpiredSyncStates(store: Map<string, AccountSyncState>) {
-  const now = Date.now()
-  for (const [key, state] of store.entries()) {
-    const age = now - (state.updatedAtMs || state.startedAtMs)
-    if (age > ACCOUNT_SYNC_STATE_TTL_MS) store.delete(key)
-  }
-}
-
-function buildSyncKey(params: {
-  userId: number
-  authType: 'oauth' | 'service_account'
-  serviceAccountId?: string | null
-}): string {
-  return `${params.userId}:${params.authType}:${params.serviceAccountId || ''}`
-}
 
 function parseDbTimestampToMs(value: string | null | undefined) {
   if (!value) return NaN
@@ -293,15 +262,13 @@ async function get(request: NextRequest) {
 
     let allAccounts: any[]
 
-    const syncStore = getAccountSyncStateStore()
-    cleanupExpiredSyncStates(syncStore)
-    const syncKey = buildSyncKey({
+    const syncKey = buildGoogleAdsAccountSyncKey({
       userId,
       authType,
       serviceAccountId: scopedServiceAccountId,
     })
-    const syncState = syncStore.get(syncKey)
-    const refreshInProgress = syncState?.status === 'running'
+    const syncState = await getGoogleAdsAccountAsyncRefreshState(syncKey)
+    const refreshInProgress = isGoogleAdsAccountRefreshInProgress(syncState)
 
     const cachedAccounts = await getCachedAccounts({
       userId,
@@ -348,29 +315,28 @@ async function get(request: NextRequest) {
       allAccounts = cachedAccounts.length > 0 ? mapCachedAccounts() : []
 
       if (!refreshInProgress) {
-        syncStore.set(syncKey, {
-          status: 'running',
-          startedAtMs: Date.now(),
-          updatedAtMs: Date.now(),
-        })
+        const syncKeyParams = {
+          userId,
+          authType,
+          serviceAccountId: scopedServiceAccountId,
+        }
+        const shouldRunSync = await tryStartGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams)
 
-        void (async () => {
-          try {
-            await syncAccountsFromAPI(userId, credentials, authType, serviceAccountConfig)
-            syncStore.set(syncKey, {
-              status: 'completed',
-              startedAtMs: syncStore.get(syncKey)?.startedAtMs || Date.now(),
-              updatedAtMs: Date.now(),
-            })
-          } catch (err: any) {
-            syncStore.set(syncKey, {
-              status: 'failed',
-              startedAtMs: syncStore.get(syncKey)?.startedAtMs || Date.now(),
-              updatedAtMs: Date.now(),
-              errorMessage: formatErrorMessage(err) || '同步失败',
-            })
-          }
-        })()
+        if (shouldRunSync) {
+          void (async () => {
+            try {
+              await syncAccountsFromAPI(userId, credentials, authType, serviceAccountConfig)
+              await completeGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams, {
+                status: 'completed',
+              })
+            } catch (err: any) {
+              await completeGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams, {
+                status: 'failed',
+                errorMessage: formatErrorMessage(err) || '同步失败',
+              })
+            }
+          })()
+        }
       }
     } else if (!forceRefresh && cachedAccounts.length > 0) {
       // 使用缓存数据（即使缓存已过期也先返回，避免请求阻塞/网关超时；由 refresh=true 显式触发同步）
@@ -579,7 +545,7 @@ async function get(request: NextRequest) {
       console.log(`🔧 filterByUserMcc=true (管理员): 过滤后剩余 ${finalAccounts.length} 个非 MCC 账号`)
     }
 
-    const finalSyncState = syncStore.get(syncKey)
+    const finalSyncState = await getGoogleAdsAccountAsyncRefreshState(syncKey)
 
     return jsonNoStore({
       success: true,
@@ -589,7 +555,7 @@ async function get(request: NextRequest) {
         cached: usedCache,
         cacheStale: usedCache ? cacheStaleBeforeRefresh : false,
         refreshFailed,
-        refreshInProgress: finalSyncState?.status === 'running',
+        refreshInProgress: isGoogleAdsAccountRefreshInProgress(finalSyncState),
         refreshError: finalSyncState?.status === 'failed' ? (finalSyncState.errorMessage || null) : null,
         refreshStartedAt: finalSyncState?.startedAtMs ? new Date(finalSyncState.startedAtMs).toISOString() : null,
         lastSyncAt: effectiveLastSyncAtIso,

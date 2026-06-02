@@ -66,7 +66,9 @@ export async function GET(req: NextRequest) {
   }
 
   const ctx = await getGoogleAdsAuthContext(user.id)
-  if (resolveGoogleAdsDisplayAuthType(ctx) !== 'service_account') {
+  const displayAuthType = resolveGoogleAdsDisplayAuthType(ctx)
+  const allowListForDualStackCleanup = ctx.dualStack && ctx.canModify
+  if (displayAuthType !== 'service_account' && !allowListForDualStackCleanup) {
     return NextResponse.json({ accounts: [] })
   }
 
