@@ -621,6 +621,36 @@ describe('resolveGoogleAdsApiAuthType', () => {
       )
     ).toThrow(/服务账号认证/)
   })
+
+  it('infers oauth from credential hints when auth.authType is empty', async () => {
+    const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads-auth-context')
+    expect(
+      resolveGoogleAdsApiAuthType(
+        {},
+        {
+          ...defaultOAuthAuthContext,
+          auth: {},
+          oauthCredentials: { refresh_token: 'rt' },
+          serviceAccountConfig: null,
+        } as any
+      )
+    ).toBe('oauth')
+  })
+
+  it('infers service_account from credential hints when auth.authType is empty', async () => {
+    const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads-auth-context')
+    expect(
+      resolveGoogleAdsApiAuthType(
+        {},
+        {
+          ...defaultOAuthAuthContext,
+          auth: {},
+          oauthCredentials: null,
+          serviceAccountConfig: { id: 'sa-1', mccCustomerId: '111', developerToken: 'tok' },
+        } as any
+      )
+    ).toBe('service_account')
+  })
 })
 
 describe('resolveGoogleAdsApiAuthFromContext', () => {

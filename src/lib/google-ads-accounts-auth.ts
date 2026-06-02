@@ -76,6 +76,17 @@ export {
 } from './google-ads-keyword-planner-auth'
 
 export {
+  assertGoogleAdsAuthTypeMatchesContext,
+  resolveGoogleAdsApiAuthType,
+} from './google-ads-auth-context'
+
+export {
+  oauthGetCustomerParams,
+  type GoogleAdsCustomerCredentialParams,
+  type OAuthGetCustomerWithCredentialsParams,
+} from './google-ads-oauth-customer-params'
+
+export {
   createCreativeGenerationAuthCache,
   validateGoogleAdsConfigForCreativeGeneration,
 } from './google-ads-creative-generation-auth'

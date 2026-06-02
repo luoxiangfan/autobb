@@ -478,7 +478,7 @@ export async function getKeywordSearchVolumes(
           keywordBatches.push(needApiKeywords.slice(i, i + BATCH_SIZE))
         }
 
-        console.log(`[KeywordPlanner] Processing ${needApiKeywords.length} keywords in ${keywordBatches.length} batches (auth: ${config.authType || 'oauth'})`)
+        console.log(`[KeywordPlanner] Processing ${needApiKeywords.length} keywords in ${keywordBatches.length} batches (auth: ${config.authType ?? 'unknown'})`)
 
         // API追踪设置
         const apiStartTime = Date.now()
@@ -531,7 +531,7 @@ export async function getKeywordSearchVolumes(
             apiSuccess = true // 标记为成功，避免记录为API错误
           } else {
             // 非 test：允许进行真实 Historical Metrics 探测（包含 basic/standard 以及 explorer 历史误标场景）
-            console.log(`[KeywordPlanner] Developer Token 访问级别: ${apiAccessLevel || 'unknown'}, 认证方式: ${config.authType || 'oauth'}`)
+            console.log(`[KeywordPlanner] Developer Token 访问级别: ${apiAccessLevel || 'unknown'}, 认证方式: ${config.authType ?? 'unknown'}`)
             if (apiAccessLevel === 'explorer') {
               console.warn('[KeywordPlanner] api_access_level=explorer，先执行 Historical Metrics 实测；若权限不足再自动降级 no-volume')
             }

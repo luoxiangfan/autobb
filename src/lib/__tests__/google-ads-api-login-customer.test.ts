@@ -12,6 +12,9 @@ const authContextFns = vi.hoisted(() => ({
 const serviceAccountFns = vi.hoisted(() => ({
   getUnifiedGoogleAdsClient: vi.fn(),
 }))
+const pythonAdsFns = vi.hoisted(() => ({
+  executeGAQLQueryPython: vi.fn(),
+}))
 const updateGoogleAdsAccount = vi.fn()
 
 vi.mock('google-ads-api', () => {
@@ -58,6 +61,10 @@ vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
 
 vi.mock('@/lib/google-ads-service-account', () => ({
   getUnifiedGoogleAdsClient: serviceAccountFns.getUnifiedGoogleAdsClient,
+}))
+
+vi.mock('@/lib/python-ads-client', () => ({
+  executeGAQLQueryPython: pythonAdsFns.executeGAQLQueryPython,
 }))
 
 describe('getCustomerWithCredentials login_customer_id fallback', () => {
@@ -214,6 +221,38 @@ describe('getCustomerWithCredentials login_customer_id fallback', () => {
   })
 })
 
+describe('resolveGoogleAdsApiCallAuth', () => {
+  let resolveGoogleAdsApiCallAuth: typeof import('@/lib/google-ads-api').resolveGoogleAdsApiCallAuth
+
+  beforeAll(async () => {
+    ;({ resolveGoogleAdsApiCallAuth } = await import('@/lib/google-ads-api'))
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns authType and authContext in one pass', async () => {
+    const saContext = {
+      dualStack: false,
+      auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+      oauthCredentials: null,
+      serviceAccountConfig: { id: 'sa-1' },
+    }
+    authContextFns.assertGoogleAdsAuthReadyForApi.mockResolvedValue(saContext)
+
+    await expect(
+      resolveGoogleAdsApiCallAuth({
+        userId: 1,
+      })
+    ).resolves.toEqual({
+      authType: 'service_account',
+      authContext: saContext,
+    })
+    expect(authContextFns.assertGoogleAdsAuthReadyForApi).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('resolveAuthTypeForGoogleAdsApiCall', () => {
   let resolveAuthTypeForGoogleAdsApiCall: typeof import('@/lib/google-ads-api').resolveAuthTypeForGoogleAdsApiCall
 
@@ -258,5 +297,73 @@ describe('resolveAuthTypeForGoogleAdsApiCall', () => {
         authContext: saContext as any,
       })
     ).rejects.toThrow(/服务账号认证/)
+  })
+})
+
+describe('findGoogleAdsCampaignByName auth reuse', () => {
+  let findGoogleAdsCampaignByName: typeof import('@/lib/google-ads-api').findGoogleAdsCampaignByName
+
+  beforeAll(async () => {
+    ;({ findGoogleAdsCampaignByName } = await import('@/lib/google-ads-api'))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    pythonAdsFns.executeGAQLQueryPython.mockResolvedValue({ results: [] })
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        access_token: 'new-access-token',
+        expires_in: 3600,
+      }),
+    })))
+  })
+
+  it('infers service_account without explicit authType when authContext is SA', async () => {
+    const saContext = {
+      dualStack: false,
+      auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+      oauthCredentials: null,
+      serviceAccountConfig: { id: 'sa-1' },
+    }
+
+    await findGoogleAdsCampaignByName({
+      customerId: '123',
+      refreshToken: '',
+      campaignName: 'Test Campaign',
+      userId: 1,
+      serviceAccountId: 'sa-1',
+      authContext: saContext as any,
+    })
+
+    expect(pythonAdsFns.executeGAQLQueryPython).toHaveBeenCalled()
+    expect(authContextFns.assertGoogleAdsAuthReadyForApi).not.toHaveBeenCalled()
+  })
+
+  it('does not reload auth-context when authContext is provided', async () => {
+    const oauthContext = {
+      dualStack: false,
+      auth: { authType: 'oauth' },
+      oauthCredentials: { refresh_token: 'rt', login_customer_id: '5010618892' },
+    }
+    const queryFn = vi.fn().mockResolvedValue([])
+
+    await findGoogleAdsCampaignByName({
+      customerId: '3178223819',
+      refreshToken: 'refresh-token',
+      campaignName: 'Existing',
+      userId: 1,
+      authType: 'oauth',
+      authContext: oauthContext as any,
+      customer: { query: queryFn } as any,
+    })
+
+    expect(queryFn).toHaveBeenCalled()
+    expect(authContextFns.assertGoogleAdsAuthReadyForApi).not.toHaveBeenCalled()
+    expect(accountsAuthFns.resolveOAuthClientCredentialsForUser).not.toHaveBeenCalled()
   })
 })

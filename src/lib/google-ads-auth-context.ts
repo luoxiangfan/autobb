@@ -417,6 +417,10 @@ export function resolveGoogleAdsApiAuthType(
   if (ctx.auth.authType === 'oauth') {
     return 'oauth'
   }
+  const fromHints = resolveGoogleAdsAuthTypeFromCredentialHints(ctx, { unconfiguredDefault: null })
+  if (fromHints) {
+    return fromHints
+  }
   throw new Error(
     '无法推断 Google Ads 认证方式：请先通过 prepareGoogleAdsApiCallForLinkedAccount 解析 apiAuth，并传入 authType'
   )

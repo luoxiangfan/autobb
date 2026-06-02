@@ -139,6 +139,7 @@ export async function upsertAccount(userId: number, account: {
       account.status,
       account.account_balance ?? null,
       account.parent_mcc || null,
+      // 同步元数据默认 oauth；非 API 认证切换，实际调用须走 prepare / auth-context
       authScope?.authType || 'oauth',
       authScope?.serviceAccountId || null,
       account.identity_verification_program_status ?? null,
@@ -177,6 +178,7 @@ export async function upsertAccount(userId: number, account: {
       account.status,
       account.account_balance ?? null,
       account.parent_mcc || null,
+      // 同步元数据默认 oauth；非 API 认证切换，实际调用须走 prepare / auth-context
       authScope?.authType || 'oauth',
       authScope?.serviceAccountId || null,
       account.identity_verification_program_status ?? null,
