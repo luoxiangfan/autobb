@@ -20,6 +20,7 @@ import {
 } from '../../google-ads-campaign-sync-pipeline-status'
 import { getQueueManagerForTaskType } from '../queue-routing'
 import { hasConfiguredGoogleAdsAuth } from '../../google-ads-auth-assignment'
+import { userHasGoogleAdsMccAssignments } from '../../google-ads-campaign-sync'
 import { buildUserExecutionEligibleSql } from '../../user-execution-eligibility'
 
 /**
@@ -203,6 +204,7 @@ export class GoogleAdsCampaignSyncScheduler {
       let triggeredCount = 0
       let skippedCount = 0
       let noCredentialsCount = 0
+      let noMccCount = 0
       let activeWorkSkippedCount = 0
 
       for (const config of configs) {
@@ -245,6 +247,16 @@ export class GoogleAdsCampaignSyncScheduler {
             continue
           }
 
+          const hasMcc = await userHasGoogleAdsMccAssignments(userId)
+          if (!hasMcc) {
+            console.log(
+              `  ⏭️  用户 #${userId}: 未分配 MCC，无法同步 Google Ads 广告系列，跳过入队`
+            )
+            noMccCount++
+            skippedCount++
+            continue
+          }
+
           // 4. 凭证有效，创建同步任务
           console.log(
             `  🔄 用户 #${userId}: 距离上次同步 ${lastSyncAt ? `${hoursSinceLastSync.toFixed(1)}小时` : '从未同步'}, 触发同步 (间隔：${intervalHours}h)`
@@ -270,7 +282,7 @@ export class GoogleAdsCampaignSyncScheduler {
 
       const elapsedMs = Date.now() - checkStartAt
       console.log(
-        `\n✅ 检查完成：触发了 ${triggeredCount}/${configs.length} 个同步任务，跳过 ${skippedCount} 个用户（${noCredentialsCount} 个无凭证，${activeWorkSkippedCount} 个仍在同步中）（耗时${elapsedMs}ms）`
+        `\n✅ 检查完成：触发了 ${triggeredCount}/${configs.length} 个同步任务，跳过 ${skippedCount} 个用户（${noCredentialsCount} 个无凭证，${noMccCount} 个无 MCC，${activeWorkSkippedCount} 个仍在同步中）（耗时${elapsedMs}ms）`
       )
     } catch (error) {
       const elapsedMs = Date.now() - checkStartAt

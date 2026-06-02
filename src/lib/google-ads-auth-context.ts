@@ -25,6 +25,7 @@ import {
 } from './google-ads-oauth'
 import {
   GOOGLE_ADS_AUTH_CONTEXT_CACHE_TTL_MS,
+  GOOGLE_ADS_AUTH_CONTEXT_PEER_RETRY_WAIT_MS,
   invalidateGoogleAdsAuthContextRedis,
   readGoogleAdsAuthContextFromRedis,
   releaseGoogleAdsAuthContextInflightLock,
@@ -124,24 +125,25 @@ async function commitAuthContextCache(
       return freshCtx
     }
     rememberAuthContextInMemory(userId, freshCtx)
-    await writeGoogleAdsAuthContextToRedis(userId, freshCtx)
+    await writeGoogleAdsAuthContextToRedis(userId, freshCtx, getAuthContextGeneration(userId))
     return freshCtx
   }
 
   rememberAuthContextInMemory(userId, ctx)
-  await writeGoogleAdsAuthContextToRedis(userId, ctx)
+  await writeGoogleAdsAuthContextToRedis(userId, ctx, getAuthContextGeneration(userId))
   return ctx
 }
 
 async function resolvePeerOrAcquireAuthContextLock(
   userId: number
 ): Promise<{ peerCtx: GoogleAdsAuthContext | null; acquiredLock: boolean }> {
+  const minGeneration = getAuthContextGeneration(userId)
   let acquiredLock = await tryAcquireGoogleAdsAuthContextInflightLock(userId)
   if (acquiredLock) {
     return { peerCtx: null, acquiredLock: true }
   }
 
-  let peerCtx = await waitForPeerGoogleAdsAuthContext(userId)
+  let peerCtx = await waitForPeerGoogleAdsAuthContext(userId, { minGeneration })
   if (peerCtx) {
     return { peerCtx, acquiredLock: false }
   }
@@ -151,7 +153,10 @@ async function resolvePeerOrAcquireAuthContextLock(
     return { peerCtx: null, acquiredLock: true }
   }
 
-  peerCtx = await waitForPeerGoogleAdsAuthContext(userId)
+  peerCtx = await waitForPeerGoogleAdsAuthContext(userId, {
+    minGeneration,
+    maxWaitMs: GOOGLE_ADS_AUTH_CONTEXT_PEER_RETRY_WAIT_MS,
+  })
   return { peerCtx, acquiredLock: false }
 }
 
@@ -222,7 +227,9 @@ export async function getGoogleAdsAuthContext(userId: number): Promise<GoogleAds
     authContextCache.delete(userId)
   }
 
-  const fromRedis = await readGoogleAdsAuthContextFromRedis(userId)
+  const fromRedis = await readGoogleAdsAuthContextFromRedis(userId, {
+    minGeneration: getAuthContextGeneration(userId),
+  })
   if (fromRedis) {
     return rememberAuthContextInMemory(userId, fromRedis)
   }
@@ -239,6 +246,10 @@ export async function getGoogleAdsAuthContext(userId: number): Promise<GoogleAds
       const peerOrLock = await resolvePeerOrAcquireAuthContextLock(userId)
       acquiredLock = peerOrLock.acquiredLock
       if (peerOrLock.peerCtx) {
+        if (!isAuthContextGenerationCurrent(userId, generationAtStart)) {
+          const ctx = await loadGoogleAdsAuthContext(userId)
+          return await commitAuthContextCache(userId, ctx, generationAtStart)
+        }
         return rememberAuthContextInMemory(userId, peerOrLock.peerCtx)
       }
 

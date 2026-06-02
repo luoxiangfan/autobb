@@ -15,7 +15,15 @@ export const GOOGLE_ADS_AUTH_CONTEXT_INFLIGHT_LOCK_TTL_SEC = 8
 /** 等待其它实例写入 Redis 缓存的最长时间 */
 export const GOOGLE_ADS_AUTH_CONTEXT_PEER_WAIT_MS = 7_000
 
+/** 二次 peer 等待（锁重试后） */
+export const GOOGLE_ADS_AUTH_CONTEXT_PEER_RETRY_WAIT_MS = 2_000
+
 const PEER_POLL_INTERVAL_MS = 50
+
+export type GoogleAdsAuthContextRedisPayload = {
+  generation: number
+  ctx: GoogleAdsAuthContext
+}
 
 function cacheKey(userId: number): string {
   return `${REDIS_PREFIX_CONFIG.cache}google-ads:auth-context:${userId}`
@@ -29,16 +37,47 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+function parseRedisAuthContextPayload(
+  raw: string,
+  minGeneration: number
+): GoogleAdsAuthContext | null {
+  const parsed = JSON.parse(raw) as unknown
+  if (
+    parsed &&
+    typeof parsed === 'object' &&
+    'ctx' in parsed &&
+    'generation' in parsed
+  ) {
+    const payload = parsed as GoogleAdsAuthContextRedisPayload
+    if (
+      typeof payload.generation !== 'number' ||
+      payload.generation < minGeneration ||
+      !payload.ctx
+    ) {
+      return null
+    }
+    return payload.ctx
+  }
+
+  // 旧格式（无 generation）：仅在 minGeneration=0 时接受，避免失效后误读
+  if (minGeneration > 0) {
+    return null
+  }
+  return parsed as GoogleAdsAuthContext
+}
+
 export async function readGoogleAdsAuthContextFromRedis(
-  userId: number
+  userId: number,
+  options?: { minGeneration?: number }
 ): Promise<GoogleAdsAuthContext | null> {
   const client = getRedisClient()
   if (!client) return null
+  const minGeneration = options?.minGeneration ?? 0
 
   try {
     const raw = await client.get(cacheKey(userId))
     if (!raw) return null
-    return JSON.parse(raw) as GoogleAdsAuthContext
+    return parseRedisAuthContextPayload(raw, minGeneration)
   } catch {
     return null
   }
@@ -46,15 +85,18 @@ export async function readGoogleAdsAuthContextFromRedis(
 
 export async function writeGoogleAdsAuthContextToRedis(
   userId: number,
-  ctx: GoogleAdsAuthContext
+  ctx: GoogleAdsAuthContext,
+  generation: number
 ): Promise<void> {
   const client = getRedisClient()
   if (!client) return
 
+  const payload: GoogleAdsAuthContextRedisPayload = { generation, ctx }
+
   try {
     await client.set(
       cacheKey(userId),
-      JSON.stringify(ctx),
+      JSON.stringify(payload),
       'EX',
       GOOGLE_ADS_AUTH_CONTEXT_REDIS_CACHE_TTL_SEC
     )
@@ -95,11 +137,14 @@ export async function releaseGoogleAdsAuthContextInflightLock(userId: number): P
 }
 
 export async function waitForPeerGoogleAdsAuthContext(
-  userId: number
+  userId: number,
+  options?: { minGeneration?: number; maxWaitMs?: number }
 ): Promise<GoogleAdsAuthContext | null> {
-  const deadline = Date.now() + GOOGLE_ADS_AUTH_CONTEXT_PEER_WAIT_MS
+  const minGeneration = options?.minGeneration ?? 0
+  const maxWaitMs = options?.maxWaitMs ?? GOOGLE_ADS_AUTH_CONTEXT_PEER_WAIT_MS
+  const deadline = Date.now() + maxWaitMs
   while (Date.now() < deadline) {
-    const ctx = await readGoogleAdsAuthContextFromRedis(userId)
+    const ctx = await readGoogleAdsAuthContextFromRedis(userId, { minGeneration })
     if (ctx) return ctx
     await sleep(PEER_POLL_INTERVAL_MS)
   }

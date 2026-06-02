@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,6 +37,7 @@ import {
   resolveAccountsFetchBlockedUiEffects,
   resolveAccountsRequestAuth,
   safeReadJson,
+  type AccountsRequestAuth,
 } from '@/lib/google-ads-credentials-errors'
 import { useGoogleAdsAccountsAuth } from '@/hooks/useGoogleAdsAccountsAuth'
 import {
@@ -469,6 +470,7 @@ export default function SettingsPage() {
   const [startingOAuth, setStartingOAuth] = useState(false)
   const [googleAdsAuthMethod, setGoogleAdsAuthMethod] = useState<'oauth' | 'service_account'>('oauth')
   const { prepareAuthForAccountsFetch } = useGoogleAdsAccountsAuth()
+  const googleAdsAccountsPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [serviceAccountForm, setServiceAccountForm] = useState({
     name: '',
     mccCustomerId: '',
@@ -831,6 +833,43 @@ export default function SettingsPage() {
   }
 
   // 获取可访问的 Google Ads 账户
+  const scheduleGoogleAdsAccountsPoll = (authForRequest: AccountsRequestAuth) => {
+    if (googleAdsAccountsPollTimerRef.current) {
+      clearTimeout(googleAdsAccountsPollTimerRef.current)
+    }
+    googleAdsAccountsPollTimerRef.current = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams()
+        appendAccountsAuthToSearchParams(params, authForRequest)
+        const response = await fetch(
+          `/api/google-ads/credentials/accounts?${params.toString()}`,
+          { credentials: 'include', cache: 'no-store' }
+        )
+        if (!response.ok) return
+
+        const data = await response.json()
+        if (!data.success || !data.data) return
+
+        setGoogleAdsAccounts(data.data.accounts || [])
+        if (data.data.refreshInProgress) {
+          scheduleGoogleAdsAccountsPoll(authForRequest)
+        } else {
+          toast.success(`找到${data.data.total}个可访问的 Google Ads 账户`)
+        }
+      } catch {
+        // 轮询失败时静默，用户可手动重试
+      }
+    }, 2000)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (googleAdsAccountsPollTimerRef.current) {
+        clearTimeout(googleAdsAccountsPollTimerRef.current)
+      }
+    }
+  }, [])
+
   const handleFetchGoogleAdsAccounts = async () => {
     try {
       setLoadingGoogleAdsAccounts(true)
@@ -893,7 +932,8 @@ export default function SettingsPage() {
       setPermissionError(null)  // 清除之前的权限错误
       setGoogleAdsAccounts(data.data.accounts || [])
       if (data.data?.refreshInProgress) {
-        toast.message('账号正在后台同步，列表将逐步更新；也可稍后再次点击刷新')
+        toast.message('账号正在后台同步，列表将逐步更新')
+        scheduleGoogleAdsAccountsPoll(authForRequest)
       } else {
         toast.success(`找到${data.data.total}个可访问的 Google Ads 账户`)
       }

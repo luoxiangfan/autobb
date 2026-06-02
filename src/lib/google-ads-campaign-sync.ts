@@ -121,6 +121,16 @@ export interface SyncResult {
   warnings: string[]
 }
 
+/** 用户是否已在 admin MCC 分配页绑定 MCC（campaign sync 前置条件） */
+export async function userHasGoogleAdsMccAssignments(userId: number): Promise<boolean> {
+  const db = await getDatabase()
+  const row = await db.queryOne<{ ok: number }>(
+    `SELECT 1 AS ok FROM user_mcc_assignments WHERE user_id = ? LIMIT 1`,
+    [userId]
+  )
+  return Boolean(row)
+}
+
 /** 将 sync 结果映射为 sync_logs 行状态（含 warnings 可观测性） */
 export function resolveGoogleAdsCampaignSyncLogOutcome(result: SyncResult): {
   status: 'success' | 'partial' | 'failed'
@@ -1517,6 +1527,10 @@ export async function syncAllUsersCampaigns(): Promise<{
 
   for (const user of users) {
     try {
+      const hasMcc = await userHasGoogleAdsMccAssignments(user.id)
+      if (!hasMcc) {
+        continue
+      }
       const result = await syncCampaignsFromGoogleAds(user.id)
       totalSynced += result.syncedCount
       totalCreated += result.createdOffersCount

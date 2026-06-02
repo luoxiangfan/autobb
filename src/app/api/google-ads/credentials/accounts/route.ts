@@ -142,6 +142,9 @@ function getOAuthErrorFromResponse(error: any): { error?: string; errorDescripti
   return { error: oauthError, errorDescription: oauthErrorDescription }
 }
 
+/** 同步路径在其它实例持锁时的短等待，避免 HTTP 长时间阻塞 */
+const GOOGLE_ADS_ACCOUNTS_SYNC_PEER_WAIT_MS = 15_000
+
 async function get(request: NextRequest) {
   try {
     const authResult = await verifyAuth(request)
@@ -385,7 +388,9 @@ async function get(request: NextRequest) {
         console.log(`⏳ 其它请求正在同步，使用缓存的 ${cachedAccounts.length} 个账号`)
         allAccounts = mapCachedAccounts()
       } else {
-        await waitForGoogleAdsAccountAsyncRefreshToSettle(syncKey, { timeoutMs: 120_000 })
+        await waitForGoogleAdsAccountAsyncRefreshToSettle(syncKey, {
+          timeoutMs: GOOGLE_ADS_ACCOUNTS_SYNC_PEER_WAIT_MS,
+        })
         const waitedAccounts = await getCachedAccounts({
           userId,
           authType,
@@ -396,12 +401,21 @@ async function get(request: NextRequest) {
           allAccounts = mapCachedAccounts(waitedAccounts)
           effectiveLastSyncAtIso = new Date().toISOString()
         } else {
-          const retryStart = await tryStartGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams)
-          if (!retryStart.started) {
-            throw new Error('账号同步正在进行中，请稍后重试')
+          const stateAfterWait = await getGoogleAdsAccountAsyncRefreshState(syncKey)
+          if (isGoogleAdsAccountRefreshInProgress(stateAfterWait)) {
+            usedCache = true
+            allAccounts = cachedAccounts.length > 0 ? mapCachedAccounts() : []
+            console.log('⏳ 其它请求正在同步，返回 refreshInProgress 供客户端轮询')
+          } else {
+            const retryStart = await tryStartGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams)
+            if (retryStart.started) {
+              allAccounts = await runAccountsSyncJob(retryStart.startedAtMs)
+              effectiveLastSyncAtIso = new Date().toISOString()
+            } else {
+              usedCache = true
+              allAccounts = cachedAccounts.length > 0 ? mapCachedAccounts() : []
+            }
           }
-          allAccounts = await runAccountsSyncJob(retryStart.startedAtMs)
-          effectiveLastSyncAtIso = new Date().toISOString()
         }
       }
     }

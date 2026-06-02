@@ -477,6 +477,53 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     expect(data.data.accounts[0].customerId).toBe('9998887776')
   })
 
+  it('returns refreshInProgress without blocking when sync lock is held and cache is empty', async () => {
+    vi.useFakeTimers()
+
+    dbFns.query.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM google_ads_accounts')) {
+        return []
+      }
+      if (sql.includes('FROM offers o')) {
+        return []
+      }
+      return []
+    })
+
+    const nowIso = new Date().toISOString()
+    dbFns.queryOne.mockImplementation(async (sql: string) => {
+      if (sql.includes('google_ads_accounts_async_refresh_state')) {
+        return {
+          status: 'running',
+          started_at: nowIso,
+          updated_at: nowIso,
+          error_message: null,
+        }
+      }
+      return undefined
+    })
+    dbFns.exec.mockImplementation(async (sql: string) => {
+      if (sql.includes('google_ads_accounts_async_refresh_state')) {
+        return { changes: 0 }
+      }
+      return { changes: 1 }
+    })
+
+    const req = new NextRequest(
+      'http://localhost/api/google-ads/credentials/accounts?refresh=true&auth_type=oauth'
+    )
+    const responsePromise = GET(req)
+    await vi.advanceTimersByTimeAsync(16_000)
+    const res = await responsePromise
+    const data = await res.json()
+
+    vi.useRealTimers()
+
+    expect(res.status).toBe(200)
+    expect(data.data.refreshInProgress).toBe(true)
+    expect(syncFns.syncAccountsFromAPI).not.toHaveBeenCalled()
+  })
+
   it('returns cached data and starts background sync when refresh=true&async=true', async () => {
     syncFns.syncAccountsFromAPI.mockImplementation(() => new Promise(() => {}))
 

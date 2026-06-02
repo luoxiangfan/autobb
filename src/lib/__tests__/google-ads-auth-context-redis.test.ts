@@ -41,12 +41,15 @@ describe('google-ads-auth-context-redis', () => {
     redisFns.del.mockResolvedValue(1)
   })
 
-  it('writes auth context JSON with short TTL', async () => {
-    await writeGoogleAdsAuthContextToRedis(7, defaultOAuthAuthContext)
+  it('writes auth context JSON with generation and short TTL', async () => {
+    await writeGoogleAdsAuthContextToRedis(7, defaultOAuthAuthContext, 2)
 
     expect(GOOGLE_ADS_AUTH_CONTEXT_CACHE_TTL_MS).toBe(
       GOOGLE_ADS_AUTH_CONTEXT_REDIS_CACHE_TTL_SEC * 1000
     )
+    const payload = JSON.parse(String(redisFns.set.mock.calls[0][1]))
+    expect(payload.generation).toBe(2)
+    expect(payload.ctx.userId).toBe(defaultOAuthAuthContext.userId)
     expect(redisFns.set).toHaveBeenCalledWith(
       expect.stringContaining('google-ads:auth-context:7'),
       expect.any(String),
@@ -55,12 +58,24 @@ describe('google-ads-auth-context-redis', () => {
     )
   })
 
-  it('reads cached auth context from Redis', async () => {
-    redisFns.get.mockResolvedValueOnce(JSON.stringify(defaultOAuthAuthContext))
+  it('reads cached auth context when generation matches', async () => {
+    redisFns.get.mockResolvedValueOnce(
+      JSON.stringify({ generation: 1, ctx: defaultOAuthAuthContext })
+    )
 
-    const ctx = await readGoogleAdsAuthContextFromRedis(7)
+    const ctx = await readGoogleAdsAuthContextFromRedis(7, { minGeneration: 1 })
 
     expect(ctx?.userId).toBe(defaultOAuthAuthContext.userId)
+  })
+
+  it('rejects stale generation in Redis payload', async () => {
+    redisFns.get.mockResolvedValueOnce(
+      JSON.stringify({ generation: 1, ctx: defaultOAuthAuthContext })
+    )
+
+    const ctx = await readGoogleAdsAuthContextFromRedis(7, { minGeneration: 2 })
+
+    expect(ctx).toBeNull()
   })
 
   it('acquires inflight lock with NX', async () => {
@@ -78,12 +93,14 @@ describe('google-ads-auth-context-redis', () => {
     )
   })
 
-  it('waits for peer-written cache', async () => {
+  it('waits for peer-written cache with generation gate', async () => {
     redisFns.get
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(JSON.stringify(defaultOAuthAuthContext))
+      .mockResolvedValueOnce(
+        JSON.stringify({ generation: 3, ctx: defaultOAuthAuthContext })
+      )
 
-    const ctx = await waitForPeerGoogleAdsAuthContext(7)
+    const ctx = await waitForPeerGoogleAdsAuthContext(7, { minGeneration: 3 })
 
     expect(ctx?.userId).toBe(defaultOAuthAuthContext.userId)
   })

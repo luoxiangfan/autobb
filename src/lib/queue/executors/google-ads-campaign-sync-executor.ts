@@ -184,7 +184,7 @@ export async function executeGoogleAdsCampaignSyncTask(
     )
 
     return {
-      success: result.errors.length === 0,
+      success: logOutcome.status === 'success',
       syncedCount: result.syncedCount,
       createdOffersCount: result.createdOffersCount,
       skippedOffersCount: result.skippedOffersCount,
@@ -220,9 +220,20 @@ export async function executeGoogleAdsCampaignSyncTask(
       // 兜底：如果没有获取到 ID，则插入新记录（保持原有逻辑）
       try {
         await db.exec(
-          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, created_at, is_manual)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [userId, 'google_ads_campaign_sync', 'failed', 0, duration, startedAt, completedAt, startedAt, isManualSync]
+          `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, created_at, is_manual, error_message)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            userId,
+            'google_ads_campaign_sync',
+            'failed',
+            0,
+            duration,
+            startedAt,
+            completedAt,
+            startedAt,
+            isManualSync,
+            errorMessage,
+          ]
         )
       } catch (logError) {
         console.error(`❌ [GoogleAdsSyncExecutor] 记录失败日志失败:`, logError)
