@@ -169,6 +169,28 @@ describe('getCustomerWithCredentials login_customer_id fallback', () => {
     expect(customerFactory).not.toHaveBeenCalled()
   })
 
+  it('rejects oauth authType when authContext is service_account', async () => {
+    const saContext = {
+      dualStack: false,
+      auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+      oauthCredentials: null,
+      serviceAccountConfig: { id: 'sa-1' },
+    }
+
+    await expect(
+      getCustomerWithCredentials({
+        customerId: '3178223819',
+        refreshToken: 'refresh-token',
+        userId: 1,
+        authType: 'oauth',
+        authContext: saContext as any,
+      })
+    ).rejects.toThrow(/服务账号认证/)
+
+    expect(customerFactory).not.toHaveBeenCalled()
+    expect(serviceAccountFns.getUnifiedGoogleAdsClient).not.toHaveBeenCalled()
+  })
+
   it('rejects dual-stack before OAuth customer creation even with refreshToken passed', async () => {
     authContextFns.assertGoogleAdsAuthReadyForApi.mockRejectedValue(
       new Error('检测到 OAuth 与服务账号同时存在，请先在设置页删除其中一种配置后再使用。')
@@ -189,5 +211,52 @@ describe('getCustomerWithCredentials login_customer_id fallback', () => {
 
     expect(customerFactory).not.toHaveBeenCalled()
     expect(accountsAuthFns.resolveOAuthClientCredentialsForUser).not.toHaveBeenCalled()
+  })
+})
+
+describe('resolveAuthTypeForGoogleAdsApiCall', () => {
+  let resolveAuthTypeForGoogleAdsApiCall: typeof import('@/lib/google-ads-api').resolveAuthTypeForGoogleAdsApiCall
+
+  beforeAll(async () => {
+    ;({ resolveAuthTypeForGoogleAdsApiCall } = await import('@/lib/google-ads-api'))
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('infers service_account when authType omitted and context is SA', async () => {
+    const saContext = {
+      dualStack: false,
+      auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+      oauthCredentials: null,
+      serviceAccountConfig: { id: 'sa-1' },
+    }
+    authContextFns.assertGoogleAdsAuthReadyForApi.mockResolvedValue(saContext)
+
+    await expect(
+      resolveAuthTypeForGoogleAdsApiCall({
+        userId: 1,
+        authContext: saContext as any,
+      })
+    ).resolves.toBe('service_account')
+  })
+
+  it('rejects explicit oauth when context is service_account', async () => {
+    const saContext = {
+      dualStack: false,
+      auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+      oauthCredentials: null,
+      serviceAccountConfig: { id: 'sa-1' },
+    }
+    authContextFns.assertGoogleAdsAuthReadyForApi.mockResolvedValue(saContext)
+
+    await expect(
+      resolveAuthTypeForGoogleAdsApiCall({
+        userId: 1,
+        authType: 'oauth',
+        authContext: saContext as any,
+      })
+    ).rejects.toThrow(/服务账号认证/)
   })
 })

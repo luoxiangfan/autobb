@@ -591,6 +591,38 @@ describe('assertGoogleAdsAuthReadyForApi', () => {
   })
 })
 
+describe('resolveGoogleAdsApiAuthType', () => {
+  it('infers service_account when authType omitted and context is SA', async () => {
+    const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads-auth-context')
+    expect(
+      resolveGoogleAdsApiAuthType(
+        {},
+        {
+          ...defaultOAuthAuthContext,
+          auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+          oauthCredentials: null,
+          serviceAccountConfig: { id: 'sa-1', mccCustomerId: '111', developerToken: 'tok' },
+        } as any
+      )
+    ).toBe('service_account')
+  })
+
+  it('rejects explicit oauth when context is service_account', async () => {
+    const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads-auth-context')
+    expect(() =>
+      resolveGoogleAdsApiAuthType(
+        { authType: 'oauth' },
+        {
+          ...defaultOAuthAuthContext,
+          auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+          oauthCredentials: null,
+          serviceAccountConfig: { id: 'sa-1' },
+        } as any
+      )
+    ).toThrow(/服务账号认证/)
+  })
+})
+
 describe('resolveGoogleAdsApiAuthFromContext', () => {
   it('throws when context is not configured', async () => {
     const { resolveGoogleAdsApiAuthFromContext } = await import('@/lib/google-ads-auth-context')

@@ -8,9 +8,19 @@ import {
   resolveOAuthClientCredentialsForUser,
   type OAuthApiCredentialsFields,
 } from './google-ads-accounts-auth'
-import type { GoogleAdsAuthContext } from './google-ads-auth-context'
+import {
+  resolveGoogleAdsApiAuthType,
+  type GoogleAdsAuthContext,
+} from './google-ads-auth-context'
 
 export type { OAuthApiCredentialsFields }
+
+/**
+ * Google Ads API 高层 mutate/search 约定：
+ * - 业务入口须 `prepareGoogleAdsApiCallForLinkedAccount` / `resolveGoogleAdsApiAuthForAccount`。
+ * - 调用本文件函数时传入 `apiAuth.authType` 与 `preparedAuthContextField(prepared)`。
+ * - 勿使用 `authType || 'oauth'`；未传 authType 时由 `resolveAuthTypeForGoogleAdsApiCall` 从 context 推断。
+ */
 
 /** prepare 后可选传入，高层 API 透传至 getCustomerWithCredentials */
 export type GoogleAdsApiAuthContextField = {
@@ -385,27 +395,6 @@ export async function getCustomer(
   }
 }
 
-/**
- * 解析 getCustomerWithCredentials 的 authType：服务账号用户不得默认落到 OAuth。
- */
-function resolveAuthTypeForGetCustomerWithCredentials(
-  params: { authType?: 'oauth' | 'service_account' },
-  authCtx: GoogleAdsAuthContext
-): 'oauth' | 'service_account' {
-  if (params.authType === 'oauth' || params.authType === 'service_account') {
-    return params.authType
-  }
-  if (authCtx.auth.authType === 'service_account') {
-    return 'service_account'
-  }
-  if (authCtx.auth.authType === 'oauth') {
-    return 'oauth'
-  }
-  throw new Error(
-    '无法推断 Google Ads 认证方式：请先通过 prepareGoogleAdsApiCallForLinkedAccount 解析 apiAuth，并传入 authType'
-  )
-}
-
 /** 发起 Customer 调用前校验双栈；已持有 context 时复用，避免重复加载。 */
 async function ensureGoogleAdsAuthReadyForApi(
   userId: number,
@@ -421,6 +410,16 @@ async function ensureGoogleAdsAuthReadyForApi(
   }
   const { assertGoogleAdsAuthReadyForApi } = await import('./google-ads-auth-context')
   return assertGoogleAdsAuthReadyForApi(userId)
+}
+
+/** 高层 API：解析 authType（含与 context 冲突检测；勿使用 `|| 'oauth'`）。 */
+export async function resolveAuthTypeForGoogleAdsApiCall(params: {
+  authType?: 'oauth' | 'service_account'
+  userId: number
+  authContext?: GoogleAdsAuthContext
+}): Promise<'oauth' | 'service_account'> {
+  const ctx = await ensureGoogleAdsAuthReadyForApi(params.userId, params.authContext)
+  return resolveGoogleAdsApiAuthType(params, ctx)
 }
 
 /**
@@ -456,7 +455,7 @@ export async function getCustomerWithCredentials(params: {
 
   const authCtx = await ensureGoogleAdsAuthReadyForApi(params.userId, params.authContext)
 
-  const authType = resolveAuthTypeForGetCustomerWithCredentials(params, authCtx)
+  const authType = resolveGoogleAdsApiAuthType(params, authCtx)
 
   if (authType === 'service_account') {
     // 服务账号认证模式：使用 @htdangkhoa/google-ads，不需要 client_id/client_secret
@@ -674,7 +673,7 @@ export async function findGoogleAdsCampaignByName(params: {
     LIMIT 1
   `
 
-  const authType = params.authType || 'oauth'
+  const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
   let results: any[]
 
   if (authType === 'service_account') {
@@ -692,7 +691,7 @@ export async function findGoogleAdsCampaignByName(params: {
       refreshToken: params.refreshToken,
       userId: params.userId,
       loginCustomerId: params.loginCustomerId,
-      authType: params.authType,
+      authType,
       serviceAccountId: params.serviceAccountId,
       credentials: params.credentials,
       authContext: params.authContext,
@@ -737,7 +736,7 @@ export async function createGoogleAdsCampaign(params: {
   credentials?: OAuthApiCredentialsFields
   authContext?: GoogleAdsAuthContext
 }): Promise<{ campaignId: string; resourceName: string }> {
-  const authType = params.authType || 'oauth'
+  const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
   const sanitizedFinalUrlSuffix = params.finalUrlSuffix && params.finalUrlSuffix.trim() !== ''
     ? sanitizeGoogleAdsFinalUrlSuffix(params.finalUrlSuffix)
     : ''
@@ -1148,6 +1147,7 @@ export async function updateGoogleAdsCampaignStatus(params: {
   credentials?: OAuthApiCredentialsFields
   authContext?: GoogleAdsAuthContext
 }): Promise<void> {
+  const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
   const requestedStatus = params.status
   const effectiveStatus = requestedStatus === 'REMOVED' ? 'PAUSED' : requestedStatus
   if (requestedStatus === 'REMOVED') {
@@ -1155,7 +1155,7 @@ export async function updateGoogleAdsCampaignStatus(params: {
   }
 
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
-  if (params.authType === 'service_account') {
+  if (authType === 'service_account') {
     const { updateCampaignStatusPython } = await import('./python-ads-client')
     const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
     await updateCampaignStatusPython({
@@ -1168,7 +1168,7 @@ export async function updateGoogleAdsCampaignStatus(params: {
   } else {
     const customer = await getCustomerWithCredentials({
       ...params,
-      authType: params.authType,
+      authType,
       serviceAccountId: params.serviceAccountId,
     })
 
@@ -1229,7 +1229,8 @@ export async function updateGoogleAdsCampaignName(params: {
 
   const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
 
-  if (params.authType === 'service_account') {
+  const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
+  if (authType === 'service_account') {
     const { updateCampaignPython } = await import('./python-ads-client')
     await updateCampaignPython({
       userId: params.userId,
@@ -1248,7 +1249,7 @@ export async function updateGoogleAdsCampaignName(params: {
       credentials: params.credentials,
       accountParentMccId: params.accountParentMccId,
       oauthLoginCustomerIdHint: params.oauthLoginCustomerIdHint,
-      authType: params.authType,
+      authType,
       serviceAccountId: params.serviceAccountId,
       authContext: params.authContext,
     })
@@ -1298,7 +1299,7 @@ export async function updateGoogleAdsKeywordStatus(params: {
   credentials?: OAuthApiCredentialsFields
   authContext?: GoogleAdsAuthContext
 }): Promise<void> {
-  const authType = params.authType || 'oauth'
+  const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
   if (authType === 'service_account') {
     throw new Error('服务账号模式暂不支持关键词状态更新，请先使用OAuth账号执行')
   }
@@ -1352,7 +1353,7 @@ export async function removeGoogleAdsCampaign(params: {
   credentials?: OAuthApiCredentialsFields
   authContext?: GoogleAdsAuthContext
 }): Promise<void> {
-  const authType = params.authType || 'oauth'
+  const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
   const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
 
   if (authType === 'service_account') {
@@ -1418,8 +1419,9 @@ export async function updateGoogleAdsCampaignBudget(params: {
   credentials?: OAuthApiCredentialsFields
   authContext?: GoogleAdsAuthContext
 }): Promise<void> {
+  const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
-  if (params.authType === 'service_account') {
+  if (authType === 'service_account') {
     const { updateCampaignBudgetPython } = await import('./python-ads-client')
     const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
     await updateCampaignBudgetPython({
@@ -1502,7 +1504,7 @@ export async function getGoogleAdsCampaign(params: {
     }
   }
 
-  const authType = params.authType || 'oauth'
+  const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
   let results: any[]
 
   if (authType === 'service_account') {
@@ -1598,7 +1600,7 @@ export async function listGoogleAdsCampaigns(params: {
     }
   }
 
-  const authType = params.authType || 'oauth'
+  const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
 
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
   if (authType === 'service_account') {
@@ -1639,7 +1641,7 @@ export async function listGoogleAdsCampaigns(params: {
   // OAuth模式
   const customer = await getCustomerWithCredentials({
     ...params,
-    authType: params.authType,
+    authType,
     serviceAccountId: params.serviceAccountId,
   })
 
@@ -1699,7 +1701,7 @@ export async function findGoogleAdsAdGroupByName(params: {
     LIMIT 1
   `
 
-  const authType = params.authType || 'oauth'
+  const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
   let results: any[]
 
   if (authType === 'service_account') {
@@ -1717,7 +1719,7 @@ export async function findGoogleAdsAdGroupByName(params: {
       refreshToken: params.refreshToken,
       userId: params.userId,
       loginCustomerId: params.loginCustomerId,
-      authType: params.authType,
+      authType,
       serviceAccountId: params.serviceAccountId,
       credentials: params.credentials,
       authContext: params.authContext,
@@ -1771,7 +1773,7 @@ export async function createGoogleAdsAdGroup(params: {
   credentials?: OAuthApiCredentialsFields
   authContext?: GoogleAdsAuthContext
 }): Promise<{ adGroupId: string; resourceName: string }> {
-  const authType = params.authType || 'oauth'
+  const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
 
   const reuseExistingAdGroup = async (): Promise<{ adGroupId: string; resourceName: string } | null> => {
     try {
@@ -1906,7 +1908,7 @@ export async function createGoogleAdsKeywordsBatch(params: {
   credentials?: OAuthApiCredentialsFields
   authContext?: GoogleAdsAuthContext
 }): Promise<Array<{ keywordId: string; resourceName: string; keywordText: string }>> {
-  const authType = params.authType || 'oauth'
+  const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
 
   const logKeywordNormalization = (
     originalText: string,
@@ -2192,7 +2194,7 @@ export async function createGoogleAdsResponsiveSearchAd(params: {
   credentials?: OAuthApiCredentialsFields
   authContext?: GoogleAdsAuthContext
 }): Promise<{ adId: string; resourceName: string }> {
-  const authType = params.authType || 'oauth'
+  const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
 
   const sanitizedHeadlines = params.headlines.map(h => sanitizeGoogleAdsAdText(h, 30))
   const sanitizedDescriptions = params.descriptions.map(d => sanitizeGoogleAdsAdText(d, 90))
@@ -2366,7 +2368,7 @@ export async function getCampaignPerformance(params: {
   `
 
   try {
-    const authType = params.authType || 'oauth'
+    const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
     let response: any[]
 
     if (authType === 'service_account') {
@@ -2458,7 +2460,7 @@ export async function getAdGroupPerformance(params: {
   `
 
   try {
-    const authType = params.authType || 'oauth'
+    const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
     let response: any[]
 
     if (authType === 'service_account') {
@@ -2550,7 +2552,7 @@ export async function getAdPerformance(params: {
   `
 
   try {
-    const authType = params.authType || 'oauth'
+    const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
     let response: any[]
 
     if (authType === 'service_account') {
@@ -2645,7 +2647,7 @@ export async function getBatchCampaignPerformance(params: {
   `
 
   try {
-    const authType = params.authType || 'oauth'
+    const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
     let response: any[]
 
     if (authType === 'service_account') {
@@ -2734,8 +2736,9 @@ export async function createGoogleAdsCalloutExtensions(params: {
       throw new Error('没有有效的Callout文本，无法创建Callout扩展')
     }
 
+    const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
     // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
-    if (params.authType === 'service_account') {
+    if (authType === 'service_account') {
       const { createCalloutExtensionsPython } = await import('./python-ads-client')
       const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
       const assetResourceNames = await createCalloutExtensionsPython({
@@ -2881,8 +2884,9 @@ export async function createGoogleAdsSitelinkExtensions(params: {
     }
   })
 
+  const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
-  if (params.authType === 'service_account') {
+  if (authType === 'service_account') {
     const { createSitelinkExtensionsPython } = await import('./python-ads-client')
     const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
     const assetResourceNames = await createSitelinkExtensionsPython({
@@ -3240,8 +3244,9 @@ export async function updateCampaignFinalUrlSuffix(params: {
   authContext?: GoogleAdsAuthContext
 }): Promise<void> {
   const sanitizedFinalUrlSuffix = sanitizeGoogleAdsFinalUrlSuffix(params.finalUrlSuffix)
+  const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
   // 🔧 修复(2025-01-03): 服务账号模式使用Python服务
-  if (params.authType === 'service_account') {
+  if (authType === 'service_account') {
     const { updateCampaignFinalUrlSuffixPython } = await import('./python-ads-client')
     const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
     await updateCampaignFinalUrlSuffixPython({
@@ -3254,7 +3259,7 @@ export async function updateCampaignFinalUrlSuffix(params: {
   } else {
     const customer = await getCustomerWithCredentials({
       ...params,
-      authType: params.authType,
+      authType,
       serviceAccountId: params.serviceAccountId,
     })
 

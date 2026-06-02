@@ -6,7 +6,12 @@ import {
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import { getDatabase } from './db'
 import { getLoginCustomerId, AuthType } from './google-ads-service-account'
-import type { GoogleAdsAuthContext } from './google-ads-auth-context'
+import {
+  getGoogleAdsAuthContext,
+  googleAdsAuthContextDualStackError,
+  resolveGoogleAdsApiAuthType,
+  type GoogleAdsAuthContext,
+} from './google-ads-auth-context'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 import { getGoogleAdsLanguageCode, getGoogleAdsGeoTargetId } from './language-country-codes'
 
@@ -22,6 +27,20 @@ export type KeywordIdeasPreparedOAuth = {
   oauthLoginCustomerId?: string
   /** 路由层 prepare 时传入，避免 getLoginCustomerId 重复加载 auth-context */
   authContext?: GoogleAdsAuthContext
+}
+
+async function resolveKeywordPlannerApiAuthType(params: {
+  userId: number
+  authType?: AuthType
+  preparedOAuth?: KeywordIdeasPreparedOAuth
+}): Promise<AuthType> {
+  const ctx =
+    params.preparedOAuth?.authContext ?? (await getGoogleAdsAuthContext(params.userId))
+  const dualStackError = googleAdsAuthContextDualStackError(ctx)
+  if (dualStackError) {
+    throw new Error(dualStackError)
+  }
+  return resolveGoogleAdsApiAuthType({ authType: params.authType }, ctx)
 }
 
 async function resolveKeywordPlannerOAuth(params: {
@@ -196,7 +215,7 @@ export async function getKeywordIdeas(params: {
     throw new Error('userId is required')
   }
 
-  const authType = params.authType || 'oauth'
+  const authType = await resolveKeywordPlannerApiAuthType(params)
 
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
   if (authType === 'service_account') {
@@ -376,7 +395,7 @@ export async function getKeywordMetrics(params: {
     throw new Error('userId is required')
   }
 
-  const authType = params.authType || 'oauth'
+  const authType = await resolveKeywordPlannerApiAuthType(params)
 
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
   if (authType === 'service_account') {

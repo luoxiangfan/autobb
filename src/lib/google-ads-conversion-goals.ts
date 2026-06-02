@@ -11,7 +11,11 @@
 
 import { Customer } from 'google-ads-api'
 import { withRetry } from './retry'
-import { getCustomerWithCredentials, type OAuthApiCredentialsFields } from './google-ads-api'
+import {
+  getCustomerWithCredentials,
+  resolveAuthTypeForGoogleAdsApiCall,
+  type OAuthApiCredentialsFields,
+} from './google-ads-api'
 
 function getErrorText(error: any): string {
   if (!error) return ''
@@ -66,7 +70,8 @@ export async function setCampaignPageViewGoalWithCredentials(params: {
   authContext?: import('./google-ads-auth-context').GoogleAdsAuthContext
 }): Promise<boolean> {
   try {
-    const {customerId, campaignId, authType = 'oauth'} = params
+    const { customerId, campaignId } = params
+    const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
 
     console.log(`🎯 配置Campaign转化目标为"网页浏览":`)
     console.log(`   Customer ID: ${customerId}`)

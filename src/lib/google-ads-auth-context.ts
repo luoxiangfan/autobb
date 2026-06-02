@@ -381,6 +381,47 @@ export function resolveConfiguredGoogleAdsAuthType(
   return resolveGoogleAdsAuthTypeFromCredentialHints(ctx, { unconfiguredDefault: 'oauth' }) ?? 'oauth'
 }
 
+/**
+ * 显式 authType 与 auth-context 不一致时抛错（与 accounts 路由 AUTH_TYPE_MISMATCH 语义一致）。
+ */
+export function assertGoogleAdsAuthTypeMatchesContext(
+  requested: 'oauth' | 'service_account',
+  ctx: Pick<GoogleAdsAuthContext, 'auth'>
+): void {
+  const configured = ctx.auth.authType
+  if (!configured || configured === requested) {
+    return
+  }
+  throw new Error(
+    configured === 'service_account'
+      ? '当前已配置服务账号认证，请使用 auth_type=service_account，或在设置页删除服务账号后再使用 OAuth。'
+      : '当前已配置 OAuth 认证，请使用 auth_type=oauth，或在设置页删除 OAuth 后再使用服务账号。'
+  )
+}
+
+/**
+ * 解析 API 调用的 authType（禁止 `|| 'oauth'` 默认）。
+ * 调用方应优先传入 prepare 后的 `apiAuth.authType`；未传时从 context 推断。
+ */
+export function resolveGoogleAdsApiAuthType(
+  params: { authType?: 'oauth' | 'service_account' },
+  ctx: GoogleAdsAuthContext
+): 'oauth' | 'service_account' {
+  if (params.authType === 'oauth' || params.authType === 'service_account') {
+    assertGoogleAdsAuthTypeMatchesContext(params.authType, ctx)
+    return params.authType
+  }
+  if (ctx.auth.authType === 'service_account') {
+    return 'service_account'
+  }
+  if (ctx.auth.authType === 'oauth') {
+    return 'oauth'
+  }
+  throw new Error(
+    '无法推断 Google Ads 认证方式：请先通过 prepareGoogleAdsApiCallForLinkedAccount 解析 apiAuth，并传入 authType'
+  )
+}
+
 export function resolveGoogleAdsDisplayAuthType(
   ctx: GoogleAdsAuthContext
 ): 'oauth' | 'service_account' | null {

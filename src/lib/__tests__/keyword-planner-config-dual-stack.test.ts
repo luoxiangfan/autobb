@@ -4,9 +4,13 @@ const authContextFns = vi.hoisted(() => ({
   getGoogleAdsAuthContext: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
-  getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
-}))
+vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+  return {
+    ...actual,
+    getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
+  }
+})
 
 import { getGoogleAdsConfig } from '@/lib/keyword-planner'
 
@@ -34,6 +38,24 @@ describe('getGoogleAdsConfig dual-stack guard', () => {
     expect(authContextFns.getGoogleAdsAuthContext).toHaveBeenCalledWith(5)
   })
 
+  it('returns null when auth is not configured', async () => {
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      userId: 5,
+      ownerUserId: 5,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      dualStack: false,
+      auth: {},
+      oauthCredentials: null,
+      serviceAccountConfig: null,
+    })
+
+    const config = await getGoogleAdsConfig(5)
+
+    expect(config).toBeNull()
+  })
+
   it('skips context load when existingContext is passed without dualStack', async () => {
     const config = await getGoogleAdsConfig(
       5,
@@ -55,6 +77,7 @@ describe('getGoogleAdsConfig dual-stack guard', () => {
           login_customer_id: '1234567890',
         },
         serviceAccountConfig: null,
+        apiAccessLevel: 'explorer',
       }
     )
 
