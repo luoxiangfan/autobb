@@ -182,11 +182,7 @@ export function resolveGoogleAdsApiAccessLevelFromContext(ctx: {
 /**
  * 解析用户的 Google Ads API 访问级别（支持管理员共享配置；复用 auth-context 缓存）。
  */
-export async function resolveGoogleAdsApiAccessLevel(userId: number): Promise<string | null> {
-  const { getGoogleAdsAuthContext } = await import('./google-ads-auth-context')
-  const ctx = await getGoogleAdsAuthContext(userId)
-  return ctx.apiAccessLevel
-}
+export { resolveGoogleAdsApiAccessLevel } from './google-ads-auth-context'
 
 /**
  * 是否已配置可用认证（委托 auth-context，与 FromContext / 双栈 / 共享语义一致）。

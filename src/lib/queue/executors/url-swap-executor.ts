@@ -26,7 +26,12 @@ import { getDatabase } from '@/lib/db'
 import { updateCampaignFinalUrlSuffix, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
 import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
-import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
+import {
+  createGoogleAdsLinkedAccountPrepareCache,
+  prepareGoogleAdsApiCallForLinkedAccountCached,
+  preparedAuthContextField,
+  type GoogleAdsLinkedAccountPrepareCache,
+} from '@/lib/google-ads-accounts-auth'
 import type { GoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
 import { initializeProxyPool } from '@/lib/offer-utils'
 import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
@@ -198,17 +203,13 @@ async function updateSingleTargetWithLoginCustomerFallback(params: {
   })
 }
 
-type LinkedPreparedGoogleAdsApiCall = Extract<
-  Awaited<ReturnType<typeof prepareGoogleAdsApiCallForLinkedAccount>>,
-  { ok: true }
->
 
 async function resolveUrlSwapTargetApiAuth(params: {
   userId: number
   target: UrlSwapTaskTarget
   db: Awaited<ReturnType<typeof getDatabase>>
   accountMetaById: Map<number, UrlSwapAccountMeta>
-  preparedByAccountId: Map<number, LinkedPreparedGoogleAdsApiCall>
+  prepareCache: GoogleAdsLinkedAccountPrepareCache
 }): Promise<
   GoogleAdsUpdateAuthContext & {
     parentMccId: string | null
@@ -234,15 +235,15 @@ async function resolveUrlSwapTargetApiAuth(params: {
   const accountMeta = params.accountMetaById.get(accountId)
   const linkedSa = accountMeta?.service_account_id ?? null
 
-  let prepared = params.preparedByAccountId.get(accountId)
-  if (!prepared) {
-    const result = await prepareGoogleAdsApiCallForLinkedAccount(params.userId, linkedSa)
-    if (!result.ok) {
-      throw new Error(result.message)
-    }
-    prepared = result
-    params.preparedByAccountId.set(accountId, result)
+  const result = await prepareGoogleAdsApiCallForLinkedAccountCached(
+    params.userId,
+    linkedSa,
+    params.prepareCache
+  )
+  if (!result.ok) {
+    throw new Error(result.message)
   }
+  const prepared = result
 
   return {
     refreshToken: prepared.refreshToken,
@@ -268,7 +269,7 @@ async function updateTargetsFinalUrlSuffix(params: {
   let failureCount = 0
 
   const accountMetaById = new Map<number, UrlSwapAccountMeta>()
-  const preparedByAccountId = new Map<number, LinkedPreparedGoogleAdsApiCall>()
+  const prepareCache = createGoogleAdsLinkedAccountPrepareCache()
 
   for (const target of params.targets) {
     await assertUserExecutionAllowed(params.userId, {
@@ -280,7 +281,7 @@ async function updateTargetsFinalUrlSuffix(params: {
       target,
       db: params.db,
       accountMetaById,
-      preparedByAccountId,
+      prepareCache,
     })
 
     try {

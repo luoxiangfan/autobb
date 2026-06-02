@@ -21,9 +21,18 @@ vi.mock('@/lib/google-ads-auth-context', () => ({
   hasConfiguredGoogleAdsAuthFromContext: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', () => ({
-  prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
-}))
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  const prepareGoogleAdsApiCallForLinkedAccount = vi.fn()
+  return {
+    ...actual,
+    prepareGoogleAdsApiCallForLinkedAccount,
+    prepareGoogleAdsApiCallForLinkedAccountCached: vi.fn(
+      async (userId: number, linkedSa: string | null | undefined) =>
+        prepareGoogleAdsApiCallForLinkedAccount(userId, linkedSa)
+    ),
+  }
+})
 
 vi.mock('@/lib/google-ads-api', () => ({
   updateCampaignFinalUrlSuffix: vi.fn(),

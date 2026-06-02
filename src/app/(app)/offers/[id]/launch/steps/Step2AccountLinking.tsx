@@ -37,6 +37,7 @@ import { Link2, CheckCircle2, AlertCircle, Plus, RefreshCw, ExternalLink, Loader
 import { showError, showSuccess } from '@/lib/toast-utils'
 import {
   appendAccountsAuthToSearchParams,
+  assertAccountsRequestAuth,
   buildAuthForAccountsRequest,
   formatNullableErrorMessage,
   safeReadJson,
@@ -193,6 +194,23 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
 
       const auth = await prepareAuthForAccountsFetch({ forceRefresh, isPoll })
 
+      if (auth.authConfigWarning) {
+        setAuthConfigWarning(auth.authConfigWarning)
+        return
+      }
+      if (!auth.hasCredentials) {
+        return
+      }
+
+      let authForRequest
+      try {
+        authForRequest = buildAuthForAccountsRequest(auth)
+        assertAccountsRequestAuth(authForRequest)
+      } catch (error) {
+        showError(error instanceof Error ? error.message : 'Google Ads 认证未配置')
+        return
+      }
+
       const params = new URLSearchParams({
         refresh: forceRefresh ? 'true' : 'false',
         offerId: offer.id.toString(),
@@ -200,7 +218,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
       if (forceRefresh) {
         params.append('async', 'true')
       }
-      appendAccountsAuthToSearchParams(params, buildAuthForAccountsRequest(auth))
+      appendAccountsAuthToSearchParams(params, authForRequest)
 
       // 🔓 KISS优化(2025-12-12): 传入offerId用于计算账号优先级
       // 🔧 添加 filterByUserMcc=true，只获取用户 MCC 下的 Google Ads 账号（非 MCC 账号）

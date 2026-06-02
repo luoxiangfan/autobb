@@ -47,7 +47,9 @@ export async function getUserAuthType(
     if (credentials?.refresh_token) {
       return { authType: 'oauth' }
     }
-    return { authType: 'oauth' }
+
+    // 共享 OAuth 但管理员尚未授权：assignment 仍为 oauth，hasConfigured 为 false
+    return { authType: assignment.authType }
   }
 
   const credentials = await db.queryOne(
@@ -333,6 +335,11 @@ export async function refreshAccessToken(userId: number): Promise<{
         updated_at = ${nowFunc}
     WHERE user_id = ?
   `, [data.access_token, expiresAt, ownerUserId])
+
+  const { invalidateGoogleAdsAuthContextCacheForOwner } = await import(
+    './google-ads-auth-context'
+  )
+  await invalidateGoogleAdsAuthContextCacheForOwner(ownerUserId)
 
   return {
     access_token: data.access_token,

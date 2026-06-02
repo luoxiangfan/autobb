@@ -163,6 +163,14 @@ export function invalidateGoogleAdsAuthContextCache(userId: number): void {
 }
 
 /**
+ * 解析用户的 Google Ads API 访问级别（复用 auth-context 缓存）。
+ */
+export async function resolveGoogleAdsApiAccessLevel(userId: number): Promise<string | null> {
+  const ctx = await getGoogleAdsAuthContext(userId)
+  return ctx.apiAccessLevel
+}
+
+/**
  * 凭证 owner 变更时失效 owner 及所有共享该 owner 的子用户缓存。
  */
 export async function invalidateGoogleAdsAuthContextCacheForOwner(

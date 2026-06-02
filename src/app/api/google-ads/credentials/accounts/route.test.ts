@@ -140,7 +140,23 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     settingsFns.getUserOnlySetting.mockResolvedValue(null)
   })
 
-  it('returns 401 when OAuth refresh token is missing from auth-context', async () => {
+  it('returns 404 when auth-context is not configured', async () => {
+    accountsAuthFns.getGoogleAdsAuthContext.mockResolvedValue({
+      ...defaultOAuthAuthContext,
+      oauthCredentials: null,
+      serviceAccountConfig: null,
+    })
+
+    const req = new NextRequest('http://localhost/api/google-ads/credentials/accounts?auth_type=oauth')
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(404)
+    expect(data.code).toBe('CREDENTIALS_NOT_CONFIGURED')
+    expect(accountsAuthFns.resolveGoogleAdsApiAuthFromContext).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 when OAuth refresh token is missing from auth-context', async () => {
     accountsAuthFns.getGoogleAdsAuthContext.mockResolvedValue({
       ...defaultOAuthAuthContext,
       oauthCredentials: {
@@ -157,12 +173,9 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     const res = await GET(req)
     const data = await res.json()
 
-    expect(res.status).toBe(401)
-    expect(data.error).toContain('Refresh Token')
-    expect(accountsAuthFns.resolveGoogleAdsApiAuthFromContext).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 7 }),
-      null
-    )
+    expect(res.status).toBe(404)
+    expect(data.code).toBe('CREDENTIALS_NOT_CONFIGURED')
+    expect(accountsAuthFns.resolveGoogleAdsApiAuthFromContext).not.toHaveBeenCalled()
   })
 
   it('returns cached OAuth accounts using auth-context (no API sync)', async () => {
@@ -290,7 +303,7 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     expect(data.data.loginCustomerId).toBe('1122334455')
   })
 
-  it('returns 400 when service_account mode lacks service_account_id', async () => {
+  it('returns 404 when service_account mode lacks configured credentials', async () => {
     accountsAuthFns.getGoogleAdsAuthContext.mockResolvedValue({
       ...defaultOAuthAuthContext,
       auth: { authType: 'service_account' as const },
@@ -304,8 +317,8 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     const res = await GET(req)
     const data = await res.json()
 
-    expect(res.status).toBe(400)
-    expect(data.error).toContain('服务账号ID')
+    expect(res.status).toBe(404)
+    expect(data.code).toBe('CREDENTIALS_NOT_CONFIGURED')
     expect(accountsAuthFns.resolveGoogleAdsApiAuthFromContext).not.toHaveBeenCalled()
   })
 

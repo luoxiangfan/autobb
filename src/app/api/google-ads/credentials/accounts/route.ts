@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth'
 import {
   getGoogleAdsAuthContext,
   GOOGLE_ADS_DUAL_STACK_WARNING,
+  hasConfiguredGoogleAdsAuthFromContext,
   resolveEffectiveServiceAccountId,
 } from '@/lib/google-ads-auth-context'
 import {
@@ -199,6 +200,16 @@ async function get(request: NextRequest) {
           authConfigWarning: GOOGLE_ADS_DUAL_STACK_WARNING,
         },
         { status: 409 }
+      )
+    }
+    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+      return jsonNoStore(
+        {
+          error: 'Google Ads 认证未配置或已失效',
+          code: 'CREDENTIALS_NOT_CONFIGURED',
+          message: '请先在设置中完成 OAuth 授权或配置服务账号',
+        },
+        { status: 404 }
       )
     }
     const ownerUserId = authContext.ownerUserId

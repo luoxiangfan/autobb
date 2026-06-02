@@ -24,16 +24,22 @@ vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
   return {
     ...actual,
     getGoogleAdsAuthContext: contextFns.getGoogleAdsAuthContext,
+    resolveGoogleAdsApiAccessLevel: async (userId: number) => {
+      const ctx = await contextFns.getGoogleAdsAuthContext(userId)
+      return ctx?.apiAccessLevel ?? null
+    },
   }
 })
 
 import {
   adminHasConfiguredAuth,
   hasConfiguredGoogleAdsAuth,
-  resolveGoogleAdsApiAccessLevel,
   resolveGoogleAdsApiAccessLevelFromContext,
 } from '@/lib/google-ads-auth-assignment'
-import { hasConfiguredGoogleAdsAuthFromContext } from '@/lib/google-ads-auth-context'
+import {
+  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsApiAccessLevel,
+} from '@/lib/google-ads-auth-context'
 
 function sharedSaContext() {
   return {
