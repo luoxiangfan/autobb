@@ -1,4 +1,7 @@
-import type { ParsedGoogleAdsCredentialsStatus } from '@/lib/google-ads-credentials-errors'
+import {
+  resolveAccountsRequestAuth,
+  type ParsedGoogleAdsCredentialsStatus,
+} from '@/lib/google-ads-credentials-errors'
 
 export type GoogleAdsInitialAccountsLoadHandlers = {
   refreshCredentialsStatus: () => Promise<ParsedGoogleAdsCredentialsStatus>
@@ -18,20 +21,23 @@ export async function runInitialGoogleAdsAccountsLoad(
   handlers: GoogleAdsInitialAccountsLoadHandlers
 ): Promise<void> {
   const auth = await handlers.refreshCredentialsStatus()
-  if (auth.authConfigWarning) {
-    handlers.onAuthConfigWarning?.(auth.authConfigWarning)
+  const resolved = resolveAccountsRequestAuth(auth)
+  if (!resolved.ok) {
+    if (resolved.reason === 'auth_config_warning') {
+      handlers.onAuthConfigWarning?.(resolved.authConfigWarning)
+    }
     return
   }
 
-  if (auth.authType === 'service_account' && auth.serviceAccountId) {
-    await handlers.fetchServiceAccountAccounts(auth.serviceAccountId, {
+  const { authForRequest } = resolved
+  if (authForRequest.authType === 'service_account' && authForRequest.serviceAccountId) {
+    await handlers.fetchServiceAccountAccounts(authForRequest.serviceAccountId, {
       skipCredentialsRefresh: true,
     })
     return
   }
 
-  if (auth.hasCredentials && auth.authType === 'oauth') {
+  if (authForRequest.authType === 'oauth') {
     await handlers.fetchOAuthAccounts({ skipCredentialsRefresh: true })
-    return
   }
 }

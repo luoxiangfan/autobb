@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   appendAccountsAuthToSearchParams,
-  assertAccountsRequestAuth,
+  accountsRequestBlockedMessage,
   buildGoogleAdsApiErrorMessage,
   formatErrorMessage,
   formatNullableErrorMessage,
   resolveAccountsRequestAuth,
   safeReadJson,
   throwAccountsListFetchError,
+  type AccountsRequestAuth,
   type ParsedGoogleAdsCredentialsStatus,
 } from '@/lib/google-ads-credentials-errors'
 import { useGoogleAdsAccountsAuth } from '@/hooks/useGoogleAdsAccountsAuth'
@@ -193,23 +194,15 @@ export default function GoogleAdsPage() {
   }
 
   const scheduleAccountsPoll = (
-    auth: Pick<ParsedGoogleAdsCredentialsStatus, 'authType' | 'serviceAccountId'>,
+    authForRequest: AccountsRequestAuth,
     fallbackServiceAccountId?: string | null
   ) => {
     if (accountsPollTimerRef.current) clearTimeout(accountsPollTimerRef.current)
     accountsPollTimerRef.current = setTimeout(() => {
-      if (auth.authType === 'service_account') {
-        try {
-          assertAccountsRequestAuth({
-            authType: 'service_account',
-            serviceAccountId: auth.serviceAccountId || fallbackServiceAccountId || undefined,
-          })
-          const saId = auth.serviceAccountId || fallbackServiceAccountId
-          if (!saId) return
-          fetchAccountsWithServiceAccount(saId, false, true)
-        } catch {
-          return
-        }
+      if (authForRequest.authType === 'service_account') {
+        const saId = authForRequest.serviceAccountId || fallbackServiceAccountId
+        if (!saId) return
+        fetchAccountsWithServiceAccount(saId, false, true)
       } else {
         fetchAccounts(false, true)
       }
@@ -262,8 +255,13 @@ export default function GoogleAdsPage() {
       if (!resolved.ok) {
         if (resolved.reason === 'auth_config_warning') {
           setAuthConfigWarning(resolved.authConfigWarning)
-        } else if (resolved.reason === 'invalid_auth') {
-          setError(resolved.message)
+        }
+        const blockedMessage = accountsRequestBlockedMessage(resolved)
+        if (blockedMessage) {
+          setError(blockedMessage)
+        }
+        if (forceRefresh) {
+          setAccountsSyncing(false)
         }
         return
       }

@@ -159,7 +159,7 @@ async function getRawActiveServiceAccount(userId: number): Promise<{
 export function resolveGoogleAdsApiAccessLevelFromContext(ctx: {
   userId: number
   assignment: GoogleAdsAuthAssignment | null
-  auth: { authType: GoogleAdsAuthType }
+  auth: { authType?: GoogleAdsAuthType }
   oauthCredentials: { api_access_level?: string } | null
   serviceAccountConfig: { apiAccessLevel?: string } | null
 }): string | null {
@@ -348,12 +348,26 @@ export async function upsertGoogleAdsAuthAssignment(params: {
   if (!updated) {
     throw new Error('保存 Google Ads 认证分配失败')
   }
+
+  const {
+    invalidateGoogleAdsAuthContextCache,
+    invalidateGoogleAdsAuthContextForCredentialUser,
+  } = await import('./google-ads-auth-context')
+  if (params.assignmentMode === 'shared_admin') {
+    invalidateGoogleAdsAuthContextCache(params.userId)
+  } else {
+    await invalidateGoogleAdsAuthContextForCredentialUser(params.userId)
+  }
+
   return updated
 }
 
 export async function deleteGoogleAdsAuthAssignment(userId: number): Promise<void> {
   const db = await getDatabase()
   await db.exec(`DELETE FROM google_ads_auth_assignments WHERE user_id = ?`, [userId])
+
+  const { invalidateGoogleAdsAuthContextCache } = await import('./google-ads-auth-context')
+  invalidateGoogleAdsAuthContextCache(userId)
 }
 
 const GOOGLE_ADS_SETTING_KEYS = [

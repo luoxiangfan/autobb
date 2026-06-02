@@ -83,6 +83,73 @@ export async function listServiceAccounts(userId: number) {
   return accounts
 }
 
+export type ReplaceGoogleAdsServiceAccountParams = {
+  name: string
+  mccCustomerId: string
+  developerToken: string
+  serviceAccountEmail: string
+  encryptedPrivateKey: string
+  projectId: string | null
+}
+
+/** 替换用户的服务账号（仅保留 1 个）并失效 auth-context 缓存 */
+export async function replaceGoogleAdsServiceAccountForUser(
+  userId: number,
+  params: ReplaceGoogleAdsServiceAccountParams
+): Promise<string> {
+  const db = await getDatabase()
+  const { nowFunc } = await import('./db-helpers')
+  const nowSql = nowFunc(db.type)
+  const id = crypto.randomUUID()
+
+  await db.exec(`DELETE FROM google_ads_service_accounts WHERE user_id = ?`, [userId])
+  await db.exec(
+    `INSERT INTO google_ads_service_accounts (
+      id, user_id, name, mcc_customer_id, developer_token,
+      service_account_email, private_key, project_id,
+      created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ${nowSql}, ${nowSql})`,
+    [
+      id,
+      userId,
+      params.name,
+      params.mccCustomerId,
+      params.developerToken,
+      params.serviceAccountEmail,
+      params.encryptedPrivateKey,
+      params.projectId,
+    ]
+  )
+
+  const { invalidateGoogleAdsAuthContextForCredentialUser } = await import('./google-ads-auth-context')
+  await invalidateGoogleAdsAuthContextForCredentialUser(userId)
+  return id
+}
+
+/** 按 id 删除用户的服务账号并失效 auth-context 缓存 */
+export async function deleteGoogleAdsServiceAccountForUser(
+  userId: number,
+  serviceAccountId: string
+): Promise<void> {
+  const db = await getDatabase()
+  await db.exec(
+    `DELETE FROM google_ads_service_accounts WHERE id = ? AND user_id = ?`,
+    [serviceAccountId, userId]
+  )
+
+  const { invalidateGoogleAdsAuthContextForCredentialUser } = await import('./google-ads-auth-context')
+  await invalidateGoogleAdsAuthContextForCredentialUser(userId)
+}
+
+/** 删除用户全部服务账号并失效 auth-context 缓存 */
+export async function deleteAllGoogleAdsServiceAccountsForUser(userId: number): Promise<void> {
+  const db = await getDatabase()
+  await db.exec(`DELETE FROM google_ads_service_accounts WHERE user_id = ?`, [userId])
+
+  const { invalidateGoogleAdsAuthContextForCredentialUser } = await import('./google-ads-auth-context')
+  await invalidateGoogleAdsAuthContextForCredentialUser(userId)
+}
+
 export function parseServiceAccountJson(jsonContent: string) {
   const data = JSON.parse(jsonContent)
 

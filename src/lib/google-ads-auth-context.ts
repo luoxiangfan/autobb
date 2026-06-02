@@ -34,7 +34,7 @@ export interface GoogleAdsAuthContext {
   /** OAuth refresh_token 与活跃服务账号同时存在（历史双栈残留） */
   dualStack: boolean
   auth: {
-    authType: 'oauth' | 'service_account'
+    authType?: 'oauth' | 'service_account'
     serviceAccountId?: string
   }
   oauthCredentials: Awaited<ReturnType<typeof getGoogleAdsCredentials>>
@@ -95,7 +95,7 @@ async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthCo
 
   if (auth.authType === 'oauth') {
     oauthCredentials = await getGoogleAdsCredentials(userId, resolution)
-  } else {
+  } else if (auth.authType === 'service_account') {
     serviceAccountConfig = await getServiceAccountConfig(userId, auth.serviceAccountId, resolution)
   }
 
@@ -237,6 +237,22 @@ export function hasConfiguredGoogleAdsAuthFromContext(ctx: GoogleAdsAuthContext)
 /**
  * 凭证状态 / 管理端展示用 authType：双栈时不返回 getUserAuthType 偏好的 oauth，避免 UI 误判为已选 OAuth。
  */
+export function resolveConfiguredGoogleAdsAuthType(
+  ctx: Pick<
+    GoogleAdsAuthContext,
+    'auth' | 'oauthCredentials' | 'serviceAccountConfig' | 'assignment'
+  >
+): 'oauth' | 'service_account' {
+  return (
+    ctx.auth.authType ??
+    (ctx.oauthCredentials?.refresh_token
+      ? 'oauth'
+      : ctx.serviceAccountConfig
+        ? 'service_account'
+        : ctx.assignment?.authType ?? 'oauth')
+  )
+}
+
 export function resolveGoogleAdsDisplayAuthType(
   ctx: GoogleAdsAuthContext
 ): 'oauth' | 'service_account' | null {
@@ -246,7 +262,14 @@ export function resolveGoogleAdsDisplayAuthType(
   if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
     return null
   }
-  return ctx.auth.authType
+  return (
+    ctx.auth.authType ??
+    (ctx.oauthCredentials?.refresh_token
+      ? 'oauth'
+      : ctx.serviceAccountConfig
+        ? 'service_account'
+        : null)
+  )
 }
 
 export function getServiceAccountMccFromContext(ctx: GoogleAdsAuthContext): string | undefined {
@@ -398,8 +421,10 @@ export async function resolveGoogleAdsApiAuthFromContext(
     }
   }
 
+  const authType = resolveConfiguredGoogleAdsAuthType(ctx)
+
   return {
-    authType: ctx.auth.authType,
+    authType,
     refreshToken: ctx.oauthCredentials?.refresh_token || '',
     serviceAccountId,
     serviceAccountMccId,

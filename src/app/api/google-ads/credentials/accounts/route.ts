@@ -221,25 +221,33 @@ async function get(request: NextRequest) {
     const offerIdParam = searchParams.get('offerId')
     const offerId = offerIdParam ? parsePositiveIntegerOfferId(offerIdParam) ?? null : null
     const authTypeParam = searchParams.get('auth_type') as 'oauth' | 'service_account' | null
+    const configuredAuthType =
+      resolvedAuth.authType ??
+      (authContext.oauthCredentials?.refresh_token
+        ? 'oauth'
+        : authContext.serviceAccountConfig
+          ? 'service_account'
+          : undefined)
     const authType: 'oauth' | 'service_account' =
       authTypeParam === 'oauth' || authTypeParam === 'service_account'
         ? authTypeParam
-        : resolvedAuth.authType
+        : (configuredAuthType ?? 'oauth')
 
     if (
       authTypeParam &&
       (authTypeParam === 'oauth' || authTypeParam === 'service_account') &&
-      authTypeParam !== resolvedAuth.authType
+      configuredAuthType &&
+      authTypeParam !== configuredAuthType
     ) {
       return jsonNoStore(
         {
           error: '认证方式与当前配置不一致',
           code: 'AUTH_TYPE_MISMATCH',
           message:
-            resolvedAuth.authType === 'service_account'
+            configuredAuthType === 'service_account'
               ? '当前已配置服务账号认证，请使用 auth_type=service_account，或在设置页删除服务账号后再使用 OAuth。'
               : '当前已配置 OAuth 认证，请使用 auth_type=oauth，或在设置页删除 OAuth 后再使用服务账号。',
-          configuredAuthType: resolvedAuth.authType,
+          configuredAuthType,
           requestedAuthType: authTypeParam,
         },
         { status: 409 }

@@ -18,6 +18,7 @@ import {
   getGoogleAdsAuthContext,
   GOOGLE_ADS_DUAL_STACK_WARNING,
   hasConfiguredGoogleAdsAuthFromContext,
+  resolveConfiguredGoogleAdsAuthType,
   resolveGoogleAdsCredentialStatusFields,
   resolveGoogleAdsDisplayAuthType,
 } from '@/lib/google-ads-auth-context'
@@ -301,11 +302,15 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    await updateApiAccessLevel(userId, apiAccessLevel, authContext.auth.authType)
+    await updateApiAccessLevel(
+      userId,
+      apiAccessLevel,
+      resolveConfiguredGoogleAdsAuthType(authContext)
+    )
 
     console.log(`✅ 已更新API访问级别: ${apiAccessLevel}`)
     console.log(`   用户: ${authResult.user.email}`)
-    console.log(`   认证类型: ${authContext.auth.authType}`)
+    console.log(`   认证类型: ${resolveConfiguredGoogleAdsAuthType(authContext)}`)
 
     return NextResponse.json({
       success: true,

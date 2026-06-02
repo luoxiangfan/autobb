@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
   appendAccountsAuthToSearchParams,
+  accountsRequestBlockedMessage,
   assertAccountsRequestAuth,
   buildAuthForAccountsRequest,
   buildGoogleAdsApiErrorMessage,
   GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE,
+  GOOGLE_ADS_NOT_CONFIGURED_MESSAGE,
   parseAccountsListFetchFailure,
   parseCredentialsStatusResponse,
   resolveAccountsRequestAuth,
@@ -196,5 +198,25 @@ describe('google-ads-credentials-errors', () => {
       expect(result.reason).toBe('invalid_auth')
       expect(result.message).toBe(GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE)
     }
+  })
+
+  it('accountsRequestBlockedMessage maps not_configured and invalid_auth', () => {
+    expect(
+      accountsRequestBlockedMessage({ ok: false, reason: 'not_configured' })
+    ).toBe(GOOGLE_ADS_NOT_CONFIGURED_MESSAGE)
+    expect(
+      accountsRequestBlockedMessage({
+        ok: false,
+        reason: 'invalid_auth',
+        message: 'missing sa',
+      })
+    ).toBe('missing sa')
+    expect(
+      accountsRequestBlockedMessage({
+        ok: false,
+        reason: 'auth_config_warning',
+        authConfigWarning: 'warn',
+      })
+    ).toBeNull()
   })
 })

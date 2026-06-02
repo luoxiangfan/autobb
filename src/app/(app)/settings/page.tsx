@@ -32,6 +32,8 @@ import { getGeminiEndpoint, type GeminiProvider } from '@/lib/gemini-config'
 import { ServiceAccountPermissionError } from '@/components/ServiceAccountPermissionError'
 import {
   appendAccountsAuthToSearchParams,
+  accountsRequestBlockedMessage,
+  GOOGLE_ADS_NOT_CONFIGURED_MESSAGE,
   parseAccountsListFetchFailure,
   resolveAccountsRequestAuth,
   safeReadJson,
@@ -842,9 +844,7 @@ export default function SettingsPage() {
           )
         }
         throw new Error(
-          resolved.reason === 'invalid_auth'
-            ? resolved.message
-            : 'Google Ads 认证未配置'
+          accountsRequestBlockedMessage(resolved) ?? GOOGLE_ADS_NOT_CONFIGURED_MESSAGE
         )
       }
       const authForRequest = resolved.authForRequest

@@ -277,7 +277,7 @@ describe('resolveGoogleAdsDisplayAuthType', () => {
     expect(
       resolveGoogleAdsDisplayAuthType({
         dualStack: false,
-        auth: { authType: 'oauth' },
+        auth: {},
         oauthCredentials: null,
         serviceAccountConfig: null,
       } as Parameters<typeof resolveGoogleAdsDisplayAuthType>[0])

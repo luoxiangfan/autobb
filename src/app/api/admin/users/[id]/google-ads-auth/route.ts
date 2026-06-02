@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth, findUserById } from '@/lib/auth'
-import { getDatabase } from '@/lib/db'
 import {
   adminHasConfiguredAuth,
   assertOwnCredentialsDifferFromAdmin,
@@ -16,16 +15,17 @@ import {
   getGoogleAdsCredentialsRaw,
   saveGoogleAdsCredentials,
 } from '@/lib/google-ads-oauth'
-import { parseServiceAccountJson } from '@/lib/google-ads-service-account'
+import {
+  deleteAllGoogleAdsServiceAccountsForUser,
+  parseServiceAccountJson,
+  replaceGoogleAdsServiceAccountForUser,
+} from '@/lib/google-ads-service-account'
 import { encrypt } from '@/lib/crypto'
-import { boolCondition } from '@/lib/db-helpers'
 import {
   assertNoConflictingGoogleAdsAuth,
   getGoogleAdsAuthContext,
   GOOGLE_ADS_DUAL_STACK_WARNING,
   hasConfiguredGoogleAdsAuthFromContext,
-  invalidateGoogleAdsAuthContextCache,
-  invalidateGoogleAdsAuthContextForCredentialUser,
   resolveGoogleAdsCredentialStatusFields,
   resolveGoogleAdsDisplayAuthType,
 } from '@/lib/google-ads-auth-context'
@@ -186,8 +186,6 @@ export async function PUT(
         configuredBy: admin.userId,
       })
 
-      invalidateGoogleAdsAuthContextCache(userId)
-
       return NextResponse.json({
         success: true,
         message: '已设置为共享管理员认证配置',
@@ -262,20 +260,16 @@ export async function PUT(
         return NextResponse.json({ error: error.message }, { status: 409 })
       }
 
-      const db = getDatabase()
-      const id = crypto.randomUUID()
-      const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
       const encryptedPrivateKey = encrypt(privateKey)
 
-      await db.exec(`DELETE FROM google_ads_service_accounts WHERE user_id = ?`, [userId])
-      await db.exec(
-        `INSERT INTO google_ads_service_accounts (
-          id, user_id, name, mcc_customer_id, developer_token,
-          service_account_email, private_key, project_id,
-          created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc}, ${nowFunc})`,
-        [id, userId, sa.name, sa.mccCustomerId, sa.developerToken, clientEmail, encryptedPrivateKey, projectId]
-      )
+      await replaceGoogleAdsServiceAccountForUser(userId, {
+        name: sa.name,
+        mccCustomerId: sa.mccCustomerId,
+        developerToken: sa.developerToken,
+        serviceAccountEmail: clientEmail,
+        encryptedPrivateKey,
+        projectId: projectId ?? null,
+      })
     }
 
     await upsertGoogleAdsAuthAssignment({
@@ -285,8 +279,6 @@ export async function PUT(
       sharedAdminUserId: null,
       configuredBy: admin.userId,
     })
-
-    await invalidateGoogleAdsAuthContextForCredentialUser(userId)
 
     return NextResponse.json({
       success: true,
@@ -322,15 +314,11 @@ export async function DELETE(
       if (assignment.authType === 'oauth') {
         await deleteGoogleAdsCredentials(userId)
       } else {
-        const db = getDatabase()
-        await db.exec(`DELETE FROM google_ads_service_accounts WHERE user_id = ?`, [userId])
+        await deleteAllGoogleAdsServiceAccountsForUser(userId)
       }
-      await invalidateGoogleAdsAuthContextForCredentialUser(userId)
     }
 
     await deleteGoogleAdsAuthAssignment(userId)
-
-    invalidateGoogleAdsAuthContextCache(userId)
 
     return NextResponse.json({
       success: true,

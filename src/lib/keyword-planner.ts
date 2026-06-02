@@ -163,7 +163,12 @@ export async function getGoogleAdsConfig(
     const effectiveAuthType: AuthType =
       authType === 'service_account' || authType === 'oauth'
         ? authType
-        : authContext.auth.authType
+        : (authContext.auth.authType ??
+            (authContext.oauthCredentials?.refresh_token
+              ? 'oauth'
+              : authContext.serviceAccountConfig
+                ? 'service_account'
+                : 'oauth'))
     const effectiveServiceAccountId =
       serviceAccountId ?? authContext.serviceAccountConfig?.id?.toString()
 

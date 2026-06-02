@@ -97,4 +97,28 @@ describe('runInitialGoogleAdsAccountsLoad', () => {
     expect(fetchServiceAccountAccounts).not.toHaveBeenCalled()
     expect(fetchOAuthAccounts).not.toHaveBeenCalled()
   })
+
+  it('loads service account accounts when resolveAccountsRequestAuth succeeds', async () => {
+    const refreshCredentialsStatus = vi.fn(async () => ({
+      hasCredentials: true,
+      authType: 'service_account' as const,
+      serviceAccountId: 'sa-bound',
+      authConfigWarning: null,
+    }))
+    const fetchOAuthAccounts = vi.fn(async () => {})
+    const fetchServiceAccountAccounts = vi.fn(async () => {})
+    const listServiceAccounts = vi.fn(async () => [])
+
+    await runInitialGoogleAdsAccountsLoad({
+      refreshCredentialsStatus,
+      fetchOAuthAccounts,
+      fetchServiceAccountAccounts,
+      listServiceAccounts,
+    })
+
+    expect(fetchServiceAccountAccounts).toHaveBeenCalledWith('sa-bound', {
+      skipCredentialsRefresh: true,
+    })
+    expect(fetchOAuthAccounts).not.toHaveBeenCalled()
+  })
 })

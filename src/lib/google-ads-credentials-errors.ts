@@ -235,6 +235,9 @@ export type AccountsRequestAuth = {
 export const GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE =
   '未找到服务账号配置，请前往设置页面配置'
 
+export const GOOGLE_ADS_NOT_CONFIGURED_MESSAGE =
+  'Google Ads 认证未配置或已失效，请先在设置中完成 OAuth 授权或配置服务账号'
+
 /** 合并凭证快照与服务账号 fallback，供 accounts 列表请求使用 */
 export function buildAuthForAccountsRequest(
   auth: ParsedGoogleAdsCredentialsStatus,
@@ -263,6 +266,18 @@ export type AccountsRequestAuthResolution =
   | { ok: false; reason: 'not_configured' }
   | { ok: false; reason: 'invalid_auth'; message: string }
   | { ok: true; authForRequest: AccountsRequestAuth }
+
+export function accountsRequestBlockedMessage(
+  resolution: Exclude<AccountsRequestAuthResolution, { ok: true }>
+): string | null {
+  if (resolution.reason === 'invalid_auth') {
+    return resolution.message
+  }
+  if (resolution.reason === 'not_configured') {
+    return GOOGLE_ADS_NOT_CONFIGURED_MESSAGE
+  }
+  return null
+}
 
 /** 拉 accounts 前的统一预检：双栈 / 未配置 / SA id 缺失 */
 export function resolveAccountsRequestAuth(

@@ -144,7 +144,8 @@ export async function trackApiUsage(record: ApiUsageRecord): Promise<void> {
     if (!record.isSuccess && record.errorMessage) {
       try {
         const { detectAndUpdateFromError } = await import('./google-ads-access-level-detector')
-        const { getGoogleAdsAuthContext } = await import('./google-ads-auth-context')
+        const { getGoogleAdsAuthContext, resolveConfiguredGoogleAdsAuthType } =
+          await import('./google-ads-auth-context')
 
         const authContext = await getGoogleAdsAuthContext(record.userId)
         if (authContext.dualStack) {
@@ -152,7 +153,7 @@ export async function trackApiUsage(record: ApiUsageRecord): Promise<void> {
         }
         await detectAndUpdateFromError(
           record.userId,
-          authContext.auth.authType,
+          resolveConfiguredGoogleAdsAuthType(authContext),
           record.errorMessage
         )
       } catch (detectError) {
