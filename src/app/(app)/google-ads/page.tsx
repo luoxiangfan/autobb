@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   appendAccountsAuthToSearchParams,
-  accountsRequestBlockedMessage,
   buildGoogleAdsApiErrorMessage,
   formatErrorMessage,
   formatNullableErrorMessage,
+  resolveAccountsFetchBlockedUiEffects,
   resolveAccountsRequestAuth,
   safeReadJson,
   throwAccountsListFetchError,
@@ -220,14 +220,6 @@ export default function GoogleAdsPage() {
           setCurrentServiceAccountId(serviceAccountId)
           return fetchAccountsWithServiceAccount(serviceAccountId, false, false, opts)
         },
-        listServiceAccounts: async () => {
-          const response = await fetch('/api/google-ads/service-account', {
-            credentials: 'include',
-          })
-          if (!response.ok) return []
-          const data = await response.json()
-          return (data.accounts || []) as Array<{ id: string }>
-        },
       })
     } catch (err: any) {
       console.error('初始加载 Google Ads 账号失败:', err)
@@ -253,14 +245,14 @@ export default function GoogleAdsPage() {
       })
       const resolved = resolveAccountsRequestAuth(auth, opts?.fallbackServiceAccountId)
       if (!resolved.ok) {
-        if (resolved.reason === 'auth_config_warning') {
-          setAuthConfigWarning(resolved.authConfigWarning)
+        const effects = resolveAccountsFetchBlockedUiEffects(resolved, { forceRefresh })
+        if (effects.authConfigWarning) {
+          setAuthConfigWarning(effects.authConfigWarning)
         }
-        const blockedMessage = accountsRequestBlockedMessage(resolved)
-        if (blockedMessage) {
-          setError(blockedMessage)
+        if (effects.errorMessage) {
+          setError(effects.errorMessage)
         }
-        if (forceRefresh) {
+        if (effects.clearForceRefreshState) {
           setAccountsSyncing(false)
         }
         return
@@ -346,11 +338,11 @@ export default function GoogleAdsPage() {
     setAccountsSyncError(null)
 
     try {
+      let fallbackServiceAccountId = currentServiceAccountId || undefined
       const auth = await prepareAuthForAccountsFetch({ forceRefresh: true, isPoll: false })
-      let fallbackServiceAccountId: string | undefined
 
       if (auth.authType === 'service_account') {
-        let serviceAccountId = auth.serviceAccountId || currentServiceAccountId || undefined
+        let serviceAccountId = auth.serviceAccountId || fallbackServiceAccountId
 
         if (!serviceAccountId) {
           const saResponse = await fetch('/api/google-ads/service-account', {
@@ -370,18 +362,7 @@ export default function GoogleAdsPage() {
 
         if (serviceAccountId) {
           setCurrentServiceAccountId(serviceAccountId)
-        }
-
-        fallbackServiceAccountId = serviceAccountId
-      }
-
-      if (auth.authType === 'service_account') {
-        const resolved = resolveAccountsRequestAuth(auth, fallbackServiceAccountId)
-        if (!resolved.ok) {
-          if (resolved.reason === 'invalid_auth') {
-            throw new Error(resolved.message)
-          }
-          return
+          fallbackServiceAccountId = serviceAccountId
         }
       }
 

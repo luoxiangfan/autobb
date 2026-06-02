@@ -244,8 +244,11 @@ export function buildAuthForAccountsRequest(
   fallbackServiceAccountId?: string | null
 ): AccountsRequestAuth {
   if (auth.authType !== 'service_account') {
+    if (!auth.authType) {
+      throw new Error(GOOGLE_ADS_NOT_CONFIGURED_MESSAGE)
+    }
     return {
-      authType: auth.authType ?? 'oauth',
+      authType: auth.authType,
       serviceAccountId: auth.serviceAccountId,
     }
   }
@@ -277,6 +280,31 @@ export function accountsRequestBlockedMessage(
     return GOOGLE_ADS_NOT_CONFIGURED_MESSAGE
   }
   return null
+}
+
+export type AccountsFetchBlockedUiEffects = {
+  authConfigWarning?: string
+  errorMessage?: string
+  clearForceRefreshState?: boolean
+}
+
+/** 客户端 accounts 拉取预检失败时的 UI 副作用（便于单测） */
+export function resolveAccountsFetchBlockedUiEffects(
+  resolution: Exclude<AccountsRequestAuthResolution, { ok: true }>,
+  opts?: { forceRefresh?: boolean }
+): AccountsFetchBlockedUiEffects {
+  const effects: AccountsFetchBlockedUiEffects = {}
+  if (resolution.reason === 'auth_config_warning') {
+    effects.authConfigWarning = resolution.authConfigWarning
+  }
+  const errorMessage = accountsRequestBlockedMessage(resolution)
+  if (errorMessage) {
+    effects.errorMessage = errorMessage
+  }
+  if (opts?.forceRefresh) {
+    effects.clearForceRefreshState = true
+  }
+  return effects
 }
 
 /** 拉 accounts 前的统一预检：双栈 / 未配置 / SA id 缺失 */

@@ -52,8 +52,9 @@ async function resolveDualStackOnOwner(
   dualStack: boolean
 }> {
   const hasOAuthRefresh =
-    options?.oauthRefreshAlreadyLoaded ??
-    Boolean((await getGoogleAdsCredentialsRaw(ownerUserId))?.refresh_token)
+    options?.oauthRefreshAlreadyLoaded !== undefined
+      ? options.oauthRefreshAlreadyLoaded
+      : Boolean((await getGoogleAdsCredentialsRaw(ownerUserId))?.refresh_token)
 
   const db = await getDatabase()
   const isActiveCondition = boolCondition('is_active', true, db.type)
@@ -101,7 +102,7 @@ async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthCo
 
   const { dualStack } = await resolveDualStackOnOwner(ownerUserId, {
     oauthRefreshAlreadyLoaded:
-      auth.authType === 'oauth' ? Boolean(oauthCredentials?.refresh_token) : undefined,
+      auth.authType === 'oauth' && oauthCredentials?.refresh_token ? true : undefined,
   })
 
   const partialCtx = {

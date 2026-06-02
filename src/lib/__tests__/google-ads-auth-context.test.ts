@@ -186,6 +186,33 @@ describe('getGoogleAdsAuthContext', () => {
 
     expect(ctx.dualStack).toBe(false)
   })
+
+  it('detects dualStack when oauth snapshot lacks refresh but owner DB has refresh and SA', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 2,
+      isShared: false,
+      assignment: {
+        userId: 2,
+        assignmentMode: 'own',
+        sharedAdminUserId: null,
+        authType: 'oauth',
+        configuredBy: 2,
+        createdAt: '',
+        updatedAt: '',
+      },
+    })
+    assignmentFns.isGoogleAdsAuthShared.mockReturnValue(false)
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+    oauthFns.getGoogleAdsCredentials.mockResolvedValue(null)
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt' })
+    dbFns.queryOne.mockResolvedValue({ id: 'sa-1' })
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+
+    const ctx = await getGoogleAdsAuthContext(2)
+
+    expect(ctx.dualStack).toBe(true)
+    expect(oauthFns.getGoogleAdsCredentialsRaw).toHaveBeenCalled()
+  })
 })
 
 describe('resolveGoogleAdsCredentialStatusFields', () => {

@@ -11,18 +11,15 @@ describe('runInitialGoogleAdsAccountsLoad', () => {
     }))
     const fetchOAuthAccounts = vi.fn(async () => {})
     const fetchServiceAccountAccounts = vi.fn(async () => {})
-    const listServiceAccounts = vi.fn(async () => [{ id: 'sa-1' }])
 
     await runInitialGoogleAdsAccountsLoad({
       refreshCredentialsStatus,
       fetchOAuthAccounts,
       fetchServiceAccountAccounts,
-      listServiceAccounts,
     })
 
     expect(fetchOAuthAccounts).toHaveBeenCalledWith({ skipCredentialsRefresh: true })
     expect(fetchServiceAccountAccounts).not.toHaveBeenCalled()
-    expect(listServiceAccounts).not.toHaveBeenCalled()
   })
 
   it('does not fall back to service account when OAuth is not configured', async () => {
@@ -33,18 +30,15 @@ describe('runInitialGoogleAdsAccountsLoad', () => {
     }))
     const fetchOAuthAccounts = vi.fn(async () => {})
     const fetchServiceAccountAccounts = vi.fn(async () => {})
-    const listServiceAccounts = vi.fn(async () => [{ id: 'sa-first' }, { id: 'sa-second' }])
 
     await runInitialGoogleAdsAccountsLoad({
       refreshCredentialsStatus,
       fetchOAuthAccounts,
       fetchServiceAccountAccounts,
-      listServiceAccounts,
     })
 
     expect(fetchOAuthAccounts).not.toHaveBeenCalled()
     expect(fetchServiceAccountAccounts).not.toHaveBeenCalled()
-    expect(listServiceAccounts).not.toHaveBeenCalled()
   })
 
   it('stops after dual-stack warning without implicit SA fallback', async () => {
@@ -57,20 +51,17 @@ describe('runInitialGoogleAdsAccountsLoad', () => {
     }))
     const fetchOAuthAccounts = vi.fn(async () => {})
     const fetchServiceAccountAccounts = vi.fn(async () => {})
-    const listServiceAccounts = vi.fn(async () => [{ id: 'sa-1' }])
 
     await runInitialGoogleAdsAccountsLoad({
       refreshCredentialsStatus,
       fetchOAuthAccounts,
       fetchServiceAccountAccounts,
-      listServiceAccounts,
       onAuthConfigWarning,
     })
 
     expect(onAuthConfigWarning).toHaveBeenCalledWith('dual stack warning')
     expect(fetchOAuthAccounts).not.toHaveBeenCalled()
     expect(fetchServiceAccountAccounts).not.toHaveBeenCalled()
-    expect(listServiceAccounts).not.toHaveBeenCalled()
   })
 
   it('does not load SA accounts when dual-stack warning even if authType is service_account', async () => {
@@ -83,13 +74,11 @@ describe('runInitialGoogleAdsAccountsLoad', () => {
     }))
     const fetchOAuthAccounts = vi.fn(async () => {})
     const fetchServiceAccountAccounts = vi.fn(async () => {})
-    const listServiceAccounts = vi.fn(async () => [])
 
     await runInitialGoogleAdsAccountsLoad({
       refreshCredentialsStatus,
       fetchOAuthAccounts,
       fetchServiceAccountAccounts,
-      listServiceAccounts,
       onAuthConfigWarning,
     })
 
@@ -107,13 +96,11 @@ describe('runInitialGoogleAdsAccountsLoad', () => {
     }))
     const fetchOAuthAccounts = vi.fn(async () => {})
     const fetchServiceAccountAccounts = vi.fn(async () => {})
-    const listServiceAccounts = vi.fn(async () => [])
 
     await runInitialGoogleAdsAccountsLoad({
       refreshCredentialsStatus,
       fetchOAuthAccounts,
       fetchServiceAccountAccounts,
-      listServiceAccounts,
     })
 
     expect(fetchServiceAccountAccounts).toHaveBeenCalledWith('sa-bound', {

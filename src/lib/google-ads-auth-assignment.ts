@@ -6,7 +6,7 @@
  * - 已持有 `GoogleAdsAuthContext` 时：heal/sync 前须 `googleAdsAuthContextDualStackError`。
  */
 import { getDatabase } from './db'
-import { boolCondition } from './db-helpers'
+import { boolCondition, nowFunc } from './db-helpers'
 import type { GoogleAdsCredentials } from './google-ads-oauth'
 
 export type GoogleAdsAuthAssignmentMode = 'own' | 'shared_admin'
@@ -309,7 +309,7 @@ export async function upsertGoogleAdsAuthAssignment(params: {
   configuredBy: number
 }): Promise<GoogleAdsAuthAssignment> {
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowSql = nowFunc(db.type)
   const existing = await getGoogleAdsAuthAssignment(params.userId)
 
   if (existing) {
@@ -319,7 +319,7 @@ export async function upsertGoogleAdsAuthAssignment(params: {
            shared_admin_user_id = ?,
            auth_type = ?,
            configured_by = ?,
-           updated_at = ${nowFunc}
+           updated_at = ${nowSql}
        WHERE user_id = ?`,
       [
         params.assignmentMode,
@@ -333,7 +333,7 @@ export async function upsertGoogleAdsAuthAssignment(params: {
     await db.exec(
       `INSERT INTO google_ads_auth_assignments (
          user_id, assignment_mode, shared_admin_user_id, auth_type, configured_by, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ${nowFunc}, ${nowFunc})`,
+       ) VALUES (?, ?, ?, ?, ?, ${nowSql}, ${nowSql})`,
       [
         params.userId,
         params.assignmentMode,
@@ -349,14 +349,9 @@ export async function upsertGoogleAdsAuthAssignment(params: {
     throw new Error('保存 Google Ads 认证分配失败')
   }
 
-  const {
-    invalidateGoogleAdsAuthContextCache,
-    invalidateGoogleAdsAuthContextForCredentialUser,
-  } = await import('./google-ads-auth-context')
+  const { invalidateGoogleAdsAuthContextCache } = await import('./google-ads-auth-context')
   if (params.assignmentMode === 'shared_admin') {
     invalidateGoogleAdsAuthContextCache(params.userId)
-  } else {
-    await invalidateGoogleAdsAuthContextForCredentialUser(params.userId)
   }
 
   return updated

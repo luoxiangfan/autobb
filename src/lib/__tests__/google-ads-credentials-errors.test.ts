@@ -9,6 +9,7 @@ import {
   GOOGLE_ADS_NOT_CONFIGURED_MESSAGE,
   parseAccountsListFetchFailure,
   parseCredentialsStatusResponse,
+  resolveAccountsFetchBlockedUiEffects,
   resolveAccountsRequestAuth,
 } from '../google-ads-credentials-errors'
 
@@ -218,5 +219,33 @@ describe('google-ads-credentials-errors', () => {
         authConfigWarning: 'warn',
       })
     ).toBeNull()
+  })
+
+  it('buildAuthForAccountsRequest throws when authType missing', () => {
+    expect(() =>
+      buildAuthForAccountsRequest({
+        hasCredentials: true,
+        authConfigWarning: null,
+      })
+    ).toThrow(GOOGLE_ADS_NOT_CONFIGURED_MESSAGE)
+  })
+
+  it('resolveAccountsFetchBlockedUiEffects maps refresh spinner reset and messages', () => {
+    expect(
+      resolveAccountsFetchBlockedUiEffects(
+        { ok: false, reason: 'auth_config_warning', authConfigWarning: 'dual stack' },
+        { forceRefresh: true }
+      )
+    ).toEqual({
+      authConfigWarning: 'dual stack',
+      clearForceRefreshState: true,
+    })
+
+    expect(
+      resolveAccountsFetchBlockedUiEffects({ ok: false, reason: 'not_configured' }, { forceRefresh: true })
+    ).toEqual({
+      errorMessage: GOOGLE_ADS_NOT_CONFIGURED_MESSAGE,
+      clearForceRefreshState: true,
+    })
   })
 })

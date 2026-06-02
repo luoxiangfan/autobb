@@ -10,7 +10,6 @@ export type GoogleAdsInitialAccountsLoadHandlers = {
     serviceAccountId: string,
     opts?: { skipCredentialsRefresh?: boolean }
   ) => Promise<void>
-  listServiceAccounts: () => Promise<Array<{ id: string }>>
   onAuthConfigWarning?: (warning: string) => void
 }
 

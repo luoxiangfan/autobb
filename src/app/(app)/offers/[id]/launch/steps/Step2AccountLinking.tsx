@@ -37,8 +37,8 @@ import { Link2, CheckCircle2, AlertCircle, Plus, RefreshCw, ExternalLink, Loader
 import { showError, showSuccess } from '@/lib/toast-utils'
 import {
   appendAccountsAuthToSearchParams,
-  accountsRequestBlockedMessage,
   formatNullableErrorMessage,
+  resolveAccountsFetchBlockedUiEffects,
   resolveAccountsRequestAuth,
   safeReadJson,
   throwAccountsListFetchError,
@@ -196,15 +196,14 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
 
       const resolved = resolveAccountsRequestAuth(auth)
       if (!resolved.ok) {
-        if (resolved.reason === 'auth_config_warning') {
-          setAuthConfigWarning(resolved.authConfigWarning)
-        } else {
-          const blockedMessage = accountsRequestBlockedMessage(resolved)
-          if (blockedMessage) {
-            showError(blockedMessage)
-          }
+        const effects = resolveAccountsFetchBlockedUiEffects(resolved, { forceRefresh })
+        if (effects.authConfigWarning) {
+          setAuthConfigWarning(effects.authConfigWarning)
         }
-        if (forceRefresh) {
+        if (effects.errorMessage) {
+          showError(effects.errorMessage)
+        }
+        if (effects.clearForceRefreshState) {
           setRefreshing(false)
         }
         return
