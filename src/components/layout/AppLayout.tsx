@@ -136,6 +136,19 @@ const collapsibleNavigationHrefs = new Set([
   '/openclaw/affiliate-commission',
 ])
 
+function resolveActiveNavHref(pathname: string | null, hrefs: readonly string[]): string | null {
+  if (!pathname) return null
+
+  const matchingHrefs = hrefs.filter((href) => {
+    if (href === '/dashboard') return pathname === '/dashboard'
+    return pathname === href || pathname.startsWith(`${href}/`)
+  })
+
+  if (matchingHrefs.length === 0) return null
+
+  return matchingHrefs.reduce((best, current) => (current.length > best.length ? current : best))
+}
+
 const navigationItems: NavItem[] = [
   {
     label: '仪表盘',
@@ -412,10 +425,8 @@ export default function AppLayout({
   }
 
   const isActive = (href: string) => {
-    if (href === '/dashboard') {
-      return pathname === '/dashboard'
-    }
-    return pathname?.startsWith(href) || false
+    const allNavHrefs = [...navigationItems, ...adminNavigationItems].map((item) => item.href)
+    return resolveActiveNavHref(pathname, allNavHrefs) === href
   }
 
   useEffect(() => {
