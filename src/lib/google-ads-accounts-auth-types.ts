@@ -40,6 +40,16 @@ export type OAuthApiCredentialsFields = {
   developer_token: string
 }
 
+export function toOAuthApiCredentialsFields(
+  userCredentials: Pick<SyncUserCredentials, 'client_id' | 'client_secret' | 'developer_token'>
+): OAuthApiCredentialsFields {
+  return {
+    client_id: userCredentials.client_id,
+    client_secret: userCredentials.client_secret,
+    developer_token: userCredentials.developer_token,
+  }
+}
+
 /** 含 login_customer_id 的 OAuth 客户端凭证 */
 export type OAuthApiClientCredentials = OAuthApiCredentialsFields & {
   login_customer_id: string

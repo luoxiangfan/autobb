@@ -6,6 +6,7 @@ import {
   resetCampaignRouteAuthMocksOAuth,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import { GET } from '@/app/api/google-ads/credentials/accounts/route'
+import { resetGoogleAdsAccountAsyncRefreshCleanupThrottleForTests } from '@/lib/google-ads-accounts-async-refresh-state'
 
 const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
@@ -120,18 +121,34 @@ function mockCachedAccountsQuery() {
 }
 
 function mockAsyncRefreshDb() {
+  let asyncRefreshRunning = false
   dbFns.queryOne.mockImplementation(async (sql: string) => {
-    if (sql.includes('google_ads_accounts_async_refresh_state')) {
-      return undefined
+    if (sql.includes('google_ads_accounts_async_refresh_state') && asyncRefreshRunning) {
+      const now = new Date().toISOString()
+      return {
+        status: 'running',
+        started_at: now,
+        updated_at: now,
+        error_message: null,
+      }
     }
     return undefined
   })
-  dbFns.exec.mockResolvedValue({ changes: 1 })
+  dbFns.exec.mockImplementation(async (sql: string) => {
+    if (sql.includes('google_ads_accounts_async_refresh_state')) {
+      if (sql.includes('INSERT')) {
+        asyncRefreshRunning = true
+      }
+      return { changes: 1 }
+    }
+    return { changes: 1 }
+  })
 }
 
 describe('GET /api/google-ads/credentials/accounts', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    resetGoogleAdsAccountAsyncRefreshCleanupThrottleForTests()
 
     authFns.verifyAuth.mockResolvedValue({
       authenticated: true,
@@ -146,7 +163,6 @@ describe('GET /api/google-ads/credentials/accounts', () => {
 
     mockCachedAccountsQuery()
     mockAsyncRefreshDb()
-    dbFns.exec.mockResolvedValue(undefined)
     serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
     syncFns.syncAccountsFromAPI.mockResolvedValue([])
     settingsFns.getUserOnlySetting.mockResolvedValue(null)
@@ -459,6 +475,21 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     )
     expect(data.data.cached).toBe(false)
     expect(data.data.accounts[0].customerId).toBe('9998887776')
+  })
+
+  it('returns cached data and starts background sync when refresh=true&async=true', async () => {
+    syncFns.syncAccountsFromAPI.mockImplementation(() => new Promise(() => {}))
+
+    const req = new NextRequest(
+      'http://localhost/api/google-ads/credentials/accounts?refresh=true&async=true&auth_type=oauth'
+    )
+    const res = await GET(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.data.cached).toBe(true)
+    expect(data.data.refreshInProgress).toBe(true)
+    expect(syncFns.syncAccountsFromAPI).toHaveBeenCalled()
   })
 
   it('resolves service account auth via auth-context when service_account_id is provided', async () => {

@@ -23,6 +23,14 @@ import {
   getGoogleAdsCredentialsRaw,
   getUserAuthType,
 } from './google-ads-oauth'
+import {
+  invalidateGoogleAdsAuthContextRedis,
+  readGoogleAdsAuthContextFromRedis,
+  releaseGoogleAdsAuthContextInflightLock,
+  tryAcquireGoogleAdsAuthContextInflightLock,
+  waitForPeerGoogleAdsAuthContext,
+  writeGoogleAdsAuthContextToRedis,
+} from './google-ads-auth-context-redis'
 import { getServiceAccountConfig } from './google-ads-service-account'
 
 export interface GoogleAdsAuthContext {
@@ -106,6 +114,9 @@ async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthCo
   })
 
   // 双栈清理 UI 需同时展示 OAuth / SA 元数据；仍禁止 API 调用（dualStack 门禁不变）
+  if (dualStack && !oauthCredentials) {
+    oauthCredentials = await getGoogleAdsCredentials(userId, resolution)
+  }
   if (dualStack && !serviceAccountConfig) {
     serviceAccountConfig = await getServiceAccountConfig(userId, undefined, resolution)
   }
@@ -129,9 +140,17 @@ async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthCo
   }
 }
 
+function rememberAuthContextInMemory(userId: number, ctx: GoogleAdsAuthContext): GoogleAdsAuthContext {
+  authContextCache.set(userId, {
+    ctx,
+    expiresAt: Date.now() + AUTH_CONTEXT_CACHE_TTL_MS,
+  })
+  return ctx
+}
+
 /**
  * 一次性解析用户的 Google Ads 认证上下文（assignment + 凭证）。
- * 同一事件循环内对相同 userId 的并发调用会合并为一次加载。
+ * 进程内 + Redis 合并并发加载；多实例下仅一个实例执行 DB 读取。
  */
 export async function getGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthContext> {
   const cached = authContextCache.get(userId)
@@ -142,22 +161,39 @@ export async function getGoogleAdsAuthContext(userId: number): Promise<GoogleAds
     authContextCache.delete(userId)
   }
 
+  const fromRedis = await readGoogleAdsAuthContextFromRedis(userId)
+  if (fromRedis) {
+    return rememberAuthContextInMemory(userId, fromRedis)
+  }
+
   const inflight = authContextInflight.get(userId)
   if (inflight) {
     return inflight
   }
 
-  const promise = loadGoogleAdsAuthContext(userId)
-    .then((ctx) => {
-      authContextCache.set(userId, {
-        ctx,
-        expiresAt: Date.now() + AUTH_CONTEXT_CACHE_TTL_MS,
-      })
+  const promise = (async () => {
+    let acquiredLock = false
+    try {
+      acquiredLock = await tryAcquireGoogleAdsAuthContextInflightLock(userId)
+      if (!acquiredLock) {
+        const peerCtx = await waitForPeerGoogleAdsAuthContext(userId)
+        if (peerCtx) {
+          return rememberAuthContextInMemory(userId, peerCtx)
+        }
+      }
+
+      const ctx = await loadGoogleAdsAuthContext(userId)
+      rememberAuthContextInMemory(userId, ctx)
+      await writeGoogleAdsAuthContextToRedis(userId, ctx)
       return ctx
-    })
-    .finally(() => {
+    } finally {
       authContextInflight.delete(userId)
-    })
+      if (acquiredLock) {
+        await releaseGoogleAdsAuthContextInflightLock(userId)
+      }
+    }
+  })()
+
   authContextInflight.set(userId, promise)
   return promise
 }
@@ -166,6 +202,7 @@ export async function getGoogleAdsAuthContext(userId: number): Promise<GoogleAds
 export function invalidateGoogleAdsAuthContextCache(userId: number): void {
   authContextCache.delete(userId)
   authContextInflight.delete(userId)
+  void invalidateGoogleAdsAuthContextRedis(userId)
 }
 
 /**

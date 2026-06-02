@@ -13,9 +13,9 @@ import type {
   AccountsRouteAuthResolveResult,
   AccountsRouteCredentials,
   OAuthApiClientCredentials,
-  OAuthApiCredentialsFields,
   SyncUserCredentials,
 } from './google-ads-accounts-auth-types'
+import { toOAuthApiCredentialsFields } from './google-ads-accounts-auth-types'
 
 export function resolveOAuthRefreshToken(
   apiAuth: GoogleAdsApiAuthFields,
@@ -29,16 +29,6 @@ export function accountsBundleResolveErrorMessage(body: Record<string, unknown>)
   if (typeof body.message === 'string' && body.message.trim()) return body.message
   if (typeof body.error === 'string' && body.error.trim()) return body.error
   return 'Google Ads 凭证配置不完整，请在设置页面完成配置'
-}
-
-function toOAuthApiCredentialsFields(
-  userCredentials: SyncUserCredentials
-): OAuthApiCredentialsFields {
-  return {
-    client_id: userCredentials.client_id,
-    client_secret: userCredentials.client_secret,
-    developer_token: userCredentials.developer_token,
-  }
 }
 
 /**

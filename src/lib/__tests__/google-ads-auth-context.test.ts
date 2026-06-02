@@ -45,6 +45,10 @@ vi.mock('@/lib/google-ads-service-account', () => ({
   getServiceAccountConfig: serviceAccountFns.getServiceAccountConfig,
 }))
 
+vi.mock('@/lib/redis-client', () => ({
+  getRedisClient: vi.fn(() => null),
+}))
+
 import { defaultOAuthAuthContext } from './helpers/campaign-route-auth-context-mock'
 import {
   assertNoConflictingGoogleAdsAuth,
@@ -173,6 +177,34 @@ describe('getGoogleAdsAuthContext', () => {
       undefined,
       expect.objectContaining({ ownerUserId: 2 })
     )
+  })
+
+  it('loads oauth credentials for dual-stack cleanup when auth preference is service_account', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 2,
+      isShared: false,
+      assignment: null,
+    })
+    assignmentFns.isGoogleAdsAuthShared.mockReturnValue(false)
+    oauthFns.getUserAuthType.mockResolvedValue({
+      authType: 'service_account',
+      serviceAccountId: 'sa-1',
+    })
+    oauthFns.getGoogleAdsCredentials.mockResolvedValue({
+      refresh_token: 'rt-dual',
+      client_id: 'cid',
+    })
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt-dual' })
+    dbFns.queryOne.mockResolvedValue({ id: 'sa-1' })
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue({ id: 'sa-1', name: 'Dual SA' })
+
+    const ctx = await getGoogleAdsAuthContext(2)
+
+    expect(ctx.dualStack).toBe(true)
+    expect(ctx.oauthCredentials).toEqual(
+      expect.objectContaining({ refresh_token: 'rt-dual' })
+    )
+    expect(oauthFns.getGoogleAdsCredentials).toHaveBeenCalled()
   })
 
   it('sets dualStack false when owner has only oauth', async () => {

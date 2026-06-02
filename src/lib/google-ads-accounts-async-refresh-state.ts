@@ -1,10 +1,17 @@
+import type { DatabaseAdapter } from '@/lib/db'
 import { REDIS_PREFIX_CONFIG } from '@/lib/config'
 import { getDatabase } from '@/lib/db'
-import { datetimeMinusMinutes } from '@/lib/db-helpers'
+import { datetimeMinusHours, datetimeMinusMinutes } from '@/lib/db-helpers'
 import { getRedisClient } from '@/lib/redis-client'
 
-/** 异步账号刷新状态 TTL（与 Redis key 过期一致） */
+/** 异步账号刷新状态 TTL（与 Redis key 过期、running  freshness 一致） */
 export const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_TTL_MS = 10 * 60 * 1000
+
+/** 长 sync 期间续期锁的间隔（须小于 TTL） */
+export const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_HEARTBEAT_MS = 3 * 60 * 1000
+
+/** DB 历史行保留时长 */
+export const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_ROW_RETENTION_MS = 24 * 60 * 60 * 1000
 
 export type GoogleAdsAccountAsyncRefreshStatus = 'running' | 'completed' | 'failed'
 
@@ -21,12 +28,23 @@ export type GoogleAdsAccountSyncKeyParams = {
   serviceAccountId?: string | null
 }
 
+let lastRowCleanupAtMs = 0
+const ROW_CLEANUP_INTERVAL_MS = 5 * 60 * 1000
+
 function buildRedisKey(syncKey: string): string {
   return `${REDIS_PREFIX_CONFIG.cache}google-ads:accounts-async-refresh:${syncKey}`
 }
 
 function redisTtlSeconds(): number {
   return Math.ceil(GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_TTL_MS / 1000)
+}
+
+/** SQLite 与 datetime('now') 可比较；PG 用 ISO */
+function toDbTimestamp(dbType: DatabaseAdapter['type'], ms: number): string {
+  if (dbType === 'postgres') {
+    return new Date(ms).toISOString()
+  }
+  return new Date(ms).toISOString().slice(0, 19).replace('T', ' ')
 }
 
 function parseTimestampToMs(value: unknown): number {
@@ -106,6 +124,17 @@ async function writeStateToRedis(
   }
 }
 
+async function releaseGoogleAdsAccountAsyncRefreshLock(syncKey: string): Promise<void> {
+  const client = getRedisClient()
+  if (!client) return
+
+  try {
+    await client.del(buildRedisKey(syncKey))
+  } catch {
+    // ignore
+  }
+}
+
 async function readStateFromDb(syncKey: string): Promise<GoogleAdsAccountAsyncRefreshState | null> {
   const db = await getDatabase()
   const row = await db.queryOne(
@@ -146,8 +175,8 @@ async function writeStateToDb(
   state: GoogleAdsAccountAsyncRefreshState
 ): Promise<void> {
   const db = await getDatabase()
-  const startedAt = new Date(state.startedAtMs).toISOString()
-  const updatedAt = new Date(state.updatedAtMs).toISOString()
+  const startedAt = toDbTimestamp(db.type, state.startedAtMs)
+  const updatedAt = toDbTimestamp(db.type, state.updatedAtMs)
   const errorMessage = state.errorMessage ?? null
 
   await db.exec(
@@ -190,7 +219,8 @@ async function tryAcquireLockInDb(
     Math.ceil(GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_TTL_MS / 60_000),
     db.type
   )
-  const startedAt = new Date().toISOString()
+  const nowMs = Date.now()
+  const startedAt = toDbTimestamp(db.type, nowMs)
   const updatedAt = startedAt
 
   const result = await db.exec(
@@ -251,9 +281,40 @@ async function tryAcquireLockInRedis(syncKey: string): Promise<boolean> {
   }
 }
 
+/** @internal test-only */
+export function resetGoogleAdsAccountAsyncRefreshCleanupThrottleForTests(): void {
+  lastRowCleanupAtMs = 0
+}
+
+/** 删除超过保留期的历史行（节流，避免每次请求都扫表） */
+export async function cleanupStaleGoogleAdsAccountAsyncRefreshRows(): Promise<void> {
+  const nowMs = Date.now()
+  if (nowMs - lastRowCleanupAtMs < ROW_CLEANUP_INTERVAL_MS) {
+    return
+  }
+  lastRowCleanupAtMs = nowMs
+
+  const db = await getDatabase()
+  const retentionHours = Math.ceil(GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_ROW_RETENTION_MS / 3_600_000)
+  const cutoff = datetimeMinusHours(retentionHours, db.type)
+
+  try {
+    await db.exec(
+      `
+        DELETE FROM google_ads_accounts_async_refresh_state
+        WHERE updated_at < ${cutoff}
+      `
+    )
+  } catch {
+    // 表未迁移等场景下静默跳过
+  }
+}
+
 export async function getGoogleAdsAccountAsyncRefreshState(
   syncKey: string
 ): Promise<GoogleAdsAccountAsyncRefreshState | null> {
+  void cleanupStaleGoogleAdsAccountAsyncRefreshRows()
+
   const fromRedis = await readStateFromRedis(syncKey)
   if (fromRedis) {
     if (fromRedis.status === 'running' && !isRunningStateFresh(fromRedis)) {
@@ -269,10 +330,48 @@ export async function getGoogleAdsAccountAsyncRefreshState(
   return fromDb
 }
 
+export async function renewGoogleAdsAccountAsyncRefreshLock(
+  syncKey: string,
+  params: GoogleAdsAccountSyncKeyParams,
+  startedAtMs: number
+): Promise<void> {
+  const nowMs = Date.now()
+  const state: GoogleAdsAccountAsyncRefreshState = {
+    status: 'running',
+    startedAtMs,
+    updatedAtMs: nowMs,
+  }
+
+  await writeStateToRedis(syncKey, state)
+  await writeStateToDb(syncKey, params, state)
+}
+
+/**
+ * 长 sync 期间定期续期 Redis TTL 与 DB updated_at，避免 10 分钟 TTL 导致重复 sync。
+ * 返回 stop 函数，须在 sync 结束（成功/失败）时调用。
+ */
+export function startGoogleAdsAccountAsyncRefreshHeartbeat(
+  syncKey: string,
+  params: GoogleAdsAccountSyncKeyParams,
+  startedAtMs: number
+): () => void {
+  const timer = setInterval(() => {
+    void renewGoogleAdsAccountAsyncRefreshLock(syncKey, params, startedAtMs)
+  }, GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_HEARTBEAT_MS)
+
+  if (typeof timer.unref === 'function') {
+    timer.unref()
+  }
+
+  return () => clearInterval(timer)
+}
+
 export async function tryStartGoogleAdsAccountAsyncRefresh(
   syncKey: string,
   params: GoogleAdsAccountSyncKeyParams
 ): Promise<boolean> {
+  void cleanupStaleGoogleAdsAccountAsyncRefreshRows()
+
   const existing = await getGoogleAdsAccountAsyncRefreshState(syncKey)
   if (existing && isRunningStateFresh(existing)) {
     return false
@@ -281,22 +380,25 @@ export async function tryStartGoogleAdsAccountAsyncRefresh(
   const acquiredInRedis = await tryAcquireLockInRedis(syncKey)
   if (acquiredInRedis) {
     const nowMs = Date.now()
-    void writeStateToDb(syncKey, params, {
+    const runningState: GoogleAdsAccountAsyncRefreshState = {
       status: 'running',
       startedAtMs: nowMs,
       updatedAtMs: nowMs,
-    })
-    return true
-  }
-
-  if (getRedisClient()) {
+    }
+    try {
+      await writeStateToDb(syncKey, params, runningState)
+      return true
+    } catch {
+      await releaseGoogleAdsAccountAsyncRefreshLock(syncKey)
+    }
+  } else if (getRedisClient()) {
     const afterRedisRace = await getGoogleAdsAccountAsyncRefreshState(syncKey)
     if (afterRedisRace && isRunningStateFresh(afterRedisRace)) {
       return false
     }
   }
 
-  const acquiredInDb = await tryAcquireLockInDb(syncKey, params)
+  const acquiredInDb = await tryAcquireLockInDb(syncKey, params).catch(() => false)
   if (acquiredInDb) {
     const nowMs = Date.now()
     await writeStateToRedis(syncKey, {

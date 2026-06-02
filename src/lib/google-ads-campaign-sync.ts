@@ -343,21 +343,18 @@ export async function syncCampaignsFromGoogleAds(
     if (mccAssignments.length > 0) {
       mccCustomerIds = mccAssignments.map(a => a.mcc_customer_id)
       console.log(`[GoogleAds Sync] User ${userId} has ${mccCustomerIds.length} assigned MCCs: ${mccCustomerIds.join(', ')}`)
-    }
-    
-    // 🔧 构建 customer_id 过滤条件
-    let customerIdsFilter = ''
-    const accountQueryParams: unknown[] = [userId]
-
-    if (mccCustomerIds.length > 0) {
-      const mccPlaceholders = mccCustomerIds.map(() => '?').join(',')
-      customerIdsFilter = `AND parent_mcc_id IN (${mccPlaceholders})`
-      accountQueryParams.push(...mccCustomerIds)
     } else {
       console.log(
-        `[GoogleAds Sync] User ${userId} has no MCC assignments; syncing all active linked accounts`
+        `[GoogleAds Sync] User ${userId} has no MCC assignments; skipping campaign sync`
       )
+      result.warnings.push('未分配 MCC，无法同步 Google Ads 广告系列')
+      return result
     }
+
+    // 构建 customer_id 过滤条件（仅同步 parent_mcc_id 在用户 MCC 列表内的账户）
+    const mccPlaceholders = mccCustomerIds.map(() => '?').join(',')
+    const customerIdsFilter = `AND parent_mcc_id IN (${mccPlaceholders})`
+    const accountQueryParams: unknown[] = [userId, ...mccCustomerIds]
 
     const accounts = await db.query(
       `SELECT id, customer_id, account_name, parent_mcc_id, auth_type, service_account_id FROM google_ads_accounts

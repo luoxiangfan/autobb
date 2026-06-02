@@ -18,6 +18,7 @@ import type {
   PreparedGoogleAdsAccountApiCall,
   SyncUserCredentials,
 } from './google-ads-accounts-auth-types'
+import { toOAuthApiCredentialsFields } from './google-ads-accounts-auth-types'
 
 /** campaign-sync / 定时任务：按账户解析认证方式与 token（与 syncCampaignsFromGoogleAds 一致） */
 export function resolveSyncAuthForAccount(
@@ -42,16 +43,6 @@ export function resolveSyncAuthForAccount(
       ? resolveOAuthRefreshToken(accountApiAuth, oauthCredentials) || null
       : null
   return { syncAuthType, syncServiceAccountId, syncRefreshToken }
-}
-
-function toOAuthApiCredentialsFields(
-  userCredentials: SyncUserCredentials
-): OAuthApiCredentialsFields {
-  return {
-    client_id: userCredentials.client_id,
-    client_secret: userCredentials.client_secret,
-    developer_token: userCredentials.developer_token,
-  }
 }
 
 export async function resolveHealedOAuthCredentialsFields(params: {
@@ -105,7 +96,6 @@ export async function resolveHealedOAuthCredentialsFields(params: {
       client_id: routeCredentials.client_id,
       client_secret: routeCredentials.client_secret,
       developer_token: routeCredentials.developer_token,
-      login_customer_id: loginCustomerId,
     }),
     loginCustomerId,
   }

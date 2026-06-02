@@ -26,6 +26,7 @@ import {
   completeGoogleAdsAccountAsyncRefresh,
   getGoogleAdsAccountAsyncRefreshState,
   isGoogleAdsAccountRefreshInProgress,
+  startGoogleAdsAccountAsyncRefreshHeartbeat,
   tryStartGoogleAdsAccountAsyncRefresh,
 } from '@/lib/google-ads-accounts-async-refresh-state'
 import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
@@ -267,8 +268,6 @@ async function get(request: NextRequest) {
       authType,
       serviceAccountId: scopedServiceAccountId,
     })
-    const syncState = await getGoogleAdsAccountAsyncRefreshState(syncKey)
-    const refreshInProgress = isGoogleAdsAccountRefreshInProgress(syncState)
 
     const cachedAccounts = await getCachedAccounts({
       userId,
@@ -314,29 +313,35 @@ async function get(request: NextRequest) {
       usedCache = true
       allAccounts = cachedAccounts.length > 0 ? mapCachedAccounts() : []
 
-      if (!refreshInProgress) {
-        const syncKeyParams = {
-          userId,
-          authType,
-          serviceAccountId: scopedServiceAccountId,
-        }
-        const shouldRunSync = await tryStartGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams)
+      const syncKeyParams = {
+        userId,
+        authType,
+        serviceAccountId: scopedServiceAccountId,
+      }
+      const shouldRunSync = await tryStartGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams)
 
-        if (shouldRunSync) {
-          void (async () => {
-            try {
-              await syncAccountsFromAPI(userId, credentials, authType, serviceAccountConfig)
-              await completeGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams, {
-                status: 'completed',
-              })
-            } catch (err: any) {
-              await completeGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams, {
-                status: 'failed',
-                errorMessage: formatErrorMessage(err) || '同步失败',
-              })
-            }
-          })()
-        }
+      if (shouldRunSync) {
+        const startedAtMs = Date.now()
+        void (async () => {
+          const stopHeartbeat = startGoogleAdsAccountAsyncRefreshHeartbeat(
+            syncKey,
+            syncKeyParams,
+            startedAtMs
+          )
+          try {
+            await syncAccountsFromAPI(userId, credentials, authType, serviceAccountConfig)
+            await completeGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams, {
+              status: 'completed',
+            })
+          } catch (err: any) {
+            await completeGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams, {
+              status: 'failed',
+              errorMessage: formatErrorMessage(err) || '同步失败',
+            })
+          } finally {
+            stopHeartbeat()
+          }
+        })()
       }
     } else if (!forceRefresh && cachedAccounts.length > 0) {
       // 使用缓存数据（即使缓存已过期也先返回，避免请求阻塞/网关超时；由 refresh=true 显式触发同步）
