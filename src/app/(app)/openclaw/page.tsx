@@ -3719,7 +3719,13 @@ export default function OpenClawPage() {
               <div className="rounded-md border bg-amber-50 px-3 py-2 text-sm text-amber-800">
                 请前往 <span className="font-mono">/settings?category=affiliate_sync</span> 维护联盟凭证与佣金同步参数。
               </div>
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <Link
+                  href="/openclaw/affiliate-commission"
+                  className={buttonVariants({ variant: 'outline' })}
+                >
+                  查看佣金原始数据
+                </Link>
                 <Link
                   href="/settings?category=affiliate_sync"
                   className={buttonVariants({ variant: 'outline' })}

@@ -28,6 +28,7 @@ import {
   Zap,
   RefreshCw,
   Bot,
+  Coins,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -127,7 +128,13 @@ function SidebarLink({
   )
 }
 
-const collapsibleNavigationHrefs = new Set(['/data-management', '/analytics/roi', '/analytics/budget', '/openclaw'])
+const collapsibleNavigationHrefs = new Set([
+  '/data-management',
+  '/analytics/roi',
+  '/analytics/budget',
+  '/openclaw',
+  '/openclaw/affiliate-commission',
+])
 
 const navigationItems: NavItem[] = [
   {
@@ -196,6 +203,11 @@ const navigationItems: NavItem[] = [
     icon: Bot,
   },
   {
+    label: '联盟佣金数据',
+    href: '/openclaw/affiliate-commission',
+    icon: Coins,
+  },
+  {
     label: '策略中心',
     href: '/strategy-center',
     icon: TrendingUp,
@@ -219,8 +231,8 @@ const navigationItems: NavItem[] = [
 
 function filterNavigationItemsByUser(items: NavItem[], user: UserInfo): NavItem[] {
   return items.filter(item => {
-    if (item.href === '/openclaw') {
-      return Boolean(user.openclawEnabled)
+    if (item.href === '/openclaw' || item.href === '/openclaw/affiliate-commission') {
+      return user.role === 'admin' || Boolean(user.openclawEnabled)
     }
     if (item.href === '/products') {
       return Boolean(user.productManagementEnabled)
