@@ -82,8 +82,17 @@ type RawSyncPayloadRow = {
   response_payload: unknown
 }
 
+function roundTo(value: number, decimals: number): number {
+  const factor = 10 ** decimals
+  return Math.round(value * factor) / factor
+}
+
+function roundTo4(value: number): number {
+  return roundTo(value, 4)
+}
+
 function roundTo2(value: number): number {
-  return Math.round(value * 100) / 100
+  return roundTo(value, 2)
 }
 
 export function normalizeReportDate(value: unknown): string {
@@ -208,7 +217,7 @@ function parseYeahPromosLineItems(params: {
       platform: 'yeahpromos',
       brandKey: scopeBrandKey(params.userId, baseBrandKey, params.showUserScope),
       brandName,
-      commission: roundTo2(commission),
+      commission: roundTo4(commission),
       advertId,
       asin: normalizeAsin(pickString(row?.sku, row?.asin, row?.ASIN)),
     })
@@ -243,7 +252,7 @@ function parsePartnerboostLineItems(params: {
       platform: 'partnerboost',
       brandKey: scopeBrandKey(params.userId, baseBrandKey, params.showUserScope),
       brandName: asin ? `ASIN ${asin}` : 'Unknown Brand',
-      commission: roundTo2(commission),
+      commission: roundTo4(commission),
       asin,
     })
   }
@@ -580,7 +589,7 @@ function buildBrandSummaries(
   for (const item of items) {
     const existing = summaryMap.get(item.brandKey)
     if (existing) {
-      existing.totalCommission = roundTo2(existing.totalCommission + item.commission)
+      existing.totalCommission += item.commission
       continue
     }
 
@@ -596,6 +605,10 @@ function buildBrandSummaries(
   }
 
   return Array.from(summaryMap.values())
+    .map((summary) => ({
+      ...summary,
+      totalCommission: roundTo2(summary.totalCommission),
+    }))
     .sort((left, right) => {
       if (showUserScope) {
         const usernameCompare = String(left.username || '').localeCompare(String(right.username || ''))
@@ -615,7 +628,7 @@ function buildDateSummaries(items: AffiliateCommissionLineItem[]): AffiliateComm
     const reportDate = normalizeReportDate(item.reportDate)
     const existing = summaryMap.get(reportDate)
     if (existing) {
-      existing.totalCommission = roundTo2(existing.totalCommission + item.commission)
+      existing.totalCommission += item.commission
       continue
     }
 
@@ -626,6 +639,10 @@ function buildDateSummaries(items: AffiliateCommissionLineItem[]): AffiliateComm
   }
 
   return Array.from(summaryMap.values())
+    .map((summary) => ({
+      ...summary,
+      totalCommission: roundTo2(summary.totalCommission),
+    }))
     .sort((left, right) => compareReportDatesDesc(left.reportDate, right.reportDate))
 }
 
@@ -701,11 +718,11 @@ export async function getAffiliateCommissionBrandDetail(params: {
   for (const item of lineItems) {
     if (item.brandKey !== params.brandKey) continue
     const reportDate = normalizeReportDate(item.reportDate)
-    detailMap.set(reportDate, roundTo2((detailMap.get(reportDate) || 0) + item.commission))
+    detailMap.set(reportDate, (detailMap.get(reportDate) || 0) + item.commission)
   }
 
   return Array.from(detailMap.entries())
-    .map(([reportDate, commission]) => ({ reportDate, commission }))
+    .map(([reportDate, commission]) => ({ reportDate, commission: roundTo2(commission) }))
     .sort((left, right) => compareReportDatesDesc(left.reportDate, right.reportDate))
 }
 
@@ -731,7 +748,7 @@ export async function getAffiliateCommissionDateDetail(params: {
   for (const item of lineItems) {
     const existing = detailMap.get(item.brandKey)
     if (existing) {
-      existing.commission = roundTo2(existing.commission + item.commission)
+      existing.commission += item.commission
       continue
     }
 
@@ -747,6 +764,10 @@ export async function getAffiliateCommissionDateDetail(params: {
   }
 
   return Array.from(detailMap.values())
+    .map((row) => ({
+      ...row,
+      commission: roundTo2(row.commission),
+    }))
     .sort((left, right) => {
       if (showUserScope) {
         const usernameCompare = String(left.username || '').localeCompare(String(right.username || ''))
