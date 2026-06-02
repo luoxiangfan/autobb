@@ -2,8 +2,8 @@ import { REDIS_PREFIX_CONFIG } from '@/lib/config'
 import { getRedisClient } from '@/lib/redis-client'
 import type { GoogleAdsAuthContext } from './google-ads-auth-context'
 
-/** 与进程内 authContextCache TTL 对齐 */
-export const GOOGLE_ADS_AUTH_CONTEXT_REDIS_CACHE_TTL_SEC = 2
+/** 与进程内 authContextCache TTL 对齐（写路径有 generation 失效，可适当拉长减轻 DB 压力） */
+export const GOOGLE_ADS_AUTH_CONTEXT_REDIS_CACHE_TTL_SEC = 30
 
 /** 进程内 auth-context 缓存 TTL（毫秒），须与 Redis EX 一致 */
 export const GOOGLE_ADS_AUTH_CONTEXT_CACHE_TTL_MS =

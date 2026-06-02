@@ -1,7 +1,6 @@
 import {
   googleAdsApiAuthValidationErrorMessage,
   googleAdsAuthContextDualStackError,
-  resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthForAccount,
   resolveGoogleAdsApiAuthFromContext,
   type GoogleAdsApiAuthFields,
@@ -24,20 +23,12 @@ import { toOAuthApiCredentialsFields } from './google-ads-accounts-auth-types'
 export function resolveSyncAuthForAccount(
   accountApiAuth: GoogleAdsApiAuthFields,
   oauthCredentials: GoogleAdsAuthContext['oauthCredentials'],
-  account: { service_account_id: string | null },
-  authContext: GoogleAdsAuthContext
+  _account: { service_account_id: string | null },
+  _authContext: GoogleAdsAuthContext
 ) {
-  const linkedServiceAccountId =
-    typeof account.service_account_id === 'string' ? account.service_account_id.trim() : ''
   const syncAuthType = accountApiAuth.authType
   const syncServiceAccountId =
-    accountApiAuth.serviceAccountId ||
-    (syncAuthType === 'service_account'
-      ? resolveEffectiveServiceAccountId(
-          linkedServiceAccountId || account.service_account_id,
-          authContext
-        )
-      : undefined)
+    syncAuthType === 'service_account' ? accountApiAuth.serviceAccountId : undefined
   const syncRefreshToken =
     syncAuthType === 'oauth'
       ? resolveOAuthRefreshToken(accountApiAuth, oauthCredentials) || null

@@ -528,6 +528,9 @@ export async function resolveGoogleAdsApiAuthFromContext(
   if (dualStackError) {
     throw new Error(dualStackError)
   }
+  if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
+    throw new Error(googleAdsApiAuthValidationErrorMessage('not_configured'))
+  }
 
   const serviceAccountId = resolveEffectiveServiceAccountId(linkedAccountServiceAccountId, ctx)
   let serviceAccountMccId = getServiceAccountMccFromContext(ctx)

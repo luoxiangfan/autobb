@@ -4,6 +4,7 @@
  */
 import { enums } from './google-ads-api'
 import { getDatabase } from './db'
+import { resolveConfiguredGoogleAdsAuthType } from './google-ads-auth-context'
 import { dateMinusDays } from './db-helpers'
 import { getCachedKeywordVolume, getBatchCachedVolumes, batchCacheVolumes } from './redis'
 import { decrypt } from './crypto'
@@ -163,12 +164,7 @@ export async function getGoogleAdsConfig(
     const effectiveAuthType: AuthType =
       authType === 'service_account' || authType === 'oauth'
         ? authType
-        : (authContext.auth.authType ??
-            (authContext.oauthCredentials?.refresh_token
-              ? 'oauth'
-              : authContext.serviceAccountConfig
-                ? 'service_account'
-                : 'oauth'))
+        : resolveConfiguredGoogleAdsAuthType(authContext)
     const effectiveServiceAccountId =
       serviceAccountId ?? authContext.serviceAccountConfig?.id?.toString()
 

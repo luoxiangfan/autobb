@@ -77,9 +77,7 @@ export async function processMccChildAccounts(
             client_secret: ctx.clientSecret,
             developer_token: ctx.developerToken,
           },
-          ctx.userId,
-          undefined,
-          'oauth'
+          ctx.userId
         )
       }
     }
@@ -130,9 +128,7 @@ export async function processMccChildAccounts(
               client_secret: ctx.clientSecret,
               developer_token: ctx.developerToken,
             },
-            ctx.userId,
-            undefined,
-            'oauth'
+            ctx.userId
           )
         } catch {
           childCustomer = null

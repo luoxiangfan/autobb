@@ -155,23 +155,26 @@ export async function resolveOAuthClientCredentialsForUser(
     throw new Error(`用户(ID=${userId})当前使用服务账号认证，无法读取 OAuth 基础凭证`)
   }
 
-  const credResolved = await resolveAndHealSyncUserCredentials({
-    userId,
-    authContext,
-    authType: 'oauth',
-    serviceAccountId: null,
-  })
-  if (!credResolved.ok) {
-    throw new Error(credResolved.message)
+  const { loadOAuthGoogleAdsCallBundleForContext } = await import('./google-ads-api-prepare')
+  const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({ userId, authContext })
+  if (!oauthBundle.ok) {
+    throw new Error(oauthBundle.message)
+  }
+  const creds = oauthBundle.bundle?.oauthCredentials
+  if (!creds) {
+    throw new Error('OAuth credentials bundle missing')
   }
 
-  const loginCustomerId = credResolved.userCredentials.login_customer_id?.trim() || ''
+  const loginCustomerId =
+    oauthBundle.bundle?.oauthLoginCustomerId?.trim() ||
+    authContext.oauthCredentials?.login_customer_id?.trim() ||
+    ''
   if (requireLogin && !loginCustomerId) {
     throw new Error(`用户(ID=${userId})未配置 login_customer_id。OAuth模式需要此参数。`)
   }
 
   return {
-    ...toOAuthApiCredentialsFields(credResolved.userCredentials),
+    ...creds,
     login_customer_id: loginCustomerId,
   }
 }

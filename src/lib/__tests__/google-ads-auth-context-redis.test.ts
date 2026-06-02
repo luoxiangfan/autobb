@@ -41,7 +41,7 @@ describe('google-ads-auth-context-redis', () => {
     redisFns.del.mockResolvedValue(1)
   })
 
-  it('writes auth context JSON with generation and short TTL', async () => {
+  it('writes auth context JSON with generation and configured TTL', async () => {
     await writeGoogleAdsAuthContextToRedis(7, defaultOAuthAuthContext, 2)
 
     expect(GOOGLE_ADS_AUTH_CONTEXT_CACHE_TTL_MS).toBe(
@@ -54,7 +54,7 @@ describe('google-ads-auth-context-redis', () => {
       expect.stringContaining('google-ads:auth-context:7'),
       expect.any(String),
       'EX',
-      2
+      GOOGLE_ADS_AUTH_CONTEXT_REDIS_CACHE_TTL_SEC
     )
   })
 

@@ -186,9 +186,7 @@ export async function syncAccountsFromAPI(
                 client_secret: clientSecret,
                 developer_token: developerToken,
               },
-              userId,
-              undefined,
-              'oauth'
+              userId
             )
 
             apiRequestCount += 1

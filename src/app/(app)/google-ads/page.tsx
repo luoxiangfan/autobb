@@ -209,7 +209,7 @@ export default function GoogleAdsPage() {
     }, 2000)
   }
 
-  // 凭证未明确为 OAuth/SA 时：先刷新 auth-context，OAuth 优先，再回落首个 SA
+  // 按凭证状态（auth-context）二选一拉取账号列表；双栈时仅展示警告，不隐式切换认证方式
   const fetchServiceAccounts = async () => {
     try {
       await runInitialGoogleAdsAccountsLoad({

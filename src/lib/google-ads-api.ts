@@ -309,9 +309,7 @@ export async function refreshAccessToken(
  * @param loginCustomerId - 必需的MCC账户ID(从数据库读取)
  * @param credentials - 必需的用户凭证(从数据库读取)
  * @param accountId - 可选的账户ID用于更新token
- * @param userId - 可选的用户ID用于更新token
- * @param authType - 认证类型: 'oauth' | 'service_account'
- * @param serviceAccountConfig - 服务账号配置(服务账号模式必需)
+ * @param userId - 用户 ID（用于回写 account access_token）
  * @throws Error 如果未提供必需参数
  */
 export async function getCustomer(
@@ -324,13 +322,7 @@ export async function getCustomer(
     developer_token: string
   },
   userId: number,
-  accountId?: number,
-  authType?: 'oauth' | 'service_account',
-  serviceAccountConfig?: {
-    clientEmail: string
-    privateKey: string
-    mccCustomerId: string
-  }
+  accountId?: number
 ): Promise<Customer> {
   if (!credentials) {
     throw new Error('缺少Google Ads凭证,必须从数据库提供 credentials 参数')
@@ -393,6 +385,27 @@ export async function getCustomer(
   }
 }
 
+/**
+ * 解析 getCustomerWithCredentials 的 authType：服务账号用户不得默认落到 OAuth。
+ */
+function resolveAuthTypeForGetCustomerWithCredentials(
+  params: { authType?: 'oauth' | 'service_account' },
+  authCtx: GoogleAdsAuthContext
+): 'oauth' | 'service_account' {
+  if (params.authType === 'oauth' || params.authType === 'service_account') {
+    return params.authType
+  }
+  if (authCtx.auth.authType === 'service_account') {
+    return 'service_account'
+  }
+  if (authCtx.auth.authType === 'oauth') {
+    return 'oauth'
+  }
+  throw new Error(
+    '无法推断 Google Ads 认证方式：请先通过 prepareGoogleAdsApiCallForLinkedAccount 解析 apiAuth，并传入 authType'
+  )
+}
+
 /** 发起 Customer 调用前校验双栈；已持有 context 时复用，避免重复加载。 */
 async function ensureGoogleAdsAuthReadyForApi(
   userId: number,
@@ -443,7 +456,7 @@ export async function getCustomerWithCredentials(params: {
 
   const authCtx = await ensureGoogleAdsAuthReadyForApi(params.userId, params.authContext)
 
-  const authType = params.authType || 'oauth'
+  const authType = resolveAuthTypeForGetCustomerWithCredentials(params, authCtx)
 
   if (authType === 'service_account') {
     // 服务账号认证模式：使用 @htdangkhoa/google-ads，不需要 client_id/client_secret

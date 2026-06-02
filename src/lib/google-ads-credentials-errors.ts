@@ -238,7 +238,10 @@ export const GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE =
 export const GOOGLE_ADS_NOT_CONFIGURED_MESSAGE =
   'Google Ads 认证未配置或已失效，请先在设置中完成 OAuth 授权或配置服务账号'
 
-/** 合并凭证快照与服务账号 fallback，供 accounts 列表请求使用 */
+/**
+ * 合并凭证快照与 UI 侧的 service_account_id 补全（仅当状态已是 SA 且 id 缺失时）。
+ * 不改变 authType，也不是 OAuth 失效后回退到服务账号。
+ */
 export function buildAuthForAccountsRequest(
   auth: ParsedGoogleAdsCredentialsStatus,
   fallbackServiceAccountId?: string | null

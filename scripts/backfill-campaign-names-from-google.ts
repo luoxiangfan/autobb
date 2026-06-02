@@ -28,6 +28,7 @@ type CampaignRow = {
   google_campaign_id: string
   customer_id: string
   parent_mcc_id: string | null
+  service_account_id: string | null
 }
 
 type GroupKey = `${number}:${number}`
@@ -356,14 +357,61 @@ async function getCampaignNameByHttp(params: {
   throw lastError || new Error('Google Ads searchStream failed for all API versions')
 }
 
+function extractGaqlCampaignName(raw: unknown, campaignId: string): string {
+  const rows = Array.isArray(raw)
+    ? raw
+  : Array.isArray((raw as { results?: unknown[] })?.results)
+    ? (raw as { results: unknown[] }).results
+    : []
+  for (const row of rows) {
+    const id = String(
+      (row as { campaign?: { id?: string | number } })?.campaign?.id ?? ''
+    ).replace(/\D/g, '')
+    const name = String(
+      (row as { campaign?: { name?: string } })?.campaign?.name ?? ''
+    ).trim()
+    if (id === campaignId.replace(/\D/g, '') && name) {
+      return name
+    }
+  }
+  return ''
+}
+
+async function getCampaignNameByPython(params: {
+  userId: number
+  serviceAccountId: string
+  customerId: string
+  campaignId: string
+}): Promise<string> {
+  const { executeGAQLQueryPython } = await import('../src/lib/python-ads-client')
+  const campaignId = normalizeDigits(params.campaignId)
+  const customerId = normalizeDigits(params.customerId)
+  const query = `
+    SELECT campaign.id, campaign.name
+    FROM campaign
+    WHERE campaign.id = ${campaignId}
+  `
+  const raw = await executeGAQLQueryPython({
+    userId: params.userId,
+    serviceAccountId: params.serviceAccountId,
+    customerId,
+    query,
+  })
+  return extractGaqlCampaignName(raw, campaignId)
+}
+
 async function run() {
   const options = parseArgs(process.argv.slice(2))
-  const [{ getDatabase, closeDatabase }, oauth, loginCustomer] = await Promise.all([
-    import('../src/lib/db'),
-    import('../src/lib/google-ads-oauth'),
-    import('../src/lib/google-ads-login-customer'),
-  ])
-  const { getGoogleAdsCredentials, getUserAuthType } = oauth
+  const [{ getDatabase, closeDatabase }, loginCustomer, authContextMod, apiPrepare] =
+    await Promise.all([
+      import('../src/lib/db'),
+      import('../src/lib/google-ads-login-customer'),
+      import('../src/lib/google-ads-auth-context'),
+      import('../src/lib/google-ads-api-prepare'),
+    ])
+  const { resolveGoogleAdsApiAuthForAccount, googleAdsApiAuthValidationErrorMessage } =
+    authContextMod
+  const { prepareGoogleAdsApiCallForLinkedAccount } = apiPrepare
   const { resolveLoginCustomerCandidates, isGoogleAdsAccountAccessError } = loginCustomer
 
   const db = getDatabase()
@@ -395,7 +443,8 @@ async function run() {
           c.campaign_config,
           COALESCE(NULLIF(c.google_campaign_id, ''), NULLIF(c.campaign_id, '')) AS google_campaign_id,
           gaa.customer_id,
-          gaa.parent_mcc_id
+          gaa.parent_mcc_id,
+          gaa.service_account_id
         FROM campaigns c
         INNER JOIN google_ads_accounts gaa
           ON gaa.id = c.google_ads_account_id
@@ -446,44 +495,67 @@ async function run() {
 
       console.log(`Processing group ${groupKey} (customer=${customerId}, campaigns=${groupRows.length})`)
 
-      const [credentials, auth] = await Promise.all([
-        getGoogleAdsCredentials(userId),
-        getUserAuthType(userId),
-      ])
-
-      const refreshToken = String(credentials?.refresh_token || '').trim()
-      const clientId = String((credentials as any)?.client_id || '').trim()
-      const clientSecret = String((credentials as any)?.client_secret || '').trim()
-      const developerToken = String((credentials as any)?.developer_token || '').trim()
-
-      if (auth.authType === 'oauth' && (!refreshToken || !clientId || !clientSecret || !developerToken)) {
+      const linkedServiceAccountId = first.service_account_id?.trim() || null
+      const authResolved = await resolveGoogleAdsApiAuthForAccount(userId, linkedServiceAccountId)
+      if (!authResolved.ok) {
         skippedNoAuth += groupRows.length
-        console.warn(`  ⚠️ skip group: OAuth credentials missing (userId=${userId})`)
+        console.warn(
+          `  ⚠️ skip group: ${googleAdsApiAuthValidationErrorMessage(authResolved.reason)} (userId=${userId})`
+        )
         continue
       }
 
-      let serviceAccountMccId: string | undefined
-      if (auth.authType === 'service_account') {
-        try {
-          const { getServiceAccountConfig } = await import('../src/lib/google-ads-service-account')
-          const saConfig = await getServiceAccountConfig(userId, auth.serviceAccountId)
-          if (saConfig?.mccCustomerId) {
-            serviceAccountMccId = saConfig.mccCustomerId
-          }
-        } catch (error) {
-          console.warn(`  ⚠️ cannot read service-account MCC config: ${error}`)
-        }
+      const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
+        userId,
+        linkedServiceAccountId
+      )
+      if (!prepared.ok) {
+        skippedNoAuth += groupRows.length
+        console.warn(`  ⚠️ skip group: ${prepared.message} (userId=${userId})`)
+        continue
       }
 
-      const loginCandidates = resolveLoginCustomerCandidates({
-        authType: auth.authType,
-        accountParentMccId: parentMccId,
-        oauthLoginCustomerId: credentials?.login_customer_id,
-        serviceAccountMccId,
-        targetCustomerId: customerId,
-      })
+      const { apiAuth } = prepared
+      const isServiceAccount = apiAuth.authType === 'service_account'
 
-      let preferredLoginCustomerId = loginCandidates[0]
+      let loginCandidates: Array<string | undefined> = []
+      let preferredLoginCustomerId: string | undefined
+      let refreshToken = ''
+      let clientId = ''
+      let clientSecret = ''
+      let developerToken = ''
+      let serviceAccountId = ''
+
+      if (isServiceAccount) {
+        serviceAccountId = String(apiAuth.serviceAccountId || '').trim()
+        if (!serviceAccountId) {
+          skippedNoAuth += groupRows.length
+          console.warn(`  ⚠️ skip group: missing service account id (userId=${userId})`)
+          continue
+        }
+      } else {
+        refreshToken = String(prepared.refreshToken || '').trim()
+        const oauthCreds = prepared.oauthCredentials
+        clientId = String(oauthCreds?.client_id || '').trim()
+        clientSecret = String(oauthCreds?.client_secret || '').trim()
+        developerToken = String(oauthCreds?.developer_token || '').trim()
+
+        if (!refreshToken || !clientId || !clientSecret || !developerToken) {
+          skippedNoAuth += groupRows.length
+          console.warn(`  ⚠️ skip group: OAuth credentials missing (userId=${userId})`)
+          continue
+        }
+
+        loginCandidates = resolveLoginCustomerCandidates({
+          authType: 'oauth',
+          accountParentMccId: parentMccId,
+          oauthLoginCustomerId:
+            prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+          targetCustomerId: customerId,
+        })
+        preferredLoginCustomerId = loginCandidates[0]
+      }
+
       let accessToken: string | null = null
 
       const ensureAccessToken = async (forceRefresh = false): Promise<string> => {
@@ -525,33 +597,45 @@ async function run() {
         throw lastError || new Error('Google Ads request failed')
       }
 
+      const fetchRemoteCampaignName = async (row: CampaignRow): Promise<string> => {
+        if (isServiceAccount) {
+          return getCampaignNameByPython({
+            userId,
+            serviceAccountId,
+            customerId,
+            campaignId: String(row.google_campaign_id),
+          })
+        }
+        return runWithLoginFallback(async (loginCustomerId) => {
+          try {
+            const token = await ensureAccessToken(false)
+            return await getCampaignNameByHttp({
+              customerId,
+              campaignId: String(row.google_campaign_id),
+              accessToken: token,
+              developerToken,
+              loginCustomerId,
+            })
+          } catch (error) {
+            if (!isTokenExpiredError(error)) {
+              throw error
+            }
+            const token = await ensureAccessToken(true)
+            return getCampaignNameByHttp({
+              customerId,
+              campaignId: String(row.google_campaign_id),
+              accessToken: token,
+              developerToken,
+              loginCustomerId,
+            })
+          }
+        })
+      }
+
       for (const row of groupRows) {
         checked += 1
         try {
-          const remoteName = await runWithLoginFallback(async (loginCustomerId) => {
-            try {
-              const token = await ensureAccessToken(false)
-              return await getCampaignNameByHttp({
-                customerId,
-                campaignId: String(row.google_campaign_id),
-                accessToken: token,
-                developerToken,
-                loginCustomerId,
-              })
-            } catch (error) {
-              if (!isTokenExpiredError(error)) {
-                throw error
-              }
-              const token = await ensureAccessToken(true)
-              return getCampaignNameByHttp({
-                customerId,
-                campaignId: String(row.google_campaign_id),
-                accessToken: token,
-                developerToken,
-                loginCustomerId,
-              })
-            }
-          })
+          const remoteName = await fetchRemoteCampaignName(row)
 
           if (!remoteName) {
             missingRemote += 1

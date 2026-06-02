@@ -9,6 +9,9 @@ const authContextFns = vi.hoisted(() => ({
   assertGoogleAdsAuthReadyForApi: vi.fn(),
   getGoogleAdsAuthContext: vi.fn(),
 }))
+const serviceAccountFns = vi.hoisted(() => ({
+  getUnifiedGoogleAdsClient: vi.fn(),
+}))
 const updateGoogleAdsAccount = vi.fn()
 
 vi.mock('google-ads-api', () => {
@@ -53,12 +56,16 @@ vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
   }
 })
 
+vi.mock('@/lib/google-ads-service-account', () => ({
+  getUnifiedGoogleAdsClient: serviceAccountFns.getUnifiedGoogleAdsClient,
+}))
+
 describe('getCustomerWithCredentials login_customer_id fallback', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
   })
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
 
     authContextFns.assertGoogleAdsAuthReadyForApi.mockResolvedValue({
@@ -83,8 +90,13 @@ describe('getCustomerWithCredentials login_customer_id fallback', () => {
     })))
   })
 
+  let getCustomerWithCredentials: typeof import('@/lib/google-ads-api').getCustomerWithCredentials
+
+  beforeAll(async () => {
+    ;({ getCustomerWithCredentials } = await import('@/lib/google-ads-api'))
+  })
+
   it('omits login_customer_id when caller passes explicit undefined', async () => {
-    const { getCustomerWithCredentials } = await import('@/lib/google-ads-api')
 
     await getCustomerWithCredentials({
       customerId: '3178223819',
@@ -101,8 +113,6 @@ describe('getCustomerWithCredentials login_customer_id fallback', () => {
   })
 
   it('uses credential login_customer_id when caller omits loginCustomerId field', async () => {
-    const { getCustomerWithCredentials } = await import('@/lib/google-ads-api')
-
     await getCustomerWithCredentials({
       customerId: '3178223819',
       refreshToken: 'refresh-token',
@@ -115,8 +125,6 @@ describe('getCustomerWithCredentials login_customer_id fallback', () => {
   })
 
   it('skips assert and resolveOAuth when authContext and credentials are passed', async () => {
-    const { getCustomerWithCredentials } = await import('@/lib/google-ads-api')
-
     await getCustomerWithCredentials({
       customerId: '3178223819',
       refreshToken: 'refresh-token',
@@ -140,12 +148,31 @@ describe('getCustomerWithCredentials login_customer_id fallback', () => {
     expect(customerFactory).toHaveBeenCalled()
   })
 
+  it('uses service_account path when authContext is SA and authType omitted', async () => {
+    serviceAccountFns.getUnifiedGoogleAdsClient.mockResolvedValue({ _isPythonProxy: true })
+
+    const saContext = {
+      dualStack: false,
+      auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+      oauthCredentials: null,
+      serviceAccountConfig: { id: 'sa-1' },
+    }
+
+    await getCustomerWithCredentials({
+      customerId: '3178223819',
+      userId: 1,
+      serviceAccountId: 'sa-1',
+      authContext: saContext as any,
+    })
+
+    expect(serviceAccountFns.getUnifiedGoogleAdsClient).toHaveBeenCalled()
+    expect(customerFactory).not.toHaveBeenCalled()
+  })
+
   it('rejects dual-stack before OAuth customer creation even with refreshToken passed', async () => {
     authContextFns.assertGoogleAdsAuthReadyForApi.mockRejectedValue(
       new Error('检测到 OAuth 与服务账号同时存在，请先在设置页删除其中一种配置后再使用。')
     )
-
-    const { getCustomerWithCredentials } = await import('@/lib/google-ads-api')
 
     await expect(
       getCustomerWithCredentials({

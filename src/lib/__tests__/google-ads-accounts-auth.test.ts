@@ -5,13 +5,16 @@ import {
   developerTokenLooksInvalid,
   healAccountsRouteDeveloperToken,
   linkedSaPrepareCacheKey,
+  loadOAuthGoogleAdsCallBundleForContext,
   prepareGoogleAdsApiCallForLinkedAccountCached,
   resolveAccountsRouteAuthBundle,
   prepareGoogleAdsAccountApiCall,
   resolveAndHealSyncUserCredentials,
   resolveOAuthApiCredentialsForUser,
+  resolveOAuthClientCredentialsForUser,
   resolveOAuthRefreshToken,
 } from '../google-ads-accounts-auth'
+import * as routeAuthModule from '../google-ads-accounts-route-auth'
 
 const authContextFns = vi.hoisted(() => ({
   getGoogleAdsAuthContext: vi.fn(),
@@ -559,6 +562,61 @@ describe('prepareGoogleAdsAccountApiCall', () => {
       message: expect.stringContaining('OAuth 与服务账号同时存在'),
     })
     expect(authContextFns.resolveGoogleAdsApiAuthFromContext).not.toHaveBeenCalled()
+  })
+})
+
+describe('resolveOAuthClientCredentialsForUser OAuth path alignment', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    settingsFns.getUserOnlySetting.mockResolvedValue({
+      value: 'abcdefghijklmnopqrstuvwxyz1234567890ab',
+    })
+  })
+
+  it('returns the same client fields as loadOAuthGoogleAdsCallBundleForContext', async () => {
+    const bundle = await loadOAuthGoogleAdsCallBundleForContext({
+      userId: oauthAuthContextFull.userId,
+      authContext: oauthAuthContextFull,
+    })
+    expect(bundle.ok).toBe(true)
+    expect(bundle.bundle?.oauthCredentials).toBeTruthy()
+
+    const clientCreds = await resolveOAuthClientCredentialsForUser(
+      oauthAuthContextFull.userId,
+      { existingAuthContext: oauthAuthContextFull }
+    )
+
+    expect(clientCreds).toEqual({
+      ...bundle.bundle!.oauthCredentials,
+      login_customer_id: bundle.bundle!.oauthLoginCustomerId ?? '',
+    })
+  })
+
+  it('reuses existing auth context without resolveAndHealSyncUserCredentials', async () => {
+    const syncSpy = vi.spyOn(routeAuthModule, 'resolveAndHealSyncUserCredentials')
+
+    await resolveOAuthClientCredentialsForUser(oauthAuthContextFull.userId, {
+      existingAuthContext: oauthAuthContextFull,
+    })
+
+    expect(syncSpy).not.toHaveBeenCalled()
+    expect(authContextFns.getGoogleAdsAuthContext).not.toHaveBeenCalled()
+    syncSpy.mockRestore()
+  })
+
+  it('rejects service account context', async () => {
+    const saContext = {
+      ...oauthAuthContextFull,
+      auth: { authType: 'service_account' as const, serviceAccountId: 'sa-1' },
+      oauthCredentials: null,
+      serviceAccountConfig: { id: 'sa-1', mccCustomerId: '111', developerToken: 'tok' },
+    }
+
+    await expect(
+      resolveOAuthClientCredentialsForUser(saContext.userId, {
+        existingAuthContext: saContext,
+      })
+    ).rejects.toThrow(/服务账号认证/)
   })
 })
 

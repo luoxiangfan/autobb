@@ -592,6 +592,19 @@ describe('assertGoogleAdsAuthReadyForApi', () => {
 })
 
 describe('resolveGoogleAdsApiAuthFromContext', () => {
+  it('throws when context is not configured', async () => {
+    const { resolveGoogleAdsApiAuthFromContext } = await import('@/lib/google-ads-auth-context')
+    await expect(
+      resolveGoogleAdsApiAuthFromContext({
+        ...defaultOAuthAuthContext,
+        dualStack: false,
+        auth: {},
+        oauthCredentials: null,
+        serviceAccountConfig: null,
+      } as any)
+    ).rejects.toThrow(/认证未配置或已失效/)
+  })
+
   it('throws when context has dualStack', async () => {
     const { resolveGoogleAdsApiAuthFromContext } = await import('@/lib/google-ads-auth-context')
     await expect(
