@@ -26,7 +26,13 @@ RUN --mount=type=cache,target=/root/.npm \
 # ============================================
 # Stage 2: 构建阶段
 # ============================================
-FROM node:24-alpine AS builder
+FROM node:24-bookworm-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
