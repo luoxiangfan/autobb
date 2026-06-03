@@ -32,9 +32,10 @@ import type {
 } from '@/lib/openclaw/affiliate-commission-types'
 import { normalizeOfferAsin } from '@/lib/openclaw/offer-asin'
 import { collectPartnerboostReportRows } from '@/lib/openclaw/partnerboost-commission-rows'
+import { collectYeahPromosReportRows } from '@/lib/openclaw/yeahpromos-commission-rows'
 
-// Facts built before PartnerBoost transaction parsing under-count commission vs campaigns.
-const AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT = '2026-06-02T00:00:00.000Z'
+// Facts built before aligned PartnerBoost/YeahPromos parsing under-count commission vs campaigns.
+const AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT = '2026-06-03T00:00:00.000Z'
 
 const SUPPORTED_SOURCES: Array<{ platform: AffiliatePlatform; sourceApi: string }> = [
   { platform: 'yeahpromos', sourceApi: 'getorder' },
@@ -261,19 +262,6 @@ function lineItemMatchesBrandDetailKey(
   return resolveBrandSummaryKey(item, showUserScope) === brandKey
 }
 
-function normalizeYeahPromosRows(payload: unknown): any[] {
-  const parsed = payload as any
-  const container = parsed?.Data ?? parsed?.data ?? parsed
-
-  if (Array.isArray(container)) return container
-  if (Array.isArray(container?.Data)) return container.Data
-  if (Array.isArray(container?.data)) return container.data
-  if (Array.isArray(container?.list)) return container.list
-  if (Array.isArray(parsed?.Data)) return parsed.Data
-  if (Array.isArray(parsed?.data)) return parsed.data
-  return []
-}
-
 function parseYeahPromosLineItems(params: {
   userId: number
   username: string
@@ -281,15 +269,12 @@ function parseYeahPromosLineItems(params: {
   payload: unknown
   showUserScope: boolean
 }): AffiliateCommissionLineItem[] {
-  const rows = normalizeYeahPromosRows(params.payload)
+  const rows = collectYeahPromosReportRows(params.payload)
   const items: AffiliateCommissionLineItem[] = []
 
   for (const row of rows) {
-    const commission = parseNumberish(row?.sale_comm ?? row?.saleComm, 0)
-    if (commission <= 0) continue
-
-    const advertId = pickString(row?.advert_id, row?.advertId)
-    const brandName = pickString(row?.advert_name, row?.advertName)
+    const advertId = row.advertId
+    const brandName = row.brandName
       || (advertId ? `Advert ${advertId}` : 'Unknown Brand')
     const baseBrandKey = advertId
       ? `yeahpromos:advert:${advertId}`
@@ -302,9 +287,9 @@ function parseYeahPromosLineItems(params: {
       platform: 'yeahpromos',
       brandKey: scopeBrandKey(params.userId, baseBrandKey, params.showUserScope),
       brandName,
-      commission: roundTo4(commission),
+      commission: roundTo4(row.commission),
       advertId,
-      asin: normalizeAsin(pickString(row?.sku, row?.asin, row?.ASIN)),
+      asin: normalizeAsin(row.asin),
     })
   }
 

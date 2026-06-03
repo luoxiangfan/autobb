@@ -938,6 +938,55 @@ describe('affiliate-commission-raw-report', () => {
     ])
   })
 
+  it('parses YeahPromos commission from alternate field names', async () => {
+    hoisted.dbQueryOneMock.mockResolvedValueOnce({
+      min_date: '2026-05-11',
+      max_date: '2026-05-11',
+    })
+    hoisted.dbQueryMock
+      .mockResolvedValueOnce([{ id: 1, username: 'alice' }])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          report_date: '2026-05-11',
+          platform: 'yeahpromos',
+          source_api: 'getorder',
+          response_payload: JSON.stringify({
+            data: {
+              rows: [
+                { advert_id: 100, advert_name: 'Brand A', commission_amount: 9.5 },
+                { advert_id: 101, advert_name: 'Brand B', sale_comm: 4 },
+              ],
+            },
+          }),
+        },
+      ])
+
+    const report = await getAffiliateCommissionReport({
+      userIds: [1],
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+      platform: 'yeahpromos',
+      showUserScope: false,
+    })
+
+    expect(report.totalCommission).toBe(13.5)
+    expect(report.brandSummaries).toEqual([
+      {
+        brandKey: 'yeahpromos:advert:100',
+        brandName: 'Brand A',
+        platform: 'yeahpromos',
+        totalCommission: 9.5,
+      },
+      {
+        brandKey: 'yeahpromos:advert:101',
+        brandName: 'Brand B',
+        platform: 'yeahpromos',
+        totalCommission: 4,
+      },
+    ])
+  })
+
   it('falls back to raw parse when line facts only cover part of the date range', async () => {
     hoisted.factsCoverMock.mockResolvedValue(false)
     hoisted.dbQueryOneMock.mockResolvedValueOnce({
