@@ -1258,7 +1258,6 @@ async function saveCampaignToDatabase(params: {
         budget_type = ?,
         status = ?,
         google_ads_account_id = ?,
-        synced_from_google_ads = ${db.type === 'postgres' ? 'FALSE' : '0'},
         updated_at = ?,
         google_ad_group_id = ?,
         google_ad_id = ?
@@ -1299,8 +1298,6 @@ async function saveCampaignToDatabase(params: {
           budget_type = ?,
           status = ?,
           google_ads_account_id = ?,
-          synced_from_google_ads = ${db.type === 'postgres' ? 'TRUE' : '1'},
-          needs_offer_completion = ${db.type === 'postgres' ? 'FALSE' : '0'},
           max_cpc = ?,
           google_campaign_id = ?,
           google_ad_group_id = ?,
