@@ -20,6 +20,7 @@ import {
   getAffiliateCommissionReport,
   isSupportedAffiliateCommissionSource,
   normalizeReportDate,
+  offerUrlsContainAsin,
   resolveTargetUserIds,
 } from './affiliate-commission-raw-report'
 
@@ -148,6 +149,7 @@ describe('affiliate-commission-raw-report', () => {
       .mockResolvedValueOnce([
         { user_id: 1, asin: 'B0BGPF71Q6', brand: 'Example Brand' },
       ])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
 
     const report = await getAffiliateCommissionReport({
@@ -318,6 +320,7 @@ describe('affiliate-commission-raw-report', () => {
         { user_id: 1, asin: 'B0TEST1234', brand: 'Brand B' },
       ])
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
 
     const detail = await getAffiliateCommissionDateDetail({
       userIds: [1],
@@ -382,6 +385,115 @@ describe('affiliate-commission-raw-report', () => {
     ])).toEqual([
       { name: 'YeahPromos', count: 3 },
       { name: 'PartnerBoost', count: 2 },
+    ])
+  })
+
+  it('detects ASIN presence in offer url or final_url', () => {
+    expect(offerUrlsContainAsin(
+      'https://www.amazon.com/dp/B0BGPF71Q6',
+      null,
+      'B0BGPF71Q6'
+    )).toBe(true)
+    expect(offerUrlsContainAsin(
+      null,
+      'https://example.com/product?asin=B0TEST1234',
+      'B0TEST1234'
+    )).toBe(true)
+    expect(offerUrlsContainAsin(
+      'https://example.com/other-product',
+      'https://example.com/final/B0OTHER123',
+      'B0BGPF71Q6'
+    )).toBe(false)
+  })
+
+  it('falls back to offer brand when affiliate product brand is missing', async () => {
+    hoisted.dbQueryOneMock.mockResolvedValueOnce({
+      min_date: '2026-05-11',
+      max_date: '2026-05-11',
+    })
+    hoisted.dbQueryMock
+      .mockResolvedValueOnce([{ id: 1, username: 'alice' }])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          report_date: '2026-05-11',
+          platform: 'partnerboost',
+          source_api: 'amazon_report',
+          response_payload: JSON.stringify({
+            data: {
+              list: [{ asin: 'B0OFFER001', estCommission: 12.5 }],
+            },
+          }),
+        },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          brand: 'Offer Brand',
+          url: 'https://www.amazon.com/dp/B0OFFER001',
+          final_url: null,
+        },
+      ])
+
+    const report = await getAffiliateCommissionReport({
+      userIds: [1],
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+      platform: 'partnerboost',
+      showUserScope: false,
+    })
+
+    expect(report.brandSummaries).toEqual([
+      {
+        brandKey: 'partnerboost:B0OFFER001:offer brand',
+        brandName: 'Offer Brand',
+        platform: 'partnerboost',
+        totalCommission: 12.5,
+      },
+    ])
+  })
+
+  it('uses ASIN label when neither product nor offer brand is available', async () => {
+    hoisted.dbQueryOneMock.mockResolvedValueOnce({
+      min_date: '2026-05-11',
+      max_date: '2026-05-11',
+    })
+    hoisted.dbQueryMock
+      .mockResolvedValueOnce([{ id: 1, username: 'alice' }])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          report_date: '2026-05-11',
+          platform: 'partnerboost',
+          source_api: 'amazon_report',
+          response_payload: JSON.stringify({
+            data: {
+              list: [{ asin: 'B0UNKNOWN1', estCommission: 4.2 }],
+            },
+          }),
+        },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+
+    const report = await getAffiliateCommissionReport({
+      userIds: [1],
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+      platform: 'partnerboost',
+      showUserScope: false,
+    })
+
+    expect(report.brandSummaries).toEqual([
+      {
+        brandKey: 'partnerboost:B0UNKNOWN1:asin b0unknown1',
+        brandName: 'ASIN B0UNKNOWN1',
+        platform: 'partnerboost',
+        totalCommission: 4.2,
+      },
     ])
   })
 })

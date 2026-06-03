@@ -156,6 +156,35 @@ function normalizeBrand(value: unknown): string | null {
   return text || null
 }
 
+export function offerUrlsContainAsin(
+  url: unknown,
+  finalUrl: unknown,
+  asin: string
+): boolean {
+  const normalizedAsin = normalizeAsin(asin)
+  if (!normalizedAsin) return false
+
+  for (const value of [url, finalUrl]) {
+    const text = String(value ?? '').trim()
+    if (!text) continue
+
+    const candidates = [text.toUpperCase()]
+    if (/%[0-9A-Fa-f]{2}/.test(text)) {
+      try {
+        candidates.push(decodeURIComponent(text).toUpperCase())
+      } catch {
+        // ignore malformed percent-encoding
+      }
+    }
+
+    if (candidates.some((candidate) => candidate.includes(normalizedAsin))) {
+      return true
+    }
+  }
+
+  return false
+}
+
 function pickString(...values: unknown[]): string | null {
   for (const value of values) {
     if (value === null || value === undefined) continue
@@ -271,6 +300,65 @@ function parsePartnerboostLineItems(params: {
   return items
 }
 
+async function loadPartnerboostOfferBrandMap(params: {
+  userIds: number[]
+  asins: string[]
+  existing: Map<string, string>
+}): Promise<void> {
+  if (params.userIds.length === 0 || params.asins.length === 0) return
+
+  const unresolved: Array<{ userId: number; asin: string }> = []
+  for (const userId of params.userIds) {
+    for (const asin of params.asins) {
+      const normalizedAsin = normalizeAsin(asin)
+      if (!normalizedAsin) continue
+      const mapKey = `${userId}:${normalizedAsin}`
+      if (!params.existing.has(mapKey)) {
+        unresolved.push({ userId, asin: normalizedAsin })
+      }
+    }
+  }
+  if (unresolved.length === 0) return
+
+  const db = await getDatabase()
+  const userPlaceholders = params.userIds.map(() => '?').join(', ')
+  const offerNotDeletedCondition = db.type === 'postgres'
+    ? '(is_deleted = false OR is_deleted IS NULL)'
+    : '(is_deleted = 0 OR is_deleted IS NULL)'
+
+  const offerRows = await db.query<{
+    user_id: number
+    brand: string | null
+    url: string | null
+    final_url: string | null
+  }>(
+    `
+      SELECT user_id, brand, url, final_url
+      FROM offers
+      WHERE user_id IN (${userPlaceholders})
+        AND ${offerNotDeletedCondition}
+        AND brand IS NOT NULL
+    `,
+    params.userIds
+  )
+
+  for (const { userId, asin } of unresolved) {
+    const mapKey = `${userId}:${asin}`
+    if (params.existing.has(mapKey)) continue
+
+    for (const row of offerRows) {
+      if (row.user_id !== userId) continue
+      if (!offerUrlsContainAsin(row.url, row.final_url, asin)) continue
+
+      const brand = normalizeBrand(row.brand)
+      if (!brand) continue
+
+      params.existing.set(mapKey, brand)
+      break
+    }
+  }
+}
+
 async function loadPartnerboostBrandMap(params: {
   userIds: number[]
   asins: string[]
@@ -332,6 +420,12 @@ async function loadPartnerboostBrandMap(params: {
       }
     }
   }
+
+  await loadPartnerboostOfferBrandMap({
+    userIds: params.userIds,
+    asins: params.asins,
+    existing: brandByUserAsin,
+  })
 
   return brandByUserAsin
 }
