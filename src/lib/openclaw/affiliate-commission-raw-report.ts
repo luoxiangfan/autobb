@@ -207,6 +207,38 @@ function scopeBrandKey(userId: number, brandKey: string, showUserScope: boolean)
   return `user:${userId}:${brandKey}`
 }
 
+function buildPartnerboostBrandSummaryKey(params: {
+  userId: number
+  brandName: string
+  showUserScope: boolean
+}): string {
+  const brandSlug = params.brandName.trim().toLowerCase() || 'unknown brand'
+  return scopeBrandKey(params.userId, `partnerboost:brand:${brandSlug}`, params.showUserScope)
+}
+
+function resolveBrandSummaryKey(
+  item: AffiliateCommissionLineItem,
+  showUserScope: boolean
+): string {
+  if (item.platform === 'partnerboost') {
+    return buildPartnerboostBrandSummaryKey({
+      userId: item.userId,
+      brandName: item.brandName,
+      showUserScope,
+    })
+  }
+  return item.brandKey
+}
+
+function lineItemMatchesBrandDetailKey(
+  item: AffiliateCommissionLineItem,
+  brandKey: string,
+  showUserScope: boolean
+): boolean {
+  if (item.brandKey === brandKey) return true
+  return resolveBrandSummaryKey(item, showUserScope) === brandKey
+}
+
 function normalizeYeahPromosRows(payload: unknown): any[] {
   const parsed = payload as any
   const container = parsed?.Data ?? parsed?.data ?? parsed
@@ -692,14 +724,15 @@ function buildBrandSummaries(
   const summaryMap = new Map<string, AffiliateCommissionBrandSummary>()
 
   for (const item of items) {
-    const existing = summaryMap.get(item.brandKey)
+    const summaryKey = resolveBrandSummaryKey(item, showUserScope)
+    const existing = summaryMap.get(summaryKey)
     if (existing) {
       existing.totalCommission += item.commission
       continue
     }
 
-    summaryMap.set(item.brandKey, {
-      brandKey: item.brandKey,
+    summaryMap.set(summaryKey, {
+      brandKey: summaryKey,
       brandName: item.brandName,
       platform: item.platform,
       totalCommission: item.commission,
@@ -821,7 +854,7 @@ export async function getAffiliateCommissionBrandDetail(params: {
 
   const detailMap = new Map<string, number>()
   for (const item of lineItems) {
-    if (item.brandKey !== params.brandKey) continue
+    if (!lineItemMatchesBrandDetailKey(item, params.brandKey, showUserScope)) continue
     const reportDate = normalizeReportDate(item.reportDate)
     detailMap.set(reportDate, (detailMap.get(reportDate) || 0) + item.commission)
   }

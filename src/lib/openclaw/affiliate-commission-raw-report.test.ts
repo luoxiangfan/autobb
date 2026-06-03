@@ -164,7 +164,7 @@ describe('affiliate-commission-raw-report', () => {
     expect(report.totalCommission).toBe(37.99)
     expect(report.brandSummaries).toEqual([
       {
-        brandKey: 'partnerboost:B0BGPF71Q6:example brand',
+        brandKey: 'partnerboost:brand:example brand',
         brandName: 'Example Brand',
         platform: 'partnerboost',
         totalCommission: 20,
@@ -447,11 +447,107 @@ describe('affiliate-commission-raw-report', () => {
 
     expect(report.brandSummaries).toEqual([
       {
-        brandKey: 'partnerboost:B0OFFER001:offer brand',
+        brandKey: 'partnerboost:brand:offer brand',
         brandName: 'Offer Brand',
         platform: 'partnerboost',
         totalCommission: 12.5,
       },
+    ])
+  })
+
+  it('merges partnerboost rows by brand name for the same user', async () => {
+    hoisted.dbQueryOneMock.mockResolvedValueOnce({
+      min_date: '2026-05-11',
+      max_date: '2026-05-11',
+    })
+    hoisted.dbQueryMock
+      .mockResolvedValueOnce([{ id: 1, username: 'alice' }])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          report_date: '2026-05-11',
+          platform: 'partnerboost',
+          source_api: 'amazon_report',
+          response_payload: JSON.stringify({
+            data: {
+              list: [
+                { asin: 'B0ASIN0001', estCommission: 6 },
+                { asin: 'B0ASIN0002', estCommission: 4 },
+              ],
+            },
+          }),
+        },
+      ])
+      .mockResolvedValueOnce([
+        { user_id: 1, asin: 'B0ASIN0001', brand: 'Shared Brand' },
+        { user_id: 1, asin: 'B0ASIN0002', brand: 'Shared Brand' },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+
+    const report = await getAffiliateCommissionReport({
+      userIds: [1],
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+      platform: 'partnerboost',
+      showUserScope: false,
+    })
+
+    expect(report.brandSummaries).toEqual([
+      {
+        brandKey: 'partnerboost:brand:shared brand',
+        brandName: 'Shared Brand',
+        platform: 'partnerboost',
+        totalCommission: 10,
+      },
+    ])
+  })
+
+  it('returns merged partnerboost brand detail across multiple asins', async () => {
+    hoisted.dbQueryMock
+      .mockResolvedValueOnce([{ id: 1, username: 'alice' }])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          report_date: '2026-05-10',
+          platform: 'partnerboost',
+          source_api: 'amazon_report',
+          response_payload: JSON.stringify({
+            data: {
+              list: [{ asin: 'B0ASIN0001', estCommission: 6 }],
+            },
+          }),
+        },
+        {
+          user_id: 1,
+          report_date: '2026-05-11',
+          platform: 'partnerboost',
+          source_api: 'amazon_report',
+          response_payload: JSON.stringify({
+            data: {
+              list: [{ asin: 'B0ASIN0002', estCommission: 4 }],
+            },
+          }),
+        },
+      ])
+      .mockResolvedValueOnce([
+        { user_id: 1, asin: 'B0ASIN0001', brand: 'Shared Brand' },
+        { user_id: 1, asin: 'B0ASIN0002', brand: 'Shared Brand' },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+
+    const detail = await getAffiliateCommissionBrandDetail({
+      userIds: [1],
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+      brandKey: 'partnerboost:brand:shared brand',
+      showUserScope: false,
+    })
+
+    expect(detail).toEqual([
+      { reportDate: '2026-05-11', commission: 4 },
+      { reportDate: '2026-05-10', commission: 6 },
     ])
   })
 
@@ -489,7 +585,7 @@ describe('affiliate-commission-raw-report', () => {
 
     expect(report.brandSummaries).toEqual([
       {
-        brandKey: 'partnerboost:B0UNKNOWN1:asin b0unknown1',
+        brandKey: 'partnerboost:brand:asin b0unknown1',
         brandName: 'ASIN B0UNKNOWN1',
         platform: 'partnerboost',
         totalCommission: 4.2,
