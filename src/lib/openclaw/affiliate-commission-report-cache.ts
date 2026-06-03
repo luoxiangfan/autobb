@@ -27,6 +27,7 @@ export function buildAffiliateCommissionLineItemsCacheKey(params: {
   showUserScope: boolean
 }): string {
   const payload = [
+    'pb-tx-v2',
     params.userIds.slice().sort((left, right) => left - right).join(','),
     params.startDate,
     params.endDate,

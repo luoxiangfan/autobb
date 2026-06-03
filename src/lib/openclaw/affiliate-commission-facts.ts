@@ -122,6 +122,112 @@ function buildPlatformClause(platform: string): { clause: string; params: unknow
   return { clause: '', params: [] }
 }
 
+const RAW_SUPPORTED_SOURCE_SQL = `
+  (
+    (platform = 'yeahpromos' AND source_api = 'getorder')
+    OR (platform = 'partnerboost' AND source_api IN ('amazon_report', 'transaction'))
+  )
+`
+
+function buildRawSourcePlatformClause(platform: string): { clause: string; params: unknown[] } {
+  if (platform === 'yeahpromos') {
+    return { clause: `AND platform = 'yeahpromos'`, params: [] }
+  }
+  if (platform === 'partnerboost') {
+    return { clause: `AND platform = 'partnerboost'`, params: [] }
+  }
+  return { clause: '', params: [] }
+}
+
+/**
+ * Facts fast-path is safe only when every raw-sync date in range has fresh rebuilt facts.
+ * Partial coverage (e.g. facts for May 10+ but raw for May 1-4) must fall back to raw parse.
+ */
+export async function affiliateCommissionFactsCoverRawRange(params: {
+  userIds: number[]
+  startDate: string
+  endDate: string
+  platform: string
+  minRebuiltAt?: string | null
+}): Promise<boolean> {
+  if (params.userIds.length === 0) return false
+
+  const db = await getDatabase()
+  const rawPlatformFilter = buildRawSourcePlatformClause(params.platform)
+  const factPlatformFilter = buildPlatformClause(params.platform)
+  const rawDatesByKey = new Map<string, { maxUpdatedAt: string | null }>()
+
+  for (const userIdChunk of chunkArray(params.userIds, 100)) {
+    const placeholders = userIdChunk.map(() => '?').join(', ')
+    const rows = await db.query<{
+      user_id: number
+      report_date: unknown
+      max_updated_at: unknown
+    }>(
+      `
+        SELECT user_id, report_date, MAX(updated_at) AS max_updated_at
+        FROM openclaw_affiliate_commission_raw_sync_payloads
+        WHERE user_id IN (${placeholders})
+          AND report_date >= ?
+          AND report_date <= ?
+          ${rawPlatformFilter.clause}
+          AND ${RAW_SUPPORTED_SOURCE_SQL}
+        GROUP BY user_id, report_date
+      `,
+      [...userIdChunk, params.startDate, params.endDate, ...rawPlatformFilter.params]
+    )
+
+    for (const row of rows) {
+      const reportDate = normalizeReportDate(row.report_date)
+      rawDatesByKey.set(`${row.user_id}:${reportDate}`, {
+        maxUpdatedAt: row.max_updated_at ? String(row.max_updated_at) : null,
+      })
+    }
+  }
+
+  if (rawDatesByKey.size === 0) return false
+
+  const factRebuiltByKey = new Map<string, string>()
+
+  for (const userIdChunk of chunkArray(params.userIds, 100)) {
+    const placeholders = userIdChunk.map(() => '?').join(', ')
+    const rows = await db.query<{
+      user_id: number
+      report_date: unknown
+      max_rebuilt_at: unknown
+    }>(
+      `
+        SELECT user_id, report_date, MAX(rebuilt_at) AS max_rebuilt_at
+        FROM openclaw_affiliate_commission_line_facts
+        WHERE user_id IN (${placeholders})
+          AND report_date >= ?
+          AND report_date <= ?
+          ${factPlatformFilter.clause}
+        GROUP BY user_id, report_date
+      `,
+      [...userIdChunk, params.startDate, params.endDate, ...factPlatformFilter.params]
+    )
+
+    for (const row of rows) {
+      const reportDate = normalizeReportDate(row.report_date)
+      const rebuiltAt = row.max_rebuilt_at ? String(row.max_rebuilt_at) : null
+      if (!rebuiltAt) continue
+      factRebuiltByKey.set(`${row.user_id}:${reportDate}`, rebuiltAt)
+    }
+  }
+
+  const minRebuiltAt = params.minRebuiltAt || null
+
+  for (const [key, raw] of rawDatesByKey.entries()) {
+    const rebuiltAt = factRebuiltByKey.get(key)
+    if (!rebuiltAt) return false
+    if (minRebuiltAt && rebuiltAt < minRebuiltAt) return false
+    if (raw.maxUpdatedAt && rebuiltAt < raw.maxUpdatedAt) return false
+  }
+
+  return true
+}
+
 export async function loadAffiliateCommissionLineFacts(params: {
   userIds: number[]
   startDate: string

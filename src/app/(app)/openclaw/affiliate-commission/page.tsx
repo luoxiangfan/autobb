@@ -459,7 +459,7 @@ export default function AffiliateCommissionReportPage() {
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-gray-900">联盟佣金原始数据</h1>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                基于 raw sync payloads 聚合展示 YeahPromos / PartnerBoost 佣金，支持按品牌或日期下钻
+                聚合展示 YeahPromos / PartnerBoost 佣金，支持按品牌或日期下钻
               </p>
             </div>
           </div>

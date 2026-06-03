@@ -3,10 +3,9 @@ import { parseJsonField } from '@/lib/json-field'
 import { parseStoredJsonPayload } from '@/lib/json-payload-compression'
 import type { AffiliatePlatform } from '@/lib/openclaw/affiliate-commission-attribution'
 import {
+  affiliateCommissionFactsCoverRawRange,
   factRowsToLineItems,
   getAffiliateCommissionRawSourceUpdatedAt,
-  getAffiliateCommissionLineFactsRebuiltAt,
-  hasAffiliateCommissionLineFacts,
   loadAffiliateCommissionLineFacts,
   replaceAffiliateCommissionLineFacts,
 } from '@/lib/openclaw/affiliate-commission-facts'
@@ -32,6 +31,16 @@ import type {
   AffiliateCommissionReportResult,
 } from '@/lib/openclaw/affiliate-commission-types'
 import { normalizeOfferAsin } from '@/lib/openclaw/offer-asin'
+import { collectPartnerboostReportRows } from '@/lib/openclaw/partnerboost-commission-rows'
+
+// Facts built before PartnerBoost transaction parsing under-count commission vs campaigns.
+const AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT = '2026-06-02T00:00:00.000Z'
+
+const SUPPORTED_SOURCES: Array<{ platform: AffiliatePlatform; sourceApi: string }> = [
+  { platform: 'yeahpromos', sourceApi: 'getorder' },
+  { platform: 'partnerboost', sourceApi: 'amazon_report' },
+  { platform: 'partnerboost', sourceApi: 'transaction' },
+]
 
 export type {
   ActiveNonAdminUser,
@@ -54,11 +63,6 @@ export {
   getAffiliatePlatformDisplayName,
   resolveAffiliateCommissionPlatformFilter,
 } from '@/lib/openclaw/affiliate-commission-platform'
-
-const SUPPORTED_SOURCES: Array<{ platform: AffiliatePlatform; sourceApi: string }> = [
-  { platform: 'yeahpromos', sourceApi: 'getorder' },
-  { platform: 'partnerboost', sourceApi: 'amazon_report' },
-]
 
 type RawSyncPayloadRow = {
   user_id: number
@@ -270,15 +274,6 @@ function normalizeYeahPromosRows(payload: unknown): any[] {
   return []
 }
 
-function normalizePartnerboostRows(payload: unknown): any[] {
-  const parsed = payload as any
-  const data = parsed?.data
-  if (Array.isArray(data)) return data
-  if (Array.isArray(data?.list)) return data.list
-  if (Array.isArray(parsed?.list)) return parsed.list
-  return []
-}
-
 function parseYeahPromosLineItems(params: {
   userId: number
   username: string
@@ -320,20 +315,21 @@ function parsePartnerboostLineItems(params: {
   userId: number
   username: string
   reportDate: string
-  payload: unknown
+  transactionPayloads: unknown[]
+  reportPayloads: unknown[]
   showUserScope: boolean
 }): AffiliateCommissionLineItem[] {
-  const rows = normalizePartnerboostRows(params.payload)
+  const rows = collectPartnerboostReportRows({
+    transactionPayloads: params.transactionPayloads,
+    reportPayloads: params.reportPayloads,
+  })
   const items: AffiliateCommissionLineItem[] = []
 
-  for (const row of rows) {
-    const commission = parseNumberish(row?.estCommission ?? row?.est_commission, 0)
-    if (commission <= 0) continue
-
-    const asin = normalizeAsin(pickString(row?.asin, row?.ASIN, row?.product_id, row?.productId))
+  rows.forEach((row, index) => {
+    const asin = normalizeAsin(row.asin)
     const baseBrandKey = asin
       ? `partnerboost:asin:${asin}`
-      : `partnerboost:row:${items.length}`
+      : `partnerboost:row:${index}`
 
     items.push({
       userId: params.userId,
@@ -342,10 +338,10 @@ function parsePartnerboostLineItems(params: {
       platform: 'partnerboost',
       brandKey: scopeBrandKey(params.userId, baseBrandKey, params.showUserScope),
       brandName: asin ? `ASIN ${asin}` : 'Unknown Brand',
-      commission: roundTo4(commission),
+      commission: roundTo4(row.commission),
       asin,
     })
-  }
+  })
 
   return items
 }
@@ -627,7 +623,7 @@ async function loadRawSyncPayloadRowsChunk(params: {
         ${platformClause}
         AND (
           (platform = 'yeahpromos' AND source_api = 'getorder')
-          OR (platform = 'partnerboost' AND source_api = 'amazon_report')
+          OR (platform = 'partnerboost' AND source_api IN ('amazon_report', 'transaction'))
         )
       ORDER BY user_id ASC, report_date ASC, platform ASC, source_api ASC, page_no ASC
     `,
@@ -692,7 +688,7 @@ function buildSupportedSourceClause(platform: AffiliateCommissionReportPlatformF
   }
   if (platform === 'partnerboost') {
     return {
-      clause: `AND platform = 'partnerboost' AND source_api = 'amazon_report'`,
+      clause: `AND platform = 'partnerboost' AND source_api IN ('amazon_report', 'transaction')`,
       params: [],
     }
   }
@@ -701,7 +697,7 @@ function buildSupportedSourceClause(platform: AffiliateCommissionReportPlatformF
     clause: `
       AND (
         (platform = 'yeahpromos' AND source_api = 'getorder')
-        OR (platform = 'partnerboost' AND source_api = 'amazon_report')
+        OR (platform = 'partnerboost' AND source_api IN ('amazon_report', 'transaction'))
       )
     `,
     params: [],
@@ -852,6 +848,13 @@ async function buildAffiliateCommissionLineItemsFromRawRows(params: {
   showUserScope: boolean
 }): Promise<AffiliateCommissionLineItem[]> {
   const lineItems: AffiliateCommissionLineItem[] = []
+  const partnerboostGroups = new Map<string, {
+    userId: number
+    username: string
+    reportDate: string
+    transactionPayloads: unknown[]
+    reportPayloads: unknown[]
+  }>()
 
   for (const row of params.rows) {
     const username = params.userLabels.get(row.user_id) || `User ${row.user_id}`
@@ -869,15 +872,38 @@ async function buildAffiliateCommissionLineItemsFromRawRows(params: {
       continue
     }
 
-    if (row.platform === 'partnerboost' && row.source_api === 'amazon_report') {
-      lineItems.push(...parsePartnerboostLineItems({
-        userId: row.user_id,
-        username,
-        reportDate: row.report_date,
-        payload,
-        showUserScope: params.showUserScope,
-      }))
+    if (row.platform === 'partnerboost') {
+      const reportDate = normalizeReportDate(row.report_date)
+      const groupKey = `${row.user_id}:${reportDate}`
+      let group = partnerboostGroups.get(groupKey)
+      if (!group) {
+        group = {
+          userId: row.user_id,
+          username,
+          reportDate,
+          transactionPayloads: [],
+          reportPayloads: [],
+        }
+        partnerboostGroups.set(groupKey, group)
+      }
+
+      if (row.source_api === 'transaction') {
+        group.transactionPayloads.push(payload)
+      } else if (row.source_api === 'amazon_report') {
+        group.reportPayloads.push(payload)
+      }
     }
+  }
+
+  for (const group of partnerboostGroups.values()) {
+    lineItems.push(...parsePartnerboostLineItems({
+      userId: group.userId,
+      username: group.username,
+      reportDate: group.reportDate,
+      transactionPayloads: group.transactionPayloads,
+      reportPayloads: group.reportPayloads,
+      showUserScope: params.showUserScope,
+    }))
   }
 
   const partnerboostEntries = params.platform === 'yeahpromos'
@@ -1014,22 +1040,13 @@ export async function loadAffiliateCommissionLineItems(params: {
   }
 
   try {
-    const hasFacts = await hasAffiliateCommissionLineFacts({
+    const factsAreFresh = await affiliateCommissionFactsCoverRawRange({
       userIds: params.userIds,
       startDate: params.startDate,
       endDate: params.endDate,
       platform: params.platform,
+      minRebuiltAt: AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT,
     })
-    const factsRebuiltAt = hasFacts
-      ? await getAffiliateCommissionLineFactsRebuiltAt({
-        userIds: params.userIds,
-        startDate: params.startDate,
-        endDate: params.endDate,
-        platform: params.platform,
-      })
-      : null
-    const factsAreFresh = hasFacts
-      && (!sourceUpdatedAt || !factsRebuiltAt || factsRebuiltAt >= sourceUpdatedAt)
 
     if (factsAreFresh) {
       const factRows = await loadAffiliateCommissionLineFacts({

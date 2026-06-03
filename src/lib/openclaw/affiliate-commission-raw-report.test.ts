@@ -4,11 +4,20 @@ const hoisted = vi.hoisted(() => ({
   getDatabaseMock: vi.fn(),
   dbQueryMock: vi.fn(),
   dbQueryOneMock: vi.fn(),
+  factsCoverMock: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
   getDatabase: hoisted.getDatabaseMock,
 }))
+
+vi.mock('@/lib/openclaw/affiliate-commission-facts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/openclaw/affiliate-commission-facts')>()
+  return {
+    ...actual,
+    affiliateCommissionFactsCoverRawRange: hoisted.factsCoverMock,
+  }
+})
 
 import {
   resolveAffiliateCommissionPlatformFilter,
@@ -32,6 +41,8 @@ describe('affiliate-commission-raw-report', () => {
     clearAffiliateCommissionLineItemsMemoryCache()
     hoisted.dbQueryMock.mockReset()
     hoisted.dbQueryOneMock.mockReset()
+    hoisted.factsCoverMock.mockReset()
+    hoisted.factsCoverMock.mockResolvedValue(false)
     hoisted.getDatabaseMock.mockResolvedValue({
       type: 'sqlite',
       query: hoisted.dbQueryMock,
@@ -92,7 +103,7 @@ describe('affiliate-commission-raw-report', () => {
   it('recognizes supported affiliate commission sources', () => {
     expect(isSupportedAffiliateCommissionSource('yeahpromos', 'getorder')).toBe(true)
     expect(isSupportedAffiliateCommissionSource('partnerboost', 'amazon_report')).toBe(true)
-    expect(isSupportedAffiliateCommissionSource('partnerboost', 'transaction')).toBe(false)
+    expect(isSupportedAffiliateCommissionSource('partnerboost', 'transaction')).toBe(true)
   })
 
   it('aggregates yeahpromos rows by advert_id and partnerboost rows by asin+brand', async () => {
@@ -866,6 +877,113 @@ describe('affiliate-commission-raw-report', () => {
         platform: 'partnerboost',
         totalCommission: 4.2,
       },
+    ])
+  })
+
+  it('uses partnerboost transaction payloads for report totals when available', async () => {
+    hoisted.dbQueryOneMock.mockResolvedValueOnce({
+      min_date: '2026-05-11',
+      max_date: '2026-05-11',
+    })
+    hoisted.dbQueryMock
+      .mockResolvedValueOnce([{ id: 1, username: 'alice' }])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          report_date: '2026-05-11',
+          platform: 'partnerboost',
+          source_api: 'transaction',
+          response_payload: JSON.stringify({
+            data: {
+              list: [
+                { sale_comm: 20, asin: 'B0BGPF71Q6', order_id: 'order-1' },
+              ],
+            },
+          }),
+        },
+        {
+          user_id: 1,
+          report_date: '2026-05-11',
+          platform: 'partnerboost',
+          source_api: 'amazon_report',
+          response_payload: JSON.stringify({
+            data: {
+              list: [{ asin: 'B0BGPF71Q6', estCommission: 5 }],
+            },
+          }),
+        },
+      ])
+      .mockResolvedValueOnce([
+        { user_id: 1, asin: 'B0BGPF71Q6', brand: 'Example Brand' },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+
+    const report = await getAffiliateCommissionReport({
+      userIds: [1],
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+      platform: 'partnerboost',
+      showUserScope: false,
+    })
+
+    expect(report.totalCommission).toBe(20)
+    expect(report.brandSummaries).toEqual([
+      {
+        brandKey: 'partnerboost:brand:example brand',
+        brandName: 'Example Brand',
+        platform: 'partnerboost',
+        totalCommission: 20,
+      },
+    ])
+  })
+
+  it('falls back to raw parse when line facts only cover part of the date range', async () => {
+    hoisted.factsCoverMock.mockResolvedValue(false)
+    hoisted.dbQueryOneMock.mockResolvedValueOnce({
+      min_date: '2026-05-01',
+      max_date: '2026-05-31',
+    })
+    hoisted.dbQueryMock
+      .mockResolvedValueOnce([{ id: 1, username: 'alice' }])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          report_date: '2026-05-01',
+          platform: 'yeahpromos',
+          source_api: 'getorder',
+          response_payload: JSON.stringify({
+            data: {
+              Data: [{ advert_id: 100, advert_name: 'Early Brand', sale_comm: 6 }],
+            },
+          }),
+        },
+        {
+          user_id: 1,
+          report_date: '2026-05-10',
+          platform: 'yeahpromos',
+          source_api: 'getorder',
+          response_payload: JSON.stringify({
+            data: {
+              Data: [{ advert_id: 200, advert_name: 'Late Brand', sale_comm: 4 }],
+            },
+          }),
+        },
+      ])
+
+    const report = await getAffiliateCommissionReport({
+      userIds: [1],
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+      platform: 'yeahpromos',
+      showUserScope: false,
+    })
+
+    expect(hoisted.factsCoverMock).toHaveBeenCalled()
+    expect(report.totalCommission).toBe(10)
+    expect(report.dateSummaries).toEqual([
+      { reportDate: '2026-05-10', totalCommission: 4 },
+      { reportDate: '2026-05-01', totalCommission: 6 },
     ])
   })
 })
