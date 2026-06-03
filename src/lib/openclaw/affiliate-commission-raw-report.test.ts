@@ -11,14 +11,16 @@ vi.mock('@/lib/db', () => ({
 }))
 
 import {
+  resolveAffiliateCommissionPlatformFilter,
+  filterAffiliatesWithRawCommissionSupport,
+} from './affiliate-commission-platform'
+import {
   getAffiliateCommissionBrandDetail,
   getAffiliateCommissionDateDetail,
   getAffiliateCommissionReport,
   isSupportedAffiliateCommissionSource,
   normalizeReportDate,
-  resolveAffiliateCommissionPlatformFilter,
   resolveTargetUserIds,
-  filterAffiliatesWithRawCommissionSupport,
 } from './affiliate-commission-raw-report'
 
 describe('affiliate-commission-raw-report', () => {

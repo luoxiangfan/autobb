@@ -45,7 +45,7 @@ import {
   filterAffiliatesWithRawCommissionSupport,
   getAffiliatePlatformDisplayName,
   type AffiliateCommissionReportPlatformFilter,
-} from '@/lib/openclaw/affiliate-commission-raw-report'
+} from '@/lib/openclaw/affiliate-commission-platform'
 
 type ViewMode = 'brand' | 'date'
 
