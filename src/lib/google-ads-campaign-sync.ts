@@ -28,6 +28,7 @@ import { runOAuthGaqlWithLoginCustomerFallback } from './google-ads-oauth-gaql'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { toDbCampaignConfigTextField } from './campaign-backups'
 import { getInsertedId } from './db-helpers'
+import { extractAsinFromOfferUrls } from '@/lib/openclaw/offer-asin'
 import { createRiskAlert } from './risk-alerts'
 import { ApiOperationType } from './google-ads-api-tracker'
 import { firstNonEmptyFinalUrlFromCampaignConfig } from './google-ads-campaign-final-url'
@@ -1426,6 +1427,17 @@ async function createOfferFirst(params: {
         updateParams.push(finalUrlSuffix)
       }
 
+      const nextUrl = updates.some((entry) => entry.startsWith('url ='))
+        ? url
+        : (existingOffer.url ?? null)
+      const nextFinalUrl = updates.some((entry) => entry.startsWith('final_url ='))
+        ? finalUrl
+        : (existingOffer.final_url ?? null)
+      if (updates.some((entry) => entry.startsWith('url =') || entry.startsWith('final_url ='))) {
+        updates.push('asin = ?')
+        updateParams.push(extractAsinFromOfferUrls(nextUrl, nextFinalUrl))
+      }
+
       const existingBrand = typeof existingOffer.brand === 'string' ? existingOffer.brand.trim() : ''
       const brandStillRawCampaignStyle =
         existingBrand === campaignNameTrimmed ||
@@ -1466,6 +1478,7 @@ async function createOfferFirst(params: {
       url,
       final_url,
       final_url_suffix,
+      asin,
       brand,
       target_country,
       target_language,
@@ -1475,12 +1488,13 @@ async function createOfferFirst(params: {
       needs_completion,
       scrape_status,
       is_active
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       userId,
       url,
       finalUrl,
       finalUrlSuffix,
+      extractAsinFromOfferUrls(url, finalUrl),
       derivedBrand,
       'US',  // 默认国家，需要用户完善
       'English',  // 默认语言

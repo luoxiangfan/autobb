@@ -367,4 +367,107 @@ describe('updateOffer: sync offer_name with brand/country', () => {
     const [, params] = mockDb.exec.mock.calls[0]
     expect(params).toEqual(expect.arrayContaining(['GB', 'Ringconn_GB_01', 'English', 3, 10]))
   })
+
+  it('updates asin when final_url changes', async () => {
+    mockDb.queryOne
+      .mockResolvedValueOnce({
+        id: 4,
+        user_id: 10,
+        url: 'https://www.amazon.com/dp/B0OLDASIN0',
+        brand: 'BrandX',
+        category: null,
+        target_country: 'US',
+        target_language: 'English',
+        offer_name: 'BrandX_US_01',
+        affiliate_link: null,
+        brand_description: null,
+        unique_selling_points: null,
+        product_highlights: null,
+        target_audience: null,
+        final_url: 'https://www.amazon.com/dp/B0OLDASIN0',
+        final_url_suffix: null,
+        product_price: null,
+        commission_payout: null,
+        scrape_status: 'completed',
+        scrape_error: null,
+        scraped_at: null,
+        is_active: 1,
+        industry_code: null,
+        review_analysis: null,
+        competitor_analysis: null,
+        visual_analysis: null,
+        extracted_keywords: null,
+        extracted_headlines: null,
+        extracted_descriptions: null,
+        extraction_metadata: null,
+        extracted_at: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+        deleted_at: null,
+        is_deleted: 0,
+        promotions: null,
+        scraped_data: null,
+        ai_keywords: null,
+        ai_reviews: null,
+        ai_competitive_edges: null,
+        ai_analysis_v32: null,
+        page_type: 'product',
+        generated_buckets: null,
+        product_name: null,
+      })
+      .mockResolvedValueOnce({
+        id: 4,
+        user_id: 10,
+        url: 'https://www.amazon.com/dp/B0OLDASIN0',
+        brand: 'BrandX',
+        category: null,
+        target_country: 'US',
+        target_language: 'English',
+        offer_name: 'BrandX_US_01',
+        affiliate_link: null,
+        brand_description: null,
+        unique_selling_points: null,
+        product_highlights: null,
+        target_audience: null,
+        final_url: 'https://www.amazon.com/dp/B0NEWASIN9',
+        final_url_suffix: null,
+        product_price: null,
+        commission_payout: null,
+        scrape_status: 'completed',
+        scrape_error: null,
+        scraped_at: null,
+        is_active: 1,
+        industry_code: null,
+        review_analysis: null,
+        competitor_analysis: null,
+        visual_analysis: null,
+        extracted_keywords: null,
+        extracted_headlines: null,
+        extracted_descriptions: null,
+        extraction_metadata: null,
+        extracted_at: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+        deleted_at: null,
+        is_deleted: 0,
+        promotions: null,
+        scraped_data: null,
+        ai_keywords: null,
+        ai_reviews: null,
+        ai_competitive_edges: null,
+        ai_analysis_v32: null,
+        page_type: 'product',
+        generated_buckets: null,
+        product_name: null,
+      })
+
+    await updateOffer(4, 10, {
+      final_url: 'https://www.amazon.com/dp/B0NEWASIN9',
+    })
+
+    const [sql, params] = mockDb.exec.mock.calls[0]
+    expect(sql).toContain('final_url = ?')
+    expect(sql).toContain('asin = ?')
+    expect(params).toEqual(expect.arrayContaining(['https://www.amazon.com/dp/B0NEWASIN9', 'B0NEWASIN9']))
+  })
 })

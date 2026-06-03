@@ -1,10 +1,48 @@
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/json-field'
+import { parseStoredJsonPayload } from '@/lib/json-payload-compression'
 import type { AffiliatePlatform } from '@/lib/openclaw/affiliate-commission-attribution'
+import {
+  factRowsToLineItems,
+  getAffiliateCommissionRawSourceUpdatedAt,
+  getAffiliateCommissionLineFactsRebuiltAt,
+  hasAffiliateCommissionLineFacts,
+  loadAffiliateCommissionLineFacts,
+  replaceAffiliateCommissionLineFacts,
+} from '@/lib/openclaw/affiliate-commission-facts'
 import type {
   AffiliateCommissionReportPlatformFilter,
   AffiliateCommissionReportViewMode,
 } from '@/lib/openclaw/affiliate-commission-platform'
+import {
+  buildAffiliateCommissionLineItemsCacheKey,
+  readAffiliateCommissionLineItemsDbCache,
+  readAffiliateCommissionLineItemsMemoryCache,
+  writeAffiliateCommissionLineItemsDbCache,
+  writeAffiliateCommissionLineItemsMemoryCache,
+} from '@/lib/openclaw/affiliate-commission-report-cache'
+import type {
+  ActiveNonAdminUser,
+  AffiliateCommissionBrandDetailRow,
+  AffiliateCommissionBrandSummary,
+  AffiliateCommissionDateBounds,
+  AffiliateCommissionDateDetailRow,
+  AffiliateCommissionDateSummary,
+  AffiliateCommissionLineItem,
+  AffiliateCommissionReportResult,
+} from '@/lib/openclaw/affiliate-commission-types'
+import { normalizeOfferAsin } from '@/lib/openclaw/offer-asin'
+
+export type {
+  ActiveNonAdminUser,
+  AffiliateCommissionBrandDetailRow,
+  AffiliateCommissionBrandSummary,
+  AffiliateCommissionDateBounds,
+  AffiliateCommissionDateDetailRow,
+  AffiliateCommissionDateSummary,
+  AffiliateCommissionLineItem,
+  AffiliateCommissionReportResult,
+} from '@/lib/openclaw/affiliate-commission-types'
 
 export type {
   AffiliateCommissionReportPlatformFilter,
@@ -17,69 +55,6 @@ export {
   resolveAffiliateCommissionPlatformFilter,
 } from '@/lib/openclaw/affiliate-commission-platform'
 
-export type AffiliateCommissionLineItem = {
-  userId: number
-  username: string
-  reportDate: string
-  platform: AffiliatePlatform
-  brandKey: string
-  brandName: string
-  commission: number
-  advertId?: string | null
-  asin?: string | null
-}
-
-export type AffiliateCommissionBrandSummary = {
-  brandKey: string
-  brandName: string
-  platform: AffiliatePlatform
-  totalCommission: number
-  userId?: number
-  username?: string
-}
-
-export type AffiliateCommissionDateSummary = {
-  reportDate: string
-  totalCommission: number
-}
-
-export type AffiliateCommissionBrandDetailRow = {
-  reportDate: string
-  commission: number
-}
-
-export type AffiliateCommissionDateDetailRow = {
-  brandKey: string
-  brandName: string
-  platform: AffiliatePlatform
-  commission: number
-  userId?: number
-  username?: string
-}
-
-export type AffiliateCommissionReportResult = {
-  startDate: string
-  endDate: string
-  platform: AffiliateCommissionReportPlatformFilter
-  viewMode: AffiliateCommissionReportViewMode
-  currency: string
-  totalCommission: number
-  showUserScope: boolean
-  dateBounds: AffiliateCommissionDateBounds
-  brandSummaries: AffiliateCommissionBrandSummary[]
-  dateSummaries: AffiliateCommissionDateSummary[]
-}
-
-export type AffiliateCommissionDateBounds = {
-  minDate: string | null
-  maxDate: string | null
-}
-
-export type ActiveNonAdminUser = {
-  id: number
-  username: string
-}
-
 const SUPPORTED_SOURCES: Array<{ platform: AffiliatePlatform; sourceApi: string }> = [
   { platform: 'yeahpromos', sourceApi: 'getorder' },
   { platform: 'partnerboost', sourceApi: 'amazon_report' },
@@ -91,6 +66,7 @@ type RawSyncPayloadRow = {
   platform: string
   source_api: string
   response_payload: unknown
+  response_payload_codec?: string | null
 }
 
 function roundTo(value: number, decimals: number): number {
@@ -144,11 +120,7 @@ function parseNumberish(value: unknown, fallback = 0): number {
 }
 
 function normalizeAsin(value: unknown): string | null {
-  const text = String(value || '').trim().toUpperCase()
-  if (!text) return null
-  const cleaned = text.replace(/[^A-Z0-9]/g, '')
-  if (!cleaned) return null
-  return cleaned.length > 10 ? cleaned.slice(0, 10) : cleaned
+  return normalizeOfferAsin(value)
 }
 
 function normalizeBrand(value: unknown): string | null {
@@ -401,48 +373,45 @@ function buildPartnerboostBrandLookupEntries(
   return Array.from(entries.values())
 }
 
-async function loadPartnerboostOfferBrandByAsin(params: {
+function flattenUserAsinTupleParams(entries: PartnerboostBrandLookupEntry[]): unknown[] {
+  return entries.flatMap((entry) => [entry.userId, entry.asin])
+}
+
+function buildUserAsinTupleClause(entryCount: number): string {
+  return Array(entryCount).fill('(?, ?)').join(', ')
+}
+
+function buildOfferBrandByUserAsin(
+  offerRows: Array<{
+    user_id: number
+    brand: string | null
+    asin?: string | null
+    url: string | null
+    final_url: string | null
+  }>,
   entries: PartnerboostBrandLookupEntry[]
-}): Promise<Map<string, string>> {
+): Map<string, string> {
   const offerBrandByUserAsin = new Map<string, string>()
-  if (params.entries.length === 0) {
+  if (entries.length === 0) {
     return offerBrandByUserAsin
   }
 
-  const userIds = Array.from(new Set(params.entries.map((entry) => entry.userId)))
-  const db = await getDatabase()
-  const offerNotDeletedCondition = db.type === 'postgres'
-    ? '(is_deleted = false OR is_deleted IS NULL)'
-    : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const neededKeys = new Set(entries.map((entry) => `${entry.userId}:${entry.asin}`))
 
-  const offerRows: Array<{
-    user_id: number
-    brand: string | null
-    url: string | null
-    final_url: string | null
-  }> = []
+  for (const row of offerRows) {
+    const brand = normalizeBrand(row.brand)
+    if (!brand) continue
 
-  for (const userIdChunk of chunkArray(userIds, 100)) {
-    const userPlaceholders = userIdChunk.map(() => '?').join(', ')
-    const chunkRows = await db.query<{
-      user_id: number
-      brand: string | null
-      url: string | null
-      final_url: string | null
-    }>(
-      `
-        SELECT user_id, brand, url, final_url
-        FROM offers
-        WHERE user_id IN (${userPlaceholders})
-          AND ${offerNotDeletedCondition}
-          AND brand IS NOT NULL
-      `,
-      userIdChunk
-    )
-    offerRows.push(...chunkRows)
+    const rowAsin = normalizeAsin(row.asin)
+    if (rowAsin) {
+      const mapKey = `${row.user_id}:${rowAsin}`
+      if (neededKeys.has(mapKey) && !offerBrandByUserAsin.has(mapKey)) {
+        offerBrandByUserAsin.set(mapKey, brand)
+      }
+    }
   }
 
-  for (const entry of params.entries) {
+  for (const entry of entries) {
     const mapKey = `${entry.userId}:${entry.asin}`
     if (offerBrandByUserAsin.has(mapKey)) continue
 
@@ -461,75 +430,132 @@ async function loadPartnerboostOfferBrandByAsin(params: {
   return offerBrandByUserAsin
 }
 
-async function loadPartnerboostBrandMap(params: {
+async function loadPartnerboostProductBrandsByEntries(
+  entries: PartnerboostBrandLookupEntry[]
+): Promise<Map<string, string>> {
+  const productBrandByUserAsin = new Map<string, string>()
+  if (entries.length === 0) {
+    return productBrandByUserAsin
+  }
+
+  const db = await getDatabase()
+
+  for (const entryChunk of chunkArray(entries, 100)) {
+    const tupleClause = buildUserAsinTupleClause(entryChunk.length)
+    const tupleParams = flattenUserAsinTupleParams(entryChunk)
+
+    const affiliateProductRows = await db.query<{ user_id: number; asin: string; brand: string }>(
+      `
+        SELECT DISTINCT user_id, asin, brand
+        FROM affiliate_products
+        WHERE platform = 'partnerboost'
+          AND asin IS NOT NULL
+          AND brand IS NOT NULL
+          AND (user_id, UPPER(asin)) IN (${tupleClause})
+      `,
+      tupleParams
+    )
+
+    for (const row of affiliateProductRows) {
+      const asin = normalizeAsin(row.asin)
+      const brand = normalizeBrand(row.brand)
+      if (!asin || !brand) continue
+      const mapKey = `${row.user_id}:${asin}`
+      if (!productBrandByUserAsin.has(mapKey)) {
+        productBrandByUserAsin.set(mapKey, brand)
+      }
+    }
+
+    const openclawProductRows = await db.query<{ user_id: number; asin: string; brand: string }>(
+      `
+        SELECT DISTINCT user_id, asin, brand_name AS brand
+        FROM openclaw_affiliate_products
+        WHERE platform = 'partnerboost'
+          AND asin IS NOT NULL
+          AND brand_name IS NOT NULL
+          AND (user_id, UPPER(asin)) IN (${tupleClause})
+      `,
+      tupleParams
+    )
+
+    for (const row of openclawProductRows) {
+      const asin = normalizeAsin(row.asin)
+      const brand = normalizeBrand(row.brand)
+      if (!asin || !brand) continue
+      const mapKey = `${row.user_id}:${asin}`
+      if (!productBrandByUserAsin.has(mapKey)) {
+        productBrandByUserAsin.set(mapKey, brand)
+      }
+    }
+  }
+
+  return productBrandByUserAsin
+}
+
+async function loadPartnerboostOfferBrandByAsin(params: {
   entries: PartnerboostBrandLookupEntry[]
 }): Promise<Map<string, string>> {
-  const productBrandByUserAsin = new Map<string, string>()
   if (params.entries.length === 0) {
-    return productBrandByUserAsin
+    return new Map()
   }
 
   const userIds = Array.from(new Set(params.entries.map((entry) => entry.userId)))
   const asins = Array.from(new Set(params.entries.map((entry) => entry.asin)))
   const db = await getDatabase()
+  const offerNotDeletedCondition = db.type === 'postgres'
+    ? '(is_deleted = false OR is_deleted IS NULL)'
+    : '(is_deleted = 0 OR is_deleted IS NULL)'
+
+  const offerRows: Array<{
+    user_id: number
+    brand: string | null
+    asin: string | null
+    url: string | null
+    final_url: string | null
+  }> = []
 
   for (const userIdChunk of chunkArray(userIds, 100)) {
     const userPlaceholders = userIdChunk.map(() => '?').join(', ')
 
     for (const asinChunk of chunkArray(asins, 200)) {
       const asinPlaceholders = asinChunk.map(() => '?').join(', ')
-
-      const affiliateProductRows = await db.query<{ user_id: number; asin: string; brand: string }>(
+      const chunkRows = await db.query<{
+        user_id: number
+        brand: string | null
+        asin: string | null
+        url: string | null
+        final_url: string | null
+      }>(
         `
-          SELECT DISTINCT user_id, asin, brand
-          FROM affiliate_products
+          SELECT user_id, brand, asin, url, final_url
+          FROM offers
           WHERE user_id IN (${userPlaceholders})
-            AND platform = 'partnerboost'
-            AND asin IS NOT NULL
+            AND ${offerNotDeletedCondition}
             AND brand IS NOT NULL
-            AND UPPER(asin) IN (${asinPlaceholders})
+            AND (
+              (asin IS NOT NULL AND UPPER(asin) IN (${asinPlaceholders}))
+              OR url IS NOT NULL
+              OR final_url IS NOT NULL
+            )
         `,
         [...userIdChunk, ...asinChunk]
       )
-
-      for (const row of affiliateProductRows) {
-        const asin = normalizeAsin(row.asin)
-        const brand = normalizeBrand(row.brand)
-        if (!asin || !brand) continue
-        const mapKey = `${row.user_id}:${asin}`
-        if (!productBrandByUserAsin.has(mapKey)) {
-          productBrandByUserAsin.set(mapKey, brand)
-        }
-      }
-
-      const openclawProductRows = await db.query<{ user_id: number; asin: string; brand: string }>(
-        `
-          SELECT DISTINCT user_id, asin, brand_name AS brand
-          FROM openclaw_affiliate_products
-          WHERE user_id IN (${userPlaceholders})
-            AND platform = 'partnerboost'
-            AND asin IS NOT NULL
-            AND brand_name IS NOT NULL
-            AND UPPER(asin) IN (${asinPlaceholders})
-        `,
-        [...userIdChunk, ...asinChunk]
-      )
-
-      for (const row of openclawProductRows) {
-        const asin = normalizeAsin(row.asin)
-        const brand = normalizeBrand(row.brand)
-        if (!asin || !brand) continue
-        const mapKey = `${row.user_id}:${asin}`
-        if (!productBrandByUserAsin.has(mapKey)) {
-          productBrandByUserAsin.set(mapKey, brand)
-        }
-      }
+      offerRows.push(...chunkRows)
     }
   }
 
-  const offerBrandByUserAsin = await loadPartnerboostOfferBrandByAsin({
-    entries: params.entries,
-  })
+  return buildOfferBrandByUserAsin(offerRows, params.entries)
+}
+
+async function loadPartnerboostBrandMap(params: {
+  entries: PartnerboostBrandLookupEntry[]
+}): Promise<Map<string, string>> {
+  if (params.entries.length === 0) {
+    return new Map()
+  }
+
+  const productBrandByUserAsin = await loadPartnerboostProductBrandsByEntries(params.entries)
+  const offerBrandByUserAsin = await loadPartnerboostOfferBrandByAsin({ entries: params.entries })
 
   const brandByUserAsin = new Map<string, string>()
   for (const entry of params.entries) {
@@ -566,7 +592,7 @@ function applyPartnerboostBrandNames(
   })
 }
 
-async function loadRawSyncPayloadRows(params: {
+async function loadRawSyncPayloadRowsChunk(params: {
   userIds: number[]
   startDate: string
   endDate: string
@@ -584,9 +610,16 @@ async function loadRawSyncPayloadRows(params: {
     queryParams.push(params.platform)
   }
 
-  return db.query<RawSyncPayloadRow>(
+  return db.query<{
+    user_id: number
+    report_date: string
+    platform: string
+    source_api: string
+    response_payload: unknown
+    response_payload_codec?: string | null
+  }>(
     `
-      SELECT user_id, report_date, platform, source_api, response_payload
+      SELECT user_id, report_date, platform, source_api, response_payload, response_payload_codec
       FROM openclaw_affiliate_commission_raw_sync_payloads
       WHERE user_id IN (${userPlaceholders})
         AND report_date >= ?
@@ -600,9 +633,51 @@ async function loadRawSyncPayloadRows(params: {
     `,
     queryParams
   ).then((rows) => rows.map((row) => ({
-    ...row,
+    user_id: row.user_id,
     report_date: normalizeReportDate(row.report_date),
+    platform: row.platform,
+    source_api: row.source_api,
+    response_payload: parseStoredJsonPayload(
+      row.response_payload,
+      row.response_payload_codec || 'json'
+    ),
+    response_payload_codec: row.response_payload_codec,
   })))
+}
+
+function compareRawSyncPayloadRows(left: RawSyncPayloadRow, right: RawSyncPayloadRow): number {
+  if (left.user_id !== right.user_id) return left.user_id - right.user_id
+
+  const dateCompare = normalizeReportDate(left.report_date).localeCompare(normalizeReportDate(right.report_date))
+  if (dateCompare !== 0) return dateCompare
+
+  const platformCompare = left.platform.localeCompare(right.platform)
+  if (platformCompare !== 0) return platformCompare
+
+  return left.source_api.localeCompare(right.source_api)
+}
+
+async function loadRawSyncPayloadRows(params: {
+  userIds: number[]
+  startDate: string
+  endDate: string
+  platform: AffiliateCommissionReportPlatformFilter
+}): Promise<RawSyncPayloadRow[]> {
+  if (params.userIds.length === 0) return []
+
+  const USER_ID_CHUNK_SIZE = 100
+  if (params.userIds.length <= USER_ID_CHUNK_SIZE) {
+    return loadRawSyncPayloadRowsChunk(params)
+  }
+
+  const chunkResults = await Promise.all(
+    chunkArray(params.userIds, USER_ID_CHUNK_SIZE).map((userIds) => loadRawSyncPayloadRowsChunk({
+      ...params,
+      userIds,
+    }))
+  )
+
+  return chunkResults.flat().sort(compareRawSyncPayloadRows)
 }
 
 function buildSupportedSourceClause(platform: AffiliateCommissionReportPlatformFilter): {
@@ -705,6 +780,34 @@ export async function listActiveNonAdminUsers(): Promise<ActiveNonAdminUser[]> {
   )
 }
 
+async function filterActiveNonAdminUserIds(userIds: number[]): Promise<Set<number>> {
+  if (userIds.length === 0) return new Set()
+
+  const db = await getDatabase()
+  const isActiveCondition = db.type === 'postgres' ? 'is_active = TRUE' : 'is_active = 1'
+  const allowedIds = new Set<number>()
+
+  for (const userIdChunk of chunkArray(userIds, 200)) {
+    const placeholders = userIdChunk.map(() => '?').join(', ')
+    const rows = await db.query<{ id: number }>(
+      `
+        SELECT id
+        FROM users
+        WHERE id IN (${placeholders})
+          AND role != 'admin'
+          AND ${isActiveCondition}
+      `,
+      userIdChunk
+    )
+
+    for (const row of rows) {
+      allowedIds.add(row.id)
+    }
+  }
+
+  return allowedIds
+}
+
 export async function resolveTargetUserIds(params: {
   isAdmin: boolean
   currentUserId: number
@@ -714,10 +817,8 @@ export async function resolveTargetUserIds(params: {
     return [params.currentUserId]
   }
 
-  const allowedUsers = await listActiveNonAdminUsers()
-  const allowedIds = new Set(allowedUsers.map((user) => user.id))
-
   if (params.requestedUserIds.length > 0) {
+    const allowedIds = await filterActiveNonAdminUserIds(params.requestedUserIds)
     const filtered = params.requestedUserIds.filter((userId) => allowedIds.has(userId))
     if (filtered.length === 0) {
       throw new Error('未选择有效的活跃用户')
@@ -725,6 +826,7 @@ export async function resolveTargetUserIds(params: {
     return filtered
   }
 
+  const allowedUsers = await listActiveNonAdminUsers()
   return allowedUsers.map((user) => user.id)
 }
 
@@ -741,27 +843,18 @@ export async function buildUserLabelMap(userIds: number[]): Promise<Map<number, 
   return new Map(rows.map((row) => [row.id, row.username]))
 }
 
-export async function loadAffiliateCommissionLineItems(params: {
-  userIds: number[]
-  userLabels?: Map<number, string>
+async function buildAffiliateCommissionLineItemsFromRawRows(params: {
+  rows: RawSyncPayloadRow[]
+  userLabels: Map<number, string>
   startDate: string
   endDate: string
   platform: AffiliateCommissionReportPlatformFilter
-  showUserScope?: boolean
+  showUserScope: boolean
 }): Promise<AffiliateCommissionLineItem[]> {
-  const showUserScope = params.showUserScope ?? params.userIds.length > 1
-  const userLabels = params.userLabels ?? await buildUserLabelMap(params.userIds)
-  const rows = await loadRawSyncPayloadRows({
-    userIds: params.userIds,
-    startDate: params.startDate,
-    endDate: params.endDate,
-    platform: params.platform,
-  })
-
   const lineItems: AffiliateCommissionLineItem[] = []
 
-  for (const row of rows) {
-    const username = userLabels.get(row.user_id) || `User ${row.user_id}`
+  for (const row of params.rows) {
+    const username = params.userLabels.get(row.user_id) || `User ${row.user_id}`
     const payload = parseJsonField(row.response_payload, null)
     if (!payload) continue
 
@@ -771,7 +864,7 @@ export async function loadAffiliateCommissionLineItems(params: {
         username,
         reportDate: row.report_date,
         payload,
-        showUserScope,
+        showUserScope: params.showUserScope,
       }))
       continue
     }
@@ -782,16 +875,223 @@ export async function loadAffiliateCommissionLineItems(params: {
         username,
         reportDate: row.report_date,
         payload,
-        showUserScope,
+        showUserScope: params.showUserScope,
       }))
     }
   }
 
+  const partnerboostEntries = params.platform === 'yeahpromos'
+    ? []
+    : buildPartnerboostBrandLookupEntries(lineItems)
+
+  if (partnerboostEntries.length === 0) {
+    return lineItems
+  }
+
   const brandByUserAsin = await loadPartnerboostBrandMap({
-    entries: buildPartnerboostBrandLookupEntries(lineItems),
+    entries: partnerboostEntries,
   })
 
-  return applyPartnerboostBrandNames(lineItems, brandByUserAsin, showUserScope)
+  return applyPartnerboostBrandNames(lineItems, brandByUserAsin, params.showUserScope)
+}
+
+async function persistAffiliateCommissionLineFactsFromLineItems(params: {
+  lineItems: AffiliateCommissionLineItem[]
+}): Promise<void> {
+  const factsByUserDate = new Map<string, { userId: number; reportDate: string; items: AffiliateCommissionLineItem[] }>()
+
+  for (const item of params.lineItems) {
+    const reportDate = normalizeReportDate(item.reportDate)
+    const mapKey = `${item.userId}:${reportDate}`
+    const unscopedItem = {
+      ...item,
+      brandKey: item.brandKey.replace(/^user:\d+:/, ''),
+    }
+    const existing = factsByUserDate.get(mapKey)
+    if (existing) {
+      existing.items.push(unscopedItem)
+      continue
+    }
+    factsByUserDate.set(mapKey, {
+      userId: item.userId,
+      reportDate,
+      items: [unscopedItem],
+    })
+  }
+
+  for (const group of factsByUserDate.values()) {
+    try {
+      await replaceAffiliateCommissionLineFacts({
+        userId: group.userId,
+        reportDates: [group.reportDate],
+        lineItems: group.items,
+      })
+    } catch {
+      // Facts table may not exist before migration 253.
+    }
+  }
+}
+
+export async function rebuildAffiliateCommissionLineFactsForUserDate(params: {
+  userId: number
+  reportDate: string
+  userLabels?: Map<number, string>
+  platform?: AffiliateCommissionReportPlatformFilter
+}): Promise<void> {
+  const platform = params.platform || 'all'
+  const userLabels = params.userLabels ?? await buildUserLabelMap([params.userId])
+  const rows = await loadRawSyncPayloadRows({
+    userIds: [params.userId],
+    startDate: params.reportDate,
+    endDate: params.reportDate,
+    platform,
+  })
+
+  const lineItems = await buildAffiliateCommissionLineItemsFromRawRows({
+    rows,
+    userLabels,
+    startDate: params.reportDate,
+    endDate: params.reportDate,
+    platform,
+    showUserScope: false,
+  })
+
+  await replaceAffiliateCommissionLineFacts({
+    userId: params.userId,
+    reportDates: [params.reportDate],
+    lineItems,
+  })
+}
+
+export async function loadAffiliateCommissionLineItems(params: {
+  userIds: number[]
+  userLabels?: Map<number, string>
+  startDate: string
+  endDate: string
+  platform: AffiliateCommissionReportPlatformFilter
+  showUserScope?: boolean
+}): Promise<AffiliateCommissionLineItem[]> {
+  const showUserScope = params.showUserScope ?? params.userIds.length > 1
+  const userLabels = params.userLabels ?? await buildUserLabelMap(params.userIds)
+  const cacheKey = buildAffiliateCommissionLineItemsCacheKey({
+    userIds: params.userIds,
+    startDate: params.startDate,
+    endDate: params.endDate,
+    platform: params.platform,
+    showUserScope,
+  })
+
+  let sourceUpdatedAt: string | null = null
+  try {
+    sourceUpdatedAt = await getAffiliateCommissionRawSourceUpdatedAt({
+      userIds: params.userIds,
+      startDate: params.startDate,
+      endDate: params.endDate,
+    })
+  } catch {
+    sourceUpdatedAt = null
+  }
+
+  const memoryCached = readAffiliateCommissionLineItemsMemoryCache(cacheKey)
+  if (memoryCached && memoryCached.sourceUpdatedAt === sourceUpdatedAt) {
+    return memoryCached.lineItems
+  }
+
+  try {
+    const dbCached = await readAffiliateCommissionLineItemsDbCache({
+      cacheKey,
+      sourceUpdatedAt,
+    })
+    if (dbCached) {
+      writeAffiliateCommissionLineItemsMemoryCache(cacheKey, {
+        lineItems: dbCached,
+        sourceUpdatedAt,
+      })
+      return dbCached
+    }
+  } catch {
+    // Cache table may not exist before migration 253.
+  }
+
+  try {
+    const hasFacts = await hasAffiliateCommissionLineFacts({
+      userIds: params.userIds,
+      startDate: params.startDate,
+      endDate: params.endDate,
+      platform: params.platform,
+    })
+    const factsRebuiltAt = hasFacts
+      ? await getAffiliateCommissionLineFactsRebuiltAt({
+        userIds: params.userIds,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        platform: params.platform,
+      })
+      : null
+    const factsAreFresh = hasFacts
+      && (!sourceUpdatedAt || !factsRebuiltAt || factsRebuiltAt >= sourceUpdatedAt)
+
+    if (factsAreFresh) {
+      const factRows = await loadAffiliateCommissionLineFacts({
+        userIds: params.userIds,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        platform: params.platform,
+      })
+      const factItems = factRowsToLineItems(factRows, userLabels, showUserScope)
+      writeAffiliateCommissionLineItemsMemoryCache(cacheKey, {
+        lineItems: factItems,
+        sourceUpdatedAt,
+      })
+      try {
+        await writeAffiliateCommissionLineItemsDbCache({
+          cacheKey,
+          lineItems: factItems,
+          sourceUpdatedAt,
+        })
+      } catch {
+        // ignore cache write failures
+      }
+      return factItems
+    }
+  } catch {
+    // Facts table may not exist before migration 253.
+  }
+
+  const rows = await loadRawSyncPayloadRows({
+    userIds: params.userIds,
+    startDate: params.startDate,
+    endDate: params.endDate,
+    platform: params.platform,
+  })
+
+  const lineItems = await buildAffiliateCommissionLineItemsFromRawRows({
+    rows,
+    userLabels,
+    startDate: params.startDate,
+    endDate: params.endDate,
+    platform: params.platform,
+    showUserScope,
+  })
+
+  await persistAffiliateCommissionLineFactsFromLineItems({ lineItems })
+
+  writeAffiliateCommissionLineItemsMemoryCache(cacheKey, {
+    lineItems,
+    sourceUpdatedAt,
+  })
+
+  try {
+    await writeAffiliateCommissionLineItemsDbCache({
+      cacheKey,
+      lineItems,
+      sourceUpdatedAt,
+    })
+  } catch {
+    // ignore cache write failures
+  }
+
+  return lineItems
 }
 
 function buildBrandSummaries(

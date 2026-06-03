@@ -20,6 +20,7 @@ import { removePendingUrlSwapQueueTasksByTaskIds } from './url-swap/queue-cleanu
 import type { OfferExtractionMode } from './offer-extraction-mode'
 import { normalizeOfferExtractionMode } from './offer-extraction-mode'
 import { executeGoogleAdsCampaignRemoteActions } from './google-ads-campaign-remote-actions'
+import { extractAsinFromOfferUrls } from '@/lib/openclaw/offer-asin'
 
 export interface Offer {
   id: number
@@ -40,6 +41,7 @@ export interface Offer {
   // Final URL字段：存储解析后的最终落地页URL
   final_url: string | null
   final_url_suffix: string | null
+  asin: string | null
   // 需求28：产品价格和佣金比例
   product_price: string | null
   commission_payout: string | null
@@ -115,6 +117,7 @@ export interface OfferListRow {
   target_audience: string | null
   final_url: string | null
   final_url_suffix: string | null
+  asin: string | null
   product_price: string | null
   commission_payout: string | null
   commission_type: 'percent' | 'amount' | null
@@ -283,6 +286,7 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
     input.target_audience || null,
     input.final_url || null,  // 解析后的最终URL
     input.final_url_suffix ?? null,  // URL查询参数后缀
+    extractAsinFromOfferUrls(input.url, input.final_url || null),
     offerName,  // 自动生成
     targetLanguage,  // 自动生成
     normalizedProductPrice || null,  // 需求28
@@ -324,7 +328,7 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
     INSERT INTO offers (
       user_id, url, brand, category, target_country, affiliate_link, store_product_links,
       brand_description, unique_selling_points, product_highlights,
-      target_audience, final_url, final_url_suffix, scrape_status,
+      target_audience, final_url, final_url_suffix, asin, scrape_status,
       offer_name, target_language,
       product_price, commission_payout, commission_type, commission_value, commission_currency, product_name,
       pricing, promotions, scraped_data,
@@ -333,7 +337,7 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
       extracted_at,
       page_type,
       extraction_mode
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, params)
 
   // 🔧 修复(2025-12-30): PostgreSQL 使用 RETURNING id，SQLite 使用 lastInsertRowid
@@ -791,6 +795,12 @@ export async function updateOffer(id: number, userId: number, input: UpdateOffer
   if (input.final_url_suffix !== undefined) {
     updates.push('final_url_suffix = ?')
     params.push(input.final_url_suffix)
+  }
+  if (input.url !== undefined || input.final_url !== undefined) {
+    const nextUrl = input.url !== undefined ? input.url : existing.url
+    const nextFinalUrl = input.final_url !== undefined ? input.final_url : existing.final_url
+    updates.push('asin = ?')
+    params.push(extractAsinFromOfferUrls(nextUrl, nextFinalUrl))
   }
   if (input.is_active !== undefined) {
     updates.push('is_active = ?')
@@ -1628,13 +1638,15 @@ export async function updateOfferScrapeStatus(
 
     // 🔧 修复：当品牌名更新时，同步更新offer_name
     // 需要先查询当前的offer_name以提取序号
-    let currentOffer: { offer_name: string; target_country: string } | undefined
+    let currentOffer: { offer_name: string; target_country: string; url: string | null; final_url: string | null } | undefined
     let newOfferName: string | null = null
 
     try {
       currentOffer = await db.queryOne(`
-        SELECT offer_name, target_country FROM offers WHERE id = ? AND user_id = ?
-      `, [id, userId]) as { offer_name: string; target_country: string } | undefined
+        SELECT offer_name, target_country, url, final_url
+        FROM offers
+        WHERE id = ? AND user_id = ?
+      `, [id, userId]) as { offer_name: string; target_country: string; url: string | null; final_url: string | null } | undefined
 
       newOfferName = currentOffer?.offer_name || null
 
@@ -1663,6 +1675,9 @@ export async function updateOfferScrapeStatus(
 
     // 🔧 PostgreSQL兼容性修复：使用NOW()替代datetime('now')
     const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+    const effectiveUrl = urlForWrite ?? currentOffer?.url ?? null
+    const effectiveFinalUrl = finalUrlForWrite ?? currentOffer?.final_url ?? null
+    const asinForWrite = extractAsinFromOfferUrls(effectiveUrl, effectiveFinalUrl)
 
     // 🔥 修复（2025-12-11）: 移除不存在的列 reviews 和 competitive_edges
     // PostgreSQL offers表中没有这两个字段，导致UPDATE语句失败
@@ -1677,6 +1692,7 @@ export async function updateOfferScrapeStatus(
           url = COALESCE(?, url),
           final_url = COALESCE(?, final_url),
           final_url_suffix = COALESCE(?, final_url_suffix),
+          asin = ?,
           product_name = COALESCE(?, product_name),
           brand_description = COALESCE(?, brand_description),
           unique_selling_points = COALESCE(?, unique_selling_points),
@@ -1708,6 +1724,7 @@ export async function updateOfferScrapeStatus(
       urlForWrite,
       finalUrlForWrite,
       finalUrlSuffixForWrite,
+      asinForWrite,
       scrapedData.product_name || null,
       scrapedData.brand_description || null,
       scrapedData.unique_selling_points || null,

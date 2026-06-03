@@ -34,6 +34,8 @@ describe('updateOfferScrapeStatus final_url guard', () => {
       queryOne: vi.fn().mockResolvedValue({
         offer_name: 'KicksCrew_US_01',
         target_country: 'US',
+        url: null,
+        final_url: null,
       }),
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
     }
@@ -83,5 +85,17 @@ describe('updateOfferScrapeStatus final_url guard', () => {
     expect(params[3]).toBe('https://www.kickscrew.com/')
     expect(params[4]).toBe('https://www.kickscrew.com/')
     expect(params[5]).toBe('x=1')
+  })
+
+  it('updates asin when scrape completes with Amazon final_url', async () => {
+    await updateOfferScrapeStatus(5107, 1, 'completed', undefined, {
+      final_url: 'https://www.amazon.com/dp/B0CJJ9SB4Y?tag=abc',
+      page_type: 'product',
+    })
+
+    expect(mockDb.exec).toHaveBeenCalledTimes(1)
+    const [sql, params] = mockDb.exec.mock.calls[0]
+    expect(sql).toContain('asin = ?')
+    expect(params[6]).toBe('B0CJJ9SB4Y')
   })
 })

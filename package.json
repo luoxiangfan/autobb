@@ -41,6 +41,8 @@
     "campaign-backups:dedup:preview": "tsx scripts/cleanup-duplicate-campaign-backups.ts --dry-run",
     "campaign-backups:dedup": "tsx scripts/cleanup-duplicate-campaign-backups.ts",
     "db:backfill-jsonb": "tsx scripts/backfill-jsonb-double-encoded.ts",
+    "db:backfill-offer-asin": "tsx scripts/backfill-offer-asin.ts",
+    "db:rebuild-affiliate-commission-facts": "tsx scripts/rebuild-affiliate-commission-line-facts.ts",
     "campaigns:backfill-names": "tsx scripts/backfill-campaign-names-from-google.ts",
     "db:clean-settings": "tsx scripts/clean-database-settings.ts",
     "admin:ensure": "tsx scripts/ensure-admin-account.ts",

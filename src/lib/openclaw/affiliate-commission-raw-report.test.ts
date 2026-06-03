@@ -24,10 +24,12 @@ import {
   resolvePartnerboostDisplayBrand,
   resolveTargetUserIds,
 } from './affiliate-commission-raw-report'
+import { clearAffiliateCommissionLineItemsMemoryCache } from './affiliate-commission-report-cache'
 
 describe('affiliate-commission-raw-report', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    clearAffiliateCommissionLineItemsMemoryCache()
     hoisted.dbQueryMock.mockReset()
     hoisted.dbQueryOneMock.mockReset()
     hoisted.getDatabaseMock.mockResolvedValue({
@@ -369,6 +371,63 @@ describe('affiliate-commission-raw-report', () => {
     })
 
     expect(userIds).toEqual([2, 3])
+  })
+
+  it('validates requested admin user ids without loading all users', async () => {
+    hoisted.dbQueryMock.mockResolvedValueOnce([
+      { id: 2 },
+      { id: 3 },
+    ])
+
+    const userIds = await resolveTargetUserIds({
+      isAdmin: true,
+      currentUserId: 1,
+      requestedUserIds: [2, 3, 99],
+    })
+
+    expect(userIds).toEqual([2, 3])
+    expect(hoisted.dbQueryMock).toHaveBeenCalledTimes(1)
+    expect(String(hoisted.dbQueryMock.mock.calls[0][0])).toContain('WHERE id IN')
+  })
+
+  it('skips partnerboost brand lookups when platform is yeahpromos', async () => {
+    hoisted.dbQueryOneMock.mockResolvedValueOnce({
+      min_date: '2026-05-11',
+      max_date: '2026-05-11',
+    })
+    hoisted.dbQueryMock
+      .mockResolvedValueOnce([{ id: 1, username: 'alice' }])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          report_date: '2026-05-11',
+          platform: 'yeahpromos',
+          source_api: 'getorder',
+          response_payload: JSON.stringify({
+            data: {
+              Data: [{ advert_id: 100, advert_name: 'Brand A', sale_comm: 5 }],
+            },
+          }),
+        },
+      ])
+
+    const report = await getAffiliateCommissionReport({
+      userIds: [1],
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+      platform: 'yeahpromos',
+      showUserScope: false,
+    })
+
+    expect(report.brandSummaries).toEqual([
+      {
+        brandKey: 'yeahpromos:advert:100',
+        brandName: 'Brand A',
+        platform: 'yeahpromos',
+        totalCommission: 5,
+      },
+    ])
+    expect(hoisted.dbQueryMock).toHaveBeenCalledTimes(2)
   })
 
   it('maps affiliate display names to raw commission platform filters', () => {

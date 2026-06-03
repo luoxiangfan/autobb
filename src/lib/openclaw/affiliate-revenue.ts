@@ -6,6 +6,9 @@ import {
 import { nowFunc } from '@/lib/db-helpers'
 import { getDatabase } from '@/lib/db'
 import { toDbJsonObjectField } from '@/lib/json-field'
+import { serializeJsonPayloadForStorage } from '@/lib/json-payload-compression'
+import { invalidateAffiliateCommissionReportCacheForUserDate } from '@/lib/openclaw/affiliate-commission-report-cache'
+import { rebuildAffiliateCommissionLineFactsForUserDate } from '@/lib/openclaw/affiliate-commission-raw-report'
 import { getOpenclawSettingsWithAffiliateSyncMap, parseNumber } from '@/lib/openclaw/settings'
 
 type PlatformQueryError = {
@@ -504,13 +507,19 @@ async function persistAffiliateCommissionRawSnapshots(params: {
 
   await db.transaction(async () => {
     for (const snapshot of params.snapshots) {
-      const requestPayload = toDbJsonObjectField(snapshot.requestPayload ?? null, db.type, null)
-      const responsePayload = toDbJsonObjectField(snapshot.responsePayload ?? null, db.type, null)
+      const requestStored = serializeJsonPayloadForStorage(
+        toDbJsonObjectField(snapshot.requestPayload ?? null, db.type, null)
+      )
+      const responseStored = serializeJsonPayloadForStorage(
+        toDbJsonObjectField(snapshot.responsePayload ?? null, db.type, null)
+      )
       const updateResult = await db.exec(
         `
           UPDATE openclaw_affiliate_commission_raw_sync_payloads
           SET request_payload = ?,
               response_payload = ?,
+              request_payload_codec = ?,
+              response_payload_codec = ?,
               updated_at = ${nowFunc(db.type)}
           WHERE user_id = ?
             AND report_date = ?
@@ -519,8 +528,10 @@ async function persistAffiliateCommissionRawSnapshots(params: {
             AND page_no = ?
         `,
         [
-          requestPayload,
-          responsePayload,
+          requestStored.payload,
+          responseStored.payload,
+          requestStored.codec,
+          responseStored.codec,
           params.userId,
           params.reportDate,
           snapshot.platform,
@@ -536,9 +547,19 @@ async function persistAffiliateCommissionRawSnapshots(params: {
       await db.exec(
         `
           INSERT INTO openclaw_affiliate_commission_raw_sync_payloads
-            (user_id, report_date, platform, source_api, page_no, request_payload, response_payload)
+            (
+              user_id,
+              report_date,
+              platform,
+              source_api,
+              page_no,
+              request_payload,
+              response_payload,
+              request_payload_codec,
+              response_payload_codec
+            )
           VALUES
-            (?, ?, ?, ?, ?, ?, ?)
+            (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           params.userId,
@@ -546,11 +567,30 @@ async function persistAffiliateCommissionRawSnapshots(params: {
           snapshot.platform,
           snapshot.sourceApi,
           snapshot.page,
-          requestPayload,
-          responsePayload,
+          requestStored.payload,
+          responseStored.payload,
+          requestStored.codec,
+          responseStored.codec,
         ]
       )
     }
+  })
+
+  try {
+    await rebuildAffiliateCommissionLineFactsForUserDate({
+      userId: params.userId,
+      reportDate: params.reportDate,
+    })
+  } catch (error: any) {
+    const message = String(error?.message || '')
+    if (!/(no such table|does not exist)/i.test(message)) {
+      throw error
+    }
+  }
+
+  await invalidateAffiliateCommissionReportCacheForUserDate({
+    userId: params.userId,
+    reportDate: params.reportDate,
   })
 }
 
