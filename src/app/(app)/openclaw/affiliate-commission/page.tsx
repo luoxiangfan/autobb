@@ -193,11 +193,11 @@ export default function AffiliateCommissionReportPage() {
     const params = new URLSearchParams()
     params.set('meta', 'bounds')
     params.set('platform', affiliateFilter)
-    if (isAdmin && selectedUserFilters.length > 0 && !allUsersSelected) {
+    if (isAdmin && selectedUserFilters.length > 0) {
       params.set('userIds', selectedUserFilters.join(','))
     }
     return params.toString()
-  }, [affiliateFilter, isAdmin, selectedUserFilters, allUsersSelected])
+  }, [affiliateFilter, isAdmin, selectedUserFilters])
 
   useEffect(() => {
     const checkAdminAndLoadUsers = async () => {
@@ -314,22 +314,22 @@ export default function AffiliateCommissionReportPage() {
     if (endDate) params.set('endDate', endDate)
     params.set('platform', affiliateFilter)
     params.set('viewMode', viewMode)
-    if (isAdmin && selectedUserFilters.length > 0 && !allUsersSelected) {
+    if (isAdmin && selectedUserFilters.length > 0) {
       params.set('userIds', selectedUserFilters.join(','))
     }
     return params.toString()
-  }, [startDate, endDate, affiliateFilter, viewMode, isAdmin, selectedUserFilters, allUsersSelected])
+  }, [startDate, endDate, affiliateFilter, viewMode, isAdmin, selectedUserFilters])
 
   const buildScopedQueryString = useCallback((extra: Record<string, string>) => {
     const params = new URLSearchParams(extra)
     if (startDate) params.set('startDate', startDate)
     if (endDate) params.set('endDate', endDate)
     params.set('platform', affiliateFilter)
-    if (isAdmin && selectedUserFilters.length > 0 && !allUsersSelected) {
+    if (isAdmin && selectedUserFilters.length > 0) {
       params.set('userIds', selectedUserFilters.join(','))
     }
     return params.toString()
-  }, [startDate, endDate, affiliateFilter, isAdmin, selectedUserFilters, allUsersSelected])
+  }, [startDate, endDate, affiliateFilter, isAdmin, selectedUserFilters])
 
   const loadReport = useCallback(async () => {
     if (!startDate || !endDate || !accessResolved || boundsLoading) return

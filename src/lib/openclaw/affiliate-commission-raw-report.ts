@@ -185,6 +185,52 @@ export function offerUrlsContainAsin(
   return false
 }
 
+function stripPartnerboostRegionSuffix(brand: string): string {
+  return brand.replace(/_([A-Z]{2})$/i, '').trim()
+}
+
+function isCompositePartnerboostBrand(brand: string): boolean {
+  return /[/|]/.test(brand)
+}
+
+function splitPartnerboostBrandParts(brand: string): string[] {
+  return brand
+    .split(/[/|]/)
+    .map((part) => stripPartnerboostRegionSuffix(part.trim()))
+    .filter(Boolean)
+}
+
+export function resolvePartnerboostDisplayBrand(params: {
+  productBrand?: string | null
+  offerBrand?: string | null
+}): string | null {
+  const productBrand = normalizeBrand(params.productBrand)
+  const offerBrand = normalizeBrand(params.offerBrand)
+
+  if (offerBrand && !isCompositePartnerboostBrand(offerBrand)) {
+    const productBase = productBrand ? stripPartnerboostRegionSuffix(productBrand) : null
+    if (!productBase || isCompositePartnerboostBrand(productBase)) {
+      return offerBrand
+    }
+  }
+
+  if (productBrand) {
+    const productBase = stripPartnerboostRegionSuffix(productBrand)
+    if (isCompositePartnerboostBrand(productBase) && offerBrand) {
+      const offerLower = offerBrand.toLowerCase()
+      const matchedPart = splitPartnerboostBrandParts(productBase)
+        .find((part) => part.toLowerCase() === offerLower)
+      if (matchedPart) return matchedPart
+      if (!isCompositePartnerboostBrand(offerBrand)) {
+        return offerBrand
+      }
+    }
+    return productBase
+  }
+
+  return offerBrand ? stripPartnerboostRegionSuffix(offerBrand) : null
+}
+
 function pickString(...values: unknown[]): string | null {
   for (const value of values) {
     if (value === null || value === undefined) continue
@@ -332,132 +378,170 @@ function parsePartnerboostLineItems(params: {
   return items
 }
 
-async function loadPartnerboostOfferBrandMap(params: {
-  userIds: number[]
-  asins: string[]
-  existing: Map<string, string>
-}): Promise<void> {
-  if (params.userIds.length === 0 || params.asins.length === 0) return
+type PartnerboostBrandLookupEntry = {
+  userId: number
+  asin: string
+}
 
-  const unresolved: Array<{ userId: number; asin: string }> = []
-  for (const userId of params.userIds) {
-    for (const asin of params.asins) {
-      const normalizedAsin = normalizeAsin(asin)
-      if (!normalizedAsin) continue
-      const mapKey = `${userId}:${normalizedAsin}`
-      if (!params.existing.has(mapKey)) {
-        unresolved.push({ userId, asin: normalizedAsin })
-      }
-    }
+function buildPartnerboostBrandLookupEntries(
+  lineItems: AffiliateCommissionLineItem[]
+): PartnerboostBrandLookupEntry[] {
+  const entries = new Map<string, PartnerboostBrandLookupEntry>()
+
+  for (const item of lineItems) {
+    if (item.platform !== 'partnerboost' || !item.asin) continue
+    const normalizedAsin = normalizeAsin(item.asin)
+    if (!normalizedAsin) continue
+    entries.set(`${item.userId}:${normalizedAsin}`, {
+      userId: item.userId,
+      asin: normalizedAsin,
+    })
   }
-  if (unresolved.length === 0) return
 
+  return Array.from(entries.values())
+}
+
+async function loadPartnerboostOfferBrandByAsin(params: {
+  entries: PartnerboostBrandLookupEntry[]
+}): Promise<Map<string, string>> {
+  const offerBrandByUserAsin = new Map<string, string>()
+  if (params.entries.length === 0) {
+    return offerBrandByUserAsin
+  }
+
+  const userIds = Array.from(new Set(params.entries.map((entry) => entry.userId)))
   const db = await getDatabase()
-  const userPlaceholders = params.userIds.map(() => '?').join(', ')
   const offerNotDeletedCondition = db.type === 'postgres'
     ? '(is_deleted = false OR is_deleted IS NULL)'
     : '(is_deleted = 0 OR is_deleted IS NULL)'
 
-  const offerRows = await db.query<{
+  const offerRows: Array<{
     user_id: number
     brand: string | null
     url: string | null
     final_url: string | null
-  }>(
-    `
-      SELECT user_id, brand, url, final_url
-      FROM offers
-      WHERE user_id IN (${userPlaceholders})
-        AND ${offerNotDeletedCondition}
-        AND brand IS NOT NULL
-    `,
-    params.userIds
-  )
+  }> = []
 
-  for (const { userId, asin } of unresolved) {
-    const mapKey = `${userId}:${asin}`
-    if (params.existing.has(mapKey)) continue
+  for (const userIdChunk of chunkArray(userIds, 100)) {
+    const userPlaceholders = userIdChunk.map(() => '?').join(', ')
+    const chunkRows = await db.query<{
+      user_id: number
+      brand: string | null
+      url: string | null
+      final_url: string | null
+    }>(
+      `
+        SELECT user_id, brand, url, final_url
+        FROM offers
+        WHERE user_id IN (${userPlaceholders})
+          AND ${offerNotDeletedCondition}
+          AND brand IS NOT NULL
+      `,
+      userIdChunk
+    )
+    offerRows.push(...chunkRows)
+  }
+
+  for (const entry of params.entries) {
+    const mapKey = `${entry.userId}:${entry.asin}`
+    if (offerBrandByUserAsin.has(mapKey)) continue
 
     for (const row of offerRows) {
-      if (row.user_id !== userId) continue
-      if (!offerUrlsContainAsin(row.url, row.final_url, asin)) continue
+      if (row.user_id !== entry.userId) continue
+      if (!offerUrlsContainAsin(row.url, row.final_url, entry.asin)) continue
 
       const brand = normalizeBrand(row.brand)
       if (!brand) continue
 
-      params.existing.set(mapKey, brand)
+      offerBrandByUserAsin.set(mapKey, brand)
       break
     }
   }
+
+  return offerBrandByUserAsin
 }
 
 async function loadPartnerboostBrandMap(params: {
-  userIds: number[]
-  asins: string[]
+  entries: PartnerboostBrandLookupEntry[]
 }): Promise<Map<string, string>> {
-  const brandByUserAsin = new Map<string, string>()
-  if (params.userIds.length === 0 || params.asins.length === 0) {
-    return brandByUserAsin
+  const productBrandByUserAsin = new Map<string, string>()
+  if (params.entries.length === 0) {
+    return productBrandByUserAsin
   }
 
+  const userIds = Array.from(new Set(params.entries.map((entry) => entry.userId)))
+  const asins = Array.from(new Set(params.entries.map((entry) => entry.asin)))
   const db = await getDatabase()
 
-  for (const asinChunk of chunkArray(params.asins, 200)) {
-    const asinPlaceholders = asinChunk.map(() => '?').join(', ')
-    const userPlaceholders = params.userIds.map(() => '?').join(', ')
+  for (const userIdChunk of chunkArray(userIds, 100)) {
+    const userPlaceholders = userIdChunk.map(() => '?').join(', ')
 
-    const affiliateProductRows = await db.query<{ user_id: number; asin: string; brand: string }>(
-      `
-        SELECT DISTINCT user_id, asin, brand
-        FROM affiliate_products
-        WHERE user_id IN (${userPlaceholders})
-          AND platform = 'partnerboost'
-          AND asin IS NOT NULL
-          AND brand IS NOT NULL
-          AND UPPER(asin) IN (${asinPlaceholders})
-      `,
-      [...params.userIds, ...asinChunk]
-    )
+    for (const asinChunk of chunkArray(asins, 200)) {
+      const asinPlaceholders = asinChunk.map(() => '?').join(', ')
 
-    for (const row of affiliateProductRows) {
-      const asin = normalizeAsin(row.asin)
-      const brand = normalizeBrand(row.brand)
-      if (!asin || !brand) continue
-      const mapKey = `${row.user_id}:${asin}`
-      if (!brandByUserAsin.has(mapKey)) {
-        brandByUserAsin.set(mapKey, brand)
+      const affiliateProductRows = await db.query<{ user_id: number; asin: string; brand: string }>(
+        `
+          SELECT DISTINCT user_id, asin, brand
+          FROM affiliate_products
+          WHERE user_id IN (${userPlaceholders})
+            AND platform = 'partnerboost'
+            AND asin IS NOT NULL
+            AND brand IS NOT NULL
+            AND UPPER(asin) IN (${asinPlaceholders})
+        `,
+        [...userIdChunk, ...asinChunk]
+      )
+
+      for (const row of affiliateProductRows) {
+        const asin = normalizeAsin(row.asin)
+        const brand = normalizeBrand(row.brand)
+        if (!asin || !brand) continue
+        const mapKey = `${row.user_id}:${asin}`
+        if (!productBrandByUserAsin.has(mapKey)) {
+          productBrandByUserAsin.set(mapKey, brand)
+        }
       }
-    }
 
-    const openclawProductRows = await db.query<{ user_id: number; asin: string; brand: string }>(
-      `
-        SELECT DISTINCT user_id, asin, brand_name AS brand
-        FROM openclaw_affiliate_products
-        WHERE user_id IN (${userPlaceholders})
-          AND platform = 'partnerboost'
-          AND asin IS NOT NULL
-          AND brand_name IS NOT NULL
-          AND UPPER(asin) IN (${asinPlaceholders})
-      `,
-      [...params.userIds, ...asinChunk]
-    )
+      const openclawProductRows = await db.query<{ user_id: number; asin: string; brand: string }>(
+        `
+          SELECT DISTINCT user_id, asin, brand_name AS brand
+          FROM openclaw_affiliate_products
+          WHERE user_id IN (${userPlaceholders})
+            AND platform = 'partnerboost'
+            AND asin IS NOT NULL
+            AND brand_name IS NOT NULL
+            AND UPPER(asin) IN (${asinPlaceholders})
+        `,
+        [...userIdChunk, ...asinChunk]
+      )
 
-    for (const row of openclawProductRows) {
-      const asin = normalizeAsin(row.asin)
-      const brand = normalizeBrand(row.brand)
-      if (!asin || !brand) continue
-      const mapKey = `${row.user_id}:${asin}`
-      if (!brandByUserAsin.has(mapKey)) {
-        brandByUserAsin.set(mapKey, brand)
+      for (const row of openclawProductRows) {
+        const asin = normalizeAsin(row.asin)
+        const brand = normalizeBrand(row.brand)
+        if (!asin || !brand) continue
+        const mapKey = `${row.user_id}:${asin}`
+        if (!productBrandByUserAsin.has(mapKey)) {
+          productBrandByUserAsin.set(mapKey, brand)
+        }
       }
     }
   }
 
-  await loadPartnerboostOfferBrandMap({
-    userIds: params.userIds,
-    asins: params.asins,
-    existing: brandByUserAsin,
+  const offerBrandByUserAsin = await loadPartnerboostOfferBrandByAsin({
+    entries: params.entries,
   })
+
+  const brandByUserAsin = new Map<string, string>()
+  for (const entry of params.entries) {
+    const mapKey = `${entry.userId}:${entry.asin}`
+    const resolvedBrand = resolvePartnerboostDisplayBrand({
+      productBrand: productBrandByUserAsin.get(mapKey),
+      offerBrand: offerBrandByUserAsin.get(mapKey),
+    })
+    if (resolvedBrand) {
+      brandByUserAsin.set(mapKey, resolvedBrand)
+    }
+  }
 
   return brandByUserAsin
 }
@@ -703,15 +787,8 @@ export async function loadAffiliateCommissionLineItems(params: {
     }
   }
 
-  const partnerboostAsins = Array.from(new Set(
-    lineItems
-      .filter((item) => item.platform === 'partnerboost' && item.asin)
-      .map((item) => item.asin as string)
-  ))
-
   const brandByUserAsin = await loadPartnerboostBrandMap({
-    userIds: params.userIds,
-    asins: partnerboostAsins,
+    entries: buildPartnerboostBrandLookupEntries(lineItems),
   })
 
   return applyPartnerboostBrandNames(lineItems, brandByUserAsin, showUserScope)

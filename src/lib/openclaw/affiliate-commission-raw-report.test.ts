@@ -21,6 +21,7 @@ import {
   isSupportedAffiliateCommissionSource,
   normalizeReportDate,
   offerUrlsContainAsin,
+  resolvePartnerboostDisplayBrand,
   resolveTargetUserIds,
 } from './affiliate-commission-raw-report'
 
@@ -388,6 +389,28 @@ describe('affiliate-commission-raw-report', () => {
     ])
   })
 
+  it('resolves composite partnerboost product brands using offer brand', () => {
+    expect(resolvePartnerboostDisplayBrand({
+      productBrand: 'LEVOIT/COSOR/Etekcity_CA',
+      offerBrand: 'LEVOIT',
+    })).toBe('LEVOIT')
+
+    expect(resolvePartnerboostDisplayBrand({
+      productBrand: 'LEVOIT/COSOR/Etekcity_IT',
+      offerBrand: 'COSOR',
+    })).toBe('COSOR')
+
+    expect(resolvePartnerboostDisplayBrand({
+      productBrand: 'LEVOIT/COSOR/Etekcity_CA',
+      offerBrand: null,
+    })).toBe('LEVOIT/COSOR/Etekcity')
+
+    expect(resolvePartnerboostDisplayBrand({
+      productBrand: 'LEVOIT/COSOR/Etekcity_IT',
+      offerBrand: null,
+    })).toBe('LEVOIT/COSOR/Etekcity')
+  })
+
   it('detects ASIN presence in offer url or final_url', () => {
     expect(offerUrlsContainAsin(
       'https://www.amazon.com/dp/B0BGPF71Q6',
@@ -451,6 +474,200 @@ describe('affiliate-commission-raw-report', () => {
         brandName: 'Offer Brand',
         platform: 'partnerboost',
         totalCommission: 12.5,
+      },
+    ])
+  })
+
+  it('splits composite partnerboost merchant names by offer brand in report', async () => {
+    hoisted.dbQueryOneMock.mockResolvedValueOnce({
+      min_date: '2026-05-11',
+      max_date: '2026-05-11',
+    })
+    hoisted.dbQueryMock
+      .mockResolvedValueOnce([{ id: 1, username: 'alice' }])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          report_date: '2026-05-11',
+          platform: 'partnerboost',
+          source_api: 'amazon_report',
+          response_payload: JSON.stringify({
+            data: {
+              list: [
+                { asin: 'B0LEVOIT01', estCommission: 10 },
+                { asin: 'B0COSOR0001', estCommission: 5 },
+              ],
+            },
+          }),
+        },
+      ])
+      .mockResolvedValueOnce([
+        { user_id: 1, asin: 'B0LEVOIT01', brand: 'LEVOIT/COSOR/Etekcity_CA' },
+        { user_id: 1, asin: 'B0COSOR0001', brand: 'LEVOIT/COSOR/Etekcity_IT' },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          brand: 'LEVOIT',
+          url: 'https://www.amazon.com/dp/B0LEVOIT01',
+          final_url: null,
+        },
+        {
+          user_id: 1,
+          brand: 'COSOR',
+          url: 'https://www.amazon.com/dp/B0COSOR0001',
+          final_url: null,
+        },
+      ])
+
+    const report = await getAffiliateCommissionReport({
+      userIds: [1],
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+      platform: 'partnerboost',
+      showUserScope: false,
+    })
+
+    expect(report.brandSummaries).toEqual([
+      {
+        brandKey: 'partnerboost:brand:levoit',
+        brandName: 'LEVOIT',
+        platform: 'partnerboost',
+        totalCommission: 10,
+      },
+      {
+        brandKey: 'partnerboost:brand:cosor',
+        brandName: 'COSOR',
+        platform: 'partnerboost',
+        totalCommission: 5,
+      },
+    ])
+  })
+
+  it('keeps composite merchant rows scoped to the user who owns the commission data', async () => {
+    hoisted.dbQueryOneMock.mockResolvedValueOnce({
+      min_date: '2026-05-11',
+      max_date: '2026-05-11',
+    })
+    hoisted.dbQueryMock
+      .mockResolvedValueOnce([
+        { id: 1, username: 'alice' },
+        { id: 2, username: 'bob' },
+      ])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          report_date: '2026-05-11',
+          platform: 'partnerboost',
+          source_api: 'amazon_report',
+          response_payload: JSON.stringify({
+            data: {
+              list: [{ asin: 'B0LEVOIT01', estCommission: 10 }],
+            },
+          }),
+        },
+        {
+          user_id: 2,
+          report_date: '2026-05-11',
+          platform: 'partnerboost',
+          source_api: 'amazon_report',
+          response_payload: JSON.stringify({
+            data: {
+              list: [{ asin: 'B0OTHER001', estCommission: 7 }],
+            },
+          }),
+        },
+      ])
+      .mockResolvedValueOnce([
+        { user_id: 1, asin: 'B0LEVOIT01', brand: 'LEVOIT/COSOR/Etekcity_CA' },
+        { user_id: 2, asin: 'B0OTHER001', brand: 'LEVOIT/COSOR/Etekcity_IT' },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          brand: 'LEVOIT',
+          url: 'https://www.amazon.com/dp/B0LEVOIT01',
+          final_url: null,
+        },
+      ])
+
+    const allUsersReport = await getAffiliateCommissionReport({
+      userIds: [1, 2],
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+      platform: 'partnerboost',
+      showUserScope: true,
+    })
+
+    expect(allUsersReport.brandSummaries).toEqual([
+      {
+        brandKey: 'user:1:partnerboost:brand:levoit',
+        brandName: 'LEVOIT',
+        platform: 'partnerboost',
+        totalCommission: 10,
+        userId: 1,
+        username: 'alice',
+      },
+      {
+        brandKey: 'user:2:partnerboost:brand:levoit/cosor/etekcity',
+        brandName: 'LEVOIT/COSOR/Etekcity',
+        platform: 'partnerboost',
+        totalCommission: 7,
+        userId: 2,
+        username: 'bob',
+      },
+    ])
+
+    hoisted.dbQueryOneMock.mockResolvedValueOnce({
+      min_date: '2026-05-11',
+      max_date: '2026-05-11',
+    })
+    hoisted.dbQueryMock
+      .mockResolvedValueOnce([{ id: 1, username: 'alice' }])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          report_date: '2026-05-11',
+          platform: 'partnerboost',
+          source_api: 'amazon_report',
+          response_payload: JSON.stringify({
+            data: {
+              list: [{ asin: 'B0LEVOIT01', estCommission: 10 }],
+            },
+          }),
+        },
+      ])
+      .mockResolvedValueOnce([
+        { user_id: 1, asin: 'B0LEVOIT01', brand: 'LEVOIT/COSOR/Etekcity_CA' },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          brand: 'LEVOIT',
+          url: 'https://www.amazon.com/dp/B0LEVOIT01',
+          final_url: null,
+        },
+      ])
+
+    const singleUserReport = await getAffiliateCommissionReport({
+      userIds: [1],
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+      platform: 'partnerboost',
+      showUserScope: true,
+    })
+
+    expect(singleUserReport.brandSummaries).toEqual([
+      {
+        brandKey: 'user:1:partnerboost:brand:levoit',
+        brandName: 'LEVOIT',
+        platform: 'partnerboost',
+        totalCommission: 10,
+        userId: 1,
+        username: 'alice',
       },
     ])
   })
