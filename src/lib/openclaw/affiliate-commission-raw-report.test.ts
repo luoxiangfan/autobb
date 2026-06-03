@@ -165,6 +165,7 @@ describe('affiliate-commission-raw-report', () => {
       ])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
 
     const report = await getAffiliateCommissionReport({
       userIds: [1],
@@ -333,6 +334,7 @@ describe('affiliate-commission-raw-report', () => {
       .mockResolvedValueOnce([
         { user_id: 1, asin: 'B0TEST1234', brand: 'Brand B' },
       ])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
 
@@ -529,6 +531,7 @@ describe('affiliate-commission-raw-report', () => {
           final_url: null,
         },
       ])
+      .mockResolvedValueOnce([])
 
     const report = await getAffiliateCommissionReport({
       userIds: [1],
@@ -590,6 +593,7 @@ describe('affiliate-commission-raw-report', () => {
           final_url: null,
         },
       ])
+      .mockResolvedValueOnce([])
 
     const report = await getAffiliateCommissionReport({
       userIds: [1],
@@ -662,6 +666,7 @@ describe('affiliate-commission-raw-report', () => {
           final_url: null,
         },
       ])
+      .mockResolvedValueOnce([])
 
     const allUsersReport = await getAffiliateCommissionReport({
       userIds: [1, 2],
@@ -721,6 +726,7 @@ describe('affiliate-commission-raw-report', () => {
           final_url: null,
         },
       ])
+      .mockResolvedValueOnce([])
 
     const singleUserReport = await getAffiliateCommissionReport({
       userIds: [1],
@@ -769,6 +775,7 @@ describe('affiliate-commission-raw-report', () => {
         { user_id: 1, asin: 'B0ASIN0001', brand: 'Shared Brand' },
         { user_id: 1, asin: 'B0ASIN0002', brand: 'Shared Brand' },
       ])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
 
@@ -823,6 +830,7 @@ describe('affiliate-commission-raw-report', () => {
       ])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
 
     const detail = await getAffiliateCommissionBrandDetail({
       userIds: [1],
@@ -861,6 +869,7 @@ describe('affiliate-commission-raw-report', () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
 
     const report = await getAffiliateCommissionReport({
       userIds: [1],
@@ -876,6 +885,98 @@ describe('affiliate-commission-raw-report', () => {
         brandName: 'ASIN B0UNKNOWN1',
         platform: 'partnerboost',
         totalCommission: 4.2,
+      },
+    ])
+  })
+
+  it('falls back to global affiliate product pool when user products are missing', async () => {
+    hoisted.dbQueryOneMock.mockResolvedValueOnce({
+      min_date: '2026-05-11',
+      max_date: '2026-05-11',
+    })
+    hoisted.dbQueryMock
+      .mockResolvedValueOnce([{ id: 2, username: 'bob' }])
+      .mockResolvedValueOnce([
+        {
+          user_id: 2,
+          report_date: '2026-05-11',
+          platform: 'partnerboost',
+          source_api: 'amazon_report',
+          response_payload: JSON.stringify({
+            data: {
+              list: [{ asin: 'B0GLOBAL01', estCommission: 9.5 }],
+            },
+          }),
+        },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { asin: 'B0GLOBAL01', brand: 'Global Pool Brand' },
+      ])
+
+    const report = await getAffiliateCommissionReport({
+      userIds: [2],
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+      platform: 'partnerboost',
+      showUserScope: false,
+    })
+
+    expect(report.brandSummaries).toEqual([
+      {
+        brandKey: 'partnerboost:brand:global pool brand',
+        brandName: 'Global Pool Brand',
+        platform: 'partnerboost',
+        totalCommission: 9.5,
+      },
+    ])
+  })
+
+  it('uses merchant_name from raw payload when db lookups miss', async () => {
+    hoisted.dbQueryOneMock.mockResolvedValueOnce({
+      min_date: '2026-05-11',
+      max_date: '2026-05-11',
+    })
+    hoisted.dbQueryMock
+      .mockResolvedValueOnce([{ id: 1, username: 'alice' }])
+      .mockResolvedValueOnce([
+        {
+          user_id: 1,
+          report_date: '2026-05-11',
+          platform: 'partnerboost',
+          source_api: 'amazon_report',
+          response_payload: JSON.stringify({
+            data: {
+              list: [{
+                asin: 'B0RAWBRAND',
+                estCommission: 3.3,
+                merchant_name: 'Payload Brand_CA',
+              }],
+            },
+          }),
+        },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+
+    const report = await getAffiliateCommissionReport({
+      userIds: [1],
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+      platform: 'partnerboost',
+      showUserScope: false,
+    })
+
+    expect(report.brandSummaries).toEqual([
+      {
+        brandKey: 'partnerboost:brand:payload brand',
+        brandName: 'Payload Brand',
+        platform: 'partnerboost',
+        totalCommission: 3.3,
       },
     ])
   })
@@ -916,6 +1017,7 @@ describe('affiliate-commission-raw-report', () => {
       .mockResolvedValueOnce([
         { user_id: 1, asin: 'B0BGPF71Q6', brand: 'Example Brand' },
       ])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
 

@@ -35,7 +35,7 @@ import { collectPartnerboostReportRows } from '@/lib/openclaw/partnerboost-commi
 import { collectYeahPromosReportRows } from '@/lib/openclaw/yeahpromos-commission-rows'
 
 // Facts built before aligned PartnerBoost/YeahPromos parsing under-count commission vs campaigns.
-const AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT = '2026-06-03T00:00:00.000Z'
+const AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT = '2026-06-04T00:00:00.000Z'
 
 const SUPPORTED_SOURCES: Array<{ platform: AffiliatePlatform; sourceApi: string }> = [
   { platform: 'yeahpromos', sourceApi: 'getorder' },
@@ -303,18 +303,29 @@ function parsePartnerboostLineItems(params: {
   transactionPayloads: unknown[]
   reportPayloads: unknown[]
   showUserScope: boolean
-}): AffiliateCommissionLineItem[] {
+}): {
+  items: AffiliateCommissionLineItem[]
+  rawBrandByUserAsin: Map<string, string>
+} {
   const rows = collectPartnerboostReportRows({
     transactionPayloads: params.transactionPayloads,
     reportPayloads: params.reportPayloads,
   })
   const items: AffiliateCommissionLineItem[] = []
+  const rawBrandByUserAsin = new Map<string, string>()
 
   rows.forEach((row, index) => {
     const asin = normalizeAsin(row.asin)
     const baseBrandKey = asin
       ? `partnerboost:asin:${asin}`
       : `partnerboost:row:${index}`
+
+    if (asin && row.rawBrand) {
+      const mapKey = `${params.userId}:${asin}`
+      if (!rawBrandByUserAsin.has(mapKey)) {
+        rawBrandByUserAsin.set(mapKey, row.rawBrand)
+      }
+    }
 
     items.push({
       userId: params.userId,
@@ -328,7 +339,7 @@ function parsePartnerboostLineItems(params: {
     })
   })
 
-  return items
+  return { items, rawBrandByUserAsin }
 }
 
 type PartnerboostBrandLookupEntry = {
@@ -473,6 +484,48 @@ async function loadPartnerboostProductBrandsByEntries(
   return productBrandByUserAsin
 }
 
+function normalizePartnerboostRawBrandFallback(rawBrand: string | null | undefined): string | null {
+  const brand = normalizeBrand(rawBrand)
+  if (!brand) return null
+  return stripPartnerboostRegionSuffix(brand)
+}
+
+async function loadPartnerboostGlobalProductBrandsByAsins(
+  asins: string[]
+): Promise<Map<string, string>> {
+  const globalBrandByAsin = new Map<string, string>()
+  if (asins.length === 0) {
+    return globalBrandByAsin
+  }
+
+  const db = await getDatabase()
+
+  for (const asinChunk of chunkArray(asins, 200)) {
+    const asinPlaceholders = asinChunk.map(() => '?').join(', ')
+    const rows = await db.query<{ asin: string; brand: string }>(
+      `
+        SELECT DISTINCT asin, brand
+        FROM affiliate_products
+        WHERE platform = 'partnerboost'
+          AND user_id = 1
+          AND asin IS NOT NULL
+          AND brand IS NOT NULL
+          AND UPPER(asin) IN (${asinPlaceholders})
+      `,
+      asinChunk
+    )
+
+    for (const row of rows) {
+      const asin = normalizeAsin(row.asin)
+      const brand = normalizeBrand(row.brand)
+      if (!asin || !brand || globalBrandByAsin.has(asin)) continue
+      globalBrandByAsin.set(asin, brand)
+    }
+  }
+
+  return globalBrandByAsin
+}
+
 async function loadPartnerboostOfferBrandByAsin(params: {
   entries: PartnerboostBrandLookupEntry[]
 }): Promise<Map<string, string>> {
@@ -530,21 +583,24 @@ async function loadPartnerboostOfferBrandByAsin(params: {
 
 async function loadPartnerboostBrandMap(params: {
   entries: PartnerboostBrandLookupEntry[]
+  rawBrandByUserAsin: Map<string, string>
 }): Promise<Map<string, string>> {
   if (params.entries.length === 0) {
     return new Map()
   }
 
+  const asins = Array.from(new Set(params.entries.map((entry) => entry.asin)))
   const productBrandByUserAsin = await loadPartnerboostProductBrandsByEntries(params.entries)
   const offerBrandByUserAsin = await loadPartnerboostOfferBrandByAsin({ entries: params.entries })
+  const globalBrandByAsin = await loadPartnerboostGlobalProductBrandsByAsins(asins)
 
   const brandByUserAsin = new Map<string, string>()
   for (const entry of params.entries) {
     const mapKey = `${entry.userId}:${entry.asin}`
     const resolvedBrand = resolvePartnerboostDisplayBrand({
-      productBrand: productBrandByUserAsin.get(mapKey),
+      productBrand: productBrandByUserAsin.get(mapKey) ?? globalBrandByAsin.get(entry.asin),
       offerBrand: offerBrandByUserAsin.get(mapKey),
-    })
+    }) ?? normalizePartnerboostRawBrandFallback(params.rawBrandByUserAsin.get(mapKey))
     if (resolvedBrand) {
       brandByUserAsin.set(mapKey, resolvedBrand)
     }
@@ -880,15 +936,23 @@ async function buildAffiliateCommissionLineItemsFromRawRows(params: {
     }
   }
 
+  const partnerboostRawBrandByUserAsin = new Map<string, string>()
+
   for (const group of partnerboostGroups.values()) {
-    lineItems.push(...parsePartnerboostLineItems({
+    const parsed = parsePartnerboostLineItems({
       userId: group.userId,
       username: group.username,
       reportDate: group.reportDate,
       transactionPayloads: group.transactionPayloads,
       reportPayloads: group.reportPayloads,
       showUserScope: params.showUserScope,
-    }))
+    })
+    lineItems.push(...parsed.items)
+    for (const [mapKey, rawBrand] of parsed.rawBrandByUserAsin) {
+      if (!partnerboostRawBrandByUserAsin.has(mapKey)) {
+        partnerboostRawBrandByUserAsin.set(mapKey, rawBrand)
+      }
+    }
   }
 
   const partnerboostEntries = params.platform === 'yeahpromos'
@@ -901,6 +965,7 @@ async function buildAffiliateCommissionLineItemsFromRawRows(params: {
 
   const brandByUserAsin = await loadPartnerboostBrandMap({
     entries: partnerboostEntries,
+    rawBrandByUserAsin: partnerboostRawBrandByUserAsin,
   })
 
   return applyPartnerboostBrandNames(lineItems, brandByUserAsin, params.showUserScope)

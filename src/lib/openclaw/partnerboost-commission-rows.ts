@@ -62,9 +62,29 @@ const PARTNERBOOST_SOURCE_ASIN_ALIASES = [
   'SKU',
 ]
 
+const PARTNERBOOST_BRAND_ALIASES = [
+  'brand',
+  'brand_name',
+  'brandName',
+  'advert_name',
+  'advertName',
+  'merchant_name',
+  'merchantName',
+  'seller_name',
+  'sellerName',
+]
+
 export type PartnerboostReportCommissionRow = {
   commission: number
   asin: string | null
+  rawBrand: string | null
+}
+
+export function extractPartnerboostBrandFromRow(row: unknown): string | null {
+  const value = getPartnerboostFieldValue(row, PARTNERBOOST_BRAND_ALIASES)
+  if (value === null || value === undefined) return null
+  const text = String(value).trim()
+  return text || null
 }
 
 function parseNumberish(value: unknown, fallback = 0): number {
@@ -276,6 +296,18 @@ function resolvePartnerboostRowAsin(params: {
   )
 }
 
+function resolvePartnerboostRowRawBrand(params: {
+  row: any
+  matchedReportRow?: any | null
+  fallbackReportRow?: any | null
+}): string | null {
+  return pickString(
+    extractPartnerboostBrandFromRow(params.row),
+    extractPartnerboostBrandFromRow(params.matchedReportRow),
+    extractPartnerboostBrandFromRow(params.fallbackReportRow),
+  )
+}
+
 /**
  * Match affiliate-revenue sync: transaction rows are primary; amazon_report is fallback.
  */
@@ -330,6 +362,11 @@ export function collectPartnerboostReportRows(params: {
         fallbackReportRow: paramsForRow.fallbackReportRow,
         sourceLinkFallback: paramsForRow.sourceLinkFallback,
       }),
+      rawBrand: resolvePartnerboostRowRawBrand({
+        row: paramsForRow.row,
+        matchedReportRow: paramsForRow.matchedReportRow,
+        fallbackReportRow: paramsForRow.fallbackReportRow,
+      }),
     })
   }
 
@@ -367,4 +404,5 @@ export const partnerboostCommissionFieldAliases = {
   linkId: PARTNERBOOST_LINK_ID_ALIASES,
   link: PARTNERBOOST_LINK_ALIASES,
   asin: PARTNERBOOST_SOURCE_ASIN_ALIASES,
+  brand: PARTNERBOOST_BRAND_ALIASES,
 }

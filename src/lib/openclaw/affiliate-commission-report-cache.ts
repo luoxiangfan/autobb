@@ -28,7 +28,7 @@ export function buildAffiliateCommissionLineItemsCacheKey(params: {
 }): string {
   const payload = [
     'yp-parse-v1',
-    'pb-tx-v2',
+    'pb-tx-v3',
     params.userIds.slice().sort((left, right) => left - right).join(','),
     params.startDate,
     params.endDate,
