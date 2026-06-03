@@ -10,7 +10,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { CheckCircleIcon, ClockIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { CheckCircle2, Clock, X } from 'lucide-react'
 
 interface UploadSuccessModalProps {
   isOpen: boolean
@@ -57,12 +57,12 @@ export default function UploadSuccessModal({
             onClick={onClose}
             className="absolute top-4 right-4 text-gray-400 hover:text-gray-500"
           >
-            <XMarkIcon className="h-6 w-6" />
+            <X className="h-6 w-6" />
           </button>
 
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <CheckCircleIcon className="h-12 w-12 text-green-600" />
+              <CheckCircle2 className="h-12 w-12 text-green-600" />
             </div>
 
             <div className="ml-4 flex-1">
@@ -84,7 +84,7 @@ export default function UploadSuccessModal({
                 </div>
 
                 <div className="flex items-start space-x-2 rounded-lg bg-blue-50 p-3">
-                  <ClockIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <Clock className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm text-blue-800">
                     <p className="font-medium">正在后台处理</p>
                     <p className="mt-1">

@@ -16,7 +16,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowDownTrayIcon, ArrowUpTrayIcon, ClockIcon, CheckCircleIcon, XCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline'
+import {
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  Download,
+  Upload,
+  XCircle,
+} from 'lucide-react'
 import UploadSuccessModal from '@/components/UploadSuccessModal'
 
 interface UploadRecord {
@@ -199,32 +206,32 @@ export default function BatchOfferPage() {
     switch (status) {
       case 'pending':
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-          <ClockIcon className="w-4 h-4 mr-1" />
+          <Clock className="w-4 h-4 mr-1" />
           待处理
         </span>
       case 'processing':
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-          <ClockIcon className="w-4 h-4 mr-1 animate-spin" />
+          <Clock className="w-4 h-4 mr-1 animate-spin" />
           处理中
         </span>
       case 'completed':
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          <CheckCircleIcon className="w-4 h-4 mr-1" />
+          <CheckCircle2 className="w-4 h-4 mr-1" />
           已完成
         </span>
       case 'failed':
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-          <XCircleIcon className="w-4 h-4 mr-1" />
+          <XCircle className="w-4 h-4 mr-1" />
           失败
         </span>
       case 'partial':
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-          <ExclamationCircleIcon className="w-4 h-4 mr-1" />
+          <AlertCircle className="w-4 h-4 mr-1" />
           部分成功
         </span>
       case 'cancelled':
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-          <XCircleIcon className="w-4 h-4 mr-1" />
+          <XCircle className="w-4 h-4 mr-1" />
           已取消
         </span>
       default:
@@ -266,7 +273,7 @@ export default function BatchOfferPage() {
             onClick={handleDownloadTemplate}
             className="inline-flex w-fit shrink-0 items-center whitespace-nowrap rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
           >
-            <ArrowDownTrayIcon className="h-5 w-5 mr-2 text-gray-500" />
+            <Download className="h-5 w-5 mr-2 text-gray-500" />
             下载模板
           </button>
         </div>
@@ -275,7 +282,7 @@ export default function BatchOfferPage() {
           <div className="flex justify-center">
             <label className="relative cursor-pointer">
               <div className="flex flex-col items-center">
-                <ArrowUpTrayIcon className="h-12 w-12 text-gray-400" />
+                <Upload className="h-12 w-12 text-gray-400" />
                 <span className="mt-2 block text-sm font-medium text-gray-900">
                   {isUploading ? '上传中...' : '点击选择CSV文件'}
                 </span>
@@ -297,7 +304,7 @@ export default function BatchOfferPage() {
         {uploadError && (
           <div className="mt-4 rounded-md bg-red-50 p-4">
             <div className="flex">
-              <XCircleIcon className="h-5 w-5 text-red-400" />
+              <XCircle className="h-5 w-5 text-red-400" />
               <div className="ml-3">
                 <h3 className="text-sm font-medium text-red-800">上传失败</h3>
                 <div className="mt-2 text-sm text-red-700">{uploadError}</div>
@@ -323,7 +330,7 @@ export default function BatchOfferPage() {
         {recordsError && (
           <div className="rounded-md bg-red-50 p-4 mb-4">
             <div className="flex">
-              <XCircleIcon className="h-5 w-5 text-red-400" />
+              <XCircle className="h-5 w-5 text-red-400" />
               <div className="ml-3">
                 <p className="text-sm text-red-700">{recordsError}</p>
               </div>
