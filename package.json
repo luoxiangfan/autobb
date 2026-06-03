@@ -95,8 +95,7 @@
     "next-themes": "^0.4.6",
     "node-cron": "^3.0.3",
     "papaparse": "^5.5.3",
-    "playwright": "^1.55.1",
-    "playwright-extra": "^4.3.6",
+    "playwright": "^1.60.0",
     "postgres": "^3.4.7",
     "react": "18.2.0",
     "react-countup": "^6.5.3",
@@ -111,7 +110,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.1",
+    "@playwright/test": "^1.60.0",
     "@testing-library/react": "^16.3.0",
     "@types/bcrypt": "^5.0.2",
     "@types/better-sqlite3": "^7.6.8",

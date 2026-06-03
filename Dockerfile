@@ -117,6 +117,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     supervisor \
     curl \
     wget \
+    unzip \
     python3 \
     python3-pip \
     python3-venv \
@@ -196,8 +197,8 @@ COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 # 设置Playwright缓存目录到应用目录
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright
 
-# 安装Playwright浏览器（使用node_modules中的playwright）
-RUN node ./node_modules/playwright/cli.js install chromium --with-deps && \
+# 安装Playwright浏览器（系统依赖已在上方 apt 安装；勿用 --with-deps 避免 CI 二次 apt 卡住）
+RUN node ./node_modules/playwright/cli.js install chromium && \
     chown -R nextjs:nodejs /app/.playwright
 
 # 安装Python依赖（Google Ads API服务）
