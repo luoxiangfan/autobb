@@ -53,8 +53,8 @@ function runRuntimeCheck() {
 }
 
 const nodeMajor = Number(String(process.versions.node).split('.')[0])
-if (nodeMajor !== 22) {
-  console.error(`\n❌ 当前 Node 版本为 ${process.versions.node}，请切换到 Node 22 后再执行：npm run bootstrap\n`)
+if (nodeMajor !== 24) {
+  console.error(`\n❌ 当前 Node 版本为 ${process.versions.node}，请切换到 Node 24 后再执行：npm run bootstrap\n`)
   process.exit(1)
 }
 

@@ -176,9 +176,9 @@ if command -v docker >/dev/null 2>&1; then
   docker run --rm \
     -v "${PREBUILT_DIR}:/out" \
     -w /out \
-    node:22-bookworm-slim \
+    node:24-bookworm-slim \
     node openclaw.mjs --help >/dev/null
-  echo "✅ OpenClaw 预编译产物验证通过（Docker Node 22）"
+  echo "✅ OpenClaw 预编译产物验证通过（Docker Node 24）"
   exit 0
 fi
 

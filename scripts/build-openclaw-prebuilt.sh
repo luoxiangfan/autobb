@@ -67,7 +67,7 @@ build_with_docker() {
     -e CI=true \
     -e HOST_UID="${HOST_UID}" \
     -e HOST_GID="${HOST_GID}" \
-    node:22-bookworm-slim \
+    node:24-bookworm-slim \
     sh -lc '
       set -e
       apt-get update && apt-get install -y git python3 make g++ bash >/dev/null

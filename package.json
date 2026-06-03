@@ -2,6 +2,9 @@
   "name": "autoads",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "bootstrap": "node scripts/bootstrap.js",
     "predev": "node scripts/check-runtime.js",
@@ -88,7 +91,7 @@
     "jose": "^6.1.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.114.0",
-    "next": "14.0.4",
+    "next": "14.2.35",
     "next-themes": "^0.4.6",
     "node-cron": "^3.0.3",
     "papaparse": "^5.5.3",
@@ -113,7 +116,7 @@
     "@types/bcrypt": "^5.0.2",
     "@types/better-sqlite3": "^7.6.8",
     "@types/jsonwebtoken": "^9.0.5",
-    "@types/node": "^20",
+    "@types/node": "^24",
     "@types/node-cron": "^3.0.11",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^18",

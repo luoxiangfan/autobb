@@ -45,7 +45,7 @@ jobs:
 
     steps:
       - name: Checkout代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
           clean: true
@@ -74,9 +74,9 @@ jobs:
           df -h
 
       - name: 设置Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: 安装依赖
@@ -126,7 +126,7 @@ jobs:
 
     steps:
       - name: Checkout代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
           clean: true
@@ -154,14 +154,12 @@ jobs:
         run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: 设置Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: 设置Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          install: true
         env:
           DOCKER_BUILD_RECORD_UPLOAD: false
 
@@ -200,7 +198,7 @@ jobs:
 
       - name: 恢复 OpenClaw 预编译缓存
         id: openclaw-prebuilt-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             openclaw-prebuilt/dist

@@ -52,7 +52,7 @@
 - **认证**: Supabase Auth (Google OAuth)
 
 ### 后端
-- **运行时**: Node.js
+- **运行时**: Node.js 24
 - **数据库（开发）**: SQLite 3.x
 - **数据库（生产）**: PostgreSQL 14+
 - **ORM**: 原生SQL（better-sqlite3, pg）
@@ -76,8 +76,8 @@
 ### 先决条件
 
 ```bash
-# 需要 Node.js 18+ 和 npm
-node --version  # 应 >= 18.0.0
+# 需要 Node.js 24 和 npm
+node --version  # 应 >= 24.0.0
 npm --version
 ```
 

@@ -51,9 +51,9 @@ if (procTranslated) info('sysctl.proc_translated', procTranslated)
 info('node_abi', nodeAbi)
 info('execPath', process.execPath)
 
-if (nodeMajor !== 22) {
+if (nodeMajor !== 24) {
   fail(
-    `Node.js 版本不匹配（当前 ${nodeVersion}）。请统一使用 Node 22（Homebrew: \`brew link --overwrite --force node@22\`），然后重开终端并执行 \`rm -rf node_modules .next && npm ci\`。`
+    `Node.js 版本不匹配（当前 ${nodeVersion}）。请统一使用 Node 24（Homebrew: \`brew link --overwrite --force node@24\`），然后重开终端并执行 \`rm -rf node_modules .next && npm ci\`。`
   )
 }
 
@@ -62,7 +62,7 @@ if (platform === 'darwin' && hardwareArm64 === '1' && nodeArch === 'x64') {
     '\n⚠️ 检测到 Apple Silicon + x86_64（Rosetta）Node。\n' +
     '   这在“依赖由 x86_64 Node 安装、运行也用 x86_64 Node”时是可用的；\n' +
     '   但非常容易出现 better-sqlite3 架构不匹配（依赖是 x86_64，而你用 arm64 Node 运行，或反之）。\n' +
-    '   推荐：使用 arm64 Node 22，并执行 `npm run bootstrap` 统一重装依赖。\n'
+    '   推荐：使用 arm64 Node 24，并执行 `npm run bootstrap` 统一重装依赖。\n'
   )
 }
 
@@ -89,7 +89,7 @@ try {
     )
   }
 
-  fail('better-sqlite3 原生模块加载失败。请在 Node 22 下执行：`rm -rf node_modules .next && npm ci`。')
+  fail('better-sqlite3 原生模块加载失败。请在 Node 24 下执行：`rm -rf node_modules .next && npm ci`。')
 }
 
 try {

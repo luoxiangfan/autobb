@@ -5,7 +5,7 @@
 # ============================================
 # Stage 1: 依赖阶段
 # ============================================
-FROM node:20-bookworm-slim AS deps
+FROM node:24-bookworm-slim AS deps
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
@@ -26,7 +26,7 @@ RUN --mount=type=cache,target=/root/.npm \
 # ============================================
 # Stage 2: 构建阶段
 # ============================================
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -47,14 +47,9 @@ RUN npm run build
 RUN node build-scheduler.js
 
 # ============================================
-# Stage 2.5: Node 22 二进制（供 OpenClaw Gateway 使用）
+# Stage 2.5: OpenClaw 运行时瘦身（仅保留 Linux 需要的预编译依赖）
 # ============================================
-FROM node:22-bookworm-slim AS node22
-
-# ============================================
-# Stage 2.6: OpenClaw 运行时瘦身（仅保留 Linux 需要的预编译依赖）
-# ============================================
-FROM node:20-bookworm-slim AS openclaw-runtime
+FROM node:24-bookworm-slim AS openclaw-runtime
 
 WORKDIR /opt/openclaw
 ARG TARGETARCH
@@ -106,7 +101,7 @@ RUN set -eux; \
 # ============================================
 # Stage 3: 生产运行阶段（单容器）
 # ============================================
-FROM node:20-bookworm-slim AS runner
+FROM node:24-bookworm-slim AS runner
 
 WORKDIR /app
 
@@ -175,9 +170,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
 # 复制 OpenClaw 预编译产物（dist + openclaw.mjs）
 # 使用瘦身阶段产物，避免把非 Linux 依赖带入生产镜像。
 COPY --from=openclaw-runtime --chown=nextjs:nodejs /opt/openclaw/openclaw-prebuilt /app/openclaw
-
-# 复制 Node 22 二进制（用于 OpenClaw Gateway）
-COPY --from=node22 /usr/local/bin/node /usr/local/bin/node22
 
 # 校验 OpenClaw 预编译产物存在
 RUN test -f /app/openclaw/dist/entry.js && \
