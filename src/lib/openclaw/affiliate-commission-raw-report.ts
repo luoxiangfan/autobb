@@ -33,9 +33,13 @@ import type {
 import { normalizeOfferAsin } from '@/lib/openclaw/offer-asin'
 import { collectPartnerboostReportRows } from '@/lib/openclaw/partnerboost-commission-rows'
 import { collectYeahPromosReportRows } from '@/lib/openclaw/yeahpromos-commission-rows'
+import {
+  loadAffiliateCommissionLineItemsFromAttributions,
+  preferAttributionLineItemsIfHigher,
+} from '@/lib/openclaw/affiliate-commission-attribution-lines'
 
 // Facts built before aligned PartnerBoost/YeahPromos parsing under-count commission vs campaigns.
-const AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT = '2026-06-04T00:00:00.000Z'
+const AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT = '2026-06-05T00:00:00.000Z'
 
 const SUPPORTED_SOURCES: Array<{ platform: AffiliatePlatform; sourceApi: string }> = [
   { platform: 'yeahpromos', sourceApi: 'getorder' },
@@ -971,6 +975,30 @@ async function buildAffiliateCommissionLineItemsFromRawRows(params: {
   return applyPartnerboostBrandNames(lineItems, brandByUserAsin, params.showUserScope)
 }
 
+async function finalizeAffiliateCommissionLineItems(params: {
+  lineItems: AffiliateCommissionLineItem[]
+  userIds: number[]
+  userLabels: Map<number, string>
+  startDate: string
+  endDate: string
+  platform: AffiliateCommissionReportPlatformFilter
+  showUserScope: boolean
+}): Promise<AffiliateCommissionLineItem[]> {
+  const attributionItems = await loadAffiliateCommissionLineItemsFromAttributions({
+    userIds: params.userIds,
+    userLabels: params.userLabels,
+    startDate: params.startDate,
+    endDate: params.endDate,
+    platform: params.platform,
+    showUserScope: params.showUserScope,
+  })
+
+  return preferAttributionLineItemsIfHigher({
+    rawDerived: params.lineItems,
+    attributionDerived: attributionItems,
+  })
+}
+
 async function persistAffiliateCommissionLineFactsFromLineItems(params: {
   lineItems: AffiliateCommissionLineItem[]
 }): Promise<void> {
@@ -1068,9 +1096,21 @@ export async function loadAffiliateCommissionLineItems(params: {
     sourceUpdatedAt = null
   }
 
+  const finalizeCtx = {
+    userIds: params.userIds,
+    userLabels,
+    startDate: params.startDate,
+    endDate: params.endDate,
+    platform: params.platform,
+    showUserScope,
+  }
+
   const memoryCached = readAffiliateCommissionLineItemsMemoryCache(cacheKey)
   if (memoryCached && memoryCached.sourceUpdatedAt === sourceUpdatedAt) {
-    return memoryCached.lineItems
+    return finalizeAffiliateCommissionLineItems({
+      lineItems: memoryCached.lineItems,
+      ...finalizeCtx,
+    })
   }
 
   try {
@@ -1079,15 +1119,21 @@ export async function loadAffiliateCommissionLineItems(params: {
       sourceUpdatedAt,
     })
     if (dbCached) {
-      writeAffiliateCommissionLineItemsMemoryCache(cacheKey, {
+      const finalized = await finalizeAffiliateCommissionLineItems({
         lineItems: dbCached,
+        ...finalizeCtx,
+      })
+      writeAffiliateCommissionLineItemsMemoryCache(cacheKey, {
+        lineItems: finalized,
         sourceUpdatedAt,
       })
-      return dbCached
+      return finalized
     }
   } catch {
     // Cache table may not exist before migration 253.
   }
+
+  let lineItems: AffiliateCommissionLineItem[]
 
   try {
     const factsAreFresh = await affiliateCommissionFactsCoverRawRange({
@@ -1105,60 +1151,62 @@ export async function loadAffiliateCommissionLineItems(params: {
         endDate: params.endDate,
         platform: params.platform,
       })
-      const factItems = factRowsToLineItems(factRows, userLabels, showUserScope)
-      writeAffiliateCommissionLineItemsMemoryCache(cacheKey, {
-        lineItems: factItems,
-        sourceUpdatedAt,
+      lineItems = factRowsToLineItems(factRows, userLabels, showUserScope)
+    } else {
+      lineItems = await buildAffiliateCommissionLineItemsFromRawRows({
+        rows: await loadRawSyncPayloadRows({
+          userIds: params.userIds,
+          startDate: params.startDate,
+          endDate: params.endDate,
+          platform: params.platform,
+        }),
+        userLabels,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        platform: params.platform,
+        showUserScope,
       })
-      try {
-        await writeAffiliateCommissionLineItemsDbCache({
-          cacheKey,
-          lineItems: factItems,
-          sourceUpdatedAt,
-        })
-      } catch {
-        // ignore cache write failures
-      }
-      return factItems
     }
   } catch {
     // Facts table may not exist before migration 253.
+    lineItems = await buildAffiliateCommissionLineItemsFromRawRows({
+      rows: await loadRawSyncPayloadRows({
+        userIds: params.userIds,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        platform: params.platform,
+      }),
+      userLabels,
+      startDate: params.startDate,
+      endDate: params.endDate,
+      platform: params.platform,
+      showUserScope,
+    })
   }
 
-  const rows = await loadRawSyncPayloadRows({
-    userIds: params.userIds,
-    startDate: params.startDate,
-    endDate: params.endDate,
-    platform: params.platform,
+  const finalizedLineItems = await finalizeAffiliateCommissionLineItems({
+    lineItems,
+    ...finalizeCtx,
   })
 
-  const lineItems = await buildAffiliateCommissionLineItemsFromRawRows({
-    rows,
-    userLabels,
-    startDate: params.startDate,
-    endDate: params.endDate,
-    platform: params.platform,
-    showUserScope,
-  })
-
-  await persistAffiliateCommissionLineFactsFromLineItems({ lineItems })
+  await persistAffiliateCommissionLineFactsFromLineItems({ lineItems: finalizedLineItems })
 
   writeAffiliateCommissionLineItemsMemoryCache(cacheKey, {
-    lineItems,
+    lineItems: finalizedLineItems,
     sourceUpdatedAt,
   })
 
   try {
     await writeAffiliateCommissionLineItemsDbCache({
       cacheKey,
-      lineItems,
+      lineItems: finalizedLineItems,
       sourceUpdatedAt,
     })
   } catch {
     // ignore cache write failures
   }
 
-  return lineItems
+  return finalizedLineItems
 }
 
 function buildBrandSummaries(

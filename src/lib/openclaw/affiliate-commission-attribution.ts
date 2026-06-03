@@ -356,7 +356,7 @@ function extractPartnerboostNormIdFromRaw(raw: unknown): string | null {
   )
 }
 
-function extractBrandFromRaw(raw: unknown): string | null {
+export function extractBrandFromRaw(raw: unknown): string | null {
   return normalizeBrand(
     getObjectFieldByAliases(raw, [
       'brand',
