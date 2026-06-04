@@ -11,10 +11,16 @@
 
 ## 历史迁移归档
 
-- SQLite 历史迁移（以及旧初始化脚本）已归档至：`migrations/archive/v2/`
-- PostgreSQL 历史迁移（以及旧初始化脚本）已归档至：`pg-migrations/archive/v2/`
+自 **2026-06** 起，历史迁移与 `prompts/*.txt` 已从仓库移除以减小体积。活跃 prompt 内容在 `prompt_versions` 表（见迁移 `246_llm_prompt_externalization_v1`）；新库请使用 consolidated 初始化 + 增量迁移。
 
-后续新增迁移请继续放在根目录 `migrations/` 与 `pg-migrations/`（例如从 `141_...` 开始）。
+如需查阅删除前的归档文件，使用 Git 标签：
+
+```bash
+git show archive/pre-cleanup-2026-06:migrations/archive/v2/141_example.sql
+git checkout archive/pre-cleanup-2026-06 -- prompts/ad_creative_generation_v5.7.txt
+```
+
+后续新增迁移请继续放在根目录 `migrations/` 与 `pg-migrations/`。
 
 ## 增量迁移命名规范
 
