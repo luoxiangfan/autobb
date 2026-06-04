@@ -6,18 +6,29 @@ import {
   decompressJsonPayloadText,
   type JsonPayloadCodec,
 } from '@/lib/json-payload-compression'
-import type { AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission-types'
+import type {
+  AffiliateCommissionDateBounds,
+  AffiliateCommissionLineItem,
+} from '@/lib/openclaw/affiliate-commission-types'
 
-const MEMORY_CACHE_TTL_MS = 5 * 60 * 1000
+export const MEMORY_CACHE_TTL_MS = 5 * 60 * 1000
 const MEMORY_CACHE_MAX_ENTRIES = 32
+const DATE_BOUNDS_CACHE_MAX_ENTRIES = 32
 
-type MemoryCacheEntry = {
+export type MemoryCacheEntry = {
   expiresAt: number
   sourceUpdatedAt: string | null
+  attributionUpdatedAt: string | null
   lineItems: AffiliateCommissionLineItem[]
 }
 
+type DateBoundsCacheEntry = {
+  expiresAt: number
+  dateBounds: AffiliateCommissionDateBounds
+}
+
 const memoryCache = new Map<string, MemoryCacheEntry>()
+const dateBoundsMemoryCache = new Map<string, DateBoundsCacheEntry>()
 
 export function buildAffiliateCommissionLineItemsCacheKey(params: {
   userIds: number[]
@@ -39,12 +50,34 @@ export function buildAffiliateCommissionLineItemsCacheKey(params: {
   return createHash('sha256').update(payload).digest('hex')
 }
 
+export function buildAffiliateCommissionDateBoundsCacheKey(params: {
+  userIds: number[]
+  platform: string
+}): string {
+  const payload = [
+    'bounds-v1',
+    params.userIds.slice().sort((left, right) => left - right).join(','),
+    params.platform,
+  ].join('|')
+
+  return createHash('sha256').update(payload).digest('hex')
+}
+
 function trimMemoryCache(): void {
   if (memoryCache.size <= MEMORY_CACHE_MAX_ENTRIES) return
 
   const oldestKey = memoryCache.keys().next().value
   if (oldestKey) {
     memoryCache.delete(oldestKey)
+  }
+}
+
+function trimDateBoundsCache(): void {
+  if (dateBoundsMemoryCache.size <= DATE_BOUNDS_CACHE_MAX_ENTRIES) return
+
+  const oldestKey = dateBoundsMemoryCache.keys().next().value
+  if (oldestKey) {
+    dateBoundsMemoryCache.delete(oldestKey)
   }
 }
 
@@ -69,8 +102,32 @@ export function writeAffiliateCommissionLineItemsMemoryCache(
   })
 }
 
+export function readAffiliateCommissionDateBoundsMemoryCache(
+  cacheKey: string
+): AffiliateCommissionDateBounds | null {
+  const entry = dateBoundsMemoryCache.get(cacheKey)
+  if (!entry) return null
+  if (entry.expiresAt <= Date.now()) {
+    dateBoundsMemoryCache.delete(cacheKey)
+    return null
+  }
+  return entry.dateBounds
+}
+
+export function writeAffiliateCommissionDateBoundsMemoryCache(
+  cacheKey: string,
+  dateBounds: AffiliateCommissionDateBounds
+): void {
+  trimDateBoundsCache()
+  dateBoundsMemoryCache.set(cacheKey, {
+    dateBounds,
+    expiresAt: Date.now() + MEMORY_CACHE_TTL_MS,
+  })
+}
+
 export function clearAffiliateCommissionLineItemsMemoryCache(): void {
   memoryCache.clear()
+  dateBoundsMemoryCache.clear()
 }
 
 export async function readAffiliateCommissionLineItemsDbCache(params: {
@@ -145,6 +202,7 @@ export async function invalidateAffiliateCommissionReportCacheForUserDate(params
   userId: number
   reportDate: string
 }): Promise<void> {
+  void params
   clearAffiliateCommissionLineItemsMemoryCache()
 
   const db = await getDatabase()

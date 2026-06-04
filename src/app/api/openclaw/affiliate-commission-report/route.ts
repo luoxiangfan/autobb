@@ -5,7 +5,7 @@ import {
   buildUserLabelMap,
   getAffiliateCommissionBrandDetail,
   getAffiliateCommissionDateDetail,
-  getAffiliateCommissionDateBounds,
+  getAffiliateCommissionDateBoundsCached,
   getAffiliateCommissionReport,
   parseRequestedUserIds,
   resolveAffiliateCommissionPlatformFilter,
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
     const showUserScope = access.isAdmin
 
     if (searchParams.get('meta') === 'bounds') {
-      const dateBounds = await getAffiliateCommissionDateBounds({
+      const dateBounds = await getAffiliateCommissionDateBoundsCached({
         userIds: targetUserIds,
         platform,
       })

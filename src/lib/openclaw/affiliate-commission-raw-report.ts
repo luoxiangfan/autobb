@@ -6,17 +6,24 @@ import {
   affiliateCommissionFactsCoverRawRange,
   factRowsToLineItems,
   getAffiliateCommissionRawSourceUpdatedAt,
+  loadAffiliateCommissionBrandAggregatesFromFacts,
+  loadAffiliateCommissionDateAggregatesFromFacts,
   loadAffiliateCommissionLineFacts,
   replaceAffiliateCommissionLineFacts,
+  sumAffiliateCommissionFromFacts,
+  type AffiliateCommissionFactsBrandAggregate,
 } from '@/lib/openclaw/affiliate-commission-facts'
 import type {
   AffiliateCommissionReportPlatformFilter,
   AffiliateCommissionReportViewMode,
 } from '@/lib/openclaw/affiliate-commission-platform'
 import {
+  buildAffiliateCommissionDateBoundsCacheKey,
   buildAffiliateCommissionLineItemsCacheKey,
+  readAffiliateCommissionDateBoundsMemoryCache,
   readAffiliateCommissionLineItemsDbCache,
   readAffiliateCommissionLineItemsMemoryCache,
+  writeAffiliateCommissionDateBoundsMemoryCache,
   writeAffiliateCommissionLineItemsDbCache,
   writeAffiliateCommissionLineItemsMemoryCache,
 } from '@/lib/openclaw/affiliate-commission-report-cache'
@@ -34,12 +41,14 @@ import { normalizeOfferAsin } from '@/lib/openclaw/offer-asin'
 import { collectPartnerboostReportRows } from '@/lib/openclaw/partnerboost-commission-rows'
 import { collectYeahPromosReportRows } from '@/lib/openclaw/yeahpromos-commission-rows'
 import {
-  loadAffiliateCommissionLineItemsFromAttributions,
-  preferAttributionLineItemsIfHigher,
+  reconcileAffiliateCommissionLineItems,
+  sumAttributionCommissionTotals,
 } from '@/lib/openclaw/affiliate-commission-attribution-lines'
 
 // Facts built before aligned PartnerBoost/YeahPromos parsing under-count commission vs campaigns.
 const AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT = '2026-06-05T00:00:00.000Z'
+/** Admin multi-user reports use SQL aggregates from facts when user count exceeds this threshold. */
+const ADMIN_FACTS_AGGREGATED_REPORT_MIN_USER_IDS = 15
 
 const SUPPORTED_SOURCES: Array<{ platform: AffiliatePlatform; sourceApi: string }> = [
   { platform: 'yeahpromos', sourceApi: 'getorder' },
@@ -783,6 +792,25 @@ export async function getAffiliateCommissionDateBounds(params: {
   }
 }
 
+export async function getAffiliateCommissionDateBoundsCached(params: {
+  userIds: number[]
+  platform?: AffiliateCommissionReportPlatformFilter
+}): Promise<AffiliateCommissionDateBounds> {
+  const platform = params.platform || 'all'
+  const cacheKey = buildAffiliateCommissionDateBoundsCacheKey({
+    userIds: params.userIds,
+    platform,
+  })
+  const cached = readAffiliateCommissionDateBoundsMemoryCache(cacheKey)
+  if (cached) {
+    return cached
+  }
+
+  const dateBounds = await getAffiliateCommissionDateBounds(params)
+  writeAffiliateCommissionDateBoundsMemoryCache(cacheKey, dateBounds)
+  return dateBounds
+}
+
 export function clampDateRangeToBounds(params: {
   startDate: string
   endDate: string
@@ -975,28 +1003,35 @@ async function buildAffiliateCommissionLineItemsFromRawRows(params: {
   return applyPartnerboostBrandNames(lineItems, brandByUserAsin, params.showUserScope)
 }
 
-async function finalizeAffiliateCommissionLineItems(params: {
+function schedulePersistAffiliateCommissionLineFactsFromLineItems(params: {
   lineItems: AffiliateCommissionLineItem[]
-  userIds: number[]
-  userLabels: Map<number, string>
-  startDate: string
-  endDate: string
-  platform: AffiliateCommissionReportPlatformFilter
-  showUserScope: boolean
-}): Promise<AffiliateCommissionLineItem[]> {
-  const attributionItems = await loadAffiliateCommissionLineItemsFromAttributions({
-    userIds: params.userIds,
-    userLabels: params.userLabels,
-    startDate: params.startDate,
-    endDate: params.endDate,
-    platform: params.platform,
-    showUserScope: params.showUserScope,
+}): void {
+  void persistAffiliateCommissionLineFactsFromLineItems(params).catch(() => {
+    // Facts persistence is best-effort on the request path; sync/rebuild scripts backfill gaps.
+  })
+}
+
+async function writeAffiliateCommissionLineItemsCaches(params: {
+  cacheKey: string
+  lineItems: AffiliateCommissionLineItem[]
+  sourceUpdatedAt: string | null
+  attributionUpdatedAt: string | null
+}): Promise<void> {
+  writeAffiliateCommissionLineItemsMemoryCache(params.cacheKey, {
+    lineItems: params.lineItems,
+    sourceUpdatedAt: params.sourceUpdatedAt,
+    attributionUpdatedAt: params.attributionUpdatedAt,
   })
 
-  return preferAttributionLineItemsIfHigher({
-    rawDerived: params.lineItems,
-    attributionDerived: attributionItems,
-  })
+  try {
+    await writeAffiliateCommissionLineItemsDbCache({
+      cacheKey: params.cacheKey,
+      lineItems: params.lineItems,
+      sourceUpdatedAt: params.sourceUpdatedAt,
+    })
+  } catch {
+    // ignore cache write failures
+  }
 }
 
 async function persistAffiliateCommissionLineFactsFromLineItems(params: {
@@ -1085,6 +1120,20 @@ export async function loadAffiliateCommissionLineItems(params: {
     showUserScope,
   })
 
+  const reconcileCtx = {
+    userIds: params.userIds,
+    userLabels,
+    startDate: params.startDate,
+    endDate: params.endDate,
+    platform: params.platform,
+    showUserScope,
+  }
+
+  const memoryCached = readAffiliateCommissionLineItemsMemoryCache(cacheKey)
+  if (memoryCached) {
+    return memoryCached.lineItems
+  }
+
   let sourceUpdatedAt: string | null = null
   try {
     sourceUpdatedAt = await getAffiliateCommissionRawSourceUpdatedAt({
@@ -1096,38 +1145,23 @@ export async function loadAffiliateCommissionLineItems(params: {
     sourceUpdatedAt = null
   }
 
-  const finalizeCtx = {
-    userIds: params.userIds,
-    userLabels,
-    startDate: params.startDate,
-    endDate: params.endDate,
-    platform: params.platform,
-    showUserScope,
-  }
-
-  const memoryCached = readAffiliateCommissionLineItemsMemoryCache(cacheKey)
-  if (memoryCached && memoryCached.sourceUpdatedAt === sourceUpdatedAt) {
-    return finalizeAffiliateCommissionLineItems({
-      lineItems: memoryCached.lineItems,
-      ...finalizeCtx,
-    })
-  }
-
   try {
     const dbCached = await readAffiliateCommissionLineItemsDbCache({
       cacheKey,
       sourceUpdatedAt,
     })
     if (dbCached) {
-      const finalized = await finalizeAffiliateCommissionLineItems({
-        lineItems: dbCached,
-        ...finalizeCtx,
+      const reconciled = await reconcileAffiliateCommissionLineItems({
+        rawDerived: dbCached,
+        ...reconcileCtx,
       })
-      writeAffiliateCommissionLineItemsMemoryCache(cacheKey, {
-        lineItems: finalized,
+      await writeAffiliateCommissionLineItemsCaches({
+        cacheKey,
+        lineItems: reconciled.lineItems,
         sourceUpdatedAt,
+        attributionUpdatedAt: reconciled.attributionUpdatedAt,
       })
-      return finalized
+      return reconciled.lineItems
     }
   } catch {
     // Cache table may not exist before migration 253.
@@ -1184,29 +1218,21 @@ export async function loadAffiliateCommissionLineItems(params: {
     })
   }
 
-  const finalizedLineItems = await finalizeAffiliateCommissionLineItems({
-    lineItems,
-    ...finalizeCtx,
+  const reconciled = await reconcileAffiliateCommissionLineItems({
+    rawDerived: lineItems,
+    ...reconcileCtx,
   })
 
-  await persistAffiliateCommissionLineFactsFromLineItems({ lineItems: finalizedLineItems })
+  schedulePersistAffiliateCommissionLineFactsFromLineItems({ lineItems: reconciled.lineItems })
 
-  writeAffiliateCommissionLineItemsMemoryCache(cacheKey, {
-    lineItems: finalizedLineItems,
+  await writeAffiliateCommissionLineItemsCaches({
+    cacheKey,
+    lineItems: reconciled.lineItems,
     sourceUpdatedAt,
+    attributionUpdatedAt: reconciled.attributionUpdatedAt,
   })
 
-  try {
-    await writeAffiliateCommissionLineItemsDbCache({
-      cacheKey,
-      lineItems: finalizedLineItems,
-      sourceUpdatedAt,
-    })
-  } catch {
-    // ignore cache write failures
-  }
-
-  return finalizedLineItems
+  return reconciled.lineItems
 }
 
 function buildBrandSummaries(
@@ -1276,6 +1302,117 @@ function buildDateSummaries(items: AffiliateCommissionLineItem[]): AffiliateComm
     .sort((left, right) => compareReportDatesDesc(left.reportDate, right.reportDate))
 }
 
+function brandFactAggregatesToPseudoLineItems(params: {
+  aggregates: AffiliateCommissionFactsBrandAggregate[]
+  userLabels: Map<number, string>
+  startDate: string
+  showUserScope: boolean
+}): AffiliateCommissionLineItem[] {
+  return params.aggregates.map((row) => ({
+    userId: row.user_id,
+    username: params.userLabels.get(row.user_id) || `User ${row.user_id}`,
+    reportDate: params.startDate,
+    platform: row.platform === 'partnerboost' ? 'partnerboost' : 'yeahpromos',
+    brandKey: scopeBrandKey(row.user_id, row.brand_key, params.showUserScope),
+    brandName: row.brand_name,
+    commission: roundTo4(Number(row.total_commission) || 0),
+  }))
+}
+
+function buildBrandSummariesFromFactAggregates(params: {
+  aggregates: AffiliateCommissionFactsBrandAggregate[]
+  userLabels: Map<number, string>
+  startDate: string
+  showUserScope: boolean
+}): AffiliateCommissionBrandSummary[] {
+  return buildBrandSummaries(
+    brandFactAggregatesToPseudoLineItems(params),
+    params.showUserScope
+  )
+}
+
+function buildDateSummariesFromFactAggregates(params: {
+  aggregates: Array<{ report_date: string; total_commission: number }>
+}): AffiliateCommissionDateSummary[] {
+  return params.aggregates
+    .map((row) => ({
+      reportDate: normalizeReportDate(row.report_date),
+      totalCommission: roundTo2(Number(row.total_commission) || 0),
+    }))
+    .sort((left, right) => compareReportDatesDesc(left.reportDate, right.reportDate))
+}
+
+async function tryBuildAffiliateCommissionReportFromFactsAggregates(params: {
+  userIds: number[]
+  userLabels: Map<number, string>
+  startDate: string
+  endDate: string
+  platform: AffiliateCommissionReportPlatformFilter
+  viewMode: AffiliateCommissionReportViewMode
+  showUserScope: boolean
+  dateBounds: AffiliateCommissionDateBounds
+}): Promise<AffiliateCommissionReportResult | null> {
+  if (params.userIds.length < ADMIN_FACTS_AGGREGATED_REPORT_MIN_USER_IDS) {
+    return null
+  }
+
+  let factsAreFresh = false
+  try {
+    factsAreFresh = await affiliateCommissionFactsCoverRawRange({
+      userIds: params.userIds,
+      startDate: params.startDate,
+      endDate: params.endDate,
+      platform: params.platform,
+      minRebuiltAt: AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT,
+    })
+  } catch {
+    return null
+  }
+
+  if (!factsAreFresh) {
+    return null
+  }
+
+  const aggregateCtx = {
+    userIds: params.userIds,
+    startDate: params.startDate,
+    endDate: params.endDate,
+    platform: params.platform,
+  }
+
+  const [factsTotal, attributionTotals, brandAggregates, dateAggregates] = await Promise.all([
+    sumAffiliateCommissionFromFacts(aggregateCtx),
+    sumAttributionCommissionTotals(aggregateCtx),
+    loadAffiliateCommissionBrandAggregatesFromFacts(aggregateCtx),
+    loadAffiliateCommissionDateAggregatesFromFacts(aggregateCtx),
+  ])
+
+  if (attributionTotals.combinedTotal > factsTotal + 0.001) {
+    return null
+  }
+
+  const brandSummaries = buildBrandSummariesFromFactAggregates({
+    aggregates: brandAggregates,
+    userLabels: params.userLabels,
+    startDate: params.startDate,
+    showUserScope: params.showUserScope,
+  })
+  const dateSummaries = buildDateSummariesFromFactAggregates({ aggregates: dateAggregates })
+
+  return {
+    startDate: params.startDate,
+    endDate: params.endDate,
+    platform: params.platform,
+    viewMode: params.viewMode,
+    currency: 'USD',
+    totalCommission: roundTo2(factsTotal),
+    showUserScope: params.showUserScope,
+    dateBounds: params.dateBounds,
+    brandSummaries,
+    dateSummaries,
+  }
+}
+
 export async function getAffiliateCommissionReport(params: {
   userIds: number[]
   userLabels?: Map<number, string>
@@ -1288,7 +1425,9 @@ export async function getAffiliateCommissionReport(params: {
   const platform = params.platform || 'all'
   const viewMode = params.viewMode || 'brand'
   const showUserScope = params.showUserScope ?? params.userIds.length > 1
-  const dateBounds = await getAffiliateCommissionDateBounds({
+  const userLabels = params.userLabels ?? await buildUserLabelMap(params.userIds)
+
+  const dateBounds = await getAffiliateCommissionDateBoundsCached({
     userIds: params.userIds,
     platform,
   })
@@ -1297,9 +1436,24 @@ export async function getAffiliateCommissionReport(params: {
     endDate: params.endDate,
     bounds: dateBounds,
   })
+
+  const aggregatedReport = await tryBuildAffiliateCommissionReportFromFactsAggregates({
+    userIds: params.userIds,
+    userLabels,
+    startDate: clampedRange.startDate,
+    endDate: clampedRange.endDate,
+    platform,
+    viewMode,
+    showUserScope,
+    dateBounds,
+  })
+  if (aggregatedReport) {
+    return aggregatedReport
+  }
+
   const lineItems = await loadAffiliateCommissionLineItems({
     userIds: params.userIds,
-    userLabels: params.userLabels,
+    userLabels,
     startDate: clampedRange.startDate,
     endDate: clampedRange.endDate,
     platform,

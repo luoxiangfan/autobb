@@ -271,6 +271,245 @@ export function sumAffiliateCommissionLineItems(items: AffiliateCommissionLineIt
   return roundTo4(items.reduce((sum, item) => sum + (Number(item.commission) || 0), 0))
 }
 
+export type AttributionCommissionTotals = {
+  attributionTotal: number
+  failureTotal: number
+  combinedTotal: number
+}
+
+function maxTimestamp(left: string | null, right: string | null): string | null {
+  if (!left) return right
+  if (!right) return left
+  return left >= right ? left : right
+}
+
+async function queryMaxAttributionUpdatedAt(params: {
+  userIds: number[]
+  startDate: string
+  endDate: string
+  platform: AffiliateCommissionReportPlatformFilter
+}): Promise<string | null> {
+  const db = await getDatabase()
+  const platformFilter = buildPlatformClause(params.platform)
+  let maxUpdatedAt: string | null = null
+
+  for (const userIdChunk of chunkArray(params.userIds, 100)) {
+    const placeholders = userIdChunk.map(() => '?').join(', ')
+    const row = await db.queryOne<{ max_updated_at: unknown }>(
+      `
+        SELECT MAX(updated_at) AS max_updated_at
+        FROM affiliate_commission_attributions
+        WHERE user_id IN (${placeholders})
+          AND report_date >= ?
+          AND report_date <= ?
+          ${platformFilter.clause}
+          AND commission_amount > 0
+      `,
+      [...userIdChunk, params.startDate, params.endDate, ...platformFilter.params]
+    )
+    maxUpdatedAt = maxTimestamp(maxUpdatedAt, row?.max_updated_at ? String(row.max_updated_at) : null)
+  }
+
+  return maxUpdatedAt
+}
+
+async function queryMaxFailureUpdatedAt(params: {
+  userIds: number[]
+  startDate: string
+  endDate: string
+  platform: AffiliateCommissionReportPlatformFilter
+}): Promise<string | null> {
+  const db = await getDatabase()
+  const platformFilter = buildPlatformClause(params.platform)
+  let maxUpdatedAt: string | null = null
+
+  try {
+    for (const userIdChunk of chunkArray(params.userIds, 100)) {
+      const placeholders = userIdChunk.map(() => '?').join(', ')
+      const row = await db.queryOne<{ max_updated_at: unknown }>(
+        `
+          SELECT MAX(updated_at) AS max_updated_at
+          FROM openclaw_affiliate_attribution_failures
+          WHERE user_id IN (${placeholders})
+            AND report_date >= ?
+            AND report_date <= ?
+            ${platformFilter.clause}
+            AND commission_amount > 0
+        `,
+        [...userIdChunk, params.startDate, params.endDate, ...platformFilter.params]
+      )
+      maxUpdatedAt = maxTimestamp(maxUpdatedAt, row?.max_updated_at ? String(row.max_updated_at) : null)
+    }
+  } catch (error: unknown) {
+    const message = String((error as Error)?.message || '')
+    if (
+      /openclaw_affiliate_attribution_failures/i.test(message)
+      && /(no such table|does not exist|no such column|column .* does not exist)/i.test(message)
+    ) {
+      return null
+    }
+    throw error
+  }
+
+  return maxUpdatedAt
+}
+
+export async function getAffiliateCommissionAttributionUpdatedAt(params: {
+  userIds: number[]
+  startDate: string
+  endDate: string
+  platform: AffiliateCommissionReportPlatformFilter
+}): Promise<string | null> {
+  if (params.userIds.length === 0) return null
+
+  const [attributionUpdatedAt, failureUpdatedAt] = await Promise.all([
+    queryMaxAttributionUpdatedAt(params),
+    queryMaxFailureUpdatedAt(params),
+  ])
+
+  return maxTimestamp(attributionUpdatedAt, failureUpdatedAt)
+}
+
+async function sumAttributionCommissionForTable(params: {
+  tableName: 'affiliate_commission_attributions' | 'openclaw_affiliate_attribution_failures'
+  userIds: number[]
+  startDate: string
+  endDate: string
+  platform: AffiliateCommissionReportPlatformFilter
+}): Promise<number> {
+  const db = await getDatabase()
+  const platformFilter = buildPlatformClause(params.platform)
+  let total = 0
+
+  try {
+    for (const userIdChunk of chunkArray(params.userIds, 100)) {
+      const placeholders = userIdChunk.map(() => '?').join(', ')
+      const row = await db.queryOne<{ total_commission: unknown }>(
+        `
+          SELECT COALESCE(SUM(commission_amount), 0) AS total_commission
+          FROM ${params.tableName}
+          WHERE user_id IN (${placeholders})
+            AND report_date >= ?
+            AND report_date <= ?
+            ${platformFilter.clause}
+            AND commission_amount > 0
+        `,
+        [...userIdChunk, params.startDate, params.endDate, ...platformFilter.params]
+      )
+      total += Number(row?.total_commission) || 0
+    }
+  } catch (error: unknown) {
+    if (params.tableName !== 'openclaw_affiliate_attribution_failures') {
+      throw error
+    }
+    const message = String((error as Error)?.message || '')
+    if (
+      /openclaw_affiliate_attribution_failures/i.test(message)
+      && /(no such table|does not exist|no such column|column .* does not exist)/i.test(message)
+    ) {
+      return 0
+    }
+    throw error
+  }
+
+  return roundTo4(total)
+}
+
+export async function sumAttributionCommissionTotals(params: {
+  userIds: number[]
+  startDate: string
+  endDate: string
+  platform: AffiliateCommissionReportPlatformFilter
+}): Promise<AttributionCommissionTotals> {
+  if (params.userIds.length === 0) {
+    return { attributionTotal: 0, failureTotal: 0, combinedTotal: 0 }
+  }
+
+  const [attributionTotal, failureTotal] = await Promise.all([
+    sumAttributionCommissionForTable({
+      tableName: 'affiliate_commission_attributions',
+      ...params,
+    }),
+    sumAttributionCommissionForTable({
+      tableName: 'openclaw_affiliate_attribution_failures',
+      ...params,
+    }),
+  ])
+
+  return {
+    attributionTotal,
+    failureTotal,
+    combinedTotal: roundTo4(attributionTotal + failureTotal),
+  }
+}
+
+export type ReconcileAffiliateCommissionLineItemsResult = {
+  lineItems: AffiliateCommissionLineItem[]
+  attributionUpdatedAt: string | null
+}
+
+/**
+ * Compare cached/raw-derived rows against attribution totals.
+ * Loads full attribution rows only when their summed commission exceeds the raw-derived total.
+ */
+export async function reconcileAffiliateCommissionLineItems(params: {
+  rawDerived: AffiliateCommissionLineItem[]
+  userIds: number[]
+  userLabels: Map<number, string>
+  startDate: string
+  endDate: string
+  platform: AffiliateCommissionReportPlatformFilter
+  showUserScope: boolean
+  knownAttributionUpdatedAt?: string | null
+  skipWhenAttributionUnchanged?: boolean
+}): Promise<ReconcileAffiliateCommissionLineItemsResult> {
+  const reconcileCtx = {
+    userIds: params.userIds,
+    startDate: params.startDate,
+    endDate: params.endDate,
+    platform: params.platform,
+  }
+
+  const attributionUpdatedAt = await getAffiliateCommissionAttributionUpdatedAt(reconcileCtx)
+
+  if (
+    params.skipWhenAttributionUnchanged
+    && params.knownAttributionUpdatedAt === attributionUpdatedAt
+  ) {
+    return {
+      lineItems: params.rawDerived,
+      attributionUpdatedAt,
+    }
+  }
+
+  const totals = await sumAttributionCommissionTotals(reconcileCtx)
+  const rawTotal = sumAffiliateCommissionLineItems(params.rawDerived)
+
+  if (totals.combinedTotal <= rawTotal + 0.001) {
+    return {
+      lineItems: params.rawDerived,
+      attributionUpdatedAt,
+    }
+  }
+
+  const attributionDerived = await loadAffiliateCommissionLineItemsFromAttributions({
+    userIds: params.userIds,
+    userLabels: params.userLabels,
+    startDate: params.startDate,
+    endDate: params.endDate,
+    platform: params.platform,
+    showUserScope: params.showUserScope,
+  })
+
+  return {
+    lineItems: preferAttributionLineItemsIfHigher({
+      rawDerived: params.rawDerived,
+      attributionDerived,
+    }),
+    attributionUpdatedAt,
+  }
+}
+
 /**
  * Build commission line items from persisted sync attributions (same rows campaigns uses).
  * Includes both attributed rows and unattributed failure audit rows.

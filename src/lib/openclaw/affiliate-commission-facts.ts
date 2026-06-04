@@ -361,3 +361,127 @@ export async function getAffiliateCommissionRawSourceUpdatedAt(params: {
 
   return maxUpdatedAt
 }
+
+export type AffiliateCommissionFactsBrandAggregate = {
+  user_id: number
+  platform: string
+  brand_key: string
+  brand_name: string
+  total_commission: number
+}
+
+export type AffiliateCommissionFactsDateAggregate = {
+  report_date: string
+  total_commission: number
+}
+
+export async function sumAffiliateCommissionFromFacts(params: {
+  userIds: number[]
+  startDate: string
+  endDate: string
+  platform: string
+}): Promise<number> {
+  if (params.userIds.length === 0) return 0
+
+  const db = await getDatabase()
+  const platformFilter = buildPlatformClause(params.platform)
+  let total = 0
+
+  for (const userIdChunk of chunkArray(params.userIds, 100)) {
+    const placeholders = userIdChunk.map(() => '?').join(', ')
+    const row = await db.queryOne<{ total_commission: unknown }>(
+      `
+        SELECT COALESCE(SUM(commission), 0) AS total_commission
+        FROM openclaw_affiliate_commission_line_facts
+        WHERE user_id IN (${placeholders})
+          AND report_date >= ?
+          AND report_date <= ?
+          ${platformFilter.clause}
+      `,
+      [...userIdChunk, params.startDate, params.endDate, ...platformFilter.params]
+    )
+    total += Number(row?.total_commission) || 0
+  }
+
+  return Math.round(total * 100) / 100
+}
+
+export async function loadAffiliateCommissionBrandAggregatesFromFacts(params: {
+  userIds: number[]
+  startDate: string
+  endDate: string
+  platform: string
+}): Promise<AffiliateCommissionFactsBrandAggregate[]> {
+  if (params.userIds.length === 0) return []
+
+  const db = await getDatabase()
+  const platformFilter = buildPlatformClause(params.platform)
+  const rows: AffiliateCommissionFactsBrandAggregate[] = []
+
+  for (const userIdChunk of chunkArray(params.userIds, 100)) {
+    const placeholders = userIdChunk.map(() => '?').join(', ')
+    const chunkRows = await db.query<AffiliateCommissionFactsBrandAggregate>(
+      `
+        SELECT
+          user_id,
+          platform,
+          brand_key,
+          brand_name,
+          SUM(commission) AS total_commission
+        FROM openclaw_affiliate_commission_line_facts
+        WHERE user_id IN (${placeholders})
+          AND report_date >= ?
+          AND report_date <= ?
+          ${platformFilter.clause}
+        GROUP BY user_id, platform, brand_key, brand_name
+      `,
+      [...userIdChunk, params.startDate, params.endDate, ...platformFilter.params]
+    )
+    rows.push(...chunkRows.map((row) => ({
+      ...row,
+      total_commission: Number(row.total_commission) || 0,
+    })))
+  }
+
+  return rows
+}
+
+export async function loadAffiliateCommissionDateAggregatesFromFacts(params: {
+  userIds: number[]
+  startDate: string
+  endDate: string
+  platform: string
+}): Promise<AffiliateCommissionFactsDateAggregate[]> {
+  if (params.userIds.length === 0) return []
+
+  const db = await getDatabase()
+  const platformFilter = buildPlatformClause(params.platform)
+  const summaryMap = new Map<string, number>()
+
+  for (const userIdChunk of chunkArray(params.userIds, 100)) {
+    const placeholders = userIdChunk.map(() => '?').join(', ')
+    const chunkRows = await db.query<AffiliateCommissionFactsDateAggregate>(
+      `
+        SELECT report_date, SUM(commission) AS total_commission
+        FROM openclaw_affiliate_commission_line_facts
+        WHERE user_id IN (${placeholders})
+          AND report_date >= ?
+          AND report_date <= ?
+          ${platformFilter.clause}
+        GROUP BY report_date
+      `,
+      [...userIdChunk, params.startDate, params.endDate, ...platformFilter.params]
+    )
+
+    for (const row of chunkRows) {
+      const reportDate = normalizeReportDate(row.report_date)
+      const commission = Number(row.total_commission) || 0
+      summaryMap.set(reportDate, (summaryMap.get(reportDate) || 0) + commission)
+    }
+  }
+
+  return Array.from(summaryMap.entries()).map(([report_date, total_commission]) => ({
+    report_date,
+    total_commission,
+  }))
+}

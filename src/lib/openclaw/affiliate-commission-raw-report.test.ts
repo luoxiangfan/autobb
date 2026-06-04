@@ -5,7 +5,7 @@ const hoisted = vi.hoisted(() => ({
   dbQueryMock: vi.fn(),
   dbQueryOneMock: vi.fn(),
   factsCoverMock: vi.fn(),
-  loadAttributionLinesMock: vi.fn(),
+  reconcileLinesMock: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -24,7 +24,7 @@ vi.mock('@/lib/openclaw/affiliate-commission-attribution-lines', async (importOr
   const actual = await importOriginal<typeof import('@/lib/openclaw/affiliate-commission-attribution-lines')>()
   return {
     ...actual,
-    loadAffiliateCommissionLineItemsFromAttributions: hoisted.loadAttributionLinesMock,
+    reconcileAffiliateCommissionLineItems: hoisted.reconcileLinesMock,
   }
 })
 
@@ -52,8 +52,11 @@ describe('affiliate-commission-raw-report', () => {
     hoisted.dbQueryOneMock.mockReset()
     hoisted.factsCoverMock.mockReset()
     hoisted.factsCoverMock.mockResolvedValue(false)
-    hoisted.loadAttributionLinesMock.mockReset()
-    hoisted.loadAttributionLinesMock.mockResolvedValue([])
+    hoisted.reconcileLinesMock.mockReset()
+    hoisted.reconcileLinesMock.mockImplementation(async ({ rawDerived }) => ({
+      lineItems: rawDerived,
+      attributionUpdatedAt: null,
+    }))
     hoisted.getDatabaseMock.mockResolvedValue({
       type: 'sqlite',
       query: hoisted.dbQueryMock,
