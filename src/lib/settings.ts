@@ -946,23 +946,3 @@ export async function getAllProxyUrls(userId?: number): Promise<ProxyUrlConfig[]
     return []
   }
 }
-
-/**
- * 获取Gemini Model实例（用于直接API调用）
- * 用于需要使用GoogleGenerativeAI SDK的场景
- *
- * @param userId - 用户ID（可选）
- * @returns GoogleGenerativeAI实例
- */
-export async function getGeminiModel(userId?: number) {
-  const apiKeySetting = await getSetting('ai', 'gemini_api_key', userId)
-
-  if (!apiKeySetting?.value) {
-    throw new Error(
-      'Gemini API密钥未配置。请在设置页面配置 Gemini API 密钥。'
-    )
-  }
-
-  const { GoogleGenerativeAI } = await import('@google/generative-ai')
-  return new GoogleGenerativeAI(apiKeySetting.value)
-}
