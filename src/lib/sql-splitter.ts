@@ -30,8 +30,29 @@ export function splitSqlStatements(sql: string): string[] {
   }
 
   const endsWithTriggerEnd = (text: string): boolean => {
-    const withoutTrailing = text.replace(/[\s;]*$/g, '')
-    return /\bEND\b\s*$/i.test(withoutTrailing)
+    const lines = text.split('\n')
+    let lastLine = ''
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const trimmed = lines[i].trim()
+      if (trimmed) {
+        lastLine = trimmed
+        break
+      }
+    }
+    if (!/^END\b;?$/i.test(lastLine)) return false
+
+    const triggerBegin = text.match(/CREATE\s+(?:TEMP\s+)?TRIGGER[\s\S]*?\bBEGIN\b/i)
+    if (!triggerBegin || triggerBegin.index === undefined) return false
+
+    const body = text.slice(triggerBegin.index + triggerBegin[0].length)
+    let caseEndBalance = 0
+    for (const token of body.match(/\b(CASE|END)\b/gi) ?? []) {
+      if (/^CASE$/i.test(token)) caseEndBalance++
+      else caseEndBalance--
+    }
+
+    // CASE ... END; leaves balance at 0; the trigger's closing END; pushes balance below 0.
+    return caseEndBalance < 0
   }
 
   const maybeEnterTrigger = () => {

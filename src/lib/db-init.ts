@@ -13,6 +13,12 @@
 import { getDatabase } from './db'
 import { hashPassword } from './crypto'
 import { splitSqlStatements } from './sql-splitter'
+import {
+  listIncrementalMigrationFiles,
+  migrationHistoryName,
+  resolveMigrationFilePath,
+} from './migration-file-discovery'
+import { normalizeMigrationSql } from './migration-sql-preprocess'
 import fs from 'fs'
 import path from 'path'
 
@@ -810,25 +816,11 @@ async function runPendingMigrations(): Promise<void> {
   // 确保 migration_history 表存在
   await ensureMigrationHistoryTable()
 
-  // 获取所有迁移文件
-  const allFiles = fs.readdirSync(migrationsDir)
-
-  const migrationFiles = allFiles
-    .filter(file => {
-      // 排除 README 和其他非 SQL 文件
-      if (!file.endsWith('.sql')) return false
-      // 排除初始化 schema（000 开头）
-      if (file.startsWith('000_')) return false
-      // 排除归档目录中的文件
-      if (file.includes('archived')) return false
-      // PostgreSQL: 只选择 .pg.sql 文件
-      if (db.type === 'postgres') {
-        return file.endsWith('.pg.sql')
-      }
-      // SQLite: 排除 .pg.sql 文件，选择普通 .sql 文件
-      return !file.endsWith('.pg.sql')
-    })
-    .sort() // 按文件名排序
+  // 获取所有迁移文件（含 archived_* 子目录）
+  const migrationFiles = listIncrementalMigrationFiles(
+    migrationsDir,
+    db.type === 'postgres' ? 'postgres' : 'sqlite'
+  )
 
   if (migrationFiles.length === 0) {
     console.log('📋 No migration files found')
@@ -842,16 +834,17 @@ async function runPendingMigrations(): Promise<void> {
   const pendingMigrations: Array<{ file: string; reason: 'new' | 'changed' }> = []
 
   for (const file of migrationFiles) {
-    const filePath = path.join(migrationsDir, file)
+    const historyName = migrationHistoryName(file)
+    const filePath = resolveMigrationFilePath(migrationsDir, file)
     const content = fs.readFileSync(filePath, 'utf-8')
     const currentHash = calculateFileHash(content)
 
-    if (!executedMigrations.has(file)) {
+    if (!executedMigrations.has(historyName) && !executedMigrations.has(file)) {
       // 新迁移文件
       pendingMigrations.push({ file, reason: 'new' })
     } else {
       // 检查内容是否变更
-      const recordedHash = executedMigrations.get(file)
+      const recordedHash = executedMigrations.get(historyName) ?? executedMigrations.get(file)
       if (recordedHash && recordedHash !== currentHash) {
         pendingMigrations.push({ file, reason: 'changed' })
       }
@@ -883,7 +876,8 @@ async function runPendingMigrations(): Promise<void> {
   let failCount = 0
 
   for (const { file: migrationFile, reason } of pendingMigrations) {
-    const filePath = path.join(migrationsDir, migrationFile)
+    const historyName = migrationHistoryName(migrationFile)
+    const filePath = resolveMigrationFilePath(migrationsDir, migrationFile)
     const sqlContent = fs.readFileSync(filePath, 'utf-8')
     const fileHash = calculateFileHash(sqlContent)
 
@@ -891,8 +885,8 @@ async function runPendingMigrations(): Promise<void> {
     console.log(`${reasonIcon} Executing: ${migrationFile}`)
 
     try {
-      await executeMigration(migrationFile, sqlContent)
-      await recordMigration(migrationFile, fileHash)
+      await executeMigration(historyName, sqlContent)
+      await recordMigration(historyName, fileHash)
       console.log(`✅ Completed: ${migrationFile}`)
       successCount++
     } catch (error) {
@@ -1038,7 +1032,9 @@ async function executeMigration(name: string, sql: string): Promise<void> {
   const db = await getDatabase()
 
   // 分割多个 SQL 语句（按分号分割，但忽略字符串中的分号）
-  const statements = splitSqlStatements(sql)
+  const statements = splitSqlStatements(
+    normalizeMigrationSql(sql, db.type === 'postgres' ? 'postgres' : 'sqlite')
+  )
 
   if (db.type === 'sqlite') {
     // SQLite: 逐条执行

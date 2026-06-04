@@ -3,13 +3,13 @@ import os from 'node:os'
 import path from 'node:path'
 import { promises as fs } from 'node:fs'
 import Database from 'better-sqlite3'
-import { readFileSync } from 'node:fs'
 import { splitSqlStatements } from '@/lib/sql-splitter'
 
-const MIGRATION_SQL = readFileSync(
-  path.join(process.cwd(), 'migrations/249_campaign_backups_user_offer_unique.sql'),
-  'utf8'
-)
+/** Minimal excerpt from migration 249 — enforces one backup row per (user_id, offer_id). */
+const MIGRATION_SQL = `
+CREATE UNIQUE INDEX IF NOT EXISTS idx_campaign_backups_user_offer_unique
+ON campaign_backups(user_id, offer_id);
+`
 
 function execMigrationStatements(db: Database.Database) {
   for (const stmt of splitSqlStatements(MIGRATION_SQL)) {

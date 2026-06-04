@@ -7,13 +7,17 @@
 - SQLite：`migrations/000_init_schema_consolidated.sqlite.sql`
 - PostgreSQL：`pg-migrations/000_init_schema_consolidated.pg.sql`
 
-初始化脚本已包含历史迁移变更，并会写入 `migration_history`，因此在新库上执行后，`npm run db:migrate` 应显示“无需迁移”。
+初始化脚本已包含历史迁移变更（**064–253**），并会写入 `migration_history`，因此在新库上执行后，`npm run db:migrate` 应显示“无需迁移”。
 
 ## 历史迁移归档
 
-自 **2026-06** 起，历史迁移与 `prompts/*.txt` 已从仓库移除以减小体积。活跃 prompt 内容在 `prompt_versions` 表（见迁移 `246_llm_prompt_externalization_v1`）；新库请使用 consolidated 初始化 + 增量迁移。
+自 **2026-06** 起，历史迁移与 `prompts/*.txt` 已从仓库移除以减小体积。活跃 prompt 内容在 `prompt_versions` 表（见迁移 `246_llm_prompt_externalization_v1`）；新库请使用 consolidated 初始化即可。
 
-如需查阅删除前的归档文件，使用 Git 标签：
+**141–253** 号增量迁移已合并进上述 consolidated 初始化脚本，不再单独保留于仓库。
+
+`npm run db:migrate` 仍会扫描 `archived_*` 子目录（若存在）；`migration_history` 记录文件名（不含目录前缀），与已有库兼容。
+
+如需查阅更早归档，使用 Git 标签：
 
 ```bash
 git show archive/pre-cleanup-2026-06:migrations/archive/v2/141_example.sql

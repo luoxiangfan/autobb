@@ -18,6 +18,12 @@
 import fs from 'fs'
 import path from 'path'
 import { splitSqlStatements } from '../src/lib/sql-splitter'
+import {
+  listIncrementalMigrationFiles,
+  migrationHistoryName,
+  resolveMigrationFilePath,
+} from '../src/lib/migration-file-discovery'
+import { normalizeMigrationSql } from '../src/lib/migration-sql-preprocess'
 
 // 检测数据库类型
 const DB_TYPE = process.env.DATABASE_URL ? 'postgres' : 'sqlite'
@@ -67,28 +73,20 @@ async function migrateSQLite() {
       .map((row: any) => row.migration_name)
   )
 
-  // 读取迁移文件
+  // 读取迁移文件（含 archived_* 子目录）
   const migrationsPath = path.join(process.cwd(), MIGRATIONS_DIR)
-  const migrationFiles = fs.readdirSync(migrationsPath)
-    .filter(f => f.endsWith('.sql') && !f.endsWith('.pg.sql'))
-    .filter(f => !f.includes('000_init_schema')) // 跳过初始化文件
-    .sort()
+  const migrationFiles = listIncrementalMigrationFiles(migrationsPath, 'sqlite')
 
   const isIgnorableSqliteMigrationError = (statement: string, errorMsg: string): boolean => {
     const msg = errorMsg.toLowerCase()
-
-    // Idempotent DDL patterns
     if (msg.includes('duplicate column name')) return true
-    if (msg.includes('already exists')) return true // tables, indexes, triggers, etc.
-
-    // prompt_versions: allow rerun when DB already has the version row
+    if (msg.includes('already exists')) return true
     if (
       msg.includes('unique constraint failed: prompt_versions.prompt_id, prompt_versions.version') &&
       /insert\s+into\s+prompt_versions\b/i.test(statement)
     ) {
       return true
     }
-
     return false
   }
 
@@ -98,8 +96,8 @@ async function migrateSQLite() {
   let executedCount = 0
 
   for (const file of migrationFiles) {
-    const migrationName = file
-    const legacyMigrationName = file.replace(/\.sql$/i, '')
+    const migrationName = migrationHistoryName(file)
+    const legacyMigrationName = migrationName.replace(/\.sql$/i, '')
 
     if (appliedMigrations.has(migrationName) || appliedMigrations.has(legacyMigrationName)) {
       console.log(`⏭️  跳过: ${file} (已执行)`)
@@ -109,26 +107,27 @@ async function migrateSQLite() {
     console.log(`🔄 执行: ${file}`)
 
     try {
-      const rawContent = fs.readFileSync(path.join(migrationsPath, file), 'utf-8')
+      const rawContent = normalizeMigrationSql(
+        fs.readFileSync(resolveMigrationFilePath(migrationsPath, file), 'utf-8'),
+        'sqlite'
+      )
       const statements = splitSqlStatements(rawContent)
 
-      // 在事务中执行迁移
-      db.transaction(() => {
-        for (const stmt of statements) {
-          const trimmed = stmt.trim()
-          if (!trimmed) continue
-          try {
-            db.exec(trimmed)
-          } catch (error: any) {
-            const msg = error?.message ? String(error.message) : String(error)
-            if (isIgnorableSqliteMigrationError(trimmed, msg)) {
-              continue
-            }
-            throw error
+      for (const stmt of statements) {
+        const trimmed = stmt.trim()
+        if (!trimmed) continue
+        try {
+          db.exec(trimmed)
+        } catch (error: unknown) {
+          const msg = error instanceof Error ? error.message : String(error)
+          if (isIgnorableSqliteMigrationError(trimmed, msg)) {
+            continue
           }
+          throw error
         }
-        db.prepare('INSERT INTO migration_history (migration_name) VALUES (?)').run(migrationName)
-      })()
+      }
+
+      db.prepare('INSERT INTO migration_history (migration_name) VALUES (?)').run(migrationName)
 
       console.log(`✅ 完成: ${file}\n`)
       executedCount++
@@ -167,12 +166,9 @@ async function migratePostgres() {
     const appliedRows = await sql`SELECT migration_name FROM migration_history`
     const appliedMigrations = new Set(appliedRows.map(row => row.migration_name))
 
-    // 读取迁移文件
+    // 读取迁移文件（含 archived_* 子目录）
     const migrationsPath = path.join(process.cwd(), MIGRATIONS_DIR)
-    const migrationFiles = fs.readdirSync(migrationsPath)
-      .filter(f => f.endsWith('.pg.sql'))
-      .filter(f => !f.includes('000_init_schema')) // 跳过初始化文件
-      .sort()
+    const migrationFiles = listIncrementalMigrationFiles(migrationsPath, 'postgres')
 
     console.log(`📋 发现 ${migrationFiles.length} 个迁移文件`)
     console.log(`✅ 已执行 ${appliedMigrations.size} 个迁移\n`)
@@ -180,8 +176,8 @@ async function migratePostgres() {
     let executedCount = 0
 
     for (const file of migrationFiles) {
-      const migrationName = file
-      const legacyMigrationName = file.replace(/\.pg\.sql$/i, '')
+      const migrationName = migrationHistoryName(file)
+      const legacyMigrationName = migrationName.replace(/\.pg\.sql$/i, '').replace(/\.sql$/i, '')
 
       if (appliedMigrations.has(migrationName) || appliedMigrations.has(legacyMigrationName)) {
         console.log(`⏭️  跳过: ${file} (已执行)`)
@@ -191,7 +187,10 @@ async function migratePostgres() {
       console.log(`🔄 执行: ${file}`)
 
       try {
-        const sqlContent = fs.readFileSync(path.join(migrationsPath, file), 'utf-8')
+        const sqlContent = normalizeMigrationSql(
+          fs.readFileSync(resolveMigrationFilePath(migrationsPath, file), 'utf-8'),
+          'postgres'
+        )
         const statements = splitSqlStatements(sqlContent)
 
         // 在事务中执行迁移
