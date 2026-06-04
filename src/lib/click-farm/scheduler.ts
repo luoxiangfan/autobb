@@ -1,7 +1,7 @@
 // 调度逻辑模块
 // src/lib/click-farm/scheduler.ts
 
-import type { ClickFarmTask, SubTask } from '../click-farm-types';
+import type { ClickFarmTask, SubTask } from '@/lib/click-farm-types';
 import crypto from 'crypto';
 import { createDateInTimezone, getDateInTimezone, getHourInTimezone } from '../timezone-utils';
 

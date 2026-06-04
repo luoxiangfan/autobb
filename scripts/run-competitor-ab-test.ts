@@ -325,7 +325,11 @@ async function main() {
     const result = await runCompetitorCompressionABTest()
 
     // 生成详细报告文件
-    const reportPath = '/Users/jason/Documents/Kiro/autobb/claudedocs/COMPETITOR_COMPRESSION_AB_TEST_REPORT.md'
+    const path = await import('path')
+    const fs = await import('fs/promises')
+    const reportDir = path.join(process.cwd(), 'claudedocs')
+    await fs.mkdir(reportDir, { recursive: true })
+    const reportPath = path.join(reportDir, 'COMPETITOR_COMPRESSION_AB_TEST_REPORT.md')
     const reportContent = `# 竞品压缩A/B测试报告
 
 **生成时间**: ${new Date().toISOString()}
@@ -490,8 +494,6 @@ Competitor 1:
 **报告结束**
 `
 
-    // 写入报告文件（使用Write工具）
-    const fs = await import('fs/promises')
     await fs.writeFile(reportPath, reportContent, 'utf-8')
 
     console.log('\n✅ A/B测试完成！')

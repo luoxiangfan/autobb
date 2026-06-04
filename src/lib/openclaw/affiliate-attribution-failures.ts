@@ -66,23 +66,6 @@ export function getAffiliateAttributionPendingGraceDays(customValue?: unknown): 
   )
 }
 
-export function isAffiliateAttributionPendingReasonCode(
-  reasonCode: unknown
-): reasonCode is AffiliateAttributionPendingFailureReasonCode {
-  const normalized = String(reasonCode || '').trim().toLowerCase()
-  return ATTRIBUTION_PENDING_REASON_CODES.includes(
-    normalized as AffiliateAttributionPendingFailureReasonCode
-  )
-}
-
-export function toFinalAffiliateAttributionReasonCode(
-  reasonCode: AffiliateAttributionFailureReasonCode
-): AffiliateAttributionBaseFailureReasonCode {
-  if (reasonCode === 'pending_product_mapping_miss') return 'product_mapping_miss'
-  if (reasonCode === 'pending_offer_mapping_miss') return 'offer_mapping_miss'
-  return reasonCode
-}
-
 export function resolveAffiliateAttributionFailureReasonCode(params: {
   baseReasonCode: AffiliateAttributionBaseFailureReasonCode
   reportDate: string

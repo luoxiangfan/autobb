@@ -11,7 +11,7 @@ import {
   shouldCompleteTask,
   generateNextRunAt
 } from '../scheduler';
-import type { ClickFarmTask } from '../click-farm-types';
+import type { ClickFarmTask } from '@/lib/click-farm-types';
 
 // Mock timezone-utils
 vi.mock('../timezone-utils', () => ({

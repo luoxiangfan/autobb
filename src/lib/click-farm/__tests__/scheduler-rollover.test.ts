@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateNextRunAt } from '../scheduler'
-import type { ClickFarmTask } from '../click-farm-types'
+import type { ClickFarmTask } from '@/lib/click-farm-types'
 
 function createTask(overrides: Partial<ClickFarmTask> = {}): ClickFarmTask {
   return {

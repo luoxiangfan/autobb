@@ -14,13 +14,6 @@ type PartnerboostLinkResult = {
   partnerboost_link?: string
 }
 
-type YeahPromosMerchant = {
-  merchant_name?: string
-  url?: string
-  tracking_url?: string
-  country?: string
-}
-
 function normalizeUrl(value?: string | null): string | null {
   if (!value) return null
   const trimmed = String(value).trim()
@@ -103,48 +96,4 @@ export async function fetchPartnerboostLinkByAsin(params: {
   if (!item) return null
   const link = normalizeUrl(item.partnerboost_link) || normalizeUrl(item.link) || undefined
   return { asin: item.asin, link }
-}
-
-export async function fetchYeahPromosMerchants(userId: number): Promise<YeahPromosMerchant[]> {
-  const settings = await getOpenclawSettingsWithAffiliateSyncMap(userId)
-  const token = (settings.yeahpromos_token || '').trim()
-  if (!token) return []
-
-  const siteId = (settings.yeahpromos_site_id || '').trim()
-  if (!siteId) return []
-
-  const page = parseNumber(settings.yeahpromos_page, 1) || 1
-  const limit = parseNumber(settings.yeahpromos_limit, 1000) || 1000
-
-  const url = new URL('https://yeahpromos.com/index/getadvert/getadvert')
-  url.searchParams.set('site_id', siteId)
-  url.searchParams.set('page', String(page))
-  url.searchParams.set('limit', String(limit))
-
-  const response = await fetch(url.toString(), {
-    method: 'GET',
-    headers: {
-      token,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-  })
-
-  if (!response.ok) {
-    const text = await response.text()
-    throw new Error(`YeahPromos merchants fetch failed (${response.status}): ${text}`)
-  }
-
-  const payload = await response.json() as { Code?: number; code?: number; Data?: any[]; data?: any[] }
-  const code = payload.Code ?? payload.code
-  if (code && code !== 100000) {
-    throw new Error(`YeahPromos merchants error: ${code}`)
-  }
-
-  const list = payload.Data || payload.data || []
-  return list.map((item: any) => ({
-    merchant_name: item.merchant_name,
-    url: item.url,
-    tracking_url: item.tracking_url,
-    country: item.country,
-  }))
 }

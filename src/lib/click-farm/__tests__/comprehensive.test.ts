@@ -20,7 +20,7 @@ import {
   estimateTraffic,
   formatBytes
 } from '../distribution';
-import type { ClickFarmTask, CreateClickFarmTaskRequest } from '../click-farm-types';
+import type { ClickFarmTask, CreateClickFarmTaskRequest } from '@/lib/click-farm-types';
 
 // Mock timezone-utils
 vi.mock('../timezone-utils', () => ({
