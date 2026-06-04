@@ -1,6 +1,6 @@
 import { REDIS_PREFIX_CONFIG } from '@/lib/config'
 import { getRedisClient } from '@/lib/redis-client'
-import { stripGoogleAdsAuthContextForCache } from './google-ads-auth-context-cache'
+import { stripGoogleAdsAuthContextForCache, normalizeCachedAuthContextPayload } from './google-ads-auth-context-cache'
 import type { GoogleAdsAuthContext } from './google-ads-auth-context'
 
 /** 与进程内 authContextCache TTL 对齐（写路径有 generation 失效，可适当拉长减轻 DB 压力） */
@@ -57,14 +57,14 @@ function parseRedisAuthContextPayload(
     ) {
       return null
     }
-    return payload.ctx
+    return normalizeCachedAuthContextPayload(payload.ctx)
   }
 
-  // 旧格式（无 generation）：仅在 minGeneration=0 时接受，避免失效后误读
+  // 旧格式（无 generation）：仅在 minGeneration=0 时接受，读后立即 strip
   if (minGeneration > 0) {
     return null
   }
-  return parsed as GoogleAdsAuthContext
+  return normalizeCachedAuthContextPayload(parsed as GoogleAdsAuthContext)
 }
 
 export async function readGoogleAdsAuthContextFromRedis(

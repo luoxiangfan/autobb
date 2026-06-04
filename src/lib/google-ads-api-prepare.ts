@@ -15,9 +15,18 @@ import type {
   OAuthApiCredentialsFields,
   OAuthGoogleAdsCallBundle,
   PreparedGoogleAdsAccountApiCall,
+  SlimPreparedGoogleAdsAccountApiCall,
   SyncUserCredentials,
 } from './google-ads-accounts-auth-types'
 import { toOAuthApiCredentialsFields } from './google-ads-accounts-auth-types'
+import {
+  seedPrepareCacheHydratedSecrets,
+  stripPreparedGoogleAdsAccountApiCallForCache,
+} from './google-ads-api-prepare-cache'
+import {
+  hydrateGoogleAdsAuthContextSecrets,
+} from './google-ads-auth-context-cache'
+import { getGoogleAdsAuthContextGenerationForHydrate } from './google-ads-auth-context'
 
 /** campaign-sync / 定时任务：按账户解析认证方式与 token（与 syncCampaignsFromGoogleAds 一致） */
 export function resolveSyncAuthForAccount(
@@ -231,6 +240,8 @@ export function createGoogleAdsLinkedAccountPrepareCache(): GoogleAdsLinkedAccou
   return { prepareByLinkedSa: new Map() }
 }
 
+export { clearGoogleAdsLinkedAccountPrepareCache } from './google-ads-api-prepare-cache'
+
 export function linkedSaPrepareCacheKey(userId: number, linkedSa: string | null): string {
   return `${userId}\0${linkedSa ?? ''}`
 }
@@ -243,6 +254,61 @@ function normalizeLinkedSaForPrepareCache(
   return trimmed || null
 }
 
+async function rehydratePreparedGoogleAdsAccountApiCallFromCache(
+  slim: SlimPreparedGoogleAdsAccountApiCall
+): Promise<GoogleAdsLinkedAccountPrepareResult> {
+  const authContext = await hydrateGoogleAdsAuthContextSecrets(
+    slim.authContext,
+    getGoogleAdsAuthContextGenerationForHydrate
+  )
+
+  const refreshToken =
+    slim.apiAuth.authType === 'oauth'
+      ? authContext.oauthCredentials?.refresh_token || ''
+      : ''
+
+  const apiAuth: GoogleAdsApiAuthFields = {
+    ...slim.apiAuth,
+    refreshToken,
+    oauthLoginCustomerId:
+      slim.oauthLoginCustomerId ??
+      slim.apiAuth.oauthLoginCustomerId ??
+      authContext.oauthCredentials?.login_customer_id,
+  }
+
+  if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
+    return { ok: false, message: 'Google Ads OAuth 授权已过期，请重新连接账号' }
+  }
+  if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {
+    return { ok: false, message: '未找到服务账号配置' }
+  }
+
+  let oauthCredentials: OAuthApiCredentialsFields | undefined
+  let oauthLoginCustomerId: string | undefined
+
+  if (apiAuth.authType === 'oauth') {
+    const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
+      userId: authContext.userId,
+      authContext,
+    })
+    if (!oauthBundle.ok) {
+      return { ok: false, message: oauthBundle.message }
+    }
+    oauthCredentials = oauthBundle.bundle?.oauthCredentials
+    oauthLoginCustomerId =
+      oauthBundle.bundle?.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+  }
+
+  return {
+    ok: true,
+    authContext,
+    apiAuth,
+    refreshToken,
+    oauthCredentials,
+    oauthLoginCustomerId,
+  }
+}
+
 export async function prepareGoogleAdsApiCallForLinkedAccountCached(
   userId: number,
   linkedSa: string | null | undefined,
@@ -250,12 +316,15 @@ export async function prepareGoogleAdsApiCallForLinkedAccountCached(
 ): Promise<GoogleAdsLinkedAccountPrepareResult> {
   const normalizedSa = normalizeLinkedSaForPrepareCache(linkedSa)
   const key = linkedSaPrepareCacheKey(userId, normalizedSa)
-  const hit = cache?.prepareByLinkedSa.get(key)
-  if (hit) return hit
+  const slimHit = cache?.prepareByLinkedSa.get(key)
+  if (slimHit) {
+    return rehydratePreparedGoogleAdsAccountApiCallFromCache(slimHit)
+  }
 
   const prepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, normalizedSa)
-  if (prepared.ok) {
-    cache?.prepareByLinkedSa.set(key, prepared)
+  if (prepared.ok && cache) {
+    seedPrepareCacheHydratedSecrets(prepared)
+    cache.prepareByLinkedSa.set(key, stripPreparedGoogleAdsAccountApiCallForCache(prepared))
   }
   return prepared
 }

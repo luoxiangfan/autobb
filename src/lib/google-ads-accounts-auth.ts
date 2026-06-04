@@ -55,6 +55,7 @@ export {
   prepareGoogleAdsAccountApiCall,
   prepareGoogleAdsApiCallForLinkedAccount,
   createGoogleAdsLinkedAccountPrepareCache,
+  clearGoogleAdsLinkedAccountPrepareCache,
   linkedSaPrepareCacheKey,
   prepareGoogleAdsApiCallForLinkedAccountCached,
 } from './google-ads-api-prepare'
@@ -88,5 +89,6 @@ export {
 
 export {
   createCreativeGenerationAuthCache,
+  clearCreativeGenerationAuthCache,
   validateGoogleAdsConfigForCreativeGeneration,
 } from './google-ads-creative-generation-auth'

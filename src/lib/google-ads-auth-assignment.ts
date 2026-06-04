@@ -189,10 +189,10 @@ export { resolveGoogleAdsApiAccessLevel } from './google-ads-auth-context'
  * 是否已配置可用认证（委托 auth-context，与 FromContext / 双栈 / 共享语义一致）。
  */
 export async function hasConfiguredGoogleAdsAuth(userId: number): Promise<boolean> {
-  const { getGoogleAdsAuthContext, hasConfiguredGoogleAdsAuthFromContext } = await import(
+  const { getGoogleAdsAuthContextMetadata, hasConfiguredGoogleAdsAuthFromContext } = await import(
     './google-ads-auth-context'
   )
-  const ctx = await getGoogleAdsAuthContext(userId)
+  const ctx = await getGoogleAdsAuthContextMetadata(userId)
   return hasConfiguredGoogleAdsAuthFromContext(ctx)
 }
 

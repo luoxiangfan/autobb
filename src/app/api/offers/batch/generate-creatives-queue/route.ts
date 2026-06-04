@@ -17,7 +17,9 @@ import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue'
 import {
   createCreativeGenerationAuthCache,
+  clearCreativeGenerationAuthCache,
   validateGoogleAdsConfigForCreativeGeneration,
+  type CreativeGenerationAuthCache,
 } from '@/lib/google-ads-accounts-auth'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
 import { toDbJsonObjectField } from '@/lib/json-field'
@@ -114,6 +116,7 @@ export async function POST(request: NextRequest) {
   const queue = getQueueManager()
   const parentRequestId = request.headers.get('x-request-id') || undefined
   const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  let authCache: CreativeGenerationAuthCache | undefined
 
   try {
     const authResult = await verifyAuth(request)
@@ -204,7 +207,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const authCache = createCreativeGenerationAuthCache()
+    authCache = createCreativeGenerationAuthCache()
     try {
       const userAuth = await validateGoogleAdsConfigForCreativeGeneration(
         userIdNum,
@@ -468,5 +471,9 @@ export async function POST(request: NextRequest) {
       { error: 'Internal server error', message: error?.message || '批量创建失败' },
       { status: 500 }
     )
+  } finally {
+    if (authCache) {
+      clearCreativeGenerationAuthCache(authCache)
+    }
   }
 }

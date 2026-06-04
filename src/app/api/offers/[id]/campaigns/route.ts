@@ -3,8 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCustomerWithCredentials } from '@/lib/google-ads-api'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
+  clearGoogleAdsLinkedAccountPrepareCache,
   prepareGoogleAdsApiCallForLinkedAccountCached,
   preparedAuthContextField,
+  type GoogleAdsLinkedAccountPrepareCache,
 } from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
@@ -112,6 +114,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  let oauthPrepareCache: GoogleAdsLinkedAccountPrepareCache | undefined
   try {
     const { id } = params
     const requestId = request.headers.get('x-request-id') || undefined
@@ -262,7 +265,7 @@ export async function GET(
       string,
       NonNullable<Awaited<ReturnType<typeof getServiceAccountConfig>>>
     >()
-    const oauthPrepareCache = createGoogleAdsLinkedAccountPrepareCache()
+    oauthPrepareCache = createGoogleAdsLinkedAccountPrepareCache()
 
     const groupedAccounts = Array.from(campaignsByAccountId.values())
 
@@ -693,5 +696,9 @@ export async function GET(
       },
       { status: 500 }
     )
+  } finally {
+    if (oauthPrepareCache) {
+      clearGoogleAdsLinkedAccountPrepareCache(oauthPrepareCache)
+    }
   }
 }

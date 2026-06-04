@@ -104,8 +104,15 @@ export type CreativeGenerationGoogleAdsValidationResult =
     }
   | { ok: true; authContext: GoogleAdsAuthContext; apiAuth: GoogleAdsApiAuthFields }
 
+/** 批任务 prepare 缓存条目：不含 refresh_token / client_secret 等密钥 */
+export type SlimPreparedGoogleAdsAccountApiCall = {
+  authContext: GoogleAdsAuthContext
+  apiAuth: GoogleAdsApiAuthFields
+  oauthLoginCustomerId?: string
+}
+
 export type GoogleAdsLinkedAccountPrepareCache = {
-  prepareByLinkedSa: Map<string, GoogleAdsLinkedAccountPrepareResult>
+  prepareByLinkedSa: Map<string, SlimPreparedGoogleAdsAccountApiCall>
 }
 
 export type CreativeGenerationAuthCache = GoogleAdsLinkedAccountPrepareCache & {

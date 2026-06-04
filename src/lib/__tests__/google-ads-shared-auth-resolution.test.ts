@@ -24,9 +24,12 @@ vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
   return {
     ...actual,
     getGoogleAdsAuthContext: contextFns.getGoogleAdsAuthContext,
-    resolveGoogleAdsApiAccessLevel: async (userId: number) => {
+    getGoogleAdsAuthContextMetadata: async (userId: number) => {
+      const { stripGoogleAdsAuthContextForCache } = await import(
+        '@/lib/google-ads-auth-context-cache'
+      )
       const ctx = await contextFns.getGoogleAdsAuthContext(userId)
-      return ctx?.apiAccessLevel ?? null
+      return stripGoogleAdsAuthContextForCache(ctx)
     },
   }
 })
@@ -39,7 +42,10 @@ import {
 import {
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsApiAccessLevel,
+  clearMemoryAuthContextCacheForTests,
+  seedMemoryAuthContextCacheForTests,
 } from '@/lib/google-ads-auth-context'
+import { stripGoogleAdsAuthContextForCache } from '@/lib/google-ads-auth-context-cache'
 
 function sharedSaContext() {
   return {
@@ -66,6 +72,7 @@ function sharedSaContext() {
 
 describe('google-ads shared auth resolution helpers', () => {
   beforeEach(() => {
+    clearMemoryAuthContextCacheForTests()
     dbMocks.queryOne.mockReset()
     contextFns.getGoogleAdsAuthContext.mockReset()
   })
@@ -74,7 +81,7 @@ describe('google-ads shared auth resolution helpers', () => {
     contextFns.getGoogleAdsAuthContext.mockResolvedValue(sharedSaContext())
 
     await expect(hasConfiguredGoogleAdsAuth(2)).resolves.toBe(true)
-    expect(contextFns.getGoogleAdsAuthContext).toHaveBeenCalledWith(2)
+    expect(contextFns.getGoogleAdsAuthContext).toHaveBeenCalled()
   })
 
   it('hasConfiguredGoogleAdsAuthFromContext returns true for shared oauth with refresh', () => {
@@ -104,11 +111,11 @@ describe('google-ads shared auth resolution helpers', () => {
     ).toBe('standard')
   })
 
-  it('resolveGoogleAdsApiAccessLevel reads service account level from admin for shared user', async () => {
-    contextFns.getGoogleAdsAuthContext.mockResolvedValue(sharedSaContext())
+  it('resolveGoogleAdsApiAccessLevel reads apiAccessLevel from slim cache without load', async () => {
+    seedMemoryAuthContextCacheForTests(2, sharedSaContext())
 
     await expect(resolveGoogleAdsApiAccessLevel(2)).resolves.toBe('basic')
-    expect(contextFns.getGoogleAdsAuthContext).toHaveBeenCalledWith(2)
+    expect(contextFns.getGoogleAdsAuthContext).not.toHaveBeenCalled()
   })
 
   it('hasConfiguredGoogleAdsAuth returns false for shared oauth when admin only has service account', async () => {
@@ -189,20 +196,23 @@ describe('google-ads shared auth resolution helpers', () => {
     await expect(adminHasConfiguredAuth(1, 'service_account')).resolves.toBe(false)
   })
 
-  it('resolveGoogleAdsApiAccessLevel returns null for shared oauth when admin has no oauth row', async () => {
-    contextFns.getGoogleAdsAuthContext.mockResolvedValue({
-      ...sharedSaContext(),
-      assignment: {
-        ...sharedSaContext().assignment!,
-        authType: 'oauth',
-      },
-      auth: { authType: 'oauth' },
-      oauthCredentials: null,
-      serviceAccountConfig: { id: 'sa-1' },
-      apiAccessLevel: null,
-    })
+  it('resolveGoogleAdsApiAccessLevel returns null from slim cache when level unknown', async () => {
+    seedMemoryAuthContextCacheForTests(
+      2,
+      stripGoogleAdsAuthContextForCache({
+        ...sharedSaContext(),
+        assignment: {
+          ...sharedSaContext().assignment!,
+          authType: 'oauth',
+        },
+        auth: { authType: 'oauth' },
+        oauthCredentials: null,
+        serviceAccountConfig: { id: 'sa-1' },
+        apiAccessLevel: null,
+      } as any)
+    )
 
     await expect(resolveGoogleAdsApiAccessLevel(2)).resolves.toBeNull()
-    expect(contextFns.getGoogleAdsAuthContext).toHaveBeenCalledWith(2)
+    expect(contextFns.getGoogleAdsAuthContext).not.toHaveBeenCalled()
   })
 })

@@ -9,6 +9,8 @@
  * - 是否已配置：用 `hasConfiguredGoogleAdsAuthFromContext`（按 userId 查请用 `google-ads-auth-assignment.hasConfiguredGoogleAdsAuth`），勿仅用 `auth.serviceAccountId` 判断。
  * - 已持有 context 做 heal/sync 前须 `googleAdsAuthContextDualStackError`；禁止在 `dualStack` 时绕过 `resolve` 直接调 API。
  * - 按 userId 发起 API 前可用 `assertGoogleAdsAuthReadyForApi`（`getCustomerWithCredentials` / 统一客户端 / `syncAccountsFromAPI` 已用）。
+ * - 进程内与 Redis 仅缓存 strip metadata（`secretsStripped: true`）；`getGoogleAdsAuthContext` 返回前 hydrate。
+ * - 仅读 metadata（如 apiAccessLevel / hasConfigured）优先 `getGoogleAdsAuthContextMetadata`，勿对 strip context 调 `resolve*FromContext`。
  */
 import {
   isGoogleAdsAuthShared,
@@ -35,8 +37,14 @@ import {
 } from './google-ads-auth-context-redis'
 import { getServiceAccountConfig } from './google-ads-service-account'
 import {
+  clearHydratedSecretsCacheForTests,
   hydrateGoogleAdsAuthContextSecrets,
+  invalidateHydratedSecretsCache,
+  oauthRefreshConfiguredFromContext,
+  seedHydratedSecretsCacheFromFullContext,
+  serviceAccountConfiguredFromContext,
   stripGoogleAdsAuthContextForCache,
+  assertAuthContextSecretsHydrated,
 } from './google-ads-auth-context-cache'
 
 export interface GoogleAdsAuthContext {
@@ -55,6 +63,11 @@ export interface GoogleAdsAuthContext {
   serviceAccountConfig: Awaited<ReturnType<typeof getServiceAccountConfig>>
   /** 与 assignment / 凭证行一致的 API 访问级别（加载 context 时解析一次） */
   apiAccessLevel: string | null
+  /** load 时写入；strip 缓存保留，供 hasConfigured 等无需 hydrate 的判断 */
+  oauthHasRefreshToken?: boolean
+  serviceAccountConfigured?: boolean
+  /** slim 缓存条目为 true；API 路径使用前须 hydrate */
+  secretsStripped?: boolean
 }
 
 async function resolveDualStackOnOwner(
@@ -113,6 +126,11 @@ function getAuthContextGeneration(userId: number): number {
   return authContextGeneration.get(userId) ?? 0
 }
 
+/** prepare / hydrate 短缓存 generation 绑定（与 invalidate bump 一致） */
+export function getGoogleAdsAuthContextGenerationForHydrate(userId: number): number {
+  return getAuthContextGeneration(userId)
+}
+
 function bumpAuthContextGeneration(userId: number): number {
   const next = getAuthContextGeneration(userId) + 1
   authContextGeneration.set(userId, next)
@@ -136,6 +154,15 @@ export function peekMemoryAuthContextCacheForTests(userId: number): GoogleAdsAut
 /** @internal test-only */
 export function clearMemoryAuthContextCacheForTests(): void {
   authContextCache.clear()
+  clearHydratedSecretsCacheForTests()
+}
+
+/** @internal test-only: 写入 slim 进程内缓存（测 resolve* / metadata slim-first 路径） */
+export function seedMemoryAuthContextCacheForTests(
+  userId: number,
+  ctx: GoogleAdsAuthContext
+): void {
+  rememberAuthContextInMemory(userId, ctx)
 }
 
 async function commitAuthContextCache(
@@ -143,19 +170,19 @@ async function commitAuthContextCache(
   ctx: GoogleAdsAuthContext,
   generationAtStart: number
 ): Promise<GoogleAdsAuthContext> {
+  let ctxToCommit = ctx
   if (!isAuthContextGenerationCurrent(userId, generationAtStart)) {
-    const freshCtx = await loadGoogleAdsAuthContext(userId)
-    if (!isAuthContextGenerationCurrent(userId, generationAtStart)) {
-      return freshCtx
-    }
-    rememberAuthContextInMemory(userId, freshCtx)
-    await writeGoogleAdsAuthContextToRedis(userId, freshCtx, getAuthContextGeneration(userId))
-    return freshCtx
+    ctxToCommit = await loadGoogleAdsAuthContext(userId)
+  }
+  if (!isAuthContextGenerationCurrent(userId, generationAtStart)) {
+    return ctxToCommit
   }
 
-  rememberAuthContextInMemory(userId, ctx)
-  await writeGoogleAdsAuthContextToRedis(userId, ctx, getAuthContextGeneration(userId))
-  return ctx
+  const generation = getAuthContextGeneration(userId)
+  rememberAuthContextInMemory(userId, ctxToCommit)
+  seedHydratedSecretsCacheFromFullContext(userId, generation, ctxToCommit)
+  await writeGoogleAdsAuthContextToRedis(userId, ctxToCommit, generation)
+  return ctxToCommit
 }
 
 async function resolvePeerOrAcquireAuthContextLock(
@@ -225,12 +252,19 @@ async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthCo
     serviceAccountConfig,
   }
   const apiAccessLevel = resolveGoogleAdsApiAccessLevelFromContext(partialCtx)
+  const oauthHasRefreshToken = Boolean(oauthCredentials?.refresh_token)
+  const serviceAccountConfigured = Boolean(
+    serviceAccountConfig?.id || auth.serviceAccountId
+  )
 
   return {
     ...partialCtx,
     canModify: !isGoogleAdsAuthShared(assignment),
     dualStack,
     apiAccessLevel,
+    oauthHasRefreshToken,
+    serviceAccountConfigured,
+    secretsStripped: false,
   }
 }
 
@@ -241,16 +275,52 @@ function rememberAuthContextInMemory(userId: number, ctx: GoogleAdsAuthContext):
   })
 }
 
-async function readAuthContextFromMemoryCache(userId: number): Promise<GoogleAdsAuthContext | null> {
+function hydrateAuthContextSecrets(ctx: GoogleAdsAuthContext): Promise<GoogleAdsAuthContext> {
+  return hydrateGoogleAdsAuthContextSecrets(ctx, getAuthContextGeneration)
+}
+
+async function readSlimAuthContextFromCaches(userId: number): Promise<GoogleAdsAuthContext | null> {
   const cached = authContextCache.get(userId)
-  if (!cached) {
+  if (cached) {
+    if (cached.expiresAt <= Date.now()) {
+      authContextCache.delete(userId)
+    } else {
+      return cached.ctx
+    }
+  }
+
+  const fromRedis = await readGoogleAdsAuthContextFromRedis(userId, {
+    minGeneration: getAuthContextGeneration(userId),
+  })
+  if (fromRedis) {
+    rememberAuthContextInMemory(userId, fromRedis)
+    return fromRedis
+  }
+
+  return null
+}
+
+async function readAuthContextFromMemoryCache(userId: number): Promise<GoogleAdsAuthContext | null> {
+  const slim = await readSlimAuthContextFromCaches(userId)
+  if (!slim) {
     return null
   }
-  if (cached.expiresAt <= Date.now()) {
-    authContextCache.delete(userId)
-    return null
+  return hydrateAuthContextSecrets(slim)
+}
+
+/**
+ * 只读 metadata（不 hydrate 密钥）。缓存未命中时会触发完整 load。
+ */
+export async function getGoogleAdsAuthContextMetadata(
+  userId: number
+): Promise<GoogleAdsAuthContext> {
+  const slim = await readSlimAuthContextFromCaches(userId)
+  if (slim) {
+    return slim
   }
-  return hydrateGoogleAdsAuthContextSecrets(cached.ctx)
+
+  const full = await getGoogleAdsAuthContext(userId)
+  return stripGoogleAdsAuthContextForCache(full)
 }
 
 /**
@@ -268,7 +338,7 @@ export async function getGoogleAdsAuthContext(userId: number): Promise<GoogleAds
   })
   if (fromRedis) {
     rememberAuthContextInMemory(userId, fromRedis)
-    return hydrateGoogleAdsAuthContextSecrets(fromRedis)
+    return hydrateAuthContextSecrets(fromRedis)
   }
 
   const inflight = authContextInflight.get(userId)
@@ -288,7 +358,7 @@ export async function getGoogleAdsAuthContext(userId: number): Promise<GoogleAds
           return await commitAuthContextCache(userId, ctx, generationAtStart)
         }
         rememberAuthContextInMemory(userId, peerOrLock.peerCtx)
-        return hydrateGoogleAdsAuthContextSecrets(peerOrLock.peerCtx)
+        return hydrateAuthContextSecrets(peerOrLock.peerCtx)
       }
 
       const ctx = await loadGoogleAdsAuthContext(userId)
@@ -310,15 +380,20 @@ export function invalidateGoogleAdsAuthContextCache(userId: number): void {
   bumpAuthContextGeneration(userId)
   authContextCache.delete(userId)
   authContextInflight.delete(userId)
+  invalidateHydratedSecretsCache(userId)
   void invalidateGoogleAdsAuthContextRedis(userId)
 }
 
 /**
- * 解析用户的 Google Ads API 访问级别（复用 auth-context 缓存）。
+ * 解析用户的 Google Ads API 访问级别（优先 slim metadata，避免 hydrate）。
  */
 export async function resolveGoogleAdsApiAccessLevel(userId: number): Promise<string | null> {
-  const ctx = await getGoogleAdsAuthContext(userId)
-  return ctx.apiAccessLevel
+  const slim = await readSlimAuthContextFromCaches(userId)
+  if (slim) {
+    return slim.apiAccessLevel ?? null
+  }
+  const ctx = await getGoogleAdsAuthContextMetadata(userId)
+  return ctx.apiAccessLevel ?? null
 }
 
 /**
@@ -373,21 +448,25 @@ export function hasConfiguredGoogleAdsAuthFromContext(ctx: GoogleAdsAuthContext)
 
   if (ctx.assignment?.assignmentMode === 'shared_admin') {
     if (ctx.assignment.authType === 'service_account') {
-      return Boolean(resolveEffectiveServiceAccountId(undefined, ctx))
+      return serviceAccountConfiguredFromContext(ctx) &&
+        Boolean(resolveEffectiveServiceAccountId(undefined, ctx))
     }
-    return Boolean(ctx.oauthCredentials?.refresh_token)
+    return oauthRefreshConfiguredFromContext(ctx)
   }
 
   if (ctx.auth.authType === 'oauth') {
-    return Boolean(ctx.oauthCredentials?.refresh_token)
+    return oauthRefreshConfiguredFromContext(ctx)
   }
 
-  return Boolean(resolveEffectiveServiceAccountId(undefined, ctx))
+  return (
+    serviceAccountConfiguredFromContext(ctx) &&
+    Boolean(resolveEffectiveServiceAccountId(undefined, ctx))
+  )
 }
 
 type GoogleAdsAuthTypeHintContext = Pick<
   GoogleAdsAuthContext,
-  'auth' | 'oauthCredentials' | 'serviceAccountConfig' | 'assignment'
+  'auth' | 'oauthCredentials' | 'serviceAccountConfig' | 'assignment' | 'oauthHasRefreshToken'
 >
 
 /** 从 auth / 凭证 / assignment 推断 authType（不含 dualStack / hasConfigured 门禁） */
@@ -398,7 +477,7 @@ function resolveGoogleAdsAuthTypeFromCredentialHints(
   if (ctx.auth.authType) {
     return ctx.auth.authType
   }
-  if (ctx.oauthCredentials?.refresh_token) {
+  if (oauthRefreshConfiguredFromContext(ctx)) {
     return 'oauth'
   }
   if (ctx.serviceAccountConfig) {
@@ -607,6 +686,7 @@ export async function resolveGoogleAdsApiAuthFromContext(
   ctx: GoogleAdsAuthContext,
   linkedAccountServiceAccountId?: string | null
 ): Promise<GoogleAdsApiAuthFields> {
+  assertAuthContextSecretsHydrated(ctx)
   const dualStackError = googleAdsAuthContextDualStackError(ctx)
   if (dualStackError) {
     throw new Error(dualStackError)
@@ -668,6 +748,7 @@ export function resolveGoogleAdsCredentialStatusFields(ctx: GoogleAdsAuthContext
   createdAt: string | undefined
   updatedAt: string | undefined
 } {
+  assertAuthContextSecretsHydrated(ctx)
   const credentials = ctx.oauthCredentials
   const serviceAccount = ctx.serviceAccountConfig
   const hasServiceAccount = Boolean(serviceAccount)

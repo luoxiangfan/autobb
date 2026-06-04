@@ -55,12 +55,14 @@ import {
   assertNoConflictingGoogleAdsAuth,
   clearMemoryAuthContextCacheForTests,
   getGoogleAdsAuthContext,
+  getGoogleAdsAuthContextMetadata,
   hasConfiguredGoogleAdsAuthFromContext,
   invalidateGoogleAdsAuthContextCache,
   invalidateGoogleAdsAuthContextCacheForOwner,
   invalidateGoogleAdsAuthContextForCredentialUser,
   peekMemoryAuthContextCacheForTests,
   resetGoogleAdsAuthContextGenerationForTests,
+  resolveGoogleAdsApiAccessLevel,
   resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthForAccount,
   resolveGoogleAdsApiAuthFromContext,
@@ -143,12 +145,92 @@ describe('getGoogleAdsAuthContext', () => {
     expect(first.oauthCredentials?.refresh_token).toBe('rt-secret')
 
     const peeked = peekMemoryAuthContextCacheForTests(7)
+    expect(peeked?.secretsStripped).toBe(true)
+    expect(peeked?.oauthHasRefreshToken).toBe(true)
     expect(oauthCredentialsLookStripped(peeked?.oauthCredentials)).toBe(true)
 
     oauthFns.getGoogleAdsCredentials.mockClear()
     const second = await getGoogleAdsAuthContext(7)
     expect(second.oauthCredentials?.refresh_token).toBe('rt-secret')
-    expect(oauthFns.getGoogleAdsCredentials).toHaveBeenCalledTimes(1)
+    expect(oauthFns.getGoogleAdsCredentials).not.toHaveBeenCalled()
+  })
+
+  it('resolveGoogleAdsApiAccessLevel reads slim cache without hydrating', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 7,
+      isShared: false,
+      assignment: null,
+    })
+    assignmentFns.isGoogleAdsAuthShared.mockReturnValue(false)
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+    oauthFns.getGoogleAdsCredentials.mockResolvedValue({
+      refresh_token: 'rt-secret',
+      client_id: 'cid',
+      api_access_level: 'basic',
+    })
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt-secret' })
+    dbFns.queryOne.mockResolvedValue(null)
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+
+    await getGoogleAdsAuthContext(7)
+    oauthFns.getGoogleAdsCredentials.mockClear()
+
+    await expect(resolveGoogleAdsApiAccessLevel(7)).resolves.toBe('basic')
+    expect(oauthFns.getGoogleAdsCredentials).not.toHaveBeenCalled()
+  })
+
+  it('getGoogleAdsAuthContextMetadata supports hasConfigured without hydrate', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 7,
+      isShared: false,
+      assignment: null,
+    })
+    assignmentFns.isGoogleAdsAuthShared.mockReturnValue(false)
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+    oauthFns.getGoogleAdsCredentials.mockResolvedValue({
+      refresh_token: 'rt-secret',
+      client_id: 'cid',
+    })
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt-secret' })
+    dbFns.queryOne.mockResolvedValue(null)
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+
+    await getGoogleAdsAuthContext(7)
+    oauthFns.getGoogleAdsCredentials.mockClear()
+
+    const slim = await getGoogleAdsAuthContextMetadata(7)
+    expect(slim.secretsStripped).toBe(true)
+    expect(hasConfiguredGoogleAdsAuthFromContext(slim)).toBe(true)
+    expect(oauthFns.getGoogleAdsCredentials).not.toHaveBeenCalled()
+  })
+
+  it('commitAuthContextCache skips write when generation invalidated during load', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 7,
+      isShared: false,
+      assignment: null,
+    })
+    assignmentFns.isGoogleAdsAuthShared.mockReturnValue(false)
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+
+    let loadCount = 0
+    oauthFns.getGoogleAdsCredentials.mockImplementation(async () => {
+      loadCount += 1
+      if (loadCount === 1) {
+        invalidateGoogleAdsAuthContextCache(7)
+      }
+      return {
+        refresh_token: loadCount === 1 ? 'stale-rt' : 'fresh-rt',
+        client_id: 'cid',
+      }
+    })
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt' })
+    dbFns.queryOne.mockResolvedValue(null)
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+
+    const ctx = await getGoogleAdsAuthContext(7)
+    expect(ctx.oauthCredentials?.refresh_token).toBe('fresh-rt')
+    expect(peekMemoryAuthContextCacheForTests(7)).toBeNull()
   })
 
   it('loads service account config for shared service account user', async () => {

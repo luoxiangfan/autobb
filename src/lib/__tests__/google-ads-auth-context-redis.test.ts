@@ -50,8 +50,9 @@ describe('google-ads-auth-context-redis', () => {
     const payload = JSON.parse(String(redisFns.set.mock.calls[0][1]))
     expect(payload.generation).toBe(2)
     expect(payload.ctx.userId).toBe(defaultOAuthAuthContext.userId)
-    expect(payload.ctx.oauthCredentials?.refresh_token).toBe('')
-    expect(payload.ctx.oauthCredentials?.client_secret).toBe('')
+    expect(payload.ctx.secretsStripped).toBe(true)
+    expect(payload.ctx.oauthCredentials?.refresh_token).toBeNull()
+    expect(payload.ctx.oauthCredentials?.client_secret).toBeNull()
     expect(redisFns.set).toHaveBeenCalledWith(
       expect.stringContaining('google-ads:auth-context:7'),
       expect.any(String),

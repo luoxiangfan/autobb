@@ -19,8 +19,10 @@ import {
 import { trackOAuthApiCall } from './google-ads-api'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
+  clearGoogleAdsLinkedAccountPrepareCache,
   prepareGoogleAdsApiCallForLinkedAccountCached,
   resolveSyncAuthForAccount,
+  type GoogleAdsLinkedAccountPrepareCache,
   type OAuthApiCredentialsFields,
 } from './google-ads-accounts-auth'
 import type { GoogleAdsAuthContext } from './google-ads-auth-context'
@@ -363,6 +365,7 @@ export async function syncCampaignsFromGoogleAds(
     errors: [],
     warnings: [],
   }
+  let linkedAccountPrepareCache: GoogleAdsLinkedAccountPrepareCache | undefined
 
   try {
     console.log(`[GoogleAds Sync] Starting sync for user ${userId}...`)
@@ -414,7 +417,8 @@ export async function syncCampaignsFromGoogleAds(
       return result
     }
 
-    const linkedAccountPrepareCache = createGoogleAdsLinkedAccountPrepareCache()
+    const linkedAccountPrepareCacheRef = createGoogleAdsLinkedAccountPrepareCache()
+    linkedAccountPrepareCache = linkedAccountPrepareCacheRef
 
     // 3. 对每个账户执行同步
     for (const account of accounts) {
@@ -429,7 +433,7 @@ export async function syncCampaignsFromGoogleAds(
         const accountPrepared = await prepareGoogleAdsApiCallForLinkedAccountCached(
           userId,
           account.service_account_id,
-          linkedAccountPrepareCache
+          linkedAccountPrepareCacheRef
         )
         if (!accountPrepared.ok) {
           result.warnings.push(
@@ -660,6 +664,10 @@ export async function syncCampaignsFromGoogleAds(
       campaignName: 'N/A',
       error: `同步服务异常：${error.message}`,
     })
+  } finally {
+    if (linkedAccountPrepareCache) {
+      clearGoogleAdsLinkedAccountPrepareCache(linkedAccountPrepareCache)
+    }
   }
 
   return result

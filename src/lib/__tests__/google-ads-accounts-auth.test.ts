@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultOAuthApiAuth, defaultOAuthAuthContext } from './helpers/campaign-route-auth-context-mock'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
+  clearGoogleAdsLinkedAccountPrepareCache,
   developerTokenLooksInvalid,
   healAccountsRouteDeveloperToken,
   linkedSaPrepareCacheKey,
@@ -646,15 +647,24 @@ describe('GoogleAdsLinkedAccountPrepareCache', () => {
     expect(linkedSaPrepareCacheKey(3, 'sa-1')).not.toBe(linkedSaPrepareCacheKey(2, 'sa-1'))
   })
 
-  it('prepareGoogleAdsApiCallForLinkedAccountCached reuses result for same linked SA', async () => {
+  it('prepareGoogleAdsApiCallForLinkedAccountCached reuses slim entry and rehydrates on hit', async () => {
     const cache = createGoogleAdsLinkedAccountPrepareCache()
 
     const first = await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
     const second = await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
 
-    expect(first).toBe(second)
+    expect(first).not.toBe(second)
+    expect(first.ok && second.ok).toBe(true)
+    if (first.ok && second.ok) {
+      expect(second.refreshToken).toBe(first.refreshToken)
+      expect(second.oauthCredentials).toEqual(first.oauthCredentials)
+    }
     expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledTimes(1)
     expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledWith(1, 'sa-1')
+
+    const slim = cache.prepareByLinkedSa.get('1\0sa-1')
+    expect(slim?.authContext.secretsStripped).toBe(true)
+    expect(slim?.apiAuth.refreshToken).toBe('')
   })
 
   it('prepareGoogleAdsApiCallForLinkedAccountCached treats blank linked SA as null', async () => {
@@ -681,5 +691,16 @@ describe('GoogleAdsLinkedAccountPrepareCache', () => {
     expect(first).toEqual({ ok: false, message: expect.any(String) })
     expect(second).toEqual({ ok: false, message: expect.any(String) })
     expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledTimes(2)
+    expect(cache.prepareByLinkedSa.size).toBe(0)
+  })
+
+  it('clearGoogleAdsLinkedAccountPrepareCache empties slim entries', async () => {
+    const cache = createGoogleAdsLinkedAccountPrepareCache()
+    await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
+    expect(cache.prepareByLinkedSa.size).toBe(1)
+
+    clearGoogleAdsLinkedAccountPrepareCache(cache)
+
+    expect(cache.prepareByLinkedSa.size).toBe(0)
   })
 })

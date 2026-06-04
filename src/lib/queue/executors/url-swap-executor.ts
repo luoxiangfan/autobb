@@ -28,6 +28,7 @@ import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
+  clearGoogleAdsLinkedAccountPrepareCache,
   prepareGoogleAdsApiCallForLinkedAccountCached,
   preparedAuthContextField,
   type GoogleAdsLinkedAccountPrepareCache,
@@ -271,47 +272,51 @@ async function updateTargetsFinalUrlSuffix(params: {
   const accountMetaById = new Map<number, UrlSwapAccountMeta>()
   const prepareCache = createGoogleAdsLinkedAccountPrepareCache()
 
-  for (const target of params.targets) {
-    await assertUserExecutionAllowed(params.userId, {
-      source: `url-swap:target-update:${target.google_campaign_id || 'unknown'}`,
-    })
-
-    const targetAuth = await resolveUrlSwapTargetApiAuth({
-      userId: params.userId,
-      target,
-      db: params.db,
-      accountMetaById,
-      prepareCache,
-    })
-
-    try {
-      await updateSingleTargetWithLoginCustomerFallback({
-        target,
-        finalUrlSuffix: params.finalUrlSuffix,
-        userId: params.userId,
-        refreshToken: targetAuth.refreshToken,
-        authType: targetAuth.authType,
-        serviceAccountId:
-          targetAuth.authType === 'service_account' ? targetAuth.serviceAccountId : undefined,
-        oauthLoginCustomerId: targetAuth.oauthLoginCustomerId,
-        serviceAccountMccId: targetAuth.serviceAccountMccId,
-        parentMccId: targetAuth.parentMccId,
-        oauthCredentials: targetAuth.oauthCredentials,
-        authContext: targetAuth.authContext,
+  try {
+    for (const target of params.targets) {
+      await assertUserExecutionAllowed(params.userId, {
+        source: `url-swap:target-update:${target.google_campaign_id || 'unknown'}`,
       })
 
-      if (target.id) {
-        await markUrlSwapTargetSuccess(target.id)
-      }
-      successCount += 1
-    } catch (error: any) {
-      const message = formatGoogleAdsError(error)
-      failures.push(message)
-      failureCount += 1
-      if (target.id) {
-        await markUrlSwapTargetFailure(target.id, message)
+      const targetAuth = await resolveUrlSwapTargetApiAuth({
+        userId: params.userId,
+        target,
+        db: params.db,
+        accountMetaById,
+        prepareCache,
+      })
+
+      try {
+        await updateSingleTargetWithLoginCustomerFallback({
+          target,
+          finalUrlSuffix: params.finalUrlSuffix,
+          userId: params.userId,
+          refreshToken: targetAuth.refreshToken,
+          authType: targetAuth.authType,
+          serviceAccountId:
+            targetAuth.authType === 'service_account' ? targetAuth.serviceAccountId : undefined,
+          oauthLoginCustomerId: targetAuth.oauthLoginCustomerId,
+          serviceAccountMccId: targetAuth.serviceAccountMccId,
+          parentMccId: targetAuth.parentMccId,
+          oauthCredentials: targetAuth.oauthCredentials,
+          authContext: targetAuth.authContext,
+        })
+
+        if (target.id) {
+          await markUrlSwapTargetSuccess(target.id)
+        }
+        successCount += 1
+      } catch (error: any) {
+        const message = formatGoogleAdsError(error)
+        failures.push(message)
+        failureCount += 1
+        if (target.id) {
+          await markUrlSwapTargetFailure(target.id, message)
+        }
       }
     }
+  } finally {
+    clearGoogleAdsLinkedAccountPrepareCache(prepareCache)
   }
 
   return { successCount, failureCount, failures }

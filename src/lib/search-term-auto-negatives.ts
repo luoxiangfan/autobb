@@ -3,6 +3,7 @@ import { boolCondition, boolParam } from '@/lib/db-helpers'
 import { createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
+  clearGoogleAdsLinkedAccountPrepareCache,
   prepareGoogleAdsApiCallForLinkedAccountCached,
   preparedAuthContextField,
   type OAuthApiCredentialsFields,
@@ -198,7 +199,7 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
     return parentMccByAccountId.get(accountId) ?? fallback
   }
 
-  return async (action: {
+  const resolve = async (action: {
     userId: number
     googleAdsAccountId: number
     customerId: string
@@ -251,6 +252,11 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
       oauthLoginCustomerId: undefined,
       ...preparedAuthContextField(prepared),
     }
+  }
+
+  return {
+    resolve,
+    dispose: () => clearGoogleAdsLinkedAccountPrepareCache(prepareCache),
   }
 }
 
@@ -560,18 +566,19 @@ export async function runSearchTermAutoNegatives(
   }
 
   const db = await getDatabase()
-  const resolveGoogleAdsAuth = createSearchTermGoogleAdsAuthResolver(db)
+  const authResolver = createSearchTermGoogleAdsAuthResolver(db)
 
   let applied = 0
   let failed = 0
   let skippedDuplicateRemote = 0
 
-  for (const action of selectedActions) {
-    const userSummary = userStats.get(action.userId)!
-    const key = `${action.adGroupId}:${normalizeTermKey(action.searchTerm)}`
+  try {
+    for (const action of selectedActions) {
+      const userSummary = userStats.get(action.userId)!
+      const key = `${action.adGroupId}:${normalizeTermKey(action.searchTerm)}`
 
-    try {
-      const apiAuth = await resolveGoogleAdsAuth(action)
+      try {
+        const apiAuth = await authResolver.resolve(action)
 
       const createResults = await createSearchTermKeywordsWithFallback({
         action,
@@ -651,6 +658,9 @@ export async function runSearchTermAutoNegatives(
         error
       )
     }
+    }
+  } finally {
+    authResolver.dispose()
   }
 
   return {
@@ -790,18 +800,19 @@ export async function runSearchTermAutoPositiveKeywords(
   }
 
   const db = await getDatabase()
-  const resolveGoogleAdsAuth = createSearchTermGoogleAdsAuthResolver(db)
+  const authResolver = createSearchTermGoogleAdsAuthResolver(db)
 
   let applied = 0
   let failed = 0
   let skippedDuplicateRemote = 0
 
-  for (const action of selectedActions) {
-    const userSummary = userStats.get(action.userId)!
-    const key = `${action.adGroupId}:${normalizeTermKey(action.searchTerm)}`
+  try {
+    for (const action of selectedActions) {
+      const userSummary = userStats.get(action.userId)!
+      const key = `${action.adGroupId}:${normalizeTermKey(action.searchTerm)}`
 
-    try {
-      const apiAuth = await resolveGoogleAdsAuth(action)
+      try {
+        const apiAuth = await authResolver.resolve(action)
 
       const createResults = await createSearchTermKeywordsWithFallback({
         action,
@@ -880,6 +891,9 @@ export async function runSearchTermAutoPositiveKeywords(
         error
       )
     }
+    }
+  } finally {
+    authResolver.dispose()
   }
 
   return {

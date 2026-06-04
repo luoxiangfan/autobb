@@ -9,9 +9,11 @@ import {
 } from './google-ads-auth-context'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
+  clearGoogleAdsLinkedAccountPrepareCache,
   prepareGoogleAdsApiCallForLinkedAccountCached,
   resolveSyncUserCredentialsForJob,
   syncUserCredentialsFromPrepared,
+  type GoogleAdsLinkedAccountPrepareCache,
   type SyncUserCredentials,
   preparedAuthContextField,
 } from './google-ads-accounts-auth'
@@ -326,6 +328,7 @@ export class DataSyncService {
 
     let recordCount = 0
     let syncLogId: number | undefined
+    let linkedAccountPrepareCache: GoogleAdsLinkedAccountPrepareCache | undefined
 
     try {
       const authContext = await getGoogleAdsAuthContext(userId)
@@ -383,7 +386,7 @@ export class DataSyncService {
         throw new Error('未找到活跃的Google Ads账户')
       }
 
-      const linkedAccountPrepareCache = createGoogleAdsLinkedAccountPrepareCache()
+      linkedAccountPrepareCache = createGoogleAdsLinkedAccountPrepareCache()
 
       // 2. 为每个账户同步数据
       for (const account of accounts) {
@@ -821,6 +824,10 @@ export class DataSyncService {
       })
 
       throw error
+    } finally {
+      if (linkedAccountPrepareCache) {
+        clearGoogleAdsLinkedAccountPrepareCache(linkedAccountPrepareCache)
+      }
     }
   }
 

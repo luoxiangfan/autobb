@@ -26,6 +26,7 @@ import { analyzeProxyError } from './proxy-error-handler'
 import { pauseClickFarmTasksByOfferId } from '../../click-farm'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
+  clearGoogleAdsLinkedAccountPrepareCache,
   prepareGoogleAdsApiCallForLinkedAccountCached,
   preparedAuthContextField,
 } from '@/lib/google-ads-accounts-auth'
@@ -352,8 +353,9 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
               const pausedInDb = upd.changes || 0
               let pausedInGoogleAds = 0
               const prepareCache = createGoogleAdsLinkedAccountPrepareCache()
-              if (pausedInDb > 0 && campaignsToSyncGoogle.length > 0) {
-                for (const campaign of campaignsToSyncGoogle) {
+              try {
+                if (pausedInDb > 0 && campaignsToSyncGoogle.length > 0) {
+                  for (const campaign of campaignsToSyncGoogle) {
                   try {
                     const adsAccount = (await dbConn.queryOne(
                       `
@@ -435,6 +437,9 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                     )
                   }
                 }
+              }
+              } finally {
+                clearGoogleAdsLinkedAccountPrepareCache(prepareCache)
               }
 
               return {

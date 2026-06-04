@@ -1,5 +1,6 @@
 import { getGoogleAdsConfig } from './keyword-planner'
 import {
+  clearGoogleAdsLinkedAccountPrepareCache,
   createGoogleAdsLinkedAccountPrepareCache,
   prepareGoogleAdsApiCallForLinkedAccountCached,
 } from './google-ads-api-prepare'
@@ -104,6 +105,12 @@ export function createCreativeGenerationAuthCache(): CreativeGenerationAuthCache
     ...createGoogleAdsLinkedAccountPrepareCache(),
     validationByOfferId: new Map(),
   }
+}
+
+/** job / 请求结束时显式释放创意生成 auth 缓存（含 prepare slim 与 validation） */
+export function clearCreativeGenerationAuthCache(cache: CreativeGenerationAuthCache): void {
+  clearGoogleAdsLinkedAccountPrepareCache(cache)
+  cache.validationByOfferId.clear()
 }
 
 export async function validateGoogleAdsConfigForCreativeGeneration(
