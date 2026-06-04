@@ -146,6 +146,14 @@ function clampRangeToBounds(range: DateRange | undefined, bounds: DateBounds): D
   return { from, to }
 }
 
+function dateRangesEqual(left: DateRange | undefined, right: DateRange | undefined): boolean {
+  if (!left?.from || !right?.from) return left === right
+  const leftTo = left.to || left.from
+  const rightTo = right.to || right.from
+  return formatYmd(left.from) === formatYmd(right.from)
+    && formatYmd(leftTo) === formatYmd(rightTo)
+}
+
 export default function AffiliateCommissionReportPage() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const [dateBounds, setDateBounds] = useState<DateBounds | null>(null)
@@ -189,15 +197,11 @@ export default function AffiliateCommissionReportPage() {
     ? `用户(${selectedUserFilters.length})`
     : '所有用户'
 
-  const boundsQueryString = useMemo(() => {
-    const params = new URLSearchParams()
-    params.set('meta', 'bounds')
-    params.set('platform', affiliateFilter)
-    if (isAdmin && selectedUserFilters.length > 0) {
-      params.set('userIds', selectedUserFilters.join(','))
-    }
-    return params.toString()
-  }, [affiliateFilter, isAdmin, selectedUserFilters])
+  const boundsUserScopeKey = useMemo(() => {
+    if (!isAdmin) return 'self'
+    if (selectedUserFilters.length === 0) return 'none'
+    return selectedUserFilters.slice().sort((left, right) => left.localeCompare(right)).join(',')
+  }, [isAdmin, selectedUserFilters])
 
   useEffect(() => {
     const checkAdminAndLoadUsers = async () => {
@@ -272,8 +276,15 @@ export default function AffiliateCommissionReportPage() {
     const loadDateBounds = async () => {
       setBoundsLoading(true)
       try {
+        const params = new URLSearchParams()
+        params.set('meta', 'bounds')
+        params.set('platform', affiliateFilter)
+        if (isAdmin && selectedUserFilters.length > 0) {
+          params.set('userIds', selectedUserFilters.join(','))
+        }
+
         const response = await fetch(
-          `/api/openclaw/affiliate-commission-report?${boundsQueryString}`,
+          `/api/openclaw/affiliate-commission-report?${params.toString()}`,
           { credentials: 'include' }
         )
         const payload = await response.json() as BoundsPayload & { error?: string }
@@ -306,7 +317,9 @@ export default function AffiliateCommissionReportPage() {
     }
 
     void loadDateBounds()
-  }, [accessResolved, boundsQueryString])
+    // Reload bounds only when user scope changes; platform switches reuse report.dateBounds.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- affiliateFilter intentionally omitted to avoid duplicate report requests on platform switch
+  }, [accessResolved, boundsUserScopeKey])
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams()
@@ -331,6 +344,26 @@ export default function AffiliateCommissionReportPage() {
     return params.toString()
   }, [startDate, endDate, affiliateFilter, isAdmin, selectedUserFilters])
 
+  const applyReportPayload = useCallback((payload: ReportPayload['report']) => {
+    setReport(payload)
+    setShowUserScope(Boolean(payload.showUserScope))
+
+    const nextBounds = payload.dateBounds
+    setDateBounds(nextBounds)
+    if (!nextBounds.minDate || !nextBounds.maxDate) {
+      return
+    }
+
+    setDateRange((current) => {
+      if (!dateRangeInitializedRef.current) {
+        dateRangeInitializedRef.current = true
+        return buildInitialDateRange(nextBounds)
+      }
+      const nextRange = clampRangeToBounds(current, nextBounds)
+      return dateRangesEqual(current, nextRange) ? current : nextRange
+    })
+  }, [])
+
   const loadReport = useCallback(async () => {
     if (!startDate || !endDate || !accessResolved || boundsLoading) return
     if (isAdmin && usersLoading) return
@@ -344,15 +377,14 @@ export default function AffiliateCommissionReportPage() {
       if (!response.ok) {
         throw new Error(payload.error || '加载佣金数据失败')
       }
-      setReport(payload.report)
-      setShowUserScope(Boolean(payload.report.showUserScope))
+      applyReportPayload(payload.report)
     } catch (error: any) {
       showError('加载失败', error?.message || '无法加载联盟佣金数据')
       setReport(null)
     } finally {
       setLoading(false)
     }
-  }, [queryString, startDate, endDate, isAdmin, usersLoading, accessResolved, boundsLoading])
+  }, [queryString, startDate, endDate, isAdmin, usersLoading, accessResolved, boundsLoading, applyReportPayload])
 
   useEffect(() => {
     void loadReport()
@@ -677,6 +709,7 @@ export default function AffiliateCommissionReportPage() {
                           type="button"
                           size="sm"
                           onClick={() => {
+                            setBoundsLoading(true)
                             const nextFilters = pendingUserFilters.slice()
                             setSelectedUserFilters(nextFilters)
                             setUserFilterMenuOpen(false)
