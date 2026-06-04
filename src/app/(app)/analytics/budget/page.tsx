@@ -1,11 +1,10 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { showError } from '@/lib/toast-utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
   Select,
@@ -29,11 +28,9 @@ import {
   Activity,
   Target,
   RefreshCw,
-  CalendarDays,
 } from 'lucide-react'
 import { useBudgetAnalytics } from '@/lib/hooks/useAnalytics'
 import { formatCurrency } from '@/lib/currency'
-import { formatCurrency as formatCurrencyDashboard, formatMultiCurrency } from '@/lib/utils'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
 
 

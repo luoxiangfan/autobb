@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import { Info, ExternalLink, Shield, Zap, Globe, Settings as SettingsIcon, Plus, Trash2, Key, RefreshCw, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, BookOpen, Star } from 'lucide-react'
+import { Info, ExternalLink, Shield, Zap, Globe, Settings as SettingsIcon, Plus, Trash2, Key, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, BookOpen, Star } from 'lucide-react'
 import { getCountryOptionsForUI } from '@/lib/language-country-codes'
 import {
   GEMINI_ACTIVE_MODEL,
@@ -466,7 +466,6 @@ export default function SettingsPage() {
   const [googleAdsAccounts, setGoogleAdsAccounts] = useState<GoogleAdsAccount[]>([])
   const [loadingGoogleAdsAccounts, setLoadingGoogleAdsAccounts] = useState(false)
   const [showGoogleAdsAccounts, setShowGoogleAdsAccounts] = useState(false)
-  const [verifyingGoogleAds, setVerifyingGoogleAds] = useState(false)
   const [startingOAuth, setStartingOAuth] = useState(false)
   const [googleAdsAuthMethod, setGoogleAdsAuthMethod] = useState<'oauth' | 'service_account'>('oauth')
   const { prepareAuthForAccountsFetch } = useGoogleAdsAccountsAuth()
@@ -479,7 +478,7 @@ export default function SettingsPage() {
   })
   const [savingServiceAccount, setSavingServiceAccount] = useState(false)
   const [serviceAccounts, setServiceAccounts] = useState<any[]>([])
-  const [loadingServiceAccounts, setLoadingServiceAccounts] = useState(false)
+  const [, setLoadingServiceAccounts] = useState(false)
   const [deletingServiceAccountId, setDeletingServiceAccountId] = useState<string | null>(null)
   const [deletingOAuthConfig, setDeletingOAuthConfig] = useState(false)
   const [deleteConfirmState, setDeleteConfirmState] = useState<
@@ -803,32 +802,6 @@ export default function SettingsPage() {
     } catch (err: any) {
       toast.error(err.message || 'OAuth启动失败')
       setStartingOAuth(false)
-    }
-  }
-
-  // 验证 Google Ads 凭证
-  const handleVerifyGoogleAdsCredentials = async () => {
-    try {
-      setVerifyingGoogleAds(true)
-
-      const response = await fetch('/api/google-ads/credentials/verify', {
-        method: 'POST',
-        credentials: 'include',
-      })
-
-      const data = await response.json()
-
-      if (data.success && data.data.valid) {
-        // 🔧 修复(2025-12-11): snake_case → camelCase
-        toast.success(`凭证有效${data.data.customerId ? ` - Customer ID: ${data.data.customerId}` : ''}`)
-        await fetchGoogleAdsCredentialStatus()
-      } else {
-        toast.error(data.data.error || '凭证无效')
-      }
-    } catch (err: any) {
-      toast.error(err.message || '验证失败')
-    } finally {
-      setVerifyingGoogleAds(false)
     }
   }
 
@@ -1431,19 +1404,6 @@ export default function SettingsPage() {
       return
     }
     requestDeleteServiceAccount(id)
-  }
-
-  const getValidationIcon = (status?: string | null): string => {
-    switch (status) {
-      case 'valid':
-        return '✅'
-      case 'invalid':
-        return '❌'
-      case 'pending':
-        return '⏳'
-      default:
-        return ''
-    }
   }
 
   const isReadOnlySetting = (category: string, key: string): boolean => {

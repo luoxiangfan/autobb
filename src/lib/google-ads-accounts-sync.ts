@@ -148,8 +148,6 @@ export async function syncAccountsFromAPI(
 
       let customer: any
       let preloadedAccountInfo: any[] | null = null
-      let lastError: Error | null = null
-      let successLoginCustomerId: string | null = null
 
       // 🔧 修复(2025-12-25): 尝试多个login_customer_id直到成功
       // 重点：每次尝试都需要重新创建客户端，因为@htdangkhoa/google-ads在实例化时固化了login_customer_id
@@ -201,12 +199,11 @@ export async function syncAccountsFromAPI(
           }
 
           // 如果执行到这行代码没有抛出异常，说明成功
-          successLoginCustomerId = lcId
           loginAttempts.push({ loginCustomerId: lcId, error: null, success: true })
           console.log(`   ✅ 使用 login_customer_id: ${lcIdDisplay} 成功访问账户 ${customerId}`)
           break
         } catch (error: any) {
-          lastError = error
+          void error
           const errorMessage = formatErrorMessage(error) || '未知错误'
           loginAttempts.push({
             loginCustomerId: lcId,
@@ -259,9 +256,6 @@ export async function syncAccountsFromAPI(
 
         throw enhancedError
       }
-
-      // 将成功的login_customer_id传下去（用于后续子账户查询）
-      const effectiveLoginCustomerId = successLoginCustomerId
 
       // 🔧 修复(2025-12-25): 分步查询，先查基本信息，再查 status
       // 有些账户的 status 字段可能有权限问题导致 field_violations 错误
@@ -318,7 +312,7 @@ export async function syncAccountsFromAPI(
             if (statusInfo && statusInfo.length > 0) {
               rawStatus = statusInfo[0].customer?.status
             }
-          } catch (statusError: any) {
+          } catch (_statusError: any) {
             console.warn(`   ⚠️ 账户 ${customerId} status 字段查询失败（权限不足或账户状态异常），使用默认值 UNKNOWN`)
           }
         }
@@ -388,7 +382,7 @@ export async function syncAccountsFromAPI(
               console.log(`   💰 ${customerId} 余额: ${accountBalance ? parseFloat((accountBalance / 1000000).toFixed(2)) : 'N/A'}`)
             }
           }
-        } catch (budgetError) {
+        } catch (_budgetError) {
           console.log(`   ⚠️ ${customerId} 无法获取预算信息（可能账户无预算设置）`)
         }
 

@@ -53,7 +53,7 @@ export function getActiveOptimizationRules(): OptimizationRule[] {
  */
 export function applyOptimizationsToPrompt(
   basePrompt: string,
-  orientation: 'brand' | 'product' | 'promo'
+  _orientation: 'brand' | 'product' | 'promo'
 ): string {
   const activeRules = getActiveOptimizationRules()
 

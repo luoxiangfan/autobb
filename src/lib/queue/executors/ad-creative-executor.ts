@@ -13,7 +13,6 @@ import {
   normalizeAdCreativeGenerationMode,
   type AdCreativeGenerationMode,
 } from '@/lib/ad-creative-generation-mode'
-import { generateAdCreative } from '@/lib/ad-creative-gen'
 import { createAdCreative } from '@/lib/ad-creative'
 import {
   createCreativeAdStrengthPayload,
@@ -194,10 +193,6 @@ export async function executeAdCreativeGeneration(
   const creativeTaskHeartbeatMs = parsePositiveIntEnv(
     process.env.CREATIVE_TASK_HEARTBEAT_MS,
     15000
-  )
-  const creativeKeywordBrandOnly = parseBooleanEnv(
-    process.env.CREATIVE_KEYWORD_BRAND_ONLY,
-    false
   )
   const hardQualityGateEnabled = parseBooleanEnv(
     process.env.AD_CREATIVE_HARD_QUALITY_GATE_ENABLED,

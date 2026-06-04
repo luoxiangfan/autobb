@@ -16,8 +16,7 @@ import {
   getBucketInfo,
   calculateKeywordOverlapRate,
   determineClusteringStrategy,
-  type OfferKeywordPool,
-  type BucketType
+  type OfferKeywordPool
 } from '../offer-keyword-pool'
 
 // 新增导入
@@ -26,7 +25,6 @@ import {
   containsPureBrand,
   isBrandIrrelevant,
   filterLowIntentKeywords,
-  filterMismatchedGeoKeywords,
   calculateSearchVolumeThreshold,
   isPureBrandKeyword as isExactPureBrandKeyword  // 🔥 2026-01-05: 使用别名避免与 offer-keyword-pool.ts 中的同名函数冲突
 } from '../keyword-quality-filter'

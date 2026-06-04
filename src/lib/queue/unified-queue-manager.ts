@@ -860,7 +860,7 @@ export class UnifiedQueueManager {
       }
 
       // 执行任务（带超时）
-      const result = await this.executeWithTimeout(
+      await this.executeWithTimeout(
         executor(task),
         this.config.taskTimeout
       )

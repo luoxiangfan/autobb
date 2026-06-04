@@ -206,7 +206,7 @@ export async function resolveAffiliateLink(
             'Pragma': 'no-cache',
           },
           // 跟随重定向但手动处理
-          beforeRedirect: (options: any, responseDetails: any) => {
+          beforeRedirect: (_options: any, _responseDetails: any) => {
             // 这个不会被调用，因为maxRedirects=0
           },
         })

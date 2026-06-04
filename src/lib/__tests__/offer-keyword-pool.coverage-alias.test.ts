@@ -10,7 +10,6 @@ vi.mock('../unified-keyword-service', () => ({
 
 import {
   DEFAULT_COVERAGE_KEYWORD_CONFIG,
-  DEFAULT_SYNTHETIC_CONFIG,
   canGenerateCoverageCreative,
   canGenerateSyntheticCreative,
   getCoverageBucketKeywords,
@@ -20,10 +19,6 @@ describe('offer-keyword-pool coverage aliases', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     getKeywordVolumesForExistingMock.mockResolvedValue([])
-  })
-
-  it('keeps legacy synthetic config as an alias of coverage config', () => {
-    expect(DEFAULT_SYNTHETIC_CONFIG).toBe(DEFAULT_COVERAGE_KEYWORD_CONFIG)
   })
 
   it('keeps legacy synthetic availability helper aligned with coverage helper', async () => {

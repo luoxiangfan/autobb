@@ -15,8 +15,7 @@
 
 import type {
   HeadlineAsset,
-  DescriptionAsset,
-  QualityMetrics
+  DescriptionAsset
 } from './ad-creative'
 import {
   getKeywordSearchVolumesForPlannerContext,
@@ -975,8 +974,8 @@ function calculateQuality(
 function calculateDifferentiation(
   headlines: HeadlineAsset[],
   descriptions: DescriptionAsset[],
-  brandName?: string,
-  productData?: any
+  _brandName?: string,
+  _productData?: any
 ): number {
   const allTexts = [...headlines.map(h => h.text), ...descriptions.map(d => d.text)].join(' ').toLowerCase()
   let score = 0
@@ -1352,7 +1351,7 @@ async function isRedisAvailable(): Promise<boolean> {
     redisAvailable = true
     lastRedisCheck = now
     return true
-  } catch (error) {
+  } catch (_error) {
     redisAvailable = false
     lastRedisCheck = now
     return false

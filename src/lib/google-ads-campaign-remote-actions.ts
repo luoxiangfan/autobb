@@ -6,7 +6,6 @@ import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-custo
 import {
   removeGoogleAdsCampaign,
   updateGoogleAdsCampaignStatus,
-  type OAuthApiCredentialsFields,
 } from './google-ads-api'
 import { getGoogleAdsAccountDeleteRemoteConfig } from './google-ads-account-delete-config'
 import { runWithConcurrency, withTimeout } from './run-with-concurrency'

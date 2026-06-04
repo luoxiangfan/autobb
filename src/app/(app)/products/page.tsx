@@ -55,7 +55,6 @@ import {
   ChevronDown,
   Search,
   Building2,
-  HelpCircle,
   AlertCircle,
   Info,
   PauseCircle,

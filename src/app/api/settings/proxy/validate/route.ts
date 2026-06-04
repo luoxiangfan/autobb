@@ -13,8 +13,6 @@ export async function POST(request: NextRequest) {
     if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-    const userId = authResult.user.userId
-
     const body = await request.json()
     const { proxy_url } = body
 

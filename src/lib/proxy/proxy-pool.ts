@@ -5,9 +5,8 @@
  * Expected Benefit: Save 3-5s per request by eliminating cold-start health checks
  */
 
-import { HttpsProxyAgent } from 'https-proxy-agent'
 import type { ProxyIP } from './types'
-import { getProxyIp, fetchProxyIp } from './fetch-proxy-ip'
+import { fetchProxyIp } from './fetch-proxy-ip'
 import { getDatabase } from '../db'
 import { normalizeCountryCode } from '../language-country-codes'
 

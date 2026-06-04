@@ -116,7 +116,7 @@ function toQueryString(query?: Record<string, string | number | boolean | null |
   return params.toString()
 }
 
-export async function fetchAutoadsAsUser<T = any>(params: {
+export async function fetchAutoadsAsUser(params: {
   userId: number
   path: string
   method?: string

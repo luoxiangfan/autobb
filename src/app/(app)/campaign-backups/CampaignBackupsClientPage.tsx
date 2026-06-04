@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Table,
@@ -33,7 +33,7 @@ import { Label } from '@/components/ui/label'
 import { Alert } from '@/components/ui/alert'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
-import { Package, Calendar, RotateCcw, Loader2, ExternalLink, FileText, CheckCircle2, XCircle } from 'lucide-react'
+import { Package, Calendar, RotateCcw, Loader2 } from 'lucide-react'
 import {
   BatchProgressIndicator,
   type BatchProgressErrorDetail,

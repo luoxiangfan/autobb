@@ -1,11 +1,10 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { showError } from '@/lib/toast-utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -14,10 +13,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { LazyROITrendChart, LazyCampaignROIChart, LazyOfferROIChart } from '@/components/LazyChartLoader'
-import { Download, TrendingUp, TrendingDown, DollarSign, Target, Percent, RefreshCw, CalendarDays, Coins } from 'lucide-react'
+import { Download, TrendingUp, TrendingDown, DollarSign, Target, Percent, RefreshCw, Coins } from 'lucide-react'
 import { useROIAnalytics } from '@/lib/hooks/useAnalytics'
 import { formatCurrency } from '@/lib/currency'
-import { formatCurrency as formatCurrencyDashboard, formatMultiCurrency } from '@/lib/utils'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
 
 

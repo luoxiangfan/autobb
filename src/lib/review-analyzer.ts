@@ -16,7 +16,7 @@ import { generateContent } from './gemini'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import { getLanguageNameForCountry } from './language-country-codes'
 import { compressReviews, type RawReview as CompressorRawReview } from './review-compressor'
-import { withCache, type CacheOptions } from './ai-cache'
+import { withCache } from './ai-cache'
 import { loadPrompt } from './prompt-loader'
 
 // ==================== 数据结构定义 ====================
@@ -238,7 +238,6 @@ export async function scrapeAmazonReviews(
     ]
 
     let reviewSelectorFound = false
-    let foundSelector = ''
 
     // 🔧 优化(2025-12-11): 增加重试机制，每次等待更长时间
     for (let attempt = 1; attempt <= 3; attempt++) {
@@ -251,7 +250,6 @@ export async function scrapeAmazonReviews(
           await page.waitForSelector(selector, { timeout })
           console.log(`✅ 找到评论选择器: ${selector}`)
           reviewSelectorFound = true
-          foundSelector = selector
           break
         } catch {
           // 继续尝试下一个选择器
@@ -322,14 +320,12 @@ export async function scrapeAmazonReviews(
       ]
 
       let reviewElements: NodeListOf<Element> | null = null
-      let usedSelector = ''
 
       for (const selector of selectorGroups) {
         try {
           const elements = document.querySelectorAll(selector)
           if (elements.length > 0) {
             reviewElements = elements
-            usedSelector = selector
             console.log(`✅ [Browser Context] 找到${elements.length}个评论元素，使用选择器: ${selector}`)
             break
           }

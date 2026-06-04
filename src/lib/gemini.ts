@@ -262,8 +262,6 @@ async function callDirectAPI(
     }
   }
 
-  let apiKey: string
-
   if (provider === 'relay') {
     const relayApiKey = await getUserOnlySetting('ai', 'gemini_relay_api_key', userId)
     if (!relayApiKey?.value) {
@@ -271,19 +269,15 @@ async function callDirectAPI(
         `用户(ID=${userId})未配置第三方中转 API 密钥。请在设置页面配置您自己的 relay API 密钥。`
       )
     }
-    apiKey = relayApiKey.value
     console.log(`🌐 使用用户(ID=${userId})的第三方中转 API`)
   } else {
-    if (forcedProviderConfig?.apiKey) {
-      apiKey = forcedProviderConfig.apiKey
-    } else {
+    if (!forcedProviderConfig?.apiKey) {
       const apiKeySetting = await getUserOnlySetting('ai', 'gemini_api_key', userId)
       if (!apiKeySetting?.value) {
         throw new Error(
           `用户(ID=${userId})未配置 Gemini 官方 API 密钥。请在设置页面配置您自己的 Gemini API 密钥。`
         )
       }
-      apiKey = apiKeySetting.value
     }
     console.log(`🌐 使用用户(ID=${userId})的 Gemini 官方 API`)
   }

@@ -45,7 +45,6 @@ function jsonNoStore(body: any, init?: { status?: number }) {
   })
 }
 
-const IS_DELETED_TRUE = 'IS_DELETED_TRUE'
 
 function parseDbTimestampToMs(value: string | null | undefined) {
   if (!value) return NaN

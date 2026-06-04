@@ -104,7 +104,7 @@ export async function scrapeUrlWithBrowser(
         const initialWait = 1000 + Math.random() * 2000  // 1-3秒
         console.log(`⏰ DOM加载后等待: ${Math.round(initialWait)}ms`)
         await new Promise(resolve => setTimeout(resolve, initialWait))
-      } catch (e) {
+      } catch (_e) {
         console.warn(`⚠️ DOM加载超时,但继续执行`)
       }
 
@@ -115,7 +115,7 @@ export async function scrapeUrlWithBrowser(
         try {
           await page.waitForLoadState('networkidle', { timeout: 15000 })
           console.log(`✅ 网络空闲等待完成`)
-        } catch (networkError) {
+        } catch (_networkError) {
           console.warn(`⚠️ Network idle timeout (15s), continuing...`)
         }
       }
@@ -197,7 +197,7 @@ export async function scrapeUrlWithBrowser(
             // 滚动页面
             await page.mouse.wheel(0, Math.random() * 300 + 100)
             console.log(`🖱️ 已模拟人类鼠标移动路径和滚动`)
-          } catch (e) {
+          } catch (_e) {
             console.warn(`⚠️ 鼠标模拟失败，继续执行`)
           }
 
@@ -214,7 +214,7 @@ export async function scrapeUrlWithBrowser(
               page.waitForLoadState('networkidle', { timeout: 15000 }),  // ✅ 8秒 → 15秒
             ])
             console.log(`✅ JavaScript渲染完成`)
-          } catch (waitError) {
+          } catch (_waitError) {
             console.warn(`⚠️ JavaScript渲染等待超时，继续执行`)
 
             // ✅ 修复4: 超时后再等待一次（给Amazon最后机会）
@@ -362,7 +362,7 @@ export async function scrapeUrlWithBrowser(
             }
 
             console.warn(`🔍 页面结构调试:`, JSON.stringify(debugInfo, null, 2))
-          } catch (e) {
+          } catch (_e) {
             console.warn('调试信息提取失败')
           }
 
@@ -388,14 +388,11 @@ export async function scrapeUrlWithBrowser(
         }).catch(() => {})
       } else {
         // 🔥 P1优化: 使用智能等待策略
-        const waitStart = Date.now()
         const waitResult = await smartWaitForLoad(page, url).catch(() => ({
           waited: 10000,
           loadComplete: false,
           signals: []
         }))
-        const waitTime = Date.now() - waitStart
-
         console.log(`⏱️ 智能等待完成: ${waitResult.waited}ms, 信号: ${waitResult.signals.join(', ')}`)
 
         // 记录优化效果（相比固定10秒networkidle）
@@ -503,7 +500,7 @@ export async function scrapeUrlWithBrowser(
           if (screenshot) {
             console.log('✅ 第二次尝试截图成功（未等待字体加载）')
           }
-        } catch (retryError) {
+        } catch (_retryError) {
           console.warn('⚠️ 第二次截图也失败，跳过截图继续执行')
         }
       }

@@ -837,7 +837,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
           cleanedTaskIds.push(taskId)
           console.log(`🧹 清理无效用户任务: ${taskId} (userId=${task.userId})`)
         }
-      } catch (e) {
+      } catch (_e) {
         // 解析失败的任务也清理掉
         await this.client.hdel(this.getKey('tasks'), taskId)
         cleanedTaskIds.push(taskId)
@@ -869,7 +869,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
       if (taskJson) {
         try {
           tasks.push(JSON.parse(taskJson))
-        } catch (e) {
+        } catch (_e) {
           console.error(`无法解析任务: ${taskId}`)
         }
       }

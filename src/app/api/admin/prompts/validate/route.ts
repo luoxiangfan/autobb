@@ -100,7 +100,7 @@ function extractTemplateVariables(content: string): Array<{
  */
 function analyzeVariables(
   variables: Array<{ name: string; fullMatch: string; line: number; position: number; isOptional: boolean; hasDefault: boolean; defaultValue?: string }>,
-  content: string
+  _content: string
 ) {
   // 统计每个变量的使用次数
   const usageCount: Record<string, number> = {}

@@ -106,7 +106,7 @@ export default function PromptsManagementPage() {
   // 编辑模式相关状态（弹窗内）
   const [editMode, setEditMode] = useState(false)
   const [editedContent, setEditedContent] = useState('')
-  const [newVersion, setNewVersion] = useState('')
+  const [, setNewVersion] = useState('')
   const [changeNotes, setChangeNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [predictedNextVersion, setPredictedNextVersion] = useState('')  // 预测的下一个版本号

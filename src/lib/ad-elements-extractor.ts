@@ -23,7 +23,7 @@ import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './b
 import { loadPrompt, interpolateTemplate } from './prompt-loader'
 import { classifyKeywordIntent } from './keyword-intent'
 import { isInvalidKeyword } from './keyword-invalid-filter'
-import type { AmazonProductData, AmazonStoreData } from './stealth-scraper'
+import type { AmazonProductData } from './stealth-scraper'
 import type {
   StoreProduct,
   EnrichedStoreProduct,
@@ -1048,7 +1048,7 @@ async function extractFromStore(
 async function getHeadlinePrompt(
   product: ProductInfo,
   topKeywords: Array<{ keyword: string; searchVolume: number }>,
-  targetLanguage: string
+  _targetLanguage: string
 ): Promise<string> {
   // 📦 从数据库加载prompt模板 (版本管理)
   const promptTemplate = await loadPrompt('ad_elements_headlines')
@@ -1402,7 +1402,7 @@ async function generateHeadlinesFromMultipleProducts(
  * 🔥 Enhanced to utilize productInfo deep analysis fields
  * 🎯 P1修复: 修复变量命名不一致和添加缺失变量
  */
-async function getDescriptionPrompt(product: ProductInfo, targetLanguage: string): Promise<string> {
+async function getDescriptionPrompt(product: ProductInfo, _targetLanguage: string): Promise<string> {
   // 📦 从数据库加载prompt模板 (版本管理)
   const promptTemplate = await loadPrompt('ad_elements_descriptions')
 

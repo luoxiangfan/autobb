@@ -62,23 +62,6 @@ const USER_AGENT_POOL = [
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:132.0) Gecko/20100101 Firefox/132.0',
 ]
 
-/**
- * 平台映射
- */
-const PLATFORM_MAP: Record<string, string> = {
-  'Windows': 'Win32',
-  'Macintosh': 'MacIntel',
-}
-
-/**
- * 浏览器厂商映射
- */
-const VENDOR_MAP: Record<string, string> = {
-  'Chrome': 'Google Inc.',
-  'Safari': 'Apple Computer, Inc.',
-  'Firefox': '',
-  'Edge': 'Microsoft Corporation',
-}
 
 /**
  * 语言池

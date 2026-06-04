@@ -25,7 +25,7 @@ interface ExtractData {
 
 function detectScrapingFailure(
   data: ExtractData,
-  offerId: number
+  _offerId: number
 ): { failed: boolean; reason?: string } {
   const debug = data.debug
 

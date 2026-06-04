@@ -52,9 +52,6 @@ export async function GET(
       [promptId]
     )
 
-    // Usage stats feature offline (prompt_usage_stats table removed)
-    const usageStats: any[] = []
-
     return NextResponse.json({
       success: true,
       data: {

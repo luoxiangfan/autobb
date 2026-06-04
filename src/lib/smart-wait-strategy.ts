@@ -105,8 +105,6 @@ export async function smartWaitForLoad(
 }> {
   const complexity = assessPageComplexity(url)
   const maxWaitTime = options?.maxWaitTime || complexity.recommendedWaitTime
-  const checkInterval = options?.checkInterval || 500
-
   const startTime = Date.now()
   const signals: string[] = []
 
@@ -114,7 +112,7 @@ export async function smartWaitForLoad(
   try {
     await page.waitForLoadState('domcontentloaded', { timeout: 5000 })
     signals.push('dom-loaded')
-  } catch (error) {
+  } catch (_error) {
     console.warn('DOM加载超时')
   }
 
@@ -164,7 +162,7 @@ export async function smartWaitForLoad(
           }
 
           await page.waitForTimeout(shortInterval)
-        } catch (error) {
+        } catch (_error) {
           return null
         }
       }
@@ -224,7 +222,7 @@ export async function smartWaitForSelector(
       found: true,
       waited: Date.now() - startTime,
     }
-  } catch (error) {
+  } catch (_error) {
     return {
       found: false,
       waited: Date.now() - startTime,
@@ -263,7 +261,7 @@ export async function smartWaitForAnySelector(
       foundSelector: results,
       waited: Date.now() - startTime,
     }
-  } catch (error) {
+  } catch (_error) {
     return {
       foundSelector: null,
       waited: Date.now() - startTime,

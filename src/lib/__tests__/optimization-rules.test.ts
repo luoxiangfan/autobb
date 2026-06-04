@@ -5,8 +5,7 @@
 import {
   createOptimizationEngine,
   OptimizationRulesEngine,
-  type CampaignMetrics,
-  type OptimizationRecommendation
+  type CampaignMetrics
 } from '../optimization-rules'
 
 describe('OptimizationRulesEngine', () => {

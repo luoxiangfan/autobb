@@ -14,7 +14,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter, useParams } from 'next/navigation'
-import { Stepper, type Step } from '@/components/ui/stepper'
+import Stepper, { type Step } from '@/components/ui/stepper'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react'

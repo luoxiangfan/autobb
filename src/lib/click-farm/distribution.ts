@@ -71,7 +71,7 @@ export function normalizeDistribution(
   }
 
   // Step 4: 按比例调整活跃时段的点击数
-  const result = distribution.map((count, hour) => {
+  const result = distribution.map((count, _hour) => {
     if (count === 0) return 0; // 非活跃时段保持0
     const adjusted = Math.round((count / currentActiveTotal) * targetTotal);
     return Math.max(adjusted, 1); // 活跃时段至少为1

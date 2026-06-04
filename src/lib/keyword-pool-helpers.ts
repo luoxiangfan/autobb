@@ -62,23 +62,6 @@ import type { Offer } from './offers'
 // 动态过滤逻辑（无硬编码配置）
 // ============================================
 
-/**
- * 检测关键词是否包含其他品牌名（竞品过滤）
- * 逻辑：关键词包含大写开头的非目标品牌词 = 竞品
- */
-function isCompetitorKeyword(keyword: string, brandName: string): boolean {
-  const brandLower = brandName.toLowerCase()
-  const words = keyword.split(/\s+/)
-
-  for (const word of words) {
-    // 大写开头 + 非目标品牌 = 可能是竞品
-    if (word[0] === word[0].toUpperCase() && !brandLower.includes(word.toLowerCase())) {
-      return true
-    }
-  }
-  return false
-}
-
 function buildPlannerBrandKeywords(brandName: string, _category: string): string[] {
   const normalizedFull = normalizeGoogleAdsKeyword(brandName)
   if (normalizedFull) return [normalizedFull]
@@ -1902,7 +1885,7 @@ export function filterKeywords(
 export function selectKeywordsForCreative(
   brandKeywords: PoolKeywordData[],
   bucketKeywords: PoolKeywordData[],
-  bucketIntent: string
+  _bucketIntent: string
 ): PoolKeywordData[] {
   // 品牌词：选择 searchVolume 最高的 2-3 个
   const topBrand = brandKeywords
@@ -1998,8 +1981,6 @@ function normalizeBrandVariants(keyword: string, brandVariants: Record<string, s
  * - 通用修饰词移除（best, new, for 等）
  */
 function performSemanticDeduplication(keywords: string[]): string[] {
-  const groups = new Map<string, string[]>()
-
   // 🔥 2025-12-26：预处理：构建关键词变体映射
   const keywordVariants = new Map<string, string>() // 变体 -> 规范形式
   for (const keyword of keywords) {
@@ -2060,19 +2041,6 @@ function normalizeKeyword(keyword: string): string {
     // 移除品牌名（只保留品类特征）- 用于品类匹配
     // 注意：这里不直接移除品牌名，而是保留完整形式用于最终选择
     // 移除多余空格
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-/**
- * 生成语义键
- * 移除修饰词，保留核心概念
- */
-function generateSemanticKey(keyword: string): string {
-  return keyword
-    .toLowerCase()
-    .replace(/\b(buy|purchase|order|shop|price|cost|deal|discount)\b/g, '') // 移除购买意图词
-    .replace(/\d+w?/g, '') // 移除数字和单位
     .replace(/\s+/g, ' ')
     .trim()
 }

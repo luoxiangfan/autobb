@@ -362,16 +362,16 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
             if (win) {
               try {
                 win.navigator.webdriver = undefined
-              } catch (e) {}
+              } catch (_e) {}
             }
             return win
           }
         })
       }
-    } catch (e) {}
+    } catch (_e) {}
 
     // ===== P2优化: 隐藏console.debug =====
-    const consoleDebug = console.debug
+    void console.debug
     console.debug = function() {
       return null
     }

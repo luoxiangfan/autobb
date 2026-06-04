@@ -142,12 +142,6 @@ const MODE_ALIASES: Record<string, OfferExtractionMode> = {
   原始: 'original',
 }
 
-function parsePositiveIntEnv(value: string | undefined, fallback: number): number {
-  if (!value) return fallback
-  const parsed = Number.parseInt(value, 10)
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback
-  return parsed
-}
 
 export function getDefaultOfferExtractionMode(): OfferExtractionMode {
   const raw = (process.env.OFFER_EXTRACTION_MODE_DEFAULT || OFFER_EXTRACTION_MODE_DEFAULT).trim().toLowerCase()

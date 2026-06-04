@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth, createUser, generateUniqueUsername } from '@/lib/auth'
+import { verifyAuth, createUser } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { logUserCreated, UserManagementContext } from '@/lib/audit-logger'
 import { buildAdminUsersOrderBy } from '@/lib/admin/users-query'

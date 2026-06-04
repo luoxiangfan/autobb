@@ -212,7 +212,7 @@ export function validatePriorityDistribution(
 
   if (excess.length > 0) {
     for (const priority of excess) {
-      const [min, max] = PRIORITY_REQUIREMENTS[priority]
+      const [, max] = PRIORITY_REQUIREMENTS[priority]
       const current = distribution[priority]
       recommendations.push(
         `Too many ${priority} keywords. Current: ${current}, Max: ${max}. Consider removing ${current - max}`

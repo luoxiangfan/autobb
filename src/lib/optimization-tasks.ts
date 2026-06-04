@@ -9,7 +9,7 @@
 
 import { getDatabase } from '@/lib/db'
 import { dateMinusDays } from '@/lib/db-helpers'
-import { createOptimizationEngine, type CampaignMetrics, type OptimizationRecommendation } from './optimization-rules'
+import { createOptimizationEngine, type CampaignMetrics } from './optimization-rules'
 import { getCommissionPerConversion as getOfferCommissionPerConversion } from './offer-monetization'
 import { buildUserExecutionEligibleSql, getUserExecutionEligibility } from './user-execution-eligibility'
 

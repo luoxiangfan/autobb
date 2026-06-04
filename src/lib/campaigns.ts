@@ -7,7 +7,6 @@ import { autoBackupCampaign } from './campaign-backups'
 import {
   assertNoActiveCampaignForOffer,
   CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,
-  hasActiveCampaignForOffer,
   isCampaignOfferUniqueViolation,
 } from './campaign-offer-constraint'
 

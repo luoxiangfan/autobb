@@ -5,7 +5,7 @@
  * 创意评分雷达图组件
  */
 
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts'
 
 interface ScoreRadarChartProps {
   scoreBreakdown: {

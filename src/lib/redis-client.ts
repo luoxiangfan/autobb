@@ -95,7 +95,7 @@ export function getRedisClient(): Redis | null {
       if (redisClient && redisClient.status === 'ready') {
         try {
           await redisClient.ping()
-        } catch (err) {
+        } catch (_err) {
           // 心跳失败静默处理，让重连机制自动处理
         }
       }

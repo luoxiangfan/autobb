@@ -73,7 +73,7 @@ export function deduplicateKeywordsWithPriority<T>(
   const seen = new Set<string>()
   const result: T[] = []
 
-  keywords.forEach((item, index) => {
+  keywords.forEach((item, _index) => {
     const keyword = getKeyword(item)
     const normalized = normalizeGoogleAdsKeyword(keyword)
 

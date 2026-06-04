@@ -38,15 +38,6 @@ export const NAMING_CONFIG = {
   }
 } as const
 
-/**
- * 格式化日期为YYYYMMDD
- */
-function formatDate(date: Date = new Date()): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}${month}${day}`
-}
 
 /**
  * 格式化日期时间为YYYYMMDDHHmmss（用于确保唯一性）
@@ -123,31 +114,6 @@ function generateShortRandomSuffix(length: number = 3): string {
 }
 
 /**
- * 🔧 修复(2025-12-16): 简化分类名称
- * - 如果是层级分类（包含 ">"），只取第一级
- * - 移除特殊字符
- * - 截断到最大20个字符
- */
-function simplifyCategory(category: string): string {
-  if (!category) return 'General'
-
-  // 如果包含层级分隔符 ">"，只取第一级
-  const firstLevel = category.split('>')[0].trim()
-
-  // 清理特殊字符
-  const cleaned = sanitize(firstLevel)
-
-  // 截断到最大20个字符
-  if (cleaned.length > 20) {
-    return cleaned.substring(0, 20)
-  }
-
-  return cleaned || 'General'
-}
-
-/**
- * 🔧 修复(2025-12-16): 简化主题名称
- * - 移除特殊字符
  * - 截断到最大25个字符
  */
 function simplifyTheme(theme: string): string {

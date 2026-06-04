@@ -20,8 +20,6 @@ import { registerAllExecutors } from './executors'
 import { NODE_ENV, REDIS_PREFIX_CONFIG } from '../config'
 import type { UnifiedQueueManager } from './unified-queue-manager'
 import type { QueueConfig } from './types'
-import { getUrlSwapScheduler } from './schedulers/url-swap-scheduler'
-import { getAffiliateProductSyncScheduler } from './schedulers/affiliate-product-sync-scheduler'
 import { getQueueRoutingDiagnostics } from './queue-routing'
 import { logger } from '@/lib/structured-logger'
 

@@ -77,7 +77,7 @@ async function resolveWebSocketImpl(): Promise<any> {
   try {
     const mod = await import('ws')
     return (mod as any).WebSocket || (mod as any).default || mod
-  } catch (error) {
+  } catch (_error) {
     throw new Error('当前运行环境不支持 WebSocket')
   }
 }

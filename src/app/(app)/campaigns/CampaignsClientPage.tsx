@@ -278,11 +278,6 @@ const formatCurrencyWithCode = (amounts: Array<{ currency: string; amount: numbe
     .join(', ')
 }
 
-const formatCampaignRoas = (campaign: Campaign): string => {
-  const roas = calculateCampaignRoas(campaign)
-  return roas === null ? '-' : roas.toFixed(2)
-}
-
 interface CampaignsClientPageProps {
   campaignsReqDedupEnabled?: boolean
   campaignsServerPagingEnabled?: boolean
@@ -505,11 +500,6 @@ export default function CampaignsClientPage({
 
     // 批量任务相关状态
     const [isBatchTasksDialogOpen, setIsBatchTasksDialogOpen] = useState(false)
-    const [batchTasksLoading, setBatchTasksLoading] = useState(false)
-
-    // 全选状态
-    const allSelected = selectedCampaignIds.size === filteredCampaigns.length && filteredCampaigns.length > 0
-    const someSelected = selectedCampaignIds.size > 0 && !allSelected
 
   // Adjust CPC dialog states
   const [adjustCpcOpen, setAdjustCpcOpen] = useState(false)
@@ -523,9 +513,6 @@ export default function CampaignsClientPage({
     currency: string
   } | null>(null)
 
-  const [editCustomNameOpen, setEditCustomNameOpen] = useState(false)
-  const [editCustomNameTarget, setEditCustomNameTarget] = useState<{ id: number; campaignName: string; customName: string | null } | null>(null)
-  const [editCustomNameSubmitting, setEditCustomNameSubmitting] = useState(false)
   // Toggle status states
   const [statusUpdatingIds, setStatusUpdatingIds] = useState<Set<number>>(new Set())
   const [isToggleStatusDialogOpen, setIsToggleStatusDialogOpen] = useState(false)
@@ -591,7 +578,7 @@ export default function CampaignsClientPage({
   } | null>(null)
   
   // 🔧 优化 (2026-04-17): 轮询状态管理
-  const [isPolling, setIsPolling] = useState(false)
+  const [, setIsPolling] = useState(false)
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
   const userSelectionInitializedRef = useRef(false)
   /** SSE / 管线 idle 时抑制 toast（本页刚点完「同步」与完成提示去重） */
@@ -1835,7 +1822,7 @@ export default function CampaignsClientPage({
   const confirmPauseOfferTasks = async () => {
     if (!pauseOfferTasksTarget || pauseOfferTasksSubmitting) return
 
-    const { action, id, campaignName } = pauseOfferTasksTarget
+    const { action, id } = pauseOfferTasksTarget
     const isPauseAction = action === 'pause'
     const endpoint = isPauseAction
       ? `/api/campaigns/${id}/pause-offer-tasks`
@@ -4164,20 +4151,6 @@ export default function CampaignsClientPage({
 	                    const isStatusUpdating = statusUpdatingIds.has(campaign.id)
 	                    const budgetCurrency = campaign.adsAccountCurrency || defaultCurrency
 	                    const performanceCurrency = campaign.performanceCurrency || campaign.adsAccountCurrency || defaultCurrency
-                        const adsAccountName = String(campaign.adsAccountName || '').trim()
-                        const adsAccountCustomerId = String(campaign.adsAccountCustomerId || '').trim()
-                        const shouldHideAdsAccount = isDeleted
-                        const adsAccountDisplayName = shouldHideAdsAccount
-                          ? '-'
-                          : (adsAccountName || adsAccountCustomerId || '-')
-                        const adsAccountDisplayId = shouldHideAdsAccount
-                          ? ''
-                          : (
-                            adsAccountCustomerId
-                            || (campaign.googleAdsAccountId !== null && campaign.googleAdsAccountId !== undefined
-                              ? String(campaign.googleAdsAccountId)
-                              : '')
-                          )
 
 			                    const canAdjustCpc = Boolean(googleCampaignId) && !isDeleted && !offerDeleted && campaign.adsAccountAvailable !== false
 			                    const adjustCpcDisabledReason = !googleCampaignId

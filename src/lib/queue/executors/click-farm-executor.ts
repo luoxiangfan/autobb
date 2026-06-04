@@ -294,7 +294,7 @@ async function resolveProxyAddress(proxyUrl: string, userId: number, taskId?: st
           needForceRefresh = true
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // 缓存未命中，需要获取新IP
       needForceRefresh = true
     }

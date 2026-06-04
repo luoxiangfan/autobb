@@ -384,7 +384,6 @@ export function compareLanguageConstraints(lang1: string, lang2: string): string
  * 获取语言特定的建议
  */
 export function getLanguageSpecificAdvice(language: string): string[] {
-  const constraints = getLanguageConstraints(language)
   const advice: string[] = []
 
   const normalized = normalizeLanguageCode(language)

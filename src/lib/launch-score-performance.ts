@@ -294,7 +294,7 @@ export function comparePredictionVsActual(
 export function generatePerformanceAdjustedRecommendations(
   launchScore: LaunchScore,
   performanceData: PerformanceData,
-  comparisons: PredictionComparison[]
+  _comparisons: PredictionComparison[]
 ): string[] {
   const recommendations: string[] = []
 

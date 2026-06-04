@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getProxyPoolHealth, disableProxy, enableProxy } from '@/lib/url-resolver-enhanced'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // 获取代理池健康状态
     const health = getProxyPoolHealth()

@@ -102,19 +102,6 @@ function compareReportDatesDesc(left: string, right: string): number {
   return normalizeReportDate(right).localeCompare(normalizeReportDate(left))
 }
 
-function parseNumberish(value: unknown, fallback = 0): number {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value
-  }
-  if (typeof value === 'string') {
-    const normalized = value.replace(/,/g, '').replace(/[^\d.-]/g, '').trim()
-    if (!normalized) return fallback
-    const parsed = Number(normalized)
-    if (Number.isFinite(parsed)) return parsed
-  }
-  return fallback
-}
-
 function normalizeAsin(value: unknown): string | null {
   return normalizeOfferAsin(value)
 }
@@ -197,15 +184,6 @@ export function resolvePartnerboostDisplayBrand(params: {
   }
 
   return offerBrand ? stripPartnerboostRegionSuffix(offerBrand) : null
-}
-
-function pickString(...values: unknown[]): string | null {
-  for (const value of values) {
-    if (value === null || value === undefined) continue
-    const text = String(value).trim()
-    if (text) return text
-  }
-  return null
 }
 
 function chunkArray<T>(items: T[], size: number): T[][] {

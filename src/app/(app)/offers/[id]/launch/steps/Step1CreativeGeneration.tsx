@@ -349,15 +349,6 @@ const formatSearchVolume = (volume: number): string => {
   return `${(volume / 1000000).toFixed(1)}M`
 }
 
-// 竞争度颜色映射
-const getCompetitionColor = (competition?: string): string => {
-  if (!competition) return 'text-gray-500'
-  const comp = competition.toUpperCase()
-  if (comp === 'LOW') return 'text-green-600'
-  if (comp === 'MEDIUM') return 'text-yellow-600'
-  if (comp === 'HIGH') return 'text-red-600'
-  return 'text-gray-500'
-}
 
 // Ad Strength评级颜色和样式
 const getAdStrengthColor = (rating: string) => {

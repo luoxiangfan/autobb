@@ -160,11 +160,6 @@ export default function OffersClientPage({
   const MAX_BATCH_REBUILD_OFFERS = 50
 
   const [isBatchTasksDialogOpen, setIsBatchTasksDialogOpen] = useState(false)
-  const [batchTasksLoading, setBatchTasksLoading] = useState(false)
-
-  // 全选状态
-  const allSelected = selectedOfferIds.size === filteredOffers.length && filteredOffers.length > 0
-  const someSelected = selectedOfferIds.size > 0 && !allSelected
 
   // 分页状态 - 使用统一的usePagination Hook
   const {
@@ -1578,7 +1573,7 @@ export default function OffersClientPage({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedOffers.map((offer, index) => (
+                    {paginatedOffers.map((offer, _index) => (
                       <TableRow
                         key={offer.id}
                         className={`hover:bg-gray-50/50 ${offer.isBlacklisted ? 'bg-gray-100' : ''}`}

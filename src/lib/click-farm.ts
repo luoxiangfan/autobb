@@ -3,7 +3,7 @@
 
 import { getDatabase } from './db';
 import { generateNextRunAt } from './click-farm/scheduler';
-import { getDateInTimezone, getHourInTimezone, createDateInTimezone } from './timezone-utils';
+import { getDateInTimezone, createDateInTimezone } from './timezone-utils';
 import { estimateTraffic } from './click-farm/distribution';
 import { normalizeDateOnly, normalizeTimestampToIso } from './db-datetime';
 import { boolParam, datetimeMinusHours } from './db-helpers';
@@ -21,10 +21,6 @@ import type {
   HourlyDistribution,
   DailyHistoryEntry
 } from './click-farm-types';
-
-// 🔧 修复(2025-01-01): PostgreSQL布尔类型兼容性
-const IS_DELETED_FALSE = 'IS_DELETED_FALSE'
-const IS_DELETED_TRUE = 'IS_DELETED_TRUE'
 
 const CLICK_FARM_STATS_BATCH_SIZE = (() => {
   const n = parseInt(process.env.CLICK_FARM_STATS_BATCH_SIZE || '20', 10)
@@ -611,7 +607,6 @@ export async function getClickFarmStats(userId: number, daysBack: number | 'all'
 
   // 构建日期过滤条件
   let dateFilter = '';
-  let dateParams: string[] = [];
   if (daysBack !== 'all') {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysBack);
@@ -648,7 +643,7 @@ export async function getClickFarmStats(userId: number, daysBack: number | 'all'
     if (typeof task.daily_history === 'string') {
       try {
         history = JSON.parse(task.daily_history);
-      } catch (e) {
+      } catch (_e) {
         history = [];
       }
     } else if (Array.isArray(task.daily_history)) {
@@ -862,7 +857,7 @@ export async function getAdminClickFarmStats(): Promise<{
     if (typeof task.daily_history === 'string') {
       try {
         history = JSON.parse(task.daily_history);
-      } catch (e) {
+      } catch (_e) {
         history = [];
       }
     } else if (Array.isArray(task.daily_history)) {
@@ -1027,7 +1022,7 @@ export function parseClickFarmTask(row: any): ClickFarmTaskListItem {
         if (typeof parsed === 'string') {
           try {
             parsed = JSON.parse(parsed);
-          } catch (e) {
+          } catch (_e) {
             // 第二次解析失败，使用第一次的结果
           }
         }
@@ -1038,7 +1033,7 @@ export function parseClickFarmTask(row: any): ClickFarmTaskListItem {
         // 否则返回默认值（不是有效的 JSON 结构）
         console.warn('[parseClickFarmTask] JSON解析结果不是对象/数组:', value);
         return defaultValue;
-      } catch (e) {
+      } catch (_e) {
         console.warn('[parseClickFarmTask] JSON解析失败:', value);
         return defaultValue;
       }

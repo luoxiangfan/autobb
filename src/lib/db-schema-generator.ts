@@ -56,7 +56,7 @@ function toPostgresType(type: ColumnDef['type']): string {
   }
 }
 
-function toSQLiteDefault(value: string | number | boolean | null, type: ColumnDef['type']): string {
+function toSQLiteDefault(value: string | number | boolean | null, _type: ColumnDef['type']): string {
   if (value === null) return 'NULL'
   if (value === 'CURRENT_TIMESTAMP') return "(datetime('now'))"
   if (typeof value === 'boolean') return value ? '1' : '0'
@@ -64,7 +64,7 @@ function toSQLiteDefault(value: string | number | boolean | null, type: ColumnDe
   return `'${value}'`
 }
 
-function toPostgresDefault(value: string | number | boolean | null, type: ColumnDef['type']): string {
+function toPostgresDefault(value: string | number | boolean | null, _type: ColumnDef['type']): string {
   if (value === null) return 'NULL'
   if (value === 'CURRENT_TIMESTAMP') return 'CURRENT_TIMESTAMP'
   if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE'
@@ -203,7 +203,7 @@ export function generateSQLiteSchema(): string {
 // PostgreSQL SQL 生成
 // ============================================================================
 
-function generatePostgresColumn(col: ColumnDef, isPrimaryKey: boolean): string {
+function generatePostgresColumn(col: ColumnDef, _isPrimaryKey: boolean): string {
   const parts: string[] = [col.name]
 
   // 处理主键自增

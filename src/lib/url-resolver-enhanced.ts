@@ -6,7 +6,6 @@
 
 import { getRedisClient } from './redis'
 import { resolveAffiliateLinkWithPlaywright } from './url-resolver-playwright'
-import type { PlaywrightResolvedUrl } from './url-resolver-playwright'
 import { extractEmbeddedTargetUrl, resolveAffiliateLinkWithHttp } from './url-resolver-http'
 import { getOptimalResolver, extractDomain } from './resolver-domains'
 import { REDIS_PREFIX_CONFIG } from './config'

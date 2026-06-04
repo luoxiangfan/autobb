@@ -290,7 +290,7 @@ export class DataSyncService {
   async syncPerformanceData(
     userId: number,
     syncType: 'manual' | 'auto' = 'manual',
-    options?: {
+    _options?: {
       startDate?: string
       endDate?: string
       forceFullSync?: boolean  // 强制全量补齐（过去7天）

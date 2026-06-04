@@ -13,7 +13,6 @@
 
 import { getDatabase, type DatabaseType } from './db'
 import { getInsertedId } from './db-helpers'
-import { backupHasCampaignConfig } from './campaign-backup-config'
 import { offerOccupyingCampaignIdSubquerySql } from './campaign-offer-constraint'
 import { parseJsonField, toDbJsonObjectField } from './json-field'
 

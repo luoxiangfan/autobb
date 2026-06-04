@@ -2,21 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { getInsertedId } from '@/lib/db-helpers'
-import {
-  createGoogleAdsCampaign,
-  createGoogleAdsAdGroup,
-  createGoogleAdsKeywordsBatch,
-  createGoogleAdsResponsiveSearchAd,
-  updateGoogleAdsCampaignStatus,
-  createGoogleAdsCalloutExtensions,
-  createGoogleAdsSitelinkExtensions
-} from '@/lib/google-ads-api'
+
+
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
 } from '@/lib/google-ads-auth-context'
 import { createError, ErrorCode, AppError } from '@/lib/errors'
-import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
 import { calculateLaunchScore } from '@/lib/scoring'
 import type { AdCreative } from '@/lib/ad-creative'
 import type { ScoreAnalysis } from '@/lib/launch-scores'
@@ -519,13 +511,6 @@ export async function POST(request: NextRequest) {
       }
 
     }
-
-    // 计算需要暂停的广告系列总数（属于当前Offer + 用户手动创建 + 其他Offer/品牌）
-    const campaignsToPause = [
-      ...activeCampaignsResult.ownCampaigns,
-      ...activeCampaignsResult.manualCampaigns,
-      ...activeCampaignsResult.otherCampaigns
-    ]
 
     // 仅对“当前Offer + 手工Campaign”弹确认；跨品牌Campaign仅警告不拦截
     const campaignsRequireConfirm = [

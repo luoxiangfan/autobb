@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getDatabase } from './db'
 import { hashPassword, verifyPassword } from './crypto'
-import { generateToken, JWTPayload, verifyToken } from './jwt'
+import { generateToken, verifyToken } from './jwt'
 import { getInsertedId } from './db-helpers'
 import {
   recordFailedLogin,

@@ -64,7 +64,7 @@ function exportToCSV(data: any[], headers: string[]): string {
 /**
  * 导出Offers数据
  */
-async function exportOffers(userId: number, format: 'json' | 'csv'): Promise<{ data: any, count: number }> {
+async function exportOffers(userId: number, _format: 'json' | 'csv'): Promise<{ data: any, count: number }> {
   const db = await getDatabase()
 
   const offers = await db.query(`
@@ -98,7 +98,7 @@ async function exportOffers(userId: number, format: 'json' | 'csv'): Promise<{ d
 /**
  * 导出Campaigns数据
  */
-async function exportCampaigns(userId: number, format: 'json' | 'csv'): Promise<{ data: any, count: number }> {
+async function exportCampaigns(userId: number, _format: 'json' | 'csv'): Promise<{ data: any, count: number }> {
   const db = await getDatabase()
 
   const campaigns = await db.query(`
@@ -263,16 +263,13 @@ export function createExportExecutor(): TaskExecutor<ExportTaskData, ExportTaskR
       }
 
       let exportContent: string
-      let mimeType: string
       let filename: string
 
       if (format === 'csv' && exportType !== 'settings') {
         exportContent = exportToCSV(Array.isArray(result.data) ? result.data : [], headers)
-        mimeType = 'text/csv; charset=utf-8'
         filename = `${exportType}_${new Date().toISOString().split('T')[0]}.csv`
       } else {
         exportContent = JSON.stringify(result.data, null, 2)
-        mimeType = 'application/json; charset=utf-8'
         filename = `${exportType}_${new Date().toISOString().split('T')[0]}.json`
       }
 

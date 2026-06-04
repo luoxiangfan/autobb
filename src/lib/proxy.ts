@@ -19,7 +19,7 @@ export interface ProxyConfig {
  * @param country - 目标国家代码
  * @returns 代理配置对象，如果不需要代理则返回 undefined
  */
-export async function getProxyConfig(country: string): Promise<ProxyConfig | undefined> {
+export async function getProxyConfig(_country: string): Promise<ProxyConfig | undefined> {
   // 从环境变量获取代理配置
   const proxyHost = process.env.PROXY_HOST
   const proxyPort = process.env.PROXY_PORT

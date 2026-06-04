@@ -62,7 +62,7 @@ export async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
     let provider
     try {
       provider = ProxyProviderRegistry.getProvider(proxyUrl)
-    } catch (error) {
+    } catch (_error) {
       console.warn(`⚠️ 不支持的代理格式: ${maskProxyUrl(proxyUrl)}`)
       return []
     }
@@ -159,7 +159,7 @@ export async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
 
           // 3. 修改plugins（显示为真实Chrome）
           Object.defineProperty(navigator, 'plugins', {
-            get: () => [1, 2, 3, 4, 5].map((_, i) => ({
+            get: () => [1, 2, 3, 4, 5].map((_, _i) => ({
               name: 'Chrome PDF Plugin',
               filename: 'internal-pdf-viewer',
               description: 'Portable Document Format',
@@ -214,7 +214,7 @@ export async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
             // @ts-ignore - __proto__在浏览器端存在
             const proto = window.navigator.__proto__
             delete proto.webdriver
-          } catch (e) {}
+          } catch (_e) {}
         })
 
         // 页面加载前等待
@@ -451,7 +451,7 @@ export async function warmupAffiliateLink(
     let provider
     try {
       provider = ProxyProviderRegistry.getProvider(proxyUrl)
-    } catch (error) {
+    } catch (_error) {
       console.warn(`⚠️ 不支持的代理格式: ${maskProxyUrl(proxyUrl)}`)
       return false
     }

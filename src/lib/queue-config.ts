@@ -6,7 +6,7 @@
  */
 
 import { getDatabase } from './db'
-import { QueueConfig } from './scrape-queue-manager'
+import type { QueueConfig } from './queue/types'
 
 /**
  * 获取队列配置（优先级：用户配置 > 全局配置 > 默认配置）

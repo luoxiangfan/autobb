@@ -130,7 +130,7 @@ export async function withRetry<T>(
  * - 速率限制错误 (429)：重试
  * - 客户端错误 (400-499，除429外)：不重试
  */
-function defaultShouldRetry(error: any, attempt: number): boolean {
+function defaultShouldRetry(error: any, _attempt: number): boolean {
   // 网络错误
   if (
     error.code === 'ECONNRESET' ||

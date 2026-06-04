@@ -30,7 +30,6 @@ import {
   createGoogleAdsCalloutExtensions,
   createGoogleAdsSitelinkExtensions,
   ensureKeywordsInHeadlines,
-  type OAuthApiCredentialsFields,
 } from '@/lib/google-ads-api'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
@@ -45,7 +44,7 @@ import {
 } from '@/lib/campaign-publish-resume'
 import { setCampaignPageViewGoalWithCredentials } from '@/lib/google-ads-conversion-goals'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
-import { generateNamingScheme, type NamingScheme } from '@/lib/naming-convention'
+import { type NamingScheme } from '@/lib/naming-convention'
 import { invalidateOfferCache } from '@/lib/api-cache'
 import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
 import { addUrlSwapTargetForOfferCampaign } from '@/lib/url-swap'

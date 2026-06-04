@@ -11,9 +11,7 @@ import {
 } from './ad-strength-evaluator'
 import type { CanonicalCreativeType } from './creative-type'
 import {
-  getAdStrength,
-  validateExcellentStandard,
-  type GoogleAdStrengthResponse
+  validateExcellentStandard
 } from './google-ads-strength-api'
 import { detectAmazonPageTypeFromUrl } from './amazon-url-utils'
 import {

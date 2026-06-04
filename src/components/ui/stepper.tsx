@@ -21,7 +21,7 @@ export interface StepperProps {
   className?: string
 }
 
-export function Stepper({ steps, currentStep, className }: StepperProps) {
+export default function Stepper({ steps, currentStep, className }: StepperProps) {
   return (
     <nav aria-label="Progress" className={cn('w-full', className)}>
       <ol role="list" className="flex items-center w-full relative justify-between pb-12 px-8">
@@ -46,7 +46,7 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
           }}
         />
 
-        {steps.map((step, stepIdx) => {
+        {steps.map((step, _stepIdx) => {
           const isCompleted = currentStep > step.id
           const isCurrent = currentStep === step.id
           const isUpcoming = currentStep < step.id
@@ -103,5 +103,3 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
     </nav>
   )
 }
-
-export default Stepper

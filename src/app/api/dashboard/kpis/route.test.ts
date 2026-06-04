@@ -183,7 +183,7 @@ describe('GET /api/dashboard/kpis', () => {
     let attributedCallCount = 0
     let unattributedCallCount = 0
 
-    const queryOne = vi.fn(async (sql: string, params: any[] = []) => {
+    const queryOne = vi.fn(async (sql: string, _params: any[] = []) => {
       if (sql.includes('FROM campaign_performance') && sql.includes('SUM(impressions) as impressions')) {
         periodCallCount += 1
         if (periodCallCount === 1) {

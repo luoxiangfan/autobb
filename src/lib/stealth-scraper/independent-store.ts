@@ -499,7 +499,7 @@ export async function scrapeIndependentStoreDeep(
   } : undefined
 
   // 4. 更新产品列表，添加从深度抓取获取的rating和reviewCount
-  const enhancedProducts = storeData.products.map((product, index) => {
+  const enhancedProducts = storeData.products.map((product, _index) => {
     const deepProduct = deepResults.topProducts.find(dp => dp.productUrl === product.productUrl)
     if (deepProduct?.productData) {
       return {
@@ -1642,7 +1642,7 @@ function extractShippingInfo($: ReturnType<typeof import('cheerio').load>): stri
  * 🔥 2025-12-24新增：提取产品徽章/标签
  * 如：Best Seller, Limited Offer, Flash Sale, Featured等
  */
-function extractProductBadge($: ReturnType<typeof import('cheerio').load>, platform: string | null): string | null {
+function extractProductBadge($: ReturnType<typeof import('cheerio').load>, _platform: string | null): string | null {
   const badgeSelectors = [
     // Badge/Label容器
     '[class*="badge"]',

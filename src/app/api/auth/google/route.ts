@@ -5,7 +5,7 @@ import { getGoogleAuthUrl } from '@/lib/google-oauth'
  * GET /api/auth/google
  * 发起Google OAuth登录流程
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const authUrl = getGoogleAuthUrl()
 

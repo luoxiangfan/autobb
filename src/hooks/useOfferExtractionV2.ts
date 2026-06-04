@@ -21,7 +21,6 @@ import { getDefaultOfferExtractionMode } from '@/lib/offer-extraction-mode'
 import type {
   ProgressStage,
   ProgressStatus,
-  ProgressEvent,
 } from '@/types/progress'
 
 interface ExtractionResult {
@@ -32,16 +31,6 @@ interface ExtractionResult {
   targetLanguage: string
   productCount?: number
   [key: string]: any
-}
-
-interface TaskStatus {
-  taskId: string
-  status: 'pending' | 'running' | 'completed' | 'failed'
-  stage: string | null
-  progress: number
-  message: string | null
-  result: ExtractionResult | null
-  error: any | null
 }
 
 interface UseOfferExtractionV2Return {
@@ -332,7 +321,7 @@ export function useOfferExtractionV2(): UseOfferExtractionV2Return {
   }, [reset, cleanup])
 
   // 重连已有任务（简化版 - 统一API不支持按taskId重连）
-  const reconnect = useCallback(async (tid: string) => {
+  const reconnect = useCallback(async (_tid: string) => {
     console.warn('Reconnect not supported in unified API, please restart extraction')
     setError('当前版本不支持重连，请重新开始提取')
   }, [])

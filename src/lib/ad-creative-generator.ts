@@ -4,8 +4,7 @@ import type {
   GeneratedAdCreativeData,
   GeneratedKeywordCandidateMetadata,
   HeadlineAsset,
-  DescriptionAsset,
-  QualityMetrics
+  DescriptionAsset
 } from './ad-creative'
 import type { Offer } from './offers'
 import { creativeCache, generateCreativeCacheKey } from './cache'
@@ -89,7 +88,7 @@ function safeParseJson(value: any, defaultValue: any = null): any {
   if (typeof value === 'string') {
     try {
       return JSON.parse(value);
-    } catch (e) {
+    } catch (_e) {
       console.warn('[safeParseJson] 解析失败:', value);
       return defaultValue;
     }
@@ -6145,7 +6144,7 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
   } = input
 
   const brandKeywordLower = canonicalBrandKeyword || offerBrand.toLowerCase().trim()
-  const containsBrand = (keyword: string, searchVolume?: number): boolean => {
+  const containsBrand = (keyword: string, _searchVolume?: number): boolean => {
     if (containsPureBrand(keyword, brandTokensToMatch)) return true
     // 🔥 修复(2026-03-13): 品牌拼接词即使搜索量为 0 也应该保留（真实品牌词）
     // 移除搜索量依赖，避免真实品牌词被意外过滤
@@ -6401,7 +6400,7 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
 
   const primaryKeywords = keywordsWithIntent
     .filter(kw => isPureBrandInFinal(kw) || kw.intentScore >= MIN_INTENT_SCORE)
-    .map(({ intentScore, intentLevel, ...rest }) => rest)
+    .map(({ _intentScore, _intentLevel, ...rest }) => rest)
 
   const exploreQuota = getRatioCappedCount(
     primaryKeywords.length,
@@ -6419,7 +6418,7 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
       return norm ? !primaryNormSet.has(norm) : false
     })
     .slice(0, exploreQuota)
-    .map(({ intentScore, intentLevel, ...rest }) => rest)
+    .map(({ _intentScore, _intentLevel, ...rest }) => rest)
 
   finalKeywords = [...primaryKeywords, ...exploreKeywords]
 
@@ -10177,7 +10176,7 @@ export async function generateAdCreative(
       : (canonicalBrandKeyword ? [canonicalBrandKeyword] : [])
   const mustContainBrand = brandTokensToMatch.length > 0
 
-  const containsBrand = (keyword: string, searchVolume?: number): boolean => {
+  const containsBrand = (keyword: string, _searchVolume?: number): boolean => {
     if (containsPureBrand(keyword, brandTokensToMatch)) return true
     // 🔥 修复(2026-03-13): 品牌拼接词即使搜索量为 0 也应该保留（真实品牌词）
     // 移除搜索量依赖，避免真实品牌词被意外过滤

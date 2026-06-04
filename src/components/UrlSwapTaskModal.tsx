@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem } from '@/components/ui/select';
 import { Alert } from '@/components/ui/alert';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, AlertCircle, Link, Clock, Globe, ExternalLink } from 'lucide-react';
+import { Loader2, AlertCircle, Link, Globe, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import type { UrlSwapTask } from '@/lib/url-swap-types';
 import { URL_SWAP_INTERVAL_OPTIONS, URL_SWAP_ALLOWED_INTERVALS_MINUTES } from '@/lib/url-swap-intervals';

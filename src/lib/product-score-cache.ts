@@ -40,13 +40,6 @@ function getProductScorePattern(userId: number): string {
   return `${REDIS_PREFIX_CONFIG.cache}product-score:user:${userId}:product:*`
 }
 
-/**
- * 获取批量商品推荐指数的缓存key
- */
-function getBatchScoreKey(userId: number, productIds: number[]): string {
-  const sortedIds = [...productIds].sort((a, b) => a - b).join(',')
-  return `${REDIS_PREFIX_CONFIG.cache}product-score:user:${userId}:batch:${sortedIds}`
-}
 
 /**
  * 缓存单个商品的推荐指数
@@ -287,7 +280,7 @@ export async function getProductScoreCacheStats(userId: number): Promise<{
               if (newestCacheTime === null || parsed.cachedAt > newestCacheTime) {
                 newestCacheTime = parsed.cachedAt
               }
-            } catch (error) {
+            } catch (_error) {
               // 忽略解析错误
             }
           }

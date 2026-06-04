@@ -75,7 +75,7 @@ export default function ProxyHealthPage() {
       const data = result.data
       setProxies(data.data)
       setLastUpdated(Date.now())
-    } catch (err: any) {
+    } catch (_err: any) {
       setError('获取代理健康状态时发生未知错误')
     } finally {
       setLoading(false)
@@ -104,7 +104,7 @@ export default function ProxyHealthPage() {
 
       // 刷新数据
       await fetchProxyHealth(true)
-    } catch (err: any) {
+    } catch (_err: any) {
       setError('操作代理状态时发生未知错误')
     }
   }

@@ -6,8 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { getInsertedId } from '@/lib/db-helpers'
-import { calculateBonusScore, saveCreativePerformance } from '@/lib/bonus-score-calculator'
-import { getIndustryBenchmark } from '@/lib/industry-classifier'
+import { calculateBonusScore } from '@/lib/bonus-score-calculator'
 import { verifyAuth } from '@/lib/auth'
 
 export async function POST(

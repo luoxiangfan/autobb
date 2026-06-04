@@ -8,7 +8,7 @@ import {
   updateSettings,
 } from '@/lib/settings'
 import { invalidateProxyPoolCache } from '@/lib/offer-utils'
-import { GEMINI_PROVIDERS, getGeminiEndpoint, getGeminiApiKeyUrl, type GeminiProvider } from '@/lib/gemini-config'
+import { getGeminiEndpoint, getGeminiApiKeyUrl, type GeminiProvider } from '@/lib/gemini-config'
 import { GEMINI_ACTIVE_MODEL, isDeprecatedGeminiModel, normalizeModelForProvider } from '@/lib/gemini-models'
 import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
@@ -287,7 +287,7 @@ export async function PUT(request: NextRequest) {
       let proxyUrls: Array<{ country?: string; url?: string }>
       try {
         proxyUrls = JSON.parse(proxyUrlsUpdate.value)
-      } catch (error) {
+      } catch (_error) {
         return NextResponse.json(
           { error: '代理配置JSON格式错误' },
           { status: 400 }

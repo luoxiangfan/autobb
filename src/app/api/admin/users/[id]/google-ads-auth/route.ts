@@ -5,14 +5,12 @@ import {
   assertOwnCredentialsDifferFromAdmin,
   deleteGoogleAdsAuthAssignment,
   getGoogleAdsAuthAssignment,
-  isGoogleAdsAuthShared,
   upsertGoogleAdsAuthAssignment,
   type GoogleAdsAuthAssignmentMode,
   type GoogleAdsAuthType,
 } from '@/lib/google-ads-auth-assignment'
 import {
   deleteGoogleAdsCredentials,
-  getGoogleAdsCredentialsRaw,
   saveGoogleAdsCredentials,
 } from '@/lib/google-ads-oauth'
 import {

@@ -12,7 +12,6 @@ import {
   safeReadJson,
   throwAccountsListFetchError,
   type AccountsRequestAuth,
-  type ParsedGoogleAdsCredentialsStatus,
 } from '@/lib/google-ads-credentials-errors'
 import { useGoogleAdsAccountsAuth } from '@/hooks/useGoogleAdsAccountsAuth'
 import { runInitialGoogleAdsAccountsLoad } from '@/lib/google-ads-initial-accounts-load'

@@ -4,7 +4,6 @@ import { getProxyPool, clearProxyPool } from '@/lib/url-resolver-enhanced'
 import { getLanguageNameForCountry, getSupportedCountries, getCountryChineseName, normalizeCountryCode } from '@/lib/language-country-codes'
 import { pickFirstTwoLetterCountryCode } from '@/lib/two-letter-country-code'
 import { calculateMaxCPC } from '@/lib/currency'
-import { maskProxyUrl } from '@/lib/proxy/validate-url'
 
 /**
  * Offer相关的辅助函数库

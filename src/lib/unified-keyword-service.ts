@@ -19,7 +19,6 @@ import {
   prepareGoogleAdsApiCallForLinkedAccount,
   resolveKeywordPlannerLinkedServiceAccountId,
   type KeywordPlannerPreparedSession,
-  type KeywordPlannerVolumeAuth,
 } from './google-ads-accounts-auth'
 import {
   getKeywordIdeas,

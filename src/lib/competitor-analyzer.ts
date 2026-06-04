@@ -16,9 +16,8 @@
 
 import { generateContent } from './gemini'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
-import { getLanguageNameForCountry } from './language-country-codes'
 import { compressCompetitors, type CompetitorInfo as CompressorCompetitorInfo } from './competitor-compressor'
-import { withCache, type CacheOptions } from './ai-cache'
+import { withCache } from './ai-cache'
 import { loadPrompt } from './prompt-loader'
 import { parsePrice } from './pricing-utils'
 
@@ -231,9 +230,6 @@ export async function inferCompetitorKeywords(
   userId: number
 ): Promise<string[]> {
   console.log(`🤖 AI推断竞品搜索关键词...`)
-
-  // 根据目标国家确定分析语言
-  const langName = getLanguageNameForCountry(productInfo.targetCountry)
 
   // 📦 从数据库加载prompt模板 (版本管理)
   const promptTemplate = await loadPrompt('competitor_keyword_inference')
@@ -830,7 +826,7 @@ async function scrapeCompareTable(page: any, limit: number): Promise<CompetitorP
 
     return competitors.filter((c: any) => c.name && c.name !== 'Unknown')
 
-  } catch (error) {
+  } catch (_error) {
     return []
   }
 }
@@ -844,15 +840,6 @@ async function scrapeRelatedToItemsYouViewed(page: any, limit: number): Promise<
   try {
     const competitors = await page.evaluate((maxItems: number) => {
       const items: any[] = []
-
-      // 在evaluate内部定义价格解析函数
-      function parsePriceInBrowser(text: string): number | null {
-        if (!text) return null
-        const cleaned = text.replace(/[^\d.,]/g, '')
-        const normalized = cleaned.replace(',', '.')
-        const num = parseFloat(normalized)
-        return isNaN(num) ? null : num
-      }
 
       // "Related to items you've viewed" 区域选择器
       // 这个区域通常使用不同的carousel widget ID
@@ -959,7 +946,7 @@ async function scrapeRelatedToItemsYouViewed(page: any, limit: number): Promise<
 
     return competitors
 
-  } catch (error) {
+  } catch (_error) {
     return []
   }
 }
@@ -971,15 +958,6 @@ async function scrapeAlsoViewed(page: any, limit: number): Promise<CompetitorPro
   try {
     const competitors = await page.evaluate((maxItems: number) => {
       const items: any[] = []
-
-      // 在evaluate内部定义价格解析函数
-      function parsePriceInBrowser(text: string): number | null {
-        if (!text) return null
-        const cleaned = text.replace(/[^\d.,]/g, '')
-        const normalized = cleaned.replace(',', '.')
-        const num = parseFloat(normalized)
-        return isNaN(num) ? null : num
-      }
 
       // "Customers also viewed" 区域选择器
       const selectors = [
@@ -1049,7 +1027,7 @@ async function scrapeAlsoViewed(page: any, limit: number): Promise<CompetitorPro
 
     return competitors
 
-  } catch (error) {
+  } catch (_error) {
     return []
   }
 }
@@ -1267,7 +1245,7 @@ export async function analyzeCompetitorsWithAI(
     sellingPoints?: string          // 🆕 卖点描述
   },
   competitors: CompetitorProduct[],
-  targetCountry: string = 'US',
+  _targetCountry: string = 'US',
   userId?: number,
   options?: {
     enableCompression?: boolean  // 启用竞品数据压缩（默认false，零破坏性）
@@ -1282,9 +1260,6 @@ export async function analyzeCompetitorsWithAI(
   }
 
   console.log(`🤖 开始AI竞品分析,我们的产品vs ${competitors.length}个竞品...`)
-
-  // 根据目标国家确定分析语言(使用全局语言映射)
-  const langName = getLanguageNameForCountry(targetCountry)
 
   // 计算基础竞争力指标
   const pricePosition = calculatePricePosition(ourProduct, competitors)

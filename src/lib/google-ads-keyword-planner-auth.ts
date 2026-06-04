@@ -11,7 +11,6 @@ import type {
   KeywordPlannerVolumeAuth,
   KeywordPlannerVolumeAuthContextParams,
   KeywordPlannerVolumeAuthLoadResult,
-  KeywordPoolExpandCredentials,
   KeywordPoolExpandLoadResult,
   PreparedGoogleAdsAccountApiCall,
   ResolveKeywordPlannerLinkedSaParams,

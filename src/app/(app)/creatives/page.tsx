@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+import { Select } from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -43,14 +43,12 @@ import {
   AlertCircle,
   FileText,
   Wand2,
-  Link,
   ArrowLeft,
   Eye,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
   Package,
-  CalendarDays,
   TrendingUp,
 } from 'lucide-react'
 import { buildLaunchScorePagePath } from '@/lib/launch-score-campaign-config-client'
@@ -285,7 +283,6 @@ export default function CreativesPage() {
     saveStoredAdCreativeGenerationMode(mode)
   }
   const [error, setError] = useState('')
-  const [syncingId, setSyncingId] = useState<number | null>(null)
   const [summary, setSummary] = useState<Summary | null>(null)
   const [analyticsSectionMounted, setAnalyticsSectionMounted] = useState(false)
 
@@ -714,30 +711,6 @@ export default function CreativesPage() {
       showSuccess('关联成功', '已成功关联到Ad Group')
     } catch (err: any) {
       showError('关联失败', err.message)
-    }
-  }
-
-  const handleSyncToGoogleAds = async (creative: Creative) => {
-    setSyncingId(creative.id)
-
-    try {
-      const response = await fetch(`/api/creatives/${creative.id}/sync`, {
-        method: 'POST',
-        credentials: 'include',
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || '同步失败')
-      }
-
-      showSuccess('同步成功', 'Creative已成功同步到Google Ads')
-      fetchOfferAndCreatives()
-    } catch (err: any) {
-      showError('同步失败', err.message)
-    } finally {
-      setSyncingId(null)
     }
   }
 

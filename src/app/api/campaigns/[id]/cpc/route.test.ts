@@ -15,7 +15,6 @@ const campaignRouteAuthFns = vi.hoisted(() => ({
 const oauthAccountsAuthFns = vi.hoisted(() => ({
   prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
-import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { executeGAQLQueryPython } from '@/lib/python-ads-client'
 
 const dbFns = vi.hoisted(() => ({

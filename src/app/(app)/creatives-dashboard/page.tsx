@@ -140,13 +140,6 @@ export default function CreativesDashboardPage() {
     }
   }
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600'
-    if (score >= 60) return 'text-blue-600'
-    if (score >= 40) return 'text-yellow-600'
-    return 'text-red-600'
-  }
-
   const getScoreBadgeColor = (score: number) => {
     if (score >= 80) return 'bg-green-100 text-green-800'
     if (score >= 60) return 'bg-blue-100 text-blue-800'

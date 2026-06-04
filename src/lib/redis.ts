@@ -184,7 +184,7 @@ export async function checkRedisConnection(): Promise<boolean> {
     const redis = getRedisClient()
     await redis.ping()
     return true
-  } catch (error) {
+  } catch (_error) {
     return false
   }
 }

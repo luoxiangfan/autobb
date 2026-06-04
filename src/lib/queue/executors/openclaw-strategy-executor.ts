@@ -1,13 +1,6 @@
 import type { Task } from '../types'
 import { getDatabase } from '@/lib/db'
-import { fetchAutoadsJson } from '@/lib/openclaw/autoads-client'
 import { getOpenclawStrategyConfig, type OpenclawStrategyConfig } from '@/lib/openclaw/strategy-config'
-import { createStrategyRun, recordStrategyAction, touchStrategyRun, updateStrategyAction, updateStrategyRun } from '@/lib/openclaw/strategy-store'
-import { fetchPartnerboostAssociates, fetchPartnerboostLinkByAsin } from '@/lib/openclaw/affiliate'
-import { generateNamingScheme } from '@/lib/naming-convention'
-import { recordOpenclawAction } from '@/lib/openclaw/action-logs'
-import { applyCampaignTransitionByGoogleCampaignIds } from '@/lib/campaign-state-machine'
-import { toDbJsonObjectField } from '@/lib/json-field'
 import {
   executeStrategyRecommendation,
   getStrategyRecommendations,
@@ -49,13 +42,6 @@ type AsinItemRow = {
   offer_id: number | null
   error_message: string | null
   data_json: unknown
-}
-
-type AsinOutcomeRow = {
-  asin: string | null
-  brand: string | null
-  status: string
-  created_at: string | null
 }
 
 type AsinOutcomeStats = {
@@ -107,42 +93,6 @@ type ThompsonBudgetAllocationResult = {
   perCampaignCap: number
   armCount: number
   arms: ThompsonBudgetAllocationArm[]
-}
-
-type AdsAccount = {
-  id: number
-  customer_id?: string
-  currency?: string
-}
-
-type CpcCandidate = {
-  id?: number
-  googleCampaignId?: string
-  status?: string
-  performance?: {
-    costUsd?: number
-    clicks?: number
-    cpcUsd?: number
-  }
-}
-
-type AccountBrandSnapshotRow = {
-  campaignId: string
-  campaignName: string
-  status: 'ENABLED' | 'PAUSED' | 'REMOVED' | 'UNKNOWN'
-  bucket: 'own' | 'manual' | 'other'
-  brand: string | null
-  brandConfidence: 'high' | 'low' | 'none'
-  source: 'naming' | 'manual'
-}
-
-type CreativeRow = {
-  id: number
-  keywords?: any
-  keywordsWithVolume?: any
-  negativeKeywords?: any
-  creationStatus?: string | null
-  finalUrlSuffix?: string | null
 }
 
 type KnowledgeBaseRow = {
@@ -209,17 +159,6 @@ function formatLocalDate(date: Date): string {
   }).format(date)
 }
 
-function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-function parsePositiveIntEnv(value: string | undefined, fallback: number): number {
-  if (!value) return fallback
-  const parsed = Number.parseInt(value, 10)
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback
-  return parsed
-}
-
 function parseJson<T>(value: unknown, fallback: T): T {
   if (value === null || value === undefined) return fallback
   if (typeof value === 'string') {
@@ -235,75 +174,6 @@ function parseJson<T>(value: unknown, fallback: T): T {
   return fallback
 }
 
-function mergeJson(existing: unknown, patch: Record<string, any>, dbType: 'sqlite' | 'postgres'): unknown {
-  const base = parseJson<Record<string, any>>(existing, {})
-  return toDbJsonObjectField({ ...base, ...patch }, dbType, {})
-}
-
-function normalizeKeywords(input: any, fallback: string[]): Array<{ text: string; matchType: string }> {
-  const keywordMap = new Map<string, { text: string; matchType: string; score: number }>()
-  const pushKeyword = (text: string, matchType?: string, score = 0) => {
-    const cleaned = text.replace(/\s+/g, ' ').trim()
-    if (!cleaned) return
-    if (cleaned.length < 2 || cleaned.length > 80) return
-
-    const normalizedMatch = String(matchType || '').toUpperCase()
-    const validMatch = ['EXACT', 'PHRASE', 'BROAD', 'BROAD_MATCH_MODIFIER'].includes(normalizedMatch)
-      ? normalizedMatch
-      : (keywordMap.size === 0 ? 'EXACT' : 'PHRASE')
-
-    const dedupeKey = cleaned.toLowerCase()
-    const existing = keywordMap.get(dedupeKey)
-    if (!existing || score > existing.score) {
-      keywordMap.set(dedupeKey, { text: cleaned, matchType: validMatch, score })
-    }
-  }
-
-  if (Array.isArray(input)) {
-    for (const entry of input) {
-      if (typeof entry === 'string') {
-        pushKeyword(entry, undefined, 0)
-      } else if (entry && typeof entry === 'object') {
-        const text = entry.text || entry.keyword || entry.term
-        if (typeof text === 'string') {
-          const searchVolume = toNumber(
-            entry.searchVolume
-            ?? entry.search_volume
-            ?? entry.monthlySearches
-            ?? entry.volume,
-            0
-          )
-          const relevance = toNumber(entry.relevance ?? entry.relevanceScore ?? entry.score, 0)
-          const score = searchVolume + relevance * 1000
-          pushKeyword(text, entry.matchType, score)
-        }
-      }
-    }
-  }
-
-  if (keywordMap.size === 0) {
-    fallback.forEach((kw, idx) => {
-      if (!kw) return
-      pushKeyword(kw, idx === 0 ? 'EXACT' : 'PHRASE', 0)
-    })
-  }
-
-  return Array.from(keywordMap.values())
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 20)
-    .map(({ text, matchType }) => ({ text, matchType }))
-}
-
-function normalizeNegativeKeywords(input: any): string[] {
-  if (!Array.isArray(input)) return []
-  return Array.from(new Set(
-    input
-      .map((item) => (typeof item === 'string' ? item.trim() : ''))
-      .filter((value) => Boolean(value))
-      .map((value) => value.slice(0, 80))
-  )).slice(0, 30)
-}
-
 function normalizeAsinKey(value: string | null | undefined): string | null {
   const normalized = String(value || '').trim().toUpperCase()
   return normalized ? normalized : null
@@ -312,47 +182,6 @@ function normalizeAsinKey(value: string | null | undefined): string | null {
 function normalizeBrandKey(value: string | null | undefined): string | null {
   const normalized = String(value || '').trim().toLowerCase()
   return normalized ? normalized : null
-}
-
-function upsertOutcomeStats(map: Map<string, AsinOutcomeStats>, key: string | null, status: string) {
-  if (!key) return
-  const normalizedStatus = status === 'published' ? 'published' : 'failed'
-  const current = map.get(key) || { published: 0, failed: 0 }
-
-  if (normalizedStatus === 'published') {
-    current.published += 1
-  } else {
-    current.failed += 1
-  }
-
-  if (!current.lastStatus) {
-    current.lastStatus = normalizedStatus
-  }
-
-  map.set(key, current)
-}
-
-async function loadAsinOutcomeIndex(userId: number): Promise<AsinOutcomeIndex> {
-  const db = await getDatabase()
-  const rows = await db.query<AsinOutcomeRow>(
-    `SELECT asin, brand, status, created_at
-     FROM openclaw_asin_items
-     WHERE user_id = ?
-       AND status IN ('published', 'failed')
-     ORDER BY created_at DESC
-     LIMIT 5000`,
-    [userId]
-  )
-
-  const byAsin = new Map<string, AsinOutcomeStats>()
-  const byBrand = new Map<string, AsinOutcomeStats>()
-
-  for (const row of rows) {
-    upsertOutcomeStats(byAsin, normalizeAsinKey(row.asin), row.status)
-    upsertOutcomeStats(byBrand, normalizeBrandKey(row.brand), row.status)
-  }
-
-  return { byAsin, byBrand }
 }
 
 export function scoreAsinItemForExecution(params: {
@@ -417,108 +246,6 @@ export function rankAsinItemsForExecution(
     if (priorityDelta !== 0) return priorityDelta
     return a.item.id - b.item.id
   })
-}
-
-async function updateAsinItem(params: {
-  userId: number
-  itemId: number
-  status?: string
-  offerId?: number | null
-  errorMessage?: string | null
-  dataPatch?: Record<string, any>
-}) {
-  const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-
-  const fields: string[] = []
-  const values: any[] = []
-
-  if (params.status) {
-    fields.push('status = ?')
-    values.push(params.status)
-  }
-  if (params.offerId !== undefined) {
-    fields.push('offer_id = ?')
-    values.push(params.offerId)
-  }
-  if (params.errorMessage !== undefined) {
-    fields.push('error_message = ?')
-    values.push(params.errorMessage)
-  }
-
-  if (params.dataPatch) {
-    const existing = await db.queryOne<{ data_json: unknown }>(
-      'SELECT data_json FROM openclaw_asin_items WHERE id = ? AND user_id = ?',
-      [params.itemId, params.userId]
-    )
-    fields.push('data_json = ?')
-    values.push(mergeJson(existing?.data_json, params.dataPatch, db.type))
-  }
-
-  if (fields.length === 0) return
-
-  await db.exec(
-    `UPDATE openclaw_asin_items SET ${fields.join(', ')}, updated_at = ${nowFunc} WHERE id = ? AND user_id = ?`,
-    [...values, params.itemId, params.userId]
-  )
-}
-
-async function waitForOfferExtraction(userId: number, taskId: string, timeoutMs = 120000): Promise<number | null> {
-  const start = Date.now()
-  while (Date.now() - start < timeoutMs) {
-    const status = await fetchAutoadsJson<any>({
-      userId,
-      path: `/api/offers/extract/status/${taskId}`,
-    })
-    if (status.status === 'completed') {
-      const offerId = status.result?.offerId
-      return offerId ? Number(offerId) : null
-    }
-    if (status.status === 'failed') {
-      throw new Error(status.error?.message || 'Offer提取失败')
-    }
-    await sleep(5000)
-  }
-  return null
-}
-
-async function waitForCreativeTask(userId: number, taskId: string, timeoutMs = 120000): Promise<number | null> {
-  const start = Date.now()
-  while (Date.now() - start < timeoutMs) {
-    const status = await fetchAutoadsJson<any>({
-      userId,
-      path: `/api/creative-tasks/${taskId}`,
-    })
-    if (status.status === 'completed') {
-      const creativeId = status.result?.creative?.id
-      return creativeId ? Number(creativeId) : null
-    }
-    if (status.status === 'failed') {
-      throw new Error(status.error || '创意生成失败')
-    }
-    await sleep(5000)
-  }
-  return null
-}
-
-async function ensureAffiliateLink(userId: number, item: AsinItemRow): Promise<string | null> {
-  if (item.affiliate_link) return item.affiliate_link
-  if (!item.asin) return null
-  const link = await fetchPartnerboostLinkByAsin({
-    userId,
-    asin: item.asin,
-    countryCode: item.country_code,
-  })
-  return link?.link || null
-}
-
-async function loadActiveAdsAccounts(userId: number): Promise<AdsAccount[]> {
-  const response = await fetchAutoadsJson<any>({
-    userId,
-    path: '/api/google-ads-accounts',
-    query: { activeOnly: true },
-  })
-  return response?.accounts || []
 }
 
 function toNumber(value: unknown, fallback = 0): number {
@@ -941,23 +668,6 @@ export function buildStrategyRunExplanations(params: {
   }
 }
 
-const DEFAULT_PUBLISH_STOP_LOSS_THRESHOLD = 3
-
-function summarizeTopErrorMessages(messages: string[], limit = 3): string[] {
-  const counts = new Map<string, number>()
-  for (const raw of messages) {
-    const message = String(raw || '').trim()
-    if (!message) continue
-    const normalized = message.slice(0, 120)
-    counts.set(normalized, (counts.get(normalized) || 0) + 1)
-  }
-
-  return Array.from(counts.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([message, count]) => `${message} (${count})`)
-}
-
 export function calculateNextCpc(params: {
   roas: number
   currentCpc: number
@@ -993,40 +703,6 @@ function extractRoasFromSummary(summary: unknown): number | null {
 
   if (totalCost <= 0) return null
   return totalRevenue / totalCost
-}
-
-async function loadRecentKnowledgeRows(userId: number, days = 7): Promise<KnowledgeBaseRow[]> {
-  const db = await getDatabase()
-  return db.query<KnowledgeBaseRow>(
-    `SELECT report_date, summary_json, notes
-     FROM openclaw_knowledge_base
-     WHERE user_id = ?
-     ORDER BY report_date DESC
-     LIMIT ?`,
-    [userId, days]
-  )
-}
-
-async function loadRecentStrategyRunStats(userId: number, limit = 8): Promise<StrategyRunStat[]> {
-  const db = await getDatabase()
-  const rows = await db.query<{ stats_json: string | null }>(
-    `SELECT stats_json
-     FROM strategy_center_runs
-     WHERE user_id = ?
-       AND status = 'completed'
-     ORDER BY created_at DESC
-     LIMIT ?`,
-    [userId, limit]
-  )
-
-  return rows.map((row) => {
-    const stats = parseJson<Record<string, any>>(row.stats_json, {})
-    return {
-      publishSuccess: toNumber(stats.campaignsPublished, 0),
-      publishFailed: toNumber(stats.publishFailed, 0),
-      reason: stats.reason ? String(stats.reason) : null,
-    }
-  })
 }
 
 export function deriveAdaptiveStrategyConfig(params: {
@@ -1163,58 +839,6 @@ export function deriveFailureGuardConfig(params: {
   }
 }
 
-async function fetchOffer(userId: number, offerId: number): Promise<any> {
-  const response = await fetchAutoadsJson<any>({
-    userId,
-    path: `/api/offers/${offerId}`,
-  })
-  return response?.offer
-}
-
-async function fetchCreatives(userId: number, offerId: number): Promise<CreativeRow[]> {
-  const response = await fetchAutoadsJson<any>({
-    userId,
-    path: '/api/ad-creatives',
-    query: { offer_id: offerId },
-  })
-  return response?.creatives || []
-}
-
-async function fetchAccountBrandSnapshot(userId: number, accountId: number): Promise<AccountBrandSnapshotRow[]> {
-  const response = await fetchAutoadsJson<any>({
-    userId,
-    path: '/api/campaigns/active-brand-snapshot',
-    query: { accountId },
-  })
-  const rows = Array.isArray(response?.data?.rows) ? response.data.rows : []
-
-  return rows
-    .map((row: any) => ({
-      campaignId: String(row?.campaignId || ''),
-      campaignName: String(row?.campaignName || ''),
-      status: String(row?.status || 'UNKNOWN').toUpperCase() as AccountBrandSnapshotRow['status'],
-      bucket: row?.bucket === 'manual' || row?.bucket === 'other' ? row.bucket : 'own',
-      brand: typeof row?.brand === 'string' ? row.brand.trim() || null : null,
-      brandConfidence: row?.brandConfidence === 'high' || row?.brandConfidence === 'low' ? row.brandConfidence : 'none',
-      source: row?.source === 'manual' ? 'manual' : 'naming',
-    }))
-    .filter((row: AccountBrandSnapshotRow) => row.campaignId)
-}
-
-async function selectCreative(userId: number, offerId: number): Promise<CreativeRow | null> {
-  const creatives = await fetchCreatives(userId, offerId)
-  if (!creatives || creatives.length === 0) return null
-  const preferred = creatives.find((c: any) => c.creationStatus !== 'failed') || creatives[0]
-  return preferred ? {
-    id: preferred.id,
-    keywords: preferred.keywords,
-    keywordsWithVolume: preferred.keywordsWithVolume,
-    negativeKeywords: preferred.negativeKeywords,
-    creationStatus: preferred.creationStatus,
-    finalUrlSuffix: preferred.finalUrlSuffix,
-  } : null
-}
-
 export function shouldTreatCampaignAsConflict(params: {
   campaignStatus?: unknown
   campaignBrand?: unknown
@@ -1240,311 +864,6 @@ export function shouldTreatCampaignAsConflict(params: {
   return {
     conflict: brand !== target,
     unknownBrand: false,
-  }
-}
-
-async function pauseConflictingCampaigns(params: {
-  userId: number
-  campaigns: any[]
-  targetBrand: string
-  allowPause: boolean
-  runId: string
-}) {
-  const conflictRows = params.campaigns
-    .map((campaign: any) => ({
-      campaign,
-      decision: shouldTreatCampaignAsConflict({
-        campaignStatus: campaign.status,
-        campaignBrand: campaign.offerBrand,
-        targetBrand: params.targetBrand,
-        enforceUnknownBrandAsConflict: true,
-      }),
-    }))
-    .filter((entry) => entry.decision.conflict)
-
-  const conflicts = conflictRows.map((entry) => entry.campaign)
-  const unknownConflicts = conflictRows.filter((entry) => entry.decision.unknownBrand).length
-
-  if (conflicts.length === 0) {
-    return { paused: 0, skipped: 0, unknownConflicts: 0, failedCampaignIds: [] as string[] }
-  }
-
-  if (!params.allowPause) {
-    return {
-      paused: 0,
-      skipped: conflicts.length,
-      unknownConflicts,
-      failedCampaignIds: conflicts.map((campaign) => String(campaign.id || '')),
-    }
-  }
-
-  let paused = 0
-  const failedCampaignIds: string[] = []
-  for (const campaign of conflicts) {
-    const actionId = await recordStrategyAction({
-      runId: params.runId,
-      userId: params.userId,
-      actionType: 'pause_campaign',
-      targetType: 'campaign',
-      targetId: String(campaign.id),
-      requestJson: JSON.stringify({ status: 'PAUSED' }),
-    })
-    try {
-      await fetchAutoadsJson({
-        userId: params.userId,
-        path: `/api/campaigns/${campaign.id}/toggle-status`,
-        method: 'PUT',
-        body: { status: 'PAUSED' },
-      })
-      await updateStrategyAction({ actionId, userId: params.userId, status: 'success' })
-      await recordOpenclawAction({
-        userId: params.userId,
-        channel: 'strategy',
-        action: 'PUT /api/campaigns/:id/toggle-status',
-        targetType: 'campaign',
-        targetId: String(campaign.id),
-        requestBody: JSON.stringify({ status: 'PAUSED' }),
-        status: 'success',
-      })
-      paused += 1
-    } catch (error: any) {
-      failedCampaignIds.push(String(campaign.id || ''))
-      await updateStrategyAction({
-        actionId,
-        userId: params.userId,
-        status: 'failed',
-        errorMessage: error?.message || '暂停失败',
-      })
-    }
-  }
-
-  return {
-    paused,
-    skipped: conflicts.length - paused,
-    unknownConflicts,
-    failedCampaignIds,
-  }
-}
-
-function selectAccountForBrand(params: {
-  accounts: AdsAccount[]
-  targetBrand: string
-  accountBrandLocks: Map<number, string>
-  roundRobinSeed: number
-}): AdsAccount | null {
-  if (!params.accounts || params.accounts.length === 0) return null
-  const normalizedBrand = normalizeBrandKey(params.targetBrand)
-  if (!normalizedBrand) {
-    return params.accounts[params.roundRobinSeed % params.accounts.length]
-  }
-
-  const aligned = params.accounts.find((account) => {
-    const lock = params.accountBrandLocks.get(Number(account.id))
-    return lock === normalizedBrand
-  })
-  if (aligned) return aligned
-
-  const unlocked = params.accounts.find((account) => !params.accountBrandLocks.has(Number(account.id)))
-  if (unlocked) return unlocked
-
-  return null
-}
-
-async function fallbackPauseEnabledCampaignsForAccount(params: {
-  userId: number
-  accountId: number
-}) {
-  const { queryActiveCampaigns, pauseCampaigns } = await import('@/lib/active-campaigns-query')
-
-  const active = await queryActiveCampaigns(0, params.accountId, params.userId)
-  const enabledCampaigns = [
-    ...active.ownCampaigns,
-    ...active.manualCampaigns,
-    ...active.otherCampaigns,
-  ]
-
-  if (enabledCampaigns.length === 0) {
-    return {
-      enabled: 0,
-      attempted: 0,
-      paused: 0,
-      failed: 0,
-      failures: [] as string[],
-    }
-  }
-
-  const pauseResult = await pauseCampaigns(enabledCampaigns, params.accountId, params.userId)
-  const googleCampaignIds = enabledCampaigns
-    .map((campaign) => String(campaign.id || '').trim())
-    .filter((id) => Boolean(id))
-
-  if (googleCampaignIds.length > 0) {
-    await applyCampaignTransitionByGoogleCampaignIds({
-      userId: params.userId,
-      googleAdsAccountId: params.accountId,
-      googleCampaignIds,
-      action: 'CIRCUIT_BREAK_PAUSE',
-    })
-  }
-
-  const failures = Array.isArray(pauseResult.failures)
-    ? pauseResult.failures.map((failure: any) => {
-      const campaignId = String(failure?.id || 'unknown')
-      const errorMessage = String(failure?.error || '熔断暂停失败')
-      return `campaign:${campaignId} ${errorMessage}`
-    })
-    : []
-
-  return {
-    enabled: enabledCampaigns.length,
-    attempted: pauseResult.attemptedCount,
-    paused: pauseResult.pausedCount,
-    failed: pauseResult.failedCount,
-    failures,
-  }
-}
-
-async function enforceDailySpendCircuitBreak(params: {
-  userId: number
-  runId: string
-  accountIds: number[]
-  totalSpent: number
-  dailySpendCap: number
-}) {
-  const actionId = await recordStrategyAction({
-    runId: params.runId,
-    userId: params.userId,
-    actionType: 'spend_cap_circuit_break',
-    requestJson: JSON.stringify({
-      accountIds: params.accountIds,
-      totalSpent: roundCurrency(params.totalSpent),
-      dailySpendCap: roundCurrency(params.dailySpendCap),
-    }),
-  })
-
-  const uniqueAccountIds = Array.from(new Set(params.accountIds
-    .map((id) => Number(id))
-    .filter((id) => Number.isFinite(id) && id > 0)))
-
-  let attempted = 0
-  let paused = 0
-  let failed = 0
-  let apiTriggered = 0
-  let fallbackTriggered = 0
-  const accountSummaries: Array<{ accountId: number; enabled: number; paused: number; failed: number; source: 'api' | 'fallback' }> = []
-  const accountErrors: string[] = []
-  const accountWarnings: string[] = []
-
-  for (const accountId of uniqueAccountIds) {
-    let handledByApi = false
-
-    try {
-      const response = await fetchAutoadsJson<any>({
-        userId: params.userId,
-        path: '/api/campaigns/circuit-break',
-        method: 'POST',
-        body: {
-          accountId,
-          reason: 'daily_spend_cap',
-          source: 'openclaw-strategy',
-        },
-      })
-
-      if (!response?.success) {
-        throw new Error('熔断接口返回失败')
-      }
-
-      const data = response?.data || {}
-      const summary = data.summary || {}
-      const result = data.result || {}
-
-      const enabled = toNumber(summary.enabledCampaigns, toNumber(result.attemptedCount, 0))
-      const attemptedCount = toNumber(result.attemptedCount, enabled)
-      const pausedCount = toNumber(result.pausedCount, 0)
-      const failedCount = toNumber(result.failedCount, 0)
-
-      attempted += attemptedCount
-      paused += pausedCount
-      failed += failedCount
-      apiTriggered += 1
-      handledByApi = true
-
-      accountSummaries.push({
-        accountId,
-        enabled,
-        paused: pausedCount,
-        failed: failedCount,
-        source: 'api',
-      })
-
-      const failures = Array.isArray(result.failures) ? result.failures : []
-      for (const failure of failures) {
-        const failureId = String(failure?.id || 'unknown')
-        const failureMessage = String(failure?.error || '熔断暂停失败')
-        accountErrors.push(`account:${accountId} campaign:${failureId} ${failureMessage}`)
-      }
-    } catch (apiError: any) {
-      accountWarnings.push(`account:${accountId} api_failed ${apiError?.message || '熔断接口调用失败'}`)
-    }
-
-    if (handledByApi) {
-      continue
-    }
-
-    try {
-      const fallback = await fallbackPauseEnabledCampaignsForAccount({
-        userId: params.userId,
-        accountId,
-      })
-      attempted += fallback.attempted
-      paused += fallback.paused
-      failed += fallback.failed
-      fallbackTriggered += 1
-
-      accountSummaries.push({
-        accountId,
-        enabled: fallback.enabled,
-        paused: fallback.paused,
-        failed: fallback.failed,
-        source: 'fallback',
-      })
-
-      for (const message of fallback.failures) {
-        accountErrors.push(`account:${accountId} ${message}`)
-      }
-    } catch (fallbackError: any) {
-      accountErrors.push(`account:${accountId} fallback_failed ${fallbackError?.message || '熔断暂停失败'}`)
-    }
-  }
-
-  const status = accountErrors.length === 0 ? 'success' : 'failed'
-  await updateStrategyAction({
-    actionId,
-    userId: params.userId,
-    status,
-    responseJson: JSON.stringify({
-      attempted,
-      paused,
-      failed,
-      apiTriggered,
-      fallbackTriggered,
-      accountSummaries,
-      accountWarnings,
-      totalSpent: roundCurrency(params.totalSpent),
-      dailySpendCap: roundCurrency(params.dailySpendCap),
-    }),
-    errorMessage: accountErrors.length > 0 ? accountErrors.join('; ') : undefined,
-  })
-
-  return {
-    attempted,
-    paused,
-    failed,
-    apiTriggered,
-    fallbackTriggered,
-    accountSummaries,
-    accountWarnings,
-    accountErrors,
   }
 }
 

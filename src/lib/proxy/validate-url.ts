@@ -90,7 +90,7 @@ export function validateProxyUrl(proxyUrl: string): ProxyUrlValidation {
     if (!password) {
       errors.push('缺少认证密码参数 (password)')
     }
-  } catch (error) {
+  } catch (_error) {
     errors.push('URL格式无效，请检查URL是否正确')
   }
 
@@ -159,7 +159,7 @@ export function maskProxyUrl(proxyUrl: string): string {
     const params = new URLSearchParams(url.search)
     const cc = params.get('cc')
     return `${url.origin}${url.pathname}?cc=${cc || 'UNKNOWN'}&...`
-  } catch (error) {
+  } catch (_error) {
     return '[INVALID_URL]'
   }
 }

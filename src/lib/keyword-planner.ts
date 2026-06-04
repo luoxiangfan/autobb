@@ -17,7 +17,7 @@ import {
   getGoogleAdsAuthContext,
   type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
-import { resolveGoogleAdsCredentialOwnerId, resolveGoogleAdsApiAccessLevel } from './google-ads-auth-assignment'
+import { resolveGoogleAdsApiAccessLevel } from './google-ads-auth-assignment'
 import { getGoogleAdsLanguageIdString, getGoogleAdsGeoTargetId, normalizeCountryCode, normalizeLanguageCode } from './language-country-codes'
 import { getGoogleAdsClient } from './google-ads-api'
 import { getServiceAccountConfig, AuthType } from './google-ads-service-account'

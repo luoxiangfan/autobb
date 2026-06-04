@@ -20,11 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const {
-      performanceData,
-      creativesData,
-      analysisType = 'comprehensive' // comprehensive | ab_test | trend
-    } = body
+    const { performanceData } = body
 
     // 构建AI分析Prompt
     let analysisPrompt = `你是AutoAds系统的数据分析专家，专门负责分析Google Ads投放数据并提供优化建议。

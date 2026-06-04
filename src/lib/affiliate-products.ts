@@ -360,8 +360,6 @@ const DEFAULT_UPSERT_BATCH_SIZE_SQLITE = 40
 const DEFAULT_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS = 5 * 60 * 1000
 const MIN_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS = 60 * 1000
 const MAX_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS = 30 * 60 * 1000
-const DEFAULT_YP_REQUEST_DELAY_MS = 120
-const MAX_YP_REQUEST_DELAY_MS = 5000
 const DEFAULT_YP_RATE_LIMIT_MAX_RETRIES = 5
 const DEFAULT_YP_RATE_LIMIT_BASE_DELAY_MS = 1200
 const DEFAULT_YP_RATE_LIMIT_MAX_DELAY_MS = 30000
@@ -607,13 +605,6 @@ type YeahPromosTransactionsResponse = {
   pageNow?: number | string
   Data?: YeahPromosTransaction[] | Record<string, YeahPromosTransaction>
   data?: YeahPromosTransaction[] | YeahPromosTransactionsResponseData
-}
-
-type YeahPromosTransactionMetric = {
-  priceAmount: number | null
-  commissionAmount: number | null
-  commissionRate: number | null
-  sampleCount: number
 }
 
 type YeahPromosProductPageParseResult = {
@@ -2069,10 +2060,6 @@ function normalizeYmdDate(value: unknown): string | null {
   if (!text) return null
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null
   return text
-}
-
-function formatYmdDate(date: Date): string {
-  return date.toISOString().slice(0, 10)
 }
 
 function parseAllowedCountries(value: string | null | undefined): string[] {
@@ -3820,33 +3807,6 @@ function resolveYeahPromosProductMid(input: {
   return null
 }
 
-function resolveYeahPromosKeyFieldsStatus(input: {
-  brand: string | null
-  asin: string | null
-  priceAmount: number | null
-  commissionRate: number | null
-  promoLink: string | null
-  reviewCount: number | null
-}): {
-  complete: boolean
-  missing_fields: string[]
-  last_checked_at: string
-} {
-  const missingFields: string[] = []
-  if (!normalizeUrl(input.brand)) missingFields.push('brand')
-  if (!normalizeAsin(input.asin)) missingFields.push('asin')
-  if (input.priceAmount === null || !Number.isFinite(input.priceAmount)) missingFields.push('priceAmount')
-  if (input.commissionRate === null || !Number.isFinite(input.commissionRate)) missingFields.push('commissionRate')
-  if (!normalizeUrl(input.promoLink)) missingFields.push('promoLink')
-  if (input.reviewCount === null || !Number.isFinite(input.reviewCount)) missingFields.push('reviewCount')
-
-  return {
-    complete: missingFields.length === 0,
-    missing_fields: missingFields,
-    last_checked_at: new Date().toISOString(),
-  }
-}
-
 function parseYeahPromosProductHtmlPage(
   html: string,
   context?: {
@@ -3863,11 +3823,6 @@ function parseYeahPromosProductHtmlPage(
     || $('select[name="market_place"] option:selected').attr('value')
     || ''
   ))
-  const selectedSiteId = normalizeUrl(String(
-    $('select[name="site"] option:selected').attr('value')
-    || ''
-  ))
-
   const noProductsFound = /No products found/i.test($.text())
   const pageNowText = normalizeUrl($('#pageList .page-num').first().text())
   const pageNowMatch = pageNowText?.match(/Page\s+(\d+)/i)
@@ -3901,7 +3856,6 @@ function parseYeahPromosProductHtmlPage(
     const commissionText = normalizeUrl(body.find('.row').first().find('.col-xs-4 div').first().text())
     const ratingPanel = body.find('.rating-panel').first()
     const reviewCount = parseReviewCount(ratingPanel.text())
-    const rating = parsePriceAmount(ratingPanel.attr('data-rating'))
     const joinStatus = normalizeUrl(block.find('.status-joined').first().text())
     const applyProductId = normalizeUrl(body.find('.apply-product').first().attr('data-product_id'))
     const promoLink = resolveYeahPromosPromoLinkFromCard({

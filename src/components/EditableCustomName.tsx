@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Check, X, Loader2 } from 'lucide-react'
+import { X, Loader2 } from 'lucide-react'
 import { showSuccess, showError } from '@/lib/toast-utils'
 
 interface EditableCustomNameProps {

@@ -362,7 +362,7 @@ export async function executeOfferExtraction(
       storeProductLinks,
       extractionMode,
       // 进度回调：更新到数据库
-      progressCallback: async (stage, status, message, data, duration) => {
+      progressCallback: async (stage, status, message, _data, _duration) => {
         // 计算进度百分比 - 必须包含所有ProgressStage阶段
         const progressMap: Record<string, number> = {
           proxy_warmup: 5,

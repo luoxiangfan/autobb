@@ -7,7 +7,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getClickFarmHealth, getClickFarmMetricsHistory } from '@/lib/click-farm/monitoring';
-import { getDatabase } from '@/lib/db';
 
 export const dynamic = 'force-dynamic'
 

@@ -389,7 +389,7 @@ export function refineBrandNameForLandingPage(options: {
   productName: string | null
   currentBrandName: string | null
 }): string | null {
-  const { url, $, productName, currentBrandName } = options
+  const { url, productName, currentBrandName } = options
 
   const domainLabel = getRegistrableDomainLabelFromUrl(url)
   const slug = getFirstMeaningfulPathSegment(url)

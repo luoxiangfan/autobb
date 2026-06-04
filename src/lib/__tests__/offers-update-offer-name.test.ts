@@ -17,7 +17,7 @@ vi.mock('../offer-utils', () => ({
   getTargetLanguage: mockGetTargetLanguage,
   normalizeOfferTargetCountry: (v: string) => (String(v || '').trim().toUpperCase() === 'UK' ? 'GB' : String(v || '').trim().toUpperCase() || 'US'),
   normalizeBrandName: (v: string) => v,
-  validateBrandName: (v: string) => ({ valid: true as const }),
+  validateBrandName: (_v: string) => ({ valid: true as const }),
 }))
 
 describe('updateOffer: sync offer_name with brand/country', () => {

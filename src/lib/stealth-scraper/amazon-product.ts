@@ -10,10 +10,10 @@ import { getPlaywrightPool } from '../playwright-pool'
 import { extractAmazonBrandFromByline } from '../amazon-brand-utils'
 import { isLikelyInvalidBrandName } from '../brand-name-utils'
 import { isProxyConnectionError } from './proxy-utils'
-import { createStealthBrowser, releaseBrowser, configureStealthPage, randomDelay } from './browser-stealth'
+import { configureStealthPage, randomDelay } from './browser-stealth'
 import { scrapeUrlWithBrowser } from './core'
 import { smartWaitForLoad } from '../smart-wait-strategy'
-import type { BrowserContext, Page } from 'playwright'
+import type { BrowserContext } from 'playwright'
 import type { AmazonProductData } from './types'
 
 const PROXY_URL = process.env.PROXY_URL || ''
@@ -254,7 +254,7 @@ export async function scrapeAmazonProductWithContext(
     // 🔥 2025-12-12优化：分段滚动触发懒加载，确保feature-bullets加载
     // Amazon产品特性(About this item)通常在页面中下部，需要滚动触发懒加载
     // KISS原则：分两次滚动，覆盖更大范围
-    const scrollDebug = await page.evaluate(() => {
+    await page.evaluate(() => {
       const results = { scrollPositions: [] as number[], featureBulletsFound: false }
 
       // 第一次滚动：到页面30%位置
@@ -629,8 +629,6 @@ function parseAmazonProductHtml($: any, url: string, skipCompetitorExtraction: b
   // 检查feature-bullets元素
   const featureBulletsExists = $('#feature-bullets').length > 0
   const featureBulletsLiCount = $('#feature-bullets li').length
-  const featureBulletsDivExists = $('#featurebullets_feature_div').length > 0
-
   // 仅在异常情况下输出调试信息
   if (featureBulletsExists && featureBulletsLiCount === 0) {
     console.log(`⚠️ feature-bullets元素存在但li为空，可能需要检查页面结构`)

@@ -11,9 +11,6 @@ import {
   getLanguageName,
   getCountryName,
   getGoogleAdsLanguageCode,
-  getGoogleAdsCountryCode,
-  LANGUAGE_CODE_MAP,
-  COUNTRY_CODE_MAP,
   LANGUAGE_COUNTRY_PAIRS,
 } from '../language-country-codes'
 

@@ -1110,11 +1110,6 @@ export default function Step4PublishSummary({
         const allCampaignsToPause = [...ownCampaigns, ...manualCampaigns]
         setExistingCampaigns(allCampaignsToPause)
 
-        // 构建详细消息
-        const totalCount = data.total?.all || allCampaignsToPause.length
-        const ownCount = data.total?.own || ownCampaigns.length
-        const manualCount = data.total?.manual || manualCampaigns.length
-
         const details = data.details || {}
         const detailText = details.own || details.manual
           ? `\n${details.own || ''}${details.own && details.manual ? '\n' : ''}${details.manual || ''}`

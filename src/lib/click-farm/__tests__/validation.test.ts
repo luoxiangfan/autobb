@@ -113,7 +113,7 @@ describe('ClickFarm 配置验证测试', () => {
       expect(total).toBe(100);
 
       // 验证非活跃时段保持为0
-      result.forEach((value, index) => {
+      result.forEach((_value, _index) => {
         // distribution中所有值都>0，所以都是活跃时段
         // 归一化后应该保持相对比例
       });
@@ -269,7 +269,7 @@ describe('ClickFarm 配置验证测试', () => {
 
       // 填充到24个元素
       const fullDistribution = [...distribution, ...Array(14).fill(0)];
-      const result = normalizeDistribution(fullDistribution, 24);
+      const result = normalizeDistribution(fullDistribution, targetTotal);
 
       const actualTotal = result.reduce((sum, n) => sum + n, 0);
       expect(actualTotal).toBe(24);

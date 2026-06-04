@@ -1,4 +1,4 @@
-import { getOpenclawSettingsWithAffiliateSyncMap, parseBoolean, parseNumber } from '@/lib/openclaw/settings'
+import { getOpenclawSettingsWithAffiliateSyncMap, parseNumber } from '@/lib/openclaw/settings'
 import { resolvePartnerboostCountryCode } from '@/lib/affiliate-products'
 
 type PartnerboostAssociateItem = {

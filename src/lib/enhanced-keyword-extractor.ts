@@ -198,8 +198,8 @@ export async function extractKeywordsEnhanced(
 async function extractBrandKeywords(
   brandName: string,
   category: string,
-  targetCountry: string,
-  targetLanguage: string
+  _targetCountry: string,
+  _targetLanguage: string
 ): Promise<Partial<EnhancedKeyword>[]> {
   const normalizedBrand = normalizeEvidencePhrase(brandName, 3)
   if (!normalizedBrand) return []
@@ -233,8 +233,8 @@ async function extractCoreKeywords(
   productName: string,
   category: string,
   features: string[],
-  targetCountry: string,
-  targetLanguage: string
+  _targetCountry: string,
+  _targetLanguage: string
 ): Promise<Partial<EnhancedKeyword>[]> {
   const keywords: Partial<EnhancedKeyword>[] = []
   const categoryPhrase = normalizeEvidencePhrase(category, 4)
@@ -328,8 +328,8 @@ async function extractLongtailKeywords(
   features: string[],
   useCases: string[],
   targetAudience: string,
-  targetCountry: string,
-  targetLanguage: string
+  _targetCountry: string,
+  _targetLanguage: string
 ): Promise<Partial<EnhancedKeyword>[]> {
   const keywords: Partial<EnhancedKeyword>[] = []
 
@@ -371,8 +371,8 @@ async function extractLongtailKeywords(
  */
 async function extractCompetitorKeywords(
   competitors: string[],
-  targetCountry: string,
-  targetLanguage: string
+  _targetCountry: string,
+  _targetLanguage: string
 ): Promise<Partial<EnhancedKeyword>[]> {
   if (!competitors || competitors.length === 0) {
     return []

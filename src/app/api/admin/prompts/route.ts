@@ -6,7 +6,7 @@ import { getInsertedId } from '@/lib/db-helpers'
  * GET /api/admin/prompts
  * 获取所有Prompt配置及其版本信息
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const db = getDatabase()
 

@@ -197,6 +197,7 @@ export interface QueueConfig {
   // 队列限制
   maxQueueSize: number           // 最大队列长度
   taskTimeout: number            // 任务超时时间(ms)
+  enablePriority?: boolean       // system_settings 中的优先级开关（admin UI）
 
   // 重试策略
   defaultMaxRetries: number      // 默认最大重试次数

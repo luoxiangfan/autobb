@@ -66,33 +66,6 @@ function ensureBackupDirWritable(): EnsureBackupDirResult {
   }
 }
 
-export async function performBackup() {
-  try {
-    const ensureResult = ensureBackupDirWritable()
-    if (!ensureResult.ok) {
-      throw new Error(ensureResult.errorMessage || '备份目录不可写')
-    }
-
-    if (ensureResult.usedFallback) {
-      console.warn(`⚠️ BACKUP_DIR 不可写，已回退到默认目录: ${ensureResult.backupDir}`)
-    }
-
-    const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'autoads.db')
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-    const backupPath = path.join(ensureResult.backupDir, `autoads-backup-${timestamp}.db`)
-
-    if (dbPath.endsWith('.db')) {
-      fs.copyFileSync(dbPath, backupPath)
-      console.log(`✅ Database backup created at ${backupPath}`)
-      cleanOldBackups(ensureResult.backupDir)
-    } else {
-      console.log('⚠️ performBackup() only supports SQLite file copy. Use backupDatabase() for full support.')
-    }
-  } catch (error) {
-    console.error('❌ Backup failed:', error)
-  }
-}
-
 export async function backupDatabase(backupType: 'manual' | 'auto', createdBy?: number): Promise<{
   success: boolean;
   errorMessage?: string;
@@ -185,17 +158,4 @@ function cleanOldBackups(backupDir: string) {
   } catch (error) {
     console.error('⚠️ Failed to clean old backups:', error)
   }
-}
-
-let backupInterval: NodeJS.Timeout | null = null
-
-export function startBackupScheduler() {
-  if (backupInterval) return
-
-  console.log('⚠️ startBackupScheduler() 已禁用，请使用队列系统进行备份调度')
-  console.log('💡 替代方案：')
-  console.log('   1. 手动触发：await triggerBackup({ backupType: "manual", createdBy: userId })')
-  console.log('   2. 自动触发：配置外部cron调用API端点')
-  console.log('   3. 系统任务：await triggerBackup({ backupType: "auto" })')
-  return
 }

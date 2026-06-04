@@ -223,7 +223,7 @@ async function getTaskStats(
  */
 async function getPerformanceMetrics(
   db: DatabaseAdapter,
-  alerts: ClickFarmHealth['alerts']
+  _alerts: ClickFarmHealth['alerts']
 ): Promise<ClickFarmHealth['performanceMetrics']> {
   // 数据库查询时间
   const dbStart = Date.now();

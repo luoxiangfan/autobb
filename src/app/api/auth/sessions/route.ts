@@ -1,14 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { withAuth, AuthenticatedHandler } from '@/lib/auth'
 import {
   getActiveSessions,
   revokeSession,
   revokeAllSessions,
   getTrustedDevices,
-  trustDevice,
-  untrustDevice,
-  getUserAlerts,
-  resolveAlert
+  getUserAlerts
 } from '@/lib/user-sessions'
 
 /**

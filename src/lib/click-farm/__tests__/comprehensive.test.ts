@@ -24,15 +24,15 @@ import type { ClickFarmTask, CreateClickFarmTaskRequest } from '@/lib/click-farm
 
 // Mock timezone-utils
 vi.mock('../timezone-utils', () => ({
-  createDateInTimezone: vi.fn((dateStr: string, timeStr: string, timezone: string) => {
+  createDateInTimezone: vi.fn((dateStr: string, timeStr: string, _timezone: string) => {
     const [year, month, day] = dateStr.split('-').map(Number);
     const [hour, minute] = timeStr.split(':').map(Number);
     return new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
   }),
-  getDateInTimezone: vi.fn((date: Date, timezone: string) => {
+  getDateInTimezone: vi.fn((date: Date, _timezone: string) => {
     return date.toISOString().split('T')[0];
   }),
-  getHourInTimezone: vi.fn((date: Date, timezone: string) => {
+  getHourInTimezone: vi.fn((date: Date, _timezone: string) => {
     return date.getUTCHours();
   }),
   getTimezoneByCountry: vi.fn((country: string) => {
@@ -128,7 +128,7 @@ describe('ClickFarm 综合业务流程测试', () => {
       const subTasks = generateSubTasks(task, targetHour, targetCount, affiliateLink, targetCountry);
 
       expect(subTasks).toHaveLength(targetCount);
-      subTasks.forEach((subTask, index) => {
+      subTasks.forEach((subTask, _index) => {
         expect(subTask.taskId).toBe(task.id);
         expect(subTask.url).toBe(affiliateLink);
         expect(subTask.proxyCountry).toBe(targetCountry);

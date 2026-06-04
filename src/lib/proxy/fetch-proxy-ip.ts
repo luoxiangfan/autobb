@@ -1,7 +1,6 @@
-import { validateProxyUrl, maskProxyUrl } from './validate-url'
+import { maskProxyUrl } from './validate-url'
 import { ProxyProviderRegistry } from './providers/provider-registry'
 import type { ProxyCredentials } from './types'
-import axios from 'axios'
 import { shouldRetry, getRetryDelay, ProxyError, ProxyHealthCheckError } from './proxy-errors'
 
 /**

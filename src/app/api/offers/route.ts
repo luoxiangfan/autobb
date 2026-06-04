@@ -4,7 +4,7 @@ import { listOffers } from '@/lib/offers'
 import { getDatabase } from '@/lib/db'
 import { boolCondition } from '@/lib/db-helpers'
 import { toNumber } from '@/lib/utils'
-import { apiCache, generateCacheKey, invalidateOfferCache } from '@/lib/api-cache'
+import { apiCache, generateCacheKey } from '@/lib/api-cache'
 import { withPerformanceMonitoring } from '@/lib/api-performance'
 import { parsePositiveIntegerOfferIdList } from '@/lib/parse-offer-id'
 

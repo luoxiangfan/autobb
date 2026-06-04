@@ -202,7 +202,7 @@ describe('GET /api/campaigns/trends', () => {
   })
 
   it('includes all unattributed failures for campaign trend backend parity', async () => {
-    const query = vi.fn(scopeThen(async (sql: string, params: unknown[] = []) => {
+    const query = vi.fn(scopeThen(async (sql: string, _params: unknown[] = []) => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(cp.currency')) {
         return [{ currency: 'USD', cost: 40 }]
       }

@@ -73,7 +73,7 @@ export async function safeJsonParse<T = any>(response: Response): Promise<ApiRes
         success: true,
         data
       }
-    } catch (parseError) {
+    } catch (_parseError) {
       // JSON解析失败，可能是HTML错误页面
       if (text.includes('<html') || text.includes('<!DOCTYPE')) {
         return {
@@ -147,7 +147,7 @@ export async function fetchWithRetry<T = any>(
 
       // 不需要重试或已达到最大重试次数
       return result
-    } catch (error) {
+    } catch (_error) {
       lastError = {
         success: false,
         error: 'FETCH_ERROR',

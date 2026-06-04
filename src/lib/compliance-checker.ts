@@ -386,7 +386,7 @@ function rule_URLValidation(content: CreativeContent): ComplianceIssue[] {
           violatingText: content.finalUrl
         })
       }
-    } catch (error) {
+    } catch (_error) {
       issues.push({
         ruleId: 'R_URL_INVALID',
         ruleName: '无效URL',

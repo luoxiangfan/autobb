@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem } from '@/components/ui/select';
 import { Alert } from '@/components/ui/alert';
-import { Loader2, AlertCircle, TrendingUp, Edit3, RotateCcw, GripVertical, Clock, Globe, Link, Tag, ExternalLink } from 'lucide-react';
+import { Loader2, AlertCircle, TrendingUp, RotateCcw, Clock, Globe, Link, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { getTimezoneByCountry, getDateInTimezone } from '@/lib/timezone-utils';
 import { BATCH_CLICK_FARM_TASK_DEFAULTS } from '@/lib/batch-task-defaults';
@@ -78,7 +78,7 @@ export default function ClickFarmTaskModal({
   const [distribution, setDistribution] = useState<number[]>([]);
   const [isEditingDistribution, setIsEditingDistribution] = useState(false);
   const [isDistributionManuallyModified, setIsDistributionManuallyModified] = useState(false);
-  const [draggedHour, setDraggedHour] = useState<number | null>(null);
+  const [, setDraggedHour] = useState<number | null>(null);
   // 🔧 修复P2-10(2025-12-30): 初始值设为空,避免误导用户,实际值由选择offer时自动设置
   const [timezone, setTimezone] = useState<string>('');
   const [taskStatus, setTaskStatus] = useState<string | null>(null);
@@ -207,7 +207,7 @@ export default function ClickFarmTaskModal({
 
   // 🔧 修复(2025-12-30): loadAuxiliaryData只负责检查代理和设置时区,不涉及distribution
   // distribution统一由useEffect(line 142-148)管理
-  const loadAuxiliaryData = async (offer: Offer, offersList: Offer[]) => {
+  const loadAuxiliaryData = async (offer: Offer, _offersList: Offer[]) => {
     // 🔧 修复P2-4(2025-12-30): 添加错误处理,防止时区设置失败影响整体流程
     try {
       // 并行检查代理
@@ -380,76 +380,6 @@ export default function ClickFarmTaskModal({
       });
     }
     console.log('[ClickFarmTaskModal] handleOfferChange END');
-  };
-
-  /**
-   * 拖拽编辑分布曲线
-   */
-  const handleDistributionBarDrag = (hour: number, deltaY: number) => {
-    if (!isEditingDistribution || distribution.length === 0) return;
-
-    // 🔧 修复P2-3(2025-12-30): 防止除零错误,处理全为0的边界情况
-    const maxValue = Math.max(...distribution);
-    if (maxValue === 0) {
-      // 如果所有值都是0,直接返回,不处理拖拽
-      return;
-    }
-
-    // Calculate new value based on drag distance
-    const pixelsPerClick = 40 / maxValue; // 40px max height
-    const clicksDelta = Math.round(-deltaY / pixelsPerClick); // negative because drag up = increase
-
-    const newDistribution = [...distribution];
-    const oldValue = newDistribution[hour];
-    const newValue = Math.max(0, oldValue + clicksDelta);
-
-    newDistribution[hour] = newValue;
-
-    // Normalize to maintain total daily click count
-    const currentTotal = newDistribution.reduce((sum, n) => sum + n, 0);
-    if (currentTotal !== dailyClickCount && currentTotal > 0) {
-      const ratio = dailyClickCount / currentTotal;
-      for (let i = 0; i < newDistribution.length; i++) {
-        newDistribution[i] = Math.round(newDistribution[i] * ratio);
-      }
-    }
-
-    // Final adjustment to ensure exact total
-    const finalTotal = newDistribution.reduce((sum, n) => sum + n, 0);
-    const diff = dailyClickCount - finalTotal;
-    if (diff !== 0) {
-      // Add/subtract diff to the hour with highest value (excluding current hour if it was just set to 0)
-      const maxIndex = newDistribution.indexOf(Math.max(...newDistribution));
-      newDistribution[maxIndex] = Math.max(0, newDistribution[maxIndex] + diff);
-    }
-
-    setDistribution(newDistribution);
-    // 🔧 修复(2025-12-30): 拖拽编辑后标记为手动修改,阻止useEffect自动覆盖
-    setIsDistributionManuallyModified(true);
-  };
-
-  const handleBarMouseDown = (hour: number, e: React.MouseEvent) => {
-    if (!isEditingDistribution) return;
-
-    e.preventDefault();
-    setDraggedHour(hour);
-
-    const startY = e.clientY;
-    const startValue = distribution[hour];
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaY = moveEvent.clientY - startY;
-      handleDistributionBarDrag(hour, deltaY);
-    };
-
-    const handleMouseUp = () => {
-      setDraggedHour(null);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
   };
 
   const toggleEditMode = () => {

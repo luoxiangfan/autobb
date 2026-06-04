@@ -384,17 +384,6 @@ function getNextHourWithQuota(now: Date, task: ClickFarmTask): Date {
     endHour = 23; // 24:00 等同于 23:59，使用 23:59 后的下一个整点
   }
 
-  // 🔧 调试日志：记录搜索条件
-  const debugInfo = {
-    taskId: task.id,
-    timezone: task.timezone,
-    currentHour,
-    currentDate,
-    startHour,
-    endHour,
-    hourlyDistribution: hourlyDistribution.join(',')
-  }
-
   // 从下一个小时开始搜索，找到第一个有配额且在执行范围内的小时
   for (let i = 1; i <= 24; i++) {
     const checkHour = (currentHour + i) % 24;

@@ -53,7 +53,7 @@ export class OxylabsProvider implements ProxyProvider {
         countryCode,
         errors,
       }
-    } catch (error) {
+    } catch (_error) {
       return {
         isValid: false,
         countryCode: null,

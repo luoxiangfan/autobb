@@ -280,7 +280,7 @@ export function generateUpsertSql(
   conflictColumns: string[],
   insertColumns: string[],
   updateColumns: string[],
-  dbType: 'sqlite' | 'postgres'
+  _dbType: 'sqlite' | 'postgres'
 ): string {
   const placeholders = insertColumns.map(() => '?').join(', ')
   const conflictClause = conflictColumns.join(', ')

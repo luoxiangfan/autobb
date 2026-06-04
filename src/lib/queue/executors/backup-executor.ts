@@ -40,7 +40,7 @@ export interface BackupTaskResult {
  */
 export function createBackupExecutor(): TaskExecutor<BackupTaskData, BackupTaskResult> {
   return async (task: Task<BackupTaskData>) => {
-    const { backupType, createdBy, dbPath } = task.data
+    const { backupType, createdBy } = task.data
 
     console.log(`💾 [BackupExecutor] 开始备份任务: 类型=${backupType}, 用户=${createdBy || 'system'}`)
 

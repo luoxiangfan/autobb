@@ -4,7 +4,6 @@ import type { ValidationResult } from './base-provider'
 import { validateProxyUrl } from '../validate-url'
 import axios from 'axios'
 import {
-  ProxyFormatError,
   ProxyError,
   ProxyHttpError,
   ProxyNetworkError,
@@ -203,7 +202,7 @@ export class IPRocketProvider implements ProxyProvider {
           get: () => undefined,
         })
         Object.defineProperty(navigator, 'plugins', {
-          get: () => [1, 2, 3, 4, 5].map((_, i) => ({
+          get: () => [1, 2, 3, 4, 5].map((_, _i) => ({
             name: 'Chrome PDF Plugin',
             filename: 'internal-pdf-viewer',
             description: 'Portable Document Format',

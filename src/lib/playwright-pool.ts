@@ -9,7 +9,7 @@
  * - 预热功能
  */
 
-import { chromium, Browser, BrowserContext, Page } from 'playwright'
+import { chromium, Browser, BrowserContext } from 'playwright'
 import { maskProxyUrl } from './proxy/validate-url'
 
 /**
@@ -410,7 +410,7 @@ class PlaywrightPool {
       })
 
       // 隐藏console.debug特征
-      const originalDebug = console.debug
+      void console.debug
       console.debug = function() {
         // 静默处理，不输出
       }
@@ -613,7 +613,7 @@ class PlaywrightPool {
       try {
         await instance.context?.close().catch(() => {})
         await instance.browser?.close().catch(() => {})
-      } catch (e) {
+      } catch (_e) {
         // 忽略关闭错误
       }
       this.instances.delete(instanceId)
@@ -634,7 +634,7 @@ class PlaywrightPool {
         await instance.browser?.close().catch(() => {})
         this.instances.delete(key)
         clearedCount++
-      } catch (e) {
+      } catch (_e) {
         // 忽略关闭错误
       }
     }
@@ -925,7 +925,7 @@ class PlaywrightPool {
     // 检测1: 长时间inUse的实例（超过10分钟）
     const LEAK_THRESHOLD = 10 * 60 * 1000  // 10分钟
 
-    for (const [key, instance] of this.instances.entries()) {
+    for (const [, instance] of this.instances.entries()) {
       if (instance.inUse) {
         const inUseDuration = now - instance.lastUsedAt
 

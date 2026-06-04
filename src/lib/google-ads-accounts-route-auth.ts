@@ -1,7 +1,6 @@
 import {
   getGoogleAdsAuthContext,
   googleAdsAuthContextDualStackError,
-  resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthFromContext,
   type GoogleAdsApiAuthFields,
   type GoogleAdsAuthContext,
@@ -15,7 +14,6 @@ import type {
   OAuthApiClientCredentials,
   SyncUserCredentials,
 } from './google-ads-accounts-auth-types'
-import { toOAuthApiCredentialsFields } from './google-ads-accounts-auth-types'
 
 export function resolveOAuthRefreshToken(
   apiAuth: GoogleAdsApiAuthFields,

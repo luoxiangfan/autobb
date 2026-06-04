@@ -1,7 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { getCustomerWithCredentials } from '@/lib/google-ads-api'
 import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
 import { runOAuthGaqlWithLoginCustomerFallback } from '@/lib/google-ads-oauth-gaql'
 import { getDatabase } from '@/lib/db'

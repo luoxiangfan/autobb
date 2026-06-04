@@ -159,52 +159,9 @@ async function scrapeStorePageContent(
   page: Page,
   url: string,
   effectiveProxyUrl: string,
-  targetCountry?: string
+  _targetCountry?: string
 ): Promise<AmazonStoreData> {
   // 🔥 策略A优化：监听网络请求，提取Amazon Store API数据
-  const apiProducts: Array<{
-    asin: string
-    name: string
-    price: string | null
-    rating: string | null
-    reviewCount: string | null
-  }> = []
-
-  let apiRequestCount = 0
-  page.on('response', async (response) => {
-    try {
-      const responseUrl = response.url()
-      const contentType = response.headers()['content-type'] || ''
-
-      if (contentType.includes('application/json') && response.status() === 200) {
-        apiRequestCount++
-
-        if (!responseUrl.includes('uedata') &&
-            !responseUrl.includes('csm.js') &&
-            !responseUrl.includes('/events/') &&
-            !responseUrl.includes('rum-http-intake') &&
-            !responseUrl.includes('metrics')) {
-          try {
-            const json = await response.json()
-            const jsonStr = JSON.stringify(json)
-
-            if (jsonStr.includes('"asin"') ||
-                jsonStr.includes('"ASIN"') ||
-                jsonStr.includes('"product') ||
-                jsonStr.includes('"item') ||
-                jsonStr.includes('"dp/')) {
-              console.log(`📡 发现可能的产品API: ${responseUrl.substring(0, 100)}`)
-            }
-          } catch (e) {
-            // JSON解析失败，跳过
-          }
-        }
-      }
-    } catch (error) {
-      // 忽略响应处理错误
-    }
-  })
-
   let finalUrlWithParams = url
   page.on('response', (response) => {
     const responseUrl = response.url()
@@ -347,7 +304,7 @@ async function scrapeStorePageContent(
         await page.waitForSelector(selector, { timeout: 8000 })
         console.log(`✅ 产品DOM已渲染: ${selector}`)
         break
-      } catch (e) {
+      } catch (_e) {
         console.log(`⏳ 选择器 ${selector} 未找到，尝试下一个...`)
       }
     }
@@ -962,7 +919,7 @@ async function scrapeCategoryProducts(
   page: Page,
   categories: Array<{ name: string; url?: string }>,
   productAsins: Set<string>,
-  effectiveProxyUrl: string
+  _effectiveProxyUrl: string
 ): Promise<void> {
   for (const category of categories) {
     if (!category.url) continue
@@ -1357,7 +1314,7 @@ async function scrapeStoreCategories(
             count: 0,
             url: href || undefined
           })
-        } catch (err) {
+        } catch (_err) {
           continue
         }
       }
@@ -1366,7 +1323,7 @@ async function scrapeStoreCategories(
         console.log(`✅ 成功抓取 ${categories.length} 个产品类别`)
         break
       }
-    } catch (error: any) {
+    } catch (_error: any) {
       continue
     }
   }
@@ -1398,7 +1355,7 @@ export async function scrapeAmazonStoreDeep(
   topN: number = 5,
   customProxyUrl?: string,
   targetCountry?: string,
-  maxConcurrency: number = 2  // 🔥 降低并发，因为复用同一个Context
+  _maxConcurrency: number = 2  // 🔥 降低并发，因为复用同一个Context
 ): Promise<AmazonStoreData> {
   console.log(`🔍 店铺深度抓取开始: ${storeUrl}, 目标抓取 ${topN} 个热销商品`)
   console.log(`📊 产品缓存状态: ${JSON.stringify(getProductCacheStats())}`)

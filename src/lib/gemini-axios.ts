@@ -845,18 +845,6 @@ async function getGeminiApiKey(userId: number, provider: GeminiProvider): Promis
   return setting.value
 }
 
-/**
- * 根据用户配置获取 Gemini 端点
- *
- * 🔧 关键修复(2025-12-30): 使用 getSetting() 正确处理配置字段
- *
- * @param userId - 用户ID
- * @returns Gemini API 端点 URL
- */
-async function getGeminiEndpoint(userId: number): Promise<string> {
-  const provider = await getGeminiProvider(userId)
-  return getEndpointByProvider(provider)
-}
 
 /**
  * 根据服务商类型获取端点 URL（纯函数）

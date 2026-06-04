@@ -9,7 +9,6 @@
  * - Auto-refresh and health monitoring
  */
 
-import { HttpsProxyAgent } from 'https-proxy-agent'
 import os from 'os'
 import type { ProxyIP } from './types'
 import { fetchProxyIp } from './fetch-proxy-ip'

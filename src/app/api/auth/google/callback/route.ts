@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     const result = await loginWithGoogle(googleUser)
 
     // KISS账户共享检测：创建会话并检查可疑活动
-    const { session, alerts } = await createUserSession(
+    const { session } = await createUserSession(
       result.user.id!,
       ipAddress,
       userAgent

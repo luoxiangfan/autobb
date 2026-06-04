@@ -4,7 +4,7 @@
  */
 
 import { getDatabase } from './db'
-import { getIndustryBenchmark, IndustryBenchmark } from './industry-classifier'
+import { getIndustryBenchmark } from './industry-classifier'
 
 export interface PerformanceData {
   clicks: number

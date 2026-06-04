@@ -23,7 +23,7 @@ import type { Offer } from './offers'
  * @param offer - Offer信息
  * @param userId - 用户ID（未使用，保留接口兼容性）
  */
-export async function generateNegativeKeywords(offer: Offer, userId: number): Promise<string[]> {
+export async function generateNegativeKeywords(offer: Offer, _userId: number): Promise<string[]> {
   const targetLanguage = (offer.target_language || 'English').toLowerCase()
 
   console.log(`📋 生成否定关键词（10类固定模板，覆盖全场景）`)

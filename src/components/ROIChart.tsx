@@ -16,13 +16,6 @@ import {
 } from 'recharts'
 import { CURRENCY_SYMBOLS, formatCurrency } from '@/lib/currency'
 
-interface ROIChartProps {
-  data: any[]
-  type?: 'line' | 'bar'
-  showProfit?: boolean
-  height?: number
-}
-
 export const ROITrendChart = memo(function ROITrendChart({
   data,
   currency = 'CNY',

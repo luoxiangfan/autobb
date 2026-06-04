@@ -10,7 +10,6 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Eye,
@@ -21,10 +20,7 @@ import {
   TrendingDown,
   Plus,
   Rocket,
-  AlertTriangle,
-  ChevronRight,
   RefreshCw,
-  CalendarDays,
 } from 'lucide-react'
 import { formatCurrency, formatMultiCurrency } from '@/lib/utils'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
@@ -133,7 +129,7 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
   const [selectedUserId, setSelectedUserId] = useState<string>('all')  // 'all' 或用户 ID
   const [users, setUsers] = useState<Array<{ id: number; username: string; email: string }>>([])
   const [isAdmin, setIsAdmin] = useState(false)
-  const [risks, setRisks] = useState<RiskAlert[]>([])
+  const [, setRisks] = useState<RiskAlert[]>([])
   const [offerSummary, setOfferSummary] = useState<OfferSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -428,8 +424,6 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
       </div>
     )
   }
-
-  const hasRisks = risks.length > 0
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 sm:p-6">

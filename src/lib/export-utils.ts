@@ -8,100 +8,6 @@
 import { showWarning } from './toast-utils'
 
 /**
- * 将数据导出为CSV格式
- * @param data 要导出的数据数组
- * @param filename 文件名（不含扩展名）
- * @param headers 自定义列头（可选）
- */
-export function exportToCSV<T extends Record<string, any>>(
-  data: T[],
-  filename: string,
-  headers?: Record<keyof T, string>
-): void {
-  if (data.length === 0) {
-    showWarning('无法导出', '没有可导出的数据')
-    return
-  }
-
-  // 获取列键
-  const keys = Object.keys(data[0]) as (keyof T)[]
-
-  // 生成CSV头部
-  const headerRow = headers
-    ? keys.map((key) => headers[key] || String(key)).join(',')
-    : keys.join(',')
-
-  // 生成CSV数据行
-  const rows = data.map((row) =>
-    keys
-      .map((key) => {
-        const value = row[key]
-        // 处理包含逗号、换行符或引号的值
-        if (value === null || value === undefined) {
-          return ''
-        }
-        const stringValue = String(value)
-        if (stringValue.includes(',') || stringValue.includes('\n') || stringValue.includes('"')) {
-          return `"${stringValue.replace(/"/g, '""')}"`
-        }
-        return stringValue
-      })
-      .join(',')
-  )
-
-  // 组合CSV内容
-  const csv = [headerRow, ...rows].join('\n')
-
-  // 创建Blob并下载
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  const url = URL.createObjectURL(blob)
-
-  link.setAttribute('href', url)
-  link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`)
-  link.style.visibility = 'hidden'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
-
-/**
- * 将数据导出为JSON格式
- * @param data 要导出的数据
- * @param filename 文件名（不含扩展名）
- */
-export function exportToJSON<T>(data: T, filename: string): void {
-  const json = JSON.stringify(data, null, 2)
-  const blob = new Blob([json], { type: 'application/json' })
-  const link = document.createElement('a')
-  const url = URL.createObjectURL(blob)
-
-  link.setAttribute('href', url)
-  link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.json`)
-  link.style.visibility = 'hidden'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
-
-/**
- * Campaign数据导出类型定义
- */
-export interface CampaignExportData {
-  campaignId: number
-  campaignName: string
-  status: string
-  offerBrand: string
-  impressions: number
-  clicks: number
-  cost: number
-  conversions: number
-  ctr: number
-  cpc: number
-  conversionRate: number
-}
-
-/**
  * Offer数据导出类型定义
  */
 export interface OfferExportData {
@@ -117,31 +23,39 @@ export interface OfferExportData {
   createdAt: string
 }
 
-/**
- * 导出Campaign数据为CSV
- */
-export function exportCampaigns(campaigns: CampaignExportData[]): void {
-  const headers: Record<keyof CampaignExportData, string> = {
-    campaignId: 'Campaign ID',
-    campaignName: 'Campaign名称',
-    status: '状态',
-    offerBrand: '品牌',
-    impressions: '展示量',
-    clicks: '点击量',
-    cost: '花费(¥)',
-    conversions: '佣金',
-    ctr: 'CTR(%)',
-    cpc: 'CPC(¥)',
-    conversionRate: '每次点击佣金',
-  }
+function downloadCsv(filename: string, csv: string): void {
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
 
-  exportToCSV(campaigns, 'campaigns', headers)
+  link.setAttribute('href', url)
+  link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`)
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+function escapeCsvCell(value: unknown): string {
+  if (value === null || value === undefined) {
+    return ''
+  }
+  const stringValue = String(value)
+  if (stringValue.includes(',') || stringValue.includes('\n') || stringValue.includes('"')) {
+    return `"${stringValue.replace(/"/g, '""')}"`
+  }
+  return stringValue
 }
 
 /**
  * 导出Offer数据为CSV
  */
 export function exportOffers(offers: OfferExportData[]): void {
+  if (offers.length === 0) {
+    showWarning('无法导出', '没有可导出的数据')
+    return
+  }
+
   const headers: Record<keyof OfferExportData, string> = {
     id: 'ID',
     offerName: 'Offer标识',
@@ -155,5 +69,12 @@ export function exportOffers(offers: OfferExportData[]): void {
     createdAt: '创建时间',
   }
 
-  exportToCSV(offers, 'offers', headers)
+  const keys = Object.keys(offers[0]) as (keyof OfferExportData)[]
+  const headerRow = keys.map((key) => headers[key] || String(key)).join(',')
+  const rows = offers.map((row) =>
+    keys.map((key) => escapeCsvCell(row[key])).join(',')
+  )
+  const csv = [headerRow, ...rows].join('\n')
+
+  downloadCsv('offers', csv)
 }

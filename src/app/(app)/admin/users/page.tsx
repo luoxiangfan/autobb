@@ -321,7 +321,7 @@ export default function UserManagementPage() {
             const data = await res.json()
             setUsers(data.users)
             setPagination(data.pagination)
-        } catch (error) {
+        } catch (_error) {
             toast.error('加载用户列表失败')
         } finally {
             setLoading(false)

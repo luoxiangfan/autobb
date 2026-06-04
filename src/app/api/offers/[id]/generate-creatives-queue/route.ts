@@ -26,8 +26,6 @@ import { normalizeSingleCreativeSelection } from '@/lib/creative-request-normali
 import { normalizeCreativeTaskError, toCreativeTaskErrorResponseFields, type CreativeTaskErrorCategory } from '@/lib/creative-task-error'
 import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
-type NormalizedCreativeBucket = 'A' | 'B' | 'D'
-
 type QueueErrorResponseInput = {
   status: number
   error: string
@@ -115,7 +113,6 @@ export async function POST(
 
   const body = await request.json()
   const {
-    targetRating = 'GOOD',
     synthetic = false,  // 🔧 向后兼容：旧版“综合创意”标记（KISS-3类型方案中不再生成S桶）
     coverage = false,   // ✅ 新命名：coverage 模式，本质仍映射到 D / product_intent
     bucket,
@@ -138,7 +135,6 @@ export async function POST(
   }
   const {
     mode: generationMode,
-    profile: generationProfile,
     maxRetries: normalizedMaxRetries,
   } = runtime
   const normalizedTargetRating: AdCreativeTaskData['targetRating'] = 'GOOD'

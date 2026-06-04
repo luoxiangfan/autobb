@@ -125,66 +125,6 @@ export async function logLoginAttempt(
 }
 
 /**
- * 获取最近的失败登录尝试（用于分析攻击模式）
- */
-export async function getRecentFailedAttempts(
-  hours: number = 1,
-  limit: number = 100
-): Promise<
-  Array<{
-    username_or_email: string
-    ip_address: string
-    user_agent: string
-    failure_reason: string
-    attempted_at: string
-  }>
-> {
-  const db = await getDatabase()
-  const db_type = db.type
-  const timeCondition =
-    db_type === 'postgres'
-      ? `attempted_at > NOW() - INTERVAL '${hours} hours'`
-      : `attempted_at > datetime('now', '-${hours} hours')`
-
-  return (await db.query(
-    `
-    SELECT username_or_email, ip_address, user_agent, failure_reason, attempted_at
-    FROM login_attempts
-    WHERE success = ?
-      AND ${timeCondition}
-    ORDER BY attempted_at DESC
-    LIMIT ?
-  `,
-    [boolParam(false, db.type), limit]
-  )) as any[]
-}
-
-/**
- * 获取当前被禁用的账户列表（管理员功能）
- */
-export async function getDisabledAccounts(): Promise<
-  Array<{
-    id: number
-    username: string | null
-    email: string
-    failed_login_count: number
-    last_failed_login: string | null
-  }>
-> {
-  const db = await getDatabase()
-
-  return (await db.query(
-    `
-    SELECT id, username, email, failed_login_count, last_failed_login
-    FROM users
-    WHERE is_active = ?
-    ORDER BY last_failed_login DESC
-  `,
-    [boolParam(false, db.type)]
-  )) as any[]
-}
-
-/**
  * 启用账户并重置失败计数（管理员功能）
  * 用于管理员手动启用因多次登录失败被禁用的账户
  */
@@ -203,39 +143,4 @@ export async function enableAccount(userId: number): Promise<void> {
   )
 
   console.log(`[Security] Account ${userId} manually enabled by admin`)
-}
-
-/**
- * 获取IP的登录尝试次数（用于IP级别的速率限制检测）
- */
-export async function getIpLoginAttempts(
-  ipAddress: string,
-  minutes: number = 5
-): Promise<number> {
-  const db = await getDatabase()
-  const db_type = db.type
-  const timeCondition =
-    db_type === 'postgres'
-      ? `attempted_at > NOW() - INTERVAL '${minutes} minutes'`
-      : `attempted_at > datetime('now', '-${minutes} minutes')`
-
-  const result = (await db.queryOne(
-    `
-    SELECT COUNT(*) as count
-    FROM login_attempts
-    WHERE ip_address = ?
-      AND ${timeCondition}
-  `,
-    [ipAddress]
-  )) as { count: number } | null
-
-  return result?.count || 0
-}
-
-/**
- * 检查是否为可疑IP（短时间内大量失败尝试）
- */
-export async function isSuspiciousIp(ipAddress: string): Promise<boolean> {
-  const attempts = await getIpLoginAttempts(ipAddress, 5)
-  return attempts > 10 // 5分钟内超过10次尝试视为可疑
 }

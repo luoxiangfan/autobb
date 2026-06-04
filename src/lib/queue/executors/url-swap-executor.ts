@@ -55,7 +55,7 @@ function validateUrlDomainChange(oldUrl: string, newUrl: string): {
     }
 
     return { valid: true }
-  } catch (error) {
+  } catch (_error) {
     return { valid: true } // URL解析失败时，允许继续
   }
 }

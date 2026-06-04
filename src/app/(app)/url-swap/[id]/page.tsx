@@ -13,9 +13,6 @@ import {
   Pause,
   Calendar,
   Link as LinkIcon,
-  CheckCircle,
-  XCircle,
-  Clock,
   AlertTriangle,
   ExternalLink,
 } from 'lucide-react';
@@ -98,11 +95,6 @@ export default function UrlSwapTaskDetailPage() {
       console.error('日期格式化失败:', dateValue, error);
       return '-';
     }
-  };
-
-  const formatDate = (dateValue: string | null): string => {
-    if (!dateValue) return '-';
-    return dateValue.split('T')[0];
   };
 
   const handleSwapNow = async () => {

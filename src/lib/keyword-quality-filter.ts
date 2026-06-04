@@ -1188,75 +1188,9 @@ const SOURCE_TRUST_SCORE_RULES: Array<{ pattern: RegExp; score: number }> = [
   { pattern: /^GLOBAL_KEYWORDS$/i, score: 3 },
 ]
 
-type ScriptFamily =
-  | 'latin'
-  | 'han'
-  | 'hiragana'
-  | 'katakana'
-  | 'hangul'
-  | 'cyrillic'
-  | 'arabic'
-  | 'hebrew'
-  | 'thai'
-
-const SCRIPT_FAMILY_PATTERNS: Array<{ family: ScriptFamily; pattern: RegExp }> = [
-  { family: 'latin', pattern: /[A-Za-z]/u },
-  { family: 'han', pattern: /\p{Script=Han}/u },
-  { family: 'hiragana', pattern: /\p{Script=Hiragana}/u },
-  { family: 'katakana', pattern: /\p{Script=Katakana}/u },
-  { family: 'hangul', pattern: /\p{Script=Hangul}/u },
-  { family: 'cyrillic', pattern: /\p{Script=Cyrillic}/u },
-  { family: 'arabic', pattern: /\p{Script=Arabic}/u },
-  { family: 'hebrew', pattern: /\p{Script=Hebrew}/u },
-  { family: 'thai', pattern: /\p{Script=Thai}/u },
-]
-
-const CYRILLIC_LANGUAGE_CODES = new Set(['ru', 'uk', 'bg', 'sr', 'mk', 'be', 'kk', 'ky', 'uz'])
-const DEFAULT_ALLOWED_SCRIPT_FAMILIES = new Set<ScriptFamily>(['latin'])
 const HIGH_PERFORMING_INFO_QUERY_PATTERN = /\b(what is|meaning|tutorial|guide|manual|how to|instructions?)\b/i
 const HIGH_PERFORMING_REVIEW_COMPARE_PATTERN = /\b(review|reviews|comparison|compare|vs)\b/i
 const HIGH_PERFORMING_PLATFORM_PATTERN = /\b(amazon|walmart|ebay|etsy|aliexpress|temu)\b/i
-
-function normalizeTargetLanguageCode(targetLanguage?: string): string {
-  const normalized = String(targetLanguage || '')
-    .trim()
-    .toLowerCase()
-    .replace(/_/g, '-')
-  if (!normalized) return ''
-  const base = normalized.split('-')[0]
-  return base || normalized
-}
-
-function resolveAllowedScriptFamilies(targetLanguage?: string): Set<ScriptFamily> {
-  const lang = normalizeTargetLanguageCode(targetLanguage)
-  if (!lang) return DEFAULT_ALLOWED_SCRIPT_FAMILIES
-  if (lang === 'zh') return new Set<ScriptFamily>(['han', 'latin'])
-  if (lang === 'ja') return new Set<ScriptFamily>(['han', 'hiragana', 'katakana', 'latin'])
-  if (lang === 'ko') return new Set<ScriptFamily>(['hangul', 'latin'])
-  if (lang === 'ar') return new Set<ScriptFamily>(['arabic', 'latin'])
-  if (lang === 'he') return new Set<ScriptFamily>(['hebrew', 'latin'])
-  if (lang === 'th') return new Set<ScriptFamily>(['thai', 'latin'])
-  if (CYRILLIC_LANGUAGE_CODES.has(lang)) return new Set<ScriptFamily>(['cyrillic', 'latin'])
-  return DEFAULT_ALLOWED_SCRIPT_FAMILIES
-}
-
-function detectKeywordScriptFamilies(keyword: string): Set<ScriptFamily> {
-  const families = new Set<ScriptFamily>()
-  const text = String(keyword || '')
-  if (!text) return families
-  for (const { family, pattern } of SCRIPT_FAMILY_PATTERNS) {
-    if (pattern.test(text)) families.add(family)
-  }
-  return families
-}
-
-function hasOnlyLatinLetters(families: Set<ScriptFamily>): boolean {
-  return families.size > 0 && Array.from(families).every(family => family === 'latin')
-}
-
-function hasAnyNonLatinFamily(families: Set<ScriptFamily>): boolean {
-  return Array.from(families).some(family => family !== 'latin')
-}
 
 function isLanguageScriptMismatch(params: {
   keyword: string

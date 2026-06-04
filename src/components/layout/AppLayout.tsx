@@ -10,7 +10,6 @@ import {
   Boxes,
   Megaphone,
   Lightbulb,
-  Rocket,
   Settings,
   Users,
   Database,
@@ -20,7 +19,6 @@ import {
   ChevronDown,
   User as UserIcon,
   Shield,
-  Key,
   Link2,
   TrendingUp,
   FileText,
@@ -51,20 +49,6 @@ const MobileBottomNav = dynamic(
   () => import('./MobileBottomNav').then(mod => mod.MobileBottomNav),
   { ssr: false }
 )
-
-// 套餐类型中文映射
-const PACKAGE_TYPE_MAP: Record<string, string> = {
-  trial: '试用版',
-  annual: '年卡',
-  lifetime: '长期会员',
-  enterprise: '私有化部署',
-}
-
-// 角色中文映射
-const ROLE_MAP: Record<string, string> = {
-  admin: '管理员',
-  user: '普通用户',
-}
 
 interface UserInfo {
   id: number
@@ -378,7 +362,7 @@ export default function AppLayout({
       cachedUser = data.user
       cacheTimestamp = Date.now()
       setUser(data.user)
-    } catch (err) {
+    } catch (_err) {
       cachedUser = null
       cacheTimestamp = 0
       router.push('/login')

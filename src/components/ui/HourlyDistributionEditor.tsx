@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { TrendingUp, GripVertical } from 'lucide-react';
+import { useState, useMemo, useCallback, useRef } from 'react';
+import { GripVertical } from 'lucide-react';
 
 interface HourlyDistributionEditorProps {
   /** 24小时分布数据 (0-23时的点击数，必须是正整数) */
@@ -29,7 +29,7 @@ interface HourlyDistributionEditorProps {
  */
 export default function HourlyDistributionEditor({
   distribution,
-  dailyClickCount,
+  dailyClickCount: _dailyClickCount,
   timePeriod = '00:00-24:00',
   isEditing = false,
   onChange,
@@ -58,7 +58,7 @@ export default function HourlyDistributionEditor({
   }, [timePeriod, startHour, endHour]);
 
   // 计算图表参数
-  const { maxValue, yTicks, chartPoints, curvePath, areaPath } = useMemo(() => {
+  const { maxValue, yTicks, chartPoints, curvePath } = useMemo(() => {
     const dataMax = Math.max(...distribution, 1);
     // Y轴最大值比数据最大值稍大，留出顶部空白使图表更美观
     // 向上取整到5的倍数（如 12→15, 10→10, 7→10）
@@ -104,11 +104,7 @@ export default function HourlyDistributionEditor({
       curvePath += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.xPercent},${p2.yPercent}`;
     }
 
-    // 生成填充区域路径
-    const lastPoint = chartPoints[chartPoints.length - 1];
-    const areaPath = `${curvePath} L ${lastPoint.xPercent},100 L ${chartPoints[0].xPercent},100 Z`;
-
-    return { maxValue, yTicks, chartPoints, curvePath, areaPath };
+    return { maxValue, yTicks, chartPoints, curvePath };
   }, [distribution, isActiveHour]);
 
   // 拖拽处理
@@ -141,13 +137,11 @@ export default function HourlyDistributionEditor({
   }, [draggedHour]);
 
   // 计算总点击数和活跃小时数
-  const { totalClicks, activeHoursCount } = useMemo(() => {
-    const activeHoursCount = chartPoints.filter(p => p.isActive).length;
+  const { totalClicks } = useMemo(() => {
     return {
       totalClicks: distribution.reduce((sum, val) => sum + val, 0),
-      activeHoursCount,
     };
-  }, [distribution, chartPoints]);
+  }, [distribution]);
 
   if (distribution.length !== 24) {
     return (

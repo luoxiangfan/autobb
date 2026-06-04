@@ -5,8 +5,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/db';
 import { parseJsonField } from '@/lib/json-field';
 
-// 🔧 修复(2025-01-01): PostgreSQL布尔类型兼容性
-const IS_DELETED_FALSE = 'IS_DELETED_FALSE'
 
 export const dynamic = 'force-dynamic'
 

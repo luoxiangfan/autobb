@@ -1700,21 +1700,6 @@ function buildRecommendationNote(params: {
   return '发布链路稳定，明日建议按建议参数稳步放量，同时持续监控ROAS与失败原因。'
 }
 
-function formatRecommendationSourceLabel(
-  source: StrategyKnowledgeSummary['recommendationSource']
-): string {
-  switch (source) {
-    case 'effective_config':
-      return '最终生效配置'
-    case 'failure_guard_after':
-      return '风控后参数'
-    case 'adaptive_after':
-      return '自适应后参数'
-    default:
-      return '无建议来源'
-  }
-}
-
 function buildStrategyKnowledgeSummary(report: DailyReportPayload): StrategyKnowledgeSummary {
   const strategyActions = Array.isArray(report.strategyActions) ? report.strategyActions : []
   const strategyStats = parseMaybeJson<Record<string, any>>(report.strategyRun?.stats_json, {})

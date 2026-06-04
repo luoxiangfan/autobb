@@ -161,7 +161,6 @@ const MODEL_FAMILY_PACK_TOKENS = new Set([
   'pieces',
   'set',
 ])
-const MODEL_FAMILY_NUMERIC_CODE_SPEC_CONTEXT_PATTERN = /\b(?:gpd|btu|lm|mah|wh|w|kw|v|ah|l|liter|liters|qt|quart|quarts|inch|in|ft|oz|lb|lbs|kg|g|cup|cups)\b/i
 
 const LINE_TERM_STOPWORDS = new Set([
   'with',
@@ -1033,14 +1032,6 @@ function extractModelCodesFromKeyword(keyword: string): string[] {
       ...generalizedTokens,
     ]
   ))
-}
-
-function keywordContainsAnyToken(keyword: string, tokens: Set<string>): boolean {
-  if (tokens.size === 0) return false
-  const normalized = normalizeGoogleAdsKeyword(keyword)
-  if (!normalized) return false
-  const keywordTokens = normalized.split(/\s+/).map(normalizeToken).filter(Boolean)
-  return keywordTokens.some((token) => tokens.has(token))
 }
 
 function keywordContainsAnyPhrase(keyword: string, phrases: string[]): boolean {

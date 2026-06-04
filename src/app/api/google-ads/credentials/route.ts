@@ -4,7 +4,6 @@ import { saveGoogleAdsCredentials, deleteGoogleAdsCredentials } from '@/lib/goog
 import { getDatabase } from '@/lib/db'
 import {
   assertUserCanModifyGoogleAdsAuth,
-  isGoogleAdsAuthShared,
 } from '@/lib/google-ads-auth-assignment'
 import { updateApiAccessLevel } from '@/lib/google-ads-access-level-detector'
 import {

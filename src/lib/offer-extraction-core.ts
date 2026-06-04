@@ -16,13 +16,12 @@ import {
   scrapeIndependentStoreDeep,  // 🔥 修改：使用深度抓取版本，与Amazon Store保持一致
   scrapeAmazonProduct,
 } from '@/lib/stealth-scraper'
-import { createError, AppError } from '@/lib/errors'
+import { AppError } from '@/lib/errors'
 import {
   detectPageType,
   initializeProxyPool,
   getTargetLanguage,
   normalizeBrandName,
-  PageTypeResult,
 } from '@/lib/offer-utils'
 import { scrapeSupplementalProducts, type SupplementalProductResult } from '@/lib/offer-supplemental-products'
 import { warmupAffiliateLink } from '@/lib/proxy-warmup'

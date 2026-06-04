@@ -14,7 +14,6 @@ import {
 } from './google-ads-auth-context'
 import {
   oauthGetCustomerParams,
-  type GoogleAdsCustomerCredentialParams,
 } from './google-ads-oauth-customer-params'
 
 export type { GoogleAdsCustomerCredentialParams, OAuthGetCustomerWithCredentialsParams } from './google-ads-oauth-customer-params'
@@ -1589,9 +1588,6 @@ export async function listGoogleAdsCampaigns(params: {
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
   if (authType === 'service_account') {
     const { executeGAQLQueryPython } = await import('./python-ads-client')
-    const { getServiceAccountConfig } = await import('./google-ads-service-account')
-    const saConfig = await getServiceAccountConfig(params.userId, params.serviceAccountId)
-
     const query = `
       SELECT
         campaign.id,

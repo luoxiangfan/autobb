@@ -66,24 +66,6 @@ export async function findAdGroupById(id: number, userId: number): Promise<AdGro
 }
 
 /**
- * 根据Google Ads ad_group_id查找
- */
-export async function findAdGroupByGoogleId(adGroupId: string, userId: number): Promise<AdGroup | null> {
-  const db = await getDatabase()
-
-  const row = await db.queryOne(`
-    SELECT * FROM ad_groups
-    WHERE ad_group_id = ? AND user_id = ?
-  `, [adGroupId, userId])
-
-  if (!row) {
-    return null
-  }
-
-  return mapRowToAdGroup(row)
-}
-
-/**
  * 查找Campaign的所有Ad Groups
  */
 export async function findAdGroupsByCampaignId(campaignId: number, userId: number): Promise<AdGroup[]> {
@@ -204,27 +186,6 @@ export async function deleteAdGroup(id: number, userId: number): Promise<boolean
   `, [id, userId])
 
   return result.changes > 0
-}
-
-/**
- * 更新Ad Group状态
- */
-export async function updateAdGroupStatus(id: number, userId: number, status: string): Promise<AdGroup | null> {
-  return await updateAdGroup(id, userId, { status })
-}
-
-/**
- * 批量创建Ad Groups
- */
-export async function createAdGroupsBatch(adGroups: CreateAdGroupInput[]): Promise<AdGroup[]> {
-  const results: AdGroup[] = []
-
-  for (const group of adGroups) {
-    const adGroup = await createAdGroup(group)
-    results.push(adGroup)
-  }
-
-  return results
 }
 
 /**

@@ -6,8 +6,7 @@ import {
   classifyKeywordPriority,
   validatePriorityDistribution,
   suggestKeywordsForMissingPriority,
-  generatePriorityDistributionSummary,
-  type KeywordPriority
+  generatePriorityDistributionSummary
 } from '../keyword-priority-classifier'
 import { mockKeywords, mockOffers } from './test-utils'
 

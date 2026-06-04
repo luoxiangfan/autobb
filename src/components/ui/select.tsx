@@ -37,7 +37,7 @@ export function SelectItem({ children, ...props }: SelectItemProps) {
   return <option {...props}>{children}</option>
 }
 
-export function SelectTrigger({ children, className = '', ...props }: SelectTriggerProps) {
+export function SelectTrigger({ children, className: _className = '', ..._props }: SelectTriggerProps) {
   return <>{children}</>
 }
 

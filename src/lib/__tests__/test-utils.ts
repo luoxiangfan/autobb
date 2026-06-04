@@ -257,12 +257,12 @@ export const mockKeywords = {
  */
 export const mockCreatives = {
   complete: {
-    headlines: mockHeadlines.complete.map((text, index) => ({
+    headlines: mockHeadlines.complete.map((text, _index) => ({
       text,
       pinned: false,
       pinnedField: null as any
     })) as HeadlineAsset[],
-    descriptions: mockDescriptions.complete.map((text, index) => ({
+    descriptions: mockDescriptions.complete.map((text, _index) => ({
       text,
       pinned: false,
       pinnedField: null as any
@@ -285,12 +285,12 @@ export const mockCreatives = {
   } as GeneratedAdCreativeData,
 
   incomplete: {
-    headlines: mockHeadlines.incomplete.map((text, index) => ({
+    headlines: mockHeadlines.incomplete.map((text, _index) => ({
       text,
       pinned: false,
       pinnedField: null as any
     })) as HeadlineAsset[],
-    descriptions: mockDescriptions.incomplete.map((text, index) => ({
+    descriptions: mockDescriptions.incomplete.map((text, _index) => ({
       text,
       pinned: false,
       pinnedField: null as any

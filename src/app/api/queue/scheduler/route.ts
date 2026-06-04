@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { triggerAllUrlSwapTasks } from '@/lib/url-swap-scheduler'
 import { getDatabase } from '@/lib/db'
-import { getQueueManager, getBackgroundQueueManager, isBackgroundQueueSplitEnabled } from '@/lib/queue'
+import { getQueueManager } from '@/lib/queue'
 
 /**
  * GET - 获取调度器健康状态
@@ -121,8 +121,6 @@ async function checkClickFarmSchedulerHealth(db: Awaited<ReturnType<typeof getDa
  * 检查 URL Swap 调度器健康状态
  */
 async function checkUrlSwapSchedulerHealth(db: Awaited<ReturnType<typeof getDatabase>>) {
-  const now = new Date()
-
   // 获取队列统计信息
   const queueManager = await getQueueManager()
   const stats = await queueManager.getStats()

@@ -1426,7 +1426,7 @@ process.on('uncaughtException', (error) => {
   // 不退出进程，让supervisord管理重启
 })
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
   logError('❌ 未处理的Promise拒绝:', reason)
   // 不退出进程，让supervisord管理重启
 })

@@ -434,7 +434,7 @@ export default function AdminScheduledTasksPage() {
                         return dateB.getTime() - dateA.getTime()
                       })
                       .slice(0, 10)
-                      .map((item, index) => (
+                      .map((item, _index) => (
                         <div key={`${item.taskType}-${item.id}`} className="flex items-center justify-between p-3 bg-gray-50 rounded">
                           <div className="flex items-center space-x-4">
                             <span className={`px-2 py-1 text-xs rounded ${

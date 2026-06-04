@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import { AlertTriangle, Trash2, UnlinkIcon } from 'lucide-react'
+import { AlertTriangle, UnlinkIcon } from 'lucide-react'
 
 interface LinkedAccountDetail {
   accountId: number

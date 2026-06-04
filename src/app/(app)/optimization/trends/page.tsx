@@ -15,10 +15,6 @@ import {
   RefreshCw,
   TrendingUp,
   TrendingDown,
-  MousePointer,
-  Eye,
-  DollarSign,
-  Target,
   Calendar
 } from 'lucide-react'
 import { toast } from 'sonner'

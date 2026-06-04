@@ -142,7 +142,7 @@ export default function SyncManagementPage() {
         fetchStatus()
         fetchLogs({ silent: true })
       }, 1000)
-    } catch (err: any) {
+    } catch (_err: any) {
       showError('同步失败', '同步时发生未知错误')
     } finally {
       setSyncing(false)

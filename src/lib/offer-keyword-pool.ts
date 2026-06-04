@@ -1604,11 +1604,6 @@ export const DEFAULT_COVERAGE_KEYWORD_CONFIG: CoverageKeywordConfig = {
 }
 
 /**
- * 兼容旧命名：保留 DEFAULT_SYNTHETIC_CONFIG，避免历史引用失效
- */
-export const DEFAULT_SYNTHETIC_CONFIG: SyntheticKeywordConfig = DEFAULT_COVERAGE_KEYWORD_CONFIG
-
-/**
  * 创意生成选项（带桶信息）
  */
 export interface BucketCreativeOptions {
@@ -7381,7 +7376,7 @@ export async function getSyntheticBucketKeywords(
   pool: OfferKeywordPool,
   userId: number,
   country: string = 'US',
-  config: SyntheticKeywordConfig = DEFAULT_SYNTHETIC_CONFIG
+  config: SyntheticKeywordConfig = DEFAULT_COVERAGE_KEYWORD_CONFIG
 ): Promise<Array<{ keyword: string; searchVolume: number; isBrand: boolean }>> {
   return getCoverageBucketKeywords(pool, userId, country, config)
 }

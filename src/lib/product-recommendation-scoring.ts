@@ -1016,7 +1016,7 @@ function calculateSeasonalityScore(
     monthsUntilPeak: number
     seasonality: string
   },
-  currentMonth: number
+  _currentMonth: number
 ): number {
   // 当前旺季
   if (analysis.isPeakSeason && analysis.monthsUntilPeak === 0) return 100

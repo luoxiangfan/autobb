@@ -15,17 +15,17 @@ import type { ClickFarmTask } from '@/lib/click-farm-types';
 
 // Mock timezone-utils
 vi.mock('../timezone-utils', () => ({
-  createDateInTimezone: vi.fn((dateStr: string, timeStr: string, timezone: string) => {
+  createDateInTimezone: vi.fn((dateStr: string, timeStr: string, _timezone: string) => {
     // 返回一个基于输入构造的Date对象
     const [year, month, day] = dateStr.split('-').map(Number);
     const [hour, minute] = timeStr.split(':').map(Number);
     return new Date(year, month - 1, day, hour, minute, 0, 0);
   }),
-  getDateInTimezone: vi.fn((date: Date, timezone: string) => {
+  getDateInTimezone: vi.fn((date: Date, _timezone: string) => {
     // 模拟返回UTC日期字符串
     return date.toISOString().split('T')[0];
   }),
-  getHourInTimezone: vi.fn((date: Date, timezone: string) => {
+  getHourInTimezone: vi.fn((date: Date, _timezone: string) => {
     // 返回UTC小时
     return date.getUTCHours();
   })
@@ -89,7 +89,7 @@ describe('ClickFarm Scheduler', () => {
       const targetCount = 3;
       const result = generateSubTasks(task, 10, targetCount, 'https://test.com', 'US');
 
-      result.forEach((subTask, index) => {
+      result.forEach((subTask, _index) => {
         expect(subTask).toHaveProperty('id');
         expect(subTask.taskId).toBe(task.id);
         expect(subTask.url).toBe('https://test.com');

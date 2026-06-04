@@ -8,7 +8,6 @@
 import { useEffect, useState } from 'react'
 import { AlertCircle, CheckCircle, Info, AlertTriangle, TrendingUp, Lightbulb } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { safeToFixed } from '@/lib/utils'
 

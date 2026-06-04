@@ -143,27 +143,6 @@ function getAllowedLanguageHintsForTarget(targetLanguage: string): Set<string> {
   return new Set<string>([code])
 }
 
-function detectLatinLanguageHints(keyword: string): Set<string> {
-  const hints = new Set<string>()
-  const normalized = normalizeGoogleAdsKeyword(String(keyword || '')) || ''
-  if (!normalized) return hints
-
-  const tokens = normalized.split(/\s+/).filter(Boolean)
-
-  for (const token of tokens) {
-    const tokenHints = detectLatinLanguageHintsForToken(token)
-    for (const hint of tokenHints) hints.add(hint)
-  }
-
-  if (/[äöüß]/u.test(normalized)) hints.add('de')
-  if (/[ñ]/u.test(normalized)) hints.add('es')
-  if (/[àâçéèêëîïôûùœ]/u.test(normalized)) hints.add('fr')
-  if (/[ãõ]/u.test(normalized)) hints.add('pt')
-  if (/[ığş]/u.test(normalized)) hints.add('tr')
-  if (/[ąćęłńóśźż]/u.test(normalized)) hints.add('pl')
-
-  return hints
-}
 
 function normalizeLanguageHintCode(code: string): string {
   return String(code || '')

@@ -3,8 +3,6 @@
 
 import { getDatabase } from '@/lib/db';
 
-// 🔧 修复(2025-01-01): PostgreSQL布尔类型兼容性
-const IS_DELETED_FALSE = 'IS_DELETED_FALSE'
 
 /**
  * 通知类型
@@ -39,8 +37,6 @@ export async function logClickFarmEvent(
   title: string,
   message: string
 ): Promise<void> {
-  const db = getDatabase();
-
   // 记录到任务备注字段（简化方案）
   // 或者可以创建专门的事件日志表
   console.log(`[ClickFarm Notification] User ${userId} - ${type}:`, {

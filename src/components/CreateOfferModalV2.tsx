@@ -117,14 +117,12 @@ export default function CreateOfferModalV2({
     currentStage,
     currentStatus,
     currentMessage,
-    progress,
     result: extractionResult,
     error: extractionError,
     currentDuration,
     stageDurations, // 🔥 获取已完成阶段的耗时Map
     connectionType,
     startExtraction,
-    reconnect,
     reset: resetExtraction,
   } = useOfferExtractionV2()
 

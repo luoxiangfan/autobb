@@ -115,9 +115,8 @@ export function ApiQuotaChart({ days = 7 }: Props) {
 
   // 计算圆环图参数
   const usagePercent = isUnlimitedQuota ? 0 : Math.min(today.quotaUsagePercent || 0, 100)
-  const remainingPercent = Math.max(0, 100 - usagePercent)
 
-  // 圆环图SVG参数（缩小20%高度：160 → 128）
+  // 圆环图SVG参数
   const size = 128
   const strokeWidth = 16
   const radius = (size - strokeWidth) / 2

@@ -24,10 +24,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Switch } from '@/components/ui/switch'
-import { Settings, CheckCircle2, AlertCircle, Eye, Plus, X, Info, Lock, Zap, Trash2, GripVertical } from 'lucide-react'
+import { Settings, CheckCircle2, AlertCircle, Plus, X, Info, Lock, Zap, Trash2, GripVertical } from 'lucide-react'
 import { showError, showSuccess } from '@/lib/toast-utils'
 import { generateNamingScheme } from '@/lib/naming-convention'
-import { CURRENCY_SYMBOLS, formatCurrency, calculateMaxCPC } from '@/lib/currency'
+import { CURRENCY_SYMBOLS, calculateMaxCPC } from '@/lib/currency'
 import {
   inferNegativeKeywordMatchType,
   normalizeNegativeKeywordMatchTypeMap,
@@ -441,7 +441,6 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
   })
 
   const [validationErrors, setValidationErrors] = useState<string[]>([])
-  const [showPreview, setShowPreview] = useState(false)
   // 🆕 P0-1优化：动态CPC出价开关
   const [enableDynamicCpc, setEnableDynamicCpc] = useState(false)
   const [batchKeywordDialogOpen, setBatchKeywordDialogOpen] = useState(false)

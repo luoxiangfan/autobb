@@ -111,7 +111,6 @@ export async function syncScrapedProductsFromExtractData(
     ? data.debug as Record<string, unknown>
     : {}
 
-  const isAmazonStore = debug.isAmazonStore === true
   const isAmazonProductPage = debug.isAmazonProductPage === true
   const isIndependentStore = debug.isIndependentStore === true
 

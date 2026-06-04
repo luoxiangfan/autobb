@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
         return count
       } else {
         // SQLite: 使用 INSERT OR IGNORE
-        const values = mccCustomerIds.map(id => `(?, ?, ?, ?)`).join(',')
+        const values = mccCustomerIds.map(_id => `(?, ?, ?, ?)`).join(',')
         const params = mccCustomerIds.flatMap(id => [userId, id, now, adminUserId])
         const result = await db.exec(`
           INSERT OR IGNORE INTO user_mcc_assignments (user_id, mcc_customer_id, assigned_at, assigned_by)

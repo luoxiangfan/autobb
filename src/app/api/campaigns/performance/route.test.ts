@@ -126,7 +126,7 @@ describe('GET /api/campaigns/performance', () => {
   })
 
   it('refresh=true bypasses read cache and writes fresh payload back', async () => {
-    const query = vi.fn(async (sql: string, params: any[] = []) => {
+    const query = vi.fn(async (sql: string, _params: any[] = []) => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
         return []
       }

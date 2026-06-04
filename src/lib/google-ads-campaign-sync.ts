@@ -16,7 +16,7 @@ import {
   hasAutoadsLikeBackupForOffer,
   toDbCampaignBackupJsonField,
 } from './campaign-backups'
-import { getCustomerWithCredentials, trackOAuthApiCall } from './google-ads-api'
+import { trackOAuthApiCall } from './google-ads-api'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
   prepareGoogleAdsApiCallForLinkedAccountCached,

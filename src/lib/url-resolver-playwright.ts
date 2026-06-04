@@ -1,7 +1,7 @@
 import { Browser, BrowserContext, Page } from 'playwright'
 import { getPlaywrightPool } from './playwright-pool'
 import { smartWaitForLoad, assessPageComplexity, recordWaitOptimization } from './smart-wait-strategy'
-import { isProxyConnectionError, withProxyRetry } from './stealth-scraper'
+import { isProxyConnectionError } from './stealth-scraper'
 
 /**
  * User-Agent rotation pool (2024 browsers)

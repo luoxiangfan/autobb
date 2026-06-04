@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { withAuth, AuthenticatedHandler } from '@/lib/auth'
 import { trustDevice, untrustDevice, generateDeviceFingerprint } from '@/lib/user-sessions'
 

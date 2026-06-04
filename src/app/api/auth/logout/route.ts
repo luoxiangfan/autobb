@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt'
-import { revokeSession, revokeAllSessions } from '@/lib/user-sessions'
+import { revokeAllSessions } from '@/lib/user-sessions'
 
 /**
  * POST /api/auth/logout

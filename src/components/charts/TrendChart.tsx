@@ -382,7 +382,7 @@ export function TrendChart({
                         }
                         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
                       }}
-                      formatter={(value, name, item, index, payload) => {
+                      formatter={(value, name, _item, _index, _payload) => {
                         const metric = metrics.find(m => m.key === name)
                         const label = metric?.label || name
                         const formattedValue = metric?.formatter
@@ -493,7 +493,7 @@ export function TrendChart({
                         }
                         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
                       }}
-                      formatter={(value, name, item, index, payload) => {
+                      formatter={(value, name, _item, _index, _payload) => {
                         const metric = metrics.find(m => m.key === name)
                         const label = metric?.label || name
                         const formattedValue = metric?.formatter
@@ -603,7 +603,7 @@ export function TrendChart({
                         }
                         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
                       }}
-                      formatter={(value, name, item, index, payload) => {
+                      formatter={(value, name, _item, _index, _payload) => {
                         const metric = metrics.find(m => m.key === name)
                         const label = metric?.label || name
                         const formattedValue = metric?.formatter

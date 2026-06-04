@@ -5,9 +5,7 @@
  * 统一的空状态组件，提供友好的空状态体验
  */
 
-import { ReactNode } from 'react'
 import {
-  FileX,
   Search,
   Inbox,
   AlertCircle,

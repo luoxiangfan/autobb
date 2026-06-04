@@ -603,7 +603,7 @@ export async function GET(request: NextRequest) {
             AND a.report_date >= ?
             AND a.report_date <= ?
             ${affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? `AND (${
-              affiliateDomainKeywords.map((_, i) => `o.affiliate_link LIKE ?`).join(' OR ')
+              affiliateDomainKeywords.map((_, _i) => `o.affiliate_link LIKE ?`).join(' OR ')
             })` : ''}
             ${hasCurrencyFilter ? 'AND COALESCE(a.currency, \'USD\') = ?' : ''}
             AND a.campaign_id IS NOT NULL
@@ -1079,7 +1079,7 @@ export async function GET(request: NextRequest) {
             AND a.report_date >= ?
             AND a.report_date <= ?
             ${affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? `AND (${
-              affiliateDomainKeywords.map((_, i) => `o.affiliate_link LIKE ?`).join(' OR ')
+              affiliateDomainKeywords.map((_, _i) => `o.affiliate_link LIKE ?`).join(' OR ')
             })` : ''}
             ${hasCurrencyFilter ? 'AND COALESCE(a.currency, \'USD\') = ?' : ''}
           GROUP BY 2

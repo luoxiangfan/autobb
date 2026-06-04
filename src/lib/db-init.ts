@@ -813,10 +813,6 @@ async function runPendingMigrations(): Promise<void> {
   // 获取所有迁移文件
   const allFiles = fs.readdirSync(migrationsDir)
 
-  // 根据数据库类型选择对应的迁移文件
-  const fileExtension = db.type === 'postgres' ? '.pg.sql' : '.sql'
-  const excludeExtension = db.type === 'postgres' ? '.sql' : '.pg.sql'
-
   const migrationFiles = allFiles
     .filter(file => {
       // 排除 README 和其他非 SQL 文件

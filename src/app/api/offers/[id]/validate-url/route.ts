@@ -7,7 +7,7 @@ import { validateUrl } from '@/lib/scraper'
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params: _params }: { params: { id: string } }
 ) {
   try {
     const body = await request.json()

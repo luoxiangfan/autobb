@@ -1107,7 +1107,6 @@ function isTrustedModelIntentSoftFamilyCandidate(candidate: {
   if (URL_FRAGMENT_PATTERN.test(text)) return false
   if (COMPONENT_NOISE_PATTERN.test(text)) return false
   if (hasModelAnchorEvidence({ keywords: [text] })) return false
-  const demandAnchorTokens = getDemandAnchorTokens(text, brandName)
   const meaningfulDemandAnchorTokens = getMeaningfulDemandAnchorTokens(text, brandName)
   const softFamilyCoreTokens = getModelIntentSoftFamilyCoreTokens(text, brandName)
   if (meaningfulDemandAnchorTokens.length === 0) return false
@@ -1293,7 +1292,6 @@ function isLowQualityCandidate(candidate: {
     ? getModelIntentSoftFamilyCoreTokens(text, brandName)
     : []
   const hasDemand = demandAnchorTokens.length > 0
-  const hasSpecificDemandTail = demandAnchorTokens.length >= 2
   const hasModelIntentSoftFamilyCore = modelIntentSoftFamilyCoreTokens.length > 0
   const hasSpecificModelIntentSoftFamilyCore = modelIntentSoftFamilyCoreTokens.length >= 2
   const hasTransactionalModifier = TRANSACTIONAL_MODIFIER_PATTERN.test(text)
@@ -1445,7 +1443,7 @@ function inferEvidenceStrength(candidate: RankedCandidate, creativeType: Canonic
 function inferFamilyMatchType(
   candidate: RankedCandidate,
   creativeType: CanonicalCreativeType | null,
-  brandName: string | undefined
+  _brandName: string | undefined
 ): KeywordAuditMetadata['familyMatchType'] {
   const profile = candidate.evidenceProfile
   const hasModelAnchor = profile.hasModelAnchor

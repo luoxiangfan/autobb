@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { toast } from 'sonner'
-import { Loader2, Plus, Trash2, CheckCircle2, XCircle, Users, Building2, ChevronDown } from 'lucide-react'
+import { Loader2, Plus, Trash2, CheckCircle2, Users, Building2, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface User {
@@ -629,8 +629,6 @@ export default function MCCAssignmentClientPage() {
     )
   }, [mccAccounts, searchTerm])
 
-  const assignedMccIds = userAssignments.map(a => a.mcc_customer_id)
-  
   // 🔧 可用 MCC = 未分配给任何用户的 MCC
   const availableMccAccounts = useMemo(() => {
     return filteredMccAccounts.filter(
@@ -1163,7 +1161,7 @@ export default function MCCAssignmentClientPage() {
                           </div>
                         ) : (
                           <div className="divide-y divide-gray-100">
-                            {availableMccAccounts.map((mcc, index) => (
+                            {availableMccAccounts.map((mcc, _index) => (
                               <div
                                 key={mcc.id}
                                 className={cn(
