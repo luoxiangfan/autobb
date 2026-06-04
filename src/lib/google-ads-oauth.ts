@@ -292,7 +292,8 @@ export async function deleteGoogleAdsCredentials(userId: number): Promise<void> 
 }
 
 /**
- * 刷新Access Token
+ * 刷新 Access Token 并写回 google_ads_credentials（按 userId / 共享 owner 解析）。
+ * 仅用于 Customer 内联 refresh 时见 `google-ads-api.refreshAccessToken(refreshToken, creds)`。
  */
 export async function refreshAccessToken(userId: number): Promise<{
   access_token: string

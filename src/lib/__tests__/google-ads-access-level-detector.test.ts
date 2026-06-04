@@ -42,7 +42,7 @@ const oauthCredentialsFixture = {
   api_access_level: 'explorer',
 }
 
-function mockOAuthAuthContext(overrides?: { dualStack?: boolean }) {
+function mockOAuthAuthContext(overrides?: { dualStack?: boolean; apiAccessLevel?: string | null }) {
   authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
     userId: 71,
     ownerUserId: 71,
@@ -53,6 +53,7 @@ function mockOAuthAuthContext(overrides?: { dualStack?: boolean }) {
     assignment: null,
     isShared: false,
     canModify: true,
+    apiAccessLevel: overrides?.apiAccessLevel ?? 'explorer',
   })
 }
 

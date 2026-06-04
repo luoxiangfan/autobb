@@ -56,15 +56,10 @@ export async function healAccountsRouteDeveloperToken(params: {
   clientSecret: string
   serviceAccountId?: string | null
   serviceAccountConfig?: { developerToken?: string } | null
-  authContext?: GoogleAdsAuthContext
+  /** 必填：共享认证 / 双栈须以调用方 userId 视角解析 */
+  authContext: GoogleAdsAuthContext
 }): Promise<DeveloperTokenHealResult> {
-  let authContext = params.authContext
-  if (!authContext) {
-    const { getGoogleAdsAuthContext } = await import('./google-ads-auth-context')
-    authContext = await getGoogleAdsAuthContext(params.ownerUserId)
-  }
-
-  const dualStackError = googleAdsAuthContextDualStackError(authContext)
+  const dualStackError = googleAdsAuthContextDualStackError(params.authContext)
   if (dualStackError) {
     return { ok: false, code: 'DUAL_STACK_CONFLICT', message: dualStackError }
   }

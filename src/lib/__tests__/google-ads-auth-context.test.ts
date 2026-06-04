@@ -50,13 +50,16 @@ vi.mock('@/lib/redis-client', () => ({
 }))
 
 import { defaultOAuthAuthContext } from './helpers/campaign-route-auth-context-mock'
+import { oauthCredentialsLookStripped } from '@/lib/google-ads-auth-context-cache'
 import {
   assertNoConflictingGoogleAdsAuth,
+  clearMemoryAuthContextCacheForTests,
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
   invalidateGoogleAdsAuthContextCache,
   invalidateGoogleAdsAuthContextCacheForOwner,
   invalidateGoogleAdsAuthContextForCredentialUser,
+  peekMemoryAuthContextCacheForTests,
   resetGoogleAdsAuthContextGenerationForTests,
   resolveEffectiveServiceAccountId,
   resolveGoogleAdsApiAuthForAccount,
@@ -67,6 +70,7 @@ import {
 
 function clearGoogleAdsAuthContextTestCache(): void {
   resetGoogleAdsAuthContextGenerationForTests()
+  clearMemoryAuthContextCacheForTests()
   for (const userId of [1, 2, 7]) {
     invalidateGoogleAdsAuthContextCache(userId)
   }
@@ -115,6 +119,36 @@ describe('getGoogleAdsAuthContext', () => {
       expect.objectContaining({ ownerUserId: 1, isShared: true })
     )
     expect(serviceAccountFns.getServiceAccountConfig).not.toHaveBeenCalled()
+  })
+
+  it('stores stripped secrets in process memory cache and hydrates on subsequent read', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 7,
+      isShared: false,
+      assignment: null,
+    })
+    assignmentFns.isGoogleAdsAuthShared.mockReturnValue(false)
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+    oauthFns.getGoogleAdsCredentials.mockResolvedValue({
+      refresh_token: 'rt-secret',
+      client_id: 'cid',
+      client_secret: 'sec',
+      developer_token: 'dev',
+    })
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt-secret' })
+    dbFns.queryOne.mockResolvedValue(null)
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+
+    const first = await getGoogleAdsAuthContext(7)
+    expect(first.oauthCredentials?.refresh_token).toBe('rt-secret')
+
+    const peeked = peekMemoryAuthContextCacheForTests(7)
+    expect(oauthCredentialsLookStripped(peeked?.oauthCredentials)).toBe(true)
+
+    oauthFns.getGoogleAdsCredentials.mockClear()
+    const second = await getGoogleAdsAuthContext(7)
+    expect(second.oauthCredentials?.refresh_token).toBe('rt-secret')
+    expect(oauthFns.getGoogleAdsCredentials).toHaveBeenCalledTimes(1)
   })
 
   it('loads service account config for shared service account user', async () => {

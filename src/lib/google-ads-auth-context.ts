@@ -34,6 +34,10 @@ import {
   writeGoogleAdsAuthContextToRedis,
 } from './google-ads-auth-context-redis'
 import { getServiceAccountConfig } from './google-ads-service-account'
+import {
+  hydrateGoogleAdsAuthContextSecrets,
+  stripGoogleAdsAuthContextForCache,
+} from './google-ads-auth-context-cache'
 
 export interface GoogleAdsAuthContext {
   userId: number
@@ -55,7 +59,11 @@ export interface GoogleAdsAuthContext {
 
 async function resolveDualStackOnOwner(
   ownerUserId: number,
-  options?: { oauthRefreshAlreadyLoaded?: boolean }
+  options?: {
+    oauthRefreshAlreadyLoaded?: boolean
+    /** 已确认 owner 有活跃 SA 时可传入，避免重复查库 */
+    hasActiveServiceAccount?: boolean
+  }
 ): Promise<{
   hasOAuthRefresh: boolean
   hasActiveServiceAccount: boolean
@@ -66,13 +74,19 @@ async function resolveDualStackOnOwner(
       ? options.oauthRefreshAlreadyLoaded
       : Boolean((await getGoogleAdsCredentialsRaw(ownerUserId))?.refresh_token)
 
-  const db = await getDatabase()
-  const isActiveCondition = boolCondition('is_active', true, db.type)
-  const existingSa = await db.queryOne<{ id: string }>(
-    `SELECT id FROM google_ads_service_accounts WHERE user_id = ? AND ${isActiveCondition} LIMIT 1`,
-    [ownerUserId]
-  )
-  const hasActiveServiceAccount = Boolean(existingSa)
+  let hasActiveServiceAccount: boolean
+  if (options?.hasActiveServiceAccount !== undefined) {
+    hasActiveServiceAccount = options.hasActiveServiceAccount
+  } else {
+    const db = await getDatabase()
+    const isActiveCondition = boolCondition('is_active', true, db.type)
+    const existingSa = await db.queryOne<{ id: string }>(
+      `SELECT id FROM google_ads_service_accounts WHERE user_id = ? AND ${isActiveCondition} LIMIT 1`,
+      [ownerUserId]
+    )
+    hasActiveServiceAccount = Boolean(existingSa)
+  }
+
   return {
     hasOAuthRefresh,
     hasActiveServiceAccount,
@@ -112,6 +126,16 @@ function isAuthContextGenerationCurrent(userId: number, generation: number): boo
 /** @internal test-only */
 export function resetGoogleAdsAuthContextGenerationForTests(): void {
   authContextGeneration.clear()
+}
+
+/** @internal test-only: 进程内缓存中的 strip 条目（不含 hydrate） */
+export function peekMemoryAuthContextCacheForTests(userId: number): GoogleAdsAuthContext | null {
+  return authContextCache.get(userId)?.ctx ?? null
+}
+
+/** @internal test-only */
+export function clearMemoryAuthContextCacheForTests(): void {
+  authContextCache.clear()
 }
 
 async function commitAuthContextCache(
@@ -177,6 +201,10 @@ async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthCo
   const { dualStack } = await resolveDualStackOnOwner(ownerUserId, {
     oauthRefreshAlreadyLoaded:
       auth.authType === 'oauth' && oauthCredentials?.refresh_token ? true : undefined,
+    hasActiveServiceAccount:
+      auth.authType === 'service_account'
+        ? Boolean(auth.serviceAccountId || serviceAccountConfig?.id)
+        : undefined,
   })
 
   // 双栈清理 UI 需同时展示 OAuth / SA 元数据；仍禁止 API 调用（dualStack 门禁不变）
@@ -206,32 +234,41 @@ async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthCo
   }
 }
 
-function rememberAuthContextInMemory(userId: number, ctx: GoogleAdsAuthContext): GoogleAdsAuthContext {
+function rememberAuthContextInMemory(userId: number, ctx: GoogleAdsAuthContext): void {
   authContextCache.set(userId, {
-    ctx,
+    ctx: stripGoogleAdsAuthContextForCache(ctx),
     expiresAt: Date.now() + GOOGLE_ADS_AUTH_CONTEXT_CACHE_TTL_MS,
   })
-  return ctx
+}
+
+async function readAuthContextFromMemoryCache(userId: number): Promise<GoogleAdsAuthContext | null> {
+  const cached = authContextCache.get(userId)
+  if (!cached) {
+    return null
+  }
+  if (cached.expiresAt <= Date.now()) {
+    authContextCache.delete(userId)
+    return null
+  }
+  return hydrateGoogleAdsAuthContextSecrets(cached.ctx)
 }
 
 /**
  * 一次性解析用户的 Google Ads 认证上下文（assignment + 凭证）。
- * 进程内 + Redis 合并并发加载；多实例下仅一个实例执行 DB 读取。
+ * 进程内与 Redis 均只缓存 strip 后的 metadata；命中后 hydrate 密钥。
  */
 export async function getGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthContext> {
-  const cached = authContextCache.get(userId)
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.ctx
-  }
-  if (cached) {
-    authContextCache.delete(userId)
+  const fromMemory = await readAuthContextFromMemoryCache(userId)
+  if (fromMemory) {
+    return fromMemory
   }
 
   const fromRedis = await readGoogleAdsAuthContextFromRedis(userId, {
     minGeneration: getAuthContextGeneration(userId),
   })
   if (fromRedis) {
-    return rememberAuthContextInMemory(userId, fromRedis)
+    rememberAuthContextInMemory(userId, fromRedis)
+    return hydrateGoogleAdsAuthContextSecrets(fromRedis)
   }
 
   const inflight = authContextInflight.get(userId)
@@ -250,7 +287,8 @@ export async function getGoogleAdsAuthContext(userId: number): Promise<GoogleAds
           const ctx = await loadGoogleAdsAuthContext(userId)
           return await commitAuthContextCache(userId, ctx, generationAtStart)
         }
-        return rememberAuthContextInMemory(userId, peerOrLock.peerCtx)
+        rememberAuthContextInMemory(userId, peerOrLock.peerCtx)
+        return hydrateGoogleAdsAuthContextSecrets(peerOrLock.peerCtx)
       }
 
       const ctx = await loadGoogleAdsAuthContext(userId)
@@ -583,14 +621,23 @@ export async function resolveGoogleAdsApiAuthFromContext(
   if (serviceAccountId) {
     const contextSaId = ctx.serviceAccountConfig?.id
     if (!contextSaId || serviceAccountId !== contextSaId) {
-      const linkedConfig = await getServiceAccountConfig(ctx.userId, serviceAccountId)
+      const ownerResolution = {
+        ownerUserId: ctx.ownerUserId,
+        assignment: ctx.assignment,
+        isShared: ctx.isShared,
+      }
+      const linkedConfig = await getServiceAccountConfig(
+        ctx.userId,
+        serviceAccountId,
+        ownerResolution
+      )
       serviceAccountMccId = linkedConfig?.mccCustomerId
         ? String(linkedConfig.mccCustomerId)
         : undefined
     }
   }
 
-  const authType = resolveConfiguredGoogleAdsAuthType(ctx)
+  const authType = resolveGoogleAdsApiAuthType({}, ctx)
 
   return {
     authType,

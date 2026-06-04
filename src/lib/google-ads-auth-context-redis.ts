@@ -1,5 +1,6 @@
 import { REDIS_PREFIX_CONFIG } from '@/lib/config'
 import { getRedisClient } from '@/lib/redis-client'
+import { stripGoogleAdsAuthContextForCache } from './google-ads-auth-context-cache'
 import type { GoogleAdsAuthContext } from './google-ads-auth-context'
 
 /** 与进程内 authContextCache TTL 对齐（写路径有 generation 失效，可适当拉长减轻 DB 压力） */
@@ -91,7 +92,10 @@ export async function writeGoogleAdsAuthContextToRedis(
   const client = getRedisClient()
   if (!client) return
 
-  const payload: GoogleAdsAuthContextRedisPayload = { generation, ctx }
+  const payload: GoogleAdsAuthContextRedisPayload = {
+    generation,
+    ctx: stripGoogleAdsAuthContextForCache(ctx),
+  }
 
   try {
     await client.set(

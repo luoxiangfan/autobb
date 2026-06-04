@@ -72,6 +72,10 @@ const oauthAuthContextFull = {
   oauthCredentials: oauthCredentialsFull,
 }
 
+function healAuthContext(overrides?: Partial<typeof oauthAuthContextFull>) {
+  return { ...oauthAuthContextFull, userId: 1, ownerUserId: 1, ...overrides }
+}
+
 describe('resolveOAuthRefreshToken', () => {
   it('prefers apiAuth refresh over oauth credentials row', () => {
     expect(
@@ -235,30 +239,25 @@ describe('healAccountsRouteDeveloperToken', () => {
     })
   })
 
-  it('loads owner auth context and returns DUAL_STACK_CONFLICT when authContext omitted', async () => {
-    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
-      userId: 7,
-      ownerUserId: 7,
-      assignment: null,
-      isShared: false,
-      canModify: true,
-      dualStack: true,
-      auth: { authType: 'oauth' as const },
-      oauthCredentials: oauthCredentialsFull,
-      serviceAccountConfig: { id: 'sa-1' },
-    })
-
+  it('returns DUAL_STACK_CONFLICT when authContext has dualStack (shared user perspective)', async () => {
     const result = await healAccountsRouteDeveloperToken({
       credentials: { ...oauthCredentialsFull },
       authType: 'oauth',
       ownerUserId: 7,
       clientSecret: oauthCredentialsFull.client_secret,
+      authContext: healAuthContext({
+        userId: 2,
+        ownerUserId: 7,
+        isShared: true,
+        dualStack: true,
+        serviceAccountConfig: { id: 'sa-1' },
+      }),
     })
 
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.code).toBe('DUAL_STACK_CONFLICT')
-    expect(authContextFns.getGoogleAdsAuthContext).toHaveBeenCalledWith(7)
+    expect(authContextFns.getGoogleAdsAuthContext).not.toHaveBeenCalled()
     expect(settingsFns.getUserOnlySetting).not.toHaveBeenCalled()
   })
 
@@ -300,6 +299,7 @@ describe('healAccountsRouteDeveloperToken', () => {
       authType: 'oauth',
       ownerUserId: 1,
       clientSecret: credentials.client_secret,
+      authContext: healAuthContext(),
     })
 
     expect(result.ok).toBe(true)
@@ -322,6 +322,7 @@ describe('healAccountsRouteDeveloperToken', () => {
       authType: 'oauth',
       ownerUserId: 1,
       clientSecret: credentials.client_secret,
+      authContext: healAuthContext(),
     })
 
     expect(result.ok).toBe(true)
@@ -347,6 +348,11 @@ describe('healAccountsRouteDeveloperToken', () => {
       clientSecret: credentials.client_secret,
       serviceAccountId: 'sa-1',
       serviceAccountConfig,
+      authContext: healAuthContext({
+        auth: { authType: 'service_account' as const, serviceAccountId: 'sa-1' },
+        oauthCredentials: null,
+        serviceAccountConfig: { id: 'sa-1', developerToken: serviceAccountConfig.developerToken },
+      }),
     })
 
     expect(result.ok).toBe(true)
@@ -372,6 +378,7 @@ describe('healAccountsRouteDeveloperToken', () => {
       authType: 'oauth',
       ownerUserId: 1,
       clientSecret: credentials.client_secret,
+      authContext: healAuthContext(),
     })
 
     expect(result.ok).toBe(false)
@@ -661,9 +668,11 @@ describe('GoogleAdsLinkedAccountPrepareCache', () => {
   })
 
   it('prepareGoogleAdsApiCallForLinkedAccountCached does not cache failures', async () => {
-    authContextFns.resolveGoogleAdsApiAuthForAccount
-      .mockResolvedValueOnce({ ok: false, reason: 'not_configured' })
-      .mockResolvedValueOnce({ ok: false, reason: 'not_configured' })
+    authContextFns.resolveGoogleAdsApiAuthForAccount.mockReset()
+    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
+      ok: false,
+      reason: 'not_configured',
+    })
     const cache = createGoogleAdsLinkedAccountPrepareCache()
 
     const first = await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)

@@ -5,7 +5,7 @@
 
 import { getDatabase } from './db'
 import { getGoogleAdsClient } from './google-ads-api'
-import { resolveGoogleAdsApiAccessLevel, resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
+import { resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
 import {
   getGoogleAdsAuthContext,
   GOOGLE_ADS_DUAL_STACK_WARNING,
@@ -101,7 +101,7 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
     }
 
     if (ctx.auth.authType === 'service_account') {
-      const storedLevel = await resolveGoogleAdsApiAccessLevel(userId)
+      const storedLevel = ctx.apiAccessLevel
       if (
         storedLevel === 'test' ||
         storedLevel === 'explorer' ||
@@ -131,7 +131,7 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
     const credentials = ctx.oauthCredentials
 
     if (!credentials?.refresh_token) {
-      const storedLevel = await resolveGoogleAdsApiAccessLevel(userId)
+      const storedLevel = ctx.apiAccessLevel
       if (storedLevel === 'test' || storedLevel === 'explorer' || storedLevel === 'basic' || storedLevel === 'standard') {
         return {
           level: storedLevel,

@@ -89,10 +89,13 @@ export async function upsertAccount(userId: number, account: {
   identity_verification_completion_deadline_time?: string | null
   identity_verification_overdue?: boolean
   identity_verification_checked_at?: string | null
-}, authScope?: {
+}, authScope: {
   authType: 'oauth' | 'service_account'
   serviceAccountId?: string | null
 }): Promise<{ id: number; last_sync_at: string }> {
+  if (!authScope?.authType) {
+    throw new Error('upsertAccount requires authScope.authType')
+  }
   const db = await getDatabase()
   const activeValue = db.type === 'postgres' ? true : 1
   const notDeletedValue = db.type === 'postgres' ? false : 0
@@ -139,9 +142,9 @@ export async function upsertAccount(userId: number, account: {
       account.status,
       account.account_balance ?? null,
       account.parent_mcc || null,
-      // 同步元数据默认 oauth；非 API 认证切换，实际调用须走 prepare / auth-context
-      authScope?.authType || 'oauth',
-      authScope?.serviceAccountId || null,
+      // 同步元数据须与当前 API 认证方式一致
+      authScope.authType,
+      authScope.serviceAccountId || null,
       account.identity_verification_program_status ?? null,
       account.identity_verification_start_deadline_time ?? null,
       account.identity_verification_completion_deadline_time ?? null,
@@ -178,9 +181,9 @@ export async function upsertAccount(userId: number, account: {
       account.status,
       account.account_balance ?? null,
       account.parent_mcc || null,
-      // 同步元数据默认 oauth；非 API 认证切换，实际调用须走 prepare / auth-context
-      authScope?.authType || 'oauth',
-      authScope?.serviceAccountId || null,
+      // 同步元数据须与当前 API 认证方式一致
+      authScope.authType,
+      authScope.serviceAccountId || null,
       account.identity_verification_program_status ?? null,
       account.identity_verification_start_deadline_time ?? null,
       account.identity_verification_completion_deadline_time ?? null,

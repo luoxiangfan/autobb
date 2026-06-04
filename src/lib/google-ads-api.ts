@@ -271,6 +271,10 @@ export async function exchangeCodeForTokens(
  * @param credentials - 必需的用户凭证(从数据库读取)
  * @throws Error 如果未提供凭证
  */
+/**
+ * 使用 refresh_token 换取 access_token（仅用于 Customer 构造，不写 google_ads_credentials）。
+ * 持久化 refresh 结果请用 `google-ads-oauth.refreshAccessToken(userId)`。
+ */
 export async function refreshAccessToken(
   refreshToken: string,
   credentials: {
@@ -378,7 +382,7 @@ export async function getCustomer(
     // 更新数据库中的token
     if (accountId && userId) {
       const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
-      updateGoogleAdsAccount(accountId, userId, {
+      await updateGoogleAdsAccount(accountId, userId, {
         accessToken: tokens.access_token,
         tokenExpiresAt: expiresAt,
       })
