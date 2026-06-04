@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { showSuccess, showError } from '@/lib/toast-utils'
 import { Card, CardContent } from '@/components/ui/card'
@@ -549,9 +550,9 @@ export default function OfferDetailPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <a href="/offers" className="text-indigo-600 hover:text-indigo-500 mr-4">
+              <Link href="/offers" className="text-indigo-600 hover:text-indigo-500 mr-4">
                 ← 返回列表
-              </a>
+              </Link>
               <h1 className="text-xl font-bold text-gray-900">{offer.brand}</h1>
             </div>
             <div className="flex items-center space-x-3">

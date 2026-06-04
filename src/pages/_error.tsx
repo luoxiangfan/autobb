@@ -1,4 +1,5 @@
 import type { NextPageContext } from 'next'
+import Link from 'next/link'
 
 interface ErrorProps {
   statusCode: number
@@ -29,7 +30,7 @@ function Error({ statusCode }: ErrorProps) {
             ? '页面未找到'
             : '服务器发生错误'}
         </p>
-        <a
+        <Link
           href="/"
           style={{
             padding: '0.5rem 1rem',
@@ -41,7 +42,7 @@ function Error({ statusCode }: ErrorProps) {
           }}
         >
           返回首页
-        </a>
+        </Link>
       </div>
     </div>
   )

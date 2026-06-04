@@ -16,7 +16,7 @@
     "build": "npm run perf:flags:check && npm run openclaw:prebuilt:verify-meta && next build",
     "build:scheduler": "node build-scheduler.js",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint src",
     "test": "vitest run",
     "test:openclaw": "vitest run src/lib/__tests__/openclaw-bindings.test.ts src/lib/__tests__/openclaw-intent-parser.test.ts src/lib/__tests__/openclaw-proxy-normalize.test.ts src/lib/__tests__/openclaw-runs-service.test.ts src/lib/__tests__/openclaw-canonical-routes.test.ts src/lib/__tests__/openclaw-command-payload-policy-coverage.test.ts src/lib/__tests__/openclaw-command-risk-policy-coverage.test.ts src/lib/__tests__/openclaw-risk-policy.test.ts src/lib/__tests__/openclaw-command-service-confirm.test.ts src/lib/openclaw/commands/payload-policy.behavior.test.ts src/lib/openclaw/auth.test.ts src/lib/openclaw/ai-models.test.ts src/lib/openclaw/config.sync-user-scope.test.ts src/lib/openclaw/feishu-accounts.test.ts src/lib/openclaw/feishu-chat-health.test.ts src/lib/openclaw/gateway.test.ts src/lib/openclaw/reports.test.ts src/lib/openclaw/settings.test.ts src/app/api/openclaw/feishu/chat-health/ingest/route.test.ts src/lib/openclaw/autoads-client.test.ts",
     "test:openclaw:guard": "vitest run src/lib/__tests__/openclaw-intent-parser.test.ts src/lib/__tests__/openclaw-proxy-normalize.test.ts src/lib/__tests__/openclaw-canonical-routes.test.ts src/lib/__tests__/openclaw-command-payload-policy-coverage.test.ts src/lib/__tests__/openclaw-command-risk-policy-coverage.test.ts src/lib/__tests__/openclaw-risk-policy.test.ts src/lib/__tests__/openclaw-command-service-confirm.test.ts src/lib/openclaw/commands/payload-policy.behavior.test.ts src/lib/openclaw/autoads-client.test.ts",
@@ -104,6 +104,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
     "@testing-library/react": "^16.3.0",
     "@types/bcrypt": "^5.0.2",
     "@types/better-sqlite3": "^7.6.8",
@@ -115,8 +116,8 @@
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
     "esbuild": "^0.19.0",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.35",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "15.5.19",
     "eslint-plugin-unused-imports": "^4.4.1",
     "jsdom": "^27.2.0",
     "postcss": "^8",

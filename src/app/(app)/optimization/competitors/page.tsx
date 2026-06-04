@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -207,9 +208,9 @@ export default function CompetitorsPage() {
               <p className="text-slate-500 max-w-md mx-auto">
                 请先在Offer管理中进行数据抓取，系统将自动分析竞品信息
               </p>
-              <a href="/offers">
+              <Link href="/offers">
                 <Button className="mt-4">前往Offer管理</Button>
-              </a>
+              </Link>
             </div>
           </CardContent>
         </Card>
