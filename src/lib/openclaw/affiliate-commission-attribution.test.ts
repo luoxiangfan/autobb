@@ -970,7 +970,7 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
         typeof sql === 'string' && sql.includes('INSERT INTO openclaw_affiliate_attribution_failures')
       )
       expect(failureInsertCalls).toHaveLength(1)
-      expect((failureInsertCalls[0]?.[1] as any[])[10]).toBe('campaign_mapping_miss')
+      expect((failureInsertCalls[0]?.[1] as any[])[11]).toBe('campaign_mapping_miss')
     } finally {
       if (previousGraceDays === undefined) {
         delete process.env.OPENCLAW_AFFILIATE_ATTRIBUTION_REMOVED_CAMPAIGN_GRACE_DAYS

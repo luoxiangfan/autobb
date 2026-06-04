@@ -271,7 +271,7 @@ export function sumAffiliateCommissionLineItems(items: AffiliateCommissionLineIt
   return roundTo4(items.reduce((sum, item) => sum + (Number(item.commission) || 0), 0))
 }
 
-export type AttributionCommissionTotals = {
+type AttributionCommissionTotals = {
   attributionTotal: number
   failureTotal: number
   combinedTotal: number
@@ -443,7 +443,7 @@ export async function sumAttributionCommissionTotals(params: {
   }
 }
 
-export type ReconcileAffiliateCommissionLineItemsResult = {
+type ReconcileAffiliateCommissionLineItemsResult = {
   lineItems: AffiliateCommissionLineItem[]
   attributionUpdatedAt: string | null
 }
@@ -514,7 +514,7 @@ export async function reconcileAffiliateCommissionLineItems(params: {
  * Build commission line items from persisted sync attributions (same rows campaigns uses).
  * Includes both attributed rows and unattributed failure audit rows.
  */
-export async function loadAffiliateCommissionLineItemsFromAttributions(params: {
+async function loadAffiliateCommissionLineItemsFromAttributions(params: {
   userIds: number[]
   userLabels: Map<number, string>
   startDate: string

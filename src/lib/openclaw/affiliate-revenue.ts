@@ -7,7 +7,7 @@ import { nowFunc } from '@/lib/db-helpers'
 import { getDatabase } from '@/lib/db'
 import { toDbJsonObjectField } from '@/lib/json-field'
 import { serializeJsonPayloadForStorage } from '@/lib/json-payload-compression'
-import { invalidateAffiliateCommissionReportCacheForUserDate } from '@/lib/openclaw/affiliate-commission-report-cache'
+import { invalidateAffiliateCommissionReportCache } from '@/lib/openclaw/affiliate-commission-report-cache'
 import { rebuildAffiliateCommissionLineFactsForUserDate } from '@/lib/openclaw/affiliate-commission-raw-report'
 import { getOpenclawSettingsWithAffiliateSyncMap, parseNumber } from '@/lib/openclaw/settings'
 
@@ -588,10 +588,7 @@ async function persistAffiliateCommissionRawSnapshots(params: {
     }
   }
 
-  await invalidateAffiliateCommissionReportCacheForUserDate({
-    userId: params.userId,
-    reportDate: params.reportDate,
-  })
+  await invalidateAffiliateCommissionReportCache()
 }
 
 async function fetchPartnerboostCommission(params: {

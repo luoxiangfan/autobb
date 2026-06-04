@@ -1,7 +1,7 @@
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/json-field'
 import { parseStoredJsonPayload } from '@/lib/json-payload-compression'
-import type { AffiliatePlatform } from '@/lib/openclaw/affiliate-commission-attribution'
+import type { AffiliatePlatform } from '@/lib/openclaw/affiliate-commission-platform'
 import {
   affiliateCommissionFactsCoverRawRange,
   factRowsToLineItems,
@@ -55,28 +55,6 @@ const SUPPORTED_SOURCES: Array<{ platform: AffiliatePlatform; sourceApi: string 
   { platform: 'partnerboost', sourceApi: 'amazon_report' },
   { platform: 'partnerboost', sourceApi: 'transaction' },
 ]
-
-export type {
-  ActiveNonAdminUser,
-  AffiliateCommissionBrandDetailRow,
-  AffiliateCommissionBrandSummary,
-  AffiliateCommissionDateBounds,
-  AffiliateCommissionDateDetailRow,
-  AffiliateCommissionDateSummary,
-  AffiliateCommissionLineItem,
-  AffiliateCommissionReportResult,
-} from '@/lib/openclaw/affiliate-commission-types'
-
-export type {
-  AffiliateCommissionReportPlatformFilter,
-  AffiliateCommissionReportViewMode,
-} from '@/lib/openclaw/affiliate-commission-platform'
-export {
-  AFFILIATE_DISPLAY_TO_RAW_PLATFORM,
-  filterAffiliatesWithRawCommissionSupport,
-  getAffiliatePlatformDisplayName,
-  resolveAffiliateCommissionPlatformFilter,
-} from '@/lib/openclaw/affiliate-commission-platform'
 
 type RawSyncPayloadRow = {
   user_id: number

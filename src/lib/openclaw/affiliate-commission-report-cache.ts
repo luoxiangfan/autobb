@@ -11,11 +11,11 @@ import type {
   AffiliateCommissionLineItem,
 } from '@/lib/openclaw/affiliate-commission-types'
 
-export const MEMORY_CACHE_TTL_MS = 5 * 60 * 1000
+const MEMORY_CACHE_TTL_MS = 5 * 60 * 1000
 const MEMORY_CACHE_MAX_ENTRIES = 32
 const DATE_BOUNDS_CACHE_MAX_ENTRIES = 32
 
-export type MemoryCacheEntry = {
+type MemoryCacheEntry = {
   expiresAt: number
   sourceUpdatedAt: string | null
   attributionUpdatedAt: string | null
@@ -198,11 +198,8 @@ export async function writeAffiliateCommissionLineItemsDbCache(params: {
   )
 }
 
-export async function invalidateAffiliateCommissionReportCacheForUserDate(params: {
-  userId: number
-  reportDate: string
-}): Promise<void> {
-  void params
+/** Clears in-memory and DB report caches after raw sync / facts rebuild. */
+export async function invalidateAffiliateCommissionReportCache(): Promise<void> {
   clearAffiliateCommissionLineItemsMemoryCache()
 
   const db = await getDatabase()

@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { isOpenclawEnabledForUser, resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 import {
+  resolveAffiliateCommissionPlatformFilter,
+  type AffiliateCommissionReportViewMode,
+} from '@/lib/openclaw/affiliate-commission-platform'
+import {
   buildUserLabelMap,
   getAffiliateCommissionBrandDetail,
   getAffiliateCommissionDateDetail,
   getAffiliateCommissionDateBoundsCached,
   getAffiliateCommissionReport,
   parseRequestedUserIds,
-  resolveAffiliateCommissionPlatformFilter,
   resolveTargetUserIds,
-  type AffiliateCommissionReportViewMode,
 } from '@/lib/openclaw/affiliate-commission-raw-report'
 
 export const dynamic = 'force-dynamic'

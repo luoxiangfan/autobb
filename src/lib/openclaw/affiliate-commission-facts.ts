@@ -34,7 +34,7 @@ function scopeBrandKey(userId: number, brandKey: string, showUserScope: boolean)
   return `user:${userId}:${brandKey}`
 }
 
-export function lineItemsToFactRows(lineItems: AffiliateCommissionLineItem[]): LineFactRow[] {
+function lineItemsToFactRows(lineItems: AffiliateCommissionLineItem[]): LineFactRow[] {
   return lineItems.map((item) => ({
     user_id: item.userId,
     report_date: normalizeReportDate(item.reportDate),
@@ -261,73 +261,6 @@ export async function loadAffiliateCommissionLineFacts(params: {
   }
 
   return rows
-}
-
-export async function getAffiliateCommissionLineFactsRebuiltAt(params: {
-  userIds: number[]
-  startDate: string
-  endDate: string
-  platform: string
-}): Promise<string | null> {
-  if (params.userIds.length === 0) return null
-
-  const db = await getDatabase()
-  const platformFilter = buildPlatformClause(params.platform)
-  let maxRebuiltAt: string | null = null
-
-  for (const userIdChunk of chunkArray(params.userIds, 100)) {
-    const placeholders = userIdChunk.map(() => '?').join(', ')
-    const row = await db.queryOne<{ max_rebuilt_at: unknown }>(
-      `
-        SELECT MAX(rebuilt_at) AS max_rebuilt_at
-        FROM openclaw_affiliate_commission_line_facts
-        WHERE user_id IN (${placeholders})
-          AND report_date >= ?
-          AND report_date <= ?
-          ${platformFilter.clause}
-      `,
-      [...userIdChunk, params.startDate, params.endDate, ...platformFilter.params]
-    )
-    const candidate = row?.max_rebuilt_at ? String(row.max_rebuilt_at) : null
-    if (!candidate) continue
-    if (!maxRebuiltAt || candidate > maxRebuiltAt) {
-      maxRebuiltAt = candidate
-    }
-  }
-
-  return maxRebuiltAt
-}
-
-export async function hasAffiliateCommissionLineFacts(params: {
-  userIds: number[]
-  startDate: string
-  endDate: string
-  platform: string
-}): Promise<boolean> {
-  if (params.userIds.length === 0) return false
-
-  const db = await getDatabase()
-  const platformFilter = buildPlatformClause(params.platform)
-
-  for (const userIdChunk of chunkArray(params.userIds, 100)) {
-    const placeholders = userIdChunk.map(() => '?').join(', ')
-    const row = await db.queryOne<{ count: number }>(
-      `
-        SELECT COUNT(*) AS count
-        FROM openclaw_affiliate_commission_line_facts
-        WHERE user_id IN (${placeholders})
-          AND report_date >= ?
-          AND report_date <= ?
-          ${platformFilter.clause}
-      `,
-      [...userIdChunk, params.startDate, params.endDate, ...platformFilter.params]
-    )
-    if ((row?.count ?? 0) > 0) {
-      return true
-    }
-  }
-
-  return false
 }
 
 export async function getAffiliateCommissionRawSourceUpdatedAt(params: {
