@@ -214,9 +214,7 @@ const LEGITIMATE_PATHS = [
   /^\/change-password/,                      // 修改密码
 ]
 
-// Next 16 虽推荐 proxy.ts，但 Turbopack dev 下 src/proxy.ts 会导致路由持续 404（vercel/next.js#92921）。
-// 在 upstream 修复前继续使用 middleware.ts + export middleware。
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname} = request.nextUrl
 
   // 统一生成/透传 requestId，供日志与跨服务调用关联
