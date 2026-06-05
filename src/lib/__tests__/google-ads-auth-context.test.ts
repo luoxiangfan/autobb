@@ -9,6 +9,8 @@ const oauthFns = vi.hoisted(() => ({
   getUserAuthType: vi.fn(),
   getGoogleAdsCredentials: vi.fn(),
   getGoogleAdsCredentialsRaw: vi.fn(),
+  getGoogleAdsCredentialsMetadata: vi.fn(),
+  googleAdsCredentialsFromMetadata: vi.fn(),
 }))
 
 const dbFns = vi.hoisted(() => ({
@@ -19,6 +21,7 @@ const dbFns = vi.hoisted(() => ({
 
 const serviceAccountFns = vi.hoisted(() => ({
   getServiceAccountConfig: vi.fn(),
+  getServiceAccountConfigMetadata: vi.fn(),
 }))
 
 vi.mock('@/lib/google-ads-auth-assignment', async (importOriginal) => {
@@ -35,6 +38,25 @@ vi.mock('@/lib/google-ads-oauth', () => ({
   getUserAuthType: oauthFns.getUserAuthType,
   getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
   getGoogleAdsCredentialsRaw: oauthFns.getGoogleAdsCredentialsRaw,
+  getGoogleAdsCredentialsMetadata: oauthFns.getGoogleAdsCredentialsMetadata,
+  googleAdsCredentialsFromMetadata: (meta: {
+    client_id: string
+    login_customer_id: string
+    api_access_level?: string
+    hasRefreshToken: boolean
+  }) => ({
+    id: 0,
+    user_id: 0,
+    client_id: meta.client_id,
+    client_secret: '',
+    refresh_token: '',
+    developer_token: '',
+    login_customer_id: meta.login_customer_id,
+    api_access_level: meta.api_access_level,
+    is_active: 1,
+    created_at: '',
+    updated_at: '',
+  }),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -43,6 +65,7 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@/lib/google-ads-service-account', () => ({
   getServiceAccountConfig: serviceAccountFns.getServiceAccountConfig,
+  getServiceAccountConfigMetadata: serviceAccountFns.getServiceAccountConfigMetadata,
 }))
 
 vi.mock('@/lib/redis-client', () => ({
@@ -202,6 +225,33 @@ describe('getGoogleAdsAuthContext', () => {
     expect(slim.secretsStripped).toBe(true)
     expect(hasConfiguredGoogleAdsAuthFromContext(slim)).toBe(true)
     expect(oauthFns.getGoogleAdsCredentials).not.toHaveBeenCalled()
+  })
+
+  it('getGoogleAdsAuthContextMetadata cold miss loads metadata without full credentials decrypt', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 7,
+      isShared: false,
+      assignment: null,
+    })
+    assignmentFns.isGoogleAdsAuthShared.mockReturnValue(false)
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+    oauthFns.getGoogleAdsCredentialsMetadata.mockResolvedValue({
+      client_id: 'cid',
+      login_customer_id: '9988776655',
+      api_access_level: 'basic',
+      hasRefreshToken: true,
+    })
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt-secret' })
+    dbFns.queryOne.mockResolvedValue(null)
+    serviceAccountFns.getServiceAccountConfigMetadata.mockResolvedValue(null)
+
+    const slim = await getGoogleAdsAuthContextMetadata(7)
+
+    expect(slim.secretsStripped).toBe(true)
+    expect(slim.apiAccessLevel).toBe('basic')
+    expect(hasConfiguredGoogleAdsAuthFromContext(slim)).toBe(true)
+    expect(oauthFns.getGoogleAdsCredentials).not.toHaveBeenCalled()
+    expect(oauthFns.getGoogleAdsCredentialsMetadata).toHaveBeenCalled()
   })
 
   it('commitAuthContextCache skips write when generation invalidated during load', async () => {

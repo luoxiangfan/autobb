@@ -22,8 +22,10 @@ import { boolCondition, isDbRowActive } from './db-helpers'
 import { getDatabase } from './db'
 import {
   getGoogleAdsCredentials,
+  getGoogleAdsCredentialsMetadata,
   getGoogleAdsCredentialsRaw,
   getUserAuthType,
+  googleAdsCredentialsFromMetadata,
 } from './google-ads-oauth'
 import {
   GOOGLE_ADS_AUTH_CONTEXT_CACHE_TTL_MS,
@@ -35,7 +37,7 @@ import {
   waitForPeerGoogleAdsAuthContext,
   writeGoogleAdsAuthContextToRedis,
 } from './google-ads-auth-context-redis'
-import { getServiceAccountConfig } from './google-ads-service-account'
+import { getServiceAccountConfig, getServiceAccountConfigMetadata } from './google-ads-service-account'
 import {
   clearHydratedSecretsCacheForTests,
   hydrateGoogleAdsAuthContextSecrets,
@@ -268,6 +270,73 @@ async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthCo
   }
 }
 
+/** 只加载 metadata（不 decrypt OAuth/SA 密钥）；供 getGoogleAdsAuthContextMetadata miss 路径 */
+async function loadGoogleAdsAuthContextMetadataOnly(userId: number): Promise<GoogleAdsAuthContext> {
+  const resolution = await resolveGoogleAdsCredentialOwnerId(userId)
+  const { ownerUserId, assignment, isShared } = resolution
+  const auth = await getUserAuthType(userId, resolution)
+
+  let oauthCredentials: GoogleAdsAuthContext['oauthCredentials'] = null
+  let oauthHasRefreshToken = false
+  let serviceAccountConfig: GoogleAdsAuthContext['serviceAccountConfig'] = null
+
+  const loadOAuthMetadata = async () => {
+    const oauthMeta = await getGoogleAdsCredentialsMetadata(userId, resolution)
+    oauthHasRefreshToken = Boolean(oauthMeta?.hasRefreshToken)
+    oauthCredentials = oauthMeta ? googleAdsCredentialsFromMetadata(oauthMeta) : null
+  }
+
+  if (auth.authType === 'oauth') {
+    await loadOAuthMetadata()
+  } else if (auth.authType === 'service_account') {
+    serviceAccountConfig = await getServiceAccountConfigMetadata(
+      userId,
+      auth.serviceAccountId,
+      resolution
+    )
+  }
+
+  const { dualStack } = await resolveDualStackOnOwner(ownerUserId, {
+    oauthRefreshAlreadyLoaded:
+      auth.authType === 'oauth' ? oauthHasRefreshToken : undefined,
+    hasActiveServiceAccount:
+      auth.authType === 'service_account'
+        ? Boolean(auth.serviceAccountId || serviceAccountConfig?.id)
+        : undefined,
+  })
+
+  if (dualStack && !oauthCredentials) {
+    await loadOAuthMetadata()
+  }
+  if (dualStack && !serviceAccountConfig) {
+    serviceAccountConfig = await getServiceAccountConfigMetadata(userId, undefined, resolution)
+  }
+
+  const partialCtx = {
+    userId,
+    ownerUserId,
+    assignment,
+    isShared,
+    auth,
+    oauthCredentials,
+    serviceAccountConfig,
+  }
+  const apiAccessLevel = resolveGoogleAdsApiAccessLevelFromContext(partialCtx)
+  const serviceAccountConfigured = Boolean(
+    serviceAccountConfig?.id || auth.serviceAccountId
+  )
+
+  return stripGoogleAdsAuthContextForCache({
+    ...partialCtx,
+    canModify: !isGoogleAdsAuthShared(assignment),
+    dualStack,
+    apiAccessLevel,
+    oauthHasRefreshToken,
+    serviceAccountConfigured,
+    secretsStripped: false,
+  })
+}
+
 function rememberAuthContextInMemory(userId: number, ctx: GoogleAdsAuthContext): void {
   authContextCache.set(userId, {
     ctx: stripGoogleAdsAuthContextForCache(ctx),
@@ -319,8 +388,9 @@ export async function getGoogleAdsAuthContextMetadata(
     return slim
   }
 
-  const full = await getGoogleAdsAuthContext(userId)
-  return stripGoogleAdsAuthContextForCache(full)
+  const ctx = await loadGoogleAdsAuthContextMetadataOnly(userId)
+  rememberAuthContextInMemory(userId, ctx)
+  return ctx
 }
 
 /**

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultOAuthApiAuth, defaultOAuthAuthContext } from './helpers/campaign-route-auth-context-mock'
+import { invalidateGoogleAdsAuthContextCache } from '@/lib/google-ads-auth-context'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
   clearGoogleAdsLinkedAccountPrepareCache,
@@ -633,7 +634,7 @@ describe('GoogleAdsLinkedAccountPrepareCache', () => {
     vi.clearAllMocks()
     authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
       ok: true,
-      ctx: oauthAuthContextFull,
+      ctx: { ...oauthAuthContextFull, userId: 1, ownerUserId: 1 },
       apiAuth: defaultOAuthApiAuth,
     })
     settingsFns.getUserOnlySetting.mockResolvedValue({
@@ -665,6 +666,7 @@ describe('GoogleAdsLinkedAccountPrepareCache', () => {
     const slim = cache.prepareByLinkedSa.get('1\0sa-1')
     expect(slim?.authContext.secretsStripped).toBe(true)
     expect(slim?.apiAuth.refreshToken).toBe('')
+    expect(slim?.generationAtPrepare).toBe(0)
   })
 
   it('prepareGoogleAdsApiCallForLinkedAccountCached treats blank linked SA as null', async () => {
@@ -702,5 +704,97 @@ describe('GoogleAdsLinkedAccountPrepareCache', () => {
     clearGoogleAdsLinkedAccountPrepareCache(cache)
 
     expect(cache.prepareByLinkedSa.size).toBe(0)
+  })
+
+  it('prepareGoogleAdsApiCallForLinkedAccountCached evicts slim and retries full prepare when rehydrate fails', async () => {
+    const cacheModule = await import('../google-ads-auth-context-cache')
+    const cache = createGoogleAdsLinkedAccountPrepareCache()
+
+    const first = await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
+    expect(first.ok).toBe(true)
+    expect(cache.prepareByLinkedSa.size).toBe(1)
+
+    const hydrateSpy = vi.spyOn(cacheModule, 'hydrateGoogleAdsAuthContextSecrets').mockResolvedValueOnce({
+      ...oauthAuthContextFull,
+      userId: 1,
+      ownerUserId: 1,
+      oauthCredentials: { ...oauthCredentialsFull, refresh_token: '' },
+      secretsStripped: false,
+    })
+
+    const second = await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
+
+    expect(hydrateSpy).toHaveBeenCalledTimes(1)
+    expect(second.ok).toBe(true)
+    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledTimes(2)
+    expect(cache.prepareByLinkedSa.size).toBe(1)
+
+    hydrateSpy.mockRestore()
+  })
+
+  it('prepareGoogleAdsApiCallForLinkedAccountCached evicts stale slim when generation changes', async () => {
+    const cache = createGoogleAdsLinkedAccountPrepareCache()
+    await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
+
+    invalidateGoogleAdsAuthContextCache(1)
+
+    await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
+
+    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledTimes(2)
+  })
+
+  it('prepareGoogleAdsApiCallForLinkedAccountCached merges concurrent inflight for same key', async () => {
+    const cache = createGoogleAdsLinkedAccountPrepareCache()
+    let resolvePrepare: ((value: unknown) => void) | undefined
+    authContextFns.resolveGoogleAdsApiAuthForAccount.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvePrepare = resolve
+        })
+    )
+
+    const first = prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
+    const second = prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
+
+    resolvePrepare!({
+      ok: true,
+      ctx: oauthAuthContextFull,
+      apiAuth: defaultOAuthApiAuth,
+    })
+
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      expect.objectContaining({ ok: true }),
+      expect.objectContaining({ ok: true }),
+    ])
+    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledTimes(1)
+  })
+
+  it('prepareGoogleAdsApiCallForLinkedAccountCached skips re-heal on slim rehydrate when healed OAuth bundle is cached', async () => {
+    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
+      ok: true,
+      ctx: {
+        ...oauthAuthContextFull,
+        userId: 1,
+        ownerUserId: 1,
+        oauthCredentials: {
+          ...oauthCredentialsFull,
+          developer_token: oauthCredentialsFull.client_secret,
+        },
+      },
+      apiAuth: defaultOAuthApiAuth,
+    })
+
+    const cache = createGoogleAdsLinkedAccountPrepareCache()
+    const first = await prepareGoogleAdsApiCallForLinkedAccountCached(1, null, cache)
+    expect(first.ok).toBe(true)
+    expect(settingsFns.getUserOnlySetting).toHaveBeenCalled()
+    expect(cache.healedOAuthBundleByUser.has(1)).toBe(true)
+
+    settingsFns.getUserOnlySetting.mockClear()
+
+    const second = await prepareGoogleAdsApiCallForLinkedAccountCached(1, null, cache)
+    expect(second.ok).toBe(true)
+    expect(settingsFns.getUserOnlySetting).not.toHaveBeenCalled()
+    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledTimes(1)
   })
 })

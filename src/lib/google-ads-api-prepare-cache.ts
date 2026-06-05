@@ -1,7 +1,6 @@
 import {
   stripGoogleAdsAuthContextForCache,
   seedHydratedSecretsCacheFromFullContext,
-  invalidateHydratedSecretsCache,
 } from './google-ads-auth-context-cache'
 import { getGoogleAdsAuthContextGenerationForHydrate } from './google-ads-auth-context'
 import type { GoogleAdsAuthContext } from './google-ads-auth-context'
@@ -21,6 +20,7 @@ export function stripPreparedGoogleAdsAccountApiCallForCache(
       refreshToken: '',
     },
     oauthLoginCustomerId: prepared.oauthLoginCustomerId,
+    generationAtPrepare: getGoogleAdsAuthContextGenerationForHydrate(prepared.authContext.userId),
   }
 }
 
@@ -35,12 +35,11 @@ export function seedPrepareCacheHydratedSecrets(
   )
 }
 
-/** job / 请求结束时显式释放 prepare 缓存及关联的 generation secrets 短缓存 */
+/** job / 请求结束时显式释放 prepare slim 缓存（不含密钥；不触碰进程级 secrets 短缓存） */
 export function clearGoogleAdsLinkedAccountPrepareCache(
   cache: GoogleAdsLinkedAccountPrepareCache
 ): void {
-  for (const entry of cache.prepareByLinkedSa.values()) {
-    invalidateHydratedSecretsCache(entry.authContext.userId)
-  }
   cache.prepareByLinkedSa.clear()
+  cache.prepareInflight.clear()
+  cache.healedOAuthBundleByUser.clear()
 }

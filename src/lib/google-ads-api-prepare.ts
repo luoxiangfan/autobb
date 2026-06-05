@@ -237,7 +237,11 @@ export async function prepareGoogleAdsApiCallForLinkedAccount(
 }
 
 export function createGoogleAdsLinkedAccountPrepareCache(): GoogleAdsLinkedAccountPrepareCache {
-  return { prepareByLinkedSa: new Map() }
+  return {
+    prepareByLinkedSa: new Map(),
+    prepareInflight: new Map(),
+    healedOAuthBundleByUser: new Map(),
+  }
 }
 
 export { clearGoogleAdsLinkedAccountPrepareCache } from './google-ads-api-prepare-cache'
@@ -255,7 +259,8 @@ function normalizeLinkedSaForPrepareCache(
 }
 
 async function rehydratePreparedGoogleAdsAccountApiCallFromCache(
-  slim: SlimPreparedGoogleAdsAccountApiCall
+  slim: SlimPreparedGoogleAdsAccountApiCall,
+  cache?: GoogleAdsLinkedAccountPrepareCache
 ): Promise<GoogleAdsLinkedAccountPrepareResult> {
   const authContext = await hydrateGoogleAdsAuthContextSecrets(
     slim.authContext,
@@ -287,16 +292,30 @@ async function rehydratePreparedGoogleAdsAccountApiCallFromCache(
   let oauthLoginCustomerId: string | undefined
 
   if (apiAuth.authType === 'oauth') {
-    const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
-      userId: authContext.userId,
-      authContext,
-    })
-    if (!oauthBundle.ok) {
-      return { ok: false, message: oauthBundle.message }
+    const generation = getGoogleAdsAuthContextGenerationForHydrate(authContext.userId)
+    const cachedHeal = cache?.healedOAuthBundleByUser.get(authContext.userId)
+    if (cachedHeal && cachedHeal.generation === generation) {
+      oauthCredentials = cachedHeal.bundle.oauthCredentials
+      oauthLoginCustomerId =
+        cachedHeal.bundle.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+    } else {
+      const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
+        userId: authContext.userId,
+        authContext,
+      })
+      if (!oauthBundle.ok) {
+        return { ok: false, message: oauthBundle.message }
+      }
+      if (oauthBundle.bundle) {
+        cache?.healedOAuthBundleByUser.set(authContext.userId, {
+          generation,
+          bundle: oauthBundle.bundle,
+        })
+      }
+      oauthCredentials = oauthBundle.bundle?.oauthCredentials
+      oauthLoginCustomerId =
+        oauthBundle.bundle?.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
     }
-    oauthCredentials = oauthBundle.bundle?.oauthCredentials
-    oauthLoginCustomerId =
-      oauthBundle.bundle?.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
   }
 
   return {
@@ -309,6 +328,43 @@ async function rehydratePreparedGoogleAdsAccountApiCallFromCache(
   }
 }
 
+async function prepareGoogleAdsApiCallForLinkedAccountCachedInternal(
+  userId: number,
+  normalizedSa: string | null,
+  cache?: GoogleAdsLinkedAccountPrepareCache
+): Promise<GoogleAdsLinkedAccountPrepareResult> {
+  const key = linkedSaPrepareCacheKey(userId, normalizedSa)
+  const slimHit = cache?.prepareByLinkedSa.get(key)
+  if (slimHit) {
+    const currentGeneration = getGoogleAdsAuthContextGenerationForHydrate(userId)
+    if (slimHit.generationAtPrepare !== currentGeneration) {
+      cache?.prepareByLinkedSa.delete(key)
+    } else {
+      const rehydrated = await rehydratePreparedGoogleAdsAccountApiCallFromCache(slimHit, cache)
+      if (rehydrated.ok) {
+        return rehydrated
+      }
+      cache?.prepareByLinkedSa.delete(key)
+    }
+  }
+
+  const prepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, normalizedSa)
+  if (prepared.ok && cache) {
+    seedPrepareCacheHydratedSecrets(prepared)
+    cache.prepareByLinkedSa.set(key, stripPreparedGoogleAdsAccountApiCallForCache(prepared))
+    if (prepared.oauthCredentials) {
+      cache.healedOAuthBundleByUser.set(prepared.authContext.userId, {
+        generation: getGoogleAdsAuthContextGenerationForHydrate(prepared.authContext.userId),
+        bundle: {
+          oauthCredentials: prepared.oauthCredentials,
+          oauthLoginCustomerId: prepared.oauthLoginCustomerId,
+        },
+      })
+    }
+  }
+  return prepared
+}
+
 export async function prepareGoogleAdsApiCallForLinkedAccountCached(
   userId: number,
   linkedSa: string | null | undefined,
@@ -316,15 +372,21 @@ export async function prepareGoogleAdsApiCallForLinkedAccountCached(
 ): Promise<GoogleAdsLinkedAccountPrepareResult> {
   const normalizedSa = normalizeLinkedSaForPrepareCache(linkedSa)
   const key = linkedSaPrepareCacheKey(userId, normalizedSa)
-  const slimHit = cache?.prepareByLinkedSa.get(key)
-  if (slimHit) {
-    return rehydratePreparedGoogleAdsAccountApiCallFromCache(slimHit)
+
+  const inflight = cache?.prepareInflight.get(key)
+  if (inflight) {
+    return inflight
   }
 
-  const prepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, normalizedSa)
-  if (prepared.ok && cache) {
-    seedPrepareCacheHydratedSecrets(prepared)
-    cache.prepareByLinkedSa.set(key, stripPreparedGoogleAdsAccountApiCallForCache(prepared))
+  const promise = prepareGoogleAdsApiCallForLinkedAccountCachedInternal(
+    userId,
+    normalizedSa,
+    cache
+  )
+  cache?.prepareInflight.set(key, promise)
+  try {
+    return await promise
+  } finally {
+    cache?.prepareInflight.delete(key)
   }
-  return prepared
 }

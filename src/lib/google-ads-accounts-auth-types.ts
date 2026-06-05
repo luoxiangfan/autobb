@@ -102,21 +102,46 @@ export type CreativeGenerationGoogleAdsValidationResult =
       authType?: 'oauth' | 'service_account'
       missingFields?: string[]
     }
-  | { ok: true; authContext: GoogleAdsAuthContext; apiAuth: GoogleAdsApiAuthFields }
+  | {
+      ok: true
+      /** 缓存命中或未请求 API 校验时可省略；fresh validate 会填充 */
+      authContext?: GoogleAdsAuthContext
+      apiAuth?: GoogleAdsApiAuthFields
+    }
 
 /** 批任务 prepare 缓存条目：不含 refresh_token / client_secret 等密钥 */
 export type SlimPreparedGoogleAdsAccountApiCall = {
   authContext: GoogleAdsAuthContext
   apiAuth: GoogleAdsApiAuthFields
   oauthLoginCustomerId?: string
+  /** prepare 写入时的 auth generation；与当前 generation 不一致时视为 stale */
+  generationAtPrepare: number
 }
 
 export type GoogleAdsLinkedAccountPrepareCache = {
   prepareByLinkedSa: Map<string, SlimPreparedGoogleAdsAccountApiCall>
+  /** 同 (userId, linkedSa) 并发 prepare 合并 */
+  prepareInflight: Map<string, Promise<GoogleAdsLinkedAccountPrepareResult>>
+  /** job 内 OAuth heal bundle 短缓存（generation 绑定） */
+  healedOAuthBundleByUser: Map<
+    number,
+    { generation: number; bundle: OAuthGoogleAdsCallBundle }
+  >
 }
 
+/** validation 缓存条目：不含 authContext / apiAuth 密钥 */
+export type CreativeGenerationValidationCacheEntry =
+  | {
+      ok: false
+      message: string
+      authType?: 'oauth' | 'service_account'
+      missingFields?: string[]
+    }
+  | { ok: true }
+
 export type CreativeGenerationAuthCache = GoogleAdsLinkedAccountPrepareCache & {
-  validationByOfferId: Map<number, CreativeGenerationGoogleAdsValidationResult>
+  validationByOfferId: Map<number, CreativeGenerationValidationCacheEntry>
+  validationByUserId: Map<number, CreativeGenerationValidationCacheEntry>
 }
 
 export type KeywordPoolExpandCredentials = {

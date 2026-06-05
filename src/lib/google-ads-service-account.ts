@@ -68,6 +68,78 @@ export async function getServiceAccountConfig(
   return getServiceAccountConfigRaw(ownerUserId, serviceAccountId)
 }
 
+/** metadata-only：不读取/解密 private_key、developer_token */
+export async function getServiceAccountConfigMetadataRaw(
+  userId: number,
+  serviceAccountId?: string
+) {
+  const db = await getDatabase()
+  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+
+  let query = `
+    SELECT id, name, mcc_customer_id, service_account_email, project_id,
+           api_access_level, created_at, updated_at
+    FROM google_ads_service_accounts
+    WHERE user_id = ? AND ${isActiveCondition}
+  `
+  const params: Array<string | number> = [userId]
+
+  if (serviceAccountId) {
+    query += ' AND id = ?'
+    params.push(serviceAccountId)
+  } else {
+    query += ' ORDER BY created_at DESC LIMIT 1'
+  }
+
+  const account = await db.queryOne(query, params) as {
+    id: string
+    name: string
+    mcc_customer_id: string
+    service_account_email: string
+    project_id: string | null
+    api_access_level: string | null
+    created_at: string
+    updated_at: string
+  } | undefined
+
+  if (!account) {
+    return null
+  }
+
+  return {
+    id: account.id,
+    name: account.name,
+    mccCustomerId: account.mcc_customer_id,
+    developerToken: null as unknown as string,
+    serviceAccountEmail: account.service_account_email,
+    privateKey: null as unknown as string,
+    projectId: account.project_id ?? undefined,
+    apiAccessLevel: account.api_access_level
+      ? String(account.api_access_level).toLowerCase()
+      : undefined,
+    createdAt: account.created_at,
+    updatedAt: account.updated_at,
+  }
+}
+
+/**
+ * metadata-only 服务账号配置（解析共享管理员）
+ */
+export async function getServiceAccountConfigMetadata(
+  userId: number,
+  serviceAccountId?: string,
+  resolved?: GoogleAdsCredentialOwnerResolutionInput
+) {
+  const { ownerUserId, assignment } =
+    resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
+
+  if (assignment?.assignmentMode === 'shared_admin' && assignment.authType === 'oauth') {
+    return null
+  }
+
+  return getServiceAccountConfigMetadataRaw(ownerUserId, serviceAccountId)
+}
+
 /**
  * 列出用户的所有服务账号配置
  */

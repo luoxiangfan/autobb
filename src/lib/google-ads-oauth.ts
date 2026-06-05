@@ -258,6 +258,69 @@ export async function getGoogleAdsCredentials(
   return getGoogleAdsCredentialsRaw(ownerUserId)
 }
 
+/** metadata-only：不解密/不读取 client_secret、developer_token 等密钥列 */
+export type GoogleAdsCredentialsMetadata = {
+  client_id: string
+  login_customer_id: string
+  api_access_level?: string
+  hasRefreshToken: boolean
+}
+
+export async function getGoogleAdsCredentialsMetadata(
+  userId: number,
+  resolved?: GoogleAdsCredentialOwnerResolutionInput
+): Promise<GoogleAdsCredentialsMetadata | null> {
+  const { ownerUserId, assignment } =
+    resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
+
+  if (assignment?.assignmentMode === 'shared_admin' && assignment.authType === 'service_account') {
+    return null
+  }
+
+  const db = await getDatabase()
+  const isActiveCondition = boolCondition('is_active', true, db.type)
+  const row = await db.queryOne<{
+    client_id: string | null
+    login_customer_id: string | null
+    api_access_level: string | null
+    refresh_token: string | null
+  }>(
+    `SELECT client_id, login_customer_id, api_access_level, refresh_token
+     FROM google_ads_credentials
+     WHERE user_id = ? AND ${isActiveCondition}`,
+    [ownerUserId]
+  )
+
+  if (!row) {
+    return null
+  }
+
+  return {
+    client_id: row.client_id || '',
+    login_customer_id: row.login_customer_id || '',
+    api_access_level: row.api_access_level || undefined,
+    hasRefreshToken: Boolean(row.refresh_token),
+  }
+}
+
+export function googleAdsCredentialsFromMetadata(
+  meta: GoogleAdsCredentialsMetadata
+): GoogleAdsCredentials {
+  return {
+    id: 0,
+    user_id: 0,
+    client_id: meta.client_id,
+    client_secret: '',
+    refresh_token: '',
+    developer_token: '',
+    login_customer_id: meta.login_customer_id,
+    api_access_level: meta.api_access_level,
+    is_active: 1,
+    created_at: '',
+    updated_at: '',
+  }
+}
+
 /**
  * 删除Google Ads凭证
  */
