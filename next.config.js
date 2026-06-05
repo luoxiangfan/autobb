@@ -44,25 +44,6 @@ const nextConfig = {
     ],
   },
 
-  experimental: {
-    serverActions: {
-      allowedOrigins: [
-        'autoads.dev',
-        'www.autoads.dev',
-        'app.autoads.dev',
-        'localhost:3000',
-        'localhost',
-        'autobb-yt54xvsg5q-an.a.run.app',
-      ],
-      allowedForwardedHosts: [
-        'autoads.dev',
-        'www.autoads.dev',
-        'app.autoads.dev',
-        'autobb-yt54xvsg5q-an.a.run.app',
-      ],
-    },
-  },
-
   // 可选：`next build --webpack` 时保留原生模块 externals
   webpack: (config, { isServer }) => {
     if (isServer) {
