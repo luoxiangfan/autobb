@@ -3,11 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
 import { getSettingsByCategory } from '@/lib/settings'
 import { syncOpenclawConfig } from '@/lib/openclaw/config'
-import {
-  ensureOpenclawWorkspaceBootstrap,
-  inspectOpenclawWorkspace,
-  resolveOpenclawWorkspaceDir,
-} from '@/lib/openclaw/workspace-bootstrap'
+import { resolveOpenclawWorkspaceDir } from '@/lib/openclaw/workspace-paths'
 
 function parseJsonObject(value?: string | null): Record<string, any> | undefined {
   if (!value) return undefined
@@ -29,11 +25,12 @@ function resolveOpenclawRuntimePaths(): { configPath: string; stateDir: string }
   return { configPath, stateDir }
 }
 
-function buildWorkspaceStatus(params: {
+async function buildWorkspaceStatus(params: {
   workspaceDir: string
   computedWorkspaceDir: string
   canReloadGateway: boolean
 }) {
+  const { inspectOpenclawWorkspace } = await import('@/lib/openclaw/workspace-bootstrap')
   const inspected = inspectOpenclawWorkspace(params.workspaceDir)
   return {
     success: true,
@@ -69,13 +66,14 @@ export async function POST(request: NextRequest) {
     preferredWorkspace,
   })
 
+  const { ensureOpenclawWorkspaceBootstrap } = await import('@/lib/openclaw/workspace-bootstrap')
   const bootstrap = ensureOpenclawWorkspaceBootstrap({
     stateDir,
     actorUserId: auth.user.userId,
     preferredWorkspace,
   })
 
-  const statusPayload = buildWorkspaceStatus({
+  const statusPayload = await buildWorkspaceStatus({
     workspaceDir: bootstrap.workspaceDir || computedWorkspaceDir,
     computedWorkspaceDir,
     canReloadGateway: auth.user.role === 'admin',

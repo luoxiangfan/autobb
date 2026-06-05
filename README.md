@@ -265,11 +265,11 @@ npm run test:openclaw    # OpenClaw 相关测试
 
 ### 常用脚本
 
-| 命令 | 说明 |
-| --- | --- |
-| `npm run db:migrate` | 应用增量迁移 |
-| `npm run admin:ensure` | 确保管理员账号存在 |
-| `npm run attribution:health` | 联盟归因健康检查 |
+| 命令                               | 说明                     |
+| ---------------------------------- | ------------------------ |
+| `npm run db:migrate`               | 应用增量迁移             |
+| `npm run admin:ensure`             | 确保管理员账号存在       |
+| `npm run attribution:health`       | 联盟归因健康检查         |
 | `npm run openclaw:prebuilt:verify` | 验证 OpenClaw 预构建产物 |
 
 ### 调试 SQLite
@@ -401,12 +401,12 @@ npm start
 
 ## 📖 文档
 
-| 文档 | 说明 |
-| --- | --- |
-| [migrations/DATABASE_INITIALIZATION_GUIDE.md](./migrations/DATABASE_INITIALIZATION_GUIDE.md) | 数据库设置与管理 |
-| [migrations/README.md](./migrations/README.md) | 迁移命名规范与近期增量 |
-| [AGENTS.md](./AGENTS.md) | Agent 工作流、质量门禁、Google Ads 认证约定 |
-| [CLAUDE.md](./CLAUDE.md) | 项目概览与开发命令速查 |
+| 文档                                                                                         | 说明                                        |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| [migrations/DATABASE_INITIALIZATION_GUIDE.md](./migrations/DATABASE_INITIALIZATION_GUIDE.md) | 数据库设置与管理                            |
+| [migrations/README.md](./migrations/README.md)                                               | 迁移命名规范与近期增量                      |
+| [AGENTS.md](./AGENTS.md)                                                                     | Agent 工作流、质量门禁、Google Ads 认证约定 |
+| [CLAUDE.md](./CLAUDE.md)                                                                     | 项目概览与开发命令速查                      |
 
 ---
 

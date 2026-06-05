@@ -1,6 +1,17 @@
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
+import {
+  formatOpenclawDateInShanghai,
+  getOpenclawDailyMemoryFileName,
+  normalizeOpenclawUserPath,
+  resolveOpenclawWorkspaceDir,
+} from '@/lib/openclaw/workspace-paths'
+
+export {
+  getOpenclawDailyMemoryFileName,
+  normalizeOpenclawUserPath,
+  resolveOpenclawWorkspaceDir,
+} from '@/lib/openclaw/workspace-paths'
 
 type EnsureOpenclawWorkspaceOptions = {
   stateDir: string
@@ -39,18 +50,6 @@ const REQUIRED_WORKSPACE_FILES: OpenclawWorkspaceTrackedFileName[] = [
   'MEMORY.md',
 ]
 
-function resolveUserPath(input: string): string {
-  const trimmed = input.trim()
-  if (!trimmed) return trimmed
-  if (trimmed === '~') {
-    return os.homedir()
-  }
-  if (trimmed.startsWith('~/')) {
-    return path.join(os.homedir(), trimmed.slice(2))
-  }
-  return path.resolve(trimmed)
-}
-
 const OVERLAY_HEADING = '## AutoAds Runtime Rule (Managed by AutoAds)'
 const AGENTS_MANAGED_START = '<!-- autoads-openclaw-agents-managed:start -->'
 const AGENTS_MANAGED_END = '<!-- autoads-openclaw-agents-managed:end -->'
@@ -63,16 +62,6 @@ const SOUL_LEGACY_SIGNATURES = [
   '## AutoAds 触发规则',
 ]
 
-export function resolveOpenclawWorkspaceDir(params: EnsureOpenclawWorkspaceOptions): string {
-  const preferred = (params.preferredWorkspace || '').trim()
-  if (preferred) {
-    return resolveUserPath(preferred)
-  }
-  if (params.actorUserId && params.actorUserId > 0) {
-    return resolveUserPath(path.join(params.stateDir, 'workspace', `user-${params.actorUserId}`))
-  }
-  return resolveUserPath(path.join(params.stateDir, 'workspace'))
-}
 
 function ensureFile(filePath: string, content: string, changedFiles: string[]): void {
   if (fs.existsSync(filePath)) {
@@ -90,18 +79,6 @@ function writeFileIfChanged(filePath: string, current: string, next: string, cha
   changedFiles.push(filePath)
 }
 
-function formatDateInShanghai(date: Date): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Shanghai',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date)
-}
-
-export function getOpenclawDailyMemoryFileName(date: Date = new Date()): string {
-  return `${formatDateInShanghai(date)}.md`
-}
 
 function buildAgentsOverlay(): string {
   return `${AGENTS_MANAGED_START}
@@ -365,7 +342,7 @@ function inspectSingleFile(filePath: string): {
 }
 
 export function inspectOpenclawWorkspace(workspaceDir: string, date: Date = new Date()): OpenclawWorkspaceStatus {
-  const normalizedWorkspaceDir = resolveUserPath(workspaceDir)
+  const normalizedWorkspaceDir = normalizeOpenclawUserPath(workspaceDir)
   const memoryDir = path.join(normalizedWorkspaceDir, 'memory')
   const files = REQUIRED_WORKSPACE_FILES.map((name) => {
     const filePath = path.join(normalizedWorkspaceDir, name)
@@ -400,7 +377,7 @@ function ensureMemoryScaffold(workspaceDir: string, changedFiles: string[]): voi
   const memoryDir = path.join(workspaceDir, 'memory')
   fs.mkdirSync(memoryDir, { recursive: true })
 
-  const today = formatDateInShanghai(new Date())
+  const today = formatOpenclawDateInShanghai(new Date())
   const dailyPath = path.join(memoryDir, `${today}.md`)
   ensureFile(dailyPath, buildDailyMemoryFile(today), changedFiles)
 }

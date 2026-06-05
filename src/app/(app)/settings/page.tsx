@@ -2450,8 +2450,7 @@ export default function SettingsPage() {
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
                                 <p className="mt-2 text-sm text-gray-600">加载账户列表...</p>
                               </div>
-                            ) : permissionError ? // 有权限错误时不显示"未找到账户"提示
-                            null : googleAdsAccounts.length === 0 ? (
+                            ) : permissionError ? null : googleAdsAccounts.length === 0 ? ( // 有权限错误时不显示"未找到账户"提示
                               <div className="text-center py-8 bg-gray-50 rounded-lg">
                                 <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                                 <p className="text-gray-600">未找到可访问的账户</p>
