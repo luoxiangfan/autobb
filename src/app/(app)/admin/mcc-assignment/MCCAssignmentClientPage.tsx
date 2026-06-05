@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -62,6 +62,8 @@ interface MCCAssignment {
 // 🔧 用于取消未完成的请求
 let fetchAssignmentsAbortController: AbortController | null = null
 
+const CACHE_DURATION = 5 * 60 * 1000 // 5 分钟缓存
+
 export default function MCCAssignmentClientPage() {
   const [loading, setLoading] = useState(true)
   const [users, setUsers] = useState<User[]>([])
@@ -94,45 +96,10 @@ export default function MCCAssignmentClientPage() {
     allAssignments: Map<string, { userId: number, username: string }>
     timestamp: number
   } | null>(null)
-  const CACHE_DURATION = 5 * 60 * 1000 // 5 分钟缓存
+  const cacheRef = useRef(cache)
+  cacheRef.current = cache
 
-  useEffect(() => {
-    fetchUsers()
-    fetchMccAccounts()
-    fetchAllAssignments()  // 🔧 获取所有 MCC 的分配情况
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // 🔧 搜索防抖 - 300ms
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(tableSearchTerm)
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [tableSearchTerm])
-
-  // 🔧 缓存清理 - 组件卸载时清理过期缓存
-  useEffect(() => {
-    const cleanup = setInterval(() => {
-      if (cache && Date.now() - cache.timestamp > CACHE_DURATION) {
-        setCache(null)
-      }
-    }, 60000) // 每分钟检查一次
-
-    return () => clearInterval(cleanup)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cache])
-
-  useEffect(() => {
-    if (selectedUserId) {
-      // 🔧 切换用户时先清除旧数据
-      setUserAssignments([])
-      fetchUserAssignments(selectedUserId)
-    }
-  }, [selectedUserId])
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const params = new URLSearchParams({
         role: 'user',
@@ -149,14 +116,15 @@ export default function MCCAssignmentClientPage() {
     } catch (error: any) {
       console.error('获取用户列表失败:', error)
     }
-  }
+  }, [])
 
-  const fetchMccAccounts = async () => {
+  const fetchMccAccounts = useCallback(async () => {
     try {
+      const cached = cacheRef.current
       // 🔧 检查缓存
-      if (cache && Date.now() - cache.timestamp < CACHE_DURATION) {
-        setMccAccounts(cache.mccAccounts)
-        setAllAssignments(cache.allAssignments)
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        setMccAccounts(cached.mccAccounts)
+        setAllAssignments(cached.allAssignments)
         return
       }
 
@@ -184,10 +152,10 @@ export default function MCCAssignmentClientPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // 🔧 获取所有 MCC 的分配情况（用于显示哪些 MCC 已被其他用户绑定）
-  const fetchAllAssignments = async () => {
+  const fetchAllAssignments = useCallback(async () => {
     try {
       const response = await fetch('/api/admin/user-mcc/all', {
         credentials: 'include',
@@ -204,9 +172,10 @@ export default function MCCAssignmentClientPage() {
         setAllAssignments(assignmentMap)
         
         // 🔧 更新缓存中的分配数据
-        if (cache) {
+        const cached = cacheRef.current
+        if (cached) {
           setCache({
-            ...cache,
+            ...cached,
             allAssignments: assignmentMap,
           })
         }
@@ -214,9 +183,35 @@ export default function MCCAssignmentClientPage() {
     } catch (error: any) {
       console.error('获取所有 MCC 分配失败:', error)
     }
-  }
+  }, [])
 
-  const fetchUserAssignments = async (userId: string) => {
+  useEffect(() => {
+    fetchUsers()
+    fetchMccAccounts()
+    fetchAllAssignments()  // 🔧 获取所有 MCC 的分配情况
+  }, [fetchUsers, fetchMccAccounts, fetchAllAssignments])
+
+  // 🔧 搜索防抖 - 300ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(tableSearchTerm)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [tableSearchTerm])
+
+  // 🔧 缓存清理 - 组件卸载时清理过期缓存
+  useEffect(() => {
+    const cleanup = setInterval(() => {
+      if (cache && Date.now() - cache.timestamp > CACHE_DURATION) {
+        setCache(null)
+      }
+    }, 60000) // 每分钟检查一次
+
+    return () => clearInterval(cleanup)
+  }, [cache])
+
+  const fetchUserAssignments = useCallback(async (userId: string) => {
     // 🔧 取消未完成的请求
     if (fetchAssignmentsAbortController) {
       fetchAssignmentsAbortController.abort()
@@ -244,7 +239,15 @@ export default function MCCAssignmentClientPage() {
         duration: 5000,
       })
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (selectedUserId) {
+      // 🔧 切换用户时先清除旧数据
+      setUserAssignments([])
+      fetchUserAssignments(selectedUserId)
+    }
+  }, [selectedUserId, fetchUserAssignments])
 
   // 🔧 刷新功能
   const handleRefresh = useCallback(async () => {
@@ -277,8 +280,7 @@ export default function MCCAssignmentClientPage() {
     } finally {
       setIsRefreshing(false)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRefreshing, selectedUserId])
+  }, [isRefreshing, selectedUserId, fetchUsers, fetchMccAccounts, fetchAllAssignments, fetchUserAssignments])
 
   const handleAssign = async () => {
     if (!selectedUserId || selectedMccIds.length === 0) {
@@ -713,7 +715,7 @@ export default function MCCAssignmentClientPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {/* 总 MCC 数 */}
-          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+          <Card className="bg-linear-to-br from-blue-50 to-indigo-50 border-blue-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -726,7 +728,7 @@ export default function MCCAssignmentClientPage() {
           </Card>
 
           {/* 已分配 MCC 数 */}
-          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+          <Card className="bg-linear-to-br from-green-50 to-emerald-50 border-green-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -739,7 +741,7 @@ export default function MCCAssignmentClientPage() {
           </Card>
 
           {/* 可用 MCC 数 */}
-          <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+          <Card className="bg-linear-to-br from-amber-50 to-orange-50 border-amber-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -1084,7 +1086,7 @@ export default function MCCAssignmentClientPage() {
                   type="button"
                   className={cn(
                     "w-full min-h-[44px] px-4 py-2.5 border rounded-lg bg-background text-left text-sm",
-                    "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+                    "focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
                     "transition-all duration-200",
                     isMccSelectOpen ? "border-blue-500 ring-2 ring-blue-500 ring-offset-2" : "border-input hover:border-gray-400"
                   )}
@@ -1131,7 +1133,7 @@ export default function MCCAssignmentClientPage() {
                   <>
                     <div className="absolute z-50 w-full mt-1 border border-gray-200 rounded-lg bg-white shadow-lg max-h-[320px] overflow-hidden">
                       {/* 搜索框 - 优化样式 */}
-                      <div className="sticky top-0 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 p-3">
+                      <div className="sticky top-0 bg-linear-to-r from-blue-50 to-indigo-50 border-b border-gray-200 p-3">
                         <div className="relative">
                           <Input
                             placeholder="🔍 搜索 MCC 账号或 ID..."
@@ -1206,7 +1208,7 @@ export default function MCCAssignmentClientPage() {
                                   </div>
                                 </div>
                                 {selectedMccIds.includes(mcc.customerId) && (
-                                  <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                                  <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />
                                 )}
                               </div>
                             ))}
@@ -1216,7 +1218,7 @@ export default function MCCAssignmentClientPage() {
 
                       {/* 底部统计 - 优化样式 */}
                       {availableMccAccounts.length > 0 && (
-                        <div className="sticky bottom-0 bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200 px-4 py-2">
+                        <div className="sticky bottom-0 bg-linear-to-r from-gray-50 to-gray-100 border-t border-gray-200 px-4 py-2">
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-gray-600">
                               已选择 <span className="font-medium text-blue-600">{selectedMccIds.length}</span> 个

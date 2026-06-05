@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import { executeOpenclawCommand } from '@/lib/openclaw/commands/command-service'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 import {
@@ -10,9 +11,9 @@ import {
 export const dynamic = 'force-dynamic'
 
 const executeSchema = z.object({
-  method: z.string().min(1),
-  path: z.string().min(1),
-  query: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+  method: z.string().min(1, zErr.required),
+  path: z.string().min(1, zErr.required),
+  query: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
   body: z.unknown().optional(),
   channel: z.string().optional(),
   accountId: z.string().optional(),
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.errors[0]?.message || '请求参数错误' },
+        { error: parsed.error.issues[0]?.message || '请求参数错误' },
         { status: 400 }
       )
     }

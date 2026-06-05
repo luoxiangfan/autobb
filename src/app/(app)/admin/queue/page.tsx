@@ -895,7 +895,7 @@ export default function QueueManagementPage() {
         <div className="space-y-6">
           {/* Global Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <Activity className="w-6 h-6 text-blue-600" />
@@ -927,7 +927,7 @@ export default function QueueManagementPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
                   <Clock className="w-6 h-6 text-yellow-600" />
@@ -961,7 +961,7 @@ export default function QueueManagementPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                   <CheckCircle className="w-6 h-6 text-green-600" />
@@ -976,7 +976,7 @@ export default function QueueManagementPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                   <XCircle className="w-6 h-6 text-red-600" />
@@ -993,16 +993,16 @@ export default function QueueManagementPage() {
           </div>
 
           {/* Scheduler Health Check */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
             <div className="flex items-start justify-between gap-4 mb-4">
               <button
                 onClick={() => setSchedulerCollapsed(!schedulerCollapsed)}
                 className="flex items-center gap-2 flex-1 text-left group"
               >
                 {schedulerCollapsed ? (
-                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0" />
+                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors shrink-0" />
                 ) : (
-                  <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0" />
+                  <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors shrink-0" />
                 )}
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 group-hover:text-gray-700 transition-colors">调度器健康检查</h2>
@@ -1034,7 +1034,7 @@ export default function QueueManagementPage() {
                 {schedulerError && !schedulerStatus && (
                   <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-900">
                     <div className="flex items-start gap-2">
-                      <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                      <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
                       <div>
                         <p className="font-medium">获取调度器状态失败</p>
                         <p className="mt-1">{schedulerError}</p>
@@ -1467,7 +1467,7 @@ export default function QueueManagementPage() {
           </div>
 
           {/* Host Metrics (Container) */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">容器资源监控</h2>
@@ -1593,7 +1593,7 @@ export default function QueueManagementPage() {
 
           {/* Task Type Stats with Concurrency Limits (Running only) */}
           {stats.byType && Object.keys(stats.byType).length > 0 && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <Settings className="w-5 h-5 mr-2" />
                 任务类型运行中与并发限制
@@ -1634,7 +1634,7 @@ export default function QueueManagementPage() {
 
           {/* Per-User Stats */}
           {stats.perUser.length > 0 && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <Users className="w-5 h-5 mr-2" />
                 用户队列状态
@@ -1881,7 +1881,7 @@ export default function QueueManagementPage() {
               {/* Pagination Controls */}
               {userQueuePagination.total > 0 && (
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 pt-4">
-                  <div className="flex items-center space-x-2 flex-shrink-0">
+                  <div className="flex items-center space-x-2 shrink-0">
                     <span className="text-sm font-medium text-gray-600 whitespace-nowrap">每页显示：</span>
                     <Select
                       value={String(userQueuePagination.limit)}
@@ -1909,7 +1909,7 @@ export default function QueueManagementPage() {
                     显示 {(userQueuePagination.page - 1) * userQueuePagination.limit + 1} - {Math.min(userQueuePagination.page * userQueuePagination.limit, userQueuePagination.total)} 条，共 {userQueuePagination.total} 条
                   </span>
 
-                  <div className="flex items-center space-x-2 flex-shrink-0">
+                  <div className="flex items-center space-x-2 shrink-0">
                     <Button
                       variant="outline"
                       size="sm"
@@ -1941,7 +1941,7 @@ export default function QueueManagementPage() {
 
           {/* Empty State */}
           {stats.perUser.length === 0 && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+            <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-12 text-center">
               <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">暂无活跃用户</h3>
               <p className="text-gray-500">当前没有用户在使用队列</p>
@@ -1955,7 +1955,7 @@ export default function QueueManagementPage() {
         <div className="space-y-6">
           {/* Warning Banner */}
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start space-x-3">
-            <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
             <div className="flex-1">
               <h3 className="text-sm font-medium text-yellow-800">配置说明</h3>
               <p className="text-sm text-yellow-700 mt-1">
@@ -1965,7 +1965,7 @@ export default function QueueManagementPage() {
           </div>
 
           {/* Configuration Form */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-6">队列配置</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2184,7 +2184,7 @@ export default function QueueManagementPage() {
           </div>
 
           {/* Current Configuration Display */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">当前生效配置</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">

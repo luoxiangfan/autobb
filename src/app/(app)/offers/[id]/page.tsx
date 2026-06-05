@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
@@ -214,10 +214,6 @@ export default function OfferDetailPage() {
   const [trendsError, setTrendsError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchOffer()
-  }, [offerId])
-
-  useEffect(() => {
     const timer = window.setTimeout(() => {
       setTrendsSectionMounted(true)
     }, 250)
@@ -227,15 +223,7 @@ export default function OfferDetailPage() {
     }
   }, [])
 
-  useEffect(() => {
-    if (!offerId) return
-    fetchPerformance()
-    if (trendsSectionMounted) {
-      fetchTrends()
-    }
-  }, [offerId, timeRange, avgOrderValue, reportCurrency, trendsSectionMounted])
-
-  const fetchOffer = async () => {
+  const fetchOffer = useCallback(async () => {
     try {
       // HttpOnly Cookie自动携带，无需手动操作
       const response = await fetch(`/api/offers/${offerId}`, {
@@ -253,9 +241,9 @@ export default function OfferDetailPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [offerId])
 
-  const fetchPerformance = async () => {
+  const fetchPerformance = useCallback(async () => {
     try {
       setPerformanceLoading(true)
       const avgOrderValueNum = parseFloat(avgOrderValue) || 0
@@ -291,9 +279,9 @@ export default function OfferDetailPage() {
     } finally {
       setPerformanceLoading(false)
     }
-  }
+  }, [offerId, timeRange, avgOrderValue, reportCurrency])
 
-  const fetchTrends = async () => {
+  const fetchTrends = useCallback(async () => {
     try {
       setTrendsLoading(true)
       const currencyParam = reportCurrency ? `&currency=${encodeURIComponent(reportCurrency)}` : ''
@@ -326,7 +314,19 @@ export default function OfferDetailPage() {
     } finally {
       setTrendsLoading(false)
     }
-  }
+  }, [offerId, timeRange, reportCurrency, currencyInfo])
+
+  useEffect(() => {
+    fetchOffer()
+  }, [fetchOffer])
+
+  useEffect(() => {
+    if (!offerId) return
+    fetchPerformance()
+    if (trendsSectionMounted) {
+      fetchTrends()
+    }
+  }, [offerId, timeRange, avgOrderValue, reportCurrency, trendsSectionMounted, fetchPerformance, fetchTrends])
 
   const selectedCurrency = reportCurrency || currencyInfo?.currency || 'USD'
   const availableCurrencies = currencyInfo?.currencies ?? []
@@ -546,7 +546,7 @@ export default function OfferDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-white shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
@@ -907,7 +907,7 @@ export default function OfferDetailPage() {
           </Card>
 
           {/* 基础信息卡片 */}
-          <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">基础信息</h2>
             <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
               <div>
@@ -929,7 +929,7 @@ export default function OfferDetailPage() {
               <div>
                 <dt className="text-sm font-medium text-gray-500">产品分类</dt>
                 <dd
-                  className="mt-1 text-sm text-gray-900 break-words"
+                  className="mt-1 text-sm text-gray-900 wrap-break-word"
                   title={offer.categoryRaw || offer.category || ''}
                 >
                   {offer.category || '未分类'}
@@ -1046,7 +1046,7 @@ export default function OfferDetailPage() {
           </div>
 
           {/* 产品描述卡片 */}
-          <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">产品描述</h2>
             <dl className="space-y-4">
               <div>
@@ -1081,7 +1081,7 @@ export default function OfferDetailPage() {
             try {
               const reviewData = JSON.parse(offer.reviewAnalysis)
               return (
-                <div className="bg-white shadow rounded-lg p-6 mb-6">
+                <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">
                     <span className="mr-2">📊</span>评论分析
                     {reviewData.totalReviews && (
@@ -1338,7 +1338,7 @@ export default function OfferDetailPage() {
             try {
               const competitorData = JSON.parse(offer.competitorAnalysis)
               return (
-                <div className="bg-white shadow rounded-lg p-6 mb-6">
+                <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">
                     <span className="mr-2">🏆</span>竞品分析
                     {competitorData.totalCompetitors && (
@@ -1529,7 +1529,7 @@ export default function OfferDetailPage() {
           })()}
 
           {/* 系统信息卡片 */}
-          <div className="bg-white shadow rounded-lg p-6">
+          <div className="bg-white shadow-sm rounded-lg p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">系统信息</h2>
             <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
               <div>

@@ -214,7 +214,7 @@ const LEGITIMATE_PATHS = [
   /^\/change-password/,                      // 修改密码
 ]
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname} = request.nextUrl
 
   // 统一生成/透传 requestId，供日志与跨服务调用关联

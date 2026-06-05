@@ -1,6 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import { batchCreateOffersFromAffiliateProducts } from '@/lib/affiliate-products'
 import { repairOfferAffiliateLinksFromProducts } from '@/lib/offer-affiliate-link-repair'
 import { invalidateOfferCache } from '@/lib/api-cache'
@@ -8,12 +9,12 @@ import { invalidateProductListCache } from '@/lib/products-cache'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 
 const itemSchema = z.object({
-  productId: z.number().int().positive(),
-  targetCountry: z.string().min(2).max(8).optional(),
+  productId: z.number().int(zErr.int).positive(zErr.positiveInt),
+  targetCountry: z.string().min(2, zErr.targetCountryMin).max(8, zErr.countryCode).optional(),
 })
 
 const bodySchema = z.object({
-  items: z.array(itemSchema).min(1).max(200),
+  items: z.array(itemSchema).min(1, zErr.minItems(1)).max(200, zErr.maxItems(200)),
 })
 
 export async function POST(request: NextRequest) {
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null)
     const parsed = bodySchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.errors[0]?.message || '参数错误' }, { status: 400 })
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || '参数错误' }, { status: 400 })
     }
 
     const result = await batchCreateOffersFromAffiliateProducts({

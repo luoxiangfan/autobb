@@ -9,8 +9,9 @@ import { getInsertedId } from '@/lib/db-helpers'
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string; versionNumber: string } }
+  props: { params: Promise<{ id: string; versionNumber: string }> }
 ) {
+  const params = await props.params;
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {

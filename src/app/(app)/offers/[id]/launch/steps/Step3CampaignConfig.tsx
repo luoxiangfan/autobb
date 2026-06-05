@@ -11,7 +11,7 @@
  * 4. 移除重复的确认按钮，点击"下一步"时验证配置
  */
 
-import { useState, useEffect, useRef, type DragEvent } from 'react'
+import { useState, useEffect, useRef, useCallback, type DragEvent } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -351,7 +351,7 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
   }
 
   // 🔧 修复(2025-12-27): 提取命名生成逻辑为独立函数，避免依赖循环
-  const generateInitialNaming = () => {
+  const generateInitialNaming = useCallback(() => {
     const budgetAmount = initialConfig?.budgetAmount || getDefaultBudget(accountCurrency)
     const maxCpcBid = initialConfig?.maxCpcBid || getDefaultCPC(accountCurrency)
     const biddingStrategy = initialConfig?.biddingStrategy || 'MAXIMIZE_CLICKS'
@@ -375,7 +375,7 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
         theme: selectedCreative.theme || undefined
       } : undefined
     })
-  }
+  }, [accountCurrency, initialConfig, offer, selectedCreative])
 
   const initialNaming = generateInitialNaming()
 
@@ -455,6 +455,14 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
   // 不在首次挂载时重置：从第4步返回时 useState 已通过 initialConfig 恢复用户修改。
   const trackedCreativeIdRef = useRef<number | null>(null)
 
+  const handleChange = useCallback((field: keyof CampaignConfig, value: any) => {
+    setConfig((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+    setValidationErrors([])
+  }, [])
+
   useEffect(() => {
     if (!selectedCreative) return
 
@@ -503,8 +511,8 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
     setValidationErrors([])
     setEnableDynamicCpc(false)
     setSelectedKeywordIndexes(new Set())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCreative?.id])
+     
+  }, [accountCurrency, generateInitialNaming, offer, selectedCreative])
 
   // 🆕 P0-1优化：计算动态CPC建议值
   const suggestedCpc = calculateDynamicCpc(config.keywords, accountCurrency)
@@ -514,15 +522,7 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
     if (enableDynamicCpc && suggestedCpc !== null) {
       handleChange('maxCpcBid', suggestedCpc)
     }
-  }, [enableDynamicCpc, suggestedCpc])
-
-  const handleChange = (field: keyof CampaignConfig, value: any) => {
-    setConfig({
-      ...config,
-      [field]: value
-    })
-    setValidationErrors([])
-  }
+  }, [enableDynamicCpc, suggestedCpc, handleChange])
 
   const handleHeadlineChange = (index: number, value: string) => {
     const newHeadlines = [...config.headlines]
@@ -1434,7 +1434,7 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
                               draggable
                               onDragStart={(event) => handleNegativeKeywordDragStart(event, keyword)}
                               onDragEnd={() => setDraggingNegativeKeyword(null)}
-                              className="group inline-flex cursor-grab items-center gap-1 rounded-full border bg-white px-2 py-1 text-[11px] shadow-sm"
+                              className="group inline-flex cursor-grab items-center gap-1 rounded-full border bg-white px-2 py-1 text-[11px] shadow-xs"
                             >
                               <GripVertical className="h-3 w-3 text-gray-400" />
                               <span>{keyword}</span>

@@ -5,7 +5,7 @@
  * 使用shadcn/ui Card, Button, Badge组件
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, CheckCircle, Info, AlertTriangle, TrendingUp, Lightbulb } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -55,7 +55,7 @@ export function InsightsCard({ days }: InsightsCardProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     try {
       const response = await fetch(`/api/dashboard/insights?days=${days}`, {
@@ -73,11 +73,11 @@ export function InsightsCard({ days }: InsightsCardProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [days])
 
   useEffect(() => {
     fetchData()
-  }, [days])
+  }, [fetchData])
 
   const getInsightIcon = (type: string) => {
     switch (type) {

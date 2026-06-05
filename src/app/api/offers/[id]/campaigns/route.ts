@@ -110,10 +110,8 @@ function logOffersCampaignsGaqlBestEffortFailure(
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   let oauthPrepareCache: GoogleAdsLinkedAccountPrepareCache | undefined
   try {
     const { id } = params

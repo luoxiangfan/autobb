@@ -132,7 +132,7 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
       body: JSON.stringify({ status: 'PAUSED' }),
     })
 
-    const res = await PUT(req, { params: { id: '1' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '1' }) })
 
     expect(res.status).toBe(401)
   })
@@ -147,7 +147,7 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
       body: JSON.stringify({ status: 'PAUSED' }),
     })
 
-    const res = await PUT(req, { params: { id: '1' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '1' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -199,7 +199,7 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
       body: JSON.stringify({ status: 'ENABLED' }),
     })
 
-    const res = await PUT(req, { params: { id: '1' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '1' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -238,7 +238,7 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
       body: JSON.stringify({ status: 'ENABLED' }),
     })
 
-    const res = await PUT(req, { params: { id: '1' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '1' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -270,7 +270,7 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
       body: JSON.stringify({ status: 'PAUSED' }),
     })
 
-    const res = await PUT(req, { params: { id: '1' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '1' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -342,7 +342,7 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
       body: JSON.stringify({ status: 'PAUSED' }),
     })
 
-    const res = await PUT(req, { params: { id: '1' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '1' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)

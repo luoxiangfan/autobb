@@ -35,15 +35,15 @@ export default function GoogleAdsSetupGuidePage() {
                 </div>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
                     <span>通过浏览器授权，安全可靠</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
                     <span>支持 Keyword Planner API（需 Basic 或 Standard 访问权限）</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
                     <span>适合单个账号或 MCC 账号</span>
                   </li>
                 </ul>
@@ -57,15 +57,15 @@ export default function GoogleAdsSetupGuidePage() {
                 </div>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
                     <span>服务器到服务器认证，无需用户交互</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
                     <span>适合自动化场景和后台任务</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
                     <span>支持 Keyword Planner API（需 Basic 或 Standard 访问权限）</span>
                   </li>
                 </ul>
@@ -90,7 +90,7 @@ export default function GoogleAdsSetupGuidePage() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-sm font-semibold">0</div>
+                    <div className="shrink-0 w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-sm font-semibold">0</div>
                     <div className="flex-1">
                       <h4 className="font-medium">建议先使用测试权限（Test Access）进行功能测试</h4>
                       <p className="text-sm text-gray-600 mt-1">
@@ -116,7 +116,7 @@ export default function GoogleAdsSetupGuidePage() {
                   </div>
 
 	                  <div className="flex items-start gap-3">
-	                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">1</div>
+	                    <div className="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">1</div>
 	                    <div>
 	                      <h4 className="font-medium">创建 GCP 项目并启用 API</h4>
 	                      <p className="text-sm text-gray-600 mt-1">
@@ -126,7 +126,7 @@ export default function GoogleAdsSetupGuidePage() {
 	                  </div>
 
 	                  <div className="flex items-start gap-3">
-	                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">2</div>
+	                    <div className="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">2</div>
 	                    <div>
 	                      <h4 className="font-medium">配置 OAuth 同意屏幕（目标对象：测试版 + OAuth 用户）</h4>
 	                      <div className="text-sm text-gray-600 mt-1 space-y-2">
@@ -141,7 +141,7 @@ export default function GoogleAdsSetupGuidePage() {
 	                  </div>
 
 	                  <div className="flex items-start gap-3">
-	                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">3</div>
+	                    <div className="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">3</div>
 	                    <div className="flex-1">
 	                      <h4 className="font-medium" id="oauth-client-id">创建 OAuth 客户端</h4>
 	                      <p className="text-sm text-gray-600 mt-1">
@@ -157,7 +157,7 @@ export default function GoogleAdsSetupGuidePage() {
 	                  </div>
 
 	                  <div className="flex items-start gap-3">
-	                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">4</div>
+	                    <div className="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">4</div>
 	                    <div>
 	                      <h4 className="font-medium">配置授权 URI</h4>
 	                      <div className="text-sm text-gray-600 mt-1 space-y-2">
@@ -172,7 +172,7 @@ export default function GoogleAdsSetupGuidePage() {
 	                  </div>
 
 	                  <div className="flex items-start gap-3">
-	                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">5</div>
+	                    <div className="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">5</div>
 	                    <div className="flex-1">
 	                      <h4 className="font-medium">获取 Client ID 和 Client Secret</h4>
 	                      <div className="text-sm text-gray-600 mt-1 space-y-2">
@@ -187,7 +187,7 @@ export default function GoogleAdsSetupGuidePage() {
 	                  </div>
 
 	                  <div className="flex items-start gap-3">
-	                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">6</div>
+	                    <div className="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">6</div>
 	                    <div className="flex-1">
 	                      <h4 className="font-medium" id="oauth-developer-token">申请 Developer Token</h4>
 	                      <p className="text-sm text-gray-600 mt-1">
@@ -211,7 +211,7 @@ export default function GoogleAdsSetupGuidePage() {
 	                  </div>
 
 	                  <div className="flex items-start gap-3">
-	                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">7</div>
+	                    <div className="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">7</div>
 	                    <div>
 	                      <h4 className="font-medium">完成配置</h4>
 	                      <p className="text-sm text-gray-600 mt-1">
@@ -242,7 +242,7 @@ export default function GoogleAdsSetupGuidePage() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">1</div>
+                    <div className="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">1</div>
                     <div>
                       <h4 className="font-medium">启用 Google Ads API</h4>
                       <p className="text-sm text-gray-600 mt-1">
@@ -252,7 +252,7 @@ export default function GoogleAdsSetupGuidePage() {
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">2</div>
+                    <div className="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">2</div>
                     <div>
                       <h4 className="font-medium">创建服务账号并下载 JSON</h4>
                       <p className="text-sm text-gray-600 mt-1">
@@ -262,7 +262,7 @@ export default function GoogleAdsSetupGuidePage() {
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">3</div>
+                    <div className="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">3</div>
                     <div>
                       <h4 className="font-medium">获取 MCC Customer ID</h4>
                       <p className="text-sm text-gray-600 mt-1">
@@ -272,7 +272,7 @@ export default function GoogleAdsSetupGuidePage() {
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">4</div>
+                    <div className="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">4</div>
                     <div>
                       <h4 className="font-medium">申请 Developer Token</h4>
                       <p className="text-sm text-gray-600 mt-1">
@@ -282,7 +282,7 @@ export default function GoogleAdsSetupGuidePage() {
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">5</div>
+                    <div className="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">5</div>
                     <div>
                       <h4 className="font-medium">添加服务账号到 MCC</h4>
                       <p className="text-sm text-gray-600 mt-1">
@@ -292,7 +292,7 @@ export default function GoogleAdsSetupGuidePage() {
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">6</div>
+                    <div className="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-semibold">6</div>
                     <div>
                       <h4 className="font-medium">完成配置</h4>
                       <p className="text-sm text-gray-600 mt-1">
@@ -362,7 +362,7 @@ export default function GoogleAdsSetupGuidePage() {
                     </div>
 
                     {/* Explorer Access */}
-                    <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-3 border-2 border-blue-200">
+                    <div className="bg-linear-to-r from-blue-50 to-green-50 rounded-lg p-3 border-2 border-blue-200">
                       <div className="flex items-start gap-2 mb-2">
                         <Badge className="bg-blue-600">Explorer Access</Badge>
                       </div>
@@ -544,7 +544,7 @@ export default function GoogleAdsSetupGuidePage() {
                   </p>
                   <div className="space-y-3 ml-2">
                     <div className="flex items-start gap-2">
-                      <span className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-xs flex-shrink-0">1</span>
+                      <span className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-xs shrink-0">1</span>
                       <div>
                         <strong className="text-sm">检查 Google Ads API 是否已启用</strong>
                         <p className="text-xs text-gray-600 mt-1">
@@ -554,7 +554,7 @@ export default function GoogleAdsSetupGuidePage() {
                       </div>
                     </div>
                     <div className="flex items-start gap-2">
-                      <span className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-xs flex-shrink-0">2</span>
+                      <span className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-xs shrink-0">2</span>
                       <div>
                         <strong className="text-sm">验证 Developer Token 有效性</strong>
                         <p className="text-xs text-gray-600 mt-1">
@@ -564,7 +564,7 @@ export default function GoogleAdsSetupGuidePage() {
                       </div>
                     </div>
                     <div className="flex items-start gap-2">
-                      <span className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-xs flex-shrink-0">3</span>
+                      <span className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-xs shrink-0">3</span>
                       <div>
                         <strong className="text-sm">确认服务账号已添加到 MCC</strong>
                         <p className="text-xs text-gray-600 mt-1">
@@ -604,7 +604,7 @@ export default function GoogleAdsSetupGuidePage() {
                   </p>
                   <div className="space-y-3 ml-2">
                     <div className="flex items-start gap-2">
-                      <span className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-xs flex-shrink-0 font-bold">推荐</span>
+                      <span className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-xs shrink-0 font-bold">推荐</span>
                       <div>
                         <strong className="text-sm text-green-700">申请 Basic/Standard Access</strong>
                         <p className="text-xs text-gray-600 mt-1">
@@ -618,7 +618,7 @@ export default function GoogleAdsSetupGuidePage() {
                     </div>
 
                     <div className="flex items-start gap-2">
-                      <span className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs flex-shrink-0">2</span>
+                      <span className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs shrink-0">2</span>
                       <div>
                         <strong className="text-sm">使用测试 MCC 账号</strong>
                         <p className="text-xs text-gray-600 mt-1">

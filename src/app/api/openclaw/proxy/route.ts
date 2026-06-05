@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import { handleOpenclawProxyRequest } from '@/lib/openclaw/proxy'
 import { resolveOpenclawParentRequestIdFromHeaders } from '@/lib/openclaw/request-correlation'
 
 const proxySchema = z.object({
-  method: z.string().min(1),
-  path: z.string().min(1),
-  query: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+  method: z.string().min(1, zErr.required),
+  path: z.string().min(1, zErr.required),
+  query: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
   body: z.unknown().optional(),
   intent: z.string().optional(),
   idempotencyKey: z.string().optional(),
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
     const parsed = proxySchema.safeParse(rawBody)
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.errors[0]?.message || 'Invalid request body' },
+        { error: parsed.error.issues[0]?.message || 'Invalid request body' },
         { status: 400 }
       )
     }

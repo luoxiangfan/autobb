@@ -48,7 +48,7 @@ describe('GET /api/creative-tasks/[taskId]/stream', () => {
       headers: { 'x-user-id': '7' },
     })
 
-    const res = await GET(req, { params: { taskId: 'task-stream-1' } })
+    const res = await GET(req, { params: Promise.resolve({ taskId: 'task-stream-1' }) })
     expect(res.status).toBe(200)
 
     await new Promise((resolve) => setTimeout(resolve, 50))

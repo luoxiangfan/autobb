@@ -30,9 +30,9 @@ async function resolveUserAndProductId(request: NextRequest, paramsPromise: Prom
   return { userId, productId }
 }
 
-export async function POST(request: NextRequest, { params }: { params: Promise<RouteParams> }) {
+export async function POST(request: NextRequest, props: { params: Promise<RouteParams> }) {
   try {
-    const resolved = await resolveUserAndProductId(request, params)
+    const resolved = await resolveUserAndProductId(request, props.params)
     if ('error' in resolved) return resolved.error
 
     const result = await offlineAffiliateProduct({

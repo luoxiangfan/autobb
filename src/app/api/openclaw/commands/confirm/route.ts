@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import {
   confirmOpenclawCommand,
   confirmOpenclawCommandByOwner,
@@ -13,8 +14,8 @@ import {
 export const dynamic = 'force-dynamic'
 
 const confirmSchema = z.object({
-  runId: z.string().min(1),
-  confirmToken: z.string().min(8).optional(),
+  runId: z.string().min(1, zErr.required),
+  confirmToken: z.string().min(8, zErr.minChars(8)).optional(),
   decision: z.enum(['confirm', 'cancel']).optional(),
   action: z.enum(['confirm', 'cancel']).optional(),
   channel: z.string().optional(),
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.errors[0]?.message || '请求参数错误' },
+        { error: parsed.error.issues[0]?.message || '请求参数错误' },
         { status: 400 }
       )
     }

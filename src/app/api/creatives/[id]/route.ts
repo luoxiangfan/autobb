@@ -8,10 +8,8 @@ import { findAdCreativeById, updateAdCreative, deleteAdCreative } from '@/lib/ad
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 
@@ -52,10 +50,8 @@ export async function GET(
  * PUT /api/creatives/:id
  * 更新创意内容
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 
@@ -126,10 +122,8 @@ export async function PUT(
  * DELETE /api/creatives/:id
  * 删除创意
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 

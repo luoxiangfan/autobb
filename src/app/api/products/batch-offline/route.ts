@@ -1,13 +1,14 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import { batchOfflineAffiliateProducts } from '@/lib/affiliate-products'
 import { invalidateOfferCache } from '@/lib/api-cache'
 import { invalidateProductListCache } from '@/lib/products-cache'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 
 const bodySchema = z.object({
-  productIds: z.array(z.number().int().positive()).min(1).max(200),
+  productIds: z.array(z.number().int(zErr.int).positive(zErr.positiveInt)).min(1, zErr.minItems(1)).max(200, zErr.maxItems(200)),
 })
 
 export async function POST(request: NextRequest) {
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null)
     const parsed = bodySchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.errors[0]?.message || '参数错误' }, { status: 400 })
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || '参数错误' }, { status: 400 })
     }
 
     const result = await batchOfflineAffiliateProducts({

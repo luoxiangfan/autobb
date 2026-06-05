@@ -47,10 +47,8 @@ interface BatchTask {
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { batchId: string } }
-) {
+export async function GET(req: NextRequest, props: { params: Promise<{ batchId: string }> }) {
+  const params = await props.params;
   const db = getDatabase()
   const { batchId } = params
 

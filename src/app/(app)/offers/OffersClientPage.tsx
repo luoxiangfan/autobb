@@ -1290,7 +1290,7 @@ export default function OffersClientPage({
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push('/dashboard')}
-                className="flex-shrink-0"
+                className="shrink-0"
               >
                 ← 返回Dashboard
               </Button>
@@ -1310,7 +1310,7 @@ export default function OffersClientPage({
                     size="sm"
                     onClick={() => setIsBatchCreativeDialogOpen(true)}
                     disabled={batchCreatingCreatives || selectedOfferIds.size > MAX_BATCH_CREATIVE_OFFERS}
-                    className="flex-shrink-0"
+                    className="shrink-0"
                     title={
                       selectedOfferIds.size > MAX_BATCH_CREATIVE_OFFERS
                         ? `单次最多支持${MAX_BATCH_CREATIVE_OFFERS}个Offer`
@@ -1325,7 +1325,7 @@ export default function OffersClientPage({
                     size="sm"
                     onClick={() => setIsBatchRebuildDialogOpen(true)}
                     disabled={batchRebuilding || selectedOfferIds.size > MAX_BATCH_REBUILD_OFFERS}
-                    className="flex-shrink-0"
+                    className="shrink-0"
                     title={
                       selectedOfferIds.size > MAX_BATCH_REBUILD_OFFERS
                         ? `单次最多支持${MAX_BATCH_REBUILD_OFFERS}个Offer`
@@ -1342,7 +1342,7 @@ export default function OffersClientPage({
                       setRemoveGoogleAdsCampaignsOnDelete(false)
                       setIsBatchDeleteDialogOpen(true)
                     }}
-                    className="flex-shrink-0"
+                    className="shrink-0"
                   >
                     删除 ({selectedOfferIds.size})
                   </Button>

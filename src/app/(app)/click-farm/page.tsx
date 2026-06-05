@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -87,14 +87,6 @@ export default function ClickFarmPage() {
   const filterKeyRef = useRef<string>('');
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    filterTasks();
-  }, [tasks, searchQuery, statusFilter, sortField, sortDirection]);
-
-  useEffect(() => {
     setSelectedTaskIds((prev) => {
       const allowedIds = new Set(tasks.filter((task) => !task.is_deleted).map((task) => task.id));
       const nextSelected = new Set(Array.from(prev).filter((id) => allowedIds.has(id)));
@@ -127,7 +119,7 @@ export default function ClickFarmPage() {
     return allTasks;
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [allTasks, statsRes] = await Promise.all([
@@ -145,9 +137,9 @@ export default function ClickFarmPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const filterTasks = () => {
+  const filterTasks = useCallback(() => {
     let result = tasks.filter((task) => !task.is_deleted);
 
     // Search filter
@@ -258,7 +250,15 @@ export default function ClickFarmPage() {
       const nextPage = filtersChanged ? 1 : prev;
       return nextPage > totalPages ? totalPages : nextPage;
     });
-  };
+  }, [tasks, searchQuery, statusFilter, sortField, sortDirection, pageSize]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    filterTasks();
+  }, [filterTasks]);
 
   const formatBytes = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -733,7 +733,7 @@ export default function ClickFarmPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="all">所有状态</option>
                 <option value="running">运行中</option>
@@ -747,7 +747,7 @@ export default function ClickFarmPage() {
 
         {/* Task List */}
         {filteredTasks.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow border border-gray-200">
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
               <Zap className="w-full h-full" />
             </div>

@@ -106,7 +106,7 @@ describe('POST /api/offers/:id/keyword-pool', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '77' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '77' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -127,7 +127,7 @@ describe('POST /api/offers/:id/keyword-pool', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '77' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '77' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -210,7 +210,7 @@ describe('GET /api/offers/:id/keyword-pool', () => {
       },
     })
 
-    const res = await GET(req, { params: { id: '77' } })
+    const res = await GET(req, { params: Promise.resolve({ id: '77' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)

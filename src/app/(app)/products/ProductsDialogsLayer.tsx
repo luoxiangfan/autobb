@@ -278,7 +278,7 @@ export default function ProductsDialogsLayer({
       </Dialog>
 
       <Dialog open={batchDialogOpen} onOpenChange={onBatchDialogOpenChange}>
-        <DialogContent className="w-[92vw] !max-w-[960px]">
+        <DialogContent className="w-[92vw] max-w-[960px]!">
           <DialogHeader>
             <DialogTitle>批量创建Offer</DialogTitle>
             <DialogDescription>

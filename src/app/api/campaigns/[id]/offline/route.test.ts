@@ -166,7 +166,7 @@ describe('POST /api/campaigns/:id/offline', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '123' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '123' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -190,7 +190,7 @@ describe('POST /api/campaigns/:id/offline', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '123' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '123' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -228,7 +228,7 @@ describe('POST /api/campaigns/:id/offline', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '123' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '123' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -269,7 +269,7 @@ describe('POST /api/campaigns/:id/offline', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '123' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '123' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -317,7 +317,7 @@ describe('POST /api/campaigns/:id/offline', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '123' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '123' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -380,7 +380,7 @@ describe('POST /api/campaigns/:id/offline', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '123' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '123' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)

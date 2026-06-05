@@ -274,7 +274,7 @@ export async function POST(req: NextRequest) {
       if (resolvedPageType === 'store') {
         const invalidLink = uniqueProductLinks.find((link) => {
           try {
-            // eslint-disable-next-line no-new
+             
             new URL(link)
             return false
           } catch {

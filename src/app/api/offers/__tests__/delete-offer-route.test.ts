@@ -23,7 +23,7 @@ describe('DELETE /api/offers/:id', () => {
       headers: { 'x-user-id': '1' }
     })
 
-    const res = await DELETE(req, { params: { id: '123' } })
+    const res = await DELETE(req, { params: Promise.resolve({ id: '123' }) })
 
     expect(res.status).toBe(200)
     expect(deleteOffer).toHaveBeenCalledWith(123, 1, true, true)
@@ -35,7 +35,7 @@ describe('DELETE /api/offers/:id', () => {
       headers: { 'x-user-id': '2' }
     })
 
-    const res = await DELETE(req, { params: { id: '456' } })
+    const res = await DELETE(req, { params: Promise.resolve({ id: '456' }) })
 
     expect(res.status).toBe(200)
     expect(deleteOffer).toHaveBeenCalledWith(456, 2, false, false)

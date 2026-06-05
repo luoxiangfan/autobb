@@ -3,10 +3,11 @@ import { loginWithPassword } from '@/lib/auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
 import { createUserSession, getUserAlerts } from '@/lib/user-sessions'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 
 const loginSchema = z.object({
-  username: z.string().min(1, '用户名不能为空'),
-  password: z.string().min(1, '密码不能为空'),
+  username: z.string().min(1, zErr.usernameRequired),
+  password: z.string().min(1, zErr.passwordRequired),
 })
 
 export async function POST(request: NextRequest) {
@@ -25,8 +26,8 @@ export async function POST(request: NextRequest) {
     if (!validationResult.success) {
       return NextResponse.json(
         {
-          error: validationResult.error.errors[0].message,
-          details: validationResult.error.errors,
+          error: validationResult.error.issues[0].message,
+          details: validationResult.error.issues,
         },
         { status: 400 }
       )
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     const { username, password } = validationResult.data
 
-    // P0：速率限制检查（IP级别 + 用户名级别）
+    // 速率限制检查（IP + 用户名）
     try {
       checkRateLimit(`ip:${ipAddress}`)
       checkRateLimit(`user:${username}`)

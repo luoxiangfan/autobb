@@ -10,9 +10,13 @@ const apiFns = vi.hoisted(() => ({
   updateGoogleAdsCampaignStatus: vi.fn(async () => {}),
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', () => ({
-  prepareGoogleAdsApiCallForLinkedAccount: accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
-}))
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    prepareGoogleAdsApiCallForLinkedAccount: accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
+  }
+})
 
 vi.mock('@/lib/google-ads-api', () => apiFns)
 

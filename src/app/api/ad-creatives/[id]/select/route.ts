@@ -6,10 +6,8 @@ import { selectAdCreative, findAdCreativeById } from '@/lib/ad-creative'
  * POST /api/ad-creatives/[id]/select
  * 选择指定的广告创意
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // 验证用户身份
     const authResult = await verifyAuth(request)

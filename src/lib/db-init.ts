@@ -1163,9 +1163,9 @@ async function recordMigration(name: string, fileHash: string): Promise<void> {
 
 // 全局标记：是否需要恢复队列任务（声明在全局作用域）
 declare global {
-  // eslint-disable-next-line no-var
+   
   var __queueRecoveryPending: boolean | undefined
-  // eslint-disable-next-line no-var
+   
   var __queueRecoveryData: Array<{
     id: number | string
     user_id: number

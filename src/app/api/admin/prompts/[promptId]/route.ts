@@ -5,10 +5,8 @@ import { getDatabase } from '@/lib/db'
  * GET /api/admin/prompts/[promptId]
  * 获取指定 Prompt 的完整信息和所有版本历史
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { promptId: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ promptId: string }> }) {
+  const params = await props.params;
   try {
     const { promptId } = params
     const db = getDatabase()
@@ -99,10 +97,8 @@ export async function GET(
  * 1. 激活指定版本（当只传入 version 字段时）
  * 2. 编辑并创建新版本（当传入 promptContent 字段时）
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { promptId: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ promptId: string }> }) {
+  const params = await props.params;
   try {
     const { promptId } = params
     const body = await request.json()

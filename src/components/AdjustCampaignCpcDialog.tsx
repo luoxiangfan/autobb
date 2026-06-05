@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -34,7 +34,7 @@ export default function AdjustCampaignCpcDialog(props: AdjustCampaignCpcDialogPr
     return `${currency} ${currentCpc.toFixed(2)}`
   }, [currency, currentCpc])
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!googleCampaignId) return
     try {
       setLoading(true)
@@ -57,12 +57,11 @@ export default function AdjustCampaignCpcDialog(props: AdjustCampaignCpcDialogPr
     } finally {
       setLoading(false)
     }
-  }
+  }, [googleCampaignId])
 
   useEffect(() => {
     if (open) void load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, googleCampaignId])
+  }, [open, load])
 
   const applyPercent = (percent: number) => {
     if (currentCpc === null || !(currentCpc > 0)) return

@@ -7,6 +7,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import { getDatabase } from '@/lib/db'
 import { findOfferById } from '@/lib/offers'
 import { deleteKeywordPool } from '@/lib/offer-keyword-pool'
@@ -20,7 +21,7 @@ import { normalizeOfferExtractionMode } from '@/lib/offer-extraction-mode'
 export const maxDuration = 120
 
 const requestSchema = z.object({
-  offerIds: z.array(z.number().int().positive()).min(1).max(50),
+  offerIds: z.array(z.number().int(zErr.int).positive(zErr.positiveInt)).min(1, zErr.minItems(1)).max(50, zErr.maxItems(50)),
 })
 
 interface OfferRow {

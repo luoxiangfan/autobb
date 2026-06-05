@@ -47,10 +47,8 @@ function scaleDistribution(
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.authenticated || !authResult.user) {
@@ -90,10 +88,8 @@ export async function GET(
 /**
  * PUT - 更新任务
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.authenticated || !authResult.user) {
@@ -232,10 +228,8 @@ export async function PUT(
 /**
  * DELETE - 删除任务（软删除）
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.authenticated || !authResult.user) {

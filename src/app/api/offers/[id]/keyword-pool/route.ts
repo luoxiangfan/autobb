@@ -138,10 +138,8 @@ function buildRawBucketCounts(pool: OfferKeywordPool) {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 
@@ -302,10 +300,8 @@ export async function GET(
  * - forceRegenerate: boolean - 是否触发重建Offer（替代关键词池重建）
  * - keywords: string[] - 可选，指定关键词列表（否则自动提取）
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 
@@ -341,7 +337,7 @@ export async function POST(
 
     if (forceRegenerate) {
       console.log(`🔁 forceRegenerate=true，改为触发 /api/offers/${offerId}/rebuild`)
-      return rebuildOfferPost(request, { params })
+      return rebuildOfferPost(request, { params: props.params })
     }
 
     // 检查是否需要生成
@@ -421,10 +417,8 @@ export async function POST(
  * DELETE /api/offers/:id/keyword-pool
  * 删除 Offer 的关键词池
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 

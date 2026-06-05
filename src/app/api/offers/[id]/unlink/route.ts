@@ -11,10 +11,8 @@ import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
  * 手动解除Offer与Ads账号的关联
  * 需求25: 增加Offer手动解除与已关联的Ads账号解除关联的功能
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 

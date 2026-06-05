@@ -25,10 +25,8 @@ function getClientIP(request: NextRequest): string {
 }
 
 // PATCH: Update user details
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await verifyAuth(request)
   if (!auth.authenticated || auth.user?.role !== 'admin') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -215,10 +213,8 @@ export async function PATCH(
 }
 
 // DELETE: Hard delete user permanently
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await verifyAuth(request)
   if (!auth.authenticated || auth.user?.role !== 'admin') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

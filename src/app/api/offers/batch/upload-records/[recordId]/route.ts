@@ -36,10 +36,8 @@ interface UploadRecordDetail {
   batch_failed_count: number
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { recordId: string } }
-) {
+export async function GET(req: NextRequest, props: { params: Promise<{ recordId: string }> }) {
+  const params = await props.params;
   const db = getDatabase()
   const { recordId } = params
 

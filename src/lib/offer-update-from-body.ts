@@ -3,6 +3,7 @@
  */
 
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import { compactCategoryLabel } from '@/lib/offer-category'
 import { findOfferById, updateOffer, type Offer } from '@/lib/offers'
 import {
@@ -19,40 +20,40 @@ import {
   resolveExtractionModeInput,
 } from '@/lib/offer-extraction-mode'
 
-const INVALID_EXTRACTION_MODE_MESSAGE = '无效的提取模式，可选：fast、balanced、original'
-
-const extractionModeSchema = z.preprocess(
-  (val) => (val == null || val === '' ? undefined : val),
-  z
-    .union([z.string(), z.undefined()])
-    .optional()
-    .superRefine((val, ctx) => {
-      if (val === undefined) return
-      if (resolveExtractionModeInput(val) === null) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: INVALID_EXTRACTION_MODE_MESSAGE,
-        })
-      }
-    })
-    .transform((val) => {
-      if (val === undefined) return undefined
-      return resolveExtractionModeInput(val)!
-    })
-)
+const extractionModeSchema = z
+  .union([z.string(), z.undefined(), z.null(), z.literal('')])
+  .transform((val): string | undefined => (val == null || val === '' ? undefined : val))
+  .pipe(
+    z
+      .string()
+      .optional()
+      .superRefine((val, ctx) => {
+        if (val === undefined) return
+        if (resolveExtractionModeInput(val) === null) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: zErr.invalidExtractionMode.error,
+          })
+        }
+      })
+      .transform((val) => {
+        if (val === undefined) return undefined
+        return resolveExtractionModeInput(val)!
+      })
+  )
 
 export const updateOfferBodySchema = z.object({
-  url: z.string().url('无效的URL格式').optional(),
-  brand: z.string().min(1, '品牌名称不能为空').optional(),
+  url: z.url(zErr.invalidUrl).optional(),
+  brand: z.string().min(1, zErr.brandRequired).optional(),
   category: z.string().optional(),
-  target_country: z.string().min(2, '目标国家代码至少2个字符').optional(),
-  affiliate_link: z.string().url('无效的联盟链接格式').optional(),
+  target_country: z.string().min(2, zErr.targetCountryMin).optional(),
+  affiliate_link: z.url(zErr.invalidAffiliateUrl).optional(),
   brand_description: z.string().optional(),
   unique_selling_points: z.string().optional(),
   product_highlights: z.string().optional(),
   target_audience: z.string().optional(),
   page_type: z.enum(['store', 'product']).optional(),
-  store_product_links: z.array(z.string().url('无效的URL格式')).max(3).optional(),
+  store_product_links: z.array(z.url(zErr.invalidUrl)).max(3, zErr.maxItems(3)).optional(),
   product_price: z.string().optional(),
   commission_payout: z.string().optional(),
   commission_type: z.enum(['percent', 'amount']).optional(),
@@ -159,7 +160,7 @@ export async function applyOfferUpdateFromBody(
   const validationResult = updateOfferBodySchema.safeParse(picked)
   if (!validationResult.success) {
     return {
-      error: validationResult.error.errors[0]?.message || '请求参数无效',
+      error: validationResult.error.issues[0]?.message || '请求参数无效',
       status: 400,
     }
   }

@@ -16,9 +16,9 @@ import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 interface RouteContext {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function POST(
@@ -26,7 +26,7 @@ export async function POST(
   context: RouteContext
 ): Promise<NextResponse> {
   try {
-    const offerId = parsePositiveIntegerOfferId(context.params.id)
+    const offerId = parsePositiveIntegerOfferId((await context.params).id)
     if (!offerId) {
       return NextResponse.json(
         { error: '无效的Offer ID' },

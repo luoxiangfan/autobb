@@ -9,10 +9,8 @@ import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
  * POST /api/offers/:id/resolve-url
  * 解析Offer的推广链接，获取Final URL和Final URL suffix
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {

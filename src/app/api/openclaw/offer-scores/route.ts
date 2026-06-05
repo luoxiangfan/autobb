@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import { listOfferScores, createOfferScore } from '@/lib/openclaw/offer-scores'
 import { batchScoreOffers, rankOffers, type AffiliateProduct } from '@/lib/openclaw/offer-scoring'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
@@ -7,15 +8,15 @@ import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 export const dynamic = 'force-dynamic'
 
 const createSchema = z.object({
-  offer_id: z.number().int().optional().nullable(),
-  asin: z.string().max(20).optional().nullable(),
-  platform: z.string().max(50).optional().nullable(),
+  offer_id: z.number().int(zErr.int).optional().nullable(),
+  asin: z.string().max(20, zErr.maxChars(20)).optional().nullable(),
+  platform: z.string().max(50, zErr.maxChars(50)).optional().nullable(),
   commission_rate: z.number().optional().nullable(),
   product_rating: z.number().optional().nullable(),
-  review_count: z.number().int().optional().default(0),
+  review_count: z.number().int(zErr.int).optional().default(0),
   discount_percent: z.number().optional().nullable(),
-  category: z.string().max(100).optional().nullable(),
-  brand: z.string().max(200).optional().nullable(),
+  category: z.string().max(100, zErr.maxChars(100)).optional().nullable(),
+  brand: z.string().max(200, zErr.maxChars(200)).optional().nullable(),
   score_total: z.number().optional().default(0),
   score_commission: z.number().optional().default(0),
   score_demand: z.number().optional().default(0),
@@ -54,21 +55,21 @@ export async function GET(request: NextRequest) {
 const autoScoreSchema = z.object({
   mode: z.literal('auto-score'),
   products: z.array(z.object({
-    asin: z.string().max(20).optional().nullable(),
+    asin: z.string().max(20, zErr.maxChars(20)).optional().nullable(),
     product_name: z.string().optional().nullable(),
     price: z.number().optional().nullable(),
     commission_rate: z.number().optional().nullable(),
     rating: z.number().optional().nullable(),
-    review_count: z.number().int().optional().nullable(),
+    review_count: z.number().int(zErr.int).optional().nullable(),
     discount_percent: z.number().optional().nullable(),
-    brand: z.string().max(200).optional().nullable(),
-    category: z.string().max(100).optional().nullable(),
+    brand: z.string().max(200, zErr.maxChars(200)).optional().nullable(),
+    category: z.string().max(100, zErr.maxChars(100)).optional().nullable(),
     marketplace: z.string().optional().nullable(),
     has_promo_code: z.boolean().optional().nullable(),
-    platform: z.string().max(50).optional().nullable(),
-    offer_id: z.number().int().optional().nullable(),
-  })).min(1).max(100),
-  top: z.number().int().min(1).max(100).optional(),
+    platform: z.string().max(50, zErr.maxChars(50)).optional().nullable(),
+    offer_id: z.number().int(zErr.int).optional().nullable(),
+  })).min(1, zErr.minItems(1)).max(100, zErr.maxItems(100)),
+  top: z.number().int(zErr.int).min(1, zErr.minNumber(1)).max(100, zErr.maxNumber(100)).optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
     const parsed = autoScoreSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: parsed.error.errors[0]?.message || 'Invalid request' },
+        { success: false, error: parsed.error.issues[0]?.message || 'Invalid request' },
         { status: 400 }
       )
     }
@@ -148,7 +149,7 @@ export async function POST(request: NextRequest) {
   const parsed = createSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
-      { success: false, error: parsed.error.errors[0]?.message || 'Invalid request' },
+      { success: false, error: parsed.error.issues[0]?.message || 'Invalid request' },
       { status: 400 }
     )
   }

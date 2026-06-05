@@ -12,7 +12,8 @@ import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-c
  * POST /api/creatives/:id/sync
  * 同步Creative到Google Ads (创建Responsive Search Ad)
  */
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 

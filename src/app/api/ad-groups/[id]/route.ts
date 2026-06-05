@@ -8,7 +8,8 @@ import { findAdGroupById, updateAdGroup, deleteAdGroup } from '@/lib/ad-groups'
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 
@@ -49,7 +50,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
  * PUT /api/ad-groups/:id
  * 更新Ad Group
  */
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 
@@ -98,7 +100,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
  * DELETE /api/ad-groups/:id
  * 删除Ad Group
  */
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 

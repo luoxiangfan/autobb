@@ -170,7 +170,7 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          currentPassword: form.currentPassword,
+          oldPassword: form.currentPassword,
           newPassword: form.newPassword,
         }),
       })

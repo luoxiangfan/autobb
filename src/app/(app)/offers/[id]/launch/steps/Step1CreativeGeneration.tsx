@@ -5,7 +5,7 @@
  * 生成广告创意、评分、对比分析
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -794,7 +794,7 @@ function CreativeGenerationOverviewPanel(props: {
   const toneClassName = sseTimeout && taskStatus === 'running'
     ? 'border-amber-200 bg-amber-50/80'
     : hasActiveGeneration
-      ? 'border-purple-200 bg-gradient-to-br from-purple-50 via-white to-blue-50'
+      ? 'border-purple-200 bg-linear-to-br from-purple-50 via-white to-blue-50'
       : isGenerationLimitReached
         ? 'border-green-200 bg-green-50/70'
         : 'border-gray-200 bg-white'
@@ -819,7 +819,7 @@ function CreativeGenerationOverviewPanel(props: {
             </div>
           </div>
 
-          <div className="min-w-[128px] rounded-lg border border-gray-200/80 bg-white/95 px-3 py-2 text-right shadow-sm">
+          <div className="min-w-[128px] rounded-lg border border-gray-200/80 bg-white/95 px-3 py-2 text-right shadow-xs">
             <div className="text-[10px] font-medium uppercase tracking-wider text-gray-500">进度</div>
             <div className="mt-0.5 text-xl font-semibold text-gray-900">{overallProgress}%</div>
             <div className="text-xs text-gray-500">{completedCount} / 3 已完成</div>
@@ -832,7 +832,7 @@ function CreativeGenerationOverviewPanel(props: {
               className={`h-full rounded-full transition-all duration-500 ease-out ${
                 isCompletedIdle
                   ? 'bg-green-500'
-                  : 'bg-gradient-to-r from-purple-600 via-blue-500 to-cyan-500'
+                  : 'bg-linear-to-r from-purple-600 via-blue-500 to-cyan-500'
               }`}
               style={{ width: `${overallProgress}%` }}
             />
@@ -896,8 +896,8 @@ function CreativeGenerationOverviewPanel(props: {
                 <div
                   className={`h-full rounded-full transition-all duration-500 ease-out ${
                     sseTimeout && taskStatus === 'running'
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500'
-                      : 'bg-gradient-to-r from-purple-500 to-blue-500'
+                      ? 'bg-linear-to-r from-amber-500 to-orange-500'
+                      : 'bg-linear-to-r from-purple-500 to-blue-500'
                   }`}
                   style={{ width: `${hasActiveGeneration ? activeProgress : isGenerationLimitReached ? 100 : overallProgress}%` }}
                 />
@@ -951,11 +951,11 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
   /**
    * 处理401未授权错误 - 跳转到登录页
    */
-  const handleUnauthorized = () => {
+  const handleUnauthorized = useCallback(() => {
     document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
     const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search)
     router.push(`/login?redirect=${redirectUrl}`)
-  }
+  }, [router])
 
   // 🆕 错误状态
   const [generationError, setGenerationError] = useState<GenerationErrorState | null>(null)
@@ -1129,26 +1129,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
     return expandedSections[creativeId]?.[section] || false
   }
 
-  useEffect(() => {
-    fetchExistingCreatives()
-  }, [offer.id])
-
-  // 计时器：每秒更新已用时间
-  useEffect(() => {
-    let timer: NodeJS.Timeout | null = null
-    if (generating && generationStartTime) {
-      timer = setInterval(() => {
-        setElapsedTime(Math.floor((Date.now() - generationStartTime) / 1000))
-      }, 1000)
-    } else {
-      setElapsedTime(0)
-    }
-    return () => {
-      if (timer) clearInterval(timer)
-    }
-  }, [generating, generationStartTime])
-
-  const fetchExistingCreatives = async () => {
+  const fetchExistingCreatives = useCallback(async () => {
     try {
       const response = await fetch(
         `/api/creatives?offerId=${offer.id}&publishableOnly=true`,
@@ -1289,7 +1270,26 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
     } catch (error) {
       console.error('Failed to fetch creatives:', error)
     }
-  }
+  }, [handleUnauthorized, offer.id, selectedCreative?.id])
+
+  useEffect(() => {
+    void fetchExistingCreatives()
+  }, [fetchExistingCreatives])
+
+  // 计时器：每秒更新已用时间
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null
+    if (generating && generationStartTime) {
+      timer = setInterval(() => {
+        setElapsedTime(Math.floor((Date.now() - generationStartTime) / 1000))
+      }, 1000)
+    } else {
+      setElapsedTime(0)
+    }
+    return () => {
+      if (timer) clearInterval(timer)
+    }
+  }, [generating, generationStartTime])
 
   const handleGenerate = async (options: HandleGenerateOptions = {}) => {
     const {
@@ -1641,10 +1641,10 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
   return (
     <div className="space-y-8">
       {/* Header Section */}
-      <div className="rounded-xl border border-purple-100/90 bg-gradient-to-br from-purple-50/70 via-white to-blue-50/50 shadow-sm">
+      <div className="rounded-xl border border-purple-100/90 bg-linear-to-br from-purple-50/70 via-white to-blue-50/50 shadow-xs">
         <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-1 gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/20">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/20">
               <Wand2 className="h-6 w-6 text-white" />
             </div>
             <div className="min-w-0">
@@ -1661,19 +1661,19 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
             {creatives.length > 0 && (
               <Badge
                 variant="secondary"
-                className="self-start border border-purple-100 bg-white/90 px-3 py-1.5 text-sm font-medium text-purple-800 shadow-sm sm:self-auto"
+                className="self-start border border-purple-100 bg-white/90 px-3 py-1.5 text-sm font-medium text-purple-800 shadow-xs sm:self-auto"
               >
                 已生成类型: {generationCount}/3 · 展示最佳 3 个
               </Badge>
             )}
 
-            <div className="flex w-full min-w-0 flex-col gap-3 rounded-xl border border-gray-200/70 bg-white/90 p-3.5 shadow-sm backdrop-blur-sm sm:w-auto sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="flex w-full min-w-0 flex-col gap-3 rounded-xl border border-gray-200/70 bg-white/90 p-3.5 shadow-xs backdrop-blur-xs sm:w-auto sm:flex-row sm:flex-wrap sm:items-end">
               <AdCreativeGenerationModeField
                 value={generationMode}
                 onChange={handleGenerationModeChange}
                 disabled={generating}
                 layout="inline"
-                className="w-full min-w-0 sm:min-w-[11rem] sm:w-auto sm:max-w-[14rem]"
+                className="w-full min-w-0 sm:min-w-44 sm:w-auto sm:max-w-56"
               />
 
               <Button
@@ -1684,8 +1684,8 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
                 disabled={generating || generatedBuckets.length >= 3}
                 className={`h-10 min-w-0 shrink border-0 px-5 font-medium transition-all duration-200 sm:shrink-0 ${
                   generatedBuckets.length >= 3
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 shadow-md shadow-amber-500/25 hover:from-amber-600 hover:to-orange-600 hover:shadow-lg hover:shadow-amber-500/30'
-                    : 'bg-gradient-to-r from-purple-600 to-blue-600 shadow-md shadow-purple-500/25 hover:from-purple-700 hover:to-blue-700 hover:shadow-lg hover:shadow-purple-500/30'
+                    ? 'bg-linear-to-r from-amber-500 to-orange-500 shadow-md shadow-amber-500/25 hover:from-amber-600 hover:to-orange-600 hover:shadow-lg hover:shadow-amber-500/30'
+                    : 'bg-linear-to-r from-purple-600 to-blue-600 shadow-md shadow-purple-500/25 hover:from-purple-700 hover:to-blue-700 hover:shadow-lg hover:shadow-purple-500/30'
                 } text-white disabled:opacity-60`}
                 title={generateButtonTitle}
               >
@@ -1727,7 +1727,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
               <span className="font-medium">{generationError.solution.title}：</span>
               {generationError.solution.description}
             </div>
-            <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+            <div className="flex items-center gap-2 ml-4 shrink-0">
               {generationError.solution.action && generationError.solution.action !== 'retry' && (
                 <Button
                   size="sm"
@@ -1758,7 +1758,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
             {/* 🆕 SSE超时但任务仍在运行中 */}
             {sseTimeout && taskStatus === 'running' && (
               <div className="space-y-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mx-auto">
+                <div className="w-16 h-16 bg-linear-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mx-auto">
                   <Loader2 className="w-8 h-8 text-amber-600 animate-spin" />
                 </div>
                 <div>
@@ -1778,7 +1778,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
                     </div>
                     <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500 ease-out"
+                        className="h-full bg-linear-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500 ease-out"
                         style={{ width: `${generationProgress.progress}%` }}
                       />
                     </div>
@@ -1790,7 +1790,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
                 {/* 刷新按钮 */}
                 <Button
                   onClick={() => fetchExistingCreatives()}
-                  className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 border-0"
+                  className="bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 border-0"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   刷新查看结果
@@ -1819,7 +1819,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
                     setCurrentTaskId(null)
                     fetchExistingCreatives()
                   }}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 border-0"
+                  className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 border-0"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   查看生成结果
@@ -1848,7 +1848,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
                     setCurrentTaskId(null)
                     handleGenerate()
                   }}
-                  className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 border-0"
+                  className="bg-linear-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 border-0"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   重新生成
@@ -1859,7 +1859,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
             {/* 🆕 SSE超时但轮询中（无明确状态） */}
             {sseTimeout && !taskStatus && (
               <div className="space-y-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center mx-auto">
+                <div className="w-16 h-16 bg-linear-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center mx-auto">
                   <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
                 </div>
                 <div>
@@ -1877,7 +1877,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
             {!sseTimeout && generating && generationProgress ? (
               // 生成中显示进度
               <div className="space-y-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center mx-auto">
+                <div className="w-16 h-16 bg-linear-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center mx-auto">
                   <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
                 </div>
                 <div>
@@ -1896,7 +1896,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
                   </div>
                   <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-500 ease-out"
+                      className="h-full bg-linear-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-500 ease-out"
                       style={{ width: `${generationProgress.progress}%` }}
                     />
                   </div>
@@ -1971,7 +1971,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
                   {generationError.solution.action && generationError.solution.action !== 'retry' && (
                     <Button
                       onClick={() => handleErrorAction(generationError.solution.action)}
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 border-0"
+                      className="bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 border-0"
                     >
                       {generationError.solution.actionLabel}
                     </Button>
@@ -1982,7 +1982,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
                       handleGenerate()
                     }}
                     variant={generationError.solution.action === 'retry' ? 'default' : 'outline'}
-                    className={generationError.solution.action === 'retry' ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 border-0' : ''}
+                    className={generationError.solution.action === 'retry' ? 'bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 border-0' : ''}
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
                     重新尝试
@@ -1992,7 +1992,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
             ) : (
               // 未生成时显示空状态
               <>
-                <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-white rounded-full shadow-xs flex items-center justify-center mx-auto mb-4">
                   <Wand2 className="w-8 h-8 text-purple-500" />
                 </div>
                 <h3 className="text-base font-semibold text-gray-900 mb-1">
@@ -2006,7 +2006,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
                     void handleGenerate()
                   }}
                   disabled={generating || generatedBuckets.length >= 3}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 border-0"
+                  className="bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 border-0"
                 >
                   <Wand2 className="w-4 h-4 mr-2" />
                   {generateButtonLabel}
@@ -2065,7 +2065,7 @@ export default function Step1CreativeGeneration({ offer, onCreativeSelected, sel
                           <TooltipTrigger asChild>
                             <button
                               onClick={(e) => handleDeleteClick(creative.id, e)}
-                              className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-white/80 hover:bg-red-50 border border-gray-200 hover:border-red-300 transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-sm hover:shadow-md z-10"
+                              className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-white/80 hover:bg-red-50 border border-gray-200 hover:border-red-300 transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-xs hover:shadow-md z-10"
                               aria-label="删除创意"
                             >
                               <X className="w-4 h-4 text-gray-500 hover:text-red-600 transition-colors" />

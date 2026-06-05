@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { showSuccess, showError, showWarning } from '@/lib/toast-utils'
@@ -338,11 +338,11 @@ export default function CreativesPage() {
   /**
    * 处理401未授权错误 - 跳转到登录页
    */
-  const handleUnauthorized = () => {
+  const handleUnauthorized = useCallback(() => {
     document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
     const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search)
     router.push(`/login?redirect=${redirectUrl}`)
-  }
+  }, [router])
 
   // Batch delete states
   const [selectedCreativeIds, setSelectedCreativeIds] = useState<Set<number>>(new Set())
@@ -350,9 +350,125 @@ export default function CreativesPage() {
   const [batchDeleting, setBatchDeleting] = useState(false)
   const [batchDeleteError, setBatchDeleteError] = useState<string | null>(null)
 
+  const calculateSummary = useCallback((data: Creative[]) => {
+    setSummary({
+      total: data.length,
+      synced: data.filter(c => c.creationStatus === 'synced').length,
+      pending: data.filter(c => c.creationStatus === 'pending').length,
+      draft: data.filter(c => c.creationStatus === 'draft').length,
+    })
+  }, [])
+
+  const fetchOfferAndCreatives = useCallback(async () => {
+    try {
+      if (offerId) {
+        // 获取Offer信息
+        const offerRes = await fetch(`/api/offers/${offerId}`, {
+          credentials: 'include',
+        })
+
+        if (!offerRes.ok) {
+          throw new Error('获取Offer失败')
+        }
+
+        const offerData = await offerRes.json()
+        setOffer(offerData.offer)
+
+        // 获取创意列表
+        const creativesRes = await fetch(`/api/creatives?offerId=${offerId}`, {
+          credentials: 'include',
+        })
+
+        if (!creativesRes.ok) {
+          throw new Error('获取创意列表失败')
+        }
+
+        const creativesData = await creativesRes.json()
+        setCreatives(creativesData.creatives)
+        setFilteredCreatives(creativesData.creatives)
+        calculateSummary(creativesData.creatives)
+
+        // 获取Ad Groups列表
+        if (offerData.offer.campaignId) {
+          const adGroupsRes = await fetch(
+            `/api/ad-groups?campaignId=${offerData.offer.campaignId}`,
+            { credentials: 'include' }
+          )
+
+          if (adGroupsRes.ok) {
+            const adGroupsData = await adGroupsRes.json()
+            setAdGroups(adGroupsData.adGroups)
+          }
+        }
+      } else {
+        // 显示所有创意
+        const creativesRes = await fetch(`/api/creatives`, {
+          credentials: 'include',
+        })
+
+        if (!creativesRes.ok) {
+          throw new Error('获取创意列表失败')
+        }
+
+        const creativesData = await creativesRes.json()
+        setCreatives(creativesData.creatives)
+        setFilteredCreatives(creativesData.creatives)
+        calculateSummary(creativesData.creatives)
+      }
+    } catch (err: any) {
+      setError(err.message || '加载失败')
+    } finally {
+      setLoading(false)
+    }
+  }, [offerId, calculateSummary])
+
+  const fetchTrends = useCallback(async () => {
+    try {
+      setTrendsLoading(true)
+      const params = new URLSearchParams()
+      if (timeRange === 'custom') {
+        if (appliedCustomRange) {
+          params.set('start_date', appliedCustomRange.startDate)
+          params.set('end_date', appliedCustomRange.endDate)
+        } else {
+          params.set('daysBack', '7')
+        }
+      } else {
+        params.set('daysBack', timeRange)
+      }
+      if (offerId) {
+        params.set('offerId', offerId)
+      }
+      const url = `/api/creatives/trends?${params.toString()}`
+      const response = await fetch(url, {
+        credentials: 'include',
+      })
+
+      // 处理401未授权 - 跳转到登录页
+      if (response.status === 401) {
+        handleUnauthorized()
+        return
+      }
+
+      if (!response.ok) {
+        throw new Error('获取趋势数据失败')
+      }
+
+      const data = await response.json()
+      setTrendsData(data.trends || [])
+      setDistributions(data.distributions || null)
+      setUsageStats(data.usage || null)
+      setTrendsError(null)
+    } catch (err: any) {
+      setTrendsError(err.message || '加载趋势数据失败')
+    } finally {
+      setTrendsLoading(false)
+    }
+  }, [offerId, timeRange, appliedCustomRange, handleUnauthorized])
+
   useEffect(() => {
     fetchOfferAndCreatives()
-  }, [offerId])
+  }, [fetchOfferAndCreatives])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -367,7 +483,7 @@ export default function CreativesPage() {
   useEffect(() => {
     if (!analyticsSectionMounted) return
     fetchTrends()
-  }, [analyticsSectionMounted, offerId, timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate])
+  }, [analyticsSectionMounted, fetchTrends])
 
   useEffect(() => {
     let result = creatives
@@ -432,78 +548,6 @@ export default function CreativesPage() {
     })
   }, [creatives, searchQuery, statusFilter, sortField, sortDirection, pageSize])
 
-  const fetchOfferAndCreatives = async () => {
-    try {
-      if (offerId) {
-        // 获取Offer信息
-        const offerRes = await fetch(`/api/offers/${offerId}`, {
-          credentials: 'include',
-        })
-
-        if (!offerRes.ok) {
-          throw new Error('获取Offer失败')
-        }
-
-        const offerData = await offerRes.json()
-        setOffer(offerData.offer)
-
-        // 获取创意列表
-        const creativesRes = await fetch(`/api/creatives?offerId=${offerId}`, {
-          credentials: 'include',
-        })
-
-        if (!creativesRes.ok) {
-          throw new Error('获取创意列表失败')
-        }
-
-        const creativesData = await creativesRes.json()
-        setCreatives(creativesData.creatives)
-        setFilteredCreatives(creativesData.creatives)
-        calculateSummary(creativesData.creatives)
-
-        // 获取Ad Groups列表
-        if (offerData.offer.campaignId) {
-          const adGroupsRes = await fetch(
-            `/api/ad-groups?campaignId=${offerData.offer.campaignId}`,
-            { credentials: 'include' }
-          )
-
-          if (adGroupsRes.ok) {
-            const adGroupsData = await adGroupsRes.json()
-            setAdGroups(adGroupsData.adGroups)
-          }
-        }
-      } else {
-        // 显示所有创意
-        const creativesRes = await fetch(`/api/creatives`, {
-          credentials: 'include',
-        })
-
-        if (!creativesRes.ok) {
-          throw new Error('获取创意列表失败')
-        }
-
-        const creativesData = await creativesRes.json()
-        setCreatives(creativesData.creatives)
-        setFilteredCreatives(creativesData.creatives)
-        calculateSummary(creativesData.creatives)
-      }
-    } catch (err: any) {
-      setError(err.message || '加载失败')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const calculateSummary = (data: Creative[]) => {
-    setSummary({
-      total: data.length,
-      synced: data.filter(c => c.creationStatus === 'synced').length,
-      pending: data.filter(c => c.creationStatus === 'pending').length,
-      draft: data.filter(c => c.creationStatus === 'draft').length,
-    })
-  }
-
   const handleDateRangeChange = (range: DateRange | undefined) => {
     if (!range?.from || !range?.to) {
       setDateRange(range)
@@ -528,50 +572,6 @@ export default function CreativesPage() {
 
   const selectPresetTimeRange = (days: Exclude<CreativesTimeRange, 'custom'>) => {
     setTimeRange(days)
-  }
-
-  const fetchTrends = async () => {
-    try {
-      setTrendsLoading(true)
-      const params = new URLSearchParams()
-      if (timeRange === 'custom') {
-        if (appliedCustomRange) {
-          params.set('start_date', appliedCustomRange.startDate)
-          params.set('end_date', appliedCustomRange.endDate)
-        } else {
-          params.set('daysBack', '7')
-        }
-      } else {
-        params.set('daysBack', timeRange)
-      }
-      if (offerId) {
-        params.set('offerId', offerId)
-      }
-      const url = `/api/creatives/trends?${params.toString()}`
-      const response = await fetch(url, {
-        credentials: 'include',
-      })
-
-      // 处理401未授权 - 跳转到登录页
-      if (response.status === 401) {
-        handleUnauthorized()
-        return
-      }
-
-      if (!response.ok) {
-        throw new Error('获取趋势数据失败')
-      }
-
-      const data = await response.json()
-      setTrendsData(data.trends || [])
-      setDistributions(data.distributions || null)
-      setUsageStats(data.usage || null)
-      setTrendsError(null)
-    } catch (err: any) {
-      setTrendsError(err.message || '加载趋势数据失败')
-    } finally {
-      setTrendsLoading(false)
-    }
   }
 
   const customRangeLabel = appliedCustomRange
@@ -1084,7 +1084,7 @@ export default function CreativesPage() {
 
         {/* Content */}
         {filteredCreatives.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow border border-gray-200">
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
               <FileText className="w-full h-full" />
             </div>

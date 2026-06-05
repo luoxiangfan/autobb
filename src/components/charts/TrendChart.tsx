@@ -13,6 +13,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
+import type { ReactNode } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, BarChart, Bar, ComposedChart } from 'recharts'
 import { TrendingUp, Calendar } from 'lucide-react'
 
@@ -52,6 +53,27 @@ export interface TrendChartProps {
 }
 
 const defaultTimeRangeOptions = [7, 14, 30]
+
+function formatTrendChartTooltipLabel(value: ReactNode): string {
+  if (value == null || typeof value === 'boolean') {
+    return ''
+  }
+
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  }
+
+  if (typeof value === 'number' || typeof value === 'string') {
+    const date = new Date(value)
+    if (!Number.isNaN(date.getTime())) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    }
+  }
+
+  return String(value)
+}
 
 export function TrendChart({
   data,
@@ -370,18 +392,7 @@ export function TrendChart({
                 <ChartTooltip
                   content={
                     <ChartTooltipContent
-                      labelFormatter={(value) => {
-                        // 解析日期，处理 "YYYY-MM-DD" 格式
-                        let date: Date
-                        if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                          // 手动解析 "YYYY-MM-DD" 格式，避免时区问题
-                          const [year, month, day] = value.split('-').map(Number)
-                          date = new Date(year, month - 1, day)
-                        } else {
-                          date = new Date(value)
-                        }
-                        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-                      }}
+                      labelFormatter={(value) => formatTrendChartTooltipLabel(value)}
                       formatter={(value, name, _item, _index, _payload) => {
                         const metric = metrics.find(m => m.key === name)
                         const label = metric?.label || name
@@ -481,18 +492,7 @@ export function TrendChart({
                 <ChartTooltip
                   content={
                     <ChartTooltipContent
-                      labelFormatter={(value) => {
-                        // 解析日期，处理 "YYYY-MM-DD" 格式
-                        let date: Date
-                        if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                          // 手动解析 "YYYY-MM-DD" 格式，避免时区问题
-                          const [year, month, day] = value.split('-').map(Number)
-                          date = new Date(year, month - 1, day)
-                        } else {
-                          date = new Date(value)
-                        }
-                        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-                      }}
+                      labelFormatter={(value) => formatTrendChartTooltipLabel(value)}
                       formatter={(value, name, _item, _index, _payload) => {
                         const metric = metrics.find(m => m.key === name)
                         const label = metric?.label || name
@@ -591,18 +591,7 @@ export function TrendChart({
                 <ChartTooltip
                   content={
                     <ChartTooltipContent
-                      labelFormatter={(value) => {
-                        // 解析日期，处理 "YYYY-MM-DD" 格式
-                        let date: Date
-                        if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                          // 手动解析 "YYYY-MM-DD" 格式，避免时区问题
-                          const [year, month, day] = value.split('-').map(Number)
-                          date = new Date(year, month - 1, day)
-                        } else {
-                          date = new Date(value)
-                        }
-                        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-                      }}
+                      labelFormatter={(value) => formatTrendChartTooltipLabel(value)}
                       formatter={(value, name, _item, _index, _payload) => {
                         const metric = metrics.find(m => m.key === name)
                         const label = metric?.label || name

@@ -261,7 +261,7 @@ export default function BatchOfferPage() {
       </div>
 
       {/* 上传区域 */}
-      <div className="bg-white shadow rounded-lg p-6 mb-8">
+      <div className="bg-white shadow-sm rounded-lg p-6 mb-8">
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-lg font-medium text-gray-900">上传CSV文件</h2>
@@ -271,7 +271,7 @@ export default function BatchOfferPage() {
           </div>
           <button
             onClick={handleDownloadTemplate}
-            className="inline-flex w-fit shrink-0 items-center whitespace-nowrap rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            className="inline-flex w-fit shrink-0 items-center whitespace-nowrap rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-xs hover:bg-gray-50"
           >
             <Download className="h-5 w-5 mr-2 text-gray-500" />
             下载模板
@@ -315,7 +315,7 @@ export default function BatchOfferPage() {
       </div>
 
       {/* 上传文件记录 */}
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="bg-white shadow-sm rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium text-gray-900">上传文件记录</h2>
           <button
@@ -385,7 +385,7 @@ export default function BatchOfferPage() {
                       <span className="block break-all font-mono">{record.id}</span>
                     </td>
                     <td className="px-3 py-4 text-sm font-medium text-gray-900">
-                      <span className="block break-words">{record.fileName}</span>
+                      <span className="block wrap-break-word">{record.fileName}</span>
                       {record.skippedCount > 0 && (
                         <span className="ml-2 text-xs text-yellow-600">
                           (跳过{record.skippedCount}行)

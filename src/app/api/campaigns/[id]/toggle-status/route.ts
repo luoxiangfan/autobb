@@ -39,7 +39,7 @@ function normalizeGoogleCampaignId(value: unknown): string | null {
   if (value === null || value === undefined) return null
   const raw = String(value).trim()
   if (!raw) return null
-  return /^\d+$/.test(raw) ? raw : null
+  return /^\d+$/.test(raw) ? raw : null;
 }
 
 /**
@@ -49,10 +49,8 @@ function normalizeGoogleCampaignId(value: unknown): string | null {
  * - :id 为本地 campaigns.id（不是 google_campaign_id）
  * - body: { status: 'PAUSED' | 'ENABLED' }
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {

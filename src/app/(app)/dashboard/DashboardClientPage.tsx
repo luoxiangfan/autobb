@@ -5,7 +5,7 @@
  * 设计原则：聚焦核心指标，减少视觉噪音，突出行动点
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
@@ -183,13 +183,13 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
     }
   }
 
-  const handleUnauthorized = () => {
+  const handleUnauthorized = useCallback(() => {
     document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
     const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search)
     router.push(`/login?redirect=${redirectUrl}`)
-  }
+  }, [router])
 
-  const fetchData = async (showRefresh = false) => {
+  const fetchData = useCallback(async (showRefresh = false) => {
     const seq = fetchSeqRef.current + 1
     fetchSeqRef.current = seq
 
@@ -288,7 +288,13 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
         setRefreshing(false)
       }
     }
-  }
+  }, [
+    timeRange,
+    appliedCustomRange,
+    isAdmin,
+    selectedUserId,
+    handleUnauthorized,
+  ])
 
   // 🔧 获取用户列表（仅管理员）
   useEffect(() => {
@@ -297,7 +303,7 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
 
   useEffect(() => {
     fetchData()
-  }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, selectedUserId])
+  }, [fetchData])
 
   useEffect(() => {
     return () => {
@@ -452,7 +458,7 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
-                className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs"
                 title="选择用户"
               >
                 <option value="all">所有用户</option>

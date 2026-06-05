@@ -9,7 +9,7 @@ import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-c
 function normalizeGoogleCampaignId(value: unknown): string | null {
   const text = String(value || '').trim()
   if (!text) return null
-  return /^\d+$/.test(text) ? text : null
+  return /^\d+$/.test(text) ? text : null;
 }
 
 function normalizeBudgetType(value: unknown): 'DAILY' | 'TOTAL' {
@@ -27,10 +27,8 @@ function roundTo2(value: number): number {
  *
  * - :id 必须是 Google Ads campaign id（google_campaign_id）
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = await verifyAuth(request)
     if (!auth.authenticated || !auth.user) {

@@ -333,7 +333,7 @@ export default function AdminScheduledTasksPage() {
             {activeTab === 'overview' && (
               <div className="space-y-6">
                 {/* 定时任务配置 */}
-                <div className="bg-white rounded-lg shadow p-6">
+                <div className="bg-white rounded-lg shadow-sm p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">定时任务配置</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {scheduledTasks.map((task, index) => (
@@ -359,7 +359,7 @@ export default function AdminScheduledTasksPage() {
                 {stats && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* 备份统计 */}
-                    <div className="bg-white rounded-lg shadow p-6">
+                    <div className="bg-white rounded-lg shadow-sm p-6">
                       <h2 className="text-lg font-semibold text-gray-900 mb-4">数据库备份统计</h2>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -390,7 +390,7 @@ export default function AdminScheduledTasksPage() {
                     </div>
 
                     {/* 同步统计 */}
-                    <div className="bg-white rounded-lg shadow p-6">
+                    <div className="bg-white rounded-lg shadow-sm p-6">
                       <h2 className="text-lg font-semibold text-gray-900 mb-4">数据同步统计</h2>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -423,7 +423,7 @@ export default function AdminScheduledTasksPage() {
                 )}
 
                 {/* 最近任务执行 */}
-                <div className="bg-white rounded-lg shadow p-6">
+                <div className="bg-white rounded-lg shadow-sm p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">最近执行记录</h2>
                   <div className="space-y-3">
                     {/* 合并备份和同步日志，按时间排序 */}
@@ -467,19 +467,19 @@ export default function AdminScheduledTasksPage() {
                 {/* 统计卡片 */}
                 {stats && (
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="bg-white rounded-lg shadow p-6">
+                    <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">总备份数</div>
                       <div className="mt-2 text-3xl font-bold text-gray-900">{stats.backup.total}</div>
                     </div>
-                    <div className="bg-white rounded-lg shadow p-6">
+                    <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">成功备份</div>
                       <div className="mt-2 text-3xl font-bold text-green-600">{stats.backup.success}</div>
                     </div>
-                    <div className="bg-white rounded-lg shadow p-6">
+                    <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">失败备份</div>
                       <div className="mt-2 text-3xl font-bold text-red-600">{stats.backup.failed}</div>
                     </div>
-                    <div className="bg-white rounded-lg shadow p-6">
+                    <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">总备份大小</div>
                       <div className="mt-2 text-3xl font-bold text-indigo-600">
                         {formatFileSize(stats.backup.totalSizeBytes)}
@@ -501,11 +501,11 @@ export default function AdminScheduledTasksPage() {
 
                 {/* 备份列表 */}
                 {backups.length === 0 ? (
-                  <div className="text-center py-12 bg-white rounded-lg shadow">
+                  <div className="text-center py-12 bg-white rounded-lg shadow-sm">
                     <p className="text-gray-500">暂无备份记录</p>
                   </div>
                 ) : (
-                  <div className="bg-white shadow overflow-hidden rounded-lg">
+                  <div className="bg-white shadow-sm overflow-hidden rounded-lg">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
@@ -583,19 +583,19 @@ export default function AdminScheduledTasksPage() {
                 {/* 统计卡片 */}
                 {stats && (
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="bg-white rounded-lg shadow p-6">
+                    <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">总同步次数</div>
                       <div className="mt-2 text-3xl font-bold text-gray-900">{stats.sync.total}</div>
                     </div>
-                    <div className="bg-white rounded-lg shadow p-6">
+                    <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">成功同步</div>
                       <div className="mt-2 text-3xl font-bold text-green-600">{stats.sync.success}</div>
                     </div>
-                    <div className="bg-white rounded-lg shadow p-6">
+                    <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">失败同步</div>
                       <div className="mt-2 text-3xl font-bold text-red-600">{stats.sync.failed}</div>
                     </div>
-                    <div className="bg-white rounded-lg shadow p-6">
+                    <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">平均耗时</div>
                       <div className="mt-2 text-3xl font-bold text-orange-600">
                         {formatDuration(stats.sync.avgDuration)}
@@ -606,11 +606,11 @@ export default function AdminScheduledTasksPage() {
 
                 {/* 同步列表 */}
                 {syncLogs.length === 0 ? (
-                  <div className="text-center py-12 bg-white rounded-lg shadow">
+                  <div className="text-center py-12 bg-white rounded-lg shadow-sm">
                     <p className="text-gray-500">暂无同步记录</p>
                   </div>
                 ) : (
-                  <div className="bg-white shadow overflow-hidden rounded-lg">
+                  <div className="bg-white shadow-sm overflow-hidden rounded-lg">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
@@ -713,7 +713,7 @@ export default function AdminScheduledTasksPage() {
 
                 {/* 统计卡片 */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-white rounded-lg shadow p-6">
+                  <div className="bg-white rounded-lg shadow-sm p-6">
                     <div className="text-sm text-gray-500">抓取产品 (scraped_products)</div>
                     <div className="text-2xl font-bold text-gray-900">
                       {cleanupStats?.current?.scraped_products?.toLocaleString() || '-'}
@@ -722,7 +722,7 @@ export default function AdminScheduledTasksPage() {
                       可清理: {cleanupStats?.cleanable?.scraped_products?.toLocaleString() || 0}
                     </div>
                   </div>
-                  <div className="bg-white rounded-lg shadow p-6">
+                  <div className="bg-white rounded-lg shadow-sm p-6">
                     <div className="text-sm text-gray-500">广告创意 (ad_creatives)</div>
                     <div className="text-2xl font-bold text-gray-900">
                       {cleanupStats?.current?.ad_creatives?.toLocaleString() || '-'}
@@ -731,7 +731,7 @@ export default function AdminScheduledTasksPage() {
                       可清理: {cleanupStats?.cleanable?.ad_creatives?.toLocaleString() || 0}
                     </div>
                   </div>
-                  <div className="bg-white rounded-lg shadow p-6">
+                  <div className="bg-white rounded-lg shadow-sm p-6">
                     <div className="text-sm text-gray-500">Google Ads账户</div>
                     <div className="text-2xl font-bold text-gray-900">
                       {cleanupStats?.current?.google_ads_accounts?.toLocaleString() || '-'}
@@ -743,7 +743,7 @@ export default function AdminScheduledTasksPage() {
                 </div>
 
                 {/* 操作按钮 */}
-                <div className="bg-white rounded-lg shadow p-6">
+                <div className="bg-white rounded-lg shadow-sm p-6">
                   <h4 className="text-lg font-semibold text-gray-900 mb-4">清理操作</h4>
 
                   <div className="flex flex-wrap gap-4">

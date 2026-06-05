@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -29,13 +29,7 @@ export default function UrlSwapHistory({
   const [history, setHistory] = useState<SwapHistoryEntry[]>([]);
   const [total, setTotal] = useState(0);
 
-  useEffect(() => {
-    if (open && taskId) {
-      loadHistory();
-    }
-  }, [open, taskId]);
-
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/url-swap/tasks/${taskId}/history`);
@@ -54,7 +48,13 @@ export default function UrlSwapHistory({
     } finally {
       setLoading(false);
     }
-  };
+  }, [taskId]);
+
+  useEffect(() => {
+    if (open && taskId) {
+      void loadHistory();
+    }
+  }, [open, taskId, loadHistory]);
 
   const formatDateTimeToMinute = (dateValue: string): string => {
     const date = new Date(dateValue);

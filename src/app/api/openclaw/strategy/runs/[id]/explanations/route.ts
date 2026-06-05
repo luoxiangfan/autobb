@@ -16,10 +16,8 @@ function parseJsonValue(value: unknown): any {
   }
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await resolveOpenclawRequestUser(request)
   if (!auth) {
     return NextResponse.json({ error: 'OpenClaw 功能未开启或未授权' }, { status: 403 })

@@ -170,7 +170,7 @@ export default function CreateOfferModalV2({
       setBrandName((prev) => prev || extractionResult.brand || '')
       setCurrentStep('confirm')
     }
-  }, [extractionResult, currentStage])
+  }, [extractionResult, currentStage, currentStep])
 
   // 🔥 监听提取错误
   useEffect(() => {
@@ -244,7 +244,7 @@ export default function CreateOfferModalV2({
       normalizedLinks = normalizeStoreProductLinks()
       for (const link of normalizedLinks) {
         try {
-          // eslint-disable-next-line no-new
+           
           new URL(link)
         } catch {
           setError(`单品推广链接无效：${link}`)
@@ -358,7 +358,7 @@ export default function CreateOfferModalV2({
         {error && (
           <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
             <div className="flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+              <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
               <div className="flex-1">
                 <div className="font-medium mb-1">创建失败</div>
                 <div className="whitespace-pre-line text-red-600">{error}</div>
@@ -636,7 +636,7 @@ export default function CreateOfferModalV2({
           <div className="space-y-4 py-4">
             {/* 成功提示 */}
             <div className="bg-green-50 border border-green-400 text-green-700 px-4 py-3 rounded text-sm flex items-start gap-2">
-              <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
               <div>
                 <p className="font-medium">自动提取成功！</p>
                 <p className="text-xs mt-1">
@@ -647,7 +647,7 @@ export default function CreateOfferModalV2({
 
             {(extractedData.warnings && extractedData.warnings.length > 0) && (
               <div className="bg-amber-50 border border-amber-300 text-amber-800 px-4 py-3 rounded text-sm flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                 <div className="space-y-1">
                   <p className="font-medium">需要确认的信息</p>
                   <ul className="list-disc list-inside text-xs space-y-0.5">

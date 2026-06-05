@@ -138,12 +138,7 @@ export default function CampaignBackupsClientPage() {
     setSelectedBackupMeta(new Map())
   }, [startDate, endDate, backupSource])
 
-  useEffect(() => {
-    fetchBackups()
-    fetchGoogleAdsAccounts()
-  }, [startDate, endDate, backupSource, currentPage, pageSize])
-
-  const fetchGoogleAdsAccounts = async () => {
+  const fetchGoogleAdsAccounts = useCallback(async () => {
     try {
       // 🔧 添加 filterByUserMcc=true，只获取用户 MCC 下的 Google Ads 账号（非 MCC 账号）
       const response = await fetch('/api/google-ads-accounts?filterByUserMcc=true', {
@@ -156,9 +151,9 @@ export default function CampaignBackupsClientPage() {
     } catch (error: any) {
       console.error('获取 Google Ads 账号失败:', error)
     }
-  }
+  }, [])
 
-  const fetchBackups = async () => {
+  const fetchBackups = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
@@ -183,7 +178,12 @@ export default function CampaignBackupsClientPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [startDate, endDate, backupSource, currentPage, pageSize])
+
+  useEffect(() => {
+    fetchBackups()
+    fetchGoogleAdsAccounts()
+  }, [fetchBackups, fetchGoogleAdsAccounts])
 
   const selectedOfferIds = new Set(
     [...selectedBackupMeta.values()].map((meta) => meta.offerId)

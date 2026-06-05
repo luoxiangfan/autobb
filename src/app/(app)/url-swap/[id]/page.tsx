@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,13 +47,7 @@ export default function UrlSwapTaskDetailPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  useEffect(() => {
-    if (taskId) {
-      loadTask();
-    }
-  }, [taskId]);
-
-  const loadTask = async () => {
+  const loadTask = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/url-swap/tasks/${taskId}`);
@@ -72,7 +66,13 @@ export default function UrlSwapTaskDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [taskId, router]);
+
+  useEffect(() => {
+    if (taskId) {
+      void loadTask();
+    }
+  }, [taskId, loadTask]);
 
   const formatDateTime = (dateValue: string | null): string => {
     if (!dateValue) return '-';

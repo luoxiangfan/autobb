@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import {
@@ -325,21 +325,7 @@ export default function AppLayout({
     router.prefetch(href)
   }
 
-  useEffect(() => {
-    // 如果已有缓存且未过期，直接使用
-    const now = Date.now()
-    if (cachedUser && (now - cacheTimestamp) < CACHE_DURATION) {
-      setUser(cachedUser)
-      setLoading(false)
-      return
-    }
-
-    // 避免重复请求
-    if (fetchingRef.current) return
-    fetchUserInfo()
-  }, [])
-
-  const fetchUserInfo = async () => {
+  const fetchUserInfo = useCallback(async () => {
     // 防止并发请求
     if (fetchingRef.current) return
     fetchingRef.current = true
@@ -370,7 +356,21 @@ export default function AppLayout({
       setLoading(false)
       fetchingRef.current = false
     }
-  }
+  }, [router])
+
+  useEffect(() => {
+    // 如果已有缓存且未过期，直接使用
+    const now = Date.now()
+    if (cachedUser && (now - cacheTimestamp) < CACHE_DURATION) {
+      setUser(cachedUser)
+      setLoading(false)
+      return
+    }
+
+    // 避免重复请求
+    if (fetchingRef.current) return
+    fetchUserInfo()
+  }, [fetchUserInfo])
 
   // 提供刷新用户信息的方法（用于登出后清除缓存）
   const clearUserCache = () => {
@@ -439,7 +439,7 @@ export default function AppLayout({
       {/* 桌面端顶部Header - 移动端隐藏 */}
       <div className="hidden lg:flex h-16 items-center justify-between px-4 border-b border-slate-200 bg-white/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="flex items-center gap-4">
-          <h1 className="font-bold text-xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          <h1 className="font-bold text-xl bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             AutoAds
           </h1>
         </div>
@@ -450,7 +450,7 @@ export default function AppLayout({
               onClick={() => setProfileModalOpen(true)}
               className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 transition-colors"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white">
+              <div className="w-8 h-8 rounded-full bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white">
                 <UserIcon className="w-4 h-4" />
               </div>
               <span className="text-sm text-slate-700">{user.username || user.email}</span>
@@ -470,14 +470,14 @@ export default function AppLayout({
       {/* 桌面端侧边栏 - 移动端隐藏 */}
       <aside
         className={`
-          hidden lg:block fixed top-0 left-0 h-full bg-white/80 backdrop-blur-xl border-r border-slate-200/60 z-40 transition-all duration-300 shadow-sm
+          hidden lg:block fixed top-0 left-0 h-full bg-white/80 backdrop-blur-xl border-r border-slate-200/60 z-40 transition-all duration-300 shadow-xs
           ${sidebarOpen ? 'w-56' : 'w-20'}
         `}
       >
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 mb-2">
           {sidebarOpen && (
-            <h1 className="font-bold text-2xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent tracking-tight">
+            <h1 className="font-bold text-2xl bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent tracking-tight">
               AutoAds
             </h1>
           )}
@@ -492,7 +492,7 @@ export default function AppLayout({
               ${sidebarOpen ? 'bg-slate-50 hover:bg-slate-100 border border-slate-100' : 'justify-center hover:bg-slate-50'}
             `}
           >
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-200">
+            <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-200">
               <UserIcon className="w-5 h-5" />
             </div>
             {sidebarOpen && (
@@ -534,14 +534,14 @@ export default function AppLayout({
                 className={`
                   group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200
                   ${active
-                    ? 'bg-blue-50/80 text-blue-600 font-medium shadow-sm shadow-blue-100/50'
+                    ? 'bg-blue-50/80 text-blue-600 font-medium shadow-xs shadow-blue-100/50'
                     : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                   }
                   ${!sidebarOpen && 'justify-center'}
                 `}
                 title={!sidebarOpen ? item.label : undefined}
               >
-                <Icon className={`w-5 h-5 flex-shrink-0 transition-colors ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                <Icon className={`w-5 h-5 shrink-0 transition-colors ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
                 {sidebarOpen && <span className="text-sm">{item.label}</span>}
                 {sidebarOpen && active && (
                   <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />
@@ -584,12 +584,12 @@ export default function AppLayout({
                         className={`
                           group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200
                           ${active
-                            ? 'bg-blue-50/80 text-blue-600 font-medium shadow-sm shadow-blue-100/50'
+                            ? 'bg-blue-50/80 text-blue-600 font-medium shadow-xs shadow-blue-100/50'
                             : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                           }
                         `}
                       >
-                        <Icon className={`w-5 h-5 flex-shrink-0 transition-colors ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                        <Icon className={`w-5 h-5 shrink-0 transition-colors ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
                         <span className="text-sm">{item.label}</span>
                         {active && (
                           <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />
@@ -629,14 +629,14 @@ export default function AppLayout({
                     className={`
                       group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200
                       ${active
-                        ? 'bg-purple-50/80 text-purple-600 font-medium shadow-sm shadow-purple-100/50'
+                        ? 'bg-purple-50/80 text-purple-600 font-medium shadow-xs shadow-purple-100/50'
                         : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                       }
                       ${!sidebarOpen && 'justify-center'}
                     `}
                     title={!sidebarOpen ? item.label : undefined}
                   >
-                    <Icon className={`w-5 h-5 flex-shrink-0 transition-colors ${active ? 'text-purple-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                    <Icon className={`w-5 h-5 shrink-0 transition-colors ${active ? 'text-purple-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
                     {sidebarOpen && <span className="text-sm">{item.label}</span>}
                   </SidebarLink>
                 )

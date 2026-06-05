@@ -80,10 +80,8 @@ function createQueueErrorResponse(input: QueueErrorResponseInput): Response {
   })
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const offerId = parsePositiveIntegerOfferId(params.id)
   if (!offerId) {
     return createQueueErrorResponse({
@@ -97,11 +95,11 @@ export async function POST(
   }
 
   // 验证用户身份
-    const authResult = await verifyAuth(request);
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
-    }
-    const userId = authResult.user.userId;
+  const authResult = await verifyAuth(request);
+  if (!authResult.authenticated || !authResult.user) {
+    return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+  }
+  const userId = authResult.user.userId;
   const parentRequestId = request.headers.get('x-request-id') || undefined
   if (!userId) {
     return createQueueErrorResponse({

@@ -19,10 +19,8 @@ function getClientIP(request: NextRequest): string {
 }
 
 // POST: Reset user password
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await verifyAuth(request)
   if (!auth.authenticated || auth.user?.role !== 'admin') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

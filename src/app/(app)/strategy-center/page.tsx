@@ -610,7 +610,7 @@ export default function StrategyCenterPage() {
     })
   }, [])
 
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     setSettingsLoading(true)
     try {
       const response = await fetch('/api/strategy-center/settings', {
@@ -635,7 +635,7 @@ export default function StrategyCenterPage() {
     } finally {
       setSettingsLoading(false)
     }
-  }
+  }, [router])
 
   const loadRecommendations = useCallback(async (options?: {
     date?: string
@@ -697,9 +697,11 @@ export default function StrategyCenterPage() {
 
   useEffect(() => {
     void loadSettings()
+  }, [loadSettings])
+
+  useEffect(() => {
     void loadRecommendations({ date: reportDate, syncDate: true })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [loadRecommendations, reportDate])
 
   useEffect(() => {
     setStrategyCronPreset(resolveStrategyCronPreset(settingsValues.openclaw_strategy_cron || ''))
@@ -1451,7 +1453,7 @@ export default function StrategyCenterPage() {
         </Card>
 
         <Card className="overflow-hidden border-slate-200">
-          <CardHeader className="gap-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-sky-50/40">
+          <CardHeader className="gap-4 border-b border-slate-100 bg-linear-to-r from-slate-50 via-white to-sky-50/40">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="space-y-1">
                 <CardTitle className="text-xl">优化建议（按优先级分排序）</CardTitle>

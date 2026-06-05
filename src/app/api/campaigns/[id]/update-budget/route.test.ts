@@ -111,7 +111,7 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
       }),
     })
 
-    const res = await PUT(req, { params: { id: '1972' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '1972' }) })
     const data = await res.json()
 
     expect(res.status).toBe(422)
@@ -142,7 +142,7 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
       }),
     })
 
-    const res = await PUT(req, { params: { id: '23578044853' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '23578044853' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -205,7 +205,7 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
       }),
     })
 
-    const res = await PUT(req, { params: { id: '23578044853' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '23578044853' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -262,7 +262,7 @@ describe('PUT /api/campaigns/:id/update-budget', () => {
       }),
     })
 
-    const res = await PUT(req, { params: { id: '23578044853' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '23578044853' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)

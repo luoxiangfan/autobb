@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -492,15 +492,11 @@ export default function SettingsPage() {
   /**
    * 处理401未授权错误 - 跳转到登录页
    */
-  const handleUnauthorized = () => {
+  const handleUnauthorized = useCallback(() => {
     document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
     const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search)
     router.push(`/login?redirect=${redirectUrl}`)
-  }
-
-  useEffect(() => {
-    fetchSettings()
-  }, [])
+  }, [router])
 
   // 检查 OAuth 回调结果
   useEffect(() => {
@@ -618,7 +614,7 @@ export default function SettingsPage() {
     applyCategorySettings(category, (data.settings?.[category] as Setting[]) || [])
   }
 
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     try {
       const response = await fetch('/api/settings', {
         credentials: 'include',
@@ -666,7 +662,11 @@ export default function SettingsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [handleUnauthorized])
+
+  useEffect(() => {
+    void fetchSettings()
+  }, [fetchSettings])
 
   const handleInputChange = (category: string, key: string, value: string) => {
     setFormData(prev => {
@@ -750,8 +750,25 @@ export default function SettingsPage() {
     ))
   }
 
+  const fetchServiceAccounts = useCallback(async () => {
+    setLoadingServiceAccounts(true)
+    try {
+      const response = await fetch('/api/google-ads/service-account', {
+        credentials: 'include'
+      })
+      const data = await response.json()
+      if (response.ok) {
+        setServiceAccounts(data.accounts || [])
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch service accounts:', err)
+    } finally {
+      setLoadingServiceAccounts(false)
+    }
+  }, [])
+
   // Google Ads 凭证状态获取
-  const fetchGoogleAdsCredentialStatus = async () => {
+  const fetchGoogleAdsCredentialStatus = useCallback(async () => {
     try {
       const response = await fetch('/api/google-ads/credentials', {
         credentials: 'include',
@@ -774,7 +791,7 @@ export default function SettingsPage() {
     } catch (err) {
       console.error('Failed to fetch Google Ads credential status:', err)
     }
-  }
+  }, [fetchServiceAccounts])
 
   // Google Ads OAuth 授权
   const handleStartGoogleAdsOAuth = async () => {
@@ -920,8 +937,8 @@ export default function SettingsPage() {
 
   // 初始化时获取 Google Ads 凭证状态
   useEffect(() => {
-    fetchGoogleAdsCredentialStatus()
-  }, [])
+    void fetchGoogleAdsCredentialStatus()
+  }, [fetchGoogleAdsCredentialStatus])
 
   const handleSave = async (category: string) => {
     setSaving(true)
@@ -1298,23 +1315,6 @@ export default function SettingsPage() {
       toast.error(err.message)
     } finally {
       setSavingServiceAccount(false)
-    }
-  }
-
-  const fetchServiceAccounts = async () => {
-    setLoadingServiceAccounts(true)
-    try {
-      const response = await fetch('/api/google-ads/service-account', {
-        credentials: 'include'
-      })
-      const data = await response.json()
-      if (response.ok) {
-        setServiceAccounts(data.accounts || [])
-      }
-    } catch (err: any) {
-      console.error('Failed to fetch service accounts:', err)
-    } finally {
-      setLoadingServiceAccounts(false)
     }
   }
 
@@ -1742,7 +1742,7 @@ export default function SettingsPage() {
         {/* 配置说明 */}
         <Card className="mb-6 p-4 bg-blue-50 border-blue-200">
           <div className="flex items-start gap-2">
-            <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <Info className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
             <div className="text-body-sm text-blue-800">
               <p className="text-body-sm font-semibold mb-2">配置说明</p>
               <ul className="space-y-1 text-body-sm text-blue-700">
@@ -1957,7 +1957,7 @@ export default function SettingsPage() {
                         {googleAdsCredentialStatus.apiAccessLevel === 'test' && (
                           <div className="mt-3 p-3 bg-blue-50 border border-blue-300 rounded-lg">
                             <div className="flex items-start gap-2">
-                              <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                              <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
                               <div className="text-xs text-blue-700">
                                 <p className="font-medium mb-1">💡 当前为测试权限 - 可以立即开始测试</p>
                                 <p>您的 Developer Token 目前仅限测试账号使用。<strong>建议立即开始测试产品功能</strong>，同时访问 <a href="https://ads.google.com/aw/apicenter" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-800 font-semibold">Google Ads API Center</a> 申请升级到 Basic 或 Standard 权限（审核 1-3 个工作日）。真实的 API 调用记录有助于提高审批通过率，权限升级后自动生效，无需重新配置。</p>
@@ -1968,7 +1968,7 @@ export default function SettingsPage() {
 
                         <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                           <div className="flex items-start gap-2">
-                            <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
                             <div className="text-xs text-blue-700">
                               <p className="font-medium mb-1">🔍 自动检测说明</p>
                               <p>系统会在验证凭证或API调用时自动检测您的访问级别。如果权限发生变化（如从 Test 升级到 Basic/Standard），系统会自动更新。</p>
@@ -2064,7 +2064,7 @@ export default function SettingsPage() {
                                   )}
                                 </div>
                                 <p className="helper-text flex items-start gap-1">
-                                  <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                  <Info className="w-3 h-3 mt-0.5 shrink-0" />
                                   {metadata?.description || setting.description || '无描述'}
                                 </p>
                                 {renderInput(category, setting)}
@@ -2085,7 +2085,7 @@ export default function SettingsPage() {
                             <span className="text-caption text-red-500">*必填</span>
                           </Label>
                           <p className="helper-text flex items-start gap-1 mt-1">
-                            <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <Info className="w-3 h-3 mt-0.5 shrink-0" />
                             用于标识此服务账号配置，方便管理多个配置
                           </p>
                           <Input
@@ -2113,7 +2113,7 @@ export default function SettingsPage() {
                             </a>
                           </div>
                           <p className="helper-text flex items-start gap-1 mt-1">
-                            <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <Info className="w-3 h-3 mt-0.5 shrink-0" />
                             MCC管理账户ID，格式：10位数字（不含连字符）
                           </p>
                           <Input
@@ -2141,7 +2141,7 @@ export default function SettingsPage() {
                             </a>
                           </div>
                           <p className="helper-text flex items-start gap-1 mt-1">
-                            <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <Info className="w-3 h-3 mt-0.5 shrink-0" />
                             需要Explorer级别或更高，在MCC账户的API中心获取
                           </p>
                           <Input
@@ -2170,7 +2170,7 @@ export default function SettingsPage() {
                             </a>
                           </div>
                           <p className="helper-text flex items-start gap-1 mt-1">
-                            <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <Info className="w-3 h-3 mt-0.5 shrink-0" />
                             从Google Cloud Console下载的服务账号密钥文件内容
                           </p>
                           <Textarea
@@ -2336,11 +2336,11 @@ export default function SettingsPage() {
                         <span className="text-caption text-red-500">*必填</span>
                       </Label>
                       <p className="helper-text flex items-start gap-1">
-                        <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                        <Info className="w-3 h-3 mt-0.5 shrink-0" />
                         配置不同国家的代理URL，第一个URL将作为未配置国家的默认兜底值。必须至少配置一个有效的代理URL。
                       </p>
                       <p className="text-xs text-blue-600 flex items-center gap-1">
-                        <Info className="w-3 h-3 flex-shrink-0" />
+                        <Info className="w-3 h-3 shrink-0" />
                         当前已支持 IPRocket、Oxylabs、Kookeey、Cliproxy 四种代理格式
                       </p>
 
@@ -2397,7 +2397,7 @@ export default function SettingsPage() {
 
                         <div className="mt-3 pt-3 border-t border-slate-200">
                           <p className="text-xs text-amber-700 flex items-start gap-1">
-                            <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
                             <span>
                               <strong>处理策略：</strong>
                               <br />• IPRocket：API格式（系统会先调用 API 获取代理IP）
@@ -2421,7 +2421,7 @@ export default function SettingsPage() {
                       <div className="space-y-3">
                         {proxyUrls.map((item, index) => (
                           <div key={index} className="flex gap-3 items-start p-3 bg-slate-50 rounded-lg">
-                            <div className="flex-shrink-0 w-40">
+                            <div className="shrink-0 w-40">
                               <Label className="text-caption text-muted-foreground mb-1.5 block">
                                 国家/地区 {index === 0 && <span className="text-amber-600">(默认)</span>}
                               </Label>
@@ -2456,7 +2456,7 @@ export default function SettingsPage() {
                                 </p>
                               )}
                             </div>
-                            <div className="flex-shrink-0 pt-6">
+                            <div className="shrink-0 pt-6">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -2488,7 +2488,7 @@ export default function SettingsPage() {
                     {category === 'ai' && (
                       <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
                         <div className="flex items-start gap-2 mb-3">
-                          <Info className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <Info className="w-5 h-5 text-purple-600 mt-0.5 shrink-0" />
                           <p className="font-semibold text-body-sm text-purple-800">AI配置顺序</p>
                         </div>
                         <div className="space-y-2 text-body-sm text-purple-700">
@@ -2501,7 +2501,7 @@ export default function SettingsPage() {
                     {category === 'affiliate_sync' && (
                       <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
                         <div className="flex items-start gap-2 mb-2">
-                          <Info className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                          <Info className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
                           <p className="font-semibold text-body-sm text-emerald-800">联盟同步配置说明</p>
                         </div>
                         <div className="space-y-1 text-body-sm text-emerald-700">
@@ -2577,7 +2577,7 @@ export default function SettingsPage() {
                           </div>
 
                           <p className="helper-text flex items-start gap-1">
-                            <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <Info className="w-3 h-3 mt-0.5 shrink-0" />
                             {metadata?.description || setting.description || '无描述'}
                           </p>
 

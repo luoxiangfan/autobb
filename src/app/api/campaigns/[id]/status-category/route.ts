@@ -7,7 +7,8 @@ import { invalidateDashboardCache } from '@/lib/api-cache'
  * PUT /api/campaigns/:id/status-category
  * 更新广告系列状态分类（待定/观察/合格）
  */
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 

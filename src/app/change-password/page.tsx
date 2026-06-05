@@ -106,7 +106,7 @@ export default function ChangePasswordPage() {
     <div className="min-h-screen flex bg-white">
       {/* Left Side - Product Showcase */}
       <div className="hidden lg:flex lg:w-1/2 bg-gray-900 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/40 to-purple-900/40 z-10" />
+        <div className="absolute inset-0 bg-linear-to-br from-blue-900/40 to-purple-900/40 z-10" />
         <Image
           src="/dashboard-dark.webp"
           alt="AutoAds Dashboard"
@@ -163,7 +163,7 @@ export default function ChangePasswordPage() {
                   type="password"
                   autoComplete="current-password"
                   required
-                  className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
+                  className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-xs placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
                   placeholder="请输入当前密码"
                   value={formData.currentPassword}
                   onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
@@ -180,7 +180,7 @@ export default function ChangePasswordPage() {
                   type="password"
                   autoComplete="new-password"
                   required
-                  className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
+                  className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-xs placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
                   placeholder="请输入新密码"
                   value={formData.newPassword}
                   onChange={handlePasswordChange}
@@ -214,7 +214,7 @@ export default function ChangePasswordPage() {
                   type="password"
                   autoComplete="new-password"
                   required
-                  className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
+                  className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-xs placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
                   placeholder="请再次输入新密码"
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
@@ -237,7 +237,7 @@ export default function ChangePasswordPage() {
               <button
                 type="submit"
                 disabled={loading || passwordErrors.length > 0}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-xs text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 {loading ? '提交中...' : '确认修改'}
               </button>

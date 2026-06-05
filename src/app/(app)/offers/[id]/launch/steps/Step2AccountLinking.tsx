@@ -12,7 +12,7 @@
  * 优先级排序：当前Offer已用 > 同品牌Offer已用 > 未使用
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -160,25 +160,16 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
     setSelectedIds(selectedAccounts.map(account => account.customerId))
   }, [selectedAccounts])
 
-  useEffect(() => {
-    fetchAccounts()
+  const fetchAccountsRef = useRef<(forceRefresh?: boolean, isPoll?: boolean) => Promise<void>>(async () => {})
 
-    return () => {
-      if (refreshPollTimerRef.current) {
-        clearTimeout(refreshPollTimerRef.current)
-        refreshPollTimerRef.current = null
-      }
-    }
-  }, [])
-
-  const scheduleRefreshPoll = () => {
+  const scheduleRefreshPoll = useCallback(() => {
     if (refreshPollTimerRef.current) clearTimeout(refreshPollTimerRef.current)
     refreshPollTimerRef.current = setTimeout(() => {
-      fetchAccounts(false, true)
+      void fetchAccountsRef.current(false, true)
     }, 2000)
-  }
+  }, [])
 
-  const fetchAccounts = async (forceRefresh: boolean = false, isPoll: boolean = false) => {
+  const fetchAccounts = useCallback(async (forceRefresh: boolean = false, isPoll: boolean = false) => {
     try {
       if (forceRefresh) {
         setRefreshing(true)
@@ -321,7 +312,20 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
         setLoading(false)
       }
     }
-  }
+  }, [offer.id, prepareAuthForAccountsFetch, scheduleRefreshPoll])
+
+  fetchAccountsRef.current = fetchAccounts
+
+  useEffect(() => {
+    void fetchAccounts()
+
+    return () => {
+      if (refreshPollTimerRef.current) {
+        clearTimeout(refreshPollTimerRef.current)
+        refreshPollTimerRef.current = null
+      }
+    }
+  }, [fetchAccounts])
 
   const handleConnectNewAccount = () => {
     // 显示操作指南弹窗，引导用户添加新账号
@@ -701,7 +705,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
           <div className="space-y-4">
             {/* Step 1 */}
             <div className="flex gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold">
+              <div className="shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold">
                 1
               </div>
               <div className="flex-1">
@@ -722,7 +726,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
 
             {/* Step 2 */}
             <div className="flex gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold">
+              <div className="shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold">
                 2
               </div>
               <div className="flex-1">
@@ -741,7 +745,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
 
             {/* Step 3 */}
             <div className="flex gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold">
+              <div className="shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold">
                 3
               </div>
               <div className="flex-1">

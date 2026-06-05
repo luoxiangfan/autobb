@@ -20,10 +20,8 @@ function parseBatchMetadata(raw: unknown): unknown | null {
  * data: {"type":"progress","status":"running","completed":5,"failed":1,"total":20,"progress":30}
  * data: {"type":"complete","status":"completed","completed":20,"failed":0,"total":20}
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { batchId: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ batchId: string }> }) {
+  const params = await props.params;
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {

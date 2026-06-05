@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -102,15 +102,8 @@ export default function ClickFarmTaskModal({
     }
   }, [open]);
 
-  // 🆕 加载现有任务数据（编辑模式）
-  useEffect(() => {
-    if (open && editTaskId) {
-      loadTaskData();
-    }
-  }, [open, editTaskId]);
-
   // 🆕 加载任务数据
-  const loadTaskData = async () => {
+  const loadTaskData = useCallback(async () => {
     try {
       const response = await fetch(`/api/click-farm/tasks/${editTaskId}`);
       if (!response.ok) throw new Error('加载任务失败');
@@ -162,7 +155,14 @@ export default function ClickFarmTaskModal({
       toast.error('加载任务失败');
       onOpenChange(false);
     }
-  };
+  }, [editTaskId, onOpenChange]);
+
+  // 🆕 加载现有任务数据（编辑模式）
+  useEffect(() => {
+    if (open && editTaskId) {
+      void loadTaskData();
+    }
+  }, [open, editTaskId, loadTaskData]);
 
   const handleRestartTask = async () => {
     if (!editTaskId) return;
@@ -185,13 +185,6 @@ export default function ClickFarmTaskModal({
     }
   };
 
-  // Load offers on mount
-  useEffect(() => {
-    if (open) {
-      loadOffers();
-    }
-  }, [open]);
-
   // 🔧 修复(2025-12-30): [核心] distribution状态的唯一管理源
   // 这是distribution自动生成的唯一入口,避免多处设置导致竞态条件
   // 触发条件: selectedOfferId变化 || dailyClickCount变化 || timePeriod变化 || 手动修改标志重置
@@ -207,7 +200,7 @@ export default function ClickFarmTaskModal({
 
   // 🔧 修复(2025-12-30): loadAuxiliaryData只负责检查代理和设置时区,不涉及distribution
   // distribution统一由useEffect(line 142-148)管理
-  const loadAuxiliaryData = async (offer: Offer, _offersList: Offer[]) => {
+  const loadAuxiliaryData = useCallback(async (offer: Offer, _offersList: Offer[]) => {
     // 🔧 修复P2-4(2025-12-30): 添加错误处理,防止时区设置失败影响整体流程
     try {
       // 并行检查代理
@@ -237,37 +230,31 @@ export default function ClickFarmTaskModal({
       // 设置失败不阻塞,使用默认时区
       toast.error('获取时区信息失败,已使用默认时区');
     }
-  };
+  }, [isEditMode]);
 
-  // 🔧 修复(2025-12-30): 简化useLayoutEffect逻辑,避免复杂的调用链
-  // 该effect只负责设置selectedOfferId,distribution由useEffect(line 142-148)统一管理
-  // 🔧 修复P1-1(2025-12-30): 添加selectedOfferId到依赖数组,避免闭包陈旧值
-  useLayoutEffect(() => {
-    console.log('[ClickFarmTaskModal] useLayoutEffect EXECUTE: open=', open, 'preSelectedOfferId=', preSelectedOfferId, 'offers.length=', offers.length, 'selectedOfferId=', selectedOfferId);
-    if (!open) return;
+  const loadOffersList = useCallback(async () => {
+    const response = await fetch('/api/offers?limit=100&isActive=true', {
+      credentials: 'include',
+      cache: 'no-store',
+    });
 
-    // 如果有 preSelectedOfferId 且 offers 已加载，选中它
-    if (preSelectedOfferId && offers.length > 0) {
-      const offer = offers.find(o => o.id === preSelectedOfferId);
-      if (offer && selectedOfferId !== preSelectedOfferId) {
-        console.log('[ClickFarmTaskModal] useLayoutEffect: 选中 offer id =', offer.id, 'name =', offer.name);
-        setSelectedOfferId(preSelectedOfferId);
-      }
-    } else if (!preSelectedOfferId && offers.length > 0 && !selectedOfferId) {
-      // 如果没有 preSelectedOfferId，选择第一个 offer
-      console.log('[ClickFarmTaskModal] useLayoutEffect: 无 preSelectedOfferId，选择第一个 offer');
-      setSelectedOfferId(offers[0].id);
-      // 异步加载辅助数据(代理检查、时区设置)
-      loadAuxiliaryData(offers[0], offers).catch(e => {
+    if (!response.ok) throw new Error('加载Offer失败');
+
+    const data = await response.json();
+    const offersData = data.offers || [];
+    console.log('[ClickFarmTaskModal] loadOffersList: API返回', offersData.length, '个offers');
+    setOffers(offersData);
+
+    if (offersData.length > 0) {
+      setSelectedOfferId(offersData[0].id);
+      // 🔧 修复(2025-12-30): 异步加载辅助数据,不阻塞主流程
+      loadAuxiliaryData(offersData[0], offersData).catch(e => {
         console.error('[ClickFarmTaskModal] loadAuxiliaryData 错误', e);
       });
     }
-  }, [open, preSelectedOfferId, offers.length, selectedOfferId]);
+  }, [loadAuxiliaryData]);
 
-  // 🔧 修复(2025-12-30): 删除重复的useEffect,统一由第142-148行的useEffect管理distribution生成
-  // 原代码在此处有重复的useEffect,导致distribution被设置两次,引发竞态条件
-
-  const loadOffers = async () => {
+  const loadOffers = useCallback(async () => {
     try {
       setLoadingOffers(true);
       console.log('[ClickFarmTaskModal] loadOffers START: preSelectedOfferId =', preSelectedOfferId);
@@ -311,30 +298,42 @@ export default function ClickFarmTaskModal({
     } finally {
       setLoadingOffers(false);
     }
-  };
+  }, [preSelectedOfferId, loadOffersList, loadAuxiliaryData]);
 
-  // 🆕 获取Offer列表（用于没有 preSelectedOfferId 的情况）
-  const loadOffersList = async () => {
-    const response = await fetch('/api/offers?limit=100&isActive=true', {
-      credentials: 'include',
-      cache: 'no-store',
-    });
+  // Load offers on mount
+  useEffect(() => {
+    if (open) {
+      void loadOffers();
+    }
+  }, [open, loadOffers]);
 
-    if (!response.ok) throw new Error('加载Offer失败');
+  // 🔧 修复(2025-12-30): 简化useLayoutEffect逻辑,避免复杂的调用链
+  // 该effect只负责设置selectedOfferId,distribution由useEffect(line 142-148)统一管理
+  // 🔧 修复P1-1(2025-12-30): 添加selectedOfferId到依赖数组,避免闭包陈旧值
+  useLayoutEffect(() => {
+    console.log('[ClickFarmTaskModal] useLayoutEffect EXECUTE: open=', open, 'preSelectedOfferId=', preSelectedOfferId, 'offers.length=', offers.length, 'selectedOfferId=', selectedOfferId);
+    if (!open) return;
 
-    const data = await response.json();
-    const offersData = data.offers || [];
-    console.log('[ClickFarmTaskModal] loadOffersList: API返回', offersData.length, '个offers');
-    setOffers(offersData);
-
-    if (offersData.length > 0) {
-      setSelectedOfferId(offersData[0].id);
-      // 🔧 修复(2025-12-30): 异步加载辅助数据,不阻塞主流程
-      loadAuxiliaryData(offersData[0], offersData).catch(e => {
+    // 如果有 preSelectedOfferId 且 offers 已加载，选中它
+    if (preSelectedOfferId && offers.length > 0) {
+      const offer = offers.find(o => o.id === preSelectedOfferId);
+      if (offer && selectedOfferId !== preSelectedOfferId) {
+        console.log('[ClickFarmTaskModal] useLayoutEffect: 选中 offer id =', offer.id, 'name =', offer.name);
+        setSelectedOfferId(preSelectedOfferId);
+      }
+    } else if (!preSelectedOfferId && offers.length > 0 && !selectedOfferId) {
+      // 如果没有 preSelectedOfferId，选择第一个 offer
+      console.log('[ClickFarmTaskModal] useLayoutEffect: 无 preSelectedOfferId，选择第一个 offer');
+      setSelectedOfferId(offers[0].id);
+      // 异步加载辅助数据(代理检查、时区设置)
+      loadAuxiliaryData(offers[0], offers).catch(e => {
         console.error('[ClickFarmTaskModal] loadAuxiliaryData 错误', e);
       });
     }
-  };
+  }, [open, preSelectedOfferId, offers, selectedOfferId, loadAuxiliaryData]);
+
+  // 🔧 修复(2025-12-30): 删除重复的useEffect,统一由第142-148行的useEffect管理distribution生成
+  // 原代码在此处有重复的useEffect,导致distribution被设置两次,引发竞态条件
 
   const generateDistribution = async () => {
     try {

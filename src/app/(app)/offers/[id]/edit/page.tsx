@@ -202,7 +202,7 @@ export default function EditOfferPage() {
       uniqueLinks = Array.from(new Set(normalizedLinks)).slice(0, 3)
       for (const link of uniqueLinks) {
         try {
-          // eslint-disable-next-line no-new
+           
           new URL(link)
         } catch {
           throw new Error(`单品推广链接无效: ${link}`)
@@ -341,7 +341,7 @@ export default function EditOfferPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-white shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
@@ -360,7 +360,7 @@ export default function EditOfferPage() {
           {needsCompletion && syncSource === 'google_ads_sync' && (
             <div className="mb-6 bg-orange-50 border-l-4 border-orange-500 p-4 rounded">
               <div className="flex">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   <svg className="h-5 w-5 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
@@ -394,7 +394,7 @@ export default function EditOfferPage() {
             </div>
           )}
 
-          <div className="bg-white shadow rounded-lg p-6">
+          <div className="bg-white shadow-sm rounded-lg p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* 基础信息 */}
               <div>
@@ -442,7 +442,7 @@ export default function EditOfferPage() {
                       type="url"
                       id="url"
                       required
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="https://www.amazon.com/stores/page/..."
                       value={url}
                       onChange={(e) => setUrl(e.target.value)}
@@ -470,7 +470,7 @@ export default function EditOfferPage() {
                       type="text"
                       id="brand"
                       required
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="Reolink"
                       value={brand}
                       onChange={(e) => setBrand(e.target.value)}
@@ -485,7 +485,7 @@ export default function EditOfferPage() {
                       <input
                         type="text"
                         id="category"
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         placeholder="安防监控"
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
@@ -499,7 +499,7 @@ export default function EditOfferPage() {
                       <select
                         id="targetCountry"
                         required
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         value={targetCountry}
                         onChange={(e) => setTargetCountry(e.target.value)}
                       >
@@ -519,7 +519,7 @@ export default function EditOfferPage() {
                     <input
                       type="url"
                       id="affiliateLink"
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="https://pboost.me/UKTs4I6"
                       value={affiliateLink}
                       onChange={(e) => setAffiliateLink(e.target.value)}
@@ -541,7 +541,7 @@ export default function EditOfferPage() {
                           <div key={`store-product-link-${idx}`} className="flex items-center gap-2">
                             <input
                               type="url"
-                              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                               placeholder={`单品推广链接 ${idx + 1}`}
                               value={link}
                               onChange={(e) => updateStoreProductLink(idx, e.target.value)}
@@ -588,7 +588,7 @@ export default function EditOfferPage() {
                     <input
                       type="text"
                       id="productPrice"
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="$699.00 或 ¥5999.00"
                       value={productPrice}
                       onChange={(e) => setProductPrice(e.target.value)}
@@ -605,7 +605,7 @@ export default function EditOfferPage() {
                     <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                       <select
                         id="commissionType"
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         value={commissionType}
                         onChange={(e) => setCommissionType(e.target.value as 'percent' | 'amount')}
                       >
@@ -615,7 +615,7 @@ export default function EditOfferPage() {
                       <input
                         type="text"
                         id="commissionValue"
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         placeholder={commissionType === 'percent' ? '如 7.5（按%）' : '如 22.5'}
                         value={commissionValue}
                         onChange={(e) => setCommissionValue(e.target.value)}
@@ -623,7 +623,7 @@ export default function EditOfferPage() {
                       <input
                         type="text"
                         id="commissionCurrency"
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:text-gray-400"
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:text-gray-400"
                         placeholder={commissionType === 'amount' ? '币种，如 USD（可选）' : 'percent模式无需币种'}
                         value={commissionCurrency}
                         onChange={(e) => setCommissionCurrency(e.target.value.toUpperCase())}
@@ -751,7 +751,7 @@ export default function EditOfferPage() {
                     <textarea
                       id="brandDescription"
                       rows={3}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="品牌的整体介绍和定位..."
                       value={brandDescription}
                       onChange={(e) => setBrandDescription(e.target.value)}
@@ -765,7 +765,7 @@ export default function EditOfferPage() {
                     <textarea
                       id="uniqueSellingPoints"
                       rows={3}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="产品的核心优势和差异化特点..."
                       value={uniqueSellingPoints}
                       onChange={(e) => setUniqueSellingPoints(e.target.value)}
@@ -779,7 +779,7 @@ export default function EditOfferPage() {
                     <textarea
                       id="productHighlights"
                       rows={3}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="关键功能和特性..."
                       value={productHighlights}
                       onChange={(e) => setProductHighlights(e.target.value)}
@@ -793,7 +793,7 @@ export default function EditOfferPage() {
                     <textarea
                       id="targetAudience"
                       rows={2}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="目标客户群体特征..."
                       value={targetAudience}
                       onChange={(e) => setTargetAudience(e.target.value)}
@@ -817,7 +817,7 @@ export default function EditOfferPage() {
                   type="button"
                   onClick={handleSaveAndReExtract}
                   disabled={saving || reExtracting}
-                  className="mt-4 px-4 py-2 border border-indigo-600 rounded-md shadow-sm text-sm font-medium text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="mt-4 px-4 py-2 border border-indigo-600 rounded-md shadow-xs text-sm font-medium text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {reExtracting ? '启动中...' : '保存并按所选模式重新提取'}
                 </button>
@@ -828,14 +828,14 @@ export default function EditOfferPage() {
                 <button
                   type="button"
                   onClick={() => router.push(`/offers/${offerId}`)}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="px-4 py-2 border border-gray-300 rounded-md shadow-xs text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
                   disabled={saving || reExtracting}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-xs text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? '保存中...' : '保存修改'}
                 </button>

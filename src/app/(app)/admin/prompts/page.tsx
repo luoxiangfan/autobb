@@ -486,7 +486,7 @@ export default function PromptsManagementPage() {
             <h1 className="text-3xl font-bold text-slate-900">Prompt 管理</h1>
             <p className="text-slate-600 mt-1">系统不同业务场景使用的 AI Prompt 配置与版本管理</p>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-slate-200 shadow-xs">
             <FileText className="w-5 h-5 text-indigo-600" />
             <div className="text-sm">
               <span className="font-semibold text-slate-900">{prompts.length}</span>
@@ -708,11 +708,11 @@ export default function PromptsManagementPage() {
                                     }`}
                                   >
                                     {issue.type === 'error' ? (
-                                      <ShieldAlert className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                      <ShieldAlert className="w-3 h-3 mt-0.5 shrink-0" />
                                     ) : issue.type === 'warning' ? (
-                                      <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                      <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
                                     ) : (
-                                      <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                      <Info className="w-3 h-3 mt-0.5 shrink-0" />
                                     )}
                                     <span>{issue.message}</span>
                                   </div>

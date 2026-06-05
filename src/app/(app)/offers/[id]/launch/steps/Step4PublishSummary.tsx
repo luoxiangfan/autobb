@@ -1688,7 +1688,7 @@ export default function Step4PublishSummary({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 左列：Publish Options & Button */}
         <Card className="border-2 border-blue-200 bg-blue-50/50 lg:h-[400px] flex flex-col">
-          <CardHeader className="pb-3 flex-shrink-0">
+          <CardHeader className="pb-3 shrink-0">
             <CardTitle className="text-base flex items-center gap-2">
               <Rocket className="w-4 h-4 text-blue-600" />
               发布选项
@@ -1782,7 +1782,7 @@ export default function Step4PublishSummary({
             ? 'border-blue-200 bg-blue-50/30'
             : 'border-gray-200 bg-gray-50/30'
         }`}>
-          <CardHeader className="pb-3 flex-shrink-0">
+          <CardHeader className="pb-3 shrink-0">
             <CardTitle className="text-base flex items-center gap-2">
               {publishStatus?.success ? (
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
@@ -1990,15 +1990,15 @@ export default function Step4PublishSummary({
                   {publishSteps.map((step, idx) => (
                     <div key={idx} className="flex items-center gap-2 p-2 bg-white rounded border">
                       {step.status === 'running' ? (
-                        <Loader2 className="w-4 h-4 text-blue-600 animate-spin flex-shrink-0" />
+                        <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
                       ) : step.status === 'success' ? (
-                        <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
                       ) : step.status === 'warning' ? (
-                        <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
                       ) : step.status === 'failed' ? (
-                        <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                        <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
                       ) : (
-                        <div className="w-4 h-4 rounded-full border-2 border-gray-300 flex-shrink-0" />
+                        <div className="w-4 h-4 rounded-full border-2 border-gray-300 shrink-0" />
                       )}
                       <span className={`text-sm ${
                         step.status === 'failed'

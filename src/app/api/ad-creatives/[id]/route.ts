@@ -2,6 +2,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 
 function parsePossiblyNestedJson(value: unknown, maxDepth = 2): unknown {
   let current = value
@@ -35,10 +36,8 @@ function normalizeObjectField(value: unknown): Record<string, any> | undefined {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 
@@ -91,8 +90,8 @@ export async function GET(
 }
 
 const updateCreativeSchema = z.object({
-  headlines: z.array(z.string()).min(3).max(15).optional(),
-  descriptions: z.array(z.string()).min(2).max(4).optional(),
+  headlines: z.array(z.string()).min(3, zErr.minItems(3)).max(15, zErr.maxItems(15)).optional(),
+  descriptions: z.array(z.string()).min(2, zErr.minItems(2)).max(4, zErr.maxItems(4)).optional(),
   keywords: z.array(z.string()).optional(),
   keywords_with_volume: z.union([z.string(), z.array(z.any())]).optional(),
   negative_keywords: z.array(z.string()).optional(),
@@ -101,16 +100,16 @@ const updateCreativeSchema = z.object({
     .array(
       z.object({
         text: z.string(),
-        url: z.string().url(),
+        url: z.url(zErr.invalidUrl),
         description: z.string().optional(),
       })
     )
     .optional(),
-  final_url: z.string().url().optional(),
+  final_url: z.url(zErr.invalidUrl).optional(),
   final_url_suffix: z.string().optional(),
-  score: z.number().min(0).max(100).optional(),
-  score_breakdown: z.union([z.string(), z.record(z.any())]).optional(),
-  ad_strength: z.union([z.string(), z.record(z.any())]).optional(),
+  score: z.number().min(0, zErr.minNumber(0)).max(100, zErr.maxNumber(100)).optional(),
+  score_breakdown: z.union([z.string(), z.record(z.string(), z.any())]).optional(),
+  ad_strength: z.union([z.string(), z.record(z.string(), z.any())]).optional(),
   theme: z.string().optional(),
 })
 
@@ -118,10 +117,8 @@ const updateCreativeSchema = z.object({
  * PUT /api/ad-creatives/:id
  * 更新广告创意
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 
@@ -138,8 +135,8 @@ export async function PUT(
     if (!validationResult.success) {
       return NextResponse.json(
         {
-          error: validationResult.error.errors[0].message,
-          details: validationResult.error.errors,
+          error: validationResult.error.issues[0].message,
+          details: validationResult.error.issues,
         },
         { status: 400 }
       )
@@ -285,10 +282,8 @@ export async function PUT(
  * DELETE /api/ad-creatives/:id
  * 删除广告创意
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 

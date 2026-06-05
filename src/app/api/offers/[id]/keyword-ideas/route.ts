@@ -26,10 +26,8 @@ import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
  * POST /api/offers/:id/keyword-ideas
  * 获取关键词建议
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {

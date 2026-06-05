@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -78,67 +78,7 @@ export default function UrlSwapTaskModal({
   const isEditMode = !!editTaskId;
   const canEnableTask = isEditMode && !!taskData && (taskData.status === 'disabled' || taskData.status === 'error');
 
-  // Load existing task data (edit mode)
-  useEffect(() => {
-    if (open && editTaskId) {
-      loadTaskData();
-    }
-  }, [open, editTaskId]);
-
-  // Load offer (create mode)
-  useEffect(() => {
-    if (open && !editTaskId && offerId) {
-      loadOfferById(offerId);
-    }
-  }, [open, offerId, editTaskId]);
-
-  const loadTaskData = async () => {
-    try {
-      const response = await fetch(`/api/url-swap/tasks/${editTaskId}`);
-      if (!response.ok) throw new Error('加载任务失败');
-
-      const { data: task } = await response.json();
-      setTaskData(task);
-      setSwapIntervalMinutes(task.swap_interval_minutes);
-      setDurationDays(task.duration_days);
-      setGoogleCustomerId(task.google_customer_id || '');
-      setGoogleCampaignId(task.google_campaign_id || '');
-      setSwapMode((task as any).swap_mode === 'manual' ? 'manual' : 'auto');
-      setManualLinksText(Array.isArray((task as any).manual_affiliate_links) ? (task as any).manual_affiliate_links.join('\n') : '');
-
-      // 加载关联的Offer信息
-      if (task.offer_id) {
-        loadOfferById(task.offer_id);
-      }
-    } catch (error) {
-      console.error('加载任务失败:', error);
-      toast.error('加载任务失败');
-      onOpenChange(false);
-    }
-  };
-
-  const handleEnableTask = async () => {
-    if (!editTaskId) return;
-    setEnabling(true);
-    try {
-      const response = await fetch(`/api/url-swap/tasks/${editTaskId}/enable`, {
-        method: 'POST',
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData?.message || '启用任务失败');
-      }
-      toast.success('任务已启用');
-      setTaskData(prev => (prev ? { ...prev, status: 'enabled' } : prev));
-    } catch (error: any) {
-      console.error('启用任务失败:', error);
-      toast.error(error?.message || '启用任务失败');
-    } finally {
-      setEnabling(false);
-    }
-  };
-
-  const loadOfferById = async (id: number) => {
+  const loadOfferById = useCallback(async (id: number) => {
     try {
       setLoadingOffer(true);
 
@@ -184,6 +124,66 @@ export default function UrlSwapTaskModal({
       toast.error('加载Offer失败');
     } finally {
       setLoadingOffer(false);
+    }
+  }, [isEditMode, googleCustomerId, googleCampaignId]);
+
+  const loadTaskData = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/url-swap/tasks/${editTaskId}`);
+      if (!response.ok) throw new Error('加载任务失败');
+
+      const { data: task } = await response.json();
+      setTaskData(task);
+      setSwapIntervalMinutes(task.swap_interval_minutes);
+      setDurationDays(task.duration_days);
+      setGoogleCustomerId(task.google_customer_id || '');
+      setGoogleCampaignId(task.google_campaign_id || '');
+      setSwapMode((task as any).swap_mode === 'manual' ? 'manual' : 'auto');
+      setManualLinksText(Array.isArray((task as any).manual_affiliate_links) ? (task as any).manual_affiliate_links.join('\n') : '');
+
+      // 加载关联的Offer信息
+      if (task.offer_id) {
+        loadOfferById(task.offer_id);
+      }
+    } catch (error) {
+      console.error('加载任务失败:', error);
+      toast.error('加载任务失败');
+      onOpenChange(false);
+    }
+  }, [editTaskId, loadOfferById, onOpenChange]);
+
+  // Load existing task data (edit mode)
+  useEffect(() => {
+    if (open && editTaskId) {
+      void loadTaskData();
+    }
+  }, [open, editTaskId, loadTaskData]);
+
+  // Load offer (create mode)
+  useEffect(() => {
+    if (open && !editTaskId && offerId) {
+      void loadOfferById(offerId);
+    }
+  }, [open, offerId, editTaskId, loadOfferById]);
+
+  const handleEnableTask = async () => {
+    if (!editTaskId) return;
+    setEnabling(true);
+    try {
+      const response = await fetch(`/api/url-swap/tasks/${editTaskId}/enable`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData?.message || '启用任务失败');
+      }
+      toast.success('任务已启用');
+      setTaskData(prev => (prev ? { ...prev, status: 'enabled' } : prev));
+    } catch (error: any) {
+      console.error('启用任务失败:', error);
+      toast.error(error?.message || '启用任务失败');
+    } finally {
+      setEnabling(false);
     }
   };
 

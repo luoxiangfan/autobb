@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -99,10 +99,6 @@ export default function TaskDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    loadTaskDetails();
-  }, [taskId]);
-
-  useEffect(() => {
     const timer = window.setTimeout(() => {
       setAnalyticsSectionMounted(true);
     }, 250);
@@ -112,7 +108,7 @@ export default function TaskDetailPage() {
     };
   }, []);
 
-  const loadTaskDetails = async () => {
+  const loadTaskDetails = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/click-farm/tasks/${taskId}/details`);
@@ -130,7 +126,11 @@ export default function TaskDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [taskId, router]);
+
+  useEffect(() => {
+    void loadTaskDetails();
+  }, [loadTaskDetails]);
 
   const handleStopTask = async () => {
     try {

@@ -13,7 +13,7 @@ function normalizeGoogleCampaignId(value: unknown): string | null {
   if (value === null || value === undefined) return null
   const raw = String(value).trim()
   if (!raw) return null
-  return /^\d+$/.test(raw) ? raw : null
+  return /^\d+$/.test(raw) ? raw : null;
 }
 
 function normalizeCampaignName(value: unknown): string | null {
@@ -29,7 +29,8 @@ function normalizeCampaignName(value: unknown): string | null {
  * PUT /api/campaigns/:id/campaign-name
  * 更新广告系列名称（本地 + 已发布时同步 Google Ads）
  */
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {

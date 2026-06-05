@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Plus, Edit, Trash, ChevronLeft, ChevronRight, Wand2, XCircle, CheckCircle, Search, Key, Copy, Check, History, Unlock, ShieldAlert, ArrowUpDown, ArrowUp, ArrowDown, Zap, ZapOff, MoreHorizontal, Boxes, TrendingUp, Settings2 } from 'lucide-react'
 import { toast } from "sonner"
 import { Button } from '@/components/ui/button'
@@ -141,7 +141,7 @@ export default function UserManagementPage() {
         serviceAccountJson: '',
     })
 
-    const resetCreateGoogleAdsAuthForm = () => {
+    const resetCreateGoogleAdsAuthForm = useCallback(() => {
         setCreateGoogleAdsAuthSetup('none')
         setCreateGoogleAdsAuthType('service_account')
         setCreateGoogleAdsOauthForm({
@@ -157,7 +157,7 @@ export default function UserManagementPage() {
             developerToken: '',
             serviceAccountJson: '',
         })
-    }
+    }, [])
 
     // 根据套餐类型计算过期时间
     const calculateExpiryDate = (packageType: string): string => {
@@ -221,7 +221,7 @@ export default function UserManagementPage() {
         if (isCreateOpen) {
             resetCreateGoogleAdsAuthForm()
         }
-    }, [isCreateOpen])
+    }, [isCreateOpen, createExpiry, createPackage, resetCreateGoogleAdsAuthForm])
 
     // Edit Form State
     const [editEmail, setEditEmail] = useState('')
@@ -264,45 +264,7 @@ export default function UserManagementPage() {
         variant: 'default'
     })
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            skipNextPageFetchRef.current = true
-            fetchUsers(1)
-        }, 300)
-        return () => clearTimeout(timer)
-    }, [searchQuery, roleFilter, statusFilter, packageFilter, sortField, sortDirection])
-
-    useEffect(() => {
-        if (skipNextPageFetchRef.current) {
-            skipNextPageFetchRef.current = false
-            return
-        }
-        fetchUsers(pagination.page)
-    }, [pagination.page])
-
-    const handleSort = (field: SortField) => {
-        const defaultDirection: SortDirection =
-            field === 'createdAt' || field === 'lastLoginAt' || field === 'id' ? 'desc' : 'asc'
-
-        if (sortField === field) {
-            setSortDirection((prevDir) => (prevDir === 'asc' ? 'desc' : 'asc'))
-            return
-        }
-
-        setSortField(field)
-        setSortDirection(defaultDirection)
-    }
-
-    const renderSortIcon = (field: SortField) => {
-        if (sortField !== field) {
-            return <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
-        }
-        return sortDirection === 'asc'
-            ? <ArrowUp className="w-3.5 h-3.5" />
-            : <ArrowDown className="w-3.5 h-3.5" />
-    }
-
-    const fetchUsers = async (page: number = 1, limit?: number) => {
+    const fetchUsers = useCallback(async (page: number = 1, limit?: number) => {
         try {
             setLoading(true)
             const params = new URLSearchParams({
@@ -326,6 +288,44 @@ export default function UserManagementPage() {
         } finally {
             setLoading(false)
         }
+    }, [searchQuery, roleFilter, statusFilter, packageFilter, sortField, sortDirection, pagination.limit])
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            skipNextPageFetchRef.current = true
+            fetchUsers(1)
+        }, 300)
+        return () => clearTimeout(timer)
+    }, [searchQuery, roleFilter, statusFilter, packageFilter, sortField, sortDirection, fetchUsers])
+
+    useEffect(() => {
+        if (skipNextPageFetchRef.current) {
+            skipNextPageFetchRef.current = false
+            return
+        }
+        fetchUsers(pagination.page)
+    }, [pagination.page, fetchUsers])
+
+    const handleSort = (field: SortField) => {
+        const defaultDirection: SortDirection =
+            field === 'createdAt' || field === 'lastLoginAt' || field === 'id' ? 'desc' : 'asc'
+
+        if (sortField === field) {
+            setSortDirection((prevDir) => (prevDir === 'asc' ? 'desc' : 'asc'))
+            return
+        }
+
+        setSortField(field)
+        setSortDirection(defaultDirection)
+    }
+
+    const renderSortIcon = (field: SortField) => {
+        if (sortField !== field) {
+            return <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
+        }
+        return sortDirection === 'asc'
+            ? <ArrowUp className="w-3.5 h-3.5" />
+            : <ArrowDown className="w-3.5 h-3.5" />
     }
 
     const applyGoogleAdsAuthForUser = async (

@@ -27,10 +27,8 @@ interface CancelRequest {
   reason?: string
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { batchId: string } }
-) {
+export async function POST(req: NextRequest, props: { params: Promise<{ batchId: string }> }) {
+  const params = await props.params;
   const db = getDatabase()
   const queue = getQueueManager()
 

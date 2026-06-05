@@ -164,16 +164,12 @@ export default function LaunchAdPage() {
   const [canProceed, setCanProceed] = useState(false)
 
   useEffect(() => {
-    fetchOffer()
-  }, [offerId])
-
-  useEffect(() => {
     const preloadNextStep = STEP_PRELOADERS[currentStep + 1]
     if (!preloadNextStep) return
     void preloadNextStep()
   }, [currentStep])
 
-  const fetchOffer = async () => {
+  const fetchOffer = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch(`/api/offers/${offerId}`, {
@@ -200,7 +196,11 @@ export default function LaunchAdPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [offerId, router])
+
+  useEffect(() => {
+    fetchOffer()
+  }, [fetchOffer])
 
   const handleNext = () => {
     if (currentStep < STEPS.length) {
@@ -271,7 +271,7 @@ export default function LaunchAdPage() {
   return (
     <div className="min-h-screen bg-gray-50/50 flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">

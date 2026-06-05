@@ -56,7 +56,7 @@ describe('GET /api/offers/:id/creatives', () => {
       },
     })
 
-    const res = await GET(req, { params: { id: '96' } })
+    const res = await GET(req, { params: Promise.resolve({ id: '96' }) })
     const payload = await res.json()
 
     expect(res.status).toBe(200)

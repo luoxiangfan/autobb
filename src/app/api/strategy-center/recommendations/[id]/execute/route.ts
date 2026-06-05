@@ -4,10 +4,8 @@ import { queueStrategyRecommendationExecution } from '@/lib/openclaw/strategy-re
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await resolveStrategyCenterRequestUser(request)
   if (!auth) {
     return NextResponse.json({ error: '策略中心功能未开启或未授权' }, { status: 403 })

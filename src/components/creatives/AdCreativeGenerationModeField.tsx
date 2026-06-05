@@ -61,12 +61,12 @@ export function AdCreativeGenerationModeField({
 
   const selectClassName =
     layout === 'inline'
-      ? 'h-10 min-w-[11rem] border-gray-200/90 bg-white pr-8 shadow-sm transition-shadow hover:border-purple-200 focus:ring-purple-500/20'
-      : 'h-9 border-gray-200/90 bg-white shadow-sm transition-shadow hover:border-purple-200'
+      ? 'h-10 min-w-44 border-gray-200/90 bg-white pr-8 shadow-xs transition-shadow hover:border-purple-200 focus:ring-purple-500/20'
+      : 'h-9 border-gray-200/90 bg-white shadow-xs transition-shadow hover:border-purple-200'
 
   if (layout === 'inline') {
     return (
-      <div className={className ?? 'min-w-[11rem]'}>
+      <div className={className ?? 'min-w-44'}>
         <div className="mb-1.5 flex items-center gap-1.5">
           <Label htmlFor={id} className="text-xs font-medium uppercase tracking-wide text-gray-500">
             生成模式

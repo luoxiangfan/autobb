@@ -125,7 +125,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       body: JSON.stringify({ bucket: 'A' }),
     })
 
-    await POST(req, { params: { id: '96' } })
+    await POST(req, { params: Promise.resolve({ id: '96' }) })
 
     expect(authFns.validateGoogleAdsConfigForCreativeGeneration).toHaveBeenCalledWith(
       1,
@@ -152,7 +152,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '96' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '96' }) })
     const data = await res.json()
 
     expect(res.status).toBe(400)
@@ -175,7 +175,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       body: JSON.stringify({}),
     })
 
-    const res = await POST(req, { params: { id: '96' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '96' }) })
     const data = await res.json()
 
     expect(res.status).toBe(400)
@@ -200,7 +200,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '96' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '96' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -238,7 +238,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '96' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '96' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -273,7 +273,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '96' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '96' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -306,7 +306,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '96' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '96' }) })
     const data = await res.json()
 
     expect(res.status).toBe(400)
@@ -331,7 +331,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '96' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '96' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -364,7 +364,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '96' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '96' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -392,7 +392,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       body: JSON.stringify({}),
     })
 
-    const res = await POST(req, { params: { id: '96' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '96' }) })
     const data = await res.json()
 
     expect(res.status).toBe(401)
@@ -411,7 +411,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '96' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '96' }) })
     const data = await res.json()
 
     expect(res.status).toBe(400)
@@ -440,7 +440,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '96' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '96' }) })
     const data = await res.json()
 
     expect(res.status).toBe(400)
@@ -465,7 +465,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '96' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '96' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -504,7 +504,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '96' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '96' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)

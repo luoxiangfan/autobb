@@ -70,7 +70,7 @@ describe('GET /api/admin/users/[id]/login-history', () => {
 
     const response = await GET(
       new NextRequest('http://localhost/api/admin/users/77/login-history?limit=50'),
-      { params: { id: '77' } }
+      { params: Promise.resolve({ id: '77' }) }
     )
     const payload = await response.json()
 

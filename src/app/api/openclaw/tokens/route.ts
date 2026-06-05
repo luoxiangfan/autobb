@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import { createOpenclawToken, listOpenclawTokens } from '@/lib/openclaw/tokens'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
 
 const createTokenSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
+  name: z.string().min(1, zErr.required).max(100, zErr.maxChars(100)).optional(),
   scopes: z.array(z.string()).optional(),
 })
 
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
   const parsed = createTokenSchema.safeParse(body || {})
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.errors[0]?.message || 'Invalid request' },
+      { error: parsed.error.issues[0]?.message || 'Invalid request' },
       { status: 400 }
     )
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { showError } from '@/lib/toast-utils'
 import { Card, CardContent } from '@/components/ui/card'
@@ -99,11 +99,7 @@ export default function CreativesDashboardPage() {
   const formatMoney = (value: number, currencyCode: string = selectedCurrency) =>
     formatCurrency(value, currencyCode)
 
-  useEffect(() => {
-    fetchCreatives()
-  }, [timeRange, sortBy, reportCurrency])
-
-  const fetchCreatives = async () => {
+  const fetchCreatives = useCallback(async () => {
     try {
       setLoading(true)
       const currencyParam = reportCurrency ? `&currency=${encodeURIComponent(reportCurrency)}` : ''
@@ -138,7 +134,11 @@ export default function CreativesDashboardPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [timeRange, sortBy, reportCurrency])
+
+  useEffect(() => {
+    fetchCreatives()
+  }, [fetchCreatives])
 
   const getScoreBadgeColor = (score: number) => {
     if (score >= 80) return 'bg-green-100 text-green-800'
@@ -302,7 +302,7 @@ export default function CreativesDashboardPage() {
                 {recommendations.map((rec) => (
                   <div
                     key={rec.type}
-                    className="p-4 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg border border-indigo-200 cursor-pointer hover:shadow-md transition-shadow"
+                    className="p-4 bg-linear-to-br from-indigo-50 to-blue-50 rounded-lg border border-indigo-200 cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => {
                       const element = document.getElementById(`creative-${rec.creativeId}`)
                       element?.scrollIntoView({ behavior: 'smooth', block: 'center' })

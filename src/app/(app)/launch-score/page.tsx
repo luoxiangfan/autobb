@@ -353,7 +353,7 @@ export default function LaunchScorePage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-white shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
@@ -418,7 +418,7 @@ export default function LaunchScorePage() {
           )}
 
           {creative && (
-            <div className="mb-6 bg-white shadow rounded-lg p-4">
+            <div className="mb-6 bg-white shadow-sm rounded-lg p-4">
               <h3 className="text-body-sm font-medium text-muted-foreground">评分创意</h3>
               <p className="mt-1 text-body-sm text-gray-900">
                 版本 {creative.version}: {creative.headline1}
@@ -444,7 +444,7 @@ export default function LaunchScorePage() {
           ) : (
             <div className="space-y-6">
               {/* 总分卡片 */}
-              <div className="bg-white shadow rounded-lg p-6">
+              <div className="bg-white shadow-sm rounded-lg p-6">
                 <div className="text-center">
                   <div className={`text-6xl font-bold ${gradeInfo?.color} mb-2`}>
                     {launchScore.totalScore}
@@ -460,7 +460,7 @@ export default function LaunchScorePage() {
               </div>
 
               {/* 各维度评分 - v4.0 4维度 */}
-              <div className="bg-white shadow rounded-lg p-6">
+              <div className="bg-white shadow-sm rounded-lg p-6">
                 <h2 className="text-h4 mb-4">维度评分详情</h2>
                 <div className="space-y-4">
                   {/* 投放可行性 */}
@@ -581,12 +581,12 @@ export default function LaunchScorePage() {
               {/* 优化建议 */}
               {analysis?.overallRecommendations &&
                 analysis.overallRecommendations.length > 0 && (
-                  <div className="bg-white shadow rounded-lg p-6">
+                  <div className="bg-white shadow-sm rounded-lg p-6">
                     <h2 className="text-h4 mb-4">优化建议</h2>
                     <ul className="space-y-2">
                       {analysis.overallRecommendations.map((rec, index) => (
                         <li key={index} className="flex items-start">
-                          <span className="flex-shrink-0 h-5 w-5 text-indigo-600 mr-2">•</span>
+                          <span className="shrink-0 h-5 w-5 text-indigo-600 mr-2">•</span>
                           <span className="text-body-sm text-gray-700">{rec}</span>
                         </li>
                       ))}
@@ -595,7 +595,7 @@ export default function LaunchScorePage() {
                 )}
 
               {/* 实际投放表现（Google Ads 同步数据） */}
-              <div className="bg-white shadow rounded-lg p-6">
+              <div className="bg-white shadow-sm rounded-lg p-6">
                 <h2 className="text-h4 mb-1">实际投放表现</h2>
                 <p className="text-body-sm text-muted-foreground mb-4">
                   转化次数来自 Google Ads 报表，与 Offer 详情页的佣金归因口径不同。
@@ -668,7 +668,7 @@ export default function LaunchScorePage() {
                           {(adjustedRecommendations as string[]).map(
                             (rec: string, index: number) => (
                             <li key={index} className="flex items-start text-body-sm text-gray-700">
-                              <span className="flex-shrink-0 text-indigo-600 mr-2">•</span>
+                              <span className="shrink-0 text-indigo-600 mr-2">•</span>
                               {rec}
                             </li>
                           )

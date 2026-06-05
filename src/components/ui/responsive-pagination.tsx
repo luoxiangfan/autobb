@@ -91,7 +91,7 @@ export function ResponsivePagination({
               <select
                 value={pageSize}
                 onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                className="h-8 px-2 rounded border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-8 px-2 rounded border border-gray-200 text-sm bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               >
                 {pageSizeOptions.map(size => (
                   <option key={size} value={size}>{size}</option>

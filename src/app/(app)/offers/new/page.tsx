@@ -112,7 +112,7 @@ export default function NewOfferPage() {
         uniqueLinks = Array.from(new Set(normalizedLinks)).slice(0, 3)
         for (const link of uniqueLinks) {
           try {
-            // eslint-disable-next-line no-new
+             
             new URL(link)
           } catch {
             throw new Error(`单品推广链接无效: ${link}`)
@@ -276,7 +276,7 @@ export default function NewOfferPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-white shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
@@ -297,7 +297,7 @@ export default function NewOfferPage() {
             </div>
           )}
 
-          <div className="bg-white shadow rounded-lg p-6">
+          <div className="bg-white shadow-sm rounded-lg p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* 基础信息 */}
               <div>
@@ -345,7 +345,7 @@ export default function NewOfferPage() {
                       type="url"
                       id="url"
                       required
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="https://www.amazon.com/stores/page/..."
                       value={url}
                       onChange={(e) => setUrl(e.target.value)}
@@ -363,7 +363,7 @@ export default function NewOfferPage() {
                       type="text"
                       id="brand"
                       required
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="Reolink"
                       value={brand}
                       onChange={(e) => setBrand(e.target.value)}
@@ -378,7 +378,7 @@ export default function NewOfferPage() {
                       <input
                         type="text"
                         id="category"
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         placeholder="安防监控"
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
@@ -392,7 +392,7 @@ export default function NewOfferPage() {
                       <select
                         id="targetCountry"
                         required
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         value={targetCountry}
                         onChange={(e) => setTargetCountry(e.target.value)}
                       >
@@ -412,7 +412,7 @@ export default function NewOfferPage() {
                     <input
                       type="url"
                       id="affiliateLink"
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="https://pboost.me/UKTs4I6"
                       value={affiliateLink}
                       onChange={(e) => setAffiliateLink(e.target.value)}
@@ -434,7 +434,7 @@ export default function NewOfferPage() {
                           <div key={`store-product-link-${idx}`} className="flex items-center gap-2">
                             <input
                               type="url"
-                              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                               placeholder={`单品推广链接 ${idx + 1}`}
                               value={link}
                               onChange={(e) => updateStoreProductLink(idx, e.target.value)}
@@ -480,7 +480,7 @@ export default function NewOfferPage() {
                     <input
                       type="text"
                       id="productPrice"
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="$699.00 或 ¥5999.00"
                       value={productPrice}
                       onChange={(e) => setProductPrice(e.target.value)}
@@ -497,7 +497,7 @@ export default function NewOfferPage() {
                     <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                       <select
                         id="commissionType"
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         value={commissionType}
                         onChange={(e) => setCommissionType(e.target.value as 'percent' | 'amount')}
                       >
@@ -507,7 +507,7 @@ export default function NewOfferPage() {
                       <input
                         type="text"
                         id="commissionValue"
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         placeholder={commissionType === 'percent' ? '如 7.5（按%）' : '如 22.5'}
                         value={commissionValue}
                         onChange={(e) => setCommissionValue(e.target.value)}
@@ -515,7 +515,7 @@ export default function NewOfferPage() {
                       <input
                         type="text"
                         id="commissionCurrency"
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:text-gray-400"
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:text-gray-400"
                         placeholder={commissionType === 'amount' ? '币种，如 USD（可选）' : 'percent模式无需币种'}
                         value={commissionCurrency}
                         onChange={(e) => setCommissionCurrency(e.target.value.toUpperCase())}
@@ -643,7 +643,7 @@ export default function NewOfferPage() {
                     <textarea
                       id="brandDescription"
                       rows={3}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="品牌的整体介绍和定位..."
                       value={brandDescription}
                       onChange={(e) => setBrandDescription(e.target.value)}
@@ -657,7 +657,7 @@ export default function NewOfferPage() {
                     <textarea
                       id="uniqueSellingPoints"
                       rows={3}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="产品的核心优势和差异化特点..."
                       value={uniqueSellingPoints}
                       onChange={(e) => setUniqueSellingPoints(e.target.value)}
@@ -671,7 +671,7 @@ export default function NewOfferPage() {
                     <textarea
                       id="productHighlights"
                       rows={3}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="关键功能和特性..."
                       value={productHighlights}
                       onChange={(e) => setProductHighlights(e.target.value)}
@@ -685,7 +685,7 @@ export default function NewOfferPage() {
                     <textarea
                       id="targetAudience"
                       rows={2}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="目标客户群体特征..."
                       value={targetAudience}
                       onChange={(e) => setTargetAudience(e.target.value)}
@@ -699,14 +699,14 @@ export default function NewOfferPage() {
                 <button
                   type="button"
                   onClick={() => router.push('/offers')}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="px-4 py-2 border border-gray-300 rounded-md shadow-xs text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-xs text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? '创建中...' : '创建Offer'}
                 </button>

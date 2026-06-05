@@ -45,7 +45,7 @@ describe('POST /api/offers/:id/unlink', () => {
       body: JSON.stringify({ accountId: 9, removeGoogleAdsCampaigns: true })
     })
 
-    const res = await POST(req, { params: { id: '77' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '77' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -60,7 +60,7 @@ describe('POST /api/offers/:id/unlink', () => {
       body: JSON.stringify({ accountId: 9 })
     })
 
-    const res = await POST(req, { params: { id: '77' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '77' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)

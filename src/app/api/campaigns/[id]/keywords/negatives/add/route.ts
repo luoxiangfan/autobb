@@ -29,7 +29,7 @@ type KeywordCreateFailure = {
 }
 
 function normalizeKeywordText(value: unknown): string {
-  return String(value || '').replace(/\s+/g, ' ').trim()
+  return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
 function normalizeMatchType(value: unknown): 'BROAD' | 'PHRASE' | 'EXACT' {
@@ -226,10 +226,8 @@ async function createNegativeKeywords(params: {
   return { created, duplicateKeywords, failures }
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {

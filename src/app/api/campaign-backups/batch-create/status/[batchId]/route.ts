@@ -16,10 +16,8 @@ function parseBatchMetadata(raw: unknown): unknown | null {
  * GET /api/campaign-backups/batch-create/status/[batchId]
  * 查询批量创建任务状态（轮询 fallback）
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { batchId: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ batchId: string }> }) {
+  const params = await props.params;
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -54,11 +54,7 @@ export default function OptimizationTasksPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [updatingTaskId, setUpdatingTaskId] = useState<number | null>(null)
 
-  useEffect(() => {
-    fetchTasks()
-  }, [statusFilter])
-
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       setLoading(true)
       const statusParam = statusFilter !== 'all' ? `status=${statusFilter}` : ''
@@ -76,7 +72,11 @@ export default function OptimizationTasksPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [statusFilter])
+
+  useEffect(() => {
+    fetchTasks()
+  }, [fetchTasks])
 
   const handleRefresh = async () => {
     setRefreshing(true)

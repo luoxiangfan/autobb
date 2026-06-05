@@ -7,7 +7,7 @@ import { z } from 'zod'
 // 配置导入验证Schema
 const importSettingsSchema = z.object({
   version: z.string().optional(),
-  settings: z.record(z.record(z.object({
+  settings: z.record(z.string(), z.record(z.string(), z.object({
     value: z.union([z.string(), z.null()]),
     dataType: z.string().optional(),
     isSensitive: z.boolean().optional(),
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: '无效的配置文件格式',
-          details: validationResult.error.errors,
+          details: validationResult.error.issues,
         },
         { status: 400 }
       )

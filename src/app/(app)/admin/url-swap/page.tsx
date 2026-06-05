@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -78,15 +78,7 @@ export default function AdminUrlSwapPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    filterTasks();
-  }, [tasks, searchQuery, statusFilter]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [tasksRes, statsRes, healthRes] = await Promise.all([
@@ -115,9 +107,9 @@ export default function AdminUrlSwapPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const filterTasks = () => {
+  const filterTasks = useCallback(() => {
     let result = [...tasks];
 
     // Search filter
@@ -146,7 +138,15 @@ export default function AdminUrlSwapPage() {
       const nextPage = filtersChanged ? 1 : prev;
       return nextPage > totalPages ? totalPages : nextPage;
     });
-  };
+  }, [tasks, searchQuery, statusFilter, pageSize]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    filterTasks();
+  }, [filterTasks]);
 
   const formatDateTime = (dateValue: string | null): string => {
     if (!dateValue) return '-';
@@ -532,7 +532,7 @@ export default function AdminUrlSwapPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="all">所有状态</option>
                 <option value="enabled">运行中</option>
@@ -546,7 +546,7 @@ export default function AdminUrlSwapPage() {
 
         {/* Task List */}
         {filteredTasks.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow border border-gray-200">
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
               <Link className="w-full h-full" />
             </div>

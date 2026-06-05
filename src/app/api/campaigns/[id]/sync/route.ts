@@ -11,7 +11,8 @@ import { invalidateOfferCache } from '@/lib/api-cache'
  * POST /api/campaigns/:id/sync
  * 同步广告系列到Google Ads
  */
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 

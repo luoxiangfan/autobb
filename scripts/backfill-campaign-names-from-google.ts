@@ -285,6 +285,7 @@ async function getCampaignNameByHttp(params: {
   const envApiVersion = /^v\d+$/.test(envApiVersionRaw) ? envApiVersionRaw : null
   const versionCandidates = Array.from(new Set([
     envApiVersion,
+    'v23',
     'v22',
     'v21',
     'v20',

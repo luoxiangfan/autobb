@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}))
   const parsed = feishuTestSchema.safeParse(body || {})
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0]?.message || '请求参数不合法' }, { status: 400 })
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || '请求参数不合法' }, { status: 400 })
   }
 
   const payload = parsed.data

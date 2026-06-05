@@ -245,7 +245,7 @@ export default function RiskAlertPanel() {
       {/* 统计卡片 - P1-4优化版 */}
       {statistics && statistics.active > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <Card className="border-red-200 bg-gradient-to-br from-red-50 to-red-100/50 hover:shadow-lg transition-shadow">
+          <Card className="border-red-200 bg-linear-to-br from-red-50 to-red-100/50 hover:shadow-lg transition-shadow">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -260,7 +260,7 @@ export default function RiskAlertPanel() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-yellow-200 bg-gradient-to-br from-yellow-50 to-yellow-100/50 hover:shadow-lg transition-shadow">
+          <Card className="border-yellow-200 bg-linear-to-br from-yellow-50 to-yellow-100/50 hover:shadow-lg transition-shadow">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -275,7 +275,7 @@ export default function RiskAlertPanel() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100/50 hover:shadow-lg transition-shadow">
+          <Card className="border-blue-200 bg-linear-to-br from-blue-50 to-blue-100/50 hover:shadow-lg transition-shadow">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -290,7 +290,7 @@ export default function RiskAlertPanel() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100/50 hover:shadow-lg transition-shadow">
+          <Card className="border-gray-200 bg-linear-to-br from-gray-50 to-gray-100/50 hover:shadow-lg transition-shadow">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -375,7 +375,7 @@ export default function RiskAlertPanel() {
                     <div
                       key={alert.id}
                       className={`rounded-lg border-2 p-4 transition-all ${config.color} ${
-                        isExpanded ? 'shadow-md' : 'hover:shadow-sm'
+                        isExpanded ? 'shadow-md' : 'hover:shadow-xs'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-4">
@@ -406,7 +406,7 @@ export default function RiskAlertPanel() {
                                   <CardContent className="p-3 space-y-2 text-sm">
                                     {details.url && (
                                       <div className="flex items-start gap-2">
-                                        <ExternalLink className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                        <ExternalLink className="h-4 w-4 mt-0.5 shrink-0" />
                                         <div className="flex-1 min-w-0">
                                           <p className="text-xs text-muted-foreground mb-1">链接地址</p>
                                           <a
@@ -436,7 +436,7 @@ export default function RiskAlertPanel() {
                                     )}
                                     {details.finalUrl && details.finalUrl !== details.url && (
                                       <div className="flex items-start gap-2">
-                                        <RefreshCw className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                        <RefreshCw className="h-4 w-4 mt-0.5 shrink-0" />
                                         <div className="flex-1 min-w-0">
                                           <p className="text-xs text-muted-foreground mb-1">重定向至</p>
                                           <a
@@ -503,7 +503,7 @@ export default function RiskAlertPanel() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setExpandedAlert(isExpanded ? null : alert.id)}
-                          className="flex-shrink-0"
+                          className="shrink-0"
                         >
                           {isExpanded ? '收起' : '详情'}
                         </Button>
@@ -519,7 +519,7 @@ export default function RiskAlertPanel() {
 
       {/* 空状态 - P1-4优化版 */}
       {alerts.length === 0 && (
-        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-green-100/50">
+        <Card className="border-green-200 bg-linear-to-br from-green-50 to-green-100/50">
           <CardContent className="py-12">
             <div className="text-center space-y-3">
               <div className="flex justify-center">

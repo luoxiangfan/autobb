@@ -41,7 +41,7 @@ function normalizeGoogleCampaignId(value: unknown): string | null {
   if (value === null || value === undefined) return null
   const raw = String(value).trim()
   if (!raw) return null
-  return /^\d+$/.test(raw) ? raw : null
+  return /^\d+$/.test(raw) ? raw : null;
 }
 
 function safeParseJson<T = any>(value: unknown): T | null {
@@ -62,10 +62,8 @@ function toPositiveNumberOrNull(value: unknown): number | null {
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const requestId = request.headers.get('x-request-id') || undefined
     const authResult = await verifyAuth(request)

@@ -12,8 +12,9 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { category: string; key: string } }
+  props: { params: Promise<{ category: string; key: string }> }
 ) {
+  const params = await props.params;
   try {
     const { category, key } = params
 
@@ -77,8 +78,9 @@ const updateSettingSchema = z.object({
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { category: string; key: string } }
+  props: { params: Promise<{ category: string; key: string }> }
 ) {
+  const params = await props.params;
   try {
     const { category, key } = params
 
@@ -92,8 +94,8 @@ export async function PUT(
     if (!validationResult.success) {
       return NextResponse.json(
         {
-          error: validationResult.error.errors[0].message,
-          details: validationResult.error.errors,
+          error: validationResult.error.issues[0].message,
+          details: validationResult.error.issues,
         },
         { status: 400 }
       )

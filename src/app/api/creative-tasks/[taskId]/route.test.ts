@@ -50,7 +50,7 @@ describe('GET /api/creative-tasks/[taskId]', () => {
       },
     })
 
-    const res = await GET(req, { params: { taskId: 'task-1' } })
+    const res = await GET(req, { params: Promise.resolve({ taskId: 'task-1' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -91,7 +91,7 @@ describe('GET /api/creative-tasks/[taskId]', () => {
       },
     })
 
-    const res = await GET(req, { params: { taskId: 'task-2' } })
+    const res = await GET(req, { params: Promise.resolve({ taskId: 'task-2' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)

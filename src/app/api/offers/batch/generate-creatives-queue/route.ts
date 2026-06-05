@@ -13,6 +13,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue'
 import {
@@ -105,7 +106,7 @@ function buildBatchPartialSkipWarning(stats: BatchEnqueueStats): string | undefi
 }
 
 const requestSchema = z.object({
-  offerIds: z.array(z.number().int().positive()).min(1).max(50),
+  offerIds: z.array(z.number().int(zErr.int).positive(zErr.positiveInt)).min(1, zErr.minItems(1)).max(50, zErr.maxItems(50)),
   bucket: z.unknown().optional(),
   creativeType: z.unknown().optional(),
   forceGenerateOnQualityGate: z.boolean().optional(),

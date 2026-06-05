@@ -23,7 +23,8 @@ function formatResumeErrors(
  * POST /api/campaigns/:id/resume-offer-tasks
  * 一键按默认配置恢复/新建关联 Offer 的补点击和换链接任务
  */
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 

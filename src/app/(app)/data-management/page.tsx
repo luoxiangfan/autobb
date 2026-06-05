@@ -56,7 +56,7 @@ export default function DataManagementPage() {
 
         {/* 数据统计卡片 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Offers</p>
@@ -67,7 +67,7 @@ export default function DataManagementPage() {
               <FileSpreadsheet className="h-8 w-8 text-indigo-500 opacity-50" />
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Campaigns</p>
@@ -78,7 +78,7 @@ export default function DataManagementPage() {
               <TrendingUp className="h-8 w-8 text-green-500 opacity-50" />
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">可导出</p>
@@ -88,7 +88,7 @@ export default function DataManagementPage() {
             </div>
             <p className="text-xs text-gray-400 mt-1">Offers, Campaigns, Settings</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">可导入</p>
@@ -135,7 +135,7 @@ export default function DataManagementPage() {
         </div>
 
         {/* 配置分类说明 */}
-        <div className="mt-6 bg-white rounded-lg shadow p-6">
+        <div className="mt-6 bg-white rounded-lg shadow-sm p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">配置分类说明</h3>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">

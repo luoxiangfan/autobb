@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -72,7 +72,7 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
     serviceAccountJson: '',
   })
 
-  const fetchStatus = async (userId: number) => {
+  const fetchStatus = useCallback(async (userId: number) => {
     setLoading(true)
     try {
       const res = await fetch(`/api/admin/users/${userId}/google-ads-auth`)
@@ -93,13 +93,13 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     if (open && user) {
       fetchStatus(user.id)
     }
-  }, [open, user?.id])
+  }, [open, user, fetchStatus])
 
   const handleSave = async () => {
     if (!user) return

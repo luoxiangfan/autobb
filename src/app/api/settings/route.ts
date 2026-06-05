@@ -197,8 +197,8 @@ export async function PUT(request: NextRequest) {
     if (!validationResult.success) {
       return NextResponse.json(
         {
-          error: validationResult.error.errors[0].message,
-          details: validationResult.error.errors,
+          error: validationResult.error.issues[0].message,
+          details: validationResult.error.issues,
         },
         { status: 400 }
       )
@@ -405,7 +405,7 @@ export async function DELETE(request: NextRequest) {
     const parsed = deleteSettingsSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.errors[0].message, details: parsed.error.errors },
+        { error: parsed.error.issues[0].message, details: parsed.error.issues },
         { status: 400 }
       )
     }

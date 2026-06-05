@@ -792,6 +792,11 @@ export default function ProductsPage() {
   const syncRunsInFlightRef = useRef(false)
   const periodicRefreshInFlightRef = useRef(false)
   const scorePauseInFlightRef = useRef(false)
+  const fetchProductsRef = useRef<
+    (options?: { forceNoCache?: boolean; silent?: boolean; suppressErrorToast?: boolean }) => Promise<void>
+  >(async () => {})
+  const fetchSyncRunsRef = useRef<() => Promise<void>>(async () => {})
+  const loadYeahPromosSessionStatusRef = useRef<() => Promise<void>>(async () => {})
   const [items, setItems] = useState<ProductListItem[]>([])
   const [total, setTotal] = useState(0)
   const [landingPageStats, setLandingPageStats] = useState<LandingPageStats>(() => createEmptyLandingPageStats())
@@ -1251,6 +1256,10 @@ export default function ProductsPage() {
     }
   }
 
+  fetchProductsRef.current = fetchProducts
+  fetchSyncRunsRef.current = fetchSyncRuns
+  loadYeahPromosSessionStatusRef.current = loadYeahPromosSessionStatus
+
   const scheduleAuxiliaryBootstrap = () => {
     if (auxiliaryBootstrapScheduledRef.current || typeof window === 'undefined') {
       return
@@ -1369,7 +1378,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     if (!syncInsightsMounted) return
-    void fetchSyncRuns()
+    void fetchSyncRunsRef.current()
   }, [syncInsightsMounted])
 
   useEffect(() => {
@@ -1381,7 +1390,7 @@ export default function ProductsPage() {
   }, [])
 
   useEffect(() => {
-    fetchProducts()
+    void fetchProductsRef.current()
   }, [page, pageSize, searchQuery, midQuery, platformFilter, statusFilter, targetCountryFilter, landingPageTypeFilter, numericRangeFilters, createdAtFrom, createdAtTo, sortBy, sortOrder])
 
   useEffect(() => {
@@ -1390,10 +1399,10 @@ export default function ProductsPage() {
     const timer = window.setInterval(() => {
       if (periodicRefreshInFlightRef.current) return
       periodicRefreshInFlightRef.current = true
-      const tasks: Array<Promise<void>> = [fetchSyncRuns()]
+      const tasks: Array<Promise<void>> = [fetchSyncRunsRef.current()]
       // 用户正在筛选时固定结果集，避免被后台同步过程中的数据波动干扰。
       if (!hasFilters) {
-        tasks.push(fetchProducts({ forceNoCache: true, silent: true, suppressErrorToast: true }))
+        tasks.push(fetchProductsRef.current({ forceNoCache: true, silent: true, suppressErrorToast: true }))
       }
       Promise.all(tasks).finally(() => {
         periodicRefreshInFlightRef.current = false
@@ -1429,7 +1438,7 @@ export default function ProductsPage() {
     if (!ypCaptureDialogOpen) return
 
     const timer = window.setInterval(() => {
-      loadYeahPromosSessionStatus()
+      void loadYeahPromosSessionStatusRef.current()
     }, 6000)
 
     return () => window.clearInterval(timer)
@@ -2250,7 +2259,7 @@ export default function ProductsPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push('/dashboard')}
-                className="flex-shrink-0"
+                className="shrink-0"
               >
                 <ArrowLeft className="mr-1 h-4 w-4" />
                 返回Dashboard

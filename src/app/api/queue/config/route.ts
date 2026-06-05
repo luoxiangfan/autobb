@@ -11,6 +11,7 @@ import { getQueueManager } from '@/lib/queue'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 
 const GLOBAL_CONCURRENCY_MAX = 1000
 const PER_USER_CONCURRENCY_MAX = 1000
@@ -149,22 +150,24 @@ function normalizeQueueConfig(input: any): typeof DEFAULT_QUEUE_CONFIG {
   return merged
 }
 
+const taskTimeoutSchema = z
+  .union([z.number(), z.undefined()])
+  .transform((value) => (typeof value === 'number' && Number.isFinite(value)
+    ? Math.min(value, TASK_TIMEOUT_MAX_MS)
+    : value))
+  .pipe(z.number().min(TASK_TIMEOUT_MIN_MS, zErr.minNumber(TASK_TIMEOUT_MIN_MS)).max(TASK_TIMEOUT_MAX_MS, zErr.maxNumber(TASK_TIMEOUT_MAX_MS)).optional())
+
 // 统一队列配置验证Schema
-const queueConfigSchema = z.object({
-  globalConcurrency: z.number().min(1).max(GLOBAL_CONCURRENCY_MAX).optional(),  // 🔥 提升上限至1000（支持补点击999并发）
-  perUserConcurrency: z.number().min(1).max(PER_USER_CONCURRENCY_MAX).optional(),  // 🔥 提升上限至1000（支持补点击999并发）
-  perTypeConcurrency: z.record(z.number().min(1).max(PER_TYPE_CONCURRENCY_MAX)).optional(),  // 🔥 提升上限至1000（支持补点击999并发）
-  maxQueueSize: z.number().min(10).max(MAX_QUEUE_SIZE_MAX).optional(),
+const queueConfigSchema = z.looseObject({
+  globalConcurrency: z.number().min(1, zErr.minNumber(1)).max(GLOBAL_CONCURRENCY_MAX, zErr.maxNumber(GLOBAL_CONCURRENCY_MAX)).optional(),  // 🔥 提升上限至1000（支持补点击999并发）
+  perUserConcurrency: z.number().min(1, zErr.minNumber(1)).max(PER_USER_CONCURRENCY_MAX, zErr.maxNumber(PER_USER_CONCURRENCY_MAX)).optional(),  // 🔥 提升上限至1000（支持补点击999并发）
+  perTypeConcurrency: z.record(z.string(), z.number().min(1, zErr.minNumber(1)).max(PER_TYPE_CONCURRENCY_MAX, zErr.maxNumber(PER_TYPE_CONCURRENCY_MAX))).optional(),  // 🔥 提升上限至1000（支持补点击999并发）
+  maxQueueSize: z.number().min(10, zErr.minNumber(10)).max(MAX_QUEUE_SIZE_MAX, zErr.maxNumber(MAX_QUEUE_SIZE_MAX)).optional(),
   // 兼容历史超限值：先裁剪再验证，避免“修改其它字段时被旧 taskTimeout 阻塞”
-  taskTimeout: z.preprocess(
-    (value) => (typeof value === 'number' && Number.isFinite(value)
-      ? Math.min(value, TASK_TIMEOUT_MAX_MS)
-      : value),
-    z.number().min(TASK_TIMEOUT_MIN_MS).max(TASK_TIMEOUT_MAX_MS).optional()
-  ),
-  defaultMaxRetries: z.number().min(0).max(DEFAULT_MAX_RETRIES_MAX).optional(),
-  retryDelay: z.number().min(1000).max(RETRY_DELAY_MAX_MS).optional(),
-}).passthrough()  // 🔥 允许额外字段（如 enablePriority, storageType 等前端状态字段）
+  taskTimeout: taskTimeoutSchema,
+  defaultMaxRetries: z.number().min(0, zErr.minNumber(0)).max(DEFAULT_MAX_RETRIES_MAX, zErr.maxNumber(DEFAULT_MAX_RETRIES_MAX)).optional(),
+  retryDelay: z.number().min(1000, zErr.minNumber(1000)).max(RETRY_DELAY_MAX_MS, zErr.maxNumber(RETRY_DELAY_MAX_MS)).optional(),
+})  // 🔥 允许额外字段（如 enablePriority, storageType 等前端状态字段）
 
 function getRuntimeQueueConfig(): typeof DEFAULT_QUEUE_CONFIG {
   const queueManager = getQueueManager()
@@ -319,10 +322,10 @@ export async function PUT(request: NextRequest) {
     if (!validationResult.success) {
       console.error('[UnifiedQueueConfig] 配置验证失败:', {
         body,
-        errors: validationResult.error.errors
+        errors: validationResult.error.issues
       })
       return NextResponse.json(
-        { error: '配置格式错误', details: validationResult.error.errors },
+        { error: '配置格式错误', details: validationResult.error.issues },
         { status: 400 }
       )
     }

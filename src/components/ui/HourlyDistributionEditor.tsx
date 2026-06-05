@@ -161,7 +161,7 @@ export default function HourlyDistributionEditor({
       </div>
 
       {/* 图表容器 */}
-      <div className="relative bg-gradient-to-b from-muted/30 to-muted/10 rounded-lg p-4 border border-border/50">
+      <div className="relative bg-linear-to-b from-muted/30 to-muted/10 rounded-lg p-4 border border-border/50">
         {/* Y轴刻度 - 反转渲染顺序，使0在底部，maxValue在顶部 */}
         <div className="absolute left-0 top-4 bottom-10 w-10 flex flex-col justify-between text-right pr-2">
           {[...yTicks].reverse().map((tick, i) => (

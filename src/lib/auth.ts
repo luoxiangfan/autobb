@@ -542,7 +542,10 @@ export function withAuth(
     requireAdmin?: boolean
   }
 ) {
-  return async (request: NextRequest, context?: { params?: Record<string, string> }): Promise<Response> => {
+  return async (
+    request: NextRequest,
+    routeContext?: { params?: Promise<Record<string, string>> }
+  ): Promise<Response> => {
     const { NextResponse } = await import('next/server')
 
     const authResult = await verifyAuth(request)
@@ -561,6 +564,9 @@ export function withAuth(
         { status: 403 }
       )
     }
+
+    const resolvedParams = routeContext?.params ? await routeContext.params : undefined
+    const context = resolvedParams ? { params: resolvedParams } : undefined
 
     try {
       return await handler(request, authResult.user, context)

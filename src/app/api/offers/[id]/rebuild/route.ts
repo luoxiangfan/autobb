@@ -21,10 +21,8 @@ import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 export const maxDuration = 120
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const parentRequestId = req.headers.get('x-request-id') || undefined
   const offerId = parsePositiveIntegerOfferId(params.id)
   if (!offerId) {

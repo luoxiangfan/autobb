@@ -61,7 +61,7 @@ export default function UploadSuccessModal({
           </button>
 
           <div className="flex items-start">
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <CheckCircle2 className="h-12 w-12 text-green-600" />
             </div>
 
@@ -84,7 +84,7 @@ export default function UploadSuccessModal({
                 </div>
 
                 <div className="flex items-start space-x-2 rounded-lg bg-blue-50 p-3">
-                  <Clock className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <Clock className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                   <div className="text-sm text-blue-800">
                     <p className="font-medium">正在后台处理</p>
                     <p className="mt-1">
@@ -107,7 +107,7 @@ export default function UploadSuccessModal({
               <div className="mt-5 flex justify-end">
                 <button
                   type="button"
-                  className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                   onClick={onClose}
                 >
                   知道了

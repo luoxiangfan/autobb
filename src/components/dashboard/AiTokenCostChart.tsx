@@ -5,7 +5,7 @@
  * 显示AI模型调用的token使用量和成本统计
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -56,11 +56,7 @@ export function AiTokenCostChart({ days = 7 }: Props) {
   const [data, setData] = useState<AiTokenData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchTokenData()
-  }, [days])
-
-  const fetchTokenData = async () => {
+  const fetchTokenData = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch(`/api/dashboard/ai-token-cost?days=${days}`, {
@@ -78,7 +74,11 @@ export function AiTokenCostChart({ days = 7 }: Props) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [days])
+
+  useEffect(() => {
+    fetchTokenData()
+  }, [fetchTokenData])
 
   if (loading) {
     return (

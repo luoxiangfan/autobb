@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -60,18 +60,7 @@ export default function TrendsPage() {
   const formatMoney = (value: number, currencyCode: string = selectedCurrency) =>
     formatCurrency(value, currencyCode)
 
-  useEffect(() => {
-    fetchTrendsData()
-  }, [days, reportCurrency])
-
-  useEffect(() => {
-    if (!currencyInfo?.currency || !Array.isArray(currencyInfo.currencies)) return
-    if (!reportCurrency || !currencyInfo.currencies.includes(reportCurrency)) {
-      setReportCurrency(currencyInfo.currency)
-    }
-  }, [currencyInfo?.currency, currencyInfo?.currencies, reportCurrency])
-
-  const fetchTrendsData = async () => {
+  const fetchTrendsData = useCallback(async () => {
     try {
       setLoading(true)
       const currencyParam = reportCurrency ? `&currency=${encodeURIComponent(reportCurrency)}` : ''
@@ -98,7 +87,18 @@ export default function TrendsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [days, reportCurrency])
+
+  useEffect(() => {
+    fetchTrendsData()
+  }, [fetchTrendsData])
+
+  useEffect(() => {
+    if (!currencyInfo?.currency || !Array.isArray(currencyInfo.currencies)) return
+    if (!reportCurrency || !currencyInfo.currencies.includes(reportCurrency)) {
+      setReportCurrency(currencyInfo.currency)
+    }
+  }, [currencyInfo?.currency, currencyInfo?.currencies, reportCurrency])
 
   const handleRefresh = async () => {
     setRefreshing(true)

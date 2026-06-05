@@ -72,7 +72,7 @@ function normalizeForCompare(input: string): string {
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .replace(/\s+/g, ' ')
     .replace(/[^\p{L}\p{N}\s]/gu, '')
-    .trim()
+    .trim();
 }
 
 function areNearDuplicate(a: string | null, b: string | null): boolean {
@@ -220,10 +220,8 @@ function buildStoreDescriptionFromScrapedData(scrapedData: any): {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {
@@ -366,10 +364,8 @@ export async function GET(
  * PUT /api/offers/:id
  * 更新Offer
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {
@@ -419,10 +415,8 @@ export async function PUT(
  * Query参数：
  * - autoUnlink: boolean (可选) - 是否自动解除关联，默认false
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {

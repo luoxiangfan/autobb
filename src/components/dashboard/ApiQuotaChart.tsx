@@ -5,7 +5,7 @@
  * 显示每日API调用次数和剩余配额
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -55,11 +55,7 @@ export function ApiQuotaChart({ days = 7 }: Props) {
   const [data, setData] = useState<ApiQuotaData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchQuotaData()
-  }, [days])
-
-  const fetchQuotaData = async () => {
+  const fetchQuotaData = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch(`/api/dashboard/api-quota?days=${days}`, {
@@ -77,7 +73,11 @@ export function ApiQuotaChart({ days = 7 }: Props) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [days])
+
+  useEffect(() => {
+    fetchQuotaData()
+  }, [fetchQuotaData])
 
   if (loading) {
     return (
@@ -250,7 +250,7 @@ export function ApiQuotaChart({ days = 7 }: Props) {
               <div className="text-amber-800">
                 时间: {latestRateLimitTime || latestRateLimitEvent.occurredAt}
               </div>
-              <div className="text-amber-800 break-words">
+              <div className="text-amber-800 wrap-break-word">
                 内容: {latestRateLimitEvent.message}
               </div>
             </AlertDescription>

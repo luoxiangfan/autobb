@@ -648,6 +648,15 @@ function normalizeCampaignDateValue(value: unknown): string | undefined {
   return normalized
 }
 
+function formatCampaignDateTimeForMutate(value: Date | string, endOfDay = false): string {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid campaign date: ${String(value)}`)
+  }
+  const ymd = date.toISOString().split('T')[0]
+  return endOfDay ? `${ymd} 23:59:59` : `${ymd} 00:00:00`
+}
+
 // 兼容 Google Ads API v23：Campaign.start_date/end_date 已迁移为 *_date_time
 function normalizeCampaignDateFields(rows: any[]): any[] {
   return rows.map((row: any) => {
@@ -925,15 +934,13 @@ export async function createGoogleAdsCampaign(params: {
     console.log('ℹ️ Campaign Final URL Suffix未设置（空字符串）')
   }
 
-  // 3. 添加日期设置
+  // 3. 添加日期设置（Google Ads API v23: start_date/end_date => start_date_time/end_date_time）
   if (params.startDate) {
-    const startDateObj = new Date(params.startDate)
-    ;(campaign as any).start_date = startDateObj.toISOString().split('T')[0].replace(/-/g, '')
+    ;(campaign as any).start_date_time = formatCampaignDateTimeForMutate(params.startDate)
   }
 
   if (params.endDate) {
-    const endDateObj = new Date(params.endDate)
-    ;(campaign as any).end_date = endDateObj.toISOString().split('T')[0].replace(/-/g, '')
+    ;(campaign as any).end_date_time = formatCampaignDateTimeForMutate(params.endDate, true)
   }
 
   // 🚀 优化(2025-12-18): 简化日志输出，减少噪音
@@ -1528,8 +1535,8 @@ export async function getGoogleAdsCampaign(params: {
         campaign.name,
         campaign.status,
         campaign.advertising_channel_type,
-        campaign.start_date,
-        campaign.end_date,
+        campaign.start_date_time,
+        campaign.end_date_time,
         campaign_budget.amount_micros,
         metrics.cost_micros,
         metrics.impressions,
@@ -1540,13 +1547,14 @@ export async function getGoogleAdsCampaign(params: {
     `
 
     const customer = await getCustomerWithCredentials(oauthGetCustomerParams(params, authContext))
-    results = await trackOAuthApiCall(
+    const rawResults = await trackOAuthApiCall(
       params.userId,
       params.customerId,
       ApiOperationType.SEARCH,
       '/api/google-ads/query',
       () => customer.query(query)
     )
+    results = normalizeCampaignDateFields(rawResults)
   }
 
   const result = results[0] || null
@@ -1631,21 +1639,22 @@ export async function listGoogleAdsCampaigns(params: {
       campaign.name,
       campaign.status,
       campaign.advertising_channel_type,
-      campaign.start_date,
-      campaign.end_date,
+      campaign.start_date_time,
+      campaign.end_date_time,
       campaign_budget.amount_micros
     FROM campaign
     WHERE campaign.status != 'REMOVED'
     ORDER BY campaign.name
   `
 
-  const results = await trackOAuthApiCall(
+  const rawResults = await trackOAuthApiCall(
     params.userId,
     params.customerId,
     ApiOperationType.SEARCH,
     '/api/google-ads/query',
     () => customer.query(query)
   )
+  const results = normalizeCampaignDateFields(rawResults)
 
   // 缓存结果（30分钟TTL）
   gadsApiCache.set(cacheKey, results)

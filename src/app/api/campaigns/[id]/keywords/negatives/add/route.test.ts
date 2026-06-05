@@ -118,7 +118,7 @@ describe('POST /api/campaigns/:id/keywords/negatives/add', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '12' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '12' }) })
     const payload = await res.json()
 
     expect(res.status).toBe(200)

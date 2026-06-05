@@ -458,6 +458,8 @@ export default function CampaignsClientPage({
   const campaignsFetchSeqRef = useRef(0)
   const trendsFetchAbortRef = useRef<AbortController | null>(null)
   const trendsFetchSeqRef = useRef(0)
+  const fetchCampaignsRef = useRef<(options?: { silent?: boolean }) => Promise<void>>(async () => {})
+  const fetchTrendsRef = useRef<() => Promise<void>>(async () => {})
 
   // Trend data states
   const [trendsData, setTrendsData] = useState<TrendChartData[]>([])
@@ -588,7 +590,7 @@ export default function CampaignsClientPage({
   /** 正在 await 队列排空循环时禁止根据 status-v2 清 syncing（避免重复点击） */
   const googleAdsSyncWaitLoopActiveRef = useRef(false)
 
-  const checkGlobalSyncStatus = async () => {
+  const checkGlobalSyncStatus = useCallback(async () => {
     try {
       const response = await fetch('/api/sync/status-v2', { credentials: 'include' })
       if (response.ok) {
@@ -613,10 +615,10 @@ export default function CampaignsClientPage({
       console.error('检查同步状态失败:', error)
     }
     return null
-  }
+  }, [])
   
   // 🔧 启动轮询（每 3 秒检查一次）
-  const startPolling = () => {
+  const startPolling = useCallback(() => {
     if (pollingRef.current) {
       // 已经存在轮询，不需要重复启动
       return
@@ -626,17 +628,17 @@ export default function CampaignsClientPage({
       void checkGlobalSyncStatus()
     }, 3000)
     console.log('[Sync] Started polling for sync status')
-  }
+  }, [checkGlobalSyncStatus])
   
   // 🔧 停止轮询
-  const stopPolling = () => {
+  const stopPolling = useCallback(() => {
     if (pollingRef.current) {
       clearInterval(pollingRef.current)
       pollingRef.current = null
     }
     setIsPolling(false)
     console.log('[Sync] Stopped polling for sync status')
-  }
+  }, [])
 
   const googleAdsCampaignQueueTotal =
     Number(globalSyncStatus?.googleAdsCampaignSyncQueue?.pending ?? 0) +
@@ -828,7 +830,7 @@ export default function CampaignsClientPage({
     () => overallRoasSpendShareData.reduce((sum, entry) => sum + Number(entry.value || 0), 0),
     [overallRoasSpendShareData]
   )
-  const overallRoasPreviewPanelClass = 'rounded-2xl border border-[#dbeafe] bg-white shadow-sm'
+  const overallRoasPreviewPanelClass = 'rounded-2xl border border-[#dbeafe] bg-white shadow-xs'
   const overallRoasPreviewPanelBodyClass = 'p-5 lg:p-6'
   const overallRoasPreviewSectionTitleClass = 'text-sm font-semibold text-slate-800'
   const overallRoasPreviewSectionHintClass = 'mt-1 text-xs text-slate-500'
@@ -968,7 +970,7 @@ export default function CampaignsClientPage({
     // 🔧 初始检查同步状态
   useEffect(() => {
     void checkGlobalSyncStatus()
-  }, [])
+  }, [checkGlobalSyncStatus])
 
   // 🔧 检查管理员权限并加载用户列表（管理员功能）- 参考 dashboard 页面实现
   useEffect(() => {
@@ -1043,11 +1045,7 @@ export default function CampaignsClientPage({
     } else if (!needPoll && pollingRef.current) {
       stopPolling()
     }
-  }, [
-    globalSyncStatus?.hasRunningSync,
-    globalSyncStatus?.googleAdsCampaignSyncQueue?.pending,
-    globalSyncStatus?.googleAdsCampaignSyncQueue?.running,
-  ])
+  }, [globalSyncStatus, startPolling, stopPolling])
 
   // 🔧 清理轮询（组件卸载时）
   useEffect(() => {
@@ -1235,7 +1233,7 @@ export default function CampaignsClientPage({
 
       return changed ? next : prev
     })
-  }, [isServerPagingMode])
+  }, [])
 
   /**
    * 处理401未授权错误 - 跳转到登录页
@@ -1249,7 +1247,7 @@ export default function CampaignsClientPage({
   }
 
   useEffect(() => {
-    fetchCampaigns()
+    void fetchCampaignsRef.current()
   }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, serverListDepsKey, selectedUserFilters, affiliateFilter])
 
   useEffect(() => {
@@ -1264,7 +1262,7 @@ export default function CampaignsClientPage({
 
   useEffect(() => {
     if (!trendsSectionMounted) return
-    fetchTrends()
+    void fetchTrendsRef.current()
   }, [timeRange, appliedCustomRange?.startDate, appliedCustomRange?.endDate, trendsSectionMounted, trendsFilterDepsKey])
 
   useEffect(() => {
@@ -1273,9 +1271,9 @@ export default function CampaignsClientPage({
       if (periodicRefreshInFlightRef.current) return
 
       periodicRefreshInFlightRef.current = true
-      const tasks: Array<Promise<void>> = [fetchCampaigns({ silent: true })]
+      const tasks: Array<Promise<void>> = [fetchCampaignsRef.current({ silent: true })]
       if (trendsSectionMounted) {
-        tasks.push(fetchTrends())
+        tasks.push(fetchTrendsRef.current())
       }
       Promise.all(tasks).finally(() => {
         periodicRefreshInFlightRef.current = false
@@ -1616,9 +1614,6 @@ export default function CampaignsClientPage({
     }
   }
 
-  const fetchCampaignsRef = useRef(fetchCampaigns)
-  fetchCampaignsRef.current = fetchCampaigns
-
   // SSE（AppLayout）在 Google Ads 管线 idle 时派发事件：刷新列表并按需 toast
   useEffect(() => {
     const onPipelineIdle = () => {
@@ -1746,6 +1741,9 @@ export default function CampaignsClientPage({
       trendsInFlightRef.current.delete(dedupKey)
     }
   }
+
+  fetchCampaignsRef.current = fetchCampaigns
+  fetchTrendsRef.current = fetchTrends
 
   const handleBudgetAdjusted = (payload: {
     googleCampaignId: string
@@ -4089,7 +4087,7 @@ export default function CampaignsClientPage({
 
         {/* Content */}
         {filteredCampaigns.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow border border-gray-200">
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
               <Search className="w-full h-full" />
             </div>
@@ -4128,13 +4126,13 @@ export default function CampaignsClientPage({
                       <SortableHeader field="campaignName" className="w-[300px] whitespace-nowrap">系列名称</SortableHeader>
                       <TableHead className="w-[200px] whitespace-nowrap">自定义名称</TableHead>
                       <SortableHeader field="budgetAmount" className="w-[86px] whitespace-nowrap">预算</SortableHeader>
-                      <SortableHeader field="impressions" className="w-[58px] whitespace-nowrap !px-0.5">展示</SortableHeader>
-                      <SortableHeader field="clicks" className="w-[58px] whitespace-nowrap !px-0.5">点击</SortableHeader>
-                      <SortableHeader field="ctr" className="w-[56px] whitespace-nowrap !px-0.5">点击率</SortableHeader>
-                      <SortableHeader field="cpc" className="w-[94px] whitespace-nowrap !px-0.5">实际CPC</SortableHeader>
-                      <SortableHeader field="configuredMaxCpc" className="w-[94px] whitespace-nowrap !px-0.5">配置CPC</SortableHeader>
-                      <SortableHeader field="conversions" className="w-[94px] whitespace-nowrap !px-0.5">佣金</SortableHeader>
-                      <SortableHeader field="cost" className="w-[94px] whitespace-nowrap !px-0.5">花费</SortableHeader>
+                      <SortableHeader field="impressions" className="w-[58px] whitespace-nowrap px-0.5!">展示</SortableHeader>
+                      <SortableHeader field="clicks" className="w-[58px] whitespace-nowrap px-0.5!">点击</SortableHeader>
+                      <SortableHeader field="ctr" className="w-[56px] whitespace-nowrap px-0.5!">点击率</SortableHeader>
+                      <SortableHeader field="cpc" className="w-[94px] whitespace-nowrap px-0.5!">实际CPC</SortableHeader>
+                      <SortableHeader field="configuredMaxCpc" className="w-[94px] whitespace-nowrap px-0.5!">配置CPC</SortableHeader>
+                      <SortableHeader field="conversions" className="w-[94px] whitespace-nowrap px-0.5!">佣金</SortableHeader>
+                      <SortableHeader field="cost" className="w-[94px] whitespace-nowrap px-0.5!">花费</SortableHeader>
                       <TableHead className="w-[100px] whitespace-nowrap">运营状态</TableHead>
                       <TableHead className="w-[100px] whitespace-nowrap">关联 Offer 任务</TableHead>
                       <SortableHeader field="status" className="w-[78px] whitespace-nowrap">投放状态</SortableHeader>
@@ -4286,39 +4284,39 @@ export default function CampaignsClientPage({
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap !px-0.5">
+                      <TableCell className="whitespace-nowrap px-0.5!">
                         <div className="font-medium text-gray-900">
                           {campaign.performance?.impressions?.toLocaleString() || '0'}
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap !px-0.5">
+                      <TableCell className="whitespace-nowrap px-0.5!">
                         <div className="font-medium text-gray-900">
                           {campaign.performance?.clicks?.toLocaleString() || '0'}
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap !px-0.5">
+                      <TableCell className="whitespace-nowrap px-0.5!">
                         <div className="font-medium text-gray-900">
                           {(Number(campaign.performance?.ctr) || 0).toFixed(2)}%
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap !px-0.5">
+                      <TableCell className="whitespace-nowrap px-0.5!">
                         <div className="font-medium text-gray-900">
                           {formatMoney(Number(campaign.performance?.cpcLocal ?? campaign.performance?.cpcUsd) || 0, performanceCurrency)}
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap !px-0.5">
+                      <TableCell className="whitespace-nowrap px-0.5!">
                         <div className="font-medium text-gray-900">
                           {hasConfiguredMaxCpc
                             ? formatMoney(configuredMaxCpc, budgetCurrency)
                             : '-'}
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap !px-0.5">
+                      <TableCell className="whitespace-nowrap px-0.5!">
                         <div className="font-medium text-gray-900">
                           {formatMoney(Number(campaign.performance?.commission ?? campaign.performance?.conversions) || 0, performanceCurrency)}
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap !px-0.5">
+                      <TableCell className="whitespace-nowrap px-0.5!">
                         <div className="font-medium text-gray-900">
                           {formatMoney(Number(campaign.performance?.costLocal ?? campaign.performance?.costUsd) || 0, performanceCurrency)}
                         </div>
@@ -4698,7 +4696,7 @@ export default function CampaignsClientPage({
               ) : overallRoasStats ? (
                 <div className="bg-slate-50 px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
                   <div className="mx-auto max-w-[960px] overflow-hidden rounded-2xl border border-blue-200 bg-[#eef5ff] shadow-[0_12px_32px_rgba(15,23,42,0.10)]">
-                    <div className="bg-gradient-to-r from-[#0b1220] via-[#1d4ed8] to-[#0369a1] px-4 py-5 text-white sm:px-5 sm:py-6 lg:px-6 lg:py-7">
+                    <div className="bg-linear-to-r from-[#0b1220] via-[#1d4ed8] to-[#0369a1] px-4 py-5 text-white sm:px-5 sm:py-6 lg:px-6 lg:py-7">
                       <div className="flex min-h-[112px] flex-col justify-between gap-4 lg:min-h-[120px]">
                         <div className="space-y-2">
                           <h3 className="text-[24px] font-bold leading-tight tracking-tight sm:text-[28px] lg:text-[32px]">
@@ -4753,15 +4751,15 @@ export default function CampaignsClientPage({
                                 />
                                 <RechartsTooltip
                                   contentStyle={{ borderRadius: 12, borderColor: '#dbeafe' }}
-                                  formatter={(value: number) => [formatRoasNumber(Number(value)), 'ROAS']}
-                                  labelFormatter={(_, payload: any[]) => payload?.[0]?.payload?.campaignName || '--'}
+                                  formatter={(value) => [formatRoasNumber(Number(value ?? 0)), 'ROAS']}
+                                  labelFormatter={(_label, payload) => payload?.[0]?.payload?.campaignName || '--'}
                                 />
                                 <Line type="monotone" dataKey="roas" stroke="#1d4ed8" strokeWidth={3} dot={{ r: 4, fill: '#ffffff', strokeWidth: 2 }} activeDot={{ r: 6 }}>
                                   <LabelList
                                     dataKey="roas"
                                     position="top"
                                     offset={12}
-                                    formatter={(value: number) => `${Number(value || 0).toFixed(2)}x`}
+                                    formatter={(value) => `${Number(value ?? 0).toFixed(2)}x`}
                                     className="fill-slate-700 text-[11px]"
                                   />
                                 </Line>
@@ -4799,14 +4797,14 @@ export default function CampaignsClientPage({
                                       ))}
                                     </Pie>
                                     <RechartsTooltip
-                                      formatter={(value: number) => formatCurrencyDashboard(Number(value), overallRoasStats.currency)}
+                                      formatter={(value) => formatCurrencyDashboard(Number(value ?? 0), overallRoasStats.currency)}
                                     />
                                   </PieChart>
                                 </ResponsiveContainer>
                               </div>
                               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
                                 {overallRoasSpendShareData.map((entry, index) => (
-                                  <div key={`legend-${entry.name}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-sm">
+                                  <div key={`legend-${entry.name}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-xs">
                                     <div className="flex items-center gap-2 text-sm text-slate-700">
                                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: chartPalette[index % chartPalette.length] }} />
                                       <span className="min-w-0 flex-1 truncate">{entry.name}</span>

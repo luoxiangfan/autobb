@@ -18,21 +18,19 @@ import { normalizeCreativeTaskError, toCreativeTaskErrorResponseFields } from '@
 export const dynamic = 'force-dynamic'
 export const maxDuration = 1200  // 20分钟
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { taskId: string } }
-) {
+export async function GET(req: NextRequest, props: { params: Promise<{ taskId: string }> }) {
+  const params = await props.params;
   const db = getDatabase()
   const { taskId } = params
 
-    const authResult = await verifyAuth(req)
-    if (!authResult.authenticated || !authResult.user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized', message: '请先登录' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
-    const userIdNum = authResult.user.userId
+  const authResult = await verifyAuth(req)
+  if (!authResult.authenticated || !authResult.user) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized', message: '请先登录' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+  const userIdNum = authResult.user.userId
 
   try {
     const taskRows = await db.query<CreativeTaskStreamRow>(

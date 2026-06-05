@@ -34,22 +34,20 @@ interface BatchTask {
   updated_at: string
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { batchId: string } }
-) {
+export async function GET(req: NextRequest, props: { params: Promise<{ batchId: string }> }) {
+  const params = await props.params;
   const db = getDatabase()
   const { batchId } = params
 
   // 验证用户身份
-    const authResult = await verifyAuth(req)
-    if (!authResult.authenticated || !authResult.user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized', message: '请先登录' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
-    const userIdNum = authResult.user.userId
+  const authResult = await verifyAuth(req)
+  if (!authResult.authenticated || !authResult.user) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized', message: '请先登录' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+  const userIdNum = authResult.user.userId
 
   try {
     // 验证批量任务存在且属于当前用户

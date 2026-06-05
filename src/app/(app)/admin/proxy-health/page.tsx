@@ -194,7 +194,7 @@ export default function ProxyHealthPage() {
         {/* Error Message */}
         {error && (
           <div className="mb-4 bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <div>{error}</div>
           </div>
         )}
@@ -333,7 +333,7 @@ export default function ProxyHealthPage() {
         <Card className="mt-6 bg-blue-50 border-blue-200">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
               <div className="text-sm text-blue-800">
                 <p className="font-semibold mb-2">说明：</p>
                 <ul className="list-disc list-inside space-y-1">

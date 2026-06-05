@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   appendAccountsAuthToSearchParams,
@@ -69,6 +69,20 @@ export default function GoogleAdsPage() {
   const [accountsSyncing, setAccountsSyncing] = useState(false)
   const [accountsSyncError, setAccountsSyncError] = useState<string | null>(null)
   const accountsPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const accountFetchersRef = useRef<{
+    fetchAccounts: (
+      forceRefresh?: boolean,
+      isPoll?: boolean,
+      listOpts?: { skipCredentialsRefresh?: boolean }
+    ) => Promise<void>
+    fetchAccountsWithServiceAccount: (
+      serviceAccountId: string,
+      forceRefresh?: boolean,
+      isPoll?: boolean,
+      listOpts?: { skipCredentialsRefresh?: boolean }
+    ) => Promise<void>
+    fetchServiceAccounts: () => Promise<void>
+  } | null>(null)
 
   const { prepareAuthForAccountsFetch, refreshCredentialsStatus, syncFromCredentialsResponse } =
     useGoogleAdsAccountsAuth({
@@ -115,24 +129,6 @@ export default function GoogleAdsPage() {
   }
 
   useEffect(() => {
-    if (!searchParams) return
-
-    const oauthSuccess = searchParams.get('oauth_success')
-    if (oauthSuccess === 'true') {
-      setSuccess('OAuth 授权成功！')
-      setTimeout(() => setSuccess(''), 5000)
-      router.replace('/google-ads')
-    }
-
-    const oauthError = searchParams.get('error')
-    if (oauthError) {
-      setError(`OAuth 授权失败: ${decodeURIComponent(oauthError)}`)
-    }
-
-    fetchCredentials()
-  }, [searchParams, router])
-
-  useEffect(() => {
     return () => {
       if (accountsPollTimerRef.current) {
         clearTimeout(accountsPollTimerRef.current)
@@ -140,44 +136,6 @@ export default function GoogleAdsPage() {
       }
     }
   }, [])
-
-  const fetchCredentials = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/google-ads/credentials', {
-        credentials: 'include',
-      })
-
-      if (!response.ok) {
-        const errorData = await safeReadJson(response)
-        throw new Error(
-          buildGoogleAdsApiErrorMessage(response, errorData, '获取凭证状态失败')
-        )
-      }
-
-      const data = await response.json()
-
-      if (data.success && data.data) {
-        setCredentials(data.data)
-        const parsed = syncFromCredentialsResponse(data)
-
-        if (parsed.authType === 'service_account' && parsed.serviceAccountId) {
-          fetchAccountsWithServiceAccount(parsed.serviceAccountId, false, false, {
-            skipCredentialsRefresh: true,
-          })
-        } else if (parsed.hasCredentials && parsed.authType === 'oauth') {
-          fetchAccounts(false, false, { skipCredentialsRefresh: true })
-        } else {
-          fetchServiceAccounts()
-        }
-      }
-    } catch (err: any) {
-      console.error('获取凭证状态失败:', err)
-      setError(formatErrorMessage(err) || '获取凭证状态失败')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const enrichAccountsWithMccNames = (allAccounts: GoogleAdsAccount[]): GoogleAdsAccount[] => {
     const mccMap = new Map<string, string>()
@@ -331,6 +289,71 @@ export default function GoogleAdsPage() {
     isPoll = false,
     listOpts?: { skipCredentialsRefresh?: boolean }
   ) => fetchAccountsList(forceRefresh, isPoll, listOpts)
+
+  accountFetchersRef.current = {
+    fetchAccounts,
+    fetchAccountsWithServiceAccount,
+    fetchServiceAccounts,
+  }
+
+  const fetchCredentials = useCallback(async () => {
+    const fetchers = accountFetchersRef.current
+    if (!fetchers) return
+
+    try {
+      setLoading(true)
+      const response = await fetch('/api/google-ads/credentials', {
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        const errorData = await safeReadJson(response)
+        throw new Error(
+          buildGoogleAdsApiErrorMessage(response, errorData, '获取凭证状态失败')
+        )
+      }
+
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        setCredentials(data.data)
+        const parsed = syncFromCredentialsResponse(data)
+
+        if (parsed.authType === 'service_account' && parsed.serviceAccountId) {
+          fetchers.fetchAccountsWithServiceAccount(parsed.serviceAccountId, false, false, {
+            skipCredentialsRefresh: true,
+          })
+        } else if (parsed.hasCredentials && parsed.authType === 'oauth') {
+          fetchers.fetchAccounts(false, false, { skipCredentialsRefresh: true })
+        } else {
+          void fetchers.fetchServiceAccounts()
+        }
+      }
+    } catch (err: any) {
+      console.error('获取凭证状态失败:', err)
+      setError(formatErrorMessage(err) || '获取凭证状态失败')
+    } finally {
+      setLoading(false)
+    }
+  }, [syncFromCredentialsResponse])
+
+  useEffect(() => {
+    if (!searchParams) return
+
+    const oauthSuccess = searchParams.get('oauth_success')
+    if (oauthSuccess === 'true') {
+      setSuccess('OAuth 授权成功！')
+      setTimeout(() => setSuccess(''), 5000)
+      router.replace('/google-ads')
+    }
+
+    const oauthError = searchParams.get('error')
+    if (oauthError) {
+      setError(`OAuth 授权失败: ${decodeURIComponent(oauthError)}`)
+    }
+
+    fetchCredentials()
+  }, [searchParams, router, fetchCredentials])
 
   const handleRefreshAccounts = async () => {
     setError('')
@@ -587,7 +610,7 @@ export default function GoogleAdsPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-white shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
@@ -612,7 +635,7 @@ export default function GoogleAdsPage() {
           {needsReauth && (
             <div className="mb-4 bg-red-50 border-2 border-red-500 rounded-lg p-6">
               <div className="flex items-start">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
@@ -637,7 +660,7 @@ export default function GoogleAdsPage() {
                   <div className="flex gap-3">
                     <a
                       href="/settings"
-                      className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                      className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                     >
                       <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
@@ -649,7 +672,7 @@ export default function GoogleAdsPage() {
                         setNeedsReauth(false)
                         setError('')
                       }}
-                      className="inline-flex items-center px-4 py-2 bg-white border border-red-300 text-red-700 text-sm font-medium rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                      className="inline-flex items-center px-4 py-2 bg-white border border-red-300 text-red-700 text-sm font-medium rounded-md hover:bg-red-50 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                     >
                       暂时关闭此提示
                     </button>
@@ -736,7 +759,7 @@ export default function GoogleAdsPage() {
               </div>
 
               {accounts.length > 0 && (
-                <div className="mb-4 bg-white shadow rounded-lg p-4">
+                <div className="mb-4 bg-white shadow-sm rounded-lg p-4">
                   <div className="flex flex-col gap-3 md:flex-row md:items-end">
                     <div className="w-full md:flex-1">
                       <label htmlFor="ads-account-search" className="block text-sm font-medium text-gray-700 mb-1">
@@ -748,7 +771,7 @@ export default function GoogleAdsPage() {
                           value={searchKeyword}
                           onChange={(e) => setSearchKeyword(e.target.value)}
                           placeholder="按账户名称 / Customer ID 搜索"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                         />
                     </div>
                     <div className="w-full md:w-56">
@@ -759,7 +782,7 @@ export default function GoogleAdsPage() {
                         id="ads-account-status-filter"
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                       >
                         <option value="ALL">全部状态</option>
                         {statusOptions.map((option) => (
@@ -774,12 +797,12 @@ export default function GoogleAdsPage() {
               )}
 
               {accountsLoading && accounts.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-lg shadow">
+                <div className="text-center py-12 bg-white rounded-lg shadow-sm">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
                   <p className="mt-4 text-gray-600">加载账户列表...</p>
                 </div>
               ) : accounts.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-lg shadow">
+                <div className="text-center py-12 bg-white rounded-lg shadow-sm">
                   <svg
                     className="mx-auto h-12 w-12 text-gray-400"
                     fill="none"
@@ -797,7 +820,7 @@ export default function GoogleAdsPage() {
                   <p className="mt-1 text-sm text-gray-500">您的 Google 账号可能没有关联任何 Google Ads 账户</p>
                 </div>
               ) : sortedAccounts.length === 0 ? (
-                <div className="bg-white shadow rounded-lg p-8 text-center">
+                <div className="bg-white shadow-sm rounded-lg p-8 text-center">
                   <h3 className="text-base font-medium text-gray-900">没有匹配的账户</h3>
                   <p className="mt-1 text-sm text-gray-500">
                     请调整搜索关键词或状态筛选条件后重试
@@ -815,7 +838,7 @@ export default function GoogleAdsPage() {
               ) : (
                 <>
                   {/* 账户列表 - 表格形式 */}
-                  <div className="bg-white shadow rounded-lg overflow-hidden">
+                  <div className="bg-white shadow-sm rounded-lg overflow-hidden">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
@@ -1005,7 +1028,7 @@ export default function GoogleAdsPage() {
 
                   {/* 分页控件 - Updated with page size selector */}
                   {totalPages > 1 && (
-                    <div className="mt-4 flex items-center justify-between bg-white px-4 py-3 rounded-lg shadow">
+                    <div className="mt-4 flex items-center justify-between bg-white px-4 py-3 rounded-lg shadow-sm">
                       <div className="flex items-center gap-4 text-sm text-gray-600">
                         <div className="flex items-center gap-2">
                           <span>每页显示</span>
@@ -1016,7 +1039,7 @@ export default function GoogleAdsPage() {
                               setPageSize(newSize)
                               setCurrentPage(1) // 重置到第一页
                             }}
-                            className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                           >
                             <option value={10}>10</option>
                             <option value={20}>20</option>

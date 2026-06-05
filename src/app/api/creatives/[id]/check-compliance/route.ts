@@ -9,10 +9,8 @@ import { findAdCreativeById } from '@/lib/ad-creative'
 import { findOfferById } from '@/lib/offers'
 import { checkCompliance, type CreativeContent } from '@/lib/compliance-checker'
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // 验证用户身份
     const auth = await verifyAuth(request)

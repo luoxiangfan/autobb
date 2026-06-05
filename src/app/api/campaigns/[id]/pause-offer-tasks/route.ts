@@ -7,7 +7,8 @@ import { pauseOfferTasks } from '@/lib/campaign-offer-tasks'
  * POST /api/campaigns/:id/pause-offer-tasks
  * 一键暂停关联 Offer 的补点击和换链接任务
  */
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { id } = params
 

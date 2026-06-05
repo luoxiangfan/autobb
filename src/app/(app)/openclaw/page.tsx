@@ -1057,6 +1057,7 @@ export default function OpenClawPage() {
   const [workspaceLoading, setWorkspaceLoading] = useState(false)
   const [workspaceBootstrapping, setWorkspaceBootstrapping] = useState(false)
   const workspaceAutoBootstrapTriedRef = useRef(false)
+  const handleWorkspaceBootstrapRef = useRef<(options?: { silent?: boolean }) => Promise<boolean>>(async () => false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [strategyRecommendations, setStrategyRecommendations] = useState<OpenclawStrategyRecommendation[]>([])
   const [strategyRecommendationsLoaded, setStrategyRecommendationsLoaded] = useState(false)
@@ -1280,106 +1281,166 @@ export default function OpenClawPage() {
     void loadFeishuHealthData(true)
   }, [settings?.isAdmin, loadFeishuHealthData])
 
+  const loadGatewayStatus = useCallback(async (force = false, isActive?: () => boolean) => {
+    setGatewayLoading(true)
+    try {
+      const response = await fetch(
+        `/api/openclaw/gateway/status${force ? '?force=1' : ''}`,
+        { credentials: 'include' }
+      )
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Gateway 状态获取失败')
+      }
+      if (isActive && !isActive()) return
+      setGatewayStatus(payload)
+    } catch (error: any) {
+      if (isActive && !isActive()) return
+      setGatewayStatus({
+        success: false,
+        error: error?.message || 'Gateway 状态获取失败',
+      })
+    } finally {
+      if (isActive && !isActive()) return
+      setGatewayLoading(false)
+    }
+  }, [])
+
+  const loadWorkspaceStatus = useCallback(async (force = false, isActive?: () => boolean) => {
+    setWorkspaceLoading(true)
+    try {
+      const response = await fetch(
+        `/api/openclaw/workspace/status${force ? '?force=1' : ''}`,
+        { credentials: 'include' }
+      )
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        throw new Error(payload?.error || 'SOUL 工作区状态获取失败')
+      }
+      if (isActive && !isActive()) return
+
+      const missingFiles = Array.isArray(payload?.missingFiles) ? payload.missingFiles.length : 0
+      const missingDailyMemory = payload?.dailyMemoryExists === false
+      const needsBootstrap = payload?.success && (missingFiles > 0 || missingDailyMemory)
+
+      if (!force && needsBootstrap && !workspaceAutoBootstrapTriedRef.current) {
+        workspaceAutoBootstrapTriedRef.current = true
+        setWorkspaceStatus(payload)
+        await handleWorkspaceBootstrapRef.current({ silent: true })
+        return
+      }
+
+      setWorkspaceStatus(payload)
+    } catch (error: any) {
+      if (isActive && !isActive()) return
+      setWorkspaceStatus({
+        success: false,
+        error: error?.message || 'SOUL 工作区状态获取失败',
+      })
+    } finally {
+      if (isActive && !isActive()) return
+      setWorkspaceLoading(false)
+    }
+  }, [])
+
+  const loadOpenClawPageData = useCallback(async (isActive: () => boolean) => {
+    setLoading(true)
+    try {
+      const resolvedReportRange = resolveNormalizedReportDateRange(reportStartDate, reportDate)
+      const reportQuery = new URLSearchParams({ date: resolvedReportRange.endDate })
+      if (resolvedReportRange.startDate !== resolvedReportRange.endDate) {
+        reportQuery.set('start_date', resolvedReportRange.startDate)
+        reportQuery.set('end_date', resolvedReportRange.endDate)
+      }
+      if (resolvedReportRange.endDate === parseLocalDate()) {
+        reportQuery.set('refresh', '1')
+      }
+
+      const strategyDate = resolvedReportRange.endDate
+      const strategyQuery = new URLSearchParams({
+        date: strategyDate,
+        limit: '200',
+      })
+
+      const [settingsRes, tokensRes, reportRes, strategyRecommendationsRes] = await Promise.all([
+        fetch('/api/openclaw/settings', { credentials: 'include' }),
+        fetch('/api/openclaw/tokens', { credentials: 'include' }),
+        fetch(`/api/openclaw/reports/daily?${reportQuery.toString()}`, { credentials: 'include' }),
+        fetch(`/api/openclaw/strategy/recommendations?${strategyQuery.toString()}`, { credentials: 'include' }),
+      ])
+
+      if (settingsRes.status === 403) {
+        toast.error('当前账号未开启 OpenClaw 功能')
+        router.replace('/dashboard')
+        return
+      }
+
+      if (!settingsRes.ok) {
+        throw new Error('配置加载失败')
+      }
+
+      const settingsJson = await settingsRes.json() as OpenclawSettingsResponse
+      const tokensJson = tokensRes.ok ? await tokensRes.json() : { tokens: [] }
+      const reportJson = reportRes.ok ? await reportRes.json() : { report: null }
+      const strategyRecommendationsJson = strategyRecommendationsRes.ok
+        ? await strategyRecommendationsRes.json() as StrategyRecommendationsResponse
+        : { success: false, recommendations: [] } as StrategyRecommendationsResponse
+
+      if (!isActive()) return
+
+      setSettings(settingsJson)
+      setTokens(tokensJson.tokens || [])
+      setReport(reportJson.report || null)
+      const normalizedReportDate = normalizeIsoDateText(reportJson?.report?.date) || ''
+      const normalizedStartDateFromRange = normalizeIsoDateText(reportJson?.report?.dateRange?.startDate) || ''
+      if (normalizedReportDate && normalizedReportDate !== reportDate) {
+        setReportDate(normalizedReportDate)
+      }
+      if (normalizedStartDateFromRange && normalizedStartDateFromRange !== reportStartDate) {
+        setReportStartDate(normalizedStartDateFromRange)
+      } else if (normalizedReportDate && reportStartDate > normalizedReportDate) {
+        setReportStartDate(normalizedReportDate)
+      }
+      setStrategyRecommendations(Array.isArray(strategyRecommendationsJson.recommendations) ? strategyRecommendationsJson.recommendations : [])
+      setStrategyServerDate(
+        String(strategyRecommendationsJson?.serverDate || '').trim() || parseLocalDate()
+      )
+      setStrategyRecommendationsReportDate(
+        String(strategyRecommendationsJson?.reportDate || strategyDate).trim() || strategyDate
+      )
+      setStrategyRecommendationsLoaded(Boolean(strategyRecommendationsJson?.success))
+
+      const userMap: Record<string, string> = {}
+      settingsJson.user.forEach(item => {
+        userMap[item.key] = item.value ?? ''
+      })
+      Object.entries(USER_DEFAULT_VALUES).forEach(([key, defaultValue]) => {
+        const current = userMap[key]
+        if (current === undefined || current === null || String(current).trim() === '') {
+          userMap[key] = defaultValue
+        }
+      })
+
+      setUserValues(userMap)
+      setSavedUserValues(userMap)
+    } catch (error: any) {
+      if (!isActive()) return
+      toast.error(error?.message || 'OpenClaw 配置加载失败')
+    } finally {
+      if (isActive()) setLoading(false)
+    }
+  }, [reportDate, reportStartDate, router])
+
   useEffect(() => {
     let active = true
-    const load = async () => {
-      setLoading(true)
-      try {
-        const resolvedReportRange = resolveNormalizedReportDateRange(reportStartDate, reportDate)
-        const reportQuery = new URLSearchParams({ date: resolvedReportRange.endDate })
-        if (resolvedReportRange.startDate !== resolvedReportRange.endDate) {
-          reportQuery.set('start_date', resolvedReportRange.startDate)
-          reportQuery.set('end_date', resolvedReportRange.endDate)
-        }
-        if (resolvedReportRange.endDate === parseLocalDate()) {
-          reportQuery.set('refresh', '1')
-        }
-
-        const strategyDate = resolvedReportRange.endDate
-        const strategyQuery = new URLSearchParams({
-          date: strategyDate,
-          limit: '200',
-        })
-
-        const [settingsRes, tokensRes, reportRes, strategyRecommendationsRes] = await Promise.all([
-          fetch('/api/openclaw/settings', { credentials: 'include' }),
-          fetch('/api/openclaw/tokens', { credentials: 'include' }),
-          fetch(`/api/openclaw/reports/daily?${reportQuery.toString()}`, { credentials: 'include' }),
-          fetch(`/api/openclaw/strategy/recommendations?${strategyQuery.toString()}`, { credentials: 'include' }),
-        ])
-
-        if (settingsRes.status === 403) {
-          toast.error('当前账号未开启 OpenClaw 功能')
-          router.replace('/dashboard')
-          return
-        }
-
-        if (!settingsRes.ok) {
-          throw new Error('配置加载失败')
-        }
-
-        const settingsJson = await settingsRes.json() as OpenclawSettingsResponse
-        const tokensJson = tokensRes.ok ? await tokensRes.json() : { tokens: [] }
-        const reportJson = reportRes.ok ? await reportRes.json() : { report: null }
-        const strategyRecommendationsJson = strategyRecommendationsRes.ok
-          ? await strategyRecommendationsRes.json() as StrategyRecommendationsResponse
-          : { success: false, recommendations: [] } as StrategyRecommendationsResponse
-
-        if (!active) return
-
-        setSettings(settingsJson)
-        setTokens(tokensJson.tokens || [])
-        setReport(reportJson.report || null)
-        const normalizedReportDate = normalizeIsoDateText(reportJson?.report?.date) || ''
-        const normalizedStartDateFromRange = normalizeIsoDateText(reportJson?.report?.dateRange?.startDate) || ''
-        if (normalizedReportDate && normalizedReportDate !== reportDate) {
-          setReportDate(normalizedReportDate)
-        }
-        if (normalizedStartDateFromRange && normalizedStartDateFromRange !== reportStartDate) {
-          setReportStartDate(normalizedStartDateFromRange)
-        } else if (normalizedReportDate && reportStartDate > normalizedReportDate) {
-          setReportStartDate(normalizedReportDate)
-        }
-        setStrategyRecommendations(Array.isArray(strategyRecommendationsJson.recommendations) ? strategyRecommendationsJson.recommendations : [])
-        setStrategyServerDate(
-          String(strategyRecommendationsJson?.serverDate || '').trim() || parseLocalDate()
-        )
-        setStrategyRecommendationsReportDate(
-          String(strategyRecommendationsJson?.reportDate || strategyDate).trim() || strategyDate
-        )
-        setStrategyRecommendationsLoaded(Boolean(strategyRecommendationsJson?.success))
-
-        const userMap: Record<string, string> = {}
-        settingsJson.user.forEach(item => {
-          userMap[item.key] = item.value ?? ''
-        })
-        Object.entries(USER_DEFAULT_VALUES).forEach(([key, defaultValue]) => {
-          const current = userMap[key]
-          if (current === undefined || current === null || String(current).trim() === '') {
-            userMap[key] = defaultValue
-          }
-        })
-
-        setUserValues(userMap)
-        setSavedUserValues(userMap)
-      } catch (error: any) {
-        if (!active) return
-        toast.error(error?.message || 'OpenClaw 配置加载失败')
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-
-    load()
-    loadGatewayStatus(false, () => active)
-    loadWorkspaceStatus(false, () => active)
+    const isActive = () => active
+    void loadOpenClawPageData(isActive)
+    void loadGatewayStatus(false, isActive)
+    void loadWorkspaceStatus(false, isActive)
     return () => {
       active = false
     }
-    // Keep this effect keyed to report date range/refreshKey only; expanding deps here can trigger
-    // repeated initial-load loops due to function identity churn in local async loaders.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportDate, reportStartDate, refreshKey])
+  }, [refreshKey, loadOpenClawPageData, loadGatewayStatus, loadWorkspaceStatus])
 
   const handleSelectReportTrendRange = useCallback((days: number) => {
     const normalizedDays = REPORT_TREND_RANGE_OPTIONS.some((option) => option.days === days)
@@ -1466,68 +1527,6 @@ export default function OpenClawPage() {
     }
   }, [])
 
-  const loadGatewayStatus = async (force = false, isActive?: () => boolean) => {
-    setGatewayLoading(true)
-    try {
-      const response = await fetch(
-        `/api/openclaw/gateway/status${force ? '?force=1' : ''}`,
-        { credentials: 'include' }
-      )
-      const payload = await response.json().catch(() => null)
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Gateway 状态获取失败')
-      }
-      if (isActive && !isActive()) return
-      setGatewayStatus(payload)
-    } catch (error: any) {
-      if (isActive && !isActive()) return
-      setGatewayStatus({
-        success: false,
-        error: error?.message || 'Gateway 状态获取失败',
-      })
-    } finally {
-      if (isActive && !isActive()) return
-      setGatewayLoading(false)
-    }
-  }
-
-  const loadWorkspaceStatus = async (force = false, isActive?: () => boolean) => {
-    setWorkspaceLoading(true)
-    try {
-      const response = await fetch(
-        `/api/openclaw/workspace/status${force ? '?force=1' : ''}`,
-        { credentials: 'include' }
-      )
-      const payload = await response.json().catch(() => null)
-      if (!response.ok) {
-        throw new Error(payload?.error || 'SOUL 工作区状态获取失败')
-      }
-      if (isActive && !isActive()) return
-
-      const missingFiles = Array.isArray(payload?.missingFiles) ? payload.missingFiles.length : 0
-      const missingDailyMemory = payload?.dailyMemoryExists === false
-      const needsBootstrap = payload?.success && (missingFiles > 0 || missingDailyMemory)
-
-      if (!force && needsBootstrap && !workspaceAutoBootstrapTriedRef.current) {
-        workspaceAutoBootstrapTriedRef.current = true
-        setWorkspaceStatus(payload)
-        await handleWorkspaceBootstrap({ silent: true })
-        return
-      }
-
-      setWorkspaceStatus(payload)
-    } catch (error: any) {
-      if (isActive && !isActive()) return
-      setWorkspaceStatus({
-        success: false,
-        error: error?.message || 'SOUL 工作区状态获取失败',
-      })
-    } finally {
-      if (isActive && !isActive()) return
-      setWorkspaceLoading(false)
-    }
-  }
-
   useEffect(() => {
     let active = true
 
@@ -1562,7 +1561,7 @@ export default function OpenClawPage() {
     }
   }, [settings?.userId, refreshKey, pendingCommandRunsPage, loadPendingCommandRuns])
 
-  const handleWorkspaceBootstrap = async (options?: { silent?: boolean }): Promise<boolean> => {
+  const handleWorkspaceBootstrap = useCallback(async (options?: { silent?: boolean }): Promise<boolean> => {
     const silent = options?.silent === true
     setWorkspaceBootstrapping(true)
     try {
@@ -1594,7 +1593,9 @@ export default function OpenClawPage() {
     } finally {
       setWorkspaceBootstrapping(false)
     }
-  }
+  }, [loadWorkspaceStatus])
+
+  handleWorkspaceBootstrapRef.current = handleWorkspaceBootstrap
 
   const handleWorkspaceBootstrapAndReload = async () => {
     if (settings?.isAdmin !== true) {
@@ -4095,7 +4096,7 @@ export default function OpenClawPage() {
           </Card>
 
           <Card className="overflow-hidden border-slate-200">
-            <CardHeader className="gap-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-sky-50/40">
+            <CardHeader className="gap-4 border-b border-slate-100 bg-linear-to-r from-slate-50 via-white to-sky-50/40">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div className="space-y-1">
                   <CardTitle className="text-xl">优化建议（按优先级分排序）</CardTitle>
