@@ -17,6 +17,21 @@ export interface ApiSuccessResult<T> {
 
 export type ApiResult<T> = ApiSuccessResult<T> | ApiErrorResult
 
+function isHtmlResponse(text: string): boolean {
+  return text.includes('<html') || text.includes('<!DOCTYPE')
+}
+
+function htmlResponseError(status: number): ApiErrorResult {
+  return {
+    success: false,
+    error: 'HTML_RESPONSE',
+    userMessage:
+      status === 404
+        ? '服务正在启动，请稍后重试'
+        : '服务返回了错误页面，请稍后重试',
+  }
+}
+
 /**
  * 安全地解析JSON响应
  * 处理服务重启期间负载均衡器返回的非JSON响应（如 "no healthy upstream"）
@@ -27,6 +42,11 @@ export async function safeJsonParse<T = any>(response: Response): Promise<ApiRes
     if (!response.ok) {
       // 尝试读取响应文本
       const text = await response.text()
+
+      // Turbopack 懒编译 / 网关错误时可能返回 HTML 而非 JSON
+      if (isHtmlResponse(text)) {
+        return htmlResponseError(response.status)
+      }
 
       // 检查是否是负载均衡器的错误响应
       if (text.includes('no healthy upstream') || text.includes('502 Bad Gateway') || text.includes('503 Service')) {
@@ -43,7 +63,7 @@ export async function safeJsonParse<T = any>(response: Response): Promise<ApiRes
         return {
           success: false,
           error: errorData.error || 'API_ERROR',
-          userMessage: errorData.message || `请求失败 (${response.status})`
+          userMessage: errorData.message || errorData.error || `请求失败 (${response.status})`
         }
       } catch {
         // 无法解析为JSON，返回原始文本
@@ -75,12 +95,8 @@ export async function safeJsonParse<T = any>(response: Response): Promise<ApiRes
       }
     } catch (_parseError) {
       // JSON解析失败，可能是HTML错误页面
-      if (text.includes('<html') || text.includes('<!DOCTYPE')) {
-        return {
-          success: false,
-          error: 'HTML_RESPONSE',
-          userMessage: '服务返回了错误页面，请稍后重试'
-        }
+      if (isHtmlResponse(text)) {
+        return htmlResponseError(response.status)
       }
 
       return {
