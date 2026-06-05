@@ -768,8 +768,45 @@ describe('GoogleAdsLinkedAccountPrepareCache', () => {
     const cache = createGoogleAdsLinkedAccountPrepareCache()
     const result = await prepareGoogleAdsApiCallForLinkedAccountCached(2, null, cache)
     expect(result.ok).toBe(true)
-    expect(cache.healedOAuthBundleByUser.has(7)).toBe(true)
-    expect(cache.healedOAuthBundleByUser.has(2)).toBe(false)
+    expect(cache.healedOAuthBundleByOwner.has(7)).toBe(true)
+    expect(cache.healedOAuthBundleByOwner.has(2)).toBe(false)
+  })
+
+  it('prepareGoogleAdsApiCallForLinkedAccountCached shares healed OAuth bundle across shared sub-users on full prepare', async () => {
+    const badDevTokenCredentials = {
+      ...oauthCredentialsFull,
+      developer_token: oauthCredentialsFull.client_secret,
+    }
+    const sharedCtxBase = {
+      ...oauthAuthContextFull,
+      ownerUserId: 7,
+      isShared: true,
+      oauthCredentials: badDevTokenCredentials,
+    }
+    authContextFns.resolveGoogleAdsApiAuthForAccount
+      .mockResolvedValueOnce({
+        ok: true,
+        ctx: { ...sharedCtxBase, userId: 2 },
+        apiAuth: defaultOAuthApiAuth,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        ctx: { ...sharedCtxBase, userId: 3 },
+        apiAuth: defaultOAuthApiAuth,
+      })
+
+    const cache = createGoogleAdsLinkedAccountPrepareCache()
+    const first = await prepareGoogleAdsApiCallForLinkedAccountCached(2, null, cache)
+    expect(first.ok).toBe(true)
+    expect(settingsFns.getUserOnlySetting).toHaveBeenCalledTimes(1)
+    expect(cache.healedOAuthBundleByOwner.has(7)).toBe(true)
+
+    settingsFns.getUserOnlySetting.mockClear()
+
+    const second = await prepareGoogleAdsApiCallForLinkedAccountCached(3, null, cache)
+    expect(second.ok).toBe(true)
+    expect(settingsFns.getUserOnlySetting).not.toHaveBeenCalled()
+    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledTimes(2)
   })
 
   it('prepareGoogleAdsApiCallForLinkedAccountCached merges concurrent inflight for same key', async () => {
@@ -817,7 +854,7 @@ describe('GoogleAdsLinkedAccountPrepareCache', () => {
     const first = await prepareGoogleAdsApiCallForLinkedAccountCached(1, null, cache)
     expect(first.ok).toBe(true)
     expect(settingsFns.getUserOnlySetting).toHaveBeenCalled()
-    expect(cache.healedOAuthBundleByUser.has(1)).toBe(true)
+    expect(cache.healedOAuthBundleByOwner.has(1)).toBe(true)
 
     settingsFns.getUserOnlySetting.mockClear()
 

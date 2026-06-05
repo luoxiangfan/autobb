@@ -159,6 +159,7 @@ export async function prepareGoogleAdsAccountApiCall(params: {
   authContext: GoogleAdsAuthContext
   linkedServiceAccountId?: string | null
   apiAuth?: GoogleAdsApiAuthFields
+  prepareCache?: GoogleAdsLinkedAccountPrepareCache
 }): Promise<
   | ({ ok: true } & PreparedGoogleAdsAccountApiCall)
   | { ok: false; message: string }
@@ -185,16 +186,16 @@ export async function prepareGoogleAdsAccountApiCall(params: {
   let oauthCredentials: OAuthApiCredentialsFields | undefined
   let oauthLoginCustomerId: string | undefined
   if (apiAuth.authType === 'oauth') {
-    const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
-      userId: params.authContext.userId,
+    const oauthResolved = await resolveOAuthCredentialsFromCacheOrLoad({
       authContext: params.authContext,
+      apiAuth,
+      cache: params.prepareCache,
     })
-    if (!oauthBundle.ok) {
-      return { ok: false, message: oauthBundle.message }
+    if (!oauthResolved.ok) {
+      return { ok: false, message: oauthResolved.message }
     }
-    oauthCredentials = oauthBundle.bundle?.oauthCredentials
-    oauthLoginCustomerId =
-      oauthBundle.bundle?.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+    oauthCredentials = oauthResolved.oauthCredentials
+    oauthLoginCustomerId = oauthResolved.oauthLoginCustomerId
   }
 
   return {
@@ -208,7 +209,8 @@ export async function prepareGoogleAdsAccountApiCall(params: {
 
 export async function prepareGoogleAdsApiCallForLinkedAccount(
   userId: number,
-  linkedServiceAccountId?: string | null
+  linkedServiceAccountId?: string | null,
+  prepareCache?: GoogleAdsLinkedAccountPrepareCache
 ): Promise<
   | ({ ok: true; authContext: GoogleAdsAuthContext } & PreparedGoogleAdsAccountApiCall)
   | { ok: false; message: string }
@@ -228,6 +230,7 @@ export async function prepareGoogleAdsApiCallForLinkedAccount(
     authContext: authResolved.ctx,
     linkedServiceAccountId: linkedServiceAccountId ?? null,
     apiAuth: authResolved.apiAuth,
+    prepareCache,
   })
   if (!prepared.ok) {
     return prepared
@@ -240,7 +243,7 @@ export function createGoogleAdsLinkedAccountPrepareCache(): GoogleAdsLinkedAccou
   return {
     prepareByLinkedSa: new Map(),
     prepareInflight: new Map(),
-    healedOAuthBundleByUser: new Map(),
+    healedOAuthBundleByOwner: new Map(),
   }
 }
 
@@ -265,6 +268,47 @@ function healedOAuthBundleCacheKey(ctx: GoogleAdsAuthContext): number {
 
 function healedOAuthBundleGeneration(ctx: GoogleAdsAuthContext): number {
   return getGoogleAdsAuthContextGenerationForHydrate(ctx.ownerUserId)
+}
+
+async function resolveOAuthCredentialsFromCacheOrLoad(params: {
+  authContext: GoogleAdsAuthContext
+  apiAuth: GoogleAdsApiAuthFields
+  cache?: GoogleAdsLinkedAccountPrepareCache
+}): Promise<
+  | { ok: true; oauthCredentials?: OAuthApiCredentialsFields; oauthLoginCustomerId?: string }
+  | { ok: false; message: string }
+> {
+  const healKey = healedOAuthBundleCacheKey(params.authContext)
+  const generation = healedOAuthBundleGeneration(params.authContext)
+  const cachedHeal = params.cache?.healedOAuthBundleByOwner.get(healKey)
+  if (cachedHeal && cachedHeal.generation === generation) {
+    return {
+      ok: true,
+      oauthCredentials: cachedHeal.bundle.oauthCredentials,
+      oauthLoginCustomerId:
+        cachedHeal.bundle.oauthLoginCustomerId ?? params.apiAuth.oauthLoginCustomerId,
+    }
+  }
+
+  const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
+    userId: params.authContext.userId,
+    authContext: params.authContext,
+  })
+  if (!oauthBundle.ok) {
+    return { ok: false, message: oauthBundle.message }
+  }
+  if (oauthBundle.bundle) {
+    params.cache?.healedOAuthBundleByOwner.set(healKey, {
+      generation,
+      bundle: oauthBundle.bundle,
+    })
+  }
+  return {
+    ok: true,
+    oauthCredentials: oauthBundle.bundle?.oauthCredentials,
+    oauthLoginCustomerId:
+      oauthBundle.bundle?.oauthLoginCustomerId ?? params.apiAuth.oauthLoginCustomerId,
+  }
 }
 
 async function rehydratePreparedGoogleAdsAccountApiCallFromCache(
@@ -301,31 +345,16 @@ async function rehydratePreparedGoogleAdsAccountApiCallFromCache(
   let oauthLoginCustomerId: string | undefined
 
   if (apiAuth.authType === 'oauth') {
-    const healKey = healedOAuthBundleCacheKey(authContext)
-    const generation = healedOAuthBundleGeneration(authContext)
-    const cachedHeal = cache?.healedOAuthBundleByUser.get(healKey)
-    if (cachedHeal && cachedHeal.generation === generation) {
-      oauthCredentials = cachedHeal.bundle.oauthCredentials
-      oauthLoginCustomerId =
-        cachedHeal.bundle.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
-    } else {
-      const oauthBundle = await loadOAuthGoogleAdsCallBundleForContext({
-        userId: authContext.userId,
-        authContext,
-      })
-      if (!oauthBundle.ok) {
-        return { ok: false, message: oauthBundle.message }
-      }
-      if (oauthBundle.bundle) {
-        cache?.healedOAuthBundleByUser.set(healKey, {
-          generation,
-          bundle: oauthBundle.bundle,
-        })
-      }
-      oauthCredentials = oauthBundle.bundle?.oauthCredentials
-      oauthLoginCustomerId =
-        oauthBundle.bundle?.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+    const oauthResolved = await resolveOAuthCredentialsFromCacheOrLoad({
+      authContext,
+      apiAuth,
+      cache,
+    })
+    if (!oauthResolved.ok) {
+      return { ok: false, message: oauthResolved.message }
     }
+    oauthCredentials = oauthResolved.oauthCredentials
+    oauthLoginCustomerId = oauthResolved.oauthLoginCustomerId
   }
 
   return {
@@ -360,19 +389,10 @@ async function prepareGoogleAdsApiCallForLinkedAccountCachedInternal(
     }
   }
 
-  const prepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, normalizedSa)
+  const prepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, normalizedSa, cache)
   if (prepared.ok && cache) {
     seedPrepareCacheHydratedSecrets(prepared)
     cache.prepareByLinkedSa.set(key, stripPreparedGoogleAdsAccountApiCallForCache(prepared))
-    if (prepared.oauthCredentials) {
-      cache.healedOAuthBundleByUser.set(healedOAuthBundleCacheKey(prepared.authContext), {
-        generation: healedOAuthBundleGeneration(prepared.authContext),
-        bundle: {
-          oauthCredentials: prepared.oauthCredentials,
-          oauthLoginCustomerId: prepared.oauthLoginCustomerId,
-        },
-      })
-    }
   }
   return prepared
 }

@@ -4,6 +4,7 @@ import {
   createGoogleAdsLinkedAccountPrepareCache,
   prepareGoogleAdsApiCallForLinkedAccountCached,
 } from './google-ads-api-prepare'
+import { resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
 import { getGoogleAdsAuthContextGenerationForHydrate } from './google-ads-auth-context'
 import { resolveLinkedServiceAccountIdForOffer, queryGoogleAdsAccountForOfferExpand } from './google-ads-keyword-planner-auth'
 import type {
@@ -27,11 +28,26 @@ async function resolveOAuthCustomerIdForPlannerContext(
   return fromLogin || null
 }
 
+function sharedOwnerGenerationFields(
+  userId: number,
+  ownerUserId: number
+): Pick<CreativeGenerationValidationCacheEntry, 'ownerUserId' | 'ownerGenerationAtValidate'> {
+  if (ownerUserId === userId) {
+    return {}
+  }
+  return {
+    ownerUserId,
+    ownerGenerationAtValidate: getGoogleAdsAuthContextGenerationForHydrate(ownerUserId),
+  }
+}
+
 function toValidationCacheEntry(
   userId: number,
+  ownerUserId: number,
   result: CreativeGenerationGoogleAdsValidationResult
 ): CreativeGenerationValidationCacheEntry {
   const generationAtValidate = getGoogleAdsAuthContextGenerationForHydrate(userId)
+  const ownerFields = sharedOwnerGenerationFields(userId, ownerUserId)
   if (!result.ok) {
     return {
       ok: false,
@@ -39,32 +55,69 @@ function toValidationCacheEntry(
       authType: result.authType,
       missingFields: result.missingFields,
       generationAtValidate,
+      ...ownerFields,
     }
   }
-  return { ok: true, generationAtValidate }
+  return { ok: true, generationAtValidate, ...ownerFields }
 }
 
 function isValidationCacheEntryCurrent(
   userId: number,
   entry: CreativeGenerationValidationCacheEntry
 ): boolean {
-  return entry.generationAtValidate === getGoogleAdsAuthContextGenerationForHydrate(userId)
+  if (entry.generationAtValidate !== getGoogleAdsAuthContextGenerationForHydrate(userId)) {
+    return false
+  }
+  if (
+    entry.ownerUserId != null &&
+    entry.ownerGenerationAtValidate != null &&
+    entry.ownerUserId !== userId
+  ) {
+    return (
+      entry.ownerGenerationAtValidate ===
+      getGoogleAdsAuthContextGenerationForHydrate(entry.ownerUserId)
+    )
+  }
+  return true
 }
 
 function validationResultFromCacheEntry(
   entry: CreativeGenerationValidationCacheEntry
 ): CreativeGenerationGoogleAdsValidationResult {
   if (!entry.ok) {
-    return entry
+    return {
+      ok: false,
+      message: entry.message,
+      authType: entry.authType,
+      missingFields: entry.missingFields,
+    }
   }
   return { ok: true }
+}
+
+async function resolveOwnerUserIdForValidationCache(
+  userId: number,
+  result: CreativeGenerationGoogleAdsValidationResult,
+  ownerUserIdHint?: number
+): Promise<number> {
+  if (ownerUserIdHint != null) {
+    return ownerUserIdHint
+  }
+  if (result.ok && result.authContext) {
+    return result.authContext.ownerUserId
+  }
+  const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
+  return ownerUserId
 }
 
 async function validateGoogleAdsConfigForCreativeGenerationInternal(
   userId: number,
   offerId: number | undefined,
   cache?: CreativeGenerationAuthCache
-): Promise<CreativeGenerationGoogleAdsValidationResult> {
+): Promise<{
+  result: CreativeGenerationGoogleAdsValidationResult
+  ownerUserId?: number
+}> {
   const linkedSa =
     offerId != null ? await resolveLinkedServiceAccountIdForOffer(userId, offerId) : null
 
@@ -74,9 +127,10 @@ async function validateGoogleAdsConfigForCreativeGenerationInternal(
     cache
   )
   if (!prepared.ok) {
-    return { ok: false, message: prepared.message }
+    return { result: { ok: false, message: prepared.message } }
   }
 
+  const ownerUserId = prepared.authContext.ownerUserId
   const { authContext, apiAuth } = prepared
   const googleAdsConfig = await getGoogleAdsConfig(
     userId,
@@ -96,16 +150,19 @@ async function validateGoogleAdsConfigForCreativeGenerationInternal(
     const isConfigComplete = !!(googleAdsConfig?.developerToken && googleAdsConfig?.customerId)
     if (!isConfigComplete) {
       return {
-        ok: false,
-        message: '广告创意生成需要完整的 Google Ads API 配置',
-        authType: apiAuth.authType,
-        missingFields: [
-          !googleAdsConfig?.developerToken && 'Developer Token',
-          !googleAdsConfig?.customerId && 'MCC Customer ID',
-        ].filter(Boolean) as string[],
+        result: {
+          ok: false,
+          message: '广告创意生成需要完整的 Google Ads API 配置',
+          authType: apiAuth.authType,
+          missingFields: [
+            !googleAdsConfig?.developerToken && 'Developer Token',
+            !googleAdsConfig?.customerId && 'MCC Customer ID',
+          ].filter(Boolean) as string[],
+        },
+        ownerUserId,
       }
     }
-    return { ok: true, authContext, apiAuth }
+    return { result: { ok: true, authContext, apiAuth }, ownerUserId }
   }
 
   const oauthCustomerId = await resolveOAuthCustomerIdForPlannerContext(
@@ -121,18 +178,21 @@ async function validateGoogleAdsConfigForCreativeGenerationInternal(
 
   if (!isConfigComplete) {
     return {
-      ok: false,
-      message: '广告创意生成需要完整的 Google Ads API 配置',
-      authType: apiAuth.authType,
-      missingFields: [
-        !googleAdsConfig?.developerToken && 'Developer Token',
-        !googleAdsConfig?.refreshToken && 'Refresh Token / OAuth',
-        !oauthCustomerId && 'Customer ID',
-      ].filter(Boolean) as string[],
+      result: {
+        ok: false,
+        message: '广告创意生成需要完整的 Google Ads API 配置',
+        authType: apiAuth.authType,
+        missingFields: [
+          !googleAdsConfig?.developerToken && 'Developer Token',
+          !googleAdsConfig?.refreshToken && 'Refresh Token / OAuth',
+          !oauthCustomerId && 'Customer ID',
+        ].filter(Boolean) as string[],
+      },
+      ownerUserId,
     }
   }
 
-  return { ok: true, authContext, apiAuth }
+  return { result: { ok: true, authContext, apiAuth }, ownerUserId }
 }
 
 export function createCreativeGenerationAuthCache(): CreativeGenerationAuthCache {
@@ -173,13 +233,15 @@ export async function validateGoogleAdsConfigForCreativeGeneration(
     }
   }
 
-  const result = await validateGoogleAdsConfigForCreativeGenerationInternal(
-    userId,
-    offerId,
-    cache
-  )
+  const { result, ownerUserId: ownerUserIdHint } =
+    await validateGoogleAdsConfigForCreativeGenerationInternal(userId, offerId, cache)
 
-  const cacheEntry = toValidationCacheEntry(userId, result)
+  const ownerUserId = await resolveOwnerUserIdForValidationCache(
+    userId,
+    result,
+    ownerUserIdHint
+  )
+  const cacheEntry = toValidationCacheEntry(userId, ownerUserId, result)
   if (offerId != null) {
     cache?.validationByOfferId.set(offerId, cacheEntry)
   } else {

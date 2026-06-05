@@ -118,12 +118,22 @@ export type SlimPreparedGoogleAdsAccountApiCall = {
   generationAtPrepare: number
 }
 
+/**
+ * Job / 请求级 prepare 缓存（不含密钥；须在 job / 请求结束时显式 clear）。
+ *
+ * - `prepareByLinkedSa`：slim 条目，同 job 内 rehydrate 复用
+ * - `prepareInflight`：同 (userId, linkedSa) 并发 prepare 合并
+ * - `healedOAuthBundleByOwner`：OAuth heal bundle（key=`ownerUserId`，generation 绑定；共享认证多子用户复用）
+ *
+ * 凭证变更须依赖 `invalidateGoogleAdsAuthContextCacheForOwner` bump generation；
+ * **勿跨 request / job 复用**实例。`clear*` 不触碰进程级 `hydratedSecrets` 短缓存。
+ */
 export type GoogleAdsLinkedAccountPrepareCache = {
   prepareByLinkedSa: Map<string, SlimPreparedGoogleAdsAccountApiCall>
   /** 同 (userId, linkedSa) 并发 prepare 合并 */
   prepareInflight: Map<string, Promise<GoogleAdsLinkedAccountPrepareResult>>
   /** job 内 OAuth heal bundle 短缓存（key=ownerUserId，generation 绑定） */
-  healedOAuthBundleByUser: Map<
+  healedOAuthBundleByOwner: Map<
     number,
     { generation: number; bundle: OAuthGoogleAdsCallBundle }
   >
@@ -137,9 +147,21 @@ export type CreativeGenerationValidationCacheEntry =
       authType?: 'oauth' | 'service_account'
       missingFields?: string[]
       generationAtValidate: number
+      /** 共享认证：凭证 owner（ownerUserId !== 请求 userId 时写入） */
+      ownerUserId?: number
+      ownerGenerationAtValidate?: number
     }
-  | { ok: true; generationAtValidate: number }
+  | {
+      ok: true
+      generationAtValidate: number
+      ownerUserId?: number
+      ownerGenerationAtValidate?: number
+    }
 
+/**
+ * 创意生成 auth 缓存（prepare + validation 两层）。
+ * 仅限单次 HTTP 请求或 batch job 生命周期；结束须 `clearCreativeGenerationAuthCache`。
+ */
 export type CreativeGenerationAuthCache = GoogleAdsLinkedAccountPrepareCache & {
   validationByOfferId: Map<number, CreativeGenerationValidationCacheEntry>
   validationByUserId: Map<number, CreativeGenerationValidationCacheEntry>

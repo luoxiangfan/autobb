@@ -41,5 +41,5 @@ export function clearGoogleAdsLinkedAccountPrepareCache(
 ): void {
   cache.prepareByLinkedSa.clear()
   cache.prepareInflight.clear()
-  cache.healedOAuthBundleByUser.clear()
+  cache.healedOAuthBundleByOwner.clear()
 }

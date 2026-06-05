@@ -148,7 +148,13 @@ describe('CreativeGenerationValidationCache', () => {
     expect(entry).not.toHaveProperty('oauthCredentials')
 
     const second = await validateGoogleAdsConfigForCreativeGeneration(1, 42, cache)
-    expect(second).toEqual(entry)
+    expect(second.ok).toBe(false)
+    if (!second.ok && entry && !entry.ok) {
+      expect(second.message).toBe(entry.message)
+      expect(second.missingFields).toEqual(entry.missingFields)
+    }
+    expect(second).not.toHaveProperty('generationAtValidate')
+    expect(second).not.toHaveProperty('ownerUserId')
     expect(prepareFns.prepareGoogleAdsApiCallForLinkedAccountCached).toHaveBeenCalledTimes(1)
   })
 
@@ -161,6 +167,32 @@ describe('CreativeGenerationValidationCache', () => {
     invalidateGoogleAdsAuthContextCache(1)
 
     await validateGoogleAdsConfigForCreativeGeneration(1, 42, cache)
+    expect(prepareFns.prepareGoogleAdsApiCallForLinkedAccountCached).toHaveBeenCalledTimes(2)
+  })
+
+  it('revalidates shared auth validation when owner generation changes but request user generation does not', async () => {
+    prepareFns.prepareGoogleAdsApiCallForLinkedAccountCached.mockResolvedValue({
+      ...preparedOk,
+      authContext: {
+        ...preparedOk.authContext,
+        userId: 2,
+        ownerUserId: 7,
+        isShared: true,
+      },
+    })
+    const cache = createCreativeGenerationAuthCache()
+
+    await validateGoogleAdsConfigForCreativeGeneration(2, 42, cache)
+    expect(prepareFns.prepareGoogleAdsApiCallForLinkedAccountCached).toHaveBeenCalledTimes(1)
+    expect(cache.validationByOfferId.get(42)).toMatchObject({
+      ok: true,
+      ownerUserId: 7,
+      ownerGenerationAtValidate: 0,
+    })
+
+    invalidateGoogleAdsAuthContextCache(7)
+
+    await validateGoogleAdsConfigForCreativeGeneration(2, 42, cache)
     expect(prepareFns.prepareGoogleAdsApiCallForLinkedAccountCached).toHaveBeenCalledTimes(2)
   })
 })
