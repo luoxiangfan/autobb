@@ -378,7 +378,7 @@ async function readAuthContextFromMemoryCache(userId: number): Promise<GoogleAds
 }
 
 /**
- * 只读 metadata（不 hydrate 密钥）。缓存未命中时会触发完整 load。
+ * 只读 metadata（不 hydrate 密钥）。缓存未命中时走 metadata-only load，不解密 OAuth/SA 密钥。
  */
 export async function getGoogleAdsAuthContextMetadata(
   userId: number

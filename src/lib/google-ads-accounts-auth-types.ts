@@ -122,7 +122,7 @@ export type GoogleAdsLinkedAccountPrepareCache = {
   prepareByLinkedSa: Map<string, SlimPreparedGoogleAdsAccountApiCall>
   /** 同 (userId, linkedSa) 并发 prepare 合并 */
   prepareInflight: Map<string, Promise<GoogleAdsLinkedAccountPrepareResult>>
-  /** job 内 OAuth heal bundle 短缓存（generation 绑定） */
+  /** job 内 OAuth heal bundle 短缓存（key=ownerUserId，generation 绑定） */
   healedOAuthBundleByUser: Map<
     number,
     { generation: number; bundle: OAuthGoogleAdsCallBundle }
@@ -136,8 +136,9 @@ export type CreativeGenerationValidationCacheEntry =
       message: string
       authType?: 'oauth' | 'service_account'
       missingFields?: string[]
+      generationAtValidate: number
     }
-  | { ok: true }
+  | { ok: true; generationAtValidate: number }
 
 export type CreativeGenerationAuthCache = GoogleAdsLinkedAccountPrepareCache & {
   validationByOfferId: Map<number, CreativeGenerationValidationCacheEntry>

@@ -127,7 +127,15 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
 
     await POST(req, { params: { id: '96' } })
 
-    expect(authFns.validateGoogleAdsConfigForCreativeGeneration).toHaveBeenCalledWith(1, 96)
+    expect(authFns.validateGoogleAdsConfigForCreativeGeneration).toHaveBeenCalledWith(
+      1,
+      96,
+      expect.objectContaining({
+        prepareByLinkedSa: expect.any(Map),
+        validationByOfferId: expect.any(Map),
+        validationByUserId: expect.any(Map),
+      })
+    )
   })
 
   it('rejects a requested bucket when the canonical available buckets do not include it', async () => {

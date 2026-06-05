@@ -743,6 +743,35 @@ describe('GoogleAdsLinkedAccountPrepareCache', () => {
     expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledTimes(2)
   })
 
+  it('prepareGoogleAdsApiCallForLinkedAccountCached evicts stale slim using authContext.userId for generation', async () => {
+    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
+      ok: true,
+      ctx: { ...oauthAuthContextFull, userId: 7, ownerUserId: 7 },
+      apiAuth: defaultOAuthApiAuth,
+    })
+    const cache = createGoogleAdsLinkedAccountPrepareCache()
+    await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
+
+    invalidateGoogleAdsAuthContextCache(7)
+
+    await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
+
+    expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledTimes(2)
+  })
+
+  it('prepareGoogleAdsApiCallForLinkedAccountCached keys healed OAuth bundle by ownerUserId', async () => {
+    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
+      ok: true,
+      ctx: { ...oauthAuthContextFull, userId: 2, ownerUserId: 7 },
+      apiAuth: defaultOAuthApiAuth,
+    })
+    const cache = createGoogleAdsLinkedAccountPrepareCache()
+    const result = await prepareGoogleAdsApiCallForLinkedAccountCached(2, null, cache)
+    expect(result.ok).toBe(true)
+    expect(cache.healedOAuthBundleByUser.has(7)).toBe(true)
+    expect(cache.healedOAuthBundleByUser.has(2)).toBe(false)
+  })
+
   it('prepareGoogleAdsApiCallForLinkedAccountCached merges concurrent inflight for same key', async () => {
     const cache = createGoogleAdsLinkedAccountPrepareCache()
     let resolvePrepare: ((value: unknown) => void) | undefined

@@ -258,6 +258,15 @@ function normalizeLinkedSaForPrepareCache(
   return trimmed || null
 }
 
+/** job 内 OAuth heal bundle 按 ownerUserId 键（共享认证多子用户复用） */
+function healedOAuthBundleCacheKey(ctx: GoogleAdsAuthContext): number {
+  return ctx.ownerUserId
+}
+
+function healedOAuthBundleGeneration(ctx: GoogleAdsAuthContext): number {
+  return getGoogleAdsAuthContextGenerationForHydrate(ctx.ownerUserId)
+}
+
 async function rehydratePreparedGoogleAdsAccountApiCallFromCache(
   slim: SlimPreparedGoogleAdsAccountApiCall,
   cache?: GoogleAdsLinkedAccountPrepareCache
@@ -292,8 +301,9 @@ async function rehydratePreparedGoogleAdsAccountApiCallFromCache(
   let oauthLoginCustomerId: string | undefined
 
   if (apiAuth.authType === 'oauth') {
-    const generation = getGoogleAdsAuthContextGenerationForHydrate(authContext.userId)
-    const cachedHeal = cache?.healedOAuthBundleByUser.get(authContext.userId)
+    const healKey = healedOAuthBundleCacheKey(authContext)
+    const generation = healedOAuthBundleGeneration(authContext)
+    const cachedHeal = cache?.healedOAuthBundleByUser.get(healKey)
     if (cachedHeal && cachedHeal.generation === generation) {
       oauthCredentials = cachedHeal.bundle.oauthCredentials
       oauthLoginCustomerId =
@@ -307,7 +317,7 @@ async function rehydratePreparedGoogleAdsAccountApiCallFromCache(
         return { ok: false, message: oauthBundle.message }
       }
       if (oauthBundle.bundle) {
-        cache?.healedOAuthBundleByUser.set(authContext.userId, {
+        cache?.healedOAuthBundleByUser.set(healKey, {
           generation,
           bundle: oauthBundle.bundle,
         })
@@ -336,7 +346,9 @@ async function prepareGoogleAdsApiCallForLinkedAccountCachedInternal(
   const key = linkedSaPrepareCacheKey(userId, normalizedSa)
   const slimHit = cache?.prepareByLinkedSa.get(key)
   if (slimHit) {
-    const currentGeneration = getGoogleAdsAuthContextGenerationForHydrate(userId)
+    const currentGeneration = getGoogleAdsAuthContextGenerationForHydrate(
+      slimHit.authContext.userId
+    )
     if (slimHit.generationAtPrepare !== currentGeneration) {
       cache?.prepareByLinkedSa.delete(key)
     } else {
@@ -353,8 +365,8 @@ async function prepareGoogleAdsApiCallForLinkedAccountCachedInternal(
     seedPrepareCacheHydratedSecrets(prepared)
     cache.prepareByLinkedSa.set(key, stripPreparedGoogleAdsAccountApiCallForCache(prepared))
     if (prepared.oauthCredentials) {
-      cache.healedOAuthBundleByUser.set(prepared.authContext.userId, {
-        generation: getGoogleAdsAuthContextGenerationForHydrate(prepared.authContext.userId),
+      cache.healedOAuthBundleByUser.set(healedOAuthBundleCacheKey(prepared.authContext), {
+        generation: healedOAuthBundleGeneration(prepared.authContext),
         bundle: {
           oauthCredentials: prepared.oauthCredentials,
           oauthLoginCustomerId: prepared.oauthLoginCustomerId,

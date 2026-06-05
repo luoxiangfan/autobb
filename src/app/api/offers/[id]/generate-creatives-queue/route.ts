@@ -12,6 +12,10 @@ import { getQueueManager } from '@/lib/queue'
 import { getDatabase } from '@/lib/db'
 import { createError } from '@/lib/errors'
 import { validateGoogleAdsConfigForCreativeGeneration } from '@/lib/google-ads-accounts-auth'
+import {
+  clearCreativeGenerationAuthCache,
+  createCreativeGenerationAuthCache,
+} from '@/lib/google-ads-creative-generation-auth'
 import { getAvailableBuckets } from '@/lib/offer-keyword-pool'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
 import {
@@ -211,12 +215,27 @@ export async function POST(
     })
   }
 
-  // 2. 验证 Google Ads API 配置（Offer linked SA + prepare/heal）
+  // 2. 验证 Google Ads API 配置并入队（Offer linked SA + prepare/heal）
+  const authCache = createCreativeGenerationAuthCache()
   try {
-    const authValidation = await validateGoogleAdsConfigForCreativeGeneration(
-      userId,
-      offer.id
-    )
+    let authValidation
+    try {
+      authValidation = await validateGoogleAdsConfigForCreativeGeneration(
+        userId,
+        offer.id,
+        authCache
+      )
+    } catch (error: any) {
+      console.error('[CreativeGeneration] Failed to check Google Ads config:', error)
+      return createQueueErrorResponse({
+        status: 400,
+        error: '广告创意生成需要完整的 Google Ads API 配置',
+        message: error?.message || 'Google Ads 配置校验失败',
+        errorCode: 'GOOGLE_ADS_CONFIG_CHECK_FAILED',
+        errorCategory: 'config',
+        retryable: false,
+      })
+    }
     if (!authValidation.ok) {
       const isNotConfigured =
         !authValidation.missingFields || authValidation.missingFields.length === 0
@@ -253,19 +272,7 @@ export async function POST(
         },
       })
     }
-  } catch (error: any) {
-    console.error('[CreativeGeneration] Failed to check Google Ads config:', error)
-    return createQueueErrorResponse({
-      status: 400,
-      error: '广告创意生成需要完整的 Google Ads API 配置',
-      message: error?.message || 'Google Ads 配置校验失败',
-      errorCode: 'GOOGLE_ADS_CONFIG_CHECK_FAILED',
-      errorCategory: 'config',
-      retryable: false,
-    })
-  }
 
-  try {
     const availableBuckets = await getAvailableBuckets(offerId)
     let requestedType: 'A' | 'B' | 'D' | null = requestedBucketFromCreativeType || requestedBucket || (normalizedCoverage ? 'D' : null)
     if (!requestedBucketFromCreativeType && bucketSelection.legacyModelHint && normalizedSelection.bucketSelection.normalizedBucket === 'B') {
@@ -402,5 +409,7 @@ export async function POST(
       errorCategory: 'system',
       retryable: true,
     })
+  } finally {
+    clearCreativeGenerationAuthCache(authCache)
   }
 }

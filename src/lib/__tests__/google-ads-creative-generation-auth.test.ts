@@ -39,6 +39,7 @@ import {
   createCreativeGenerationAuthCache,
   validateGoogleAdsConfigForCreativeGeneration,
 } from '../google-ads-creative-generation-auth'
+import { invalidateGoogleAdsAuthContextCache } from '@/lib/google-ads-auth-context'
 
 const oauthCredentialsFull = {
   refresh_token: 'oauth-refresh-token',
@@ -89,7 +90,7 @@ describe('CreativeGenerationValidationCache', () => {
     }
 
     const entry = cache.validationByOfferId.get(42)
-    expect(entry).toEqual({ ok: true })
+    expect(entry).toEqual({ ok: true, generationAtValidate: 0 })
     expect(entry).not.toHaveProperty('authContext')
     expect(entry).not.toHaveProperty('apiAuth')
 
@@ -111,7 +112,7 @@ describe('CreativeGenerationValidationCache', () => {
     }
 
     const entry = cache.validationByUserId.get(1)
-    expect(entry).toEqual({ ok: true })
+    expect(entry).toEqual({ ok: true, generationAtValidate: 0 })
     expect(entry).not.toHaveProperty('authContext')
     expect(entry).not.toHaveProperty('apiAuth')
 
@@ -149,5 +150,17 @@ describe('CreativeGenerationValidationCache', () => {
     const second = await validateGoogleAdsConfigForCreativeGeneration(1, 42, cache)
     expect(second).toEqual(entry)
     expect(prepareFns.prepareGoogleAdsApiCallForLinkedAccountCached).toHaveBeenCalledTimes(1)
+  })
+
+  it('revalidates when validation cache generation is stale after invalidate', async () => {
+    const cache = createCreativeGenerationAuthCache()
+
+    await validateGoogleAdsConfigForCreativeGeneration(1, 42, cache)
+    expect(prepareFns.prepareGoogleAdsApiCallForLinkedAccountCached).toHaveBeenCalledTimes(1)
+
+    invalidateGoogleAdsAuthContextCache(1)
+
+    await validateGoogleAdsConfigForCreativeGeneration(1, 42, cache)
+    expect(prepareFns.prepareGoogleAdsApiCallForLinkedAccountCached).toHaveBeenCalledTimes(2)
   })
 })

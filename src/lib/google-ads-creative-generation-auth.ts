@@ -4,6 +4,7 @@ import {
   createGoogleAdsLinkedAccountPrepareCache,
   prepareGoogleAdsApiCallForLinkedAccountCached,
 } from './google-ads-api-prepare'
+import { getGoogleAdsAuthContextGenerationForHydrate } from './google-ads-auth-context'
 import { resolveLinkedServiceAccountIdForOffer, queryGoogleAdsAccountForOfferExpand } from './google-ads-keyword-planner-auth'
 import type {
   CreativeGenerationAuthCache,
@@ -27,17 +28,27 @@ async function resolveOAuthCustomerIdForPlannerContext(
 }
 
 function toValidationCacheEntry(
+  userId: number,
   result: CreativeGenerationGoogleAdsValidationResult
 ): CreativeGenerationValidationCacheEntry {
+  const generationAtValidate = getGoogleAdsAuthContextGenerationForHydrate(userId)
   if (!result.ok) {
     return {
       ok: false,
       message: result.message,
       authType: result.authType,
       missingFields: result.missingFields,
+      generationAtValidate,
     }
   }
-  return { ok: true }
+  return { ok: true, generationAtValidate }
+}
+
+function isValidationCacheEntryCurrent(
+  userId: number,
+  entry: CreativeGenerationValidationCacheEntry
+): boolean {
+  return entry.generationAtValidate === getGoogleAdsAuthContextGenerationForHydrate(userId)
 }
 
 function validationResultFromCacheEntry(
@@ -146,13 +157,19 @@ export async function validateGoogleAdsConfigForCreativeGeneration(
 ): Promise<CreativeGenerationGoogleAdsValidationResult> {
   if (offerId != null) {
     const cachedOffer = cache?.validationByOfferId.get(offerId)
-    if (cachedOffer) {
+    if (cachedOffer && isValidationCacheEntryCurrent(userId, cachedOffer)) {
       return validationResultFromCacheEntry(cachedOffer)
+    }
+    if (cachedOffer) {
+      cache?.validationByOfferId.delete(offerId)
     }
   } else {
     const cachedUser = cache?.validationByUserId.get(userId)
-    if (cachedUser) {
+    if (cachedUser && isValidationCacheEntryCurrent(userId, cachedUser)) {
       return validationResultFromCacheEntry(cachedUser)
+    }
+    if (cachedUser) {
+      cache?.validationByUserId.delete(userId)
     }
   }
 
@@ -162,7 +179,7 @@ export async function validateGoogleAdsConfigForCreativeGeneration(
     cache
   )
 
-  const cacheEntry = toValidationCacheEntry(result)
+  const cacheEntry = toValidationCacheEntry(userId, result)
   if (offerId != null) {
     cache?.validationByOfferId.set(offerId, cacheEntry)
   } else {
