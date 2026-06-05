@@ -30,7 +30,19 @@ const nextConfig = {
   ],
 
   // Next.js 16 默认 Turbopack；显式声明以允许保留 webpack 回退选项
-  turbopack: {},
+  turbopack: {
+    // Runtime fs（OpenClaw workspace、backup、db-init）触发的 NFT 静态分析误报，不影响 standalone 部署。
+    ignoreIssue: [
+      {
+        path: '**/*',
+        title: /Encountered unexpected file in NFT list/,
+      },
+      {
+        path: '**/src/lib/backup.ts',
+        title: /Overly broad patterns/,
+      },
+    ],
+  },
 
   experimental: {
     serverActions: {

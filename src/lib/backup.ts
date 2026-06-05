@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { getDatabase } from './db'
 
-const DEFAULT_BACKUP_DIR = path.join(process.cwd(), 'data', 'backups')
+const DEFAULT_BACKUP_DIR = path.join(/*turbopackIgnore: true*/ process.cwd(), 'data', 'backups')
 
 type EnsureBackupDirResult = {
   ok: boolean
@@ -25,7 +25,7 @@ export function resolveBackupDir(): string {
     return raw
   }
 
-  return path.resolve(process.cwd(), raw)
+  return path.join(/*turbopackIgnore: true*/ process.cwd(), raw)
 }
 
 function tryEnsureWritableDir(dirPath: string): { ok: true } | { ok: false; errorMessage: string } {
@@ -78,7 +78,9 @@ export async function backupDatabase(
   const db = await getDatabase()
 
   try {
-    const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'autoads.db')
+    const dbPath =
+      process.env.DATABASE_PATH ||
+      path.join(/*turbopackIgnore: true*/ process.cwd(), 'data', 'autoads.db')
     const isPostgres = process.env.DATABASE_URL?.startsWith('postgres')
 
     if (isPostgres || !dbPath.endsWith('.db')) {

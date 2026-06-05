@@ -1,9 +1,8 @@
 import fs from 'fs'
-import path from 'path'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
 import { getSettingsByCategory } from '@/lib/settings'
-import { resolveOpenclawWorkspaceDir } from '@/lib/openclaw/workspace-paths'
+import { resolveOpenclawRuntimePaths, resolveOpenclawWorkspaceDir } from '@/lib/openclaw/workspace-paths'
 
 function parseJsonObject(value?: string | null): Record<string, any> | undefined {
   if (!value) return undefined
@@ -18,12 +17,6 @@ function parseJsonObject(value?: string | null): Record<string, any> | undefined
   }
 }
 
-function resolveOpenclawRuntimePaths(): { configPath: string; stateDir: string } {
-  const configPath = (process.env.OPENCLAW_CONFIG_PATH || '').trim()
-    || path.join(process.cwd(), '.openclaw', 'openclaw.json')
-  const stateDir = (process.env.OPENCLAW_STATE_DIR || '').trim() || path.dirname(configPath)
-  return { configPath, stateDir }
-}
 
 function readRuntimeWorkspaceDir(configPath: string): string | undefined {
   try {
@@ -65,7 +58,9 @@ export async function GET(request: NextRequest) {
   })
   const runtimeWorkspaceDir = readRuntimeWorkspaceDir(configPath)
   const effectiveWorkspaceDir = runtimeWorkspaceDir || computedWorkspaceDir
-  const { inspectOpenclawWorkspace } = await import('@/lib/openclaw/workspace-bootstrap')
+  const { inspectOpenclawWorkspace } = await import(
+    /* turbopackIgnore: true */ '@/lib/openclaw/workspace-bootstrap'
+  )
   const status = inspectOpenclawWorkspace(effectiveWorkspaceDir)
 
   return NextResponse.json({

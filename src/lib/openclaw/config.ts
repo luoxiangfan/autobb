@@ -1,10 +1,10 @@
 import fs from 'fs'
-import path from 'path'
 import { getSettingsByCategory } from '@/lib/settings'
 import { getOpenclawGatewayToken } from '@/lib/openclaw/auth'
 import { collectUserFeishuAccounts } from '@/lib/openclaw/feishu-accounts'
 import { parseAiModelsJson } from '@/lib/openclaw/ai-models'
 import { syncOpenclawManagedAiAuthProfiles } from '@/lib/openclaw/ai-auth-audit'
+import { resolveOpenclawRuntimePaths } from '@/lib/openclaw/workspace-paths'
 
 type SyncOpenclawConfigOptions = {
   reason?: string
@@ -230,11 +230,7 @@ function normalizeFeishuAccountForRuntime(accountConfig: Record<string, any>): R
 }
 
 function resolveConfigPath(): { configPath: string; stateDir: string } {
-  const configPath = (process.env.OPENCLAW_CONFIG_PATH || '').trim()
-    || path.join(process.cwd(), '.openclaw', 'openclaw.json')
-  const stateDir = (process.env.OPENCLAW_STATE_DIR || '').trim()
-    || path.dirname(configPath)
-  return { configPath, stateDir }
+  return resolveOpenclawRuntimePaths()
 }
 
 export async function syncOpenclawConfig(options: SyncOpenclawConfigOptions = {}) {
@@ -396,7 +392,9 @@ export async function syncOpenclawConfig(options: SyncOpenclawConfigOptions = {}
     ? agentDefaults.workspace.trim()
     : ''
 
-  const { ensureOpenclawWorkspaceBootstrap } = await import('@/lib/openclaw/workspace-bootstrap')
+  const { ensureOpenclawWorkspaceBootstrap } = await import(
+    /* turbopackIgnore: true */ '@/lib/openclaw/workspace-bootstrap'
+  )
   const workspaceBootstrap = ensureOpenclawWorkspaceBootstrap({
     stateDir,
     actorUserId,

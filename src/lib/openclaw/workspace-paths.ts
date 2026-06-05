@@ -20,7 +20,7 @@ export function normalizeOpenclawUserPath(input: string): string {
     return path.normalize(trimmed)
   }
   // Avoid bare path.resolve() — Turbopack NFT treats it as tracing the whole project root.
-  return path.join(/* turbopackIgnore: true */ process.cwd(), trimmed)
+  return path.join(/*turbopackIgnore: true*/ process.cwd(), trimmed)
 }
 
 export function resolveOpenclawWorkspaceDir(params: ResolveOpenclawWorkspaceDirParams): string {
@@ -49,4 +49,16 @@ function formatDateInShanghai(date: Date): string {
     month: '2-digit',
     day: '2-digit',
   }).format(date)
+}
+
+export function resolveOpenclawConfigPath(): string {
+  const configured = (process.env.OPENCLAW_CONFIG_PATH || '').trim()
+  if (configured) return configured
+  return path.join(/*turbopackIgnore: true*/ process.cwd(), '.openclaw', 'openclaw.json')
+}
+
+export function resolveOpenclawRuntimePaths(): { configPath: string; stateDir: string } {
+  const configPath = resolveOpenclawConfigPath()
+  const stateDir = (process.env.OPENCLAW_STATE_DIR || '').trim() || path.dirname(configPath)
+  return { configPath, stateDir }
 }

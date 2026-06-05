@@ -1,16 +1,10 @@
 import crypto from 'crypto'
 import fs from 'fs'
-import path from 'path'
 import { getSetting, updateSettings } from '@/lib/settings'
 import { generateRandomKey } from '@/lib/crypto'
+import { resolveOpenclawConfigPath } from '@/lib/openclaw/workspace-paths'
 
 const GATEWAY_TOKEN_KEY = 'gateway_token'
-
-function resolveOpenclawConfigPath(): string {
-  const configured = (process.env.OPENCLAW_CONFIG_PATH || '').trim()
-  if (configured) return configured
-  return path.join(process.cwd(), '.openclaw', 'openclaw.json')
-}
 
 function readGatewayTokenFromConfigFile(): string | null {
   const configPath = resolveOpenclawConfigPath()

@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { resolveOpenclawRuntimePaths } from '@/lib/openclaw/workspace-paths'
 
 type JsonRecord = Record<string, unknown>
 
@@ -74,18 +75,10 @@ function isManagedProfileId(profileId: string): boolean {
 }
 
 function resolveStateDir(configPath?: string): string {
-  const overridePath = normalizeSecret(process.env.OPENCLAW_CONFIG_PATH)
-  if (overridePath) {
-    return path.dirname(overridePath)
-  }
   if (configPath && configPath.trim()) {
     return path.dirname(configPath)
   }
-  const overrideStateDir = normalizeSecret(process.env.OPENCLAW_STATE_DIR)
-  if (overrideStateDir) {
-    return overrideStateDir
-  }
-  return path.join(process.cwd(), '.openclaw')
+  return resolveOpenclawRuntimePaths().stateDir
 }
 
 function resolveAuthProfilePathCandidates(stateDir: string): string[] {
