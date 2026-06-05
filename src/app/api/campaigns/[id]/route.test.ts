@@ -31,7 +31,7 @@ describe('/api/campaigns/:id', () => {
       method: 'DELETE',
     })
 
-    const res = await DELETE(req, { params: { id: '1' } })
+    const res = await DELETE(req, { params: Promise.resolve({ id: '1' }) })
     expect(res.status).toBe(401)
   })
 
@@ -42,7 +42,7 @@ describe('/api/campaigns/:id', () => {
       body: JSON.stringify({ status: 'PAUSED' }),
     })
 
-    const res = await PUT(req, { params: { id: '1' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '1' }) })
     expect(res.status).toBe(401)
   })
 
@@ -65,7 +65,7 @@ describe('/api/campaigns/:id', () => {
       }),
     })
 
-    const res = await PUT(req, { params: { id: '1' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '1' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -85,7 +85,7 @@ describe('/api/campaigns/:id', () => {
       headers: { 'x-user-id': '7' },
     })
 
-    const res = await DELETE(req, { params: { id: '1' } })
+    const res = await DELETE(req, { params: Promise.resolve({ id: '1' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -102,7 +102,7 @@ describe('/api/campaigns/:id', () => {
       headers: { 'x-user-id': '7' },
     })
 
-    const res = await DELETE(req, { params: { id: '2' } })
+    const res = await DELETE(req, { params: Promise.resolve({ id: '2' }) })
     const data = await res.json()
 
     expect(res.status).toBe(409)
@@ -117,7 +117,7 @@ describe('/api/campaigns/:id', () => {
       headers: { 'x-user-id': '7' },
     })
 
-    const res = await DELETE(req, { params: { id: '3' } })
+    const res = await DELETE(req, { params: Promise.resolve({ id: '3' }) })
     const data = await res.json()
 
     expect(res.status).toBe(409)
@@ -132,7 +132,7 @@ describe('/api/campaigns/:id', () => {
       headers: { 'x-user-id': '7' },
     })
 
-    const res = await DELETE(req, { params: { id: '4' } })
+    const res = await DELETE(req, { params: Promise.resolve({ id: '4' }) })
 
     expect(res.status).toBe(404)
   })

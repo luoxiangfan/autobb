@@ -48,13 +48,13 @@ describe('GET /api/creative-tasks/[taskId]/stream', () => {
       headers: { 'x-user-id': '7' },
     })
 
-    const res = await GET(req, { params: { taskId: 'task-stream-1' } })
+    const res = await GET(req, { params: Promise.resolve({ taskId: 'task-stream-1' }) })
     expect(res.status).toBe(200)
 
     await new Promise((resolve) => setTimeout(resolve, 50))
 
-    const pollCalls = dbFns.query.mock.calls.filter((call) =>
-      String(call[0]).includes('creative_tasks') && String(call[0]).includes('user_id')
+    const pollCalls = dbFns.query.mock.calls.filter(
+      (call) => String(call[0]).includes('creative_tasks') && String(call[0]).includes('user_id')
     )
     expect(pollCalls.length).toBeGreaterThan(0)
     expect(pollCalls[0][1]).toEqual(['task-stream-1', 7])

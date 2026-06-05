@@ -127,19 +127,19 @@ function checkTokenUtilization(
   if (utilization >= 1.0) {
     console.error(
       `🚨 Token截断错误: ${operationType || 'unknown'} ` +
-      `输出${outputTokens}/${maxOutputTokens} tokens (${percentage}%) - 内容被截断！\n` +
-      `⚠️ 必须增加maxOutputTokens配置以避免输出不完整`
+        `输出${outputTokens}/${maxOutputTokens} tokens (${percentage}%) - 内容被截断！\n` +
+        `⚠️ 必须增加maxOutputTokens配置以避免输出不完整`
     )
   } else if (utilization >= 0.8) {
     console.warn(
       `⚠️ Token高使用率警告: ${operationType || 'unknown'} ` +
-      `输出${outputTokens}/${maxOutputTokens} tokens (${percentage}%) - 接近限制\n` +
-      `💡 建议: 考虑适当增加maxOutputTokens配置`
+        `输出${outputTokens}/${maxOutputTokens} tokens (${percentage}%) - 接近限制\n` +
+        `💡 建议: 考虑适当增加maxOutputTokens配置`
     )
   } else {
     console.log(
       `✅ Token使用正常: ${operationType || 'unknown'} ` +
-      `输出${outputTokens}/${maxOutputTokens} tokens (${percentage}%)`
+        `输出${outputTokens}/${maxOutputTokens} tokens (${percentage}%)`
     )
   }
 }
@@ -175,7 +175,9 @@ export async function generateContent(
       hasResponseSchema: !!responseSchema,
     })
     finalModel = selection.model
-    console.log(`🤖 智能模型选择 (User ${userId}): ${operationType} → ${finalModel} (${selection.reason})`)
+    console.log(
+      `🤖 智能模型选择 (User ${userId}): ${operationType} → ${finalModel} (${selection.reason})`
+    )
   } else if (requestedModel) {
     finalModel = normalizeGeminiModel(requestedModel)
     console.log(`📝 使用显式指定模型: ${finalModel}`)
@@ -187,10 +189,15 @@ export async function generateContent(
   const normalizedThinkingBudget = Number.isFinite(Number(thinkingBudget))
     ? Math.max(0, Math.floor(Number(thinkingBudget)))
     : undefined
-  const shouldDisableThinkingForStructuredOutput = !!responseSchema && finalModel.includes('gemini-3')
-  const effectiveThinkingBudget = normalizedThinkingBudget
-    ?? (shouldDisableThinkingForStructuredOutput ? 0 : undefined)
-  if (effectiveThinkingBudget === 0 && normalizedThinkingBudget === undefined && shouldDisableThinkingForStructuredOutput) {
+  const shouldDisableThinkingForStructuredOutput =
+    !!responseSchema && finalModel.includes('gemini-3')
+  const effectiveThinkingBudget =
+    normalizedThinkingBudget ?? (shouldDisableThinkingForStructuredOutput ? 0 : undefined)
+  if (
+    effectiveThinkingBudget === 0 &&
+    normalizedThinkingBudget === undefined &&
+    shouldDisableThinkingForStructuredOutput
+  ) {
     console.log(`🧠 结构化任务自动关闭 thinking 模式 (模型: ${finalModel})`)
   }
 
@@ -198,8 +205,8 @@ export async function generateContent(
   if (!hasGeminiAPI) {
     throw new Error(
       `AI配置缺失：用户(ID=${userId})尚未配置 Gemini API。\n` +
-      `请在设置页面配置服务商与 API 密钥。\n` +
-      `注意：系统不支持全局AI配置，每个用户必须配置自己的AI凭证。`
+        `请在设置页面配置服务商与 API 密钥。\n` +
+        `注意：系统不支持全局AI配置，每个用户必须配置自己的AI凭证。`
     )
   }
 
@@ -294,7 +301,9 @@ async function callDirectAPI(
     const savedModelSetting = await getUserOnlySetting('ai', 'gemini_model', userId)
     const lockedRelayModel = normalizeModelForProvider(savedModelSetting?.value, provider)
     if (effectiveModel !== lockedRelayModel) {
-      console.warn(`⚠️ relay 模型锁定生效：忽略临时模型 ${effectiveModel}，使用用户最后保存模型 ${lockedRelayModel}`)
+      console.warn(
+        `⚠️ relay 模型锁定生效：忽略临时模型 ${effectiveModel}，使用用户最后保存模型 ${lockedRelayModel}`
+      )
       effectiveModel = lockedRelayModel
     }
   }
@@ -315,10 +324,14 @@ async function callDirectAPI(
     result = await axiosGenerate(baseParams, userId, forcedProviderConfig)
   } catch (error: any) {
     const message = String(error?.message || '')
-    const isMaxTokens = error?.code === 'MAX_TOKENS' || message.includes('MAX_TOKENS') || message.includes('token限制')
+    const isMaxTokens =
+      error?.code === 'MAX_TOKENS' ||
+      message.includes('MAX_TOKENS') ||
+      message.includes('token限制')
     const isRunawayCandidate = Boolean(error?.isRunawayCandidate)
     const suggestedRetryMaxOutputTokens = Number(error?.retryMaxOutputTokens || 0)
-    const shouldFallbackModel = isMaxTokens &&
+    const shouldFallbackModel =
+      isMaxTokens &&
       !isRunawayCandidate &&
       effectiveModel === GEMINI_ACTIVE_MODEL &&
       operationType === 'ad_creative_generation_main'
@@ -329,27 +342,34 @@ async function callDirectAPI(
         candidateError?.code === 'MAX_TOKENS' ||
         candidateMessage.includes('MAX_TOKENS') ||
         candidateMessage.includes('token限制')
-      return candidateIsMaxTokens &&
+      return (
+        candidateIsMaxTokens &&
         provider === 'relay' &&
         operationType === 'ad_creative_generation_main' &&
         !!responseSchema
+      )
     }
 
     let retryError: any = error
     if (shouldFallbackModel) {
-      const bumpedMaxOutputTokens = suggestedRetryMaxOutputTokens > (maxOutputTokens || 0)
-        ? suggestedRetryMaxOutputTokens
-        : maxOutputTokens
+      const bumpedMaxOutputTokens =
+        suggestedRetryMaxOutputTokens > (maxOutputTokens || 0)
+          ? suggestedRetryMaxOutputTokens
+          : maxOutputTokens
       console.warn(
         `⚠️ ad_creative_generation_main MAX_TOKENS in ${GEMINI_ACTIVE_MODEL}, ` +
-        `retry same model with upstream bump (${maxOutputTokens || 0} → ${bumpedMaxOutputTokens || 0})`
+          `retry same model with upstream bump (${maxOutputTokens || 0} → ${bumpedMaxOutputTokens || 0})`
       )
       try {
-        result = await axiosGenerate({
-          ...baseParams,
-          model: GEMINI_ACTIVE_MODEL,
-          maxOutputTokens: bumpedMaxOutputTokens,
-        }, userId, forcedProviderConfig)
+        result = await axiosGenerate(
+          {
+            ...baseParams,
+            model: GEMINI_ACTIVE_MODEL,
+            maxOutputTokens: bumpedMaxOutputTokens,
+          },
+          userId,
+          forcedProviderConfig
+        )
         retryError = null
       } catch (fallbackError: any) {
         retryError = fallbackError
@@ -368,15 +388,19 @@ async function callDirectAPI(
 
       console.warn(
         `⚠️ ad_creative_generation_main relay MAX_TOKENS，启用紧急收敛重试 ` +
-        `(maxOutputTokens=${emergencyMaxOutputTokens}, temperature<=${AD_CREATIVE_EMERGENCY_RETRY_TEMPERATURE})`
+          `(maxOutputTokens=${emergencyMaxOutputTokens}, temperature<=${AD_CREATIVE_EMERGENCY_RETRY_TEMPERATURE})`
       )
 
-      result = await axiosGenerate({
-        ...baseParams,
-        prompt: emergencyPrompt,
-        maxOutputTokens: emergencyMaxOutputTokens,
-        temperature: Math.min(temperature || 0.7, AD_CREATIVE_EMERGENCY_RETRY_TEMPERATURE),
-      }, userId, forcedProviderConfig)
+      result = await axiosGenerate(
+        {
+          ...baseParams,
+          prompt: emergencyPrompt,
+          maxOutputTokens: emergencyMaxOutputTokens,
+          temperature: Math.min(temperature || 0.7, AD_CREATIVE_EMERGENCY_RETRY_TEMPERATURE),
+        },
+        userId,
+        forcedProviderConfig
+      )
     }
 
     if (!result) {

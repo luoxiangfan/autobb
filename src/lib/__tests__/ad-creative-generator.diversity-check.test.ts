@@ -18,7 +18,8 @@ vi.mock('../google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../google-ads-accounts-auth')>()
   return {
     ...actual,
-    loadKeywordPoolExpandCredentialsForOffer: authExpandFns.loadKeywordPoolExpandCredentialsForOffer,
+    loadKeywordPoolExpandCredentialsForOffer:
+      authExpandFns.loadKeywordPoolExpandCredentialsForOffer,
     resolvePlannerExpandForOffer: authExpandFns.resolvePlannerExpandForOffer,
   }
 })
@@ -53,26 +54,30 @@ describe('generateMultipleCreativesWithDiversityCheck', () => {
       creds: { authType: 'oauth', linkedServiceAccountId: null },
       plannerSession: mockSession,
     })
-    authExpandFns.resolvePlannerExpandForOffer.mockImplementation(async (_userId, _offerId, existing) => {
-      if (existing?.preparedExpand !== undefined) {
-        return {
-          preparedExpand: existing.preparedExpand,
-          plannerSession:
-            existing.plannerSession ??
-            (existing.preparedExpand.ok ? existing.preparedExpand.plannerSession : undefined),
+    authExpandFns.resolvePlannerExpandForOffer.mockImplementation(
+      async (_userId, _offerId, existing) => {
+        if (existing?.preparedExpand !== undefined) {
+          return {
+            preparedExpand: existing.preparedExpand,
+            plannerSession:
+              existing.plannerSession ??
+              (existing.preparedExpand.ok ? existing.preparedExpand.plannerSession : undefined),
+          }
         }
-      }
-      if (existing?.plannerSession !== undefined) {
-        return {
-          plannerSession: existing.plannerSession,
-          preparedExpand: existing.preparedExpand,
+        if (existing?.plannerSession !== undefined) {
+          return {
+            plannerSession: existing.plannerSession,
+            preparedExpand: existing.preparedExpand,
+          }
         }
+        return authExpandFns
+          .loadKeywordPoolExpandCredentialsForOffer(_userId, _offerId)
+          .then((expandLoad) => ({
+            preparedExpand: expandLoad,
+            plannerSession: expandLoad.ok ? expandLoad.plannerSession : undefined,
+          }))
       }
-      return authExpandFns.loadKeywordPoolExpandCredentialsForOffer(_userId, _offerId).then((expandLoad) => ({
-        preparedExpand: expandLoad,
-        plannerSession: expandLoad.ok ? expandLoad.plannerSession : undefined,
-      }))
-    })
+    )
 
     poolFns.resolveKeywordPoolForCreativeGeneration.mockResolvedValue({
       pool: { id: 1, offerId: 9, totalKeywords: 10 },

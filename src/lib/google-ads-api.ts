@@ -8,15 +8,13 @@ import {
   resolveOAuthClientCredentialsForUser,
   type OAuthApiCredentialsFields,
 } from './google-ads-accounts-auth'
-import {
-  resolveGoogleAdsApiAuthType,
-  type GoogleAdsAuthContext,
-} from './google-ads-auth-context'
-import {
-  oauthGetCustomerParams,
-} from './google-ads-oauth-customer-params'
+import { resolveGoogleAdsApiAuthType, type GoogleAdsAuthContext } from './google-ads-auth-context'
+import { oauthGetCustomerParams } from './google-ads-oauth-customer-params'
 
-export type { GoogleAdsCustomerCredentialParams, OAuthGetCustomerWithCredentialsParams } from './google-ads-oauth-customer-params'
+export type {
+  GoogleAdsCustomerCredentialParams,
+  OAuthGetCustomerWithCredentialsParams,
+} from './google-ads-oauth-customer-params'
 export { oauthGetCustomerParams } from './google-ads-oauth-customer-params'
 
 export type { OAuthApiCredentialsFields }
@@ -37,7 +35,7 @@ import {
   getGoogleAdsTextEffectiveLength,
   sanitizeGoogleAdsAdText,
   sanitizeGoogleAdsFinalUrlSuffix,
-  sanitizeGoogleAdsPath
+  sanitizeGoogleAdsPath,
 } from './google-ads-ad-text'
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { getGoogleAdsGeoTargetId } from './language-country-codes'
@@ -49,9 +47,7 @@ export { getGoogleAdsOAuthRedirectUri } from './google-ads-oauth-redirect'
 
 function serializeGoogleAdsError(error: unknown): string {
   const primaryMessage = String((error as any)?.message || '').trim()
-  const googleAdsErrors = Array.isArray((error as any)?.errors)
-    ? (error as any).errors
-    : []
+  const googleAdsErrors = Array.isArray((error as any)?.errors) ? (error as any).errors : []
   const googleAdsDetail = googleAdsErrors
     .map((item: any) => String(item?.message || '').trim())
     .filter(Boolean)
@@ -122,9 +118,7 @@ export async function trackOAuthApiCall<T>(
  */
 export function sanitizeKeyword(keyword: string): string {
   const input = String(keyword ?? '')
-  const cleaned = input
-    .replace(/[\p{C}]/gu, ' ')
-    .replace(/[^\p{L}\p{M}\p{N}\s_.&'+-]/gu, '')
+  const cleaned = input.replace(/[\p{C}]/gu, ' ').replace(/[^\p{L}\p{M}\p{N}\s_.&'+-]/gu, '')
 
   const normalized = cleaned.replace(/\s+/g, ' ').trim()
   return normalized.replace(/^[-_]+|[-_]+$/g, '').trim()
@@ -362,10 +356,11 @@ export async function getCustomer(
   try {
     // 尝试使用refresh token获取新的access token（带重试）
     const tokens = await withRetry(
-      () => refreshAccessToken(refreshToken, {
-        client_id: credentials.client_id,
-        client_secret: credentials.client_secret
-      }),
+      () =>
+        refreshAccessToken(refreshToken, {
+          client_id: credentials.client_id,
+          client_secret: credentials.client_secret,
+        }),
       {
         maxRetries: 2,
         initialDelay: 500,
@@ -375,7 +370,7 @@ export async function getCustomer(
           if (message.includes('invalid_grant') || message.includes('invalid_client')) return false
           return true
         },
-        operationName: 'Refresh Google Ads Token'
+        operationName: 'Refresh Google Ads Token',
       }
     )
 
@@ -459,7 +454,7 @@ export async function resolveAuthTypeForGoogleAdsApiCall(params: {
  */
 export async function getCustomerWithCredentials(params: {
   customerId: string
-  refreshToken?: string  // OAuth模式需要
+  refreshToken?: string // OAuth模式需要
   accountId?: number
   userId: number
   loginCustomerId?: string | null
@@ -491,7 +486,7 @@ export async function getCustomerWithCredentials(params: {
       authConfig: {
         authType: 'service_account',
         userId: params.userId,
-        serviceAccountId: params.serviceAccountId
+        serviceAccountId: params.serviceAccountId,
       },
       authContext: authCtx,
     })
@@ -501,7 +496,10 @@ export async function getCustomerWithCredentials(params: {
       throw new Error('refreshToken is required for OAuth authentication')
     }
 
-    const hasExplicitLoginCustomerId = Object.prototype.hasOwnProperty.call(params, 'loginCustomerId')
+    const hasExplicitLoginCustomerId = Object.prototype.hasOwnProperty.call(
+      params,
+      'loginCustomerId'
+    )
     const omitLoginCustomerHeader =
       hasExplicitLoginCustomerId && params.loginCustomerId === undefined
 
@@ -568,38 +566,38 @@ function getGeoTargetConstantId(countryCode: string): number | null {
 function getLanguageConstantId(input: string): number | null {
   // 语言代码到Constant ID的映射
   const languageCodeMap: Record<string, number> = {
-    'en': 1000,      // English
-    'zh': 1017,      // Chinese (Simplified)
-    'zh-cn': 1017,   // Chinese (Simplified)
-    'zh-tw': 1018,   // Chinese (Traditional)
-    'ja': 1005,      // Japanese
-    'de': 1001,      // German
-    'fr': 1002,      // French
-    'es': 1003,      // Spanish
-    'it': 1004,      // Italian
-    'ko': 1012,      // Korean
-    'ru': 1031,      // Russian
-    'pt': 1014,      // Portuguese
-    'ar': 1019,      // Arabic
-    'hi': 1023,      // Hindi
+    en: 1000, // English
+    zh: 1017, // Chinese (Simplified)
+    'zh-cn': 1017, // Chinese (Simplified)
+    'zh-tw': 1018, // Chinese (Traditional)
+    ja: 1005, // Japanese
+    de: 1001, // German
+    fr: 1002, // French
+    es: 1003, // Spanish
+    it: 1004, // Italian
+    ko: 1012, // Korean
+    ru: 1031, // Russian
+    pt: 1014, // Portuguese
+    ar: 1019, // Arabic
+    hi: 1023, // Hindi
   }
 
   // 语言名称到语言代码的映射
   const languageNameMap: Record<string, string> = {
-    'english': 'en',
+    english: 'en',
     'chinese (simplified)': 'zh-cn',
     'chinese (traditional)': 'zh-tw',
-    'chinese': 'zh',
-    'spanish': 'es',
-    'french': 'fr',
-    'german': 'de',
-    'japanese': 'ja',
-    'korean': 'ko',
-    'portuguese': 'pt',
-    'italian': 'it',
-    'russian': 'ru',
-    'arabic': 'ar',
-    'hindi': 'hi',
+    chinese: 'zh',
+    spanish: 'es',
+    french: 'fr',
+    german: 'de',
+    japanese: 'ja',
+    korean: 'ko',
+    portuguese: 'pt',
+    italian: 'it',
+    russian: 'ru',
+    arabic: 'ar',
+    hindi: 'hi',
   }
 
   const normalized = input.toLowerCase().trim()
@@ -631,7 +629,9 @@ function isDuplicateCampaignNameError(error: any): boolean {
 }
 
 function escapeGaqlStringLiteral(value: string): string {
-  return String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+  return String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
 }
 
 function normalizeCampaignDateValue(value: unknown): string | undefined {
@@ -648,6 +648,15 @@ function normalizeCampaignDateValue(value: unknown): string | undefined {
   return normalized
 }
 
+function formatCampaignDateTimeForMutate(value: Date | string, endOfDay = false): string {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid campaign date: ${String(value)}`)
+  }
+  const ymd = date.toISOString().split('T')[0]
+  return endOfDay ? `${ymd} 23:59:59` : `${ymd} 00:00:00`
+}
+
 // 兼容 Google Ads API v23：Campaign.start_date/end_date 已迁移为 *_date_time
 function normalizeCampaignDateFields(rows: any[]): any[] {
   return rows.map((row: any) => {
@@ -656,10 +665,12 @@ function normalizeCampaignDateFields(rows: any[]): any[] {
       return row
     }
 
-    const startDate = normalizeCampaignDateValue(campaign.start_date_time)
-      ?? normalizeCampaignDateValue(campaign.start_date)
-    const endDate = normalizeCampaignDateValue(campaign.end_date_time)
-      ?? normalizeCampaignDateValue(campaign.end_date)
+    const startDate =
+      normalizeCampaignDateValue(campaign.start_date_time) ??
+      normalizeCampaignDateValue(campaign.start_date)
+    const endDate =
+      normalizeCampaignDateValue(campaign.end_date_time) ??
+      normalizeCampaignDateValue(campaign.end_date)
 
     return {
       ...row,
@@ -710,9 +721,9 @@ export async function findGoogleAdsCampaignByName(params: {
     })
     results = response.results || []
   } else {
-    const customer = params.customer || await getCustomerWithCredentials(
-      oauthGetCustomerParams(params, authContext)
-    )
+    const customer =
+      params.customer ||
+      (await getCustomerWithCredentials(oauthGetCustomerParams(params, authContext)))
     results = await trackOAuthApiCall(
       params.userId,
       params.customerId,
@@ -726,7 +737,9 @@ export async function findGoogleAdsCampaignByName(params: {
   const campaignId = row?.campaign?.id ? String(row.campaign.id) : ''
   const resourceName = row?.campaign?.resourceName
     ? String(row.campaign.resourceName)
-    : (row?.campaign?.resource_name ? String(row.campaign.resource_name) : '')
+    : row?.campaign?.resource_name
+      ? String(row.campaign.resource_name)
+      : ''
   if (!campaignId || !resourceName) return null
   return { campaignId, resourceName }
 }
@@ -746,17 +759,18 @@ export async function createGoogleAdsCampaign(params: {
   startDate?: string
   endDate?: string
   accountId?: number
-  userId: number  // 改为必填
-  loginCustomerId?: string  // 🔥 经理账号ID（用于访问客户账号）
+  userId: number // 改为必填
+  loginCustomerId?: string // 🔥 经理账号ID（用于访问客户账号）
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
   authContext?: GoogleAdsAuthContext
 }): Promise<{ campaignId: string; resourceName: string }> {
   const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
-  const sanitizedFinalUrlSuffix = params.finalUrlSuffix && params.finalUrlSuffix.trim() !== ''
-    ? sanitizeGoogleAdsFinalUrlSuffix(params.finalUrlSuffix)
-    : ''
+  const sanitizedFinalUrlSuffix =
+    params.finalUrlSuffix && params.finalUrlSuffix.trim() !== ''
+      ? sanitizeGoogleAdsFinalUrlSuffix(params.finalUrlSuffix)
+      : ''
 
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
   if (authType === 'service_account') {
@@ -777,13 +791,12 @@ export async function createGoogleAdsCampaign(params: {
         return existing
       }
     } catch (lookupError: any) {
-      console.warn(`⚠️ Campaign存在性检查失败，将继续尝试创建: ${lookupError?.message || lookupError}`)
+      console.warn(
+        `⚠️ Campaign存在性检查失败，将继续尝试创建: ${lookupError?.message || lookupError}`
+      )
     }
 
-    const {
-      createCampaignBudgetPython,
-      createCampaignPython,
-    } = await import('./python-ads-client')
+    const { createCampaignBudgetPython, createCampaignPython } = await import('./python-ads-client')
 
     // 1. 创建预算
     const budgetResourceName = await createCampaignBudgetPython({
@@ -826,7 +839,9 @@ export async function createGoogleAdsCampaign(params: {
           authContext,
         })
         if (existing) {
-          console.log(`♻️ Campaign名称重复，复用已存在的Campaign: ${params.campaignName} (ID=${existing.campaignId})`)
+          console.log(
+            `♻️ Campaign名称重复，复用已存在的Campaign: ${params.campaignName} (ID=${existing.campaignId})`
+          )
           return existing
         }
       }
@@ -858,7 +873,9 @@ export async function createGoogleAdsCampaign(params: {
       return existing
     }
   } catch (lookupError: any) {
-    console.warn(`⚠️ Campaign存在性检查失败，将继续尝试创建: ${lookupError?.message || lookupError}`)
+    console.warn(
+      `⚠️ Campaign存在性检查失败，将继续尝试创建: ${lookupError?.message || lookupError}`
+    )
   }
 
   // 1. 创建预算（添加时间戳避免重复名称）
@@ -899,18 +916,19 @@ export async function createGoogleAdsCampaign(params: {
   // 注意：Maximize Clicks在API中的枚举值是TARGET_SPEND
   campaign.bidding_strategy_type = enums.BiddingStrategyType.TARGET_SPEND
   campaign.target_spend = {
-    cpc_bid_ceiling_micros: params.cpcBidCeilingMicros || 170000  // 默认0.17 USD
+    cpc_bid_ceiling_micros: params.cpcBidCeilingMicros || 170000, // 默认0.17 USD
   }
 
   // 必填字段：EU政治广告状态声明
   // 大多数Campaign不包含政治广告，设置为DOES_NOT_CONTAIN
-  campaign.contains_eu_political_advertising = enums.EuPoliticalAdvertisingStatus.DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING
+  campaign.contains_eu_political_advertising =
+    enums.EuPoliticalAdvertisingStatus.DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING
 
   // 地理位置选项设置：PRESENCE = 所在地（只定位实际位于该地理位置的用户）
   // PRESENCE_OR_INTEREST = 所在地或兴趣（定位在该地或对该地感兴趣的用户）
   // 参考：https://developers.google.com/google-ads/api/reference/rpc/latest/PositiveGeoTargetTypeEnum.PositiveGeoTargetType
   campaign.geo_target_type_setting = {
-    positive_geo_target_type: enums.PositiveGeoTargetType.PRESENCE
+    positive_geo_target_type: enums.PositiveGeoTargetType.PRESENCE,
   }
 
   // 添加Final URL Suffix（始终设置，即使为空）
@@ -925,15 +943,13 @@ export async function createGoogleAdsCampaign(params: {
     console.log('ℹ️ Campaign Final URL Suffix未设置（空字符串）')
   }
 
-  // 3. 添加日期设置
+  // 3. 添加日期设置（Google Ads API v23: start_date/end_date => start_date_time/end_date_time）
   if (params.startDate) {
-    const startDateObj = new Date(params.startDate)
-    ;(campaign as any).start_date = startDateObj.toISOString().split('T')[0].replace(/-/g, '')
+    ;(campaign as any).start_date_time = formatCampaignDateTimeForMutate(params.startDate)
   }
 
   if (params.endDate) {
-    const endDateObj = new Date(params.endDate)
-    ;(campaign as any).end_date = endDateObj.toISOString().split('T')[0].replace(/-/g, '')
+    ;(campaign as any).end_date_time = formatCampaignDateTimeForMutate(params.endDate, true)
   }
 
   // 🚀 优化(2025-12-18): 简化日志输出，减少噪音
@@ -943,7 +959,7 @@ export async function createGoogleAdsCampaign(params: {
       name: campaign.name,
       strategy: campaign.bidding_strategy_type,
       budget: campaign.target_spend,
-      country: params.targetCountry
+      country: params.targetCountry,
     })
   }
 
@@ -954,14 +970,12 @@ export async function createGoogleAdsCampaign(params: {
       params.customerId,
       ApiOperationType.MUTATE,
       '/api/google-ads/campaign/create',
-      () => withRetry(
-        () => customer.campaigns.create([campaign]),
-        {
+      () =>
+        withRetry(() => customer.campaigns.create([campaign]), {
           maxRetries: 3,
           initialDelay: 1000,
-          operationName: `Create Campaign: ${params.campaignName}`
-        }
-      )
+          operationName: `Create Campaign: ${params.campaignName}`,
+        })
     )
   } catch (error: any) {
     if (isDuplicateCampaignNameError(error)) {
@@ -977,7 +991,9 @@ export async function createGoogleAdsCampaign(params: {
         authContext,
       })
       if (existing) {
-        console.log(`♻️ Campaign名称重复，复用已存在的Campaign: ${params.campaignName} (ID=${existing.campaignId})`)
+        console.log(
+          `♻️ Campaign名称重复，复用已存在的Campaign: ${params.campaignName} (ID=${existing.campaignId})`
+        )
         return existing
       }
     }
@@ -1024,8 +1040,8 @@ export async function createGoogleAdsCampaign(params: {
       criteriaOperations.push({
         campaign: campaignResourceName,
         location: {
-          geo_target_constant: `geoTargetConstants/${geoTargetConstantId}`
-        }
+          geo_target_constant: `geoTargetConstants/${geoTargetConstantId}`,
+        },
       })
       console.log(`📍 添加地理位置定位: ${params.targetCountry} (${geoTargetConstantId})`)
     }
@@ -1038,12 +1054,14 @@ export async function createGoogleAdsCampaign(params: {
       criteriaOperations.push({
         campaign: campaignResourceName,
         language: {
-          language_constant: `languageConstants/${languageConstantId}`
-        }
+          language_constant: `languageConstants/${languageConstantId}`,
+        },
       })
       console.log(`🌐 添加语言定位: ${params.targetLanguage} (${languageConstantId})`)
     } else {
-      console.warn(`⚠️ 警告: 未找到语言 "${params.targetLanguage}" 对应的常量ID，语言定位可能被跳过`)
+      console.warn(
+        `⚠️ 警告: 未找到语言 "${params.targetLanguage}" 对应的常量ID，语言定位可能被跳过`
+      )
     }
   } else {
     console.warn(`⚠️ 警告: 未提供targetLanguage参数，将使用默认语言设置`)
@@ -1057,14 +1075,12 @@ export async function createGoogleAdsCampaign(params: {
         params.customerId,
         ApiOperationType.MUTATE,
         '/api/google-ads/campaign-criteria/create',
-        () => withRetry(
-          () => customer.campaignCriteria.create(criteriaOperations),
-          {
+        () =>
+          withRetry(() => customer.campaignCriteria.create(criteriaOperations), {
             maxRetries: 3,
             initialDelay: 1000,
-            operationName: `Create Campaign Criteria for ${params.campaignName}`
-          }
-        )
+            operationName: `Create Campaign Criteria for ${params.campaignName}`,
+          })
       )
       console.log(`✅ 成功添加${criteriaOperations.length}个定位条件`)
     } catch (error: any) {
@@ -1076,10 +1092,13 @@ export async function createGoogleAdsCampaign(params: {
           params.customerId,
           ApiOperationType.MUTATE,
           '/api/google-ads/campaign/update',
-          () => customer.campaigns.update([{
-            resource_name: campaignResourceName,
-            status: enums.CampaignStatus.PAUSED,
-          }])
+          () =>
+            customer.campaigns.update([
+              {
+                resource_name: campaignResourceName,
+                status: enums.CampaignStatus.PAUSED,
+              },
+            ])
         )
         console.log(`⏸️ 已暂停Campaign ${campaignId}（因定位条件创建失败）`)
       } catch (rollbackError) {
@@ -1132,16 +1151,14 @@ async function createCampaignBudget(
     params.customerId,
     ApiOperationType.MUTATE,
     '/api/google-ads/campaign-budget/create',
-    () => withRetry(
-      () => customer.campaignBudgets.create([budget]),
-      {
+    () =>
+      withRetry(() => customer.campaignBudgets.create([budget]), {
         maxRetries: 3,
         initialDelay: 1000,
         // login_customer_id 权限错误应立即切换候选，不应在同一候选上指数退避重试。
         shouldRetry: (error) => !isGoogleAdsAccountAccessError(error),
-        operationName: `Create Budget: ${params.name}`
-      }
-    )
+        operationName: `Create Budget: ${params.name}`,
+      })
   )
 
   if (!response || !response.results || response.results.length === 0) {
@@ -1196,23 +1213,27 @@ export async function updateGoogleAdsCampaignStatus(params: {
       params.customerId,
       ApiOperationType.MUTATE,
       '/api/google-ads/campaign/update',
-      () => withRetry(
-        () => customer.campaigns.update([{
-          resource_name: resourceName,
-          status: enums.CampaignStatus[effectiveStatus],
-        }]),
-        {
-          maxRetries: 3,
-          initialDelay: 1000,
-          operationName: `Update Campaign Status: ${params.campaignId} -> ${effectiveStatus}`
-        }
-      )
+      () =>
+        withRetry(
+          () =>
+            customer.campaigns.update([
+              {
+                resource_name: resourceName,
+                status: enums.CampaignStatus[effectiveStatus],
+              },
+            ]),
+          {
+            maxRetries: 3,
+            initialDelay: 1000,
+            operationName: `Update Campaign Status: ${params.campaignId} -> ${effectiveStatus}`,
+          }
+        )
     )
   }
 
   // 清除相关缓存（更新状态后）
   const getCacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, {
-    campaignId: params.campaignId
+    campaignId: params.campaignId,
   })
   const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId)
 
@@ -1264,17 +1285,21 @@ export async function updateGoogleAdsCampaignName(params: {
       params.customerId,
       ApiOperationType.MUTATE,
       '/api/google-ads/campaign/update',
-      () => withRetry(
-        () => customer.campaigns.update([{
-          resource_name: resourceName,
-          name: trimmedName,
-        }]),
-        {
-          maxRetries: 3,
-          initialDelay: 1000,
-          operationName: `Update Campaign Name: ${params.campaignId}`,
-        }
-      )
+      () =>
+        withRetry(
+          () =>
+            customer.campaigns.update([
+              {
+                resource_name: resourceName,
+                name: trimmedName,
+              },
+            ]),
+          {
+            maxRetries: 3,
+            initialDelay: 1000,
+            operationName: `Update Campaign Name: ${params.campaignId}`,
+          }
+        )
     )
   }
 
@@ -1318,17 +1343,21 @@ export async function updateGoogleAdsKeywordStatus(params: {
     params.customerId,
     ApiOperationType.MUTATE,
     '/api/google-ads/keyword/update-status',
-    () => withRetry(
-      () => customer.adGroupCriteria.update([{
-        resource_name: resourceName,
-        status: enums.AdGroupCriterionStatus[params.status],
-      }]),
-      {
-        maxRetries: 3,
-        initialDelay: 1000,
-        operationName: `Update Keyword Status: ${params.keywordId} -> ${params.status}`,
-      }
-    )
+    () =>
+      withRetry(
+        () =>
+          customer.adGroupCriteria.update([
+            {
+              resource_name: resourceName,
+              status: enums.AdGroupCriterionStatus[params.status],
+            },
+          ]),
+        {
+          maxRetries: 3,
+          initialDelay: 1000,
+          operationName: `Update Keyword Status: ${params.keywordId} -> ${params.status}`,
+        }
+      )
   )
 }
 
@@ -1360,28 +1389,26 @@ export async function removeGoogleAdsCampaign(params: {
       campaignResourceName: resourceName,
     })
   } else {
-    const customer = params.customer ?? await getCustomerWithCredentials(
-      oauthGetCustomerParams(params, authContext)
-    )
+    const customer =
+      params.customer ??
+      (await getCustomerWithCredentials(oauthGetCustomerParams(params, authContext)))
 
     await trackOAuthApiCall(
       params.userId,
       params.customerId,
       ApiOperationType.MUTATE,
       '/api/google-ads/campaign/remove',
-      () => withRetry(
-        () => customer.campaigns.remove([resourceName]),
-        {
+      () =>
+        withRetry(() => customer.campaigns.remove([resourceName]), {
           maxRetries: 3,
           initialDelay: 1000,
-          operationName: `Remove Campaign: ${params.campaignId}`
-        }
-      )
+          operationName: `Remove Campaign: ${params.campaignId}`,
+        })
     )
   }
 
   const getCacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, {
-    campaignId: params.campaignId
+    campaignId: params.campaignId,
   })
   const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId)
   gadsApiCache.delete(getCacheKey)
@@ -1438,23 +1465,27 @@ export async function updateGoogleAdsCampaignBudget(params: {
       params.customerId,
       ApiOperationType.MUTATE,
       '/api/google-ads/campaign/update',
-      () => withRetry(
-        () => customer.campaigns.update([{
-          resource_name: resourceName,
-          campaign_budget: budgetResourceName,
-        }]),
-        {
-          maxRetries: 3,
-          initialDelay: 1000,
-          operationName: `Update Campaign Budget: ${params.campaignId} -> ${params.budgetAmount}`
-        }
-      )
+      () =>
+        withRetry(
+          () =>
+            customer.campaigns.update([
+              {
+                resource_name: resourceName,
+                campaign_budget: budgetResourceName,
+              },
+            ]),
+          {
+            maxRetries: 3,
+            initialDelay: 1000,
+            operationName: `Update Campaign Budget: ${params.campaignId} -> ${params.budgetAmount}`,
+          }
+        )
     )
   }
 
   // 清除相关缓存
   const getCacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, {
-    campaignId: params.campaignId
+    campaignId: params.campaignId,
   })
   const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId)
 
@@ -1480,7 +1511,7 @@ export async function getGoogleAdsCampaign(params: {
   authContext?: GoogleAdsAuthContext
 }): Promise<any> {
   const cacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, {
-    campaignId: params.campaignId
+    campaignId: params.campaignId,
   })
 
   if (!params.skipCache) {
@@ -1528,8 +1559,8 @@ export async function getGoogleAdsCampaign(params: {
         campaign.name,
         campaign.status,
         campaign.advertising_channel_type,
-        campaign.start_date,
-        campaign.end_date,
+        campaign.start_date_time,
+        campaign.end_date_time,
         campaign_budget.amount_micros,
         metrics.cost_micros,
         metrics.impressions,
@@ -1540,13 +1571,14 @@ export async function getGoogleAdsCampaign(params: {
     `
 
     const customer = await getCustomerWithCredentials(oauthGetCustomerParams(params, authContext))
-    results = await trackOAuthApiCall(
+    const rawResults = await trackOAuthApiCall(
       params.userId,
       params.customerId,
       ApiOperationType.SEARCH,
       '/api/google-ads/query',
       () => customer.query(query)
     )
+    results = normalizeCampaignDateFields(rawResults)
   }
 
   const result = results[0] || null
@@ -1610,7 +1642,7 @@ export async function listGoogleAdsCampaigns(params: {
       userId: params.userId,
       serviceAccountId: params.serviceAccountId,
       customerId: params.customerId,
-      query
+      query,
     })
 
     const results = normalizeCampaignDateFields(response.results || [])
@@ -1631,21 +1663,22 @@ export async function listGoogleAdsCampaigns(params: {
       campaign.name,
       campaign.status,
       campaign.advertising_channel_type,
-      campaign.start_date,
-      campaign.end_date,
+      campaign.start_date_time,
+      campaign.end_date_time,
       campaign_budget.amount_micros
     FROM campaign
     WHERE campaign.status != 'REMOVED'
     ORDER BY campaign.name
   `
 
-  const results = await trackOAuthApiCall(
+  const rawResults = await trackOAuthApiCall(
     params.userId,
     params.customerId,
     ApiOperationType.SEARCH,
     '/api/google-ads/query',
     () => customer.query(query)
   )
+  const results = normalizeCampaignDateFields(rawResults)
 
   // 缓存结果（30分钟TTL）
   gadsApiCache.set(cacheKey, results)
@@ -1694,9 +1727,9 @@ export async function findGoogleAdsAdGroupByName(params: {
     })
     results = response.results || []
   } else {
-    const customer = params.customer || await getCustomerWithCredentials(
-      oauthGetCustomerParams(params, authContext)
-    )
+    const customer =
+      params.customer ||
+      (await getCustomerWithCredentials(oauthGetCustomerParams(params, authContext)))
     results = await trackOAuthApiCall(
       params.userId,
       params.customerId,
@@ -1711,9 +1744,9 @@ export async function findGoogleAdsAdGroupByName(params: {
   if (!adGroupId) return null
 
   const resourceName = String(
-    row?.ad_group?.resource_name
-    || row?.adGroup?.resourceName
-    || `customers/${params.customerId}/adGroups/${adGroupId}`
+    row?.ad_group?.resource_name ||
+      row?.adGroup?.resourceName ||
+      `customers/${params.customerId}/adGroups/${adGroupId}`
   ).trim()
 
   return { adGroupId, resourceName }
@@ -1740,7 +1773,7 @@ export async function createGoogleAdsAdGroup(params: {
   status: 'ENABLED' | 'PAUSED'
   accountId?: number
   userId: number
-  loginCustomerId?: string  // 🔥 经理账号ID
+  loginCustomerId?: string // 🔥 经理账号ID
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
@@ -1748,7 +1781,10 @@ export async function createGoogleAdsAdGroup(params: {
 }): Promise<{ adGroupId: string; resourceName: string }> {
   const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
 
-  const reuseExistingAdGroup = async (): Promise<{ adGroupId: string; resourceName: string } | null> => {
+  const reuseExistingAdGroup = async (): Promise<{
+    adGroupId: string
+    resourceName: string
+  } | null> => {
     try {
       return await findGoogleAdsAdGroupByName({
         customerId: params.customerId,
@@ -1763,7 +1799,9 @@ export async function createGoogleAdsAdGroup(params: {
         authContext,
       })
     } catch (lookupError: any) {
-      console.warn(`⚠️ Ad Group存在性检查失败，将继续尝试创建: ${lookupError?.message || lookupError}`)
+      console.warn(
+        `⚠️ Ad Group存在性检查失败，将继续尝试创建: ${lookupError?.message || lookupError}`
+      )
       return null
     }
   }
@@ -1794,7 +1832,9 @@ export async function createGoogleAdsAdGroup(params: {
       if (isDuplicateAdGroupNameError(error)) {
         const duplicate = await reuseExistingAdGroup()
         if (duplicate) {
-          console.log(`♻️ Ad Group名称重复，复用已存在的Ad Group: ${params.adGroupName} (ID=${duplicate.adGroupId})`)
+          console.log(
+            `♻️ Ad Group名称重复，复用已存在的Ad Group: ${params.adGroupName} (ID=${duplicate.adGroupId})`
+          )
           return duplicate
         }
       }
@@ -1850,7 +1890,9 @@ export async function createGoogleAdsAdGroup(params: {
     if (isDuplicateAdGroupNameError(error)) {
       const duplicate = await reuseExistingAdGroup()
       if (duplicate) {
-        console.log(`♻️ Ad Group名称重复，复用已存在的Ad Group: ${params.adGroupName} (ID=${duplicate.adGroupId})`)
+        console.log(
+          `♻️ Ad Group名称重复，复用已存在的Ad Group: ${params.adGroupName} (ID=${duplicate.adGroupId})`
+        )
         return duplicate
       }
     }
@@ -1868,14 +1910,14 @@ export async function createGoogleAdsKeywordsBatch(params: {
   keywords: Array<{
     keywordText: string
     matchType: 'BROAD' | 'PHRASE' | 'EXACT'
-    negativeKeywordMatchType?: 'BROAD' | 'PHRASE' | 'EXACT'  // ← 新增：负向词的匹配类型
+    negativeKeywordMatchType?: 'BROAD' | 'PHRASE' | 'EXACT' // ← 新增：负向词的匹配类型
     status: 'ENABLED' | 'PAUSED'
     finalUrl?: string
     isNegative?: boolean
   }>
   accountId?: number
   userId: number
-  loginCustomerId?: string  // 🔧 添加MCC权限参数
+  loginCustomerId?: string // 🔧 添加MCC权限参数
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
@@ -1911,7 +1953,15 @@ export async function createGoogleAdsKeywordsBatch(params: {
         }
         return { kw, originalIndex, normalizedText: normalized.text }
       })
-      .filter((x): x is { kw: (typeof params.keywords)[number]; originalIndex: number; normalizedText: string } => Boolean(x))
+      .filter(
+        (
+          x
+        ): x is {
+          kw: (typeof params.keywords)[number]
+          originalIndex: number
+          normalizedText: string
+        } => Boolean(x)
+      )
 
     if (keywordInputs.length === 0) {
       return []
@@ -1950,9 +2000,9 @@ export async function createGoogleAdsKeywordsBatch(params: {
     const batch = params.keywords.slice(i, i + batchSize)
 
     const keywordOperationsWithMeta = batch
-      .map(kw => {
+      .map((kw) => {
         const effectiveMatchType = kw.isNegative
-          ? (kw.negativeKeywordMatchType || 'EXACT')
+          ? kw.negativeKeywordMatchType || 'EXACT'
           : kw.matchType
 
         const normalized = sanitizeKeywordForGoogleAds(kw.keywordText)
@@ -1992,7 +2042,7 @@ export async function createGoogleAdsKeywordsBatch(params: {
       params.customerId,
       ApiOperationType.MUTATE_BATCH,
       '/api/google-ads/keywords/create',
-      () => customer.adGroupCriteria.create(keywordOperationsWithMeta.map(x => x.operation))
+      () => customer.adGroupCriteria.create(keywordOperationsWithMeta.map((x) => x.operation))
     )
 
     if (response && response.results && response.results.length > 0) {
@@ -2013,10 +2063,10 @@ export async function createGoogleAdsKeywordsBatch(params: {
 function isDuplicateKeywordCriterionError(error: unknown): boolean {
   const message = String((error as { message?: string })?.message || error || '').toLowerCase()
   if (
-    message.includes('already exists')
-    || message.includes('resource_already_exists')
-    || message.includes('duplicate')
-    || message.includes('重复')
+    message.includes('already exists') ||
+    message.includes('resource_already_exists') ||
+    message.includes('duplicate') ||
+    message.includes('重复')
   ) {
     return true
   }
@@ -2072,7 +2122,9 @@ export async function createGoogleAdsKeywordsBatchAllowingDuplicates(
 const RESPONSIVE_AD_VARIANT_HINTS = ['Now', 'Today', 'Deals', 'Official', 'Shop'] as const
 
 function normalizeResponsiveAssetKey(text: string, maxLength: number): string {
-  return sanitizeGoogleAdsAdText(String(text ?? ''), maxLength).trim().toLowerCase()
+  return sanitizeGoogleAdsAdText(String(text ?? ''), maxLength)
+    .trim()
+    .toLowerCase()
 }
 
 function buildUniqueResponsiveAssetVariant(params: {
@@ -2096,9 +2148,10 @@ function buildUniqueResponsiveAssetVariant(params: {
 
   for (const suffix of candidateSuffixes) {
     const maxBaseLength = Math.max(1, maxLength - suffix.length)
-    const trimmedBase = normalizedBase.length > maxBaseLength
-      ? normalizedBase.slice(0, maxBaseLength).trim()
-      : normalizedBase
+    const trimmedBase =
+      normalizedBase.length > maxBaseLength
+        ? normalizedBase.slice(0, maxBaseLength).trim()
+        : normalizedBase
 
     if (!trimmedBase) continue
 
@@ -2138,7 +2191,9 @@ export function ensureUniqueResponsiveSearchAdAssets(
     })
 
     if (!replacement) {
-      throw new Error(`${assetLabel}${index + 1}与已有资产重复，且无法自动生成唯一变体，请调整创意后重试`)
+      throw new Error(
+        `${assetLabel}${index + 1}与已有资产重复，且无法自动生成唯一变体，请调整创意后重试`
+      )
     }
 
     console.warn(`[RSA] ${assetLabel}${index + 1}与已有资产重复，自动改写为: "${replacement}"`)
@@ -2156,12 +2211,12 @@ export async function createGoogleAdsResponsiveSearchAd(params: {
   headlines: string[] // Max 15 headlines
   descriptions: string[] // Max 4 descriptions
   finalUrls: string[]
-  finalUrlSuffix?: string  // 查询参数后缀（用于tracking）
+  finalUrlSuffix?: string // 查询参数后缀（用于tracking）
   path1?: string
   path2?: string
   accountId?: number
   userId: number
-  loginCustomerId?: string  // 🔥 经理账号ID
+  loginCustomerId?: string // 🔥 经理账号ID
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
@@ -2169,8 +2224,8 @@ export async function createGoogleAdsResponsiveSearchAd(params: {
 }): Promise<{ adId: string; resourceName: string }> {
   const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
 
-  const sanitizedHeadlines = params.headlines.map(h => sanitizeGoogleAdsAdText(h, 30))
-  const sanitizedDescriptions = params.descriptions.map(d => sanitizeGoogleAdsAdText(d, 90))
+  const sanitizedHeadlines = params.headlines.map((h) => sanitizeGoogleAdsAdText(h, 30))
+  const sanitizedDescriptions = params.descriptions.map((d) => sanitizeGoogleAdsAdText(d, 90))
   const uniqueHeadlines = ensureUniqueResponsiveSearchAdAssets(sanitizedHeadlines, 30, '标题')
   const uniqueDescriptions = ensureUniqueResponsiveSearchAdAssets(sanitizedDescriptions, 90, '描述')
   const sanitizedPath1 = params.path1 ? sanitizeGoogleAdsPath(params.path1, 15) : undefined
@@ -2179,13 +2234,17 @@ export async function createGoogleAdsResponsiveSearchAd(params: {
     ? sanitizeGoogleAdsFinalUrlSuffix(params.finalUrlSuffix)
     : undefined
 
-  const emptyHeadlineIndex = uniqueHeadlines.findIndex(h => !h.trim())
+  const emptyHeadlineIndex = uniqueHeadlines.findIndex((h) => !h.trim())
   if (emptyHeadlineIndex >= 0) {
-    throw new Error(`标题${emptyHeadlineIndex + 1}清洗后为空（可能仅包含不允许的符号），请修改后重试`)
+    throw new Error(
+      `标题${emptyHeadlineIndex + 1}清洗后为空（可能仅包含不允许的符号），请修改后重试`
+    )
   }
-  const emptyDescriptionIndex = uniqueDescriptions.findIndex(d => !d.trim())
+  const emptyDescriptionIndex = uniqueDescriptions.findIndex((d) => !d.trim())
   if (emptyDescriptionIndex >= 0) {
-    throw new Error(`描述${emptyDescriptionIndex + 1}清洗后为空（可能仅包含不允许的符号），请修改后重试`)
+    throw new Error(
+      `描述${emptyDescriptionIndex + 1}清洗后为空（可能仅包含不允许的符号），请修改后重试`
+    )
   }
 
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
@@ -2216,20 +2275,26 @@ export async function createGoogleAdsResponsiveSearchAd(params: {
   // Validate headlines (必须正好15个)
   // 根据业务规范：Headlines必须配置15个，如果从广告创意中获得的标题数量不足，则报错
   if (params.headlines.length !== 15) {
-    throw new Error(`Headlines必须正好15个，当前提供了${params.headlines.length}个。如果从广告创意中获得的标题数量不足，请报错。`)
+    throw new Error(
+      `Headlines必须正好15个，当前提供了${params.headlines.length}个。如果从广告创意中获得的标题数量不足，请报错。`
+    )
   }
 
   // Validate descriptions (必须正好4个)
   // 根据业务规范：Descriptions必须配置4个，如果从广告创意中获得的描述数量不足，则报错
   if (params.descriptions.length !== 4) {
-    throw new Error(`Descriptions必须正好4个，当前提供了${params.descriptions.length}个。如果从广告创意中获得的描述数量不足，请报错。`)
+    throw new Error(
+      `Descriptions必须正好4个，当前提供了${params.descriptions.length}个。如果从广告创意中获得的描述数量不足，请报错。`
+    )
   }
 
   // Validate headline length (max 30 characters each)
   uniqueHeadlines.forEach((headline, index) => {
     const effectiveLength = getGoogleAdsTextEffectiveLength(headline)
     if (effectiveLength > 30) {
-      throw new Error(`标题${index + 1}超过30字符限制: "${headline}" (effective=${effectiveLength}, raw=${headline.length})`)
+      throw new Error(
+        `标题${index + 1}超过30字符限制: "${headline}" (effective=${effectiveLength}, raw=${headline.length})`
+      )
     }
   })
 
@@ -2237,7 +2302,9 @@ export async function createGoogleAdsResponsiveSearchAd(params: {
   uniqueDescriptions.forEach((desc, index) => {
     const effectiveLength = getGoogleAdsTextEffectiveLength(desc)
     if (effectiveLength > 90) {
-      throw new Error(`描述${index + 1}超过90字符限制: "${desc}" (effective=${effectiveLength}, raw=${desc.length})`)
+      throw new Error(
+        `描述${index + 1}超过90字符限制: "${desc}" (effective=${effectiveLength}, raw=${desc.length})`
+      )
     }
   })
 
@@ -2248,8 +2315,8 @@ export async function createGoogleAdsResponsiveSearchAd(params: {
     ad: {
       final_urls: params.finalUrls,
       responsive_search_ad: {
-        headlines: uniqueHeadlines.map(text => ({ text })),
-        descriptions: uniqueDescriptions.map(text => ({ text })),
+        headlines: uniqueHeadlines.map((text) => ({ text })),
+        descriptions: uniqueDescriptions.map((text) => ({ text })),
       },
     },
   }
@@ -2314,16 +2381,18 @@ export async function getCampaignPerformance(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   authContext?: GoogleAdsAuthContext
-}): Promise<Array<{
-  date: string
-  impressions: number
-  clicks: number
-  conversions: number
-  cost_micros: number
-  ctr: number
-  cpc_micros: number
-  conversion_rate: number
-}>> {
+}): Promise<
+  Array<{
+    date: string
+    impressions: number
+    clicks: number
+    conversions: number
+    cost_micros: number
+    ctr: number
+    cpc_micros: number
+    conversion_rate: number
+  }>
+> {
   const query = `
     SELECT
       segments.date,
@@ -2406,16 +2475,18 @@ export async function getAdGroupPerformance(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   authContext?: GoogleAdsAuthContext
-}): Promise<Array<{
-  date: string
-  impressions: number
-  clicks: number
-  conversions: number
-  cost_micros: number
-  ctr: number
-  cpc_micros: number
-  conversion_rate: number
-}>> {
+}): Promise<
+  Array<{
+    date: string
+    impressions: number
+    clicks: number
+    conversions: number
+    cost_micros: number
+    ctr: number
+    cpc_micros: number
+    conversion_rate: number
+  }>
+> {
   const query = `
     SELECT
       segments.date,
@@ -2498,16 +2569,18 @@ export async function getAdPerformance(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   authContext?: GoogleAdsAuthContext
-}): Promise<Array<{
-  date: string
-  impressions: number
-  clicks: number
-  conversions: number
-  cost_micros: number
-  ctr: number
-  cpc_micros: number
-  conversion_rate: number
-}>> {
+}): Promise<
+  Array<{
+    date: string
+    impressions: number
+    clicks: number
+    conversions: number
+    cost_micros: number
+    ctr: number
+    cpc_micros: number
+    conversion_rate: number
+  }>
+> {
   const query = `
     SELECT
       segments.date,
@@ -2590,16 +2663,21 @@ export async function getBatchCampaignPerformance(params: {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   authContext?: GoogleAdsAuthContext
-}): Promise<Record<string, Array<{
-  date: string
-  impressions: number
-  clicks: number
-  conversions: number
-  cost_micros: number
-  ctr: number
-  cpc_micros: number
-  conversion_rate: number
-}>>> {
+}): Promise<
+  Record<
+    string,
+    Array<{
+      date: string
+      impressions: number
+      clicks: number
+      conversions: number
+      cost_micros: number
+      ctr: number
+      cpc_micros: number
+      conversion_rate: number
+    }>
+  >
+> {
   const campaignIdList = params.campaignIds.join(',')
 
   const query = `
@@ -2697,13 +2775,15 @@ export async function createGoogleAdsCalloutExtensions(params: {
   authContext?: GoogleAdsAuthContext
 }): Promise<{ assetIds: string[] }> {
   try {
-    const normalizedCallouts = Array.from(new Set(
-      params.callouts
-        .filter((text): text is string => typeof text === 'string')
-        .map((text) => sanitizeGoogleAdsAdText(text, 25))
-        .map((text) => text.trim())
-        .filter((text) => text.length > 0)
-    ))
+    const normalizedCallouts = Array.from(
+      new Set(
+        params.callouts
+          .filter((text): text is string => typeof text === 'string')
+          .map((text) => sanitizeGoogleAdsAdText(text, 25))
+          .map((text) => text.trim())
+          .filter((text) => text.length > 0)
+      )
+    )
 
     if (normalizedCallouts.length === 0) {
       throw new Error('没有有效的Callout文本，无法创建Callout扩展')
@@ -2721,7 +2801,7 @@ export async function createGoogleAdsCalloutExtensions(params: {
         campaignResourceName: resourceName,
         calloutTexts: normalizedCallouts,
       })
-      return { assetIds: assetResourceNames.map(rn => rn.split('/').pop() || '') }
+      return { assetIds: assetResourceNames.map((rn) => rn.split('/').pop() || '') }
     }
 
     const customer = await getCustomerWithCredentials(oauthGetCustomerParams(params, authContext))
@@ -2730,11 +2810,11 @@ export async function createGoogleAdsCalloutExtensions(params: {
     const assetResourceNames: string[] = []
 
     // Step 1: Create Callout Assets
-    const assetOperations = normalizedCallouts.map(calloutText => ({
+    const assetOperations = normalizedCallouts.map((calloutText) => ({
       callout_asset: {
         // normalizedCallouts 已经过 sanitizeGoogleAdsAdText(..., 25) 处理
-        callout_text: calloutText
-      }
+        callout_text: calloutText,
+      },
     }))
 
     console.log(`📢 创建${normalizedCallouts.length}个Callout Assets...`)
@@ -2765,10 +2845,10 @@ export async function createGoogleAdsCalloutExtensions(params: {
     }
 
     // Step 2: Link Assets to Campaign
-    const campaignAssetOperations = assetResourceNames.map(resourceName => ({
+    const campaignAssetOperations = assetResourceNames.map((resourceName) => ({
       campaign: `customers/${params.customerId}/campaigns/${params.campaignId}`,
       asset: resourceName,
-      field_type: enums.AssetFieldType.CALLOUT
+      field_type: enums.AssetFieldType.CALLOUT,
     }))
 
     console.log(`🔗 关联Callout Assets到Campaign ${params.campaignId}...`)
@@ -2837,8 +2917,12 @@ export async function createGoogleAdsSitelinkExtensions(params: {
 }): Promise<{ assetIds: string[] }> {
   const sanitizedSitelinks = params.sitelinks.map((sitelink) => {
     const sanitizedText = sanitizeGoogleAdsAdText(sitelink.text, 25).trim()
-    const desc1Raw = sitelink.description1 ? sanitizeGoogleAdsAdText(sitelink.description1, 35).trim() : ''
-    const desc2Raw = sitelink.description2 ? sanitizeGoogleAdsAdText(sitelink.description2, 35).trim() : ''
+    const desc1Raw = sitelink.description1
+      ? sanitizeGoogleAdsAdText(sitelink.description1, 35).trim()
+      : ''
+    const desc2Raw = sitelink.description2
+      ? sanitizeGoogleAdsAdText(sitelink.description2, 35).trim()
+      : ''
 
     let description1: string | undefined = desc1Raw
     let description2: string | undefined = desc2Raw
@@ -2853,7 +2937,7 @@ export async function createGoogleAdsSitelinkExtensions(params: {
       ...sitelink,
       text: sanitizedText,
       description1,
-      description2
+      description2,
     }
   })
 
@@ -2867,14 +2951,14 @@ export async function createGoogleAdsSitelinkExtensions(params: {
       serviceAccountId: params.serviceAccountId,
       customerId: params.customerId,
       campaignResourceName: resourceName,
-      sitelinks: sanitizedSitelinks.map(sl => ({
+      sitelinks: sanitizedSitelinks.map((sl) => ({
         linkText: sl.text,
         finalUrl: sl.url,
         description1: sl.description1,
         description2: sl.description2,
       })),
     })
-    return { assetIds: assetResourceNames.map(rn => rn.split('/').pop() || '') }
+    return { assetIds: assetResourceNames.map((rn) => rn.split('/').pop() || '') }
   }
 
   const customer = await getCustomerWithCredentials(oauthGetCustomerParams(params, authContext))
@@ -2883,12 +2967,14 @@ export async function createGoogleAdsSitelinkExtensions(params: {
 
   try {
     // Step 1: Create Sitelink Assets
-    const assetOperations = sanitizedSitelinks.map(sitelink => {
-      console.log(`🔍 处理Sitelink: text="${sitelink.text}", url="${sitelink.url}", desc1="${sitelink.description1}"`)
+    const assetOperations = sanitizedSitelinks.map((sitelink) => {
+      console.log(
+        `🔍 处理Sitelink: text="${sitelink.text}", url="${sitelink.url}", desc1="${sitelink.description1}"`
+      )
 
       const sitelinkAsset: any = {
         // sanitizedSitelinks 已经过 sanitizeGoogleAdsAdText(..., 25) 处理
-        link_text: sitelink.text
+        link_text: sitelink.text,
       }
 
       // description1 和 description2 必须要么都存在，要么都不存在
@@ -2902,7 +2988,7 @@ export async function createGoogleAdsSitelinkExtensions(params: {
       // 关键修复：final_urls必须在Asset层级，不是sitelink_asset内部
       const assetObj = {
         sitelink_asset: sitelinkAsset,
-        final_urls: [sitelink.url] // final_urls在Asset层级
+        final_urls: [sitelink.url], // final_urls在Asset层级
       }
 
       console.log(`✅ 生成的Asset:`, JSON.stringify(assetObj, null, 2))
@@ -2929,10 +3015,10 @@ export async function createGoogleAdsSitelinkExtensions(params: {
     }
 
     // Step 2: Link Assets to Campaign
-    const campaignAssetOperations = assetIds.map(assetId => ({
+    const campaignAssetOperations = assetIds.map((assetId) => ({
       campaign: `customers/${params.customerId}/campaigns/${params.campaignId}`,
       asset: `customers/${params.customerId}/assets/${assetId}`,
-      field_type: enums.AssetFieldType.SITELINK
+      field_type: enums.AssetFieldType.SITELINK,
     }))
 
     console.log(`🔗 关联Sitelink Assets到Campaign ${params.campaignId}...`)
@@ -2963,7 +3049,6 @@ export async function createGoogleAdsSitelinkExtensions(params: {
     throw new Error(`创建Sitelink扩展失败: ${errorMessage}`)
   }
 }
-
 
 // ==================== Conversion Goal Functions Removed ====================
 //
@@ -3018,7 +3103,9 @@ export function ensureKeywordsInHeadlines(
   const normalizeCoverageKey = (value: string): string =>
     normalizeGoogleAdsKeyword(value).replace(/\s+/g, '')
   const normalizeHeadlineAssetKey = (value: string): string =>
-    sanitizeGoogleAdsAdText(String(value ?? ''), 30).trim().toLowerCase()
+    sanitizeGoogleAdsAdText(String(value ?? ''), 30)
+      .trim()
+      .toLowerCase()
 
   const headlineCoverage = result.map((headline) => {
     const normalized = normalizeGoogleAdsKeyword(headline)
@@ -3030,9 +3117,13 @@ export function ensureKeywordsInHeadlines(
   // 获取需要确保覆盖的 Top N 关键词
   const topKeywordsRaw = keywords
     .slice(0, maxKeywordsToEnsure)
-    .map(k => typeof k === 'string' ? k : (k as any).text || (k as any).keyword || '')
-    .map(k => sanitizeKeyword(String(k ?? '')).replace(/\s+/g, ' ').trim())
-    .filter(k => k.length > 0)
+    .map((k) => (typeof k === 'string' ? k : (k as any).text || (k as any).keyword || ''))
+    .map((k) =>
+      sanitizeKeyword(String(k ?? ''))
+        .replace(/\s+/g, ' ')
+        .trim()
+    )
+    .filter((k) => k.length > 0)
 
   // 去重（规范化后去掉分隔符），避免把 "soundcore" 和 "sound core" 当成两个关键词
   const topKeywords: string[] = []
@@ -3049,14 +3140,14 @@ export function ensureKeywordsInHeadlines(
 
   // 找出未被标题覆盖的关键词
   const uncoveredKeywords: string[] = []
-  topKeywords.forEach(kw => {
+  topKeywords.forEach((kw) => {
     const normalizedKeyword = normalizeGoogleAdsKeyword(kw)
     const keywordCompact = normalizeCoverageKey(kw)
     const keywordTokens = normalizedKeyword.split(/\s+/).filter(Boolean)
     const isCovered = headlineCoverage.some((headline) => {
       if (keywordCompact && headline.compact.includes(keywordCompact)) return true
       if (keywordTokens.length === 0) return false
-      return keywordTokens.every(token => headline.tokenSet.has(token))
+      return keywordTokens.every((token) => headline.tokenSet.has(token))
     })
     if (!isCovered) {
       uncoveredKeywords.push(kw)
@@ -3075,20 +3166,28 @@ export function ensureKeywordsInHeadlines(
 
   // 去重未覆盖关键词（按Google Ads规范化键），避免近似词重复替换
   const uniqueUncoveredKeywords = Array.from(
-    uncoveredKeywords.reduce((map, keyword) => {
-      const key = normalizeCoverageKey(keyword)
-      if (!key || map.has(key)) return map
-      map.set(key, keyword)
-      return map
-    }, new Map<string, string>()).values()
+    uncoveredKeywords
+      .reduce((map, keyword) => {
+        const key = normalizeCoverageKey(keyword)
+        if (!key || map.has(key)) return map
+        map.set(key, keyword)
+        return map
+      }, new Map<string, string>())
+      .values()
   )
-  console.log(`[HeadlineOptimizer] 去重后需要为 ${uniqueUncoveredKeywords.length} 个唯一关键词生成新标题`)
+  console.log(
+    `[HeadlineOptimizer] 去重后需要为 ${uniqueUncoveredKeywords.length} 个唯一关键词生成新标题`
+  )
 
   // 生成包含关键词的新标题模板
   const generateKeywordHeadline = (keyword: string, brand: string): string => {
-    const brandText = sanitizeKeyword(String(brand ?? '')).replace(/\s+/g, ' ').trim()
+    const brandText = sanitizeKeyword(String(brand ?? ''))
+      .replace(/\s+/g, ' ')
+      .trim()
     const brandKey = normalizeCoverageKey(brandText)
-    const rawKeywordText = sanitizeKeyword(String(keyword ?? '')).replace(/\s+/g, ' ').trim()
+    const rawKeywordText = sanitizeKeyword(String(keyword ?? ''))
+      .replace(/\s+/g, ' ')
+      .trim()
     if (!rawKeywordText) {
       return brandText.length <= 30 ? brandText.trim() : brandText.substring(0, 30).trim()
     }
@@ -3127,7 +3226,9 @@ export function ensureKeywordsInHeadlines(
       return normalizedTokens.join(' ')
     })()
 
-    const keywordContainsBrand = Boolean(brandKey && normalizeCoverageKey(keywordForHeadline).includes(brandKey))
+    const keywordContainsBrand = Boolean(
+      brandKey && normalizeCoverageKey(keywordForHeadline).includes(brandKey)
+    )
 
     // 多种模板，确保多样性
     // 注意：避免使用 "-" 和 "|" 等可能触发 Google Ads SYMBOLS 政策的符号
@@ -3169,20 +3270,27 @@ export function ensureKeywordsInHeadlines(
       const normalizedNewHeadlineKey = normalizeHeadlineAssetKey(newHeadline)
 
       // 检查生成的标题是否与已有标题重复
-      const isDuplicate = result.some((h, idx) =>
-        idx !== replaceIndex && normalizeHeadlineAssetKey(h) === normalizedNewHeadlineKey
+      const isDuplicate = result.some(
+        (h, idx) =>
+          idx !== replaceIndex && normalizeHeadlineAssetKey(h) === normalizedNewHeadlineKey
       )
 
       if (!isDuplicate) {
         result[replaceIndex] = newHeadline
-        console.log(`[HeadlineOptimizer]    替换标题[${replaceIndex}]: "${oldHeadline}" → "${newHeadline}"`)
+        console.log(
+          `[HeadlineOptimizer]    替换标题[${replaceIndex}]: "${oldHeadline}" → "${newHeadline}"`
+        )
       } else {
-        console.log(`[HeadlineOptimizer]    跳过标题[${replaceIndex}]：新标题"${newHeadline}"与已有标题重复`)
+        console.log(
+          `[HeadlineOptimizer]    跳过标题[${replaceIndex}]：新标题"${newHeadline}"与已有标题重复`
+        )
       }
     }
   })
 
-  console.log(`[HeadlineOptimizer] ✅ 标题优化完成，替换了 ${uniqueUncoveredKeywords.length} 个标题`)
+  console.log(
+    `[HeadlineOptimizer] ✅ 标题优化完成，替换了 ${uniqueUncoveredKeywords.length} 个标题`
+  )
 
   return result
 }
@@ -3239,23 +3347,27 @@ export async function updateCampaignFinalUrlSuffix(params: {
       params.customerId,
       ApiOperationType.MUTATE,
       '/api/google-ads/campaign/update',
-      () => withRetry(
-        () => customer.campaigns.update([{
-          resource_name: resourceName,
-          final_url_suffix: sanitizedFinalUrlSuffix,
-        }]),
-        {
-          maxRetries: 3,
-          initialDelay: 1000,
-          operationName: `Update Campaign Final URL Suffix: ${params.campaignId}`
-        }
-      )
+      () =>
+        withRetry(
+          () =>
+            customer.campaigns.update([
+              {
+                resource_name: resourceName,
+                final_url_suffix: sanitizedFinalUrlSuffix,
+              },
+            ]),
+          {
+            maxRetries: 3,
+            initialDelay: 1000,
+            operationName: `Update Campaign Final URL Suffix: ${params.campaignId}`,
+          }
+        )
     )
   }
 
   // 清除相关缓存
   const getCacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, {
-    campaignId: params.campaignId
+    campaignId: params.campaignId,
   })
   const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId)
 

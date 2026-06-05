@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
 import { resolveOpenclawUserFromBindingDebug } from '@/lib/openclaw/bindings'
 
 export const dynamic = 'force-dynamic'
 
 const diagnoseSchema = z.object({
-  channel: z.string().min(1),
-  senderId: z.string().min(1),
+  channel: z.string().min(1, zErr.required),
+  senderId: z.string().min(1, zErr.required),
   accountId: z.string().optional(),
   tenantKey: z.string().optional(),
 })
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
   const parsed = diagnoseSchema.safeParse(body || {})
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.errors[0]?.message || 'Invalid request' },
+      { error: parsed.error.issues[0]?.message || 'Invalid request' },
       { status: 400 }
     )
   }

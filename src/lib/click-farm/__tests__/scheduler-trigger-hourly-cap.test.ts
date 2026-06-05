@@ -16,15 +16,15 @@ describe('click-farm trigger hourly cap', () => {
               target: hour === 23 ? 3 : 0,
               actual: hour === 23 ? 3 : 0,
               success: hour === 23 ? 3 : 0,
-              failed: 0
-            }))
-          }
-        ] as any
+              failed: 0,
+            })),
+          },
+        ] as any,
       },
       {
         targetDate: '2026-03-22',
         currentHour: 23,
-        plannedClicks: 3
+        plannedClicks: 3,
       }
     )
 
@@ -45,15 +45,15 @@ describe('click-farm trigger hourly cap', () => {
               target: hour === 23 ? 3 : 0,
               actual: hour === 23 ? 1 : 0,
               success: hour === 23 ? 1 : 0,
-              failed: 0
-            }))
-          }
-        ] as any
+              failed: 0,
+            })),
+          },
+        ] as any,
       },
       {
         targetDate: '2026-03-22',
         currentHour: 23,
-        plannedClicks: 3
+        plannedClicks: 3,
       }
     )
 

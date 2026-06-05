@@ -11,7 +11,10 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-const removePendingClickFarmQueueTasksByTaskIds = vi.fn(async () => ({ removedCount: 1, scannedCount: 2 }))
+const removePendingClickFarmQueueTasksByTaskIds = vi.fn(async () => ({
+  removedCount: 1,
+  scannedCount: 2,
+}))
 vi.mock('@/lib/click-farm/queue-cleanup', () => ({
   removePendingClickFarmQueueTasksByTaskIds,
 }))
@@ -20,7 +23,10 @@ describe('deleteClickFarmTask queue cleanup', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     exec.mockResolvedValue({ changes: 1 })
-    removePendingClickFarmQueueTasksByTaskIds.mockResolvedValue({ removedCount: 1, scannedCount: 2 })
+    removePendingClickFarmQueueTasksByTaskIds.mockResolvedValue({
+      removedCount: 1,
+      scannedCount: 2,
+    })
   })
 
   it('removes pending queue tasks for deleted click-farm task', async () => {

@@ -73,7 +73,7 @@ describe('PUT /api/admin/users/[id]/google-ads-auth', () => {
       }),
     })
 
-    const res = await PUT(req, { params: { id: '2' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '2' }) })
     const data = await res.json()
 
     expect(res.status).toBe(409)

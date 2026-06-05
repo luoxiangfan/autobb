@@ -1,6 +1,10 @@
 import { getDatabase } from './db'
 import { getInsertedId } from './db-helpers'
-import { markUrlSwapTargetsRemovedByCampaignId, getUrlSwapTaskByOfferId, disableUrlSwapTask } from './url-swap'
+import {
+  markUrlSwapTargetsRemovedByCampaignId,
+  getUrlSwapTaskByOfferId,
+  disableUrlSwapTask,
+} from './url-swap'
 import { applyCampaignTransition } from './campaign-state-machine'
 import { stopClickFarmTask } from './click-farm'
 import { autoBackupCampaign } from './campaign-backups'
@@ -48,10 +52,10 @@ export interface CreateCampaignInput {
   startDate?: string
   endDate?: string
   // 🔧 新增：广告系列排期和定位字段
-  startDateTime?: string  // ISO 8601 格式
-  endDateTime?: string  // ISO 8601 格式
-  targetCountry?: string  // 国家代码
-  targetLanguage?: string  // 语言
+  startDateTime?: string // ISO 8601 格式
+  endDateTime?: string // ISO 8601 格式
+  targetCountry?: string // 国家代码
+  targetLanguage?: string // 语言
 }
 
 /**
@@ -65,26 +69,29 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
 
   let result
   try {
-    result = await db.exec(`
+    result = await db.exec(
+      `
       INSERT INTO campaigns (
         user_id, offer_id, google_ads_account_id,
         campaign_name, budget_amount, budget_type,
         target_cpa, max_cpc, status,
         start_date, end_date
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      input.userId,
-      input.offerId,
-      input.googleAdsAccountId,
-      input.campaignName,
-      input.budgetAmount,
-      input.budgetType || 'DAILY',
-      input.targetCpa || null,
-      input.maxCpc || null,
-      input.status || 'PAUSED',
-      input.startDate || null,
-      input.endDate || null,
-    ])
+    `,
+      [
+        input.userId,
+        input.offerId,
+        input.googleAdsAccountId,
+        input.campaignName,
+        input.budgetAmount,
+        input.budgetType || 'DAILY',
+        input.targetCpa || null,
+        input.maxCpc || null,
+        input.status || 'PAUSED',
+        input.startDate || null,
+        input.endDate || null,
+      ]
+    )
   } catch (error) {
     if (isCampaignOfferUniqueViolation(error)) {
       throw new Error(CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE)
@@ -118,10 +125,13 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
 export async function findCampaignById(id: number, userId: number): Promise<Campaign | null> {
   const db = await getDatabase()
 
-  const row = await db.queryOne(`
+  const row = (await db.queryOne(
+    `
     SELECT * FROM campaigns
     WHERE id = ? AND user_id = ?
-  `, [id, userId]) as any
+  `,
+    [id, userId]
+  )) as any
 
   if (!row) {
     return null
@@ -133,13 +143,19 @@ export async function findCampaignById(id: number, userId: number): Promise<Camp
 /**
  * 根据Google Ads campaign_id查找
  */
-export async function findCampaignByGoogleId(campaignId: string, userId: number): Promise<Campaign | null> {
+export async function findCampaignByGoogleId(
+  campaignId: string,
+  userId: number
+): Promise<Campaign | null> {
   const db = await getDatabase()
 
-  const row = await db.queryOne(`
+  const row = (await db.queryOne(
+    `
     SELECT * FROM campaigns
     WHERE campaign_id = ? AND user_id = ?
-  `, [campaignId, userId]) as any
+  `,
+    [campaignId, userId]
+  )) as any
 
   if (!row) {
     return null
@@ -158,11 +174,14 @@ export async function findCampaignsByOfferId(offerId: number, userId: number): P
   // 避免 prepared statement 中的 boolean = integer 类型不匹配问题
   const isDeletedCheck = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
 
-  const rows = await db.query(`
+  const rows = (await db.query(
+    `
     SELECT * FROM campaigns
     WHERE offer_id = ? AND user_id = ? AND ${isDeletedCheck}
     ORDER BY created_at DESC
-  `, [offerId, userId]) as any[]
+  `,
+    [offerId, userId]
+  )) as any[]
 
   return rows.map(mapRowToCampaign)
 }
@@ -186,7 +205,7 @@ export async function findCampaignsByUserId(userId: number, limit?: number): Pro
     sql += ` LIMIT ${limit}`
   }
 
-  const rows = await db.query(sql, [userId]) as any[]
+  const rows = (await db.query(sql, [userId])) as any[]
   return rows.map(mapRowToCampaign)
 }
 
@@ -202,11 +221,14 @@ export async function findCampaignsByAccountId(
   // 🔧 修复: PostgreSQL兼容性 - 使用BOOLEAN类型字面量直接嵌入SQL
   const isDeletedCheck = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
 
-  const rows = await db.query(`
+  const rows = (await db.query(
+    `
     SELECT * FROM campaigns
     WHERE google_ads_account_id = ? AND user_id = ? AND ${isDeletedCheck}
     ORDER BY created_at DESC
-  `, [googleAdsAccountId, userId]) as any[]
+  `,
+    [googleAdsAccountId, userId]
+  )) as any[]
 
   return rows.map(mapRowToCampaign)
 }
@@ -318,11 +340,14 @@ export async function updateCampaign(
   fields.push(`updated_at = ${nowFunc}`)
   values.push(id, userId)
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE campaigns
     SET ${fields.join(', ')}
     WHERE id = ? AND user_id = ?
-  `, values)
+  `,
+    values
+  )
 
   if (shouldMarkRemoved) {
     await markUrlSwapTargetsRemovedByCampaignId(id, userId)
@@ -347,7 +372,7 @@ export type DeleteCampaignResult =
 export async function deleteCampaign(id: number, userId: number): Promise<DeleteCampaignResult> {
   const db = await getDatabase()
 
-  const campaign = await db.queryOne(
+  const campaign = (await db.queryOne(
     `
       SELECT
         c.id,
@@ -365,7 +390,7 @@ export async function deleteCampaign(id: number, userId: number): Promise<Delete
       LIMIT 1
     `,
     [id, userId]
-  ) as
+  )) as
     | {
         id: number
         offer_id: number
@@ -383,7 +408,9 @@ export async function deleteCampaign(id: number, userId: number): Promise<Delete
     return { success: false, reason: 'NOT_FOUND' }
   }
 
-  const normalizedStatus = String(campaign.status || '').trim().toUpperCase()
+  const normalizedStatus = String(campaign.status || '')
+    .trim()
+    .toUpperCase()
 
   // 与 /api/campaigns/performance 对齐：Ads 账号可用 = 账号存在且为激活状态
   const hasLinkedAdsAccountId =
@@ -510,12 +537,15 @@ async function pauseOfferTasks(offerId: number, userId: number): Promise<void> {
 async function getClickFarmTaskByOfferId(offerId: number, userId: number): Promise<any | null> {
   const db = await getDatabase()
 
-  const task = await db.queryOne<any>(`
+  const task = await db.queryOne<any>(
+    `
     SELECT * FROM click_farm_tasks
     WHERE offer_id = ? AND user_id = ? AND is_deleted = 0
     ORDER BY created_at DESC
     LIMIT 1
-  `, [offerId, userId])
+  `,
+    [offerId, userId]
+  )
 
   if (!task) return null
 
@@ -530,7 +560,9 @@ export async function updateCampaignStatus(
   userId: number,
   status: string
 ): Promise<Campaign | null> {
-  const normalizedStatus = String(status || '').trim().toUpperCase()
+  const normalizedStatus = String(status || '')
+    .trim()
+    .toUpperCase()
 
   if (normalizedStatus === 'ENABLED' || normalizedStatus === 'PAUSED') {
     await applyCampaignTransition({

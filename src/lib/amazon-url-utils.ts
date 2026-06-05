@@ -55,10 +55,12 @@ export function isAmazonVanityStorePath(pathname: string): boolean {
 
 export function isAmazonStorePath(pathname: string): boolean {
   const normalized = normalizePathname(pathname)
-  return normalized.includes('/stores/')
-    || normalized.includes('/store/')
-    || normalized.includes('/storefront/')
-    || isAmazonVanityStorePath(normalized)
+  return (
+    normalized.includes('/stores/') ||
+    normalized.includes('/store/') ||
+    normalized.includes('/storefront/') ||
+    isAmazonVanityStorePath(normalized)
+  )
 }
 
 export function isAmazonProductPath(pathname: string): boolean {

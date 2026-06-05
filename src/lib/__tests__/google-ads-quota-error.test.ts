@@ -54,9 +54,7 @@ describe('google-ads-quota-error', () => {
   })
 
   it('detects quota error from explorer operation message', () => {
-    const error = new Error(
-      'Number of operations for explorer access exceeded temporarily'
-    )
+    const error = new Error('Number of operations for explorer access exceeded temporarily')
 
     expect(isGoogleAdsQuotaRateError(error)).toBe(true)
   })

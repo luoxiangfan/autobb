@@ -20,10 +20,7 @@ export async function GET(request: NextRequest) {
     // 1. 验证用户身份
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: '未授权' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
     const userId = authResult.user.userId
@@ -32,7 +29,9 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'score'
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined
     const requestedCurrencyRaw = searchParams.get('currency')
-    const requestedCurrency = requestedCurrencyRaw ? requestedCurrencyRaw.trim().toUpperCase() : null
+    const requestedCurrency = requestedCurrencyRaw
+      ? requestedCurrencyRaw.trim().toUpperCase()
+      : null
 
     const db = await getDatabase()
 
@@ -74,7 +73,7 @@ export async function GET(request: NextRequest) {
       creativesQuery += ` LIMIT ${limit}`
     }
 
-    const creatives = await db.query(creativesQuery, [userId]) as any[]
+    const creatives = (await db.query(creativesQuery, [userId])) as any[]
 
     // 4. 为每个Creative获取关联Campaign的性能数据（使用 campaign_performance）
     const cutoffDate = new Date()
@@ -82,7 +81,8 @@ export async function GET(request: NextRequest) {
     const cutoffDateStr = cutoffDate.toISOString().split('T')[0]
 
     // 获取可用币种（用于前端选择；多币种时禁止混加）
-    const currencyRows = await db.query<any>(`
+    const currencyRows = await db.query<any>(
+      `
       SELECT DISTINCT
         COALESCE(cp.currency, gaa.currency, 'USD') as currency
       FROM campaigns c
@@ -91,31 +91,43 @@ export async function GET(request: NextRequest) {
         ON c.id = cp.campaign_id
         AND cp.date >= ?
       WHERE c.user_id = ?
-    `, [cutoffDateStr, userId])
+    `,
+      [cutoffDateStr, userId]
+    )
 
-    const availableCurrencies = Array.from(new Set(
-      (currencyRows || [])
-        .map((r: any) => String(r.currency || '').trim())
-        .filter((c: string) => Boolean(c))
-    ))
+    const availableCurrencies = Array.from(
+      new Set(
+        (currencyRows || [])
+          .map((r: any) => String(r.currency || '').trim())
+          .filter((c: string) => Boolean(c))
+      )
+    )
 
-    const defaultCurrencyRow = await db.queryOne<any>(`
+    const defaultCurrencyRow = await db.queryOne<any>(
+      `
       SELECT COALESCE(gaa.currency, 'USD') as currency
       FROM campaigns c
       LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
       WHERE c.user_id = ?
       ORDER BY COALESCE(c.published_at, c.created_at) DESC
       LIMIT 1
-    `, [userId])
+    `,
+      [userId]
+    )
     const defaultCurrency = String(defaultCurrencyRow?.currency || 'USD')
 
-    const reportingCurrency = requestedCurrency && availableCurrencies.includes(requestedCurrency)
-      ? requestedCurrency
-      : (availableCurrencies.includes(defaultCurrency) ? defaultCurrency : (availableCurrencies[0] || 'USD'))
+    const reportingCurrency =
+      requestedCurrency && availableCurrencies.includes(requestedCurrency)
+        ? requestedCurrency
+        : availableCurrencies.includes(defaultCurrency)
+          ? defaultCurrency
+          : availableCurrencies[0] || 'USD'
 
-    const creativesWithPerformance = await Promise.all(creatives.map(async (creative) => {
-      // 获取该Offer下所有Campaign的性能数据（从 campaign_performance）
-      const performanceData = await db.queryOne(`
+    const creativesWithPerformance = await Promise.all(
+      creatives.map(async (creative) => {
+        // 获取该Offer下所有Campaign的性能数据（从 campaign_performance）
+        const performanceData = (await db.queryOne(
+          `
         SELECT
           SUM(cp.impressions) as impressions,
           SUM(cp.clicks) as clicks,
@@ -130,50 +142,53 @@ export async function GET(request: NextRequest) {
           AND COALESCE(cp.currency, gaa.currency, 'USD') = ?
         WHERE c.offer_id = ?
           AND c.user_id = ?
-      `, [cutoffDateStr, reportingCurrency, creative.offer_id, userId]) as any
+      `,
+          [cutoffDateStr, reportingCurrency, creative.offer_id, userId]
+        )) as any
 
-      // 安全计算指标
-      const impressions = toNumber(performanceData?.impressions)
-      const clicks = toNumber(performanceData?.clicks)
-      const conversions = toNumber(performanceData?.conversions)
-      const cost = toNumber(performanceData?.cost)
+        // 安全计算指标
+        const impressions = toNumber(performanceData?.impressions)
+        const clicks = toNumber(performanceData?.clicks)
+        const conversions = toNumber(performanceData?.conversions)
+        const cost = toNumber(performanceData?.cost)
 
-      const currencyCount = toNumber(performanceData?.currency_count)
-      const hasMixedCurrency = currencyCount > 1
+        const currencyCount = toNumber(performanceData?.currency_count)
+        const hasMixedCurrency = currencyCount > 1
 
-      const ctr = impressions > 0 ? clicks * 100.0 / impressions : 0
-      const avgCpc = clicks > 0 ? cost / clicks : 0
-      const conversionRate = clicks > 0 ? conversions * 100.0 / clicks : 0
+        const ctr = impressions > 0 ? (clicks * 100.0) / impressions : 0
+        const avgCpc = clicks > 0 ? cost / clicks : 0
+        const conversionRate = clicks > 0 ? (conversions * 100.0) / clicks : 0
 
-      return {
-        id: creative.id,
-        offerId: creative.offer_id,
-        offerBrand: creative.offer_brand,
-        offerCategory: creative.offer_category,
-        offerUrl: creative.offer_url,
-        headlines: JSON.parse(creative.headlines),
-        descriptions: JSON.parse(creative.descriptions),
-        keywords: creative.keywords ? JSON.parse(creative.keywords) : [],
-        finalUrl: creative.final_url,
-        score: creative.score,
-        scoreBreakdown: creative.score_breakdown ? JSON.parse(creative.score_breakdown) : null,
-        generationRound: creative.generation_round,
-        theme: creative.theme,
-        isSelected: creative.is_selected === 1,
-        createdAt: creative.created_at,
-        adsAccountCurrency: reportingCurrency,
-        hasMixedCurrency,
-        performance: {
-          impressions: impressions,
-          clicks: clicks,
-          conversions: conversions,
-          costUsd: Math.round(cost * 100) / 100,
-          ctr: Math.round(ctr * 100) / 100,
-          avgCpcUsd: Math.round(avgCpc * 100) / 100,
-          conversionRate: Math.round(conversionRate * 100) / 100,
+        return {
+          id: creative.id,
+          offerId: creative.offer_id,
+          offerBrand: creative.offer_brand,
+          offerCategory: creative.offer_category,
+          offerUrl: creative.offer_url,
+          headlines: JSON.parse(creative.headlines),
+          descriptions: JSON.parse(creative.descriptions),
+          keywords: creative.keywords ? JSON.parse(creative.keywords) : [],
+          finalUrl: creative.final_url,
+          score: creative.score,
+          scoreBreakdown: creative.score_breakdown ? JSON.parse(creative.score_breakdown) : null,
+          generationRound: creative.generation_round,
+          theme: creative.theme,
+          isSelected: creative.is_selected === 1,
+          createdAt: creative.created_at,
+          adsAccountCurrency: reportingCurrency,
+          hasMixedCurrency,
+          performance: {
+            impressions: impressions,
+            clicks: clicks,
+            conversions: conversions,
+            costUsd: Math.round(cost * 100) / 100,
+            ctr: Math.round(ctr * 100) / 100,
+            avgCpcUsd: Math.round(avgCpc * 100) / 100,
+            conversionRate: Math.round(conversionRate * 100) / 100,
+          },
         }
-      }
-    }))
+      })
+    )
 
     // 5. 如果按performance排序，现在进行排序
     if (sortBy === 'performance') {
@@ -187,34 +202,40 @@ export async function GET(request: NextRequest) {
 
     // 6. 计算统计数据和推荐
     const totalCreatives = creativesWithPerformance.length
-    const selectedCreatives = creativesWithPerformance.filter(c => c.isSelected).length
+    const selectedCreatives = creativesWithPerformance.filter((c) => c.isSelected).length
 
     // 性能总计
-    const totalPerformance = creativesWithPerformance.reduce((acc, c) => ({
-      impressions: acc.impressions + c.performance.impressions,
-      clicks: acc.clicks + c.performance.clicks,
-      conversions: acc.conversions + c.performance.conversions,
-      cost: acc.cost + c.performance.costUsd,
-    }), { impressions: 0, clicks: 0, conversions: 0, cost: 0 })
+    const totalPerformance = creativesWithPerformance.reduce(
+      (acc, c) => ({
+        impressions: acc.impressions + c.performance.impressions,
+        clicks: acc.clicks + c.performance.clicks,
+        conversions: acc.conversions + c.performance.conversions,
+        cost: acc.cost + c.performance.costUsd,
+      }),
+      { impressions: 0, clicks: 0, conversions: 0, cost: 0 }
+    )
 
     // 找出最佳Creative（按不同维度）
-    const bestByScore = creativesWithPerformance.length > 0
-      ? creativesWithPerformance.reduce((best, current) =>
-        current.score > best.score ? current : best
-      )
-      : null
+    const bestByScore =
+      creativesWithPerformance.length > 0
+        ? creativesWithPerformance.reduce((best, current) =>
+            current.score > best.score ? current : best
+          )
+        : null
 
-    const bestByConversions = creativesWithPerformance.length > 0
-      ? creativesWithPerformance.reduce((best, current) =>
-        current.performance.conversions > best.performance.conversions ? current : best
-      )
-      : null
+    const bestByConversions =
+      creativesWithPerformance.length > 0
+        ? creativesWithPerformance.reduce((best, current) =>
+            current.performance.conversions > best.performance.conversions ? current : best
+          )
+        : null
 
-    const bestByCtr = creativesWithPerformance.length > 0
-      ? creativesWithPerformance.reduce((best, current) =>
-        current.performance.ctr > best.performance.ctr ? current : best
-      )
-      : null
+    const bestByCtr =
+      creativesWithPerformance.length > 0
+        ? creativesWithPerformance.reduce((best, current) =>
+            current.performance.ctr > best.performance.ctr ? current : best
+          )
+        : null
 
     // 生成推荐
     const recommendations = []
@@ -224,7 +245,7 @@ export async function GET(request: NextRequest) {
         type: 'best_score',
         creativeId: bestByScore.id,
         reason: `综合得分最高（${bestByScore.score}分），文案质量优秀`,
-        metric: bestByScore.score
+        metric: bestByScore.score,
       })
     }
 
@@ -233,7 +254,7 @@ export async function GET(request: NextRequest) {
         type: 'best_conversion',
         creativeId: bestByConversions.id,
         reason: `转化效果最佳（${bestByConversions.performance.conversions}次转化）`,
-        metric: bestByConversions.performance.conversions
+        metric: bestByConversions.performance.conversions,
       })
     }
 
@@ -242,7 +263,7 @@ export async function GET(request: NextRequest) {
         type: 'best_engagement',
         creativeId: bestByCtr.id,
         reason: `点击率最高（${parseFloat((bestByCtr.performance.ctr * 100).toFixed(2))}%）`,
-        metric: bestByCtr.performance.ctr
+        metric: bestByCtr.performance.ctr,
       })
     }
 
@@ -260,13 +281,12 @@ export async function GET(request: NextRequest) {
         dateRange: {
           start: cutoffDateStr,
           end: new Date().toISOString().split('T')[0],
-          days: daysBack
-        }
+          days: daysBack,
+        },
       },
       recommendations,
-      sortBy
+      sortBy,
     })
-
   } catch (error: any) {
     console.error('Get creative performance error:', error)
     return NextResponse.json(

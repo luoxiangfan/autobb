@@ -16,13 +16,13 @@ export default function Recent14DaysCampaignsPage() {
   const now = new Date()
   const fourteenDaysAgo = new Date(now)
   fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
-  
+
   const startStr = fourteenDaysAgo.toISOString().split('T')[0]
   const endStr = now.toISOString().split('T')[0]
   // 如果参数还未设置，显示加载状态
   const createdAtStart = startStr
   const createdAtEnd = endStr
-  
+
   if (!createdAtStart || !createdAtEnd) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -38,7 +38,7 @@ export default function Recent14DaysCampaignsPage() {
     <CampaignsClientPage
       campaignsReqDedupEnabled={campaignsReqDedupEnabled}
       campaignsServerPagingEnabled={campaignsServerPagingEnabled}
-      defaultTimeRange='14'
+      defaultTimeRange="14"
       createdAtStart={createdAtStart}
       createdAtEnd={createdAtEnd}
       pageTitle="最近 14 天新增广告系列"

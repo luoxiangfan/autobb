@@ -39,10 +39,7 @@ export interface CacheStats {
 /**
  * 缓存配置（按operationType）
  */
-const CACHE_CONFIG: Record<
-  string,
-  { ttl: number; enabled: boolean; avgCost: number }
-> = {
+const CACHE_CONFIG: Record<string, { ttl: number; enabled: boolean; avgCost: number }> = {
   review_analysis: {
     ttl: 7 * 24 * 60 * 60, // 7天（秒）
     enabled: true,
@@ -103,8 +100,7 @@ function simpleHash(str: string): string {
  */
 export class AICacheManager {
   private stats: Map<string, CacheStats> = new Map()
-  private memoryCache: Map<string, { value: unknown; expireAt: number }> =
-    new Map()
+  private memoryCache: Map<string, { value: unknown; expireAt: number }> = new Map()
 
   /**
    * 获取Redis客户端（如果可用）
@@ -168,11 +164,7 @@ export class AICacheManager {
     }
 
     try {
-      const cacheKey = generateCacheKey(
-        operationType,
-        simpleHash(contentKey),
-        options.version
-      )
+      const cacheKey = generateCacheKey(operationType, simpleHash(contentKey), options.version)
 
       const redis = this.getRedis()
 
@@ -228,11 +220,7 @@ export class AICacheManager {
     }
 
     try {
-      const cacheKey = generateCacheKey(
-        operationType,
-        simpleHash(contentKey),
-        options.version
-      )
+      const cacheKey = generateCacheKey(operationType, simpleHash(contentKey), options.version)
       const ttl = options.ttl || config.ttl
 
       const redis = this.getRedis()
@@ -264,11 +252,7 @@ export class AICacheManager {
     options: CacheOptions = {}
   ): Promise<void> {
     try {
-      const cacheKey = generateCacheKey(
-        operationType,
-        simpleHash(contentKey),
-        options.version
-      )
+      const cacheKey = generateCacheKey(operationType, simpleHash(contentKey), options.version)
 
       const redis = this.getRedis()
       if (redis && redis.status === 'ready') {

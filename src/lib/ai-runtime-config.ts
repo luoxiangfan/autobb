@@ -45,20 +45,25 @@ export async function resolveActiveAIConfig(userId: number): Promise<ResolvedAIC
     }
   }
 
-  const [providerSetting, modelSetting, officialApiKeySetting, relayApiKeySetting] = await Promise.all([
-    getUserOnlySetting('ai', 'gemini_provider', userId),
-    getUserOnlySetting('ai', 'gemini_model', userId),
-    getUserOnlySetting('ai', 'gemini_api_key', userId),
-    getUserOnlySetting('ai', 'gemini_relay_api_key', userId),
-  ])
+  const [providerSetting, modelSetting, officialApiKeySetting, relayApiKeySetting] =
+    await Promise.all([
+      getUserOnlySetting('ai', 'gemini_provider', userId),
+      getUserOnlySetting('ai', 'gemini_model', userId),
+      getUserOnlySetting('ai', 'gemini_api_key', userId),
+      getUserOnlySetting('ai', 'gemini_relay_api_key', userId),
+    ])
 
   const rawProvider = normalizeProvider(providerSetting?.value)
   const directProvider: 'official' | 'relay' = rawProvider === 'relay' ? 'relay' : 'official'
-  const directModel = normalizeModelForProvider(modelSetting?.value || fallbackModel, directProvider)
+  const directModel = normalizeModelForProvider(
+    modelSetting?.value || fallbackModel,
+    directProvider
+  )
 
-  const directApiKey = directProvider === 'relay'
-    ? relayApiKeySetting?.value || ''
-    : officialApiKeySetting?.value || ''
+  const directApiKey =
+    directProvider === 'relay'
+      ? relayApiKeySetting?.value || ''
+      : officialApiKeySetting?.value || ''
   const directEndpoint = getGeminiEndpoint(directProvider, directModel)
 
   if (directApiKey) {

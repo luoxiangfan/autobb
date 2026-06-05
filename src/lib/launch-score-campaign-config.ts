@@ -65,11 +65,11 @@ export function parseLaunchScoreHashCampaignConfig(
   const keywords = Array.isArray(source.keywords) ? source.keywords : undefined
 
   if (
-    budgetAmount == null
-    && maxCpcBid == null
-    && !targetCountry
-    && !targetLanguage
-    && !keywords?.length
+    budgetAmount == null &&
+    maxCpcBid == null &&
+    !targetCountry &&
+    !targetLanguage &&
+    !keywords?.length
   ) {
     return undefined
   }

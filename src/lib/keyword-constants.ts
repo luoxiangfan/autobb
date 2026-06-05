@@ -15,13 +15,33 @@
  */
 export const PLATFORMS = [
   // 销售平台
-  'amazon', 'ebay', 'walmart', 'target', 'bestbuy', 'homedepot', 'lowes',
-  'aliexpress', 'alibaba', 'etsy', 'newegg', 'costco', 'samsclub',
+  'amazon',
+  'ebay',
+  'walmart',
+  'target',
+  'bestbuy',
+  'homedepot',
+  'lowes',
+  'aliexpress',
+  'alibaba',
+  'etsy',
+  'newegg',
+  'costco',
+  'samsclub',
   // 智能家居生态系统平台（功能特性，非竞品）
-  'alexa', 'google home', 'google assistant', 'homekit', 'apple homekit',
-  'smartthings', 'ifttt', 'home assistant',
+  'alexa',
+  'google home',
+  'google assistant',
+  'homekit',
+  'apple homekit',
+  'smartthings',
+  'ifttt',
+  'home assistant',
   // 大型科技公司（通常表示兼容性/集成）
-  'google', 'apple', 'microsoft', 'amazon'
+  'google',
+  'apple',
+  'microsoft',
+  'amazon',
 ] as const
 
 /**
@@ -34,14 +54,43 @@ export const PLATFORMS = [
  */
 export const BRAND_PATTERNS = [
   // 安防/摄像头竞品品牌
-  'ring', 'arlo', 'nest', 'wyze', 'blink', 'eufy', 'lorex', 'swann', 'hikvision', 'dahua',
-  'adt', 'simplisafe', 'vivint', 'frontpoint', 'abode', 'cove', 'scout',
+  'ring',
+  'arlo',
+  'nest',
+  'wyze',
+  'blink',
+  'eufy',
+  'lorex',
+  'swann',
+  'hikvision',
+  'dahua',
+  'adt',
+  'simplisafe',
+  'vivint',
+  'frontpoint',
+  'abode',
+  'cove',
+  'scout',
   // 电商平台相关
-  'shopify', 'woocommerce', 'bigcommerce', 'magento',
+  'shopify',
+  'woocommerce',
+  'bigcommerce',
+  'magento',
   // 通用科技品牌（可能有竞品）
-  'samsung', 'philips', 'hue', 'lutron', 'ecobee', 'tplink', 'kasa', 'nanoleaf', 'meross',
+  'samsung',
+  'philips',
+  'hue',
+  'lutron',
+  'ecobee',
+  'tplink',
+  'kasa',
+  'nanoleaf',
+  'meross',
   // 其他智能家居品牌
-  'xiaomi', 'mijia', 'tuya', 'smart life'
+  'xiaomi',
+  'mijia',
+  'tuya',
+  'smart life',
 ] as const
 
 /**
@@ -49,7 +98,7 @@ export const BRAND_PATTERNS = [
  */
 export const DEFAULTS = {
   /** 默认最小搜索量阈值 */
-  minSearchVolume: 500,  // 🔥 2025-12-17: 从100提高到500，只保留高价值关键词
+  minSearchVolume: 500, // 🔥 2025-12-17: 从100提高到500，只保留高价值关键词
 
   /** 默认最大关键词数量 */
   maxKeywords: 5000,
@@ -61,7 +110,7 @@ export const DEFAULTS = {
   maxFilterAttempts: 4,
 
   /** Redis缓存TTL（天） */
-  cacheTtlDays: 7
+  cacheTtlDays: 7,
 } as const
 
 /**
@@ -74,9 +123,9 @@ export const THRESHOLD_LEVELS = [500, 100, 10, 1] as const
  * 关键词意图分类（用于桶分类）
  */
 export const INTENT_BUCKETS = {
-  BRAND: 'A',      // 品牌相关
-  SCENARIO: 'B',   // 使用场景
-  FEATURE: 'C'     // 功能特性
+  BRAND: 'A', // 品牌相关
+  SCENARIO: 'B', // 使用场景
+  FEATURE: 'C', // 功能特性
 } as const
 
 /**
@@ -85,7 +134,7 @@ export const INTENT_BUCKETS = {
 export const MATCH_TYPES = {
   EXACT: 'exact',
   PHRASE: 'phrase',
-  BROAD: 'broad'
+  BROAD: 'broad',
 } as const
 
 /**
@@ -96,8 +145,8 @@ export const SOURCES = {
   EXPANDED: 'EXPANDED',
   AI_GENERATED: 'AI_GENERATED',
   SEED: 'SEED',
-  TRENDS: 'TRENDS',      // 🔥 2025-12-24: Google Trends 来源
-  POPULAR: 'POPULAR'     // 🔥 2025-12-24: 热门品类词来源
+  TRENDS: 'TRENDS', // 🔥 2025-12-24: Google Trends 来源
+  POPULAR: 'POPULAR', // 🔥 2025-12-24: 热门品类词来源
 } as const
 
 // ============================================
@@ -110,25 +159,42 @@ export const SOURCES = {
  */
 export const TRENDS_CATEGORY_KEYWORDS: Record<string, string[]> = {
   'robot vacuum': [
-    'robot vacuum', 'robot vacuum cleaner', 'robo vacuum',
-    'vacuum robot', 'automatic vacuum', 'smart vacuum',
-    'floor cleaning robot', 'home cleaning robot', 'pet hair vacuum'
+    'robot vacuum',
+    'robot vacuum cleaner',
+    'robo vacuum',
+    'vacuum robot',
+    'automatic vacuum',
+    'smart vacuum',
+    'floor cleaning robot',
+    'home cleaning robot',
+    'pet hair vacuum',
   ],
-  'doorbell': [
-    'video doorbell', 'smart doorbell', 'doorbell camera',
-    'wireless doorbell', 'front door camera', 'entry camera'
+  doorbell: [
+    'video doorbell',
+    'smart doorbell',
+    'doorbell camera',
+    'wireless doorbell',
+    'front door camera',
+    'entry camera',
   ],
   'security camera': [
-    'security camera', 'outdoor camera', 'indoor camera',
-    'wireless camera', 'ip camera', 'cctv camera', 'home security'
+    'security camera',
+    'outdoor camera',
+    'indoor camera',
+    'wireless camera',
+    'ip camera',
+    'cctv camera',
+    'home security',
   ],
-  'speaker': [
-    'smart speaker', 'voice assistant', 'bluetooth speaker',
-    'wireless speaker', 'portable speaker', 'home audio'
+  speaker: [
+    'smart speaker',
+    'voice assistant',
+    'bluetooth speaker',
+    'wireless speaker',
+    'portable speaker',
+    'home audio',
   ],
-  'smart home': [
-    'smart home', 'home automation', 'iot device', 'smart device'
-  ]
+  'smart home': ['smart home', 'home automation', 'iot device', 'smart device'],
 }
 
 /**
@@ -144,7 +210,7 @@ export const KEYWORD_MODIFIERS = {
   /** 时间修饰词 */
   time: ['2024', '2025', 'new', 'latest', 'best'],
   /** 特性修饰词 */
-  feature: ['wireless', 'smart', 'automatic', 'intelligent']
+  feature: ['wireless', 'smart', 'automatic', 'intelligent'],
 }
 
 /**
@@ -157,7 +223,7 @@ export const VACUUM_COMPETITORS = ['roomba', 'neato', 'iRobot', 'dyson', 'shark'
  * 用于补充热门品类词
  */
 export const CATEGORY_WILDCARDS: Record<string, string[]> = {
-  'vacuum': [
+  vacuum: [
     `${'{brand}'} vacuum`,
     `${'{brand}'} robot vacuum`,
     `${'{brand}'} floor cleaner`,
@@ -165,39 +231,29 @@ export const CATEGORY_WILDCARDS: Record<string, string[]> = {
     'automatic vacuum',
     'smart vacuum',
     'cordless vacuum',
-    'pet hair vacuum'
+    'pet hair vacuum',
   ],
-  'cleaner': [
+  cleaner: [
     `${'{brand}'} floor cleaner`,
     `${'{brand}'} mop`,
     'hard floor cleaner',
     'tile floor cleaner',
-    'wood floor cleaner'
+    'wood floor cleaner',
   ],
-  'robot': [
-    `${'{brand}'} robot`,
-    'home robot',
-    'cleaning robot',
-    'autonomous robot'
-  ],
-  'security': [
+  robot: [`${'{brand}'} robot`, 'home robot', 'cleaning robot', 'autonomous robot'],
+  security: [
     `${'{brand}'} security`,
     'home security camera',
     'outdoor security camera',
-    'wireless security camera'
+    'wireless security camera',
   ],
-  'camera': [
+  camera: [
     `${'{brand}'} camera`,
     `${'{brand}'} outdoor camera`,
     'security camera',
-    'indoor camera'
+    'indoor camera',
   ],
-  'doorbell': [
-    `${'{brand}'} doorbell`,
-    'video doorbell',
-    'smart doorbell',
-    'wireless doorbell'
-  ]
+  doorbell: [`${'{brand}'} doorbell`, 'video doorbell', 'smart doorbell', 'wireless doorbell'],
 }
 
 /**
@@ -205,7 +261,7 @@ export const CATEGORY_WILDCARDS: Record<string, string[]> = {
  * 按品类提供热门搜索建议
  */
 export const POPULAR_SEARCH_TERMS: Record<string, string[]> = {
-  'vacuum': [
+  vacuum: [
     'robot vacuum',
     'cordless vacuum',
     'stick vacuum',
@@ -214,30 +270,18 @@ export const POPULAR_SEARCH_TERMS: Record<string, string[]> = {
     'handheld vacuum',
     'pet hair vacuum',
     'robot mop',
-    'vacuum and mop combo'
+    'vacuum and mop combo',
   ],
-  'cleaner': [
-    'floor cleaner',
-    'steam mop',
-    'cordless mop',
-    'robot mop',
-    'hard floor cleaner'
-  ],
-  'security': [
+  cleaner: ['floor cleaner', 'steam mop', 'cordless mop', 'robot mop', 'hard floor cleaner'],
+  security: [
     'home security',
     'security camera',
     'doorbell camera',
     'outdoor camera',
     'wireless camera',
-    'cctv system'
+    'cctv system',
   ],
-  'camera': [
-    'security camera',
-    'outdoor camera',
-    'indoor camera',
-    'wireless camera',
-    '4k camera'
-  ]
+  camera: ['security camera', 'outdoor camera', 'indoor camera', 'wireless camera', '4k camera'],
 }
 
 /**
@@ -251,7 +295,7 @@ export const TRENDS_CONFIG = {
   /** 最大热门品类词数量 */
   maxPopularTerms: 10,
   /** 后备查询最大数量 */
-  maxFallbackQueries: 20
+  maxFallbackQueries: 20,
 } as const
 
 // ============================================
@@ -268,68 +312,68 @@ export const TRENDS_CONFIG = {
  */
 export const CATEGORY_SYNONYMS: Record<string, string[]> = {
   // ==================== 摄像头类 ====================
-  'camera': ['cam', 'video', 'surveillance', 'monitoring', 'vision', 'webcam', 'recorder', 'cctv'],
-  'security': ['safety', 'protection', 'guard', 'alarm', 'secure', 'watch'],
-  'outdoor': ['weather', 'waterproof', 'exterior', 'outside', 'resistant'],
-  'indoor': ['interior', 'inside', 'room', 'home'],
-  'doorbell': ['door', 'bell', 'chime', 'ring', 'entry', 'entrance'],
+  camera: ['cam', 'video', 'surveillance', 'monitoring', 'vision', 'webcam', 'recorder', 'cctv'],
+  security: ['safety', 'protection', 'guard', 'alarm', 'secure', 'watch'],
+  outdoor: ['weather', 'waterproof', 'exterior', 'outside', 'resistant'],
+  indoor: ['interior', 'inside', 'room', 'home'],
+  doorbell: ['door', 'bell', 'chime', 'ring', 'entry', 'entrance'],
 
   // ==================== 吸尘器类 ====================
-  'vacuum': ['cleaner', 'cleaning', 'sweeper', 'mop', 'robot', 'hoover'],
-  'robot': ['robotic', 'automatic', 'auto', 'smart'],
-  'floor': ['ground', 'carpet', 'hardwood', 'tile'],
+  vacuum: ['cleaner', 'cleaning', 'sweeper', 'mop', 'robot', 'hoover'],
+  robot: ['robotic', 'automatic', 'auto', 'smart'],
+  floor: ['ground', 'carpet', 'hardwood', 'tile'],
 
   // ==================== 智能家居类 ====================
   'smart home': ['iot', 'smart', 'connected', 'automation', 'intelligent'],
-  'lock': ['keyless', 'deadbolt', 'entry', 'door lock', 'secure'],
-  'light': ['lighting', 'lamp', 'bulb', 'led', 'brightness'],
-  'switch': ['dimmer', 'control', 'button', 'toggle'],
-  'sensor': ['detector', 'detection', 'monitor', 'sense'],
+  lock: ['keyless', 'deadbolt', 'entry', 'door lock', 'secure'],
+  light: ['lighting', 'lamp', 'bulb', 'led', 'brightness'],
+  switch: ['dimmer', 'control', 'button', 'toggle'],
+  sensor: ['detector', 'detection', 'monitor', 'sense'],
 
   // ==================== 音频设备类 ====================
-  'speaker': ['audio', 'sound', 'music', 'bluetooth', 'wireless'],
-  'headphones': ['earphones', 'earbuds', 'headset', 'ear', 'buds'],
-  'microphone': ['mic', 'recording', 'voice', 'audio input'],
+  speaker: ['audio', 'sound', 'music', 'bluetooth', 'wireless'],
+  headphones: ['earphones', 'earbuds', 'headset', 'ear', 'buds'],
+  microphone: ['mic', 'recording', 'voice', 'audio input'],
 
   // ==================== 智能可穿戴类 ====================
-  'watch': ['smartwatch', 'wearable', 'fitness', 'tracker'],
-  'band': ['bracelet', 'wristband', 'strap', 'fitness band'],
-  'ring': ['smart ring', 'wearable ring', 'finger'],
+  watch: ['smartwatch', 'wearable', 'fitness', 'tracker'],
+  band: ['bracelet', 'wristband', 'strap', 'fitness band'],
+  ring: ['smart ring', 'wearable ring', 'finger'],
 
   // ==================== 母婴类 ====================
   'breast pump': ['pump', 'breastfeeding', 'nursing', 'lactation', 'expressing'],
   'baby monitor': ['baby cam', 'nursery', 'infant', 'child'],
-  'thermometer': ['temperature', 'fever', 'digital'],
+  thermometer: ['temperature', 'fever', 'digital'],
 
   // ==================== 厨房电器类 ====================
-  'coffee': ['espresso', 'brew', 'maker', 'grinder', 'café'],
-  'kettle': ['boiler', 'water heater', 'pot'],
-  'blender': ['mixer', 'juicer', 'smoothie', 'processor'],
+  coffee: ['espresso', 'brew', 'maker', 'grinder', 'café'],
+  kettle: ['boiler', 'water heater', 'pot'],
+  blender: ['mixer', 'juicer', 'smoothie', 'processor'],
 
   // ==================== 个人护理类 ====================
-  'toothbrush': ['dental', 'oral', 'teeth', 'brush'],
-  'shaver': ['razor', 'trimmer', 'grooming', 'beard'],
+  toothbrush: ['dental', 'oral', 'teeth', 'brush'],
+  shaver: ['razor', 'trimmer', 'grooming', 'beard'],
   'hair dryer': ['blow dryer', 'styling', 'hair'],
 
   // ==================== 健康设备类 ====================
-  'scale': ['weighing', 'weight', 'body', 'fat', 'bmi'],
+  scale: ['weighing', 'weight', 'body', 'fat', 'bmi'],
   'blood pressure': ['bp', 'monitor', 'sphygmomanometer', 'heart'],
-  'oximeter': ['oxygen', 'pulse', 'spo2', 'saturation'],
+  oximeter: ['oxygen', 'pulse', 'spo2', 'saturation'],
 
   // ==================== 通用修饰词 ====================
-  'wireless': ['wifi', 'bluetooth', 'cordless', 'cable-free'],
-  'portable': ['handheld', 'mobile', 'travel', 'compact'],
-  'rechargeable': ['battery', 'charging', 'powered', 'cordless'],
-  'waterproof': ['water resistant', 'splash proof', 'ip67', 'ip68'],
+  wireless: ['wifi', 'bluetooth', 'cordless', 'cable-free'],
+  portable: ['handheld', 'mobile', 'travel', 'compact'],
+  rechargeable: ['battery', 'charging', 'powered', 'cordless'],
+  waterproof: ['water resistant', 'splash proof', 'ip67', 'ip68'],
 } as const
 
 /**
  * 类型导出（用于TypeScript）
  */
-export type Platform = typeof PLATFORMS[number]
-export type BrandPattern = typeof BRAND_PATTERNS[number]
-export type ThresholdLevel = typeof THRESHOLD_LEVELS[number]
-export type IntentBucket = typeof INTENT_BUCKETS[keyof typeof INTENT_BUCKETS]
-export type MatchType = typeof MATCH_TYPES[keyof typeof MATCH_TYPES]
-export type Source = typeof SOURCES[keyof typeof SOURCES]
+export type Platform = (typeof PLATFORMS)[number]
+export type BrandPattern = (typeof BRAND_PATTERNS)[number]
+export type ThresholdLevel = (typeof THRESHOLD_LEVELS)[number]
+export type IntentBucket = (typeof INTENT_BUCKETS)[keyof typeof INTENT_BUCKETS]
+export type MatchType = (typeof MATCH_TYPES)[keyof typeof MATCH_TYPES]
+export type Source = (typeof SOURCES)[keyof typeof SOURCES]
 export type CategorySynonym = keyof typeof CATEGORY_SYNONYMS

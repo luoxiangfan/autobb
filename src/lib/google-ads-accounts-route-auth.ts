@@ -81,8 +81,7 @@ export async function resolveAndHealSyncUserCredentials(params: {
       client_id: creds.client_id,
       client_secret: creds.client_secret,
       developer_token: creds.developer_token,
-      login_customer_id:
-        creds.login_customer_id || bundle.loginCustomerId || undefined,
+      login_customer_id: creds.login_customer_id || bundle.loginCustomerId || undefined,
     },
     serviceAccountConfig: bundle.serviceAccountConfig,
   }
@@ -143,8 +142,7 @@ export async function resolveOAuthClientCredentialsForUser(
   } = {}
 ): Promise<OAuthApiClientCredentials> {
   const requireLogin = options.requireLoginCustomerId !== false
-  const authContext =
-    options.existingAuthContext ?? (await getGoogleAdsAuthContext(userId))
+  const authContext = options.existingAuthContext ?? (await getGoogleAdsAuthContext(userId))
   const dualStackError = googleAdsAuthContextDualStackError(authContext)
   if (dualStackError) {
     throw new Error(dualStackError)
@@ -244,9 +242,7 @@ export async function resolveAccountsRouteAuthBundle(params: {
 
     const oauthCredentials = authContext.oauthCredentials
     if (!oauthCredentials?.client_id) {
-      console.log(
-        '⚠️ 未配置OAuth凭证，使用占位值创建API客户端（服务账号认证不需要OAuth）'
-      )
+      console.log('⚠️ 未配置OAuth凭证，使用占位值创建API客户端（服务账号认证不需要OAuth）')
     }
 
     const credentials: AccountsRouteCredentials = {

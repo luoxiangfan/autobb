@@ -72,23 +72,27 @@ describe('updateUrlSwapTask', () => {
 
   it('编辑 error 任务会清理错误并恢复为 enabled，同时更新 Google IDs', async () => {
     mockDb.queryOne
-      .mockResolvedValueOnce(makeTaskRow({
-        status: 'error',
-        consecutive_failures: 2,
-        error_message: 'boom',
-        error_at: '2026-01-07T12:00:00.000Z',
-      }))
-      .mockResolvedValueOnce(makeTaskRow({
-        status: 'enabled',
-        swap_interval_minutes: 30,
-        duration_days: 14,
-        google_customer_id: 'cust-new',
-        google_campaign_id: 'camp-new',
-        consecutive_failures: 0,
-        error_message: null,
-        error_at: null,
-        next_swap_at: '2026-01-08T00:00:00.000Z',
-      }))
+      .mockResolvedValueOnce(
+        makeTaskRow({
+          status: 'error',
+          consecutive_failures: 2,
+          error_message: 'boom',
+          error_at: '2026-01-07T12:00:00.000Z',
+        })
+      )
+      .mockResolvedValueOnce(
+        makeTaskRow({
+          status: 'enabled',
+          swap_interval_minutes: 30,
+          duration_days: 14,
+          google_customer_id: 'cust-new',
+          google_campaign_id: 'camp-new',
+          consecutive_failures: 0,
+          error_message: null,
+          error_at: null,
+          next_swap_at: '2026-01-08T00:00:00.000Z',
+        })
+      )
 
     const updated = await updateUrlSwapTask('task-1', 1, {
       swap_interval_minutes: 30,
@@ -110,27 +114,29 @@ describe('updateUrlSwapTask', () => {
     expect(sql).toContain('status = ?')
     expect(sql).toContain('error_message = NULL')
     expect(sql).toContain('error_at = NULL')
-    expect(params).toEqual(expect.arrayContaining([
-      30,
-      14,
-      'cust-new',
-      'camp-new',
-      'enabled',
-      0,
-      '2026-01-08T00:00:00.000Z',
-      'task-1',
-      1,
-    ]))
+    expect(params).toEqual(
+      expect.arrayContaining([
+        30,
+        14,
+        'cust-new',
+        'camp-new',
+        'enabled',
+        0,
+        '2026-01-08T00:00:00.000Z',
+        'task-1',
+        1,
+      ])
+    )
   })
 
   it('编辑非 error 任务不会隐式修改 status/error 字段', async () => {
-    mockDb.queryOne
-      .mockResolvedValueOnce(makeTaskRow({ status: 'enabled' }))
-      .mockResolvedValueOnce(makeTaskRow({
+    mockDb.queryOne.mockResolvedValueOnce(makeTaskRow({ status: 'enabled' })).mockResolvedValueOnce(
+      makeTaskRow({
         status: 'enabled',
         google_customer_id: 'cust-new',
         google_campaign_id: 'camp-new',
-      }))
+      })
+    )
 
     const updated = await updateUrlSwapTask('task-1', 1, {
       google_customer_id: 'cust-new',

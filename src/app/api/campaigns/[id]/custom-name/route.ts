@@ -7,7 +7,8 @@ import { invalidateDashboardCache } from '@/lib/api-cache'
  * PUT /api/campaigns/:id/custom-name
  * 更新广告系列自定义名称
  */
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 
@@ -22,10 +23,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // customName 可以为空字符串或 null，用于清除自定义名称
     if (customName === undefined) {
-      return NextResponse.json(
-        { error: '缺少 customName 字段' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '缺少 customName 字段' }, { status: 400 })
     }
 
     const campaign = await updateCampaign(parseInt(id, 10), userId, {

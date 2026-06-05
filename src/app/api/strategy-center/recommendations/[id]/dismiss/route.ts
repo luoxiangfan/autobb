@@ -4,10 +4,8 @@ import { dismissStrategyRecommendation } from '@/lib/openclaw/strategy-recommend
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   const auth = await resolveStrategyCenterRequestUser(request)
   if (!auth) {
     return NextResponse.json({ error: '策略中心功能未开启或未授权' }, { status: 403 })
@@ -30,11 +28,7 @@ export async function POST(
     })
   } catch (error: any) {
     const message = error?.message || '设置暂不执行失败'
-    const status = message.includes('不存在')
-      ? 404
-      : message.includes('已执行')
-        ? 409
-        : 400
+    const status = message.includes('不存在') ? 404 : message.includes('已执行') ? 409 : 400
     return NextResponse.json({ error: message }, { status })
   }
 }

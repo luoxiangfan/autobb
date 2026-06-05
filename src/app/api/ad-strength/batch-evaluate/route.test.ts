@@ -208,10 +208,7 @@ describe('POST /api/ad-strength/batch-evaluate', () => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        creatives: [
-          buildCreativePayload({ id: 'a' }),
-          buildCreativePayload({ id: 'b' }),
-        ],
+        creatives: [buildCreativePayload({ id: 'a' }), buildCreativePayload({ id: 'b' })],
       }),
     })
 

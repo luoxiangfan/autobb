@@ -175,11 +175,7 @@ class ApiCache {
   /**
    * 获取或设置缓存（带回调函数）
    */
-  async getOrSet<T>(
-    key: string,
-    fetchFn: () => Promise<T>,
-    ttl?: number
-  ): Promise<T> {
+  async getOrSet<T>(key: string, fetchFn: () => Promise<T>, ttl?: number): Promise<T> {
     // 尝试从缓存获取
     const cached = this.get<T>(key)
     if (cached !== null) {
@@ -212,9 +208,12 @@ export const apiCache = new ApiCache()
 
 // 定期清理过期缓存（每10分钟）
 if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    apiCache.cleanup()
-  }, 10 * 60 * 1000)
+  setInterval(
+    () => {
+      apiCache.cleanup()
+    },
+    10 * 60 * 1000
+  )
 }
 
 /**

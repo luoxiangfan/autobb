@@ -38,7 +38,7 @@ async function sendNotification(
   const levelEmoji = {
     info: 'ℹ️',
     warning: '⚠️',
-    error: '❌'
+    error: '❌',
   }
 
   const prefix = levelEmoji[level] || '📢'
@@ -64,11 +64,14 @@ async function getTaskInfo(taskId: string): Promise<{
     offer_id: number
     google_campaign_id: string | null
     current_final_url: string | null
-  }>(`
+  }>(
+    `
     SELECT user_id, offer_id, google_campaign_id, current_final_url
     FROM url_swap_tasks
     WHERE id = ?
-  `, [taskId])
+  `,
+    [taskId]
+  )
 
   if (!task) return null
 
@@ -77,7 +80,7 @@ async function getTaskInfo(taskId: string): Promise<{
     userId: task.user_id,
     offerId: task.offer_id,
     googleCampaignId: task.google_campaign_id,
-    currentFinalUrl: task.current_final_url
+    currentFinalUrl: task.current_final_url,
   }
 }
 
@@ -97,10 +100,7 @@ async function getTaskInfo(taskId: string): Promise<{
  * @example
  * await notifyUrlSwapTaskPaused('task-123', '连续失败3次，已自动暂停')
  */
-export async function notifyUrlSwapTaskPaused(
-  taskId: string,
-  reason: string
-): Promise<void> {
+export async function notifyUrlSwapTaskPaused(taskId: string, reason: string): Promise<void> {
   const taskInfo = await getTaskInfo(taskId)
   if (!taskInfo) {
     console.error(`❌ Task not found: ${taskId}`)
@@ -116,7 +116,7 @@ export async function notifyUrlSwapTaskPaused(
       taskId,
       offerId: taskInfo.offerId,
       googleCampaignId: taskInfo.googleCampaignId,
-      reason
+      reason,
     }
   )
 }
@@ -133,9 +133,7 @@ export async function notifyUrlSwapTaskPaused(
  * @example
  * await notifyUrlSwapTaskCompleted('task-123')
  */
-export async function notifyUrlSwapTaskCompleted(
-  taskId: string
-): Promise<void> {
+export async function notifyUrlSwapTaskCompleted(taskId: string): Promise<void> {
   const taskInfo = await getTaskInfo(taskId)
   if (!taskInfo) {
     console.error(`❌ Task not found: ${taskId}`)
@@ -150,7 +148,7 @@ export async function notifyUrlSwapTaskCompleted(
     {
       taskId,
       offerId: taskInfo.offerId,
-      googleCampaignId: taskInfo.googleCampaignId
+      googleCampaignId: taskInfo.googleCampaignId,
     }
   )
 }
@@ -189,14 +187,14 @@ export async function notifyUrlChanged(
     'info',
     '推广链接已自动更新',
     `任务 ${taskId.substring(0, 8)}... 检测到链接变化\n` +
-    `旧链接: ${oldUrl.substring(0, 60)}...\n` +
-    `新链接: ${newUrl.substring(0, 60)}...`,
+      `旧链接: ${oldUrl.substring(0, 60)}...\n` +
+      `新链接: ${newUrl.substring(0, 60)}...`,
     {
       taskId,
       offerId: taskInfo.offerId,
       googleCampaignId: taskInfo.googleCampaignId,
       oldUrl,
-      newUrl
+      newUrl,
     }
   )
 }
@@ -216,10 +214,7 @@ export async function notifyUrlChanged(
  * @example
  * await notifySwapError('task-123', 'Google Ads API调用失败: 401 Unauthorized')
  */
-export async function notifySwapError(
-  taskId: string,
-  errorMessage: string
-): Promise<void> {
+export async function notifySwapError(taskId: string, errorMessage: string): Promise<void> {
   const taskInfo = await getTaskInfo(taskId)
   if (!taskInfo) {
     console.error(`❌ Task not found: ${taskId}`)
@@ -235,8 +230,7 @@ export async function notifySwapError(
       taskId,
       offerId: taskInfo.offerId,
       googleCampaignId: taskInfo.googleCampaignId,
-      errorMessage
+      errorMessage,
     }
   )
 }
-

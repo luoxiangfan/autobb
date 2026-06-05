@@ -9,7 +9,10 @@
  *   或: npx tsx scripts/run-competitor-ab-test.ts
  */
 
-import { validateCompetitorCompressionQuality, runCompetitorCompressionABTest } from './competitor-ab-test-validation'
+import {
+  validateCompetitorCompressionQuality,
+  runCompetitorCompressionABTest,
+} from './competitor-ab-test-validation'
 import type { CompetitorProduct } from '@/lib/competitor-analyzer'
 
 /**
@@ -354,9 +357,9 @@ async function main() {
 | 指标 | 实际值 | 目标值 | 状态 |
 |------|--------|--------|------|
 | **USP匹配率** | ${(result.uspMatchRate * 100).toFixed(1)}% | ≥ 85% | ${result.uspMatchRate >= 0.85 ? '✅ 达标' : '❌ 未达标'} |
-| **特性匹配率** | ${(result.featureMatchRate * 100).toFixed(1)}% | ≥ 90% | ${result.featureMatchRate >= 0.90 ? '✅ 达标' : '❌ 未达标'} |
+| **特性匹配率** | ${(result.featureMatchRate * 100).toFixed(1)}% | ≥ 90% | ${result.featureMatchRate >= 0.9 ? '✅ 达标' : '❌ 未达标'} |
 | **USP相似度** | ${(result.uspSimilarity * 100).toFixed(1)}% | ≥ 85% | ${result.uspSimilarity >= 0.85 ? '✅ 达标' : '❌ 未达标'} |
-| **竞争力相关性** | ${(result.competitivenessCorrelation * 100).toFixed(1)}% | ≥ 90% | ${result.competitivenessCorrelation >= 0.90 ? '✅ 达标' : '❌ 未达标'} |
+| **竞争力相关性** | ${(result.competitivenessCorrelation * 100).toFixed(1)}% | ≥ 90% | ${result.competitivenessCorrelation >= 0.9 ? '✅ 达标' : '❌ 未达标'} |
 
 ### 性能指标
 
@@ -399,18 +402,19 @@ async function main() {
 
 **竞品特性完整性**:
 - 特性匹配率: ${(result.featureMatchRate * 100).toFixed(1)}%
-- 分析: ${result.featureMatchRate >= 0.90 ? '竞品核心特性得到完整保留' : '部分特性信息在压缩中丢失，需要改进'}
+- 分析: ${result.featureMatchRate >= 0.9 ? '竞品核心特性得到完整保留' : '部分特性信息在压缩中丢失，需要改进'}
 
 **竞争力评估一致性**:
 - 竞争力相关性: ${(result.competitivenessCorrelation * 100).toFixed(1)}%
-- 分析: ${result.competitivenessCorrelation >= 0.90 ? '压缩格式不影响竞争力评分准确性' : '竞争力评估出现偏差，需要检查压缩逻辑'}
+- 分析: ${result.competitivenessCorrelation >= 0.9 ? '压缩格式不影响竞争力评分准确性' : '竞争力评估出现偏差，需要检查压缩逻辑'}
 
 ---
 
 ## 🚦 下一步行动
 
-${result.recommendation === 'approve_compression'
-  ? `### ✅ 批准部署
+${
+  result.recommendation === 'approve_compression'
+    ? `### ✅ 批准部署
 
 **立即行动**:
 1. 部署到Staging环境进行集成测试
@@ -424,8 +428,8 @@ ${result.recommendation === 'approve_compression'
 - 广告创意生成质量（竞争力定位准确性）
 - Token使用量和成本节省效果
 - 用户反馈和投诉率`
-  : result.recommendation === 'reject_compression'
-  ? `### ❌ 拒绝部署
+    : result.recommendation === 'reject_compression'
+      ? `### ❌ 拒绝部署
 
 **问题分析**:
 - 质量指标未达标，存在明显信息损失
@@ -441,7 +445,7 @@ ${result.recommendation === 'approve_compression'
 - 算法优化: 2-3天
 - 重新测试: 1天
 - 决策review: 1天`
-  : `### ⚠️ 需要更多测试
+      : `### ⚠️ 需要更多测试
 
 **当前状态**:
 - 部分指标接近临界值
@@ -465,11 +469,15 @@ ${result.recommendation === 'approve_compression'
 
 ### 测试数据集详情
 
-${realWorldTestData.map((data, idx) => `#### 测试用例 ${idx + 1}: ${data.ourProduct.name}
+${realWorldTestData
+  .map(
+    (data, idx) => `#### 测试用例 ${idx + 1}: ${data.ourProduct.name}
 - **价格**: $${data.ourProduct.price}
 - **评分**: ${data.ourProduct.rating}★ (${data.ourProduct.reviewCount}条评论)
 - **竞品数量**: ${data.competitors.length}个
-- **竞品价格区间**: $${Math.min(...data.competitors.map(c => c.price || 0))} - $${Math.max(...data.competitors.map(c => c.price || 0))}`).join('\n\n')}
+- **竞品价格区间**: $${Math.min(...data.competitors.map((c) => c.price || 0))} - $${Math.max(...data.competitors.map((c) => c.price || 0))}`
+  )
+  .join('\n\n')}
 
 ### 压缩格式示例
 
@@ -504,7 +512,6 @@ Competitor 1:
     console.log(`   - USP相似度: ${(result.uspSimilarity * 100).toFixed(1)}%`)
     console.log(`   - 竞争力相关性: ${(result.competitivenessCorrelation * 100).toFixed(1)}%`)
     console.log(`   - Token节省: ${result.avgTokenSavings.toFixed(0)}个/次`)
-
   } catch (error: any) {
     console.error('\n❌ A/B测试执行失败:', error.message)
     console.error(error.stack)

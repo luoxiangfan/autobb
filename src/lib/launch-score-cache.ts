@@ -123,7 +123,11 @@ export async function findCachedLaunchScoreForCreative(
   userId: number,
   campaignConfig?: LaunchScoreHashCampaignConfig
 ) {
-  const { contentHash, campaignConfigHash } = buildLaunchScoreHashes(creative, offer, campaignConfig)
+  const { contentHash, campaignConfigHash } = buildLaunchScoreHashes(
+    creative,
+    offer,
+    campaignConfig
+  )
   return findCachedLaunchScore(creative.id, contentHash, campaignConfigHash, userId)
 }
 
@@ -178,12 +182,7 @@ export async function findCachedLaunchScoresForCreatives(
 ): Promise<Map<number, LaunchScore>> {
   const pairs = await Promise.all(
     creatives.map(async (creative) => {
-      const cached = await findCachedLaunchScoreForCreative(
-        creative,
-        offer,
-        userId,
-        campaignConfig
-      )
+      const cached = await findCachedLaunchScoreForCreative(creative, offer, userId, campaignConfig)
       return [creative.id, cached] as const
     })
   )
@@ -315,12 +314,7 @@ export async function resolveLaunchScoreForPerformanceApi(
     if (!creative || creative.offer_id !== offer.id) {
       return { launchScore: null, stale: false }
     }
-    const read = await readLaunchScoreForCreative(
-      creative,
-      offer,
-      userId,
-      hashCampaignConfig
-    )
+    const read = await readLaunchScoreForCreative(creative, offer, userId, hashCampaignConfig)
     return {
       launchScore: read.score,
       stale: !read.score && read.staleScore != null,
@@ -339,12 +333,7 @@ export async function resolveLaunchScoreForPerformanceApi(
     return { launchScore: null, stale: false }
   }
 
-  const read = await readLaunchScoreForCreative(
-    bestCreative,
-    offer,
-    userId,
-    hashCampaignConfig
-  )
+  const read = await readLaunchScoreForCreative(bestCreative, offer, userId, hashCampaignConfig)
   return {
     launchScore: read.score,
     stale: !read.score && read.staleScore != null,
@@ -402,8 +391,7 @@ export async function resolveLaunchScoreGetForCreative(
   }
 
   const creatives = await findAdCreativesByOfferId(offer.id, userId)
-  const canAutoCalculate =
-    offer.scrape_status === 'completed' && creatives.length > 0
+  const canAutoCalculate = offer.scrape_status === 'completed' && creatives.length > 0
 
   if (read.staleScore) {
     return {

@@ -1,5 +1,7 @@
 export function normalizeTwoLetterCountryCode(value: unknown): string | null {
-  const normalized = String(value || '').trim().toUpperCase()
+  const normalized = String(value || '')
+    .trim()
+    .toUpperCase()
   if (!/^[A-Z]{2}$/.test(normalized)) return null
   return normalized
 }

@@ -2,7 +2,14 @@ import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 type ParamRow = {
   key: string
@@ -87,15 +94,39 @@ const AFFILIATE_OPTIONAL_PARAMS: ParamRow[] = [
   { key: 'yeahpromos_request_delay_ms', desc: 'YP 请求间隔(ms)', note: '默认 120' },
   { key: 'yeahpromos_rate_limit_max_retries', desc: 'YP 429 最大重试次数', note: '默认 3' },
   { key: 'yeahpromos_rate_limit_base_delay_ms', desc: 'YP 429 重试基准延迟(ms)', note: '默认 600' },
-  { key: 'yeahpromos_rate_limit_max_delay_ms', desc: 'YP 429 重试最大延迟(ms)', note: '默认 10000' },
-  { key: 'partnerboost_base_url', desc: 'PB API Base URL', note: '默认 https://app.partnerboost.com' },
+  {
+    key: 'yeahpromos_rate_limit_max_delay_ms',
+    desc: 'YP 429 重试最大延迟(ms)',
+    note: '默认 10000',
+  },
+  {
+    key: 'partnerboost_base_url',
+    desc: 'PB API Base URL',
+    note: '默认 https://app.partnerboost.com',
+  },
   { key: 'partnerboost_products_country_code', desc: 'PB products country_code', note: '默认 US' },
-  { key: 'partnerboost_products_link_batch_size', desc: 'PB 商品链接批次大小', note: '默认 20（建议 10~30）' },
-  { key: 'partnerboost_asin_link_batch_size', desc: 'PB ASIN 链接批次大小', note: '默认 20（建议 10~30）' },
+  {
+    key: 'partnerboost_products_link_batch_size',
+    desc: 'PB 商品链接批次大小',
+    note: '默认 20（建议 10~30）',
+  },
+  {
+    key: 'partnerboost_asin_link_batch_size',
+    desc: 'PB ASIN 链接批次大小',
+    note: '默认 20（建议 10~30）',
+  },
   { key: 'partnerboost_request_delay_ms', desc: 'PB 批次间隔(ms)', note: '默认 150' },
   { key: 'partnerboost_rate_limit_max_retries', desc: 'PB 429 最大重试次数', note: '默认 4' },
-  { key: 'partnerboost_rate_limit_base_delay_ms', desc: 'PB 429 重试基准延迟(ms)', note: '默认 800' },
-  { key: 'partnerboost_rate_limit_max_delay_ms', desc: 'PB 429 重试最大延迟(ms)', note: '默认 12000' },
+  {
+    key: 'partnerboost_rate_limit_base_delay_ms',
+    desc: 'PB 429 重试基准延迟(ms)',
+    note: '默认 800',
+  },
+  {
+    key: 'partnerboost_rate_limit_max_delay_ms',
+    desc: 'PB 429 重试最大延迟(ms)',
+    note: '默认 12000',
+  },
   { key: 'partnerboost_link_country_code', desc: 'PB link country_code', note: '默认 US' },
   { key: 'partnerboost_link_uid', desc: 'PB link uid', note: '可选' },
 ]
@@ -180,7 +211,9 @@ export default function OpenClawConfigGuidePage() {
               <Badge variant="secondary">4. 策略中心</Badge>
             </div>
             <div>1）确认 OpenClaw 页内 Gateway 状态为在线（只读检查）。</div>
-            <div>2）填写 <code className="rounded bg-slate-100 px-1 py-0.5">ai_models_json</code>。</div>
+            <div>
+              2）填写 <code className="rounded bg-slate-100 px-1 py-0.5">ai_models_json</code>。
+            </div>
             <div>
               3）填写飞书最小三项：
               <code className="rounded bg-slate-100 px-1 py-0.5">feishu_app_id</code>、
@@ -211,7 +244,9 @@ export default function OpenClawConfigGuidePage() {
             </section>
             <section className="space-y-2 text-sm text-slate-700">
               <div>建议从最小模板开始：</div>
-              <pre className="overflow-auto rounded-md bg-slate-900 p-4 text-xs text-slate-100">{AI_JSON_EXAMPLE}</pre>
+              <pre className="overflow-auto rounded-md bg-slate-900 p-4 text-xs text-slate-100">
+                {AI_JSON_EXAMPLE}
+              </pre>
             </section>
           </CardContent>
         </Card>
@@ -235,12 +270,16 @@ export default function OpenClawConfigGuidePage() {
               <ParamTable rows={FEISHU_ADVANCED_DEFAULT_PARAMS} />
             </section>
             <section className="space-y-3">
-              <div className="text-sm font-semibold text-slate-700">多账号 / Webhook 扩展（可选）</div>
+              <div className="text-sm font-semibold text-slate-700">
+                多账号 / Webhook 扩展（可选）
+              </div>
               <div className="text-xs text-slate-500">
                 高风险命令默认自动确认并入队执行；本页仅保留近 7 天命令审计记录查看。
               </div>
               <ParamTable rows={FEISHU_ACCOUNT_JSON_FIELDS} />
-              <pre className="overflow-auto rounded-md bg-slate-900 p-4 text-xs text-slate-100">{FEISHU_ACCOUNTS_JSON_EXAMPLE}</pre>
+              <pre className="overflow-auto rounded-md bg-slate-900 p-4 text-xs text-slate-100">
+                {FEISHU_ACCOUNTS_JSON_EXAMPLE}
+              </pre>
             </section>
           </CardContent>
         </Card>
@@ -265,14 +304,18 @@ export default function OpenClawConfigGuidePage() {
         <Card>
           <CardHeader>
             <CardTitle>策略中心（用户级）</CardTitle>
-            <CardDescription>定位：自动分析运行中 Campaign 并生成建议；执行由人工确认触发（仅保留最小参数）</CardDescription>
+            <CardDescription>
+              定位：自动分析运行中 Campaign 并生成建议；执行由人工确认触发（仅保留最小参数）
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <section className="space-y-2">
               <div className="text-sm font-semibold text-slate-700">最小参数</div>
               <ParamTable rows={STRATEGY_MINIMAL_PARAMS} />
             </section>
-            <div className="text-xs text-slate-500">策略中心仅需“启用自动分析 + 分析频率”，其余历史策略参数已下线。</div>
+            <div className="text-xs text-slate-500">
+              策略中心仅需“启用自动分析 + 分析频率”，其余历史策略参数已下线。
+            </div>
           </CardContent>
         </Card>
 
@@ -283,7 +326,9 @@ export default function OpenClawConfigGuidePage() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-slate-700">
             <div>路径：OpenClaw → 配置中心 → OpenClaw Access Tokens → 生成新 Token</div>
-            <div className="text-xs text-slate-500">每个 Token 都绑定用户身份，调用时会进行授权校验。</div>
+            <div className="text-xs text-slate-500">
+              每个 Token 都绑定用户身份，调用时会进行授权校验。
+            </div>
           </CardContent>
         </Card>
 

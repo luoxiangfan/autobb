@@ -39,8 +39,8 @@ export function getRedisClient(): Redis | null {
       lazyConnect: false,
 
       // 连接保活配置
-      keepAlive: 30000,  // 每30秒发送TCP keepalive包
-      connectTimeout: 10000,  // 连接超时10秒
+      keepAlive: 30000, // 每30秒发送TCP keepalive包
+      connectTimeout: 10000, // 连接超时10秒
 
       // 重连策略：指数退避，最大延迟10秒
       retryStrategy(times) {
@@ -48,7 +48,7 @@ export function getRedisClient(): Redis | null {
 
         if (times > MAX_RECONNECT_ATTEMPTS) {
           console.error(`❌ Redis重连失败，已达到最大重试次数(${MAX_RECONNECT_ATTEMPTS})`)
-          return null  // 停止重连
+          return null // 停止重连
         }
 
         const delay = Math.min(times * 200, 10000)
@@ -99,7 +99,7 @@ export function getRedisClient(): Redis | null {
           // 心跳失败静默处理，让重连机制自动处理
         }
       }
-    }, 30000)  // 每30秒心跳一次
+    }, 30000) // 每30秒心跳一次
 
     return redisClient
   } catch (error) {

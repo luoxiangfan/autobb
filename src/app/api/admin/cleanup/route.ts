@@ -14,12 +14,9 @@ import { getDatabase } from '@/lib/db'
 export async function POST(request: NextRequest) {
   try {
     // 验证管理员权限
-    const authResult = await verifyAuth(request) as AuthResult
+    const authResult = (await verifyAuth(request)) as AuthResult
     if (!authResult.authenticated || authResult.user?.role !== 'admin') {
-      return NextResponse.json(
-        { error: '需要管理员权限' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
     }
 
     const db = await getDatabase()
@@ -27,24 +24,23 @@ export async function POST(request: NextRequest) {
 
     // 解析请求参数
     const body = await request.json().catch(() => ({}))
-    const { tables = ['scraped_products', 'ad_creatives', 'google_ads_accounts'], dryRun = false } = body
+    const { tables = ['scraped_products', 'ad_creatives', 'google_ads_accounts'], dryRun = false } =
+      body
 
     // 验证tables参数
     const validTables = ['scraped_products', 'ad_creatives', 'google_ads_accounts']
     const tablesToClean = tables.filter((t: string) => validTables.includes(t))
 
     if (tablesToClean.length === 0) {
-      return NextResponse.json(
-        { error: '没有有效的表需要清理' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '没有有效的表需要清理' }, { status: 400 })
     }
 
     // 🔧 兼容 SQLite 和 PostgreSQL
     const deletedCheck = db.type === 'sqlite' ? 'is_deleted = 1' : 'is_deleted = TRUE'
-    const dateCheck = db.type === 'sqlite'
-      ? `deleted_at < datetime('now', '-${retentionDays} days')`
-      : `deleted_at < NOW() - INTERVAL '${retentionDays} days'`
+    const dateCheck =
+      db.type === 'sqlite'
+        ? `deleted_at < datetime('now', '-${retentionDays} days')`
+        : `deleted_at < NOW() - INTERVAL '${retentionDays} days'`
 
     const results: Record<string, { count: number; success: boolean; error?: string }> = {}
     let totalDeleted = 0
@@ -52,13 +48,13 @@ export async function POST(request: NextRequest) {
     // 预览模式
     if (dryRun) {
       for (const table of tablesToClean) {
-        const result = await db.queryOne(`
+        const result = (await db.queryOne(`
           SELECT COUNT(*) as count
           FROM ${table}
           WHERE ${deletedCheck}
             AND deleted_at IS NOT NULL
             AND ${dateCheck}
-        `) as { count: number }
+        `)) as { count: number }
         results[table] = { count: Number(result.count) || 0, success: true }
         totalDeleted += Number(result.count) || 0
       }
@@ -99,9 +95,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       mode: 'execution',
       retentionDays,
-      message: totalDeleted > 0
-        ? `已清理 ${totalDeleted} 条软删除记录`
-        : '没有需要清理的记录',
+      message: totalDeleted > 0 ? `已清理 ${totalDeleted} 条软删除记录` : '没有需要清理的记录',
       summary: {
         tables: tablesToClean,
         totalRecordsDeleted: totalDeleted,
@@ -127,12 +121,9 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     // 验证管理员权限
-    const authResult = await verifyAuth(request) as AuthResult
+    const authResult = (await verifyAuth(request)) as AuthResult
     if (!authResult.authenticated || authResult.user?.role !== 'admin') {
-      return NextResponse.json(
-        { error: '需要管理员权限' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
     }
 
     const db = await getDatabase()
@@ -141,25 +132,25 @@ export async function GET(request: NextRequest) {
     const retentionDays = 90
 
     // 统计所有软删除记录
-    const scrapedProducts = await db.queryOne(`
+    const scrapedProducts = (await db.queryOne(`
       SELECT COUNT(*) as count FROM scraped_products WHERE is_deleted = ${deletedFlag}
-    `) as { count: number }
+    `)) as { count: number }
 
-    const adCreatives = await db.queryOne(`
+    const adCreatives = (await db.queryOne(`
       SELECT COUNT(*) as count FROM ad_creatives WHERE is_deleted = ${deletedFlag}
-    `) as { count: number }
+    `)) as { count: number }
 
-    const googleAdsAccounts = await db.queryOne(`
+    const googleAdsAccounts = (await db.queryOne(`
       SELECT COUNT(*) as count FROM google_ads_accounts WHERE is_deleted = ${deletedFlag}
-    `) as { count: number }
+    `)) as { count: number }
 
-    const campaigns = await db.queryOne(`
+    const campaigns = (await db.queryOne(`
       SELECT COUNT(*) as count FROM campaigns WHERE is_deleted = ${deletedFlag}
-    `) as { count: number }
+    `)) as { count: number }
 
-    const offers = await db.queryOne(`
+    const offers = (await db.queryOne(`
       SELECT COUNT(*) as count FROM offers WHERE is_deleted = ${deletedFlag}
-    `) as { count: number }
+    `)) as { count: number }
 
     return NextResponse.json({
       retentionDays,
@@ -169,13 +160,12 @@ export async function GET(request: NextRequest) {
         google_ads_accounts: Number(googleAdsAccounts.count) || 0,
         campaigns: Number(campaigns.count) || 0,
         offers: Number(offers.count) || 0,
-        total: (
+        total:
           (Number(scrapedProducts.count) || 0) +
           (Number(adCreatives.count) || 0) +
           (Number(googleAdsAccounts.count) || 0) +
           (Number(campaigns.count) || 0) +
-          (Number(offers.count) || 0)
-        ),
+          (Number(offers.count) || 0),
       },
       cleanableAfterDays: retentionDays,
       note: `超过 ${retentionDays} 天的软删除记录可以被安全清理`,

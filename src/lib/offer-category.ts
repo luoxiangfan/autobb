@@ -74,13 +74,7 @@ function isGenericStoreCategoryLabel(label: string): boolean {
   if (!s) return true
   if (isNoiseCategorySegment(s)) return true
 
-  const generic = [
-    'productos',
-    'productos domesticos',
-    'productos del hogar',
-    'hogar',
-    'inicio',
-  ]
+  const generic = ['productos', 'productos domesticos', 'productos del hogar', 'hogar', 'inicio']
   if (generic.includes(s)) return true
 
   if (s.startsWith('productos') && (s.includes('domestic') || s.includes('hogar'))) return true
@@ -125,13 +119,21 @@ function deriveCategoryFromTextSignals(parsed: any): string | null {
   const text = normalizeTextForCategory(textParts.join('\n'))
   if (!text) return null
 
-  if (/(\\bantivirus\\b|malware|ransomware|phishing|spyware|rootkit|ciberseguridad|cybersecurity)/.test(text)) {
+  if (
+    /(\\bantivirus\\b|malware|ransomware|phishing|spyware|rootkit|ciberseguridad|cybersecurity)/.test(
+      text
+    )
+  ) {
     return 'Antivirus'
   }
   if (/(\\bvpn\\b|virtual private network)/.test(text)) {
     return 'VPN'
   }
-  if (/(ai\\s*companion|virtual\\s*friend|ai\\s*friend|conversation\\s*ai|mental\\s*wellness|emotional\\s*support)/.test(text)) {
+  if (
+    /(ai\\s*companion|virtual\\s*friend|ai\\s*friend|conversation\\s*ai|mental\\s*wellness|emotional\\s*support)/.test(
+      text
+    )
+  ) {
     return 'AI Companion'
   }
   if (/(\\bchatbot\\b|ai\\s*chatbot)/.test(text)) {
@@ -141,7 +143,9 @@ function deriveCategoryFromTextSignals(parsed: any): string | null {
   return null
 }
 
-export function deriveCategoryFromScrapedData(scrapedDataJson: string | null | undefined): string | null {
+export function deriveCategoryFromScrapedData(
+  scrapedDataJson: string | null | undefined
+): string | null {
   if (!scrapedDataJson) return null
 
   const parsed = safeJsonParse(scrapedDataJson)

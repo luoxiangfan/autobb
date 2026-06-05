@@ -46,10 +46,7 @@ export function normalizeBatchStartClientRequestId(raw: unknown): string | undef
  */
 export async function parseBatchStartRequestBody(
   request: NextRequest
-): Promise<
-  | { ok: true; body: Record<string, unknown> }
-  | { ok: false; response: NextResponse }
-> {
+): Promise<{ ok: true; body: Record<string, unknown> } | { ok: false; response: NextResponse }> {
   let raw: unknown
   try {
     raw = await request.json()

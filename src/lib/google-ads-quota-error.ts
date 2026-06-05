@@ -92,14 +92,14 @@ function extractRetryDelayFromDetails(details: unknown): number | null {
 
   const detailsObj = details as Record<string, unknown>
   const quotaErrorDetails =
-    (detailsObj.quota_error_details as Record<string, unknown> | undefined)
-    || (detailsObj.quotaErrorDetails as Record<string, unknown> | undefined)
+    (detailsObj.quota_error_details as Record<string, unknown> | undefined) ||
+    (detailsObj.quotaErrorDetails as Record<string, unknown> | undefined)
 
   if (!quotaErrorDetails || typeof quotaErrorDetails !== 'object') return null
 
   const retryDelay =
-    (quotaErrorDetails.retry_delay as Record<string, unknown> | undefined)
-    || (quotaErrorDetails.retryDelay as Record<string, unknown> | undefined)
+    (quotaErrorDetails.retry_delay as Record<string, unknown> | undefined) ||
+    (quotaErrorDetails.retryDelay as Record<string, unknown> | undefined)
 
   if (!retryDelay || typeof retryDelay !== 'object') return null
 
@@ -142,10 +142,12 @@ export function extractGoogleAdsRetryDelaySeconds(error: unknown): number | null
 
 export function isGoogleAdsQuotaRateError(error: unknown): boolean {
   const messages = extractMessages(error)
-  if (messages.some((message) => {
-    const normalized = message.toLowerCase()
-    return QUOTA_MESSAGE_PATTERNS.some((pattern) => normalized.includes(pattern))
-  })) {
+  if (
+    messages.some((message) => {
+      const normalized = message.toLowerCase()
+      return QUOTA_MESSAGE_PATTERNS.some((pattern) => normalized.includes(pattern))
+    })
+  ) {
     return true
   }
 

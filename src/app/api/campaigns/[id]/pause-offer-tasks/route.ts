@@ -7,7 +7,8 @@ import { pauseOfferTasks } from '@/lib/campaign-offer-tasks'
  * POST /api/campaigns/:id/pause-offer-tasks
  * 一键暂停关联 Offer 的补点击和换链接任务
  */
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 
@@ -29,16 +30,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // 1. 获取广告系列信息（验证权限并获取 offer_id）
-    const campaign = await db.queryOne<any>(`
+    const campaign = await db.queryOne<any>(
+      `
       SELECT id, offer_id, user_id, status, is_deleted FROM campaigns
       WHERE id = ? AND user_id = ?
-    `, [campaignId, numericUserId])
+    `,
+      [campaignId, numericUserId]
+    )
 
     if (!campaign) {
-      return NextResponse.json(
-        { error: '广告系列不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: '广告系列不存在或无权访问' }, { status: 404 })
     }
 
     const isDeleted = campaign.is_deleted === true || campaign.is_deleted === 1
@@ -51,10 +52,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     const offerId = campaign.offer_id
     if (!offerId) {
-      return NextResponse.json(
-        { error: '该广告系列未关联 Offer' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '该广告系列未关联 Offer' }, { status: 400 })
     }
 
     // 2. 复用统一逻辑批量暂停/禁用关联任务
@@ -80,9 +78,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     return NextResponse.json(result)
   } catch (error: any) {
     console.error('暂停关联 Offer 任务失败:', error)
-    return NextResponse.json(
-      { error: error.message || '暂停任务失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '暂停任务失败' }, { status: 500 })
   }
 }

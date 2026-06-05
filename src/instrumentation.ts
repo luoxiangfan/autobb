@@ -17,7 +17,9 @@ export async function register() {
     patchConsoleToJsonOnce()
 
     if (skipRuntimeDbInit) {
-      console.log('⏭️ SKIP_RUNTIME_DB_INIT=true，跳过 Next.js runtime 数据库初始化（由 entrypoint 负责）')
+      console.log(
+        '⏭️ SKIP_RUNTIME_DB_INIT=true，跳过 Next.js runtime 数据库初始化（由 entrypoint 负责）'
+      )
     } else {
       try {
         await initializeDatabase()

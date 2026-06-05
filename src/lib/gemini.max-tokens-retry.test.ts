@@ -37,25 +37,28 @@ describe('Gemini MAX_TOKENS retry bump', () => {
     settingStore.set(getStoreKey('ai', 'gemini_provider', userId), 'official')
     settingStore.set(getStoreKey('ai', 'gemini_api_key', userId), 'official-key')
 
-    const maxTokensError: any = new Error('Gemini API 输出达到token限制被截断。请增加maxOutputTokens参数。')
+    const maxTokensError: any = new Error(
+      'Gemini API 输出达到token限制被截断。请增加maxOutputTokens参数。'
+    )
     maxTokensError.code = 'MAX_TOKENS'
     maxTokensError.retryMaxOutputTokens = 32768
 
-    axiosGenerate
-      .mockRejectedValueOnce(maxTokensError)
-      .mockResolvedValueOnce({
-        text: '{"headlines":[],"descriptions":[],"keywords":[]}',
-        usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3 },
-        model: GEMINI_ACTIVE_MODEL,
-      })
+    axiosGenerate.mockRejectedValueOnce(maxTokensError).mockResolvedValueOnce({
+      text: '{"headlines":[],"descriptions":[],"keywords":[]}',
+      usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3 },
+      model: GEMINI_ACTIVE_MODEL,
+    })
 
     const { generateContent } = await import('./gemini')
-    await generateContent({
-      prompt: 'test prompt',
-      operationType: 'ad_creative_generation_main',
-      model: GEMINI_ACTIVE_MODEL,
-      maxOutputTokens: 16384,
-    }, userId)
+    await generateContent(
+      {
+        prompt: 'test prompt',
+        operationType: 'ad_creative_generation_main',
+        model: GEMINI_ACTIVE_MODEL,
+        maxOutputTokens: 16384,
+      },
+      userId
+    )
 
     expect(axiosGenerate).toHaveBeenCalledTimes(2)
     expect(axiosGenerate.mock.calls[0]?.[0]?.maxOutputTokens).toBe(16384)
@@ -68,7 +71,9 @@ describe('Gemini MAX_TOKENS retry bump', () => {
     settingStore.set(getStoreKey('ai', 'gemini_provider', userId), 'official')
     settingStore.set(getStoreKey('ai', 'gemini_api_key', userId), 'official-key')
 
-    const maxTokensError: any = new Error('Gemini API 输出达到token限制被截断。请增加maxOutputTokens参数。')
+    const maxTokensError: any = new Error(
+      'Gemini API 输出达到token限制被截断。请增加maxOutputTokens参数。'
+    )
     maxTokensError.code = 'MAX_TOKENS'
     maxTokensError.retryMaxOutputTokens = 32768
     maxTokensError.isRunawayCandidate = true
@@ -77,12 +82,17 @@ describe('Gemini MAX_TOKENS retry bump', () => {
 
     const { generateContent } = await import('./gemini')
 
-    await expect(generateContent({
-      prompt: 'test prompt',
-      operationType: 'ad_creative_generation_main',
-      model: GEMINI_ACTIVE_MODEL,
-      maxOutputTokens: 16384,
-    }, userId)).rejects.toThrow('Gemini API 输出达到token限制被截断')
+    await expect(
+      generateContent(
+        {
+          prompt: 'test prompt',
+          operationType: 'ad_creative_generation_main',
+          model: GEMINI_ACTIVE_MODEL,
+          maxOutputTokens: 16384,
+        },
+        userId
+      )
+    ).rejects.toThrow('Gemini API 输出达到token限制被截断')
 
     expect(axiosGenerate).toHaveBeenCalledTimes(1)
     expect(axiosGenerate.mock.calls[0]?.[0]?.maxOutputTokens).toBe(16384)
@@ -94,38 +104,43 @@ describe('Gemini MAX_TOKENS retry bump', () => {
     settingStore.set(getStoreKey('ai', 'gemini_relay_api_key', userId), 'relay-key')
     settingStore.set(getStoreKey('ai', 'gemini_model', userId), GEMINI_ACTIVE_MODEL)
 
-    const maxTokensError: any = new Error('Gemini API 输出达到token限制被截断。请增加maxOutputTokens参数。')
+    const maxTokensError: any = new Error(
+      'Gemini API 输出达到token限制被截断。请增加maxOutputTokens参数。'
+    )
     maxTokensError.code = 'MAX_TOKENS'
     maxTokensError.retryMaxOutputTokens = 32768
     maxTokensError.isRunawayCandidate = true
 
-    axiosGenerate
-      .mockRejectedValueOnce(maxTokensError)
-      .mockResolvedValueOnce({
-        text: '{"headlines":[],"descriptions":[],"keywords":[],"callouts":[],"sitelinks":[]}',
-        usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3 },
-        model: GEMINI_ACTIVE_MODEL,
-      })
+    axiosGenerate.mockRejectedValueOnce(maxTokensError).mockResolvedValueOnce({
+      text: '{"headlines":[],"descriptions":[],"keywords":[],"callouts":[],"sitelinks":[]}',
+      usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3 },
+      model: GEMINI_ACTIVE_MODEL,
+    })
 
     const { generateContent } = await import('./gemini')
-    await generateContent({
-      prompt: 'test prompt',
-      operationType: 'ad_creative_generation_main',
-      model: GEMINI_ACTIVE_MODEL,
-      maxOutputTokens: 16384,
-      responseSchema: {
-        type: 'OBJECT',
-        properties: {
-          headlines: { type: 'ARRAY' },
+    await generateContent(
+      {
+        prompt: 'test prompt',
+        operationType: 'ad_creative_generation_main',
+        model: GEMINI_ACTIVE_MODEL,
+        maxOutputTokens: 16384,
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            headlines: { type: 'ARRAY' },
+          },
         },
       },
-    }, userId)
+      userId
+    )
 
     expect(axiosGenerate).toHaveBeenCalledTimes(2)
     expect(axiosGenerate.mock.calls[0]?.[0]?.maxOutputTokens).toBe(16384)
     expect(axiosGenerate.mock.calls[1]?.[0]?.maxOutputTokens).toBe(8192)
     expect(axiosGenerate.mock.calls[1]?.[0]?.temperature).toBe(0.2)
-    expect(String(axiosGenerate.mock.calls[1]?.[0]?.prompt || '')).toContain('## EMERGENCY OUTPUT CONTRACT (CRITICAL)')
+    expect(String(axiosGenerate.mock.calls[1]?.[0]?.prompt || '')).toContain(
+      '## EMERGENCY OUTPUT CONTRACT (CRITICAL)'
+    )
   })
 
   it('auto-disables thinking for structured responseSchema tasks on gemini-3 models', async () => {
@@ -140,18 +155,21 @@ describe('Gemini MAX_TOKENS retry bump', () => {
     })
 
     const { generateContent } = await import('./gemini')
-    await generateContent({
-      prompt: 'return json',
-      model: GEMINI_ACTIVE_MODEL,
-      enableAutoModelSelection: false,
-      responseSchema: {
-        type: 'OBJECT',
-        properties: {
-          ok: { type: 'BOOLEAN' },
+    await generateContent(
+      {
+        prompt: 'return json',
+        model: GEMINI_ACTIVE_MODEL,
+        enableAutoModelSelection: false,
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            ok: { type: 'BOOLEAN' },
+          },
+          required: ['ok'],
         },
-        required: ['ok'],
       },
-    }, userId)
+      userId
+    )
 
     expect(axiosGenerate).toHaveBeenCalledTimes(1)
     expect(axiosGenerate.mock.calls[0]?.[0]?.thinkingBudget).toBe(0)
@@ -169,19 +187,22 @@ describe('Gemini MAX_TOKENS retry bump', () => {
     })
 
     const { generateContent } = await import('./gemini')
-    await generateContent({
-      prompt: 'return json',
-      model: GEMINI_ACTIVE_MODEL,
-      enableAutoModelSelection: false,
-      thinkingBudget: 256,
-      responseSchema: {
-        type: 'OBJECT',
-        properties: {
-          ok: { type: 'BOOLEAN' },
+    await generateContent(
+      {
+        prompt: 'return json',
+        model: GEMINI_ACTIVE_MODEL,
+        enableAutoModelSelection: false,
+        thinkingBudget: 256,
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            ok: { type: 'BOOLEAN' },
+          },
+          required: ['ok'],
         },
-        required: ['ok'],
       },
-    }, userId)
+      userId
+    )
 
     expect(axiosGenerate).toHaveBeenCalledTimes(1)
     expect(axiosGenerate.mock.calls[0]?.[0]?.thinkingBudget).toBe(256)

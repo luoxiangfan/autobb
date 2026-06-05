@@ -3,9 +3,23 @@
 import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Download, Upload, AlertCircle, CheckCircle2, RefreshCw, Settings, FileText } from 'lucide-react'
+import {
+  Download,
+  Upload,
+  AlertCircle,
+  CheckCircle2,
+  RefreshCw,
+  Settings,
+  FileText,
+} from 'lucide-react'
 
 type ExportType = 'offers' | 'campaigns' | 'settings'
 type ExportFormat = 'json' | 'csv'
@@ -42,7 +56,7 @@ export function DataExportImport() {
       }
 
       const response = await fetch(url, {
-        credentials: 'include'
+        credentials: 'include',
       })
 
       if (!response.ok) {
@@ -131,7 +145,10 @@ export function DataExportImport() {
       if (result.summary?.errors === 0) {
         setMessage({ type: 'success', text: result.message })
       } else {
-        setMessage({ type: 'error', text: `${result.message}，但有 ${result.summary.errors} 个错误` })
+        setMessage({
+          type: 'error',
+          text: `${result.message}，但有 ${result.summary.errors} 个错误`,
+        })
       }
 
       // 清空文件选择
@@ -169,15 +186,16 @@ export function DataExportImport() {
             <Download className="h-5 w-5" />
             数据导出
           </CardTitle>
-          <CardDescription>
-            导出您的数据，支持Offers、Campaigns和用户配置
-          </CardDescription>
+          <CardDescription>导出您的数据，支持Offers、Campaigns和用户配置</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">数据类型</label>
-              <Select value={exportType} onValueChange={(value) => setExportType(value as ExportType)}>
+              <Select
+                value={exportType}
+                onValueChange={(value) => setExportType(value as ExportType)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -192,7 +210,10 @@ export function DataExportImport() {
             {showFormatSelect && (
               <div>
                 <label className="text-sm font-medium mb-2 block">导出格式</label>
-                <Select value={exportFormat} onValueChange={(value) => setExportFormat(value as ExportFormat)}>
+                <Select
+                  value={exportFormat}
+                  onValueChange={(value) => setExportFormat(value as ExportFormat)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -243,9 +264,7 @@ export function DataExportImport() {
             <Settings className="h-5 w-5" />
             配置导入
           </CardTitle>
-          <CardDescription>
-            导入用户配置数据（JSON格式）
-          </CardDescription>
+          <CardDescription>导入用户配置数据（JSON格式）</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* 说明 */}
@@ -278,7 +297,11 @@ export function DataExportImport() {
             )}
           </div>
 
-          <Button onClick={handleImportSettings} disabled={loading || !importFile} className="w-full">
+          <Button
+            onClick={handleImportSettings}
+            disabled={loading || !importFile}
+            className="w-full"
+          >
             {loading ? (
               <>
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />

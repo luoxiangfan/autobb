@@ -6,6 +6,7 @@ import { Loader2, ArrowRight, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { fetchWithRetry } from '@/lib/api-error-handler'
 
 function LoginForm() {
   const router = useRouter()
@@ -22,12 +23,16 @@ function LoginForm() {
 
     const checkAuthAndRedirect = async () => {
       try {
-        const response = await fetch('/api/auth/me', {
-          credentials: 'include',
-          cache: 'no-store',
-        })
+        const result = await fetchWithRetry<{ user?: { mustChangePassword?: boolean } }>(
+          '/api/auth/me',
+          {
+            credentials: 'include',
+            cache: 'no-store',
+          },
+          { maxRetries: 1, retryDelay: 500 }
+        )
 
-        if (response.ok) {
+        if (result.success) {
           const redirect = searchParams?.get('redirect')
           const target = redirect && redirect !== '/login' ? redirect : '/dashboard'
           router.replace(target)
@@ -57,7 +62,9 @@ function LoginForm() {
 
     const warningParam = searchParams?.get('security_warning')
     if (warningParam === 'true') {
-      setSecurityWarning('检测到您的账户存在异常登录活动，请确认是否为本人操作。如非本人操作，建议立即修改密码。')
+      setSecurityWarning(
+        '检测到您的账户存在异常登录活动，请确认是否为本人操作。如非本人操作，建议立即修改密码。'
+      )
     }
   }, [searchParams])
 
@@ -67,19 +74,26 @@ function LoginForm() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const result = await fetchWithRetry<{
+        user?: { mustChangePassword?: boolean }
+        error?: string
+      }>(
+        '/api/auth/login',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username, password }),
         },
-        body: JSON.stringify({ username, password }),
-      })
+        { maxRetries: 2, retryDelay: 600 }
+      )
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || '登录失败')
+      if (!result.success) {
+        throw new Error(result.userMessage)
       }
+
+      const data = result.data
 
       if (data.user && data.user.mustChangePassword) {
         router.push('/change-password?forced=true')
@@ -105,15 +119,16 @@ function LoginForm() {
 
   return (
     <div className="marketing-shell min-h-screen bg-slate-50 text-slate-900 selection:bg-blue-100 selection:text-slate-900">
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-200/80 bg-white/92 backdrop-blur">
-      </header>
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-200/80 bg-white/92 backdrop-blur-sm"></header>
 
       <main className="overflow-x-clip">
         <section>
-          <div className="mx-auto flex justify-center items-center w-auto max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.05fr,0.95fr] lg:gap-14 lg:px-8 lg:py-20">
+          <div className="mx-auto flex justify-center items-center w-auto max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:px-8 lg:py-20">
             <div className="rounded-[28px] md:w-1/2 max-w-full border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/10 sm:p-8">
               <div className="mb-6 space-y-2">
-                <h2 className="font-display text-3xl font-bold tracking-tight text-slate-950">欢迎回来</h2>
+                <h2 className="font-display text-3xl font-bold tracking-tight text-slate-950">
+                  欢迎回来
+                </h2>
                 <p className="text-base text-slate-600">请输入账号信息，登录 AutoAds 控制台。</p>
               </div>
 

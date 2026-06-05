@@ -51,7 +51,9 @@ export function getRatioCappedCount(total: number, ratio: number, hardCap: numbe
   return Math.max(0, Math.min(ratioCap, hardCap))
 }
 
-export function resolveNonBrandMinSearchVolumeByBrandKeywordCount(brandKeywordCount: number): number {
+export function resolveNonBrandMinSearchVolumeByBrandKeywordCount(
+  brandKeywordCount: number
+): number {
   const count = Number.isFinite(brandKeywordCount) ? Math.max(0, Math.floor(brandKeywordCount)) : 0
   const { rules, defaultMinSearchVolume } = KEYWORD_POLICY.creative.nonBrandVolumeDynamic
 

@@ -47,11 +47,14 @@ describe('POST /api/products/yeahpromos/session/capture-extension', () => {
       status: 401,
     })
 
-    const req = new NextRequest('http://localhost/api/products/yeahpromos/session/capture-extension', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ cookie: 'PHPSESSID=abc' }),
-    })
+    const req = new NextRequest(
+      'http://localhost/api/products/yeahpromos/session/capture-extension',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ cookie: 'PHPSESSID=abc' }),
+      }
+    )
     const res = await POST(req)
     const data = await res.json()
 
@@ -60,14 +63,17 @@ describe('POST /api/products/yeahpromos/session/capture-extension', () => {
   })
 
   it('uses authenticated user id and ignores body userId to avoid cross-user overwrite', async () => {
-    const req = new NextRequest('http://localhost/api/products/yeahpromos/session/capture-extension', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        userId: 999,
-        cookie: 'PHPSESSID=abc; test=1',
-      }),
-    })
+    const req = new NextRequest(
+      'http://localhost/api/products/yeahpromos/session/capture-extension',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          userId: 999,
+          cookie: 'PHPSESSID=abc; test=1',
+        }),
+      }
+    )
     const res = await POST(req)
     const data = await res.json()
 
@@ -80,11 +86,14 @@ describe('POST /api/products/yeahpromos/session/capture-extension', () => {
   })
 
   it('returns 400 when cookie is missing', async () => {
-    const req = new NextRequest('http://localhost/api/products/yeahpromos/session/capture-extension', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({}),
-    })
+    const req = new NextRequest(
+      'http://localhost/api/products/yeahpromos/session/capture-extension',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      }
+    )
     const res = await POST(req)
     const data = await res.json()
 

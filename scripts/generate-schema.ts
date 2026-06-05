@@ -11,7 +11,12 @@
 
 import fs from 'fs'
 import path from 'path'
-import { generateSQLiteSchema, generatePostgresSchema, TABLE_COUNT, SCHEMA_VERSION } from '../src/lib/db-schema-generator'
+import {
+  generateSQLiteSchema,
+  generatePostgresSchema,
+  TABLE_COUNT,
+  SCHEMA_VERSION,
+} from '../src/lib/db-schema-generator'
 
 const migrationsDir = path.join(process.cwd(), 'migrations')
 

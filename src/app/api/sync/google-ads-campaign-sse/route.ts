@@ -107,10 +107,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('[google-ads-campaign-sse] error:', error)
-    return NextResponse.json(
-      { error: error.message || 'SSE 初始化失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || 'SSE 初始化失败' }, { status: 500 })
   }
 }
 

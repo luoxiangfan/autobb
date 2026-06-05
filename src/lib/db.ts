@@ -128,7 +128,7 @@ class SQLiteAdapter implements DatabaseAdapter {
 
     // 🔥 仅开发环境启用verbose日志（减少生产环境日志噪音）
     this.db = new Database(dbPath, {
-      verbose: process.env.NODE_ENV === 'development' ? console.log : undefined
+      verbose: process.env.NODE_ENV === 'development' ? console.log : undefined,
     })
 
     // 启用外键约束
@@ -155,7 +155,10 @@ class SQLiteAdapter implements DatabaseAdapter {
     return Promise.resolve(this.db.prepare(normalizedSql).get(...normalizedParams) as T | undefined)
   }
 
-  async exec(sql: string, params: any[] = []): Promise<{ changes: number; lastInsertRowid?: number }> {
+  async exec(
+    sql: string,
+    params: any[] = []
+  ): Promise<{ changes: number; lastInsertRowid?: number }> {
     await this.waitForTxTurn()
     const normalizedSql = normalizeSqliteSql(sql)
     const normalizedParams = normalizeSqliteParams(params)
@@ -169,7 +172,7 @@ class SQLiteAdapter implements DatabaseAdapter {
         const info = stmt.run()
         return Promise.resolve({
           changes: info.changes,
-          lastInsertRowid: Number(info.lastInsertRowid)
+          lastInsertRowid: Number(info.lastInsertRowid),
         })
       } catch {
         this.db.exec(normalizedSql)
@@ -179,11 +182,12 @@ class SQLiteAdapter implements DatabaseAdapter {
           .get() as { changes: number; lastInsertRowid: number }
 
         const isInsertLike = /^\s*(?:INSERT|REPLACE)\b/i.test(normalizedSql)
-        const lastInsertRowid = isInsertLike && meta.changes > 0 ? Number(meta.lastInsertRowid) : undefined
+        const lastInsertRowid =
+          isInsertLike && meta.changes > 0 ? Number(meta.lastInsertRowid) : undefined
 
         return Promise.resolve({
           changes: Number(meta.changes),
-          ...(lastInsertRowid !== undefined ? { lastInsertRowid } : {})
+          ...(lastInsertRowid !== undefined ? { lastInsertRowid } : {}),
         })
       }
     }
@@ -192,7 +196,7 @@ class SQLiteAdapter implements DatabaseAdapter {
     const info = stmt.run(...normalizedParams)
     return Promise.resolve({
       changes: info.changes,
-      lastInsertRowid: Number(info.lastInsertRowid)
+      lastInsertRowid: Number(info.lastInsertRowid),
     })
   }
 
@@ -260,9 +264,10 @@ class PostgresAdapter implements DatabaseAdapter {
     // 移除postgres.js不支持的连接参数
     const cleanedUrl = connectionString.replace(/[?&]directConnection=[^&]*/g, '')
     const statementTimeoutRaw = Number(process.env.POSTGRES_STATEMENT_TIMEOUT_MS || '60000')
-    const statementTimeoutMs = Number.isFinite(statementTimeoutRaw) && statementTimeoutRaw >= 0
-      ? Math.floor(statementTimeoutRaw)
-      : 60000
+    const statementTimeoutMs =
+      Number.isFinite(statementTimeoutRaw) && statementTimeoutRaw >= 0
+        ? Math.floor(statementTimeoutRaw)
+        : 60000
 
     this.sql = postgres(cleanedUrl, {
       max: 10, // 最大连接数
@@ -289,8 +294,8 @@ class PostgresAdapter implements DatabaseAdapter {
           from: [1082, 1114, 1184],
           serialize: (x: any) => (x instanceof Date ? x : new Date(x)).toISOString(),
           parse: (x: string) => parseDbDateTimeAsUtc(x),
-        }
-      }
+        },
+      },
     }) as unknown as postgres.Sql<{ bigint: number; date: Date }>
   }
 
@@ -327,14 +332,17 @@ class PostgresAdapter implements DatabaseAdapter {
     // 3. 转换 datetime('now') 为 PostgreSQL 的 CURRENT_TIMESTAMP
     // 转换 datetime('now', '-N hours') 或 datetime('now', '-N minutes') 等
     // 支持单引号和双引号
-    result = result.replace(/datetime\s*\(\s*["']now["']\s*,\s*["']?(-?\d+)\s+(hours?|minutes?)["']?\s*\)/gi, (_, value, unit) => {
-      const numValue = parseInt(value)
-      if (unit.startsWith('hour')) {
-        return `CURRENT_TIMESTAMP - INTERVAL '${Math.abs(numValue)} hours'`
-      } else {
-        return `CURRENT_TIMESTAMP - INTERVAL '${Math.abs(numValue)} minutes'`
+    result = result.replace(
+      /datetime\s*\(\s*["']now["']\s*,\s*["']?(-?\d+)\s+(hours?|minutes?)["']?\s*\)/gi,
+      (_, value, unit) => {
+        const numValue = parseInt(value)
+        if (unit.startsWith('hour')) {
+          return `CURRENT_TIMESTAMP - INTERVAL '${Math.abs(numValue)} hours'`
+        } else {
+          return `CURRENT_TIMESTAMP - INTERVAL '${Math.abs(numValue)} minutes'`
+        }
       }
-    })
+    )
     // 简单的 datetime('now') 转换（支持单引号和双引号）
     result = result.replace(/datetime\s*\(\s*["']now["']\s*\)/gi, 'CURRENT_TIMESTAMP')
 
@@ -344,7 +352,7 @@ class PostgresAdapter implements DatabaseAdapter {
     result = result.replace(/datetime\s*\(\s*'([^']+)'\s*\)/gi, (_, dateStr) => {
       // 跳过 'now' 或 'now, -N days' 等情况
       if (dateStr.startsWith('now')) {
-        return _;  // 返回原始字符串，保留给后续规则处理
+        return _ // 返回原始字符串，保留给后续规则处理
       }
       // 将 ISO 8601 格式转换为 PostgreSQL timestamp 格式
       // '2025-01-01T12:00:00.000Z' -> '2025-01-01 12:00:00'
@@ -392,16 +400,16 @@ class PostgresAdapter implements DatabaseAdapter {
     // 只对在 PostgreSQL 中是 BOOLEAN 类型的字段进行转换
     const booleanFieldsPostgres: Record<string, string[]> = {
       // 表名: [字段名列表]
-      'users': ['is_active', 'must_change_password', 'openclaw_enabled'],
-      'offers': ['is_active', 'is_deleted', 'is_manager_account'],
-      'ad_creatives': ['is_selected'],
-      'campaigns': ['is_deleted'],
-      'click_farm_tasks': ['is_deleted'],
-      'google_ads_accounts': ['is_active'],
-      'google_ads_api_usage': ['is_success'],
-      'google_ads_credentials': ['is_active'],
-      'google_ads_service_accounts': ['is_active'],
-      'prompt_versions': ['is_active'],
+      users: ['is_active', 'must_change_password', 'openclaw_enabled'],
+      offers: ['is_active', 'is_deleted', 'is_manager_account'],
+      ad_creatives: ['is_selected'],
+      campaigns: ['is_deleted'],
+      click_farm_tasks: ['is_deleted'],
+      google_ads_accounts: ['is_active'],
+      google_ads_api_usage: ['is_success'],
+      google_ads_credentials: ['is_active'],
+      google_ads_service_accounts: ['is_active'],
+      prompt_versions: ['is_active'],
     }
 
     // 转换 field = 1 -> field = true（仅对指定表的指定字段）
@@ -441,15 +449,28 @@ class PostgresAdapter implements DatabaseAdapter {
   private convertParams(params: any[], sql: string): any[] {
     // 已知的布尔字段列表（PostgreSQL 中是 BOOLEAN 类型）
     const booleanFields = new Set([
-      'is_active', 'is_selected', 'is_success', 'must_change_password', 'openclaw_enabled',
-      'is_default', 'is_manager', 'is_manager_account', 'is_idle',
-      'enabled', 'is_deleted', 'is_sensitive', 'is_required', 'is_active'
+      'is_active',
+      'is_selected',
+      'is_success',
+      'must_change_password',
+      'openclaw_enabled',
+      'is_default',
+      'is_manager',
+      'is_manager_account',
+      'is_idle',
+      'enabled',
+      'is_deleted',
+      'is_sensitive',
+      'is_required',
+      'is_active',
     ])
 
     // INTEGER 类型的布尔字段（不需要转换参数值）
     const integerBooleanFields = new Set([
-      'is_current', 'is_suspicious', 'is_resolved',
-      'success'  // login_attempts.success
+      'is_current',
+      'is_suspicious',
+      'is_resolved',
+      'success', // login_attempts.success
     ])
 
     // 提取SQL中所有 field = ? 的字段名和位置
@@ -489,15 +510,17 @@ class PostgresAdapter implements DatabaseAdapter {
       if (p === undefined) return null
 
       // 查找这个参数位置对应的字段
-      const fieldPosition = fieldPositions.find(fp => fp.paramIndex === index)
+      const fieldPosition = fieldPositions.find((fp) => fp.paramIndex === index)
       const field = fieldPosition?.field
 
       // 如果是布尔字段且参数是 0 或 1，转换为布尔值
       // 但如果是 INTEGER 类型的布尔字段，则保持 0/1 不变
-      if (field &&
-          booleanFields.has(field.toLowerCase()) &&
-          !integerBooleanFields.has(field.toLowerCase()) &&
-          (p === 0 || p === 1)) {
+      if (
+        field &&
+        booleanFields.has(field.toLowerCase()) &&
+        !integerBooleanFields.has(field.toLowerCase()) &&
+        (p === 0 || p === 1)
+      ) {
         return p === 1 ? true : false
       }
 
@@ -518,7 +541,7 @@ class PostgresAdapter implements DatabaseAdapter {
         console.error('❌ 参数数量不匹配!', {
           SQL: pgSql.substring(0, 200),
           占位符数量: placeholderCount,
-          参数数量: cleanParams.length
+          参数数量: cleanParams.length,
         })
       }
     }
@@ -534,12 +557,12 @@ class PostgresAdapter implements DatabaseAdapter {
     const cleanParams = this.convertParams(params, sql)
 
     // 🔧 调试：查看累计统计查询
-    const isCumulativeQuery = sql.includes('SUM(success_clicks)');
+    const isCumulativeQuery = sql.includes('SUM(success_clicks)')
     if (isCumulativeQuery) {
-      console.log('🔍 [PostgreSQL queryOne] 累计统计查询');
-      console.log('  原始SQL:', sql.substring(0, 200));
-      console.log('  转换后SQL:', pgSql.substring(0, 200));
-      console.log('  参数:', cleanParams);
+      console.log('🔍 [PostgreSQL queryOne] 累计统计查询')
+      console.log('  原始SQL:', sql.substring(0, 200))
+      console.log('  转换后SQL:', pgSql.substring(0, 200))
+      console.log('  参数:', cleanParams)
     }
 
     // 生产环境不输出详细日志
@@ -549,7 +572,7 @@ class PostgresAdapter implements DatabaseAdapter {
         console.error('❌ 参数数量不匹配!', {
           SQL: pgSql.substring(0, 200),
           占位符数量: placeholderCount,
-          参数数量: cleanParams.length
+          参数数量: cleanParams.length,
         })
       }
     }
@@ -558,14 +581,17 @@ class PostgresAdapter implements DatabaseAdapter {
 
     // 🔧 调试：查看累计统计查询结果
     if (isCumulativeQuery) {
-      console.log('🔍 [PostgreSQL queryOne] 查询结果:', JSON.stringify(result[0]));
-      console.log('  result[0] 所有键:', result[0] ? Object.keys(result[0]) : 'undefined');
+      console.log('🔍 [PostgreSQL queryOne] 查询结果:', JSON.stringify(result[0]))
+      console.log('  result[0] 所有键:', result[0] ? Object.keys(result[0]) : 'undefined')
     }
 
     return result[0] as T | undefined
   }
 
-  async exec(sql: string, params: any[] = []): Promise<{ changes: number; lastInsertRowid?: number }> {
+  async exec(
+    sql: string,
+    params: any[] = []
+  ): Promise<{ changes: number; lastInsertRowid?: number }> {
     // 先转换 SQLite 特有语法，再转换占位符
     const convertedSql = this.convertSqliteSyntax(sql)
     let pgSql = this.convertPlaceholders(convertedSql)
@@ -576,7 +602,7 @@ class PostgresAdapter implements DatabaseAdapter {
     if (isDev) {
       console.log('🔍 [PostgreSQL exec]', {
         table: extractTableName(sql),
-        op: sql.trim().substring(0, 20).replace(/\s+/g, ' ')
+        op: sql.trim().substring(0, 20).replace(/\s+/g, ' '),
       })
     }
 
@@ -639,9 +665,9 @@ class PostgresAdapter implements DatabaseAdapter {
   }
 
   async transaction<T>(fn: () => Promise<T>): Promise<T> {
-    return await this.getSqlClient().begin(async (tx: any) => {
+    return (await this.getSqlClient().begin(async (tx: any) => {
       return await this.txStorage.run(tx, fn)
-    }) as Promise<T>
+    })) as Promise<T>
   }
 
   async close(): Promise<void> {
@@ -675,7 +701,10 @@ export function getDatabase(): DatabaseAdapter {
   if (!global.__dbAdapter) {
     const databaseUrl = process.env.DATABASE_URL
 
-    if (databaseUrl && (databaseUrl.startsWith('postgres://') || databaseUrl.startsWith('postgresql://'))) {
+    if (
+      databaseUrl &&
+      (databaseUrl.startsWith('postgres://') || databaseUrl.startsWith('postgresql://'))
+    ) {
       // 使用 PostgreSQL
       console.log('🐘 Initializing PostgreSQL connection...')
       global.__dbAdapter = new PostgresAdapter(databaseUrl)

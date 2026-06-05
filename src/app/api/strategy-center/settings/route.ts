@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import cron from 'node-cron'
-import { getSettingsByCategory, getUserOnlySettingsByCategory, updateSettings } from '@/lib/settings'
+import {
+  getSettingsByCategory,
+  getUserOnlySettingsByCategory,
+  updateSettings,
+} from '@/lib/settings'
 import { verifyStrategyCenterSessionAuth } from '@/lib/openclaw/request-auth'
 
 const STRATEGY_CENTER_USER_KEYS = new Set([
@@ -19,10 +23,7 @@ const STRATEGY_CENTER_USER_KEYS = new Set([
   'feishu_strict_auto_bind',
 ])
 
-const STRATEGY_KEYS = new Set([
-  'openclaw_strategy_enabled',
-  'openclaw_strategy_cron',
-])
+const STRATEGY_KEYS = new Set(['openclaw_strategy_enabled', 'openclaw_strategy_cron'])
 
 const updateSchema = z.object({
   updates: z.array(
@@ -39,9 +40,7 @@ function parseJsonStringArray(value: string | undefined): string[] {
   try {
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed
-      .map(item => String(item || '').trim())
-      .filter(Boolean)
+    return parsed.map((item) => String(item || '').trim()).filter(Boolean)
   } catch {
     return []
   }
@@ -80,8 +79,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: auth.error }, { status: auth.status })
   }
 
-  const settings = (await getUserOnlySettingsByCategory('openclaw', auth.user.userId))
-    .filter(setting => STRATEGY_CENTER_USER_KEYS.has(setting.key))
+  const settings = (await getUserOnlySettingsByCategory('openclaw', auth.user.userId)).filter(
+    (setting) => STRATEGY_CENTER_USER_KEYS.has(setting.key)
+  )
 
   return NextResponse.json({
     success: true,
@@ -100,13 +100,13 @@ export async function PUT(request: NextRequest) {
   const parsed = updateSchema.safeParse(body || {})
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.errors[0]?.message || 'Invalid request' },
+      { error: parsed.error.issues[0]?.message || 'Invalid request' },
       { status: 400 }
     )
   }
 
   const { updates } = parsed.data
-  const invalidKey = updates.find(item => !STRATEGY_CENTER_USER_KEYS.has(item.key))
+  const invalidKey = updates.find((item) => !STRATEGY_CENTER_USER_KEYS.has(item.key))
   if (invalidKey) {
     return NextResponse.json({ error: `不允许修改配置: ${invalidKey.key}` }, { status: 400 })
   }
@@ -119,7 +119,7 @@ export async function PUT(request: NextRequest) {
     return existingSettings
   }
 
-  const strategyUpdates = updates.filter(item => STRATEGY_KEYS.has(item.key))
+  const strategyUpdates = updates.filter((item) => STRATEGY_KEYS.has(item.key))
   if (strategyUpdates.length > 0) {
     const currentSettings = await getExistingSettings()
     const mergedStrategyMap = currentSettings.reduce<Record<string, string>>((acc, item) => {
@@ -138,7 +138,7 @@ export async function PUT(request: NextRequest) {
   }
 
   const effectiveUpdates = [...updates]
-  const targetUpdate = updates.find(item => item.key === 'feishu_target')
+  const targetUpdate = updates.find((item) => item.key === 'feishu_target')
   if (targetUpdate) {
     const inferredFeishuId = resolveFeishuPersonalIdFromTarget(targetUpdate.value)
     if (inferredFeishuId) {
@@ -148,10 +148,7 @@ export async function PUT(request: NextRequest) {
         return acc
       }, {})
       const existingAllowFrom = parseJsonStringArray(currentMap.feishu_allow_from)
-      const mergedAllowFrom = Array.from(new Set([
-        ...existingAllowFrom,
-        inferredFeishuId,
-      ]))
+      const mergedAllowFrom = Array.from(new Set([...existingAllowFrom, inferredFeishuId]))
 
       effectiveUpdates.push({
         key: 'feishu_allow_from',
@@ -166,19 +163,17 @@ export async function PUT(request: NextRequest) {
 
   const templateSettings = await getSettingsByCategory('openclaw')
   const templateKeySet = new Set(templateSettings.map((setting) => setting.key))
-  const dedupedUpdates = Array.from(new Map(
-    effectiveUpdates.map(item => [item.key, item])
-  ).values())
-  const filteredUpdates = dedupedUpdates.filter(item => templateKeySet.has(item.key))
-  const skippedKeys = Array.from(new Set(
-    dedupedUpdates
-      .filter(item => !templateKeySet.has(item.key))
-      .map(item => item.key)
-  ))
+  const dedupedUpdates = Array.from(
+    new Map(effectiveUpdates.map((item) => [item.key, item])).values()
+  )
+  const filteredUpdates = dedupedUpdates.filter((item) => templateKeySet.has(item.key))
+  const skippedKeys = Array.from(
+    new Set(dedupedUpdates.filter((item) => !templateKeySet.has(item.key)).map((item) => item.key))
+  )
 
   if (filteredUpdates.length > 0) {
     await updateSettings(
-      filteredUpdates.map(item => ({ category: 'openclaw', key: item.key, value: item.value })),
+      filteredUpdates.map((item) => ({ category: 'openclaw', key: item.key, value: item.value })),
       auth.user.userId
     )
 

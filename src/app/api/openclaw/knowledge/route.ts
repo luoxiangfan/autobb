@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import {
   saveKnowledgeEntry,
   generateKnowledgeSummary,
@@ -11,8 +12,8 @@ import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 export const dynamic = 'force-dynamic'
 
 const saveEntrySchema = z.object({
-  report_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  summary_json: z.string().min(1),
+  report_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, zErr.dateYmd),
+  summary_json: z.string().min(1, zErr.required),
   notes: z.string().optional().nullable(),
 })
 
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
   const parsed = saveEntrySchema.safeParse(body || {})
   if (!parsed.success) {
     return NextResponse.json(
-      { success: false, error: parsed.error.errors[0]?.message || 'Invalid request' },
+      { success: false, error: parsed.error.issues[0]?.message || 'Invalid request' },
       { status: 400 }
     )
   }

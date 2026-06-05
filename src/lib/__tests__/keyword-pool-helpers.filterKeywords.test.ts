@@ -11,8 +11,14 @@ describe('keyword-pool-helpers.filterKeywords', () => {
       { keyword: 'betta fish tank', searchVolume: 30000, source: 'TEST' },
     ]
 
-    const out = filterKeywords(input, 'Bettabot', 'robot vacuum cleaner', 'US', 'Bettabot X1 robot vacuum cleaner')
-    const texts = out.map(k => k.keyword.toLowerCase())
+    const out = filterKeywords(
+      input,
+      'Bettabot',
+      'robot vacuum cleaner',
+      'US',
+      'Bettabot X1 robot vacuum cleaner'
+    )
+    const texts = out.map((k) => k.keyword.toLowerCase())
 
     expect(texts).toContain('bettabot')
     expect(texts).not.toContain('robot vacuum')
@@ -30,7 +36,7 @@ describe('keyword-pool-helpers.filterKeywords', () => {
     ]
 
     const out = filterKeywords(input, 'BrandX', '', 'US', null)
-    const texts = out.map(k => k.keyword.toLowerCase())
+    const texts = out.map((k) => k.keyword.toLowerCase())
 
     expect(texts).toContain('brandx')
     expect(texts).not.toContain('betta fish')
@@ -47,7 +53,7 @@ describe('keyword-pool-helpers.filterKeywords', () => {
     ]
 
     const out = filterKeywords(input, 'Hoover', 'vacuum', 'UK', 'Hoover vacuum cleaner')
-    const texts = out.map(k => k.keyword.toLowerCase())
+    const texts = out.map((k) => k.keyword.toLowerCase())
 
     expect(texts).toContain('hoover')
     expect(texts).toContain('hoover uk')
@@ -85,7 +91,7 @@ describe('keyword-pool-helpers.filterKeywords', () => {
         allowNonBrandForModelFamily: true,
       },
     })
-    const texts = out.map(k => k.keyword.toLowerCase())
+    const texts = out.map((k) => k.keyword.toLowerCase())
 
     expect(texts).toContain('novilla')
     expect(texts).toContain('cooling mattress')

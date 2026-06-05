@@ -9,11 +9,13 @@ const accountFns = vi.hoisted(() => ({
 
 const campaignListFns = vi.hoisted(() => ({
   listDeletableRemoteCampaignsForAccount: vi.fn(async () => [{ google_campaign_id: '9001' }]),
-  limitDeletableRemoteCampaigns: vi.fn((campaigns: { google_campaign_id: string }[], max: number) => ({
-    selected: campaigns.slice(0, max),
-    truncated: Math.max(0, campaigns.length - max),
-    maxCampaigns: max,
-  })),
+  limitDeletableRemoteCampaigns: vi.fn(
+    (campaigns: { google_campaign_id: string }[], max: number) => ({
+      selected: campaigns.slice(0, max),
+      truncated: Math.max(0, campaigns.length - max),
+      maxCampaigns: max,
+    })
+  ),
 }))
 
 const remoteFns = vi.hoisted(() => ({
@@ -59,7 +61,7 @@ describe('DELETE /api/google-ads-accounts/:id', () => {
       body: JSON.stringify({ removeGoogleAdsCampaigns: true }),
     })
 
-    const res = await DELETE(req, { params: { id: '9' } })
+    const res = await DELETE(req, { params: Promise.resolve({ id: '9' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -91,7 +93,7 @@ describe('DELETE /api/google-ads-accounts/:id', () => {
       }
     )
 
-    const res = await DELETE(req, { params: { id: '9' } })
+    const res = await DELETE(req, { params: Promise.resolve({ id: '9' }) })
     expect(res.status).toBe(200)
     expect(remoteFns.executeGoogleAdsCampaignRemoteActions).toHaveBeenCalled()
   })
@@ -103,7 +105,7 @@ describe('DELETE /api/google-ads-accounts/:id', () => {
       body: JSON.stringify({ removeGoogleAdsCampaigns: true }),
     })
 
-    const res = await DELETE(req, { params: { id: '9' } })
+    const res = await DELETE(req, { params: Promise.resolve({ id: '9' }) })
     expect(res.status).toBe(200)
     expect(remoteFns.executeGoogleAdsCampaignRemoteActions).toHaveBeenCalled()
   })
@@ -114,7 +116,7 @@ describe('DELETE /api/google-ads-accounts/:id', () => {
       headers: { 'x-user-id': '7' },
     })
 
-    const res = await DELETE(req, { params: { id: '9' } })
+    const res = await DELETE(req, { params: Promise.resolve({ id: '9' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -142,7 +144,7 @@ describe('DELETE /api/google-ads-accounts/:id', () => {
       body: JSON.stringify({ removeGoogleAdsCampaigns: true }),
     })
 
-    const res = await DELETE(req, { params: { id: '9' } })
+    const res = await DELETE(req, { params: Promise.resolve({ id: '9' }) })
     const data = await res.json()
 
     expect(data.data.googleAds.failures).toHaveLength(1)
@@ -178,7 +180,7 @@ describe('DELETE /api/google-ads-accounts/:id', () => {
       body: JSON.stringify({ removeGoogleAdsCampaigns: true }),
     })
 
-    await DELETE(req, { params: { id: '9' } })
+    await DELETE(req, { params: Promise.resolve({ id: '9' }) })
     expect(callOrder).toEqual(['remote', 'local'])
   })
 
@@ -206,7 +208,7 @@ describe('DELETE /api/google-ads-accounts/:id', () => {
       body: JSON.stringify({ removeGoogleAdsCampaigns: true }),
     })
 
-    const res = await DELETE(req, { params: { id: '9' } })
+    const res = await DELETE(req, { params: Promise.resolve({ id: '9' }) })
     const data = await res.json()
 
     expect(res.status).toBe(500)

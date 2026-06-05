@@ -86,7 +86,7 @@ export async function generateNegativeKeywords(offer: Offer, _userId: number): P
     'instead of',
     'replace',
     'better than',
-    'or',  // "brand A or brand B"
+    'or', // "brand A or brand B"
 
     // === 6. 不相关产品（通用否定词，避免跨品类流量）===
     // 注：这部分可根据category动态调整，但保留通用低价值词
@@ -131,57 +131,109 @@ export async function generateNegativeKeywords(offer: Offer, _userId: number): P
   // 多语言支持（覆盖10个类别的高频词翻译）
   if (targetLanguage.includes('chinese') || targetLanguage === 'zh') {
     negatives.push(
-      '免费', '破解', '试用', '样品',  // 1. 低价值
-      '教程', '评测', '对比', '如何使用', '安装',  // 2. 信息查询
-      '招聘', '工作', '职位',  // 3. 招聘
-      '二手', '翻新', '维修', '配件',  // 4. 二手
-      '对比', '替代',  // 5. 竞品比较
-      '便宜', '最低价', '批发',  // 7. 低价
-      '手工', '自制',  // 8. DIY
-      '下载', '软件', 'APP'  // 9. 下载
+      '免费',
+      '破解',
+      '试用',
+      '样品', // 1. 低价值
+      '教程',
+      '评测',
+      '对比',
+      '如何使用',
+      '安装', // 2. 信息查询
+      '招聘',
+      '工作',
+      '职位', // 3. 招聘
+      '二手',
+      '翻新',
+      '维修',
+      '配件', // 4. 二手
+      '对比',
+      '替代', // 5. 竞品比较
+      '便宜',
+      '最低价',
+      '批发', // 7. 低价
+      '手工',
+      '自制', // 8. DIY
+      '下载',
+      '软件',
+      'APP' // 9. 下载
     )
   } else if (targetLanguage.includes('spanish') || targetLanguage === 'es') {
     negatives.push(
-      'gratis', 'piratear', 'muestra',
-      'tutorial', 'reseña', 'comparar',
-      'trabajo', 'empleo',
-      'usado', 'reparar',
-      'barato', 'descuento',
-      'descargar', 'aplicación'
+      'gratis',
+      'piratear',
+      'muestra',
+      'tutorial',
+      'reseña',
+      'comparar',
+      'trabajo',
+      'empleo',
+      'usado',
+      'reparar',
+      'barato',
+      'descuento',
+      'descargar',
+      'aplicación'
     )
   } else if (targetLanguage.includes('french') || targetLanguage === 'fr') {
     negatives.push(
-      'gratuit', 'piraté', 'échantillon',
-      'tutoriel', 'avis', 'comparer',
-      'emploi', 'travail',
-      'occasion', 'réparer',
-      'bon marché', 'remise',
-      'télécharger', 'application'
+      'gratuit',
+      'piraté',
+      'échantillon',
+      'tutoriel',
+      'avis',
+      'comparer',
+      'emploi',
+      'travail',
+      'occasion',
+      'réparer',
+      'bon marché',
+      'remise',
+      'télécharger',
+      'application'
     )
   } else if (targetLanguage.includes('german') || targetLanguage === 'de') {
     negatives.push(
-      'kostenlos', 'raubkopie', 'probe',
-      'anleitung', 'bewertung', 'vergleichen',
-      'arbeit', 'stelle',
-      'gebraucht', 'reparieren',
-      'billig', 'rabatt',
-      'herunterladen', 'anwendung'
+      'kostenlos',
+      'raubkopie',
+      'probe',
+      'anleitung',
+      'bewertung',
+      'vergleichen',
+      'arbeit',
+      'stelle',
+      'gebraucht',
+      'reparieren',
+      'billig',
+      'rabatt',
+      'herunterladen',
+      'anwendung'
     )
   } else if (targetLanguage.includes('japanese') || targetLanguage === 'ja') {
     negatives.push(
-      '無料', '割れ', 'サンプル',
-      'チュートリアル', 'レビュー', '比較',
-      '仕事', '求人',
-      '中古', '修理',
-      '安い', '割引',
-      'ダウンロード', 'アプリ'
+      '無料',
+      '割れ',
+      'サンプル',
+      'チュートリアル',
+      'レビュー',
+      '比較',
+      '仕事',
+      '求人',
+      '中古',
+      '修理',
+      '安い',
+      '割引',
+      'ダウンロード',
+      'アプリ'
     )
   }
 
   const dedupedNegatives: string[] = []
   const seen = new Set<string>()
   for (const rawKeyword of negatives) {
-    const keyword = String(rawKeyword ?? '').trim().replace(/\s+/g, ' ')
+    const keyword = String(rawKeyword ?? '')
+      .trim()
+      .replace(/\s+/g, ' ')
     if (!keyword) continue
     const key = keyword.toLowerCase()
     if (seen.has(key)) continue

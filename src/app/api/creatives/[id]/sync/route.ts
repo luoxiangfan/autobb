@@ -5,14 +5,18 @@ import { findAdGroupById } from '@/lib/ad-groups'
 import { findCampaignById } from '@/lib/campaigns'
 import { findGoogleAdsAccountById } from '@/lib/google-ads-accounts'
 import { createGoogleAdsResponsiveSearchAd } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
+import {
+  prepareGoogleAdsApiCallForLinkedAccount,
+  preparedAuthContextField,
+} from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 
 /**
  * POST /api/creatives/:id/sync
  * 同步Creative到Google Ads (创建Responsive Search Ad)
  */
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 
@@ -24,32 +28,20 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     const creative = await findAdCreativeById(parseInt(id, 10), userId)
     if (!creative) {
-      return NextResponse.json(
-        { error: 'Creative不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Creative不存在或无权访问' }, { status: 404 })
     }
 
     if (creative.ad_id) {
-      return NextResponse.json(
-        { error: 'Creative已同步，不能重复同步' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Creative已同步，不能重复同步' }, { status: 400 })
     }
 
     if (!creative.ad_group_id) {
-      return NextResponse.json(
-        { error: '请先将Creative关联到Ad Group' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '请先将Creative关联到Ad Group' }, { status: 400 })
     }
 
     const adGroup = await findAdGroupById(creative.ad_group_id, userId)
     if (!adGroup) {
-      return NextResponse.json(
-        { error: 'Ad Group不存在' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Ad Group不存在' }, { status: 404 })
     }
 
     if (!adGroup.adGroupId) {
@@ -61,22 +53,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     const campaign = await findCampaignById(adGroup.campaignId, userId)
     if (!campaign) {
-      return NextResponse.json(
-        { error: 'Campaign不存在' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Campaign不存在' }, { status: 404 })
     }
 
-    const googleAdsAccount = await findGoogleAdsAccountById(
-      campaign.googleAdsAccountId,
-      userId
-    )
+    const googleAdsAccount = await findGoogleAdsAccountById(campaign.googleAdsAccountId, userId)
 
     if (!googleAdsAccount) {
-      return NextResponse.json(
-        { error: 'Google Ads账号不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Google Ads账号不存在或无权访问' }, { status: 404 })
     }
 
     const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
@@ -102,9 +85,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
       const descriptions = creative.descriptions.slice(0, 4)
       if (descriptions.length < 2) {
-        throw new Error(
-          `Responsive Search Ad需要至少2个描述，当前只有${descriptions.length}个`
-        )
+        throw new Error(`Responsive Search Ad需要至少2个描述，当前只有${descriptions.length}个`)
       }
 
       const finalUrls = [creative.final_url]
@@ -168,9 +149,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   } catch (error: any) {
     console.error('同步Creative失败:', error)
 
-    return NextResponse.json(
-      { error: error.message || '同步Creative失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '同步Creative失败' }, { status: 500 })
   }
 }

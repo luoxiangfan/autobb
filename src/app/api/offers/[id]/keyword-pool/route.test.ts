@@ -78,9 +78,24 @@ describe('POST /api/offers/:id/keyword-pool', () => {
     })
     keywordPoolFns.getAvailableBuckets.mockResolvedValue(['A', 'B', 'D'])
     keywordPoolFns.getBucketInfo.mockImplementation((pool: any, bucket: string) => {
-      if (bucket === 'A') return { intent: '品牌意图', intentEn: 'Brand Intent', keywords: pool.bucketAKeywords }
-      if (bucket === 'B' || bucket === 'C') return { intent: '商品型号/产品族意图', intentEn: 'Model Intent', keywords: [...pool.bucketAKeywords, ...pool.bucketBKeywords] }
-      return { intent: '商品需求意图', intentEn: 'Product Demand Intent', keywords: [...pool.bucketAKeywords, ...pool.bucketBKeywords, ...pool.bucketCKeywords, ...pool.bucketDKeywords] }
+      if (bucket === 'A')
+        return { intent: '品牌意图', intentEn: 'Brand Intent', keywords: pool.bucketAKeywords }
+      if (bucket === 'B' || bucket === 'C')
+        return {
+          intent: '商品型号/产品族意图',
+          intentEn: 'Model Intent',
+          keywords: [...pool.bucketAKeywords, ...pool.bucketBKeywords],
+        }
+      return {
+        intent: '商品需求意图',
+        intentEn: 'Product Demand Intent',
+        keywords: [
+          ...pool.bucketAKeywords,
+          ...pool.bucketBKeywords,
+          ...pool.bucketCKeywords,
+          ...pool.bucketDKeywords,
+        ],
+      }
     })
 
     rebuildFns.postRebuild.mockResolvedValue(
@@ -106,7 +121,7 @@ describe('POST /api/offers/:id/keyword-pool', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '77' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '77' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -127,7 +142,7 @@ describe('POST /api/offers/:id/keyword-pool', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '77' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '77' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -196,21 +211,39 @@ describe('GET /api/offers/:id/keyword-pool', () => {
     keywordPoolFns.getUsedBuckets.mockResolvedValue(['A'])
     keywordPoolFns.getAvailableBuckets.mockResolvedValue(['B', 'D'])
     keywordPoolFns.getBucketInfo.mockImplementation((pool: any, bucket: string) => {
-      if (bucket === 'A') return { intent: '品牌意图', intentEn: 'Brand Intent', keywords: pool.bucketAKeywords }
-      if (bucket === 'B' || bucket === 'C') return { intent: '商品型号/产品族意图', intentEn: 'Model Intent', keywords: [...pool.bucketAKeywords, ...pool.bucketBKeywords] }
-      return { intent: '商品需求意图', intentEn: 'Product Demand Intent', keywords: [...pool.bucketAKeywords, ...pool.bucketBKeywords, ...pool.bucketCKeywords, ...pool.bucketDKeywords] }
+      if (bucket === 'A')
+        return { intent: '品牌意图', intentEn: 'Brand Intent', keywords: pool.bucketAKeywords }
+      if (bucket === 'B' || bucket === 'C')
+        return {
+          intent: '商品型号/产品族意图',
+          intentEn: 'Model Intent',
+          keywords: [...pool.bucketAKeywords, ...pool.bucketBKeywords],
+        }
+      return {
+        intent: '商品需求意图',
+        intentEn: 'Product Demand Intent',
+        keywords: [
+          ...pool.bucketAKeywords,
+          ...pool.bucketBKeywords,
+          ...pool.bucketCKeywords,
+          ...pool.bucketDKeywords,
+        ],
+      }
     })
   })
 
   it('returns canonical creative slots when includeBucketDetails=true', async () => {
-    const req = new NextRequest('http://localhost/api/offers/77/keyword-pool?includeBucketDetails=true', {
-      method: 'GET',
-      headers: {
-        'x-user-id': '1',
-      },
-    })
+    const req = new NextRequest(
+      'http://localhost/api/offers/77/keyword-pool?includeBucketDetails=true',
+      {
+        method: 'GET',
+        headers: {
+          'x-user-id': '1',
+        },
+      }
+    )
 
-    const res = await GET(req, { params: { id: '77' } })
+    const res = await GET(req, { params: Promise.resolve({ id: '77' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)

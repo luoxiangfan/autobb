@@ -146,9 +146,7 @@ describe('openclaw bindings isolation', () => {
   })
 
   it('keeps non-feishu fallback lookup when scoped binding misses', async () => {
-    const queryOne = vi.fn()
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ user_id: 9 })
+    const queryOne = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce({ user_id: 9 })
     getDatabaseMock.mockResolvedValue({ queryOne })
 
     const result = await resolveOpenclawUserFromBinding('slack', 'u_123', {
@@ -227,9 +225,7 @@ describe('openclaw bindings isolation', () => {
     process.env.OPENCLAW_FEISHU_AUTH_MODE = 'strict'
     process.env.OPENCLAW_FEISHU_STRICT_AUTO_BIND = 'true'
 
-    const queryOne = vi.fn()
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null)
+    const queryOne = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(null)
     const exec = vi.fn().mockResolvedValue({ changes: 1 })
     getDatabaseMock.mockResolvedValue({ queryOne, exec, type: 'postgres' })
 
@@ -250,7 +246,8 @@ describe('openclaw bindings isolation', () => {
     const duplicate = Object.assign(new Error('duplicate key value violates unique constraint'), {
       code: '23505',
     })
-    const queryOne = vi.fn()
+    const queryOne = vi
+      .fn()
       .mockResolvedValueOnce(null) // findFeishuTenantBinding
       .mockResolvedValueOnce(null) // ensureStrictFeishuBinding existing (scoped)
       .mockResolvedValueOnce({ id: 101, user_id: 11 }) // scopedAfterConflict
@@ -273,7 +270,8 @@ describe('openclaw bindings isolation', () => {
     const duplicate = Object.assign(new Error('duplicate key value violates unique constraint'), {
       code: '23505',
     })
-    const queryOne = vi.fn()
+    const queryOne = vi
+      .fn()
       .mockResolvedValueOnce(null) // findFeishuTenantBinding
       .mockResolvedValueOnce(null) // ensureStrictFeishuBinding existing (scoped)
       .mockResolvedValueOnce(null) // scopedAfterConflict
@@ -293,7 +291,8 @@ describe('openclaw bindings isolation', () => {
   it('uses strict mode: blocks conflicting existing binding', async () => {
     process.env.OPENCLAW_FEISHU_AUTH_MODE = 'strict'
 
-    const queryOne = vi.fn()
+    const queryOne = vi
+      .fn()
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: 99, user_id: 5 })
     const exec = vi.fn()
@@ -330,9 +329,7 @@ describe('openclaw bindings isolation', () => {
     process.env.OPENCLAW_FEISHU_AUTH_MODE = 'strict'
     process.env.OPENCLAW_FEISHU_STRICT_AUTO_BIND = 'true'
 
-    const queryOne = vi.fn()
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null)
+    const queryOne = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(null)
     const exec = vi.fn().mockResolvedValue({ changes: 1 })
     getDatabaseMock.mockResolvedValue({ queryOne, exec, type: 'postgres' })
 

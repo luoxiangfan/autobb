@@ -202,9 +202,9 @@ describe('google-ads-credentials-errors', () => {
   })
 
   it('accountsRequestBlockedMessage maps not_configured and invalid_auth', () => {
-    expect(
-      accountsRequestBlockedMessage({ ok: false, reason: 'not_configured' })
-    ).toBe(GOOGLE_ADS_NOT_CONFIGURED_MESSAGE)
+    expect(accountsRequestBlockedMessage({ ok: false, reason: 'not_configured' })).toBe(
+      GOOGLE_ADS_NOT_CONFIGURED_MESSAGE
+    )
     expect(
       accountsRequestBlockedMessage({
         ok: false,
@@ -242,7 +242,10 @@ describe('google-ads-credentials-errors', () => {
     })
 
     expect(
-      resolveAccountsFetchBlockedUiEffects({ ok: false, reason: 'not_configured' }, { forceRefresh: true })
+      resolveAccountsFetchBlockedUiEffects(
+        { ok: false, reason: 'not_configured' },
+        { forceRefresh: true }
+      )
     ).toEqual({
       errorMessage: GOOGLE_ADS_NOT_CONFIGURED_MESSAGE,
       clearForceRefreshState: true,

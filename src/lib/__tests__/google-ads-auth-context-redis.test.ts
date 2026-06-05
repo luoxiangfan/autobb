@@ -99,9 +99,7 @@ describe('google-ads-auth-context-redis', () => {
   it('waits for peer-written cache with generation gate', async () => {
     redisFns.get
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(
-        JSON.stringify({ generation: 3, ctx: defaultOAuthAuthContext })
-      )
+      .mockResolvedValueOnce(JSON.stringify({ generation: 3, ctx: defaultOAuthAuthContext }))
 
     const ctx = await waitForPeerGoogleAdsAuthContext(7, { minGeneration: 3 })
 

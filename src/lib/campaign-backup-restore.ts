@@ -54,9 +54,7 @@ function parseJsonField<T>(value: unknown): T | null {
   return value as T
 }
 
-export type BatchCreateBackupValidationResult =
-  | { ok: true }
-  | { ok: false; error: string }
+export type BatchCreateBackupValidationResult = { ok: true } | { ok: false; error: string }
 
 /**
  * 批量从备份恢复前的服务端校验
@@ -68,11 +66,7 @@ export async function validateCampaignBackupsForBatchCreate(
 ): Promise<BatchCreateBackupValidationResult> {
   const db = await getDatabase()
 
-  const accountCheck = await validateGoogleAdsAccountForRestore(
-    db,
-    googleAdsAccountId,
-    userId
-  )
+  const accountCheck = await validateGoogleAdsAccountForRestore(db, googleAdsAccountId, userId)
   if (!accountCheck.ok) {
     return { ok: false, error: accountCheck.message }
   }
@@ -108,9 +102,7 @@ export async function validateCampaignBackupsForBatchCreate(
     offerToBackupIds.set(row.offer_id, list)
   }
 
-  const duplicateOffers = [...offerToBackupIds.entries()].filter(
-    ([, ids]) => ids.length > 1
-  )
+  const duplicateOffers = [...offerToBackupIds.entries()].filter(([, ids]) => ids.length > 1)
   if (duplicateOffers.length > 0) {
     const detail = duplicateOffers
       .map(([offerId, ids]) => `Offer ${offerId}（备份 ${ids.join(', ')}）`)
@@ -136,8 +128,11 @@ export async function validateCampaignBackupsForBatchCreate(
   await abandonStalePendingCampaignsForOffers(uniqueOfferIds, userId)
   const conflictsByOffer = await getActiveCampaignConflictsForOffers(uniqueOfferIds, userId)
 
-  const blockedByCampaign: Array<{ offerId: number; backupIds: number[]; conflict: ActiveCampaignConflict }> =
-    []
+  const blockedByCampaign: Array<{
+    offerId: number
+    backupIds: number[]
+    conflict: ActiveCampaignConflict
+  }> = []
   for (const [offerId, conflict] of conflictsByOffer) {
     blockedByCampaign.push({
       offerId,
@@ -167,14 +162,14 @@ export async function validateGoogleAdsAccountForRestore(
   googleAdsAccountId: number,
   userId: number
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const adsAccount = await db.queryOne(
+  const adsAccount = (await db.queryOne(
     `
     SELECT is_active, is_deleted
     FROM google_ads_accounts
     WHERE id = ? AND user_id = ?
   `,
     [googleAdsAccountId, userId]
-  ) as { is_active: boolean | number; is_deleted: boolean | number } | undefined
+  )) as { is_active: boolean | number; is_deleted: boolean | number } | undefined
 
   if (!adsAccount) {
     return { ok: false, message: 'Google Ads 账号不存在或无权访问' }
@@ -321,8 +316,7 @@ export async function enqueueCampaignPublishFromBackup(params: {
       const regenerateResult = await regenerateAdCreative({
         userId,
         offerId,
-        previousAdCreativeId:
-          finalCampaignConfig.adCreativeId || backup.adCreativeId || 0,
+        previousAdCreativeId: finalCampaignConfig.adCreativeId || backup.adCreativeId || 0,
         campaignConfigForTask: finalCampaignConfig,
       })
       if (regenerateResult.success && regenerateResult.campaignConfig) {
@@ -335,10 +329,7 @@ export async function enqueueCampaignPublishFromBackup(params: {
       }
 
       if (regeneratedCreative) {
-        const configSerialized = toDbCampaignBackupJsonField(
-          finalCampaignConfig,
-          db.type
-        )
+        const configSerialized = toDbCampaignBackupJsonField(finalCampaignConfig, db.type)
         const configText = toDbCampaignConfigTextField(finalCampaignConfig)
         const nowIso = new Date().toISOString()
 
@@ -391,13 +382,15 @@ export async function enqueueCampaignPublishFromBackup(params: {
       WHERE id = ? AND user_id = ?
     `,
       [offerId, userId]
-    )) as {
-      id: number
-      url: string
-      brand: string
-      category: string | null
-      offer_name: string | null
-    } | undefined
+    )) as
+      | {
+          id: number
+          url: string
+          brand: string
+          category: string | null
+          offer_name: string | null
+        }
+      | undefined
 
     if (!offer) {
       return { backupId, offerId, campaignId, error: 'Offer 不存在或无权访问' }
@@ -443,9 +436,7 @@ export async function enqueueCampaignPublishFromBackup(params: {
       fallbackNegativeKeywords: effectiveCreativeForTask.negativeKeywords,
     })
 
-    const keywordsWithVolume = parseJsonField<unknown>(
-      finalCampaignConfig.keywords_with_volume
-    )
+    const keywordsWithVolume = parseJsonField<unknown>(finalCampaignConfig.keywords_with_volume)
 
     const { getOrCreateQueueManager } = await import('@/lib/queue/init-queue')
     const queue = await getOrCreateQueueManager()
@@ -514,4 +505,3 @@ export async function enqueueCampaignPublishFromBackup(params: {
     }
   }
 }
-

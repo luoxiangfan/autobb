@@ -190,14 +190,10 @@ export function compressCompetitors(
   const compressedChars = compressed.length
 
   // 计算元数据
-  const ratings = topCompetitors
-    .map((c) => parseRating(c.rating))
-    .filter((r) => r > 0)
+  const ratings = topCompetitors.map((c) => parseRating(c.rating)).filter((r) => r > 0)
   const avgRating = ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0
 
-  const prices = topCompetitors
-    .map((c) => parsePrice(c.price))
-    .filter((p) => p.value > 0)
+  const prices = topCompetitors.map((c) => parsePrice(c.price)).filter((p) => p.value > 0)
   const priceRange = {
     min: prices.length > 0 ? Math.min(...prices.map((p) => p.value)) : 0,
     max: prices.length > 0 ? Math.max(...prices.map((p) => p.value)) : 0,
@@ -243,18 +239,10 @@ export function validateCompressionQuality(
   ratingAccuracy: number // 评分准确率
 } {
   // 提取原始数据的关键信息
-  const originalUSPs = original
-    .filter((c) => c.usp)
-    .map((c) => c.usp!.toLowerCase())
-  const originalFeatures = original
-    .flatMap((c) => c.keyFeatures || [])
-    .map((f) => f.toLowerCase())
-  const originalPrices = original
-    .filter((c) => c.price)
-    .map((c) => parsePrice(c.price).value)
-  const originalRatings = original
-    .filter((c) => c.rating)
-    .map((c) => parseRating(c.rating))
+  const originalUSPs = original.filter((c) => c.usp).map((c) => c.usp!.toLowerCase())
+  const originalFeatures = original.flatMap((c) => c.keyFeatures || []).map((f) => f.toLowerCase())
+  const originalPrices = original.filter((c) => c.price).map((c) => parsePrice(c.price).value)
+  const originalRatings = original.filter((c) => c.rating).map((c) => parseRating(c.rating))
 
   // 从压缩数据中提取信息
   const compressedText = compressed.toLowerCase()
@@ -282,8 +270,7 @@ export function validateCompressionQuality(
   const retainedRatings = originalRatings.filter((rating) =>
     compressedText.includes(rating.toFixed(1))
   ).length
-  const ratingAccuracy =
-    originalRatings.length > 0 ? retainedRatings / originalRatings.length : 1
+  const ratingAccuracy = originalRatings.length > 0 ? retainedRatings / originalRatings.length : 1
 
   return {
     uspRetention,

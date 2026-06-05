@@ -46,7 +46,9 @@ describe('UnifiedQueueManager distributed running snapshot gate', () => {
       })
 
       await waitFor(async () => {
-        return (adapter.getRunningConcurrencySnapshot as ReturnType<typeof vi.fn>).mock.calls.length > 0
+        return (
+          (adapter.getRunningConcurrencySnapshot as ReturnType<typeof vi.fn>).mock.calls.length > 0
+        )
       })
 
       const task = await queue.getTask(taskId)

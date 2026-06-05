@@ -1,11 +1,11 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { useCallback, useEffect, useState } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
 import {
   ArrowLeft,
   RefreshCw,
@@ -15,71 +15,74 @@ import {
   Link as LinkIcon,
   AlertTriangle,
   ExternalLink,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import type { UrlSwapTask, UrlSwapTaskTarget } from '@/lib/url-swap-types';
-import UrlSwapHistory from '@/components/UrlSwapHistory';
+} from 'lucide-react'
+import { toast } from 'sonner'
+import type { UrlSwapTask, UrlSwapTaskTarget } from '@/lib/url-swap-types'
+import UrlSwapHistory from '@/components/UrlSwapHistory'
 
 function groupTargetsByAccount(targets: UrlSwapTaskTarget[]) {
-  const groups = new Map<string, { accountId: number; customerId: string; targets: UrlSwapTaskTarget[] }>();
+  const groups = new Map<
+    string,
+    { accountId: number; customerId: string; targets: UrlSwapTaskTarget[] }
+  >()
   targets.forEach((target) => {
-    const key = `${target.google_ads_account_id}-${target.google_customer_id}`;
+    const key = `${target.google_ads_account_id}-${target.google_customer_id}`
     if (!groups.has(key)) {
       groups.set(key, {
         accountId: target.google_ads_account_id,
         customerId: target.google_customer_id,
-        targets: []
-      });
+        targets: [],
+      })
     }
-    groups.get(key)!.targets.push(target);
-  });
-  return Array.from(groups.values());
+    groups.get(key)!.targets.push(target)
+  })
+  return Array.from(groups.values())
 }
 
 export default function UrlSwapTaskDetailPage() {
-  const router = useRouter();
-  const params = useParams();
-  const taskId = typeof params?.id === 'string' ? params.id : '';
+  const router = useRouter()
+  const params = useParams()
+  const taskId = typeof params?.id === 'string' ? params.id : ''
 
   // Data states
-  const [task, setTask] = useState<UrlSwapTask | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [task, setTask] = useState<UrlSwapTask | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
+
+  const loadTask = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/url-swap/tasks/${taskId}`)
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || '获取任务失败')
+      }
+
+      const data = await response.json()
+      setTask(data.data)
+    } catch (error: any) {
+      console.error('加载任务失败:', error)
+      toast.error(error.message || '加载任务失败')
+      router.push('/url-swap')
+    } finally {
+      setLoading(false)
+    }
+  }, [taskId, router])
 
   useEffect(() => {
     if (taskId) {
-      loadTask();
+      void loadTask()
     }
-  }, [taskId]);
-
-  const loadTask = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/url-swap/tasks/${taskId}`);
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || '获取任务失败');
-      }
-
-      const data = await response.json();
-      setTask(data.data);
-    } catch (error: any) {
-      console.error('加载任务失败:', error);
-      toast.error(error.message || '加载任务失败');
-      router.push('/url-swap');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [taskId, loadTask])
 
   const formatDateTime = (dateValue: string | null): string => {
-    if (!dateValue) return '-';
+    if (!dateValue) return '-'
     try {
-      const date = new Date(dateValue);
+      const date = new Date(dateValue)
       if (isNaN(date.getTime())) {
-        return '-';
+        return '-'
       }
       return date.toLocaleString('zh-CN', {
         timeZone: 'Asia/Shanghai',
@@ -89,136 +92,156 @@ export default function UrlSwapTaskDetailPage() {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-        hour12: false
-      });
+        hour12: false,
+      })
     } catch (error) {
-      console.error('日期格式化失败:', dateValue, error);
-      return '-';
+      console.error('日期格式化失败:', dateValue, error)
+      return '-'
     }
-  };
+  }
 
   const handleSwapNow = async () => {
     try {
-      setActionLoading('swap-now');
+      setActionLoading('swap-now')
       const response = await fetch(`/api/url-swap/tasks/${taskId}/swap-now`, {
         method: 'POST',
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || data.message || '立即执行失败');
+        throw new Error(data.error || data.message || '立即执行失败')
       }
 
-      toast.success(data.message || '任务已加入队列');
-      await loadTask();
+      toast.success(data.message || '任务已加入队列')
+      await loadTask()
     } catch (error: any) {
-      toast.error(error.message || '立即执行失败');
+      toast.error(error.message || '立即执行失败')
     } finally {
-      setActionLoading(null);
+      setActionLoading(null)
     }
-  };
+  }
 
   const handleDisableTask = async () => {
     try {
-      setActionLoading('disable');
+      setActionLoading('disable')
       const response = await fetch(`/api/url-swap/tasks/${taskId}/disable`, {
         method: 'POST',
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || '暂停任务失败');
+        throw new Error(data.error || '暂停任务失败')
       }
 
-      toast.success('任务已暂停');
-      await loadTask();
+      toast.success('任务已暂停')
+      await loadTask()
     } catch (error: any) {
-      toast.error(error.message || '暂停任务失败');
+      toast.error(error.message || '暂停任务失败')
     } finally {
-      setActionLoading(null);
+      setActionLoading(null)
     }
-  };
+  }
 
   const handleEnableTask = async () => {
     try {
-      setActionLoading('enable');
+      setActionLoading('enable')
       const response = await fetch(`/api/url-swap/tasks/${taskId}/enable`, {
         method: 'POST',
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || '恢复任务失败');
+        throw new Error(data.error || '恢复任务失败')
       }
 
-      toast.success('任务已恢复');
-      await loadTask();
+      toast.success('任务已恢复')
+      await loadTask()
     } catch (error: any) {
-      toast.error(error.message || '恢复任务失败');
+      toast.error(error.message || '恢复任务失败')
     } finally {
-      setActionLoading(null);
+      setActionLoading(null)
     }
-  };
+  }
 
   const getStatusBadge = (status: string) => {
-    const configs: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; className: string }> = {
+    const configs: Record<
+      string,
+      {
+        label: string
+        variant: 'default' | 'secondary' | 'destructive' | 'outline'
+        className: string
+      }
+    > = {
       enabled: { label: '运行中', variant: 'default', className: 'bg-green-600' },
-      disabled: { label: '已暂停', variant: 'secondary', className: 'bg-yellow-100 text-yellow-700' },
+      disabled: {
+        label: '已暂停',
+        variant: 'secondary',
+        className: 'bg-yellow-100 text-yellow-700',
+      },
       error: { label: '异常', variant: 'destructive', className: '' },
       completed: { label: '已完成', variant: 'default', className: 'bg-blue-600' },
-    };
-    const config = configs[status] || { label: status, variant: 'outline' as const, className: '' };
+    }
+    const config = configs[status] || { label: status, variant: 'outline' as const, className: '' }
 
     return (
       <Badge variant={config.variant} className={config.className}>
         {config.label}
       </Badge>
-    );
-  };
+    )
+  }
 
   const getTargetStatusBadge = (status: UrlSwapTaskTarget['status']) => {
-    const configs: Record<UrlSwapTaskTarget['status'], { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; className: string }> = {
+    const configs: Record<
+      UrlSwapTaskTarget['status'],
+      {
+        label: string
+        variant: 'default' | 'secondary' | 'destructive' | 'outline'
+        className: string
+      }
+    > = {
       active: { label: '启用', variant: 'default', className: 'bg-green-600' },
       paused: { label: '暂停', variant: 'secondary', className: 'bg-yellow-100 text-yellow-700' },
       removed: { label: '已移除', variant: 'outline', className: 'text-gray-500' },
       invalid: { label: '无效', variant: 'destructive', className: '' },
-    };
+    }
 
-    const config = configs[status] || { label: status, variant: 'outline' as const, className: '' };
+    const config = configs[status] || { label: status, variant: 'outline' as const, className: '' }
 
     return (
       <Badge variant={config.variant} className={config.className}>
         {config.label}
       </Badge>
-    );
-  };
+    )
+  }
 
-  const rawTargets = task?.targets ?? [];
+  const rawTargets = task?.targets ?? []
   const legacyTargets: UrlSwapTaskTarget[] =
     task && rawTargets.length === 0 && task.google_customer_id && task.google_campaign_id
-      ? [{
-          id: 'legacy',
-          task_id: task.id,
-          offer_id: task.offer_id,
-          google_ads_account_id: 0,
-          google_customer_id: task.google_customer_id,
-          google_campaign_id: task.google_campaign_id,
-          status: 'active',
-          consecutive_failures: 0,
-          last_success_at: null,
-          last_error: null,
-          created_at: '',
-          updated_at: ''
-        }]
-      : [];
+      ? [
+          {
+            id: 'legacy',
+            task_id: task.id,
+            offer_id: task.offer_id,
+            google_ads_account_id: 0,
+            google_customer_id: task.google_customer_id,
+            google_campaign_id: task.google_campaign_id,
+            status: 'active',
+            consecutive_failures: 0,
+            last_success_at: null,
+            last_error: null,
+            created_at: '',
+            updated_at: '',
+          },
+        ]
+      : []
 
-  const targets = rawTargets.length > 0 ? rawTargets : legacyTargets;
-  const isLegacyTargets = rawTargets.length === 0 && legacyTargets.length > 0;
+  const targets = rawTargets.length > 0 ? rawTargets : legacyTargets
+  const isLegacyTargets = rawTargets.length === 0 && legacyTargets.length > 0
 
-  const groupedTargets = targets.length > 0 ? groupTargetsByAccount(targets) : [];
+  const groupedTargets = targets.length > 0 ? groupTargetsByAccount(targets) : []
 
   if (loading) {
     return (
@@ -228,11 +251,11 @@ export default function UrlSwapTaskDetailPage() {
           <p className="mt-4 text-gray-600">加载中...</p>
         </div>
       </div>
-    );
+    )
   }
 
   if (!task) {
-    return null;
+    return null
   }
 
   return (
@@ -286,14 +309,10 @@ export default function UrlSwapTaskDetailPage() {
                   className="flex items-center gap-2"
                 >
                   <Play className="w-4 h-4" />
-                    恢复
+                  恢复
                 </Button>
               )}
-              <Button
-                variant="outline"
-                onClick={loadTask}
-                className="flex items-center gap-2"
-              >
+              <Button variant="outline" onClick={loadTask} className="flex items-center gap-2">
                 <RefreshCw className="w-4 h-4" />
                 刷新
               </Button>
@@ -336,9 +355,7 @@ export default function UrlSwapTaskDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">执行状态</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {getStatusBadge(task.status)}
-                  </div>
+                  <div className="flex items-center gap-2 mt-1">{getStatusBadge(task.status)}</div>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">完成进度</p>
@@ -384,7 +401,8 @@ export default function UrlSwapTaskDetailPage() {
                 <span className="font-bold">
                   {task.total_swaps > 0
                     ? ((task.success_swaps / task.total_swaps) * 100).toFixed(1)
-                    : 0}%
+                    : 0}
+                  %
                 </span>
               </div>
             </CardContent>
@@ -480,7 +498,10 @@ export default function UrlSwapTaskDetailPage() {
                 </div>
                 <div className="space-y-4">
                   {groupedTargets.map((group) => (
-                    <div key={`${group.accountId}-${group.customerId}`} className="border rounded-lg bg-white">
+                    <div
+                      key={`${group.accountId}-${group.customerId}`}
+                      className="border rounded-lg bg-white"
+                    >
                       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
                         <div className="text-sm font-medium text-gray-900">
                           Ads账号 {group.accountId || '未知'} · Customer {group.customerId}
@@ -491,7 +512,10 @@ export default function UrlSwapTaskDetailPage() {
                       </div>
                       <div className="divide-y">
                         {group.targets.map((target) => (
-                          <div key={target.id} className="grid grid-cols-1 md:grid-cols-6 gap-3 px-4 py-3 text-sm">
+                          <div
+                            key={target.id}
+                            className="grid grid-cols-1 md:grid-cols-6 gap-3 px-4 py-3 text-sm"
+                          >
                             <div className="md:col-span-2">
                               <p className="text-xs text-gray-500">Campaign ID</p>
                               <p className="font-mono break-all">{target.google_campaign_id}</p>
@@ -506,7 +530,9 @@ export default function UrlSwapTaskDetailPage() {
                             </div>
                             <div>
                               <p className="text-xs text-gray-500">最近成功</p>
-                              <p className="font-medium">{formatDateTime(target.last_success_at)}</p>
+                              <p className="font-medium">
+                                {formatDateTime(target.last_success_at)}
+                              </p>
                             </div>
                             <div className="md:col-span-2">
                               <p className="text-xs text-gray-500">最近错误</p>
@@ -586,11 +612,7 @@ export default function UrlSwapTaskDetailPage() {
       </main>
 
       {/* History Dialog */}
-      <UrlSwapHistory
-        open={historyOpen}
-        onOpenChange={setHistoryOpen}
-        taskId={taskId}
-      />
+      <UrlSwapHistory open={historyOpen} onOpenChange={setHistoryOpen} taskId={taskId} />
     </div>
-  );
+  )
 }

@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { defaultOAuthApiAuth, defaultOAuthAuthContext } from './helpers/campaign-route-auth-context-mock'
+import {
+  defaultOAuthApiAuth,
+  defaultOAuthAuthContext,
+} from './helpers/campaign-route-auth-context-mock'
 import { invalidateGoogleAdsAuthContextCache } from '@/lib/google-ads-auth-context'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
@@ -449,11 +452,7 @@ describe('resolveAndHealSyncUserCredentials', () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(settingsFns.getUserOnlySetting).toHaveBeenCalledWith(
-      'google_ads',
-      'developer_token',
-      1
-    )
+    expect(settingsFns.getUserOnlySetting).toHaveBeenCalledWith('google_ads', 'developer_token', 1)
     expect(dbFns.exec).toHaveBeenCalledWith(
       expect.stringContaining('UPDATE google_ads_credentials'),
       expect.arrayContaining(['abcdefghijklmnopqrstuvwxyz1234567890', 1])
@@ -482,9 +481,7 @@ describe('resolveAndHealSyncUserCredentials', () => {
 
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    expect(result.userCredentials.developer_token).toBe(
-      'sa-developer-token-abcdefghijklmnopqrst'
-    )
+    expect(result.userCredentials.developer_token).toBe('sa-developer-token-abcdefghijklmnopqrst')
     expect(result.serviceAccountConfig?.id).toBe('sa-1')
   })
 })
@@ -524,9 +521,7 @@ describe('resolveOAuthApiCredentialsForUser', () => {
       dualStack: true,
     })
 
-    await expect(resolveOAuthApiCredentialsForUser(1)).rejects.toThrow(
-      /OAuth 与服务账号同时存在/
-    )
+    await expect(resolveOAuthApiCredentialsForUser(1)).rejects.toThrow(/OAuth 与服务账号同时存在/)
   })
 
   it('throws when login_customer_id is missing', async () => {
@@ -590,10 +585,9 @@ describe('resolveOAuthClientCredentialsForUser OAuth path alignment', () => {
     expect(bundle.ok).toBe(true)
     expect(bundle.bundle?.oauthCredentials).toBeTruthy()
 
-    const clientCreds = await resolveOAuthClientCredentialsForUser(
-      oauthAuthContextFull.userId,
-      { existingAuthContext: oauthAuthContextFull }
-    )
+    const clientCreds = await resolveOAuthClientCredentialsForUser(oauthAuthContextFull.userId, {
+      existingAuthContext: oauthAuthContextFull,
+    })
 
     expect(clientCreds).toEqual({
       ...bundle.bundle!.oauthCredentials,
@@ -714,13 +708,15 @@ describe('GoogleAdsLinkedAccountPrepareCache', () => {
     expect(first.ok).toBe(true)
     expect(cache.prepareByLinkedSa.size).toBe(1)
 
-    const hydrateSpy = vi.spyOn(cacheModule, 'hydrateGoogleAdsAuthContextSecrets').mockResolvedValueOnce({
-      ...oauthAuthContextFull,
-      userId: 1,
-      ownerUserId: 1,
-      oauthCredentials: { ...oauthCredentialsFull, refresh_token: '' },
-      secretsStripped: false,
-    })
+    const hydrateSpy = vi
+      .spyOn(cacheModule, 'hydrateGoogleAdsAuthContextSecrets')
+      .mockResolvedValueOnce({
+        ...oauthAuthContextFull,
+        userId: 1,
+        ownerUserId: 1,
+        oauthCredentials: { ...oauthCredentialsFull, refresh_token: '' },
+        secretsStripped: false,
+      })
 
     const second = await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)
 

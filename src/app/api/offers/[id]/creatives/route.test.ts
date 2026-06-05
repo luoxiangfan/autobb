@@ -35,7 +35,12 @@ describe('GET /api/offers/:id/creatives', () => {
         descriptions: ['Product demand copy'],
         keywords: ['brandx robot vacuum'],
         keywordsWithVolume: [
-          { keyword: 'brandx robot vacuum', searchVolume: 4200, matchType: 'PHRASE', source: 'KEYWORD_POOL' },
+          {
+            keyword: 'brandx robot vacuum',
+            searchVolume: 4200,
+            matchType: 'PHRASE',
+            source: 'KEYWORD_POOL',
+          },
         ],
         theme: 'Robot Vacuum Needs',
         creative_type: null,
@@ -56,7 +61,7 @@ describe('GET /api/offers/:id/creatives', () => {
       },
     })
 
-    const res = await GET(req, { params: { id: '96' } })
+    const res = await GET(req, { params: Promise.resolve({ id: '96' }) })
     const payload = await res.json()
 
     expect(res.status).toBe(200)

@@ -68,7 +68,8 @@ function parseArgs(argv: string[]): BackfillOptions {
       continue
     }
     if (arg === '--help' || arg === '-h') {
-      console.log(`
+      console.log(
+        `
 Usage:
   tsx scripts/backfill-campaign-names-from-google.ts [--dry-run] [--apply] [--user-id=N] [--account-id=N] [--limit=N]
 
@@ -78,7 +79,8 @@ Options:
   --user-id=N    Backfill only one user
   --account-id=N Backfill only one Google Ads account
   --limit=N      Limit candidate rows
-      `.trim())
+      `.trim()
+      )
       process.exit(0)
     }
   }
@@ -110,12 +112,14 @@ function normalizeDigits(value: unknown): string {
   return String(value || '').replace(/\D/g, '')
 }
 
-function buildGoogleAdsError(prefix: string, response: Response, payload: any, fallbackText: string): Error {
+function buildGoogleAdsError(
+  prefix: string,
+  response: Response,
+  payload: any,
+  fallbackText: string
+): Error {
   const errorMessage = String(
-    payload?.error?.message
-    || payload?.message
-    || fallbackText
-    || `HTTP ${response.status}`
+    payload?.error?.message || payload?.message || fallbackText || `HTTP ${response.status}`
   ).trim()
   const err: any = new Error(`${prefix}: ${errorMessage}`)
   err.status = payload?.error?.status || payload?.status || response.status
@@ -134,12 +138,14 @@ function isTokenExpiredError(error: unknown): boolean {
   const err: any = error
   const message = String(err?.message || '').toLowerCase()
   const status = String(err?.status || err?.response?.status || '').toLowerCase()
-  return status === '401'
-    || status.includes('unauthenticated')
-    || message.includes('unauthenticated')
-    || message.includes('invalid authentication credentials')
-    || message.includes('access token has expired')
-    || message.includes('expired token')
+  return (
+    status === '401' ||
+    status.includes('unauthenticated') ||
+    message.includes('unauthenticated') ||
+    message.includes('invalid authentication credentials') ||
+    message.includes('access token has expired') ||
+    message.includes('expired token')
+  )
 }
 
 async function resolveProxyUrl(): Promise<string | undefined> {
@@ -148,11 +154,11 @@ async function resolveProxyUrl(): Promise<string | undefined> {
   }
 
   const explicitProxy = String(
-    process.env.GOOGLE_ADS_HTTP_PROXY
-    || process.env.HTTPS_PROXY
-    || process.env.HTTP_PROXY
-    || process.env.ALL_PROXY
-    || ''
+    process.env.GOOGLE_ADS_HTTP_PROXY ||
+      process.env.HTTPS_PROXY ||
+      process.env.HTTP_PROXY ||
+      process.env.ALL_PROXY ||
+      ''
   ).trim()
 
   if (explicitProxy) {
@@ -176,7 +182,9 @@ async function resolveProxyUrl(): Promise<string | undefined> {
     return cachedProxyUrl
   } catch (error: any) {
     cachedProxyUrl = null
-    console.warn(`⚠️ proxy bootstrap failed, fallback to direct connection: ${error?.message || error}`)
+    console.warn(
+      `⚠️ proxy bootstrap failed, fallback to direct connection: ${error?.message || error}`
+    )
     return undefined
   }
 }
@@ -259,7 +267,9 @@ async function refreshAccessTokenWithRetry(params: {
       const nonRetryable = message.includes('invalid_grant') || message.includes('invalid_client')
       if (nonRetryable || attempt >= maxAttempts) break
       const delayMs = attempt * 500
-      console.warn(`Refresh Google Ads Token failed (${attempt}/${maxAttempts}), retry in ${delayMs}ms`)
+      console.warn(
+        `Refresh Google Ads Token failed (${attempt}/${maxAttempts}), retry in ${delayMs}ms`
+      )
       await new Promise((resolve) => setTimeout(resolve, delayMs))
     }
   }
@@ -281,18 +291,17 @@ async function getCampaignNameByHttp(params: {
   if (!customerId) throw new Error(`Invalid customerId: ${params.customerId}`)
   if (!campaignId) throw new Error(`Invalid campaignId: ${params.campaignId}`)
 
-  const envApiVersionRaw = String(process.env.GOOGLE_ADS_API_VERSION || '').trim().toLowerCase()
+  const envApiVersionRaw = String(process.env.GOOGLE_ADS_API_VERSION || '')
+    .trim()
+    .toLowerCase()
   const envApiVersion = /^v\d+$/.test(envApiVersionRaw) ? envApiVersionRaw : null
-  const versionCandidates = Array.from(new Set([
-    envApiVersion,
-    'v22',
-    'v21',
-    'v20',
-    'v19',
-    'v18',
-    'v17',
-    'v16',
-  ].filter(Boolean) as string[]))
+  const versionCandidates = Array.from(
+    new Set(
+      [envApiVersion, 'v23', 'v22', 'v21', 'v20', 'v19', 'v18', 'v17', 'v16'].filter(
+        Boolean
+      ) as string[]
+    )
+  )
 
   const query = `
     SELECT
@@ -303,7 +312,7 @@ async function getCampaignNameByHttp(params: {
   `
 
   const headers: Record<string, string> = {
-    'Authorization': `Bearer ${params.accessToken}`,
+    Authorization: `Bearer ${params.accessToken}`,
     'developer-token': params.developerToken,
     'Content-Type': 'application/json',
   }
@@ -329,10 +338,16 @@ async function getCampaignNameByHttp(params: {
     }
 
     if (!response.ok) {
-      const err = buildGoogleAdsError('Google Ads searchStream failed', response, payload, responseText)
+      const err = buildGoogleAdsError(
+        'Google Ads searchStream failed',
+        response,
+        payload,
+        responseText
+      )
       const errText = String((err as any)?.message || '').toLowerCase()
-      const unsupportedVersion = errText.includes('unsupported_version')
-        || errText.includes('version') && errText.includes('deprecated')
+      const unsupportedVersion =
+        errText.includes('unsupported_version') ||
+        (errText.includes('version') && errText.includes('deprecated'))
       if (unsupportedVersion) {
         lastError = err
         continue
@@ -360,16 +375,15 @@ async function getCampaignNameByHttp(params: {
 function extractGaqlCampaignName(raw: unknown, campaignId: string): string {
   const rows = Array.isArray(raw)
     ? raw
-  : Array.isArray((raw as { results?: unknown[] })?.results)
-    ? (raw as { results: unknown[] }).results
-    : []
+    : Array.isArray((raw as { results?: unknown[] })?.results)
+      ? (raw as { results: unknown[] }).results
+      : []
   for (const row of rows) {
-    const id = String(
-      (row as { campaign?: { id?: string | number } })?.campaign?.id ?? ''
-    ).replace(/\D/g, '')
-    const name = String(
-      (row as { campaign?: { name?: string } })?.campaign?.name ?? ''
-    ).trim()
+    const id = String((row as { campaign?: { id?: string | number } })?.campaign?.id ?? '').replace(
+      /\D/g,
+      ''
+    )
+    const name = String((row as { campaign?: { name?: string } })?.campaign?.name ?? '').trim()
     if (id === campaignId.replace(/\D/g, '') && name) {
       return name
     }
@@ -493,7 +507,9 @@ async function run() {
       const customerId = String(first.customer_id)
       const parentMccId = first.parent_mcc_id ? String(first.parent_mcc_id) : undefined
 
-      console.log(`Processing group ${groupKey} (customer=${customerId}, campaigns=${groupRows.length})`)
+      console.log(
+        `Processing group ${groupKey} (customer=${customerId}, campaigns=${groupRows.length})`
+      )
 
       const linkedServiceAccountId = first.service_account_id?.trim() || null
       const authResolved = await resolveGoogleAdsApiAuthForAccount(userId, linkedServiceAccountId)
@@ -505,10 +521,7 @@ async function run() {
         continue
       }
 
-      const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
-        userId,
-        linkedServiceAccountId
-      )
+      const prepared = await prepareGoogleAdsApiCallForLinkedAccount(userId, linkedServiceAccountId)
       if (!prepared.ok) {
         skippedNoAuth += groupRows.length
         console.warn(`  ⚠️ skip group: ${prepared.message} (userId=${userId})`)
@@ -549,8 +562,7 @@ async function run() {
         loginCandidates = resolveLoginCustomerCandidates({
           authType: 'oauth',
           accountParentMccId: parentMccId,
-          oauthLoginCustomerId:
-            prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+          oauthLoginCustomerId: prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
           targetCustomerId: customerId,
         })
         preferredLoginCustomerId = loginCandidates[0]

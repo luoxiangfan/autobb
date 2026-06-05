@@ -10,7 +10,7 @@ export function Badge({ className = '', variant = 'default', ...props }: BadgePr
     default: 'bg-primary text-primary-foreground',
     secondary: 'bg-secondary text-secondary-foreground',
     destructive: 'bg-destructive text-destructive-foreground',
-    outline: 'border border-input bg-background'
+    outline: 'border border-input bg-background',
   }
 
   return (

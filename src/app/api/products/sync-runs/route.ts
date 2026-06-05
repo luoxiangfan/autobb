@@ -31,9 +31,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('[GET /api/products/sync-runs] failed:', error)
-    return NextResponse.json(
-      { error: error?.message || '获取同步记录失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '获取同步记录失败' }, { status: 500 })
   }
 }

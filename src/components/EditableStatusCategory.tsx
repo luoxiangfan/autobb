@@ -1,9 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import {
-  Select,
-} from '@/components/ui/select'
+import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { showSuccess, showError } from '@/lib/toast-utils'
 
@@ -28,7 +26,7 @@ interface EditableStatusCategoryProps {
 
 /**
  * 可编辑的运营状态组件
- * 
+ *
  * 功能：
  * 1. 默认显示运营状态（Badge 形式）
  * 2. 点击后显示下拉选择框
@@ -51,7 +49,7 @@ export function EditableStatusCategory({
   const containerRef = useRef<HTMLDivElement>(null)
 
   // 获取状态配置
-  const statusConfig = STATUS_CATEGORIES.find(s => s.value === status) || STATUS_CATEGORIES[0]
+  const statusConfig = STATUS_CATEGORIES.find((s) => s.value === status) || STATUS_CATEGORIES[0]
 
   // 点击外部关闭下拉框
   useEffect(() => {
@@ -75,46 +73,52 @@ export function EditableStatusCategory({
   /**
    * 保存运营状态
    */
-  const saveStatusCategory = useCallback(async (value: string) => {
-    if (value === status) {
-      setIsEditing(false)
-      return
-    }
-
-    setIsSaving(true)
-
-    try {
-      const response = await fetch(`/api/campaigns/${campaignId}/status-category`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ statusCategory: value }),
-      })
-
-      if (response.status === 401) {
-        showError('保存失败', '未授权，请重新登录')
-        setTimeout(() => {
-          window.location.reload()
-        }, 1000)
+  const saveStatusCategory = useCallback(
+    async (value: string) => {
+      if (value === status) {
+        setIsEditing(false)
         return
       }
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => null)
-        throw new Error(data?.error || '网络错误')
-      }
+      setIsSaving(true)
 
-      // 保存成功
-      setStatus(value)
-      onSaved?.(value)
-      showSuccess('保存成功', `已设置运营状态为"${STATUS_CATEGORIES.find(s => s.value === value)?.label || value}"`)
-    } catch (error: any) {
-      showError('保存失败', error?.message || '网络错误')
-    } finally {
-      setIsSaving(false)
-      setIsEditing(false)
-    }
-  }, [campaignId, status, onSaved])
+      try {
+        const response = await fetch(`/api/campaigns/${campaignId}/status-category`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ statusCategory: value }),
+        })
+
+        if (response.status === 401) {
+          showError('保存失败', '未授权，请重新登录')
+          setTimeout(() => {
+            window.location.reload()
+          }, 1000)
+          return
+        }
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error || '网络错误')
+        }
+
+        // 保存成功
+        setStatus(value)
+        onSaved?.(value)
+        showSuccess(
+          '保存成功',
+          `已设置运营状态为"${STATUS_CATEGORIES.find((s) => s.value === value)?.label || value}"`
+        )
+      } catch (error: any) {
+        showError('保存失败', error?.message || '网络错误')
+      } finally {
+        setIsSaving(false)
+        setIsEditing(false)
+      }
+    },
+    [campaignId, status, onSaved]
+  )
 
   /**
    * 处理状态变化

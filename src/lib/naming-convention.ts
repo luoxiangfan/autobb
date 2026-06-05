@@ -12,7 +12,7 @@ export const NAMING_CONFIG = {
   MAX_LENGTH: {
     CAMPAIGN: 255,
     AD_GROUP: 255,
-    AD: 90
+    AD: 90,
   },
 
   // 分隔符
@@ -21,10 +21,10 @@ export const NAMING_CONFIG = {
   // 日期格式
   DATE_FORMAT: 'YYYYMMDD',
 
- // 预算类型缩写
+  // 预算类型缩写
   BUDGET_TYPE: {
     DAILY: 'D',
-    TOTAL: 'T'
+    TOTAL: 'T',
   },
 
   // 投放策略缩写
@@ -34,10 +34,9 @@ export const NAMING_CONFIG = {
     TARGET_ROAS: 'TROAS',
     MANUAL_CPC: 'MCPC',
     MAXIMIZE_CLICKS: 'MAXCLICK',
-    ENHANCED_CPC: 'ECPC'
-  }
+    ENHANCED_CPC: 'ECPC',
+  },
 } as const
-
 
 /**
  * 格式化日期时间为YYYYMMDDHHmmss（用于确保唯一性）
@@ -138,10 +137,7 @@ function truncate(text: string, maxLength: number): string {
 
   // 在最后一个分隔符处截断
   const truncated = text.substring(0, maxLength)
-  const lastSeparator = Math.max(
-    truncated.lastIndexOf('_'),
-    truncated.lastIndexOf('-')
-  )
+  const lastSeparator = Math.max(truncated.lastIndexOf('_'), truncated.lastIndexOf('-'))
 
   return lastSeparator > 0 ? truncated.substring(0, lastSeparator) : truncated
 }
@@ -159,12 +155,7 @@ export function generateCampaignName(params: {
   date?: Date
   randomSuffix?: string
 }): string {
-  const {
-    offerName,
-    creativeId,
-    date = new Date(),
-    randomSuffix
-  } = params
+  const { offerName, creativeId, date = new Date(), randomSuffix } = params
 
   const safeCreativeId = Number.isFinite(creativeId) ? Math.max(0, Math.floor(creativeId)) : 0
   const safeOfferName = sanitize(offerName) || 'Offer'
@@ -174,7 +165,7 @@ export function generateCampaignName(params: {
     String(safeCreativeId),
     formatDateTime(date),
     formatMilliseconds(date),
-    randomSuffix || generateShortRandomSuffix(3)
+    randomSuffix || generateShortRandomSuffix(3),
   ]
 
   const name = parts.join(NAMING_CONFIG.SEPARATOR)
@@ -193,11 +184,7 @@ export function generateAdGroupName(params: {
   creativeId: number
   randomSuffix?: string
 }): string {
-  const {
-    offerName,
-    creativeId,
-    randomSuffix
-  } = params
+  const { offerName, creativeId, randomSuffix } = params
 
   const safeOfferName = sanitize(offerName) || 'Offer'
   const safeCreativeId = Number.isFinite(creativeId) ? Math.max(0, Math.floor(creativeId)) : 0
@@ -205,7 +192,7 @@ export function generateAdGroupName(params: {
     safeOfferName,
     'AG',
     String(safeCreativeId),
-    randomSuffix || generateShortRandomSuffix(3)
+    randomSuffix || generateShortRandomSuffix(3),
   ]
 
   const name = parts.join(NAMING_CONFIG.SEPARATOR)
@@ -224,15 +211,11 @@ export function generateAdName(params: {
   creativeId: number
   variantIndex?: number
 }): string {
-  const {
-    theme,
-    creativeId,
-    variantIndex
-  } = params
+  const { theme, creativeId, variantIndex } = params
 
   const parts = [
     'RSA',
-    simplifyTheme(theme || '').substring(0, 15),  // 🔧 修复(2025-12-16): 使用简化主题函数
+    simplifyTheme(theme || '').substring(0, 15), // 🔧 修复(2025-12-16): 使用简化主题函数
     `C${creativeId}`,
   ]
 
@@ -261,7 +244,7 @@ export function parseAdGroupName(name: string): {
   return {
     offerName,
     creativeId: parseInt(creativeId, 10),
-    randomSuffix
+    randomSuffix,
   }
 }
 
@@ -294,7 +277,7 @@ export function parseCampaignName(name: string): {
     creativeId: parseInt(creativeId, 10),
     dateTime,
     milliseconds,
-    randomSuffix
+    randomSuffix,
   }
 }
 
@@ -353,17 +336,19 @@ export function generateNamingScheme(params: {
 
   const baseCampaignParams = {
     offerName: offerIdentifier,
-    creativeId: creative?.id ?? 0
+    creativeId: creative?.id ?? 0,
   }
 
   // 🔥 生成远端（Google Ads中真实Campaign.name）的权威命名
-  const associativeCampaignName = creative ? generateAssociativeCampaignName({
-    offerId: offer.id,
-    creativeId: creative.id,
-    brand: offer.brand,
-    country: config.targetCountry,
-    campaignType: 'Search'
-  }) : undefined
+  const associativeCampaignName = creative
+    ? generateAssociativeCampaignName({
+        offerId: offer.id,
+        creativeId: creative.id,
+        brand: offer.brand,
+        country: config.targetCountry,
+        campaignType: 'Search',
+      })
+    : undefined
 
   // 本地命名也应与远端保持一致；若缺少creative（极少见），回退到旧命名生成器
   const legacyCampaignName = smartOptimization?.enabled
@@ -378,21 +363,23 @@ export function generateNamingScheme(params: {
   // 生成Ad Group名称
   const adGroupName = generateAdGroupName({
     offerName: offerIdentifier,
-    creativeId: creative?.id ?? 0
+    creativeId: creative?.id ?? 0,
   })
 
   // 生成Ad名称（如果提供了creative）
-  const adName = creative ? generateAdName({
-    theme: creative.theme,
-    creativeId: creative.id,
-    variantIndex: smartOptimization?.variantIndex
-  }) : undefined
+  const adName = creative
+    ? generateAdName({
+        theme: creative.theme,
+        creativeId: creative.id,
+        variantIndex: smartOptimization?.variantIndex,
+      })
+    : undefined
 
   return {
     campaignName,
     adGroupName,
     adName,
-    associativeCampaignName  // 🔥 新增：用于关联的Campaign名称
+    associativeCampaignName, // 🔥 新增：用于关联的Campaign名称
   }
 }
 
@@ -410,7 +397,7 @@ export interface NamingScheme {
   campaignName: string
   adGroupName: string
   adName?: string
-  associativeCampaignName?: string  // 🔥 新增：用于关联的Campaign名称
+  associativeCampaignName?: string // 🔥 新增：用于关联的Campaign名称
 }
 
 /**
@@ -431,7 +418,7 @@ export function generateAssociativeCampaignName(params: {
   brand: string
   country: string
   campaignType?: string
-  date?: Date  // 🔧 新增：可选的日期参数，用于测试或指定特定时间
+  date?: Date // 🔧 新增：可选的日期参数，用于测试或指定特定时间
 }): string {
   const { offerId, creativeId, brand, country, date = new Date() } = params
 
@@ -447,19 +434,13 @@ export function generateAssociativeCampaignName(params: {
   // 时间戳精确到毫秒（YYYYMMDDHHmmssSSS），使用服务器本地时区字段
   const timestamp = formatDateTimeWithMilliseconds(date)
 
-  const tail = [
-    safeCountry,
-    String(safeOfferId),
-    String(safeCreativeId),
-    timestamp,
-  ].join(NAMING_CONFIG.SEPARATOR)
+  const tail = [safeCountry, String(safeOfferId), String(safeCreativeId), timestamp].join(
+    NAMING_CONFIG.SEPARATOR
+  )
 
   // 只截断品牌名部分，保证尾部可追溯字段完整不被截断
   const maxBrandLength = Math.max(1, NAMING_CONFIG.MAX_LENGTH.CAMPAIGN - (tail.length + 1))
-  let brandPart = rawBrand
-    .replace(/^_+/, '')
-    .replace(/_+$/, '')
-    .trim()
+  let brandPart = rawBrand.replace(/^_+/, '').replace(/_+$/, '').trim()
   if (!brandPart) brandPart = 'Brand'
   if (brandPart.length > maxBrandLength) {
     brandPart = brandPart.slice(0, maxBrandLength).replace(/_+$/, '').trim()
@@ -486,7 +467,7 @@ export function parseAssociativeCampaignName(name: string): {
   brand: string
   country?: string
   campaignType: string
-  timestamp?: string  // 🔧 新增：可选的时间戳字段
+  timestamp?: string // 🔧 新增：可选的时间戳字段
 } | null {
   // 🔥 新格式（下划线分隔）：
   // 品牌名_国家_OfferID_创意ID_时间戳(毫秒)
@@ -524,14 +505,15 @@ export function parseAssociativeCampaignName(name: string): {
   const newWithCountryMatch = name.match(newWithCountryPattern)
 
   if (newWithCountryMatch) {
-    const [, offerIdStr, creativeIdStr, brand, country, campaignType, timestamp] = newWithCountryMatch
+    const [, offerIdStr, creativeIdStr, brand, country, campaignType, timestamp] =
+      newWithCountryMatch
     return {
       offerId: parseInt(offerIdStr, 10),
       creativeId: parseInt(creativeIdStr, 10),
       brand,
       country,
       campaignType,
-      timestamp
+      timestamp,
     }
   }
 
@@ -546,7 +528,7 @@ export function parseAssociativeCampaignName(name: string): {
       creativeId: parseInt(creativeIdStr, 10),
       brand,
       campaignType,
-      timestamp
+      timestamp,
     }
   }
 
@@ -560,7 +542,7 @@ export function parseAssociativeCampaignName(name: string): {
       offerId: parseInt(offerIdStr, 10),
       creativeId: parseInt(creativeIdStr, 10),
       brand,
-      campaignType
+      campaignType,
     }
   }
 

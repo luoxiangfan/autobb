@@ -45,7 +45,7 @@ describe('POST /api/campaigns/:id/resume-offer-tasks', () => {
       method: 'POST',
     })
 
-    const res = await POST(req, { params: { id: '1' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '1' }) })
     expect(res.status).toBe(401)
   })
 
@@ -62,7 +62,7 @@ describe('POST /api/campaigns/:id/resume-offer-tasks', () => {
       headers: { 'x-user-id': '7' },
     })
 
-    const res = await POST(req, { params: { id: '1' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '1' }) })
     const data = await res.json()
 
     expect(res.status).toBe(400)
@@ -83,7 +83,7 @@ describe('POST /api/campaigns/:id/resume-offer-tasks', () => {
       headers: { 'x-user-id': '7' },
     })
 
-    const res = await POST(req, { params: { id: '1' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '1' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)

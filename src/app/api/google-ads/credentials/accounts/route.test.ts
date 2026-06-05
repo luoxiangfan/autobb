@@ -175,7 +175,9 @@ describe('GET /api/google-ads/credentials/accounts', () => {
       serviceAccountConfig: null,
     })
 
-    const req = new NextRequest('http://localhost/api/google-ads/credentials/accounts?auth_type=oauth')
+    const req = new NextRequest(
+      'http://localhost/api/google-ads/credentials/accounts?auth_type=oauth'
+    )
     const res = await GET(req)
     const data = await res.json()
 
@@ -207,7 +209,9 @@ describe('GET /api/google-ads/credentials/accounts', () => {
   })
 
   it('returns cached OAuth accounts using auth-context (no API sync)', async () => {
-    const req = new NextRequest('http://localhost/api/google-ads/credentials/accounts?auth_type=oauth')
+    const req = new NextRequest(
+      'http://localhost/api/google-ads/credentials/accounts?auth_type=oauth'
+    )
     const res = await GET(req)
     const data = await res.json()
 
@@ -260,7 +264,9 @@ describe('GET /api/google-ads/credentials/accounts', () => {
         message: GOOGLE_ADS_DUAL_STACK_WARNING,
       })
 
-    const req = new NextRequest('http://localhost/api/google-ads/credentials/accounts?auth_type=oauth')
+    const req = new NextRequest(
+      'http://localhost/api/google-ads/credentials/accounts?auth_type=oauth'
+    )
     const res = await GET(req)
     const data = await res.json()
 
@@ -279,7 +285,9 @@ describe('GET /api/google-ads/credentials/accounts', () => {
       dualStack: true,
     })
 
-    const req = new NextRequest('http://localhost/api/google-ads/credentials/accounts?auth_type=oauth')
+    const req = new NextRequest(
+      'http://localhost/api/google-ads/credentials/accounts?auth_type=oauth'
+    )
     const res = await GET(req)
     const data = await res.json()
 
@@ -362,16 +370,14 @@ describe('GET /api/google-ads/credentials/accounts', () => {
       value: 'abcdefghijklmnopqrstuvwxyz1234567890',
     })
 
-    const req = new NextRequest('http://localhost/api/google-ads/credentials/accounts?auth_type=oauth')
+    const req = new NextRequest(
+      'http://localhost/api/google-ads/credentials/accounts?auth_type=oauth'
+    )
     const res = await GET(req)
     const data = await res.json()
 
     expect(res.status).toBe(200)
-    expect(settingsFns.getUserOnlySetting).toHaveBeenCalledWith(
-      'google_ads',
-      'developer_token',
-      7
-    )
+    expect(settingsFns.getUserOnlySetting).toHaveBeenCalledWith('google_ads', 'developer_token', 7)
     expect(data.data.accounts).toHaveLength(1)
   })
 

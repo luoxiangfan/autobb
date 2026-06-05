@@ -12,10 +12,7 @@ import {
   prepareGoogleAdsApiCallForLinkedAccount,
 } from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
-import {
-  categorizeCampaigns,
-  type GoogleAdsCampaignInfo
-} from './campaign-association'
+import { categorizeCampaigns, type GoogleAdsCampaignInfo } from './campaign-association'
 
 /**
  * 查询结果
@@ -54,7 +51,7 @@ function normalizeCampaignStatus(status: unknown): 'ENABLED' | 'PAUSED' | 'REMOV
   }
 
   if (status && typeof status === 'object') {
-    const maybeValue = (status as { value?: unknown; name?: unknown; status?: unknown })
+    const maybeValue = status as { value?: unknown; name?: unknown; status?: unknown }
     const nested = maybeValue.value ?? maybeValue.name ?? maybeValue.status
     if (typeof nested === 'string' || typeof nested === 'number') {
       return normalizeCampaignStatus(nested)
@@ -83,8 +80,7 @@ async function loadGoogleAdsQueryAuth(
     serviceAccountId: prepared.apiAuth.serviceAccountId,
     serviceAccountMccId: prepared.apiAuth.serviceAccountMccId,
     oauthCredentials: prepared.oauthCredentials,
-    oauthLoginCustomerId:
-      prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId,
+    oauthLoginCustomerId: prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId,
   }
 }
 
@@ -105,11 +101,11 @@ export async function queryActiveCampaigns(
 
   // 1. 获取Google Ads账号信息（包含parent_mcc_id用于MCC子账号权限）
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-  const adsAccount = await db.queryOne(
+  const adsAccount = (await db.queryOne(
     `SELECT id, customer_id, parent_mcc_id, service_account_id FROM google_ads_accounts
      WHERE id = ? AND user_id = ? AND ${isActiveCondition}`,
     [Number(googleAdsAccountId), Number(userId)]
-  ) as any
+  )) as any
 
   if (!adsAccount) {
     throw new Error(`Google Ads账号不存在或未激活: ${googleAdsAccountId}`)
@@ -160,7 +156,7 @@ export async function queryActiveCampaigns(
     status: normalizeCampaignStatus(c.campaign.status),
     budget: c.campaign_budget?.amount_micros
       ? Math.round(Number(c.campaign_budget.amount_micros) / 1000000)
-      : undefined
+      : undefined,
   }))
 
   // 5. 分类广告系列
@@ -212,11 +208,11 @@ export async function pauseCampaigns(
 
   // 获取账号信息（包含parent_mcc_id用于MCC子账号权限）
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-  const adsAccount = await db.queryOne(
+  const adsAccount = (await db.queryOne(
     `SELECT customer_id, parent_mcc_id, service_account_id FROM google_ads_accounts
      WHERE id = ? AND user_id = ? AND ${isActiveCondition}`,
     [Number(googleAdsAccountId), Number(userId)]
-  ) as any
+  )) as any
 
   if (!adsAccount) {
     throw new Error(`Google Ads账号不存在或未激活: ${googleAdsAccountId}`)

@@ -43,15 +43,17 @@ vi.mock('@/lib/queue/unified-queue-manager', () => ({
 
 describe('buildExtractionTaskParamsFromOffer', () => {
   it('throws when target country is missing', () => {
-    expect(() => buildExtractionTaskParamsFromOffer(
-      {
-        id: 1,
-        affiliate_link: 'https://aff.example.com',
-        url: 'https://aff.example.com',
-        target_country: '',
-      } as any,
-      { userId: 7, offerId: 1 }
-    )).toThrow(OfferExtractRequestError)
+    expect(() =>
+      buildExtractionTaskParamsFromOffer(
+        {
+          id: 1,
+          affiliate_link: 'https://aff.example.com',
+          url: 'https://aff.example.com',
+          target_country: '',
+        } as any,
+        { userId: 7, offerId: 1 }
+      )
+    ).toThrow(OfferExtractRequestError)
   })
 
   it('does not default to US when country is provided', () => {
@@ -95,10 +97,12 @@ describe('offer extraction enqueue guards', () => {
     const busy = await findOfferIdsWithActiveExtractionTasks([42, 43])
 
     expect(busy).toEqual(new Set([42]))
-    expect(dbFns.query).toHaveBeenCalledWith(
-      expect.stringMatching(/status IN \(\?, \?\)/),
-      [42, 43, 'pending', 'running']
-    )
+    expect(dbFns.query).toHaveBeenCalledWith(expect.stringMatching(/status IN \(\?, \?\)/), [
+      42,
+      43,
+      'pending',
+      'running',
+    ])
   })
 
   it('assertOfferAvailableForExtractionEnqueue rejects busy scrape_status', async () => {
@@ -140,7 +144,6 @@ describe('offer extraction enqueue guards', () => {
       'sync failed'
     )
   })
-
 })
 
 describe('offer-extraction-task helpers', () => {
@@ -226,9 +229,9 @@ describe('offer-extraction-task helpers', () => {
 
   describe('parseStoreProductLinksInput', () => {
     it('validates URL format', () => {
-      expect(
-        parseStoreProductLinksInput(['not-a-url'])
-      ).toEqual({ error: '单品推广链接无效: not-a-url' })
+      expect(parseStoreProductLinksInput(['not-a-url'])).toEqual({
+        error: '单品推广链接无效: not-a-url',
+      })
     })
   })
 })

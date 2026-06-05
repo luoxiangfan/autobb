@@ -87,7 +87,7 @@ describe('campaign-offer-constraint', () => {
     mockExec.mockResolvedValueOnce({ changes: 2 })
     await expect(abandonStalePendingCampaignsForOffer(10, 7)).resolves.toBe(2)
     expect(mockExec).toHaveBeenCalledWith(
-      expect.stringContaining("updated_at < ?"),
+      expect.stringContaining('updated_at < ?'),
       expect.arrayContaining([expect.any(String), 10, 7, expect.any(String)])
     )
   })
@@ -156,9 +156,11 @@ describe('campaign-offer-constraint', () => {
       })
     ).resolves.toBe(true)
 
-    expect(mockExec).toHaveBeenCalledWith(
-      expect.stringContaining('creation_status = \'pending\''),
-      ['queue down', 99, 7, 10]
-    )
+    expect(mockExec).toHaveBeenCalledWith(expect.stringContaining("creation_status = 'pending'"), [
+      'queue down',
+      99,
+      7,
+      10,
+    ])
   })
 })

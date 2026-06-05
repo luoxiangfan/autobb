@@ -30,7 +30,7 @@ function createTask(overrides: Partial<ClickFarmTask> = {}): ClickFarmTask {
     next_run_at: null,
     created_at: '2026-03-18T15:29:45.232Z',
     updated_at: '2026-03-18T15:29:45.232Z',
-    ...overrides
+    ...overrides,
   }
 }
 

@@ -34,4 +34,3 @@ describe('normalizeCallouts', () => {
     expect(normalizeCallouts('x')).toBeUndefined()
   })
 })
-

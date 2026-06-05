@@ -3,7 +3,7 @@ import {
   getGoogleAdsTextEffectiveLength,
   sanitizeGoogleAdsAdText,
   sanitizeGoogleAdsFinalUrlSuffix,
-  sanitizeGoogleAdsPath
+  sanitizeGoogleAdsPath,
 } from '../google-ads-ad-text'
 
 describe('google-ads-ad-text', () => {

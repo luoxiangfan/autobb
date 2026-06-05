@@ -14,9 +14,7 @@ describe('parseKeywordsWithVolumeJson', () => {
 
   it('parses valid JSON array', () => {
     expect(
-      parseKeywordsWithVolumeJson(
-        JSON.stringify([{ keyword: 'a', searchVolume: 10 }])
-      )
+      parseKeywordsWithVolumeJson(JSON.stringify([{ keyword: 'a', searchVolume: 10 }]))
     ).toEqual([{ keyword: 'a', searchVolume: 10 }])
   })
 
@@ -81,9 +79,7 @@ describe('mapCampaignKeywordToVolumeInput', () => {
   })
 
   it('falls back to keyword when text missing', () => {
-    expect(
-      mapCampaignKeywordToVolumeInput({ keyword: 'only-keyword', searchVolume: 5 })
-    ).toEqual({
+    expect(mapCampaignKeywordToVolumeInput({ keyword: 'only-keyword', searchVolume: 5 })).toEqual({
       keyword: 'only-keyword',
       searchVolume: 5,
       matchType: undefined,

@@ -33,7 +33,6 @@ import { useBudgetAnalytics } from '@/lib/hooks/useAnalytics'
 import { formatCurrency } from '@/lib/currency'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
 
-
 type BudgetAnalyticsTimeRange = '7' | '14' | '30' | 'custom'
 
 interface BudgetData {
@@ -109,11 +108,20 @@ export default function BudgetAnalyticsPage() {
   })
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0])
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
-  const [appliedCustomRange, setAppliedCustomRange] = useState<{ startDate: string; endDate: string } | null>(null)
+  const [appliedCustomRange, setAppliedCustomRange] = useState<{
+    startDate: string
+    endDate: string
+  } | null>(null)
   const [reportCurrency, setReportCurrency] = useState<string | null>(null)
 
   // Use SWR for data fetching with automatic caching
-  const { data, currencyInfo, error, isLoading: loading, refresh } = useBudgetAnalytics(startDate, endDate, reportCurrency)
+  const {
+    data,
+    currencyInfo,
+    error,
+    isLoading: loading,
+    refresh,
+  } = useBudgetAnalytics(startDate, endDate, reportCurrency)
 
   const selectedCurrency = reportCurrency || currencyInfo?.currency || 'USD'
   const availableCurrencies = currencyInfo?.currencies ?? []
@@ -167,7 +175,6 @@ export default function BudgetAnalyticsPage() {
     setEndDate(endDateStr)
     setTimeRange('custom')
   }
-
 
   useEffect(() => {
     if (!currencyInfo?.currency || !Array.isArray(currencyInfo.currencies)) return
@@ -265,7 +272,7 @@ export default function BudgetAnalyticsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-white shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
@@ -279,12 +286,7 @@ export default function BudgetAnalyticsPage() {
             </div>
             <div className="flex items-center gap-3">
               {/* 刷新按钮 */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => refresh()}
-                disabled={loading}
-              >
+              <Button variant="ghost" size="sm" onClick={() => refresh()} disabled={loading}>
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
               {/* 时间范围 */}
@@ -322,7 +324,9 @@ export default function BudgetAnalyticsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {availableCurrencies.map((c: string) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -356,8 +360,10 @@ export default function BudgetAnalyticsPage() {
                             <li key={idx}>
                               • {campaign.name}
                               {campaign.overBy && ` (超支 ${money(campaign.overBy)})`}
-                              {campaign.remaining !== undefined && ` (剩余 ${money(campaign.remaining)})`}
-                              {campaign.daysRemaining && ` (预计剩余 ${campaign.daysRemaining.toFixed(0)} 天)`}
+                              {campaign.remaining !== undefined &&
+                                ` (剩余 ${money(campaign.remaining)})`}
+                              {campaign.daysRemaining &&
+                                ` (预计剩余 ${campaign.daysRemaining.toFixed(0)} 天)`}
                             </li>
                           ))}
                         </ul>
@@ -395,9 +401,7 @@ export default function BudgetAnalyticsPage() {
                 <div className="text-2xl font-bold text-green-600">
                   {money(data.overall?.remaining ?? 0)}
                 </div>
-                <p className="text-xs text-gray-600 mt-1">
-                  可用预算
-                </p>
+                <p className="text-xs text-gray-600 mt-1">可用预算</p>
               </CardContent>
             </Card>
 
@@ -425,9 +429,7 @@ export default function BudgetAnalyticsPage() {
                 <div className="text-2xl font-bold text-gray-900">
                   {data.overall?.activeCampaigns ?? 0}
                 </div>
-                <p className="text-xs text-gray-600 mt-1">
-                  正在投放中
-                </p>
+                <p className="text-xs text-gray-600 mt-1">正在投放中</p>
               </CardContent>
             </Card>
           </div>
@@ -440,16 +442,18 @@ export default function BudgetAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {data.recommendations.map((rec: BudgetData['recommendations'][0], index: number) => (
-                    <div key={index} className="bg-blue-50 p-4 rounded-lg">
-                      <p className="font-semibold text-blue-900">{rec.message}</p>
-                      <ul className="mt-2 space-y-1 text-sm text-blue-800">
-                        {rec.campaigns.map((campaign, idx) => (
-                          <li key={idx}>• {campaign}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
+                  {data.recommendations.map(
+                    (rec: BudgetData['recommendations'][0], index: number) => (
+                      <div key={index} className="bg-blue-50 p-4 rounded-lg">
+                        <p className="font-semibold text-blue-900">{rec.message}</p>
+                        <ul className="mt-2 space-y-1 text-sm text-blue-800">
+                          {rec.campaigns.map((campaign, idx) => (
+                            <li key={idx}>• {campaign}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -481,7 +485,11 @@ export default function BudgetAnalyticsPage() {
                 <CardTitle>Offer预算分配</CardTitle>
               </CardHeader>
               <CardContent>
-                <LazyOfferBudgetChart data={data.byOffer} currency={selectedCurrency} height={350} />
+                <LazyOfferBudgetChart
+                  data={data.byOffer}
+                  currency={selectedCurrency}
+                  height={350}
+                />
               </CardContent>
             </Card>
           </div>
@@ -492,7 +500,11 @@ export default function BudgetAnalyticsPage() {
               <CardTitle>Campaign预算使用对比 (Top 10)</CardTitle>
             </CardHeader>
             <CardContent>
-              <LazyCampaignBudgetChart data={data.byCampaign} currency={selectedCurrency} height={450} />
+              <LazyCampaignBudgetChart
+                data={data.byCampaign}
+                currency={selectedCurrency}
+                height={450}
+              />
             </CardContent>
           </Card>
 
@@ -546,7 +558,9 @@ export default function BudgetAnalyticsPage() {
                         <td className="px-4 py-3 text-sm text-right text-gray-900">
                           {money(campaign.spent)}
                         </td>
-                        <td className={`px-4 py-3 text-sm text-right ${campaign.remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <td
+                          className={`px-4 py-3 text-sm text-right ${campaign.remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                        >
                           {money(campaign.remaining)}
                         </td>
                         <td className="px-4 py-3 text-sm text-right">
@@ -555,8 +569,8 @@ export default function BudgetAnalyticsPage() {
                               campaign.isOverBudget
                                 ? 'text-red-600'
                                 : campaign.isNearBudget
-                                ? 'text-amber-600'
-                                : 'text-green-600'
+                                  ? 'text-amber-600'
+                                  : 'text-green-600'
                             }`}
                           >
                             {campaign.utilizationRate.toFixed(1)}%

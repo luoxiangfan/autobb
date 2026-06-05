@@ -26,7 +26,9 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       return NextResponse.redirect(
-        createRedirectUrl(`/settings?category=google_ads&test_oauth_error=${encodeURIComponent(error)}`)
+        createRedirectUrl(
+          `/settings?category=google_ads&test_oauth_error=${encodeURIComponent(error)}`
+        )
       )
     }
 
@@ -66,12 +68,13 @@ export async function GET(request: NextRequest) {
 
     const userId = stateData.user_id
 
-    const [mccSetting, clientIdSetting, clientSecretSetting, developerTokenSetting] = await Promise.all([
-      getUserOnlySetting('google_ads', 'test_login_customer_id', userId),
-      getUserOnlySetting('google_ads', 'test_client_id', userId),
-      getUserOnlySetting('google_ads', 'test_client_secret', userId),
-      getUserOnlySetting('google_ads', 'test_developer_token', userId),
-    ])
+    const [mccSetting, clientIdSetting, clientSecretSetting, developerTokenSetting] =
+      await Promise.all([
+        getUserOnlySetting('google_ads', 'test_login_customer_id', userId),
+        getUserOnlySetting('google_ads', 'test_client_id', userId),
+        getUserOnlySetting('google_ads', 'test_client_secret', userId),
+        getUserOnlySetting('google_ads', 'test_developer_token', userId),
+      ])
 
     const loginCustomerIdRaw = mccSetting?.value || ''
     const clientId = clientIdSetting?.value || ''
@@ -84,7 +87,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const loginCustomerId = formatAndValidateLoginCustomerId(loginCustomerIdRaw, 'test_login_customer_id')
+    const loginCustomerId = formatAndValidateLoginCustomerId(
+      loginCustomerIdRaw,
+      'test_login_customer_id'
+    )
     const redirectUri = `${getBaseUrl()}/api/google-ads/test-oauth/callback`
 
     const tokens = await exchangeCodeForTokens(code, clientId, clientSecret, redirectUri)
@@ -105,8 +111,9 @@ export async function GET(request: NextRequest) {
     )
   } catch (error: any) {
     return NextResponse.redirect(
-      createRedirectUrl(`/settings?category=google_ads&test_oauth_error=${encodeURIComponent(error.message || 'unknown_error')}`)
+      createRedirectUrl(
+        `/settings?category=google_ads&test_oauth_error=${encodeURIComponent(error.message || 'unknown_error')}`
+      )
     )
   }
 }
-

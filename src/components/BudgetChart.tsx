@@ -18,13 +18,26 @@ import {
 } from 'recharts'
 import { CURRENCY_SYMBOLS, formatCurrency } from '@/lib/currency'
 
-const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#14b8a6', '#f97316']
+const COLORS = [
+  '#6366f1',
+  '#8b5cf6',
+  '#ec4899',
+  '#f59e0b',
+  '#10b981',
+  '#3b82f6',
+  '#14b8a6',
+  '#f97316',
+]
 
 export const BudgetTrendChart = memo(function BudgetTrendChart({
   data,
   currency = 'CNY',
-  height = 300
-}: { data: any[]; currency?: string; height?: number }) {
+  height = 300,
+}: {
+  data: any[]
+  currency?: string
+  height?: number
+}) {
   const chartData = useMemo(() => {
     return data.map((item) => ({
       ...item,
@@ -92,17 +105,22 @@ export const BudgetTrendChart = memo(function BudgetTrendChart({
 export const CampaignBudgetChart = memo(function CampaignBudgetChart({
   data,
   currency = 'CNY',
-  height = 400
-}: { data: any[]; currency?: string; height?: number }) {
+  height = 400,
+}: {
+  data: any[]
+  currency?: string
+  height?: number
+}) {
   const sortedData = useMemo(() => {
     return [...data]
       .sort((a, b) => b.budget - a.budget)
       .slice(0, 10)
       .map((item) => ({
         ...item,
-        name: item.campaignName.length > 20
-          ? item.campaignName.substring(0, 20) + '...'
-          : item.campaignName,
+        name:
+          item.campaignName.length > 20
+            ? item.campaignName.substring(0, 20) + '...'
+            : item.campaignName,
       }))
   }, [data])
 
@@ -111,7 +129,13 @@ export const CampaignBudgetChart = memo(function CampaignBudgetChart({
       <BarChart data={sortedData} margin={{ top: 5, right: 30, left: 20, bottom: 80 }}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-        <YAxis label={{ value: `金额 (${CURRENCY_SYMBOLS[currency] || currency})`, angle: -90, position: 'insideLeft' }} />
+        <YAxis
+          label={{
+            value: `金额 (${CURRENCY_SYMBOLS[currency] || currency})`,
+            angle: -90,
+            position: 'insideLeft',
+          }}
+        />
         <Tooltip
           content={({ active, payload }) => {
             if (active && payload && payload.length) {
@@ -122,13 +146,22 @@ export const CampaignBudgetChart = memo(function CampaignBudgetChart({
                   <p className="text-sm text-gray-600 mb-2">{data.offerBrand}</p>
                   <div className="space-y-1 text-sm">
                     <p>
-                      预算: <span className="font-semibold">{formatCurrency(Number(data.budget) || 0, currency)}</span>
+                      预算:{' '}
+                      <span className="font-semibold">
+                        {formatCurrency(Number(data.budget) || 0, currency)}
+                      </span>
                     </p>
                     <p>
-                      已花费: <span className="font-semibold">{formatCurrency(Number(data.spent) || 0, currency)}</span>
+                      已花费:{' '}
+                      <span className="font-semibold">
+                        {formatCurrency(Number(data.spent) || 0, currency)}
+                      </span>
                     </p>
                     <p>
-                      剩余: <span className="font-semibold">{formatCurrency(Number(data.remaining) || 0, currency)}</span>
+                      剩余:{' '}
+                      <span className="font-semibold">
+                        {formatCurrency(Number(data.remaining) || 0, currency)}
+                      </span>
                     </p>
                     <p>
                       使用率:{' '}
@@ -137,8 +170,8 @@ export const CampaignBudgetChart = memo(function CampaignBudgetChart({
                           data.isOverBudget
                             ? 'text-red-600'
                             : data.isNearBudget
-                            ? 'text-amber-600'
-                            : 'text-green-600'
+                              ? 'text-amber-600'
+                              : 'text-green-600'
                         }`}
                       >
                         {data.utilizationRate.toFixed(1)}%
@@ -164,12 +197,18 @@ export const CampaignBudgetChart = memo(function CampaignBudgetChart({
   )
 })
 
-export const BudgetUtilizationChart = memo(function BudgetUtilizationChart({ data, height = 350 }: { data: any[]; height?: number }) {
+export const BudgetUtilizationChart = memo(function BudgetUtilizationChart({
+  data,
+  height = 350,
+}: {
+  data: any[]
+  height?: number
+}) {
   const chartData = useMemo(() => {
     const utilizationGroups = {
-      'over_budget': { name: '超预算', value: 0, color: '#ef4444' },
-      'near_budget': { name: '接近预算 (80-100%)', value: 0, color: '#f59e0b' },
-      'on_track': { name: '正常 (<80%)', value: 0, color: '#10b981' },
+      over_budget: { name: '超预算', value: 0, color: '#ef4444' },
+      near_budget: { name: '接近预算 (80-100%)', value: 0, color: '#f59e0b' },
+      on_track: { name: '正常 (<80%)', value: 0, color: '#10b981' },
     }
 
     data.forEach((item: any) => {
@@ -187,7 +226,7 @@ export const BudgetUtilizationChart = memo(function BudgetUtilizationChart({ dat
           cx="50%"
           cy="50%"
           labelLine={false}
-          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+          label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
           outerRadius={120}
           fill="#8884d8"
           dataKey="value"
@@ -218,8 +257,12 @@ export const BudgetUtilizationChart = memo(function BudgetUtilizationChart({ dat
 export const OfferBudgetChart = memo(function OfferBudgetChart({
   data,
   currency = 'CNY',
-  height = 350
-}: { data: any[]; currency?: string; height?: number }) {
+  height = 350,
+}: {
+  data: any[]
+  currency?: string
+  height?: number
+}) {
   const chartData = useMemo(() => {
     return [...data]
       .sort((a, b) => b.spent - a.spent)
@@ -233,9 +276,20 @@ export const OfferBudgetChart = memo(function OfferBudgetChart({
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={chartData} layout="horizontal" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
+      <BarChart
+        data={chartData}
+        layout="horizontal"
+        margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+      >
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis type="number" label={{ value: `花费 (${CURRENCY_SYMBOLS[currency] || currency})`, position: 'insideBottom', offset: -5 }} />
+        <XAxis
+          type="number"
+          label={{
+            value: `花费 (${CURRENCY_SYMBOLS[currency] || currency})`,
+            position: 'insideBottom',
+            offset: -5,
+          }}
+        />
         <YAxis type="category" dataKey="name" width={90} />
         <Tooltip
           content={({ active, payload }) => {
@@ -247,13 +301,20 @@ export const OfferBudgetChart = memo(function OfferBudgetChart({
                   <p className="text-sm text-gray-600 mb-2">{data.offerName}</p>
                   <div className="space-y-1 text-sm">
                     <p>
-                      预算分配: <span className="font-semibold">{formatCurrency(Number(data.allocatedBudget) || 0, currency)}</span>
+                      预算分配:{' '}
+                      <span className="font-semibold">
+                        {formatCurrency(Number(data.allocatedBudget) || 0, currency)}
+                      </span>
                     </p>
                     <p>
-                      已花费: <span className="font-semibold">{formatCurrency(Number(data.spent) || 0, currency)}</span>
+                      已花费:{' '}
+                      <span className="font-semibold">
+                        {formatCurrency(Number(data.spent) || 0, currency)}
+                      </span>
                     </p>
                     <p>
-                      使用率: <span className="font-semibold">{data.utilizationRate.toFixed(1)}%</span>
+                      使用率:{' '}
+                      <span className="font-semibold">{data.utilizationRate.toFixed(1)}%</span>
                     </p>
                     <p className="text-xs text-gray-500 mt-2">
                       {data.campaignCount} 个Campaign · {data.conversions} 次转化

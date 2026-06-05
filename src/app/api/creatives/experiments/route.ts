@@ -108,36 +108,36 @@ export async function GET(request: NextRequest) {
       experimentType: row.experiment_type,
       status: row.status,
       winner: row.winner,
-      confidence: row.confidence === null || row.confidence === undefined
-        ? null
-        : Number(row.confidence),
+      confidence:
+        row.confidence === null || row.confidence === undefined ? null : Number(row.confidence),
       conclusion: row.conclusion || null,
       startedAt: row.started_at || null,
       endedAt: row.ended_at || null,
       createdAt: row.created_at || null,
       offer: row.offer_id
         ? {
-          offerId: Number(row.offer_id),
-          brand: row.offer_brand || null,
-          offerName: row.offer_name || null,
-        }
+            offerId: Number(row.offer_id),
+            brand: row.offer_brand || null,
+            offerName: row.offer_name || null,
+          }
         : null,
       campaign: row.campaign_id
         ? {
-          campaignId: Number(row.campaign_id),
-          campaignName: row.campaign_name || null,
-          googleCampaignId: row.google_campaign_id || null,
-        }
+            campaignId: Number(row.campaign_id),
+            campaignName: row.campaign_name || null,
+            googleCampaignId: row.google_campaign_id || null,
+          }
         : null,
       creativeContext: row.ad_creative_id
         ? {
-          creativeId: Number(row.ad_creative_id),
-          score: row.creative_score === null || row.creative_score === undefined
-            ? null
-            : Number(row.creative_score),
-          headlines: parseJsonValue(row.creative_headlines),
-          descriptions: parseJsonValue(row.creative_descriptions),
-        }
+            creativeId: Number(row.ad_creative_id),
+            score:
+              row.creative_score === null || row.creative_score === undefined
+                ? null
+                : Number(row.creative_score),
+            headlines: parseJsonValue(row.creative_headlines),
+            descriptions: parseJsonValue(row.creative_descriptions),
+          }
         : null,
       variants: {
         a: parseJsonValue(row.variant_a),
@@ -152,7 +152,8 @@ export async function GET(request: NextRequest) {
     const summary = {
       total: data.length,
       running: data.filter((item) => String(item.status || '').toLowerCase() === 'running').length,
-      completed: data.filter((item) => String(item.status || '').toLowerCase() === 'completed').length,
+      completed: data.filter((item) => String(item.status || '').toLowerCase() === 'completed')
+        .length,
       withWinner: data.filter((item) => Boolean(item.winner)).length,
     }
 
@@ -170,9 +171,6 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || '创意实验结果查询失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '创意实验结果查询失败' }, { status: 500 })
   }
 }

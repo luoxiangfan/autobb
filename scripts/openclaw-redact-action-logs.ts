@@ -64,9 +64,10 @@ async function main() {
       const responseBody = redactOpenclawActionLogText(row.response_body)
       const errorMessage = redactOpenclawActionLogText(row.error_message)
 
-      const changed = requestBody !== row.request_body
-        || responseBody !== row.response_body
-        || errorMessage !== row.error_message
+      const changed =
+        requestBody !== row.request_body ||
+        responseBody !== row.response_body ||
+        errorMessage !== row.error_message
 
       if (!changed) continue
 
@@ -91,7 +92,9 @@ async function main() {
 
   const mode = dryRun ? 'DRY_RUN' : 'APPLY'
   console.log(`[openclaw-redact-action-logs] mode=${mode}`)
-  console.log(`[openclaw-redact-action-logs] scanned=${scanned}, changed=${changedRows}, updated=${updated}`)
+  console.log(
+    `[openclaw-redact-action-logs] scanned=${scanned}, changed=${changedRows}, updated=${updated}`
+  )
   if (changedIds.length > 0) {
     console.log(`[openclaw-redact-action-logs] sampleChangedIds=${changedIds.join(',')}`)
   }

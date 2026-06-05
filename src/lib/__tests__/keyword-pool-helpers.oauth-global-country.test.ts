@@ -106,7 +106,9 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
 
   it('queries global_keywords with normalized country (GB) when targetCountry is UK', async () => {
     const { expandAllKeywords } = await import('../keyword-pool-helpers')
-    const initial: PoolKeywordData[] = [{ keyword: 'hoover', searchVolume: 0, source: 'TEST', matchType: 'BROAD' }]
+    const initial: PoolKeywordData[] = [
+      { keyword: 'hoover', searchVolume: 0, source: 'TEST', matchType: 'BROAD' },
+    ]
 
     const out = await expandAllKeywords(
       initial,
@@ -125,12 +127,14 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
     const [sql, params] = mockDb.query.mock.calls[0]
     expect(String(sql)).toContain('country IN (')
     expect(params).toEqual(expect.arrayContaining(['GB', 'UK', 'en']))
-    expect(out.map(k => k.keyword)).toContain('hoover vacuum cleaner')
+    expect(out.map((k) => k.keyword)).toContain('hoover vacuum cleaner')
   })
 
   it('queries global_keywords with language aliases (de + German) for DE offers', async () => {
     const { expandAllKeywords } = await import('../keyword-pool-helpers')
-    const initial: PoolKeywordData[] = [{ keyword: 'midea', searchVolume: 0, source: 'TEST', matchType: 'BROAD' }]
+    const initial: PoolKeywordData[] = [
+      { keyword: 'midea', searchVolume: 0, source: 'TEST', matchType: 'BROAD' },
+    ]
 
     const out = await expandAllKeywords(
       initial,
@@ -149,10 +153,10 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
     const [sql, params] = mockDb.query.mock.calls[0]
     expect(String(sql)).toContain('language IN (')
     expect(params).toEqual(expect.arrayContaining(['DE', 'de', 'German']))
-    expect(out.map(k => k.keyword)).toContain('midea waschmaschine')
-    expect(out.map(k => k.keyword)).toContain('midea dryer')
-    expect(out.map(k => k.keyword)).not.toContain('midea comprar')
-    expect(out.map(k => k.keyword)).not.toContain('midea купить')
+    expect(out.map((k) => k.keyword)).toContain('midea waschmaschine')
+    expect(out.map((k) => k.keyword)).toContain('midea dryer')
+    expect(out.map((k) => k.keyword)).not.toContain('midea comprar')
+    expect(out.map((k) => k.keyword)).not.toContain('midea купить')
   })
 
   it('sets plannerDecision.volumeUnavailableFromPlanner when planner metrics are unavailable', async () => {
@@ -169,8 +173,13 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
     ])
 
     const { expandAllKeywords } = await import('../keyword-pool-helpers')
-    const initial: PoolKeywordData[] = [{ keyword: 'hoover', searchVolume: 0, source: 'TEST', matchType: 'BROAD' }]
-    const plannerDecision: { allowNonBrandFromPlanner?: boolean; volumeUnavailableFromPlanner?: boolean } = {}
+    const initial: PoolKeywordData[] = [
+      { keyword: 'hoover', searchVolume: 0, source: 'TEST', matchType: 'BROAD' },
+    ]
+    const plannerDecision: {
+      allowNonBrandFromPlanner?: boolean
+      volumeUnavailableFromPlanner?: boolean
+    } = {}
 
     await expandAllKeywords(
       initial,
@@ -225,7 +234,9 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
     ])
 
     const { expandAllKeywords } = await import('../keyword-pool-helpers')
-    const initial: PoolKeywordData[] = [{ keyword: 'novilla', searchVolume: 0, source: 'TEST', matchType: 'BROAD' }]
+    const initial: PoolKeywordData[] = [
+      { keyword: 'novilla', searchVolume: 0, source: 'TEST', matchType: 'BROAD' },
+    ]
     const plannerDecision: {
       allowNonBrandFromPlanner?: boolean
       volumeUnavailableFromPlanner?: boolean
@@ -244,11 +255,7 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
         product_name: 'Novilla King Size Mattress, 10 Inch Memory Foam Mattress, Medium Firm',
         scraped_data: JSON.stringify({
           rawProductTitle: 'Novilla King Size Mattress, 10 Inch Memory Foam Mattress, Medium Firm',
-          rawAboutThisItem: [
-            'King size support',
-            'Cooling comfort',
-            '10 inch memory foam design',
-          ],
+          rawAboutThisItem: ['King size support', 'Cooling comfort', '10 inch memory foam design'],
         }),
       } as any,
       51,
@@ -276,10 +283,9 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
       sourceSubtype: 'KEYWORD_PLANNER_MODEL_FAMILY',
       rawSource: 'KEYWORD_PLANNER',
     })
-    expect(kingMattress?.derivedTags).toEqual(expect.arrayContaining([
-      'PLANNER_NON_BRAND',
-      'PLANNER_NON_BRAND_MODEL_FAMILY',
-    ]))
+    expect(kingMattress?.derivedTags).toEqual(
+      expect.arrayContaining(['PLANNER_NON_BRAND', 'PLANNER_NON_BRAND_MODEL_FAMILY'])
+    )
     expect(out.map((item) => item.keyword)).not.toContain('mattress for side sleepers')
     expect(out.map((item) => item.keyword)).not.toContain('mattress')
     expect(plannerDecision.allowNonBrandFromPlanner).toBe(true)
@@ -287,7 +293,9 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
 
   it('keeps platform keyword when semantic term matches product URL platform', async () => {
     const { expandAllKeywords } = await import('../keyword-pool-helpers')
-    const initial: PoolKeywordData[] = [{ keyword: 'hoover', searchVolume: 0, source: 'TEST', matchType: 'BROAD' }]
+    const initial: PoolKeywordData[] = [
+      { keyword: 'hoover', searchVolume: 0, source: 'TEST', matchType: 'BROAD' },
+    ]
 
     const out = await expandAllKeywords(
       initial,
@@ -305,7 +313,7 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
       'refresh-token'
     )
 
-    const keywords = out.map(k => k.keyword)
+    const keywords = out.map((k) => k.keyword)
     expect(keywords).toContain('hoover amazon')
   })
 })

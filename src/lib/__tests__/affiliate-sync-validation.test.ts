@@ -17,10 +17,12 @@ describe('validateAffiliateSyncConfig partnerboost', () => {
     fetchMock.mockResolvedValue({
       ok: true,
       status: 200,
-      text: vi.fn().mockResolvedValue(JSON.stringify({
-        status: { code: 0, msg: 'success' },
-        data: { list: [] },
-      })),
+      text: vi.fn().mockResolvedValue(
+        JSON.stringify({
+          status: { code: 0, msg: 'success' },
+          data: { list: [] },
+        })
+      ),
     } as any)
 
     const result = await validateAffiliateSyncConfig({
@@ -47,10 +49,12 @@ describe('validateAffiliateSyncConfig partnerboost', () => {
     fetchMock.mockResolvedValue({
       ok: true,
       status: 200,
-      text: vi.fn().mockResolvedValue(JSON.stringify({
-        status: { code: 1003, msg: 'no permission' },
-        data: null,
-      })),
+      text: vi.fn().mockResolvedValue(
+        JSON.stringify({
+          status: { code: 1003, msg: 'no permission' },
+          data: null,
+        })
+      ),
     } as any)
 
     const result = await validateAffiliateSyncConfig({

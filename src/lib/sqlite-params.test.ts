@@ -18,4 +18,3 @@ describe('normalizeSqliteParams', () => {
     expect(() => normalizeSqliteParams(['ok', { a: 1 } as unknown as string])).toThrow(/index 1/i)
   })
 })
-

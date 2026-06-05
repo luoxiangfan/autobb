@@ -46,7 +46,9 @@ export function getInsertedId(
     if (pgResult.id !== undefined) {
       return Number(pgResult.id)
     }
-    throw new Error('PostgreSQL INSERT 未返回 id (请确保 SQL 包含 RETURNING id 或 db.exec 自动添加)')
+    throw new Error(
+      'PostgreSQL INSERT 未返回 id (请确保 SQL 包含 RETURNING id 或 db.exec 自动添加)'
+    )
   } else {
     // SQLite: 返回 {lastInsertRowid: 123, changes: 1}
     if (result.lastInsertRowid === undefined || result.lastInsertRowid === null) {
@@ -85,7 +87,7 @@ export function boolCondition(
   value: boolean,
   dbType: 'sqlite' | 'postgres'
 ): string {
-  const sqlValue = dbType === 'postgres' ? String(value) : (value ? '1' : '0')
+  const sqlValue = dbType === 'postgres' ? String(value) : value ? '1' : '0'
   return `${field} = ${sqlValue}`
 }
 
@@ -108,11 +110,8 @@ export function boolCondition(
  * ]
  * ```
  */
-export function boolParam(
-  value: boolean,
-  dbType: 'sqlite' | 'postgres'
-): boolean | number {
-  return dbType === 'postgres' ? value : (value ? 1 : 0)
+export function boolParam(value: boolean, dbType: 'sqlite' | 'postgres'): boolean | number {
+  return dbType === 'postgres' ? value : value ? 1 : 0
 }
 
 /**
@@ -284,9 +283,7 @@ export function generateUpsertSql(
 ): string {
   const placeholders = insertColumns.map(() => '?').join(', ')
   const conflictClause = conflictColumns.join(', ')
-  const updateClause = updateColumns
-    .map(col => `${col} = excluded.${col}`)
-    .join(', ')
+  const updateClause = updateColumns.map((col) => `${col} = excluded.${col}`).join(', ')
 
   return `
     INSERT INTO ${table} (${insertColumns.join(', ')})

@@ -37,7 +37,10 @@ import {
   waitForPeerGoogleAdsAuthContext,
   writeGoogleAdsAuthContextToRedis,
 } from './google-ads-auth-context-redis'
-import { getServiceAccountConfig, getServiceAccountConfigMetadata } from './google-ads-service-account'
+import {
+  getServiceAccountConfig,
+  getServiceAccountConfigMetadata,
+} from './google-ads-service-account'
 import {
   clearHydratedSecretsCacheForTests,
   hydrateGoogleAdsAuthContextSecrets,
@@ -118,10 +121,7 @@ export interface GoogleAdsApiAuthFields {
 }
 
 const authContextInflight = new Map<number, Promise<GoogleAdsAuthContext>>()
-const authContextCache = new Map<
-  number,
-  { expiresAt: number; ctx: GoogleAdsAuthContext }
->()
+const authContextCache = new Map<number, { expiresAt: number; ctx: GoogleAdsAuthContext }>()
 const authContextGeneration = new Map<number, number>()
 
 function getAuthContextGeneration(userId: number): number {
@@ -255,9 +255,7 @@ async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthCo
   }
   const apiAccessLevel = resolveGoogleAdsApiAccessLevelFromContext(partialCtx)
   const oauthHasRefreshToken = Boolean(oauthCredentials?.refresh_token)
-  const serviceAccountConfigured = Boolean(
-    serviceAccountConfig?.id || auth.serviceAccountId
-  )
+  const serviceAccountConfigured = Boolean(serviceAccountConfig?.id || auth.serviceAccountId)
 
   return {
     ...partialCtx,
@@ -297,8 +295,7 @@ async function loadGoogleAdsAuthContextMetadataOnly(userId: number): Promise<Goo
   }
 
   const { dualStack } = await resolveDualStackOnOwner(ownerUserId, {
-    oauthRefreshAlreadyLoaded:
-      auth.authType === 'oauth' ? oauthHasRefreshToken : undefined,
+    oauthRefreshAlreadyLoaded: auth.authType === 'oauth' ? oauthHasRefreshToken : undefined,
     hasActiveServiceAccount:
       auth.authType === 'service_account'
         ? Boolean(auth.serviceAccountId || serviceAccountConfig?.id)
@@ -322,9 +319,7 @@ async function loadGoogleAdsAuthContextMetadataOnly(userId: number): Promise<Goo
     serviceAccountConfig,
   }
   const apiAccessLevel = resolveGoogleAdsApiAccessLevelFromContext(partialCtx)
-  const serviceAccountConfigured = Boolean(
-    serviceAccountConfig?.id || auth.serviceAccountId
-  )
+  const serviceAccountConfigured = Boolean(serviceAccountConfig?.id || auth.serviceAccountId)
 
   return stripGoogleAdsAuthContextForCache({
     ...partialCtx,
@@ -369,7 +364,9 @@ async function readSlimAuthContextFromCaches(userId: number): Promise<GoogleAdsA
   return null
 }
 
-async function readAuthContextFromMemoryCache(userId: number): Promise<GoogleAdsAuthContext | null> {
+async function readAuthContextFromMemoryCache(
+  userId: number
+): Promise<GoogleAdsAuthContext | null> {
   const slim = await readSlimAuthContextFromCaches(userId)
   if (!slim) {
     return null
@@ -504,9 +501,7 @@ export function resolveEffectiveServiceAccountId(
   }
 
   const linked =
-    typeof linkedAccountServiceAccountId === 'string'
-      ? linkedAccountServiceAccountId.trim()
-      : ''
+    typeof linkedAccountServiceAccountId === 'string' ? linkedAccountServiceAccountId.trim() : ''
 
   return linked || ctx.auth.serviceAccountId || ctx.serviceAccountConfig?.id
 }
@@ -518,8 +513,10 @@ export function hasConfiguredGoogleAdsAuthFromContext(ctx: GoogleAdsAuthContext)
 
   if (ctx.assignment?.assignmentMode === 'shared_admin') {
     if (ctx.assignment.authType === 'service_account') {
-      return serviceAccountConfiguredFromContext(ctx) &&
+      return (
+        serviceAccountConfiguredFromContext(ctx) &&
         Boolean(resolveEffectiveServiceAccountId(undefined, ctx))
+      )
     }
     return oauthRefreshConfiguredFromContext(ctx)
   }
@@ -565,7 +562,9 @@ function resolveGoogleAdsAuthTypeFromCredentialHints(
 export function resolveConfiguredGoogleAdsAuthType(
   ctx: GoogleAdsAuthTypeHintContext
 ): 'oauth' | 'service_account' {
-  return resolveGoogleAdsAuthTypeFromCredentialHints(ctx, { unconfiguredDefault: 'oauth' }) ?? 'oauth'
+  return (
+    resolveGoogleAdsAuthTypeFromCredentialHints(ctx, { unconfiguredDefault: 'oauth' }) ?? 'oauth'
+  )
 }
 
 /**
@@ -737,18 +736,14 @@ export async function assertNoConflictingGoogleAdsAuth(
       [ownerUserId]
     )
     if (existingSa) {
-      throw new Error(
-        '当前已配置服务账号认证，请先在设置页删除服务账号后再配置 OAuth。'
-      )
+      throw new Error('当前已配置服务账号认证，请先在设置页删除服务账号后再配置 OAuth。')
     }
     return
   }
 
   const credentials = await getGoogleAdsCredentialsRaw(ownerUserId)
   if (credentials?.refresh_token) {
-    throw new Error(
-      '当前已配置 OAuth 认证，请先在设置页删除 OAuth 后再配置服务账号。'
-    )
+    throw new Error('当前已配置 OAuth 认证，请先在设置页删除 OAuth 后再配置服务账号。')
   }
 }
 
@@ -846,16 +841,12 @@ export function resolveGoogleAdsCredentialStatusFields(ctx: GoogleAdsAuthContext
     loginCustomerId,
     apiAccessLevel: ctx.apiAccessLevel || 'explorer',
     lastVerifiedAt: isServiceAccountAuth
-      ? serviceAccount?.updatedAt ?? null
-      : credentials?.last_verified_at ?? null,
+      ? (serviceAccount?.updatedAt ?? null)
+      : (credentials?.last_verified_at ?? null),
     isActive: isServiceAccountAuth
       ? Boolean(serviceAccount)
       : isDbRowActive(credentials?.is_active),
-    createdAt: isServiceAccountAuth
-      ? serviceAccount?.createdAt
-      : credentials?.created_at,
-    updatedAt: isServiceAccountAuth
-      ? serviceAccount?.updatedAt
-      : credentials?.updated_at,
+    createdAt: isServiceAccountAuth ? serviceAccount?.createdAt : credentials?.created_at,
+    updatedAt: isServiceAccountAuth ? serviceAccount?.updatedAt : credentials?.updated_at,
   }
 }

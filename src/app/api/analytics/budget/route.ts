@@ -25,7 +25,9 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('end_date')
     const campaignIdRaw = searchParams.get('campaign_id')
     const requestedCurrencyRaw = searchParams.get('currency')
-    const requestedCurrency = requestedCurrencyRaw ? requestedCurrencyRaw.trim().toUpperCase() : null
+    const requestedCurrency = requestedCurrencyRaw
+      ? requestedCurrencyRaw.trim().toUpperCase()
+      : null
 
     const campaignId = campaignIdRaw ? parseInt(campaignIdRaw, 10) : null
     if (campaignIdRaw && (campaignId === null || isNaN(campaignId))) {
@@ -55,43 +57,65 @@ export async function GET(request: NextRequest) {
     }
 
     // 获取可用币种（优先使用 performance 中出现的币种；无数据则回退到账号币种）
-    const currencyRows = await db.query<any>(`
+    const currencyRows = await db.query<any>(
+      `
       SELECT DISTINCT cp.currency as currency
       FROM campaign_performance cp
       WHERE ${baseWhereConditions.join(' AND ')}
       ORDER BY currency ASC
-    `, baseParams)
+    `,
+      baseParams
+    )
 
-    let currencies = Array.from(new Set(
-      (currencyRows || [])
-        .map((r: any) => String(r.currency || '').trim().toUpperCase())
-        .filter(Boolean)
-    ))
+    let currencies = Array.from(
+      new Set(
+        (currencyRows || [])
+          .map((r: any) =>
+            String(r.currency || '')
+              .trim()
+              .toUpperCase()
+          )
+          .filter(Boolean)
+      )
+    )
 
     if (currencies.length === 0) {
-      const accountCurrencyRows = await db.query<any>(`
+      const accountCurrencyRows = await db.query<any>(
+        `
         SELECT DISTINCT COALESCE(currency, 'USD') as currency
         FROM google_ads_accounts
         WHERE user_id = ?
         ORDER BY currency ASC
-      `, [userId])
-      currencies = Array.from(new Set(
-        (accountCurrencyRows || [])
-          .map((r: any) => String(r.currency || '').trim().toUpperCase())
-          .filter(Boolean)
-      ))
+      `,
+        [userId]
+      )
+      currencies = Array.from(
+        new Set(
+          (accountCurrencyRows || [])
+            .map((r: any) =>
+              String(r.currency || '')
+                .trim()
+                .toUpperCase()
+            )
+            .filter(Boolean)
+        )
+      )
     }
 
     const defaultCurrency = currencies.length > 0 ? currencies[0] : 'USD'
-    const reportingCurrency = requestedCurrency && currencies.includes(requestedCurrency)
-      ? requestedCurrency
-      : defaultCurrency
+    const reportingCurrency =
+      requestedCurrency && currencies.includes(requestedCurrency)
+        ? requestedCurrency
+        : defaultCurrency
     const hasMixedCurrency = currencies.length > 1
 
     const whereConditions = [...baseWhereConditions, 'cp.currency = ?']
     const params: any[] = [...baseParams, reportingCurrency]
 
-    const allCampaignSpendWhereConditions = [...baseWhereConditions, 'COALESCE(cp.currency, \'USD\') = ?']
+    const allCampaignSpendWhereConditions = [
+      ...baseWhereConditions,
+      "COALESCE(cp.currency, 'USD') = ?",
+    ]
     const allCampaignSpendParams: any[] = [...baseParams, reportingCurrency]
 
     // 计算日期范围（天数）
@@ -100,7 +124,8 @@ export async function GET(request: NextRequest) {
     const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) || 1
 
     // 1. 整体预算使用情况
-    const overallBudget = await db.queryOne(`
+    const overallBudget = (await db.queryOne(
+      `
       SELECT
         SUM(c.budget_amount) as total_budget,
         SUM(cp.cost) as total_spent,
@@ -112,14 +137,19 @@ export async function GET(request: NextRequest) {
       WHERE c.user_id = ? AND c.status = 'ENABLED'
         AND COALESCE(gaa.currency, 'USD') = ?
         ${campaignId ? 'AND c.id = ?' : ''}
-    `, [...params, userId, reportingCurrency, ...(campaignId ? [campaignId] : [])]) as any
+    `,
+      [...params, userId, reportingCurrency, ...(campaignId ? [campaignId] : [])]
+    )) as any
 
-    const allCampaignSpend = await db.queryOne(`
+    const allCampaignSpend = (await db.queryOne(
+      `
       SELECT
         COALESCE(SUM(cp.cost), 0) as total_spent_all_campaigns
       FROM campaign_performance cp
       WHERE ${allCampaignSpendWhereConditions.join(' AND ')}
-    `, allCampaignSpendParams) as any
+    `,
+      allCampaignSpendParams
+    )) as any
 
     const totalBudgetRaw = toNumber(overallBudget.total_budget)
     const totalSpentRaw = toNumber(overallBudget.total_spent)
@@ -134,7 +164,8 @@ export async function GET(request: NextRequest) {
     const projectedTotalSpend = dailyAvgSpend * 30 // 预测30天花费
 
     // 2. 按Campaign的预算使用
-    const campaignBudgets = await db.query(`
+    const campaignBudgets = (await db.query(
+      `
       SELECT
         c.id,
         c.campaign_name,
@@ -154,7 +185,9 @@ export async function GET(request: NextRequest) {
         ${campaignId ? 'AND c.id = ?' : ''}
       GROUP BY c.id, c.campaign_name, c.budget_amount, c.budget_type, o.brand
       ORDER BY c.budget_amount DESC
-    `, [...params, userId, reportingCurrency, ...(campaignId ? [campaignId] : [])]) as any[]
+    `,
+      [...params, userId, reportingCurrency, ...(campaignId ? [campaignId] : [])]
+    )) as any[]
 
     const campaignBudgetData = campaignBudgets.map((row) => {
       const budgetRaw = toNumber(row.budget_amount)
@@ -190,7 +223,8 @@ export async function GET(request: NextRequest) {
     })
 
     // 3. 预算使用趋势（按日）
-    const budgetTrend = await db.query(`
+    const budgetTrend = (await db.query(
+      `
       SELECT
         DATE(cp.date) as date,
         SUM(cp.cost) as daily_spent
@@ -198,7 +232,9 @@ export async function GET(request: NextRequest) {
       WHERE ${whereConditions.join(' AND ')}
       GROUP BY DATE(cp.date)
       ORDER BY date ASC
-    `, params) as any[]
+    `,
+      params
+    )) as any[]
 
     let cumulativeSpent = 0
     const budgetTrendData = budgetTrend.map((row) => {
@@ -212,7 +248,8 @@ export async function GET(request: NextRequest) {
     })
 
     // 4. 预算分配分析（按Offer）
-    const budgetByOffer = await db.query(`
+    const budgetByOffer = (await db.query(
+      `
       SELECT
         o.id,
         o.brand,
@@ -233,7 +270,9 @@ export async function GET(request: NextRequest) {
       HAVING SUM(cp.cost) > 0
       ORDER BY spent DESC
       LIMIT 10
-    `, [...params, userId, reportingCurrency, ...(campaignId ? [campaignId] : [])]) as any[]
+    `,
+      [...params, userId, reportingCurrency, ...(campaignId ? [campaignId] : [])]
+    )) as any[]
 
     const budgetByOfferData = budgetByOffer.map((row) => {
       const allocatedBudget = toNumber(row.allocated_budget)

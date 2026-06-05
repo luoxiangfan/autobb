@@ -30,8 +30,8 @@ export interface EnhancedKeyword {
   source: string
   variants: string[]
   trend: 'rising' | 'stable' | 'declining'
-  seasonality: number  // 0-1，季节性指数
-  confidence: number   // 0-1，置信度
+  seasonality: number // 0-1，季节性指数
+  confidence: number // 0-1，置信度
   estimatedCTR?: number
   estimatedConversionRate?: number
 }
@@ -63,7 +63,12 @@ function normalizeEvidencePhrase(raw: string, maxTokens = 4): string | null {
     .split(/\s+/)
     .filter(Boolean)
     .filter((token) => token.length >= 2 || /\d/.test(token))
-    .filter((token) => !/^(with|for|and|the|a|an|in|on|of|to|by|from|new|best|top|sale|deal|discount|shop|buy)$/i.test(token))
+    .filter(
+      (token) =>
+        !/^(with|for|and|the|a|an|in|on|of|to|by|from|new|best|top|sale|deal|discount|shop|buy)$/i.test(
+          token
+        )
+    )
     .slice(0, maxTokens)
 
   if (tokens.length === 0) return null
@@ -172,20 +177,16 @@ export async function extractKeywordsEnhanced(
     // 过滤和排序
     console.log('⚙️ 过滤和排序关键词...')
     const filtered = filterAndRankKeywords(withMetrics, {
-      minSearchVolume: 100,  // 降低阈值以支持小众产品
+      minSearchVolume: 100, // 降低阈值以支持小众产品
       maxCPC: 50,
     })
 
     // 生成多语言变体
     console.log('🌍 生成多语言变体...')
-    const withVariants = await generateKeywordVariants(
-      filtered,
-      targetLanguage
-    )
+    const withVariants = await generateKeywordVariants(filtered, targetLanguage)
 
     console.log(`✅ 关键词提取完成，共${withVariants.length}个关键词`)
     return withVariants
-
   } catch (error) {
     console.error('❌ 关键词提取失败:', error)
     throw error
@@ -283,9 +284,7 @@ async function extractIntentKeywords(
   if (!normalizedBrand) return []
 
   const categoryTokens = new Set(
-    (normalizeEvidencePhrase(category, 3) || '')
-      .split(/\s+/)
-      .filter(Boolean)
+    (normalizeEvidencePhrase(category, 3) || '').split(/\s+/).filter(Boolean)
   )
   const brandTokenSet = new Set(normalizedBrand.split(/\s+/).filter(Boolean))
 
@@ -393,9 +392,7 @@ async function extractCompetitorKeywords(
 /**
  * 关键词去重
  */
-function deduplicateKeywords(
-  keywords: Partial<EnhancedKeyword>[]
-): Partial<EnhancedKeyword>[] {
+function deduplicateKeywords(keywords: Partial<EnhancedKeyword>[]): Partial<EnhancedKeyword>[] {
   const seen = new Set<string>()
   return keywords.filter((kw) => {
     const lower = (kw.keyword || '').toLowerCase()
@@ -414,7 +411,7 @@ function deduplicateKeywords(
 async function enrichKeywordsWithMetrics(
   keywords: Partial<EnhancedKeyword>[],
   targetCountry: string,
-  targetLanguage: string,  // 添加语言参数
+  targetLanguage: string, // 添加语言参数
   userId: number,
   offerId?: number,
   plannerSession?: KeywordPlannerPreparedSession
@@ -437,7 +434,7 @@ async function enrichKeywordsWithMetrics(
     const volumes = volumeResult.volumes
 
     // 创建keyword到volume的映射
-    const volumeMap = new Map(volumes.map(v => [v.keyword.toLowerCase(), v]))
+    const volumeMap = new Map(volumes.map((v) => [v.keyword.toLowerCase(), v]))
 
     return keywords.map((kw) => {
       const kwLower = (kw.keyword || '').toLowerCase()
@@ -450,9 +447,10 @@ async function enrichKeywordsWithMetrics(
 
       // 将competition字符串转换为我们的格式
       const competitionLevel = volumeData?.competition?.toLowerCase() || 'medium'
-      const competition = competitionLevel === 'low' || competitionLevel === 'high'
-        ? competitionLevel as 'low' | 'high'
-        : 'medium' as const
+      const competition =
+        competitionLevel === 'low' || competitionLevel === 'high'
+          ? (competitionLevel as 'low' | 'high')
+          : ('medium' as const)
 
       return {
         keyword: kw.keyword || '',
@@ -501,7 +499,7 @@ function filterAndRankKeywords(
   const { minSearchVolume = 100, maxCPC = 50 } = options
 
   // 🔧 修复(2025-12-26): 服务账号模式下无法获取搜索量，跳过过滤
-  const hasAnyVolume = keywords.some(kw => kw.searchVolume > 0)
+  const hasAnyVolume = keywords.some((kw) => kw.searchVolume > 0)
 
   return keywords
     .filter((kw) => {
@@ -512,8 +510,7 @@ function filterAndRankKeywords(
     .sort((a, b) => {
       // 按优先级排序
       const priorityOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 }
-      const priorityDiff =
-        (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2)
+      const priorityDiff = (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2)
       if (priorityDiff !== 0) return priorityDiff
 
       // 按搜索量排序

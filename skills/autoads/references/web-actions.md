@@ -15,34 +15,41 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 ## Read Actions (proxy unless noted)
 
 ### `offer.extract.status`
+
 - Method/Path: `GET /api/offers/extract/status/:taskId`
 - Query/body: none.
 - 仅当你拿到真实 `offer_tasks.id` 时可调用；不要使用 OpenClaw `commands/execute` 返回的 `taskId`。
 
 ### `creative.task.get`
+
 - Method/Path: `GET /api/creative-tasks/:taskId`
 - Query/body: none.
 - 仅当你拿到真实 `creative_tasks.id` 时可调用；不要使用 OpenClaw `commands/execute` 返回的 `taskId`。
 
 ### `creative.task.stream`
+
 - Method/Path: `GET /api/creative-tasks/:taskId/stream`
 - Query/body: none.
 
 ### `creative.list`
+
 - Preferred: `GET /api/offers/:id/creatives`
 - Launch / 管理页读取：`GET /api/creatives?offerId=:id`（可选 `publishableOnly=true` 过滤 RSA 15/4）
 
 ### `campaign.publish.status.poll`
+
 - Method/Path: `GET /api/offers/:offerId/campaigns/status`
 - Required query: `campaignId=<local campaign id>`
 
 ### `openclaw.runs.list` (direct)
+
 - Method/Path: `GET /api/openclaw/commands/runs`
 - Recommended query: `channel`, `senderId`, optional `accountId`, `tenantKey`, `limit`.
 
 ## Write Actions (execute)
 
 ### `offer.create`
+
 - Method/Path: `POST /api/offers/extract`
 - Required body keys: `affiliate_link`, `target_country`
 - Optional body keys: `product_price`, `commission_payout`, `brand_name`, `page_type`, `store_product_links`, `skipCache`, `skipWarmup`
@@ -62,6 +69,7 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 ```
 
 ### `offer.update`
+
 - Method/Path: `PUT /api/offers/:id`
 - Required body keys: at least one field
 - Allowed body keys only:
@@ -70,10 +78,12 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 - `page_type`, `store_product_links`, `product_price`, `commission_payout`, `is_active`
 
 ### `offer.rebuild`
+
 - Method/Path: `POST /api/offers/:id/rebuild`
 - Body: empty object `{}`.
 
 ### `creative.generate.queue`
+
 - Method/Path: `POST /api/offers/:id/generate-creatives-queue`
 - Required body keys: none (object required)
 - Optional body keys: `maxRetries`, `targetRating`, `synthetic`, `bucket`
@@ -89,10 +99,12 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 ```
 
 ### `creative.select`
+
 - Method/Path: `POST /api/ad-creatives/:id/select`
 - Body: empty object `{}`.
 
 ### `creative.batch.generate.queue`
+
 - Method/Path: `POST /api/offers/batch/generate-creatives-queue`
 - Required body keys: `offerIds`
 - Constraints: 1..50 integer IDs.
@@ -104,6 +116,7 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 ```
 
 ### `keyword.ideas`
+
 - Method/Path: `POST /api/offers/:id/keyword-ideas`
 - Required body keys: none (object required)
 - Optional body keys: `seedKeywords`, `useUrl`, `filterOptions`
@@ -120,14 +133,17 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 ```
 
 ### `keyword.pool.generate`
+
 - Method/Path: `POST /api/offers/:id/keyword-pool`
 - Optional body keys: `forceRegenerate`, `keywords`
 
 ### `keyword.pool.delete`
+
 - Method/Path: `DELETE /api/offers/:id/keyword-pool`
 - Body: empty object `{}`.
 
 ### `campaign.publish`
+
 - Method/Path: `POST /api/campaigns/publish`
 - Required top-level keys:
 - `offerId`, `googleAdsAccountId`, `campaignConfig`
@@ -145,6 +161,7 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 - `callouts`, `sitelinks`
 
 ### `campaign.toggle-status`
+
 - Method/Path: `PUT /api/campaigns/:id/toggle-status`
 - Required body keys: `status`
 - Allowed values: `PAUSED` or `ENABLED`
@@ -156,6 +173,7 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 ```
 
 ### `campaign.update-cpc`
+
 - Method/Path: `PUT /api/campaigns/:id/update-cpc`
 - Required body keys: `newCpc`
 - Constraint: positive number.
@@ -167,6 +185,7 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 ```
 
 ### `campaign.offline`
+
 - Method/Path: `POST /api/campaigns/:id/offline`
 - Optional body keys:
 - `blacklistOffer`, `forceLocalOffline`, `removeGoogleAdsCampaign`
@@ -182,6 +201,7 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 ```
 
 ### `clickfarm.create`
+
 - Method/Path: `POST /api/click-farm/tasks`
 - Required body keys: `offer_id`, `daily_click_count`
 - Optional body keys:
@@ -200,6 +220,7 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 ```
 
 ### `offer.unlink`
+
 - Method/Path: `POST /api/offers/:id/unlink`
 - Required body keys: `accountId`
 - Optional body keys: `removeGoogleAdsCampaigns`
@@ -212,6 +233,7 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 ```
 
 ### `googleAdsAccount.delete`
+
 - Method/Path: `DELETE /api/google-ads-accounts/:id`
 - Optional: `removeGoogleAdsCampaigns` (query **or** JSON body; query wins if both set)
 - Body may be omitted; JSON without `Content-Type` is accepted.
@@ -227,10 +249,12 @@ Last verified: 2026-02-15 (from current Web pages + API routes in repo).
 ```
 
 ### `offer.blacklist.add`
+
 - Method/Path: `POST /api/offers/:id/blacklist`
 - Body: empty object `{}`.
 
 ### `offer.blacklist.remove`
+
 - Method/Path: `DELETE /api/offers/:id/blacklist`
 - Body: empty object `{}`.
 

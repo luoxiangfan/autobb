@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import { parseOpenclawCommandIntent } from '@/lib/openclaw/commands/intent-parser'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 
 export const dynamic = 'force-dynamic'
 
 const parseSchema = z.object({
-  method: z.string().min(1),
-  path: z.string().min(1),
+  method: z.string().min(1, zErr.required),
+  path: z.string().min(1, zErr.required),
   intent: z.string().optional(),
 })
 
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
   const parsed = parseSchema.safeParse(rawBody)
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.errors[0]?.message || '请求参数错误' },
+      { error: parsed.error.issues[0]?.message || '请求参数错误' },
       { status: 400 }
     )
   }

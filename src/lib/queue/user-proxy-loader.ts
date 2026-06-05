@@ -57,9 +57,8 @@ function expandProxyUrlCountries(proxyUrls: ProxyUrlConfig[]): ProxyUrlConfig[] 
     if (!rawCountry || !url) continue
 
     const countryCandidates = getCountryCandidates(rawCountry)
-    const finalCandidates = countryCandidates.size > 0
-      ? Array.from(countryCandidates)
-      : [rawCountry.toUpperCase()]
+    const finalCandidates =
+      countryCandidates.size > 0 ? Array.from(countryCandidates) : [rawCountry.toUpperCase()]
 
     for (const country of finalCandidates) {
       const key = `${country}\u0000${url}`
@@ -142,7 +141,7 @@ function parseProxyEndpoint(proxyUrl: string): ParsedProxyEndpoint | null {
 
       return {
         host: url.hostname,
-        port: url.port ? parseInt(url.port, 10) : (url.protocol === 'https:' ? 443 : 80),
+        port: url.port ? parseInt(url.port, 10) : url.protocol === 'https:' ? 443 : 80,
         username: url.username || undefined,
         password: url.password || undefined,
         protocol,
@@ -182,24 +181,26 @@ export function isProxyRequiredForTaskType(taskType: string): boolean {
  * 需要保留原始URL以便在实际使用时调用API获取代理IP
  */
 export function convertUserProxiesToQueueFormat(proxies: ProxyUrlConfig[]): QueueProxyConfig[] {
-  return proxies.map(proxy => {
-    const parsed = parseProxyEndpoint(proxy.url)
-    if (!parsed) {
-      console.warn(`解析代理URL失败: ${proxy.url}`)
-      return null
-    }
+  return proxies
+    .map((proxy) => {
+      const parsed = parseProxyEndpoint(proxy.url)
+      if (!parsed) {
+        console.warn(`解析代理URL失败: ${proxy.url}`)
+        return null
+      }
 
-    return {
-      host: parsed.host,
-      port: parsed.port,
-      username: parsed.username,
-      password: parsed.password,
-      protocol: parsed.protocol,
-      country: proxy.country,
-      // 保留原始URL，用于IPRocket等动态代理服务
-      originalUrl: proxy.url
-    }
-  }).filter((proxy): proxy is NonNullable<typeof proxy> => proxy !== null)
+      return {
+        host: parsed.host,
+        port: parsed.port,
+        username: parsed.username,
+        password: parsed.password,
+        protocol: parsed.protocol,
+        country: proxy.country,
+        // 保留原始URL，用于IPRocket等动态代理服务
+        originalUrl: proxy.url,
+      }
+    })
+    .filter((proxy): proxy is NonNullable<typeof proxy> => proxy !== null)
 }
 
 /**
@@ -216,9 +217,9 @@ export async function getUserProxiesForQueue(userId: number): Promise<QueueProxy
   const queueProxies = convertUserProxiesToQueueFormat(userProxies)
 
   // 添加userId标识
-  return queueProxies.map(proxy => ({
+  return queueProxies.map((proxy) => ({
     ...proxy,
-    userId
+    userId,
   }))
 }
 
@@ -242,11 +243,13 @@ async function getUserOnlyProxyUrls(userId: number): Promise<ProxyUrlConfig[]> {
       ORDER BY updated_at DESC
       LIMIT 1
     `
-    const row = await db.queryOne(query, [userId]) as {
-      value: string | null
-      encrypted_value: string | null
-      is_sensitive: number | boolean
-    } | undefined
+    const row = (await db.queryOne(query, [userId])) as
+      | {
+          value: string | null
+          encrypted_value: string | null
+          is_sensitive: number | boolean
+        }
+      | undefined
 
     if (!row) {
       return []
@@ -302,9 +305,10 @@ export async function getProxyForCountry(
 
   // 查找匹配的国家
   const targetCountryCandidates = getCountryCandidates(targetCountry)
-  const matched = proxies.find(proxy =>
-    Array.from(getCountryCandidates(String(proxy.country || '')))
-      .some(code => targetCountryCandidates.has(code))
+  const matched = proxies.find((proxy) =>
+    Array.from(getCountryCandidates(String(proxy.country || ''))).some((code) =>
+      targetCountryCandidates.has(code)
+    )
   )
 
   if (matched) {

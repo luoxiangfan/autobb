@@ -86,9 +86,7 @@ export default function CreativesAnalyticsSection({
         <div className="lg:col-span-2">
           <TrendChart
             data={trendsData}
-            metrics={[
-              { key: 'newCreatives', label: '新增创意', color: 'hsl(217, 91%, 60%)' },
-            ]}
+            metrics={[{ key: 'newCreatives', label: '新增创意', color: 'hsl(217, 91%, 60%)' }]}
             title="新增创意趋势"
             description="每日新增创意数量"
             loading={trendsLoading}
@@ -126,19 +124,27 @@ export default function CreativesAnalyticsSection({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">优秀 (≥90)</span>
-                    <span className="text-sm font-semibold text-green-600">{distributions.quality.excellent || 0}</span>
+                    <span className="text-sm font-semibold text-green-600">
+                      {distributions.quality.excellent || 0}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">良好 (75-89)</span>
-                    <span className="text-sm font-semibold text-blue-600">{distributions.quality.good || 0}</span>
+                    <span className="text-sm font-semibold text-blue-600">
+                      {distributions.quality.good || 0}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">一般 (60-74)</span>
-                    <span className="text-sm font-semibold text-yellow-600">{distributions.quality.average || 0}</span>
+                    <span className="text-sm font-semibold text-yellow-600">
+                      {distributions.quality.average || 0}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">较差 (&lt;60)</span>
-                    <span className="text-sm font-semibold text-red-600">{distributions.quality.poor || 0}</span>
+                    <span className="text-sm font-semibold text-red-600">
+                      {distributions.quality.poor || 0}
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -156,11 +162,15 @@ export default function CreativesAnalyticsSection({
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">已选用</span>
-                    <span className="text-sm font-semibold text-green-600">{usageStats.selected}</span>
+                    <span className="text-sm font-semibold text-green-600">
+                      {usageStats.selected}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">使用率</span>
-                    <span className="text-sm font-semibold text-blue-600">{usageStats.usageRate}%</span>
+                    <span className="text-sm font-semibold text-blue-600">
+                      {usageStats.usageRate}%
+                    </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
                     <div

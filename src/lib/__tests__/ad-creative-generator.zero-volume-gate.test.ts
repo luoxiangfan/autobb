@@ -8,10 +8,16 @@ import {
 
 describe('ad-creative-generator zero-volume gate', () => {
   it('maps legacy sources into normalized source types', () => {
-    expect(normalizeSourceTypeFromLegacySource({ source: 'AI_ENHANCED' })).toBe('AI_ENHANCED_PERSISTED')
+    expect(normalizeSourceTypeFromLegacySource({ source: 'AI_ENHANCED' })).toBe(
+      'AI_ENHANCED_PERSISTED'
+    )
     expect(normalizeSourceTypeFromLegacySource({ source: 'AI_GENERATED' })).toBe('AI_LLM_RAW')
-    expect(normalizeSourceTypeFromLegacySource({ source: 'SCORING_SUGGESTION' })).toBe('GAP_INDUSTRY_BRANDED')
-    expect(normalizeSourceTypeFromLegacySource({ source: 'KEYWORD_POOL' })).toBe('CANONICAL_BUCKET_VIEW')
+    expect(normalizeSourceTypeFromLegacySource({ source: 'SCORING_SUGGESTION' })).toBe(
+      'GAP_INDUSTRY_BRANDED'
+    )
+    expect(normalizeSourceTypeFromLegacySource({ source: 'KEYWORD_POOL' })).toBe(
+      'CANONICAL_BUCKET_VIEW'
+    )
   })
 
   it('always rejects derived canonical bucket view for zero-volume pass', () => {

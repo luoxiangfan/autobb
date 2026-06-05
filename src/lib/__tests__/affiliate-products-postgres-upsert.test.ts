@@ -28,27 +28,32 @@ describe('upsertAffiliateProducts postgres two-phase upsert', () => {
   it('builds a typed incoming CTE to avoid text inference mismatches', async () => {
     const { upsertAffiliateProducts } = await import('@/lib/affiliate-products')
 
-    const result = await upsertAffiliateProducts(1, 'partnerboost', [
-      {
-        platform: 'partnerboost',
-        mid: 'PB-MID-001',
-        asin: 'B000TEST01',
-        brand: 'Brand',
-        productName: 'Demo Product',
-        productUrl: 'https://example.com/product',
-        promoLink: 'https://example.com/promo',
-        shortPromoLink: null,
-        allowedCountries: ['US'],
-        priceAmount: 19.99,
-        priceCurrency: 'USD',
-        commissionRate: 10,
-        commissionAmount: 2,
-        commissionRateMode: 'percent',
-        reviewCount: 120,
-        isDeepLink: false,
-        isConfirmedInvalid: false,
-      },
-    ], { progressEvery: 1 })
+    const result = await upsertAffiliateProducts(
+      1,
+      'partnerboost',
+      [
+        {
+          platform: 'partnerboost',
+          mid: 'PB-MID-001',
+          asin: 'B000TEST01',
+          brand: 'Brand',
+          productName: 'Demo Product',
+          productUrl: 'https://example.com/product',
+          promoLink: 'https://example.com/promo',
+          shortPromoLink: null,
+          allowedCountries: ['US'],
+          priceAmount: 19.99,
+          priceCurrency: 'USD',
+          commissionRate: 10,
+          commissionAmount: 2,
+          commissionRateMode: 'percent',
+          reviewCount: 120,
+          isDeepLink: false,
+          isConfirmedInvalid: false,
+        },
+      ],
+      { progressEvery: 1 }
+    )
 
     expect(result).toMatchObject({
       totalFetched: 1,
@@ -80,7 +85,9 @@ describe('upsertAffiliateProducts postgres two-phase upsert', () => {
     expect(updateSql).toContain('WHERE p.user_id = incoming.user_id')
     expect(updateSql).toContain('p.merchant_id IS DISTINCT FROM incoming.merchant_id')
     expect(updateSql).toContain('price_amount = COALESCE(incoming.price_amount, p.price_amount)')
-    expect(updateSql).toContain('price_currency = COALESCE(incoming.price_currency, p.price_currency)')
+    expect(updateSql).toContain(
+      'price_currency = COALESCE(incoming.price_currency, p.price_currency)'
+    )
     expect(updateSql).not.toContain('WHERE p.user_id = incoming.user_id::integer')
 
     expect(touchSql).toContain('SET')
@@ -93,10 +100,16 @@ describe('upsertAffiliateProducts postgres two-phase upsert', () => {
     expect(insertSql).toContain('commission_rate_mode = CASE')
     expect(insertSql).toContain('is_deeplink = CASE')
     expect(insertSql).toContain('is_confirmed_invalid = CASE')
-    expect(insertSql).toContain('THEN COALESCE(EXCLUDED.price_amount, affiliate_products.price_amount)')
-    expect(insertSql).toContain('THEN COALESCE(EXCLUDED.price_currency, affiliate_products.price_currency)')
+    expect(insertSql).toContain(
+      'THEN COALESCE(EXCLUDED.price_amount, affiliate_products.price_amount)'
+    )
+    expect(insertSql).toContain(
+      'THEN COALESCE(EXCLUDED.price_currency, affiliate_products.price_currency)'
+    )
     expect(insertSql).toContain('updated_at = CASE')
-    expect(insertSql).toContain('affiliate_products.last_synced_at IS DISTINCT FROM EXCLUDED.last_synced_at')
+    expect(insertSql).toContain(
+      'affiliate_products.last_synced_at IS DISTINCT FROM EXCLUDED.last_synced_at'
+    )
     expect(insertSql).not.toContain('ON p.user_id = incoming.user_id::integer')
 
     expect(updateParams).toHaveLength(22)
@@ -122,46 +135,51 @@ describe('upsertAffiliateProducts postgres two-phase upsert', () => {
       return { changes: 1 }
     })
 
-    const result = await upsertAffiliateProducts(1, 'partnerboost', [
-      {
-        platform: 'partnerboost',
-        mid: 'PB-MID-100',
-        asin: 'B000TIME01',
-        brand: 'BrandA',
-        productName: 'ProdA',
-        productUrl: 'https://example.com/a',
-        promoLink: 'https://example.com/a?promo=1',
-        shortPromoLink: null,
-        allowedCountries: ['US'],
-        priceAmount: 10,
-        priceCurrency: 'USD',
-        commissionRate: 8,
-        commissionAmount: 0.8,
-        commissionRateMode: 'percent',
-        reviewCount: 1,
-        isDeepLink: false,
-        isConfirmedInvalid: false,
-      },
-      {
-        platform: 'partnerboost',
-        mid: 'PB-MID-101',
-        asin: 'B000TIME02',
-        brand: 'BrandB',
-        productName: 'ProdB',
-        productUrl: 'https://example.com/b',
-        promoLink: 'https://example.com/b?promo=1',
-        shortPromoLink: null,
-        allowedCountries: ['US'],
-        priceAmount: 12,
-        priceCurrency: 'USD',
-        commissionRate: 9,
-        commissionAmount: 1.08,
-        commissionRateMode: 'percent',
-        reviewCount: 2,
-        isDeepLink: false,
-        isConfirmedInvalid: false,
-      },
-    ], { progressEvery: 1 })
+    const result = await upsertAffiliateProducts(
+      1,
+      'partnerboost',
+      [
+        {
+          platform: 'partnerboost',
+          mid: 'PB-MID-100',
+          asin: 'B000TIME01',
+          brand: 'BrandA',
+          productName: 'ProdA',
+          productUrl: 'https://example.com/a',
+          promoLink: 'https://example.com/a?promo=1',
+          shortPromoLink: null,
+          allowedCountries: ['US'],
+          priceAmount: 10,
+          priceCurrency: 'USD',
+          commissionRate: 8,
+          commissionAmount: 0.8,
+          commissionRateMode: 'percent',
+          reviewCount: 1,
+          isDeepLink: false,
+          isConfirmedInvalid: false,
+        },
+        {
+          platform: 'partnerboost',
+          mid: 'PB-MID-101',
+          asin: 'B000TIME02',
+          brand: 'BrandB',
+          productName: 'ProdB',
+          productUrl: 'https://example.com/b',
+          promoLink: 'https://example.com/b?promo=1',
+          shortPromoLink: null,
+          allowedCountries: ['US'],
+          priceAmount: 12,
+          priceCurrency: 'USD',
+          commissionRate: 9,
+          commissionAmount: 1.08,
+          commissionRateMode: 'percent',
+          reviewCount: 2,
+          isDeepLink: false,
+          isConfirmedInvalid: false,
+        },
+      ],
+      { progressEvery: 1 }
+    )
 
     expect(result).toMatchObject({
       totalFetched: 2,

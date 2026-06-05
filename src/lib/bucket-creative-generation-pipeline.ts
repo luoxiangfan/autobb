@@ -36,7 +36,10 @@ import type {
 } from '@/lib/google-ads-accounts-auth'
 import type { OfferKeywordPool, PoolKeywordData } from '@/lib/offer-keyword-pool'
 import type { Offer } from '@/lib/offers'
-import { getSearchTermFeedbackHints, type SearchTermFeedbackHints } from '@/lib/search-term-feedback-hints'
+import {
+  getSearchTermFeedbackHints,
+  type SearchTermFeedbackHints,
+} from '@/lib/search-term-feedback-hints'
 import type { SearchTermFeedbackHintsInput } from '@/lib/ad-creative-generator'
 import { parseBooleanEnv } from '@/lib/parse-env'
 import type { RetryFailureType } from '@/lib/rsa-quality-gate'
@@ -115,7 +118,9 @@ export function assertPostGenerationPersistenceGate(params: {
 export function normalizePipelineBucket(
   bucket: string | null | undefined
 ): CreativeBucketSlot | null {
-  const normalized = String(bucket || '').trim().toUpperCase()
+  const normalized = String(bucket || '')
+    .trim()
+    .toUpperCase()
   if (normalized === 'C') return 'B'
   if (normalized === 'S') return 'D'
   if (normalized === 'A' || normalized === 'B' || normalized === 'D') {
@@ -196,19 +201,28 @@ function normalizeKeywordMapKey(value: unknown): string {
 
 export function resolveOfferLinkType(offer: Offer): 'product' | 'store' {
   const record = offer as unknown as Record<string, unknown>
-  const pageType = String(record.page_type || '').trim().toLowerCase()
+  const pageType = String(record.page_type || '')
+    .trim()
+    .toLowerCase()
   if (pageType === 'store' || pageType === 'product') {
     return pageType
   }
-  const linkType = String(record.link_type || '').trim().toLowerCase()
+  const linkType = String(record.link_type || '')
+    .trim()
+    .toLowerCase()
   if (linkType === 'store') return 'store'
   return 'product'
 }
 
-export function buildKeywordPoolVolumeHintMap(keywordPool: OfferKeywordPool | null | undefined): Map<string, {
-  searchVolume: number
-  volumeUnavailableReason?: string
-}> {
+export function buildKeywordPoolVolumeHintMap(
+  keywordPool: OfferKeywordPool | null | undefined
+): Map<
+  string,
+  {
+    searchVolume: number
+    volumeUnavailableReason?: string
+  }
+> {
   const hints = new Map<string, { searchVolume: number; volumeUnavailableReason?: string }>()
   if (!keywordPool) return hints
 
@@ -232,7 +246,9 @@ export function buildKeywordPoolVolumeHintMap(keywordPool: OfferKeywordPool | nu
       if (!key) continue
 
       const searchVolume = Number((item as { searchVolume?: number })?.searchVolume || 0)
-      const volumeUnavailableReasonRaw = String((item as { volumeUnavailableReason?: string })?.volumeUnavailableReason || '').trim()
+      const volumeUnavailableReasonRaw = String(
+        (item as { volumeUnavailableReason?: string })?.volumeUnavailableReason || ''
+      ).trim()
       const volumeUnavailableReason = volumeUnavailableReasonRaw || undefined
 
       const existing = hints.get(key)
@@ -266,7 +282,8 @@ export function backfillCreativeKeywordVolumesFromPoolHints(
   hints: Map<string, { searchVolume: number; volumeUnavailableReason?: string }>,
   scopeLabel: string
 ): void {
-  if (!Array.isArray(creative.keywordsWithVolume) || creative.keywordsWithVolume.length === 0) return
+  if (!Array.isArray(creative.keywordsWithVolume) || creative.keywordsWithVolume.length === 0)
+    return
   if (!hints || hints.size === 0) return
 
   let patched = 0
@@ -286,10 +303,9 @@ export function backfillCreativeKeywordVolumesFromPoolHints(
     return {
       ...item,
       searchVolume: hint.searchVolume,
-      volumeUnavailableReason: (
-        (item as { volumeUnavailableReason?: string }).volumeUnavailableReason
-        || hint.volumeUnavailableReason
-      ) as typeof item.volumeUnavailableReason,
+      volumeUnavailableReason: ((item as { volumeUnavailableReason?: string })
+        .volumeUnavailableReason ||
+        hint.volumeUnavailableReason) as typeof item.volumeUnavailableReason,
     }
   })
 
@@ -354,8 +370,9 @@ export async function prepareBucketKeywordContext(params: {
 }): Promise<BucketKeywordContext> {
   const linkType = params.linkType || resolveOfferLinkType(params.offer)
   const creativeType = getCreativeTypeForBucketSlot(params.bucket)
-  const seedCandidates = params.seedCandidates
-    ?? await loadBucketSeedCandidates(params.offerId, linkType, params.bucket, params.scopeLabel)
+  const seedCandidates =
+    params.seedCandidates ??
+    (await loadBucketSeedCandidates(params.offerId, linkType, params.bucket, params.scopeLabel))
 
   const precomputedKeywordSet = await buildPreGenerationCreativeKeywordSet({
     offer: params.offer,
@@ -392,9 +409,9 @@ export function warnKeywordContextFallback(
   creative: GeneratedAdCreative
 ): void {
   if (
-    Array.isArray(creative.keywordsWithVolume)
-    && creative.keywordsWithVolume.length > 0
-    && precomputedKeywordSet.contextFallbackStrategy !== 'filtered'
+    Array.isArray(creative.keywordsWithVolume) &&
+    creative.keywordsWithVolume.length > 0 &&
+    precomputedKeywordSet.contextFallbackStrategy !== 'filtered'
   ) {
     console.warn(
       precomputedKeywordSet.contextFallbackStrategy === 'keyword_pool'
@@ -410,9 +427,7 @@ export function assertExecutableKeywordsNonEmpty(
 ): void {
   const executableKeywordCount = Array.isArray(creative.keywords) ? creative.keywords.length : 0
   if (executableKeywordCount === 0) {
-    throw new Error(
-      `关键词筛选后为空（bucket=${bucket || 'unknown'}），中止本轮并触发重试`
-    )
+    throw new Error(`关键词筛选后为空（bucket=${bucket || 'unknown'}），中止本轮并触发重试`)
   }
 }
 
@@ -497,10 +512,9 @@ export async function evaluateCreativeWithPersistenceGate(params: {
   skipKeywordPoolExpandLoad?: boolean
 }): Promise<CreativeAttemptEvaluation> {
   const offerRecord = params.offer as unknown as Record<string, unknown>
-  const hardPersistenceGateEnabled = params.hardPersistenceGateEnabled ?? parseBooleanEnv(
-    process.env.AD_CREATIVE_HARD_PERSISTENCE_GATE_ENABLED,
-    true
-  )
+  const hardPersistenceGateEnabled =
+    params.hardPersistenceGateEnabled ??
+    parseBooleanEnv(process.env.AD_CREATIVE_HARD_PERSISTENCE_GATE_ENABLED, true)
 
   const qualityEvaluation = await evaluateCreativeForQuality(
     createCreativeQualityEvaluationInput({
@@ -533,9 +547,7 @@ export async function evaluateCreativeWithPersistenceGate(params: {
     return qualityEvaluation
   }
 
-  const persistenceReasons = persistenceGate.violations.map(
-    (item) => `persistence:${item.code}`
-  )
+  const persistenceReasons = persistenceGate.violations.map((item) => `persistence:${item.code}`)
   return {
     ...qualityEvaluation,
     passed: false,
@@ -588,25 +600,29 @@ export function createBucketCreativeGenerationCallbacks(
     await hooks?.onBeforeGenerate?.({ attempt })
 
     const seeded = getSeedCreativeForAttempt?.(attempt)
-    const creative = seeded ?? await generateAdCreative(offerId, userId, {
-      theme: theme ?? (bucketContext
-        ? `${bucketContext.bucketIntent} - ${bucketContext.bucketIntentEn}`
-        : undefined),
-      referencePerformance,
-      skipCache: skipCacheOnRetryOnly ? attempt > 1 : skipCache,
-      excludeKeywords: attempt > 1 ? usedKeywordsRef.current : undefined,
-      retryFailureType,
-      searchTermFeedbackHints,
-      keywordPool: params.keywordPool || undefined,
-      bucket: (apiBucket as 'A' | 'B' | 'C' | 'D' | 'S' | undefined) || undefined,
-      bucketKeywords: bucketContext?.bucketKeywords,
-      bucketIntent: bucketContext?.bucketIntent,
-      bucketIntentEn: bucketContext?.bucketIntentEn,
-      deferKeywordPostProcessingToBuilder: Boolean(bucket),
-      precomputedKeywordSet: bucketContext?.precomputedKeywordSet,
-      plannerSession: params.plannerSession,
-      preparedExpand: params.preparedExpand,
-    })
+    const creative =
+      seeded ??
+      (await generateAdCreative(offerId, userId, {
+        theme:
+          theme ??
+          (bucketContext
+            ? `${bucketContext.bucketIntent} - ${bucketContext.bucketIntentEn}`
+            : undefined),
+        referencePerformance,
+        skipCache: skipCacheOnRetryOnly ? attempt > 1 : skipCache,
+        excludeKeywords: attempt > 1 ? usedKeywordsRef.current : undefined,
+        retryFailureType,
+        searchTermFeedbackHints,
+        keywordPool: params.keywordPool || undefined,
+        bucket: (apiBucket as 'A' | 'B' | 'C' | 'D' | 'S' | undefined) || undefined,
+        bucketKeywords: bucketContext?.bucketKeywords,
+        bucketIntent: bucketContext?.bucketIntent,
+        bucketIntentEn: bucketContext?.bucketIntentEn,
+        deferKeywordPostProcessingToBuilder: Boolean(bucket),
+        precomputedKeywordSet: bucketContext?.precomputedKeywordSet,
+        plannerSession: params.plannerSession,
+        preparedExpand: params.preparedExpand,
+      }))
 
     await postProcessGeneratedCreativeKeywords({
       offer,
@@ -658,23 +674,25 @@ export async function runBucketCreativeGeneration(
   params: RunBucketCreativeGenerationParams
 ): Promise<CreativeGenerationLoopResult<GeneratedAdCreative>> {
   const linkType = params.linkType || resolveOfferLinkType(params.offer)
-  const searchTermFeedbackHints = params.searchTermFeedbackHints
-    ?? (params.loadSearchTermFeedbackHints !== false
+  const searchTermFeedbackHints =
+    params.searchTermFeedbackHints ??
+    (params.loadSearchTermFeedbackHints !== false
       ? await loadSearchTermFeedbackHintsForGeneration(params.offerId, params.userId)
       : undefined)
 
-  const bucketContext = params.preparedBucketContext
-    ?? (params.bucket
+  const bucketContext =
+    params.preparedBucketContext ??
+    (params.bucket
       ? await prepareBucketKeywordContext({
-        offer: params.offer,
-        userId: params.userId,
-        offerId: params.offerId,
-        bucket: params.bucket,
-        generationProfile: params.generationProfile,
-        scopeLabel: params.scopeLabel,
-        linkType,
-        bucketInfo: params.bucketInfo,
-      })
+          offer: params.offer,
+          userId: params.userId,
+          offerId: params.offerId,
+          bucket: params.bucket,
+          generationProfile: params.generationProfile,
+          scopeLabel: params.scopeLabel,
+          linkType,
+          bucketInfo: params.bucketInfo,
+        })
       : null)
 
   const keywordPoolVolumeHints = params.keywordPool

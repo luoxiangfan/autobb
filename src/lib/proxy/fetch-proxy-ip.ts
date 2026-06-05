@@ -38,7 +38,7 @@ async function throttleIprocketCall<T>(providerName: string, fn: () => Promise<T
         if (timeSinceLastCall < MIN_IPROCKET_CALL_INTERVAL) {
           const waitTime = MIN_IPROCKET_CALL_INTERVAL - timeSinceLastCall
           console.log(`⏳ [IPRocket 频率限制] 等待 ${waitTime}ms...`)
-          await new Promise(r => setTimeout(r, waitTime))
+          await new Promise((r) => setTimeout(r, waitTime))
         }
 
         lastIprocketCallTime = Date.now()
@@ -193,8 +193,9 @@ export async function testProxyHealth(
       const response = await fetch(testUrl, {
         method: 'GET', // 使用GET获取实际内容，确保代理真实可用
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/plain,*/*',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'text/plain,*/*',
         },
         agent,
         signal: controller.signal,
@@ -227,7 +228,9 @@ export async function testProxyHealth(
     }
   } catch (error: any) {
     const responseTime = Date.now() - startTime
-    console.warn(`❌ 代理IP健康检查失败: ${credentials.fullAddress} - ${error.message} (${responseTime}ms)`)
+    console.warn(
+      `❌ 代理IP健康检查失败: ${credentials.fullAddress} - ${error.message} (${responseTime}ms)`
+    )
 
     return {
       healthy: false,
@@ -280,7 +283,9 @@ export async function fetchProxyIp(
   try {
     provider = ProxyProviderRegistry.getProvider(proxyUrl)
   } catch (error) {
-    throw new Error(`不支持的代理URL格式: ${error instanceof Error ? error.message : String(error)}`)
+    throw new Error(
+      `不支持的代理URL格式: ${error instanceof Error ? error.message : String(error)}`
+    )
   }
 
   console.log(`✅ 使用${provider.name} Provider处理URL: ${maskProxyUrl(proxyUrl)}`)
@@ -301,13 +306,17 @@ export async function fetchProxyIp(
       if (!skipHealthCheck) {
         const healthCheck = await testProxyHealth(credentials, 10000)
         if (!healthCheck.healthy) {
-          console.warn(`⚠️ 代理IP健康检查失败: ${credentials.fullAddress} (${healthCheck.error || '响应过慢'})`)
+          console.warn(
+            `⚠️ 代理IP健康检查失败: ${credentials.fullAddress} (${healthCheck.error || '响应过慢'})`
+          )
           throw new ProxyHealthCheckError(
             `代理IP健康检查失败: ${healthCheck.error || '响应过慢'}`,
             credentials.fullAddress
           )
         }
-        console.log(`✅ [${provider.name}] ${credentials.fullAddress} 健康检查通过 (${healthCheck.responseTime}ms)`)
+        console.log(
+          `✅ [${provider.name}] ${credentials.fullAddress} 健康检查通过 (${healthCheck.responseTime}ms)`
+        )
       } else {
         console.log(`✅ [${provider.name}] ${credentials.fullAddress} (跳过健康检查)`)
       }
@@ -336,9 +345,8 @@ export async function fetchProxyIp(
 
       // 如果不是最后一次尝试，等待后重试
       if (!isLastAttempt) {
-        const waitTime = error instanceof ProxyError
-          ? getRetryDelay(attempt, error)
-          : attempt * 1000
+        const waitTime =
+          error instanceof ProxyError ? getRetryDelay(attempt, error) : attempt * 1000
 
         console.log(`⏳ 等待 ${waitTime}ms 后重试...`)
         await new Promise((resolve) => setTimeout(resolve, waitTime))
@@ -401,7 +409,7 @@ export async function fetchFastestProxy(
   const fetchPromises: Promise<ProxyCredentials | null>[] = []
   for (let i = 0; i < concurrency; i++) {
     fetchPromises.push(
-      fetchProxyIp(proxyUrl, 1, true)  // 单次尝试，跳过健康检查
+      fetchProxyIp(proxyUrl, 1, true) // 单次尝试，跳过健康检查
         .then((creds) => {
           console.log(`✅ [${i + 1}] 获取成功: ${creds.fullAddress}`)
           return creds
@@ -510,7 +518,9 @@ export async function getProxyIp(
   if (!forceRefresh && userId) {
     const cached = proxyCache.get(fullCacheKey)
     if (cached && now < cached.expiresAt) {
-      console.log(`使用缓存的代理IP: ${cached.credentials.fullAddress} (user: ${userId}${cacheKey ? `, key: ${cacheKey}` : ''})`)
+      console.log(
+        `使用缓存的代理IP: ${cached.credentials.fullAddress} (user: ${userId}${cacheKey ? `, key: ${cacheKey}` : ''})`
+      )
       return cached.credentials
     }
 

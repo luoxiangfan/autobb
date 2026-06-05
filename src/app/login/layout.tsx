@@ -6,10 +6,6 @@ export const dynamic = 'force-dynamic'
 // P2-1: 登录页SEO metadata
 export const metadata = pageMetadata.login
 
-export default function LoginLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function LoginLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }

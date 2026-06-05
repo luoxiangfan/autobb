@@ -11,10 +11,8 @@ import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
  * 手动解除Offer与Ads账号的关联
  * 需求25: 增加Offer手动解除与已关联的Ads账号解除关联的功能
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 
@@ -45,7 +43,8 @@ export async function POST(
     const db = await getDatabase()
 
     // 先读取该 Offer 在该账号下“已同步”的所有 Campaign（用于后续 best-effort 的 Google Ads 远端暂停）
-    const campaignsToUnlink = await db.query(`
+    const campaignsToUnlink = (await db.query(
+      `
       SELECT id, google_campaign_id, campaign_name, status
       FROM campaigns
       WHERE offer_id = ?
@@ -54,7 +53,9 @@ export async function POST(
         AND status != 'REMOVED'
         AND google_campaign_id IS NOT NULL
         AND google_campaign_id != ''
-    `, [offerId, googleAdsAccountId, userId]) as Array<{
+    `,
+      [offerId, googleAdsAccountId, userId]
+    )) as Array<{
       id: number
       google_campaign_id: string | null
       campaign_name: string | null
@@ -62,11 +63,14 @@ export async function POST(
     }>
 
     // 查询账号信息（用于 customer_id / login_customer_id）
-    const adsAccount = await db.queryOne(`
+    const adsAccount = (await db.queryOne(
+      `
       SELECT id, customer_id, parent_mcc_id, is_active, is_deleted
       FROM google_ads_accounts
       WHERE id = ? AND user_id = ?
-    `, [googleAdsAccountId, userId]) as {
+    `,
+      [googleAdsAccountId, userId]
+    )) as {
       id: number
       customer_id: string | null
       parent_mcc_id: string | null
@@ -100,7 +104,7 @@ export async function POST(
           queued: googleAdsRemote.queued,
           planned: googleAdsRemote.planned,
           action: googleAdsRemote.action,
-        }
+        },
       },
     })
   } catch (error: any) {

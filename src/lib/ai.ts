@@ -10,43 +10,43 @@ export interface ProductInfo {
   targetAudience: string
   category?: string
   // 🆕 增强字段：用于竞品搜索词推断
-  sellingPoints?: string[]           // 产品卖点列表
-  productDescription?: string        // 产品描述（完整文本）
+  sellingPoints?: string[] // 产品卖点列表
+  productDescription?: string // 产品描述（完整文本）
 
   // 🎯 P0优化（2025-12-07）：存储AI返回的完整数据，提升广告创意质量20-30%
-  keywords?: string[]                 // AI生成的关键词列表
+  keywords?: string[] // AI生成的关键词列表
 
   pricing?: {
-    current?: string                  // 当前价格
-    original?: string                 // 原价
-    discount?: string                 // 折扣百分比
-    competitiveness?: 'Premium' | 'Competitive' | 'Budget'  // 价格竞争力
-    valueAssessment?: string          // 性价比评估
+    current?: string // 当前价格
+    original?: string // 原价
+    discount?: string // 折扣百分比
+    competitiveness?: 'Premium' | 'Competitive' | 'Budget' // 价格竞争力
+    valueAssessment?: string // 性价比评估
   }
 
   reviews?: {
-    rating?: number                   // 评分
-    count?: number                    // 评论数
-    sentiment?: 'Positive' | 'Mixed' | 'Negative'  // 情感倾向
-    positives?: string[]              // 用户好评要点
-    concerns?: string[]               // 用户关注点/缺点
-    useCases?: string[]               // 真实使用场景
+    rating?: number // 评分
+    count?: number // 评论数
+    sentiment?: 'Positive' | 'Mixed' | 'Negative' // 情感倾向
+    positives?: string[] // 用户好评要点
+    concerns?: string[] // 用户关注点/缺点
+    useCases?: string[] // 真实使用场景
   }
 
   promotions?: {
-    active?: boolean                  // 是否有促销
-    types?: string[]                  // 促销类型（Coupon, Deal, Lightning Deal）
-    urgency?: string | null           // 紧迫性文案
-    activeDeals?: string[]            // 活跃促销（兼容旧字段）
-    urgencyIndicators?: string[]      // 紧迫性指标（兼容旧字段）
-    freeShipping?: boolean            // 免邮
+    active?: boolean // 是否有促销
+    types?: string[] // 促销类型（Coupon, Deal, Lightning Deal）
+    urgency?: string | null // 紧迫性文案
+    activeDeals?: string[] // 活跃促销（兼容旧字段）
+    urgencyIndicators?: string[] // 紧迫性指标（兼容旧字段）
+    freeShipping?: boolean // 免邮
   }
 
   competitiveEdges?: {
-    badges?: string[]                 // 徽章（Amazon's Choice, Best Seller）
-    primeEligible?: boolean           // Prime资格
-    stockStatus?: string              // 库存状态
-    salesRank?: string                // 销售排名
+    badges?: string[] // 徽章（Amazon's Choice, Best Seller）
+    primeEligible?: boolean // Prime资格
+    stockStatus?: string // 库存状态
+    salesRank?: string // 销售排名
   }
 
   // 🎯 v3.3优化（2025-12-08）：店铺/单品差异化分析字段
@@ -120,10 +120,10 @@ export async function analyzeProductPage(
     description: string
     text: string
     targetCountry?: string
-    pageType?: 'product' | 'store'  // 新增：页面类型
+    pageType?: 'product' | 'store' // 新增：页面类型
     // 🎯 P1优化：新增字段用于增强AI分析
-    technicalDetails?: Record<string, string>  // 技术规格
-    reviewHighlights?: string[]  // 评论摘要
+    technicalDetails?: Record<string, string> // 技术规格
+    reviewHighlights?: string[] // 评论摘要
     // 🔥 2026-01-04新增：独立站增强数据字段（用于AI分析）
     reviews?: Array<{
       rating: number
@@ -162,7 +162,7 @@ export async function analyzeProductPage(
     const lang = languageConfig[targetCountry] || languageConfig.US
     const langName = lang.name
     const categoryExamples = lang.examples
-    const pageType = pageData.pageType || 'product'  // 默认为单品页面
+    const pageType = pageData.pageType || 'product' // 默认为单品页面
 
     // 根据页面类型选择不同的prompt
     let prompt: string
@@ -181,47 +181,59 @@ export async function analyzeProductPage(
 
       // 🔥 2026-01-21：店铺prompt也可能引用增强数据占位符（例如 v4.16）
       // 生产环境中若不替换，会让模型看到原样 {{reviews}} 等占位符，导致输出不稳定。
-      const reviewsText = pageData.reviews && pageData.reviews.length > 0
-        ? pageData.reviews.slice(0, 10).map((r, i) =>
-            `Review ${i + 1}:\n` +
-            `  Rating: ${r.rating}/5\n` +
-            `  Author: ${r.author} ${r.verifiedBuyer ? '(Verified)' : ''}\n` +
-            `  Date: ${r.date}\n` +
-            `  Title: ${r.title}\n` +
-            `  Body: ${r.body.substring(0, 200)}${r.body.length > 200 ? '...' : ''}`
-          ).join('\n\n')
-        : 'Not available (store page)'
+      const reviewsText =
+        pageData.reviews && pageData.reviews.length > 0
+          ? pageData.reviews
+              .slice(0, 10)
+              .map(
+                (r, i) =>
+                  `Review ${i + 1}:\n` +
+                  `  Rating: ${r.rating}/5\n` +
+                  `  Author: ${r.author} ${r.verifiedBuyer ? '(Verified)' : ''}\n` +
+                  `  Date: ${r.date}\n` +
+                  `  Title: ${r.title}\n` +
+                  `  Body: ${r.body.substring(0, 200)}${r.body.length > 200 ? '...' : ''}`
+              )
+              .join('\n\n')
+          : 'Not available (store page)'
 
-      const faqsText = pageData.faqs && pageData.faqs.length > 0
-        ? pageData.faqs.slice(0, 10).map((faq, i) =>
-            `Q${i + 1}: ${faq.question}\nA${i + 1}: ${faq.answer}`
-          ).join('\n\n')
-        : 'Not available (store page)'
+      const faqsText =
+        pageData.faqs && pageData.faqs.length > 0
+          ? pageData.faqs
+              .slice(0, 10)
+              .map((faq, i) => `Q${i + 1}: ${faq.question}\nA${i + 1}: ${faq.answer}`)
+              .join('\n\n')
+          : 'Not available (store page)'
 
-      const specificationsText = pageData.specifications && Object.keys(pageData.specifications).length > 0
-        ? Object.entries(pageData.specifications)
-            .map(([key, value]) => `${key}: ${value}`)
-            .join('\n')
-        : 'Not available (store page)'
+      const specificationsText =
+        pageData.specifications && Object.keys(pageData.specifications).length > 0
+          ? Object.entries(pageData.specifications)
+              .map(([key, value]) => `${key}: ${value}`)
+              .join('\n')
+          : 'Not available (store page)'
 
-      const socialProofText = pageData.socialProof && pageData.socialProof.length > 0
-        ? pageData.socialProof.map(sp => `${sp.metric}: ${sp.value}`).join('\n')
-        : 'Not available (store page)'
+      const socialProofText =
+        pageData.socialProof && pageData.socialProof.length > 0
+          ? pageData.socialProof.map((sp) => `${sp.metric}: ${sp.value}`).join('\n')
+          : 'Not available (store page)'
 
-      const coreFeaturesText = pageData.coreFeatures && pageData.coreFeatures.length > 0
-        ? '- ' + pageData.coreFeatures.join('\n- ')
-        : 'Not available (store page)'
+      const coreFeaturesText =
+        pageData.coreFeatures && pageData.coreFeatures.length > 0
+          ? '- ' + pageData.coreFeatures.join('\n- ')
+          : 'Not available (store page)'
 
       // 🎯 P1优化: 格式化technicalDetails和reviewHighlights供AI使用（店铺页面通常无单品数据）
-      const technicalDetailsText = pageData.technicalDetails && Object.keys(pageData.technicalDetails).length > 0
-        ? Object.entries(pageData.technicalDetails)
-            .map(([key, value]) => `${key}: ${value}`)
-            .join('\n')
-        : 'Not available (store page)'
+      const technicalDetailsText =
+        pageData.technicalDetails && Object.keys(pageData.technicalDetails).length > 0
+          ? Object.entries(pageData.technicalDetails)
+              .map(([key, value]) => `${key}: ${value}`)
+              .join('\n')
+          : 'Not available (store page)'
 
-      const reviewHighlightsText = pageData.reviewHighlights && pageData.reviewHighlights.length > 0
-        ? '- ' + pageData.reviewHighlights.join('\n- ')
-        : 'Not available (store page)'
+      const reviewHighlightsText =
+        pageData.reviewHighlights && pageData.reviewHighlights.length > 0
+          ? '- ' + pageData.reviewHighlights.join('\n- ')
+          : 'Not available (store page)'
 
       // 🎨 插值替换模板变量
       prompt = ensureStorePromptHasOutputSchema(promptTemplate)
@@ -252,59 +264,76 @@ export async function analyzeProductPage(
       const pageDataText = pageData.text.slice(0, 10000)
 
       // 🎯 P1优化: 格式化technicalDetails和reviewHighlights供AI使用
-      const technicalDetailsText = pageData.technicalDetails && Object.keys(pageData.technicalDetails).length > 0
-        ? Object.entries(pageData.technicalDetails)
-            .map(([key, value]) => `${key}: ${value}`)
-            .join('\n')
-        : 'Not available'
+      const technicalDetailsText =
+        pageData.technicalDetails && Object.keys(pageData.technicalDetails).length > 0
+          ? Object.entries(pageData.technicalDetails)
+              .map(([key, value]) => `${key}: ${value}`)
+              .join('\n')
+          : 'Not available'
 
-      const reviewHighlightsText = pageData.reviewHighlights && pageData.reviewHighlights.length > 0
-        ? '- ' + pageData.reviewHighlights.join('\n- ')
-        : 'Not available'
+      const reviewHighlightsText =
+        pageData.reviewHighlights && pageData.reviewHighlights.length > 0
+          ? '- ' + pageData.reviewHighlights.join('\n- ')
+          : 'Not available'
 
       // 🔥 2026-01-04新增：格式化独立站增强数据供AI使用
-      const reviewsText = pageData.reviews && pageData.reviews.length > 0
-        ? pageData.reviews.slice(0, 10).map((r, i) =>
-            `Review ${i + 1}:\n` +
-            `  Rating: ${r.rating}/5\n` +
-            `  Author: ${r.author} ${r.verifiedBuyer ? '(Verified)' : ''}\n` +
-            `  Date: ${r.date}\n` +
-            `  Title: ${r.title}\n` +
-            `  Body: ${r.body.substring(0, 200)}${r.body.length > 200 ? '...' : ''}`
-          ).join('\n\n')
-        : 'Not available'
+      const reviewsText =
+        pageData.reviews && pageData.reviews.length > 0
+          ? pageData.reviews
+              .slice(0, 10)
+              .map(
+                (r, i) =>
+                  `Review ${i + 1}:\n` +
+                  `  Rating: ${r.rating}/5\n` +
+                  `  Author: ${r.author} ${r.verifiedBuyer ? '(Verified)' : ''}\n` +
+                  `  Date: ${r.date}\n` +
+                  `  Title: ${r.title}\n` +
+                  `  Body: ${r.body.substring(0, 200)}${r.body.length > 200 ? '...' : ''}`
+              )
+              .join('\n\n')
+          : 'Not available'
 
-      const faqsText = pageData.faqs && pageData.faqs.length > 0
-        ? pageData.faqs.slice(0, 10).map((faq, i) =>
-            `Q${i + 1}: ${faq.question}\nA${i + 1}: ${faq.answer}`
-          ).join('\n\n')
-        : 'Not available'
+      const faqsText =
+        pageData.faqs && pageData.faqs.length > 0
+          ? pageData.faqs
+              .slice(0, 10)
+              .map((faq, i) => `Q${i + 1}: ${faq.question}\nA${i + 1}: ${faq.answer}`)
+              .join('\n\n')
+          : 'Not available'
 
-      const specificationsText = pageData.specifications && Object.keys(pageData.specifications).length > 0
-        ? Object.entries(pageData.specifications)
-            .map(([key, value]) => `${key}: ${value}`)
-            .join('\n')
-        : 'Not available'
+      const specificationsText =
+        pageData.specifications && Object.keys(pageData.specifications).length > 0
+          ? Object.entries(pageData.specifications)
+              .map(([key, value]) => `${key}: ${value}`)
+              .join('\n')
+          : 'Not available'
 
-      const packagesText = pageData.packages && pageData.packages.length > 0
-        ? pageData.packages.map((pkg, i) =>
-            `Package ${i + 1}: ${pkg.name}\n` +
-            `  Price: ${pkg.price || 'N/A'}\n` +
-            `  Includes: ${pkg.includes.join(', ')}`
-          ).join('\n\n')
-        : 'Not available'
+      const packagesText =
+        pageData.packages && pageData.packages.length > 0
+          ? pageData.packages
+              .map(
+                (pkg, i) =>
+                  `Package ${i + 1}: ${pkg.name}\n` +
+                  `  Price: ${pkg.price || 'N/A'}\n` +
+                  `  Includes: ${pkg.includes.join(', ')}`
+              )
+              .join('\n\n')
+          : 'Not available'
 
-      const socialProofText = pageData.socialProof && pageData.socialProof.length > 0
-        ? pageData.socialProof.map(sp => `${sp.metric}: ${sp.value}`).join('\n')
-        : 'Not available'
+      const socialProofText =
+        pageData.socialProof && pageData.socialProof.length > 0
+          ? pageData.socialProof.map((sp) => `${sp.metric}: ${sp.value}`).join('\n')
+          : 'Not available'
 
-      const coreFeaturesText = pageData.coreFeatures && pageData.coreFeatures.length > 0
-        ? '- ' + pageData.coreFeatures.join('\n- ')
-        : 'Not available'
+      const coreFeaturesText =
+        pageData.coreFeatures && pageData.coreFeatures.length > 0
+          ? '- ' + pageData.coreFeatures.join('\n- ')
+          : 'Not available'
 
-      const secondaryFeaturesText = pageData.secondaryFeatures && pageData.secondaryFeatures.length > 0
-        ? '- ' + pageData.secondaryFeatures.join('\n- ')
-        : 'Not available'
+      const secondaryFeaturesText =
+        pageData.secondaryFeatures && pageData.secondaryFeatures.length > 0
+          ? '- ' + pageData.secondaryFeatures.join('\n- ')
+          : 'Not available'
 
       // 🎨 插值替换模板变量
       prompt = promptTemplate
@@ -331,12 +360,15 @@ export async function analyzeProductPage(
     if (!userId) {
       throw new Error('分析产品页面需要用户ID，请确保已登录')
     }
-    const geminiResult = await generateContent({
-      operationType: 'product_page_analysis',
-      prompt,
-      temperature: 0.7,
-      maxOutputTokens: 6144,  // 增加到6144以容纳更丰富的数据维度
-    }, userId)
+    const geminiResult = await generateContent(
+      {
+        operationType: 'product_page_analysis',
+        prompt,
+        temperature: 0.7,
+        maxOutputTokens: 6144, // 增加到6144以容纳更丰富的数据维度
+      },
+      userId
+    )
 
     const text = geminiResult.text
 
@@ -355,7 +387,7 @@ export async function analyzeProductPage(
         outputTokens: geminiResult.usage.outputTokens,
         totalTokens: geminiResult.usage.totalTokens,
         cost,
-        apiType: geminiResult.apiType
+        apiType: geminiResult.apiType,
       })
     }
 
@@ -449,11 +481,11 @@ export async function analyzeProductPage(
       // 策略1: 找到最后一个完整的属性值对
       // 完整的属性模式: "key": "value", 或 "key": [...], 或 "key": {...}
       const lastCompletePatterns = [
-        /"[^"]+"\s*:\s*"[^"]*"\s*,/g,  // "key": "value",
-        /"[^"]+"\s*:\s*\[[^\]]*\]\s*,/g,  // "key": [...],
-        /"[^"]+"\s*:\s*\{[^}]*\}\s*,/g,  // "key": {...},
-        /"[^"]+"\s*:\s*"[^"]*"\s*$/g,  // "key": "value" (最后一个，无逗号)
-        /"[^"]+"\s*:\s*\[[^\]]*\]\s*$/g,  // "key": [...] (最后一个)
+        /"[^"]+"\s*:\s*"[^"]*"\s*,/g, // "key": "value",
+        /"[^"]+"\s*:\s*\[[^\]]*\]\s*,/g, // "key": [...],
+        /"[^"]+"\s*:\s*\{[^}]*\}\s*,/g, // "key": {...},
+        /"[^"]+"\s*:\s*"[^"]*"\s*$/g, // "key": "value" (最后一个，无逗号)
+        /"[^"]+"\s*:\s*\[[^\]]*\]\s*$/g, // "key": [...] (最后一个)
       ]
 
       let lastCompleteIndex = -1
@@ -525,7 +557,10 @@ export async function analyzeProductPage(
       }
 
       logger.debug('修复后的JSON长度:', repairedJson.length)
-      logger.debug('修复后的JSON末尾:', repairedJson.substring(Math.max(0, repairedJson.length - 100)))
+      logger.debug(
+        '修复后的JSON末尾:',
+        repairedJson.substring(Math.max(0, repairedJson.length - 100))
+      )
 
       try {
         productInfo = JSON.parse(repairedJson) as ProductInfo
@@ -540,7 +575,7 @@ export async function analyzeProductPage(
           // 尝试匹配 "field": "value" 格式（处理转义和多行）
           const patterns = [
             new RegExp(`"${fieldName}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`, 's'),
-            new RegExp(`"${fieldName}"\\s*:\\s*"([^"]*)`),  // 截断的字符串
+            new RegExp(`"${fieldName}"\\s*:\\s*"([^"]*)`), // 截断的字符串
           ]
           for (const pattern of patterns) {
             const match = source.match(pattern)
@@ -569,17 +604,33 @@ export async function analyzeProductPage(
 
         productInfo = {
           brandDescription: extractStringField('brandDescription', repairedJson),
-          uniqueSellingPoints: extractArrayField('uniqueSellingPoints', repairedJson) || extractStringField('uniqueSellingPoints', repairedJson),
-          productHighlights: extractArrayField('productHighlights', repairedJson) || extractStringField('productHighlights', repairedJson),
+          uniqueSellingPoints:
+            extractArrayField('uniqueSellingPoints', repairedJson) ||
+            extractStringField('uniqueSellingPoints', repairedJson),
+          productHighlights:
+            extractArrayField('productHighlights', repairedJson) ||
+            extractStringField('productHighlights', repairedJson),
           targetAudience: extractStringField('targetAudience', repairedJson),
           category: extractStringField('category', repairedJson),
         }
 
         logger.debug('📋 提取到的字段:')
-        logger.debug('  - brandDescription:', productInfo.brandDescription ? `${productInfo.brandDescription.length}字符` : '无')
-        logger.debug('  - uniqueSellingPoints:', productInfo.uniqueSellingPoints ? `${productInfo.uniqueSellingPoints.length}字符` : '无')
-        logger.debug('  - productHighlights:', productInfo.productHighlights ? `${productInfo.productHighlights.length}字符` : '无')
-        logger.debug('  - targetAudience:', productInfo.targetAudience ? `${productInfo.targetAudience.length}字符` : '无')
+        logger.debug(
+          '  - brandDescription:',
+          productInfo.brandDescription ? `${productInfo.brandDescription.length}字符` : '无'
+        )
+        logger.debug(
+          '  - uniqueSellingPoints:',
+          productInfo.uniqueSellingPoints ? `${productInfo.uniqueSellingPoints.length}字符` : '无'
+        )
+        logger.debug(
+          '  - productHighlights:',
+          productInfo.productHighlights ? `${productInfo.productHighlights.length}字符` : '无'
+        )
+        logger.debug(
+          '  - targetAudience:',
+          productInfo.targetAudience ? `${productInfo.targetAudience.length}字符` : '无'
+        )
         logger.debug('  - category:', productInfo.category || '无')
 
         // 如果所有字段都为空，则抛出错误
@@ -597,9 +648,9 @@ export async function analyzeProductPage(
     const ensureString = (value: any): string => {
       if (!value) return ''
       if (Array.isArray(value)) {
-        return value.map((item: any) =>
-          typeof item === 'string' ? item : JSON.stringify(item)
-        ).join('\n')
+        return value
+          .map((item: any) => (typeof item === 'string' ? item : JSON.stringify(item)))
+          .join('\n')
       }
       return String(value)
     }
@@ -627,72 +678,107 @@ export async function analyzeProductPage(
       productDescription: pi.productDescription || undefined,
 
       // 定价信息
-      pricing: pi.pricing ? {
-        current: pi.pricing.current || undefined,
-        original: pi.pricing.original || undefined,
-        discount: pi.pricing.discount || undefined,
-        competitiveness: pi.pricing.competitiveness || undefined,
-        valueAssessment: pi.pricing.valueAssessment || undefined,
-      } : undefined,
+      pricing: pi.pricing
+        ? {
+            current: pi.pricing.current || undefined,
+            original: pi.pricing.original || undefined,
+            discount: pi.pricing.discount || undefined,
+            competitiveness: pi.pricing.competitiveness || undefined,
+            valueAssessment: pi.pricing.valueAssessment || undefined,
+          }
+        : undefined,
 
       // 评论洞察
-      reviews: pi.reviews ? {
-        rating: typeof pi.reviews.rating === 'number' ? pi.reviews.rating : undefined,
-        count: typeof pi.reviews.count === 'number' ? pi.reviews.count : undefined,
-        sentiment: pi.reviews.sentiment || undefined,
-        positives: pi.reviews.positives || undefined,
-        concerns: pi.reviews.concerns || undefined,
-        useCases: pi.reviews.useCases || undefined,
-      } : undefined,
+      reviews: pi.reviews
+        ? {
+            rating: typeof pi.reviews.rating === 'number' ? pi.reviews.rating : undefined,
+            count: typeof pi.reviews.count === 'number' ? pi.reviews.count : undefined,
+            sentiment: pi.reviews.sentiment || undefined,
+            positives: pi.reviews.positives || undefined,
+            concerns: pi.reviews.concerns || undefined,
+            useCases: pi.reviews.useCases || undefined,
+          }
+        : undefined,
 
       // 促销信息
-      promotions: pi.promotions ? {
-        active: typeof pi.promotions.active === 'boolean' ? pi.promotions.active : undefined,
-        types: pi.promotions.types || undefined,
-        urgency: pi.promotions.urgency !== undefined ? pi.promotions.urgency : undefined,
-        freeShipping: typeof pi.promotions.freeShipping === 'boolean' ? pi.promotions.freeShipping : undefined,
-      } : undefined,
+      promotions: pi.promotions
+        ? {
+            active: typeof pi.promotions.active === 'boolean' ? pi.promotions.active : undefined,
+            types: pi.promotions.types || undefined,
+            urgency: pi.promotions.urgency !== undefined ? pi.promotions.urgency : undefined,
+            freeShipping:
+              typeof pi.promotions.freeShipping === 'boolean'
+                ? pi.promotions.freeShipping
+                : undefined,
+          }
+        : undefined,
 
       // 竞争优势
-      competitiveEdges: pi.competitiveEdges ? {
-        badges: pi.competitiveEdges.badges || undefined,
-        primeEligible: typeof pi.competitiveEdges.primeEligible === 'boolean' ? pi.competitiveEdges.primeEligible : undefined,
-        stockStatus: pi.competitiveEdges.stockStatus || undefined,
-        salesRank: pi.competitiveEdges.salesRank || undefined,
-      } : undefined,
+      competitiveEdges: pi.competitiveEdges
+        ? {
+            badges: pi.competitiveEdges.badges || undefined,
+            primeEligible:
+              typeof pi.competitiveEdges.primeEligible === 'boolean'
+                ? pi.competitiveEdges.primeEligible
+                : undefined,
+            stockStatus: pi.competitiveEdges.stockStatus || undefined,
+            salesRank: pi.competitiveEdges.salesRank || undefined,
+          }
+        : undefined,
 
       // 🎯 v3.3优化（2025-12-08）：店铺/单品差异化分析字段
       // 店铺分析专用字段
       storeQualityLevel: pi.storeQualityLevel || undefined,
-      categoryDiversification: pi.categoryDiversification ? {
-        level: pi.categoryDiversification.level || 'Focused',
-        categories: pi.categoryDiversification.categories || undefined,
-        primaryCategory: pi.categoryDiversification.primaryCategory || undefined,
-      } : undefined,
-      hotInsights: pi.hotInsights ? {
-        avgRating: typeof pi.hotInsights.avgRating === 'number' ? pi.hotInsights.avgRating : undefined,
-        avgReviews: typeof pi.hotInsights.avgReviews === 'number' ? pi.hotInsights.avgReviews : undefined,
-        topProductsCount: typeof pi.hotInsights.topProductsCount === 'number' ? pi.hotInsights.topProductsCount : undefined,
-        bestSeller: pi.hotInsights.bestSeller || undefined,
-        priceRange: pi.hotInsights.priceRange || undefined,
-      } : undefined,
+      categoryDiversification: pi.categoryDiversification
+        ? {
+            level: pi.categoryDiversification.level || 'Focused',
+            categories: pi.categoryDiversification.categories || undefined,
+            primaryCategory: pi.categoryDiversification.primaryCategory || undefined,
+          }
+        : undefined,
+      hotInsights: pi.hotInsights
+        ? {
+            avgRating:
+              typeof pi.hotInsights.avgRating === 'number' ? pi.hotInsights.avgRating : undefined,
+            avgReviews:
+              typeof pi.hotInsights.avgReviews === 'number' ? pi.hotInsights.avgReviews : undefined,
+            topProductsCount:
+              typeof pi.hotInsights.topProductsCount === 'number'
+                ? pi.hotInsights.topProductsCount
+                : undefined,
+            bestSeller: pi.hotInsights.bestSeller || undefined,
+            priceRange: pi.hotInsights.priceRange || undefined,
+          }
+        : undefined,
       // 单品分析专用字段
-      marketFit: pi.marketFit ? {
-        score: typeof pi.marketFit.score === 'number' ? pi.marketFit.score : 0,
-        level: pi.marketFit.level || 'Average',
-        strengths: pi.marketFit.strengths || undefined,
-        gaps: pi.marketFit.gaps || undefined,
-      } : undefined,
-      credibilityLevel: pi.credibilityLevel ? {
-        score: typeof pi.credibilityLevel.score === 'number' ? pi.credibilityLevel.score : 0,
-        level: pi.credibilityLevel.level || 'Medium',
-        factors: pi.credibilityLevel.factors || undefined,
-      } : undefined,
-      categoryPosition: pi.categoryPosition ? {
-        rank: pi.categoryPosition.rank || undefined,
-        percentile: typeof pi.categoryPosition.percentile === 'number' ? pi.categoryPosition.percentile : undefined,
-        competitors: typeof pi.categoryPosition.competitors === 'number' ? pi.categoryPosition.competitors : undefined,
-      } : undefined,
+      marketFit: pi.marketFit
+        ? {
+            score: typeof pi.marketFit.score === 'number' ? pi.marketFit.score : 0,
+            level: pi.marketFit.level || 'Average',
+            strengths: pi.marketFit.strengths || undefined,
+            gaps: pi.marketFit.gaps || undefined,
+          }
+        : undefined,
+      credibilityLevel: pi.credibilityLevel
+        ? {
+            score: typeof pi.credibilityLevel.score === 'number' ? pi.credibilityLevel.score : 0,
+            level: pi.credibilityLevel.level || 'Medium',
+            factors: pi.credibilityLevel.factors || undefined,
+          }
+        : undefined,
+      categoryPosition: pi.categoryPosition
+        ? {
+            rank: pi.categoryPosition.rank || undefined,
+            percentile:
+              typeof pi.categoryPosition.percentile === 'number'
+                ? pi.categoryPosition.percentile
+                : undefined,
+            competitors:
+              typeof pi.categoryPosition.competitors === 'number'
+                ? pi.categoryPosition.competitors
+                : undefined,
+          }
+        : undefined,
       // 页面类型标识
       pageType: pi.pageType || pageType,
     }
@@ -709,10 +795,14 @@ export async function analyzeProductPage(
         const allProductHighlights: Array<{ productName: string; highlights: string[] }> = []
 
         pi.hotProducts.forEach((product: any) => {
-          if (product.productHighlights && Array.isArray(product.productHighlights) && product.productHighlights.length > 0) {
+          if (
+            product.productHighlights &&
+            Array.isArray(product.productHighlights) &&
+            product.productHighlights.length > 0
+          ) {
             allProductHighlights.push({
               productName: product.name || 'Unknown Product',
-              highlights: product.productHighlights
+              highlights: product.productHighlights,
             })
           }
         })
@@ -723,10 +813,14 @@ export async function analyzeProductPage(
 
           // 🎨 准备模板变量
           const productCount = allProductHighlights.length.toString()
-          const productHighlightsText = allProductHighlights.map((p, i) => `
+          const productHighlightsText = allProductHighlights
+            .map(
+              (p, i) => `
 Product ${i + 1}: ${p.productName}
-${p.highlights.map(h => `- ${h}`).join('\n')}
-`).join('\n')
+${p.highlights.map((h) => `- ${h}`).join('\n')}
+`
+            )
+            .join('\n')
 
           // 🎨 插值替换模板变量
           const synthesisPrompt = promptTemplate
@@ -734,12 +828,15 @@ ${p.highlights.map(h => `- ${h}`).join('\n')}
             .replace('{{productHighlights}}', productHighlightsText)
             .replace('{{langName}}', langName)
 
-          const synthesisResult = await generateContent({
-            operationType: 'store_highlights_synthesis',
-            prompt: synthesisPrompt,
-            temperature: 0.7,
-            maxOutputTokens: 4096,  // 🔥 提升到4096，避免店铺产品亮点整合被截断
-          }, userId)
+          const synthesisResult = await generateContent(
+            {
+              operationType: 'store_highlights_synthesis',
+              prompt: synthesisPrompt,
+              temperature: 0.7,
+              maxOutputTokens: 4096, // 🔥 提升到4096，避免店铺产品亮点整合被截断
+            },
+            userId
+          )
 
           // 记录token使用
           if (synthesisResult.usage) {
@@ -756,7 +853,7 @@ ${p.highlights.map(h => `- ${h}`).join('\n')}
               outputTokens: synthesisResult.usage.outputTokens,
               totalTokens: synthesisResult.usage.totalTokens,
               cost,
-              apiType: synthesisResult.apiType
+              apiType: synthesisResult.apiType,
             })
           }
 
@@ -767,7 +864,9 @@ ${p.highlights.map(h => `- ${h}`).join('\n')}
             const synthesisData = JSON.parse(jsonMatch[0])
             if (synthesisData.storeHighlights && Array.isArray(synthesisData.storeHighlights)) {
               productInfo.productHighlights = synthesisData.storeHighlights.join('\n')
-              logger.debug(`✅ [STORE] AI整合提炼了 ${allProductHighlights.length} 个热销商品的产品亮点 → ${synthesisData.storeHighlights.length} 条店铺级亮点`)
+              logger.debug(
+                `✅ [STORE] AI整合提炼了 ${allProductHighlights.length} 个热销商品的产品亮点 → ${synthesisData.storeHighlights.length} 条店铺级亮点`
+              )
             }
           }
         } else {
@@ -793,7 +892,9 @@ ${p.highlights.map(h => `- ${h}`).join('\n')}
 
     // 📊 数据提取统计
     logger.debug('📊 AI数据提取统计:')
-    logger.debug(`  - 基础字段: brandDescription(${productInfo.brandDescription?.length || 0}), uniqueSellingPoints(${productInfo.uniqueSellingPoints?.length || 0})`)
+    logger.debug(
+      `  - 基础字段: brandDescription(${productInfo.brandDescription?.length || 0}), uniqueSellingPoints(${productInfo.uniqueSellingPoints?.length || 0})`
+    )
     logger.debug(`  - keywords: ${productInfo.keywords?.length || 0}个`)
     logger.debug(`  - pricing: ${productInfo.pricing ? 'YES' : 'NO'}`)
     logger.debug(`  - reviews: ${productInfo.reviews ? 'YES' : 'NO'}`)
@@ -802,10 +903,16 @@ ${p.highlights.map(h => `- ${h}`).join('\n')}
     // 🎯 v3.3优化：新增字段统计
     logger.debug(`  - pageType: ${productInfo.pageType || 'unknown'}`)
     logger.debug(`  - storeQualityLevel: ${productInfo.storeQualityLevel || 'N/A'}`)
-    logger.debug(`  - categoryDiversification: ${productInfo.categoryDiversification?.level || 'N/A'}`)
+    logger.debug(
+      `  - categoryDiversification: ${productInfo.categoryDiversification?.level || 'N/A'}`
+    )
     logger.debug(`  - hotInsights: ${productInfo.hotInsights ? 'YES' : 'NO'}`)
-    logger.debug(`  - marketFit: ${productInfo.marketFit ? `${productInfo.marketFit.score}/100 (${productInfo.marketFit.level})` : 'N/A'}`)
-    logger.debug(`  - credibilityLevel: ${productInfo.credibilityLevel ? `${productInfo.credibilityLevel.score}/100 (${productInfo.credibilityLevel.level})` : 'N/A'}`)
+    logger.debug(
+      `  - marketFit: ${productInfo.marketFit ? `${productInfo.marketFit.score}/100 (${productInfo.marketFit.level})` : 'N/A'}`
+    )
+    logger.debug(
+      `  - credibilityLevel: ${productInfo.credibilityLevel ? `${productInfo.credibilityLevel.score}/100 (${productInfo.credibilityLevel.level})` : 'N/A'}`
+    )
     logger.debug(`  - categoryPosition: ${productInfo.categoryPosition?.rank || 'N/A'}`)
 
     return productInfo
@@ -814,4 +921,3 @@ ${p.highlights.map(h => `- ${h}`).join('\n')}
     throw new Error(`AI分析失败: ${error.message}`)
   }
 }
-

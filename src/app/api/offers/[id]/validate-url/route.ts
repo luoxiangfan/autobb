@@ -5,10 +5,7 @@ import { validateUrl } from '@/lib/scraper'
  * POST /api/offers/:id/validate-url
  * 验证URL是否可访问
  */
-export async function POST(
-  request: NextRequest,
-  { params: _params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, _props: { params: Promise<{ id: string }> }) {
   try {
     const body = await request.json()
     const { url } = body

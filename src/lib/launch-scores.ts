@@ -315,7 +315,8 @@ export async function findCachedLaunchScore(
 ): Promise<LaunchScore | null> {
   const db = await getDatabase()
 
-  const row = await db.queryOne(`
+  const row = (await db.queryOne(
+    `
     SELECT * FROM launch_scores
     WHERE ad_creative_id = ?
       AND content_hash = ?
@@ -323,7 +324,9 @@ export async function findCachedLaunchScore(
       AND user_id = ?
     ORDER BY calculated_at DESC
     LIMIT 1
-  `, [creativeId, contentHash, campaignConfigHash, userId]) as any
+  `,
+    [creativeId, contentHash, campaignConfigHash, userId]
+  )) as any
 
   if (!row) {
     return null
@@ -341,13 +344,16 @@ export async function findLaunchScoreByCreativeId(
 ): Promise<LaunchScore | null> {
   const db = await getDatabase()
 
-  const row = await db.queryOne(`
+  const row = (await db.queryOne(
+    `
     SELECT * FROM launch_scores
     WHERE ad_creative_id = ?
       AND user_id = ?
     ORDER BY calculated_at DESC
     LIMIT 1
-  `, [creativeId, userId]) as any
+  `,
+    [creativeId, userId]
+  )) as any
 
   if (!row) {
     return null
@@ -442,11 +448,12 @@ export async function createLaunchScore(
   // v4.16字段：launch_viability_score, ad_quality_score, keyword_strategy_score, basic_config_score
   const legacyKeywordScore = analysis.keywordStrategy.score || 0
   const legacyMarketFitScore = analysis.launchViability.score || 0
-  const legacyLandingPageScore = analysis.basicConfig.finalUrl ? 5 : 0  // 基于Final URL存在性评估
+  const legacyLandingPageScore = analysis.basicConfig.finalUrl ? 5 : 0 // 基于Final URL存在性评估
   const legacyBudgetScore = analysis.basicConfig.budgetScore || 0
   const legacyContentScore = analysis.adQuality.score || 0
 
-  const info = await db.exec(`
+  const info = await db.exec(
+    `
     INSERT INTO launch_scores (
       user_id, offer_id, total_score,
       keyword_score, market_fit_score, landing_page_score, budget_score, content_score,
@@ -456,36 +463,38 @@ export async function createLaunchScore(
       launch_viability_data, ad_quality_data, keyword_strategy_data, basic_config_data,
       ad_creative_id, issues, suggestions, content_hash, campaign_config_hash
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [
-    userId,
-    offerId,
-    totalScore,
-    legacyKeywordScore,
-    legacyMarketFitScore,
-    legacyLandingPageScore,
-    legacyBudgetScore,
-    legacyContentScore,
-    JSON.stringify(analysis.keywordStrategy),
-    JSON.stringify(analysis.launchViability),
-    JSON.stringify(analysis.basicConfig),
-    JSON.stringify(analysis.basicConfig),
-    JSON.stringify(analysis.adQuality),
-    JSON.stringify(analysis.overallRecommendations),
-    new Date().toISOString(),
-    analysis.launchViability.score,
-    analysis.adQuality.score,
-    analysis.keywordStrategy.score,
-    analysis.basicConfig.score,
-    JSON.stringify(analysis.launchViability),
-    JSON.stringify(analysis.adQuality),
-    JSON.stringify(analysis.keywordStrategy),
-    JSON.stringify(analysis.basicConfig),
-    options?.adCreativeId || null,
-    JSON.stringify(allIssues),
-    JSON.stringify(allSuggestions),
-    options?.contentHash || null,
-    options?.campaignConfigHash || null
-  ])
+  `,
+    [
+      userId,
+      offerId,
+      totalScore,
+      legacyKeywordScore,
+      legacyMarketFitScore,
+      legacyLandingPageScore,
+      legacyBudgetScore,
+      legacyContentScore,
+      JSON.stringify(analysis.keywordStrategy),
+      JSON.stringify(analysis.launchViability),
+      JSON.stringify(analysis.basicConfig),
+      JSON.stringify(analysis.basicConfig),
+      JSON.stringify(analysis.adQuality),
+      JSON.stringify(analysis.overallRecommendations),
+      new Date().toISOString(),
+      analysis.launchViability.score,
+      analysis.adQuality.score,
+      analysis.keywordStrategy.score,
+      analysis.basicConfig.score,
+      JSON.stringify(analysis.launchViability),
+      JSON.stringify(analysis.adQuality),
+      JSON.stringify(analysis.keywordStrategy),
+      JSON.stringify(analysis.basicConfig),
+      options?.adCreativeId || null,
+      JSON.stringify(allIssues),
+      JSON.stringify(allSuggestions),
+      options?.contentHash || null,
+      options?.campaignConfigHash || null,
+    ]
+  )
 
   const insertedId = getInsertedId(info, db.type)
   return (await findLaunchScoreById(insertedId, userId))!
@@ -497,10 +506,13 @@ export async function createLaunchScore(
 export async function findLaunchScoreById(id: number, userId: number): Promise<LaunchScore | null> {
   const db = await getDatabase()
 
-  const row = await db.queryOne(`
+  const row = (await db.queryOne(
+    `
     SELECT * FROM launch_scores
     WHERE id = ? AND user_id = ?
-  `, [id, userId]) as any
+  `,
+    [id, userId]
+  )) as any
 
   if (!row) {
     return null
@@ -512,14 +524,20 @@ export async function findLaunchScoreById(id: number, userId: number): Promise<L
 /**
  * 查找Offer的所有Launch Scores
  */
-export async function findLaunchScoresByOfferId(offerId: number, userId: number): Promise<LaunchScore[]> {
+export async function findLaunchScoresByOfferId(
+  offerId: number,
+  userId: number
+): Promise<LaunchScore[]> {
   const db = await getDatabase()
 
-  const rows = await db.query(`
+  const rows = (await db.query(
+    `
     SELECT * FROM launch_scores
     WHERE offer_id = ? AND user_id = ?
     ORDER BY calculated_at DESC
-  `, [offerId, userId]) as any[]
+  `,
+    [offerId, userId]
+  )) as any[]
 
   return rows.map(mapRowToLaunchScore)
 }
@@ -527,15 +545,21 @@ export async function findLaunchScoresByOfferId(offerId: number, userId: number)
 /**
  * 查找Offer的最新Launch Score
  */
-export async function findLatestLaunchScore(offerId: number, userId: number): Promise<LaunchScore | null> {
+export async function findLatestLaunchScore(
+  offerId: number,
+  userId: number
+): Promise<LaunchScore | null> {
   const db = await getDatabase()
 
-  const row = await db.queryOne(`
+  const row = (await db.queryOne(
+    `
     SELECT * FROM launch_scores
     WHERE offer_id = ? AND user_id = ?
     ORDER BY calculated_at DESC
     LIMIT 1
-  `, [offerId, userId]) as any
+  `,
+    [offerId, userId]
+  )) as any
 
   if (!row) {
     return null
@@ -614,11 +638,7 @@ export function resolveLaunchScoreForCreativeCompareFromMaps(
     return { score: byCreative, scoreSource: 'creative' }
   }
 
-  return resolveOfferLatestLaunchScoreForCompare(
-    offerLatest,
-    creativeId,
-    compareCreativeCount
-  )
+  return resolveOfferLatestLaunchScoreForCompare(offerLatest, creativeId, compareCreativeCount)
 }
 
 /**
@@ -645,10 +665,13 @@ export async function resolveLaunchScoreForCreativeCompare(
 export async function deleteLaunchScore(id: number, userId: number): Promise<boolean> {
   const db = await getDatabase()
 
-  const info = await db.exec(`
+  const info = await db.exec(
+    `
     DELETE FROM launch_scores
     WHERE id = ? AND user_id = ?
-  `, [id, userId])
+  `,
+    [id, userId]
+  )
 
   return info.changes > 0
 }
@@ -687,10 +710,16 @@ function mapRowToLaunchScore(row: any): LaunchScore {
  */
 export function parseLaunchScoreAnalysis(score: LaunchScore): ScoreAnalysis {
   return {
-    launchViability: score.launchViabilityData ? JSON.parse(score.launchViabilityData) : getDefaultLaunchViability(),
+    launchViability: score.launchViabilityData
+      ? JSON.parse(score.launchViabilityData)
+      : getDefaultLaunchViability(),
     adQuality: score.adQualityData ? JSON.parse(score.adQualityData) : getDefaultAdQuality(),
-    keywordStrategy: score.keywordStrategyData ? JSON.parse(score.keywordStrategyData) : getDefaultKeywordStrategy(),
-    basicConfig: score.basicConfigData ? JSON.parse(score.basicConfigData) : getDefaultBasicConfig(),
+    keywordStrategy: score.keywordStrategyData
+      ? JSON.parse(score.keywordStrategyData)
+      : getDefaultKeywordStrategy(),
+    basicConfig: score.basicConfigData
+      ? JSON.parse(score.basicConfigData)
+      : getDefaultBasicConfig(),
     overallRecommendations: score.recommendations ? JSON.parse(score.recommendations) : [],
   }
 }

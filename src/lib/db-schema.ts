@@ -90,16 +90,21 @@ export const TABLES: TableDef[] = [
     name: 'google_ads_accounts',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'customer_id', type: 'TEXT', notNull: true },
       { name: 'account_name', type: 'TEXT' },
       { name: 'currency', type: 'TEXT', notNull: true, default: 'CNY' },
       { name: 'timezone', type: 'TEXT', notNull: true, default: 'Asia/Shanghai' },
       { name: 'is_manager_account', type: 'BOOLEAN', notNull: true, default: false },
       { name: 'is_active', type: 'BOOLEAN', notNull: true, default: true },
-      { name: 'status', type: 'TEXT', default: 'ENABLED' },  // Google Ads账户状态: ENABLED, CANCELED, SUSPENDED, CLOSED, UNKNOWN
-      { name: 'parent_mcc_id', type: 'TEXT' },  // 父级MCC账户ID（用于账户层级关系）
-      { name: 'test_account', type: 'BOOLEAN', notNull: true, default: false },  // 标识是否为测试账户
+      { name: 'status', type: 'TEXT', default: 'ENABLED' }, // Google Ads账户状态: ENABLED, CANCELED, SUSPENDED, CLOSED, UNKNOWN
+      { name: 'parent_mcc_id', type: 'TEXT' }, // 父级MCC账户ID（用于账户层级关系）
+      { name: 'test_account', type: 'BOOLEAN', notNull: true, default: false }, // 标识是否为测试账户
       // Identity Verification（广告主验证）：用于识别“验证导致暂停但 customer.status 仍为 ENABLED”的情况
       { name: 'identity_verification_program_status', type: 'TEXT' },
       { name: 'identity_verification_start_deadline_time', type: 'TEXT' },
@@ -123,7 +128,12 @@ export const TABLES: TableDef[] = [
     name: 'offers',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'url', type: 'TEXT', notNull: true },
       { name: 'brand', type: 'TEXT', notNull: true },
       { name: 'product_name', type: 'TEXT' },
@@ -132,7 +142,7 @@ export const TABLES: TableDef[] = [
       { name: 'target_language', type: 'TEXT' },
       { name: 'offer_name', type: 'TEXT', unique: true },
       { name: 'affiliate_link', type: 'TEXT' },
-      { name: 'store_product_links', type: 'TEXT' },  // 店铺模式：最多3个单品推广链接（JSON）
+      { name: 'store_product_links', type: 'TEXT' }, // 店铺模式：最多3个单品推广链接（JSON）
       { name: 'brand_description', type: 'TEXT' },
       { name: 'unique_selling_points', type: 'TEXT' },
       { name: 'product_highlights', type: 'TEXT' },
@@ -141,9 +151,9 @@ export const TABLES: TableDef[] = [
       { name: 'final_url_suffix', type: 'TEXT' },
       { name: 'product_price', type: 'TEXT' },
       { name: 'commission_payout', type: 'TEXT' },
-      { name: 'commission_type', type: 'TEXT' },  // percent | amount
-      { name: 'commission_value', type: 'TEXT' },  // numeric string
-      { name: 'commission_currency', type: 'TEXT' },  // amount模式货币代码
+      { name: 'commission_type', type: 'TEXT' }, // percent | amount
+      { name: 'commission_value', type: 'TEXT' }, // numeric string
+      { name: 'commission_currency', type: 'TEXT' }, // amount模式货币代码
       { name: 'scrape_status', type: 'TEXT', notNull: true, default: 'pending' },
       { name: 'scrape_error', type: 'TEXT' },
       { name: 'scraped_at', type: 'TIMESTAMP' },
@@ -158,28 +168,28 @@ export const TABLES: TableDef[] = [
       { name: 'extraction_metadata', type: 'TEXT' },
       { name: 'extracted_at', type: 'TIMESTAMP' },
       // P0 优化字段 - 增强提取数据
-      { name: 'enhanced_keywords', type: 'TEXT' },  // 增强的关键词（JSON格式）
-      { name: 'enhanced_product_info', type: 'TEXT' },  // 增强的产品信息（JSON格式）
-      { name: 'enhanced_review_analysis', type: 'TEXT' },  // 增强的评论分析（JSON格式）
-      { name: 'extraction_quality_score', type: 'INTEGER' },  // 提取质量评分（0-100）
-      { name: 'extraction_enhanced_at', type: 'TIMESTAMP' },  // 增强提取时间
+      { name: 'enhanced_keywords', type: 'TEXT' }, // 增强的关键词（JSON格式）
+      { name: 'enhanced_product_info', type: 'TEXT' }, // 增强的产品信息（JSON格式）
+      { name: 'enhanced_review_analysis', type: 'TEXT' }, // 增强的评论分析（JSON格式）
+      { name: 'extraction_quality_score', type: 'INTEGER' }, // 提取质量评分（0-100）
+      { name: 'extraction_enhanced_at', type: 'TIMESTAMP' }, // 增强提取时间
       // P1 优化字段 - 增强标题和描述
-      { name: 'enhanced_headlines', type: 'TEXT' },  // 增强的标题（JSON格式）
-      { name: 'enhanced_descriptions', type: 'TEXT' },  // 增强的描述（JSON格式）
+      { name: 'enhanced_headlines', type: 'TEXT' }, // 增强的标题（JSON格式）
+      { name: 'enhanced_descriptions', type: 'TEXT' }, // 增强的描述（JSON格式）
       // P2/P3 优化字段 - 本地化和品牌分析
-      { name: 'localization_adapt', type: 'TEXT' },  // 本地化适配数据（JSON格式）
-      { name: 'brand_analysis', type: 'TEXT' },  // 品牌分析数据（JSON格式）
+      { name: 'localization_adapt', type: 'TEXT' }, // 本地化适配数据（JSON格式）
+      { name: 'brand_analysis', type: 'TEXT' }, // 品牌分析数据（JSON格式）
       // 原有字段
-      { name: 'pricing', type: 'TEXT' },  // 产品定价信息（JSON格式）
-      { name: 'promotions', type: 'TEXT' },  // 促销活动信息（JSON格式）
-      { name: 'scraped_data', type: 'TEXT' },  // 爬取的原始数据（JSON格式）
-      { name: 'product_currency', type: 'TEXT', default: 'USD' },  // 产品货币单位
+      { name: 'pricing', type: 'TEXT' }, // 产品定价信息（JSON格式）
+      { name: 'promotions', type: 'TEXT' }, // 促销活动信息（JSON格式）
+      { name: 'scraped_data', type: 'TEXT' }, // 爬取的原始数据（JSON格式）
+      { name: 'product_currency', type: 'TEXT', default: 'USD' }, // 产品货币单位
       // Database v2.0: AI增强字段 - 用于AI分析的结构化数据
-      { name: 'ai_reviews', type: 'TEXT' },  // AI处理的评论数据（JSON格式）
-      { name: 'ai_competitive_edges', type: 'TEXT' },  // AI分析的竞争优势（JSON格式）
-      { name: 'ai_keywords', type: 'TEXT' },  // AI提取的关键词（JSON格式）
-      { name: 'is_deleted', type: 'BOOLEAN', notNull: true, default: false },  // 软删除标记
-      { name: 'deleted_at', type: 'TIMESTAMP' },  // 删除时间
+      { name: 'ai_reviews', type: 'TEXT' }, // AI处理的评论数据（JSON格式）
+      { name: 'ai_competitive_edges', type: 'TEXT' }, // AI分析的竞争优势（JSON格式）
+      { name: 'ai_keywords', type: 'TEXT' }, // AI提取的关键词（JSON格式）
+      { name: 'is_deleted', type: 'BOOLEAN', notNull: true, default: false }, // 软删除标记
+      { name: 'deleted_at', type: 'TIMESTAMP' }, // 删除时间
       { name: 'created_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
       { name: 'updated_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
     ],
@@ -188,8 +198,8 @@ export const TABLES: TableDef[] = [
       { name: 'idx_offers_offer_name', columns: ['offer_name'] },
       { name: 'idx_offers_is_deleted', columns: ['is_deleted'] },
       { name: 'idx_offers_deleted_at', columns: ['deleted_at'] },
-      { name: 'idx_offers_google_ads_campaign_id', columns: ['google_ads_campaign_id'] },  // Google Ads 同步索引
-      { name: 'idx_offers_needs_completion', columns: ['needs_completion'] },  // 需要完善的索引
+      { name: 'idx_offers_google_ads_campaign_id', columns: ['google_ads_campaign_id'] }, // Google Ads 同步索引
+      { name: 'idx_offers_needs_completion', columns: ['needs_completion'] }, // 需要完善的索引
     ],
   },
 
@@ -200,8 +210,18 @@ export const TABLES: TableDef[] = [
     name: 'ad_creatives',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'offer_id', type: 'INTEGER', notNull: true, references: { table: 'offers', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'offer_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'offers', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'headlines', type: 'TEXT', notNull: true },
       { name: 'descriptions', type: 'TEXT', notNull: true },
       { name: 'keywords', type: 'TEXT' },
@@ -218,13 +238,13 @@ export const TABLES: TableDef[] = [
       { name: 'ai_model', type: 'TEXT' },
       { name: 'is_selected', type: 'BOOLEAN', default: false },
       { name: 'ab_test_variant_id', type: 'INTEGER' },
-      { name: 'google_campaign_id', type: 'TEXT' },  // Google Ads Campaign ID（用于性能数据同步）
-      { name: 'industry_code', type: 'TEXT' },  // 行业分类代码（如ecom_fashion, saas等）
-      { name: 'orientation', type: 'TEXT' },  // 创意导向类型（brand/product/promotion）
-      { name: 'brand', type: 'TEXT' },  // 品牌名称（从offer复制用于评分）
-      { name: 'url', type: 'TEXT' },  // 产品URL或落地页URL
-      { name: 'path1', type: 'TEXT' },  // RSA Display URL路径1，如"Cameras"，最多15字符
-      { name: 'path2', type: 'TEXT' },  // RSA Display URL路径2，如"Wireless"，最多15字符
+      { name: 'google_campaign_id', type: 'TEXT' }, // Google Ads Campaign ID（用于性能数据同步）
+      { name: 'industry_code', type: 'TEXT' }, // 行业分类代码（如ecom_fashion, saas等）
+      { name: 'orientation', type: 'TEXT' }, // 创意导向类型（brand/product/promotion）
+      { name: 'brand', type: 'TEXT' }, // 品牌名称（从offer复制用于评分）
+      { name: 'url', type: 'TEXT' }, // 产品URL或落地页URL
+      { name: 'path1', type: 'TEXT' }, // RSA Display URL路径1，如"Cameras"，最多15字符
+      { name: 'path2', type: 'TEXT' }, // RSA Display URL路径2，如"Wireless"，最多15字符
       { name: 'created_at', type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
       { name: 'updated_at', type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
     ],
@@ -243,11 +263,25 @@ export const TABLES: TableDef[] = [
     name: 'campaigns',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'offer_id', type: 'INTEGER', notNull: true, references: { table: 'offers', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'offer_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'offers', column: 'id', onDelete: 'CASCADE' },
+      },
       // 🔧 修复(2025-12-25): google_ads_account_id 改为可空
       // 删除Ads账号时，Campaign应保留（历史数据），只将account_id设为NULL
-      { name: 'google_ads_account_id', type: 'INTEGER', references: { table: 'google_ads_accounts', column: 'id', onDelete: 'SET NULL' } },
+      {
+        name: 'google_ads_account_id',
+        type: 'INTEGER',
+        references: { table: 'google_ads_accounts', column: 'id', onDelete: 'SET NULL' },
+      },
       { name: 'campaign_id', type: 'TEXT', unique: true },
       { name: 'campaign_name', type: 'TEXT', notNull: true },
       { name: 'budget_amount', type: 'REAL', notNull: true },
@@ -262,7 +296,11 @@ export const TABLES: TableDef[] = [
       { name: 'removed_reason', type: 'TEXT' },
       { name: 'last_sync_at', type: 'TIMESTAMP' },
       { name: 'published_at', type: 'TIMESTAMP' }, // 成功发布到Ads账号的时间（用于“投放日期”展示）
-      { name: 'ad_creative_id', type: 'INTEGER', references: { table: 'ad_creatives', column: 'id', onDelete: 'SET NULL' } },
+      {
+        name: 'ad_creative_id',
+        type: 'INTEGER',
+        references: { table: 'ad_creatives', column: 'id', onDelete: 'SET NULL' },
+      },
       { name: 'google_campaign_id', type: 'TEXT' },
       { name: 'google_ad_group_id', type: 'TEXT' },
       { name: 'google_ad_id', type: 'TEXT' },
@@ -270,9 +308,14 @@ export const TABLES: TableDef[] = [
       { name: 'pause_old_campaigns', type: 'BOOLEAN' },
       { name: 'is_test_variant', type: 'BOOLEAN', default: false },
       { name: 'ab_test_id', type: 'INTEGER' },
-      { name: 'traffic_allocation', type: 'REAL', default: 1.0, check: 'traffic_allocation >= 0 AND traffic_allocation <= 1' },
-      { name: 'synced_from_google_ads', type: 'BOOLEAN', notNull: true, default: false },  // 是否从 Google Ads 同步
-      { name: 'needs_offer_completion', type: 'BOOLEAN', notNull: true, default: false },  // 是否需要完善 Offer 信息
+      {
+        name: 'traffic_allocation',
+        type: 'REAL',
+        default: 1.0,
+        check: 'traffic_allocation >= 0 AND traffic_allocation <= 1',
+      },
+      { name: 'synced_from_google_ads', type: 'BOOLEAN', notNull: true, default: false }, // 是否从 Google Ads 同步
+      { name: 'needs_offer_completion', type: 'BOOLEAN', notNull: true, default: false }, // 是否需要完善 Offer 信息
       { name: 'is_deleted', type: 'BOOLEAN', notNull: true, default: false },
       { name: 'deleted_at', type: 'TIMESTAMP' },
       { name: 'created_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
@@ -302,8 +345,18 @@ export const TABLES: TableDef[] = [
     name: 'ad_groups',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'campaign_id', type: 'INTEGER', notNull: true, references: { table: 'campaigns', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'campaign_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'campaigns', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'ad_group_id', type: 'TEXT', unique: true },
       { name: 'ad_group_name', type: 'TEXT', notNull: true },
       { name: 'status', type: 'TEXT', notNull: true, default: 'PAUSED' },
@@ -327,8 +380,18 @@ export const TABLES: TableDef[] = [
     name: 'keywords',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'ad_group_id', type: 'INTEGER', notNull: true, references: { table: 'ad_groups', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'ad_group_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'ad_groups', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'keyword_id', type: 'TEXT', unique: true },
       { name: 'keyword_text', type: 'TEXT', notNull: true },
       { name: 'match_type', type: 'TEXT', notNull: true, default: 'PHRASE' },
@@ -359,7 +422,7 @@ export const TABLES: TableDef[] = [
     name: 'global_keywords',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'keyword', type: 'TEXT', notNull: true },  // 🔧 修复(2025-12-22): 从 keyword_text 改为 keyword (migration 075)
+      { name: 'keyword', type: 'TEXT', notNull: true }, // 🔧 修复(2025-12-22): 从 keyword_text 改为 keyword (migration 075)
       { name: 'country', type: 'TEXT', notNull: true, default: 'US' },
       { name: 'language', type: 'TEXT', notNull: true, default: 'en' },
       { name: 'search_volume', type: 'INTEGER', default: 0 },
@@ -369,7 +432,11 @@ export const TABLES: TableDef[] = [
       { name: 'created_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
     ],
     indexes: [
-      { name: 'idx_global_keywords_lookup', columns: ['keyword', 'country', 'language'], unique: true },
+      {
+        name: 'idx_global_keywords_lookup',
+        columns: ['keyword', 'country', 'language'],
+        unique: true,
+      },
       { name: 'idx_global_keywords_cached_at', columns: ['cached_at'] },
     ],
   },
@@ -381,8 +448,18 @@ export const TABLES: TableDef[] = [
     name: 'launch_scores',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'offer_id', type: 'INTEGER', notNull: true, references: { table: 'offers', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'offer_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'offers', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'total_score', type: 'INTEGER', notNull: true },
       { name: 'keyword_score', type: 'INTEGER', notNull: true },
       { name: 'market_fit_score', type: 'INTEGER', notNull: true },
@@ -406,9 +483,18 @@ export const TABLES: TableDef[] = [
     name: 'weekly_recommendations',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
       // 🔧 修复(2025-12-25): 删除Ads账号时保留历史数据，设为NULL
-      { name: 'google_ads_account_id', type: 'INTEGER', references: { table: 'google_ads_accounts', column: 'id', onDelete: 'SET NULL' } },
+      {
+        name: 'google_ads_account_id',
+        type: 'INTEGER',
+        references: { table: 'google_ads_accounts', column: 'id', onDelete: 'SET NULL' },
+      },
       { name: 'recommendation_type', type: 'TEXT', notNull: true },
       { name: 'recommendation_data', type: 'TEXT', notNull: true },
       { name: 'priority', type: 'TEXT', notNull: true, default: 'MEDIUM' },
@@ -426,9 +512,18 @@ export const TABLES: TableDef[] = [
     name: 'optimization_recommendations',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
       // 🔧 修复(2025-12-25): 删除Ads账号时保留历史数据，设为NULL
-      { name: 'google_ads_account_id', type: 'INTEGER', references: { table: 'google_ads_accounts', column: 'id', onDelete: 'SET NULL' } },
+      {
+        name: 'google_ads_account_id',
+        type: 'INTEGER',
+        references: { table: 'google_ads_accounts', column: 'id', onDelete: 'SET NULL' },
+      },
       { name: 'recommendation_id', type: 'TEXT', notNull: true, unique: true },
       { name: 'recommendation_type', type: 'TEXT', notNull: true },
       { name: 'impact', type: 'TEXT' },
@@ -447,7 +542,12 @@ export const TABLES: TableDef[] = [
     name: 'optimization_tasks',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'task_type', type: 'TEXT', notNull: true },
       { name: 'priority', type: 'TEXT', notNull: true, default: 'MEDIUM' },
       { name: 'title', type: 'TEXT', notNull: true },
@@ -467,8 +567,18 @@ export const TABLES: TableDef[] = [
     name: 'campaign_performance',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'campaign_id', type: 'INTEGER', notNull: true, references: { table: 'campaigns', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'campaign_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'campaigns', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'date', type: 'DATE', notNull: true },
       { name: 'impressions', type: 'INTEGER', notNull: true, default: 0 },
       { name: 'clicks', type: 'INTEGER', notNull: true, default: 0 },
@@ -494,9 +604,23 @@ export const TABLES: TableDef[] = [
     name: 'search_term_reports',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'campaign_id', type: 'INTEGER', notNull: true, references: { table: 'campaigns', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'ad_group_id', type: 'INTEGER', references: { table: 'ad_groups', column: 'id', onDelete: 'SET NULL' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'campaign_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'campaigns', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'ad_group_id',
+        type: 'INTEGER',
+        references: { table: 'ad_groups', column: 'id', onDelete: 'SET NULL' },
+      },
       { name: 'google_ad_group_id', type: 'TEXT' },
       { name: 'search_term', type: 'TEXT', notNull: true },
       { name: 'match_type', type: 'TEXT', notNull: true },
@@ -510,7 +634,10 @@ export const TABLES: TableDef[] = [
     ],
     indexes: [
       { name: 'idx_search_terms_campaign_date', columns: ['campaign_id', 'date'] },
-      { name: 'idx_search_terms_campaign_adgroup_date', columns: ['campaign_id', 'ad_group_id', 'date'] },
+      {
+        name: 'idx_search_terms_campaign_adgroup_date',
+        columns: ['campaign_id', 'ad_group_id', 'date'],
+      },
       { name: 'idx_search_terms_term', columns: ['search_term'] },
       { name: 'idx_search_terms_google_adgroup', columns: ['google_ad_group_id'] },
       { name: 'idx_search_terms_user_id', columns: ['user_id'] },
@@ -539,7 +666,10 @@ export const TABLES: TableDef[] = [
       { name: 'updated_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
     ],
     indexes: [
-      { name: 'idx_brand_core_lookup', columns: ['brand_key', 'target_country', 'target_language'] },
+      {
+        name: 'idx_brand_core_lookup',
+        columns: ['brand_key', 'target_country', 'target_language'],
+      },
       { name: 'idx_brand_core_last_seen', columns: ['brand_key', 'last_seen_at'] },
     ],
     uniqueConstraints: [['brand_key', 'target_country', 'target_language', 'keyword_norm']],
@@ -561,9 +691,7 @@ export const TABLES: TableDef[] = [
       { name: 'source_mask', type: 'TEXT', notNull: true },
       { name: 'created_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
     ],
-    indexes: [
-      { name: 'idx_brand_core_daily_date', columns: ['date'] },
-    ],
+    indexes: [{ name: 'idx_brand_core_daily_date', columns: ['date'] }],
     uniqueConstraints: [['brand_key', 'target_country', 'target_language', 'keyword_norm', 'date']],
   },
 
@@ -574,7 +702,12 @@ export const TABLES: TableDef[] = [
     name: 'rate_limits',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'api_name', type: 'TEXT', notNull: true },
       { name: 'endpoint', type: 'TEXT', notNull: true },
       { name: 'request_count', type: 'INTEGER', notNull: true, default: 1 },
@@ -591,7 +724,11 @@ export const TABLES: TableDef[] = [
     name: 'system_settings',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'category', type: 'TEXT', notNull: true },
       { name: 'key', type: 'TEXT', notNull: true },
       { name: 'value', type: 'TEXT' },
@@ -616,8 +753,18 @@ export const TABLES: TableDef[] = [
     name: 'cpc_adjustment_history',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'offer_id', type: 'INTEGER', notNull: true, references: { table: 'offers', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'offer_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'offers', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'campaign_id', type: 'INTEGER' },
       { name: 'adjustment_type', type: 'TEXT', notNull: true },
       { name: 'adjustment_value', type: 'REAL', notNull: true },
@@ -637,7 +784,12 @@ export const TABLES: TableDef[] = [
     name: 'risk_alerts',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'risk_type', type: 'TEXT', notNull: true },
       { name: 'severity', type: 'TEXT', notNull: true },
       { name: 'title', type: 'TEXT', notNull: true },
@@ -672,8 +824,18 @@ export const TABLES: TableDef[] = [
     name: 'link_check_history',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'offer_id', type: 'INTEGER', notNull: true, references: { table: 'offers', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'offer_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'offers', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'is_accessible', type: 'BOOLEAN', notNull: true },
       { name: 'http_status_code', type: 'INTEGER' },
       { name: 'response_time_ms', type: 'INTEGER' },
@@ -695,23 +857,28 @@ export const TABLES: TableDef[] = [
     name: 'creative_versions',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'creative_id', type: 'INTEGER', notNull: true, references: { table: 'ad_creatives', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'creative_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'ad_creatives', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'version_number', type: 'INTEGER', notNull: true },
-      { name: 'headlines', type: 'TEXT', notNull: true },  // JSON格式: ["H1", "H2", "H3"]
-      { name: 'descriptions', type: 'TEXT', notNull: true },  // JSON格式: ["D1", "D2"]
+      { name: 'headlines', type: 'TEXT', notNull: true }, // JSON格式: ["H1", "H2", "H3"]
+      { name: 'descriptions', type: 'TEXT', notNull: true }, // JSON格式: ["D1", "D2"]
       { name: 'final_url', type: 'TEXT', notNull: true },
       { name: 'path_1', type: 'TEXT' },
       { name: 'path_2', type: 'TEXT' },
       { name: 'quality_score', type: 'INTEGER' },
-      { name: 'quality_details', type: 'TEXT' },  // JSON格式
+      { name: 'quality_details', type: 'TEXT' }, // JSON格式
       { name: 'budget_amount', type: 'REAL' },
       { name: 'clicks', type: 'INTEGER', default: 0 },
       { name: 'impressions', type: 'INTEGER', default: 0 },
       { name: 'conversions', type: 'INTEGER', default: 0 },
       { name: 'cost', type: 'REAL', default: 0 },
-      { name: 'created_by', type: 'TEXT', notNull: true },  // 用户标识（字符串）
-      { name: 'creation_method', type: 'TEXT', notNull: true },  // inline_edit, ai_generation, rollback等
-      { name: 'change_summary', type: 'TEXT' },  // 变更说明
+      { name: 'created_by', type: 'TEXT', notNull: true }, // 用户标识（字符串）
+      { name: 'creation_method', type: 'TEXT', notNull: true }, // inline_edit, ai_generation, rollback等
+      { name: 'change_summary', type: 'TEXT' }, // 变更说明
       { name: 'created_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
     ],
     indexes: [
@@ -727,9 +894,18 @@ export const TABLES: TableDef[] = [
     name: 'sync_logs',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
       // 🔧 修复(2025-12-25): 删除Ads账号时保留历史数据，设为NULL
-      { name: 'google_ads_account_id', type: 'INTEGER', references: { table: 'google_ads_accounts', column: 'id', onDelete: 'SET NULL' } },
+      {
+        name: 'google_ads_account_id',
+        type: 'INTEGER',
+        references: { table: 'google_ads_accounts', column: 'id', onDelete: 'SET NULL' },
+      },
       { name: 'sync_type', type: 'TEXT', notNull: true },
       { name: 'status', type: 'TEXT', notNull: true },
       { name: 'record_count', type: 'INTEGER', notNull: true, default: 0 },
@@ -749,7 +925,13 @@ export const TABLES: TableDef[] = [
     name: 'creative_learning_patterns',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, unique: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        unique: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'success_features', type: 'TEXT', notNull: true },
       { name: 'total_creatives_analyzed', type: 'INTEGER', notNull: true, default: 0 },
       { name: 'avg_ctr', type: 'REAL' },
@@ -768,8 +950,18 @@ export const TABLES: TableDef[] = [
     name: 'scraped_products',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'offer_id', type: 'INTEGER', notNull: true, references: { table: 'offers', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'offer_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'offers', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'product_title', type: 'TEXT', notNull: true },
       { name: 'product_url', type: 'TEXT' },
       { name: 'price', type: 'REAL' },
@@ -797,7 +989,11 @@ export const TABLES: TableDef[] = [
       { name: 'file_size_bytes', type: 'BIGINT' },
       { name: 'error_message', type: 'TEXT' },
       { name: 'created_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
-      { name: 'created_by', type: 'INTEGER', references: { table: 'users', column: 'id', onDelete: 'SET NULL' } },
+      {
+        name: 'created_by',
+        type: 'INTEGER',
+        references: { table: 'users', column: 'id', onDelete: 'SET NULL' },
+      },
     ],
     indexes: [
       { name: 'idx_backup_logs_created_at', columns: ['created_at'] },
@@ -812,12 +1008,34 @@ export const TABLES: TableDef[] = [
     name: 'ab_tests',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'offer_id', type: 'INTEGER', notNull: true, references: { table: 'offers', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'offer_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'offers', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'test_name', type: 'TEXT', notNull: true },
       { name: 'test_description', type: 'TEXT' },
-      { name: 'test_type', type: 'TEXT', notNull: true, check: "test_type IN ('headline', 'description', 'keyword', 'callout', 'sitelink', 'full_creative')" },
-      { name: 'status', type: 'TEXT', notNull: true, default: 'draft', check: "status IN ('draft', 'running', 'paused', 'completed', 'cancelled')" },
+      {
+        name: 'test_type',
+        type: 'TEXT',
+        notNull: true,
+        check:
+          "test_type IN ('headline', 'description', 'keyword', 'callout', 'sitelink', 'full_creative')",
+      },
+      {
+        name: 'status',
+        type: 'TEXT',
+        notNull: true,
+        default: 'draft',
+        check: "status IN ('draft', 'running', 'paused', 'completed', 'cancelled')",
+      },
       { name: 'start_date', type: 'TIMESTAMP' },
       { name: 'end_date', type: 'TIMESTAMP' },
       { name: 'winner_variant_id', type: 'INTEGER' },
@@ -826,9 +1044,23 @@ export const TABLES: TableDef[] = [
       { name: 'confidence_level', type: 'REAL', default: 0.95 },
       // 自动测试相关字段
       { name: 'is_auto_test', type: 'BOOLEAN', default: true },
-      { name: 'test_mode', type: 'TEXT', default: 'manual', check: "test_mode IN ('launch_multi_variant', 'optimization_challenge', 'manual')" },
-      { name: 'parent_campaign_id', type: 'INTEGER', references: { table: 'campaigns', column: 'id', onDelete: 'SET NULL' } },
-      { name: 'test_dimension', type: 'TEXT', default: 'creative', check: "test_dimension IN ('creative', 'strategy')" },
+      {
+        name: 'test_mode',
+        type: 'TEXT',
+        default: 'manual',
+        check: "test_mode IN ('launch_multi_variant', 'optimization_challenge', 'manual')",
+      },
+      {
+        name: 'parent_campaign_id',
+        type: 'INTEGER',
+        references: { table: 'campaigns', column: 'id', onDelete: 'SET NULL' },
+      },
+      {
+        name: 'test_dimension',
+        type: 'TEXT',
+        default: 'creative',
+        check: "test_dimension IN ('creative', 'strategy')",
+      },
       { name: 'created_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
       { name: 'updated_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
     ],
@@ -848,11 +1080,27 @@ export const TABLES: TableDef[] = [
     name: 'ab_test_variants',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'ab_test_id', type: 'INTEGER', notNull: true, references: { table: 'ab_tests', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'ab_test_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'ab_tests', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'variant_name', type: 'TEXT', notNull: true },
       { name: 'variant_label', type: 'TEXT' },
-      { name: 'ad_creative_id', type: 'INTEGER', notNull: true, references: { table: 'ad_creatives', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'traffic_allocation', type: 'REAL', notNull: true, default: 0.5, check: 'traffic_allocation >= 0 AND traffic_allocation <= 1' },
+      {
+        name: 'ad_creative_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'ad_creatives', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'traffic_allocation',
+        type: 'REAL',
+        notNull: true,
+        default: 0.5,
+        check: 'traffic_allocation >= 0 AND traffic_allocation <= 1',
+      },
       { name: 'is_control', type: 'BOOLEAN', notNull: true, default: false },
       { name: 'impressions', type: 'INTEGER', default: 0 },
       { name: 'clicks', type: 'INTEGER', default: 0 },
@@ -882,13 +1130,19 @@ export const TABLES: TableDef[] = [
     name: 'google_ads_credentials',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, unique: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'client_id', type: 'TEXT' },  // 选填，可使用平台共享配置
-      { name: 'client_secret', type: 'TEXT' },  // 选填，可使用平台共享配置
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        unique: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
+      { name: 'client_id', type: 'TEXT' }, // 选填，可使用平台共享配置
+      { name: 'client_secret', type: 'TEXT' }, // 选填，可使用平台共享配置
       { name: 'refresh_token', type: 'TEXT', notNull: true },
       { name: 'access_token', type: 'TEXT' },
-      { name: 'developer_token', type: 'TEXT' },  // 选填，可使用平台共享配置
-      { name: 'login_customer_id', type: 'TEXT', notNull: true },  // 必填，MCC账户ID
+      { name: 'developer_token', type: 'TEXT' }, // 选填，可使用平台共享配置
+      { name: 'login_customer_id', type: 'TEXT', notNull: true }, // 必填，MCC账户ID
       { name: 'access_token_expires_at', type: 'TIMESTAMP' },
       { name: 'is_active', type: 'BOOLEAN', default: true },
       { name: 'last_verified_at', type: 'TIMESTAMP' },
@@ -904,7 +1158,12 @@ export const TABLES: TableDef[] = [
     name: 'google_ads_api_usage',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'operation_type', type: 'TEXT', notNull: true },
       { name: 'endpoint', type: 'TEXT', notNull: true },
       { name: 'customer_id', type: 'TEXT' },
@@ -929,12 +1188,36 @@ export const TABLES: TableDef[] = [
     name: 'ad_strength_history',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'offer_id', type: 'INTEGER', notNull: true, references: { table: 'offers', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'creative_id', type: 'INTEGER', references: { table: 'ad_creatives', column: 'id', onDelete: 'SET NULL' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'offer_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'offers', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'creative_id',
+        type: 'INTEGER',
+        references: { table: 'ad_creatives', column: 'id', onDelete: 'SET NULL' },
+      },
       { name: 'campaign_id', type: 'TEXT' },
-      { name: 'rating', type: 'TEXT', notNull: true, check: "rating IN ('PENDING', 'POOR', 'AVERAGE', 'GOOD', 'EXCELLENT')" },
-      { name: 'overall_score', type: 'INTEGER', notNull: true, check: 'overall_score >= 0 AND overall_score <= 100' },
+      {
+        name: 'rating',
+        type: 'TEXT',
+        notNull: true,
+        check: "rating IN ('PENDING', 'POOR', 'AVERAGE', 'GOOD', 'EXCELLENT')",
+      },
+      {
+        name: 'overall_score',
+        type: 'INTEGER',
+        notNull: true,
+        check: 'overall_score >= 0 AND overall_score <= 100',
+      },
       { name: 'diversity_score', type: 'INTEGER', notNull: true },
       { name: 'relevance_score', type: 'INTEGER', notNull: true },
       { name: 'completeness_score', type: 'INTEGER', notNull: true },
@@ -996,8 +1279,18 @@ export const TABLES: TableDef[] = [
     name: 'ad_creative_performance',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'ad_creative_id', type: 'INTEGER', notNull: true, references: { table: 'ad_creatives', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'offer_id', type: 'INTEGER', notNull: true, references: { table: 'offers', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'ad_creative_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'ad_creatives', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'offer_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'offers', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'user_id', type: 'TEXT', notNull: true },
       { name: 'impressions', type: 'INTEGER', default: 0 },
       { name: 'clicks', type: 'INTEGER', default: 0 },
@@ -1031,7 +1324,12 @@ export const TABLES: TableDef[] = [
     name: 'conversion_feedback',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'ad_creative_id', type: 'INTEGER', notNull: true, references: { table: 'ad_creatives', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'ad_creative_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'ad_creatives', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'user_id', type: 'TEXT', notNull: true },
       { name: 'conversions', type: 'INTEGER', notNull: true },
       { name: 'conversion_value', type: 'REAL', default: 0 },
@@ -1079,7 +1377,12 @@ export const TABLES: TableDef[] = [
     name: 'ai_token_usage',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'model', type: 'TEXT', notNull: true },
       { name: 'operation_type', type: 'TEXT', notNull: true },
       { name: 'input_tokens', type: 'INTEGER', notNull: true, default: 0 },
@@ -1114,7 +1417,11 @@ export const TABLES: TableDef[] = [
       { name: 'function_name', type: 'TEXT', notNull: true },
       { name: 'prompt_content', type: 'TEXT', notNull: true },
       { name: 'language', type: 'TEXT', default: 'English' },
-      { name: 'created_by', type: 'INTEGER', references: { table: 'users', column: 'id', onDelete: 'SET NULL' } },
+      {
+        name: 'created_by',
+        type: 'INTEGER',
+        references: { table: 'users', column: 'id', onDelete: 'SET NULL' },
+      },
       { name: 'created_at', type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
       { name: 'is_active', type: 'BOOLEAN', default: false },
       { name: 'change_notes', type: 'TEXT' },
@@ -1133,36 +1440,55 @@ export const TABLES: TableDef[] = [
   {
     name: 'offer_tasks',
     columns: [
-      { name: 'id', type: 'TEXT', primaryKey: true },  // UUID v4
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'status', type: 'TEXT', notNull: true, check: "status IN ('pending', 'running', 'completed', 'failed')", default: 'pending' },
-      { name: 'stage', type: 'TEXT' },  // Current processing stage
-      { name: 'progress', type: 'INTEGER', default: 0 },  // 0-100
+      { name: 'id', type: 'TEXT', primaryKey: true }, // UUID v4
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'status',
+        type: 'TEXT',
+        notNull: true,
+        check: "status IN ('pending', 'running', 'completed', 'failed')",
+        default: 'pending',
+      },
+      { name: 'stage', type: 'TEXT' }, // Current processing stage
+      { name: 'progress', type: 'INTEGER', default: 0 }, // 0-100
       { name: 'message', type: 'TEXT' },
       { name: 'affiliate_link', type: 'TEXT', notNull: true },
       { name: 'target_country', type: 'TEXT', notNull: true },
-      { name: 'page_type', type: 'TEXT' },  // store/product (user selection)
-      { name: 'store_product_links', type: 'TEXT' },  // JSON array
+      { name: 'page_type', type: 'TEXT' }, // store/product (user selection)
+      { name: 'store_product_links', type: 'TEXT' }, // JSON array
       { name: 'skip_cache', type: 'BOOLEAN', default: false },
       { name: 'skip_warmup', type: 'BOOLEAN', default: false },
       { name: 'product_price', type: 'TEXT' },
       { name: 'commission_payout', type: 'TEXT' },
       { name: 'brand_name', type: 'TEXT' },
-      { name: 'result', type: 'TEXT' },  // JSON extraction result
-      { name: 'error', type: 'TEXT' },  // JSON error details
-      { name: 'batch_id', type: 'TEXT', references: { table: 'batch_tasks', column: 'id', onDelete: 'SET NULL' } },  // Migration 060
-      { name: 'offer_id', type: 'INTEGER', references: { table: 'offers', column: 'id', onDelete: 'SET NULL' } },
+      { name: 'result', type: 'TEXT' }, // JSON extraction result
+      { name: 'error', type: 'TEXT' }, // JSON error details
+      {
+        name: 'batch_id',
+        type: 'TEXT',
+        references: { table: 'batch_tasks', column: 'id', onDelete: 'SET NULL' },
+      }, // Migration 060
+      {
+        name: 'offer_id',
+        type: 'INTEGER',
+        references: { table: 'offers', column: 'id', onDelete: 'SET NULL' },
+      },
       { name: 'created_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
       { name: 'updated_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
       { name: 'started_at', type: 'TIMESTAMP' },
       { name: 'completed_at', type: 'TIMESTAMP' },
     ],
     indexes: [
-      { name: 'idx_offer_tasks_user_status', columns: ['user_id', 'status'] },  // User task list
-      { name: 'idx_offer_tasks_status_created', columns: ['status', 'created_at'] },  // Admin dashboard
-      { name: 'idx_offer_tasks_updated_at', columns: ['updated_at'] },  // SSE polling
-      { name: 'idx_offer_tasks_id_updated', columns: ['id', 'updated_at'] },  // SSE single task
-      { name: 'idx_offer_tasks_batch_id', columns: ['batch_id', 'status'] },  // Batch queries (Migration 060)
+      { name: 'idx_offer_tasks_user_status', columns: ['user_id', 'status'] }, // User task list
+      { name: 'idx_offer_tasks_status_created', columns: ['status', 'created_at'] }, // Admin dashboard
+      { name: 'idx_offer_tasks_updated_at', columns: ['updated_at'] }, // SSE polling
+      { name: 'idx_offer_tasks_id_updated', columns: ['id', 'updated_at'] }, // SSE single task
+      { name: 'idx_offer_tasks_batch_id', columns: ['batch_id', 'status'] }, // Batch queries (Migration 060)
     ],
   },
 
@@ -1172,25 +1498,36 @@ export const TABLES: TableDef[] = [
   {
     name: 'batch_tasks',
     columns: [
-      { name: 'id', type: 'TEXT', primaryKey: true },  // UUID v4
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'task_type', type: 'TEXT', notNull: true },  // offer-creation, offer-scrape, offer-enhance
-      { name: 'status', type: 'TEXT', notNull: true, check: "status IN ('pending', 'running', 'completed', 'failed', 'partial')", default: 'pending' },
+      { name: 'id', type: 'TEXT', primaryKey: true }, // UUID v4
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
+      { name: 'task_type', type: 'TEXT', notNull: true }, // offer-creation, offer-scrape, offer-enhance
+      {
+        name: 'status',
+        type: 'TEXT',
+        notNull: true,
+        check: "status IN ('pending', 'running', 'completed', 'failed', 'partial')",
+        default: 'pending',
+      },
       { name: 'total_count', type: 'INTEGER', notNull: true, default: 0 },
       { name: 'success_count', type: 'INTEGER', notNull: true, default: 0 },
       { name: 'failed_count', type: 'INTEGER', notNull: true, default: 0 },
-      { name: 'progress', type: 'INTEGER', notNull: true, default: 0 },  // 0-100
-      { name: 'result_summary', type: 'TEXT' },  // JSON summary
-      { name: 'error', type: 'TEXT' },  // JSON error details
+      { name: 'progress', type: 'INTEGER', notNull: true, default: 0 }, // 0-100
+      { name: 'result_summary', type: 'TEXT' }, // JSON summary
+      { name: 'error', type: 'TEXT' }, // JSON error details
       { name: 'created_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
       { name: 'updated_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
       { name: 'started_at', type: 'TIMESTAMP' },
       { name: 'completed_at', type: 'TIMESTAMP' },
     ],
     indexes: [
-      { name: 'idx_batch_tasks_user_status', columns: ['user_id', 'status'] },  // User batch list
-      { name: 'idx_batch_tasks_status_created', columns: ['status', 'created_at'] },  // Status filtering
-      { name: 'idx_batch_tasks_user_created', columns: ['user_id', 'created_at'] },  // History queries
+      { name: 'idx_batch_tasks_user_status', columns: ['user_id', 'status'] }, // User batch list
+      { name: 'idx_batch_tasks_status_created', columns: ['status', 'created_at'] }, // Status filtering
+      { name: 'idx_batch_tasks_user_created', columns: ['user_id', 'created_at'] }, // History queries
     ],
   },
 
@@ -1213,23 +1550,33 @@ export const TABLES: TableDef[] = [
     name: 'offer_keyword_pools',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'offer_id', type: 'INTEGER', notNull: true, references: { table: 'offers', column: 'id', onDelete: 'CASCADE' } },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'offer_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'offers', column: 'id', onDelete: 'CASCADE' },
+      },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
       // 共享层：纯品牌词
-      { name: 'brand_keywords', type: 'TEXT', notNull: true },  // JSON数组
+      { name: 'brand_keywords', type: 'TEXT', notNull: true }, // JSON数组
       // 独占层：语义分桶
-      { name: 'bucket_a_keywords', type: 'TEXT', notNull: true },  // JSON数组，品牌商品锚点
-      { name: 'bucket_b_keywords', type: 'TEXT', notNull: true },  // JSON数组，商品需求场景
-      { name: 'bucket_c_keywords', type: 'TEXT', notNull: true },  // JSON数组，功能规格/需求扩展
+      { name: 'bucket_a_keywords', type: 'TEXT', notNull: true }, // JSON数组，品牌商品锚点
+      { name: 'bucket_b_keywords', type: 'TEXT', notNull: true }, // JSON数组，商品需求场景
+      { name: 'bucket_c_keywords', type: 'TEXT', notNull: true }, // JSON数组，功能规格/需求扩展
       // 桶意图描述
       { name: 'bucket_a_intent', type: 'TEXT', default: '品牌商品锚点' },
       { name: 'bucket_b_intent', type: 'TEXT', default: '商品需求场景' },
       { name: 'bucket_c_intent', type: 'TEXT', default: '功能规格/需求扩展' },
       // 元数据
       { name: 'total_keywords', type: 'INTEGER', notNull: true },
-      { name: 'clustering_model', type: 'TEXT' },  // 使用的AI模型
-      { name: 'clustering_prompt_version', type: 'TEXT' },  // 聚类prompt版本
-      { name: 'balance_score', type: 'REAL' },  // 分桶均衡度评分 0-1
+      { name: 'clustering_model', type: 'TEXT' }, // 使用的AI模型
+      { name: 'clustering_prompt_version', type: 'TEXT' }, // 聚类prompt版本
+      { name: 'balance_score', type: 'REAL' }, // 分桶均衡度评分 0-1
       { name: 'created_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
       { name: 'updated_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
     ],
@@ -1246,10 +1593,20 @@ export const TABLES: TableDef[] = [
     name: 'offer_blacklist',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'user_id', type: 'INTEGER', notNull: true, references: { table: 'users', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'user_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'brand', type: 'TEXT', notNull: true },
       { name: 'target_country', type: 'TEXT', notNull: true },
-      { name: 'offer_id', type: 'INTEGER', notNull: true, references: { table: 'offers', column: 'id', onDelete: 'CASCADE' } },
+      {
+        name: 'offer_id',
+        type: 'INTEGER',
+        notNull: true,
+        references: { table: 'offers', column: 'id', onDelete: 'CASCADE' },
+      },
       { name: 'created_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },
     ],
     uniqueConstraints: [['user_id', 'brand', 'target_country']],
@@ -1266,23 +1623,106 @@ export const TABLES: TableDef[] = [
 
 export const DEFAULT_SETTINGS = [
   // Google Ads API配置
-  { category: 'google_ads', key: 'client_id', dataType: 'string', isSensitive: true, isRequired: true, description: 'Google Ads API Client ID' },
-  { category: 'google_ads', key: 'client_secret', dataType: 'string', isSensitive: true, isRequired: true, description: 'Google Ads API Client Secret' },
-  { category: 'google_ads', key: 'developer_token', dataType: 'string', isSensitive: true, isRequired: true, description: 'Google Ads Developer Token' },
+  {
+    category: 'google_ads',
+    key: 'client_id',
+    dataType: 'string',
+    isSensitive: true,
+    isRequired: true,
+    description: 'Google Ads API Client ID',
+  },
+  {
+    category: 'google_ads',
+    key: 'client_secret',
+    dataType: 'string',
+    isSensitive: true,
+    isRequired: true,
+    description: 'Google Ads API Client Secret',
+  },
+  {
+    category: 'google_ads',
+    key: 'developer_token',
+    dataType: 'string',
+    isSensitive: true,
+    isRequired: true,
+    description: 'Google Ads Developer Token',
+  },
 
   // AI配置 - Gemini直接API模式
-  { category: 'ai', key: 'gemini_api_key', dataType: 'string', isSensitive: true, isRequired: false, description: 'Gemini API密钥（直接API模式）' },
-  { category: 'ai', key: 'gemini_model', dataType: 'string', isSensitive: false, isRequired: true, defaultValue: 'gemini-3-flash-preview', description: 'AI模型' },
+  {
+    category: 'ai',
+    key: 'gemini_api_key',
+    dataType: 'string',
+    isSensitive: true,
+    isRequired: false,
+    description: 'Gemini API密钥（直接API模式）',
+  },
+  {
+    category: 'ai',
+    key: 'gemini_model',
+    dataType: 'string',
+    isSensitive: false,
+    isRequired: true,
+    defaultValue: 'gemini-3-flash-preview',
+    description: 'AI模型',
+  },
 
   // 代理配置
-  { category: 'proxy', key: 'urls', dataType: 'json', isSensitive: false, isRequired: false, description: '代理URL配置列表（JSON格式），支持多个国家的代理URL' },
+  {
+    category: 'proxy',
+    key: 'urls',
+    dataType: 'json',
+    isSensitive: false,
+    isRequired: false,
+    description: '代理URL配置列表（JSON格式），支持多个国家的代理URL',
+  },
 
   // 系统配置
-  { category: 'system', key: 'currency', dataType: 'string', isSensitive: false, isRequired: true, defaultValue: 'CNY', description: '默认货币' },
-  { category: 'system', key: 'language', dataType: 'string', isSensitive: false, isRequired: true, defaultValue: 'zh-CN', description: '系统语言' },
-  { category: 'system', key: 'sync_interval_hours', dataType: 'number', isSensitive: false, isRequired: true, defaultValue: '4', description: '数据同步间隔(小时)' },
-  { category: 'system', key: 'link_check_enabled', dataType: 'boolean', isSensitive: false, isRequired: true, defaultValue: 'true', description: '是否启用链接检查' },
-  { category: 'system', key: 'link_check_time', dataType: 'string', isSensitive: false, isRequired: true, defaultValue: '02:00', description: '链接检查时间' },
+  {
+    category: 'system',
+    key: 'currency',
+    dataType: 'string',
+    isSensitive: false,
+    isRequired: true,
+    defaultValue: 'CNY',
+    description: '默认货币',
+  },
+  {
+    category: 'system',
+    key: 'language',
+    dataType: 'string',
+    isSensitive: false,
+    isRequired: true,
+    defaultValue: 'zh-CN',
+    description: '系统语言',
+  },
+  {
+    category: 'system',
+    key: 'sync_interval_hours',
+    dataType: 'number',
+    isSensitive: false,
+    isRequired: true,
+    defaultValue: '4',
+    description: '数据同步间隔(小时)',
+  },
+  {
+    category: 'system',
+    key: 'link_check_enabled',
+    dataType: 'boolean',
+    isSensitive: false,
+    isRequired: true,
+    defaultValue: 'true',
+    description: '是否启用链接检查',
+  },
+  {
+    category: 'system',
+    key: 'link_check_time',
+    dataType: 'string',
+    isSensitive: false,
+    isRequired: true,
+    defaultValue: '02:00',
+    description: '链接检查时间',
+  },
 ]
 
 // ============================================================================

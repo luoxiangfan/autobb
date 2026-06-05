@@ -116,7 +116,9 @@ export class CliproxyProvider implements ProxyProvider {
 
       return credentials
     } catch (error) {
-      throw new Error(`解析Cliproxy URL失败: ${error instanceof Error ? error.message : String(error)}`)
+      throw new Error(
+        `解析Cliproxy URL失败: ${error instanceof Error ? error.message : String(error)}`
+      )
     }
   }
 }

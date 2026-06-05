@@ -10,7 +10,7 @@ describe('classifySearchTermFeedbackTerms - High Performing Terms', () => {
         clicks: 50, // 5% CTR
         cost: 25,
         conversions: 1,
-        conversion_value: 30
+        conversion_value: 30,
       },
       {
         search_term: 'cheap solar lights',
@@ -18,13 +18,13 @@ describe('classifySearchTermFeedbackTerms - High Performing Terms', () => {
         clicks: 10, // 0.5% CTR - low
         cost: 50,
         conversions: 0,
-        conversion_value: 0
-      }
+        conversion_value: 0,
+      },
     ]
 
     const result = classifySearchTermFeedbackTerms(rows, {
       dominantCurrency: 'USD',
-      maxTerms: 10
+      maxTerms: 10,
     })
 
     expect(result.highPerformingTerms).toContain('best solar lights outdoor')
@@ -39,7 +39,7 @@ describe('classifySearchTermFeedbackTerms - High Performing Terms', () => {
         clicks: 20, // 4% CTR
         cost: 15,
         conversions: 3, // 15% conversion rate
-        conversion_value: 90
+        conversion_value: 90,
       },
       {
         search_term: 'solar lights info',
@@ -47,13 +47,13 @@ describe('classifySearchTermFeedbackTerms - High Performing Terms', () => {
         clicks: 20, // 2% CTR - below threshold
         cost: 20,
         conversions: 0, // 0% conversion rate
-        conversion_value: 0
-      }
+        conversion_value: 0,
+      },
     ]
 
     const result = classifySearchTermFeedbackTerms(rows, {
       dominantCurrency: 'USD',
-      maxTerms: 10
+      maxTerms: 10,
     })
 
     expect(result.highPerformingTerms).toContain('buy solar garden lights')
@@ -68,13 +68,13 @@ describe('classifySearchTermFeedbackTerms - High Performing Terms', () => {
         clicks: 40, // 4% CTR - high performing
         cost: 80, // High CPC but good CTR
         conversions: 5,
-        conversion_value: 150
-      }
+        conversion_value: 150,
+      },
     ]
 
     const result = classifySearchTermFeedbackTerms(rows, {
       dominantCurrency: 'USD',
-      maxTerms: 10
+      maxTerms: 10,
     })
 
     expect(result.highPerformingTerms).toContain('premium solar lights')
@@ -90,13 +90,13 @@ describe('classifySearchTermFeedbackTerms - High Performing Terms', () => {
         clicks: 30, // 3.75% CTR - meets threshold
         cost: 20,
         conversions: 0, // No conversions but good CTR
-        conversion_value: 0
-      }
+        conversion_value: 0,
+      },
     ]
 
     const result = classifySearchTermFeedbackTerms(rows, {
       dominantCurrency: 'USD',
-      maxTerms: 10
+      maxTerms: 10,
     })
 
     // Should still be identified as high performing based on CTR alone
@@ -110,12 +110,12 @@ describe('classifySearchTermFeedbackTerms - High Performing Terms', () => {
       clicks: 50, // 5% CTR
       cost: 25,
       conversions: 3,
-      conversion_value: 90
+      conversion_value: 90,
     }))
 
     const result = classifySearchTermFeedbackTerms(rows, {
       dominantCurrency: 'USD',
-      maxTerms: 10
+      maxTerms: 10,
     })
 
     expect(result.highPerformingTerms.length).toBeLessThanOrEqual(10)
@@ -129,7 +129,7 @@ describe('classifySearchTermFeedbackTerms - High Performing Terms', () => {
         clicks: 50,
         cost: 25,
         conversions: 3,
-        conversion_value: 90
+        conversion_value: 90,
       },
       {
         search_term: '123', // Pure numbers - should be filtered
@@ -137,7 +137,7 @@ describe('classifySearchTermFeedbackTerms - High Performing Terms', () => {
         clicks: 50,
         cost: 25,
         conversions: 3,
-        conversion_value: 90
+        conversion_value: 90,
       },
       {
         search_term: 'a', // Too short
@@ -145,13 +145,13 @@ describe('classifySearchTermFeedbackTerms - High Performing Terms', () => {
         clicks: 50,
         cost: 25,
         conversions: 3,
-        conversion_value: 90
-      }
+        conversion_value: 90,
+      },
     ]
 
     const result = classifySearchTermFeedbackTerms(rows, {
       dominantCurrency: 'USD',
-      maxTerms: 10
+      maxTerms: 10,
     })
 
     expect(result.highPerformingTerms).toContain('solar lights')

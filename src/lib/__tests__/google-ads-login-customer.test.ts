@@ -45,12 +45,7 @@ describe('resolveLoginCustomerId', () => {
       targetCustomerId: '7512164048',
     })
 
-    expect(result).toEqual([
-      '3139800184',
-      '4077212437',
-      '7512164048',
-      undefined,
-    ])
+    expect(result).toEqual(['3139800184', '4077212437', '7512164048', undefined])
   })
 
   it('deduplicates fallback candidates when values repeat', () => {

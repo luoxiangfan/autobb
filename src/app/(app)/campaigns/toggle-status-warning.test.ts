@@ -37,9 +37,7 @@ describe('formatToggleStatusWarnings', () => {
   })
 
   it('falls back to warning code for unknown labels', () => {
-    const output = formatToggleStatusWarnings([
-      { code: 'UNKNOWN_CODE', message: '需要人工关注' },
-    ])
+    const output = formatToggleStatusWarnings([{ code: 'UNKNOWN_CODE', message: '需要人工关注' }])
 
     expect(output).toBe('[UNKNOWN_CODE] 需要人工关注')
   })

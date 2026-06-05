@@ -1,6 +1,9 @@
 import type { Task } from '../types'
 import { getDatabase } from '@/lib/db'
-import { getOpenclawStrategyConfig, type OpenclawStrategyConfig } from '@/lib/openclaw/strategy-config'
+import {
+  getOpenclawStrategyConfig,
+  type OpenclawStrategyConfig,
+} from '@/lib/openclaw/strategy-config'
 import {
   executeStrategyRecommendation,
   getStrategyRecommendations,
@@ -175,12 +178,16 @@ function parseJson<T>(value: unknown, fallback: T): T {
 }
 
 function normalizeAsinKey(value: string | null | undefined): string | null {
-  const normalized = String(value || '').trim().toUpperCase()
+  const normalized = String(value || '')
+    .trim()
+    .toUpperCase()
   return normalized ? normalized : null
 }
 
 function normalizeBrandKey(value: string | null | undefined): string | null {
-  const normalized = String(value || '').trim().toLowerCase()
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   return normalized ? normalized : null
 }
 
@@ -197,10 +204,18 @@ export function scoreAsinItemForExecution(params: {
 
   const explorationBonus = sampleSize < 3 ? (3 - sampleSize) * 6 : 0
   const failurePenalty = Math.min(18, failed * 2)
-  const recentFailurePenalty = String(params.outcome?.lastStatus || '').toLowerCase() === 'failed' ? 6 : 0
+  const recentFailurePenalty =
+    String(params.outcome?.lastStatus || '').toLowerCase() === 'failed' ? 6 : 0
   const preferredBoost = params.isPreferred ? 80 : 0
 
-  return roundCurrency(priority * 100 + bayesWinRate * 25 + explorationBonus - failurePenalty - recentFailurePenalty + preferredBoost)
+  return roundCurrency(
+    priority * 100 +
+      bayesWinRate * 25 +
+      explorationBonus -
+      failurePenalty -
+      recentFailurePenalty +
+      preferredBoost
+  )
 }
 
 export function rankAsinItemsForExecution(
@@ -224,7 +239,9 @@ export function rankAsinItemsForExecution(
     const isPreferred = asinKey ? preferredAsins.has(asinKey) : false
     const signalSource: RankedAsinItem['signalSource'] = asinOutcome
       ? 'asin'
-      : (brandOutcome ? 'brand' : 'none')
+      : brandOutcome
+        ? 'brand'
+        : 'none'
 
     return {
       item,
@@ -363,10 +380,7 @@ export function allocateBudgetsWithThompsonSampling(params: {
   let activeIndexes = preparedArms.map((_, idx) => idx)
 
   while (remainingBudget > 0.001 && activeIndexes.length > 0) {
-    const activeWeightSum = activeIndexes.reduce(
-      (sum, idx) => sum + preparedArms[idx].weight,
-      0
-    )
+    const activeWeightSum = activeIndexes.reduce((sum, idx) => sum + preparedArms[idx].weight, 0)
     if (!(activeWeightSum > 0)) break
 
     let distributedThisRound = 0
@@ -470,14 +484,17 @@ export function buildStrategyRunExplanations(params: {
 }) {
   const runStats = parseJson<Record<string, any>>(params.run.statsJson, {})
 
-  const byType = params.actions.reduce((acc, action) => {
-    const key = action.actionType
-    if (!acc[key]) {
-      acc[key] = [] as typeof params.actions
-    }
-    acc[key].push(action)
-    return acc
-  }, {} as Record<string, typeof params.actions>)
+  const byType = params.actions.reduce(
+    (acc, action) => {
+      const key = action.actionType
+      if (!acc[key]) {
+        acc[key] = [] as typeof params.actions
+      }
+      acc[key].push(action)
+      return acc
+    },
+    {} as Record<string, typeof params.actions>
+  )
 
   const pushPublishedReasons = () => {
     const reasons: any[] = []
@@ -501,9 +518,10 @@ export function buildStrategyRunExplanations(params: {
     if (runStats?.budgetAllocation?.method) {
       reasons.push({
         trigger: 'budget_allocate',
-        summary: runStats.budgetAllocation.method === 'thompson_sampling'
-          ? '采用 Thompson Sampling 对候选臂进行预算分配'
-          : '预算分配回退到默认预算策略',
+        summary:
+          runStats.budgetAllocation.method === 'thompson_sampling'
+            ? '采用 Thompson Sampling 对候选臂进行预算分配'
+            : '预算分配回退到默认预算策略',
         evidence: runStats.budgetAllocation,
       })
     }
@@ -531,14 +549,13 @@ export function buildStrategyRunExplanations(params: {
   }
 
   const pushPauseReasons = () => {
-    const pauseActions = (byType.pause_campaign || [])
-      .map((action) => ({
-        actionId: action.id,
-        status: action.status,
-        targetId: action.targetId,
-        reason: action.errorMessage || null,
-        request: parseJson<Record<string, any>>(action.requestJson, {}),
-      }))
+    const pauseActions = (byType.pause_campaign || []).map((action) => ({
+      actionId: action.id,
+      status: action.status,
+      targetId: action.targetId,
+      reason: action.errorMessage || null,
+      request: parseJson<Record<string, any>>(action.requestJson, {}),
+    }))
 
     const reasons: any[] = []
     if (pauseActions.length > 0) {
@@ -644,12 +661,12 @@ export function buildStrategyRunExplanations(params: {
       publishedSummary,
       stopLoss: stopLossAction
         ? {
-          actionId: stopLossAction.id,
-          status: stopLossAction.status,
-          details: parseJson<Record<string, any>>(stopLossAction.responseJson, {}),
-          errorMessage: stopLossAction.errorMessage,
-        }
-        : (runStats.stopLoss || null),
+            actionId: stopLossAction.id,
+            status: stopLossAction.status,
+            details: parseJson<Record<string, any>>(stopLossAction.responseJson, {}),
+            errorMessage: stopLossAction.errorMessage,
+          }
+        : runStats.stopLoss || null,
     },
     explanations: {
       publish: pushPublishedReasons(),
@@ -677,7 +694,10 @@ export function calculateNextCpc(params: {
 }): number {
   const minCpc = Math.max(0.01, params.minCpc)
   const maxCpc = Math.max(minCpc, params.maxCpc)
-  const current = Math.max(minCpc, Math.min(maxCpc, params.currentCpc > 0 ? params.currentCpc : maxCpc))
+  const current = Math.max(
+    minCpc,
+    Math.min(maxCpc, params.currentCpc > 0 ? params.currentCpc : maxCpc)
+  )
   const targetRoas = Math.max(0.01, params.targetRoas)
   const roas = Math.max(0, params.roas)
 
@@ -716,15 +736,14 @@ export function deriveAdaptiveStrategyConfig(params: {
   const effectiveConfig: OpenclawStrategyConfig = { ...config }
 
   const roasSamples = knowledgeRows
-    .map(row => extractRoasFromSummary(row.summary_json))
+    .map((row) => extractRoasFromSummary(row.summary_json))
     .filter((value): value is number => value !== null && Number.isFinite(value))
 
   const sampleCount = roasSamples.length
-  const avgRoas = sampleCount > 0
-    ? roasSamples.reduce((sum, roas) => sum + roas, 0) / sampleCount
-    : null
-  const profitableDays = roasSamples.filter(roas => roas >= config.targetRoas).length
-  const lossDays = roasSamples.filter(roas => roas < config.targetRoas * 0.8).length
+  const avgRoas =
+    sampleCount > 0 ? roasSamples.reduce((sum, roas) => sum + roas, 0) / sampleCount : null
+  const profitableDays = roasSamples.filter((roas) => roas >= config.targetRoas).length
+  const lossDays = roasSamples.filter((roas) => roas < config.targetRoas * 0.8).length
   const profitRate = sampleCount > 0 ? profitableDays / sampleCount : 0
   const lossRate = sampleCount > 0 ? lossDays / sampleCount : 0
 
@@ -742,14 +761,22 @@ export function deriveAdaptiveStrategyConfig(params: {
     adjustment = 'expand'
     const campaignBudgetCap = Math.max(1, Math.min(config.dailyBudgetCap, config.dailySpendCap))
     effectiveConfig.maxOffersPerRun = Math.min(config.maxOffersPerRun + 1, 8)
-    effectiveConfig.defaultBudget = roundCurrency(clampNumber(config.defaultBudget * 1.1, 1, campaignBudgetCap))
-    effectiveConfig.maxCpc = roundCurrency(clampNumber(config.maxCpc * 1.05, config.minCpc, config.maxCpc * 1.2))
+    effectiveConfig.defaultBudget = roundCurrency(
+      clampNumber(config.defaultBudget * 1.1, 1, campaignBudgetCap)
+    )
+    effectiveConfig.maxCpc = roundCurrency(
+      clampNumber(config.maxCpc * 1.05, config.minCpc, config.maxCpc * 1.2)
+    )
   } else if ((avgRoas || 0) < config.targetRoas || lossRate >= 0.5) {
     adjustment = 'defensive'
     const campaignBudgetCap = Math.max(1, Math.min(config.dailyBudgetCap, config.dailySpendCap))
     effectiveConfig.maxOffersPerRun = Math.max(1, config.maxOffersPerRun - 1)
-    effectiveConfig.defaultBudget = roundCurrency(clampNumber(config.defaultBudget * 0.8, 1, campaignBudgetCap))
-    effectiveConfig.maxCpc = roundCurrency(clampNumber(config.maxCpc * 0.9, config.minCpc, config.maxCpc))
+    effectiveConfig.defaultBudget = roundCurrency(
+      clampNumber(config.defaultBudget * 0.8, 1, campaignBudgetCap)
+    )
+    effectiveConfig.maxCpc = roundCurrency(
+      clampNumber(config.maxCpc * 0.9, config.minCpc, config.maxCpc)
+    )
   }
 
   if (effectiveConfig.maxCpc < effectiveConfig.minCpc) {
@@ -787,8 +814,14 @@ export function deriveFailureGuardConfig(params: {
   const { config, runStats } = params
   const effectiveConfig: OpenclawStrategyConfig = { ...config }
 
-  const publishSuccess = runStats.reduce((sum, stat) => sum + Math.max(0, toNumber(stat.publishSuccess, 0)), 0)
-  const publishFailed = runStats.reduce((sum, stat) => sum + Math.max(0, toNumber(stat.publishFailed, 0)), 0)
+  const publishSuccess = runStats.reduce(
+    (sum, stat) => sum + Math.max(0, toNumber(stat.publishSuccess, 0)),
+    0
+  )
+  const publishFailed = runStats.reduce(
+    (sum, stat) => sum + Math.max(0, toNumber(stat.publishFailed, 0)),
+    0
+  )
   const publishAttempts = publishSuccess + publishFailed
   const publishFailureRate = publishAttempts > 0 ? publishFailed / publishAttempts : 0
   const stopLossRuns = runStats.filter((stat) => stat.reason === 'publish_failure_stop_loss').length
@@ -811,12 +844,20 @@ export function deriveFailureGuardConfig(params: {
   const campaignBudgetCap = Math.max(1, Math.min(config.dailyBudgetCap, config.dailySpendCap))
   if (guardLevel === 'strong') {
     effectiveConfig.maxOffersPerRun = Math.max(1, config.maxOffersPerRun - 2)
-    effectiveConfig.defaultBudget = roundCurrency(clampNumber(config.defaultBudget * 0.75, 1, campaignBudgetCap))
-    effectiveConfig.maxCpc = roundCurrency(clampNumber(config.maxCpc * 0.85, config.minCpc, config.maxCpc))
+    effectiveConfig.defaultBudget = roundCurrency(
+      clampNumber(config.defaultBudget * 0.75, 1, campaignBudgetCap)
+    )
+    effectiveConfig.maxCpc = roundCurrency(
+      clampNumber(config.maxCpc * 0.85, config.minCpc, config.maxCpc)
+    )
   } else if (guardLevel === 'mild') {
     effectiveConfig.maxOffersPerRun = Math.max(1, config.maxOffersPerRun - 1)
-    effectiveConfig.defaultBudget = roundCurrency(clampNumber(config.defaultBudget * 0.9, 1, campaignBudgetCap))
-    effectiveConfig.maxCpc = roundCurrency(clampNumber(config.maxCpc * 0.92, config.minCpc, config.maxCpc))
+    effectiveConfig.defaultBudget = roundCurrency(
+      clampNumber(config.defaultBudget * 0.9, 1, campaignBudgetCap)
+    )
+    effectiveConfig.maxCpc = roundCurrency(
+      clampNumber(config.maxCpc * 0.92, config.minCpc, config.maxCpc)
+    )
   }
 
   return {
@@ -845,17 +886,23 @@ export function shouldTreatCampaignAsConflict(params: {
   targetBrand: string
   enforceUnknownBrandAsConflict?: boolean
 }): { conflict: boolean; unknownBrand: boolean } {
-  const status = String(params.campaignStatus || '').trim().toUpperCase()
+  const status = String(params.campaignStatus || '')
+    .trim()
+    .toUpperCase()
   if (status !== 'ENABLED') {
     return { conflict: false, unknownBrand: false }
   }
 
-  const target = String(params.targetBrand || '').trim().toLowerCase()
+  const target = String(params.targetBrand || '')
+    .trim()
+    .toLowerCase()
   if (!target) {
     return { conflict: false, unknownBrand: false }
   }
 
-  const brand = String(params.campaignBrand || '').trim().toLowerCase()
+  const brand = String(params.campaignBrand || '')
+    .trim()
+    .toLowerCase()
   if (!brand) {
     const unknownAsConflict = params.enforceUnknownBrandAsConflict !== false
     return { conflict: unknownAsConflict, unknownBrand: unknownAsConflict }
@@ -867,7 +914,9 @@ export function shouldTreatCampaignAsConflict(params: {
   }
 }
 
-function isStrategyRecommendationTaskData(data: OpenclawStrategyTaskData | undefined): data is StrategyRecommendationQueueTaskData {
+function isStrategyRecommendationTaskData(
+  data: OpenclawStrategyTaskData | undefined
+): data is StrategyRecommendationQueueTaskData {
   const kind = String(data?.kind || '').trim()
   const recommendationId = String(data?.recommendationId || '').trim()
   if (!recommendationId) return false
@@ -886,7 +935,9 @@ async function executeStrategyRecommendationTask(
   const recommendationId = String(task.data?.recommendationId || '').trim()
   const kind = String(task.data?.kind || '').trim() as StrategyRecommendationQueueTaskData['kind']
   const userId = Number(task.data?.userId || task.userId)
-  await assertUserExecutionAllowed(userId, { source: `openclaw-strategy:${task.id}:${kind || 'unknown'}` })
+  await assertUserExecutionAllowed(userId, {
+    source: `openclaw-strategy:${task.id}:${kind || 'unknown'}`,
+  })
 
   if (!recommendationId || !kind) {
     throw new Error('策略建议队列任务缺少必要参数')
@@ -911,7 +962,9 @@ async function executeStrategyRecommendationTask(
   const reviewWindowDays = Math.max(1, Math.floor(Number(executed.data?.impactWindowDays || 3)))
   const scheduledAt = new Date(Date.now() + reviewWindowDays * 24 * 60 * 60 * 1000).toISOString()
   try {
-    await assertUserExecutionAllowed(userId, { source: `openclaw-strategy:post-review-enqueue:${task.id}` })
+    await assertUserExecutionAllowed(userId, {
+      source: `openclaw-strategy:post-review-enqueue:${task.id}`,
+    })
     const queue = getQueueManagerForTaskType('openclaw-strategy')
     const reviewTaskId = await queue.enqueue(
       'openclaw-strategy',
@@ -957,7 +1010,8 @@ async function executeStrategyRecommendationAnalyzeTask(
     [userId]
   )
   const strategyCenterEnabled = userAccess
-    ? ((userAccess.strategy_center_enabled as any) === true || (userAccess.strategy_center_enabled as any) === 1)
+    ? (userAccess.strategy_center_enabled as any) === true ||
+      (userAccess.strategy_center_enabled as any) === 1
     : false
   if (!strategyCenterEnabled) {
     return { success: true, skipped: true }
@@ -968,7 +1022,9 @@ async function executeStrategyRecommendationAnalyzeTask(
     return { success: true, skipped: true }
   }
 
-  const reportDate = normalizeOpenclawReportDate(String(task.data?.reportDate || formatLocalDate(new Date())).trim())
+  const reportDate = normalizeOpenclawReportDate(
+    String(task.data?.reportDate || formatLocalDate(new Date())).trim()
+  )
   const limit = normalizeRecommendationLimit(task.data?.limit, 100)
   await getStrategyRecommendations({
     userId,
@@ -985,7 +1041,9 @@ async function executeStrategyRecommendationAnalyzeTask(
   const shouldSendReport = task.data?.sendReport !== false
   if (shouldSendReport) {
     try {
-      await assertUserExecutionAllowed(userId, { source: `openclaw-strategy:report-enqueue:${task.id}` })
+      await assertUserExecutionAllowed(userId, {
+        source: `openclaw-strategy:report-enqueue:${task.id}`,
+      })
       const settings = await getOpenclawSettingsMap(userId)
       const feishuTarget = String(settings.feishu_target || '').trim() || undefined
       const queue = getQueueManagerForTaskType('openclaw-report-send')

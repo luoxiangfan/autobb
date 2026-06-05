@@ -161,7 +161,8 @@ export default function LaunchScorePage() {
           }
         }
 
-        const creativeIdToLoad = creativeId ?? (apiCreativeId != null ? String(apiCreativeId) : null)
+        const creativeIdToLoad =
+          creativeId ?? (apiCreativeId != null ? String(apiCreativeId) : null)
         if (creativeIdToLoad) {
           await loadCreativeById(creativeIdToLoad)
         } else {
@@ -327,8 +328,18 @@ export default function LaunchScorePage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
           <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-indigo-100 mb-4">
-            <svg className="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <svg
+              className="h-8 w-8 text-indigo-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
             </svg>
           </div>
           <h3 className="text-h3 mb-2">Launch Score 投放评分</h3>
@@ -341,9 +352,7 @@ export default function LaunchScorePage() {
           >
             前往选择 Offer
           </button>
-          <p className="mt-4 helper-text">
-            在Offer详情页中，您可以为特定创意计算Launch Score
-          </p>
+          <p className="mt-4 helper-text">在Offer详情页中，您可以为特定创意计算Launch Score</p>
         </div>
       </div>
     )
@@ -353,14 +362,11 @@ export default function LaunchScorePage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-white shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <a
-                href={`/offers/${offerId}`}
-                className="text-indigo-600 hover:text-indigo-500 mr-4"
-              >
+              <a href={`/offers/${offerId}`} className="text-indigo-600 hover:text-indigo-500 mr-4">
                 ← 返回Offer
               </a>
               <h1 className="text-h3 font-bold text-gray-900">
@@ -407,7 +413,9 @@ export default function LaunchScorePage() {
 
           {!hashCampaignConfig && effectiveCreativeId && (
             <div className="mb-6 px-4 py-3 bg-blue-50 border border-blue-200 text-blue-800 rounded text-body-sm">
-              未携带 Step3 投放配置（预算/关键词）。评分与缓存将使用默认配置，可能与发布时的分数不一致；建议从投放流程 Step4 进入或先完成 Step3 配置。
+              未携带 Step3
+              投放配置（预算/关键词）。评分与缓存将使用默认配置，可能与发布时的分数不一致；建议从投放流程
+              Step4 进入或先完成 Step3 配置。
             </div>
           )}
 
@@ -418,7 +426,7 @@ export default function LaunchScorePage() {
           )}
 
           {creative && (
-            <div className="mb-6 bg-white shadow rounded-lg p-4">
+            <div className="mb-6 bg-white shadow-sm rounded-lg p-4">
               <h3 className="text-body-sm font-medium text-muted-foreground">评分创意</h3>
               <p className="mt-1 text-body-sm text-gray-900">
                 版本 {creative.version}: {creative.headline1}
@@ -444,7 +452,7 @@ export default function LaunchScorePage() {
           ) : (
             <div className="space-y-6">
               {/* 总分卡片 */}
-              <div className="bg-white shadow rounded-lg p-6">
+              <div className="bg-white shadow-sm rounded-lg p-6">
                 <div className="text-center">
                   <div className={`text-6xl font-bold ${gradeInfo?.color} mb-2`}>
                     {launchScore.totalScore}
@@ -460,7 +468,7 @@ export default function LaunchScorePage() {
               </div>
 
               {/* 各维度评分 - v4.0 4维度 */}
-              <div className="bg-white shadow rounded-lg p-6">
+              <div className="bg-white shadow-sm rounded-lg p-6">
                 <h2 className="text-h4 mb-4">维度评分详情</h2>
                 <div className="space-y-4">
                   {/* 投放可行性 */}
@@ -511,14 +519,13 @@ export default function LaunchScorePage() {
                         style={{ width: `${(launchScore.adQualityScore / 30) * 100}%` }}
                       ></div>
                     </div>
-                    {analysis?.adQuality?.issues &&
-                      analysis.adQuality.issues.length > 0 && (
-                        <ul className="mt-2 text-caption text-red-600 list-disc list-inside">
-                          {analysis.adQuality.issues.map((issue, i) => (
-                            <li key={i}>{issue}</li>
-                          ))}
-                        </ul>
-                      )}
+                    {analysis?.adQuality?.issues && analysis.adQuality.issues.length > 0 && (
+                      <ul className="mt-2 text-caption text-red-600 list-disc list-inside">
+                        {analysis.adQuality.issues.map((issue, i) => (
+                          <li key={i}>{issue}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
 
                   {/* 关键词策略 */}
@@ -566,36 +573,34 @@ export default function LaunchScorePage() {
                         style={{ width: `${(launchScore.basicConfigScore / 15) * 100}%` }}
                       ></div>
                     </div>
-                    {analysis?.basicConfig?.issues &&
-                      analysis.basicConfig.issues.length > 0 && (
-                        <ul className="mt-2 text-caption text-red-600 list-disc list-inside">
-                          {analysis.basicConfig.issues.map((issue, i) => (
-                            <li key={i}>{issue}</li>
-                          ))}
-                        </ul>
-                      )}
+                    {analysis?.basicConfig?.issues && analysis.basicConfig.issues.length > 0 && (
+                      <ul className="mt-2 text-caption text-red-600 list-disc list-inside">
+                        {analysis.basicConfig.issues.map((issue, i) => (
+                          <li key={i}>{issue}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* 优化建议 */}
-              {analysis?.overallRecommendations &&
-                analysis.overallRecommendations.length > 0 && (
-                  <div className="bg-white shadow rounded-lg p-6">
-                    <h2 className="text-h4 mb-4">优化建议</h2>
-                    <ul className="space-y-2">
-                      {analysis.overallRecommendations.map((rec, index) => (
-                        <li key={index} className="flex items-start">
-                          <span className="flex-shrink-0 h-5 w-5 text-indigo-600 mr-2">•</span>
-                          <span className="text-body-sm text-gray-700">{rec}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+              {analysis?.overallRecommendations && analysis.overallRecommendations.length > 0 && (
+                <div className="bg-white shadow-sm rounded-lg p-6">
+                  <h2 className="text-h4 mb-4">优化建议</h2>
+                  <ul className="space-y-2">
+                    {analysis.overallRecommendations.map((rec, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="shrink-0 h-5 w-5 text-indigo-600 mr-2">•</span>
+                        <span className="text-body-sm text-gray-700">{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {/* 实际投放表现（Google Ads 同步数据） */}
-              <div className="bg-white shadow rounded-lg p-6">
+              <div className="bg-white shadow-sm rounded-lg p-6">
                 <h2 className="text-h4 mb-1">实际投放表现</h2>
                 <p className="text-body-sm text-muted-foreground mb-4">
                   转化次数来自 Google Ads 报表，与 Offer 详情页的佣金归因口径不同。
@@ -626,10 +631,7 @@ export default function LaunchScorePage() {
                       <div className="rounded-lg bg-gray-50 p-3">
                         <p className="text-caption text-muted-foreground">花费</p>
                         <p className="text-body font-semibold">
-                          {formatCurrency(
-                            performanceData.totalCost,
-                            performanceData.costCurrency
-                          )}
+                          {formatCurrency(performanceData.totalCost, performanceData.costCurrency)}
                         </p>
                       </div>
                     </div>
@@ -647,12 +649,12 @@ export default function LaunchScorePage() {
                           <tbody>
                             {(comparisons as PredictionComparison[]).map(
                               (row: PredictionComparison, index: number) => (
-                              <tr key={index} className="border-b border-gray-100">
-                                <td className="py-2 pr-4">{row.metric}</td>
-                                <td className="py-2 pr-4">{String(row.actual)}</td>
-                                <td className="py-2 text-muted-foreground">{row.variance}</td>
-                              </tr>
-                            )
+                                <tr key={index} className="border-b border-gray-100">
+                                  <td className="py-2 pr-4">{row.metric}</td>
+                                  <td className="py-2 pr-4">{String(row.actual)}</td>
+                                  <td className="py-2 text-muted-foreground">{row.variance}</td>
+                                </tr>
+                              )
                             )}
                           </tbody>
                         </table>
@@ -667,11 +669,14 @@ export default function LaunchScorePage() {
                         <ul className="space-y-2">
                           {(adjustedRecommendations as string[]).map(
                             (rec: string, index: number) => (
-                            <li key={index} className="flex items-start text-body-sm text-gray-700">
-                              <span className="flex-shrink-0 text-indigo-600 mr-2">•</span>
-                              {rec}
-                            </li>
-                          )
+                              <li
+                                key={index}
+                                className="flex items-start text-body-sm text-gray-700"
+                              >
+                                <span className="shrink-0 text-indigo-600 mr-2">•</span>
+                                {rec}
+                              </li>
+                            )
                           )}
                         </ul>
                       </div>

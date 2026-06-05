@@ -19,10 +19,7 @@ export async function GET(request: NextRequest) {
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: authResult.error || '缺少用户认证信息' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: authResult.error || '缺少用户认证信息' }, { status: 401 })
     }
     const userId = authResult.user.userId
     const searchParams = request.nextUrl.searchParams
@@ -58,11 +55,9 @@ export async function GET(request: NextRequest) {
     // 计算今日总计
     const todayTotals = todayData.reduce(
       (acc, row) => ({
-        totalCost: acc.totalCost + estimateTokenCost(
-          row.model,
-          toNumber(row.input_tokens),
-          toNumber(row.output_tokens)
-        ),
+        totalCost:
+          acc.totalCost +
+          estimateTokenCost(row.model, toNumber(row.input_tokens), toNumber(row.output_tokens)),
         totalTokens: acc.totalTokens + toNumber(row.total_tokens),
         totalCalls: acc.totalCalls + toNumber(row.call_count),
       }),
@@ -170,7 +165,7 @@ export async function GET(request: NextRequest) {
 
     // 识别高成本操作
     const highCostOperations = Array.from(operationTypeMap.values())
-      .filter(op => op.cost > 5) // 单操作成本>¥5
+      .filter((op) => op.cost > 5) // 单操作成本>¥5
       .sort((a, b) => b.cost - a.cost)
 
     // 生成建议
@@ -186,8 +181,8 @@ export async function GET(request: NextRequest) {
     }
 
     // 模型优化建议
-    const hasProModel = Array.from(modelUsageMap.values()).some(m => m.model.includes('pro'))
-    const hasFlashModel = Array.from(modelUsageMap.values()).some(m => m.model.includes('flash'))
+    const hasProModel = Array.from(modelUsageMap.values()).some((m) => m.model.includes('pro'))
+    const hasFlashModel = Array.from(modelUsageMap.values()).some((m) => m.model.includes('flash'))
     if (hasProModel && !hasFlashModel) {
       recommendations.push('💡 考虑在非关键场景使用flash模型以降低成本（5x成本减少）')
     }
@@ -196,12 +191,15 @@ export async function GET(request: NextRequest) {
     if (highCostOperations.length > 0) {
       const topCostOp = highCostOperations[0]
       const opName = topCostOp.operationType.replace(/_/g, ' ')
-      recommendations.push(`🔍 高成本操作：${opName}（¥${(topCostOp?.cost ?? 0).toFixed(2)}），建议优化`)
+      recommendations.push(
+        `🔍 高成本操作：${opName}（¥${(topCostOp?.cost ?? 0).toFixed(2)}），建议优化`
+      )
     }
 
     // 🆕 Token优化进度提示
-    const compressionEnabled = Array.from(operationTypeMap.values())
-      .some(op => op.operationType === 'competitor_analysis')
+    const compressionEnabled = Array.from(operationTypeMap.values()).some(
+      (op) => op.operationType === 'competitor_analysis'
+    )
     if (compressionEnabled) {
       recommendations.push('🗜️ 竞品压缩已启用，预计节省45% token（$800/年）')
     }
@@ -213,25 +211,25 @@ export async function GET(request: NextRequest) {
           totalCost: parseFloat(toNumber(todayTotals.totalCost).toFixed(2)),
           totalTokens: toNumber(todayTotals.totalTokens),
           totalCalls: toNumber(todayTotals.totalCalls),
-          modelUsage: Array.from(modelUsageMap.values()).map(m => ({
+          modelUsage: Array.from(modelUsageMap.values()).map((m) => ({
             ...m,
             cost: parseFloat(toNumber(m.cost).toFixed(4)), // 保留4位小数用于统计
           })),
           operationUsage: Array.from(operationTypeMap.values())
             .sort((a, b) => b.cost - a.cost)
             .slice(0, 5)
-            .map(op => ({
+            .map((op) => ({
               ...op,
               cost: parseFloat(toNumber(op.cost).toFixed(4)), // 保留4位小数用于统计
             })),
         },
-        trend: trend.map(row => ({
+        trend: trend.map((row) => ({
           date: row.date,
           totalTokens: toNumber(row.totalTokens),
           totalCost: parseFloat(toNumber(row.totalCost).toFixed(2)),
         })),
         recommendations,
-        highCostOperations: highCostOperations.map(op => ({
+        highCostOperations: highCostOperations.map((op) => ({
           ...op,
           cost: parseFloat(toNumber(op.cost).toFixed(4)),
         })),
@@ -239,9 +237,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('获取AI Token成本数据失败:', error)
-    return NextResponse.json(
-      { error: '获取数据失败', message: error.message },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: '获取数据失败', message: error.message }, { status: 500 })
   }
 }

@@ -437,7 +437,7 @@ describe('POST /api/campaigns/publish URL alignment', () => {
       }),
     ])
     expect(db.exec).toHaveBeenCalledWith(
-      expect.stringContaining('creation_status = \'pending\''),
+      expect.stringContaining("creation_status = 'pending'"),
       expect.arrayContaining(['队列化失败: redis unavailable', 1970, 7, 11])
     )
     expect(mocks.invalidateOfferCache).toHaveBeenCalledWith(7, 11)

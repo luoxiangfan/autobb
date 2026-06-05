@@ -85,4 +85,3 @@ export function normalizeTimestampToIso(value: unknown): string | null {
   const date = parseDbDateTimeAsUtc(asString)
   return Number.isNaN(date.getTime()) ? null : date.toISOString()
 }
-

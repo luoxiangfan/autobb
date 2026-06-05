@@ -23,9 +23,7 @@ import {
   seedPrepareCacheHydratedSecrets,
   stripPreparedGoogleAdsAccountApiCallForCache,
 } from './google-ads-api-prepare-cache'
-import {
-  hydrateGoogleAdsAuthContextSecrets,
-} from './google-ads-auth-context-cache'
+import { hydrateGoogleAdsAuthContextSecrets } from './google-ads-auth-context-cache'
 import { getGoogleAdsAuthContextGenerationForHydrate } from './google-ads-auth-context'
 
 /** campaign-sync / 定时任务：按账户解析认证方式与 token（与 syncCampaignsFromGoogleAds 一致） */
@@ -58,7 +56,10 @@ export async function resolveHealedOAuthCredentialsFields(params: {
   }
 
   if (params.authContext.auth.authType === 'service_account') {
-    return { ok: false, message: `用户(ID=${params.userId})当前使用服务账号认证，无法读取 OAuth 基础凭证` }
+    return {
+      ok: false,
+      message: `用户(ID=${params.userId})当前使用服务账号认证，无法读取 OAuth 基础凭证`,
+    }
   }
 
   const oauthCredentials = params.authContext.oauthCredentials
@@ -104,10 +105,7 @@ export async function resolveHealedOAuthCredentialsFields(params: {
 export async function loadOAuthGoogleAdsCallBundleForContext(params: {
   userId: number
   authContext: GoogleAdsAuthContext
-}): Promise<
-  | { ok: true; bundle?: OAuthGoogleAdsCallBundle }
-  | { ok: false; message: string }
-> {
+}): Promise<{ ok: true; bundle?: OAuthGoogleAdsCallBundle } | { ok: false; message: string }> {
   const dualStackError = googleAdsAuthContextDualStackError(params.authContext)
   if (dualStackError) {
     return { ok: false, message: dualStackError }
@@ -131,15 +129,15 @@ export async function loadOAuthGoogleAdsCallBundleForContext(params: {
   }
 }
 
-export function googleAdsAuthContextParam(
+export function googleAdsAuthContextParam(authContext: GoogleAdsAuthContext): {
   authContext: GoogleAdsAuthContext
-): { authContext: GoogleAdsAuthContext } {
+} {
   return { authContext }
 }
 
-export function preparedAuthContextField(
-  prepared: { authContext: GoogleAdsAuthContext }
-): { authContext: GoogleAdsAuthContext } {
+export function preparedAuthContextField(prepared: { authContext: GoogleAdsAuthContext }): {
+  authContext: GoogleAdsAuthContext
+} {
   return googleAdsAuthContextParam(prepared.authContext)
 }
 
@@ -160,10 +158,7 @@ export async function prepareGoogleAdsAccountApiCall(params: {
   linkedServiceAccountId?: string | null
   apiAuth?: GoogleAdsApiAuthFields
   prepareCache?: GoogleAdsLinkedAccountPrepareCache
-}): Promise<
-  | ({ ok: true } & PreparedGoogleAdsAccountApiCall)
-  | { ok: false; message: string }
-> {
+}): Promise<({ ok: true } & PreparedGoogleAdsAccountApiCall) | { ok: false; message: string }> {
   const dualStackError = googleAdsAuthContextDualStackError(params.authContext)
   if (dualStackError) {
     return { ok: false, message: dualStackError }
@@ -253,9 +248,7 @@ export function linkedSaPrepareCacheKey(userId: number, linkedSa: string | null)
   return `${userId}\0${linkedSa ?? ''}`
 }
 
-function normalizeLinkedSaForPrepareCache(
-  linkedSa: string | null | undefined
-): string | null {
+function normalizeLinkedSaForPrepareCache(linkedSa: string | null | undefined): string | null {
   if (linkedSa == null) return null
   const trimmed = String(linkedSa).trim()
   return trimmed || null
@@ -321,9 +314,7 @@ async function rehydratePreparedGoogleAdsAccountApiCallFromCache(
   )
 
   const refreshToken =
-    slim.apiAuth.authType === 'oauth'
-      ? authContext.oauthCredentials?.refresh_token || ''
-      : ''
+    slim.apiAuth.authType === 'oauth' ? authContext.oauthCredentials?.refresh_token || '' : ''
 
   const apiAuth: GoogleAdsApiAuthFields = {
     ...slim.apiAuth,
@@ -410,11 +401,7 @@ export async function prepareGoogleAdsApiCallForLinkedAccountCached(
     return inflight
   }
 
-  const promise = prepareGoogleAdsApiCallForLinkedAccountCachedInternal(
-    userId,
-    normalizedSa,
-    cache
-  )
+  const promise = prepareGoogleAdsApiCallForLinkedAccountCachedInternal(userId, normalizedSa, cache)
   cache?.prepareInflight.set(key, promise)
   try {
     return await promise

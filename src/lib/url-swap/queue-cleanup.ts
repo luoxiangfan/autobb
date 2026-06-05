@@ -21,11 +21,7 @@ export async function removePendingUrlSwapQueueTasksByTaskIds(
   taskIds: Array<string | number>,
   userId?: number
 ): Promise<{ removedCount: number; scannedCount: number }> {
-  const normalizedIds = new Set(
-    taskIds
-      .map((id) => String(id).trim())
-      .filter(Boolean)
-  )
+  const normalizedIds = new Set(taskIds.map((id) => String(id).trim()).filter(Boolean))
 
   if (normalizedIds.size === 0) {
     return { removedCount: 0, scannedCount: 0 }

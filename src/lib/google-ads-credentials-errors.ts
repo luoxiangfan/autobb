@@ -182,7 +182,9 @@ function resolveParsedCredentialsAuthType(payload: Record<string, unknown>): {
 export function parseCredentialsStatusResponse(data: unknown): ParsedGoogleAdsCredentialsStatus {
   const record = data && typeof data === 'object' ? (data as Record<string, unknown>) : null
   const payload =
-    record?.data && typeof record.data === 'object' ? (record.data as Record<string, unknown>) : null
+    record?.data && typeof record.data === 'object'
+      ? (record.data as Record<string, unknown>)
+      : null
 
   if (!record?.success || !payload) {
     return {
@@ -202,7 +204,10 @@ export function parseCredentialsStatusResponse(data: unknown): ParsedGoogleAdsCr
   }
 }
 
-export function credentialsStatusErrorMessage(data: unknown, fallback = '获取凭证状态失败'): string {
+export function credentialsStatusErrorMessage(
+  data: unknown,
+  fallback = '获取凭证状态失败'
+): string {
   const record = data && typeof data === 'object' ? (data as Record<string, unknown>) : null
   return (
     formatNullableErrorMessage(record?.message) ||
@@ -232,8 +237,7 @@ export type AccountsRequestAuth = {
   serviceAccountId?: string
 }
 
-export const GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE =
-  '未找到服务账号配置，请前往设置页面配置'
+export const GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE = '未找到服务账号配置，请前往设置页面配置'
 
 export const GOOGLE_ADS_NOT_CONFIGURED_MESSAGE =
   'Google Ads 认证未配置或已失效，请先在设置中完成 OAuth 授权或配置服务账号'
@@ -329,8 +333,7 @@ export function resolveAccountsRequestAuth(
     return {
       ok: false,
       reason: 'invalid_auth',
-      message:
-        error instanceof Error ? error.message : GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE,
+      message: error instanceof Error ? error.message : GOOGLE_ADS_MISSING_SERVICE_ACCOUNT_MESSAGE,
     }
   }
 }

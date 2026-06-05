@@ -20,11 +20,13 @@ function parsePossiblyNestedJsonObject(value: unknown, maxDepth = 2): Record<str
   return current as Record<string, any>
 }
 
-function resolveCreativeKeywordAudit(adStrengthPayload: Record<string, any> | null): Record<string, any> | null {
+function resolveCreativeKeywordAudit(
+  adStrengthPayload: Record<string, any> | null
+): Record<string, any> | null {
   if (!adStrengthPayload) return null
   return (
-    parsePossiblyNestedJsonObject(adStrengthPayload.audit)
-    || parsePossiblyNestedJsonObject(adStrengthPayload.keywordSourceAudit)
+    parsePossiblyNestedJsonObject(adStrengthPayload.audit) ||
+    parsePossiblyNestedJsonObject(adStrengthPayload.keywordSourceAudit)
   )
 }
 
@@ -74,9 +76,9 @@ function parseYmdParam(value: string | null): string | null {
   const [year, month, day] = normalized.split('-').map((part) => Number(part))
   const date = new Date(Date.UTC(year, month - 1, day))
   if (
-    date.getUTCFullYear() !== year
-    || date.getUTCMonth() !== month - 1
-    || date.getUTCDate() !== day
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
   ) {
     return null
   }
@@ -136,10 +138,7 @@ export async function GET(request: NextRequest) {
         )
       }
       if (startDateQuery > endDateQuery) {
-        return NextResponse.json(
-          { error: 'start_date 不能晚于 end_date' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: 'start_date 不能晚于 end_date' }, { status: 400 })
       }
     }
     const offerId = searchParams.get('offerId')
@@ -214,11 +213,17 @@ export async function GET(request: NextRequest) {
       ORDER BY date ASC
     `
 
-    const dailyTrends = await db.query(dailyCreativesQuery, params) as any[]
+    const dailyTrends = (await db.query(dailyCreativesQuery, params)) as any[]
 
     // 🔧 调试日志：检查原始查询结果
     console.log('[Trends API] 原始查询结果:', JSON.stringify(dailyTrends, null, 2))
-    console.log('[Trends API] 日期范围:', { startDateStr, endDateStr, rangeDays, userId, offerId: offerId || '全部' })
+    console.log('[Trends API] 日期范围:', {
+      startDateStr,
+      endDateStr,
+      rangeDays,
+      userId,
+      offerId: offerId || '全部',
+    })
 
     // 10. 补全缺失的日期（确保返回完整的日期范围，包括没有数据的日期）
     const allDates: string[] = []
@@ -229,19 +234,20 @@ export async function GET(request: NextRequest) {
     }
 
     // 创建日期到数据的映射
-    const trendsMap = new Map<string, typeof dailyTrends[0]>()
-    dailyTrends.forEach(row => {
+    const trendsMap = new Map<string, (typeof dailyTrends)[0]>()
+    dailyTrends.forEach((row) => {
       const dateKey = formatDate(row.date)
       trendsMap.set(dateKey, row)
     })
 
     // 补全所有日期，缺失的日期值为0
-    const completeTrends = allDates.map(date => {
+    const completeTrends = allDates.map((date) => {
       const row = trendsMap.get(date)
       return {
         date,
         newCreatives: row ? Number(row.newcreatives) || 0 : 0,
-        avgQualityScore: row && row.avgscore ? Math.round((Number(row.avgscore) || 0) * 10) / 10 : 0,
+        avgQualityScore:
+          row && row.avgscore ? Math.round((Number(row.avgscore) || 0) * 10) / 10 : 0,
         highQuality: row ? Number(row.highquality) || 0 : 0,
         mediumQuality: row ? Number(row.mediumquality) || 0 : 0,
         lowQuality: row ? Number(row.lowquality) || 0 : 0,
@@ -271,12 +277,13 @@ export async function GET(request: NextRequest) {
 
     statusQuery += ` GROUP BY status`
 
-    const statusDistribution = await db.query(statusQuery, statusParams) as any[]
+    const statusDistribution = (await db.query(statusQuery, statusParams)) as any[]
 
     // 5. 查询Ad Strength分布（当前总量）
-    const adStrengthExpr = db.type === 'postgres'
-      ? `COALESCE(NULLIF(trim(both '\"' from NULLIF(ad_strength_data::text, 'null')), ''), 'UNKNOWN')`
-      : `COALESCE(ad_strength_data, 'UNKNOWN')`
+    const adStrengthExpr =
+      db.type === 'postgres'
+        ? `COALESCE(NULLIF(trim(both '\"' from NULLIF(ad_strength_data::text, 'null')), ''), 'UNKNOWN')`
+        : `COALESCE(ad_strength_data, 'UNKNOWN')`
     let adStrengthQuery = `
       SELECT
         ${adStrengthExpr} as ad_strength,
@@ -293,7 +300,7 @@ export async function GET(request: NextRequest) {
 
     adStrengthQuery += ` GROUP BY ${adStrengthExpr}`
 
-    const adStrengthDistribution = await db.query(adStrengthQuery, adStrengthParams) as any[]
+    const adStrengthDistribution = (await db.query(adStrengthQuery, adStrengthParams)) as any[]
 
     // 5.1 查询关键词来源审计聚合（主字段 ad_strength_data.audit，兼容 keywordSourceAudit）
     let keywordAuditQuery = `
@@ -306,10 +313,9 @@ export async function GET(request: NextRequest) {
       keywordAuditQuery += ` AND offer_id = ?`
       keywordAuditParams.push(parseInt(offerId))
     }
-    const keywordAuditRows = await db.query(
-      keywordAuditQuery,
-      keywordAuditParams
-    ) as Array<{ ad_strength_data: unknown }>
+    const keywordAuditRows = (await db.query(keywordAuditQuery, keywordAuditParams)) as Array<{
+      ad_strength_data: unknown
+    }>
 
     const keywordSourceByRawSource: Record<string, number> = {}
     const keywordSourceBySubtype: Record<string, number> = {}
@@ -350,7 +356,8 @@ export async function GET(request: NextRequest) {
       const noVolumeKey = String(Boolean(keywordAudit.noVolumeMode))
       noVolumeModeDistribution[noVolumeKey] = (noVolumeModeDistribution[noVolumeKey] || 0) + 1
 
-      const contextFallbackStrategy = String(keywordAudit.contextFallbackStrategy || 'unknown').trim() || 'unknown'
+      const contextFallbackStrategy =
+        String(keywordAudit.contextFallbackStrategy || 'unknown').trim() || 'unknown'
       contextFallbackDistribution[contextFallbackStrategy] =
         (contextFallbackDistribution[contextFallbackStrategy] || 0) + 1
 
@@ -362,7 +369,8 @@ export async function GET(request: NextRequest) {
 
         sourceQuotaRefill.triggered += sourceQuotaAudit.deferredRefillTriggered ? 1 : 0
         sourceQuotaRefill.refillCount += Number(sourceQuotaAudit.deferredRefillCount) || 0
-        sourceQuotaRefill.underfillBeforeRefill += Number(sourceQuotaAudit.underfillBeforeRefill) || 0
+        sourceQuotaRefill.underfillBeforeRefill +=
+          Number(sourceQuotaAudit.underfillBeforeRefill) || 0
         sourceQuotaRefill.deferredCount += Number(sourceQuotaAudit.deferredCount) || 0
         sourceQuotaRefill.acceptedCount += Number(sourceQuotaAudit.acceptedCount) || 0
       }
@@ -390,7 +398,7 @@ export async function GET(request: NextRequest) {
 
     qualityQuery += ` GROUP BY quality_level`
 
-    const qualityDistribution = await db.query(qualityQuery, qualityParams) as any[]
+    const qualityDistribution = (await db.query(qualityQuery, qualityParams)) as any[]
 
     // 7. 查询主题分布
     let themeQuery = `
@@ -409,7 +417,7 @@ export async function GET(request: NextRequest) {
 
     themeQuery += ` GROUP BY theme`
 
-    const themeDistribution = await db.query(themeQuery, themeParams) as any[]
+    const themeDistribution = (await db.query(themeQuery, themeParams)) as any[]
 
     // 8. 查询创意使用情况
     let usageQuery = `
@@ -427,7 +435,7 @@ export async function GET(request: NextRequest) {
       usageParams.push(parseInt(offerId))
     }
 
-    const usageStats = await db.queryOne(usageQuery, usageParams) as any
+    const usageStats = (await db.queryOne(usageQuery, usageParams)) as any
 
     // 🔧 调试日志：检查最终返回数据
     console.log('[Trends API] 最终返回数据:', {
@@ -443,7 +451,7 @@ export async function GET(request: NextRequest) {
       usage: {
         total: Number(usageStats?.total) || 0,
         selected: Number(usageStats?.selected) || 0,
-      }
+      },
     })
 
     const keywordAuditDistribution = {
@@ -473,25 +481,37 @@ export async function GET(request: NextRequest) {
       // 分布统计（确保 count 转换为 number）
       distributions: {
         // 状态分布
-        status: statusDistribution.reduce((acc, item) => {
-          acc[item.status || 'unknown'] = Number(item.count) || 0
-          return acc
-        }, {} as Record<string, number>),
+        status: statusDistribution.reduce(
+          (acc, item) => {
+            acc[item.status || 'unknown'] = Number(item.count) || 0
+            return acc
+          },
+          {} as Record<string, number>
+        ),
         // Ad Strength分布
-        adStrength: adStrengthDistribution.reduce((acc, item) => {
-          acc[item.ad_strength] = Number(item.count) || 0
-          return acc
-        }, {} as Record<string, number>),
+        adStrength: adStrengthDistribution.reduce(
+          (acc, item) => {
+            acc[item.ad_strength] = Number(item.count) || 0
+            return acc
+          },
+          {} as Record<string, number>
+        ),
         // 质量评分分布
-        quality: qualityDistribution.reduce((acc, item) => {
-          acc[item.quality_level] = Number(item.count) || 0
-          return acc
-        }, {} as Record<string, number>),
+        quality: qualityDistribution.reduce(
+          (acc, item) => {
+            acc[item.quality_level] = Number(item.count) || 0
+            return acc
+          },
+          {} as Record<string, number>
+        ),
         // 主题分布
-        theme: themeDistribution.reduce((acc, item) => {
-          acc[item.theme] = Number(item.count) || 0
-          return acc
-        }, {} as Record<string, number>),
+        theme: themeDistribution.reduce(
+          (acc, item) => {
+            acc[item.theme] = Number(item.count) || 0
+            return acc
+          },
+          {} as Record<string, number>
+        ),
         // 关键词来源审计聚合（主字段）
         audit: keywordAuditDistribution,
         // 兼容别名（逐步淘汰）
@@ -502,9 +522,10 @@ export async function GET(request: NextRequest) {
         selected: Number(usageStats?.selected) || 0,
         notSelected: Number(usageStats?.notSelected) || 0,
         total: Number(usageStats?.total) || 0,
-        usageRate: usageStats?.total > 0
-          ? Math.round((Number(usageStats.selected) / Number(usageStats.total)) * 100)
-          : 0,
+        usageRate:
+          usageStats?.total > 0
+            ? Math.round((Number(usageStats.selected) / Number(usageStats.total)) * 100)
+            : 0,
       },
       dateRange: {
         start: startDateStr,
@@ -514,9 +535,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Get creatives trends error:', error)
-    return NextResponse.json(
-      { error: error.message || '获取趋势数据失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取趋势数据失败' }, { status: 500 })
   }
 }

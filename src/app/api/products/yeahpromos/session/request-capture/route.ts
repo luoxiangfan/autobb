@@ -14,7 +14,11 @@ function normalizeHost(rawHost: string | null | undefined): string | null {
 }
 
 function normalizeProto(rawProto: string | null | undefined): 'http' | 'https' | null {
-  const proto = String(rawProto || '').trim().toLowerCase().split(',')[0]?.trim()
+  const proto = String(rawProto || '')
+    .trim()
+    .toLowerCase()
+    .split(',')[0]
+    ?.trim()
   if (proto === 'http' || proto === 'https') return proto
   return null
 }
@@ -22,10 +26,12 @@ function normalizeProto(rawProto: string | null | undefined): 'http' | 'https' |
 function isNonPublicHost(hostname: string): boolean {
   const normalized = hostname.trim().toLowerCase()
   if (!normalized) return true
-  return normalized === 'localhost'
-    || normalized === '127.0.0.1'
-    || normalized === '0.0.0.0'
-    || normalized === '::1'
+  return (
+    normalized === 'localhost' ||
+    normalized === '127.0.0.1' ||
+    normalized === '0.0.0.0' ||
+    normalized === '::1'
+  )
 }
 
 function parsePublicOriginFromUrl(rawUrl: string | null | undefined): string | null {
@@ -51,16 +57,18 @@ function resolveCaptureOrigin(request: NextRequest): string {
 
   const host = normalizeHost(request.headers.get('host'))
   if (host) {
-    const directProto = normalizeProto(request.headers.get('x-forwarded-proto'))
-      || normalizeProto(request.nextUrl.protocol.replace(':', ''))
-      || 'https'
+    const directProto =
+      normalizeProto(request.headers.get('x-forwarded-proto')) ||
+      normalizeProto(request.nextUrl.protocol.replace(':', '')) ||
+      'https'
     const directOrigin = parsePublicOriginFromUrl(`${directProto}://${host}`)
     if (directOrigin) return directOrigin
   }
 
-  const envOrigin = parsePublicOriginFromUrl(process.env.NEXT_PUBLIC_APP_URL)
-    || parsePublicOriginFromUrl(process.env.APP_URL)
-    || parsePublicOriginFromUrl(process.env.PUBLIC_APP_URL)
+  const envOrigin =
+    parsePublicOriginFromUrl(process.env.NEXT_PUBLIC_APP_URL) ||
+    parsePublicOriginFromUrl(process.env.APP_URL) ||
+    parsePublicOriginFromUrl(process.env.PUBLIC_APP_URL)
   if (envOrigin) return envOrigin
 
   return request.nextUrl.origin

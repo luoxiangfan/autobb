@@ -10,7 +10,7 @@ import type {
   QueueStorageAdapter,
   PendingEligibilityStats,
   RunningConcurrencySnapshot,
-  ProxyConfig
+  ProxyConfig,
 } from './types'
 import { MemoryQueueAdapter } from './memory-adapter'
 import { RedisQueueAdapter } from './redis-adapter'
@@ -107,16 +107,16 @@ export class UnifiedQueueManager {
 
   // 🔥 健康检查定时器
   private healthCheckLoop: NodeJS.Timeout | null = null
-  private readonly HEALTH_CHECK_INTERVAL = 5 * 60 * 1000  // 5分钟检查一次
-  private readonly STALE_TASK_TIMEOUT = 30 * 60 * 1000    // 30分钟超时
-  private readonly BATCH_STATUS_CHECK_INTERVAL = 60 * 1000  // 1分钟检查一次 batch 状态
+  private readonly HEALTH_CHECK_INTERVAL = 5 * 60 * 1000 // 5分钟检查一次
+  private readonly STALE_TASK_TIMEOUT = 30 * 60 * 1000 // 30分钟超时
+  private readonly BATCH_STATUS_CHECK_INTERVAL = 60 * 1000 // 1分钟检查一次 batch 状态
 
   // 🔥 错误追踪和退避机制（防止Redis连接问题时的错误刷屏）
   private consecutiveErrors: number = 0
   private lastErrorTime: number = 0
   private lastRunningSnapshotErrorAt: number = 0
   private readonly MAX_CONSECUTIVE_ERRORS = 3
-  private readonly ERROR_BACKOFF_MS = 5000  // 连续错误后暂停5秒
+  private readonly ERROR_BACKOFF_MS = 5000 // 连续错误后暂停5秒
   private readonly clickFarmHeapPressureThresholdPct = getBoundedFloatFromEnv(
     'QUEUE_CLICK_FARM_HEAP_PRESSURE_PCT',
     72,
@@ -142,10 +142,12 @@ export class UnifiedQueueManager {
 
   constructor(config: Partial<QueueConfig> = {}) {
     const defaultRedisKeyPrefix =
-      process.env.REDIS_KEY_PREFIX ||
-      `autoads:${process.env.NODE_ENV || 'development'}:queue:`
+      process.env.REDIS_KEY_PREFIX || `autoads:${process.env.NODE_ENV || 'development'}:queue:`
 
-    const clickFarmConcurrencyCap = getPositiveIntFromEnv('QUEUE_CLICK_FARM_CONCURRENCY_HARD_CAP', 40)
+    const clickFarmConcurrencyCap = getPositiveIntFromEnv(
+      'QUEUE_CLICK_FARM_CONCURRENCY_HARD_CAP',
+      40
+    )
     const defaultClickFarmConcurrency = Math.min(
       getPositiveIntFromEnv('QUEUE_CLICK_FARM_CONCURRENCY', 20),
       Math.max(1, clickFarmConcurrencyCap)
@@ -155,8 +157,8 @@ export class UnifiedQueueManager {
     // 合并默认配置
     this.config = {
       autoStartOnEnqueue: config.autoStartOnEnqueue !== false,
-      globalConcurrency: config.globalConcurrency || 999,    // 🔥 全局并发提升至999（补点击需求）
-      perUserConcurrency: config.perUserConcurrency || 999,  // 🔥 单用户并发提升至999（补点击需求）
+      globalConcurrency: config.globalConcurrency || 999, // 🔥 全局并发提升至999（补点击需求）
+      perUserConcurrency: config.perUserConcurrency || 999, // 🔥 单用户并发提升至999（补点击需求）
       perTypeConcurrency: config.perTypeConcurrency || {
         'ai-analysis': 2,
         sync: 1,
@@ -165,32 +167,32 @@ export class UnifiedQueueManager {
         export: 2,
         'link-check': 2,
         cleanup: 1,
-        'offer-extraction': 2,      // Offer提取任务并发限制（AI密集型）
-        'batch-offer-creation': 1,  // 批量任务协调器（串行执行，避免资源竞争）
-        'ad-creative': 3,           // 创意生成任务并发限制（提高到3，允许多用户同时生成）
-        'campaign-publish': 2,      // 🆕 广告系列发布并发限制（Google Ads API限制）
-        'click-farm-trigger': 4,    // 🆕 补点击触发任务（控制面）
-        'click-farm-batch': 6,      // 🆕 补点击批次分发任务（滚动派发）
+        'offer-extraction': 2, // Offer提取任务并发限制（AI密集型）
+        'batch-offer-creation': 1, // 批量任务协调器（串行执行，避免资源竞争）
+        'ad-creative': 3, // 创意生成任务并发限制（提高到3，允许多用户同时生成）
+        'campaign-publish': 2, // 🆕 广告系列发布并发限制（Google Ads API限制）
+        'click-farm-trigger': 4, // 🆕 补点击触发任务（控制面）
+        'click-farm-batch': 6, // 🆕 补点击批次分发任务（滚动派发）
         'click-farm': defaultClickFarmConcurrency, // 🆕 支持通过 QUEUE_CLICK_FARM_CONCURRENCY 覆盖
-        'url-swap': defaultUrlSwapConcurrency,     // 支持通过 QUEUE_URL_SWAP_CONCURRENCY 覆盖
-        'openclaw-strategy': 2,     // 🆕 OpenClaw 策略任务并发限制（默认2，避免策略批量冲击配额）
+        'url-swap': defaultUrlSwapConcurrency, // 支持通过 QUEUE_URL_SWAP_CONCURRENCY 覆盖
+        'openclaw-strategy': 2, // 🆕 OpenClaw 策略任务并发限制（默认2，避免策略批量冲击配额）
         'affiliate-product-sync': 2, // 🆕 联盟商品同步任务并发限制（默认2，降低平台API冲击）
-        'openclaw-command': 3,       // 🆕 OpenClaw 指令执行任务并发限制
+        'openclaw-command': 3, // 🆕 OpenClaw 指令执行任务并发限制
         'openclaw-affiliate-sync': 2, // 🆕 OpenClaw 联盟佣金快照同步任务并发限制
-        'openclaw-report-send': 2,    // 🆕 OpenClaw 报表投递任务并发限制
+        'openclaw-report-send': 2, // 🆕 OpenClaw 报表投递任务并发限制
         'product-score-calculation': 2, // 🆕 商品推荐指数计算任务并发限制（AI密集型）
         'google-ads-campaign-sync': 1, // 🆕 Google Ads广告系列同步任务并发限制
         'campaign-batch-create': 1, // 🆕 批量从备份创建广告系列任务并发限制（资源密集型）
       },
       maxQueueSize: config.maxQueueSize || 1000,
-      taskTimeout: config.taskTimeout || 900000,  // 15分钟超时（店铺深度抓取+竞品分析可能需要10-15分钟）
+      taskTimeout: config.taskTimeout || 900000, // 15分钟超时（店铺深度抓取+竞品分析可能需要10-15分钟）
       defaultMaxRetries: config.defaultMaxRetries || 3,
       retryDelay: config.retryDelay || 5000,
       redisUrl: config.redisUrl || process.env.REDIS_URL,
       redisKeyPrefix: config.redisKeyPrefix || defaultRedisKeyPrefix,
       proxyPool: config.proxyPool || [],
       proxyRotation: config.proxyRotation !== false,
-      instanceName: config.instanceName
+      instanceName: config.instanceName,
     }
 
     // 初始化代理管理器
@@ -226,10 +228,7 @@ export class UnifiedQueueManager {
   private createAdapter(): QueueStorageAdapter {
     if (this.config.redisUrl) {
       console.log('🔄 尝试连接Redis队列...')
-      return new RedisQueueAdapter(
-        this.config.redisUrl,
-        this.config.redisKeyPrefix
-      )
+      return new RedisQueueAdapter(this.config.redisUrl, this.config.redisKeyPrefix)
     } else {
       console.log('⚠️ REDIS_URL未配置，使用内存队列')
       return new MemoryQueueAdapter()
@@ -245,9 +244,8 @@ export class UnifiedQueueManager {
     autoStartOnEnqueue: boolean
   } {
     const adapterName = (this.adapter as any)?.constructor?.name || 'UnknownAdapter'
-    const connected = typeof this.adapter.isConnected === 'function'
-      ? this.adapter.isConnected()
-      : true
+    const connected =
+      typeof this.adapter.isConnected === 'function' ? this.adapter.isConnected() : true
     return {
       instanceName: this.config.instanceName || 'queue',
       adapter: adapterName,
@@ -372,9 +370,13 @@ export class UnifiedQueueManager {
         const repair = await this.adapter.repairPendingIndexes()
         const repairElapsedMs = Date.now() - repairStartedAt
         if (repair.repairedCount > 0) {
-          console.log(`🧩 pending 索引修复: repaired=${repair.repairedCount}, scanned=${repair.scannedCount}, elapsed=${repairElapsedMs}ms`)
+          console.log(
+            `🧩 pending 索引修复: repaired=${repair.repairedCount}, scanned=${repair.scannedCount}, elapsed=${repairElapsedMs}ms`
+          )
         } else {
-          console.log(`🧩 pending 索引修复: 无需处理 (scanned=${repair.scannedCount}, elapsed=${repairElapsedMs}ms)`)
+          console.log(
+            `🧩 pending 索引修复: 无需处理 (scanned=${repair.scannedCount}, elapsed=${repairElapsedMs}ms)`
+          )
         }
       } else if (this.adapter.repairPendingIndexes && this.skipStartupPendingRepair) {
         console.log('⏭️ 启动阶段已跳过 pending 索引修复 (QUEUE_SKIP_STARTUP_PENDING_REPAIR=true)')
@@ -426,10 +428,7 @@ export class UnifiedQueueManager {
    * 注册任务执行器
    * 防止重复注册
    */
-  registerExecutor<T = any, R = any>(
-    type: TaskType,
-    executor: TaskExecutor<T, R>
-  ): void {
+  registerExecutor<T = any, R = any>(type: TaskType, executor: TaskExecutor<T, R>): void {
     if (this.executors.has(type)) {
       return // 静默跳过，不输出警告日志
     }
@@ -510,8 +509,8 @@ export class UnifiedQueueManager {
       requireProxy?: boolean
       proxyConfig?: ProxyConfig
       maxRetries?: number
-      taskId?: string  // 可选的预定义taskId
-      parentRequestId?: string  // 可选：关联上游HTTP请求
+      taskId?: string // 可选的预定义taskId
+      parentRequestId?: string // 可选：关联上游HTTP请求
     } = {}
   ): Promise<string> {
     // 兼容：默认保持旧行为（enqueue 时自动启动 worker）
@@ -525,8 +524,7 @@ export class UnifiedQueueManager {
     const taskId = options.taskId || randomUUID()
     const parentRequestId = options.parentRequestId
     const priority: TaskPriority =
-      options.priority ??
-      (this.isBackgroundTaskType(type) ? 'low' : 'normal')
+      options.priority ?? (this.isBackgroundTaskType(type) ? 'low' : 'normal')
 
     // click-farm：明确不重试（用户可重新触发/由调度器下一轮重建）
     const noRetryTaskTypes = new Set<TaskType>([
@@ -550,7 +548,7 @@ export class UnifiedQueueManager {
       proxyConfig: options.proxyConfig,
       createdAt: Date.now(),
       retryCount: 0,
-      maxRetries
+      maxRetries,
     }
 
     // 若任务携带 scheduledAt（ISO 字符串），将其映射为 notBefore，避免“提前 dequeue 后长时间 setTimeout”等待导致内存/并发失控
@@ -618,7 +616,7 @@ export class UnifiedQueueManager {
       }
 
       // 检查并发限制
-      if (!await this.canExecuteTask(task)) {
+      if (!(await this.canExecuteTask(task))) {
         // 放回队列
         task.status = 'pending'
         // 清理 startedAt（否则会被误判为长时间 running / 并影响调试）
@@ -652,7 +650,7 @@ export class UnifiedQueueManager {
       } else if (this.consecutiveErrors === this.MAX_CONSECUTIVE_ERRORS) {
         console.error(
           `❌ Redis连接持续失败（${this.consecutiveErrors}次），` +
-          `暂停${this.ERROR_BACKOFF_MS / 1000}秒后重试。错误: ${error.message}`
+            `暂停${this.ERROR_BACKOFF_MS / 1000}秒后重试。错误: ${error.message}`
         )
       }
       // 其他连续错误静默处理，避免刷屏
@@ -706,7 +704,9 @@ export class UnifiedQueueManager {
     return true
   }
 
-  private async getCrossProcessRunningSnapshot(task: Task): Promise<RunningConcurrencySnapshot | null> {
+  private async getCrossProcessRunningSnapshot(
+    task: Task
+  ): Promise<RunningConcurrencySnapshot | null> {
     if (!this.adapter.getRunningConcurrencySnapshot) {
       return null
     }
@@ -758,36 +758,36 @@ export class UnifiedQueueManager {
 
     // 不可恢复的错误模式
     const nonRecoverablePatterns = [
-      '未配置',                                              // 配置缺失
-      '未配置完整',                                          // 配置不完整
-      '配置不完整',                                          // 配置不完整 (变体)
-      '不完整',                                              // 配置不完整
-      '需要',                                                // 需要某个参数
-      '必需参数',                                            // 缺少必需参数
-      '缺少',                                                // 缺少某个参数
-      '缺失',                                                // 参数缺失
-      '未找到',                                              // 未找到资源/配置
-      '权限',                                                // 权限相关
-      '认证',                                                // 认证相关
-      '授权',                                                // 授权相关
-      '不存在',                                              // 资源不存在
-      '无效的',                                              // 无效的参数/资源
-      '找不到',                                              // 找不到资源
-      '上传',                                                // 需要上传文件
-      '权限等级',                                            // Developer Token 权限等级（新增 2025-12-29）
-      'only approved for use with test accounts',           // Developer Token 权限错误（新增 2025-12-29）
-      'unauthorized',                                        // 未授权
-      'forbidden',                                           // 禁止访问
-      'not found',                                           // 未找到
-      'invalid',                                             // 无效的
-      'missing',                                             // 缺失的
-      'required',                                            // 必需的
-      'credential',                                          // 凭证相关
-      'config',                                              // 配置相关
-      'permission_denied',                                   // Google Ads API 权限拒绝
-      'business abnormality',                                // 代理服务商业务异常（需人工介入）
-      'contact customer service',                            // 代理服务商要求联系客服
-      'api business error',                                  // 代理服务商业务错误（不可恢复）
+      '未配置', // 配置缺失
+      '未配置完整', // 配置不完整
+      '配置不完整', // 配置不完整 (变体)
+      '不完整', // 配置不完整
+      '需要', // 需要某个参数
+      '必需参数', // 缺少必需参数
+      '缺少', // 缺少某个参数
+      '缺失', // 参数缺失
+      '未找到', // 未找到资源/配置
+      '权限', // 权限相关
+      '认证', // 认证相关
+      '授权', // 授权相关
+      '不存在', // 资源不存在
+      '无效的', // 无效的参数/资源
+      '找不到', // 找不到资源
+      '上传', // 需要上传文件
+      '权限等级', // Developer Token 权限等级（新增 2025-12-29）
+      'only approved for use with test accounts', // Developer Token 权限错误（新增 2025-12-29）
+      'unauthorized', // 未授权
+      'forbidden', // 禁止访问
+      'not found', // 未找到
+      'invalid', // 无效的
+      'missing', // 缺失的
+      'required', // 必需的
+      'credential', // 凭证相关
+      'config', // 配置相关
+      'permission_denied', // Google Ads API 权限拒绝
+      'business abnormality', // 代理服务商业务异常（需人工介入）
+      'contact customer service', // 代理服务商要求联系客服
+      'api business error', // 代理服务商业务错误（不可恢复）
     ]
 
     for (const pattern of nonRecoverablePatterns) {
@@ -828,158 +828,160 @@ export class UnifiedQueueManager {
       })
 
       try {
-      // 用户执行资格门禁：禁用/过期用户任务直接终止，避免继续消耗资源
-      await assertUserExecutionAllowed(task.userId, {
-        source: `queue:${task.type}:${task.id}`,
-      })
+        // 用户执行资格门禁：禁用/过期用户任务直接终止，避免继续消耗资源
+        await assertUserExecutionAllowed(task.userId, {
+          source: `queue:${task.type}:${task.id}`,
+        })
 
-      // 准备代理配置（按需加载）
-      // 1. 检查任务类型是否需要代理
-      // 2. 如果需要代理，从用户配置中加载
-      if (!task.proxyConfig) {
-        const needsProxy = task.requireProxy ?? isProxyRequiredForTaskType(task.type)
-        if (needsProxy) {
-          // 从任务数据中获取目标国家（优先使用offer的target_country字段）
-          const targetCountry = task.data?.target_country || task.data?.targetCountry || task.data?.country || 'US'
-          const userProxy = await getProxyForCountry(targetCountry, task.userId)
-          if (userProxy) {
-            task.proxyConfig = {
-              host: userProxy.host,
-              port: userProxy.port,
-              username: userProxy.username,
-              password: userProxy.password,
-              protocol: userProxy.protocol,
-              // 保存原始URL用于动态代理服务
-              originalUrl: userProxy.originalUrl
-            } as ProxyConfig
-            console.log(`🔌 任务 ${task.id} 使用用户 ${task.userId} 的代理 (${userProxy.country})`)
-          } else {
-            console.log(`⚠️ 任务 ${task.id} 需要代理但用户 ${task.userId} 未配置代理`)
+        // 准备代理配置（按需加载）
+        // 1. 检查任务类型是否需要代理
+        // 2. 如果需要代理，从用户配置中加载
+        if (!task.proxyConfig) {
+          const needsProxy = task.requireProxy ?? isProxyRequiredForTaskType(task.type)
+          if (needsProxy) {
+            // 从任务数据中获取目标国家（优先使用offer的target_country字段）
+            const targetCountry =
+              task.data?.target_country || task.data?.targetCountry || task.data?.country || 'US'
+            const userProxy = await getProxyForCountry(targetCountry, task.userId)
+            if (userProxy) {
+              task.proxyConfig = {
+                host: userProxy.host,
+                port: userProxy.port,
+                username: userProxy.username,
+                password: userProxy.password,
+                protocol: userProxy.protocol,
+                // 保存原始URL用于动态代理服务
+                originalUrl: userProxy.originalUrl,
+              } as ProxyConfig
+              console.log(
+                `🔌 任务 ${task.id} 使用用户 ${task.userId} 的代理 (${userProxy.country})`
+              )
+            } else {
+              console.log(`⚠️ 任务 ${task.id} 需要代理但用户 ${task.userId} 未配置代理`)
+            }
           }
         }
-      }
 
-      // 执行任务（带超时）
-      await this.executeWithTimeout(
-        executor(task),
-        this.config.taskTimeout
-      )
+        // 执行任务（带超时）
+        await this.executeWithTimeout(executor(task), this.config.taskTimeout)
 
-      // 标记代理成功（如果使用了代理池中的代理）
-      if (task.proxyConfig && this.proxyManager.getStats().total > 0) {
-        this.proxyManager.markProxySuccess(task.proxyConfig)
-      }
+        // 标记代理成功（如果使用了代理池中的代理）
+        if (task.proxyConfig && this.proxyManager.getStats().total > 0) {
+          this.proxyManager.markProxySuccess(task.proxyConfig)
+        }
 
-      // 更新任务状态
-      await this.adapter.updateTaskStatus(task.id, 'completed')
-      logger.info('queue_task_completed', {
-        taskId: task.id,
-        taskType: task.type,
-        userId: task.userId,
-        parentRequestId: task.parentRequestId,
-        durationMs: Date.now() - startedAt,
-      })
-      } catch (error: any) {
-      logger.error(
-        'queue_task_failed',
-        {
+        // 更新任务状态
+        await this.adapter.updateTaskStatus(task.id, 'completed')
+        logger.info('queue_task_completed', {
           taskId: task.id,
           taskType: task.type,
           userId: task.userId,
           parentRequestId: task.parentRequestId,
           durationMs: Date.now() - startedAt,
-        },
-        error
-      )
-
-      // 标记代理失败
-      if (task.proxyConfig) {
-        this.proxyManager.markProxyFailed(task.proxyConfig)
-      }
-
-      const isUserSuspended = isUserExecutionSuspendedError(error)
-
-      // 判断错误是否可恢复
-      const isRecoverable = isUserSuspended ? false : this.isRecoverableError(error)
-
-      // 重试逻辑：仅对可恢复的错误执行重试
-      const shouldRetry = isRecoverable && (task.retryCount || 0) < (task.maxRetries || 0)
-      if (shouldRetry) {
-        task.retryCount = (task.retryCount || 0) + 1
-        task.status = 'pending'
-        // 清理 startedAt，避免被误判为长时间 running
-        delete (task as any).startedAt
-
-        // 🔧 修复：重试时清除代理配置，强制重新获取新代理
-        // 这样可以避免使用失败的代理IP，提高重试成功率
-        if (task.type === 'click-farm' && task.data?.proxyUrl) {
-          console.log(`🔄 任务重试 (${task.retryCount}/${task.maxRetries}): ${task.id} - 清除旧代理，准备更换新代理`)
-          delete task.data.proxyUrl
-          task.proxyConfig = undefined
-        } else {
-          console.log(`🔄 任务重试 (${task.retryCount}/${task.maxRetries}): ${task.id}`)
-        }
-
-        // 延迟后重新入队
-        logger.warn('queue_task_retry_scheduled', {
-          taskId: task.id,
-          taskType: task.type,
-          userId: task.userId,
-          parentRequestId: task.parentRequestId,
-          retryCount: task.retryCount,
-          maxRetries: task.maxRetries,
-          retryDelayMs: this.config.retryDelay,
         })
+      } catch (error: any) {
+        logger.error(
+          'queue_task_failed',
+          {
+            taskId: task.id,
+            taskType: task.type,
+            userId: task.userId,
+            parentRequestId: task.parentRequestId,
+            durationMs: Date.now() - startedAt,
+          },
+          error
+        )
 
-        // 使用 notBefore 将重试延迟持久化到队列，避免 setTimeout 导致进程重启后丢失/误判 running
-        ;(task as any).notBefore = Date.now() + this.config.retryDelay
-        await this.adapter.enqueue(task)
-      } else {
-        // 不可恢复的错误或超过重试次数，标记为失败
-        if (!isRecoverable) {
-          if (isUserSuspended) {
-            logger.warn('queue_task_aborted_user_suspended', {
-              taskId: task.id,
-              taskType: task.type,
-              userId: task.userId,
-              parentRequestId: task.parentRequestId,
-              errorCode: USER_EXECUTION_SUSPENDED_ERROR_CODE,
-              reason: (error as any)?.reason || undefined,
-            })
-          }
-          console.log(`⚠️ 不可恢复的错误，不再重试: ${task.id}`)
+        // 标记代理失败
+        if (task.proxyConfig) {
+          this.proxyManager.markProxyFailed(task.proxyConfig)
         }
-        // 队列恢复功能已移除，用户可重新提交任务
-        await this.adapter.updateTaskStatus(task.id, 'failed', error.message)
-        await this.syncTaskFailureToDatabase(task, error)
-      }
+
+        const isUserSuspended = isUserExecutionSuspendedError(error)
+
+        // 判断错误是否可恢复
+        const isRecoverable = isUserSuspended ? false : this.isRecoverableError(error)
+
+        // 重试逻辑：仅对可恢复的错误执行重试
+        const shouldRetry = isRecoverable && (task.retryCount || 0) < (task.maxRetries || 0)
+        if (shouldRetry) {
+          task.retryCount = (task.retryCount || 0) + 1
+          task.status = 'pending'
+          // 清理 startedAt，避免被误判为长时间 running
+          delete (task as any).startedAt
+
+          // 🔧 修复：重试时清除代理配置，强制重新获取新代理
+          // 这样可以避免使用失败的代理IP，提高重试成功率
+          if (task.type === 'click-farm' && task.data?.proxyUrl) {
+            console.log(
+              `🔄 任务重试 (${task.retryCount}/${task.maxRetries}): ${task.id} - 清除旧代理，准备更换新代理`
+            )
+            delete task.data.proxyUrl
+            task.proxyConfig = undefined
+          } else {
+            console.log(`🔄 任务重试 (${task.retryCount}/${task.maxRetries}): ${task.id}`)
+          }
+
+          // 延迟后重新入队
+          logger.warn('queue_task_retry_scheduled', {
+            taskId: task.id,
+            taskType: task.type,
+            userId: task.userId,
+            parentRequestId: task.parentRequestId,
+            retryCount: task.retryCount,
+            maxRetries: task.maxRetries,
+            retryDelayMs: this.config.retryDelay,
+          })
+
+          // 使用 notBefore 将重试延迟持久化到队列，避免 setTimeout 导致进程重启后丢失/误判 running
+          ;(task as any).notBefore = Date.now() + this.config.retryDelay
+          await this.adapter.enqueue(task)
+        } else {
+          // 不可恢复的错误或超过重试次数，标记为失败
+          if (!isRecoverable) {
+            if (isUserSuspended) {
+              logger.warn('queue_task_aborted_user_suspended', {
+                taskId: task.id,
+                taskType: task.type,
+                userId: task.userId,
+                parentRequestId: task.parentRequestId,
+                errorCode: USER_EXECUTION_SUSPENDED_ERROR_CODE,
+                reason: (error as any)?.reason || undefined,
+              })
+            }
+            console.log(`⚠️ 不可恢复的错误，不再重试: ${task.id}`)
+          }
+          // 队列恢复功能已移除，用户可重新提交任务
+          await this.adapter.updateTaskStatus(task.id, 'failed', error.message)
+          await this.syncTaskFailureToDatabase(task, error)
+        }
       } finally {
-      // 减少并发计数
-      this.decrementConcurrency(task)
+        // 减少并发计数
+        this.decrementConcurrency(task)
 
-      // 🔥 2025-12-12 内存优化：任务完成后主动清理资源
-      // 清理空闲的浏览器实例，释放内存
-      if (task.type === 'offer-extraction' || task.type === 'batch-offer-creation') {
-        try {
-          const { getPlaywrightPool } = await import('@/lib/playwright-pool')
-          const pool = getPlaywrightPool()
-          await pool.clearIdleInstances()
-          console.log(`🧹 [内存清理] 任务 ${task.id} 完成后清理空闲浏览器实例`)
-        } catch (cleanupError) {
-          // 清理失败不影响主流程
-          console.warn(`⚠️ [内存清理] 清理空闲实例失败: ${cleanupError}`)
-        }
-
-        // 触发Node.js垃圾回收（如果可用）
-        if (global.gc) {
+        // 🔥 2025-12-12 内存优化：任务完成后主动清理资源
+        // 清理空闲的浏览器实例，释放内存
+        if (task.type === 'offer-extraction' || task.type === 'batch-offer-creation') {
           try {
-            global.gc()
-            console.log(`🧹 [内存清理] 触发GC`)
-          } catch {
-            // GC失败不影响主流程
+            const { getPlaywrightPool } = await import('@/lib/playwright-pool')
+            const pool = getPlaywrightPool()
+            await pool.clearIdleInstances()
+            console.log(`🧹 [内存清理] 任务 ${task.id} 完成后清理空闲浏览器实例`)
+          } catch (cleanupError) {
+            // 清理失败不影响主流程
+            console.warn(`⚠️ [内存清理] 清理空闲实例失败: ${cleanupError}`)
+          }
+
+          // 触发Node.js垃圾回收（如果可用）
+          if (global.gc) {
+            try {
+              global.gc()
+              console.log(`🧹 [内存清理] 触发GC`)
+            } catch {
+              // GC失败不影响主流程
+            }
           }
         }
-      }
       }
     })
   }
@@ -1003,7 +1005,9 @@ export class UnifiedQueueManager {
           errorMessage: error?.message || '任务执行失败',
         })
       } catch (syncError: any) {
-        console.warn(`⚠️ 同步 affiliate_product_sync_runs 失败状态失败: ${task.id}: ${syncError?.message || syncError}`)
+        console.warn(
+          `⚠️ 同步 affiliate_product_sync_runs 失败状态失败: ${task.id}: ${syncError?.message || syncError}`
+        )
       }
       return
     }
@@ -1014,10 +1018,14 @@ export class UnifiedQueueManager {
         const db = getDatabase()
         const nowSql = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
         const message = error?.message || '任务执行失败'
-        const errorPayload = toDbJsonObjectField({
-          message,
-          source: 'queue-manager',
-        }, db.type, { message, source: 'queue-manager' })
+        const errorPayload = toDbJsonObjectField(
+          {
+            message,
+            source: 'queue-manager',
+          },
+          db.type,
+          { message, source: 'queue-manager' }
+        )
 
         await db.exec(
           `UPDATE offer_tasks
@@ -1031,7 +1039,9 @@ export class UnifiedQueueManager {
           [message, errorPayload, task.id]
         )
       } catch (syncError: any) {
-        console.warn(`⚠️ 同步 offer_tasks 失败状态失败: ${task.id}: ${syncError?.message || syncError}`)
+        console.warn(
+          `⚠️ 同步 offer_tasks 失败状态失败: ${task.id}: ${syncError?.message || syncError}`
+        )
       }
     }
   }
@@ -1039,10 +1049,7 @@ export class UnifiedQueueManager {
   /**
    * 执行任务并设置超时
    */
-  private executeWithTimeout<T>(
-    promise: Promise<T>,
-    timeout: number
-  ): Promise<T> {
+  private executeWithTimeout<T>(promise: Promise<T>, timeout: number): Promise<T> {
     let timeoutId: NodeJS.Timeout | null = null
     const timeoutPromise = new Promise<T>((_, reject) => {
       timeoutId = setTimeout(() => reject(new Error('Task timeout')), timeout)
@@ -1072,10 +1079,7 @@ export class UnifiedQueueManager {
         (this.perUserRunningCount.get(task.userId) || 0) + 1
       )
     }
-    this.perTypeRunningCount.set(
-      task.type,
-      (this.perTypeRunningCount.get(task.type) || 0) + 1
-    )
+    this.perTypeRunningCount.set(task.type, (this.perTypeRunningCount.get(task.type) || 0) + 1)
   }
 
   /**
@@ -1170,7 +1174,7 @@ export class UnifiedQueueManager {
 
           return {
             cleaned: result.totalCleared,
-            details
+            details,
           }
         }
       } else {
@@ -1184,7 +1188,7 @@ export class UnifiedQueueManager {
 
           return {
             cleaned: result.cleanedCount,
-            details: `stale tasks cleaned: ${result.cleanedTaskIds.join(', ')}`
+            details: `stale tasks cleaned: ${result.cleanedTaskIds.join(', ')}`,
           }
         }
       }
@@ -1223,7 +1227,9 @@ export class UnifiedQueueManager {
         if (limit > 0) {
           const pct = (heap / limit) * 100
           if (pct >= 85) {
-            issues.push(`Node heap 使用率高: ${pct.toFixed(1)}% (${Math.round(heap / 1024 / 1024)}MB / ${Math.round(limit / 1024 / 1024)}MB)`)
+            issues.push(
+              `Node heap 使用率高: ${pct.toFixed(1)}% (${Math.round(heap / 1024 / 1024)}MB / ${Math.round(limit / 1024 / 1024)}MB)`
+            )
           }
         }
       } catch {
@@ -1263,8 +1269,8 @@ export class UnifiedQueueManager {
       const healthy = issues.length === 0
       if (!healthy) {
         console.log(`⚠️ 队列健康检查发现问题:`)
-        issues.forEach(issue => console.log(`   - ${issue}`))
-        actions.forEach(action => console.log(`   ✅ ${action}`))
+        issues.forEach((issue) => console.log(`   - ${issue}`))
+        actions.forEach((action) => console.log(`   ✅ ${action}`))
       }
 
       return { healthy, issues, actions }
@@ -1272,7 +1278,7 @@ export class UnifiedQueueManager {
       return {
         healthy: false,
         issues: [`健康检查失败: ${error.message}`],
-        actions: []
+        actions: [],
       }
     }
   }
@@ -1301,26 +1307,40 @@ export class UnifiedQueueManager {
       }
 
       // 获取超时的 running 任务
-      const staleTasks = await db.query<{ id: string; batch_id: string | null; started_at: string }>(`
+      const staleTasks = await db.query<{
+        id: string
+        batch_id: string | null
+        started_at: string
+      }>(
+        `
         SELECT id, batch_id, started_at
         FROM offer_tasks
         WHERE status = 'running'
           AND started_at < ${timeoutThreshold}
-      `, [])
+      `,
+        []
+      )
 
       if (staleTasks.length === 0) {
         return { cleanedCount: 0, taskIds: [] }
       }
 
-      console.log(`⚠️ 发现 ${staleTasks.length} 个数据库超时任务: ${staleTasks.map(t => t.id).join(', ')}`)
+      console.log(
+        `⚠️ 发现 ${staleTasks.length} 个数据库超时任务: ${staleTasks.map((t) => t.id).join(', ')}`
+      )
 
       // 将超时任务标记为 failed
       const nowFunc = db_type === 'postgres' ? 'NOW()' : "datetime('now')"
-      const timeoutErrorJson = toDbJsonObjectField({
-        timeout: true,
-        message: 'Task timeout - no heartbeat received',
-      }, db_type, { timeout: true, message: 'Task timeout - no heartbeat received' })
-      const updateResult = await db.exec(`
+      const timeoutErrorJson = toDbJsonObjectField(
+        {
+          timeout: true,
+          message: 'Task timeout - no heartbeat received',
+        },
+        db_type,
+        { timeout: true, message: 'Task timeout - no heartbeat received' }
+      )
+      const updateResult = await db.exec(
+        `
         UPDATE offer_tasks
         SET status = 'failed',
             message = '任务超时',
@@ -1329,10 +1349,14 @@ export class UnifiedQueueManager {
             updated_at = ${nowFunc}
         WHERE status = 'running'
           AND started_at < ${timeoutThreshold}
-      `, [timeoutErrorJson])
+      `,
+        [timeoutErrorJson]
+      )
 
       // 如果有超时的 batch 任务，一并处理
-      const staleBatchIds = [...new Set(staleTasks.filter(t => t.batch_id).map(t => t.batch_id!))]
+      const staleBatchIds = [
+        ...new Set(staleTasks.filter((t) => t.batch_id).map((t) => t.batch_id!)),
+      ]
       for (const batchId of staleBatchIds) {
         // 检查该 batch 是否所有任务都已完成或失败
         const batchStats = await db.queryOne<{
@@ -1341,7 +1365,8 @@ export class UnifiedQueueManager {
           failed: number
           running: number
           pending: number
-        }>(`
+        }>(
+          `
           SELECT
             COUNT(*) as total,
             COUNT(*) FILTER (WHERE status = 'completed') as completed,
@@ -1350,18 +1375,23 @@ export class UnifiedQueueManager {
             COUNT(*) FILTER (WHERE status = 'pending') as pending
           FROM offer_tasks
           WHERE batch_id = ?
-        `, [batchId])
+        `,
+          [batchId]
+        )
 
         if (batchStats && batchStats.running === 0 && batchStats.pending === 0) {
           // 所有任务都完成了，更新 batch 状态
           const newStatus = batchStats.failed > 0 ? 'failed' : 'completed'
-          await db.exec(`
+          await db.exec(
+            `
             UPDATE batch_tasks
             SET status = ?,
                 completed_at = ${nowFunc},
                 updated_at = ${nowFunc}
             WHERE id = ?
-          `, [newStatus, batchId])
+          `,
+            [newStatus, batchId]
+          )
           console.log(`📦 Batch ${batchId} 状态已更新为: ${newStatus}`)
         }
       }
@@ -1370,7 +1400,7 @@ export class UnifiedQueueManager {
 
       return {
         cleanedCount: updateResult.changes,
-        taskIds: staleTasks.map(t => t.id)
+        taskIds: staleTasks.map((t) => t.id),
       }
     } catch (error: any) {
       console.error('❌ 清理数据库超时任务失败:', error.message)
@@ -1385,9 +1415,7 @@ export class UnifiedQueueManager {
     if (this.healthCheckLoop) return
 
     // 立即执行一次健康检查
-    this.performHealthCheck().catch(err =>
-      console.error('❌ 首次健康检查失败:', err.message)
-    )
+    this.performHealthCheck().catch((err) => console.error('❌ 首次健康检查失败:', err.message))
 
     // 设置定期检查
     this.healthCheckLoop = setInterval(async () => {
@@ -1446,7 +1474,9 @@ export class UnifiedQueueManager {
       const total = runningDeleted + pendingDeleted
 
       if (total > 0) {
-        console.log(`[队列健康] ✅ 清理 ${total} 个换链接任务 (running: ${runningDeleted}, pending: ${pendingDeleted})`)
+        console.log(
+          `[队列健康] ✅ 清理 ${total} 个换链接任务 (running: ${runningDeleted}, pending: ${pendingDeleted})`
+        )
         console.log('[队列健康] ℹ️  任务将在下一个时间间隔由调度器重新入队')
       } else {
         console.log('[队列健康] ✅ 无需清理换链接任务')
@@ -1477,9 +1507,12 @@ export class UnifiedQueueManager {
       const childTasks = await db.query<{
         id: string
         status: string
-      }>(`
+      }>(
+        `
         SELECT id, status FROM offer_tasks WHERE batch_id = ? AND status IN ('pending', 'running')
-      `, [batchId])
+      `,
+        [batchId]
+      )
 
       let cancelledCount = 0
 
@@ -1499,24 +1532,30 @@ export class UnifiedQueueManager {
       // 4. 将 running/pending 任务标记为 failed（因为无法直接停止正在执行的代码）
       // PostgreSQL 使用 JSONB，SQLite 使用 JSON 字符串
       if (db_type === 'postgres') {
-        await db.exec(`
+        await db.exec(
+          `
           UPDATE offer_tasks
           SET status = 'failed',
               message = '因批次取消而终止',
               error = jsonb_build_object('cancelled', true, 'message', 'Batch cancelled by user', 'cancelled_at', ${nowFunc}),
               updated_at = ${nowFunc}
           WHERE batch_id = ? AND status IN ('pending', 'running')
-        `, [batchId])
+        `,
+          [batchId]
+        )
       } else {
         // SQLite
-        await db.exec(`
+        await db.exec(
+          `
           UPDATE offer_tasks
           SET status = 'failed',
               message = '因批次取消而终止',
               error = json_object('cancelled', 1, 'message', 'Batch cancelled by user'),
               updated_at = ${nowFunc}
           WHERE batch_id = ? AND status IN ('pending', 'running')
-        `, [batchId])
+        `,
+          [batchId]
+        )
       }
 
       console.log(`✅ 批量任务 ${batchId} 已取消，共处理 ${cancelledCount} 个 pending 任务`)
@@ -1576,7 +1615,8 @@ export class UnifiedQueueManager {
           failed: number
           running: number
           pending: number
-        }>(`
+        }>(
+          `
           SELECT
             COUNT(*) as total,
             COUNT(*) FILTER (WHERE status = 'completed') as completed,
@@ -1585,7 +1625,9 @@ export class UnifiedQueueManager {
             COUNT(*) FILTER (WHERE status = 'pending') as pending
           FROM offer_tasks
           WHERE batch_id = ?
-        `, [batch.id])
+        `,
+          [batch.id]
+        )
 
         if (!stats) continue
 
@@ -1602,7 +1644,8 @@ export class UnifiedQueueManager {
 
         // 如果状态不一致，更新 batch 状态
         if (newStatus && newStatus !== batch.status) {
-          await db.exec(`
+          await db.exec(
+            `
             UPDATE batch_tasks
             SET status = ?,
                 completed_count = ?,
@@ -1610,12 +1653,14 @@ export class UnifiedQueueManager {
                 completed_at = ${nowFunc},
                 updated_at = ${nowFunc}
             WHERE id = ?
-          `, [newStatus, stats.completed, stats.failed, batch.id])
+          `,
+            [newStatus, stats.completed, stats.failed, batch.id]
+          )
 
           fixed++
           details.push(
             `Batch ${batch.id}: ${batch.status} → ${newStatus} ` +
-            `(completed: ${stats.completed}, failed: ${stats.failed}, running: ${stats.running}, pending: ${stats.pending})`
+              `(completed: ${stats.completed}, failed: ${stats.failed}, running: ${stats.running}, pending: ${stats.pending})`
           )
         }
       }
@@ -1625,7 +1670,7 @@ export class UnifiedQueueManager {
       return {
         checked: batches.length,
         fixed,
-        details
+        details,
       }
     } catch (error: any) {
       console.error('❌ 同步 batch 状态失败:', error)
@@ -1752,7 +1797,9 @@ export class UnifiedQueueManager {
 
     const typeSet = new Set(types)
     const pending = await this.adapter.getPendingTasks()
-    const toRemove = pending.filter((t) => t.userId === userId && typeSet.has(t.type)).map((t) => t.id)
+    const toRemove = pending
+      .filter((t) => t.userId === userId && typeSet.has(t.type))
+      .map((t) => t.id)
 
     for (const taskId of toRemove) {
       await this.adapter.removeTask(taskId)
@@ -1795,12 +1842,8 @@ export function getBackgroundQueueManager(config?: Partial<QueueConfig>): Unifie
     getBooleanFromEnv('QUEUE_SPLIT_BACKGROUND', false) &&
     !backgroundWorker &&
     !getBooleanFromEnv('QUEUE_ALLOW_BACKGROUND_EXECUTORS_IN_WEB', false)
-  const requestedAutoStart =
-    config?.autoStartOnEnqueue ??
-    backgroundWorker
-  const effectiveAutoStartOnEnqueue = forceProducerMode
-    ? false
-    : requestedAutoStart
+  const requestedAutoStart = config?.autoStartOnEnqueue ?? backgroundWorker
+  const effectiveAutoStartOnEnqueue = forceProducerMode ? false : requestedAutoStart
 
   if (!globalThis.__backgroundQueueManager) {
     console.log('🚀 创建后台队列管理器单例...')
@@ -1817,7 +1860,8 @@ export function getBackgroundQueueManager(config?: Partial<QueueConfig>): Unifie
       autoStartOnEnqueue: effectiveAutoStartOnEnqueue,
     })
   } else {
-    const currentAutoStart = globalThis.__backgroundQueueManager.getConfig().autoStartOnEnqueue !== false
+    const currentAutoStart =
+      globalThis.__backgroundQueueManager.getConfig().autoStartOnEnqueue !== false
     if (currentAutoStart !== effectiveAutoStartOnEnqueue) {
       globalThis.__backgroundQueueManager.updateConfig({
         autoStartOnEnqueue: effectiveAutoStartOnEnqueue,

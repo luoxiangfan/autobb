@@ -39,7 +39,11 @@ describe('google-ads warning filter', () => {
   })
 
   it('filters noisy warning text from console/stderr paths', () => {
-    expect(shouldSuppressGoogleAdsWarningText('(node:39) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN')).toBe(true)
+    expect(
+      shouldSuppressGoogleAdsWarningText(
+        '(node:39) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN'
+      )
+    ).toBe(true)
     expect(shouldSuppressGoogleAdsWarningText('regular warning')).toBe(false)
   })
 })

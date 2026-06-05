@@ -51,11 +51,13 @@ export interface RegenerateAdCreativeParams {
   userId: number
   offerId: number
   previousAdCreativeId: number
-  campaignConfigForTask: Record<string, any>  // 来自任务的 campaignConfig，包含原始的创意元素等信息
+  campaignConfigForTask: Record<string, any> // 来自任务的 campaignConfig，包含原始的创意元素等信息
 }
 
 function parseBooleanEnv(value: string | undefined, fallback: boolean): boolean {
-  const normalized = String(value || '').trim().toLowerCase()
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   if (!normalized) return fallback
   if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true
   if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false
@@ -67,10 +69,10 @@ function resolveRegenerationBucketContext(
   campaignConfig: Record<string, any>
 ): { slotBucket: CreativeBucketSlot | null; generationBucket: string | null } {
   const raw =
-    previousCreative?.keyword_bucket
-    ?? campaignConfig?.keyword_bucket
-    ?? campaignConfig?.keywordBucket
-    ?? campaignConfig?.bucket
+    previousCreative?.keyword_bucket ??
+    campaignConfig?.keyword_bucket ??
+    campaignConfig?.keywordBucket ??
+    campaignConfig?.bucket
   if (typeof raw !== 'string') {
     return { slotBucket: null, generationBucket: null }
   }
@@ -98,13 +100,12 @@ export async function regenerateAdCreative(
   const { userId, offerId, previousAdCreativeId, campaignConfigForTask } = params
 
   try {
-    const previousCreative = previousAdCreativeId > 0
-      ? await findAdCreativeById(previousAdCreativeId, userId)
-      : null
+    const previousCreative =
+      previousAdCreativeId > 0 ? await findAdCreativeById(previousAdCreativeId, userId) : null
     const inheritedMode = normalizeAdCreativeGenerationMode(
-      previousCreative?.generation_mode
-        ?? campaignConfigForTask?.generation_mode
-        ?? campaignConfigForTask?.generationMode
+      previousCreative?.generation_mode ??
+        campaignConfigForTask?.generation_mode ??
+        campaignConfigForTask?.generationMode
     )
     const generationProfile = getAdCreativeGenerationModeProfile(inheritedMode)
     const { slotBucket: bucket, generationBucket } = resolveRegenerationBucketContext(
@@ -126,14 +127,13 @@ export async function regenerateAdCreative(
 
     const linkType = resolveOfferLinkType(offer)
     const bucketTheme = bucket ? getThemeByBucket(bucket, linkType) : null
-    const bucketIntent = bucketTheme?.split(' - ')[0]
-      || previousCreative?.bucket_intent
-      || undefined
+    const bucketIntent =
+      bucketTheme?.split(' - ')[0] || previousCreative?.bucket_intent || undefined
     const bucketIntentEn = bucketTheme?.split(' - ')[1] || undefined
 
-    let keywordPool: Awaited<
-      ReturnType<typeof resolveKeywordPoolForCreativeGeneration>
-    >['pool'] | null = null
+    let keywordPool:
+      | Awaited<ReturnType<typeof resolveKeywordPoolForCreativeGeneration>>['pool']
+      | null = null
     let plannerSession: Awaited<
       ReturnType<typeof resolveKeywordPoolForCreativeGeneration>
     >['plannerSession']
@@ -206,22 +206,18 @@ export async function regenerateAdCreative(
     const bestEvaluation = selectedEvaluation.adStrength
     const creativeAudit = resolveCreativeKeywordAudit(generatedCreative)
 
-    const newCreative = await createAdCreative(
-      userId,
-      offerId,
-      {
-        ...generatedCreative,
-        final_url: offer.url || offer.final_url || '',
-        final_url_suffix: offer.final_url_suffix || '',
-        generation_mode: inheritedMode,
-        keyword_bucket: bucket ?? generatedCreative.keyword_bucket ?? undefined,
-        bucket_intent: bucketIntent ?? generatedCreative.bucket_intent ?? undefined,
-        creative_type: bucket ? getCreativeTypeForBucketSlot(bucket) : undefined,
-        score: bestEvaluation.finalScore,
-        score_breakdown: createCreativeScoreBreakdown(bestEvaluation, { allowPartialMetrics: true }),
-        adStrength: createCreativeAdStrengthPayload(bestEvaluation, creativeAudit),
-      }
-    )
+    const newCreative = await createAdCreative(userId, offerId, {
+      ...generatedCreative,
+      final_url: offer.url || offer.final_url || '',
+      final_url_suffix: offer.final_url_suffix || '',
+      generation_mode: inheritedMode,
+      keyword_bucket: bucket ?? generatedCreative.keyword_bucket ?? undefined,
+      bucket_intent: bucketIntent ?? generatedCreative.bucket_intent ?? undefined,
+      creative_type: bucket ? getCreativeTypeForBucketSlot(bucket) : undefined,
+      score: bestEvaluation.finalScore,
+      score_breakdown: createCreativeScoreBreakdown(bestEvaluation, { allowPartialMetrics: true }),
+      adStrength: createCreativeAdStrengthPayload(bestEvaluation, creativeAudit),
+    })
 
     if (!newCreative?.id) {
       console.error('[Ad Creative Regenerator] Save failed')

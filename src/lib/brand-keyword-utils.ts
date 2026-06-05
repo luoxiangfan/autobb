@@ -1,12 +1,39 @@
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 
 export const PRODUCT_WORD_PATTERNS = [
-  'pro', 'max', 'ultra', 'plus', 'mini', 'lite', 'air', 's',
-  'se', 'x', 'c', 'e', 'a', 'v', 't',
-  'edition', 'version', 'gen', 'generation',
-  'camera', 'cam', 'vacuum', 'robot', 'cleaner',
-  'doorbell', 'security', 'tracker', 'sensor',
-  'starter', 'bundle', 'kit', 'set', 'pack'
+  'pro',
+  'max',
+  'ultra',
+  'plus',
+  'mini',
+  'lite',
+  'air',
+  's',
+  'se',
+  'x',
+  'c',
+  'e',
+  'a',
+  'v',
+  't',
+  'edition',
+  'version',
+  'gen',
+  'generation',
+  'camera',
+  'cam',
+  'vacuum',
+  'robot',
+  'cleaner',
+  'doorbell',
+  'security',
+  'tracker',
+  'sensor',
+  'starter',
+  'bundle',
+  'kit',
+  'set',
+  'pack',
 ]
 
 export function getPureBrandKeywords(brandName: string): string[] {
@@ -67,7 +94,11 @@ export function containsPureBrand(keyword: string, pureBrandKeywords: string[]):
 
       if (PRODUCT_WORD_PATTERNS.includes(suffix)) return true
 
-      if (PRODUCT_WORD_PATTERNS.some(word => suffix.startsWith(word) && /\d/.test(suffix.slice(word.length)))) {
+      if (
+        PRODUCT_WORD_PATTERNS.some(
+          (word) => suffix.startsWith(word) && /\d/.test(suffix.slice(word.length))
+        )
+      ) {
         return true
       }
     }
@@ -86,7 +117,7 @@ export function isPureBrandKeyword(keyword: string, pureBrandKeywords: string[])
 
   const kwCompact = kwNorm.replace(/\s+/g, '')
 
-  return pureBrandKeywords.some(brand => {
+  return pureBrandKeywords.some((brand) => {
     const brandNorm = normalizeGoogleAdsKeyword(brand || '')
     if (!brandNorm) return false
     if (kwNorm === brandNorm) return true

@@ -21,16 +21,8 @@ describe('search-term-auto-negatives', () => {
   })
 
   it('不把通用criterion错误误判为重复', () => {
-    expect(
-      isDuplicateKeywordErrorMessage(
-        'CriterionError.INVALID_KEYWORD_TEXT'
-      )
-    ).toBe(false)
-    expect(
-      isDuplicateKeywordErrorMessage(
-        'AuthorizationError.CUSTOMER_NOT_ENABLED'
-      )
-    ).toBe(false)
+    expect(isDuplicateKeywordErrorMessage('CriterionError.INVALID_KEYWORD_TEXT')).toBe(false)
+    expect(isDuplicateKeywordErrorMessage('AuthorizationError.CUSTOMER_NOT_ENABLED')).toBe(false)
   })
 
   it('环境变量解析：非法值回退默认值', () => {

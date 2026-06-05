@@ -1,6 +1,9 @@
 import { REDIS_PREFIX_CONFIG } from '@/lib/config'
 import { getRedisClient } from '@/lib/redis-client'
-import { stripGoogleAdsAuthContextForCache, normalizeCachedAuthContextPayload } from './google-ads-auth-context-cache'
+import {
+  stripGoogleAdsAuthContextForCache,
+  normalizeCachedAuthContextPayload,
+} from './google-ads-auth-context-cache'
 import type { GoogleAdsAuthContext } from './google-ads-auth-context'
 
 /** 与进程内 authContextCache TTL 对齐（写路径有 generation 失效，可适当拉长减轻 DB 压力） */
@@ -43,12 +46,7 @@ function parseRedisAuthContextPayload(
   minGeneration: number
 ): GoogleAdsAuthContext | null {
   const parsed = JSON.parse(raw) as unknown
-  if (
-    parsed &&
-    typeof parsed === 'object' &&
-    'ctx' in parsed &&
-    'generation' in parsed
-  ) {
+  if (parsed && typeof parsed === 'object' && 'ctx' in parsed && 'generation' in parsed) {
     const payload = parsed as GoogleAdsAuthContextRedisPayload
     if (
       typeof payload.generation !== 'number' ||
@@ -109,9 +107,7 @@ export async function writeGoogleAdsAuthContextToRedis(
   }
 }
 
-export async function tryAcquireGoogleAdsAuthContextInflightLock(
-  userId: number
-): Promise<boolean> {
+export async function tryAcquireGoogleAdsAuthContextInflightLock(userId: number): Promise<boolean> {
   const client = getRedisClient()
   if (!client) return true
 

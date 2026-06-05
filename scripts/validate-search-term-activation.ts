@@ -102,8 +102,10 @@ function parseKeywordsWithVolume(raw: unknown): CreativeKeywordRow[] {
       .map((row) => ({
         keyword: String((row as any)?.keyword || '').trim(),
         source: typeof (row as any)?.source === 'string' ? (row as any).source : undefined,
-        sourceType: typeof (row as any)?.sourceType === 'string' ? (row as any).sourceType : undefined,
-        sourceSubtype: typeof (row as any)?.sourceSubtype === 'string' ? (row as any).sourceSubtype : undefined,
+        sourceType:
+          typeof (row as any)?.sourceType === 'string' ? (row as any).sourceType : undefined,
+        sourceSubtype:
+          typeof (row as any)?.sourceSubtype === 'string' ? (row as any).sourceSubtype : undefined,
       }))
       .filter((row) => row.keyword.length > 0)
   } catch {
@@ -114,7 +116,13 @@ function parseKeywordsWithVolume(raw: unknown): CreativeKeywordRow[] {
 function normalizeSet(items: string[]): Set<string> {
   return new Set(
     items
-      .map((item) => normalizeGoogleAdsKeyword(item) || String(item || '').trim().toLowerCase())
+      .map(
+        (item) =>
+          normalizeGoogleAdsKeyword(item) ||
+          String(item || '')
+            .trim()
+            .toLowerCase()
+      )
       .filter(Boolean)
   )
 }
@@ -130,7 +138,8 @@ function intersects(a: Set<string>, b: Set<string>): string[] {
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2))
   const db = await getDatabase()
-  const isDeletedFalse = db.type === 'postgres' ? 'COALESCE(is_deleted, FALSE) = FALSE' : 'COALESCE(is_deleted, 0) = 0'
+  const isDeletedFalse =
+    db.type === 'postgres' ? 'COALESCE(is_deleted, FALSE) = FALSE' : 'COALESCE(is_deleted, 0) = 0'
 
   try {
     const hints = await getSearchTermFeedbackHints({
@@ -174,10 +183,9 @@ async function main(): Promise<void> {
 
     const kwsFromVolume = parseKeywordsWithVolume(creative.keywords_with_volume)
     const kwsFromText = parseStringArray(creative.keywords)
-    const creativeKeywords = Array.from(new Set([
-      ...kwsFromVolume.map((row) => row.keyword),
-      ...kwsFromText,
-    ]))
+    const creativeKeywords = Array.from(
+      new Set([...kwsFromVolume.map((row) => row.keyword), ...kwsFromText])
+    )
 
     const highTerms = hints.highPerformingTerms || []
     const highSet = normalizeSet(highTerms)
@@ -185,7 +193,8 @@ async function main(): Promise<void> {
     const overlapNormalized = intersects(highSet, creativeSet)
 
     const markerRows = kwsFromVolume.filter((row) => {
-      const sourceAll = `${row.source || ''} ${row.sourceType || ''} ${row.sourceSubtype || ''}`.toUpperCase()
+      const sourceAll =
+        `${row.source || ''} ${row.sourceType || ''} ${row.sourceSubtype || ''}`.toUpperCase()
       return sourceAll.includes('SEARCH_TERM')
     })
 
@@ -225,7 +234,10 @@ async function main(): Promise<void> {
     }
     if (markerRows.length > 0) {
       console.log(
-        `marker_keyword_sample: ${markerRows.slice(0, 10).map((row) => row.keyword).join(', ')}`
+        `marker_keyword_sample: ${markerRows
+          .slice(0, 10)
+          .map((row) => row.keyword)
+          .join(', ')}`
       )
     }
 
@@ -245,4 +257,3 @@ main().catch((error) => {
   console.error('❌ 验收脚本执行失败:', error)
   process.exit(1)
 })
-

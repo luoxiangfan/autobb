@@ -17,7 +17,9 @@ export function getFixedAffiliateSyncSettingValue(key: string): string | undefin
   return FIXED_AFFILIATE_SYNC_SETTINGS[key]
 }
 
-export function applyFixedAffiliateSyncValues<T extends Record<string, string | null | undefined>>(settings: T): T {
+export function applyFixedAffiliateSyncValues<T extends Record<string, string | null | undefined>>(
+  settings: T
+): T {
   const next = { ...settings }
 
   for (const [key, value] of Object.entries(FIXED_AFFILIATE_SYNC_SETTINGS)) {
@@ -27,7 +29,11 @@ export function applyFixedAffiliateSyncValues<T extends Record<string, string | 
   return next
 }
 
-export function normalizeAffiliateSyncMode(value: string | null | undefined): 'incremental' | 'realtime' {
-  const normalized = String(value || '').trim().toLowerCase()
+export function normalizeAffiliateSyncMode(
+  value: string | null | undefined
+): 'incremental' | 'realtime' {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   return normalized === 'realtime' ? 'realtime' : 'incremental'
 }

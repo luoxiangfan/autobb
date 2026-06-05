@@ -23,7 +23,7 @@ export async function validateUrlSwapTask(offerId: number): Promise<UrlSwapValid
   if (!offer) {
     return {
       valid: false,
-      error: 'Offer不存在或已被删除'
+      error: 'Offer不存在或已被删除',
     }
   }
 
@@ -35,7 +35,7 @@ export async function validateUrlSwapTask(offerId: number): Promise<UrlSwapValid
     } catch (e: any) {
       return {
         valid: false,
-        error: e?.message || '未找到代理配置，请在设置页面配置代理URL'
+        error: e?.message || '未找到代理配置，请在设置页面配置代理URL',
       }
     }
   }
@@ -46,7 +46,7 @@ export async function validateUrlSwapTask(offerId: number): Promise<UrlSwapValid
   if (!proxyPool.hasProxyForCountry(offer.target_country)) {
     return {
       valid: false,
-      error: `未配置 ${offer.target_country} 国家的代理。请前往设置页面配置代理后重试。`
+      error: `未配置 ${offer.target_country} 国家的代理。请前往设置页面配置代理后重试。`,
     }
   }
 
@@ -55,7 +55,7 @@ export async function validateUrlSwapTask(offerId: number): Promise<UrlSwapValid
   if (domainWarning) {
     return {
       valid: true,
-      warning: domainWarning
+      warning: domainWarning,
     }
   }
 
@@ -77,7 +77,7 @@ export function validateTaskConfig(
   if (!validIntervals.includes(intervalMinutes)) {
     return {
       valid: false,
-      error: `换链间隔必须是以下值之一：${validIntervals.join(', ')} 分钟`
+      error: `换链间隔必须是以下值之一：${validIntervals.join(', ')} 分钟`,
     }
   }
 
@@ -85,7 +85,7 @@ export function validateTaskConfig(
   if (durationDays !== -1 && (durationDays < 1 || durationDays > 365)) {
     return {
       valid: false,
-      error: '持续天数必须是 1-365 之间的整数，或 -1 表示无限期'
+      error: '持续天数必须是 1-365 之间的整数，或 -1 表示无限期',
     }
   }
 
@@ -136,13 +136,17 @@ export async function getMissingProxyCountries(offerIds: number[]): Promise<stri
 
 async function getOfferById(offerId: number): Promise<any | null> {
   const db = await getDatabase()
-  const isDeletedCondition = db.type === 'postgres'
-    ? '(is_deleted = FALSE OR is_deleted IS NULL)'
-    : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const isDeletedCondition =
+    db.type === 'postgres'
+      ? '(is_deleted = FALSE OR is_deleted IS NULL)'
+      : '(is_deleted = 0 OR is_deleted IS NULL)'
 
-  return db.queryOne(`
+  return db.queryOne(
+    `
     SELECT id, user_id, target_country, affiliate_link
     FROM offers
     WHERE id = ? AND ${isDeletedCondition}
-  `, [offerId])
+  `,
+    [offerId]
+  )
 }

@@ -1,37 +1,37 @@
 // 补点击任务执行器
 // src/lib/queue/executors/click-farm-executor.ts
 
-import axios from 'axios';
-import { HttpsProxyAgent } from 'https-proxy-agent';
-import type { Task } from '../types';
-import { updateTaskStats } from '@/lib/click-farm';
-import { getHourInTimezone } from '@/lib/timezone-utils';
-import { getDatabase } from '@/lib/db';
-import { getAllProxyUrls } from '@/lib/settings';
-import { getProxyIp } from '@/lib/proxy/fetch-proxy-ip';
-import type { ProxyCredentials } from '@/lib/proxy/types';
-import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry';
-import { maskProxyUrl } from '@/lib/proxy/validate-url';
-import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility';
-import { getHeapStatistics } from 'v8';
-import { analyzeProxyError } from './proxy-error-handler';
+import axios from 'axios'
+import { HttpsProxyAgent } from 'https-proxy-agent'
+import type { Task } from '../types'
+import { updateTaskStats } from '@/lib/click-farm'
+import { getHourInTimezone } from '@/lib/timezone-utils'
+import { getDatabase } from '@/lib/db'
+import { getAllProxyUrls } from '@/lib/settings'
+import { getProxyIp } from '@/lib/proxy/fetch-proxy-ip'
+import type { ProxyCredentials } from '@/lib/proxy/types'
+import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
+import { maskProxyUrl } from '@/lib/proxy/validate-url'
+import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
+import { getHeapStatistics } from 'v8'
+import { analyzeProxyError } from './proxy-error-handler'
 
 /**
  * 补点击任务数据结构
  */
 export interface ClickFarmTaskData {
-  taskId: string;        // click_farm_tasks表的ID
-  url: string;           // 要访问的affiliate链接
-  proxyUrl: string;      // 代理URL
-  offerId: number;       // Offer ID（用于日志）
-  timezone?: string;     // 🆕 任务时区（用于按 scheduledAt 统计到正确小时，避免每次点击再查库）
+  taskId: string // click_farm_tasks表的ID
+  url: string // 要访问的affiliate链接
+  proxyUrl: string // 代理URL
+  offerId: number // Offer ID（用于日志）
+  timezone?: string // 🆕 任务时区（用于按 scheduledAt 统计到正确小时，避免每次点击再查库）
   // 🆕 计划执行时间（用于将点击分散到1小时内不同时间点执行）
-  scheduledAt?: string;  // ISO 8601 格式的时间戳字符串
+  scheduledAt?: string // ISO 8601 格式的时间戳字符串
   // 🆕 Referer配置
   refererConfig?: {
-    type: 'none' | 'random' | 'specific' | 'custom';
-    referer?: string;    // specific/custom类型时的固定referer
-  };
+    type: 'none' | 'random' | 'specific' | 'custom'
+    referer?: string // specific/custom类型时的固定referer
+  }
 }
 
 /**
@@ -46,19 +46,23 @@ export const SOCIAL_MEDIA_REFERRERS = [
   { name: 'TikTok', url: 'https://www.tiktok.com/', pattern: 'tiktok' },
   { name: 'Pinterest', url: 'https://www.pinterest.com/search/pins/?q=', pattern: 'pinterest' },
   { name: 'Reddit', url: 'https://www.reddit.com/search/?q=', pattern: 'reddit' },
-  { name: 'LinkedIn', url: 'https://www.linkedin.com/search/results/all/?keyword=', pattern: 'linkedin' },
+  {
+    name: 'LinkedIn',
+    url: 'https://www.linkedin.com/search/results/all/?keyword=',
+    pattern: 'linkedin',
+  },
   { name: 'Medium', url: 'https://medium.com/search?q=', pattern: 'medium' },
   { name: 'WhatsApp', url: 'https://wa.me/', pattern: 'whatsapp' },
   { name: 'Snapchat', url: 'https://www.snapchat.com/', pattern: 'snapchat' },
   { name: 'Quora', url: 'https://www.quora.com/search?q=', pattern: 'quora' },
-];
+]
 
 /**
  * 🆕 从社媒列表中随机获取一个referer
  */
 export function getRandomSocialReferer(): string {
-  const randomIndex = Math.floor(Math.random() * SOCIAL_MEDIA_REFERRERS.length);
-  return SOCIAL_MEDIA_REFERRERS[randomIndex].url;
+  const randomIndex = Math.floor(Math.random() * SOCIAL_MEDIA_REFERRERS.length)
+  return SOCIAL_MEDIA_REFERRERS[randomIndex].url
 }
 
 const MAX_PROXY_AGENT_CACHE_SIZE = 50
@@ -193,15 +197,13 @@ function shouldFallbackToCachedProxy(error: any): boolean {
   const raw = String(error?.message || error || '')
   return (
     raw.includes('IPRocket') &&
-    (
-      raw.includes('业务异常') ||
+    (raw.includes('业务异常') ||
       raw.includes('联系客服') ||
       raw.includes('Business abnormality') ||
       raw.includes('business error') ||
       raw.includes('contact customer service') ||
       raw.includes('"code":500') ||
-      raw.includes('code=500')
-    )
+      raw.includes('code=500'))
   )
 }
 
@@ -235,7 +237,7 @@ function recordTaskProxyUsage(taskId: string, proxyAddress: string): void {
   taskProxyUsageHistory.set(taskId, {
     taskId,
     proxyAddress,
-    usedAt: Date.now()
+    usedAt: Date.now(),
   })
 
   // 清理过期记录（超过1小时的记录）
@@ -247,7 +249,11 @@ function recordTaskProxyUsage(taskId: string, proxyAddress: string): void {
   }
 }
 
-async function resolveProxyAddress(proxyUrl: string, userId: number, taskId?: string): Promise<string | null> {
+async function resolveProxyAddress(
+  proxyUrl: string,
+  userId: number,
+  taskId?: string
+): Promise<string | null> {
   const trimmed = proxyUrl.trim()
   if (!trimmed) return null
 
@@ -288,7 +294,9 @@ async function resolveProxyAddress(proxyUrl: string, userId: number, taskId?: st
         if (inDegradedMode && canTaskFallbackReuse(taskId)) {
           const streak = recordTaskFallbackReuse(taskId)
           usedFallbackReuse = true
-          console.warn(`[ClickFarm] 任务 ${taskId} 命中IPRocket降级窗口，复用缓存代理 ${proxyAddress}（连续复用 ${streak}/${TASK_FALLBACK_REUSE_MAX_STREAK}）`)
+          console.warn(
+            `[ClickFarm] 任务 ${taskId} 命中IPRocket降级窗口，复用缓存代理 ${proxyAddress}（连续复用 ${streak}/${TASK_FALLBACK_REUSE_MAX_STREAK}）`
+          )
         } else {
           console.log(`[ClickFarm] 任务 ${taskId} 不能重复使用代理 ${proxyAddress}，强制获取新IP`)
           needForceRefresh = true
@@ -316,7 +324,9 @@ async function resolveProxyAddress(proxyUrl: string, userId: number, taskId?: st
           if (taskId) {
             const streak = recordTaskFallbackReuse(taskId)
             usedFallbackReuse = true
-            console.warn(`[ClickFarm] 任务 ${taskId} IPRocket返回业务错误，回退使用缓存代理（连续复用 ${streak}/${TASK_FALLBACK_REUSE_MAX_STREAK}）`)
+            console.warn(
+              `[ClickFarm] 任务 ${taskId} IPRocket返回业务错误，回退使用缓存代理（连续复用 ${streak}/${TASK_FALLBACK_REUSE_MAX_STREAK}）`
+            )
           } else {
             usedFallbackReuse = true
           }
@@ -390,9 +400,7 @@ const clickFarmMaxInFlight = (() => {
   const value = Number.isFinite(raw) && raw > 0 ? raw : 20
   return Math.min(value, CLICK_FARM_INFLIGHT_HARD_CAP)
 })()
-const clickFarmSemaphore = new SimpleSemaphore(
-  Math.max(1, clickFarmMaxInFlight)
-)
+const clickFarmSemaphore = new SimpleSemaphore(Math.max(1, clickFarmMaxInFlight))
 
 function isHeapPressureHigh(): boolean {
   try {
@@ -416,69 +424,72 @@ function isHeapPressureHigh(): boolean {
  * 4. 简单格式: host:port
  */
 function parseProxyUrl(proxyUrl: string): {
-  host: string;
-  port: number;
-  auth?: { username: string; password: string };
-  protocol: string;
+  host: string
+  port: number
+  auth?: { username: string; password: string }
+  protocol: string
 } | null {
   if (!proxyUrl || !proxyUrl.trim()) {
-    return null;
+    return null
   }
 
-  const trimmedUrl = proxyUrl.trim();
+  const trimmedUrl = proxyUrl.trim()
 
   // 格式0: 直连格式（可选带 http(s):// 前缀）: host:port:user:pass
-  const directUrl = trimmedUrl.replace(/^https?:\/\//, '');
-  const directParts = directUrl.split(':');
+  const directUrl = trimmedUrl.replace(/^https?:\/\//, '')
+  const directParts = directUrl.split(':')
   if (directParts.length >= 4) {
-    const port = parseInt(directParts[1]);
+    const port = parseInt(directParts[1])
     if (!isNaN(port)) {
       return {
         host: directParts[0],
         port: port,
         auth: {
           username: directParts[2],
-          password: directParts[3]
+          password: directParts[3],
         },
-        protocol: 'http'
-      };
+        protocol: 'http',
+      }
     }
   }
 
   // 格式1: 标准URL (http:// 或 https://)
   if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
     try {
-      const url = new URL(trimmedUrl);
+      const url = new URL(trimmedUrl)
       return {
         host: url.hostname,
         port: parseInt(url.port) || (url.protocol === 'https' ? 443 : 80),
-        auth: url.username && url.password ? {
-          username: decodeURIComponent(url.username),
-          password: decodeURIComponent(url.password)
-        } : undefined,
-        protocol: url.protocol.replace(':', '')
-      };
+        auth:
+          url.username && url.password
+            ? {
+                username: decodeURIComponent(url.username),
+                password: decodeURIComponent(url.password),
+              }
+            : undefined,
+        protocol: url.protocol.replace(':', ''),
+      }
     } catch (error) {
-      console.error(`[ClickFarm] 代理URL解析失败: ${trimmedUrl}`, error);
-      return null;
+      console.error(`[ClickFarm] 代理URL解析失败: ${trimmedUrl}`, error)
+      return null
     }
   }
 
   // 格式2: 简单格式 (host:port)
-  const parts = trimmedUrl.split(':');
+  const parts = trimmedUrl.split(':')
   if (parts.length === 2) {
-    const port = parseInt(parts[1]);
+    const port = parseInt(parts[1])
     if (!isNaN(port)) {
       return {
         host: parts[0],
         port: port,
-        protocol: 'http'
-      };
+        protocol: 'http',
+      }
     }
   }
 
-  console.error(`[ClickFarm] 不支持的代理URL格式: ${trimmedUrl}`);
-  return null;
+  console.error(`[ClickFarm] 不支持的代理URL格式: ${trimmedUrl}`)
+  return null
 }
 
 /**
@@ -501,9 +512,9 @@ function getRandomUserAgent(): string {
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Safari/605.1.15',
     // Edge on Windows (最新版本)
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',
-  ];
+  ]
 
-  return userAgents[Math.floor(Math.random() * userAgents.length)];
+  return userAgents[Math.floor(Math.random() * userAgents.length)]
 }
 
 /**
@@ -517,9 +528,9 @@ function getRandomAcceptLanguage(): string {
     'en-US,en;q=0.9,fr;q=0.8',
     'en-US,en;q=0.9,es;q=0.8',
     'en-GB,en;q=0.9,en-US;q=0.8',
-  ];
+  ]
 
-  return languages[Math.floor(Math.random() * languages.length)];
+  return languages[Math.floor(Math.random() * languages.length)]
 }
 
 /**
@@ -544,7 +555,7 @@ function getRandomAcceptLanguage(): string {
 export async function executeClickFarmTask(
   task: Task<ClickFarmTaskData>
 ): Promise<{ success: boolean; traffic: number }> {
-  const { taskId, url, refererConfig, scheduledAt, timezone } = task.data;
+  const { taskId, url, refererConfig, scheduledAt, timezone } = task.data
   await assertUserExecutionAllowed(task.userId, { source: `click-farm:${task.id}` })
 
   const getScheduledHour = (): number | undefined => {
@@ -556,12 +567,15 @@ export async function executeClickFarmTask(
   // 关键防线：执行前再次校验 click_farm_tasks 状态，避免“已暂停/已停止任务”残留队列继续记点击
   try {
     const db = await getDatabase()
-    const currentTask = await db.queryOne<{ status?: string }>(`
+    const currentTask = await db.queryOne<{ status?: string }>(
+      `
       SELECT status
       FROM click_farm_tasks
       WHERE id = ?
       LIMIT 1
-    `, [taskId])
+    `,
+      [taskId]
+    )
 
     const status = String(currentTask?.status || '').toLowerCase()
     if (status && status !== 'pending' && status !== 'running') {
@@ -569,7 +583,10 @@ export async function executeClickFarmTask(
       return { success: false, traffic: 0 }
     }
   } catch (error: any) {
-    console.warn(`[ClickFarm] 执行前状态校验失败，按安全策略跳过: ${taskId}`, error?.message || error)
+    console.warn(
+      `[ClickFarm] 执行前状态校验失败，按安全策略跳过: ${taskId}`,
+      error?.message || error
+    )
     return { success: false, traffic: 0 }
   }
 
@@ -583,7 +600,7 @@ export async function executeClickFarmTask(
       heapUsed: `${(mem.heapUsed / 1024 / 1024).toFixed(2)} MB`,
       heapLimit: `${(heap.heap_size_limit / 1024 / 1024).toFixed(2)} MB`,
       percentage: `${pct}%`,
-      threshold: `${CLICK_FARM_EXECUTOR_HEAP_PRESSURE_PCT}%`
+      threshold: `${CLICK_FARM_EXECUTOR_HEAP_PRESSURE_PCT}%`,
     })
     try {
       await updateTaskStats(taskId, false, getScheduledHour())
@@ -600,21 +617,26 @@ export async function executeClickFarmTask(
     try {
       // 获取任务信息以确定目标国家
       const db = await getDatabase()
-      const taskRow = await db.queryOne<any>(`
+      const taskRow = await db.queryOne<any>(
+        `
         SELECT t.user_id, o.target_country
         FROM click_farm_tasks t
         JOIN offers o ON t.offer_id = o.id
         WHERE t.id = ?
-      `, [taskId])
+      `,
+        [taskId]
+      )
 
       if (taskRow) {
         const proxyUrls = await getAllProxyUrls(taskRow.user_id)
         const targetCountry = taskRow.target_country?.toUpperCase()
-        const proxyConfig = proxyUrls?.find(p => p.country.toUpperCase() === targetCountry)
+        const proxyConfig = proxyUrls?.find((p) => p.country.toUpperCase() === targetCountry)
 
         if (proxyConfig && proxyConfig.url) {
           proxyUrl = proxyConfig.url
-          console.log(`[ClickFarm] 任务 ${taskId} 动态获取到代理: ${targetCountry} (${proxyUrl.substring(0, 30)}...)`)
+          console.log(
+            `[ClickFarm] 任务 ${taskId} 动态获取到代理: ${targetCountry} (${proxyUrl.substring(0, 30)}...)`
+          )
         }
       }
     } catch (error: any) {
@@ -645,9 +667,9 @@ export async function executeClickFarmTask(
       console.error(`错误详情: ${errorAnalysis.enhancedMessage}`)
     }
     if (!proxyAddress) {
-      console.error(`[ClickFarm] 代理URL解析失败: ${maskProxyUrl(proxyUrl)}`);
-      await updateTaskStats(taskId, false);
-      return { success: false, traffic: 0 };
+      console.error(`[ClickFarm] 代理URL解析失败: ${maskProxyUrl(proxyUrl)}`)
+      await updateTaskStats(taskId, false)
+      return { success: false, traffic: 0 }
     }
 
     // 控制真实 in-flight 请求数，避免同时堆出大量 HTTP 请求
@@ -662,60 +684,65 @@ export async function executeClickFarmTask(
     const proxyAgent = getProxyAgent(proxyAddress)
 
     // 执行前再次检查，尽快响应用户禁用/过期状态变化
-    await assertUserExecutionAllowed(task.userId, { source: `click-farm:before-request:${task.id}` })
+    await assertUserExecutionAllowed(task.userId, {
+      source: `click-farm:before-request:${task.id}`,
+    })
 
     // 🆕 确定Referer
-    let referer: string | undefined;
+    let referer: string | undefined
     if (refererConfig) {
       switch (refererConfig.type) {
         case 'specific':
         case 'custom':
-          referer = refererConfig.referer;
-          break;
+          referer = refererConfig.referer
+          break
         case 'random':
-          referer = getRandomSocialReferer();
-          break;
+          referer = getRandomSocialReferer()
+          break
         case 'none':
         default:
-          referer = undefined;
+          referer = undefined
       }
     }
 
-    const startTime = Date.now();
+    const startTime = Date.now()
 
     // 🆕 构建请求头（完整的浏览器指纹，绕过反爬虫）
-    const userAgent = getRandomUserAgent();
+    const userAgent = getRandomUserAgent()
     const headers: Record<string, string> = {
       'User-Agent': userAgent,
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+      Accept:
+        'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
       'Accept-Language': getRandomAcceptLanguage(),
       'Accept-Encoding': 'gzip, deflate, br, zstd',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
       'Upgrade-Insecure-Requests': '1',
       'Sec-Fetch-Dest': 'document',
       'Sec-Fetch-Mode': 'navigate',
       'Sec-Fetch-Site': 'cross-site',
       'Sec-Fetch-User': '?1',
       'Cache-Control': 'max-age=0',
-      'DNT': '1',
-    };
+      DNT: '1',
+    }
 
     // 🆕 添加Chrome特征头（Sec-CH-UA系列）
     if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
-      const chromeVersion = userAgent.match(/Chrome\/(\d+)/)?.[1] || '131';
-      headers['Sec-CH-UA'] = `"Not_A Brand";v="8", "Chromium";v="${chromeVersion}", "Google Chrome";v="${chromeVersion}"`;
-      headers['Sec-CH-UA-Mobile'] = '?0';
-      headers['Sec-CH-UA-Platform'] = userAgent.includes('Windows') ? '"Windows"' : '"macOS"';
+      const chromeVersion = userAgent.match(/Chrome\/(\d+)/)?.[1] || '131'
+      headers['Sec-CH-UA'] =
+        `"Not_A Brand";v="8", "Chromium";v="${chromeVersion}", "Google Chrome";v="${chromeVersion}"`
+      headers['Sec-CH-UA-Mobile'] = '?0'
+      headers['Sec-CH-UA-Platform'] = userAgent.includes('Windows') ? '"Windows"' : '"macOS"'
     } else if (userAgent.includes('Edg')) {
-      const edgeVersion = userAgent.match(/Edg\/(\d+)/)?.[1] || '131';
-      headers['Sec-CH-UA'] = `"Not_A Brand";v="8", "Chromium";v="${edgeVersion}", "Microsoft Edge";v="${edgeVersion}"`;
-      headers['Sec-CH-UA-Mobile'] = '?0';
-      headers['Sec-CH-UA-Platform'] = '"Windows"';
+      const edgeVersion = userAgent.match(/Edg\/(\d+)/)?.[1] || '131'
+      headers['Sec-CH-UA'] =
+        `"Not_A Brand";v="8", "Chromium";v="${edgeVersion}", "Microsoft Edge";v="${edgeVersion}"`
+      headers['Sec-CH-UA-Mobile'] = '?0'
+      headers['Sec-CH-UA-Platform'] = '"Windows"'
     }
 
     // 🆕 添加Referer头（如果配置了）
     if (referer) {
-      headers['Referer'] = referer;
+      headers['Referer'] = referer
     }
 
     // 🆕 P0修复：从 scheduledAt 提取计划执行的小时数，而不是使用实际执行时间
@@ -765,21 +792,20 @@ export async function executeClickFarmTask(
     console.log(
       `[ClickFarm] 请求已发起: ${url.substring(0, 50)}... [${Date.now() - startTime}ms]` +
         (referer ? ` [Referer: ${referer.substring(0, 30)}...]` : '')
-    );
+    )
 
-    return { success: true, traffic: url.length + 500 };
-
+    return { success: true, traffic: url.length + 500 }
   } catch (error: any) {
-    console.error(`[ClickFarm] 执行器错误:`, error?.message || error);
+    console.error(`[ClickFarm] 执行器错误:`, error?.message || error)
     // 同步阶段失败（例如代理URL解析失败之外的异常），记为失败
     try {
-      let scheduledHour: number | undefined;
+      let scheduledHour: number | undefined
       scheduledHour = getScheduledHour()
-      await updateTaskStats(taskId, false, scheduledHour);
+      await updateTaskStats(taskId, false, scheduledHour)
     } catch {
       // ignore
     }
-    return { success: false, traffic: 0 };
+    return { success: false, traffic: 0 }
   }
 }
 
@@ -788,6 +814,6 @@ export async function executeClickFarmTask(
  */
 export function createClickFarmExecutor() {
   return async (task: Task<ClickFarmTaskData>) => {
-    return await executeClickFarmTask(task);
-  };
+    return await executeClickFarmTask(task)
+  }
 }

@@ -40,7 +40,9 @@ function getCountryCandidates(country: string): Set<string> {
   return candidates
 }
 
-function expandProxyUrlCountries(proxyUrls: Array<{ country: string; url: string }>): Array<{ country: string; url: string }> {
+function expandProxyUrlCountries(
+  proxyUrls: Array<{ country: string; url: string }>
+): Array<{ country: string; url: string }> {
   const expanded: Array<{ country: string; url: string }> = []
   const seen = new Set<string>()
 
@@ -50,9 +52,8 @@ function expandProxyUrlCountries(proxyUrls: Array<{ country: string; url: string
     if (!rawCountry || !url) continue
 
     const countryCandidates = getCountryCandidates(rawCountry)
-    const finalCandidates = countryCandidates.size > 0
-      ? Array.from(countryCandidates)
-      : [rawCountry.toUpperCase()]
+    const finalCandidates =
+      countryCandidates.size > 0 ? Array.from(countryCandidates) : [rawCountry.toUpperCase()]
 
     for (const candidate of finalCandidates) {
       const key = `${candidate}\u0000${url}`
@@ -70,13 +71,13 @@ async function fetchHealthyProxyIPs(country: string, count: number): Promise<Pro
   try {
     // 从数据库中读取代理配置（获取最新的非空配置）
     const db = await getDatabase()
-    const setting = await db.queryOne(`
+    const setting = (await db.queryOne(`
       SELECT value FROM system_settings
       WHERE category = 'proxy' AND key = 'urls'
         AND value IS NOT NULL AND value <> ''
       ORDER BY updated_at DESC
       LIMIT 1
-    `) as { value: string } | undefined
+    `)) as { value: string } | undefined
 
     if (!setting) {
       console.warn(`⚠️  未找到代理配置`)
@@ -88,13 +89,17 @@ async function fetchHealthyProxyIPs(country: string, count: number): Promise<Pro
       ? expandProxyUrlCountries(
           proxyConfigsRaw
             .filter((c: any) => c && typeof c.country === 'string' && typeof c.url === 'string')
-            .map((c: any) => ({ country: String(c.country || '').trim(), url: String(c.url || '').trim() }))
+            .map((c: any) => ({
+              country: String(c.country || '').trim(),
+              url: String(c.url || '').trim(),
+            }))
         )
       : []
     const targetCountryCandidates = getCountryCandidates(country)
     let proxyUrl = proxyConfigs.find((c: any) =>
-      Array.from(getCountryCandidates(String(c.country || '')))
-        .some(code => targetCountryCandidates.has(code))
+      Array.from(getCountryCandidates(String(c.country || ''))).some((code) =>
+        targetCountryCandidates.has(code)
+      )
     )?.url
 
     // 如果没有找到对应国家的配置，使用第一个作为默认值
@@ -119,7 +124,7 @@ async function fetchHealthyProxyIPs(country: string, count: number): Promise<Pro
             username: proxyCredentials.username,
             password: proxyCredentials.password,
             country,
-            health: { healthy: true, lastCheck: new Date() }
+            health: { healthy: true, lastCheck: new Date() },
           })
         }
       } catch (error) {
@@ -141,10 +146,10 @@ interface ProxyPoolEntry {
 }
 
 interface ProxyPoolConfig {
-  refreshIntervalMs: number  // How often to refresh the pool
-  minHealthyProxies: number  // Minimum number of healthy proxies to maintain
-  maxPoolSize: number        // Maximum proxies per country
-  countries: string[]        // Countries to maintain pools for
+  refreshIntervalMs: number // How often to refresh the pool
+  minHealthyProxies: number // Minimum number of healthy proxies to maintain
+  maxPoolSize: number // Maximum proxies per country
+  countries: string[] // Countries to maintain pools for
 }
 
 class ProxyPoolManager {
@@ -154,10 +159,10 @@ class ProxyPoolManager {
 
   constructor(config?: Partial<ProxyPoolConfig>) {
     this.config = {
-      refreshIntervalMs: 5 * 60 * 1000,  // 5 minutes
+      refreshIntervalMs: 5 * 60 * 1000, // 5 minutes
       minHealthyProxies: 3,
       maxPoolSize: 10,
-      countries: ['US', 'DE', 'GB'],  // 使用ISO 3166-1标准国家代码（GB而非UK）
+      countries: ['US', 'DE', 'GB'], // 使用ISO 3166-1标准国家代码（GB而非UK）
       ...config,
     }
 
@@ -221,7 +226,9 @@ class ProxyPoolManager {
     // If pool has healthy proxies, return immediately (cache hit)
     if (pool.healthyProxies.length > 0) {
       const proxy = pool.healthyProxies[Math.floor(Math.random() * pool.healthyProxies.length)]
-      console.log(`✅ Proxy pool cache HIT for ${country} (${pool.healthyProxies.length} available)`)
+      console.log(
+        `✅ Proxy pool cache HIT for ${country} (${pool.healthyProxies.length} available)`
+      )
       return proxy
     }
 
@@ -253,12 +260,16 @@ class ProxyPoolManager {
     // If pool has enough proxies, return from cache
     if (pool.healthyProxies.length >= count) {
       const proxies = pool.healthyProxies.slice(0, count)
-      console.log(`✅ Proxy pool cache HIT for ${country} (requested ${count}, available ${pool.healthyProxies.length})`)
+      console.log(
+        `✅ Proxy pool cache HIT for ${country} (requested ${count}, available ${pool.healthyProxies.length})`
+      )
       return proxies
     }
 
     // Not enough in cache, trigger refresh
-    console.warn(`⚠️ Proxy pool has insufficient proxies for ${country} (need ${count}, have ${pool.healthyProxies.length})`)
+    console.warn(
+      `⚠️ Proxy pool has insufficient proxies for ${country} (need ${count}, have ${pool.healthyProxies.length})`
+    )
     await this.refreshPool(country)
 
     // Return what we have after refresh

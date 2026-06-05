@@ -56,16 +56,16 @@ export async function initializeQueue(): Promise<UnifiedQueueManager> {
     // 注意：不再在初始化时加载代理池，代理在任务执行时按需加载
     const queue = getQueueManager({
       // 从环境变量读取配置
-      globalConcurrency: parseInt(process.env.QUEUE_GLOBAL_CONCURRENCY || '999'),  // 🔥 全局并发提升至999（补点击需求）
-      perUserConcurrency: parseInt(process.env.QUEUE_PER_USER_CONCURRENCY || '999'),  // 🔥 单用户并发提升至999（补点击需求）
+      globalConcurrency: parseInt(process.env.QUEUE_GLOBAL_CONCURRENCY || '999'), // 🔥 全局并发提升至999（补点击需求）
+      perUserConcurrency: parseInt(process.env.QUEUE_PER_USER_CONCURRENCY || '999'), // 🔥 单用户并发提升至999（补点击需求）
       maxQueueSize: parseInt(process.env.QUEUE_MAX_SIZE || '1000'),
-      taskTimeout: parseInt(process.env.QUEUE_TASK_TIMEOUT || '600000'),  // 🔥 修复（2025-12-10）：默认10分钟（Offer提取约需5分钟）
+      taskTimeout: parseInt(process.env.QUEUE_TASK_TIMEOUT || '600000'), // 🔥 修复（2025-12-10）：默认10分钟（Offer提取约需5分钟）
       defaultMaxRetries: parseInt(process.env.QUEUE_MAX_RETRIES || '3'),
       retryDelay: parseInt(process.env.QUEUE_RETRY_DELAY || '5000'),
       redisUrl: process.env.REDIS_URL,
-      redisKeyPrefix: REDIS_PREFIX_CONFIG.queue,  // 🔥 使用环境隔离的prefix
+      redisKeyPrefix: REDIS_PREFIX_CONFIG.queue, // 🔥 使用环境隔离的prefix
       // 代理池为空，代理在任务执行时按需从用户配置加载
-      proxyPool: []
+      proxyPool: [],
     })
 
     // 连接存储适配器（Redis优先，失败则回退内存）
@@ -106,7 +106,7 @@ export async function initializeQueue(): Promise<UnifiedQueueManager> {
     return await __queueInitPromise
   } catch (error: any) {
     console.error('❌ 队列系统初始化失败:', error.message)
-    __queueInitPromise = null  // 重置失败的初始化承诺
+    __queueInitPromise = null // 重置失败的初始化承诺
     throw error
   }
 }
@@ -149,7 +149,9 @@ if (typeof process !== 'undefined') {
  * 获取队列管理器并确保已初始化和启动
  * 用于API路由中快速获取可用的队列实例
  */
-export async function getOrCreateQueueManager(config?: Partial<QueueConfig>): Promise<UnifiedQueueManager> {
+export async function getOrCreateQueueManager(
+  config?: Partial<QueueConfig>
+): Promise<UnifiedQueueManager> {
   const queue = getQueueManager(config)
   await queue.ensureStarted()
   return queue

@@ -62,7 +62,15 @@ function sanitizeKeywordItems(items: CampaignKeywordConfigItem[]): CampaignKeywo
         sourceKey: typeof source.text === 'string' ? ('text' as const) : ('keyword' as const),
       }
     })
-    .filter((item): item is { keyword: string; source: CampaignKeywordConfigItem; sourceKey: 'string' | 'text' | 'keyword' } => Boolean(item))
+    .filter(
+      (
+        item
+      ): item is {
+        keyword: string
+        source: CampaignKeywordConfigItem
+        sourceKey: 'string' | 'text' | 'keyword'
+      } => Boolean(item)
+    )
 
   if (normalizedItems.length === 0) return []
 
@@ -92,10 +100,12 @@ export function resolveTaskCampaignKeywords(
   params: ResolveTaskKeywordParams
 ): ResolveTaskKeywordResult {
   const hasConfiguredKeywords =
-    Array.isArray(params.configuredKeywords)
-    && params.configuredKeywords.some((item) => hasNonEmptyKeywordText(item))
+    Array.isArray(params.configuredKeywords) &&
+    params.configuredKeywords.some((item) => hasNonEmptyKeywordText(item))
 
-  const normalizedConfiguredNegativeKeywords = normalizeNegativeKeywords(params.configuredNegativeKeywords)
+  const normalizedConfiguredNegativeKeywords = normalizeNegativeKeywords(
+    params.configuredNegativeKeywords
+  )
   const hasConfiguredNegativeKeywords = normalizedConfiguredNegativeKeywords.length > 0
 
   const configuredKeywordItems = hasConfiguredKeywords

@@ -22,12 +22,14 @@ import {
   CREATIVE_GENERATION_MODE_INVALID_MESSAGE,
   resolveCreativeGenerationRuntime,
 } from '@/lib/ad-creative-generation-mode'
-import {
-  deriveCanonicalCreativeType,
-} from '@/lib/creative-type'
+import { deriveCanonicalCreativeType } from '@/lib/creative-type'
 import { extractModelAnchorTextsFromScrapedData } from '@/lib/model-anchor-evidence'
 import { normalizeSingleCreativeSelection } from '@/lib/creative-request-normalizer'
-import { normalizeCreativeTaskError, toCreativeTaskErrorResponseFields, type CreativeTaskErrorCategory } from '@/lib/creative-task-error'
+import {
+  normalizeCreativeTaskError,
+  toCreativeTaskErrorResponseFields,
+  type CreativeTaskErrorCategory,
+} from '@/lib/creative-task-error'
 import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 type QueueErrorResponseInput = {
@@ -59,31 +61,35 @@ function toStructuredDetails(details: unknown): Record<string, unknown> | null {
 }
 
 function createQueueErrorResponse(input: QueueErrorResponseInput): Response {
-  const normalizedError = normalizeCreativeTaskError({
-    code: input.errorCode,
-    category: input.errorCategory,
-    message: input.message || input.error,
-    userMessage: input.userMessage || input.message || input.error,
-    retryable: input.retryable ?? false,
-    details: toStructuredDetails(input.details),
-  }, input.message || input.error)
+  const normalizedError = normalizeCreativeTaskError(
+    {
+      code: input.errorCode,
+      category: input.errorCategory,
+      message: input.message || input.error,
+      userMessage: input.userMessage || input.message || input.error,
+      retryable: input.retryable ?? false,
+      details: toStructuredDetails(input.details),
+    },
+    input.message || input.error
+  )
 
-  return new Response(JSON.stringify({
-    error: input.error,
-    message: normalizedError.userMessage,
-    details: input.details ?? null,
-    ...toCreativeTaskErrorResponseFields(normalizedError),
-    ...(input.extra || {}),
-  }), {
-    status: input.status,
-    headers: JSON_HEADERS,
-  })
+  return new Response(
+    JSON.stringify({
+      error: input.error,
+      message: normalizedError.userMessage,
+      details: input.details ?? null,
+      ...toCreativeTaskErrorResponseFields(normalizedError),
+      ...(input.extra || {}),
+    }),
+    {
+      status: input.status,
+      headers: JSON_HEADERS,
+    }
+  )
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   const offerId = parsePositiveIntegerOfferId(params.id)
   if (!offerId) {
     return createQueueErrorResponse({
@@ -97,11 +103,11 @@ export async function POST(
   }
 
   // 验证用户身份
-    const authResult = await verifyAuth(request);
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
-    }
-    const userId = authResult.user.userId;
+  const authResult = await verifyAuth(request)
+  if (!authResult.authenticated || !authResult.user) {
+    return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+  }
+  const userId = authResult.user.userId
   const parentRequestId = request.headers.get('x-request-id') || undefined
   if (!userId) {
     return createQueueErrorResponse({
@@ -117,8 +123,8 @@ export async function POST(
 
   const body = await request.json()
   const {
-    synthetic = false,  // 🔧 向后兼容：旧版“综合创意”标记（KISS-3类型方案中不再生成S桶）
-    coverage = false,   // ✅ 新命名：coverage 模式，本质仍映射到 D / product_intent
+    synthetic = false, // 🔧 向后兼容：旧版“综合创意”标记（KISS-3类型方案中不再生成S桶）
+    coverage = false, // ✅ 新命名：coverage 模式，本质仍映射到 D / product_intent
     bucket,
     creativeType,
     forceGenerate,
@@ -137,16 +143,16 @@ export async function POST(
       retryable: false,
     })
   }
-  const {
-    mode: generationMode,
-    maxRetries: normalizedMaxRetries,
-  } = runtime
+  const { mode: generationMode, maxRetries: normalizedMaxRetries } = runtime
   const normalizedTargetRating: AdCreativeTaskData['targetRating'] = 'GOOD'
   const forceGenerateOnQualityGate = forceGenerate === true || force_generate === true
   const normalizedForceGenerateReason = forceGenerateOnQualityGate
-    ? String(forceGenerateReason || force_generate_reason || '').trim().slice(0, 240)
+    ? String(forceGenerateReason || force_generate_reason || '')
+        .trim()
+        .slice(0, 240)
     : ''
-  const hasExplicitCreativeType = creativeType !== undefined && creativeType !== null && String(creativeType).trim() !== ''
+  const hasExplicitCreativeType =
+    creativeType !== undefined && creativeType !== null && String(creativeType).trim() !== ''
   const normalizedSelection = normalizeSingleCreativeSelection({
     creativeType,
     bucket,
@@ -162,7 +168,8 @@ export async function POST(
     return createQueueErrorResponse({
       status: 400,
       error: 'Invalid creativeType',
-      message: 'creativeType 仅支持 brand_intent / model_intent / product_intent（兼容旧值：brand_focus / model_focus / brand_product）',
+      message:
+        'creativeType 仅支持 brand_intent / model_intent / product_intent（兼容旧值：brand_focus / model_focus / brand_product）',
       errorCode: 'CREATIVE_TYPE_INVALID',
       errorCategory: 'validation',
       retryable: false,
@@ -274,17 +281,18 @@ export async function POST(
     }
 
     const availableBuckets = await getAvailableBuckets(offerId)
-    let requestedType: 'A' | 'B' | 'D' | null = requestedBucketFromCreativeType || requestedBucket || (normalizedCoverage ? 'D' : null)
-    if (!requestedBucketFromCreativeType && bucketSelection.legacyModelHint && normalizedSelection.bucketSelection.normalizedBucket === 'B') {
+    let requestedType: 'A' | 'B' | 'D' | null =
+      requestedBucketFromCreativeType || requestedBucket || (normalizedCoverage ? 'D' : null)
+    if (
+      !requestedBucketFromCreativeType &&
+      bucketSelection.legacyModelHint &&
+      normalizedSelection.bucketSelection.normalizedBucket === 'B'
+    ) {
       const offerAny = offer as any
       const scrapedModelTexts = extractModelAnchorTextsFromScrapedData(offerAny.scraped_data)
       const normalizedLegacyType = deriveCanonicalCreativeType({
         keywordBucket: bucketSelection.rawBucket,
-        keywords: [
-          offerAny.product_name,
-          offerAny.extracted_keywords,
-          ...scrapedModelTexts,
-        ],
+        keywords: [offerAny.product_name, offerAny.extracted_keywords, ...scrapedModelTexts],
         headlines: [offerAny.extracted_headlines],
         descriptions: [
           offerAny.brand_description,
@@ -309,49 +317,62 @@ export async function POST(
       const error = createError.creativeQuotaExceeded({
         round: 1,
         current: usedTypeCount,
-        limit: 3
+        limit: 3,
       })
       const message = `该Offer已生成桶${requestedType}类型创意。为保持仅3个类型创意，请先删除该类型后再生成。`
-      const structuredError = normalizeCreativeTaskError({
-        code: error.code,
-        category: 'validation',
-        message,
-        userMessage: message,
-        retryable: false,
-      }, message)
-      return new Response(JSON.stringify({
-        ...error.toJSON(),
-        message,
-        ...toCreativeTaskErrorResponseFields(structuredError),
-      }), {
-        status: error.httpStatus,
-        headers: JSON_HEADERS
-      })
+      const structuredError = normalizeCreativeTaskError(
+        {
+          code: error.code,
+          category: 'validation',
+          message,
+          userMessage: message,
+          retryable: false,
+        },
+        message
+      )
+      return new Response(
+        JSON.stringify({
+          ...error.toJSON(),
+          message,
+          ...toCreativeTaskErrorResponseFields(structuredError),
+        }),
+        {
+          status: error.httpStatus,
+          headers: JSON_HEADERS,
+        }
+      )
     }
 
     if (availableBuckets.length === 0) {
       const error = createError.creativeQuotaExceeded({
         round: 1,
         current: usedTypeCount,
-        limit: 3
+        limit: 3,
       })
       const errorJson = error.toJSON()
-      const quotaMessage = errorJson?.error?.message || '该Offer已生成全部3种创意类型（A/B/D），无需继续生成。'
-      const structuredError = normalizeCreativeTaskError({
-        code: error.code,
-        category: 'validation',
-        message: quotaMessage,
-        userMessage: quotaMessage,
-        retryable: false,
-        details: errorJson?.error?.details || null,
-      }, quotaMessage)
-      return new Response(JSON.stringify({
-        ...errorJson,
-        ...toCreativeTaskErrorResponseFields(structuredError),
-      }), {
-        status: error.httpStatus,
-        headers: JSON_HEADERS
-      })
+      const quotaMessage =
+        errorJson?.error?.message || '该Offer已生成全部3种创意类型（A/B/D），无需继续生成。'
+      const structuredError = normalizeCreativeTaskError(
+        {
+          code: error.code,
+          category: 'validation',
+          message: quotaMessage,
+          userMessage: quotaMessage,
+          retryable: false,
+          details: errorJson?.error?.details || null,
+        },
+        quotaMessage
+      )
+      return new Response(
+        JSON.stringify({
+          ...errorJson,
+          ...toCreativeTaskErrorResponseFields(structuredError),
+        }),
+        {
+          status: error.httpStatus,
+          headers: JSON_HEADERS,
+        }
+      )
     }
 
     const db = getDatabase()
@@ -374,31 +395,37 @@ export async function POST(
       targetRating: normalizedTargetRating,
       generationMode,
       coverage: normalizedCoverage,
-      synthetic: normalizedCoverage,  // 双写旧字段，确保旧执行器/半部署状态仍映射为 D
+      synthetic: normalizedCoverage, // 双写旧字段，确保旧执行器/半部署状态仍映射为 D
       bucket: requestedType || undefined,
-      ...(forceGenerateOnQualityGate ? {
-        forceGenerateOnQualityGate: true,
-        qualityGateBypassReason: normalizedForceGenerateReason || 'user_confirmed_from_quality_gate_modal',
-      } : {}),
+      ...(forceGenerateOnQualityGate
+        ? {
+            forceGenerateOnQualityGate: true,
+            qualityGateBypassReason:
+              normalizedForceGenerateReason || 'user_confirmed_from_quality_gate_modal',
+          }
+        : {}),
     }
 
     await queue.enqueue('ad-creative', taskData, userId, {
       parentRequestId,
       priority: 'high',
       taskId,
-      maxRetries: 0  // 禁用队列重试，由执行器内部控制多轮生成
+      maxRetries: 0, // 禁用队列重试，由执行器内部控制多轮生成
     })
 
     console.log(`🚀 创意生成任务已入队: ${taskId}`)
 
-    return new Response(JSON.stringify({
-      taskId,
-      bucket: requestedType || undefined,
-      generationMode,
-    }), {
-      status: 200,
-      headers: JSON_HEADERS
-    })
+    return new Response(
+      JSON.stringify({
+        taskId,
+        bucket: requestedType || undefined,
+        generationMode,
+      }),
+      {
+        status: 200,
+        headers: JSON_HEADERS,
+      }
+    )
   } catch (error: any) {
     console.error('创意生成任务入队失败:', error)
     return createQueueErrorResponse({

@@ -3,7 +3,9 @@ import { __testOnly } from '@/lib/affiliate-products'
 
 describe('affiliate products publish backfill helpers', () => {
   it('extracts asin from common amazon url patterns', () => {
-    expect(__testOnly.extractAsinFromUrlLike('https://www.amazon.com/dp/B0CCY6VG8Z')).toBe('B0CCY6VG8Z')
+    expect(__testOnly.extractAsinFromUrlLike('https://www.amazon.com/dp/B0CCY6VG8Z')).toBe(
+      'B0CCY6VG8Z'
+    )
     expect(
       __testOnly.extractAsinFromUrlLike(
         'https://example.com/redirect?to=https%3A%2F%2Fwww.amazon.com%2Fgp%2Fproduct%2FB0CCY6VG8Z'

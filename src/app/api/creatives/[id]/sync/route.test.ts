@@ -110,7 +110,7 @@ describe('POST /api/creatives/:id/sync', () => {
       method: 'POST',
     })
 
-    const res = await POST(req, { params: { id: '3' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '3' }) })
     expect(res.status).toBe(401)
   })
 
@@ -120,7 +120,7 @@ describe('POST /api/creatives/:id/sync', () => {
       headers: { 'x-user-id': '7' },
     })
 
-    const res = await POST(req, { params: { id: '3' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '3' }) })
     expect(res.status).toBe(200)
     expect(adsFns.createGoogleAdsResponsiveSearchAd).toHaveBeenCalledWith(
       expect.objectContaining({ refreshToken: 'shared-refresh-token' })
@@ -138,7 +138,7 @@ describe('POST /api/creatives/:id/sync', () => {
       headers: { 'x-user-id': '7' },
     })
 
-    const res = await POST(req, { params: { id: '3' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '3' }) })
     expect(res.status).toBe(400)
     expect(adsFns.createGoogleAdsResponsiveSearchAd).not.toHaveBeenCalled()
   })

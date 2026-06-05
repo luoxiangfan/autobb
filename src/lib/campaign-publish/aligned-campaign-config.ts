@@ -58,17 +58,16 @@ function toNonEmptyString(value: unknown): string {
 
 function normalizeFinalUrls(value: unknown): string[] {
   if (!Array.isArray(value)) return []
-  return value
-    .map((entry) => toNonEmptyString(entry))
-    .filter((entry) => entry.length > 0)
+  return value.map((entry) => toNonEmptyString(entry)).filter((entry) => entry.length > 0)
 }
 
 export function buildAlignedPublishCampaignConfig(
   params: BuildAlignedPublishCampaignConfigParams
 ): BuildAlignedPublishCampaignConfigResult {
-  const source = (params.campaignConfig && typeof params.campaignConfig === 'object')
-    ? { ...params.campaignConfig }
-    : {}
+  const source =
+    params.campaignConfig && typeof params.campaignConfig === 'object'
+      ? { ...params.campaignConfig }
+      : {}
 
   const inputFinalUrls = normalizeFinalUrls(source.finalUrls)
   const inputFinalUrl = inputFinalUrls[0] || ''
@@ -112,17 +111,15 @@ export function buildAlignedPublishCampaignConfig(
 export function evaluatePublishCampaignConfigOwnership(
   params: BuildAlignedPublishCampaignConfigParams
 ): EvaluatePublishCampaignConfigOwnershipResult {
-  const source = (params.campaignConfig && typeof params.campaignConfig === 'object')
-    ? (params.campaignConfig as PlainObject)
-    : {}
-  const hasInputFinalUrls = (
-    Object.prototype.hasOwnProperty.call(source, 'finalUrls')
-    && source.finalUrls !== undefined
-  )
-  const hasInputFinalUrlSuffix = (
-    Object.prototype.hasOwnProperty.call(source, 'finalUrlSuffix')
-    && source.finalUrlSuffix !== undefined
-  )
+  const source =
+    params.campaignConfig && typeof params.campaignConfig === 'object'
+      ? (params.campaignConfig as PlainObject)
+      : {}
+  const hasInputFinalUrls =
+    Object.prototype.hasOwnProperty.call(source, 'finalUrls') && source.finalUrls !== undefined
+  const hasInputFinalUrlSuffix =
+    Object.prototype.hasOwnProperty.call(source, 'finalUrlSuffix') &&
+    source.finalUrlSuffix !== undefined
   const inputFinalUrl = normalizeFinalUrls(source.finalUrls)[0] || ''
   const inputFinalUrlSuffix = toNonEmptyString(source.finalUrlSuffix)
 

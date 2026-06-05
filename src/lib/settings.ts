@@ -75,7 +75,7 @@ export async function getAllSettings(userId?: number): Promise<SettingValue[]> {
     : 'SELECT * FROM system_settings WHERE user_id IS NULL ORDER BY category, key'
 
   const params = userId ? [userId] : []
-  const settings = await db.query(query, params) as SystemSetting[]
+  const settings = (await db.query(query, params)) as SystemSetting[]
 
   // 去重：对于同一个 (category, key) 组合，优先使用用户配置
   const settingsMap = new Map<string, SystemSetting>()
@@ -91,15 +91,13 @@ export async function getAllSettings(userId?: number): Promise<SettingValue[]> {
 
   // 转换为返回格式
   // 注意：PostgreSQL 返回 boolean 类型，SQLite 返回 0/1，需要兼容处理
-  return Array.from(settingsMap.values()).map(setting => {
+  return Array.from(settingsMap.values()).map((setting) => {
     const isSensitive = setting.is_sensitive === true || setting.is_sensitive === 1
     const rawValue = normalizeSettingValue(setting.category, setting.key, setting.value)
     return {
       category: setting.category,
       key: setting.key,
-      value: isSensitive && setting.encrypted_value
-        ? decrypt(setting.encrypted_value)
-        : rawValue,
+      value: isSensitive && setting.encrypted_value ? decrypt(setting.encrypted_value) : rawValue,
       dataType: setting.data_type,
       isSensitive,
       isRequired: setting.is_required === true || setting.is_required === 1,
@@ -115,7 +113,10 @@ export async function getAllSettings(userId?: number): Promise<SettingValue[]> {
  * 获取指定分类的配置
  * 优先级：用户配置 > 全局配置
  */
-export async function getSettingsByCategory(category: string, userId?: number): Promise<SettingValue[]> {
+export async function getSettingsByCategory(
+  category: string,
+  userId?: number
+): Promise<SettingValue[]> {
   const db = await getDatabase()
 
   const query = userId
@@ -123,7 +124,7 @@ export async function getSettingsByCategory(category: string, userId?: number): 
     : 'SELECT * FROM system_settings WHERE category = ? AND user_id IS NULL ORDER BY key'
 
   const params = userId ? [category, userId] : [category]
-  const settings = await db.query(query, params) as SystemSetting[]
+  const settings = (await db.query(query, params)) as SystemSetting[]
 
   // 去重：对于同一个 key，优先使用用户配置
   const settingsMap = new Map<string, SystemSetting>()
@@ -138,15 +139,13 @@ export async function getSettingsByCategory(category: string, userId?: number): 
 
   // 转换为返回格式
   // 注意：PostgreSQL 返回 boolean 类型，SQLite 返回 0/1，需要兼容处理
-  return Array.from(settingsMap.values()).map(setting => {
+  return Array.from(settingsMap.values()).map((setting) => {
     const isSensitive = setting.is_sensitive === true || setting.is_sensitive === 1
     const rawValue = normalizeSettingValue(setting.category, setting.key, setting.value)
     return {
       category: setting.category,
       key: setting.key,
-      value: isSensitive && setting.encrypted_value
-        ? decrypt(setting.encrypted_value)
-        : rawValue,
+      value: isSensitive && setting.encrypted_value ? decrypt(setting.encrypted_value) : rawValue,
       dataType: setting.data_type,
       isSensitive,
       isRequired: setting.is_required === true || setting.is_required === 1,
@@ -161,26 +160,27 @@ export async function getSettingsByCategory(category: string, userId?: number): 
 /**
  * 获取指定分类的用户级配置（严格不回退到全局）
  */
-export async function getUserOnlySettingsByCategory(category: string, userId: number): Promise<SettingValue[]> {
+export async function getUserOnlySettingsByCategory(
+  category: string,
+  userId: number
+): Promise<SettingValue[]> {
   if (!userId || userId <= 0) {
     return []
   }
 
   const db = await getDatabase()
-  const settings = await db.query(
+  const settings = (await db.query(
     'SELECT * FROM system_settings WHERE category = ? AND user_id = ? ORDER BY key',
     [category, userId]
-  ) as SystemSetting[]
+  )) as SystemSetting[]
 
-  return settings.map(setting => {
+  return settings.map((setting) => {
     const isSensitive = setting.is_sensitive === true || setting.is_sensitive === 1
     const rawValue = normalizeSettingValue(setting.category, setting.key, setting.value)
     return {
       category: setting.category,
       key: setting.key,
-      value: isSensitive && setting.encrypted_value
-        ? decrypt(setting.encrypted_value)
-        : rawValue,
+      value: isSensitive && setting.encrypted_value ? decrypt(setting.encrypted_value) : rawValue,
       dataType: setting.data_type,
       isSensitive,
       isRequired: setting.is_required === true || setting.is_required === 1,
@@ -195,7 +195,11 @@ export async function getUserOnlySettingsByCategory(category: string, userId: nu
 /**
  * 获取单个配置项
  */
-export async function getSetting(category: string, key: string, userId?: number): Promise<SettingValue | null> {
+export async function getSetting(
+  category: string,
+  key: string,
+  userId?: number
+): Promise<SettingValue | null> {
   const db = await getDatabase()
 
   // 注意：PostgreSQL 中 ORDER BY user_id DESC 会把 NULL 排在最前面
@@ -205,7 +209,7 @@ export async function getSetting(category: string, key: string, userId?: number)
     : 'SELECT * FROM system_settings WHERE category = ? AND key = ? AND user_id IS NULL LIMIT 1'
 
   const params = userId ? [category, key, userId] : [category, key]
-  const setting = await db.queryOne(query, params) as SystemSetting | undefined
+  const setting = (await db.queryOne(query, params)) as SystemSetting | undefined
 
   if (!setting) return null
 
@@ -219,7 +223,9 @@ export async function getSetting(category: string, key: string, userId?: number)
   if (isSensitive && setting.encrypted_value) {
     const decrypted = decrypt(setting.encrypted_value)
     if (decrypted === null) {
-      console.error(`[settings] 解密失败: category=${setting.category}, key=${setting.key}, user_id=${userId || 'global'}`)
+      console.error(
+        `[settings] 解密失败: category=${setting.category}, key=${setting.key}, user_id=${userId || 'global'}`
+      )
       // 解密失败时返回 null，让调用方知道配置不可用
       value = null
     } else {
@@ -252,7 +258,11 @@ export async function getSetting(category: string, key: string, userId?: number)
  * @param userId - 用户ID（必需）
  * @returns 用户级配置值，如果用户没有配置则返回 null
  */
-export async function getUserOnlySetting(category: string, key: string, userId: number): Promise<SettingValue | null> {
+export async function getUserOnlySetting(
+  category: string,
+  key: string,
+  userId: number
+): Promise<SettingValue | null> {
   if (!userId || userId <= 0) {
     throw new Error('getUserOnlySetting requires a valid userId')
   }
@@ -260,10 +270,11 @@ export async function getUserOnlySetting(category: string, key: string, userId: 
   const db = await getDatabase()
 
   // 只查询用户级配置，不包含全局配置（user_id IS NULL）
-  const query = 'SELECT * FROM system_settings WHERE category = ? AND key = ? AND user_id = ? LIMIT 1'
+  const query =
+    'SELECT * FROM system_settings WHERE category = ? AND key = ? AND user_id = ? LIMIT 1'
   const params = [category, key, userId]
 
-  const setting = await db.queryOne(query, params) as SystemSetting | undefined
+  const setting = (await db.queryOne(query, params)) as SystemSetting | undefined
 
   if (!setting) return null
 
@@ -277,7 +288,9 @@ export async function getUserOnlySetting(category: string, key: string, userId: 
   if (isSensitive && setting.encrypted_value) {
     const decrypted = decrypt(setting.encrypted_value)
     if (decrypted === null) {
-      console.error(`[settings] 解密失败: category=${setting.category}, key=${setting.key}, user_id=${userId || 'global'}`)
+      console.error(
+        `[settings] 解密失败: category=${setting.category}, key=${setting.key}, user_id=${userId || 'global'}`
+      )
       // 解密失败时返回 null，让调用方知道配置不可用
       value = null
     } else {
@@ -313,11 +326,14 @@ export async function updateSetting(
   const db = await getDatabase()
 
   // 获取配置元数据（从全局模板获取字段定义）
-  const metadata = await db.queryOne(`
+  const metadata = (await db.queryOne(
+    `
     SELECT * FROM system_settings
     WHERE category = ? AND key = ? AND user_id IS NULL
     LIMIT 1
-  `, [category, key]) as SystemSetting | undefined
+  `,
+    [category, key]
+  )) as SystemSetting | undefined
 
   if (!metadata) {
     throw new Error(`配置项不存在: ${category}.${key}`)
@@ -337,21 +353,28 @@ export async function updateSetting(
 
   // 检查是否已存在用户级配置
   if (userId) {
-    const userSetting = await db.queryOne(`
+    const userSetting = (await db.queryOne(
+      `
       SELECT id FROM system_settings
       WHERE category = ? AND key = ? AND user_id = ?
-    `, [category, key, userId]) as { id: number } | undefined
+    `,
+      [category, key, userId]
+    )) as { id: number } | undefined
 
     if (userSetting) {
       // 更新现有用户配置
-      await db.exec(`
+      await db.exec(
+        `
         UPDATE system_settings
         SET value = ?, encrypted_value = ?, updated_at = datetime('now')
         WHERE id = ?
-      `, [configValue, encryptedValue, userSetting.id])
+      `,
+        [configValue, encryptedValue, userSetting.id]
+      )
     } else {
       // 创建新的用户配置
-      await db.exec(`
+      await db.exec(
+        `
         INSERT INTO system_settings (
           user_id, category, key, value, encrypted_value,
           data_type, is_sensitive, is_required, description
@@ -359,15 +382,20 @@ export async function updateSetting(
         SELECT ?, category, key, ?, ?, data_type, is_sensitive, is_required, description
         FROM system_settings
         WHERE category = ? AND key = ? AND user_id IS NULL
-      `, [userId, configValue, encryptedValue, category, key])
+      `,
+        [userId, configValue, encryptedValue, category, key]
+      )
     }
   } else {
     // 更新全局配置
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE system_settings
       SET value = ?, encrypted_value = ?, updated_at = datetime('now')
       WHERE category = ? AND key = ? AND user_id IS NULL
-    `, [configValue, encryptedValue, category, key])
+    `,
+      [configValue, encryptedValue, category, key]
+    )
   }
 }
 
@@ -548,25 +576,29 @@ export async function validateGoogleAdsConfig(
     if (developerToken.trim() === clientSecret.trim()) {
       return {
         valid: false,
-        message: 'Developer Token 与 Client Secret 相同，疑似误填。Developer Token 需从 Google Ads API Center 获取。',
+        message:
+          'Developer Token 与 Client Secret 相同，疑似误填。Developer Token 需从 Google Ads API Center 获取。',
       }
     }
     if (looksLikeOAuthClientId(developerToken)) {
       return {
         valid: false,
-        message: 'Developer Token 看起来像 Client ID（包含 .apps.googleusercontent.com），请填写 Google Ads Developer Token。',
+        message:
+          'Developer Token 看起来像 Client ID（包含 .apps.googleusercontent.com），请填写 Google Ads Developer Token。',
       }
     }
     if (looksLikeOAuthClientSecret(developerToken)) {
       return {
         valid: false,
-        message: 'Developer Token 看起来像 Client Secret（以 GOCSPX- 开头），请在 Google Ads API Center 获取正确的 Developer Token。',
+        message:
+          'Developer Token 看起来像 Client Secret（以 GOCSPX- 开头），请在 Google Ads API Center 获取正确的 Developer Token。',
       }
     }
     if (looksLikeOAuthAccessToken(developerToken)) {
       return {
         valid: false,
-        message: 'Developer Token 看起来像 Access Token（以 ya29. 开头），请填写 Google Ads Developer Token。',
+        message:
+          'Developer Token 看起来像 Access Token（以 ya29. 开头），请填写 Google Ads Developer Token。',
       }
     }
 
@@ -696,7 +728,7 @@ export async function validateGeminiConfig(
   apiKey: string,
   model: string = GEMINI_ACTIVE_MODEL,
   userId: number,
-  provider?: string  // 🔧 关键修复(2025-12-30): 新增 provider 参数，用于验证未保存配置
+  provider?: string // 🔧 关键修复(2025-12-30): 新增 provider 参数，用于验证未保存配置
 ): Promise<{ valid: boolean; message: string }> {
   // Step 1: 基础验证
   if (!apiKey) {
@@ -730,20 +762,26 @@ export async function validateGeminiConfig(
 
     // 🔧 关键修复(2025-12-30): 使用临时配置覆盖参数
     // 避免 generateContent → getGeminiApiKey 从数据库读取空值
-    const overrideConfig = provider ? {
-      provider,
-      apiKey
-    } : undefined
+    const overrideConfig = provider
+      ? {
+          provider,
+          apiKey,
+        }
+      : undefined
 
     // 使用选择的模型进行测试（使用用户级AI配置）
     // 注意：Gemini 2.5+ 模型有"思考"功能，思考过程可能占用大量tokens
     // 为了确保有足够的输出空间，设置maxOutputTokens为1000
-    const validationResult = await generateContent({
-      model: normalizedModel,
-      prompt: 'Say "OK" if you can hear me.',
-      temperature: 0.1,
-      maxOutputTokens: 4096, // 🔧 修复(2025-12-11): 增加token限制以容纳思考过程和实际输出
-    }, userId, overrideConfig)
+    const validationResult = await generateContent(
+      {
+        model: normalizedModel,
+        prompt: 'Say "OK" if you can hear me.',
+        temperature: 0.1,
+        maxOutputTokens: 4096, // 🔧 修复(2025-12-11): 增加token限制以容纳思考过程和实际输出
+      },
+      userId,
+      overrideConfig
+    )
 
     if (validationResult.usage) {
       const cost = estimateTokenCost(
@@ -771,7 +809,11 @@ export async function validateGeminiConfig(
     // API调用失败，分析错误类型
     const errorMessage = error.message || '未知错误'
 
-    if (errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('invalid key') || errorMessage.includes('400')) {
+    if (
+      errorMessage.includes('API_KEY_INVALID') ||
+      errorMessage.includes('invalid key') ||
+      errorMessage.includes('400')
+    ) {
       return {
         valid: false,
         message: 'API密钥无效，请检查密钥是否正确',
@@ -785,7 +827,8 @@ export async function validateGeminiConfig(
       }
     }
 
-    const isDnsResolutionError = errorMessage.includes('ENOTFOUND') || errorMessage.includes('EAI_AGAIN')
+    const isDnsResolutionError =
+      errorMessage.includes('ENOTFOUND') || errorMessage.includes('EAI_AGAIN')
     if (isDnsResolutionError) {
       return {
         valid: false,
@@ -793,7 +836,11 @@ export async function validateGeminiConfig(
       }
     }
 
-    if (errorMessage.includes('network') || errorMessage.includes('timeout') || errorMessage.includes('ECONNREFUSED')) {
+    if (
+      errorMessage.includes('network') ||
+      errorMessage.includes('timeout') ||
+      errorMessage.includes('ECONNREFUSED')
+    ) {
       return {
         valid: false,
         message: '网络连接失败，请检查代理配置或稍后重试',
@@ -860,7 +907,8 @@ function expandProxyUrlCountries(proxyUrls: ProxyUrlConfig[]): ProxyUrlConfig[] 
     if (!rawCountry || !url) continue
 
     const countryCandidates = resolveProxyCountryCandidates(rawCountry)
-    const finalCandidates = countryCandidates.length > 0 ? countryCandidates : [rawCountry.toUpperCase()]
+    const finalCandidates =
+      countryCandidates.length > 0 ? countryCandidates : [rawCountry.toUpperCase()]
 
     for (const country of finalCandidates) {
       const key = `${country}\u0000${url}`
@@ -881,7 +929,10 @@ function expandProxyUrlCountries(proxyUrls: ProxyUrlConfig[]): ProxyUrlConfig[] 
  * @param userId - 用户ID
  * @returns 代理URL或undefined（如果未配置代理）
  */
-export async function getProxyUrlForCountry(targetCountry: string, userId?: number): Promise<string | undefined> {
+export async function getProxyUrlForCountry(
+  targetCountry: string,
+  userId?: number
+): Promise<string | undefined> {
   const proxyUrls = await getAllProxyUrls(userId)
   if (!proxyUrls || proxyUrls.length === 0) {
     return undefined
@@ -889,8 +940,12 @@ export async function getProxyUrlForCountry(targetCountry: string, userId?: numb
 
   // 查找匹配的国家（支持 UK/GB 等别名）
   const countryCandidates = new Set(resolveProxyCountryCandidates(targetCountry))
-  const matched = proxyUrls.find(item =>
-    countryCandidates.has(String(item.country || '').trim().toUpperCase())
+  const matched = proxyUrls.find((item) =>
+    countryCandidates.has(
+      String(item.country || '')
+        .trim()
+        .toUpperCase()
+    )
   )
 
   if (matched) {
@@ -917,7 +972,11 @@ export async function isProxyEnabled(userId?: number): Promise<boolean> {
 
   try {
     const proxyUrls: ProxyUrlConfig[] = JSON.parse(setting.value)
-    return Array.isArray(proxyUrls) && proxyUrls.length > 0 && proxyUrls.some(item => item.url.trim() !== '')
+    return (
+      Array.isArray(proxyUrls) &&
+      proxyUrls.length > 0 &&
+      proxyUrls.some((item) => item.url.trim() !== '')
+    )
   } catch {
     return false
   }

@@ -14,7 +14,7 @@ export interface ExtractedScenario {
 
 export interface ExtractedUserQuestion {
   question: string
-  priority: number  // 1-10
+  priority: number // 1-10
   category: 'feature' | 'price' | 'comparison' | 'problem'
 }
 
@@ -46,15 +46,13 @@ interface ReviewAnalysisResult {
  * Extract scenarios from review_analysis data
  * Returns empty result if review_analysis is null/invalid
  */
-export function extractScenariosFromReviews(
-  reviewAnalysisJson: string | null
-): ExtractedScenarios {
+export function extractScenariosFromReviews(reviewAnalysisJson: string | null): ExtractedScenarios {
   // Graceful degradation: no review data → empty scenarios
   if (!reviewAnalysisJson) {
     return {
       scenarios: [],
       painPoints: [],
-      userQuestions: []
+      userQuestions: [],
     }
   }
 
@@ -74,7 +72,7 @@ export function extractScenariosFromReviews(
           scenario: useCase.scenario,
           frequency: useCase.mentions > 10 ? 'high' : useCase.mentions > 5 ? 'medium' : 'low',
           keywords: useCase.keywords || extractKeywordsFromScenario(useCase.scenario),
-          source: 'review'
+          source: 'review',
         })
       }
     }
@@ -91,8 +89,9 @@ export function extractScenariosFromReviews(
           if (question) {
             userQuestions.push({
               question,
-              priority: painPoint.severity === 'critical' ? 10 : painPoint.severity === 'moderate' ? 7 : 4,
-              category: 'problem'
+              priority:
+                painPoint.severity === 'critical' ? 10 : painPoint.severity === 'moderate' ? 7 : 4,
+              category: 'problem',
             })
           }
         }
@@ -100,13 +99,16 @@ export function extractScenariosFromReviews(
     }
 
     // 3. Generate questions from quantitative highlights
-    if (reviewAnalysis.quantitativeHighlights && Array.isArray(reviewAnalysis.quantitativeHighlights)) {
+    if (
+      reviewAnalysis.quantitativeHighlights &&
+      Array.isArray(reviewAnalysis.quantitativeHighlights)
+    ) {
       for (const highlight of reviewAnalysis.quantitativeHighlights) {
         if (highlight.metric) {
           userQuestions.push({
             question: `What is the ${highlight.metric.toLowerCase()}?`,
             priority: 8,
-            category: 'feature'
+            category: 'feature',
           })
         }
       }
@@ -119,7 +121,7 @@ export function extractScenariosFromReviews(
     return {
       scenarios: [],
       painPoints: [],
-      userQuestions: []
+      userQuestions: [],
     }
   }
 }
@@ -129,14 +131,50 @@ export function extractScenariosFromReviews(
  * Simple implementation: split by spaces and filter common words
  */
 function extractKeywordsFromScenario(scenario: string): string[] {
-  const commonWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'can'])
+  const commonWords = new Set([
+    'the',
+    'a',
+    'an',
+    'and',
+    'or',
+    'but',
+    'in',
+    'on',
+    'at',
+    'to',
+    'for',
+    'of',
+    'with',
+    'by',
+    'from',
+    'as',
+    'is',
+    'was',
+    'are',
+    'were',
+    'been',
+    'be',
+    'have',
+    'has',
+    'had',
+    'do',
+    'does',
+    'did',
+    'will',
+    'would',
+    'should',
+    'could',
+    'may',
+    'might',
+    'can',
+  ])
 
   return scenario
     .toLowerCase()
     .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
-    .filter(word => word.length > 2 && !commonWords.has(word))
-    .slice(0, 5)  // Top 5 keywords
+    .filter((word) => word.length > 2 && !commonWords.has(word))
+    .slice(0, 5) // Top 5 keywords
 }
 
 /**

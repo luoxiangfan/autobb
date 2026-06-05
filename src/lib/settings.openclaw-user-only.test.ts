@@ -68,4 +68,3 @@ describe('getUserOnlySettingsByCategory', () => {
     expect(queryMock).not.toHaveBeenCalled()
   })
 })
-

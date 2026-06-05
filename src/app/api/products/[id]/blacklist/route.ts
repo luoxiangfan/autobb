@@ -29,9 +29,9 @@ async function resolveUserAndProductId(request: NextRequest, paramsPromise: Prom
   return { userId, productId }
 }
 
-export async function POST(request: NextRequest, { params }: { params: Promise<RouteParams> }) {
+export async function POST(request: NextRequest, props: { params: Promise<RouteParams> }) {
   try {
-    const resolved = await resolveUserAndProductId(request, params)
+    const resolved = await resolveUserAndProductId(request, props.params)
     if ('error' in resolved) return resolved.error
 
     const product = await getAffiliateProductById(resolved.userId, resolved.productId)
@@ -49,16 +49,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<R
     })
   } catch (error: any) {
     console.error('[POST /api/products/:id/blacklist] failed:', error)
-    return NextResponse.json(
-      { error: error?.message || '拉黑失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '拉黑失败' }, { status: 500 })
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<RouteParams> }) {
+export async function DELETE(request: NextRequest, props: { params: Promise<RouteParams> }) {
   try {
-    const resolved = await resolveUserAndProductId(request, params)
+    const resolved = await resolveUserAndProductId(request, props.params)
     if ('error' in resolved) return resolved.error
 
     const product = await getAffiliateProductById(resolved.userId, resolved.productId)
@@ -76,9 +73,6 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     })
   } catch (error: any) {
     console.error('[DELETE /api/products/:id/blacklist] failed:', error)
-    return NextResponse.json(
-      { error: error?.message || '取消拉黑失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '取消拉黑失败' }, { status: 500 })
   }
 }

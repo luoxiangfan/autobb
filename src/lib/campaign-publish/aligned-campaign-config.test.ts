@@ -43,7 +43,9 @@ describe('buildAlignedPublishCampaignConfig', () => {
       },
     })
 
-    expect(withOfferFinalUrl.campaignConfig.finalUrls).toEqual(['https://offer-final.example.com/landing'])
+    expect(withOfferFinalUrl.campaignConfig.finalUrls).toEqual([
+      'https://offer-final.example.com/landing',
+    ])
 
     const withOfferUrl = buildAlignedPublishCampaignConfig({
       campaignConfig: {

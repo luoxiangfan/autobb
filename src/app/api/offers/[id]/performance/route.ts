@@ -5,7 +5,7 @@ import {
   getOfferPerformanceTrend,
   getCampaignPerformanceComparison,
   calculateOfferROI,
-  getOfferCurrencyInfo
+  getOfferCurrencyInfo,
 } from '@/lib/offer-performance'
 import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
@@ -24,26 +24,18 @@ import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: '未授权' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
     const userId = authResult.user.userId
     const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {
-      return NextResponse.json(
-        { error: '无效的Offer ID' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '无效的Offer ID' }, { status: 400 })
     }
 
     const { searchParams } = new URL(request.url)
@@ -76,7 +68,7 @@ export async function GET(
       avgCpcUsd: Math.round((summary?.avg_cpc || 0) * 100) / 100,
       conversionRate: Math.round((summary?.conversion_rate || 0) * 100) / 100,
       commissionPerClick: Math.round((summary?.commission_per_click || 0) * 100) / 100,
-      dateRange: { start: startDateStr, end: endDateStr, days: daysBack }
+      dateRange: { start: startDateStr, end: endDateStr, days: daysBack },
     }
 
     return NextResponse.json({
@@ -87,7 +79,7 @@ export async function GET(
       currencies: currencyInfo.currencies,
       hasMixedCurrency: currencyInfo.hasMixedCurrency,
       summary: safeSummary,
-      trend: trend.map(t => ({
+      trend: trend.map((t) => ({
         date: t.date,
         impressions: t.impressions || 0,
         clicks: t.clicks || 0,
@@ -100,7 +92,7 @@ export async function GET(
         conversionRate: Math.round((t.conversion_rate || 0) * 100) / 100,
         commissionPerClick: Math.round((t.commission_per_click || 0) * 100) / 100,
       })),
-      campaigns: campaigns.map(c => ({
+      campaigns: campaigns.map((c) => ({
         campaignId: c.campaign_id,
         campaignName: c.campaign_name,
         googleCampaignId: c.google_campaign_id,
@@ -117,22 +109,20 @@ export async function GET(
         conversionRate: Math.round((c.conversion_rate || 0) * 100) / 100,
         commissionPerClick: Math.round((c.commission_per_click || 0) * 100) / 100,
       })),
-      roi: roi ? {
-        totalCostUsd: roi.total_cost_usd,
-        totalRevenueUsd: roi.total_revenue_usd,
-        roiPercentage: roi.roi_percentage,
-        profitUsd: roi.profit_usd,
-        conversions: Math.round((roi.conversions || 0) * 100) / 100,
-        commission: Math.round((roi.commission || 0) * 100) / 100,
-        avgOrderValue: avgOrderValue
-      } : null
+      roi: roi
+        ? {
+            totalCostUsd: roi.total_cost_usd,
+            totalRevenueUsd: roi.total_revenue_usd,
+            roiPercentage: roi.roi_percentage,
+            profitUsd: roi.profit_usd,
+            conversions: Math.round((roi.conversions || 0) * 100) / 100,
+            commission: Math.round((roi.commission || 0) * 100) / 100,
+            avgOrderValue: avgOrderValue,
+          }
+        : null,
     })
-
   } catch (error: any) {
     console.error('Get offer performance error:', error)
-    return NextResponse.json(
-      { error: error.message || '获取Offer性能数据失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取Offer性能数据失败' }, { status: 500 })
   }
 }

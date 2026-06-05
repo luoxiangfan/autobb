@@ -17,7 +17,8 @@ vi.mock('../creative-keyword-context-filter', () => ({
   filterCreativeKeywordsByOfferContext: (params: any) =>
     mocks.filterCreativeKeywordsByOfferContextDetailed(params).keywords,
   filterCreativeKeywordsByOfferContextDetailed: mocks.filterCreativeKeywordsByOfferContextDetailed,
-  normalizeCreativeKeywordCandidatesForContextFilter: mocks.normalizeCreativeKeywordCandidatesForContextFilter,
+  normalizeCreativeKeywordCandidatesForContextFilter:
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter,
 }))
 
 vi.mock('../creative-keyword-selection', () => ({
@@ -48,9 +49,11 @@ describe('buildCreativeKeywordSet prompt keyword passthrough', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(({ keywordsWithVolume }: any) =>
-      contextFilterResult(keywordsWithVolume)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(
+      ({ keywordsWithVolume }: any) => contextFilterResult(keywordsWithVolume)
     )
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: selectedKeywords.map((item) => item.keyword),
@@ -91,19 +94,12 @@ describe('buildCreativeKeywordSet prompt keyword passthrough', () => {
       scopeLabel: 'unit-prompt-passthrough',
       keywordsWithVolume: selectedKeywords as any,
       keywords: selectedKeywords.map((item) => item.keyword),
-      promptKeywords: [
-        'brandx x200 vacuum',
-        'self empty station',
-        'brandx x200 vacuum',
-      ],
+      promptKeywords: ['brandx x200 vacuum', 'self empty station', 'brandx x200 vacuum'],
       enableSupplementation: true,
     })
 
     expect(result.executableKeywords).toEqual(['brandx x200 vacuum'])
-    expect(result.promptKeywords).toEqual([
-      'brandx x200 vacuum',
-      'self empty station',
-    ])
+    expect(result.promptKeywords).toEqual(['brandx x200 vacuum', 'self empty station'])
   })
 
   it('drops context-blocked upstream prompt keywords while preserving remaining prompt metadata', async () => {
@@ -116,11 +112,14 @@ describe('buildCreativeKeywordSet prompt keyword passthrough', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(({ keywordsWithVolume }: any) =>
-      contextFilterResult(keywordsWithVolume, {
-        blockedKeywordKeys: ['buy brandx x200 vacuum'],
-      })
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(
+      ({ keywordsWithVolume }: any) =>
+        contextFilterResult(keywordsWithVolume, {
+          blockedKeywordKeys: ['buy brandx x200 vacuum'],
+        })
     )
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: selectedKeywords.map((item) => item.keyword),
@@ -151,10 +150,7 @@ describe('buildCreativeKeywordSet prompt keyword passthrough', () => {
       scopeLabel: 'unit-prompt-sanitize',
       keywordsWithVolume: selectedKeywords as any,
       keywords: selectedKeywords.map((item) => item.keyword),
-      promptKeywords: [
-        'brandx x200 vacuum',
-        'buy brandx x200 vacuum',
-      ],
+      promptKeywords: ['brandx x200 vacuum', 'buy brandx x200 vacuum'],
       enableSupplementation: false,
     })
 

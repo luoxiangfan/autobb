@@ -1,17 +1,18 @@
 {
-    "kiroAgent.configureMCP": "Disabled",
-    "git.autoRepositoryDetection": "openEditors",
-    "git.openRepositoryInParentFolders": "never",
-    "git.repositoryScanIgnoredFolders": [
-        "openclaw",
-        "openclaw-v1",
-        "openclaw-prebuilt",
-        ".openclaw-prebuilt-tmp"
-    ],
-    "git.ignoredRepositories": [
-        "openclaw",
-        "openclaw-v1",
-        "openclaw-prebuilt"
-    ],
-    "git.untrackedChanges": "mixed"
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "kiroAgent.configureMCP": "Disabled",
+  "git.autoRepositoryDetection": "openEditors",
+  "git.openRepositoryInParentFolders": "never",
+  "git.repositoryScanIgnoredFolders": [
+    "openclaw",
+    "openclaw-v1",
+    "openclaw-prebuilt",
+    ".openclaw-prebuilt-tmp"
+  ],
+  "git.ignoredRepositories": ["openclaw", "openclaw-v1", "openclaw-prebuilt"],
+  "git.untrackedChanges": "mixed"
 }

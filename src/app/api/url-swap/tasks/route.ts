@@ -2,15 +2,15 @@
 // POST /api/url-swap/tasks - 创建换链接任务
 
 import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server';
-import { createUrlSwapTask, getUrlSwapTasks, hasUrlSwapTask } from '@/lib/url-swap';
-import { triggerUrlSwapScheduling } from '@/lib/url-swap-scheduler';
-import type { CreateUrlSwapTaskRequest } from '@/lib/url-swap-types';
-import { normalizeAffiliateLinksInput, findInvalidAffiliateLinks } from '@/lib/url-swap-link-utils';
+import { NextRequest, NextResponse } from 'next/server'
+import { createUrlSwapTask, getUrlSwapTasks, hasUrlSwapTask } from '@/lib/url-swap'
+import { triggerUrlSwapScheduling } from '@/lib/url-swap-scheduler'
+import type { CreateUrlSwapTaskRequest } from '@/lib/url-swap-types'
+import { normalizeAffiliateLinksInput, findInvalidAffiliateLinks } from '@/lib/url-swap-link-utils'
 
 function parseBooleanQuery(value: string | null): boolean {
-  if (!value) return false;
-  return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
+  if (!value) return false
+  return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase())
 }
 
 /**
@@ -20,28 +20,30 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await verifyAuth(request);
+    const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
         { error: 'unauthorized', message: authResult.error || '未登录' },
         { status: 401 }
-      );
+      )
     }
-    const userIdNum = authResult.user.userId;
-    const { searchParams } = new URL(request.url);
+    const userIdNum = authResult.user.userId
+    const { searchParams } = new URL(request.url)
 
     // 解析查询参数
-    const status = searchParams.get('status') as any;
-    const includeDeleted = parseBooleanQuery(searchParams.get('include_deleted') ?? searchParams.get('includeDeleted'));
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const status = searchParams.get('status') as any
+    const includeDeleted = parseBooleanQuery(
+      searchParams.get('include_deleted') ?? searchParams.get('includeDeleted')
+    )
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '20')
 
     const result = await getUrlSwapTasks(userIdNum, {
       status: status || undefined,
       include_deleted: includeDeleted,
       page,
-      limit
-    });
+      limit,
+    })
 
     const payload = {
       tasks: result.tasks,
@@ -49,19 +51,18 @@ export async function GET(request: NextRequest) {
         page,
         limit,
         total: result.total,
-        totalPages: Math.ceil(result.total / limit)
-      }
+        totalPages: Math.ceil(result.total / limit),
+      },
     }
 
     // 兼容前端：既返回 data 包装，也保留原字段
-    return NextResponse.json({ ...payload, data: payload });
-
+    return NextResponse.json({ ...payload, data: payload })
   } catch (error: any) {
-    console.error('[url-swap] 获取任务列表失败:', error);
+    console.error('[url-swap] 获取任务列表失败:', error)
     return NextResponse.json(
       { error: 'internal_error', message: '获取任务列表失败: ' + error.message },
       { status: 500 }
-    );
+    )
   }
 }
 
@@ -70,32 +71,32 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await verifyAuth(request);
+    const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
         { error: 'unauthorized', message: authResult.error || '未登录' },
         { status: 401 }
-      );
+      )
     }
-    const userIdNum = authResult.user.userId;
+    const userIdNum = authResult.user.userId
 
     // 获取原始请求体
-    const rawBody = await request.text();
+    const rawBody = await request.text()
     if (!rawBody) {
       return NextResponse.json(
         { error: 'validation_error', message: '请求体为空' },
         { status: 400 }
-      );
+      )
     }
 
-    let body: CreateUrlSwapTaskRequest;
+    let body: CreateUrlSwapTaskRequest
     try {
-      body = JSON.parse(rawBody) as CreateUrlSwapTaskRequest;
+      body = JSON.parse(rawBody) as CreateUrlSwapTaskRequest
     } catch (parseError: any) {
       return NextResponse.json(
         { error: 'validation_error', message: 'JSON格式错误: ' + parseError.message },
         { status: 400 }
-      );
+      )
     }
 
     // 验证必填字段
@@ -103,16 +104,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'validation_error', message: '缺少必填字段: offer_id' },
         { status: 400 }
-      );
+      )
     }
 
     // 检查是否已存在任务
-    const existing = await hasUrlSwapTask(body.offer_id, userIdNum);
+    const existing = await hasUrlSwapTask(body.offer_id, userIdNum)
     if (existing) {
       return NextResponse.json(
-        { error: 'task_exists', message: '该Offer已有关联的换链接任务，请先删除现有任务或使用更新功能' },
+        {
+          error: 'task_exists',
+          message: '该Offer已有关联的换链接任务，请先删除现有任务或使用更新功能',
+        },
         { status: 409 }
-      );
+      )
     }
 
     const swapMode = body.swap_mode === 'manual' ? 'manual' : 'auto'
@@ -126,42 +130,44 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: 'validation_error', message: '方式二需要至少配置 1 个推广链接' },
           { status: 400 }
-        );
+        )
       }
 
       const invalidLinks = findInvalidAffiliateLinks(normalizedList)
       if (invalidLinks.length > 0) {
         return NextResponse.json(
-          { error: 'validation_error', message: '推广链接需包含 http/https 协议，请检查方式二列表' },
+          {
+            error: 'validation_error',
+            message: '推广链接需包含 http/https 协议，请检查方式二列表',
+          },
           { status: 400 }
-        );
+        )
       }
 
       body.manual_affiliate_links = normalizedList
     }
 
     // 创建任务
-    const task = await createUrlSwapTask(userIdNum, body);
+    const task = await createUrlSwapTask(userIdNum, body)
 
     // 异步触发调度：避免把调度耗时算进创建接口RT，Cron会作为兜底
     void triggerUrlSwapScheduling(task.id).catch((schedulingError: any) => {
-      console.error(`[url-swap] 异步调度失败: ${task.id}`, schedulingError);
-    });
+      console.error(`[url-swap] 异步调度失败: ${task.id}`, schedulingError)
+    })
 
-    console.log(`[url-swap] 创建任务成功: ${task.id}`);
+    console.log(`[url-swap] 创建任务成功: ${task.id}`)
 
     return NextResponse.json({
       success: true,
       data: task,
       task,
-      message: '换链接任务创建成功'
-    });
-
+      message: '换链接任务创建成功',
+    })
   } catch (error: any) {
-    console.error('[url-swap] 创建任务失败:', error);
+    console.error('[url-swap] 创建任务失败:', error)
     return NextResponse.json(
       { error: 'internal_error', message: '创建任务失败: ' + error.message },
       { status: 500 }
-    );
+    )
   }
 }

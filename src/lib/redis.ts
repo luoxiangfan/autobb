@@ -46,9 +46,7 @@ export function getRedisClient(): Redis {
  */
 function generateCacheKey(url: string, language: string, pageType?: 'product' | 'store'): string {
   // 标准化URL（移除尾部斜杠和查询参数中的tracking）
-  const normalizedUrl = url
-    .replace(/\/$/, '')
-    .replace(/[?&](ref|tag|utm_[^&]+)=[^&]*/g, '')
+  const normalizedUrl = url.replace(/\/$/, '').replace(/[?&](ref|tag|utm_[^&]+)=[^&]*/g, '')
 
   // 包含页面类型以避免类型不匹配
   const typePrefix = pageType ? `${pageType}:` : ''
@@ -79,7 +77,7 @@ export interface CachedPageData {
   description: string
   text: string
   seo: SeoData
-  pageType?: 'product' | 'store'  // 页面类型（可选，避免类型不匹配）
+  pageType?: 'product' | 'store' // 页面类型（可选，避免类型不匹配）
   cachedAt: string
   url: string
   language: string
@@ -125,7 +123,13 @@ export async function getCachedPageData(
 export async function setCachedPageData(
   url: string,
   language: string,
-  data: { title: string; description: string; text: string; seo?: SeoData; pageType?: 'product' | 'store' }
+  data: {
+    title: string
+    description: string
+    text: string
+    seo?: SeoData
+    pageType?: 'product' | 'store'
+  }
 ): Promise<void> {
   try {
     const redis = getRedisClient()
@@ -146,14 +150,16 @@ export async function setCachedPageData(
         h1: [],
         imageAlts: [],
       },
-      pageType: data.pageType,  // 存储页面类型
+      pageType: data.pageType, // 存储页面类型
       url,
       language,
       cachedAt: new Date().toISOString(),
     }
 
     await redis.setex(key, CACHE_TTL, JSON.stringify(cacheData))
-    console.log(`💾 已缓存网页数据: ${url} (${data.pageType || '未指定类型'}, TTL: 7天, 大小: ${JSON.stringify(cacheData).length} bytes)`)
+    console.log(
+      `💾 已缓存网页数据: ${url} (${data.pageType || '未指定类型'}, TTL: 7天, 大小: ${JSON.stringify(cacheData).length} bytes)`
+    )
   } catch (error: any) {
     console.error('Redis写入失败:', error.message)
     // 缓存失败不影响主流程
@@ -225,12 +231,16 @@ export async function cacheKeywordVolume(
     const client = getRedisClient()
     const key = getKeywordCacheKey(keyword, country, language)
     // 修复(2025-12-19): 保存competition_level数据
-    await client.setex(key, ttlSeconds, JSON.stringify({
-      volume,
-      competition: competition || 'UNKNOWN',
-      competitionIndex: competitionIndex || 0,
-      cachedAt: Date.now()
-    }))
+    await client.setex(
+      key,
+      ttlSeconds,
+      JSON.stringify({
+        volume,
+        competition: competition || 'UNKNOWN',
+        competitionIndex: competitionIndex || 0,
+        cachedAt: Date.now(),
+      })
+    )
   } catch (error: any) {
     console.error('[Redis] Cache keyword volume error:', error.message)
   }
@@ -241,7 +251,12 @@ export async function getCachedKeywordVolume(
   keyword: string,
   country: string,
   language: string
-): Promise<{ volume: number; competition?: string; competitionIndex?: number; cachedAt: number } | null> {
+): Promise<{
+  volume: number
+  competition?: string
+  competitionIndex?: number
+  cachedAt: number
+} | null> {
   try {
     const client = getRedisClient()
     const key = getKeywordCacheKey(keyword, country, language)
@@ -261,10 +276,13 @@ export async function getBatchCachedVolumes(
   country: string,
   language: string
 ): Promise<Map<string, { volume: number; competition?: string; competitionIndex?: number }>> {
-  const result = new Map<string, { volume: number; competition?: string; competitionIndex?: number }>()
+  const result = new Map<
+    string,
+    { volume: number; competition?: string; competitionIndex?: number }
+  >()
   try {
     const client = getRedisClient()
-    const keys = keywords.map(kw => getKeywordCacheKey(kw, country, language))
+    const keys = keywords.map((kw) => getKeywordCacheKey(kw, country, language))
     if (keys.length === 0) return result
 
     const values = await client.mget(...keys)
@@ -299,12 +317,16 @@ export async function batchCacheVolumes(
     for (const item of data) {
       const key = getKeywordCacheKey(item.keyword, country, language)
       // 修复(2025-12-19): 保存competition_level数据
-      pipeline.setex(key, ttlSeconds, JSON.stringify({
-        volume: item.volume,
-        competition: item.competition || 'UNKNOWN',
-        competitionIndex: item.competitionIndex || 0,
-        cachedAt: Date.now()
-      }))
+      pipeline.setex(
+        key,
+        ttlSeconds,
+        JSON.stringify({
+          volume: item.volume,
+          competition: item.competition || 'UNKNOWN',
+          competitionIndex: item.competitionIndex || 0,
+          cachedAt: Date.now(),
+        })
+      )
     }
 
     await pipeline.exec()

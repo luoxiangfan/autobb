@@ -19,7 +19,7 @@ import {
   getUrlSwapTaskTargets,
   markUrlSwapTargetSuccess,
   markUrlSwapTargetFailure,
-  type UrlSwapErrorType
+  type UrlSwapErrorType,
 } from '@/lib/url-swap'
 import type { UrlSwapTaskData, UrlSwapTaskTarget } from '@/lib/url-swap-types'
 import { getDatabase } from '@/lib/db'
@@ -40,9 +40,12 @@ import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
 /**
  * URL域名验证
  */
-function validateUrlDomainChange(oldUrl: string, newUrl: string): {
-  valid: boolean;
-  error?: string;
+function validateUrlDomainChange(
+  oldUrl: string,
+  newUrl: string
+): {
+  valid: boolean
+  error?: string
 } {
   try {
     const oldDomain = new URL(oldUrl).hostname
@@ -51,7 +54,7 @@ function validateUrlDomainChange(oldUrl: string, newUrl: string): {
     if (oldDomain !== newDomain) {
       return {
         valid: false,
-        error: `域名变更警告: ${oldDomain} → ${newDomain}，请确认为正常换链`
+        error: `域名变更警告: ${oldDomain} → ${newDomain}，请确认为正常换链`,
       }
     }
 
@@ -195,7 +198,8 @@ async function updateSingleTargetWithLoginCustomerFallback(params: {
         finalUrlSuffix: params.finalUrlSuffix,
         userId: params.userId,
         authType: params.authType,
-        serviceAccountId: params.authType === 'service_account' ? params.serviceAccountId : undefined,
+        serviceAccountId:
+          params.authType === 'service_account' ? params.serviceAccountId : undefined,
         loginCustomerId,
         credentials: params.oauthCredentials,
         accountParentMccId: params.parentMccId,
@@ -203,7 +207,6 @@ async function updateSingleTargetWithLoginCustomerFallback(params: {
       }),
   })
 }
-
 
 async function resolveUrlSwapTargetApiAuth(params: {
   userId: number
@@ -250,8 +253,7 @@ async function resolveUrlSwapTargetApiAuth(params: {
     refreshToken: prepared.refreshToken,
     authType: prepared.apiAuth.authType,
     serviceAccountId: prepared.apiAuth.serviceAccountId,
-    oauthLoginCustomerId:
-      prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId,
+    oauthLoginCustomerId: prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId,
     serviceAccountMccId: prepared.apiAuth.serviceAccountMccId,
     parentMccId: accountMeta?.parent_mcc_id ?? null,
     oauthCredentials: prepared.oauthCredentials,
@@ -331,7 +333,7 @@ function parseStringArrayJson(input: unknown): string[] {
   if (Array.isArray(input)) {
     return input
       .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
-      .map(v => v.trim())
+      .map((v) => v.trim())
   }
   if (typeof input !== 'string' || !input.trim()) return []
   try {
@@ -339,7 +341,7 @@ function parseStringArrayJson(input: unknown): string[] {
     if (!Array.isArray(parsed)) return []
     return parsed
       .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
-      .map(v => v.trim())
+      .map((v) => v.trim())
   } catch {
     return []
   }
@@ -355,7 +357,16 @@ function isHttpUrl(value: string): boolean {
 export async function executeUrlSwapTask(
   task: Task<UrlSwapTaskData>
 ): Promise<{ success: boolean; changed: boolean }> {
-  const { taskId, offerId, affiliateLink, targetCountry, googleCustomerId, googleCampaignId, currentFinalUrl, currentFinalUrlSuffix } = task.data
+  const {
+    taskId,
+    offerId,
+    affiliateLink,
+    targetCountry,
+    googleCustomerId,
+    googleCampaignId,
+    currentFinalUrl,
+    currentFinalUrlSuffix,
+  } = task.data
 
   console.log(`[url-swap-executor] 开始执行任务: ${taskId}, offer: ${offerId}`)
   await assertUserExecutionAllowed(task.userId, { source: `url-swap:${task.id}` })
@@ -366,7 +377,8 @@ export async function executeUrlSwapTask(
   try {
     // 读取任务最新配置（用于方式二/以及避免队列数据过期）
     const db = await getDatabase()
-    const taskRow = await db.queryOne<any>(`
+    const taskRow = await db.queryOne<any>(
+      `
       SELECT
         status,
         is_deleted,
@@ -379,7 +391,9 @@ export async function executeUrlSwapTask(
         google_campaign_id
       FROM url_swap_tasks
       WHERE id = ?
-    `, [taskId])
+    `,
+      [taskId]
+    )
 
     if (!taskRow) {
       throw new Error('任务不存在或已被删除')
@@ -388,33 +402,44 @@ export async function executeUrlSwapTask(
     const status = String(taskRow.status || '').toLowerCase()
     const isDeleted = taskRow.is_deleted === true || Number(taskRow.is_deleted) === 1
     if (isDeleted || status !== 'enabled') {
-      console.log(`[url-swap-executor] 跳过执行: taskId=${taskId}, status=${status || 'unknown'}, isDeleted=${isDeleted}`)
+      console.log(
+        `[url-swap-executor] 跳过执行: taskId=${taskId}, status=${status || 'unknown'}, isDeleted=${isDeleted}`
+      )
       return { success: false, changed: false }
     }
 
     const swapMode = taskRow.swap_mode === 'manual' ? 'manual' : 'auto'
     const effectiveCustomerId = (taskRow.google_customer_id ?? googleCustomerId) as string | null
     const effectiveCampaignId = (taskRow.google_campaign_id ?? googleCampaignId) as string | null
-    effectiveCurrentFinalUrl = (typeof taskRow.current_final_url === 'string' ? taskRow.current_final_url : currentFinalUrl) as string | null
-    effectiveCurrentFinalUrlSuffix = (typeof taskRow.current_final_url_suffix === 'string' ? taskRow.current_final_url_suffix : currentFinalUrlSuffix) as string | null
+    effectiveCurrentFinalUrl = (
+      typeof taskRow.current_final_url === 'string' ? taskRow.current_final_url : currentFinalUrl
+    ) as string | null
+    effectiveCurrentFinalUrlSuffix = (
+      typeof taskRow.current_final_url_suffix === 'string'
+        ? taskRow.current_final_url_suffix
+        : currentFinalUrlSuffix
+    ) as string | null
 
     const activeTargets = await getUrlSwapTaskTargets(taskId, task.userId, { status: 'active' })
-    const fallbackTargets: UrlSwapTaskTarget[] = (!activeTargets.length && effectiveCustomerId && effectiveCampaignId)
-      ? [{
-          id: '',
-          task_id: taskId,
-          offer_id: offerId,
-          google_ads_account_id: 0,
-          google_customer_id: effectiveCustomerId,
-          google_campaign_id: effectiveCampaignId,
-          status: 'active',
-          consecutive_failures: 0,
-          last_success_at: null,
-          last_error: null,
-          created_at: '',
-          updated_at: ''
-        }]
-      : []
+    const fallbackTargets: UrlSwapTaskTarget[] =
+      !activeTargets.length && effectiveCustomerId && effectiveCampaignId
+        ? [
+            {
+              id: '',
+              task_id: taskId,
+              offer_id: offerId,
+              google_ads_account_id: 0,
+              google_customer_id: effectiveCustomerId,
+              google_campaign_id: effectiveCampaignId,
+              status: 'active',
+              consecutive_failures: 0,
+              last_success_at: null,
+              last_error: null,
+              created_at: '',
+              updated_at: '',
+            },
+          ]
+        : []
     const taskTargets = activeTargets.length > 0 ? activeTargets : fallbackTargets
 
     // =========================
@@ -427,7 +452,8 @@ export async function executeUrlSwapTask(
       }
 
       const cursorRaw = taskRow.manual_suffix_cursor
-      const cursor = typeof cursorRaw === 'number' ? cursorRaw : parseInt(String(cursorRaw ?? '0'), 10)
+      const cursor =
+        typeof cursorRaw === 'number' ? cursorRaw : parseInt(String(cursorRaw ?? '0'), 10)
       const safeCursor = Number.isFinite(cursor) && cursor >= 0 ? cursor : 0
 
       const selectedLink = manualAffiliateLinks[safeCursor % manualAffiliateLinks.length]
@@ -437,12 +463,16 @@ export async function executeUrlSwapTask(
         throw new Error('推广链接格式错误（需http/https），请重新配置方式二列表')
       }
 
-      const currentUrlFromDb = typeof taskRow.current_final_url === 'string' ? taskRow.current_final_url : ''
-      const currentSuffixFromDb = typeof taskRow.current_final_url_suffix === 'string' ? taskRow.current_final_url_suffix : ''
+      const currentUrlFromDb =
+        typeof taskRow.current_final_url === 'string' ? taskRow.current_final_url : ''
+      const currentSuffixFromDb =
+        typeof taskRow.current_final_url_suffix === 'string' ? taskRow.current_final_url_suffix : ''
 
       // 确保代理池已按该用户的设置加载
       await initializeProxyPool(task.userId, targetCountry)
-      await assertUserExecutionAllowed(task.userId, { source: `url-swap:manual-before-resolve:${task.id}` })
+      await assertUserExecutionAllowed(task.userId, {
+        source: `url-swap:manual-before-resolve:${task.id}`,
+      })
 
       console.log(`[url-swap-executor]（manual）解析推广链接: ${selectedLink}`)
       const resolved = await resolveAffiliateLinkForUrlSwap({
@@ -451,8 +481,8 @@ export async function executeUrlSwapTask(
         userId: task.userId,
       })
 
-      const urlChanged = resolved.finalUrl !== currentUrlFromDb ||
-                         resolved.finalUrlSuffix !== currentSuffixFromDb
+      const urlChanged =
+        resolved.finalUrl !== currentUrlFromDb || resolved.finalUrlSuffix !== currentSuffixFromDb
 
       if (!taskTargets.length) {
         const message =
@@ -466,7 +496,7 @@ export async function executeUrlSwapTask(
           new_final_url: resolved.finalUrl,
           new_final_url_suffix: resolved.finalUrlSuffix,
           success: false,
-          error_message: message
+          error_message: message,
         })
 
         await updateTaskStats(taskId, false, false)
@@ -487,7 +517,8 @@ export async function executeUrlSwapTask(
         ? taskTargets
         : taskTargets.filter(shouldRetryTargetOnSameSuffix)
 
-      let updateResult: { successCount: number; failureCount: number; failures: string[] } | null = null
+      let updateResult: { successCount: number; failureCount: number; failures: string[] } | null =
+        null
       if (targetsToUpdate.length > 0) {
         console.log(`[url-swap-executor]（manual）更新Google Ads目标数: ${targetsToUpdate.length}`)
 
@@ -502,7 +533,9 @@ export async function executeUrlSwapTask(
           })
         } catch (adsError: any) {
           const message = formatGoogleAdsError(adsError)
-          adsApiError = message.includes('Google Ads') ? new Error(message) : new Error(`Google Ads API调用失败: ${message}`)
+          adsApiError = message.includes('Google Ads')
+            ? new Error(message)
+            : new Error(`Google Ads API调用失败: ${message}`)
         }
 
         if (adsApiError) {
@@ -521,10 +554,12 @@ export async function executeUrlSwapTask(
           previous_final_url_suffix: currentSuffixFromDb,
           new_final_url: resolved.finalUrl,
           new_final_url_suffix: resolved.finalUrlSuffix,
-          success: true
+          success: true,
         })
 
-        await updateTaskAfterSwap(taskId, resolved.finalUrl, resolved.finalUrlSuffix, { manualSuffixCursor: nextCursor })
+        await updateTaskAfterSwap(taskId, resolved.finalUrl, resolved.finalUrlSuffix, {
+          manualSuffixCursor: nextCursor,
+        })
       } else {
         const hasUpdates = targetsToUpdate.length > 0
         const hasSuccess = (updateResult?.successCount ?? 0) > 0
@@ -539,7 +574,7 @@ export async function executeUrlSwapTask(
           previous_final_url_suffix: currentSuffixFromDb,
           new_final_url: resolved.finalUrl,
           new_final_url_suffix: resolved.finalUrlSuffix,
-          success: true
+          success: true,
         })
 
         await updateTaskAfterManualAdvance(taskId, nextCursor)
@@ -564,7 +599,7 @@ export async function executeUrlSwapTask(
         new_final_url: '',
         new_final_url_suffix: '',
         success: false,
-        error_message: message
+        error_message: message,
       })
 
       await updateTaskStats(taskId, false, false)
@@ -574,7 +609,9 @@ export async function executeUrlSwapTask(
 
     // 确保代理池已按该用户的设置加载（executor 运行在队列进程中，不能假设已初始化）
     await initializeProxyPool(task.userId, targetCountry)
-    await assertUserExecutionAllowed(task.userId, { source: `url-swap:auto-before-resolve:${task.id}` })
+    await assertUserExecutionAllowed(task.userId, {
+      source: `url-swap:auto-before-resolve:${task.id}`,
+    })
 
     // 1. 解析推广链接（禁用缓存，确保获取最新URL）
     console.log(`[url-swap-executor] 解析推广链接: ${affiliateLink}`)
@@ -584,11 +621,14 @@ export async function executeUrlSwapTask(
       userId: task.userId,
     })
 
-    console.log(`[url-swap-executor] 解析结果: finalUrl=${resolved.finalUrl}, suffix=${resolved.finalUrlSuffix}`)
+    console.log(
+      `[url-swap-executor] 解析结果: finalUrl=${resolved.finalUrl}, suffix=${resolved.finalUrlSuffix}`
+    )
 
     // 2. 对比是否发生变化
-    const urlChanged = resolved.finalUrl !== effectiveCurrentFinalUrl ||
-                       resolved.finalUrlSuffix !== effectiveCurrentFinalUrlSuffix
+    const urlChanged =
+      resolved.finalUrl !== effectiveCurrentFinalUrl ||
+      resolved.finalUrlSuffix !== effectiveCurrentFinalUrlSuffix
 
     if (!urlChanged) {
       const retryTargets = taskTargets.filter(shouldRetryTargetOnSameSuffix)
@@ -600,7 +640,8 @@ export async function executeUrlSwapTask(
       }
 
       console.log(`[url-swap-executor] URL未变化，尝试重试失败目标: ${retryTargets.length}`)
-      let retryResult: { successCount: number; failureCount: number; failures: string[] } | null = null
+      let retryResult: { successCount: number; failureCount: number; failures: string[] } | null =
+        null
       try {
         retryResult = await updateTargetsFinalUrlSuffix({
           targets: retryTargets,
@@ -610,7 +651,9 @@ export async function executeUrlSwapTask(
         })
       } catch (adsError: any) {
         const message = formatGoogleAdsError(adsError)
-        throw new Error(message.includes('Google Ads') ? message : `Google Ads API调用失败: ${message}`)
+        throw new Error(
+          message.includes('Google Ads') ? message : `Google Ads API调用失败: ${message}`
+        )
       }
 
       const hasSuccess = (retryResult?.successCount ?? 0) > 0
@@ -636,7 +679,8 @@ export async function executeUrlSwapTask(
 
     // 4. 调用Google Ads API更新（多目标）
     const targetsToUpdate = taskTargets
-    let updateResult: { successCount: number; failureCount: number; failures: string[] } | null = null
+    let updateResult: { successCount: number; failureCount: number; failures: string[] } | null =
+      null
 
     if (targetsToUpdate.length > 0) {
       console.log(`[url-swap-executor] 更新Google Ads目标数: ${targetsToUpdate.length}`)
@@ -653,7 +697,9 @@ export async function executeUrlSwapTask(
       } catch (adsError: any) {
         const message = formatGoogleAdsError(adsError)
         console.error(`[url-swap-executor] Google Ads更新失败: ${taskId}`, message)
-        throw new Error(message.includes('Google Ads') ? message : `Google Ads API调用失败: ${message}`)
+        throw new Error(
+          message.includes('Google Ads') ? message : `Google Ads API调用失败: ${message}`
+        )
       }
     }
 
@@ -669,7 +715,7 @@ export async function executeUrlSwapTask(
       previous_final_url_suffix: effectiveCurrentFinalUrlSuffix || '',
       new_final_url: resolved.finalUrl,
       new_final_url_suffix: resolved.finalUrlSuffix,
-      success: true
+      success: true,
     })
 
     // 6. 更新任务状态
@@ -677,7 +723,6 @@ export async function executeUrlSwapTask(
 
     console.log(`[url-swap-executor] 换链成功: ${taskId}`)
     return { success: true, changed: true }
-
   } catch (error: any) {
     const rawMessage = error?.message || String(error)
     console.error(`[url-swap-executor] 执行失败: ${taskId}`, rawMessage)
@@ -690,8 +735,8 @@ export async function executeUrlSwapTask(
     if (
       rawMessage.includes('IPRocket') &&
       (rawMessage.includes('Business abnormality') ||
-       rawMessage.includes('business error') ||
-       rawMessage.includes('contact customer service'))
+        rawMessage.includes('business error') ||
+        rawMessage.includes('contact customer service'))
     ) {
       errorType = 'link_resolution'
       enhancedMessage =
@@ -738,16 +783,19 @@ export async function executeUrlSwapTask(
     ) {
       errorType = 'google_ads_api'
       const formattedMessage = formatGoogleAdsError(error)
-      const message = formattedMessage && formattedMessage !== 'Google Ads API error'
-        ? formattedMessage
-        : rawMessage
+      const message =
+        formattedMessage && formattedMessage !== 'Google Ads API error'
+          ? formattedMessage
+          : rawMessage
       if (isOAuthInvalidGrantError(rawMessage)) {
         enhancedMessage =
           `Google OAuth 授权已过期或被撤销（invalid_grant），无法更新 Google Ads。\n` +
           `请前往设置页面重新授权，然后重新启用该任务。\n\n` +
           `错误详情: ${message}`
       } else {
-        enhancedMessage = message.startsWith('Google Ads') ? message : `Google Ads API调用失败: ${message}`
+        enhancedMessage = message.startsWith('Google Ads')
+          ? message
+          : `Google Ads API调用失败: ${message}`
       }
     }
 
@@ -759,7 +807,7 @@ export async function executeUrlSwapTask(
       new_final_url: '',
       new_final_url_suffix: '',
       success: false,
-      error_message: enhancedMessage
+      error_message: enhancedMessage,
     })
 
     // 更新失败统计
@@ -775,18 +823,17 @@ export async function executeUrlSwapTask(
 /**
  * 更新任务统计
  */
-async function updateTaskStats(
-  taskId: string,
-  success: boolean,
-  changed: boolean
-): Promise<void> {
+async function updateTaskStats(taskId: string, success: boolean, changed: boolean): Promise<void> {
   const db = await getDatabase()
   const now = new Date().toISOString()
 
   // 获取任务信息以计算下次执行时间
-  const taskRow = await db.queryOne<{ swap_interval_minutes: number }>(`
+  const taskRow = await db.queryOne<{ swap_interval_minutes: number }>(
+    `
     SELECT swap_interval_minutes FROM url_swap_tasks WHERE id = ?
-  `, [taskId])
+  `,
+    [taskId]
+  )
 
   if (!taskRow) {
     console.error(`[url-swap-executor] 任务不存在: ${taskId}`)
@@ -797,7 +844,8 @@ async function updateTaskStats(
   const nextSwapAt = calculateNextSwapAt(taskRow.swap_interval_minutes)
 
   if (success) {
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE url_swap_tasks
       SET total_swaps = total_swaps + 1,
           ${changed ? 'url_changed_count = url_changed_count + 1,' : ''}
@@ -808,14 +856,19 @@ async function updateTaskStats(
           next_swap_at = ?,
           updated_at = ?
       WHERE id = ?
-    `, [nextSwapAt.toISOString(), now, taskId])
+    `,
+      [nextSwapAt.toISOString(), now, taskId]
+    )
   } else {
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE url_swap_tasks
       SET total_swaps = total_swaps + 1,
           failed_swaps = failed_swaps + 1,
           updated_at = ?
       WHERE id = ?
-    `, [now, taskId])
+    `,
+      [now, taskId]
+    )
   }
 }

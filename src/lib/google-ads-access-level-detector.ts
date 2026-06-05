@@ -66,10 +66,7 @@ function detectLevelFromError(errorMessage: string): ApiAccessLevel | null {
   }
 
   // 标准权限提示（部分返回消息可能包含 approved/granted + standard access）
-  if (
-    msg.includes('standard access')
-    && (msg.includes('approved') || msg.includes('granted'))
-  ) {
+  if (msg.includes('standard access') && (msg.includes('approved') || msg.includes('granted'))) {
     return 'standard'
   }
 
@@ -132,7 +129,12 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
 
     if (!credentials?.refresh_token) {
       const storedLevel = ctx.apiAccessLevel
-      if (storedLevel === 'test' || storedLevel === 'explorer' || storedLevel === 'basic' || storedLevel === 'standard') {
+      if (
+        storedLevel === 'test' ||
+        storedLevel === 'explorer' ||
+        storedLevel === 'basic' ||
+        storedLevel === 'standard'
+      ) {
         return {
           level: storedLevel,
           detectedAt: now,
@@ -147,7 +149,7 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
     const client = getGoogleAdsClient({
       client_id: credentials.client_id,
       client_secret: credentials.client_secret,
-      developer_token: credentials.developer_token
+      developer_token: credentials.developer_token,
     })
 
     // 尝试获取可访问的客户账户列表
@@ -157,9 +159,14 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
 
       // listAccessibleCustomers 返回 { resource_names: ['customers/123', ...] }
       const resourceNames = Array.isArray(response.resource_names) ? response.resource_names : []
-      const storedLevel = String((credentials as { api_access_level?: string }).api_access_level || '').toLowerCase()
+      const storedLevel = String(
+        (credentials as { api_access_level?: string }).api_access_level || ''
+      ).toLowerCase()
       const storedLevelResolved: ApiAccessLevel | null =
-        storedLevel === 'test' || storedLevel === 'explorer' || storedLevel === 'basic' || storedLevel === 'standard'
+        storedLevel === 'test' ||
+        storedLevel === 'explorer' ||
+        storedLevel === 'basic' ||
+        storedLevel === 'standard'
           ? storedLevel
           : null
 
@@ -193,7 +200,8 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
             geo_target_constants: ['geoTargetConstants/2840'],
           } as any)
 
-          const upgradedLevel: ApiAccessLevel = storedLevelResolved === 'standard' ? 'standard' : 'basic'
+          const upgradedLevel: ApiAccessLevel =
+            storedLevelResolved === 'standard' ? 'standard' : 'basic'
           return {
             level: upgradedLevel,
             detectedAt: now,
@@ -208,7 +216,7 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
               level: detectedFromProbe,
               detectedAt: now,
               method: 'error_pattern',
-              details: probeErrorMessage
+              details: probeErrorMessage,
             }
           }
           lastProbeError = probeErrorMessage
@@ -224,7 +232,7 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
         level: fallbackLevel,
         detectedAt: now,
         method: 'default',
-        details: `Listed ${resourceNames.length} accessible customers; keyword planner probe inconclusive${lastProbeError ? `: ${lastProbeError}` : ''}`
+        details: `Listed ${resourceNames.length} accessible customers; keyword planner probe inconclusive${lastProbeError ? `: ${lastProbeError}` : ''}`,
       }
     } catch (apiError: any) {
       // 从错误消息中检测访问级别
@@ -236,7 +244,7 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
           level: detectedLevel,
           detectedAt: now,
           method: 'error_pattern',
-          details: errorMessage
+          details: errorMessage,
         }
       }
 
@@ -246,7 +254,7 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
         level: 'explorer',
         detectedAt: now,
         method: 'default',
-        details: 'Could not detect from error, using default'
+        details: 'Could not detect from error, using default',
       }
     }
   } catch (error: any) {
@@ -265,7 +273,7 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
         level: detectedLevel,
         detectedAt: now,
         method: 'error_pattern',
-        details: errorMessage
+        details: errorMessage,
       }
     }
 
@@ -274,7 +282,7 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
       level: 'explorer',
       detectedAt: now,
       method: 'default',
-      details: 'Detection failed, using default'
+      details: 'Detection failed, using default',
     }
   }
 }
@@ -293,22 +301,30 @@ export async function updateApiAccessLevel(
   const updatedAt = nowFunc(db.type)
 
   if (authType === 'oauth') {
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE google_ads_credentials
       SET api_access_level = ?, updated_at = ${updatedAt}
       WHERE user_id = ?
-    `, [level, ownerUserId])
+    `,
+      [level, ownerUserId]
+    )
   } else {
     const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE google_ads_service_accounts
       SET api_access_level = ?, updated_at = ${updatedAt}
       WHERE user_id = ? AND ${isActiveCondition}
-    `, [level, ownerUserId])
+    `,
+      [level, ownerUserId]
+    )
   }
 
   if (ownerUserId !== userId) {
-    console.log(`✅ 已更新共享凭证所有者 ${ownerUserId} 的API访问级别: ${level} (请求用户 ${userId})`)
+    console.log(
+      `✅ 已更新共享凭证所有者 ${ownerUserId} 的API访问级别: ${level} (请求用户 ${userId})`
+    )
   } else {
     console.log(`✅ 已更新用户 ${userId} 的API访问级别: ${level}`)
   }
@@ -332,7 +348,7 @@ export async function autoDetectAndUpdateAccessLevel(
     userId,
     level: result.level,
     method: result.method,
-    details: result.details
+    details: result.details,
   })
 
   return result.level

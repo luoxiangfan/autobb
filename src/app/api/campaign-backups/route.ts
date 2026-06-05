@@ -26,16 +26,20 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '100', 10)
     const offset = parseInt(searchParams.get('offset') || '0', 10)
 
-    const { backups, total, limit: appliedLimit, offset: appliedOffset } =
-      await listCampaignBackups({
-        userId,
-        startDate,
-        endDate,
-        backupSource,
-        limit,
-        offset,
-        withOfferInfo: true,
-      })
+    const {
+      backups,
+      total,
+      limit: appliedLimit,
+      offset: appliedOffset,
+    } = await listCampaignBackups({
+      userId,
+      startDate,
+      endDate,
+      backupSource,
+      limit,
+      offset,
+      withOfferInfo: true,
+    })
 
     return NextResponse.json({
       success: true,
@@ -46,9 +50,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('获取备份列表失败:', error)
-    return NextResponse.json(
-      { error: error.message || '获取失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取失败' }, { status: 500 })
   }
 }

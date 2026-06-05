@@ -9,7 +9,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/json-field'
 import { normalizeAdCreativeGenerationMode } from '@/lib/ad-creative-generation-mode'
-import { normalizeCreativeTaskError, toCreativeTaskErrorResponseFields } from '@/lib/creative-task-error'
+import {
+  normalizeCreativeTaskError,
+  toCreativeTaskErrorResponseFields,
+} from '@/lib/creative-task-error'
 
 interface CreativeTaskRow {
   id: string
@@ -28,7 +31,9 @@ interface CreativeTaskRow {
 }
 
 function parseBooleanQuery(value: string | null): boolean {
-  const normalized = String(value || '').trim().toLowerCase()
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   return normalized === '1' || normalized === 'true' || normalized === 'yes'
 }
 
@@ -47,7 +52,9 @@ function resolveRecommendedPollIntervalMs(task: CreativeTaskRow): number {
     return 0
   }
 
-  const stage = String(task.stage || '').trim().toLowerCase()
+  const stage = String(task.stage || '')
+    .trim()
+    .toLowerCase()
   if (task.status === 'pending') return 3000
   if (stage === 'generating' || stage === 'evaluating') return 2500
   if (stage === 'preparing' || stage === 'saving') return 1500
@@ -56,20 +63,15 @@ function resolveRecommendedPollIntervalMs(task: CreativeTaskRow): number {
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { taskId: string } }
-) {
+export async function GET(req: NextRequest, props: { params: Promise<{ taskId: string }> }) {
+  const params = await props.params
   const db = getDatabase()
   const { taskId } = params
 
   try {
     const authResult = await verifyAuth(req)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: '请先登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
     }
     const userIdNum = authResult.user.userId
 
@@ -94,7 +96,12 @@ export async function GET(
       )
     }
 
-    if (waitForUpdate && lastUpdatedAt && task.updated_at === lastUpdatedAt && task.status === 'running') {
+    if (
+      waitForUpdate &&
+      lastUpdatedAt &&
+      task.updated_at === lastUpdatedAt &&
+      task.status === 'running'
+    ) {
       const startedAt = Date.now()
       while (Date.now() - startedAt < timeoutMs) {
         await sleep(600)
@@ -107,12 +114,17 @@ export async function GET(
       }
     }
 
-    const parsedError = task.error !== null && task.error !== undefined
-      ? parseJsonField<any>(task.error, task.error)
-      : null
-    const normalizedError = task.status === 'failed'
-      ? normalizeCreativeTaskError(parsedError ?? task.error ?? task.message ?? '任务失败', task.message || '任务失败')
-      : null
+    const parsedError =
+      task.error !== null && task.error !== undefined
+        ? parseJsonField<any>(task.error, task.error)
+        : null
+    const normalizedError =
+      task.status === 'failed'
+        ? normalizeCreativeTaskError(
+            parsedError ?? task.error ?? task.message ?? '任务失败',
+            task.message || '任务失败'
+          )
+        : null
 
     return NextResponse.json({
       taskId: task.id,
@@ -126,13 +138,15 @@ export async function GET(
       result: parseJsonField(task.result, null),
       error: normalizedError?.userMessage || null,
       errorDetails: normalizedError?.details || null,
-      ...(normalizedError ? toCreativeTaskErrorResponseFields(normalizedError) : {
-        errorCode: null,
-        errorCategory: null,
-        errorUserMessage: null,
-        errorRetryable: null,
-        structuredError: null,
-      }),
+      ...(normalizedError
+        ? toCreativeTaskErrorResponseFields(normalizedError)
+        : {
+            errorCode: null,
+            errorCategory: null,
+            errorUserMessage: null,
+            errorRetryable: null,
+            structuredError: null,
+          }),
       createdAt: task.created_at,
       updatedAt: task.updated_at,
       startedAt: task.started_at,
@@ -147,7 +161,7 @@ export async function GET(
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message || '查询失败'
+        message: error.message || '查询失败',
       },
       { status: 500 }
     )

@@ -21,10 +21,8 @@ import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 export const maxDuration = 120
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   const parentRequestId = req.headers.get('x-request-id') || undefined
   const offerId = parsePositiveIntegerOfferId(params.id)
   if (!offerId) {
@@ -37,10 +35,7 @@ export async function POST(
   try {
     const authResult = await verifyAuth(req)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: '请先登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
     }
     const userIdNum = authResult.user.userId
 
@@ -65,19 +60,23 @@ export async function POST(
     const applyResult = await applyOfferUpdateFromBody(offerId, userIdNum, requestBody)
     if ('error' in applyResult) {
       return NextResponse.json(
-        { error: applyResult.status === 404 ? 'Not found' : 'Invalid data', message: applyResult.error },
+        {
+          error: applyResult.status === 404 ? 'Not found' : 'Invalid data',
+          message: applyResult.error,
+        },
         { status: applyResult.status }
       )
     }
 
     const offer = applyResult.offer
-    const extractionMode = ('mode' in modeFromBody ? modeFromBody.mode : undefined)
-      ?? normalizeOfferExtractionMode(offer.extraction_mode)
+    const extractionMode =
+      ('mode' in modeFromBody ? modeFromBody.mode : undefined) ??
+      normalizeOfferExtractionMode(offer.extraction_mode)
 
     const pickedUpdate = pickOfferUpdateBody(requestBody)
     const extractionModePersistedByApply = Boolean(
-      pickedUpdate
-      && (pickedUpdate.extraction_mode !== undefined || pickedUpdate.extractionMode !== undefined)
+      pickedUpdate &&
+      (pickedUpdate.extraction_mode !== undefined || pickedUpdate.extractionMode !== undefined)
     )
 
     await assertOfferAvailableForExtractionEnqueue(offer)

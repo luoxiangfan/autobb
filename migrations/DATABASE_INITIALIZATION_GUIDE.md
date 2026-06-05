@@ -45,6 +45,7 @@ npm run dev
 ```
 
 完成！数据库已就绪，包含：
+
 - ✅ 40个业务表
 - ✅ 89+个性能优化索引
 - ✅ 12组AI Prompt模板（70个版本历史）
@@ -319,6 +320,7 @@ tsx scripts/validate-db-schema.ts --sqlite-only
 **原因**: 数据库已存在且包含数据
 
 **解决方案**:
+
 ```bash
 # 备份现有数据（如有需要）
 cp data/autoads.db data/autoads_backup.db
@@ -333,6 +335,7 @@ npm run db:init
 **原因**: SQLite数据库被其他进程占用
 
 **解决方案**:
+
 ```bash
 # 1. 停止所有Node.js进程
 pkill -f node
@@ -350,6 +353,7 @@ npm run dev
 **原因**: 初始化脚本中的INSERT语句可能被截断
 
 **解决方案**:
+
 ```bash
 # 使用完整的初始化脚本重新初始化
 npm run db:reset
@@ -364,6 +368,7 @@ sqlite3 data/autoads.db "SELECT COUNT(*) FROM prompt_versions WHERE is_active = 
 **原因**: PostgreSQL服务未运行或连接配置错误
 
 **解决方案**:
+
 ```bash
 # 检查PostgreSQL状态
 # macOS
@@ -388,6 +393,7 @@ psql -U autoads_user -d autoads -h localhost
 **原因**: 插入数据时违反了外键约束
 
 **解决方案**:
+
 ```sql
 -- 检查外键约束
 PRAGMA foreign_key_list(table_name);

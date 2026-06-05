@@ -10,7 +10,7 @@ import {
   getBucketInfo,
   determineClusteringStrategy,
   type OfferKeywordPool,
-  type BucketType
+  type BucketType,
 } from '@/lib/offer-keyword-pool'
 import { POST as rebuildOfferPost } from '@/app/api/offers/[id]/rebuild/route'
 import { getCreativeTypeForBucketSlot } from '@/lib/creative-type'
@@ -27,7 +27,10 @@ function parseBooleanFlag(value: unknown): boolean {
   return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on'
 }
 
-function getCreativeSlotDescription(slot: CanonicalBucketSlot, linkType: 'product' | 'store'): string {
+function getCreativeSlotDescription(
+  slot: CanonicalBucketSlot,
+  linkType: 'product' | 'store'
+): string {
   if (slot === 'A') {
     return linkType === 'store'
       ? '品牌词必须与真实商品集合或核心品类一起出现'
@@ -51,19 +54,24 @@ function buildCanonicalBucketDetails(params: {
   const linkType = params.pool.linkType === 'store' ? 'store' : 'product'
   const slots: CanonicalBucketSlot[] = ['A', 'B', 'D']
 
-  return Object.fromEntries(slots.map((slot) => {
-    const slotInfo = getBucketInfo(params.pool, slot)
-    return [slot, {
-      creativeType: getCreativeTypeForBucketSlot(slot),
-      intent: slotInfo.intent,
-      intentEn: slotInfo.intentEn,
-      keywords: slotInfo.keywords,
-      count: slotInfo.keywords.length,
-      isUsed: params.usedBuckets.includes(slot),
-      isAvailable: params.availableBuckets.includes(slot),
-      description: getCreativeSlotDescription(slot, linkType),
-    }]
-  }))
+  return Object.fromEntries(
+    slots.map((slot) => {
+      const slotInfo = getBucketInfo(params.pool, slot)
+      return [
+        slot,
+        {
+          creativeType: getCreativeTypeForBucketSlot(slot),
+          intent: slotInfo.intent,
+          intentEn: slotInfo.intentEn,
+          keywords: slotInfo.keywords,
+          count: slotInfo.keywords.length,
+          isUsed: params.usedBuckets.includes(slot),
+          isAvailable: params.availableBuckets.includes(slot),
+          description: getCreativeSlotDescription(slot, linkType),
+        },
+      ]
+    })
+  )
 }
 
 function buildCanonicalBucketAliases(pool: OfferKeywordPool) {
@@ -80,10 +88,7 @@ function buildCanonicalBucketAliases(pool: OfferKeywordPool) {
   }
 }
 
-function buildRawBucketDetails(params: {
-  pool: OfferKeywordPool
-  usedBuckets: BucketType[]
-}) {
+function buildRawBucketDetails(params: { pool: OfferKeywordPool; usedBuckets: BucketType[] }) {
   return {
     A: {
       intent: params.pool.bucketAIntent,
@@ -138,10 +143,8 @@ function buildRawBucketCounts(pool: OfferKeywordPool) {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 
@@ -160,10 +163,7 @@ export async function GET(
     // 验证 Offer 存在且属于当前用户
     const offer = await findOfferById(offerId, userIdNum)
     if (!offer) {
-      return NextResponse.json(
-        { error: 'Offer 不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Offer 不存在或无权访问' }, { status: 404 })
     }
 
     // 获取关键词池
@@ -175,8 +175,8 @@ export async function GET(
         data: {
           offerId,
           exists: false,
-          message: '关键词池尚未创建，请调用 POST 方法生成'
-        }
+          message: '关键词池尚未创建，请调用 POST 方法生成',
+        },
       })
     }
 
@@ -220,8 +220,8 @@ export async function GET(
 
         // 时间戳
         createdAt: pool.createdAt,
-        updatedAt: pool.updatedAt
-      }
+        updatedAt: pool.updatedAt,
+      },
     }
 
     // 如果请求包含桶详情
@@ -230,7 +230,7 @@ export async function GET(
         brand: {
           keywords: pool.brandKeywords,
           count: pool.brandKeywords.length,
-          description: '纯品牌词（所有创意共享）'
+          description: '纯品牌词（所有创意共享）',
         },
         A: {
           intent: canonicalBuckets.A.intent,
@@ -238,7 +238,7 @@ export async function GET(
           keywords: canonicalBuckets.A.keywords,
           count: canonicalBuckets.A.keywords.length,
           isUsed: usedBuckets.includes('A'),
-          description: 'canonical creative slot：品牌意图关键词集合'
+          description: 'canonical creative slot：品牌意图关键词集合',
         },
         B: {
           intent: canonicalBuckets.B.intent,
@@ -246,7 +246,7 @@ export async function GET(
           keywords: canonicalBuckets.B.keywords,
           count: canonicalBuckets.B.keywords.length,
           isUsed: usedBuckets.includes('B'),
-          description: 'canonical creative slot：商品型号/产品族意图关键词集合'
+          description: 'canonical creative slot：商品型号/产品族意图关键词集合',
         },
         C: {
           intent: canonicalBuckets.C.intent,
@@ -254,7 +254,7 @@ export async function GET(
           keywords: canonicalBuckets.C.keywords,
           count: canonicalBuckets.C.keywords.length,
           isUsed: usedBuckets.includes('B'),
-          description: '兼容别名：旧 C 桶在当前策略下等价于商品型号/产品族意图'
+          description: '兼容别名：旧 C 桶在当前策略下等价于商品型号/产品族意图',
         },
         D: {
           intent: canonicalBuckets.D.intent,
@@ -262,7 +262,7 @@ export async function GET(
           keywords: canonicalBuckets.D.keywords,
           count: canonicalBuckets.D.keywords.length,
           isUsed: usedBuckets.includes('D'),
-          description: 'canonical creative slot：商品需求意图关键词集合'
+          description: 'canonical creative slot：商品需求意图关键词集合',
         },
       }
 
@@ -287,10 +287,7 @@ export async function GET(
     return NextResponse.json(response)
   } catch (error: any) {
     console.error('获取关键词池失败:', error)
-    return NextResponse.json(
-      { error: error.message || '获取关键词池失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取关键词池失败' }, { status: 500 })
   }
 }
 
@@ -302,10 +299,8 @@ export async function GET(
  * - forceRegenerate: boolean - 是否触发重建Offer（替代关键词池重建）
  * - keywords: string[] - 可选，指定关键词列表（否则自动提取）
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 
@@ -324,10 +319,7 @@ export async function POST(
     // 验证 Offer 存在且属于当前用户
     const offer = await findOfferById(offerId, userIdNum)
     if (!offer) {
-      return NextResponse.json(
-        { error: 'Offer 不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Offer 不存在或无权访问' }, { status: 404 })
     }
 
     // 解析请求体
@@ -341,7 +333,7 @@ export async function POST(
 
     if (forceRegenerate) {
       console.log(`🔁 forceRegenerate=true，改为触发 /api/offers/${offerId}/rebuild`)
-      return rebuildOfferPost(request, { params })
+      return rebuildOfferPost(request, { params: props.params })
     }
 
     // 检查是否需要生成
@@ -354,8 +346,8 @@ export async function POST(
           id: existing.id,
           offerId: existing.offerId,
           totalKeywords: existing.totalKeywords,
-          isNew: false
-        }
+          isNew: false,
+        },
       })
     }
 
@@ -401,19 +393,16 @@ export async function POST(
         strategy: {
           bucketCount: strategy.bucketCount,
           strategyType: strategy.strategy,
-          message: strategy.message
+          message: strategy.message,
         },
 
         // 可用桶
-        availableBuckets
-      }
+        availableBuckets,
+      },
     })
   } catch (error: any) {
     console.error('生成关键词池失败:', error)
-    return NextResponse.json(
-      { error: error.message || '生成关键词池失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '生成关键词池失败' }, { status: 500 })
   }
 }
 
@@ -421,10 +410,8 @@ export async function POST(
  * DELETE /api/offers/:id/keyword-pool
  * 删除 Offer 的关键词池
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 
@@ -443,19 +430,13 @@ export async function DELETE(
     // 验证 Offer 存在且属于当前用户
     const offer = await findOfferById(offerId, userIdNum)
     if (!offer) {
-      return NextResponse.json(
-        { error: 'Offer 不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Offer 不存在或无权访问' }, { status: 404 })
     }
 
     // 检查是否存在
     const existing = await getKeywordPoolByOfferId(offerId)
     if (!existing) {
-      return NextResponse.json(
-        { error: '关键词池不存在' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: '关键词池不存在' }, { status: 404 })
     }
 
     // 删除
@@ -463,13 +444,10 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: '关键词池已删除'
+      message: '关键词池已删除',
     })
   } catch (error: any) {
     console.error('删除关键词池失败:', error)
-    return NextResponse.json(
-      { error: error.message || '删除关键词池失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '删除关键词池失败' }, { status: 500 })
   }
 }

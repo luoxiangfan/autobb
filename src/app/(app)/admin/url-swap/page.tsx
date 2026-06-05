@@ -1,11 +1,11 @@
-'use client';
+'use client'
 
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -13,7 +13,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +23,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from '@/components/ui/alert-dialog'
 import {
   Search,
   RefreshCw,
@@ -38,191 +38,205 @@ import {
   TrendingUp,
   XCircle,
   AlertCircle,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { ResponsivePagination } from '@/components/ui/responsive-pagination';
-import type { UrlSwapTaskListItem, UrlSwapGlobalStats } from '@/lib/url-swap-types';
-import type { UrlSwapHealthStatus } from '@/lib/url-swap/monitoring';
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { ResponsivePagination } from '@/components/ui/responsive-pagination'
+import type { UrlSwapTaskListItem, UrlSwapGlobalStats } from '@/lib/url-swap-types'
+import type { UrlSwapHealthStatus } from '@/lib/url-swap/monitoring'
 
 interface UrlSwapAdminStats extends UrlSwapGlobalStats {
   userTaskDistribution: {
-    userId: number;
-    username: string;
-    taskCount: number;
-    enabledTasks: number;
-  }[];
+    userId: number
+    username: string
+    taskCount: number
+    enabledTasks: number
+  }[]
 }
 
 export default function AdminUrlSwapPage() {
-  const router = useRouter();
+  const router = useRouter()
 
   // Data states
-  const [tasks, setTasks] = useState<Array<UrlSwapTaskListItem & { username?: string }>>([]);
-  const [filteredTasks, setFilteredTasks] = useState<Array<UrlSwapTaskListItem & { username?: string }>>([]);
-  const [stats, setStats] = useState<UrlSwapAdminStats | null>(null);
-  const [health, setHealth] = useState<UrlSwapHealthStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [tasks, setTasks] = useState<Array<UrlSwapTaskListItem & { username?: string }>>([])
+  const [filteredTasks, setFilteredTasks] = useState<
+    Array<UrlSwapTaskListItem & { username?: string }>
+  >([])
+  const [stats, setStats] = useState<UrlSwapAdminStats | null>(null)
+  const [health, setHealth] = useState<UrlSwapHealthStatus | null>(null)
+  const [loading, setLoading] = useState(true)
 
   // UI states
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [healthCheckLoading, setHealthCheckLoading] = useState(false);
-  const [retryDialogOpen, setRetryDialogOpen] = useState(false);
-  const [retryTaskId, setRetryTaskId] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [healthCheckLoading, setHealthCheckLoading] = useState(false)
+  const [retryDialogOpen, setRetryDialogOpen] = useState(false)
+  const [retryTaskId, setRetryTaskId] = useState<string | null>(null)
 
   // Filter states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const filterKeyRef = useRef<string>('');
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const filterKeyRef = useRef<string>('')
 
   // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    filterTasks();
-  }, [tasks, searchQuery, statusFilter]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      setLoading(true);
+      setLoading(true)
       const [tasksRes, statsRes, healthRes] = await Promise.all([
         fetch('/api/admin/url-swap/tasks'),
         fetch('/api/admin/url-swap/stats'),
         fetch('/api/admin/url-swap/health'),
-      ]);
+      ])
 
       if (tasksRes.ok) {
-        const data = await tasksRes.json();
-        setTasks(data.data?.tasks || []);
+        const data = await tasksRes.json()
+        setTasks(data.data?.tasks || [])
       }
 
       if (statsRes.ok) {
-        const data = await statsRes.json();
-        setStats(data.data);
+        const data = await statsRes.json()
+        setStats(data.data)
       }
 
       if (healthRes.ok) {
-        const data = await healthRes.json();
-        setHealth(data.data);
+        const data = await healthRes.json()
+        setHealth(data.data)
       }
     } catch (error) {
-      console.error('加载数据失败:', error);
-      toast.error('加载数据失败');
+      console.error('加载数据失败:', error)
+      toast.error('加载数据失败')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }, [])
 
-  const filterTasks = () => {
-    let result = [...tasks];
+  const filterTasks = useCallback(() => {
+    let result = [...tasks]
 
     // Search filter
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(t =>
-        t.id.toLowerCase().includes(query) ||
-        t.offer_id.toString().includes(query) ||
-        t.user_id.toString().includes(query)
-      );
+      const query = searchQuery.toLowerCase()
+      result = result.filter(
+        (t) =>
+          t.id.toLowerCase().includes(query) ||
+          t.offer_id.toString().includes(query) ||
+          t.user_id.toString().includes(query)
+      )
     }
 
     // Status filter
     if (statusFilter !== 'all') {
-      result = result.filter(t => t.status === statusFilter);
+      result = result.filter((t) => t.status === statusFilter)
     }
 
-    setFilteredTasks(result);
+    setFilteredTasks(result)
 
-    const filterKey = JSON.stringify({ searchQuery, statusFilter });
-    const filtersChanged = filterKeyRef.current !== filterKey;
-    filterKeyRef.current = filterKey;
+    const filterKey = JSON.stringify({ searchQuery, statusFilter })
+    const filtersChanged = filterKeyRef.current !== filterKey
+    filterKeyRef.current = filterKey
 
-    const totalPages = Math.max(1, Math.ceil(result.length / pageSize));
+    const totalPages = Math.max(1, Math.ceil(result.length / pageSize))
     setCurrentPage((prev) => {
-      const nextPage = filtersChanged ? 1 : prev;
-      return nextPage > totalPages ? totalPages : nextPage;
-    });
-  };
+      const nextPage = filtersChanged ? 1 : prev
+      return nextPage > totalPages ? totalPages : nextPage
+    })
+  }, [tasks, searchQuery, statusFilter, pageSize])
+
+  useEffect(() => {
+    void loadData()
+  }, [loadData])
+
+  useEffect(() => {
+    filterTasks()
+  }, [filterTasks])
 
   const formatDateTime = (dateValue: string | null): string => {
-    if (!dateValue) return '-';
-    return new Date(dateValue).toLocaleString('zh-CN');
-  };
+    if (!dateValue) return '-'
+    return new Date(dateValue).toLocaleString('zh-CN')
+  }
 
   const formatDate = (dateValue: string | null): string => {
-    if (!dateValue) return '-';
-    return dateValue.split('T')[0];
-  };
+    if (!dateValue) return '-'
+    return dateValue.split('T')[0]
+  }
 
   const handleRetryTask = async () => {
-    if (!retryTaskId) return;
+    if (!retryTaskId) return
 
     try {
-      setActionLoading(retryTaskId);
+      setActionLoading(retryTaskId)
       const response = await fetch(`/api/admin/url-swap/tasks/${retryTaskId}/retry`, {
         method: 'POST',
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || '重试任务失败');
+        throw new Error(data.message || '重试任务失败')
       }
 
-      toast.success(data.message || '任务已重新加入队列');
-      setRetryDialogOpen(false);
-      setRetryTaskId(null);
-      await loadData();
+      toast.success(data.message || '任务已重新加入队列')
+      setRetryDialogOpen(false)
+      setRetryTaskId(null)
+      await loadData()
     } catch (error: any) {
-      toast.error(error.message || '重试任务失败');
+      toast.error(error.message || '重试任务失败')
     } finally {
-      setActionLoading(null);
+      setActionLoading(null)
     }
-  };
+  }
 
   const handleHealthCheck = async () => {
     try {
-      setHealthCheckLoading(true);
+      setHealthCheckLoading(true)
       const response = await fetch('/api/admin/url-swap/health/auto-fix', {
         method: 'POST',
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || '健康检查失败');
+        throw new Error(data.error || '健康检查失败')
       }
 
-      toast.success(data.message || '健康检查完成');
-      await loadData();
+      toast.success(data.message || '健康检查完成')
+      await loadData()
     } catch (error: any) {
-      toast.error(error.message || '健康检查失败');
+      toast.error(error.message || '健康检查失败')
     } finally {
-      setHealthCheckLoading(false);
+      setHealthCheckLoading(false)
     }
-  };
+  }
 
   const getStatusBadge = (status: string) => {
-    const configs: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; className: string }> = {
+    const configs: Record<
+      string,
+      {
+        label: string
+        variant: 'default' | 'secondary' | 'destructive' | 'outline'
+        className: string
+      }
+    > = {
       enabled: { label: '运行中', variant: 'default', className: 'bg-green-600' },
-      disabled: { label: '已暂停', variant: 'secondary', className: 'bg-yellow-100 text-yellow-700' },
+      disabled: {
+        label: '已暂停',
+        variant: 'secondary',
+        className: 'bg-yellow-100 text-yellow-700',
+      },
       error: { label: '异常', variant: 'destructive', className: '' },
       completed: { label: '已完成', variant: 'default', className: 'bg-blue-600' },
-    };
-    const config = configs[status] || { label: status, variant: 'outline' as const, className: '' };
+    }
+    const config = configs[status] || { label: status, variant: 'outline' as const, className: '' }
 
     return (
       <Badge variant={config.variant} className={config.className}>
         {config.label}
       </Badge>
-    );
-  };
+    )
+  }
 
-  const paginatedTasks = filteredTasks.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginatedTasks = filteredTasks.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   if (loading) {
     return (
@@ -232,7 +246,7 @@ export default function AdminUrlSwapPage() {
           <p className="mt-4 text-gray-600">加载中...</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -257,11 +271,7 @@ export default function AdminUrlSwapPage() {
                 <Activity className="w-4 h-4" />
                 {healthCheckLoading ? '检查中...' : '健康检查'}
               </Button>
-              <Button
-                variant="outline"
-                onClick={loadData}
-                className="flex items-center gap-2"
-              >
+              <Button variant="outline" onClick={loadData} className="flex items-center gap-2">
                 <RefreshCw className="w-4 h-4" />
                 刷新
               </Button>
@@ -279,9 +289,7 @@ export default function AdminUrlSwapPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-600">总任务</p>
-                    <p className="text-xl font-bold text-gray-900 mt-1">
-                      {stats.total_tasks}
-                    </p>
+                    <p className="text-xl font-bold text-gray-900 mt-1">{stats.total_tasks}</p>
                   </div>
                   <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
                     <Link className="w-4 h-4 text-blue-600" />
@@ -295,9 +303,7 @@ export default function AdminUrlSwapPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-600">运行中</p>
-                    <p className="text-xl font-bold text-green-600 mt-1">
-                      {stats.active_tasks}
-                    </p>
+                    <p className="text-xl font-bold text-green-600 mt-1">{stats.active_tasks}</p>
                   </div>
                   <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center shrink-0">
                     <Play className="w-4 h-4 text-green-600" />
@@ -311,9 +317,7 @@ export default function AdminUrlSwapPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-600">已暂停</p>
-                    <p className="text-xl font-bold text-yellow-600 mt-1">
-                      {stats.disabled_tasks}
-                    </p>
+                    <p className="text-xl font-bold text-yellow-600 mt-1">{stats.disabled_tasks}</p>
                   </div>
                   <div className="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center shrink-0">
                     <Clock className="w-4 h-4 text-yellow-600" />
@@ -346,7 +350,8 @@ export default function AdminUrlSwapPage() {
                     <p className="text-xl font-bold text-gray-900 mt-1">
                       {stats.total_swaps > 0
                         ? ((stats.success_swaps / stats.total_swaps) * 100).toFixed(1)
-                        : 0}%
+                        : 0}
+                      %
                     </p>
                   </div>
                   <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center shrink-0">
@@ -369,19 +374,25 @@ export default function AdminUrlSwapPage() {
                 </CardTitle>
                 <Badge
                   variant={
-                    health.overall === 'healthy' ? 'default' :
-                    health.overall === 'warning' ? 'secondary' :
-                    'destructive'
+                    health.overall === 'healthy'
+                      ? 'default'
+                      : health.overall === 'warning'
+                        ? 'secondary'
+                        : 'destructive'
                   }
                   className={
-                    health.overall === 'healthy' ? 'bg-green-600' :
-                    health.overall === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-                    ''
+                    health.overall === 'healthy'
+                      ? 'bg-green-600'
+                      : health.overall === 'warning'
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : ''
                   }
                 >
-                  {health.overall === 'healthy' ? '🟢 健康' :
-                   health.overall === 'warning' ? '🟡 警告' :
-                   '🔴 严重'}
+                  {health.overall === 'healthy'
+                    ? '🟢 健康'
+                    : health.overall === 'warning'
+                      ? '🟡 警告'
+                      : '🔴 严重'}
                 </Badge>
               </div>
             </CardHeader>
@@ -394,7 +405,9 @@ export default function AdminUrlSwapPage() {
                 </div>
                 <div className="text-center p-3 bg-green-50 rounded-lg">
                   <p className="text-xs text-muted-foreground">成功次数</p>
-                  <p className="text-lg font-bold text-green-600">{health.performance.successSwaps}</p>
+                  <p className="text-lg font-bold text-green-600">
+                    {health.performance.successSwaps}
+                  </p>
                 </div>
                 <div className="text-center p-3 bg-red-50 rounded-lg">
                   <p className="text-xs text-muted-foreground">失败次数</p>
@@ -402,7 +415,9 @@ export default function AdminUrlSwapPage() {
                 </div>
                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                   <p className="text-xs text-muted-foreground">成功率</p>
-                  <p className="text-lg font-bold text-blue-600">{health.performance.successRate}%</p>
+                  <p className="text-lg font-bold text-blue-600">
+                    {health.performance.successRate}%
+                  </p>
                 </div>
               </div>
 
@@ -455,14 +470,20 @@ export default function AdminUrlSwapPage() {
                       <div
                         key={index}
                         className={`p-3 rounded-lg text-sm ${
-                          alert.level === 'error' ? 'bg-red-50 border border-red-200' :
-                          alert.level === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
-                          'bg-blue-50 border border-blue-200'
+                          alert.level === 'error'
+                            ? 'bg-red-50 border border-red-200'
+                            : alert.level === 'warning'
+                              ? 'bg-yellow-50 border border-yellow-200'
+                              : 'bg-blue-50 border border-blue-200'
                         }`}
                       >
                         <div className="flex items-start gap-2">
                           <span className="shrink-0">
-                            {alert.level === 'error' ? '❌' : alert.level === 'warning' ? '⚠️' : 'ℹ️'}
+                            {alert.level === 'error'
+                              ? '❌'
+                              : alert.level === 'warning'
+                                ? '⚠️'
+                                : 'ℹ️'}
                           </span>
                           <div className="flex-1">
                             <p className="font-medium">{alert.message}</p>
@@ -532,7 +553,7 @@ export default function AdminUrlSwapPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="all">所有状态</option>
                 <option value="enabled">运行中</option>
@@ -546,7 +567,7 @@ export default function AdminUrlSwapPage() {
 
         {/* Task List */}
         {filteredTasks.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow border border-gray-200">
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
               <Link className="w-full h-full" />
             </div>
@@ -576,9 +597,7 @@ export default function AdminUrlSwapPage() {
                 <TableBody>
                   {paginatedTasks.map((task) => (
                     <TableRow key={task.id} className="hover:bg-gray-50/50">
-                      <TableCell className="font-mono text-xs">
-                        #{task.id.slice(0, 8)}
-                      </TableCell>
+                      <TableCell className="font-mono text-xs">#{task.id.slice(0, 8)}</TableCell>
                       <TableCell>
                         <Button
                           variant="link"
@@ -613,9 +632,7 @@ export default function AdminUrlSwapPage() {
                         </div>
                       </TableCell>
                       <TableCell>{task.swap_interval_minutes}m</TableCell>
-                      <TableCell className="text-sm">
-                        {formatDateTime(task.next_swap_at)}
-                      </TableCell>
+                      <TableCell className="text-sm">{formatDateTime(task.next_swap_at)}</TableCell>
                       <TableCell>
                         <span className="text-green-600">{task.success_swaps}</span>
                         <span className="text-gray-400">/</span>
@@ -643,8 +660,8 @@ export default function AdminUrlSwapPage() {
                               size="sm"
                               variant="ghost"
                               onClick={() => {
-                                setRetryTaskId(task.id);
-                                setRetryDialogOpen(true);
+                                setRetryTaskId(task.id)
+                                setRetryDialogOpen(true)
                               }}
                               disabled={actionLoading === task.id}
                               className="text-green-600 hover:text-green-700"
@@ -668,7 +685,10 @@ export default function AdminUrlSwapPage() {
                     totalItems={filteredTasks.length}
                     pageSize={pageSize}
                     onPageChange={setCurrentPage}
-                    onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+                    onPageSizeChange={(size) => {
+                      setPageSize(size)
+                      setCurrentPage(1)
+                    }}
                     pageSizeOptions={[10, 20, 50, 100]}
                   />
                 </div>
@@ -692,15 +712,12 @@ export default function AdminUrlSwapPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setRetryTaskId(null)}>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRetryTask}
-              disabled={actionLoading !== null}
-            >
+            <AlertDialogAction onClick={handleRetryTask} disabled={actionLoading !== null}>
               {actionLoading ? '重试中...' : '确认重试'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
+  )
 }

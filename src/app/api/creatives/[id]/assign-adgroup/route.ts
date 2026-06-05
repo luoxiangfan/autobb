@@ -7,7 +7,8 @@ import { findAdGroupById } from '@/lib/ad-groups'
  * POST /api/creatives/:id/assign-adgroup
  * 将Creative关联到Ad Group
  */
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
     const body = await request.json()

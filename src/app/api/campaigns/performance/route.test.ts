@@ -36,7 +36,12 @@ vi.mock('@/lib/feature-flags', () => ({
 }))
 
 function buildPreviousSummaryRows(params: {
-  performance?: Array<{ currency?: string | null; impressions?: number; clicks?: number; cost?: number }>
+  performance?: Array<{
+    currency?: string | null
+    impressions?: number
+    clicks?: number
+    cost?: number
+  }>
   attributed?: Array<{ currency?: string | null; amount?: number }>
 }) {
   return [
@@ -120,7 +125,10 @@ describe('GET /api/campaigns/performance', () => {
 
     expect(res.status).toBe(200)
     expect(data).toEqual(cachedPayload)
-    expect(campaignCacheFns.getCachedCampaignPerformance).toHaveBeenCalledWith(1, 'campaign-performance-hash')
+    expect(campaignCacheFns.getCachedCampaignPerformance).toHaveBeenCalledWith(
+      1,
+      'campaign-performance-hash'
+    )
     expect(dbFns.getDatabase).not.toHaveBeenCalled()
     expect(campaignCacheFns.setCachedCampaignPerformance).not.toHaveBeenCalled()
   })
@@ -136,7 +144,7 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('GROUP BY currency')) {
         return []
       }
-      if (sql.includes('GROUP BY COALESCE(currency, \'USD\')')) {
+      if (sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
         return []
       }
       return []
@@ -158,7 +166,9 @@ describe('GET /api/campaigns/performance', () => {
       campaigns: [{ id: 99 }],
     })
 
-    const req = new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&refresh=true')
+    const req = new NextRequest(
+      'http://localhost/api/campaigns/performance?daysBack=7&refresh=true'
+    )
     const res = await GET(req)
     const data = await res.json()
 
@@ -217,7 +227,10 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('GROUP BY campaign_id, COALESCE(currency')
+      ) {
         return [
           {
             campaign_id: 1,
@@ -229,7 +242,10 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes('GROUP BY a.campaign_id')
+      ) {
         return [{ campaign_id: 1, currency: 'USD', commission: 5 }]
       }
 
@@ -250,7 +266,10 @@ describe('GET /api/campaigns/performance', () => {
         })
       }
 
-      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+      if (
+        sql.includes('scoped_campaigns') ||
+        (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))
+      ) {
         return [{ campaign_id: 1, currency: 'USD', commission: 1 }]
       }
 
@@ -258,7 +277,10 @@ describe('GET /api/campaigns/performance', () => {
     })
 
     const queryOne = vi.fn(async (sql: string, params: any[] = []) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('COALESCE(SUM(impressions), 0) as impressions')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('COALESCE(SUM(impressions), 0) as impressions')
+      ) {
         const start = String(params?.[1] || '')
         if (start === '2026-02-19') {
           currentTotalsQueryCount += 1
@@ -303,7 +325,9 @@ describe('GET /api/campaigns/performance', () => {
     try {
       vi.setSystemTime(new Date('2026-02-25T04:00:00.000Z'))
 
-      const req = new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&currency=USD')
+      const req = new NextRequest(
+        'http://localhost/api/campaigns/performance?daysBack=7&currency=USD'
+      )
       const res = await GET(req)
       const data = await res.json()
 
@@ -331,7 +355,10 @@ describe('GET /api/campaigns/performance', () => {
       let capturedRange: { start?: string; end?: string } = {}
 
       const query = vi.fn(async (sql: string, params: any[] = []) => {
-        if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+        if (
+          sql.includes('FROM campaign_performance') &&
+          sql.includes('GROUP BY campaign_id, COALESCE(currency')
+        ) {
           capturedRange = {
             start: String(params?.[1] || ''),
             end: String(params?.[2] || ''),
@@ -411,7 +438,10 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('GROUP BY campaign_id, COALESCE(currency')
+      ) {
         return [
           {
             campaign_id: 1,
@@ -423,7 +453,10 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes('GROUP BY a.campaign_id')
+      ) {
         return [{ campaign_id: 1, currency: 'CNY', commission: 7 }]
       }
 
@@ -450,7 +483,10 @@ describe('GET /api/campaigns/performance', () => {
         })
       }
 
-      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+      if (
+        sql.includes('scoped_campaigns') ||
+        (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))
+      ) {
         return [{ campaign_id: 1, currency: 'CNY', commission: 3 }]
       }
 
@@ -462,7 +498,10 @@ describe('GET /api/campaigns/performance', () => {
     let unattributedCallCount = 0
 
     const queryOne = vi.fn(async (sql: string, params: any[] = []) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('COALESCE(SUM(impressions), 0) as impressions')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('COALESCE(SUM(impressions), 0) as impressions')
+      ) {
         expect(params?.[3]).toBe('CNY')
         totalsCallCount += 1
         if (totalsCallCount === 1) {
@@ -505,7 +544,9 @@ describe('GET /api/campaigns/performance', () => {
       queryOne,
     })
 
-    const req = new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&currency=CNY')
+    const req = new NextRequest(
+      'http://localhost/api/campaigns/performance?daysBack=7&currency=CNY'
+    )
     const res = await GET(req)
     const data = await res.json()
 
@@ -559,7 +600,10 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('GROUP BY campaign_id, COALESCE(currency')
+      ) {
         return [
           {
             campaign_id: 1,
@@ -578,7 +622,10 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes('GROUP BY a.campaign_id')
+      ) {
         return [{ campaign_id: 1, currency: 'USD', commission: 3 }]
       }
 
@@ -596,7 +643,10 @@ describe('GET /api/campaigns/performance', () => {
         return []
       }
 
-      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+      if (
+        sql.includes('scoped_campaigns') ||
+        (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))
+      ) {
         return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
@@ -607,7 +657,10 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM sync_logs')) {
         return { latest_sync_at: null }
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('COALESCE(SUM(impressions), 0) as impressions')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('COALESCE(SUM(impressions), 0) as impressions')
+      ) {
         expect(params?.[3]).toBe('USD')
         return { impressions: 120, clicks: 12, cost: 24 }
       }
@@ -628,18 +681,22 @@ describe('GET /api/campaigns/performance', () => {
       queryOne,
     })
 
-    const req = new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&currency=USD')
+    const req = new NextRequest(
+      'http://localhost/api/campaigns/performance?daysBack=7&currency=USD'
+    )
     const res = await GET(req)
     const data = await res.json()
 
     expect(res.status).toBe(200)
     expect(data.success).toBe(true)
     expect(data.summary?.currency).toBe('USD')
-    expect(data.campaigns?.[0]).toEqual(expect.objectContaining({
-      budgetAmount: 50,
-      adsAccountCurrency: 'CNY',
-      performanceCurrency: 'USD',
-    }))
+    expect(data.campaigns?.[0]).toEqual(
+      expect.objectContaining({
+        budgetAmount: 50,
+        adsAccountCurrency: 'CNY',
+        performanceCurrency: 'USD',
+      })
+    )
     expect(data.campaigns?.[0]?.performance?.costLocal).toBe(24)
     expect(data.campaigns?.[0]?.performance?.cpcLocal).toBe(2)
   })
@@ -684,7 +741,10 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('GROUP BY campaign_id, COALESCE(currency')
+      ) {
         return [
           {
             campaign_id: 1,
@@ -696,7 +756,10 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes('GROUP BY a.campaign_id')
+      ) {
         return [{ campaign_id: 1, currency: 'USD', commission: 3 }]
       }
 
@@ -713,7 +776,10 @@ describe('GET /api/campaigns/performance', () => {
         return []
       }
 
-      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+      if (
+        sql.includes('scoped_campaigns') ||
+        (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))
+      ) {
         return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
@@ -724,7 +790,10 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM sync_logs')) {
         return { latest_sync_at: null }
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('COALESCE(SUM(impressions), 0) as impressions')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('COALESCE(SUM(impressions), 0) as impressions')
+      ) {
         return { impressions: 120, clicks: 12, cost: 24 }
       }
       if (sql.includes('FROM affiliate_commission_attributions')) {
@@ -742,7 +811,9 @@ describe('GET /api/campaigns/performance', () => {
       queryOne,
     })
 
-    const req = new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&currency=USD')
+    const req = new NextRequest(
+      'http://localhost/api/campaigns/performance?daysBack=7&currency=USD'
+    )
     const res = await GET(req)
     const data = await res.json()
 
@@ -795,7 +866,10 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('GROUP BY campaign_id, COALESCE(currency')
+      ) {
         return [
           {
             campaign_id: 1,
@@ -821,21 +895,30 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes('GROUP BY a.campaign_id')
+      ) {
         return [
           { campaign_id: 1, currency: 'USD', commission: 9 },
           { campaign_id: 1, currency: 'CNY', commission: 4 },
         ]
       }
 
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY COALESCE(currency, \'USD\')')) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return [
           { currency: 'USD', total_commission: 9 },
           { currency: 'CNY', total_commission: 4 },
         ]
       }
 
-      if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes('GROUP BY COALESCE(currency, \'USD\')')) {
+      if (
+        sql.includes('FROM openclaw_affiliate_attribution_failures') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return [
           { currency: 'USD', total_commission: 1.5 },
           { currency: 'CNY', total_commission: 2.5 },
@@ -858,7 +941,10 @@ describe('GET /api/campaigns/performance', () => {
         })
       }
 
-      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+      if (
+        sql.includes('scoped_campaigns') ||
+        (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))
+      ) {
         return [
           { campaign_id: 1, currency: 'USD', commission: 1.5 },
           { campaign_id: 1, currency: 'CNY', commission: 2.5 },
@@ -872,7 +958,10 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM sync_logs')) {
         return { latest_sync_at: null }
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('COALESCE(SUM(impressions), 0) as impressions')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('COALESCE(SUM(impressions), 0) as impressions')
+      ) {
         return { impressions: 200, clicks: 20, cost: 40 }
       }
       if (sql.includes('FROM affiliate_commission_attributions')) {
@@ -957,7 +1046,10 @@ describe('GET /api/campaigns/performance', () => {
         ]
       }
 
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('GROUP BY campaign_id, COALESCE(currency')
+      ) {
         return [
           {
             campaign_id: 1,
@@ -977,15 +1069,24 @@ describe('GET /api/campaigns/performance', () => {
         return [{ currency: 'CNY', impressions: 20, clicks: 2, cost: 8 }]
       }
 
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes('GROUP BY a.campaign_id')
+      ) {
         return [{ campaign_id: 1, currency: 'USD', commission: 7 }]
       }
 
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY COALESCE(currency, \'USD\')')) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return [{ currency: 'USD', total_commission: 7 }]
       }
 
-      if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes('GROUP BY COALESCE(currency, \'USD\')')) {
+      if (
+        sql.includes('FROM openclaw_affiliate_attribution_failures') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return [{ currency: 'USD', total_commission: 3 }]
       }
 
@@ -1003,7 +1104,10 @@ describe('GET /api/campaigns/performance', () => {
         })
       }
 
-      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+      if (
+        sql.includes('scoped_campaigns') ||
+        (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))
+      ) {
         return [{ campaign_id: 1, currency: 'USD', commission: 3 }]
       }
 
@@ -1047,15 +1151,16 @@ describe('GET /api/campaigns/performance', () => {
     expect(res.status).toBe(200)
     expect(data.success).toBe(true)
     expect(data.summary?.currency).toBe('MIXED')
-    expect(data.summary?.attributedCommissionsByCurrency).toEqual([
-      { currency: 'USD', amount: 7 },
-    ])
+    expect(data.summary?.attributedCommissionsByCurrency).toEqual([{ currency: 'USD', amount: 7 }])
     expect(data.summary?.unattributedCommissionsByCurrency).toEqual([
       { currency: 'USD', amount: 3 },
     ])
     expect(data.campaigns?.[0]?.performanceCurrency).toBe('CNY')
     expect(data.campaigns?.[0]?.performance?.costLocal).toBe(40)
-    expect(data.campaigns?.[0]?.performance?.commission).toBeCloseTo(convertCurrency(7, 'USD', 'CNY'), 2)
+    expect(data.campaigns?.[0]?.performance?.commission).toBeCloseTo(
+      convertCurrency(7, 'USD', 'CNY'),
+      2
+    )
     expect(data.campaigns?.[0]?.performance?.commission).toBeGreaterThan(0)
   })
 
@@ -1125,7 +1230,10 @@ describe('GET /api/campaigns/performance', () => {
           },
         ]
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('GROUP BY campaign_id, COALESCE(currency')
+      ) {
         return [
           { campaign_id: 1, currency: 'USD', impressions: 100, clicks: 10, cost: 50 },
           { campaign_id: 2, currency: 'CNY', impressions: 100, clicks: 10, cost: 100 },
@@ -1137,13 +1245,22 @@ describe('GET /api/campaigns/performance', () => {
           { currency: 'CNY', impressions: 100, clicks: 10, cost: 100 },
         ]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes('GROUP BY a.campaign_id')
+      ) {
         return []
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return []
       }
-      if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
+      if (
+        sql.includes('FROM openclaw_affiliate_attribution_failures') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return []
       }
 
@@ -1160,7 +1277,10 @@ describe('GET /api/campaigns/performance', () => {
         return []
       }
 
-      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+      if (
+        sql.includes('scoped_campaigns') ||
+        (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))
+      ) {
         return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
@@ -1171,7 +1291,10 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM sync_logs')) {
         return { latest_sync_at: null }
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('COALESCE(SUM(impressions), 0) as impressions')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('COALESCE(SUM(impressions), 0) as impressions')
+      ) {
         return { impressions: 200, clicks: 20, cost: 150 }
       }
       if (sql.includes('FROM affiliate_commission_attributions')) {
@@ -1267,22 +1390,34 @@ describe('GET /api/campaigns/performance', () => {
           },
         ]
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('GROUP BY campaign_id, COALESCE(currency')
+      ) {
         return [
           { campaign_id: 1, currency: 'USD', impressions: 100, clicks: 10, cost: 10 },
           { campaign_id: 2, currency: 'USD', impressions: 100, clicks: 10, cost: 10 },
         ]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes('GROUP BY a.campaign_id')
+      ) {
         return []
       }
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY currency')) {
         return [{ currency: 'USD', impressions: 200, clicks: 20, cost: 20 }]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return []
       }
-      if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
+      if (
+        sql.includes('FROM openclaw_affiliate_attribution_failures') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return []
       }
 
@@ -1296,7 +1431,10 @@ describe('GET /api/campaigns/performance', () => {
         return []
       }
 
-      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+      if (
+        sql.includes('scoped_campaigns') ||
+        (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))
+      ) {
         return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
@@ -1307,7 +1445,10 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM sync_logs')) {
         return { latest_sync_at: null }
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('COALESCE(SUM(impressions), 0) as impressions')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('COALESCE(SUM(impressions), 0) as impressions')
+      ) {
         return { impressions: 200, clicks: 20, cost: 20 }
       }
       if (sql.includes('FROM affiliate_commission_attributions')) {
@@ -1348,19 +1489,31 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM campaigns c') && sql.includes('google_ads_accounts')) {
         return []
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('GROUP BY campaign_id, COALESCE(currency')
+      ) {
         return []
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes('GROUP BY a.campaign_id')
+      ) {
         return []
       }
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY currency')) {
         return []
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return []
       }
-      if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
+      if (
+        sql.includes('FROM openclaw_affiliate_attribution_failures') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return []
       }
 
@@ -1372,7 +1525,10 @@ describe('GET /api/campaigns/performance', () => {
         return []
       }
 
-      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+      if (
+        sql.includes('scoped_campaigns') ||
+        (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))
+      ) {
         return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
@@ -1383,7 +1539,10 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM sync_logs')) {
         return { latest_sync_at: null }
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('COALESCE(SUM(impressions), 0) as impressions')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('COALESCE(SUM(impressions), 0) as impressions')
+      ) {
         return { impressions: 0, clicks: 0, cost: 0 }
       }
       if (sql.includes('FROM affiliate_commission_attributions')) {
@@ -1481,13 +1640,19 @@ describe('GET /api/campaigns/performance', () => {
           },
         ]
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('GROUP BY campaign_id, COALESCE(currency')
+      ) {
         return [
           { campaign_id: 1, currency: 'USD', impressions: 100, clicks: 20, cost: 30 },
           { campaign_id: 2, currency: 'USD', impressions: 10, clicks: 2, cost: 3 },
         ]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes('GROUP BY a.campaign_id')
+      ) {
         return [
           { campaign_id: 1, commission: 12 },
           { campaign_id: 2, commission: 1 },
@@ -1496,10 +1661,16 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY currency')) {
         return [{ currency: 'USD', impressions: 110, clicks: 22, cost: 33 }]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return [{ currency: 'USD', total_commission: 13 }]
       }
-      if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
+      if (
+        sql.includes('FROM openclaw_affiliate_attribution_failures') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return []
       }
 
@@ -1514,7 +1685,10 @@ describe('GET /api/campaigns/performance', () => {
         return []
       }
 
-      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+      if (
+        sql.includes('scoped_campaigns') ||
+        (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))
+      ) {
         return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
@@ -1525,7 +1699,10 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM sync_logs')) {
         return { latest_sync_at: null }
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('COALESCE(SUM(impressions), 0) as impressions')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('COALESCE(SUM(impressions), 0) as impressions')
+      ) {
         return { impressions: 110, clicks: 22, cost: 33 }
       }
       if (sql.includes('FROM affiliate_commission_attributions')) {
@@ -1555,20 +1732,24 @@ describe('GET /api/campaigns/performance', () => {
     expect(data.limit).toBe(1)
     expect(data.offset).toBe(0)
     expect(data.campaigns).toHaveLength(1)
-    expect(data.campaigns[0]).toEqual(expect.objectContaining({
-      id: 1,
-      campaignName: 'Alpha Campaign',
-      status: 'ENABLED',
-    }))
-    expect(data.summary).toEqual(expect.objectContaining({
-      totalCampaigns: 1,
-      activeCampaigns: 1,
-      statusDistribution: expect.objectContaining({
-        enabled: 1,
-        removed: 0,
-        total: 1,
-      }),
-    }))
+    expect(data.campaigns[0]).toEqual(
+      expect.objectContaining({
+        id: 1,
+        campaignName: 'Alpha Campaign',
+        status: 'ENABLED',
+      })
+    )
+    expect(data.summary).toEqual(
+      expect.objectContaining({
+        totalCampaigns: 1,
+        activeCampaigns: 1,
+        statusDistribution: expect.objectContaining({
+          enabled: 1,
+          removed: 0,
+          total: 1,
+        }),
+      })
+    )
   })
 
   it('supports ids-based lookup while keeping summary global', async () => {
@@ -1661,14 +1842,20 @@ describe('GET /api/campaigns/performance', () => {
           },
         ]
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('GROUP BY campaign_id, COALESCE(currency')
+      ) {
         return [
           { campaign_id: 1, currency: 'USD', impressions: 100, clicks: 20, cost: 30 },
           { campaign_id: 2, currency: 'USD', impressions: 10, clicks: 2, cost: 3 },
           { campaign_id: 3, currency: 'USD', impressions: 50, clicks: 10, cost: 15 },
         ]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes('GROUP BY a.campaign_id')
+      ) {
         return [
           { campaign_id: 1, commission: 12 },
           { campaign_id: 2, commission: 1 },
@@ -1678,10 +1865,16 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY currency')) {
         return [{ currency: 'USD', impressions: 160, clicks: 32, cost: 48 }]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return [{ currency: 'USD', total_commission: 19 }]
       }
-      if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
+      if (
+        sql.includes('FROM openclaw_affiliate_attribution_failures') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return []
       }
 
@@ -1696,7 +1889,10 @@ describe('GET /api/campaigns/performance', () => {
         return []
       }
 
-      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+      if (
+        sql.includes('scoped_campaigns') ||
+        (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))
+      ) {
         return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
@@ -1707,7 +1903,10 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM sync_logs')) {
         return { latest_sync_at: null }
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('COALESCE(SUM(impressions), 0) as impressions')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('COALESCE(SUM(impressions), 0) as impressions')
+      ) {
         return { impressions: 160, clicks: 32, cost: 48 }
       }
       if (sql.includes('FROM affiliate_commission_attributions')) {
@@ -1725,9 +1924,7 @@ describe('GET /api/campaigns/performance', () => {
       queryOne,
     })
 
-    const req = new NextRequest(
-      'http://localhost/api/campaigns/performance?daysBack=7&ids=2,999,1'
-    )
+    const req = new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&ids=2,999,1')
     const res = await GET(req)
     const data = await res.json()
 
@@ -1736,15 +1933,17 @@ describe('GET /api/campaigns/performance', () => {
     expect(data.total).toBe(2)
     expect(data.campaigns).toHaveLength(2)
     expect(new Set(data.campaigns.map((item: { id: number }) => item.id))).toEqual(new Set([1, 2]))
-    expect(data.summary).toEqual(expect.objectContaining({
-      totalCampaigns: 2,
-      statusDistribution: expect.objectContaining({
-        enabled: 1,
-        paused: 0,
-        removed: 1,
-        total: 2,
-      }),
-    }))
+    expect(data.summary).toEqual(
+      expect.objectContaining({
+        totalCampaigns: 2,
+        statusDistribution: expect.objectContaining({
+          enabled: 1,
+          paused: 0,
+          removed: 1,
+          total: 2,
+        }),
+      })
+    )
   })
 
   it('matches search against linked ads account name and ids', async () => {
@@ -1807,13 +2006,19 @@ describe('GET /api/campaigns/performance', () => {
           },
         ]
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('GROUP BY campaign_id, COALESCE(currency')
+      ) {
         return [
           { campaign_id: 1, currency: 'USD', impressions: 100, clicks: 20, cost: 30 },
           { campaign_id: 2, currency: 'USD', impressions: 50, clicks: 10, cost: 15 },
         ]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes('GROUP BY a.campaign_id')
+      ) {
         return [
           { campaign_id: 1, currency: 'USD', commission: 12 },
           { campaign_id: 2, currency: 'USD', commission: 6 },
@@ -1822,10 +2027,16 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY currency')) {
         return [{ currency: 'USD', impressions: 150, clicks: 30, cost: 45 }]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return [{ currency: 'USD', total_commission: 18 }]
       }
-      if (sql.includes('FROM openclaw_affiliate_attribution_failures') && sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
+      if (
+        sql.includes('FROM openclaw_affiliate_attribution_failures') &&
+        sql.includes("GROUP BY COALESCE(currency, 'USD')")
+      ) {
         return []
       }
       if (sql.includes('summary_source')) {
@@ -1838,7 +2049,10 @@ describe('GET /api/campaigns/performance', () => {
         return []
       }
 
-      if (sql.includes('scoped_campaigns') || (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))) {
+      if (
+        sql.includes('scoped_campaigns') ||
+        (sql.includes('openclaw_affiliate_attribution_failures') && sql.includes('campaign_id'))
+      ) {
         return [{ campaign_id: 1, currency: 'USD', commission: 0 }]
       }
 
@@ -1849,7 +2063,10 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('FROM sync_logs')) {
         return { latest_sync_at: null }
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('COALESCE(SUM(impressions), 0) as impressions')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('COALESCE(SUM(impressions), 0) as impressions')
+      ) {
         return { impressions: 150, clicks: 30, cost: 45 }
       }
       if (sql.includes('FROM affiliate_commission_attributions')) {
@@ -1868,9 +2085,15 @@ describe('GET /api/campaigns/performance', () => {
       queryOne,
     })
 
-    const nameRes = await GET(new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&search=north%20hub'))
-    const customerIdRes = await GET(new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&search=1006966374'))
-    const accountIdRes = await GET(new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&search=424242'))
+    const nameRes = await GET(
+      new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&search=north%20hub')
+    )
+    const customerIdRes = await GET(
+      new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&search=1006966374')
+    )
+    const accountIdRes = await GET(
+      new NextRequest('http://localhost/api/campaigns/performance?daysBack=7&search=424242')
+    )
 
     const nameData = await nameRes.json()
     const customerIdData = await customerIdRes.json()
@@ -1881,22 +2104,28 @@ describe('GET /api/campaigns/performance', () => {
     expect(accountIdRes.status).toBe(200)
 
     expect(nameData.campaigns).toHaveLength(1)
-    expect(nameData.campaigns[0]).toEqual(expect.objectContaining({
-      campaignName: 'Alpha Campaign',
-      adsAccountName: 'North Hub',
-    }))
+    expect(nameData.campaigns[0]).toEqual(
+      expect.objectContaining({
+        campaignName: 'Alpha Campaign',
+        adsAccountName: 'North Hub',
+      })
+    )
 
     expect(customerIdData.campaigns).toHaveLength(1)
-    expect(customerIdData.campaigns[0]).toEqual(expect.objectContaining({
-      campaignName: 'Alpha Campaign',
-      adsAccountCustomerId: '1006966374',
-    }))
+    expect(customerIdData.campaigns[0]).toEqual(
+      expect.objectContaining({
+        campaignName: 'Alpha Campaign',
+        adsAccountCustomerId: '1006966374',
+      })
+    )
 
     expect(accountIdData.campaigns).toHaveLength(1)
-    expect(accountIdData.campaigns[0]).toEqual(expect.objectContaining({
-      campaignName: 'Alpha Campaign',
-      googleAdsAccountId: 424242,
-    }))
+    expect(accountIdData.campaigns[0]).toEqual(
+      expect.objectContaining({
+        campaignName: 'Alpha Campaign',
+        googleAdsAccountId: 424242,
+      })
+    )
   })
 
   it('gracefully degrades when attribution failures table has no campaign_id column', async () => {
@@ -1935,10 +2164,16 @@ describe('GET /api/campaigns/performance', () => {
           },
         ]
       }
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY campaign_id, COALESCE(currency')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('GROUP BY campaign_id, COALESCE(currency')
+      ) {
         return [{ campaign_id: 1, currency: 'USD', impressions: 100, clicks: 20, cost: 30 }]
       }
-      if (sql.includes('FROM affiliate_commission_attributions') && sql.includes('GROUP BY a.campaign_id')) {
+      if (
+        sql.includes('FROM affiliate_commission_attributions') &&
+        sql.includes('GROUP BY a.campaign_id')
+      ) {
         return [{ campaign_id: 1, currency: 'USD', commission: 12 }]
       }
       if (sql.includes('summary_source')) {
@@ -1950,7 +2185,10 @@ describe('GET /api/campaigns/performance', () => {
       if (sql.includes('period_label')) {
         return []
       }
-      if (sql.includes('scoped_campaigns') && sql.includes('openclaw_affiliate_attribution_failures')) {
+      if (
+        sql.includes('scoped_campaigns') &&
+        sql.includes('openclaw_affiliate_attribution_failures')
+      ) {
         throw new Error('openclaw_affiliate_attribution_failures: no such column: f.campaign_id')
       }
 

@@ -116,7 +116,9 @@ export default function OffersActionDialogs({
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p>
-                  您确定要解除 <strong className="text-gray-900">{offerToUnlink?.offer.brand}</strong> 与账号 <strong className="text-gray-900">{offerToUnlink?.accountName}</strong> 的关联吗？
+                  您确定要解除{' '}
+                  <strong className="text-gray-900">{offerToUnlink?.offer.brand}</strong> 与账号{' '}
+                  <strong className="text-gray-900">{offerToUnlink?.accountName}</strong> 的关联吗？
                 </p>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-body-sm text-blue-800">
                   <p className="font-medium mb-1">ℹ️ 解除关联将会：</p>
@@ -130,11 +132,16 @@ export default function OffersActionDialogs({
                   <Checkbox
                     id="unlink-remove-ads"
                     checked={removeGoogleAdsCampaignsOnUnlink}
-                    onCheckedChange={(checked) => onRemoveGoogleAdsCampaignsOnUnlinkChange(checked as boolean)}
+                    onCheckedChange={(checked) =>
+                      onRemoveGoogleAdsCampaignsOnUnlinkChange(checked as boolean)
+                    }
                     className="mt-0.5"
                   />
                   <div className="flex-1">
-                    <Label htmlFor="unlink-remove-ads" className="text-sm font-medium cursor-pointer text-orange-900">
+                    <Label
+                      htmlFor="unlink-remove-ads"
+                      className="text-sm font-medium cursor-pointer text-orange-900"
+                    >
                       同时在 Ads 账号中删除对应广告系列（不可恢复）
                     </Label>
                     <p className="text-xs text-orange-700 mt-1">
@@ -165,7 +172,8 @@ export default function OffersActionDialogs({
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p>
-                  您确定要删除 <strong className="text-gray-900">{offerToDelete?.brand}</strong> 的Offer吗？
+                  您确定要删除 <strong className="text-gray-900">{offerToDelete?.brand}</strong>{' '}
+                  的Offer吗？
                 </p>
                 {deleteError && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-body-sm text-red-800">
@@ -178,7 +186,9 @@ export default function OffersActionDialogs({
                     <p className="font-medium mb-1">⚠️ 重要提示：</p>
                     <ul className="list-disc list-inside space-y-1 ml-2">
                       <li>已删除的Offer历史数据会保留在系统中</li>
-                      <li>系统会自动暂停该Offer在各关联Ads账号下的已启用广告系列（仅暂停该账号下关联的广告系列），避免继续花费</li>
+                      <li>
+                        系统会自动暂停该Offer在各关联Ads账号下的已启用广告系列（仅暂停该账号下关联的广告系列），避免继续花费
+                      </li>
                       <li>关联的Google Ads账号会自动解除关联</li>
                       <li>此操作不可撤销</li>
                     </ul>
@@ -186,11 +196,16 @@ export default function OffersActionDialogs({
                       <Checkbox
                         id="delete-remove-ads-simple"
                         checked={removeGoogleAdsCampaignsOnDelete}
-                        onCheckedChange={(checked) => onRemoveGoogleAdsCampaignsOnDeleteChange(checked as boolean)}
+                        onCheckedChange={(checked) =>
+                          onRemoveGoogleAdsCampaignsOnDeleteChange(checked as boolean)
+                        }
                         className="mt-0.5"
                       />
                       <div className="flex-1">
-                        <Label htmlFor="delete-remove-ads-simple" className="text-sm font-medium cursor-pointer text-orange-900">
+                        <Label
+                          htmlFor="delete-remove-ads-simple"
+                          className="text-sm font-medium cursor-pointer text-orange-900"
+                        >
                           同时在 Ads 账号中删除对应广告系列（不可恢复）
                         </Label>
                         <p className="text-xs text-orange-700 mt-1">
@@ -204,12 +219,10 @@ export default function OffersActionDialogs({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting} onClick={onDeleteErrorReset}>取消</AlertDialogCancel>
-            <Button
-              onClick={onConfirmDeleteSimple}
-              disabled={deleting}
-              variant="destructive"
-            >
+            <AlertDialogCancel disabled={deleting} onClick={onDeleteErrorReset}>
+              取消
+            </AlertDialogCancel>
+            <Button onClick={onConfirmDeleteSimple} disabled={deleting} variant="destructive">
               {deleting ? '删除中...' : deleteError ? '重试删除' : '确认删除'}
             </Button>
           </AlertDialogFooter>
@@ -222,7 +235,10 @@ export default function OffersActionDialogs({
             <AlertDialogTitle>确认批量删除</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
-                <p>您确定要删除选中的 <strong className="text-gray-900">{selectedOfferCount}</strong> 个Offer吗？</p>
+                <p>
+                  您确定要删除选中的 <strong className="text-gray-900">{selectedOfferCount}</strong>{' '}
+                  个Offer吗？
+                </p>
                 {batchDeleteError && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-body-sm text-red-800">
                     <p className="font-medium mb-1">部分删除失败</p>
@@ -234,7 +250,9 @@ export default function OffersActionDialogs({
                     <p className="font-medium mb-1">⚠️ 重要提示：</p>
                     <ul className="list-disc list-inside space-y-1 ml-2">
                       <li>已删除的Offer历史数据会保留在系统中</li>
-                      <li>系统会自动暂停各Offer在关联Ads账号下的已启用广告系列（仅暂停该账号下关联的广告系列），避免继续花费</li>
+                      <li>
+                        系统会自动暂停各Offer在关联Ads账号下的已启用广告系列（仅暂停该账号下关联的广告系列），避免继续花费
+                      </li>
                       <li>关联的Google Ads账号会自动解除关联</li>
                       <li>此操作不可撤销</li>
                     </ul>
@@ -242,11 +260,16 @@ export default function OffersActionDialogs({
                       <Checkbox
                         id="delete-remove-ads-batch"
                         checked={removeGoogleAdsCampaignsOnDelete}
-                        onCheckedChange={(checked) => onRemoveGoogleAdsCampaignsOnDeleteChange(checked as boolean)}
+                        onCheckedChange={(checked) =>
+                          onRemoveGoogleAdsCampaignsOnDeleteChange(checked as boolean)
+                        }
                         className="mt-0.5"
                       />
                       <div className="flex-1">
-                        <Label htmlFor="delete-remove-ads-batch" className="text-sm font-medium cursor-pointer text-orange-900">
+                        <Label
+                          htmlFor="delete-remove-ads-batch"
+                          className="text-sm font-medium cursor-pointer text-orange-900"
+                        >
                           同时在 Ads 账号中删除对应广告系列（不可恢复）
                         </Label>
                         <p className="text-xs text-orange-700 mt-1">
@@ -260,12 +283,10 @@ export default function OffersActionDialogs({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={batchDeleting} onClick={onBatchDeleteErrorReset}>取消</AlertDialogCancel>
-            <Button
-              onClick={onConfirmBatchDelete}
-              disabled={batchDeleting}
-              variant="destructive"
-            >
+            <AlertDialogCancel disabled={batchDeleting} onClick={onBatchDeleteErrorReset}>
+              取消
+            </AlertDialogCancel>
+            <Button onClick={onConfirmBatchDelete} disabled={batchDeleting} variant="destructive">
               {batchDeleting ? '删除中...' : batchDeleteError ? '重试删除' : '确认删除'}
             </Button>
           </AlertDialogFooter>
@@ -279,8 +300,9 @@ export default function OffersActionDialogs({
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p>
-                  将为选中的 <strong className="text-gray-900">{selectedOfferCount}</strong> 个Offer提交创意生成任务：
-                  每个Offer仅创建 <strong className="text-gray-900">1</strong> 个创意，生成下一步类型（A→B→D）。
+                  将为选中的 <strong className="text-gray-900">{selectedOfferCount}</strong>{' '}
+                  个Offer提交创意生成任务： 每个Offer仅创建{' '}
+                  <strong className="text-gray-900">1</strong> 个创意，生成下一步类型（A→B→D）。
                 </p>
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-body-sm text-gray-700">
                   <p className="font-medium mb-1">跳过规则：</p>
@@ -292,7 +314,8 @@ export default function OffersActionDialogs({
                 </div>
                 {selectedOfferCount > maxBatchCreativeOffers && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-body-sm text-red-800">
-                    单次最多支持 <strong>{maxBatchCreativeOffers}</strong> 个Offer，请减少选择后再提交。
+                    单次最多支持 <strong>{maxBatchCreativeOffers}</strong>{' '}
+                    个Offer，请减少选择后再提交。
                   </div>
                 )}
                 <div className="text-body-sm text-gray-500">
@@ -331,8 +354,8 @@ export default function OffersActionDialogs({
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p>
-                  将为选中的 <strong className="text-gray-900">{selectedOfferCount}</strong> 个Offer提交重建任务：
-                  重新抓取并更新所有Offer信息。
+                  将为选中的 <strong className="text-gray-900">{selectedOfferCount}</strong>{' '}
+                  个Offer提交重建任务： 重新抓取并更新所有Offer信息。
                 </p>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-body-sm text-blue-800">
                   <p className="font-medium mb-1">ℹ️ 重建说明：</p>
@@ -342,7 +365,9 @@ export default function OffersActionDialogs({
                     <li>更新品牌信息、产品描述、评价分析、竞品分析等所有字段</li>
                     <li>删除旧的关键词池，下次生成创意时自动重建</li>
                     <li>处理时间约2-5分钟/个，后台异步执行</li>
-                    <li><strong>注意：将覆盖现有所有数据</strong></li>
+                    <li>
+                      <strong>注意：将覆盖现有所有数据</strong>
+                    </li>
                   </ul>
                 </div>
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-body-sm text-gray-700">
@@ -355,7 +380,8 @@ export default function OffersActionDialogs({
                 </div>
                 {selectedOfferCount > maxBatchRebuildOffers && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-body-sm text-red-800">
-                    单次最多支持 <strong>{maxBatchRebuildOffers}</strong> 个Offer，请减少选择后再提交。
+                    单次最多支持 <strong>{maxBatchRebuildOffers}</strong>{' '}
+                    个Offer，请减少选择后再提交。
                   </div>
                 )}
                 <div className="text-body-sm text-gray-500">
@@ -389,7 +415,9 @@ export default function OffersActionDialogs({
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p>
-                  您确定要{offerToBlacklist?.isBlacklisted ? '取消拉黑' : '拉黑'} <strong className="text-gray-900">{offerToBlacklist?.brand}</strong> ({offerToBlacklist?.targetCountry}) 吗？
+                  您确定要{offerToBlacklist?.isBlacklisted ? '取消拉黑' : '拉黑'}{' '}
+                  <strong className="text-gray-900">{offerToBlacklist?.brand}</strong> (
+                  {offerToBlacklist?.targetCountry}) 吗？
                 </p>
                 {!offerToBlacklist?.isBlacklisted && (
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-body-sm text-orange-800">
@@ -409,9 +437,17 @@ export default function OffersActionDialogs({
             <AlertDialogAction
               onClick={onConfirmToggleBlacklist}
               disabled={blacklisting}
-              className={offerToBlacklist?.isBlacklisted ? 'bg-green-600 hover:bg-green-700' : 'bg-orange-600 hover:bg-orange-700'}
+              className={
+                offerToBlacklist?.isBlacklisted
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : 'bg-orange-600 hover:bg-orange-700'
+              }
             >
-              {blacklisting ? '处理中...' : offerToBlacklist?.isBlacklisted ? '确认取消拉黑' : '确认拉黑'}
+              {blacklisting
+                ? '处理中...'
+                : offerToBlacklist?.isBlacklisted
+                  ? '确认取消拉黑'
+                  : '确认拉黑'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

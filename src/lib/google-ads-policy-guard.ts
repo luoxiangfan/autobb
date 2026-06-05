@@ -33,19 +33,19 @@ const INFERENCE_REPLACEMENT_RULES: PolicyReplacementRule[] = [
     replacement: 'looking to improve',
     patterns: [
       /\bdo\s+you\s+(?:suffer\s+from|have|struggle\s+with|live\s+with)\b/giu,
-      /\bare\s+you\s+(?:diagnosed\s+with|suffering\s+from)\b/giu
-    ]
+      /\bare\s+you\s+(?:diagnosed\s+with|suffering\s+from)\b/giu,
+    ],
   },
   {
     term: 'patient status inference',
     replacement: 'for wellness-focused users',
-    patterns: [/\bfor\s+patients?\s+like\s+you\b/giu]
+    patterns: [/\bfor\s+patients?\s+like\s+you\b/giu],
   },
   {
     term: 'sensitive personal status',
     replacement: 'your wellness goals',
-    patterns: [/\byour\s+(?:condition|diagnosis|disease|medical\s+history|debt)\b/giu]
-  }
+    patterns: [/\byour\s+(?:condition|diagnosis|disease|medical\s+history|debt)\b/giu],
+  },
 ]
 
 const POLICY_REPLACEMENT_RULES: PolicyReplacementRule[] = [
@@ -53,156 +53,214 @@ const POLICY_REPLACEMENT_RULES: PolicyReplacementRule[] = [
   {
     term: 'sleep apnea',
     replacement: 'sleep quality',
-    patterns: [/\bsleep[\s-]*apnea\b/giu, /睡眠呼吸暂停/gu]
+    patterns: [/\bsleep[\s-]*apnea\b/giu, /睡眠呼吸暂停/gu],
   },
   {
     term: 'apnea',
     replacement: 'sleep quality',
-    patterns: [/\bapnea\b/giu]
+    patterns: [/\bapnea\b/giu],
   },
   {
     term: 'hypertension',
     replacement: 'blood pressure trends',
-    patterns: [/\bhypertension\b/giu, /高血压/gu]
+    patterns: [/\bhypertension\b/giu, /高血压/gu],
   },
   {
     term: 'arrhythmia',
     replacement: 'heart rhythm trends',
-    patterns: [/\barrhythmia\b/giu, /心律失常/gu]
+    patterns: [/\barrhythmia\b/giu, /心律失常/gu],
   },
   {
     term: 'diabetes',
     replacement: 'wellness',
-    patterns: [/\bdiabet(?:es|ic)\b/giu, /糖尿病/gu]
+    patterns: [/\bdiabet(?:es|ic)\b/giu, /糖尿病/gu],
   },
   {
     term: 'insomnia',
     replacement: 'sleep quality',
-    patterns: [/\binsomnia\b/giu, /失眠/gu]
+    patterns: [/\binsomnia\b/giu, /失眠/gu],
   },
   {
     term: 'pain relief',
     replacement: 'everyday comfort',
-    patterns: [/\bpain[\s-]*relief\b/giu, /止痛|镇痛|缓解疼痛/gu]
+    patterns: [/\bpain[\s-]*relief\b/giu, /止痛|镇痛|缓解疼痛/gu],
   },
   {
     term: 'spinal support',
     replacement: 'targeted support',
-    patterns: [/\bspinal[\s-]*support\b/giu, /脊椎支撑|脊柱支撑/gu]
+    patterns: [/\bspinal[\s-]*support\b/giu, /脊椎支撑|脊柱支撑/gu],
   },
   {
     term: 'disease',
     replacement: 'wellness',
-    patterns: [/\bdisease\b/giu, /\bdisorder\b/giu, /\bsyndrome\b/giu, /疾病|病症|综合征/gu]
+    patterns: [/\bdisease\b/giu, /\bdisorder\b/giu, /\bsyndrome\b/giu, /疾病|病症|综合征/gu],
   },
   {
     term: 'diagnosis',
     replacement: 'insights',
-    patterns: [/\bdiagnos(?:e|is|ed|ing)\b/giu, /诊断|确诊/gu]
+    patterns: [/\bdiagnos(?:e|is|ed|ing)\b/giu, /诊断|确诊/gu],
   },
   {
     term: 'treatment',
     replacement: 'support',
-    patterns: [/\btreat(?:ment|ing|ed|s)?\b/giu, /治疗|疗效/gu]
+    patterns: [/\btreat(?:ment|ing|ed|s)?\b/giu, /治疗|疗效/gu],
   },
   {
     term: 'cure',
     replacement: 'support',
-    patterns: [/\bcure(?:d|s)?\b/giu, /治愈/gu]
+    patterns: [/\bcure(?:d|s)?\b/giu, /治愈/gu],
   },
   {
     term: 'medication',
     replacement: 'routine',
-    patterns: [/\bmedication\b/giu, /\bprescription\b/giu, /\bdrug(?:s)?\b/giu, /用药|处方|药物/gu]
+    patterns: [/\bmedication\b/giu, /\bprescription\b/giu, /\bdrug(?:s)?\b/giu, /用药|处方|药物/gu],
   },
   {
     term: 'patient',
     replacement: 'user',
-    patterns: [/\bpatient(?:s)?\b/giu, /病患|患者/gu]
+    patterns: [/\bpatient(?:s)?\b/giu, /病患|患者/gu],
   },
   {
     term: 'clinical',
     replacement: 'consumer',
-    patterns: [/\bclinical\b/giu, /临床/gu]
+    patterns: [/\bclinical\b/giu, /临床/gu],
   },
 
   // Personal hardship / vulnerable status
   {
     term: 'financial hardship',
     replacement: 'financial wellness',
-    patterns: [/\bdebt(?:s)?\b/giu, /\bbankrupt(?:cy|cies)\b/giu, /\bunemploy(?:ed|ment)\b/giu, /债务|破产|失业/gu]
+    patterns: [
+      /\bdebt(?:s)?\b/giu,
+      /\bbankrupt(?:cy|cies)\b/giu,
+      /\bunemploy(?:ed|ment)\b/giu,
+      /债务|破产|失业/gu,
+    ],
   },
   {
     term: 'personal hardship',
     replacement: 'life transitions',
-    patterns: [/\bdivorce\b/giu, /\bgrief\b/giu, /\bbereavement\b/giu, /\babuse\b/giu, /\btrauma\b/giu, /离婚|丧亲|受虐|创伤/gu]
+    patterns: [
+      /\bdivorce\b/giu,
+      /\bgrief\b/giu,
+      /\bbereavement\b/giu,
+      /\babuse\b/giu,
+      /\btrauma\b/giu,
+      /离婚|丧亲|受虐|创伤/gu,
+    ],
   },
 
   // Sensitive identity
   {
     term: 'political affiliation',
     replacement: 'audience interests',
-    patterns: [/\b(?:republican|democrat|liberal|conservative|political\s+affiliation|political\s+views?)\b/giu, /政治立场|党派/gu]
+    patterns: [
+      /\b(?:republican|democrat|liberal|conservative|political\s+affiliation|political\s+views?)\b/giu,
+      /政治立场|党派/gu,
+    ],
   },
   {
     term: 'religion',
     replacement: 'personal preferences',
-    patterns: [/\b(?:christian|muslim|jewish|hindu|buddhist|catholic|religion|faith)\b/giu, /宗教|信仰/gu]
+    patterns: [
+      /\b(?:christian|muslim|jewish|hindu|buddhist|catholic|religion|faith)\b/giu,
+      /宗教|信仰/gu,
+    ],
   },
   {
     term: 'ethnicity',
     replacement: 'community preferences',
-    patterns: [/\bethnicit(?:y|ies)\b/giu, /\bracial\b/giu, /\bafrican\s+american\b/giu, /\basian\s+american\b/giu, /\bhispanic\b/giu, /\blatino\b/giu, /种族|族裔|民族/gu]
+    patterns: [
+      /\bethnicit(?:y|ies)\b/giu,
+      /\bracial\b/giu,
+      /\bafrican\s+american\b/giu,
+      /\basian\s+american\b/giu,
+      /\bhispanic\b/giu,
+      /\blatino\b/giu,
+      /种族|族裔|民族/gu,
+    ],
   },
   {
     term: 'sexual orientation',
     replacement: 'personal preferences',
-    patterns: [/\b(?:gay|lesbian|bisexual|transgender|non-?binary|queer|sexual\s+orientation|gender\s+identity)\b/giu, /性取向|性少数|跨性别|性别认同/gu]
+    patterns: [
+      /\b(?:gay|lesbian|bisexual|transgender|non-?binary|queer|sexual\s+orientation|gender\s+identity)\b/giu,
+      /性取向|性少数|跨性别|性别认同/gu,
+    ],
   },
 
   // Sexual / minors
   {
     term: 'sexual content',
     replacement: 'wellness',
-    patterns: [/\bsexual\b/giu, /\bsex\s+life\b/giu, /性行为|成人内容|色情/gu]
+    patterns: [/\bsexual\b/giu, /\bsex\s+life\b/giu, /性行为|成人内容|色情/gu],
   },
   {
     term: 'minors',
     replacement: 'family wellness',
-    patterns: [/\bunder\s*1[38]\b/giu, /\bteen(?:s|ager)?\b/giu, /\bminor(?:s)?\b/giu, /\bchildren?\b/giu, /未成年人|青少年|儿童/gu]
-  }
+    patterns: [
+      /\bunder\s*1[38]\b/giu,
+      /\bteen(?:s|ager)?\b/giu,
+      /\bminor(?:s)?\b/giu,
+      /\bchildren?\b/giu,
+      /未成年人|青少年|儿童/gu,
+    ],
+  },
 ]
 
 const KEYWORD_HARD_BLOCK_RULES: PolicyHardBlockRule[] = [
   {
     term: 'political affiliation',
-    patterns: [/\b(?:republican|democrat|liberal|conservative|political\s+affiliation|political\s+views?)\b/giu, /政治立场|党派/gu],
-    modes: ['strict', 'balanced', 'preserve-volume']
+    patterns: [
+      /\b(?:republican|democrat|liberal|conservative|political\s+affiliation|political\s+views?)\b/giu,
+      /政治立场|党派/gu,
+    ],
+    modes: ['strict', 'balanced', 'preserve-volume'],
   },
   {
     term: 'religion',
-    patterns: [/\b(?:christian|muslim|jewish|hindu|buddhist|catholic|religion|faith)\b/giu, /宗教|信仰/gu],
-    modes: ['strict', 'balanced', 'preserve-volume']
+    patterns: [
+      /\b(?:christian|muslim|jewish|hindu|buddhist|catholic|religion|faith)\b/giu,
+      /宗教|信仰/gu,
+    ],
+    modes: ['strict', 'balanced', 'preserve-volume'],
   },
   {
     term: 'ethnicity',
-    patterns: [/\bethnicit(?:y|ies)\b/giu, /\bracial\b/giu, /\bafrican\s+american\b/giu, /\basian\s+american\b/giu, /\bhispanic\b/giu, /\blatino\b/giu, /种族|族裔|民族/gu],
-    modes: ['strict', 'balanced', 'preserve-volume']
+    patterns: [
+      /\bethnicit(?:y|ies)\b/giu,
+      /\bracial\b/giu,
+      /\bafrican\s+american\b/giu,
+      /\basian\s+american\b/giu,
+      /\bhispanic\b/giu,
+      /\blatino\b/giu,
+      /种族|族裔|民族/gu,
+    ],
+    modes: ['strict', 'balanced', 'preserve-volume'],
   },
   {
     term: 'sexual orientation',
-    patterns: [/\b(?:gay|lesbian|bisexual|transgender|non-?binary|queer|sexual\s+orientation|gender\s+identity)\b/giu, /性取向|性少数|跨性别|性别认同/gu],
-    modes: ['strict', 'balanced', 'preserve-volume']
+    patterns: [
+      /\b(?:gay|lesbian|bisexual|transgender|non-?binary|queer|sexual\s+orientation|gender\s+identity)\b/giu,
+      /性取向|性少数|跨性别|性别认同/gu,
+    ],
+    modes: ['strict', 'balanced', 'preserve-volume'],
   },
   {
     term: 'sexual content',
     patterns: [/\bsexual\b/giu, /\bsex\s+life\b/giu, /性行为|成人内容|色情/gu],
-    modes: ['strict', 'balanced', 'preserve-volume']
+    modes: ['strict', 'balanced', 'preserve-volume'],
   },
   {
     term: 'minors',
-    patterns: [/\bunder\s*1[38]\b/giu, /\bteen(?:s|ager)?\b/giu, /\bminor(?:s)?\b/giu, /\bchildren?\b/giu, /未成年人|青少年|儿童/gu],
-    modes: ['strict', 'balanced', 'preserve-volume']
+    patterns: [
+      /\bunder\s*1[38]\b/giu,
+      /\bteen(?:s|ager)?\b/giu,
+      /\bminor(?:s)?\b/giu,
+      /\bchildren?\b/giu,
+      /未成年人|青少年|儿童/gu,
+    ],
+    modes: ['strict', 'balanced', 'preserve-volume'],
   },
   {
     term: 'sensitive inference',
@@ -210,29 +268,47 @@ const KEYWORD_HARD_BLOCK_RULES: PolicyHardBlockRule[] = [
       /\bdo\s+you\s+(?:suffer\s+from|have|struggle\s+with|live\s+with)\b/giu,
       /\bare\s+you\s+(?:diagnosed\s+with|suffering\s+from)\b/giu,
       /\bfor\s+patients?\s+like\s+you\b/giu,
-      /\byour\s+(?:condition|diagnosis|disease|medical\s+history|debt)\b/giu
+      /\byour\s+(?:condition|diagnosis|disease|medical\s+history|debt)\b/giu,
     ],
-    modes: ['strict', 'balanced', 'preserve-volume']
+    modes: ['strict', 'balanced', 'preserve-volume'],
   },
   {
     term: 'personal hardship',
-    patterns: [/\bdivorce\b/giu, /\bgrief\b/giu, /\bbereavement\b/giu, /\babuse\b/giu, /\btrauma\b/giu, /\bcriminal\s+record\b/giu, /离婚|丧亲|受虐|创伤|犯罪记录/gu],
-    modes: ['strict']
-  }
+    patterns: [
+      /\bdivorce\b/giu,
+      /\bgrief\b/giu,
+      /\bbereavement\b/giu,
+      /\babuse\b/giu,
+      /\btrauma\b/giu,
+      /\bcriminal\s+record\b/giu,
+      /离婚|丧亲|受虐|创伤|犯罪记录/gu,
+    ],
+    modes: ['strict'],
+  },
 ]
 
-function normalizePolicyGuardMode(value: string | undefined | null): GoogleAdsPolicyGuardMode | null {
-  const normalized = String(value || '').trim().toLowerCase()
+function normalizePolicyGuardMode(
+  value: string | undefined | null
+): GoogleAdsPolicyGuardMode | null {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   if (!normalized) return null
   if (normalized === 'strict') return 'strict'
   if (normalized === 'balanced') return 'balanced'
-  if (normalized === 'preserve-volume' || normalized === 'preserve_volume' || normalized === 'preservevolume') {
+  if (
+    normalized === 'preserve-volume' ||
+    normalized === 'preserve_volume' ||
+    normalized === 'preservevolume'
+  ) {
     return 'preserve-volume'
   }
   return null
 }
 
-export function resolveGoogleAdsPolicyGuardMode(input?: GoogleAdsPolicyGuardMode | string | null): GoogleAdsPolicyGuardMode {
+export function resolveGoogleAdsPolicyGuardMode(
+  input?: GoogleAdsPolicyGuardMode | string | null
+): GoogleAdsPolicyGuardMode {
   const direct = normalizePolicyGuardMode(input || '')
   if (direct) return direct
 
@@ -273,11 +349,12 @@ function ruleMatches(text: string, patterns: RegExp[]): boolean {
   })
 }
 
-function collectMatchedTerms(text: string, rules: Array<{ term: string; patterns: RegExp[] }>): string[] {
+function collectMatchedTerms(
+  text: string,
+  rules: Array<{ term: string; patterns: RegExp[] }>
+): string[] {
   return dedupeTerms(
-    rules
-      .filter((rule) => ruleMatches(text, rule.patterns))
-      .map((rule) => rule.term)
+    rules.filter((rule) => ruleMatches(text, rule.patterns)).map((rule) => rule.term)
   )
 }
 
@@ -330,7 +407,7 @@ export function extractGoogleAdsPolicySensitiveTerms(
   return dedupeTerms([
     ...collectMatchedTerms(joined, INFERENCE_REPLACEMENT_RULES),
     ...collectMatchedTerms(joined, POLICY_REPLACEMENT_RULES),
-    ...collectMatchedTerms(joined, getHardBlockRulesForMode(mode))
+    ...collectMatchedTerms(joined, getHardBlockRulesForMode(mode)),
   ])
 }
 
@@ -354,7 +431,7 @@ export function sanitizeGoogleAdsPolicyText(
   return {
     text: sanitized,
     changed: sanitized !== original,
-    matchedTerms: dedupeTerms(matchedTerms)
+    matchedTerms: dedupeTerms(matchedTerms),
   }
 }
 
@@ -405,7 +482,7 @@ export function sanitizeKeywordListForGoogleAdsPolicy(
     items: sanitized,
     changedCount,
     droppedCount,
-    matchedTerms: dedupeTerms(matchedTerms)
+    matchedTerms: dedupeTerms(matchedTerms),
   }
 }
 
@@ -451,7 +528,7 @@ export function sanitizeKeywordObjectsForGoogleAdsPolicy<T extends { keyword: st
 
     sanitized.push({
       ...item,
-      keyword: normalizedKeyword
+      keyword: normalizedKeyword,
     })
   }
 
@@ -459,7 +536,7 @@ export function sanitizeKeywordObjectsForGoogleAdsPolicy<T extends { keyword: st
     items: sanitized,
     changedCount,
     droppedCount,
-    matchedTerms: dedupeTerms(matchedTerms)
+    matchedTerms: dedupeTerms(matchedTerms),
   }
 }
 
@@ -482,7 +559,7 @@ export function buildGoogleAdsPolicyPromptGuardrails(
     '- Do NOT reference political affiliation, religion, ethnicity, sexual orientation, or minors.',
     '- Do NOT infer sensitive personal status (for example: "do you suffer from...", "your condition").',
     '- Use neutral wording: wellness, sleep quality, trends, everyday insights.',
-    termLine
+    termLine,
   ]
     .filter(Boolean)
     .join('\n')

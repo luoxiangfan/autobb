@@ -5,7 +5,7 @@
 import {
   createOptimizationEngine,
   OptimizationRulesEngine,
-  type CampaignMetrics
+  type CampaignMetrics,
 } from '../optimization-rules'
 
 describe('OptimizationRulesEngine', () => {
@@ -30,7 +30,7 @@ describe('OptimizationRulesEngine', () => {
     conversionRate: 0.05,
     roi: 0.67,
     daysRunning: 7,
-    ...overrides
+    ...overrides,
   })
 
   describe('规则1: CTR过低', () => {
@@ -38,13 +38,13 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         clicks: 100,
         impressions: 50000,
-        ctr: 0.002 // 0.2%
+        ctr: 0.002, // 0.2%
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
       expect(recommendations.length).toBeGreaterThan(0)
-      const ctrRec = recommendations.find(r => r.reason.includes('CTR过低'))
+      const ctrRec = recommendations.find((r) => r.reason.includes('CTR过低'))
       expect(ctrRec).toBeDefined()
       expect(ctrRec?.priority).toBe('high')
       expect(ctrRec?.type).toBe('pause_campaign')
@@ -54,12 +54,12 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         clicks: 60,
         impressions: 10000,
-        ctr: 0.006 // 0.6%
+        ctr: 0.006, // 0.6%
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const ctrRec = recommendations.find(r => r.reason.includes('CTR过低'))
+      const ctrRec = recommendations.find((r) => r.reason.includes('CTR过低'))
       expect(ctrRec).toBeDefined()
       expect(ctrRec?.priority).toBe('high')
       expect(ctrRec?.type).toBe('optimize_creative')
@@ -69,12 +69,12 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         clicks: 200,
         impressions: 10000,
-        ctr: 0.02 // 2%
+        ctr: 0.02, // 2%
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const ctrRec = recommendations.find(r => r.reason.includes('CTR过低'))
+      const ctrRec = recommendations.find((r) => r.reason.includes('CTR过低'))
       expect(ctrRec).toBeUndefined()
     })
 
@@ -82,12 +82,12 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         clicks: 30,
         impressions: 10000,
-        ctr: 0.003
+        ctr: 0.003,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const ctrRec = recommendations.find(r => r.reason.includes('CTR过低'))
+      const ctrRec = recommendations.find((r) => r.reason.includes('CTR过低'))
       expect(ctrRec).toBeUndefined()
     })
   })
@@ -97,12 +97,12 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         clicks: 100,
         conversions: 0,
-        conversionRate: 0
+        conversionRate: 0,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const convRec = recommendations.find(r => r.reason.includes('转化率过低'))
+      const convRec = recommendations.find((r) => r.reason.includes('转化率过低'))
       expect(convRec).toBeDefined()
       expect(convRec?.priority).toBe('medium')
       expect(convRec?.type).toBe('improve_landing_page')
@@ -112,12 +112,12 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         clicks: 100,
         conversions: 5,
-        conversionRate: 0.05 // 5%
+        conversionRate: 0.05, // 5%
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const convRec = recommendations.find(r => r.reason.includes('转化率过低'))
+      const convRec = recommendations.find((r) => r.reason.includes('转化率过低'))
       expect(convRec).toBeUndefined()
     })
 
@@ -125,12 +125,12 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         clicks: 15,
         conversions: 0,
-        conversionRate: 0
+        conversionRate: 0,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const convRec = recommendations.find(r => r.reason.includes('转化率过低'))
+      const convRec = recommendations.find((r) => r.reason.includes('转化率过低'))
       expect(convRec).toBeUndefined()
     })
   })
@@ -140,12 +140,12 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         clicks: 50,
         cost: 200,
-        cpc: 4.0 // $4
+        cpc: 4.0, // $4
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const cpcRec = recommendations.find(r => r.reason.includes('CPC过高'))
+      const cpcRec = recommendations.find((r) => r.reason.includes('CPC过高'))
       expect(cpcRec).toBeDefined()
       expect(cpcRec?.priority).toBe('medium')
       expect(cpcRec?.type).toBe('lower_cpc')
@@ -155,12 +155,12 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         clicks: 50,
         cost: 75,
-        cpc: 1.5
+        cpc: 1.5,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const cpcRec = recommendations.find(r => r.reason.includes('CPC过高'))
+      const cpcRec = recommendations.find((r) => r.reason.includes('CPC过高'))
       expect(cpcRec).toBeUndefined()
     })
 
@@ -168,12 +168,12 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         clicks: 5,
         cost: 25,
-        cpc: 5.0
+        cpc: 5.0,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const cpcRec = recommendations.find(r => r.reason.includes('CPC过高'))
+      const cpcRec = recommendations.find((r) => r.reason.includes('CPC过高'))
       expect(cpcRec).toBeUndefined()
     })
   })
@@ -182,12 +182,12 @@ describe('OptimizationRulesEngine', () => {
     it('应该建议暂停花费过高但无转化的Campaign', () => {
       const campaign = createMockCampaign({
         cost: 150,
-        conversions: 0
+        conversions: 0,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const costRec = recommendations.find(r => r.reason.includes('已花费'))
+      const costRec = recommendations.find((r) => r.reason.includes('已花费'))
       expect(costRec).toBeDefined()
       expect(costRec?.priority).toBe('high')
       expect(costRec?.type).toBe('pause_campaign')
@@ -196,24 +196,24 @@ describe('OptimizationRulesEngine', () => {
     it('花费低于阈值时不应生成建议', () => {
       const campaign = createMockCampaign({
         cost: 50,
-        conversions: 0
+        conversions: 0,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const costRec = recommendations.find(r => r.reason.includes('已花费'))
+      const costRec = recommendations.find((r) => r.reason.includes('已花费'))
       expect(costRec).toBeUndefined()
     })
 
     it('有转化时不应生成建议', () => {
       const campaign = createMockCampaign({
         cost: 150,
-        conversions: 2
+        conversions: 2,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const costRec = recommendations.find(r => r.reason.includes('已花费'))
+      const costRec = recommendations.find((r) => r.reason.includes('已花费'))
       expect(costRec).toBeUndefined()
     })
   })
@@ -223,12 +223,12 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         cost: 100,
         conversions: 1,
-        roi: -0.5 // -50%
+        roi: -0.5, // -50%
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const roiRec = recommendations.find(r => r.reason.includes('ROI为负值'))
+      const roiRec = recommendations.find((r) => r.reason.includes('ROI为负值'))
       expect(roiRec).toBeDefined()
       expect(roiRec?.priority).toBe('high')
       expect(roiRec?.type).toBe('decrease_budget')
@@ -238,12 +238,12 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         cost: 50,
         conversions: 2,
-        roi: 1.0 // 100%
+        roi: 1.0, // 100%
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const roiRec = recommendations.find(r => r.reason.includes('ROI为负值'))
+      const roiRec = recommendations.find((r) => r.reason.includes('ROI为负值'))
       expect(roiRec).toBeUndefined()
     })
 
@@ -251,12 +251,12 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         cost: 100,
         conversions: 0,
-        roi: 0
+        roi: 0,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const roiRec = recommendations.find(r => r.reason.includes('ROI为负值'))
+      const roiRec = recommendations.find((r) => r.reason.includes('ROI为负值'))
       expect(roiRec).toBeUndefined()
     })
   })
@@ -266,12 +266,12 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         cost: 50,
         conversions: 10,
-        roi: 1.5 // 150%
+        roi: 1.5, // 150%
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const roiRec = recommendations.find(r => r.reason.includes('ROI表现优异'))
+      const roiRec = recommendations.find((r) => r.reason.includes('ROI表现优异'))
       expect(roiRec).toBeDefined()
       expect(roiRec?.priority).toBe('low')
       expect(roiRec?.type).toBe('increase_budget')
@@ -281,12 +281,12 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         cost: 50,
         conversions: 5,
-        roi: 0.8 // 80%
+        roi: 0.8, // 80%
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const roiRec = recommendations.find(r => r.reason.includes('ROI表现优异'))
+      const roiRec = recommendations.find((r) => r.reason.includes('ROI表现优异'))
       expect(roiRec).toBeUndefined()
     })
 
@@ -294,12 +294,12 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         cost: 20,
         conversions: 3,
-        roi: 2.0
+        roi: 2.0,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const roiRec = recommendations.find(r => r.reason.includes('ROI表现优异'))
+      const roiRec = recommendations.find((r) => r.reason.includes('ROI表现优异'))
       expect(roiRec).toBeUndefined()
     })
   })
@@ -310,12 +310,12 @@ describe('OptimizationRulesEngine', () => {
         clicks: 600,
         impressions: 10000,
         ctr: 0.06, // 6%
-        conversions: 10
+        conversions: 10,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const ctrRec = recommendations.find(r => r.reason.includes('CTR表现优异'))
+      const ctrRec = recommendations.find((r) => r.reason.includes('CTR表现优异'))
       expect(ctrRec).toBeDefined()
       expect(ctrRec?.priority).toBe('low')
       expect(ctrRec?.type).toBe('increase_budget')
@@ -326,12 +326,12 @@ describe('OptimizationRulesEngine', () => {
         clicks: 600,
         impressions: 10000,
         ctr: 0.06,
-        conversions: 0
+        conversions: 0,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const ctrRec = recommendations.find(r => r.reason.includes('CTR表现优异'))
+      const ctrRec = recommendations.find((r) => r.reason.includes('CTR表现优异'))
       expect(ctrRec).toBeUndefined()
     })
 
@@ -340,12 +340,12 @@ describe('OptimizationRulesEngine', () => {
         clicks: 200,
         impressions: 10000,
         ctr: 0.02, // 2%
-        conversions: 5
+        conversions: 5,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const ctrRec = recommendations.find(r => r.reason.includes('CTR表现优异'))
+      const ctrRec = recommendations.find((r) => r.reason.includes('CTR表现优异'))
       expect(ctrRec).toBeUndefined()
     })
   })
@@ -354,12 +354,12 @@ describe('OptimizationRulesEngine', () => {
     it('应该建议扩大定位当展示量过低', () => {
       const campaign = createMockCampaign({
         impressions: 50,
-        daysRunning: 5
+        daysRunning: 5,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const impRec = recommendations.find(r => r.reason.includes('展示量过低'))
+      const impRec = recommendations.find((r) => r.reason.includes('展示量过低'))
       expect(impRec).toBeDefined()
       expect(impRec?.priority).toBe('medium')
       expect(impRec?.type).toBe('expand_targeting')
@@ -368,24 +368,24 @@ describe('OptimizationRulesEngine', () => {
     it('展示量正常时不应生成建议', () => {
       const campaign = createMockCampaign({
         impressions: 5000,
-        daysRunning: 5
+        daysRunning: 5,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const impRec = recommendations.find(r => r.reason.includes('展示量过低'))
+      const impRec = recommendations.find((r) => r.reason.includes('展示量过低'))
       expect(impRec).toBeUndefined()
     })
 
     it('运行天数不足3天时不应生成建议', () => {
       const campaign = createMockCampaign({
         impressions: 50,
-        daysRunning: 2
+        daysRunning: 2,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const impRec = recommendations.find(r => r.reason.includes('展示量过低'))
+      const impRec = recommendations.find((r) => r.reason.includes('展示量过低'))
       expect(impRec).toBeUndefined()
     })
   })
@@ -394,12 +394,12 @@ describe('OptimizationRulesEngine', () => {
     it('应该提示新Campaign处于观察期', () => {
       const campaign = createMockCampaign({
         daysRunning: 2,
-        impressions: 100
+        impressions: 100,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const newRec = recommendations.find(r => r.reason.includes('新Campaign处于观察期'))
+      const newRec = recommendations.find((r) => r.reason.includes('新Campaign处于观察期'))
       expect(newRec).toBeDefined()
       expect(newRec?.priority).toBe('low')
       expect(newRec?.type).toBe('optimize_creative')
@@ -408,24 +408,24 @@ describe('OptimizationRulesEngine', () => {
     it('运行超过3天时不应生成观察期建议', () => {
       const campaign = createMockCampaign({
         daysRunning: 5,
-        impressions: 100
+        impressions: 100,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const newRec = recommendations.find(r => r.reason.includes('新Campaign处于观察期'))
+      const newRec = recommendations.find((r) => r.reason.includes('新Campaign处于观察期'))
       expect(newRec).toBeUndefined()
     })
 
     it('展示量过低时不应生成观察期建议', () => {
       const campaign = createMockCampaign({
         daysRunning: 2,
-        impressions: 5
+        impressions: 5,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
 
-      const newRec = recommendations.find(r => r.reason.includes('新Campaign处于观察期'))
+      const newRec = recommendations.find((r) => r.reason.includes('新Campaign处于观察期'))
       expect(newRec).toBeUndefined()
     })
   })
@@ -435,7 +435,7 @@ describe('OptimizationRulesEngine', () => {
       const campaigns: CampaignMetrics[] = [
         createMockCampaign({ campaignId: 1, clicks: 100, ctr: 0.005 }),
         createMockCampaign({ campaignId: 2, cost: 150, conversions: 0 }),
-        createMockCampaign({ campaignId: 3, roi: 1.5, conversions: 10 })
+        createMockCampaign({ campaignId: 3, roi: 1.5, conversions: 10 }),
       ]
 
       const recommendations = engine.generateBatchRecommendations(campaigns)
@@ -443,9 +443,9 @@ describe('OptimizationRulesEngine', () => {
       expect(recommendations.length).toBeGreaterThan(0)
 
       // 验证不同Campaign的建议
-      const campaign1Recs = recommendations.filter(r => r.campaignId === 1)
-      const campaign2Recs = recommendations.filter(r => r.campaignId === 2)
-      const campaign3Recs = recommendations.filter(r => r.campaignId === 3)
+      const campaign1Recs = recommendations.filter((r) => r.campaignId === 1)
+      const campaign2Recs = recommendations.filter((r) => r.campaignId === 2)
+      const campaign3Recs = recommendations.filter((r) => r.campaignId === 3)
 
       expect(campaign1Recs.length).toBeGreaterThan(0)
       expect(campaign2Recs.length).toBeGreaterThan(0)
@@ -456,13 +456,13 @@ describe('OptimizationRulesEngine', () => {
       const campaigns: CampaignMetrics[] = [
         createMockCampaign({ campaignId: 1, roi: 1.5, conversions: 10 }), // low priority
         createMockCampaign({ campaignId: 2, cost: 150, conversions: 0 }), // high priority
-        createMockCampaign({ campaignId: 3, clicks: 50, cpc: 4.0 }) // medium priority
+        createMockCampaign({ campaignId: 3, clicks: 50, cpc: 4.0 }), // medium priority
       ]
 
       const recommendations = engine.generateBatchRecommendations(campaigns)
 
       // 验证优先级排序：high -> medium -> low
-      const priorities = recommendations.map(r => r.priority)
+      const priorities = recommendations.map((r) => r.priority)
       const highIndex = priorities.indexOf('high')
       const mediumIndex = priorities.indexOf('medium')
       const lowIndex = priorities.indexOf('low')
@@ -482,20 +482,20 @@ describe('OptimizationRulesEngine', () => {
         ctrLow: {
           enabled: true,
           threshold: 0.015, // 提高到1.5%
-          sensitivity: 'strict'
-        }
+          sensitivity: 'strict',
+        },
       })
 
       const campaign = createMockCampaign({
         clicks: 100,
         impressions: 10000,
-        ctr: 0.012 // 1.2%
+        ctr: 0.012, // 1.2%
       })
 
       const recommendations = customEngine.generateRecommendations(campaign)
 
       // 使用更严格的阈值，1.2%应该触发建议
-      const ctrRec = recommendations.find(r => r.reason.includes('CTR过低'))
+      const ctrRec = recommendations.find((r) => r.reason.includes('CTR过低'))
       expect(ctrRec).toBeDefined()
     })
 
@@ -504,20 +504,20 @@ describe('OptimizationRulesEngine', () => {
         ctrLow: {
           enabled: false,
           threshold: 0.01,
-          sensitivity: 'normal'
-        }
+          sensitivity: 'normal',
+        },
       })
 
       const campaign = createMockCampaign({
         clicks: 100,
         impressions: 50000,
-        ctr: 0.002 // 极低CTR
+        ctr: 0.002, // 极低CTR
       })
 
       const recommendations = customEngine.generateRecommendations(campaign)
 
       // CTR规则已禁用，不应生成建议
-      const ctrRec = recommendations.find(r => r.reason.includes('CTR过低'))
+      const ctrRec = recommendations.find((r) => r.reason.includes('CTR过低'))
       expect(ctrRec).toBeUndefined()
     })
 
@@ -529,8 +529,8 @@ describe('OptimizationRulesEngine', () => {
         ctrLow: {
           enabled: true,
           threshold: 0.02,
-          sensitivity: 'relaxed'
-        }
+          sensitivity: 'relaxed',
+        },
       })
 
       const updatedConfig = engine.getConfig()
@@ -545,18 +545,18 @@ describe('OptimizationRulesEngine', () => {
         ctrLow: {
           enabled: true,
           threshold: 0.01,
-          sensitivity: 'strict' // 1.2x multiplier
-        }
+          sensitivity: 'strict', // 1.2x multiplier
+        },
       })
 
       const campaign = createMockCampaign({
         clicks: 100,
         impressions: 10000,
-        ctr: 0.011 // 1.1%，正常模式不会触发，strict会触发
+        ctr: 0.011, // 1.1%，正常模式不会触发，strict会触发
       })
 
       const recommendations = strictEngine.generateRecommendations(campaign)
-      const ctrRec = recommendations.find(r => r.reason.includes('CTR过低'))
+      const ctrRec = recommendations.find((r) => r.reason.includes('CTR过低'))
       expect(ctrRec).toBeDefined()
     })
 
@@ -565,18 +565,18 @@ describe('OptimizationRulesEngine', () => {
         ctrLow: {
           enabled: true,
           threshold: 0.01,
-          sensitivity: 'relaxed' // 0.8x multiplier
-        }
+          sensitivity: 'relaxed', // 0.8x multiplier
+        },
       })
 
       const campaign = createMockCampaign({
         clicks: 100,
         impressions: 10000,
-        ctr: 0.009 // 0.9%，正常模式会触发，relaxed不会
+        ctr: 0.009, // 0.9%，正常模式会触发，relaxed不会
       })
 
       const recommendations = relaxedEngine.generateRecommendations(campaign)
-      const ctrRec = recommendations.find(r => r.reason.includes('CTR过低'))
+      const ctrRec = recommendations.find((r) => r.reason.includes('CTR过低'))
       expect(ctrRec).toBeUndefined()
     })
   })
@@ -585,7 +585,7 @@ describe('OptimizationRulesEngine', () => {
     it('展示量过低时不应生成建议', () => {
       const campaign = createMockCampaign({
         impressions: 5,
-        clicks: 0
+        clicks: 0,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
@@ -601,7 +601,7 @@ describe('OptimizationRulesEngine', () => {
         ctr: 0,
         cpc: 0,
         conversionRate: 0,
-        roi: 0
+        roi: 0,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
@@ -618,7 +618,7 @@ describe('OptimizationRulesEngine', () => {
         ctr: 0.5, // 50% CTR（极端高）
         cpc: 2.0,
         conversionRate: 0.02,
-        roi: 5.0 // 500% ROI
+        roi: 5.0, // 500% ROI
       })
 
       const recommendations = engine.generateRecommendations(campaign)
@@ -630,7 +630,7 @@ describe('OptimizationRulesEngine', () => {
     it('建议应包含完整信息', () => {
       const campaign = createMockCampaign({
         cost: 150,
-        conversions: 0
+        conversions: 0,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
@@ -650,11 +650,11 @@ describe('OptimizationRulesEngine', () => {
     it('建议应提供可操作的行动方案', () => {
       const campaign = createMockCampaign({
         clicks: 100,
-        ctr: 0.005
+        ctr: 0.005,
       })
 
       const recommendations = engine.generateRecommendations(campaign)
-      const ctrRec = recommendations.find(r => r.reason.includes('CTR过低'))
+      const ctrRec = recommendations.find((r) => r.reason.includes('CTR过低'))
 
       expect(ctrRec?.action).toContain('建议')
       expect(ctrRec?.action.length).toBeGreaterThan(10)

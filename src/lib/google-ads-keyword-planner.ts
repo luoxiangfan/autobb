@@ -36,8 +36,7 @@ async function resolveKeywordPlannerApiAuthType(params: {
   authType?: AuthType
   preparedOAuth?: KeywordIdeasPreparedOAuth
 }): Promise<AuthType> {
-  const ctx =
-    params.preparedOAuth?.authContext ?? (await getGoogleAdsAuthContext(params.userId))
+  const ctx = params.preparedOAuth?.authContext ?? (await getGoogleAdsAuthContext(params.userId))
   const dualStackError = googleAdsAuthContextDualStackError(ctx)
   if (dualStackError) {
     throw new Error(dualStackError)
@@ -84,8 +83,7 @@ async function resolveKeywordPlannerOAuth(params: {
 
     refreshToken = (params.refreshToken || prepared.refreshToken || '').trim()
     credentials = prepared.oauthCredentials
-    loginCustomerHint =
-      prepared.oauthLoginCustomerId || prepared.apiAuth.oauthLoginCustomerId || ''
+    loginCustomerHint = prepared.oauthLoginCustomerId || prepared.apiAuth.oauthLoginCustomerId || ''
     authContext = prepared.authContext
   }
 
@@ -202,7 +200,7 @@ export interface KeywordMetrics {
  */
 export async function getKeywordIdeas(params: {
   customerId: string
-  refreshToken?: string  // OAuth模式需要，服务账号模式不需要
+  refreshToken?: string // OAuth模式需要，服务账号模式不需要
   seedKeywords?: string[]
   pageUrl?: string
   targetCountry: string
@@ -284,7 +282,9 @@ export async function getKeywordIdeas(params: {
       seedBatches.push([])
     }
 
-    console.log(`   📦 种子词分批: ${params.seedKeywords?.length || 0} 个词 → ${seedBatches.length} 批`)
+    console.log(
+      `   📦 种子词分批: ${params.seedKeywords?.length || 0} 个词 → ${seedBatches.length} 批`
+    )
 
     for (let batchIndex = 0; batchIndex < seedBatches.length; batchIndex++) {
       const batch = seedBatches[batchIndex]
@@ -344,13 +344,15 @@ export async function getKeywordIdeas(params: {
       }))
 
       // 合并结果（去重）
-      batchIdeas.forEach(idea => {
-        if (!allKeywordIdeas.find(k => k.text.toLowerCase() === idea.text.toLowerCase())) {
+      batchIdeas.forEach((idea) => {
+        if (!allKeywordIdeas.find((k) => k.text.toLowerCase() === idea.text.toLowerCase())) {
           allKeywordIdeas.push(idea)
         }
       })
 
-      console.log(`   📦 批次 ${batchIndex + 1}/${seedBatches.length}: 获取 ${batchIdeas.length} 个关键词，累计 ${allKeywordIdeas.length} 个`)
+      console.log(
+        `   📦 批次 ${batchIndex + 1}/${seedBatches.length}: 获取 ${batchIdeas.length} 个关键词，累计 ${allKeywordIdeas.length} 个`
+      )
     }
 
     success = true
@@ -371,7 +373,7 @@ export async function getKeywordIdeas(params: {
         requestCount: 1,
         responseTimeMs: Date.now() - startTime,
         isSuccess: success,
-        errorMessage
+        errorMessage,
       })
     }
   }
@@ -383,7 +385,7 @@ export async function getKeywordIdeas(params: {
  */
 export async function getKeywordMetrics(params: {
   customerId: string
-  refreshToken?: string  // OAuth模式需要，服务账号模式不需要
+  refreshToken?: string // OAuth模式需要，服务账号模式不需要
   keywords: string[]
   targetCountry: string
   targetLanguage: string
@@ -498,7 +500,7 @@ export async function getKeywordMetrics(params: {
         requestCount: 1,
         responseTimeMs: Date.now() - startTime,
         isSuccess: success,
-        errorMessage
+        errorMessage,
       })
     }
   }
@@ -524,7 +526,7 @@ export function filterHighQualityKeywords(
     excludeCompetition = [],
   } = options
 
-  return keywords.filter(kw => {
+  return keywords.filter((kw) => {
     // 过滤低搜索量
     if (kw.avgMonthlySearches < minMonthlySearches) {
       return false
@@ -562,22 +564,42 @@ function normalizeTokens(input: string): string[] {
   if (!cleaned) return []
 
   const stop = new Set([
-    'the', 'a', 'an', 'and', 'or', 'for', 'with', 'to', 'of', 'in', 'on', 'by',
-    'official', 'store', 'shop', 'website', 'site', 'online',
+    'the',
+    'a',
+    'an',
+    'and',
+    'or',
+    'for',
+    'with',
+    'to',
+    'of',
+    'in',
+    'on',
+    'by',
+    'official',
+    'store',
+    'shop',
+    'website',
+    'site',
+    'online',
   ])
   return Array.from(
     new Set(
       cleaned
         .split(' ')
-        .map(t => t.trim())
+        .map((t) => t.trim())
         .filter(Boolean)
-        .filter(t => t.length >= 3)
-        .filter(t => !stop.has(t))
+        .filter((t) => t.length >= 3)
+        .filter((t) => !stop.has(t))
     )
   )
 }
 
-function buildRelevanceContext(context?: { brand?: string; category?: string | null; productName?: string | null }): {
+function buildRelevanceContext(context?: {
+  brand?: string
+  category?: string | null
+  productName?: string | null
+}): {
   brand: string
   brandCore: string
   tokens: string[]
@@ -592,7 +614,7 @@ function buildRelevanceContext(context?: { brand?: string; category?: string | n
       ...normalizeTokens(context?.category || ''),
       ...normalizeTokens(context?.productName || ''),
     ])
-  ).filter(t => !brandTokens.has(t))
+  ).filter((t) => !brandTokens.has(t))
 
   return { brand, brandCore, tokens }
 }
@@ -627,7 +649,7 @@ function calculateRelevanceScore(
   if (ctx) {
     const text = keyword.text.toLowerCase()
     const hasBrand = text.includes(ctx.brandCore)
-    const hasToken = ctx.tokens.length === 0 ? true : ctx.tokens.some(t => text.includes(t))
+    const hasToken = ctx.tokens.length === 0 ? true : ctx.tokens.some((t) => text.includes(t))
 
     if (hasBrand) relevanceBonus += 8
     if (hasToken) relevanceBonus += 3
@@ -653,7 +675,7 @@ export function groupKeywordsByTheme(keywords: KeywordIdea[]): {
     other: [],
   }
 
-  keywords.forEach(kw => {
+  keywords.forEach((kw) => {
     const text = kw.text.toLowerCase()
 
     // 品牌词

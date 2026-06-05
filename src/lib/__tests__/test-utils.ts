@@ -17,7 +17,7 @@ export const mockOffers = {
     target_country: 'US',
     target_language: 'English',
     unique_selling_points: '4K Resolution, Extended Battery Life, Smart Navigation',
-    keywords: ['robot vacuum', 'smart cleaning', 'automated vacuum']
+    keywords: ['robot vacuum', 'smart cleaning', 'automated vacuum'],
   } as Offer,
 
   eufyDE: {
@@ -28,7 +28,7 @@ export const mockOffers = {
     target_country: 'DE',
     target_language: 'German',
     unique_selling_points: 'Intelligente Navigation, Lange Akkulaufzeit',
-    keywords: ['robot staubsauger', 'intelligente reinigung']
+    keywords: ['robot staubsauger', 'intelligente reinigung'],
   } as Offer,
 
   eufyIT: {
@@ -39,7 +39,7 @@ export const mockOffers = {
     target_country: 'IT',
     target_language: 'Italian',
     unique_selling_points: 'Navigazione intelligente, Batteria lunga durata',
-    keywords: ['robot aspirapolvere', 'pulizia intelligente']
+    keywords: ['robot aspirapolvere', 'pulizia intelligente'],
   } as Offer,
 
   eufyJA: {
@@ -50,8 +50,8 @@ export const mockOffers = {
     target_country: 'JP',
     target_language: 'Japanese',
     unique_selling_points: 'スマートナビゲーション、長いバッテリー寿命',
-    keywords: ['ロボット掃除機', 'スマート清掃']
-  } as Offer
+    keywords: ['ロボット掃除機', 'スマート清掃'],
+  } as Offer,
 }
 
 /**
@@ -79,7 +79,7 @@ export const mockHeadlines = {
     // Urgency (2)
     'Only 5 Left in Stock',
     'Ends Tomorrow',
-    'Premium Quality'
+    'Premium Quality',
   ],
 
   // 不完整的标题（缺少某些类型）
@@ -93,7 +93,7 @@ export const mockHeadlines = {
     'Get Yours Today',
     'Only 5 Left in Stock',
     'Ends Tomorrow',
-    'Premium Quality'
+    'Premium Quality',
   ],
 
   // 相似度高的标题
@@ -112,7 +112,7 @@ export const mockHeadlines = {
     'Battery Life Extended',
     'Save 30% Today',
     'Save 30% Now',
-    'Save 30% This Week'
+    'Save 30% This Week',
   ],
 
   // 短标题
@@ -131,7 +131,7 @@ export const mockHeadlines = {
     'Quality',
     'Smart',
     'Fast',
-    'Easy'
+    'Easy',
   ],
 
   // 长标题
@@ -150,8 +150,8 @@ export const mockHeadlines = {
     'Smart Navigation System Advanced Technology',
     'Extended Battery Life Long Lasting Performance',
     'Eco-Friendly Design Sustainable Solution',
-    'Official Store Authentic Products Guaranteed'
-  ]
+    'Official Store Authentic Products Guaranteed',
+  ],
 }
 
 /**
@@ -163,7 +163,7 @@ export const mockDescriptions = {
     'Award-Winning Tech. Rated 4.8 stars by 50K+ Happy Customers. Shop Now',
     'Shop Now for Fast, Free Delivery. Easy Returns Guaranteed.',
     '4K Resolution. Solar Powered. Works Rain or Shine. Learn More',
-    'Trusted by 100K+ Buyers. 30-Day Money-Back Promise. Order Now'
+    'Trusted by 100K+ Buyers. 30-Day Money-Back Promise. Order Now',
   ],
 
   // 不完整的描述（缺少某些焦点）
@@ -171,7 +171,7 @@ export const mockDescriptions = {
     'Award-Winning Tech. Rated 4.8 stars by 50K+ customers.',
     'Fast, Free Delivery. Easy Returns.',
     '4K Resolution. Solar Powered. Works Rain or Shine.',
-    'Trusted by 100K+ Buyers.'
+    'Trusted by 100K+ Buyers.',
   ],
 
   // 缺少CTA的描述
@@ -179,7 +179,7 @@ export const mockDescriptions = {
     'Award-Winning Tech. Rated 4.8 stars by 50K+ customers.',
     'Fast, Free Delivery. Easy Returns.',
     '4K Resolution. Solar Powered. Works Rain or Shine.',
-    'Trusted by 100K+ Buyers. 30-Day Money-Back Promise.'
+    'Trusted by 100K+ Buyers. 30-Day Money-Back Promise.',
   ],
 
   // 相似度高的描述
@@ -187,8 +187,8 @@ export const mockDescriptions = {
     'Award-Winning Tech. Rated 4.8 stars by 50K+ customers. Shop Now',
     'Award-Winning Tech. Rated 4.8 stars by 50K+ customers. Buy Now',
     'Award-Winning Tech. Rated 4.8 stars by 50K+ customers. Order Now',
-    'Award-Winning Tech. Rated 4.8 stars by 50K+ customers. Get Now'
-  ]
+    'Award-Winning Tech. Rated 4.8 stars by 50K+ customers. Get Now',
+  ],
 }
 
 /**
@@ -228,7 +228,7 @@ export const mockKeywords = {
     { keyword: 'robot vacuum with mopping', searchVolume: 700 },
     { keyword: 'affordable robot vacuum under 300', searchVolume: 400 },
     { keyword: 'robot vacuum with self emptying', searchVolume: 550 },
-    { keyword: 'best budget robot vacuum 2024', searchVolume: 450 }
+    { keyword: 'best budget robot vacuum 2024', searchVolume: 450 },
   ],
 
   // 不完整的关键词（缺少某些优先级）
@@ -240,7 +240,7 @@ export const mockKeywords = {
     { keyword: 'best robot vacuum', searchVolume: 6000 },
     { keyword: 'cheap robot vacuum', searchVolume: 4000 },
     { keyword: 'best robot vacuum for pet hair', searchVolume: 800 },
-    { keyword: 'robot vacuum with app control', searchVolume: 600 }
+    { keyword: 'robot vacuum with app control', searchVolume: 600 },
   ],
 
   // 低搜索量的关键词
@@ -248,8 +248,8 @@ export const mockKeywords = {
     { keyword: 'eufy xyz', searchVolume: 50 },
     { keyword: 'eufy abc', searchVolume: 30 },
     { keyword: 'robot vacuum xyz', searchVolume: 40 },
-    { keyword: 'smart vacuum abc', searchVolume: 20 }
-  ]
+    { keyword: 'smart vacuum abc', searchVolume: 20 },
+  ],
 }
 
 /**
@@ -260,48 +260,43 @@ export const mockCreatives = {
     headlines: mockHeadlines.complete.map((text, _index) => ({
       text,
       pinned: false,
-      pinnedField: null as any
+      pinnedField: null as any,
     })) as HeadlineAsset[],
     descriptions: mockDescriptions.complete.map((text, _index) => ({
       text,
       pinned: false,
-      pinnedField: null as any
+      pinnedField: null as any,
     })) as DescriptionAsset[],
     keywords: mockKeywords.complete,
-    callouts: [
-      'Free Shipping',
-      '30-Day Returns',
-      'Prime Eligible',
-      'Award Winner'
-    ],
+    callouts: ['Free Shipping', '30-Day Returns', 'Prime Eligible', 'Award Winner'],
     sitelinks: [
       { text: 'Shop Vacuums', description: 'Browse our full collection' },
       { text: 'Robot Vacuums', description: 'Smart cleaning solutions' },
       { text: 'Deals & Offers', description: 'Save on select items' },
       { text: 'Customer Reviews', description: 'See what customers say' },
       { text: 'Support & Help', description: 'Get answers to questions' },
-      { text: 'About Us', description: 'Learn our story' }
-    ]
+      { text: 'About Us', description: 'Learn our story' },
+    ],
   } as GeneratedAdCreativeData,
 
   incomplete: {
     headlines: mockHeadlines.incomplete.map((text, _index) => ({
       text,
       pinned: false,
-      pinnedField: null as any
+      pinnedField: null as any,
     })) as HeadlineAsset[],
     descriptions: mockDescriptions.incomplete.map((text, _index) => ({
       text,
       pinned: false,
-      pinnedField: null as any
+      pinnedField: null as any,
     })) as DescriptionAsset[],
     keywords: mockKeywords.incomplete,
     callouts: ['Free Shipping', '30-Day Returns'],
     sitelinks: [
       { text: 'Shop Vacuums', description: 'Browse our collection' },
-      { text: 'Robot Vacuums', description: 'Smart solutions' }
-    ]
-  } as GeneratedAdCreativeData
+      { text: 'Robot Vacuums', description: 'Smart solutions' },
+    ],
+  } as GeneratedAdCreativeData,
 }
 
 /**
@@ -372,7 +367,7 @@ export function generateRandomDescription(): string {
     'Fast shipping and easy returns available.',
     'Trusted by thousands of happy customers.',
     'Save money with our special offers today.',
-    'Premium quality at affordable prices.'
+    'Premium quality at affordable prices.',
   ]
 
   return descriptions[Math.floor(Math.random() * descriptions.length)]
@@ -393,7 +388,7 @@ export function generateRandomKeyword(): { keyword: string; searchVolume: number
  * 延迟函数（用于异步测试）
  */
 export function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**

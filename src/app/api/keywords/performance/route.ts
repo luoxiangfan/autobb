@@ -10,7 +10,9 @@ function toNumber(value: unknown, fallback = 0): number {
 }
 
 function normalizeCurrency(value: unknown): string {
-  const normalized = String(value ?? '').trim().toUpperCase()
+  const normalized = String(value ?? '')
+    .trim()
+    .toUpperCase()
   return normalized || 'USD'
 }
 
@@ -122,15 +124,16 @@ export async function GET(request: NextRequest) {
       baseParams
     )
 
-    const currencies = Array.from(new Set(
-      (currencyRows || [])
-        .map((row: any) => normalizeCurrency(row.currency))
-        .filter(Boolean)
-    ))
+    const currencies = Array.from(
+      new Set(
+        (currencyRows || []).map((row: any) => normalizeCurrency(row.currency)).filter(Boolean)
+      )
+    )
 
-    const reportingCurrency = requestedCurrency && currencies.includes(requestedCurrency)
-      ? requestedCurrency
-      : (currencies[0] || 'USD')
+    const reportingCurrency =
+      requestedCurrency && currencies.includes(requestedCurrency)
+        ? requestedCurrency
+        : currencies[0] || 'USD'
 
     const queryParams = [...baseParams, reportingCurrency, limit]
 
@@ -231,20 +234,23 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    const summary = data.reduce((acc, row) => {
-      acc.impressions += row.metrics.impressions
-      acc.clicks += row.metrics.clicks
-      acc.conversions += row.metrics.conversions
-      acc.cost += row.metrics.cost
-      acc.estimatedRevenue += row.metrics.estimatedRevenue
-      return acc
-    }, {
-      impressions: 0,
-      clicks: 0,
-      conversions: 0,
-      cost: 0,
-      estimatedRevenue: 0,
-    })
+    const summary = data.reduce(
+      (acc, row) => {
+        acc.impressions += row.metrics.impressions
+        acc.clicks += row.metrics.clicks
+        acc.conversions += row.metrics.conversions
+        acc.cost += row.metrics.cost
+        acc.estimatedRevenue += row.metrics.estimatedRevenue
+        return acc
+      },
+      {
+        impressions: 0,
+        clicks: 0,
+        conversions: 0,
+        cost: 0,
+        estimatedRevenue: 0,
+      }
+    )
 
     const summaryCtr = summary.impressions > 0 ? (summary.clicks / summary.impressions) * 100 : 0
     const summaryCvr = summary.clicks > 0 ? (summary.conversions / summary.clicks) * 100 : 0
@@ -279,9 +285,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('获取关键词表现失败:', error)
-    return NextResponse.json(
-      { error: error?.message || '获取关键词表现失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '获取关键词表现失败' }, { status: 500 })
   }
 }

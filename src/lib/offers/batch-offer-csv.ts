@@ -24,10 +24,7 @@ export function canonicalizeOfferBatchCsvHeader(value: unknown) {
 
   const tokens = new Set<string>()
   for (const token of [raw, compact, lower, lowerCompact, ...extracted]) {
-    const normalized = token
-      .replace(/\s+/g, '')
-      .toLowerCase()
-      .replace(/[_-]/g, '')
+    const normalized = token.replace(/\s+/g, '').toLowerCase().replace(/[_-]/g, '')
     if (normalized) tokens.add(normalized)
   }
 
@@ -36,99 +33,141 @@ export function canonicalizeOfferBatchCsvHeader(value: unknown) {
     return false
   }
 
-  if (has(t =>
-    t.includes('productlink1') ||
-    t.includes('storeproductlink1') ||
-    t.includes('单品链接1') ||
-    t.includes('单品推广链接1') ||
-    t.includes('商品链接1') ||
-    t.includes('产品链接1')
-  )) {
+  if (
+    has(
+      (t) =>
+        t.includes('productlink1') ||
+        t.includes('storeproductlink1') ||
+        t.includes('单品链接1') ||
+        t.includes('单品推广链接1') ||
+        t.includes('商品链接1') ||
+        t.includes('产品链接1')
+    )
+  ) {
     return 'product_link_1'
   }
-  if (has(t =>
-    t.includes('productlink2') ||
-    t.includes('storeproductlink2') ||
-    t.includes('单品链接2') ||
-    t.includes('单品推广链接2') ||
-    t.includes('商品链接2') ||
-    t.includes('产品链接2')
-  )) {
+  if (
+    has(
+      (t) =>
+        t.includes('productlink2') ||
+        t.includes('storeproductlink2') ||
+        t.includes('单品链接2') ||
+        t.includes('单品推广链接2') ||
+        t.includes('商品链接2') ||
+        t.includes('产品链接2')
+    )
+  ) {
     return 'product_link_2'
   }
-  if (has(t =>
-    t.includes('productlink3') ||
-    t.includes('storeproductlink3') ||
-    t.includes('单品链接3') ||
-    t.includes('单品推广链接3') ||
-    t.includes('商品链接3') ||
-    t.includes('产品链接3')
-  )) {
+  if (
+    has(
+      (t) =>
+        t.includes('productlink3') ||
+        t.includes('storeproductlink3') ||
+        t.includes('单品链接3') ||
+        t.includes('单品推广链接3') ||
+        t.includes('商品链接3') ||
+        t.includes('产品链接3')
+    )
+  ) {
     return 'product_link_3'
   }
-  if (has(t => t === 'affiliatelink' || t.includes('affiliatelink') || t.includes('推广链接'))) {
+  if (has((t) => t === 'affiliatelink' || t.includes('affiliatelink') || t.includes('推广链接'))) {
     return 'affiliate_link'
   }
-  if (has(t => t === 'targetcountry' || t.includes('targetcountry') || t.includes('推广国家'))) {
+  if (has((t) => t === 'targetcountry' || t.includes('targetcountry') || t.includes('推广国家'))) {
     return 'target_country'
   }
-  if (has(t => t === 'brandname' || t.includes('brandname') || t === 'brand' || t.includes('品牌名') || t.includes('品牌名称') || t === '品牌')) {
+  if (
+    has(
+      (t) =>
+        t === 'brandname' ||
+        t.includes('brandname') ||
+        t === 'brand' ||
+        t.includes('品牌名') ||
+        t.includes('品牌名称') ||
+        t === '品牌'
+    )
+  ) {
     return 'brand_name'
   }
-  if (has(t => t === 'pagetype' || t.includes('pagetype') || t.includes('page_type') || t.includes('链接类型') || t.includes('页面类型') || t.includes('linktype'))) {
+  if (
+    has(
+      (t) =>
+        t === 'pagetype' ||
+        t.includes('pagetype') ||
+        t.includes('page_type') ||
+        t.includes('链接类型') ||
+        t.includes('页面类型') ||
+        t.includes('linktype')
+    )
+  ) {
     return 'page_type'
   }
-  if (has(t =>
-    t === 'productprice' ||
-    t.includes('productprice') ||
-    t.includes('产品价格') ||
-    t.includes('平均产品价格') ||
-    t.includes('avgproductprice') ||
-    t.includes('averageproductprice')
-  )) {
+  if (
+    has(
+      (t) =>
+        t === 'productprice' ||
+        t.includes('productprice') ||
+        t.includes('产品价格') ||
+        t.includes('平均产品价格') ||
+        t.includes('avgproductprice') ||
+        t.includes('averageproductprice')
+    )
+  ) {
     return 'product_price'
   }
-  if (has(t =>
-    t === 'commissionpayout' ||
-    t.includes('commissionpayout') ||
-    t.includes('佣金比例') ||
-    t.includes('平均佣金比例') ||
-    t.includes('avgcommissionpayout') ||
-    t.includes('averagecommissionpayout')
-  )) {
+  if (
+    has(
+      (t) =>
+        t === 'commissionpayout' ||
+        t.includes('commissionpayout') ||
+        t.includes('佣金比例') ||
+        t.includes('平均佣金比例') ||
+        t.includes('avgcommissionpayout') ||
+        t.includes('averagecommissionpayout')
+    )
+  ) {
     return 'commission_payout'
   }
-  if (has(t =>
-    t === 'commissiontype' ||
-    t.includes('commissiontype') ||
-    t.includes('commissionmode') ||
-    t.includes('佣金类型') ||
-    t.includes('佣金模式')
-  )) {
+  if (
+    has(
+      (t) =>
+        t === 'commissiontype' ||
+        t.includes('commissiontype') ||
+        t.includes('commissionmode') ||
+        t.includes('佣金类型') ||
+        t.includes('佣金模式')
+    )
+  ) {
     return 'commission_type'
   }
-  if (has(t =>
-    t === 'commissionvalue' ||
-    t.includes('commissionvalue') ||
-    t.includes('佣金值') ||
-    t.includes('佣金数值') ||
-    t.includes('佣金金额')
-  )) {
+  if (
+    has(
+      (t) =>
+        t === 'commissionvalue' ||
+        t.includes('commissionvalue') ||
+        t.includes('佣金值') ||
+        t.includes('佣金数值') ||
+        t.includes('佣金金额')
+    )
+  ) {
     return 'commission_value'
   }
-  if (has(t =>
-    t === 'commissioncurrency' ||
-    t.includes('commissioncurrency') ||
-    t.includes('佣金币种') ||
-    t.includes('佣金货币')
-  )) {
+  if (
+    has(
+      (t) =>
+        t === 'commissioncurrency' ||
+        t.includes('commissioncurrency') ||
+        t.includes('佣金币种') ||
+        t.includes('佣金货币')
+    )
+  ) {
     return 'commission_currency'
   }
-  if (has(t =>
-    t.includes('extractionmode') ||
-    t.includes('提取模式') ||
-    t.includes('抓取模式')
-  )) {
+  if (
+    has((t) => t.includes('extractionmode') || t.includes('提取模式') || t.includes('抓取模式'))
+  ) {
     return 'extraction_mode'
   }
   return raw.toLowerCase()

@@ -14,7 +14,9 @@ async function ensureAdminAccount() {
   // 验证必需的环境变量
   if (!password) {
     console.error('❌ 错误: 必须设置环境变量 DEFAULT_ADMIN_PASSWORD')
-    console.error('   用法: DEFAULT_ADMIN_PASSWORD="your-password" npx tsx scripts/ensure-admin-account.ts')
+    console.error(
+      '   用法: DEFAULT_ADMIN_PASSWORD="your-password" npx tsx scripts/ensure-admin-account.ts'
+    )
     process.exit(1)
   }
 
@@ -26,7 +28,7 @@ async function ensureAdminAccount() {
 
     // 查询 autoads 管理员是否存在
     const existingAdmin = await db.queryOne<{ id: number; username: string; email: string }>(
-      "SELECT id, username, email FROM users WHERE username = ?",
+      'SELECT id, username, email FROM users WHERE username = ?',
       ['autoads']
     )
 
@@ -116,7 +118,7 @@ async function ensureAdminAccount() {
       if (isPostgres) {
         // PostgreSQL 版本
         await db.exec(
-          "UPDATE users SET password_hash = ?, must_change_password = FALSE, is_active = TRUE, openclaw_enabled = TRUE, updated_at = NOW() WHERE username = ?",
+          'UPDATE users SET password_hash = ?, must_change_password = FALSE, is_active = TRUE, openclaw_enabled = TRUE, updated_at = NOW() WHERE username = ?',
           [passwordHash, 'autoads']
         )
       } else {

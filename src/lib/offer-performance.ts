@@ -120,7 +120,8 @@ export async function getOfferCurrencyInfo(
   const db = await getDatabase()
   const { startDateStr, endDateStr } = getDateRange(daysBack)
 
-  const rows = await db.query(`
+  const rows = (await db.query(
+    `
     SELECT DISTINCT
       COALESCE(cp.currency, gaa.currency, 'USD') as currency
     FROM campaigns c
@@ -131,18 +132,19 @@ export async function getOfferCurrencyInfo(
       AND cp.date <= ?
     WHERE c.offer_id = ?
       AND c.user_id = ?
-  `, [startDateStr, endDateStr, offerId, userId]) as any[]
+  `,
+    [startDateStr, endDateStr, offerId, userId]
+  )) as any[]
 
-  const currencies = rows
-    .map((r) => String(r.currency || '').trim())
-    .filter((c) => Boolean(c))
+  const currencies = rows.map((r) => String(r.currency || '').trim()).filter((c) => Boolean(c))
 
   const unique = Array.from(new Set(currencies))
   if (unique.length === 0) {
     return { currency: 'USD', currencies: ['USD'], hasMixedCurrency: false }
   }
 
-  const latestCurrencyRow = await db.queryOne(`
+  const latestCurrencyRow = (await db.queryOne(
+    `
     SELECT COALESCE(gaa.currency, 'USD') as currency
     FROM campaigns c
     LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
@@ -150,12 +152,13 @@ export async function getOfferCurrencyInfo(
       AND c.user_id = ?
     ORDER BY COALESCE(c.published_at, c.created_at) DESC
     LIMIT 1
-  `, [offerId, userId]) as any
+  `,
+    [offerId, userId]
+  )) as any
 
   const latestCurrency = String(latestCurrencyRow?.currency || '').trim()
-  const preferredCurrency = latestCurrency && unique.includes(latestCurrency)
-    ? latestCurrency
-    : unique[0]
+  const preferredCurrency =
+    latestCurrency && unique.includes(latestCurrency) ? latestCurrency : unique[0]
 
   return {
     currency: preferredCurrency,
@@ -173,7 +176,8 @@ export async function getOfferPerformanceSummary(
   const { startDateStr, endDateStr } = getDateRange(daysBack)
 
   // 查询广告数据（不转换货币，保持原始数据）
-  const summary = await db.queryOne(`
+  const summary = (await db.queryOne(
+    `
     SELECT
       COUNT(DISTINCT cp.campaign_id) as campaign_count,
       SUM(cp.impressions) as impressions,
@@ -195,10 +199,13 @@ export async function getOfferPerformanceSummary(
       AND c.user_id = ?
       AND cp.date >= ?
       AND cp.date <= ?
-  `, [offerId, userId, startDateStr, endDateStr]) as any
+  `,
+    [offerId, userId, startDateStr, endDateStr]
+  )) as any
 
   // 查询佣金数据（不转换货币，保持原始数据）
-  const commissionData = await db.queryOne(`
+  const commissionData = (await db.queryOne(
+    `
     SELECT
       COALESCE(SUM(aca.commission_amount), 0) AS commission,
       COALESCE(MAX(aca.currency), 'USD') as commission_currency
@@ -207,7 +214,9 @@ export async function getOfferPerformanceSummary(
       AND aca.offer_id = ?
       AND aca.report_date >= ?
       AND aca.report_date <= ?
-  `, [userId, offerId, startDateStr, endDateStr]) as any
+  `,
+    [userId, offerId, startDateStr, endDateStr]
+  )) as any
 
   const clicks = Number(summary?.clicks) || 0
   const commission = Number(commissionData?.commission) || 0
@@ -243,7 +252,8 @@ export async function getOfferPerformanceTrend(
   const { startDateStr, endDateStr } = getDateRange(daysBack)
 
   // 查询广告趋势数据（不转换货币）
-  const adTrends = await db.query(`
+  const adTrends = (await db.query(
+    `
     SELECT
       cp.date as date,
       SUM(cp.impressions) as impressions,
@@ -263,10 +273,13 @@ export async function getOfferPerformanceTrend(
       AND cp.date <= ?
     GROUP BY cp.date
     ORDER BY cp.date ASC
-  `, [offerId, userId, startDateStr, endDateStr]) as any[]
+  `,
+    [offerId, userId, startDateStr, endDateStr]
+  )) as any[]
 
   // 查询佣金趋势数据（不转换货币）
-  const commissionTrends = await db.query(`
+  const commissionTrends = (await db.query(
+    `
     SELECT
       aca.report_date as date,
       COALESCE(SUM(aca.commission_amount), 0) as commission,
@@ -278,15 +291,20 @@ export async function getOfferPerformanceTrend(
       AND aca.report_date <= ?
     GROUP BY aca.report_date
     ORDER BY aca.report_date ASC
-  `, [userId, offerId, startDateStr, endDateStr]) as any[]
+  `,
+    [userId, offerId, startDateStr, endDateStr]
+  )) as any[]
 
-  const adMap = new Map<string, {
-    impressions: number
-    clicks: number
-    cost: number
-    cost_currency: string
-    ctr: number
-  }>()
+  const adMap = new Map<
+    string,
+    {
+      impressions: number
+      clicks: number
+      cost: number
+      cost_currency: string
+      ctr: number
+    }
+  >()
   for (const row of adTrends) {
     const date = normalizeDateKey(row?.date)
     if (!date) continue
@@ -348,7 +366,8 @@ export async function getCampaignPerformanceComparison(
   const { startDateStr, endDateStr } = getDateRange(daysBack)
 
   // 查询所有 Campaign 的广告数据（不转换货币）
-  const campaigns = await db.query(`
+  const campaigns = (await db.query(
+    `
     SELECT
       cp.campaign_id,
       c.campaign_name,
@@ -374,10 +393,13 @@ export async function getCampaignPerformanceComparison(
       AND cp.date <= ?
     GROUP BY cp.campaign_id, c.campaign_name, c.google_campaign_id, gaa.currency
     ORDER BY SUM(cp.clicks) DESC
-  `, [offerId, userId, startDateStr, endDateStr]) as any[]
+  `,
+    [offerId, userId, startDateStr, endDateStr]
+  )) as any[]
 
   // 查询每个 Campaign 的佣金数据（不转换货币）
-  const commissionRows = await db.query(`
+  const commissionRows = (await db.query(
+    `
     SELECT
       aca.campaign_id,
       COALESCE(SUM(aca.commission_amount), 0) AS commission,
@@ -389,13 +411,18 @@ export async function getCampaignPerformanceComparison(
       AND aca.report_date <= ?
       AND aca.campaign_id IS NOT NULL
     GROUP BY aca.campaign_id
-  `, [userId, offerId, startDateStr, endDateStr]) as Array<{
+  `,
+    [userId, offerId, startDateStr, endDateStr]
+  )) as Array<{
     campaign_id: number
     commission: number
     commission_currency: string
   }>
 
-  const commissionByCampaign = new Map<number, { commission: number; commission_currency: string }>()
+  const commissionByCampaign = new Map<
+    number,
+    { commission: number; commission_currency: string }
+  >()
   for (const row of commissionRows) {
     const campaignId = Number(row.campaign_id)
     if (!Number.isFinite(campaignId)) continue
@@ -446,7 +473,8 @@ export async function calculateOfferROI(
   const { startDateStr, endDateStr } = getDateRange(daysBack)
 
   // 查询广告成本数据，按货币分组
-  const adDataRows = await db.query(`
+  const adDataRows = (await db.query(
+    `
     SELECT
       COALESCE(cp.currency, gaa.currency, 'CNY') as currency,
       SUM(cp.cost) as total_cost
@@ -458,7 +486,9 @@ export async function calculateOfferROI(
       AND cp.date >= ?
       AND cp.date <= ?
     GROUP BY COALESCE(cp.currency, gaa.currency, 'CNY')
-  `, [offerId, userId, startDateStr, endDateStr]) as Array<{ currency: string; total_cost: number }>
+  `,
+    [offerId, userId, startDateStr, endDateStr]
+  )) as Array<{ currency: string; total_cost: number }>
 
   // 将所有成本转换为 USD
   let totalCostUsd = 0
@@ -478,7 +508,8 @@ export async function calculateOfferROI(
   }
 
   // 查询佣金数据，按货币分组
-  const commissionRows = await db.query(`
+  const commissionRows = (await db.query(
+    `
     SELECT
       aca.currency,
       COALESCE(SUM(aca.commission_amount), 0) AS commission
@@ -488,7 +519,9 @@ export async function calculateOfferROI(
       AND aca.report_date >= ?
       AND aca.report_date <= ?
     GROUP BY aca.currency
-  `, [userId, offerId, startDateStr, endDateStr]) as Array<{ currency: string; commission: number }>
+  `,
+    [userId, offerId, startDateStr, endDateStr]
+  )) as Array<{ currency: string; commission: number }>
 
   // 将所有佣金转换为 USD
   let totalCommissionUsd = 0

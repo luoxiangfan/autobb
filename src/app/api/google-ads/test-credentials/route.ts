@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { deleteGoogleAdsTestCredentials, getGoogleAdsTestCredentialStatus } from '@/lib/google-ads-test-credentials'
+import {
+  deleteGoogleAdsTestCredentials,
+  getGoogleAdsTestCredentialStatus,
+} from '@/lib/google-ads-test-credentials'
 import { getDatabase } from '@/lib/db'
 
 /**
@@ -63,7 +66,12 @@ export async function DELETE(request: NextRequest) {
 
     // 3) 删除 Settings 页保存的测试配置（system_settings 的用户实例）
     // 注意：必须限定 user_id = ?，避免误删全局模板记录(user_id IS NULL)
-    const keysToClear = ['test_login_customer_id', 'test_client_id', 'test_client_secret', 'test_developer_token']
+    const keysToClear = [
+      'test_login_customer_id',
+      'test_client_id',
+      'test_client_secret',
+      'test_developer_token',
+    ]
     const placeholders = keysToClear.map(() => '?').join(', ')
     await db.exec(
       `

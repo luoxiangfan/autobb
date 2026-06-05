@@ -1,12 +1,13 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import { linkOfferToAffiliateProduct } from '@/lib/affiliate-products'
 import { invalidateProductListCache } from '@/lib/products-cache'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 
 const bodySchema = z.object({
-  offerId: z.number().int().positive(),
+  offerId: z.number().int(zErr.int).positive(zErr.positiveInt),
 })
 
 type RouteParams = {
@@ -35,7 +36,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<R
     const body = await request.json().catch(() => null)
     const parsed = bodySchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.errors[0]?.message || '参数错误' }, { status: 400 })
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || '参数错误' },
+        { status: 400 }
+      )
     }
 
     const result = await linkOfferToAffiliateProduct({

@@ -42,7 +42,7 @@ const RECOVERY_RETRY_MAX_ATTEMPTS = resolvePositiveIntEnv(
 )
 const RECOVERY_SYNC_MAX_ATTEMPTS = resolvePositiveIntEnv(
   'AFFILIATE_SYNC_RECOVERY_SYNC_MAX_ATTEMPTS',
- 4,
+  4,
   5
 )
 const RECOVERY_RETRY_BASE_DELAY_MS = resolvePositiveIntEnv(
@@ -60,11 +60,7 @@ const STALL_GUARD_LOOKBACK_BUCKETS = resolvePositiveIntEnv(
   6,
   48
 )
-const STALL_GUARD_MIN_BUCKETS = resolvePositiveIntEnv(
-  'AFFILIATE_SYNC_STALL_MIN_BUCKETS',
-  4,
-  24
-)
+const STALL_GUARD_MIN_BUCKETS = resolvePositiveIntEnv('AFFILIATE_SYNC_STALL_MIN_BUCKETS', 4, 24)
 const STALL_GUARD_MIN_PROCESSED_BATCHES = resolvePositiveIntEnv(
   'AFFILIATE_SYNC_STALL_MIN_PROCESSED_BATCHES',
   60,
@@ -84,27 +80,30 @@ function sleep(ms: number): Promise<void> {
 function isPostgresRecoveryModeError(error: unknown): boolean {
   const code = String((error as any)?.code || '').toUpperCase()
   if (
-    code === '57P03'
-    || code === 'CONNECTION_CLOSED'
-    || code === 'ECONNRESET'
-    || code === 'ETIMEDOUT'
-  ) return true
+    code === '57P03' ||
+    code === 'CONNECTION_CLOSED' ||
+    code === 'ECONNRESET' ||
+    code === 'ETIMEDOUT'
+  )
+    return true
 
   const message = String((error as any)?.message || error || '').toLowerCase()
   if (!message) return false
 
-  return message.includes('the database system is in recovery mode')
-    || message.includes('database system is in recovery mode')
-    || message.includes('connection_closed')
-    || message.includes('connection closed')
-    || message.includes('econnreset')
-    || message.includes('etimedout')
+  return (
+    message.includes('the database system is in recovery mode') ||
+    message.includes('database system is in recovery mode') ||
+    message.includes('connection_closed') ||
+    message.includes('connection closed') ||
+    message.includes('econnreset') ||
+    message.includes('etimedout')
+  )
 }
 
 function getRecoveryRetryDelayMs(attempt: number): number {
-  const exponentialDelay = RECOVERY_RETRY_BASE_DELAY_MS * (2 ** Math.max(0, attempt - 1))
+  const exponentialDelay = RECOVERY_RETRY_BASE_DELAY_MS * 2 ** Math.max(0, attempt - 1)
   const cappedDelay = Math.min(RECOVERY_RETRY_MAX_DELAY_MS, exponentialDelay)
-  const jitter = 0.85 + (Math.random() * 0.3)
+  const jitter = 0.85 + Math.random() * 0.3
   return Math.max(50, Math.floor(cappedDelay * jitter))
 }
 
@@ -113,7 +112,10 @@ async function withRecoveryModeRetry<T>(params: {
   operation: () => Promise<T>
   maxAttempts?: number
 }): Promise<T> {
-  const maxAttempts = Math.max(1, Math.floor(Number(params.maxAttempts || RECOVERY_RETRY_MAX_ATTEMPTS)))
+  const maxAttempts = Math.max(
+    1,
+    Math.floor(Number(params.maxAttempts || RECOVERY_RETRY_MAX_ATTEMPTS))
+  )
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
@@ -170,11 +172,10 @@ async function readRunGrowthWindow(params: {
       return null
     }
 
-    const totals = rows
-      .map((row) => {
-        const value = Number(row?.max_total_items || 0)
-        return Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0
-      })
+    const totals = rows.map((row) => {
+      const value = Number(row?.max_total_items || 0)
+      return Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0
+    })
     if (totals.length < safeMinBuckets) {
       return null
     }
@@ -211,7 +212,13 @@ const DEFAULT_CACHE_WARM_PARAMS: {
   search: string
   mid: string
   targetCountry: string
-  landingPageType: 'all' | 'amazon_product' | 'amazon_store' | 'independent_product' | 'independent_store' | 'unknown'
+  landingPageType:
+    | 'all'
+    | 'amazon_product'
+    | 'amazon_store'
+    | 'independent_product'
+    | 'independent_store'
+    | 'unknown'
   sortBy: ProductSortField
   sortOrder: ProductSortOrder
   platform: 'all'
@@ -276,7 +283,13 @@ type CacheWarmParams = {
   search: string
   mid: string
   targetCountry: string
-  landingPageType: 'all' | 'amazon_product' | 'amazon_store' | 'independent_product' | 'independent_store' | 'unknown'
+  landingPageType:
+    | 'all'
+    | 'amazon_product'
+    | 'amazon_store'
+    | 'independent_product'
+    | 'independent_store'
+    | 'unknown'
   sortBy: ProductSortField
   sortOrder: ProductSortOrder
   platform: 'all' | AffiliatePlatform
@@ -322,32 +335,44 @@ function normalizeWarmParams(payload: ProductListCachePayload): CacheWarmParams 
   const sortByRaw = String(payload.sortBy || 'serial') as ProductSortField
   const sortBy = ALLOWED_SORT_FIELDS.has(sortByRaw) ? sortByRaw : 'serial'
 
-  const sortOrder = String(payload.sortOrder || 'desc').toLowerCase() === 'asc'
-    ? 'asc'
-    : 'desc' as ProductSortOrder
+  const sortOrder =
+    String(payload.sortOrder || 'desc').toLowerCase() === 'asc'
+      ? 'asc'
+      : ('desc' as ProductSortOrder)
 
-  const platform = payload.platform === 'all'
-    ? 'all'
-    : (normalizeAffiliatePlatform(payload.platform) || 'all')
-  const statusRaw = String(payload.status || '').trim().toLowerCase()
-  const status = statusRaw === 'active' || statusRaw === 'invalid' || statusRaw === 'sync_missing' || statusRaw === 'unknown'
-    ? statusRaw
-    : 'all'
-  const rawTargetCountry = String(payload.targetCountry || '').trim().toUpperCase()
+  const platform =
+    payload.platform === 'all' ? 'all' : normalizeAffiliatePlatform(payload.platform) || 'all'
+  const statusRaw = String(payload.status || '')
+    .trim()
+    .toLowerCase()
+  const status =
+    statusRaw === 'active' ||
+    statusRaw === 'invalid' ||
+    statusRaw === 'sync_missing' ||
+    statusRaw === 'unknown'
+      ? statusRaw
+      : 'all'
+  const rawTargetCountry = String(payload.targetCountry || '')
+    .trim()
+    .toUpperCase()
   const targetCountry = /^[A-Z]{2,3}$/.test(rawTargetCountry) ? rawTargetCountry : 'all'
-  const rawLandingPageType = String(payload.landingPageType || '').trim().toLowerCase()
-  const landingPageType = rawLandingPageType === 'amazon_product'
-    || rawLandingPageType === 'amazon_store'
-    || rawLandingPageType === 'independent_product'
-    || rawLandingPageType === 'independent_store'
-    || rawLandingPageType === 'unknown'
-    ? rawLandingPageType
-    : 'all'
+  const rawLandingPageType = String(payload.landingPageType || '')
+    .trim()
+    .toLowerCase()
+  const landingPageType =
+    rawLandingPageType === 'amazon_product' ||
+    rawLandingPageType === 'amazon_store' ||
+    rawLandingPageType === 'independent_product' ||
+    rawLandingPageType === 'independent_store' ||
+    rawLandingPageType === 'unknown'
+      ? rawLandingPageType
+      : 'all'
   const createdAtFrom = normalizeOptionalDate(payload.createdAtFrom)
   const createdAtTo = normalizeOptionalDate(payload.createdAtTo)
-  const normalizedDateRange = createdAtFrom && createdAtTo && createdAtFrom > createdAtTo
-    ? { createdAtFrom: createdAtTo, createdAtTo: createdAtFrom }
-    : { createdAtFrom, createdAtTo }
+  const normalizedDateRange =
+    createdAtFrom && createdAtTo && createdAtFrom > createdAtTo
+      ? { createdAtFrom: createdAtTo, createdAtTo: createdAtFrom }
+      : { createdAtFrom, createdAtTo }
 
   return {
     page,
@@ -375,7 +400,10 @@ function normalizeWarmParams(payload: ProductListCachePayload): CacheWarmParams 
   }
 }
 
-async function warmProductListCacheByParams(userId: number, params: CacheWarmParams): Promise<void> {
+async function warmProductListCacheByParams(
+  userId: number,
+  params: CacheWarmParams
+): Promise<void> {
   const listResult = await listAffiliateProducts(userId, {
     ...params,
     mid: params.mid,
@@ -438,13 +466,14 @@ export async function executeAffiliateProductSync(task: Task<AffiliateProductSyn
     throw new Error('任务参数不完整')
   }
 
-  const platformLabel = data.platform === 'partnerboost'
-    ? 'PartnerBoost'
-    : data.platform === 'yeahpromos'
-      ? 'YeahPromos'
-      : '联盟平台'
-  const supportsPlatformResume = data.mode === 'platform'
-    && (data.platform === 'partnerboost' || data.platform === 'yeahpromos')
+  const platformLabel =
+    data.platform === 'partnerboost'
+      ? 'PartnerBoost'
+      : data.platform === 'yeahpromos'
+        ? 'YeahPromos'
+        : '联盟平台'
+  const supportsPlatformResume =
+    data.mode === 'platform' && (data.platform === 'partnerboost' || data.platform === 'yeahpromos')
   const toSafeCount = (value: unknown): number => {
     const parsed = Number(value)
     if (!Number.isFinite(parsed) || parsed < 0) return 0
@@ -454,21 +483,21 @@ export async function executeAffiliateProductSync(task: Task<AffiliateProductSyn
   const existingRun = await withRecoveryModeRetry({
     label: `load run context(run=${data.runId})`,
     maxAttempts: RECOVERY_SYNC_MAX_ATTEMPTS,
-    operation: () => getAffiliateProductSyncRunById({
-      runId: data.runId,
-      userId: data.userId,
-    }),
+    operation: () =>
+      getAffiliateProductSyncRunById({
+        runId: data.runId,
+        userId: data.userId,
+      }),
   })
 
-  let resumeSourceRun = supportsPlatformResume && Number(existingRun?.cursor_page || 0) > 0
-    ? existingRun
-    : null
+  let resumeSourceRun =
+    supportsPlatformResume && Number(existingRun?.cursor_page || 0) > 0 ? existingRun : null
 
   const resumeFromPage = resumeSourceRun
     ? Math.max(1, toSafeCount(resumeSourceRun.cursor_page || 1))
     : undefined
   const resumeFromScope = resumeSourceRun
-    ? (String(resumeSourceRun.cursor_scope || '').trim() || undefined)
+    ? String(resumeSourceRun.cursor_scope || '').trim() || undefined
     : undefined
   const baseTotalItems = resumeSourceRun ? toSafeCount(resumeSourceRun.total_items) : 0
   const baseCreatedCount = resumeSourceRun ? toSafeCount(resumeSourceRun.created_count) : 0
@@ -478,23 +507,23 @@ export async function executeAffiliateProductSync(task: Task<AffiliateProductSyn
   const startedAt = new Date().toISOString()
   await withRecoveryModeRetry({
     label: `mark run running(run=${data.runId})`,
-    operation: () => updateAffiliateProductSyncRun({
-      runId: data.runId,
-      status: 'running',
-      startedAt: resumeSourceRun?.id === data.runId
-        ? (existingRun?.started_at || startedAt)
-        : startedAt,
-      completedAt: null,
-      totalItems: baseTotalItems,
-      createdCount: baseCreatedCount,
-      updatedCount: baseUpdatedCount,
-      failedCount: 0,
-      cursorPage: resumeFromPage || 1,
-      cursorScope: resumeFromScope || null,
-      processedBatches: baseProcessedBatches,
-      lastHeartbeatAt: startedAt,
-      errorMessage: null,
-    }),
+    operation: () =>
+      updateAffiliateProductSyncRun({
+        runId: data.runId,
+        status: 'running',
+        startedAt:
+          resumeSourceRun?.id === data.runId ? existingRun?.started_at || startedAt : startedAt,
+        completedAt: null,
+        totalItems: baseTotalItems,
+        createdCount: baseCreatedCount,
+        updatedCount: baseUpdatedCount,
+        failedCount: 0,
+        cursorPage: resumeFromPage || 1,
+        cursorScope: resumeFromScope || null,
+        processedBatches: baseProcessedBatches,
+        lastHeartbeatAt: startedAt,
+        errorMessage: null,
+      }),
   })
 
   try {
@@ -506,83 +535,92 @@ export async function executeAffiliateProductSync(task: Task<AffiliateProductSyn
     const result = await withRecoveryModeRetry({
       label: `sync window(run=${data.runId}, platform=${data.platform})`,
       maxAttempts: RECOVERY_SYNC_MAX_ATTEMPTS,
-      operation: () => syncAffiliateProducts({
-        userId: data.userId,
-        platform: data.platform,
-        mode: data.mode || 'platform',
-        productId: data.productId,
-        resumeFromPage,
-        resumeFromScope,
-        fetchedItemsBeforeWindow: baseTotalItems,
-        progressEvery: 20,
-        onProgress: async (progress: AffiliateProductSyncProgress) => {
-          await withRecoveryModeRetry({
-            label: `progress snapshot(run=${data.runId})`,
-            operation: () => recordAffiliateProductSyncHourlySnapshot({
-              userId: data.userId,
-              runId: data.runId,
-              platform: data.platform,
-              totalItems: baseTotalItems + toSafeCount(progress.totalFetched),
-            }),
-          })
+      operation: () =>
+        syncAffiliateProducts({
+          userId: data.userId,
+          platform: data.platform,
+          mode: data.mode || 'platform',
+          productId: data.productId,
+          resumeFromPage,
+          resumeFromScope,
+          fetchedItemsBeforeWindow: baseTotalItems,
+          progressEvery: 20,
+          onProgress: async (progress: AffiliateProductSyncProgress) => {
+            await withRecoveryModeRetry({
+              label: `progress snapshot(run=${data.runId})`,
+              operation: () =>
+                recordAffiliateProductSyncHourlySnapshot({
+                  userId: data.userId,
+                  runId: data.runId,
+                  platform: data.platform,
+                  totalItems: baseTotalItems + toSafeCount(progress.totalFetched),
+                }),
+            })
 
-          await withRecoveryModeRetry({
-            label: `progress update(run=${data.runId})`,
-            operation: () => updateAffiliateProductSyncRun({
-              runId: data.runId,
-              status: 'running', // ✅ 确保状态始终为 running
-              totalItems: baseTotalItems + toSafeCount(progress.totalFetched),
-              createdCount: baseCreatedCount + toSafeCount(progress.createdCount),
-              updatedCount: baseUpdatedCount + toSafeCount(progress.updatedCount),
-              failedCount: progress.failedCount,
-              lastHeartbeatAt: new Date().toISOString(),
-            }),
-          })
-        },
-        onCheckpoint: async (checkpoint: AffiliateProductSyncCheckpoint) => {
-          await withRecoveryModeRetry({
-            label: `checkpoint snapshot(run=${data.runId})`,
-            operation: () => recordAffiliateProductSyncHourlySnapshot({
-              userId: data.userId,
-              runId: data.runId,
-              platform: data.platform,
-              totalItems: baseTotalItems + toSafeCount(checkpoint.totalFetched),
-            }),
-          })
+            await withRecoveryModeRetry({
+              label: `progress update(run=${data.runId})`,
+              operation: () =>
+                updateAffiliateProductSyncRun({
+                  runId: data.runId,
+                  status: 'running', // ✅ 确保状态始终为 running
+                  totalItems: baseTotalItems + toSafeCount(progress.totalFetched),
+                  createdCount: baseCreatedCount + toSafeCount(progress.createdCount),
+                  updatedCount: baseUpdatedCount + toSafeCount(progress.updatedCount),
+                  failedCount: progress.failedCount,
+                  lastHeartbeatAt: new Date().toISOString(),
+                }),
+            })
+          },
+          onCheckpoint: async (checkpoint: AffiliateProductSyncCheckpoint) => {
+            await withRecoveryModeRetry({
+              label: `checkpoint snapshot(run=${data.runId})`,
+              operation: () =>
+                recordAffiliateProductSyncHourlySnapshot({
+                  userId: data.userId,
+                  runId: data.runId,
+                  platform: data.platform,
+                  totalItems: baseTotalItems + toSafeCount(checkpoint.totalFetched),
+                }),
+            })
 
-          await withRecoveryModeRetry({
-            label: `checkpoint update(run=${data.runId})`,
-            operation: () => updateAffiliateProductSyncRun({
-              runId: data.runId,
-              status: 'running', // ✅ 确保状态始终为 running
-              totalItems: baseTotalItems + toSafeCount(checkpoint.totalFetched),
-              createdCount: baseCreatedCount + toSafeCount(checkpoint.createdCount),
-              updatedCount: baseUpdatedCount + toSafeCount(checkpoint.updatedCount),
-              failedCount: checkpoint.failedCount,
-              cursorPage: checkpoint.cursorPage,
-              cursorScope: checkpoint.cursorScope || null,
-              processedBatches: baseProcessedBatches + toSafeCount(checkpoint.processedBatches),
-              lastHeartbeatAt: new Date().toISOString(),
-            }),
-          })
-        },
-      }),
+            await withRecoveryModeRetry({
+              label: `checkpoint update(run=${data.runId})`,
+              operation: () =>
+                updateAffiliateProductSyncRun({
+                  runId: data.runId,
+                  status: 'running', // ✅ 确保状态始终为 running
+                  totalItems: baseTotalItems + toSafeCount(checkpoint.totalFetched),
+                  createdCount: baseCreatedCount + toSafeCount(checkpoint.createdCount),
+                  updatedCount: baseUpdatedCount + toSafeCount(checkpoint.updatedCount),
+                  failedCount: checkpoint.failedCount,
+                  cursorPage: checkpoint.cursorPage,
+                  cursorScope: checkpoint.cursorScope || null,
+                  processedBatches: baseProcessedBatches + toSafeCount(checkpoint.processedBatches),
+                  lastHeartbeatAt: new Date().toISOString(),
+                }),
+            })
+          },
+        }),
     })
 
     await withRecoveryModeRetry({
       label: `final snapshot(run=${data.runId})`,
-      operation: () => recordAffiliateProductSyncHourlySnapshot({
-        userId: data.userId,
-        runId: data.runId,
-        platform: data.platform,
-        totalItems: baseTotalItems + toSafeCount(result.totalFetched),
-      }),
+      operation: () =>
+        recordAffiliateProductSyncHourlySnapshot({
+          userId: data.userId,
+          runId: data.runId,
+          platform: data.platform,
+          totalItems: baseTotalItems + toSafeCount(result.totalFetched),
+        }),
     })
 
     try {
       await refreshAndWarmProductListCache(data.userId)
     } catch (cacheError: any) {
-      console.warn('[affiliate-product-sync] cache refresh/warm failed:', cacheError?.message || cacheError)
+      console.warn(
+        '[affiliate-product-sync] cache refresh/warm failed:',
+        cacheError?.message || cacheError
+      )
     }
 
     const finalTotalItems = baseTotalItems + toSafeCount(result.totalFetched)
@@ -596,7 +634,12 @@ export async function executeAffiliateProductSync(task: Task<AffiliateProductSyn
 
     // 仅在“无后续分页可续跑”时，将首轮 0 数据标记为 completed 警告。
     // 若 hasMore=true，说明仍有后续 scope/page 可抓取，不应提前结束。
-    if (data.mode === 'platform' && finalTotalItems === 0 && !resumeSourceRun && !shouldContinuePlatformSync) {
+    if (
+      data.mode === 'platform' &&
+      finalTotalItems === 0 &&
+      !resumeSourceRun &&
+      !shouldContinuePlatformSync
+    ) {
       const emptyRunWarning = '⚠️ 同步完成但未抓取到任何商品，请检查平台配置、登录态或代理设置'
       console.warn(
         `[affiliate-product-sync] Platform sync completed with 0 items for platform=${data.platform}, userId=${data.userId}. This may indicate configuration or authentication issues.`
@@ -610,19 +653,20 @@ export async function executeAffiliateProductSync(task: Task<AffiliateProductSyn
       // 仍然标记为completed，但在error_message中记录警告
       await withRecoveryModeRetry({
         label: `complete empty run(run=${data.runId})`,
-        operation: () => updateAffiliateProductSyncRun({
-          runId: data.runId,
-          status: 'completed',
-          totalItems: 0,
-          createdCount: 0,
-          updatedCount: 0,
-          failedCount: 0,
-          cursorPage: 0,
-          cursorScope: null,
-          completedAt: new Date().toISOString(),
-          lastHeartbeatAt: new Date().toISOString(),
-          errorMessage: emptyRunWarning,
-        }),
+        operation: () =>
+          updateAffiliateProductSyncRun({
+            runId: data.runId,
+            status: 'completed',
+            totalItems: 0,
+            createdCount: 0,
+            updatedCount: 0,
+            failedCount: 0,
+            cursorPage: 0,
+            cursorScope: null,
+            completedAt: new Date().toISOString(),
+            lastHeartbeatAt: new Date().toISOString(),
+            errorMessage: emptyRunWarning,
+          }),
       })
 
       return {
@@ -635,10 +679,10 @@ export async function executeAffiliateProductSync(task: Task<AffiliateProductSyn
     }
 
     if (shouldContinuePlatformSync) {
-      const noWindowProgress = windowFetchedCount === 0
-        && windowCreatedCount === 0
-        && windowUpdatedCount === 0
-      const reachedStallGuardBatchThreshold = baseProcessedBatches >= STALL_GUARD_MIN_PROCESSED_BATCHES
+      const noWindowProgress =
+        windowFetchedCount === 0 && windowCreatedCount === 0 && windowUpdatedCount === 0
+      const reachedStallGuardBatchThreshold =
+        baseProcessedBatches >= STALL_GUARD_MIN_PROCESSED_BATCHES
       if (noWindowProgress && reachedStallGuardBatchThreshold) {
         const growthWindow = await readRunGrowthWindow({
           userId: data.userId,
@@ -665,24 +709,27 @@ export async function executeAffiliateProductSync(task: Task<AffiliateProductSyn
       if (shouldContinuePlatformSync) {
         const nextCursorPage = Math.max(1, toSafeCount(result.nextCursorPage || 1))
         const nextCursorScope = String(result.nextCursorScope || '').trim() || null
-        const continuationScheduledAt = new Date(Date.now() + PLATFORM_CONTINUATION_DELAY_MS).toISOString()
+        const continuationScheduledAt = new Date(
+          Date.now() + PLATFORM_CONTINUATION_DELAY_MS
+        ).toISOString()
         const heartbeatAt = new Date().toISOString()
 
         await withRecoveryModeRetry({
           label: `persist continuation checkpoint(run=${data.runId})`,
-          operation: () => updateAffiliateProductSyncRun({
-            runId: data.runId,
-            status: 'running', // ✅ 修复：保持 running 状态，不要重置为 queued
-            totalItems: finalTotalItems,
-            createdCount: finalCreatedCount,
-            updatedCount: finalUpdatedCount,
-            failedCount: 0,
-            cursorPage: nextCursorPage,
-            cursorScope: nextCursorScope,
-            completedAt: null,
-            lastHeartbeatAt: heartbeatAt,
-            errorMessage: null,
-          }),
+          operation: () =>
+            updateAffiliateProductSyncRun({
+              runId: data.runId,
+              status: 'running', // ✅ 修复：保持 running 状态，不要重置为 queued
+              totalItems: finalTotalItems,
+              createdCount: finalCreatedCount,
+              updatedCount: finalUpdatedCount,
+              failedCount: 0,
+              cursorPage: nextCursorPage,
+              cursorScope: nextCursorScope,
+              completedAt: null,
+              lastHeartbeatAt: heartbeatAt,
+              errorMessage: null,
+            }),
         })
 
         const queue = getQueueManagerForTaskType('affiliate-product-sync')
@@ -717,24 +764,24 @@ export async function executeAffiliateProductSync(task: Task<AffiliateProductSyn
 
     await withRecoveryModeRetry({
       label: `mark run completed(run=${data.runId})`,
-      operation: () => updateAffiliateProductSyncRun({
-        runId: data.runId,
-        status: 'completed',
-        totalItems: finalTotalItems,
-        createdCount: finalCreatedCount,
-        updatedCount: finalUpdatedCount,
-        failedCount: 0,
-        cursorPage: 0,
-        cursorScope: null,
-        completedAt: new Date().toISOString(),
-        lastHeartbeatAt: new Date().toISOString(),
-        errorMessage: completionWarningMessage,
-      }),
+      operation: () =>
+        updateAffiliateProductSyncRun({
+          runId: data.runId,
+          status: 'completed',
+          totalItems: finalTotalItems,
+          createdCount: finalCreatedCount,
+          updatedCount: finalUpdatedCount,
+          failedCount: 0,
+          cursorPage: 0,
+          cursorScope: null,
+          completedAt: new Date().toISOString(),
+          lastHeartbeatAt: new Date().toISOString(),
+          errorMessage: completionWarningMessage,
+        }),
     })
 
-    const shouldScheduleScoreCalculation = finalTotalItems > 0
-      || finalCreatedCount > 0
-      || finalUpdatedCount > 0
+    const shouldScheduleScoreCalculation =
+      finalTotalItems > 0 || finalCreatedCount > 0 || finalUpdatedCount > 0
     if (shouldScheduleScoreCalculation) {
       try {
         const scoreTaskId = await scheduleProductScoreCalculation(data.userId, {
@@ -766,14 +813,15 @@ export async function executeAffiliateProductSync(task: Task<AffiliateProductSyn
     try {
       await withRecoveryModeRetry({
         label: `mark run failed(run=${data.runId})`,
-        operation: () => updateAffiliateProductSyncRun({
-          runId: data.runId,
-          status: 'failed',
-          failedCount: 1,
-          lastHeartbeatAt: new Date().toISOString(),
-          completedAt: new Date().toISOString(),
-          errorMessage: error?.message || '同步失败',
-        }),
+        operation: () =>
+          updateAffiliateProductSyncRun({
+            runId: data.runId,
+            status: 'failed',
+            failedCount: 1,
+            lastHeartbeatAt: new Date().toISOString(),
+            completedAt: new Date().toISOString(),
+            errorMessage: error?.message || '同步失败',
+          }),
       })
     } catch (persistError: any) {
       console.error(

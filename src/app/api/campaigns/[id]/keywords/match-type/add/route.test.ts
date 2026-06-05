@@ -57,7 +57,8 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    prepareGoogleAdsApiCallForLinkedAccount: oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
+    prepareGoogleAdsApiCallForLinkedAccount:
+      oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
   }
 })
 
@@ -105,9 +106,7 @@ describe('POST /api/campaigns/:id/keywords/match-type/add', () => {
   })
 
   it('allows adding same text with a different match type', async () => {
-    dbFns.query.mockResolvedValue([
-      { keyword_text: 'dreo', match_type: 'EXACT' },
-    ])
+    dbFns.query.mockResolvedValue([{ keyword_text: 'dreo', match_type: 'EXACT' }])
     adsFns.createGoogleAdsKeywordsBatch.mockResolvedValue([
       { keywordId: 'k-11', resourceName: 'x', keywordText: 'dreo' },
     ])
@@ -120,7 +119,7 @@ describe('POST /api/campaigns/:id/keywords/match-type/add', () => {
       }),
     })
 
-    const res = await POST(req, { params: { id: '12' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '12' }) })
     const payload = await res.json()
 
     expect(res.status).toBe(200)
@@ -133,8 +132,9 @@ describe('POST /api/campaigns/:id/keywords/match-type/add', () => {
       isNegative: false,
     })
     const hasConfigSync = dbFns.exec.mock.calls.some(
-      (call: any[]) => String(call?.[0] || '').includes('UPDATE campaigns')
-        && String(call?.[0] || '').includes('campaign_config')
+      (call: any[]) =>
+        String(call?.[0] || '').includes('UPDATE campaigns') &&
+        String(call?.[0] || '').includes('campaign_config')
     )
     expect(hasConfigSync).toBe(true)
   })

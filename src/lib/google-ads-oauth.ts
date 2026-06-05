@@ -23,18 +23,17 @@ export async function getUserAuthType(
   resolved?: GoogleAdsCredentialOwnerResolutionInput
 ): Promise<GoogleAdsUserAuthType> {
   const db = await getDatabase()
-  const { ownerUserId, assignment } =
-    resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
+  const { ownerUserId, assignment } = resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
   const isActiveCondition = boolCondition('is_active', true, db.type)
 
   if (assignment?.assignmentMode === 'shared_admin') {
     if (assignment.authType === 'service_account') {
-      const serviceAccount = await db.queryOne(
+      const serviceAccount = (await db.queryOne(
         `SELECT id FROM google_ads_service_accounts
          WHERE user_id = ? AND ${isActiveCondition}
          ORDER BY created_at DESC LIMIT 1`,
         [ownerUserId]
-      ) as { id: string } | undefined
+      )) as { id: string } | undefined
 
       if (serviceAccount) {
         return { authType: 'service_account', serviceAccountId: serviceAccount.id }
@@ -42,10 +41,10 @@ export async function getUserAuthType(
       return { authType: 'service_account' }
     }
 
-    const credentials = await db.queryOne(
+    const credentials = (await db.queryOne(
       `SELECT refresh_token FROM google_ads_credentials WHERE user_id = ? AND ${isActiveCondition}`,
       [ownerUserId]
-    ) as { refresh_token: string | null } | undefined
+    )) as { refresh_token: string | null } | undefined
 
     if (credentials?.refresh_token) {
       return { authType: 'oauth' }
@@ -55,21 +54,21 @@ export async function getUserAuthType(
     return { authType: assignment.authType }
   }
 
-  const credentials = await db.queryOne(
+  const credentials = (await db.queryOne(
     `SELECT refresh_token FROM google_ads_credentials WHERE user_id = ? AND ${isActiveCondition}`,
     [ownerUserId]
-  ) as { refresh_token: string | null } | undefined
+  )) as { refresh_token: string | null } | undefined
 
   if (credentials?.refresh_token) {
     return { authType: 'oauth' }
   }
 
-  const serviceAccount = await db.queryOne(
+  const serviceAccount = (await db.queryOne(
     `SELECT id FROM google_ads_service_accounts
      WHERE user_id = ? AND ${isActiveCondition}
      ORDER BY created_at DESC LIMIT 1`,
     [ownerUserId]
-  ) as { id: string } | undefined
+  )) as { id: string } | undefined
 
   if (serviceAccount) {
     return { authType: 'service_account', serviceAccountId: serviceAccount.id }
@@ -91,7 +90,10 @@ export async function getUserAuthType(
  * 移除空格和横杠，确保是10位数字字符串
  * @throws Error 如果格式无效
  */
-export function formatAndValidateLoginCustomerId(id: string, fieldName: string = 'login_customer_id'): string {
+export function formatAndValidateLoginCustomerId(
+  id: string,
+  fieldName: string = 'login_customer_id'
+): string {
   // 移除空格和横杠
   const formatted = id.replace(/[\s-]/g, '')
   // 验证必须是10位数字
@@ -108,11 +110,11 @@ export function formatAndValidateLoginCustomerId(id: string, fieldName: string =
 export interface GoogleAdsCredentials {
   id: number
   user_id: number
-  client_id: string         // 必填 - 独立账号模式，每用户独立配置
-  client_secret: string     // 必填 - 独立账号模式，每用户独立配置
+  client_id: string // 必填 - 独立账号模式，每用户独立配置
+  client_secret: string // 必填 - 独立账号模式，每用户独立配置
   refresh_token: string
   access_token?: string
-  developer_token: string   // 必填 - 独立账号模式，每用户独立配置
+  developer_token: string // 必填 - 独立账号模式，每用户独立配置
   login_customer_id: string // 必填 - MCC账户ID
   access_token_expires_at?: string
   is_active: number
@@ -130,11 +132,11 @@ export interface GoogleAdsCredentials {
 export async function saveGoogleAdsCredentials(
   userId: number,
   credentials: {
-    client_id: string          // 必填 - 独立账号模式
-    client_secret: string      // 必填 - 独立账号模式
+    client_id: string // 必填 - 独立账号模式
+    client_secret: string // 必填 - 独立账号模式
     refresh_token: string
-    developer_token: string    // 必填 - 独立账号模式
-    login_customer_id: string  // 必填 - MCC账户ID
+    developer_token: string // 必填 - 独立账号模式
+    login_customer_id: string // 必填 - MCC账户ID
     access_token?: string
     access_token_expires_at?: string
   }
@@ -154,7 +156,10 @@ export async function saveGoogleAdsCredentials(
   }
 
   // 🔧 修复(2025-12-26): 验证并格式化 login_customer_id
-  const formattedLoginCustomerId = formatAndValidateLoginCustomerId(cleanedCredentials.login_customer_id, 'login_customer_id')
+  const formattedLoginCustomerId = formatAndValidateLoginCustomerId(
+    cleanedCredentials.login_customer_id,
+    'login_customer_id'
+  )
 
   // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
   const nowSql = sqlNowFunc(db.type)
@@ -163,13 +168,17 @@ export async function saveGoogleAdsCredentials(
   const isActiveValue = db.type === 'postgres' ? true : 1
 
   // 检查是否已存在
-  const existing = await db.queryOne<GoogleAdsCredentials>(`
+  const existing = await db.queryOne<GoogleAdsCredentials>(
+    `
     SELECT * FROM google_ads_credentials WHERE user_id = ?
-  `, [userId])
+  `,
+    [userId]
+  )
 
   if (existing) {
     // 更新现有记录
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE google_ads_credentials
       SET client_id = ?,
           client_secret = ?,
@@ -182,35 +191,40 @@ export async function saveGoogleAdsCredentials(
           last_verified_at = ${nowSql},
           updated_at = ${nowSql}
       WHERE user_id = ?
-    `, [
-      cleanedCredentials.client_id,
-      cleanedCredentials.client_secret,
-      cleanedCredentials.refresh_token,         // 🔧 修复：正确的参数顺序
-      cleanedCredentials.developer_token,       // 🔧 修复：正确的参数顺序
-      formattedLoginCustomerId,          // 🔧 修复：正确的参数顺序
-      cleanedCredentials.access_token || null,
-      cleanedCredentials.access_token_expires_at || null,
-      isActiveValue,
-      userId
-    ])
+    `,
+      [
+        cleanedCredentials.client_id,
+        cleanedCredentials.client_secret,
+        cleanedCredentials.refresh_token, // 🔧 修复：正确的参数顺序
+        cleanedCredentials.developer_token, // 🔧 修复：正确的参数顺序
+        formattedLoginCustomerId, // 🔧 修复：正确的参数顺序
+        cleanedCredentials.access_token || null,
+        cleanedCredentials.access_token_expires_at || null,
+        isActiveValue,
+        userId,
+      ]
+    )
   } else {
     // 插入新记录
-    await db.exec(`
+    await db.exec(
+      `
       INSERT INTO google_ads_credentials (
         user_id, client_id, client_secret, refresh_token,
         developer_token, login_customer_id, access_token, access_token_expires_at,
         last_verified_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ${nowSql})
-    `, [
-      userId,
-      cleanedCredentials.client_id,
-      cleanedCredentials.client_secret,
-      cleanedCredentials.refresh_token,
-      cleanedCredentials.developer_token,
-      formattedLoginCustomerId,  // 使用格式化后的值
-      cleanedCredentials.access_token || null,
-      cleanedCredentials.access_token_expires_at || null
-    ])
+    `,
+      [
+        userId,
+        cleanedCredentials.client_id,
+        cleanedCredentials.client_secret,
+        cleanedCredentials.refresh_token,
+        cleanedCredentials.developer_token,
+        formattedLoginCustomerId, // 使用格式化后的值
+        cleanedCredentials.access_token || null,
+        cleanedCredentials.access_token_expires_at || null,
+      ]
+    )
   }
 
   const updated = await getGoogleAdsCredentials(userId)
@@ -218,9 +232,8 @@ export async function saveGoogleAdsCredentials(
     throw new Error('保存Google Ads凭证失败')
   }
 
-  const { invalidateGoogleAdsAuthContextForCredentialUser } = await import(
-    './google-ads-auth-context'
-  )
+  const { invalidateGoogleAdsAuthContextForCredentialUser } =
+    await import('./google-ads-auth-context')
   await invalidateGoogleAdsAuthContextForCredentialUser(userId)
 
   return updated
@@ -229,14 +242,19 @@ export async function saveGoogleAdsCredentials(
 /**
  * 获取指定用户自身的 Google Ads OAuth 凭证（不解析共享分配）
  */
-export async function getGoogleAdsCredentialsRaw(userId: number): Promise<GoogleAdsCredentials | null> {
+export async function getGoogleAdsCredentialsRaw(
+  userId: number
+): Promise<GoogleAdsCredentials | null> {
   const db = await getDatabase()
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
 
-  const credentials = await db.queryOne<GoogleAdsCredentials>(`
+  const credentials = await db.queryOne<GoogleAdsCredentials>(
+    `
     SELECT * FROM google_ads_credentials
     WHERE user_id = ? AND ${isActiveCondition}
-  `, [userId])
+  `,
+    [userId]
+  )
 
   return credentials || null
 }
@@ -248,8 +266,7 @@ export async function getGoogleAdsCredentials(
   userId: number,
   resolved?: GoogleAdsCredentialOwnerResolutionInput
 ): Promise<GoogleAdsCredentials | null> {
-  const { ownerUserId, assignment } =
-    resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
+  const { ownerUserId, assignment } = resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
 
   if (assignment?.assignmentMode === 'shared_admin' && assignment.authType === 'service_account') {
     return null
@@ -270,8 +287,7 @@ export async function getGoogleAdsCredentialsMetadata(
   userId: number,
   resolved?: GoogleAdsCredentialOwnerResolutionInput
 ): Promise<GoogleAdsCredentialsMetadata | null> {
-  const { ownerUserId, assignment } =
-    resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
+  const { ownerUserId, assignment } = resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
 
   if (assignment?.assignmentMode === 'shared_admin' && assignment.authType === 'service_account') {
     return null
@@ -333,7 +349,8 @@ export async function deleteGoogleAdsCredentials(userId: number): Promise<void> 
   // 🔧 PostgreSQL兼容性：is_active 在 PostgreSQL 是 BOOLEAN，在 SQLite 是 INTEGER
   const isActiveValue = db.type === 'postgres' ? false : 0
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE google_ads_credentials
     SET is_active = ?,
         client_id = '',
@@ -346,11 +363,12 @@ export async function deleteGoogleAdsCredentials(userId: number): Promise<void> 
         last_verified_at = NULL,
         updated_at = ${nowSql}
     WHERE user_id = ?
-  `, [isActiveValue, userId])
-
-  const { invalidateGoogleAdsAuthContextForCredentialUser } = await import(
-    './google-ads-auth-context'
+  `,
+    [isActiveValue, userId]
   )
+
+  const { invalidateGoogleAdsAuthContextForCredentialUser } =
+    await import('./google-ads-auth-context')
   await invalidateGoogleAdsAuthContextForCredentialUser(userId)
 }
 
@@ -409,17 +427,18 @@ export async function refreshAccessToken(userId: number): Promise<{
   // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
   const nowSql = sqlNowFunc(db.type)
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE google_ads_credentials
     SET access_token = ?,
         access_token_expires_at = ?,
         updated_at = ${nowSql}
     WHERE user_id = ?
-  `, [data.access_token, expiresAt, ownerUserId])
-
-  const { invalidateGoogleAdsAuthContextCacheForOwner } = await import(
-    './google-ads-auth-context'
+  `,
+    [data.access_token, expiresAt, ownerUserId]
   )
+
+  const { invalidateGoogleAdsAuthContextCacheForOwner } = await import('./google-ads-auth-context')
   await invalidateGoogleAdsAuthContextCacheForOwner(ownerUserId)
 
   return {
@@ -438,10 +457,8 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
   authType?: 'oauth' | 'service_account'
 }> {
   try {
-    const {
-      googleAdsApiAuthValidationErrorMessage,
-      resolveGoogleAdsApiAuthForAccount,
-    } = await import('./google-ads-auth-context')
+    const { googleAdsApiAuthValidationErrorMessage, resolveGoogleAdsApiAuthForAccount } =
+      await import('./google-ads-auth-context')
 
     const resolved = await resolveGoogleAdsApiAuthForAccount(userId, null)
     if (!resolved.ok) {
@@ -479,15 +496,13 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
         const firstCustomerId = resourceNames[0].split('/').pop() || ''
 
         await db
-          .exec(
-            `UPDATE google_ads_service_accounts SET updated_at = ${nowSql} WHERE id = ?`,
-            [serviceAccount.id]
-          )
+          .exec(`UPDATE google_ads_service_accounts SET updated_at = ${nowSql} WHERE id = ?`, [
+            serviceAccount.id,
+          ])
           .catch(() => {})
 
-        const { invalidateGoogleAdsAuthContextCacheForOwner } = await import(
-          './google-ads-auth-context'
-        )
+        const { invalidateGoogleAdsAuthContextCacheForOwner } =
+          await import('./google-ads-auth-context')
         await invalidateGoogleAdsAuthContextCacheForOwner(ctx.ownerUserId)
 
         return {
@@ -541,9 +556,8 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
       [ctx.ownerUserId]
     )
 
-    const { invalidateGoogleAdsAuthContextCacheForOwner } = await import(
-      './google-ads-auth-context'
-    )
+    const { invalidateGoogleAdsAuthContextCacheForOwner } =
+      await import('./google-ads-auth-context')
     await invalidateGoogleAdsAuthContextCacheForOwner(ctx.ownerUserId)
 
     return {
@@ -563,11 +577,7 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
 /**
  * 生成OAuth授权URL
  */
-export function generateOAuthUrl(
-  clientId: string,
-  redirectUri: string,
-  state?: string
-): string {
+export function generateOAuthUrl(clientId: string, redirectUri: string, state?: string): string {
   const scopes = 'https://www.googleapis.com/auth/adwords'
 
   const params = new URLSearchParams({

@@ -120,9 +120,12 @@ export function checkMultipleRateLimits(...identifiers: string[]): void {
 }
 
 // 定期清理过期条目（每5分钟）
-setInterval(() => {
-  cleanupExpiredEntries()
-}, 5 * 60 * 1000)
+setInterval(
+  () => {
+    cleanupExpiredEntries()
+  },
+  5 * 60 * 1000
+)
 
 // 监控：当条目数量过多时触发清理
 setInterval(() => {

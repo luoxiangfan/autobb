@@ -58,7 +58,10 @@ describe('queueGoogleAdsCampaignRemoteActions eligibility', () => {
     expect(result.executed).toBe(true)
     expect(result.planned).toBe(1)
     expect(result.action).toBe('REMOVE')
-    expect(accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount).toHaveBeenCalledWith(1, undefined)
+    expect(accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount).toHaveBeenCalledWith(
+      1,
+      undefined
+    )
   })
 
   it('uses linked account service_account_id when resolving auth', async () => {
@@ -89,7 +92,10 @@ describe('queueGoogleAdsCampaignRemoteActions eligibility', () => {
       skipAccountEligibilityCheck: true,
     })
 
-    expect(accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount).toHaveBeenCalledWith(1, 'sa-linked')
+    expect(accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount).toHaveBeenCalledWith(
+      1,
+      'sa-linked'
+    )
   })
 
   it('queues remote REMOVE for inactive account when skipAccountEligibilityCheck=true', () => {

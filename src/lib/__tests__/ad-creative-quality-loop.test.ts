@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { GeneratedAdCreativeData } from '../ad-creative'
 import {
   runCreativeGenerationQualityLoop,
-  type CreativeAttemptEvaluation
+  type CreativeAttemptEvaluation,
 } from '../ad-creative-quality-loop'
 
 function buildCreative(attempt: number): GeneratedAdCreativeData {
@@ -11,13 +11,13 @@ function buildCreative(attempt: number): GeneratedAdCreativeData {
     descriptions: [
       'Trusted quality and comfort. Shop Now.',
       'Learn More about breathable support.',
-      'Premium fit for daily training.'
+      'Premium fit for daily training.',
     ],
     keywords: ['sports bra', 'workout bra'],
     callouts: ['Breathable Fabric'],
     sitelinks: [{ text: 'Shop Now', url: '/', description: 'Find Your Fit' }],
     theme: 'test',
-    explanation: 'test'
+    explanation: 'test',
   }
 }
 
@@ -31,18 +31,18 @@ function mockEvaluation(params: {
     adStrength: {
       finalScore: params.score,
       finalRating: params.rating,
-      combinedSuggestions: params.passed ? [] : ['Improve relevance']
+      combinedSuggestions: params.passed ? [] : ['Improve relevance'],
     } as any,
     rsaGate: {
       passed: params.passed,
-      reasons: params.passed ? [] : ['finalScore < 70']
+      reasons: params.passed ? [] : ['finalScore < 70'],
     } as any,
     ruleGate: {
-      passed: params.passed
+      passed: params.passed,
     } as any,
     passed: params.passed,
-    failureType: params.passed ? null : (params.failureType || 'format_fail'),
-    reasons: params.passed ? [] : ['quality gate failed']
+    failureType: params.passed ? null : params.failureType || 'format_fail',
+    reasons: params.passed ? [] : ['quality gate failed'],
   }
 }
 
@@ -53,10 +53,15 @@ describe('ad-creative-quality-loop', () => {
       generate: async ({ attempt }) => buildCreative(attempt),
       evaluate: async (_, { attempt }) => {
         if (attempt === 1) {
-          return mockEvaluation({ score: 66, rating: 'AVERAGE', passed: false, failureType: 'intent_fail' })
+          return mockEvaluation({
+            score: 66,
+            rating: 'AVERAGE',
+            passed: false,
+            failureType: 'intent_fail',
+          })
         }
         return mockEvaluation({ score: 74, rating: 'GOOD', passed: true })
-      }
+      },
     })
 
     expect(result.accepted).toBe(true)
@@ -71,11 +76,12 @@ describe('ad-creative-quality-loop', () => {
     const result = await runCreativeGenerationQualityLoop({
       maxRetries: 2,
       generate: async ({ attempt }) => buildCreative(attempt),
-      evaluate: async (_, { attempt }) => mockEvaluation({
-        score: scores[attempt - 1],
-        rating: 'AVERAGE',
-        passed: false
-      })
+      evaluate: async (_, { attempt }) =>
+        mockEvaluation({
+          score: scores[attempt - 1],
+          rating: 'AVERAGE',
+          passed: false,
+        }),
     })
 
     expect(result.accepted).toBe(false)
@@ -89,11 +95,12 @@ describe('ad-creative-quality-loop', () => {
     const result = await runCreativeGenerationQualityLoop({
       maxRetries: 9,
       generate: async ({ attempt }) => buildCreative(attempt),
-      evaluate: async () => mockEvaluation({
-        score: 65,
-        rating: 'AVERAGE',
-        passed: false
-      })
+      evaluate: async () =>
+        mockEvaluation({
+          score: 65,
+          rating: 'AVERAGE',
+          passed: false,
+        }),
     })
 
     expect(result.maxRetries).toBe(2)

@@ -63,7 +63,10 @@ export function splitSqlStatements(sql: string): string[] {
     }
   }
 
-  const tryConsumeDollarTag = (source: string, startIndex: number): { tag: string; endIndex: number } | null => {
+  const tryConsumeDollarTag = (
+    source: string,
+    startIndex: number
+  ): { tag: string; endIndex: number } | null => {
     // source[startIndex] is '$'
     let tag = '$'
     let j = startIndex + 1
@@ -144,10 +147,10 @@ export function splitSqlStatements(sql: string): string[] {
 
     // Quote toggle (handle escaped single quote '' inside string)
     if (!inDoubleQuote && !inBacktick) {
-      if (ch === '\'' && !inSingleQuote) {
+      if (ch === "'" && !inSingleQuote) {
         inSingleQuote = true
-      } else if (ch === '\'' && inSingleQuote) {
-        if (next === '\'') {
+      } else if (ch === "'" && inSingleQuote) {
+        if (next === "'") {
           current += ch + next
           i++
           continue

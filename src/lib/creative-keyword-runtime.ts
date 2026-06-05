@@ -10,10 +10,7 @@ import {
   type BuildCreativeKeywordSetOutput,
   type CreativeKeywordSourceAudit,
 } from './creative-keyword-set-builder'
-import {
-  normalizeCanonicalCreativeType,
-  type CanonicalCreativeType,
-} from './creative-type'
+import { normalizeCanonicalCreativeType, type CanonicalCreativeType } from './creative-type'
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { analyzeKeywordLanguageCompatibility } from './keyword-validity'
 import type { ComprehensiveAdStrengthResult } from './scoring'
@@ -232,7 +229,10 @@ export function applyCreativeKeywordSetToCreative<T extends CreativeKeywordRunti
   creative.keywordsWithVolume = keywordSet.keywordsWithVolume as any
   creative.promptKeywords = keywordSet.promptKeywords
 
-  if (options?.includeKeywordSupplementation !== false && keywordSet.keywordSupplementation !== undefined) {
+  if (
+    options?.includeKeywordSupplementation !== false &&
+    keywordSet.keywordSupplementation !== undefined
+  ) {
     creative.keywordSupplementation = keywordSet.keywordSupplementation
   }
 
@@ -319,12 +319,16 @@ export async function finalizeCreativeKeywordSet<TCreative extends CreativeKeywo
 }
 
 export function buildCreativeBrandKeywords(brandName: string | null | undefined): string[] {
-  const normalized = String(brandName || '').trim().toLowerCase()
+  const normalized = String(brandName || '')
+    .trim()
+    .toLowerCase()
   return normalized ? [normalized] : []
 }
 
 function normalizeBucketForHardGate(bucket: unknown): CanonicalBucketSlot | null {
-  const normalized = String(bucket || '').trim().toUpperCase()
+  const normalized = String(bucket || '')
+    .trim()
+    .toUpperCase()
   if (normalized === 'A') return 'A'
   if (normalized === 'B' || normalized === 'C') return 'B'
   if (normalized === 'D' || normalized === 'S') return 'D'
@@ -338,14 +342,18 @@ function clampRatio(value: unknown, fallback: number): number {
 }
 
 function isLikelyTruncatedCreativeText(value: unknown): boolean {
-  const normalized = String(value || '').replace(/\s+/g, ' ').trim()
+  const normalized = String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
   if (!normalized) return false
   if (TRUNCATED_CTA_TAIL_PATTERN.test(normalized)) return true
   if (UNBALANCED_OPEN_BRACKET_TAIL_PATTERN.test(normalized)) return true
   return false
 }
 
-function countCreativeTextTruncationAnomalies(creative: EvaluateCreativePersistenceHardGateInput['creative']): number {
+function countCreativeTextTruncationAnomalies(
+  creative: EvaluateCreativePersistenceHardGateInput['creative']
+): number {
   const assets = [
     ...(Array.isArray(creative.headlines) ? creative.headlines : []),
     ...(Array.isArray(creative.descriptions) ? creative.descriptions : []),
@@ -370,11 +378,8 @@ export function evaluateCreativePersistenceHardGate(
   const requiredKeywordCount = Math.max(
     1,
     Math.floor(
-      Number(
-        bucket
-          ? input.bucketKeywordFloors?.[bucket]
-          : undefined
-      ) || (bucket ? HARD_GATE_BUCKET_KEYWORD_FLOORS[bucket] : defaultMinimumKeywordCount)
+      Number(bucket ? input.bucketKeywordFloors?.[bucket] : undefined) ||
+        (bucket ? HARD_GATE_BUCKET_KEYWORD_FLOORS[bucket] : defaultMinimumKeywordCount)
     )
   )
   const maxNonTargetLanguageRatio = clampRatio(
@@ -387,18 +392,25 @@ export function evaluateCreativePersistenceHardGate(
   )
 
   const normalizedKeywords = keywords
-    .map((keyword) => normalizeGoogleAdsKeyword(keyword) || keyword.toLowerCase().replace(/\s+/g, ' ').trim())
+    .map(
+      (keyword) =>
+        normalizeGoogleAdsKeyword(keyword) || keyword.toLowerCase().replace(/\s+/g, ' ').trim()
+    )
     .filter(Boolean)
-  const duplicateKeywordCount = Math.max(0, normalizedKeywords.length - new Set(normalizedKeywords).size)
+  const duplicateKeywordCount = Math.max(
+    0,
+    normalizedKeywords.length - new Set(normalizedKeywords).size
+  )
   const duplicateKeywordRatio = duplicateKeywordCount / Math.max(1, normalizedKeywords.length)
 
   const brandKeywords = buildCreativeBrandKeywords(input.brandName)
-  const nonTargetLanguageKeywordCount = keywords.filter((keyword) =>
-    analyzeKeywordLanguageCompatibility({
-      keyword,
-      targetLanguage: input.targetLanguage || undefined,
-      pureBrandKeywords: brandKeywords,
-    }).hardReject
+  const nonTargetLanguageKeywordCount = keywords.filter(
+    (keyword) =>
+      analyzeKeywordLanguageCompatibility({
+        keyword,
+        targetLanguage: input.targetLanguage || undefined,
+        pureBrandKeywords: brandKeywords,
+      }).hardReject
   ).length
   const nonTargetLanguageKeywordRatio = nonTargetLanguageKeywordCount / Math.max(1, keywordCount)
   const truncationAnomalyCount = countCreativeTextTruncationAnomalies(input.creative)
@@ -436,7 +448,9 @@ export function evaluateCreativePersistenceHardGate(
   return {
     passed: violations.length === 0,
     bucket,
-    targetLanguage: String(input.targetLanguage || '').trim().toLowerCase(),
+    targetLanguage: String(input.targetLanguage || '')
+      .trim()
+      .toLowerCase(),
     thresholds: {
       requiredKeywordCount,
       maxNonTargetLanguageRatio,
@@ -459,28 +473,33 @@ export function createCreativeQualityEvaluationInput(
 ): CreativeQualityEvaluationInput {
   const targetLanguage = input.offer.target_language || 'en'
   const normalizedPageType = (() => {
-    const normalized = String(input.offer.page_type || '').trim().toLowerCase()
+    const normalized = String(input.offer.page_type || '')
+      .trim()
+      .toLowerCase()
     if (normalized === 'store' || normalized === 'product') return normalized
     return null
   })()
   const bucketType = (() => {
-    const normalized = String(input.bucket || '').trim().toUpperCase()
+    const normalized = String(input.bucket || '')
+      .trim()
+      .toUpperCase()
     if (normalized === 'A') return 'A' as const
     if (normalized === 'B' || normalized === 'C') return normalized as 'B' | 'C'
     if (normalized === 'D' || normalized === 'S') return normalized as 'D' | 'S'
     return null
   })()
-  const normalizedCreativeType = normalizeCanonicalCreativeType(input.creativeType)
-    || normalizeCanonicalCreativeType((input.creative as { creative_type?: unknown })?.creative_type)
-    || (
-      bucketType === 'A'
-        ? 'brand_intent'
-        : bucketType === 'B' || bucketType === 'C'
-          ? 'model_intent'
-          : bucketType === 'D' || bucketType === 'S'
-            ? 'product_intent'
-            : null
-    )
+  const normalizedCreativeType =
+    normalizeCanonicalCreativeType(input.creativeType) ||
+    normalizeCanonicalCreativeType(
+      (input.creative as { creative_type?: unknown })?.creative_type
+    ) ||
+    (bucketType === 'A'
+      ? 'brand_intent'
+      : bucketType === 'B' || bucketType === 'C'
+        ? 'model_intent'
+        : bucketType === 'D' || bucketType === 'S'
+          ? 'product_intent'
+          : null)
 
   return {
     creative: input.creative,
@@ -508,7 +527,7 @@ export function createCreativeQualityEvaluationInput(
       targetLanguage,
       bucket: input.bucket,
       ...(normalizedPageType ? { pageType: normalizedPageType } : {}),
-    }
+    },
   }
 }
 
@@ -554,7 +573,7 @@ export function createCreativeScoreBreakdown(
 }
 
 export function createCreativeApiRetryHistory(history: CreativeGenerationHistoryItem[]) {
-  return history.map(item => ({
+  return history.map((item) => ({
     ...item,
     gatePassed: item.passed,
     gateReasons: item.reasons,
@@ -562,7 +581,7 @@ export function createCreativeApiRetryHistory(history: CreativeGenerationHistory
 }
 
 export function createCreativeTaskRetryHistory(history: CreativeGenerationHistoryItem[]) {
-  return history.map(item => ({
+  return history.map((item) => ({
     attempt: item.attempt,
     rating: item.rating,
     score: item.score,
@@ -605,9 +624,7 @@ export function createCreativeBucketSummaryPayload(input: CreativeBucketSummaryI
   }
 }
 
-export function createCreativeResponsePayload(
-  input: CreateCreativeResponsePayloadOptions
-) {
+export function createCreativeResponsePayload(input: CreateCreativeResponsePayloadOptions) {
   return {
     ...(input.id !== undefined ? { id: input.id } : {}),
     headlines: input.creative.headlines,
@@ -667,9 +684,9 @@ export function resolveCreativeKeywordsForRetryExclusion(
   for (const source of candidateSources) {
     const keywords = Array.isArray(source)
       ? source
-        .filter((item): item is string => typeof item === 'string')
-        .map((item) => item.trim())
-        .filter(Boolean)
+          .filter((item): item is string => typeof item === 'string')
+          .map((item) => item.trim())
+          .filter(Boolean)
       : []
     if (keywords.length > 0) {
       return keywords
@@ -719,7 +736,8 @@ export function mergeUsedKeywordsExcludingBrand(
     return !lowSignalSingleTokenSet.has(token)
   }
   const buildDedupKey = (keyword: string): string => {
-    const normalized = normalizeGoogleAdsKeyword(keyword) || keyword.toLowerCase().replace(/\s+/g, ' ').trim()
+    const normalized =
+      normalizeGoogleAdsKeyword(keyword) || keyword.toLowerCase().replace(/\s+/g, ' ').trim()
     const permutation = buildPermutationKey(keyword)
     if (permutation) return `perm:${permutation}`
     if (normalized) return `norm:${normalized}`
@@ -728,8 +746,12 @@ export function mergeUsedKeywordsExcludingBrand(
 
   const brandKeywords = Array.isArray(input.brandKeywords)
     ? input.brandKeywords
-      .map((item) => String(item || '').trim().toLowerCase())
-      .filter(Boolean)
+        .map((item) =>
+          String(item || '')
+            .trim()
+            .toLowerCase()
+        )
+        .filter(Boolean)
     : []
   const nonBrandKeywords = (Array.isArray(input.candidateKeywords) ? input.candidateKeywords : [])
     .filter((item): item is string => typeof item === 'string')
@@ -738,11 +760,15 @@ export function mergeUsedKeywordsExcludingBrand(
     .filter((keyword) => isUsefulCandidateKeywordForExclusion(keyword))
     .filter((keyword) => {
       const keywordLower = keyword.toLowerCase()
-      return !brandKeywords.some((brand) => keywordLower.includes(brand) || brand.includes(keywordLower))
+      return !brandKeywords.some(
+        (brand) => keywordLower.includes(brand) || brand.includes(keywordLower)
+      )
     })
 
   const mergedKeywords = [
-    ...(Array.isArray(input.usedKeywords) ? input.usedKeywords.map((item) => normalizeKeyword(item)) : []),
+    ...(Array.isArray(input.usedKeywords)
+      ? input.usedKeywords.map((item) => normalizeKeyword(item))
+      : []),
     ...nonBrandKeywords,
   ].filter(Boolean)
   const deduped = new Map<string, string>()
@@ -756,12 +782,14 @@ export function mergeUsedKeywordsExcludingBrand(
   return Array.from(deduped.values())
 }
 
-export function resolveCreativeKeywordAudit(creative: CreativeKeywordRuntimeCarrier | null | undefined): CreativeKeywordSourceAudit | undefined {
+export function resolveCreativeKeywordAudit(
+  creative: CreativeKeywordRuntimeCarrier | null | undefined
+): CreativeKeywordSourceAudit | undefined {
   return (
-    creative?.audit
-    || creative?.keywordSourceAudit
-    || creative?.adStrength?.audit
-    || creative?.adStrength?.keywordSourceAudit
-    || undefined
+    creative?.audit ||
+    creative?.keywordSourceAudit ||
+    creative?.adStrength?.audit ||
+    creative?.adStrength?.keywordSourceAudit ||
+    undefined
   )
 }

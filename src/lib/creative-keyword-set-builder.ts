@@ -1,4 +1,7 @@
-import { applyKeywordSupplementationOnce, type KeywordSupplementationReport } from './ad-creative-gen'
+import {
+  applyKeywordSupplementationOnce,
+  type KeywordSupplementationReport,
+} from './ad-creative-gen'
 import {
   filterCreativeKeywordsByOfferContextDetailed,
   normalizeCreativeKeywordCandidatesForContextFilter,
@@ -281,11 +284,7 @@ const RESCUE_TRAILING_CONNECTOR_TOKENS = new Set([
   'and',
   'or',
 ])
-const RESCUE_TRAILING_CONNECTOR_ALLOWED_BIGRAMS = new Set([
-  'check in',
-  'log in',
-  'sign in',
-])
+const RESCUE_TRAILING_CONNECTOR_ALLOWED_BIGRAMS = new Set(['check in', 'log in', 'sign in'])
 const RESCUE_SHORT_NUMERIC_SUFFIX_ALLOWED_PREV_TOKENS = new Set([
   'gen',
   'mark',
@@ -294,13 +293,7 @@ const RESCUE_SHORT_NUMERIC_SUFFIX_ALLOWED_PREV_TOKENS = new Set([
   'ver',
   'version',
 ])
-const RESCUE_INLINE_SKIP_TOKENS = new Set([
-  'and',
-  'for',
-  'or',
-  'plus',
-  's',
-])
+const RESCUE_INLINE_SKIP_TOKENS = new Set(['and', 'for', 'or', 'plus', 's'])
 const RESCUE_FORBIDDEN_TOPIC_TOKENS = new Set([
   'bistro',
   'menu',
@@ -311,7 +304,10 @@ const RESCUE_FORBIDDEN_TOPIC_TOKENS = new Set([
 ])
 const RESCUE_SEGMENT_SPLIT_PATTERN = /[,;:()\-–—|]+/
 const RESCUE_CONTEXT_TEXT_MAX_ITEMS = 16
-const RESCUE_CONTEXT_DETAIL_MAX_CANDIDATES: Record<'brand_intent' | 'model_intent' | 'product_intent', number> = {
+const RESCUE_CONTEXT_DETAIL_MAX_CANDIDATES: Record<
+  'brand_intent' | 'model_intent' | 'product_intent',
+  number
+> = {
   brand_intent: 12,
   model_intent: 8,
   product_intent: 12,
@@ -377,10 +373,7 @@ export interface CreativeKeywordSourceAudit {
 
 export type CreativeKeywordAudit = CreativeKeywordSourceAudit
 
-function toFallbackKeywords(input: {
-  keywords: string[]
-  fallbackSource: string
-}): Array<{
+function toFallbackKeywords(input: { keywords: string[]; fallbackSource: string }): Array<{
   keyword: string
   searchVolume: number
   matchType: 'PHRASE'
@@ -397,11 +390,16 @@ function toFallbackKeywords(input: {
 }
 
 function normalizeCandidateKey(keyword: unknown): string {
-  return String(keyword || '').trim().toLowerCase().replace(/\s+/g, ' ')
+  return String(keyword || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
 }
 
 function envEnabled(name: string, defaultEnabled: boolean): boolean {
-  const normalized = String(process.env[name] || '').trim().toLowerCase()
+  const normalized = String(process.env[name] || '')
+    .trim()
+    .toLowerCase()
   if (!normalized) return defaultEnabled
   if (['0', 'false', 'off', 'no'].includes(normalized)) return false
   if (['1', 'true', 'on', 'yes'].includes(normalized)) return true
@@ -440,12 +438,13 @@ function resolveSelectedKeywordLanguageRisk(params: {
   }
 
   const pureBrandKeywords = getPureBrandKeywords(params.brandName || '')
-  const nonTargetLanguageCount = keywords.filter((keyword) =>
-    analyzeKeywordLanguageCompatibility({
-      keyword,
-      targetLanguage,
-      pureBrandKeywords,
-    }).hardReject
+  const nonTargetLanguageCount = keywords.filter(
+    (keyword) =>
+      analyzeKeywordLanguageCompatibility({
+        keyword,
+        targetLanguage,
+        pureBrandKeywords,
+      }).hardReject
   ).length
 
   return {
@@ -490,7 +489,9 @@ async function emitCreativeKeywordRiskAlerts(params: {
     minimumSelectedKeywordCount: params.minimumSelectedKeywordCount,
   }
 
-  if (params.contextIntentTighteningRemovalRatio > CREATIVE_KEYWORD_ALERT_CONTEXT_REMOVAL_THRESHOLD) {
+  if (
+    params.contextIntentTighteningRemovalRatio > CREATIVE_KEYWORD_ALERT_CONTEXT_REMOVAL_THRESHOLD
+  ) {
     await createRiskAlert(
       userId,
       'creative_keyword_context_intent_removal_high',
@@ -566,8 +567,12 @@ async function emitCreativeKeywordRiskAlerts(params: {
   }
 }
 
-function normalizeBucketForFloor(bucket: BuildCreativeKeywordSetInput['bucket']): 'A' | 'B' | 'D' | null {
-  const normalized = String(bucket || '').trim().toUpperCase()
+function normalizeBucketForFloor(
+  bucket: BuildCreativeKeywordSetInput['bucket']
+): 'A' | 'B' | 'D' | null {
+  const normalized = String(bucket || '')
+    .trim()
+    .toUpperCase()
   if (normalized === 'A') return 'A'
   if (normalized === 'B' || normalized === 'C') return 'B'
   if (normalized === 'D' || normalized === 'S') return 'D'
@@ -594,7 +599,11 @@ function isRelaxedFilteringPriorityCandidate(item: PoolKeywordData): boolean {
     (item as any)?.rawSource,
     ...(Array.isArray((item as any)?.derivedTags) ? (item as any).derivedTags : []),
   ]
-    .map((value) => String(value || '').trim().toUpperCase())
+    .map((value) =>
+      String(value || '')
+        .trim()
+        .toUpperCase()
+    )
     .filter(Boolean)
 
   return RELAXED_FILTERING_PRIORITY_SOURCE_PATTERNS.some((pattern) =>
@@ -638,7 +647,7 @@ function getContextRecoverySourceBonus(item: PoolKeywordData): number {
     String((item as any)?.source || '').trim(),
     String((item as any)?.rawSource || '').trim(),
   ]
-    .map(signal => signal.toUpperCase())
+    .map((signal) => signal.toUpperCase())
     .filter(Boolean)
 
   for (const signal of signals) {
@@ -651,14 +660,16 @@ function getContextRecoverySourceBonus(item: PoolKeywordData): number {
 }
 
 function compareContextRecoveryCandidates(a: PoolKeywordData, b: PoolKeywordData): number {
-  const aPriority = getKeywordSourcePriorityScoreFromInput({
-    source: String((a as any)?.source || ''),
-    sourceType: String((a as any)?.sourceSubtype || (a as any)?.sourceType || ''),
-  }) + getContextRecoverySourceBonus(a)
-  const bPriority = getKeywordSourcePriorityScoreFromInput({
-    source: String((b as any)?.source || ''),
-    sourceType: String((b as any)?.sourceSubtype || (b as any)?.sourceType || ''),
-  }) + getContextRecoverySourceBonus(b)
+  const aPriority =
+    getKeywordSourcePriorityScoreFromInput({
+      source: String((a as any)?.source || ''),
+      sourceType: String((a as any)?.sourceSubtype || (a as any)?.sourceType || ''),
+    }) + getContextRecoverySourceBonus(a)
+  const bPriority =
+    getKeywordSourcePriorityScoreFromInput({
+      source: String((b as any)?.source || ''),
+      sourceType: String((b as any)?.sourceSubtype || (b as any)?.sourceType || ''),
+    }) + getContextRecoverySourceBonus(b)
   if (bPriority !== aPriority) return bPriority - aPriority
 
   const volumeDiff = Number((b as any)?.searchVolume || 0) - Number((a as any)?.searchVolume || 0)
@@ -714,11 +725,7 @@ function filterLanguageCompatibleCandidates(params: {
 function normalizeStringList(values: unknown, max = 8): string[] | undefined {
   if (!Array.isArray(values)) return undefined
   const unique = Array.from(
-    new Set(
-      values
-        .map((item) => String(item || '').trim())
-        .filter(Boolean)
-    )
+    new Set(values.map((item) => String(item || '').trim()).filter(Boolean))
   ).slice(0, max)
   return unique.length > 0 ? unique : undefined
 }
@@ -745,12 +752,15 @@ function normalizeSeedCandidates(seedCandidates: unknown[]): Array<Record<string
       return {
         ...(item as Record<string, any>),
         keyword,
-        searchVolume: typeof (item as any).searchVolume === 'number'
-          ? (item as any).searchVolume
-          : Number((item as any).searchVolume) || 0,
+        searchVolume:
+          typeof (item as any).searchVolume === 'number'
+            ? (item as any).searchVolume
+            : Number((item as any).searchVolume) || 0,
         matchType: ((item as any).matchType || 'PHRASE') as 'EXACT' | 'PHRASE' | 'BROAD',
         source: String((item as any).source || 'KEYWORD_POOL').trim() || 'KEYWORD_POOL',
-        sourceType: String((item as any).sourceType || 'CANONICAL_BUCKET_VIEW').trim() || 'CANONICAL_BUCKET_VIEW',
+        sourceType:
+          String((item as any).sourceType || 'CANONICAL_BUCKET_VIEW').trim() ||
+          'CANONICAL_BUCKET_VIEW',
       }
     })
     .filter((item): item is Record<string, any> => item !== null)
@@ -776,9 +786,8 @@ function inferCreativeAffinity(params: {
   const keyword = String(params.keyword || '').trim()
   const normalized = normalizeGoogleAdsKeyword(keyword) || ''
   const pureBrandKeywords = getPureBrandKeywords(params.brandName || '')
-  const hasBrand = pureBrandKeywords.length > 0
-    ? containsPureBrand(keyword, pureBrandKeywords)
-    : false
+  const hasBrand =
+    pureBrandKeywords.length > 0 ? containsPureBrand(keyword, pureBrandKeywords) : false
   const hasModel = /\b[a-z]*\d+[a-z0-9-]*\b/i.test(normalized)
   const hasDemand = hasDemandIntentSignal(keyword)
 
@@ -814,11 +823,7 @@ function inferCreativeAffinity(params: {
   }
 
   const normalizedScore = Math.max(0.3, Math.min(0.99, Math.round(score * 100) / 100))
-  const level = normalizedScore >= 0.75
-    ? 'high'
-    : normalizedScore >= 0.5
-      ? 'medium'
-      : 'low'
+  const level = normalizedScore >= 0.75 ? 'high' : normalizedScore >= 0.5 ? 'medium' : 'low'
 
   return {
     label,
@@ -827,7 +832,9 @@ function inferCreativeAffinity(params: {
   }
 }
 
-function normalizeCandidateProvenance(item: PoolKeywordData): CreativeKeywordCandidateProvenance | undefined {
+function normalizeCandidateProvenance(
+  item: PoolKeywordData
+): CreativeKeywordCandidateProvenance | undefined {
   const source = String((item as any)?.source || '').trim()
   const sourceType = String((item as any)?.sourceType || '').trim()
   const sourceSubtype = String((item as any)?.sourceSubtype || '').trim()
@@ -845,7 +852,9 @@ function normalizeCandidateProvenance(item: PoolKeywordData): CreativeKeywordCan
   }
 }
 
-function mergeCandidateProvenanceRecords(records: Array<CreativeKeywordCandidateProvenance | undefined>): CreativeKeywordCandidateProvenance[] | undefined {
+function mergeCandidateProvenanceRecords(
+  records: Array<CreativeKeywordCandidateProvenance | undefined>
+): CreativeKeywordCandidateProvenance[] | undefined {
   const merged = new Map<string, CreativeKeywordCandidateProvenance>()
   for (const record of records) {
     if (!record) continue
@@ -866,16 +875,22 @@ function mergeCandidateProvenanceRecords(records: Array<CreativeKeywordCandidate
 function normalizeSourceScore(item: PoolKeywordData): number {
   return getKeywordSourcePriorityScoreFromInput({
     source: String((item as any)?.source || '').trim() || undefined,
-    sourceType: String((item as any)?.sourceSubtype || (item as any)?.sourceType || '').trim() || undefined,
+    sourceType:
+      String((item as any)?.sourceSubtype || (item as any)?.sourceType || '').trim() || undefined,
   })
 }
 
-function mergeKeywordCandidateRecords(existing: PoolKeywordData, incoming: PoolKeywordData): PoolKeywordData {
+function mergeKeywordCandidateRecords(
+  existing: PoolKeywordData,
+  incoming: PoolKeywordData
+): PoolKeywordData {
   const existingScore = normalizeSourceScore(existing)
   const incomingScore = normalizeSourceScore(incoming)
   const incomingVolume = Number((incoming as any)?.searchVolume || 0)
   const existingVolume = Number((existing as any)?.searchVolume || 0)
-  const preferIncoming = incomingScore > existingScore || (incomingScore === existingScore && incomingVolume > existingVolume)
+  const preferIncoming =
+    incomingScore > existingScore ||
+    (incomingScore === existingScore && incomingVolume > existingVolume)
   const preferred = preferIncoming ? incoming : existing
   const secondary = preferIncoming ? existing : incoming
 
@@ -885,36 +900,37 @@ function mergeKeywordCandidateRecords(existing: PoolKeywordData, incoming: PoolK
     ...((incoming as any)?.provenance || []),
     normalizeCandidateProvenance(incoming),
   ])
-  const mergedSource = String((preferred as any)?.source || (secondary as any)?.source || '').trim() || 'KEYWORD_POOL'
+  const mergedSource =
+    String((preferred as any)?.source || (secondary as any)?.source || '').trim() || 'KEYWORD_POOL'
   const preferredSourceType = String((preferred as any)?.sourceType || '').trim()
   const preferredSourceSubtype = String((preferred as any)?.sourceSubtype || '').trim()
-  const resolvedSourceSubtype = (
-    preferredSourceSubtype
-    || normalizeKeywordSourceSubtype({
+  const resolvedSourceSubtype =
+    preferredSourceSubtype ||
+    normalizeKeywordSourceSubtype({
       source: mergedSource,
       sourceType: preferredSourceType || undefined,
-    })
-    || undefined
-  )
+    }) ||
+    undefined
   const resolvedSourceType = preferredSourceType || resolvedSourceSubtype || undefined
-  const resolvedRawSource = (
-    String((preferred as any)?.rawSource || '').trim()
-    || inferKeywordRawSource({
+  const resolvedRawSource =
+    String((preferred as any)?.rawSource || '').trim() ||
+    inferKeywordRawSource({
       source: mergedSource,
       sourceType: resolvedSourceSubtype || resolvedSourceType,
-    })
-    || undefined
-  )
+    }) ||
+    undefined
   const preferredSourceField = String((preferred as any)?.sourceField || '').trim()
   const secondarySourceField = String((secondary as any)?.sourceField || '').trim()
-  const canReuseSecondarySourceField = (
-    !preferredSourceField
-    && String((preferred as any)?.source || '').trim().toUpperCase()
-      === String((secondary as any)?.source || '').trim().toUpperCase()
-  )
-  const resolvedSourceField = preferredSourceField
-    || (canReuseSecondarySourceField ? secondarySourceField : '')
-    || undefined
+  const canReuseSecondarySourceField =
+    !preferredSourceField &&
+    String((preferred as any)?.source || '')
+      .trim()
+      .toUpperCase() ===
+      String((secondary as any)?.source || '')
+        .trim()
+        .toUpperCase()
+  const resolvedSourceField =
+    preferredSourceField || (canReuseSecondarySourceField ? secondarySourceField : '') || undefined
 
   return {
     ...secondary,
@@ -930,10 +946,10 @@ function mergeKeywordCandidateRecords(existing: PoolKeywordData, incoming: PoolK
       ...((existing as any)?.derivedTags || []),
       ...((incoming as any)?.derivedTags || []),
     ]),
-    evidence: normalizeStringList([
-      ...((existing as any)?.evidence || []),
-      ...((incoming as any)?.evidence || []),
-    ], 12),
+    evidence: normalizeStringList(
+      [...((existing as any)?.evidence || []), ...((incoming as any)?.evidence || [])],
+      12
+    ),
     provenance: mergedProvenance,
   } as PoolKeywordData
 }
@@ -1035,17 +1051,19 @@ function prefixStandaloneModelTokensWithBrand(params: {
     const keyword = String((item as any)?.keyword || '').trim()
     if (!keyword) continue
 
-    if (isShortNumericFragmentKeyword({
-      keyword,
-      pureBrandKeywords,
-    })) {
+    if (
+      isShortNumericFragmentKeyword({
+        keyword,
+        pureBrandKeywords,
+      })
+    ) {
       removedShortNumericFragmentCount += 1
       continue
     }
 
     if (
-      brandKeyword
-      && isStandaloneModelTokenWithoutBrand({
+      brandKeyword &&
+      isStandaloneModelTokenWithoutBrand({
         keyword,
         pureBrandKeywords,
       })
@@ -1094,9 +1112,7 @@ function buildGlobalKeywordLookupKeys(keyword: string): string[] {
   const normalized = normalizeGoogleAdsKeyword(keyword)
   if (!normalized) return []
   const compact = normalized.replace(/\s+/g, '')
-  return compact && compact !== normalized
-    ? [normalized, compact]
-    : [normalized]
+  return compact && compact !== normalized ? [normalized, compact] : [normalized]
 }
 
 async function buildGlobalKeywordVolumeHintMap(params: {
@@ -1137,10 +1153,7 @@ async function buildGlobalKeywordVolumeHintMap(params: {
   const requestedLanguage = String(params.targetLanguage || '').trim()
   const effectiveLanguage = normalizeLanguageCode(requestedLanguage || 'en')
   const languageCandidates = Array.from(
-    new Set([
-      effectiveLanguage,
-      requestedLanguage.toLowerCase(),
-    ].filter(Boolean))
+    new Set([effectiveLanguage, requestedLanguage.toLowerCase()].filter(Boolean))
   )
 
   const effectiveCountry = normalizeCountryCode(String(params.targetCountry || 'US').trim() || 'US')
@@ -1149,18 +1162,17 @@ async function buildGlobalKeywordVolumeHintMap(params: {
 
   try {
     const db = await getDatabase()
-    const rows = await db.query(`
+    const rows = (await db.query(
+      `
       SELECT keyword, search_volume
       FROM global_keywords
       WHERE keyword IN (${placeholders})
         AND country = ?
         AND language IN (${langPlaceholders})
         AND search_volume > 0
-    `, [
-      ...lookupKeys,
-      effectiveCountry,
-      ...languageCandidates,
-    ]) as Array<{ keyword?: string; search_volume?: number }>
+    `,
+      [...lookupKeys, effectiveCountry, ...languageCandidates]
+    )) as Array<{ keyword?: string; search_volume?: number }>
 
     for (const row of rows) {
       const lookupKey = normalizeCandidateKey(row.keyword || '')
@@ -1277,18 +1289,22 @@ function filterBlockedPromptKeywords(params: {
   })
 }
 
-function toCreativeKeywordCandidate(item: PoolKeywordData, flags?: {
-  promptEligible?: boolean
-  executableEligible?: boolean
-  creativeType?: CanonicalCreativeType | null
-  brandName?: string
-}): CreativeKeywordCandidate {
+function toCreativeKeywordCandidate(
+  item: PoolKeywordData,
+  flags?: {
+    promptEligible?: boolean
+    executableEligible?: boolean
+    creativeType?: CanonicalCreativeType | null
+    brandName?: string
+  }
+): CreativeKeywordCandidate {
   const keyword = String((item as any)?.keyword || '').trim()
   return {
     keyword,
     searchVolume: Number((item as any)?.searchVolume || 0),
     rawSource: String((item as any)?.rawSource || '').trim() || undefined,
-    sourceSubtype: String((item as any)?.sourceSubtype || (item as any)?.sourceType || '').trim() || undefined,
+    sourceSubtype:
+      String((item as any)?.sourceSubtype || (item as any)?.sourceType || '').trim() || undefined,
     derivedTags: normalizeStringList((item as any)?.derivedTags),
     sourceField: String((item as any)?.sourceField || '').trim() || undefined,
     evidence: normalizeStringList((item as any)?.evidence, 12),
@@ -1307,27 +1323,36 @@ function toCreativeKeywordCandidate(item: PoolKeywordData, flags?: {
 }
 
 function isKeywordPoolCandidate(item: PoolKeywordData): boolean {
-  const source = String((item as any)?.source || '').trim().toUpperCase()
-  const sourceType = String((item as any)?.sourceType || '').trim().toUpperCase()
-  const sourceSubtype = String((item as any)?.sourceSubtype || '').trim().toUpperCase()
-  const sourceField = String((item as any)?.sourceField || '').trim().toLowerCase()
+  const source = String((item as any)?.source || '')
+    .trim()
+    .toUpperCase()
+  const sourceType = String((item as any)?.sourceType || '')
+    .trim()
+    .toUpperCase()
+  const sourceSubtype = String((item as any)?.sourceSubtype || '')
+    .trim()
+    .toUpperCase()
+  const sourceField = String((item as any)?.sourceField || '')
+    .trim()
+    .toLowerCase()
 
   return (
-    source === 'KEYWORD_POOL'
-    || sourceType === 'KEYWORD_POOL'
-    || sourceType === 'CANONICAL_BUCKET_VIEW'
-    || sourceSubtype === 'KEYWORD_POOL'
-    || sourceSubtype === 'CANONICAL_BUCKET_VIEW'
-    || sourceField === 'keyword_pool'
+    source === 'KEYWORD_POOL' ||
+    sourceType === 'KEYWORD_POOL' ||
+    sourceType === 'CANONICAL_BUCKET_VIEW' ||
+    sourceSubtype === 'KEYWORD_POOL' ||
+    sourceSubtype === 'CANONICAL_BUCKET_VIEW' ||
+    sourceField === 'keyword_pool'
   )
 }
 
 function hasOfferContextFilteredTag(item: PoolKeywordData): boolean {
-  const derivedTags = Array.isArray((item as any)?.derivedTags)
-    ? (item as any).derivedTags
-    : []
-  return derivedTags.some((tag: unknown) =>
-    String(tag || '').trim().toUpperCase() === BUILDER_OFFER_CONTEXT_FILTERED_TAG
+  const derivedTags = Array.isArray((item as any)?.derivedTags) ? (item as any).derivedTags : []
+  return derivedTags.some(
+    (tag: unknown) =>
+      String(tag || '')
+        .trim()
+        .toUpperCase() === BUILDER_OFFER_CONTEXT_FILTERED_TAG
   )
 }
 
@@ -1401,11 +1426,16 @@ function shouldBlockOriginalFallbackForModelIntent(input: {
   bucket?: 'A' | 'B' | 'C' | 'D' | 'S' | null
 }): boolean {
   if (input.creativeType === 'model_intent') return true
-  const normalizedBucket = String(input.bucket || '').trim().toUpperCase()
+  const normalizedBucket = String(input.bucket || '')
+    .trim()
+    .toUpperCase()
   return normalizedBucket === 'B' || normalizedBucket === 'C'
 }
 
-function countToRatioMap(counts: Record<string, number>, total: number): Record<string, CreativeKeywordSourceRatioItem> {
+function countToRatioMap(
+  counts: Record<string, number>,
+  total: number
+): Record<string, CreativeKeywordSourceRatioItem> {
   const safeTotal = total > 0 ? total : 1
   const entries = Object.entries(counts)
   entries.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
@@ -1419,8 +1449,15 @@ function countToRatioMap(counts: Record<string, number>, total: number): Record<
   }, {})
 }
 
-function bumpCount(target: Record<string, number>, key: string | undefined, fallbackKey: string): void {
-  const normalized = String(key || '').trim().toUpperCase() || fallbackKey
+function bumpCount(
+  target: Record<string, number>,
+  key: string | undefined,
+  fallbackKey: string
+): void {
+  const normalized =
+    String(key || '')
+      .trim()
+      .toUpperCase() || fallbackKey
   target[normalized] = (target[normalized] || 0) + 1
 }
 
@@ -1433,15 +1470,15 @@ function toRatioItem(count: number, total: number): CreativeKeywordSourceRatioIt
 }
 
 function normalizeAuditMetricValue(value: unknown): string {
-  return String(value || '').trim().toUpperCase()
+  return String(value || '')
+    .trim()
+    .toUpperCase()
 }
 
 function hasAuditMetricTag(item: PoolKeywordData, expected: string): boolean {
   const normalizedExpected = normalizeAuditMetricValue(expected)
   if (!normalizedExpected) return false
-  const derivedTags = Array.isArray((item as any)?.derivedTags)
-    ? (item as any).derivedTags
-    : []
+  const derivedTags = Array.isArray((item as any)?.derivedTags) ? (item as any).derivedTags : []
   return derivedTags.some((tag: unknown) => normalizeAuditMetricValue(tag) === normalizedExpected)
 }
 
@@ -1466,16 +1503,18 @@ function isFinalRescueKeyword(item: PoolKeywordData): boolean {
   ].map(normalizeAuditMetricValue)
 
   return (
-    sourceKeys.includes('CONTRACT_RESCUE')
-    || sourceKeys.includes('FINAL_INVARIANT')
-    || hasAuditMetricTag(item, 'CONTRACT_RESCUE')
-    || hasAuditMetricTag(item, 'FINAL_INVARIANT')
+    sourceKeys.includes('CONTRACT_RESCUE') ||
+    sourceKeys.includes('FINAL_INVARIANT') ||
+    hasAuditMetricTag(item, 'CONTRACT_RESCUE') ||
+    hasAuditMetricTag(item, 'FINAL_INVARIANT')
   )
 }
 
 function isHardModelKeyword(item: PoolKeywordData): boolean {
   const keyword = String((item as any)?.keyword || '')
-  const familyMatchType = String((item as any)?.familyMatchType || '').trim().toLowerCase()
+  const familyMatchType = String((item as any)?.familyMatchType || '')
+    .trim()
+    .toLowerCase()
   if (familyMatchType === 'hard_model') return true
   if (familyMatchType === 'mixed') {
     return BUILDER_MODEL_ANCHOR_PATTERN.test(keyword)
@@ -1484,7 +1523,9 @@ function isHardModelKeyword(item: PoolKeywordData): boolean {
 }
 
 function isSoftFamilyKeyword(item: PoolKeywordData): boolean {
-  const familyMatchType = String((item as any)?.familyMatchType || '').trim().toLowerCase()
+  const familyMatchType = String((item as any)?.familyMatchType || '')
+    .trim()
+    .toLowerCase()
   if (familyMatchType === 'soft_family') return true
   return isModelFamilyGuardKeyword(item)
 }
@@ -1549,8 +1590,8 @@ function buildKeywordSourceAudit(input: {
     const searchVolume = Number((item as any)?.searchVolume || 0)
     if (searchVolume > 0) withSearchVolumeKeywords += 1
     if (
-      (item as any)?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
-      && searchVolume <= 0
+      (item as any)?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS' &&
+      searchVolume <= 0
     ) {
       volumeUnavailableKeywords += 1
     }
@@ -1582,19 +1623,23 @@ function buildKeywordSourceAudit(input: {
     isPureBrandKeyword(String((item as any)?.keyword || ''), pureBrandKeywords)
   ).length
   const nonPureBrandCount = Math.max(0, totalKeywords - pureBrandCount)
-  const requiredKeywordsCount = keywords.filter((item) =>
-    String((item as any)?.contractRole || '').trim().toLowerCase() === 'required'
+  const requiredKeywordsCount = keywords.filter(
+    (item) =>
+      String((item as any)?.contractRole || '')
+        .trim()
+        .toLowerCase() === 'required'
   ).length
-  const fallbackKeywordsCount = keywords.filter((item) =>
-    String((item as any)?.contractRole || '').trim().toLowerCase() === 'fallback'
+  const fallbackKeywordsCount = keywords.filter(
+    (item) =>
+      String((item as any)?.contractRole || '')
+        .trim()
+        .toLowerCase() === 'fallback'
   ).length
   const modelFamilyGuardCount = keywords.filter(isModelFamilyGuardKeyword).length
   const hardModelCount = keywords.filter(isHardModelKeyword).length
   const softFamilyCount = keywords.filter(isSoftFamilyKeyword).length
   const finalRescueCount = keywords.filter(isFinalRescueKeyword).length
-  const dNonPureBrandCount = input.creativeType === 'product_intent'
-    ? nonPureBrandCount
-    : 0
+  const dNonPureBrandCount = input.creativeType === 'product_intent' ? nonPureBrandCount : 0
   const contractSatisfied = evaluateCreativeKeywordContractSatisfaction({
     keywords,
     creativeType: input.creativeType || null,
@@ -1654,11 +1699,7 @@ function normalizeRescueKeywordPhrase(
 ): string | null {
   const normalized = normalizeGoogleAdsKeyword(String(text || ''))
   if (!normalized) return null
-  const tokens = compactRescueTokens(
-    normalized.split(/\s+/).filter(Boolean),
-    maxTokens,
-    options
-  )
+  const tokens = compactRescueTokens(normalized.split(/\s+/).filter(Boolean), maxTokens, options)
   return tokens.length > 0 ? tokens.join(' ') : null
 }
 
@@ -1676,7 +1717,11 @@ function dedupeRescuePhrases(phrases: Array<string | null | undefined>): string[
   return results
 }
 
-function stripBrandTokensFromPhrase(text: unknown, brandName: string | undefined, maxTokens: number): string | null {
+function stripBrandTokensFromPhrase(
+  text: unknown,
+  brandName: string | undefined,
+  maxTokens: number
+): string | null {
   const normalized = normalizeGoogleAdsKeyword(String(text || ''))
   if (!normalized) return null
 
@@ -1707,12 +1752,14 @@ function normalizeRescueNumericSeparators(text: string): string {
 function normalizeAmpersandBrandPhrase(brandName: string): string | null {
   const raw = String(brandName || '').trim()
   if (!raw || !/[&＋+]/u.test(raw)) return null
-  return raw
-    .normalize('NFKC')
-    .toLowerCase()
-    .replace(/\s*[&＋+]\s*/gu, ' & ')
-    .replace(/\s+/g, ' ')
-    .trim() || null
+  return (
+    raw
+      .normalize('NFKC')
+      .toLowerCase()
+      .replace(/\s*[&＋+]\s*/gu, ' & ')
+      .replace(/\s+/g, ' ')
+      .trim() || null
+  )
 }
 
 function buildRescueBrandKeywordVariants(input: {
@@ -1758,27 +1805,25 @@ function extractRescuePhraseCandidates(
 ): string[] {
   const raw = normalizeRescueNumericSeparators(String(text || '')).trim()
   if (!raw) return []
-  const maxSegments = Math.max(
-    1,
-    Math.floor(Number(options?.maxSegments || 2))
-  )
+  const maxSegments = Math.max(1, Math.floor(Number(options?.maxSegments || 2)))
 
   const segmentCandidates = raw
     .split(RESCUE_SEGMENT_SPLIT_PATTERN)
     .slice(0, maxSegments)
-    .map(segment => stripBrandTokensFromPhrase(segment, brandName, maxTokens))
+    .map((segment) => stripBrandTokensFromPhrase(segment, brandName, maxTokens))
     .filter(Boolean)
 
   if (segmentCandidates.length === 0) {
-    return dedupeRescuePhrases([
-      stripBrandTokensFromPhrase(raw, brandName, maxTokens),
-    ])
+    return dedupeRescuePhrases([stripBrandTokensFromPhrase(raw, brandName, maxTokens)])
   }
 
   return dedupeRescuePhrases(segmentCandidates)
 }
 
-function parseOfferTextArray(value: unknown, maxItems: number = RESCUE_CONTEXT_TEXT_MAX_ITEMS): string[] {
+function parseOfferTextArray(
+  value: unknown,
+  maxItems: number = RESCUE_CONTEXT_TEXT_MAX_ITEMS
+): string[] {
   const limit = Math.max(1, Math.floor(Number(maxItems) || RESCUE_CONTEXT_TEXT_MAX_ITEMS))
   const collected: string[] = []
   const queue: unknown[] = [value]
@@ -1798,8 +1843,8 @@ function parseOfferTextArray(value: unknown, maxItems: number = RESCUE_CONTEXT_T
       const text = current.trim()
       if (!text) continue
       if (
-        (text.startsWith('[') && text.endsWith(']'))
-        || (text.startsWith('{') && text.endsWith('}'))
+        (text.startsWith('[') && text.endsWith(']')) ||
+        (text.startsWith('{') && text.endsWith('}'))
       ) {
         try {
           queue.push(JSON.parse(text))
@@ -1837,26 +1882,17 @@ function extractRescuePhraseCandidatesFromTexts(params: {
   const results: string[] = []
   for (const rawText of params.texts) {
     if (results.length >= params.maxCandidates) break
-    const phrases = extractRescuePhraseCandidates(
-      rawText,
-      params.brandName,
-      params.maxTokens,
-      { maxSegments: params.maxSegmentsPerText }
-    )
+    const phrases = extractRescuePhraseCandidates(rawText, params.brandName, params.maxTokens, {
+      maxSegments: params.maxSegmentsPerText,
+    })
     if (phrases.length === 0) continue
-    const combined = buildCombinedRescuePhraseCandidates(
-      phrases,
-      params.maxTokens
-    )
+    const combined = buildCombinedRescuePhraseCandidates(phrases, params.maxTokens)
     results.push(...phrases, ...combined)
   }
   return dedupeRescuePhrases(results).slice(0, params.maxCandidates)
 }
 
-function buildCombinedRescuePhraseCandidates(
-  phrases: string[],
-  maxTokens: number
-): string[] {
+function buildCombinedRescuePhraseCandidates(phrases: string[], maxTokens: number): string[] {
   const combined: string[] = []
 
   for (let index = 0; index < phrases.length - 1; index += 1) {
@@ -1897,11 +1933,7 @@ function composeRescueKeyword(
   )
   if (!normalized) return null
 
-  const tokens = compactRescueTokens(
-    normalized.split(/\s+/).filter(Boolean),
-    maxTokens,
-    options
-  )
+  const tokens = compactRescueTokens(normalized.split(/\s+/).filter(Boolean), maxTokens, options)
   return tokens.length > 0 ? tokens.join(' ') : null
 }
 
@@ -1920,24 +1952,26 @@ function compactRescueTokens(
     if (!token) continue
     const dedupeKey = token.toLowerCase()
     const isNumeric = /^\d+$/.test(dedupeKey)
-    const nextToken = String(tokens[index + 1] || '').trim().toLowerCase()
+    const nextToken = String(tokens[index + 1] || '')
+      .trim()
+      .toLowerCase()
 
     if (isNumeric && /^0{3,}\d*$/.test(dedupeKey)) continue
 
     if (
-      isNumeric
-      && compacted.length > 0
-      && /^\d{1,4}$/.test(compacted[compacted.length - 1])
-      && dedupeKey.length === 3
+      isNumeric &&
+      compacted.length > 0 &&
+      /^\d{1,4}$/.test(compacted[compacted.length - 1]) &&
+      dedupeKey.length === 3
     ) {
       compacted[compacted.length - 1] = `${compacted[compacted.length - 1]}${dedupeKey}`
       continue
     }
 
     if (
-      compacted.length === 0
-      && isNumeric
-      && ['pack', 'count', 'pc', 'piece', 'pieces', 'set'].includes(nextToken)
+      compacted.length === 0 &&
+      isNumeric &&
+      ['pack', 'count', 'pc', 'piece', 'pieces', 'set'].includes(nextToken)
     ) {
       index += 1
       continue
@@ -1971,7 +2005,7 @@ function getNonEmptyRescueCandidateRejectionReason(params: {
     return 'forbidden_topic_fragment'
   }
 
-  if (tokens.some(token => /^0{3,}\d*$/.test(token))) {
+  if (tokens.some((token) => /^0{3,}\d*$/.test(token))) {
     return 'numeric_fragment'
   }
 
@@ -1992,9 +2026,9 @@ function getNonEmptyRescueCandidateRejectionReason(params: {
   }
 
   if (
-    tokens.length === 2
-    && /^\d{1,2}$/.test(tokens[1] || '')
-    && params.brandLeadingTokens.has(tokens[0] || '')
+    tokens.length === 2 &&
+    /^\d{1,2}$/.test(tokens[1] || '') &&
+    params.brandLeadingTokens.has(tokens[0] || '')
   ) {
     return 'brand_short_numeric_fragment'
   }
@@ -2003,8 +2037,11 @@ function getNonEmptyRescueCandidateRejectionReason(params: {
     const penultimateToken = tokens[tokens.length - 2] || ''
     const hasPriorNumericAnchor = tokens
       .slice(0, -1)
-      .some(token => /\d/.test(token) && !/^\d{1,2}$/.test(token))
-    if (hasPriorNumericAnchor && !RESCUE_SHORT_NUMERIC_SUFFIX_ALLOWED_PREV_TOKENS.has(penultimateToken)) {
+      .some((token) => /\d/.test(token) && !/^\d{1,2}$/.test(token))
+    if (
+      hasPriorNumericAnchor &&
+      !RESCUE_SHORT_NUMERIC_SUFFIX_ALLOWED_PREV_TOKENS.has(penultimateToken)
+    ) {
       return 'trailing_short_numeric_fragment'
     }
   }
@@ -2014,14 +2051,20 @@ function getNonEmptyRescueCandidateRejectionReason(params: {
 
 function isBuilderNonEmptyRescueCandidate(item: PoolKeywordData | null | undefined): boolean {
   if (!item) return false
-  const sourceType = String((item as any)?.sourceType || '').trim().toUpperCase()
-  const sourceSubtype = String((item as any)?.sourceSubtype || '').trim().toUpperCase()
-  const source = String((item as any)?.source || '').trim().toUpperCase()
+  const sourceType = String((item as any)?.sourceType || '')
+    .trim()
+    .toUpperCase()
+  const sourceSubtype = String((item as any)?.sourceSubtype || '')
+    .trim()
+    .toUpperCase()
+  const source = String((item as any)?.source || '')
+    .trim()
+    .toUpperCase()
 
   return (
-    sourceType === 'BUILDER_NON_EMPTY_RESCUE'
-    || sourceSubtype === 'BUILDER_NON_EMPTY_RESCUE'
-    || source === 'DERIVED_RESCUE'
+    sourceType === 'BUILDER_NON_EMPTY_RESCUE' ||
+    sourceSubtype === 'BUILDER_NON_EMPTY_RESCUE' ||
+    source === 'DERIVED_RESCUE'
   )
 }
 
@@ -2069,17 +2112,27 @@ function collectNeutralRescueDetailCandidates(
     const normalizedText = normalizeRescueNumericSeparators(String(text || ''))
     if (!normalizedText) continue
 
-    for (const match of normalizedText.matchAll(new RegExp(RESCUE_NEUTRAL_MODEL_TOKEN_PATTERN.source, 'gi'))) {
+    for (const match of normalizedText.matchAll(
+      new RegExp(RESCUE_NEUTRAL_MODEL_TOKEN_PATTERN.source, 'gi')
+    )) {
       pushCandidate(match[0] || '')
     }
-    for (const match of normalizedText.matchAll(new RegExp(RESCUE_NEUTRAL_SPEC_TOKEN_PATTERN.source, 'gi'))) {
+    for (const match of normalizedText.matchAll(
+      new RegExp(RESCUE_NEUTRAL_SPEC_TOKEN_PATTERN.source, 'gi')
+    )) {
       pushCandidate(match[0] || '')
     }
-    for (const match of normalizedText.matchAll(new RegExp(RESCUE_NEUTRAL_RATIO_TOKEN_PATTERN.source, 'g'))) {
+    for (const match of normalizedText.matchAll(
+      new RegExp(RESCUE_NEUTRAL_RATIO_TOKEN_PATTERN.source, 'g')
+    )) {
       pushCandidate(match[0] || '')
     }
-    for (const certMatch of normalizedText.matchAll(new RegExp(RESCUE_NEUTRAL_CERT_TOKEN_PATTERN.source, 'gi'))) {
-      const certNumbers = Array.from(String(certMatch[1] || '').matchAll(/\d{1,3}/g)).map((item) => item[0])
+    for (const certMatch of normalizedText.matchAll(
+      new RegExp(RESCUE_NEUTRAL_CERT_TOKEN_PATTERN.source, 'gi')
+    )) {
+      const certNumbers = Array.from(String(certMatch[1] || '').matchAll(/\d{1,3}/g)).map(
+        (item) => item[0]
+      )
       for (const certNumber of certNumbers) {
         pushCandidate(`nsf ansi ${certNumber}`)
       }
@@ -2093,24 +2146,20 @@ function buildNonEmptyRescueCandidates(input: BuildCreativeKeywordSetInput): Poo
   const creativeType = input.creativeType || null
   const combinedTokenLimit = creativeType === 'model_intent' ? 6 : 5
   const detailTokenLimit = creativeType === 'model_intent' ? 5 : 4
-  const contextMaxCandidates = creativeType === 'model_intent'
-    ? RESCUE_CONTEXT_DETAIL_MAX_CANDIDATES.model_intent
-    : creativeType === 'product_intent'
-      ? RESCUE_CONTEXT_DETAIL_MAX_CANDIDATES.product_intent
-      : RESCUE_CONTEXT_DETAIL_MAX_CANDIDATES.brand_intent
+  const contextMaxCandidates =
+    creativeType === 'model_intent'
+      ? RESCUE_CONTEXT_DETAIL_MAX_CANDIDATES.model_intent
+      : creativeType === 'product_intent'
+        ? RESCUE_CONTEXT_DETAIL_MAX_CANDIDATES.product_intent
+        : RESCUE_CONTEXT_DETAIL_MAX_CANDIDATES.brand_intent
   const rawBrandName = input.brandName || input.offer.brand || ''
-  const normalizedBrand = normalizeRescueKeywordPhrase(
-    rawBrandName,
-    3
-  )
+  const normalizedBrand = normalizeRescueKeywordPhrase(rawBrandName, 3)
   const brandKeywordVariants = buildRescueBrandKeywordVariants({
     brandName: rawBrandName,
     normalizedBrand,
   })
-  const pureBrandKeyword = brandKeywordVariants.pure[0]
-    || getPureBrandKeywords(rawBrandName)[0]
-    || normalizedBrand
-    || null
+  const pureBrandKeyword =
+    brandKeywordVariants.pure[0] || getPureBrandKeywords(rawBrandName)[0] || normalizedBrand || null
   const brandLeadingTokens = new Set(
     dedupeRescuePhrases([
       ...brandKeywordVariants.prefixes,
@@ -2158,15 +2207,14 @@ function buildNonEmptyRescueCandidates(input: BuildCreativeKeywordSetInput): Poo
     ...contextDetailCandidates,
   ]).slice(0, Math.max(6, contextMaxCandidates))
   const productTailCandidates = dedupeRescuePhrases(
-    productDetailCandidates
-      .map((candidate) => {
-        const tokens = normalizeGoogleAdsKeyword(candidate).split(/\s+/).filter(Boolean)
-        if (tokens.length < 2) return null
-        const tail = tokens[tokens.length - 1] || ''
-        if (!/^[a-z]{4,}$/i.test(tail)) return null
-        if (RESCUE_PREFIX_NOISE_TOKENS.has(tail) || RESCUE_INLINE_SKIP_TOKENS.has(tail)) return null
-        return tail
-      })
+    productDetailCandidates.map((candidate) => {
+      const tokens = normalizeGoogleAdsKeyword(candidate).split(/\s+/).filter(Boolean)
+      if (tokens.length < 2) return null
+      const tail = tokens[tokens.length - 1] || ''
+      if (!/^[a-z]{4,}$/i.test(tail)) return null
+      if (RESCUE_PREFIX_NOISE_TOKENS.has(tail) || RESCUE_INLINE_SKIP_TOKENS.has(tail)) return null
+      return tail
+    })
   ).slice(0, 3)
   const categoryDetailCandidates = extractRescuePhraseCandidates(
     input.offer.category || '',
@@ -2182,44 +2230,36 @@ function buildNonEmptyRescueCandidates(input: BuildCreativeKeywordSetInput): Poo
   const seen = new Set<string>()
   const pushCandidate = (keyword: string | null, evidence: string[]) => {
     if (!keyword) return
-    if (getNonEmptyRescueCandidateRejectionReason({
-      keyword,
-      brandLeadingTokens,
-    })) return
+    if (
+      getNonEmptyRescueCandidateRejectionReason({
+        keyword,
+        brandLeadingTokens,
+      })
+    )
+      return
     const normalized = normalizeCandidateKey(keyword)
     if (!normalized || seen.has(normalized)) return
     seen.add(normalized)
     results.push(createNonEmptyRescueCandidate(keyword, evidence))
   }
-  const pushBrandedRescueCandidate = (
-    detailKeyword: string | null,
-    evidence: string[]
-  ) => {
+  const pushBrandedRescueCandidate = (detailKeyword: string | null, evidence: string[]) => {
     if (brandKeywordVariants.prefixes.length === 0) return
     if (creativeType === 'model_intent' && !detailKeyword) return
     for (const prefix of brandKeywordVariants.prefixes) {
       pushCandidate(
-        composeRescueKeyword(
-          [prefix, detailKeyword],
-          combinedTokenLimit,
-          { preserveAndToken: true }
-        ),
+        composeRescueKeyword([prefix, detailKeyword], combinedTokenLimit, {
+          preserveAndToken: true,
+        }),
         evidence
       )
     }
   }
-  const pushBrandedRescueCandidates = (
-    detailKeywords: string[],
-    evidence: string[]
-  ) => {
+  const pushBrandedRescueCandidates = (detailKeywords: string[], evidence: string[]) => {
     for (const detailKeyword of detailKeywords) {
       pushBrandedRescueCandidate(detailKeyword, evidence)
     }
   }
-  const pushRescueCandidatePreferBranded = (
-    detailKeyword: string | null,
-    evidence: string[]
-  ) => {
+  const pushRescueCandidatePreferBranded = (detailKeyword: string | null, evidence: string[]) => {
     if (brandKeywordVariants.prefixes.length > 0) {
       pushBrandedRescueCandidate(detailKeyword, evidence)
       return
@@ -2228,10 +2268,7 @@ function buildNonEmptyRescueCandidates(input: BuildCreativeKeywordSetInput): Poo
   }
 
   if (creativeType === 'brand_intent' || creativeType === 'product_intent') {
-    for (const keyword of dedupeRescuePhrases([
-      pureBrandKeyword,
-      ...brandKeywordVariants.pure,
-    ])) {
+    for (const keyword of dedupeRescuePhrases([pureBrandKeyword, ...brandKeywordVariants.pure])) {
       pushCandidate(keyword, ['pure_brand_floor'])
     }
   }
@@ -2250,10 +2287,12 @@ function buildNonEmptyRescueCandidates(input: BuildCreativeKeywordSetInput): Poo
 
   if (creativeType === 'model_intent') {
     const productModelDetailCandidates = productDetailCandidates
-      .filter(candidate => BUILDER_MODEL_ANCHOR_PATTERN.test(candidate))
+      .filter((candidate) => BUILDER_MODEL_ANCHOR_PATTERN.test(candidate))
       .slice(0, 4)
     const productHasModelAnchor = productModelDetailCandidates.length > 0
-    const categoryHasModelAnchor = Boolean(categoryCore && BUILDER_MODEL_ANCHOR_PATTERN.test(categoryCore))
+    const categoryHasModelAnchor = Boolean(
+      categoryCore && BUILDER_MODEL_ANCHOR_PATTERN.test(categoryCore)
+    )
     if (brandKeywordVariants.prefixes.length === 0 || productHasModelAnchor) {
       for (const candidate of productModelDetailCandidates) {
         pushRescueCandidatePreferBranded(candidate, ['offer_product_name'])
@@ -2332,19 +2371,23 @@ function augmentSourceQuotaAuditWithRescue(params: {
 export async function buildCreativeKeywordSet(
   input: BuildCreativeKeywordSetInput
 ): Promise<BuildCreativeKeywordSetOutput> {
-  const fallbackSource = String(input.fallbackSource || 'AI_GENERATED').trim().toUpperCase() || 'AI_GENERATED'
+  const fallbackSource =
+    String(input.fallbackSource || 'AI_GENERATED')
+      .trim()
+      .toUpperCase() || 'AI_GENERATED'
   const primaryCandidates = normalizeCreativeKeywordCandidatesForContextFilter(
     Array.isArray(input.keywordsWithVolume) && input.keywordsWithVolume.length > 0
       ? input.keywordsWithVolume
       : toFallbackKeywords({
-        keywords: Array.isArray(input.keywords) ? input.keywords : [],
-        fallbackSource,
-      }),
+          keywords: Array.isArray(input.keywords) ? input.keywords : [],
+          fallbackSource,
+        }),
     fallbackSource
   )
-  const rawSeedCandidates = Array.isArray(input.seedCandidates) && input.seedCandidates.length > 0
-    ? input.seedCandidates
-    : []
+  const rawSeedCandidates =
+    Array.isArray(input.seedCandidates) && input.seedCandidates.length > 0
+      ? input.seedCandidates
+      : []
   const normalizedSeedCandidates = normalizeCreativeKeywordCandidatesForContextFilter(
     normalizeSeedCandidates(rawSeedCandidates),
     'KEYWORD_POOL'
@@ -2356,11 +2399,10 @@ export async function buildCreativeKeywordSet(
     primaryCandidates: primaryCandidates as PoolKeywordData[],
     seedCandidates: normalizedSeedCandidates as PoolKeywordData[],
   })
-  const canReuseContextFilteredSeedCandidates = (
-    primaryCandidates.length === 0
-    && originalCandidates.length > 0
-    && originalCandidates.every((item) => hasOfferContextFilteredTag(item as PoolKeywordData))
-  )
+  const canReuseContextFilteredSeedCandidates =
+    primaryCandidates.length === 0 &&
+    originalCandidates.length > 0 &&
+    originalCandidates.every((item) => hasOfferContextFilteredTag(item as PoolKeywordData))
 
   let candidatePoolSource = originalCandidates
   let keywordSupplementation: KeywordSupplementationReport | undefined
@@ -2386,15 +2428,16 @@ export async function buildCreativeKeywordSet(
     contextFilterStats.removedByModelFamily += Number(report.modelFamilyRemovedCount || 0)
     contextFilterStats.removedByIntentTightening += Number(report.intentTighteningRemovedCount || 0)
   }
-  const accumulateBlockedFallbackKeywordKeys = (report: {
-    blockedKeywordKeys?: string[]
-  }) => {
+  const accumulateBlockedFallbackKeywordKeys = (report: { blockedKeywordKeys?: string[] }) => {
     for (const keywordKey of report.blockedKeywordKeys || []) {
       const normalized = normalizeCandidateKey(keywordKey)
       if (normalized) blockedFallbackKeywordKeys.add(normalized)
     }
   }
-  const applyLanguageGate = (candidates: PoolKeywordData[], stageLabel: string): PoolKeywordData[] => {
+  const applyLanguageGate = (
+    candidates: PoolKeywordData[],
+    stageLabel: string
+  ): PoolKeywordData[] => {
     const languageGateResult = filterLanguageCompatibleCandidates({
       candidates,
       targetLanguage: input.targetLanguage || input.offer.target_language,
@@ -2410,22 +2453,23 @@ export async function buildCreativeKeywordSet(
     }
     return languageGateResult.keywords
   }
-  const runContextFilter = (keywordsWithVolume: PoolKeywordData[]) => filterCreativeKeywordsByOfferContextDetailed({
-    offer: input.offer,
-    keywordsWithVolume,
-    creativeType: input.creativeType,
-    scopeLabel: input.scopeLabel,
-  })
+  const runContextFilter = (keywordsWithVolume: PoolKeywordData[]) =>
+    filterCreativeKeywordsByOfferContextDetailed({
+      offer: input.offer,
+      keywordsWithVolume,
+      creativeType: input.creativeType,
+      scopeLabel: input.scopeLabel,
+    })
   const initialContextFilterReport = canReuseContextFilteredSeedCandidates
     ? {
-      keywords: originalCandidates as PoolKeywordData[],
-      contextMismatchRemovedCount: 0,
-      forbiddenRemovedCount: 0,
-      qualityRemovedCount: 0,
-      modelFamilyRemovedCount: 0,
-      intentTighteningRemovedCount: 0,
-      blockedKeywordKeys: [],
-    }
+        keywords: originalCandidates as PoolKeywordData[],
+        contextMismatchRemovedCount: 0,
+        forbiddenRemovedCount: 0,
+        qualityRemovedCount: 0,
+        modelFamilyRemovedCount: 0,
+        intentTighteningRemovedCount: 0,
+        blockedKeywordKeys: [],
+      }
     : runContextFilter(originalCandidates as PoolKeywordData[])
   if (!canReuseContextFilteredSeedCandidates) {
     accumulateContextFilterStats(initialContextFilterReport)
@@ -2463,8 +2507,8 @@ export async function buildCreativeKeywordSet(
         const alreadyContextFiltered = supplementedCandidates.filter((item) =>
           hasOfferContextFilteredTag(item as PoolKeywordData)
         )
-        const candidatesNeedingFilter = supplementedCandidates.filter((item) =>
-          !hasOfferContextFilteredTag(item as PoolKeywordData)
+        const candidatesNeedingFilter = supplementedCandidates.filter(
+          (item) => !hasOfferContextFilteredTag(item as PoolKeywordData)
         )
 
         if (candidatesNeedingFilter.length > 0) {
@@ -2489,9 +2533,7 @@ export async function buildCreativeKeywordSet(
       if (!input.continueOnSupplementError) {
         throw error
       }
-      console.warn(
-        `[buildCreativeKeywordSet] 补词失败（继续执行）: ${error?.message || error}`
-      )
+      console.warn(`[buildCreativeKeywordSet] 补词失败（继续执行）: ${error?.message || error}`)
     }
   }
 
@@ -2539,9 +2581,8 @@ export async function buildCreativeKeywordSet(
   let relaxedFilteringAddedCount = 0
   let relaxedFilteringPostFilterRatio = 0
 
-  const contextIntentTighteningRemoved = (
+  const contextIntentTighteningRemoved =
     contextFilterStats.removedByContextMismatch + contextFilterStats.removedByIntentTightening
-  )
   const contextIntentTighteningDenominator = Math.max(
     1,
     initialCandidateCount,
@@ -2554,15 +2595,13 @@ export async function buildCreativeKeywordSet(
   const hasPositiveVolumeCandidate = candidatePoolSource.some(
     (item) => Number((item as any)?.searchVolume || 0) > 0
   )
-  const allowAdaptiveNoVolumeFloor = (
-    input.creativeType === 'product_intent'
-    && (input.bucket === 'D' || input.bucket === 'S')
-  )
+  const allowAdaptiveNoVolumeFloor =
+    input.creativeType === 'product_intent' && (input.bucket === 'D' || input.bucket === 'S')
   if (
-    allowAdaptiveNoVolumeFloor
-    && !hasPositiveVolumeCandidate
-    && contextFilteredCandidates.length > 0
-    && contextIntentTighteningRemovalRatio >= 0.9
+    allowAdaptiveNoVolumeFloor &&
+    !hasPositiveVolumeCandidate &&
+    contextFilteredCandidates.length > 0 &&
+    contextIntentTighteningRemovalRatio >= 0.9
   ) {
     const demandIntentMinimum = resolveCreativeKeywordMinimumOutputCount({
       creativeType: input.creativeType || null,
@@ -2602,10 +2641,10 @@ export async function buildCreativeKeywordSet(
     0.6
   )
   if (
-    relaxedFilteringEnabled
-    && contextFilteredCandidates.length > 0
-    && relaxedFilteringPostFilterRatio < relaxedFilteringTriggerRatio
-    && contextFilteredCandidates.length < relaxedFilteringTargetCount
+    relaxedFilteringEnabled &&
+    contextFilteredCandidates.length > 0 &&
+    relaxedFilteringPostFilterRatio < relaxedFilteringTriggerRatio &&
+    contextFilteredCandidates.length < relaxedFilteringTargetCount
   ) {
     const existingKeywordKeys = new Set(
       contextFilteredCandidates
@@ -2646,7 +2685,10 @@ export async function buildCreativeKeywordSet(
     bucket: input.bucket,
   })
 
-  const selectFromCandidates = (selectionCandidates: PoolKeywordData[], preferredBucketKeywords: string[]) =>
+  const selectFromCandidates = (
+    selectionCandidates: PoolKeywordData[],
+    preferredBucketKeywords: string[]
+  ) =>
     selectCreativeKeywords({
       // Avoid duplicating the same pool candidates into `keywords` (which are treated as AI fallback-only inputs).
       // Pass structured candidates only, so source provenance remains stable for dedupe/quota.
@@ -2665,18 +2707,15 @@ export async function buildCreativeKeywordSet(
     })
 
   let selected = selectFromCandidates(
-    (
-      blockOriginalFallback && fallbackResolved.strategy === 'original'
-        ? []
-        : fallbackResolved.keywords
-    ) as PoolKeywordData[],
+    (blockOriginalFallback && fallbackResolved.strategy === 'original'
+      ? []
+      : fallbackResolved.keywords) as PoolKeywordData[],
     poolCandidates
   )
-  let selectionStrategy = (
+  let selectionStrategy =
     blockOriginalFallback && fallbackResolved.strategy === 'original'
       ? 'keyword_pool'
       : fallbackResolved.strategy
-  )
   let selectionFallbackReason: CreativeKeywordSourceAudit['pipeline']['selectionFallbackReason'] =
     fallbackResolved.strategy === 'filtered' ? 'none' : 'context_filter_empty'
   let finalInvariantTriggered = false
@@ -2686,9 +2725,9 @@ export async function buildCreativeKeywordSet(
 
   const keywordPoolCandidates = candidatePoolSource.filter(isKeywordPoolCandidate)
   if (
-    selected.keywords.length === 0
-    && selectionStrategy !== 'keyword_pool'
-    && keywordPoolCandidates.length > 0
+    selected.keywords.length === 0 &&
+    selectionStrategy !== 'keyword_pool' &&
+    keywordPoolCandidates.length > 0
   ) {
     selected = selectFromCandidates(keywordPoolCandidates, poolCandidates)
     selectionStrategy = 'keyword_pool'
@@ -2698,10 +2737,10 @@ export async function buildCreativeKeywordSet(
   }
 
   if (
-    selected.keywords.length === 0
-    && selectionStrategy !== 'original'
-    && candidatePoolSource.length > 0
-    && !blockOriginalFallback
+    selected.keywords.length === 0 &&
+    selectionStrategy !== 'original' &&
+    candidatePoolSource.length > 0 &&
+    !blockOriginalFallback
   ) {
     selected = selectFromCandidates(candidatePoolSource, poolCandidates)
     selectionStrategy = 'original'
@@ -2716,12 +2755,15 @@ export async function buildCreativeKeywordSet(
       brandName: input.brandName || input.offer.brand,
       scopeLabel: `${input.scopeLabel}:selected`,
     })
-    const currentCount = Array.isArray(selected.keywordsWithVolume) ? selected.keywordsWithVolume.length : 0
+    const currentCount = Array.isArray(selected.keywordsWithVolume)
+      ? selected.keywordsWithVolume.length
+      : 0
     if (
-      prefixed.prefixedCount <= 0
-      && prefixed.removedShortNumericFragmentCount <= 0
-      && prefixed.keywordsWithVolume.length === currentCount
-    ) return
+      prefixed.prefixedCount <= 0 &&
+      prefixed.removedShortNumericFragmentCount <= 0 &&
+      prefixed.keywordsWithVolume.length === currentCount
+    )
+      return
     selected = {
       ...selected,
       keywordsWithVolume: prefixed.keywordsWithVolume as any,
@@ -2732,9 +2774,9 @@ export async function buildCreativeKeywordSet(
   normalizeSelectedStandaloneModelTokens()
 
   if (
-    selected.keywords.length > 0
-    && selected.keywords.length < minimumSelectedKeywordCount
-    && contextFilteredCandidates.length > selected.keywords.length
+    selected.keywords.length > 0 &&
+    selected.keywords.length < minimumSelectedKeywordCount &&
+    contextFilteredCandidates.length > selected.keywords.length
   ) {
     const existingSelectedKeywordKeys = new Set(
       ((selected.keywordsWithVolume as PoolKeywordData[]) || [])
@@ -2764,10 +2806,12 @@ export async function buildCreativeKeywordSet(
         keywordsWithVolume: mergedKeywordsWithVolume as any,
         truncated: false,
         sourceQuotaAudit: augmentSourceQuotaAuditWithRescue({
-          audit: selected.sourceQuotaAudit || buildNonEmptyRescueSourceQuotaAudit({
-            fallbackMode: Boolean(input.fallbackMode),
-            keywordCount: mergedKeywordsWithVolume.length,
-          }),
+          audit:
+            selected.sourceQuotaAudit ||
+            buildNonEmptyRescueSourceQuotaAudit({
+              fallbackMode: Boolean(input.fallbackMode),
+              keywordCount: mergedKeywordsWithVolume.length,
+            }),
           keywordsWithVolume: mergedKeywordsWithVolume,
           brandName: input.brandName,
         }),
@@ -2779,10 +2823,7 @@ export async function buildCreativeKeywordSet(
   if (selected.keywords.length === 0 && contextFilteredCandidates.length > 0) {
     const selectionFallbackLimit = Math.min(
       maxKeywords,
-      Math.max(
-        minimumSelectedKeywordCount,
-        Math.min(12, contextFilteredCandidates.length)
-      )
+      Math.max(minimumSelectedKeywordCount, Math.min(12, contextFilteredCandidates.length))
     )
     const prioritizedContextFallback = [...contextFilteredCandidates]
       .sort(compareContextRecoveryCandidates)
@@ -2824,9 +2865,8 @@ export async function buildCreativeKeywordSet(
       })
       const rescueSelected = selectFromCandidates(rescueSelectionCandidates, poolCandidates)
 
-      let nextSelected = rescueSelected.keywords.length > selected.keywords.length
-        ? rescueSelected
-        : selected
+      let nextSelected =
+        rescueSelected.keywords.length > selected.keywords.length ? rescueSelected : selected
 
       if (nextSelected.keywords.length < minimumSelectedKeywordCount) {
         const existingKeywordKeys = new Set(
@@ -2834,10 +2874,12 @@ export async function buildCreativeKeywordSet(
             .map((item) => normalizeCandidateKey((item as any)?.keyword))
             .filter(Boolean)
         )
-        const manualRescueCandidates = nonEmptyRescueCandidates.filter((item) => {
-          const key = normalizeCandidateKey((item as any)?.keyword)
-          return Boolean(key) && !existingKeywordKeys.has(key)
-        }).slice(0, Math.max(0, minimumSelectedKeywordCount - nextSelected.keywords.length))
+        const manualRescueCandidates = nonEmptyRescueCandidates
+          .filter((item) => {
+            const key = normalizeCandidateKey((item as any)?.keyword)
+            return Boolean(key) && !existingKeywordKeys.has(key)
+          })
+          .slice(0, Math.max(0, minimumSelectedKeywordCount - nextSelected.keywords.length))
 
         if (manualRescueCandidates.length > 0) {
           const mergedKeywordsWithVolume = mergeSeedCandidates({
@@ -2849,12 +2891,13 @@ export async function buildCreativeKeywordSet(
             keywordsWithVolume: mergedKeywordsWithVolume as any,
             truncated: false,
             sourceQuotaAudit: augmentSourceQuotaAuditWithRescue({
-              audit: nextSelected.keywords.length > 0
-                ? nextSelected.sourceQuotaAudit
-                : buildNonEmptyRescueSourceQuotaAudit({
-                  fallbackMode: Boolean(input.fallbackMode),
-                  keywordCount: mergedKeywordsWithVolume.length,
-                }),
+              audit:
+                nextSelected.keywords.length > 0
+                  ? nextSelected.sourceQuotaAudit
+                  : buildNonEmptyRescueSourceQuotaAudit({
+                      fallbackMode: Boolean(input.fallbackMode),
+                      keywordCount: mergedKeywordsWithVolume.length,
+                    }),
               keywordsWithVolume: mergedKeywordsWithVolume,
               brandName: input.brandName,
             }),
@@ -2892,29 +2935,31 @@ export async function buildCreativeKeywordSet(
         .filter(Boolean)
     )
     const fallbackNeed = Math.max(0, minimumSelectedKeywordCount - selected.keywords.length)
-    const buildEligibleTopUp = (preferNonRescue: boolean) => candidatePoolSource
-      .filter((item) => {
-        const key = normalizeCandidateKey((item as any)?.keyword)
-        if (!key || existingKeywordKeys.has(key)) return false
-        return preferNonRescue ? !isBuilderNonEmptyRescueCandidate(item) : true
-      })
-      .sort(compareRelaxedFilteringCandidates)
+    const buildEligibleTopUp = (preferNonRescue: boolean) =>
+      candidatePoolSource
+        .filter((item) => {
+          const key = normalizeCandidateKey((item as any)?.keyword)
+          if (!key || existingKeywordKeys.has(key)) return false
+          return preferNonRescue ? !isBuilderNonEmptyRescueCandidate(item) : true
+        })
+        .sort(compareRelaxedFilteringCandidates)
 
     const preferredTopUp = buildEligibleTopUp(true).slice(0, fallbackNeed)
-    const fallbackInvariantTopUpCandidates = preferredTopUp.length >= fallbackNeed
-      ? preferredTopUp
-      : [
-        ...preferredTopUp,
-        ...buildEligibleTopUp(false)
-          .filter((item) => {
-            const key = normalizeCandidateKey((item as any)?.keyword)
-            if (!key) return false
-            return !preferredTopUp.some((candidate) =>
-              normalizeCandidateKey((candidate as any)?.keyword) === key
-            )
-          })
-          .slice(0, fallbackNeed - preferredTopUp.length),
-      ]
+    const fallbackInvariantTopUpCandidates =
+      preferredTopUp.length >= fallbackNeed
+        ? preferredTopUp
+        : [
+            ...preferredTopUp,
+            ...buildEligibleTopUp(false)
+              .filter((item) => {
+                const key = normalizeCandidateKey((item as any)?.keyword)
+                if (!key) return false
+                return !preferredTopUp.some(
+                  (candidate) => normalizeCandidateKey((candidate as any)?.keyword) === key
+                )
+              })
+              .slice(0, fallbackNeed - preferredTopUp.length),
+          ]
 
     if (fallbackInvariantTopUpCandidates.length > 0) {
       const mergedKeywordsWithVolume = mergeSeedCandidates({
@@ -2926,10 +2971,12 @@ export async function buildCreativeKeywordSet(
         keywordsWithVolume: mergedKeywordsWithVolume as any,
         truncated: false,
         sourceQuotaAudit: augmentSourceQuotaAuditWithRescue({
-          audit: selected.sourceQuotaAudit || buildNonEmptyRescueSourceQuotaAudit({
-            fallbackMode: Boolean(input.fallbackMode),
-            keywordCount: mergedKeywordsWithVolume.length,
-          }),
+          audit:
+            selected.sourceQuotaAudit ||
+            buildNonEmptyRescueSourceQuotaAudit({
+              fallbackMode: Boolean(input.fallbackMode),
+              keywordCount: mergedKeywordsWithVolume.length,
+            }),
           keywordsWithVolume: mergedKeywordsWithVolume,
           brandName: input.brandName,
         }),
@@ -3044,24 +3091,24 @@ export async function buildCreativeKeywordSet(
 
   const sanitizedInputPromptKeywords = Array.isArray(input.promptKeywords)
     ? filterBlockedPromptKeywords({
-      keywords: input.promptKeywords,
-      blockedKeywordKeys: blockedFallbackKeywordKeys,
-    })
+        keywords: input.promptKeywords,
+        blockedKeywordKeys: blockedFallbackKeywordKeys,
+      })
     : []
   const promptKeywords =
     sanitizedInputPromptKeywords.length > 0
       ? buildPromptKeywordSubset({
-        selectedKeywords: sanitizedInputPromptKeywords,
-        candidates: [],
-        maxKeywords: CREATIVE_PROMPT_KEYWORD_LIMIT,
-      })
+          selectedKeywords: sanitizedInputPromptKeywords,
+          candidates: [],
+          maxKeywords: CREATIVE_PROMPT_KEYWORD_LIMIT,
+        })
       : selected.keywords.length === 0
         ? []
-      : buildPromptKeywordSubset({
-        selectedKeywords: selected.keywords,
-        candidates: candidatePoolSource,
-        maxKeywords: CREATIVE_PROMPT_KEYWORD_LIMIT,
-      })
+        : buildPromptKeywordSubset({
+            selectedKeywords: selected.keywords,
+            candidates: candidatePoolSource,
+            maxKeywords: CREATIVE_PROMPT_KEYWORD_LIMIT,
+          })
   const promptKeywordSet = new Set(promptKeywords.map((item) => normalizeCandidateKey(item)))
   const executableKeywordSet = new Set(selected.keywords.map((item) => normalizeCandidateKey(item)))
   const candidatePool = candidatePoolSource.map((item) =>
@@ -3072,13 +3119,14 @@ export async function buildCreativeKeywordSet(
       brandName: input.brandName,
     })
   )
-  const executableKeywordCandidates = (selected.keywordsWithVolume as PoolKeywordData[]).map((item) =>
-    toCreativeKeywordCandidate(item, {
-      promptEligible: promptKeywordSet.has(normalizeCandidateKey((item as any)?.keyword)),
-      executableEligible: true,
-      creativeType: input.creativeType || null,
-      brandName: input.brandName,
-    })
+  const executableKeywordCandidates = (selected.keywordsWithVolume as PoolKeywordData[]).map(
+    (item) =>
+      toCreativeKeywordCandidate(item, {
+        promptEligible: promptKeywordSet.has(normalizeCandidateKey((item as any)?.keyword)),
+        executableEligible: true,
+        creativeType: input.creativeType || null,
+        brandName: input.brandName,
+      })
   )
 
   return {

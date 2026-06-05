@@ -167,12 +167,14 @@ describe('executeOpenclawStrategy analyze-only mode', () => {
   })
 
   it('runs cron analyze task without entering legacy strategy run pipeline', async () => {
-    const result = await executeOpenclawStrategy(buildTask({
-      userId: 9,
-      mode: 'auto',
-      trigger: 'cron',
-      kind: 'analyze_recommendations',
-    }))
+    const result = await executeOpenclawStrategy(
+      buildTask({
+        userId: 9,
+        mode: 'auto',
+        trigger: 'cron',
+        kind: 'analyze_recommendations',
+      })
+    )
 
     expect(result.success).toBe(true)
     expect(result.skipped).not.toBe(true)
@@ -206,11 +208,13 @@ describe('executeOpenclawStrategy analyze-only mode', () => {
   })
 
   it('treats legacy cron task payload as analyze-only task', async () => {
-    const result = await executeOpenclawStrategy(buildTask({
-      userId: 9,
-      mode: 'auto',
-      trigger: 'cron',
-    }))
+    const result = await executeOpenclawStrategy(
+      buildTask({
+        userId: 9,
+        mode: 'auto',
+        trigger: 'cron',
+      })
+    )
 
     expect(result.success).toBe(true)
     expect(recommendationFns.getStrategyRecommendations).toHaveBeenCalledTimes(1)
@@ -223,12 +227,14 @@ describe('executeOpenclawStrategy analyze-only mode', () => {
       cron: '0 9 * * *',
     })
 
-    const result = await executeOpenclawStrategy(buildTask({
-      userId: 9,
-      mode: 'auto',
-      trigger: 'cron',
-      kind: 'analyze_recommendations',
-    }))
+    const result = await executeOpenclawStrategy(
+      buildTask({
+        userId: 9,
+        mode: 'auto',
+        trigger: 'cron',
+        kind: 'analyze_recommendations',
+      })
+    )
 
     expect(result.success).toBe(true)
     expect(result.skipped).toBe(true)
@@ -247,12 +253,14 @@ describe('executeOpenclawStrategy analyze-only mode', () => {
       return null
     })
 
-    const result = await executeOpenclawStrategy(buildTask({
-      userId: 9,
-      mode: 'auto',
-      trigger: 'cron',
-      kind: 'analyze_recommendations',
-    }))
+    const result = await executeOpenclawStrategy(
+      buildTask({
+        userId: 9,
+        mode: 'auto',
+        trigger: 'cron',
+        kind: 'analyze_recommendations',
+      })
+    )
 
     expect(result.success).toBe(true)
     expect(result.skipped).toBe(true)

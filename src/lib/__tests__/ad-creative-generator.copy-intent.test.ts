@@ -8,19 +8,19 @@ function buildCreativeDraft(): GeneratedAdCreativeData {
       '{KeyWord:ToolPro} Official',
       'Powerful Drill for Home',
       'Cordless Hammer Drill',
-      'Reliable Tool for Repairs'
+      'Reliable Tool for Repairs',
     ],
     descriptions: [
       'Durable power tool for daily projects',
       'Built for heavy tasks in your workshop',
       'Trusted quality and easy handling',
-      'Strong performance for home and garden'
+      'Strong performance for home and garden',
     ],
     keywords: ['hammer drill', 'cordless drill', 'garden repair tool'],
     callouts: [],
     sitelinks: [],
     theme: 'test',
-    explanation: 'test'
+    explanation: 'test',
   }
 }
 
@@ -32,7 +32,9 @@ describe('ad-creative-generator softlyReinforceTypeCopy', () => {
     const fix = softlyReinforceTypeCopy(creative, 'B', 'fr', 'ToolPro')
 
     expect(fix.descriptionFixes).toBeGreaterThan(0)
-    expect(creative.descriptions.some((d) => /(en savoir plus|acheter maintenant|commander)/i.test(d))).toBe(true)
+    expect(
+      creative.descriptions.some((d) => /(en savoir plus|acheter maintenant|commander)/i.test(d))
+    ).toBe(true)
     expect(creative.keywords).toEqual(originalKeywords)
   })
 
@@ -42,7 +44,9 @@ describe('ad-creative-generator softlyReinforceTypeCopy', () => {
     const fix = softlyReinforceTypeCopy(creative, 'D', 'Swiss German', 'WerkPro')
 
     expect(fix.descriptionFixes + fix.headlineFixes).toBeGreaterThan(0)
-    expect(creative.descriptions.some((d) => /(jetzt kaufen|mehr erfahren|bestellen)/i.test(d))).toBe(true)
+    expect(
+      creative.descriptions.some((d) => /(jetzt kaufen|mehr erfahren|bestellen)/i.test(d))
+    ).toBe(true)
   })
 
   it('applies soft reinforcement for Spanish copy', () => {
@@ -51,7 +55,9 @@ describe('ad-creative-generator softlyReinforceTypeCopy', () => {
     const fix = softlyReinforceTypeCopy(creative, 'B', 'es-MX', 'ToolPro')
 
     expect(fix.descriptionFixes).toBeGreaterThan(0)
-    expect(creative.descriptions.some((d) => /(comprar ahora|más información|pedir)/i.test(d))).toBe(true)
+    expect(
+      creative.descriptions.some((d) => /(comprar ahora|más información|pedir)/i.test(d))
+    ).toBe(true)
   })
 
   it('applies soft reinforcement for Chinese copy', () => {
@@ -69,7 +75,9 @@ describe('ad-creative-generator softlyReinforceTypeCopy', () => {
     const fix = softlyReinforceTypeCopy(creative, 'A', 'ar', 'ToolPro')
 
     expect(fix.descriptionFixes + fix.headlineFixes).toBeGreaterThan(0)
-    expect(creative.descriptions.some((d) => /(اشتري الآن|اعرف المزيد|اطلب الآن)/.test(d))).toBe(true)
+    expect(creative.descriptions.some((d) => /(اشتري الآن|اعرف المزيد|اطلب الآن)/.test(d))).toBe(
+      true
+    )
   })
 
   it('keeps unsupported languages unchanged', () => {
@@ -106,14 +114,14 @@ describe('ad-creative-generator enforceHeadlineComplementarity', () => {
         'Official ToolPro Site',
         'Trusted ToolPro Choice',
         'For Home Repair Projects',
-        'Buy ToolPro Today'
+        'Buy ToolPro Today',
       ],
       descriptions: ['Trusted quality with support'],
       keywords: ['toolpro drill', 'repair tool'],
       callouts: [],
       sitelinks: [],
       theme: 'test',
-      explanation: 'test'
+      explanation: 'test',
     }
 
     const fix = enforceHeadlineComplementarity(creative, 'en', 'ToolPro')
@@ -131,14 +139,14 @@ describe('ad-creative-generator enforceHeadlineComplementarity', () => {
         'Official ToolPro Warranty',
         'Built to solve daily repair pain',
         'Buy ToolPro Today',
-        'Trusted ToolPro Support'
+        'Trusted ToolPro Support',
       ],
       descriptions: ['Trusted value for daily use'],
       keywords: ['repair tool', 'home project tool'],
       callouts: [],
       sitelinks: [],
       theme: 'test',
-      explanation: 'test'
+      explanation: 'test',
     }
     const before = [...creative.headlines]
 
@@ -156,14 +164,14 @@ describe('ad-creative-generator enforceHeadlineComplementarity', () => {
         'Official ToolPro Warranty',
         'For Home Repair Projects',
         'Built to solve daily repair pain',
-        'Trusted ToolPro Support'
+        'Trusted ToolPro Support',
       ],
       descriptions: ['Trusted value for daily use'],
       keywords: ['home repair tool', 'project drill'],
       callouts: [],
       sitelinks: [],
       theme: 'test',
-      explanation: 'test'
+      explanation: 'test',
     }
 
     const fix = enforceHeadlineComplementarity(creative, 'en', 'ToolPro', 'B')

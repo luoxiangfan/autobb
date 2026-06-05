@@ -38,9 +38,9 @@ import { updateGoogleAdsCampaignStatus } from '../../google-ads-api'
  */
 export interface LinkCheckTaskData {
   checkType: 'daily' | 'manual' | 'single-offer'
-  userId?: number  // 可选，指定用户ID时只检查该用户
+  userId?: number // 可选，指定用户ID时只检查该用户
   offerId?: number // 可选，指定Offer ID时只检查该Offer
-  useUrlResolver?: boolean  // 是否使用URL解析器验证（默认true）
+  useUrlResolver?: boolean // 是否使用URL解析器验证（默认true）
 }
 
 /**
@@ -53,9 +53,9 @@ export interface LinkCheckTaskResult {
   totalAlerts: number
   brokenLinks: number
   validLinks: number
-  pausedCampaigns: number  // 🔧 暂停的数据库广告系列数
-  pausedGoogleAdsCampaigns: number  // 🔧 暂停成功的 Google Ads 广告系列数（仅当 DB 有新暂停行时）
-  pausedClickFarmTasks: number  // 🔧 新增：暂停的补点击任务数
+  pausedCampaigns: number // 🔧 暂停的数据库广告系列数
+  pausedGoogleAdsCampaigns: number // 🔧 暂停成功的 Google Ads 广告系列数（仅当 DB 有新暂停行时）
+  pausedClickFarmTasks: number // 🔧 新增：暂停的补点击任务数
   /** 对应 url-swap 自动暂停启用前恒为 0 */
   pausedUrlSwapTasks: number
   /** 仅在流程中真正把 offer 设为不活跃时才递增（当前 resolver 分支恒为 0） */
@@ -68,7 +68,7 @@ export interface LinkCheckTaskResult {
     problemAccounts: number
   }
   errorMessage?: string
-  duration: number  // 检查耗时（毫秒）
+  duration: number // 检查耗时（毫秒）
 }
 
 /** 非代理关键词但明显为网络/超时类失败，不应触发「链接失效」自动暂停 */
@@ -138,24 +138,23 @@ async function validateLinkWithResolver(
       return {
         isValid: true,
         finalUrl: resolved.finalUrl,
-        finalUrlSuffix: resolved.finalUrlSuffix
+        finalUrlSuffix: resolved.finalUrlSuffix,
       }
     } else {
       return {
         isValid: false,
-        error: '无法解析到最终URL'
+        error: '无法解析到最终URL',
       }
     }
   } catch (error: any) {
     const errorAnalysis = analyzeProxyError(error)
-    const infra =
-      errorAnalysis.isProxyError || isLikelyNetworkOrTimeoutFailure(error)
+    const infra = errorAnalysis.isProxyError || isLikelyNetworkOrTimeoutFailure(error)
     return {
       isValid: false,
       unresolvedDueToInfrastructure: infra,
       error: errorAnalysis.isProxyError
         ? errorAnalysis.enhancedMessage
-        : (errorAnalysis.enhancedMessage || error.message || '链接解析失败')
+        : errorAnalysis.enhancedMessage || error.message || '链接解析失败',
     }
   }
 }
@@ -167,7 +166,9 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
   return async (task: Task<LinkCheckTaskData>) => {
     const { checkType, userId, offerId, useUrlResolver = true } = task.data
 
-    console.log(`🔍 [LinkCheckExecutor] 开始链接检查任务: 类型=${checkType}, 用户=${userId || 'all'}, Offer=${offerId || 'all'}, 使用URL解析器=${useUrlResolver}`)
+    console.log(
+      `🔍 [LinkCheckExecutor] 开始链接检查任务: 类型=${checkType}, 用户=${userId || 'all'}, Offer=${offerId || 'all'}, 使用URL解析器=${useUrlResolver}`
+    )
 
     const startTime = Date.now()
 
@@ -235,7 +236,10 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
           pausedUrlSwapTasks: number
         }
 
-        async function runOffer(dbConn: DatabaseAdapter, offer: OfferRow): Promise<LinkCheckOfferDelta> {
+        async function runOffer(
+          dbConn: DatabaseAdapter,
+          offer: OfferRow
+        ): Promise<LinkCheckOfferDelta> {
           const zero = (): LinkCheckOfferDelta => ({
             validInc: 0,
             brokenInc: 0,
@@ -356,88 +360,88 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
               try {
                 if (pausedInDb > 0 && campaignsToSyncGoogle.length > 0) {
                   for (const campaign of campaignsToSyncGoogle) {
-                  try {
-                    const adsAccount = (await dbConn.queryOne(
-                      `
+                    try {
+                      const adsAccount = (await dbConn.queryOne(
+                        `
                           SELECT id, customer_id, service_account_id, parent_mcc_id
                           FROM google_ads_accounts
                           WHERE id = ? AND user_id = ?
                         `,
-                      [campaign.google_ads_account_id, offer.user_id]
-                    )) as
-                      | {
-                          id: number
-                          customer_id: string
-                          service_account_id: string | null
-                          parent_mcc_id: string | null
+                        [campaign.google_ads_account_id, offer.user_id]
+                      )) as
+                        | {
+                            id: number
+                            customer_id: string
+                            service_account_id: string | null
+                            parent_mcc_id: string | null
+                          }
+                        | undefined
+
+                      if (adsAccount) {
+                        const result = await prepareGoogleAdsApiCallForLinkedAccountCached(
+                          offer.user_id,
+                          adsAccount.service_account_id,
+                          prepareCache
+                        )
+                        if (!result.ok) {
+                          console.warn(
+                            `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: ${result.message}`
+                          )
+                          continue
                         }
-                      | undefined
+                        const prepared = result
 
-                    if (adsAccount) {
-                      const result = await prepareGoogleAdsApiCallForLinkedAccountCached(
-                        offer.user_id,
-                        adsAccount.service_account_id,
-                        prepareCache
+                        const { apiAuth } = prepared
+                        if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {
+                          console.warn(
+                            `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: 缺少服务账号配置`
+                          )
+                          continue
+                        }
+
+                        const refreshToken = prepared.refreshToken
+                        const oauthCredentials = prepared.oauthCredentials
+                        const oauthLoginCustomerId =
+                          prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+
+                        await runWithLoginCustomerFallbackForAccount({
+                          adsAccount: {
+                            customer_id: adsAccount.customer_id,
+                            parent_mcc_id: adsAccount.parent_mcc_id,
+                            id: adsAccount.id,
+                          },
+                          refreshToken,
+                          authType: apiAuth.authType,
+                          serviceAccountId: apiAuth.serviceAccountId,
+                          serviceAccountMccId: apiAuth.serviceAccountMccId,
+                          oauthLoginCustomerId,
+                          actionName: `链接检测暂停 Campaign ${campaign.campaign_id}`,
+                          callback: (loginCustomerId) =>
+                            updateGoogleAdsCampaignStatus({
+                              customerId: adsAccount.customer_id,
+                              refreshToken,
+                              campaignId: campaign.campaign_id,
+                              status: 'PAUSED',
+                              accountId: campaign.google_ads_account_id,
+                              userId: offer.user_id,
+                              loginCustomerId,
+                              authType: apiAuth.authType,
+                              serviceAccountId: apiAuth.serviceAccountId,
+                              credentials: oauthCredentials,
+                              ...preparedAuthContextField(prepared),
+                            }),
+                        })
+                        pausedInGoogleAds++
+                        console.log(`   ⏸️  已暂停 Google Ads 广告系列 ${campaign.campaign_id}`)
+                      }
+                    } catch (error: any) {
+                      console.error(
+                        `   ⚠️  暂停 Google Ads 广告系列 ${campaign.campaign_id} 失败:`,
+                        error.message
                       )
-                      if (!result.ok) {
-                        console.warn(
-                          `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: ${result.message}`
-                        )
-                        continue
-                      }
-                      const prepared = result
-
-                      const { apiAuth } = prepared
-                      if (apiAuth.authType === 'service_account' && !apiAuth.serviceAccountId) {
-                        console.warn(
-                          `   ⚠️  跳过暂停 Google Ads 广告系列 ${campaign.campaign_id}: 缺少服务账号配置`
-                        )
-                        continue
-                      }
-
-                      const refreshToken = prepared.refreshToken
-                      const oauthCredentials = prepared.oauthCredentials
-                      const oauthLoginCustomerId =
-                        prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
-
-                      await runWithLoginCustomerFallbackForAccount({
-                        adsAccount: {
-                          customer_id: adsAccount.customer_id,
-                          parent_mcc_id: adsAccount.parent_mcc_id,
-                          id: adsAccount.id,
-                        },
-                        refreshToken,
-                        authType: apiAuth.authType,
-                        serviceAccountId: apiAuth.serviceAccountId,
-                        serviceAccountMccId: apiAuth.serviceAccountMccId,
-                        oauthLoginCustomerId,
-                        actionName: `链接检测暂停 Campaign ${campaign.campaign_id}`,
-                        callback: (loginCustomerId) =>
-                          updateGoogleAdsCampaignStatus({
-                            customerId: adsAccount.customer_id,
-                            refreshToken,
-                            campaignId: campaign.campaign_id,
-                            status: 'PAUSED',
-                            accountId: campaign.google_ads_account_id,
-                            userId: offer.user_id,
-                            loginCustomerId,
-                            authType: apiAuth.authType,
-                            serviceAccountId: apiAuth.serviceAccountId,
-                            credentials: oauthCredentials,
-                            ...preparedAuthContextField(prepared),
-                          }),
-                      })
-                      pausedInGoogleAds++
-                      console.log(`   ⏸️  已暂停 Google Ads 广告系列 ${campaign.campaign_id}`)
                     }
-                  } catch (error: any) {
-                    console.error(
-                      `   ⚠️  暂停 Google Ads 广告系列 ${campaign.campaign_id} 失败:`,
-                      error.message
-                    )
                   }
                 }
-              }
               } finally {
                 clearGoogleAdsLinkedAccountPrepareCache(prepareCache)
               }
@@ -520,12 +524,16 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
 
         const duration = Date.now() - startTime
 
-        console.log(`✅ [LinkCheckExecutor] 链接检查完成: 有效=${validLinks}, 失效=${brokenLinks}, 未完成(基础设施)=${checksUnresolvedInfrastructure}, 新风险提示=${totalAlerts}, 耗时=${duration}ms`)
-        console.log(`📊 [LinkCheckExecutor] 自动暂停统计: DB广告系列=${pausedCampaigns}, GoogleAds广告系列=${pausedGoogleAdsCampaigns}, 补点击任务=${pausedClickFarmTasks}`)
+        console.log(
+          `✅ [LinkCheckExecutor] 链接检查完成: 有效=${validLinks}, 失效=${brokenLinks}, 未完成(基础设施)=${checksUnresolvedInfrastructure}, 新风险提示=${totalAlerts}, 耗时=${duration}ms`
+        )
+        console.log(
+          `📊 [LinkCheckExecutor] 自动暂停统计: DB广告系列=${pausedCampaigns}, GoogleAds广告系列=${pausedGoogleAdsCampaigns}, 补点击任务=${pausedClickFarmTasks}`
+        )
 
         return {
           success: true,
-          totalUsers: new Set(offers.map(o => o.user_id)).size,
+          totalUsers: new Set(offers.map((o) => o.user_id)).size,
           totalLinks: offers.length,
           totalAlerts,
           brokenLinks,
@@ -537,7 +545,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
           deactivatedOffers,
           checksUnresolvedInfrastructure,
           accountChecks: { totalAccounts: 0, problemAccounts: 0 },
-          duration
+          duration,
         }
       }
 
@@ -551,7 +559,9 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
 
       const duration = Date.now() - startTime
 
-      console.log(`✅ [LinkCheckExecutor] 链接检查完成: 用户数=${result.totalUsers}, 链接数=${result.totalLinks}, 新风险提示=${result.totalAlerts}, 耗时=${duration}ms`)
+      console.log(
+        `✅ [LinkCheckExecutor] 链接检查完成: 用户数=${result.totalUsers}, 链接数=${result.totalLinks}, 新风险提示=${result.totalAlerts}, 耗时=${duration}ms`
+      )
 
       return {
         success: true,
@@ -560,14 +570,14 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
         totalAlerts: result.totalAlerts,
         brokenLinks,
         validLinks: result.totalLinks - brokenLinks,
-        pausedCampaigns: 0,  // 原有逻辑不包含暂停功能
+        pausedCampaigns: 0, // 原有逻辑不包含暂停功能
         pausedGoogleAdsCampaigns: 0,
         pausedClickFarmTasks: 0,
         pausedUrlSwapTasks: 0,
         deactivatedOffers: 0,
         checksUnresolvedInfrastructure: 0,
         accountChecks: result.accountChecks,
-        duration
+        duration,
       }
     } catch (error: any) {
       const duration = Date.now() - startTime
@@ -588,7 +598,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
         checksUnresolvedInfrastructure: 0,
         accountChecks: { totalAccounts: 0, problemAccounts: 0 },
         errorMessage: error.message,
-        duration
+        duration,
       }
     }
   }

@@ -11,7 +11,10 @@ import { getDatabase } from '@/lib/db'
 import { dateMinusDays } from '@/lib/db-helpers'
 import { createOptimizationEngine, type CampaignMetrics } from './optimization-rules'
 import { getCommissionPerConversion as getOfferCommissionPerConversion } from './offer-monetization'
-import { buildUserExecutionEligibleSql, getUserExecutionEligibility } from './user-execution-eligibility'
+import {
+  buildUserExecutionEligibleSql,
+  getUserExecutionEligibility,
+} from './user-execution-eligibility'
 
 export interface OptimizationTask {
   id: number
@@ -49,7 +52,7 @@ export async function generateOptimizationTasksForUser(userId: number): Promise<
   const engine = createOptimizationEngine()
 
   // 获取用户的所有活跃Campaigns（JOIN offers获取转化价值）
-  const campaigns = await db.query(
+  const campaigns = (await db.query(
     `
     SELECT
       c.id as campaignId,
@@ -65,7 +68,7 @@ export async function generateOptimizationTasksForUser(userId: number): Promise<
       AND c.status IN ('ENABLED', 'PAUSED')
   `,
     [userId]
-  ) as any[]
+  )) as any[]
 
   if (campaigns.length === 0) {
     return 0
@@ -81,7 +84,7 @@ export async function generateOptimizationTasksForUser(userId: number): Promise<
 
   for (const campaign of campaigns) {
     // 聚合性能数据
-    const perf = await db.queryOne(
+    const perf = (await db.queryOne(
       `
       SELECT
         COALESCE(SUM(impressions), 0) as impressions,
@@ -95,7 +98,7 @@ export async function generateOptimizationTasksForUser(userId: number): Promise<
         AND date <= ?
     `,
       [campaign.campaignId, userId, startDate, endDate]
-    ) as any
+    )) as any
 
     // 计算衍生指标
     const impressions = perf.impressions || 0
@@ -146,7 +149,7 @@ export async function generateOptimizationTasksForUser(userId: number): Promise<
       cpa,
       conversionRate,
       roi,
-      daysRunning
+      daysRunning,
     })
   }
 
@@ -154,7 +157,7 @@ export async function generateOptimizationTasksForUser(userId: number): Promise<
   const recommendations = engine.generateBatchRecommendations(campaignMetrics)
 
   // 过滤掉已存在的pending任务（避免重复）
-  const existingTasks = await db.query(
+  const existingTasks = (await db.query(
     `
     SELECT campaign_id, task_type
     FROM optimization_tasks
@@ -163,11 +166,9 @@ export async function generateOptimizationTasksForUser(userId: number): Promise<
       AND created_at >= ${recentCutoffExpr}
   `,
     [userId]
-  ) as any[]
+  )) as any[]
 
-  const existingTaskKeys = new Set(
-    existingTasks.map(t => `${t.campaign_id}_${t.task_type}`)
-  )
+  const existingTaskKeys = new Set(existingTasks.map((t) => `${t.campaign_id}_${t.task_type}`))
 
   // 插入新任务
   let insertedCount = 0
@@ -181,7 +182,7 @@ export async function generateOptimizationTasksForUser(userId: number): Promise<
     }
 
     // 找到对应的Campaign指标
-    const metrics = campaignMetrics.find(m => m.campaignId === rec.campaignId)
+    const metrics = campaignMetrics.find((m) => m.campaignId === rec.campaignId)
     if (!metrics) continue
 
     // 保存指标快照
@@ -195,7 +196,7 @@ export async function generateOptimizationTasksForUser(userId: number): Promise<
       conversionRate: metrics.conversionRate,
       roi: metrics.roi,
       daysRunning: metrics.daysRunning,
-      snapshotDate: endDate
+      snapshotDate: endDate,
     })
 
     await db.exec(
@@ -241,7 +242,7 @@ export async function generateWeeklyOptimizationTasks(): Promise<{
   const userEligibleCondition = buildUserExecutionEligibleSql({ dbType: db.type, userAlias: 'u' })
 
   // 获取所有有活跃Campaign的用户
-  const users = await db.query(
+  const users = (await db.query(
     `
     SELECT DISTINCT c.user_id
     FROM campaigns c
@@ -250,7 +251,7 @@ export async function generateWeeklyOptimizationTasks(): Promise<{
       AND ${userEligibleCondition}
   `,
     []
-  ) as { user_id: number }[]
+  )) as { user_id: number }[]
 
   const userTasks: Record<number, number> = {}
   let totalTasks = 0
@@ -264,7 +265,7 @@ export async function generateWeeklyOptimizationTasks(): Promise<{
   return {
     totalUsers: users.length,
     totalTasks,
-    userTasks
+    userTasks,
   }
 }
 
@@ -303,9 +304,9 @@ export async function getUserOptimizationTasks(
     t.created_at DESC
   `
 
-  const tasks = await db.query(query, params) as any[]
+  const tasks = (await db.query(query, params)) as any[]
 
-  return tasks.map(t => ({
+  return tasks.map((t) => ({
     id: t.id,
     userId: t.user_id,
     campaignId: t.campaign_id,
@@ -321,7 +322,7 @@ export async function getUserOptimizationTasks(
     dismissedAt: t.dismissed_at,
     completionNote: t.completion_note,
     campaignName: t.campaignName,
-    campaignStatus: t.campaignStatus
+    campaignStatus: t.campaignStatus,
   }))
 }
 
@@ -400,7 +401,7 @@ export async function getTaskStatistics(userId: number): Promise<{
   const db = await getDatabase()
   const recentCutoffExpr = dateMinusDays(30, db.type)
 
-  const stats = await db.queryOne(
+  const stats = (await db.queryOne(
     `
     SELECT
       COUNT(*) as total,
@@ -416,7 +417,7 @@ export async function getTaskStatistics(userId: number): Promise<{
       AND created_at >= ${recentCutoffExpr}
   `,
     [userId]
-  ) as any
+  )) as any
 
   return {
     total: stats.total || 0,
@@ -427,8 +428,8 @@ export async function getTaskStatistics(userId: number): Promise<{
     byPriority: {
       high: stats.highPriority || 0,
       medium: stats.mediumPriority || 0,
-      low: stats.lowPriority || 0
-    }
+      low: stats.lowPriority || 0,
+    },
   }
 }
 

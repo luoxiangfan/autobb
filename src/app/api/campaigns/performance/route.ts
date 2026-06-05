@@ -30,7 +30,9 @@ function formatAsYmd(value: unknown): string | null {
 }
 
 function normalizeCurrency(value: unknown): string {
-  const normalized = String(value ?? '').trim().toUpperCase()
+  const normalized = String(value ?? '')
+    .trim()
+    .toUpperCase()
   return normalized || 'USD'
 }
 
@@ -51,9 +53,9 @@ function parseYmdParam(value: string | null): string | null {
   const [year, month, day] = normalized.split('-').map((part) => Number(part))
   const date = new Date(Date.UTC(year, month - 1, day))
   if (
-    date.getUTCFullYear() !== year
-    || date.getUTCMonth() !== month - 1
-    || date.getUTCDate() !== day
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
   ) {
     return null
   }
@@ -79,7 +81,10 @@ function roundTo2(value: number): number {
   return Math.round(value * 100) / 100
 }
 
-function calculateRoas(commission: number, cost: number): { value: number | null; infinite: boolean } {
+function calculateRoas(
+  commission: number,
+  cost: number
+): { value: number | null; infinite: boolean } {
   const normalizedCommission = Number(commission) || 0
   const normalizedCost = Number(cost) || 0
   if (normalizedCost <= 0) {
@@ -163,9 +168,7 @@ function summarizeAggByCurrency(params: {
 
       impressions += aggImpressions
       clicks += aggClicks
-      cost += params.reportingCurrency
-        ? aggCost
-        : convertToBase(aggCost, normalizedCurrency)
+      cost += params.reportingCurrency ? aggCost : convertToBase(aggCost, normalizedCurrency)
     }
   }
 
@@ -180,14 +183,17 @@ function summarizeCostsByCurrency(
   for (const byCurrency of byCampaign.values()) {
     for (const [currency, agg] of byCurrency.entries()) {
       const normalizedCurrency = normalizeCurrency(currency)
-      totals.set(normalizedCurrency, (totals.get(normalizedCurrency) || 0) + (Number(agg.cost) || 0))
+      totals.set(
+        normalizedCurrency,
+        (totals.get(normalizedCurrency) || 0) + (Number(agg.cost) || 0)
+      )
     }
   }
 
   return Array.from(totals.entries())
     .map(([currency, amount]) => ({ currency, amount }))
     .filter((row) => row.amount > 0)
-    .sort((a, b) => (b.amount - a.amount) || a.currency.localeCompare(b.currency))
+    .sort((a, b) => b.amount - a.amount || a.currency.localeCompare(b.currency))
 }
 
 function summarizeCommissionByCurrency(
@@ -332,10 +338,7 @@ export async function GET(request: NextRequest) {
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const userId = authResult.user.userId
@@ -353,10 +356,7 @@ export async function GET(request: NextRequest) {
         )
       }
       if (startDateQuery > endDateQuery) {
-        return NextResponse.json(
-          { error: 'start_date 不能晚于 end_date' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: 'start_date 不能晚于 end_date' }, { status: 400 })
       }
     }
     const requestedCurrencyRaw = searchParams.get('currency')
@@ -365,8 +365,12 @@ export async function GET(request: NextRequest) {
     const offset = parseOptionalNonNegativeInt(searchParams.get('offset'))
     const searchQuery = (searchParams.get('search') || '').trim().toLowerCase()
     const statusFilterRaw = (searchParams.get('status') || '').trim().toUpperCase()
-    const statusFilter = ['ENABLED', 'PAUSED', 'REMOVED', 'ALL'].includes(statusFilterRaw) ? statusFilterRaw : ''
-    const needsOfferCompletionFilter = (searchParams.get('needsOfferCompletion') || '').trim().toUpperCase()
+    const statusFilter = ['ENABLED', 'PAUSED', 'REMOVED', 'ALL'].includes(statusFilterRaw)
+      ? statusFilterRaw
+      : ''
+    const needsOfferCompletionFilter = (searchParams.get('needsOfferCompletion') || '')
+      .trim()
+      .toUpperCase()
     const statusCategoryFilter = (searchParams.get('statusCategory') || '').trim().toLowerCase()
     const showDeletedParam = parseOptionalBoolean(searchParams.get('showDeleted'))
     const refresh = parseOptionalBoolean(searchParams.get('refresh')) === true
@@ -379,9 +383,10 @@ export async function GET(request: NextRequest) {
     const sortOrder = sortOrderParam === 'asc' ? 'asc' : sortOrderParam === 'desc' ? 'desc' : null
     const idsParam = (searchParams.get('ids') || '').trim()
     const idsFilter = idsParam
-      ? idsParam.split(',')
-        .map((id) => Number.parseInt(id.trim(), 10))
-        .filter((id) => Number.isFinite(id) && id > 0)
+      ? idsParam
+          .split(',')
+          .map((id) => Number.parseInt(id.trim(), 10))
+          .filter((id) => Number.isFinite(id) && id > 0)
       : []
     // 🔧 新增：按创建时间过滤（用于"最近 14 天新增"页面）
     const createdAtStartParam = searchParams.get('createdAtStart')
@@ -389,12 +394,14 @@ export async function GET(request: NextRequest) {
     // 🔧 新增：按用户筛选（管理员功能，支持多选）
     const userIdsParam = (searchParams.get('userIds') || '').trim()
     const requestedUserIds = userIdsParam
-      ? Array.from(new Set(
-          userIdsParam
-            .split(',')
-            .map((id) => Number.parseInt(id.trim(), 10))
-            .filter((id) => Number.isFinite(id) && id > 0)
-        ))
+      ? Array.from(
+          new Set(
+            userIdsParam
+              .split(',')
+              .map((id) => Number.parseInt(id.trim(), 10))
+              .filter((id) => Number.isFinite(id) && id > 0)
+          )
+        )
       : []
     // 向后兼容：仍支持旧的单选 userId 参数
     const userIdFilterParam = searchParams.get('userId')
@@ -403,7 +410,12 @@ export async function GET(request: NextRequest) {
     const effectiveUserIds: number[] | null = (() => {
       if (!isAdmin) return [userId]
       if (requestedUserIds.length > 0) return requestedUserIds
-      if (userIdFilterParam && userIdFilterParam !== 'all' && userIdFilter && Number.isFinite(userIdFilter)) {
+      if (
+        userIdFilterParam &&
+        userIdFilterParam !== 'all' &&
+        userIdFilter &&
+        Number.isFinite(userIdFilter)
+      ) {
         return [userIdFilter]
       }
       return null
@@ -419,7 +431,9 @@ export async function GET(request: NextRequest) {
       }
     }
     // 将联盟平台名称映射到域名关键字（用于 LIKE 查询）
-    const affiliateDomainKeywords = affiliateFilter ? getAffiliateDomainKeywords(affiliateFilter) : []
+    const affiliateDomainKeywords = affiliateFilter
+      ? getAffiliateDomainKeywords(affiliateFilter)
+      : []
     const hasAffiliateListScope = Boolean(
       affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0
     )
@@ -474,19 +488,19 @@ export async function GET(request: NextRequest) {
     const affiliateAlignedWhereClause = hasAffiliateListScope
       ? buildCampaignAffiliateAlignedWhereClause(db.type, 'c', 'o')
       : ''
-    const buildUserScopeClause = (column: string): string => (
+    const buildUserScopeClause = (column: string): string =>
       effectiveUserIds !== null
         ? `${column} IN (${effectiveUserIds.map(() => '?').join(',')})`
         : '1=1'
-    )
     const userScopeValues = effectiveUserIds ?? []
     const unattributedFailureFilter = buildAffiliateUnattributedFailureFilter({
       includePendingWithinGrace: true,
       includeAllFailures: true,
     })
 
-    const queryCampaignRows = async (): Promise<any[]> => (
-      await db.query(`
+    const queryCampaignRows = async (): Promise<any[]> =>
+      (await db.query(
+        `
         SELECT
           c.id,
           c.user_id,
@@ -528,26 +542,32 @@ export async function GET(request: NextRequest) {
         LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
         LEFT JOIN offers o ON c.offer_id = o.id
         WHERE ${buildUserScopeClause('c.user_id')}
-        ${hasAffiliateListScope ? `AND (
+        ${
+          hasAffiliateListScope
+            ? `AND (
           ${affiliateDomainKeywords.map(() => `o.affiliate_link LIKE ?`).join(' OR ')}
-        )` : ''}
+        )`
+            : ''
+        }
         ${affiliateAlignedWhereClause}
         ${createdAtStartParam ? `AND c.created_at >= ?` : ''}
         ${createdAtEndParam ? `AND c.created_at <= ?` : ''}
         ORDER BY c.created_at DESC
-      `, [
-        ...userScopeValues,
-        ...affiliateLikeBindValues,
-        ...(createdAtStartParam ? [createdAtStartParam] : []),
-        ...(createdAtEndParam ? [createdAtEndParam] : [])
-      ]) as any[]
-    )
+      `,
+        [
+          ...userScopeValues,
+          ...affiliateLikeBindValues,
+          ...(createdAtStartParam ? [createdAtStartParam] : []),
+          ...(createdAtEndParam ? [createdAtEndParam] : []),
+        ]
+      )) as any[]
 
     const aggregateByCampaignCurrency = async (params: {
       start: string
       end: string
     }): Promise<Map<number, Map<string, Agg>>> => {
-      const rows = await db.query(`
+      const rows = (await db.query(
+        `
         SELECT
           campaign_id,
           COALESCE(currency, 'USD') as currency,
@@ -559,11 +579,9 @@ export async function GET(request: NextRequest) {
           AND date >= ?
           AND date <= ?
         GROUP BY campaign_id, COALESCE(currency, 'USD')
-      `, [
-        ...userScopeValues,
-        params.start,
-        params.end
-      ]) as any[]
+      `,
+        [...userScopeValues, params.start, params.end]
+      )) as any[]
 
       const map = new Map<number, Map<string, Agg>>()
       for (const row of rows) {
@@ -602,10 +620,14 @@ export async function GET(request: NextRequest) {
           WHERE ${buildUserScopeClause('c.user_id')}
             AND a.report_date >= ?
             AND a.report_date <= ?
-            ${affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? `AND (${
-              affiliateDomainKeywords.map((_, _i) => `o.affiliate_link LIKE ?`).join(' OR ')
-            })` : ''}
-            ${hasCurrencyFilter ? 'AND COALESCE(a.currency, \'USD\') = ?' : ''}
+            ${
+              affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0
+                ? `AND (${affiliateDomainKeywords
+                    .map((_, _i) => `o.affiliate_link LIKE ?`)
+                    .join(' OR ')})`
+                : ''
+            }
+            ${hasCurrencyFilter ? "AND COALESCE(a.currency, 'USD') = ?" : ''}
             AND a.campaign_id IS NOT NULL
           GROUP BY a.campaign_id, COALESCE(a.currency, 'USD')
         `,
@@ -617,12 +639,7 @@ export async function GET(request: NextRequest) {
               ...affiliateLikeBindValues,
               String(params.currency),
             ]
-          : [
-              ...userScopeValues,
-              params.start,
-              params.end,
-              ...affiliateLikeBindValues,
-            ]
+          : [...userScopeValues, params.start, params.end, ...affiliateLikeBindValues]
       )
 
       const map = new Map<number, Map<string, number>>()
@@ -653,9 +670,13 @@ export async function GET(request: NextRequest) {
             INNER JOIN offers o ON c.offer_id = o.id
             WHERE ${buildUserScopeClause('c.user_id')}
               AND c.offer_id IS NOT NULL
-              ${affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? `AND (${
-                affiliateDomainKeywords.map(() => `o.affiliate_link LIKE ?`).join(' OR ')
-              })` : ''}
+              ${
+                affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0
+                  ? `AND (${affiliateDomainKeywords
+                      .map(() => `o.affiliate_link LIKE ?`)
+                      .join(' OR ')})`
+                  : ''
+              }
           ),
           offer_campaign_counts AS (
             SELECT offer_id, COUNT(*) AS campaign_count
@@ -673,7 +694,7 @@ export async function GET(request: NextRequest) {
             AND f.report_date <= ?
             AND f.offer_id IS NOT NULL
             AND ${unattributedFailureFilter.sql}
-            ${hasCurrencyFilter ? 'AND COALESCE(f.currency, \'USD\') = ?' : ''}
+            ${hasCurrencyFilter ? "AND COALESCE(f.currency, 'USD') = ?" : ''}
           GROUP BY sc.id, COALESCE(f.currency, 'USD')
         `,
           hasCurrencyFilter
@@ -708,8 +729,8 @@ export async function GET(request: NextRequest) {
       } catch (error: any) {
         const message = String(error?.message || '')
         if (
-          /openclaw_affiliate_attribution_failures/i.test(message)
-          && /(no such table|does not exist|no such column|column .* does not exist)/i.test(message)
+          /openclaw_affiliate_attribution_failures/i.test(message) &&
+          /(no such table|does not exist|no such column|column .* does not exist)/i.test(message)
         ) {
           return new Map<number, Map<string, number>>()
         }
@@ -723,7 +744,12 @@ export async function GET(request: NextRequest) {
     let currentUnattributedCommissionByCampaign: Map<number, Map<string, number>>
 
     if (campaignsParallelEnabled) {
-      ;[campaigns, currentAggByCampaign, currentCommissionByCampaign, currentUnattributedCommissionByCampaign] = await Promise.all([
+      ;[
+        campaigns,
+        currentAggByCampaign,
+        currentCommissionByCampaign,
+        currentUnattributedCommissionByCampaign,
+      ] = await Promise.all([
         queryCampaignRows(),
         aggregateByCampaignCurrency({
           start: startDateStr,
@@ -748,16 +774,17 @@ export async function GET(request: NextRequest) {
         start: startDateStr,
         end: endDateStr,
       })
-      currentUnattributedCommissionByCampaign = await queryUnattributedCommissionByCampaignCurrency({
-        start: startDateStr,
-        end: endDateStr,
-      })
+      currentUnattributedCommissionByCampaign = await queryUnattributedCommissionByCampaignCurrency(
+        {
+          start: startDateStr,
+          end: endDateStr,
+        }
+      )
     }
     const costs = summarizeCostsByCurrency(currentAggByCampaign)
     const costCurrencies = costs.map((row) => row.currency)
-    const reportingCurrency = requestedCurrency && costCurrencies.includes(requestedCurrency)
-      ? requestedCurrency
-      : null
+    const reportingCurrency =
+      requestedCurrency && costCurrencies.includes(requestedCurrency) ? requestedCurrency : null
 
     const pickCampaignCurrency = (params: {
       accountCurrency: string
@@ -776,7 +803,7 @@ export async function GET(request: NextRequest) {
           currency: normalizeCurrency(currency),
           cost: Number(agg.cost) || 0,
         }))
-        .sort((a, b) => (b.cost - a.cost) || a.currency.localeCompare(b.currency))
+        .sort((a, b) => b.cost - a.cost || a.currency.localeCompare(b.currency))
 
       const top = options[0]?.currency
       if (!top) return accountCurrency
@@ -784,12 +811,15 @@ export async function GET(request: NextRequest) {
       return top
     }
 
-    const formattedCampaigns = campaigns.map(c => {
-      const hasLinkedAdsAccountId = c.google_ads_account_id !== null && c.google_ads_account_id !== undefined
+    const formattedCampaigns = campaigns.map((c) => {
+      const hasLinkedAdsAccountId =
+        c.google_ads_account_id !== null && c.google_ads_account_id !== undefined
       const hasAccountRow = c.ads_account_id !== null && c.ads_account_id !== undefined
       const adsAccountIsActive = c.ads_account_is_active === true || c.ads_account_is_active === 1
-      const adsAccountIsDeleted = c.ads_account_is_deleted === true || c.ads_account_is_deleted === 1
-      const adsAccountAvailable = hasLinkedAdsAccountId && hasAccountRow && adsAccountIsActive && !adsAccountIsDeleted
+      const adsAccountIsDeleted =
+        c.ads_account_is_deleted === true || c.ads_account_is_deleted === 1
+      const adsAccountAvailable =
+        hasLinkedAdsAccountId && hasAccountRow && adsAccountIsActive && !adsAccountIsDeleted
 
       const currentAgg = currentAggByCampaign.get(Number(c.id))
       const accountCurrency = normalizeCurrency(c.ads_account_currency)
@@ -867,9 +897,9 @@ export async function GET(request: NextRequest) {
           dateRange: {
             start: startDateStr,
             end: endDateStr,
-            days: rangeDays
-          }
-        }
+            days: rangeDays,
+          },
+        },
       }
     })
 
@@ -896,19 +926,28 @@ export async function GET(request: NextRequest) {
     }
 
     if (searchQuery) {
-      listCampaigns = listCampaigns.filter((campaign) => matchesCampaignSearch(searchQuery, campaign))
+      listCampaigns = listCampaigns.filter((campaign) =>
+        matchesCampaignSearch(searchQuery, campaign)
+      )
     }
 
     if (statusFilter && statusFilter !== 'ALL') {
-      listCampaigns = listCampaigns.filter((campaign) => String(campaign.status || '').toUpperCase() === statusFilter)
+      listCampaigns = listCampaigns.filter(
+        (campaign) => String(campaign.status || '').toUpperCase() === statusFilter
+      )
     }
-    
+
     if (needsOfferCompletionFilter && needsOfferCompletionFilter !== 'ALL') {
-      listCampaigns = listCampaigns.filter((campaign) => String(campaign.offerNeedsCompletion || '').toUpperCase() === needsOfferCompletionFilter)
+      listCampaigns = listCampaigns.filter(
+        (campaign) =>
+          String(campaign.offerNeedsCompletion || '').toUpperCase() === needsOfferCompletionFilter
+      )
     }
 
     if (statusCategoryFilter && statusCategoryFilter !== 'all') {
-      listCampaigns = listCampaigns.filter((campaign) => (campaign.statusCategory || 'pending') === statusCategoryFilter)
+      listCampaigns = listCampaigns.filter(
+        (campaign) => (campaign.statusCategory || 'pending') === statusCategoryFilter
+      )
     }
 
     if (sortBy && sortOrder) {
@@ -957,20 +996,40 @@ export async function GET(request: NextRequest) {
             bVal = Number(b.performance?.ctr) || 0
             break
           case 'cpc':
-            aVal = Number(a.performance?.cpcBase ?? a.performance?.cpcLocal ?? a.performance?.cpcUsd) || 0
-            bVal = Number(b.performance?.cpcBase ?? b.performance?.cpcLocal ?? b.performance?.cpcUsd) || 0
+            aVal =
+              Number(a.performance?.cpcBase ?? a.performance?.cpcLocal ?? a.performance?.cpcUsd) ||
+              0
+            bVal =
+              Number(b.performance?.cpcBase ?? b.performance?.cpcLocal ?? b.performance?.cpcUsd) ||
+              0
             break
           case 'configuredMaxCpc':
             aVal = Number(a.configuredMaxCpc) || 0
             bVal = Number(b.configuredMaxCpc) || 0
             break
           case 'conversions':
-            aVal = Number(a.performance?.commissionBase ?? a.performance?.commission ?? a.performance?.conversions) || 0
-            bVal = Number(b.performance?.commissionBase ?? b.performance?.commission ?? b.performance?.conversions) || 0
+            aVal =
+              Number(
+                a.performance?.commissionBase ??
+                  a.performance?.commission ??
+                  a.performance?.conversions
+              ) || 0
+            bVal =
+              Number(
+                b.performance?.commissionBase ??
+                  b.performance?.commission ??
+                  b.performance?.conversions
+              ) || 0
             break
           case 'cost':
-            aVal = Number(a.performance?.costBase ?? a.performance?.costLocal ?? a.performance?.costUsd) || 0
-            bVal = Number(b.performance?.costBase ?? b.performance?.costLocal ?? b.performance?.costUsd) || 0
+            aVal =
+              Number(
+                a.performance?.costBase ?? a.performance?.costLocal ?? a.performance?.costUsd
+              ) || 0
+            bVal =
+              Number(
+                b.performance?.costBase ?? b.performance?.costLocal ?? b.performance?.costUsd
+              ) || 0
             break
           case 'status':
             aVal = String(a.status || '')
@@ -994,23 +1053,27 @@ export async function GET(request: NextRequest) {
       listCampaigns = listCampaigns.slice(pagingOffset, pagingOffset + pagingLimit)
     }
 
-    const latestCampaignSyncFallback = formattedCampaigns.reduce<string | null>((latest, campaign) => {
-      const candidate = campaign.lastSyncAt
-      if (!candidate) return latest
+    const latestCampaignSyncFallback = formattedCampaigns.reduce<string | null>(
+      (latest, campaign) => {
+        const candidate = campaign.lastSyncAt
+        if (!candidate) return latest
 
-      const candidateTs = Date.parse(candidate)
-      if (Number.isNaN(candidateTs)) return latest
+        const candidateTs = Date.parse(candidate)
+        if (Number.isNaN(candidateTs)) return latest
 
-      if (!latest) return candidate
-      const latestTs = Date.parse(latest)
-      if (Number.isNaN(latestTs) || candidateTs > latestTs) return candidate
+        if (!latest) return candidate
+        const latestTs = Date.parse(latest)
+        if (Number.isNaN(latestTs) || candidateTs > latestTs) return candidate
 
-      return latest
-    }, null)
+        return latest
+      },
+      null
+    )
 
-    const latestSyncFromLogsPromise = db.type === 'postgres'
-      ? db.queryOne<{ latest_sync_at: string | null }>(
-          `
+    const latestSyncFromLogsPromise =
+      db.type === 'postgres'
+        ? db.queryOne<{ latest_sync_at: string | null }>(
+            `
             SELECT MAX(
               COALESCE(
                 NULLIF(completed_at, '')::timestamptz,
@@ -1021,16 +1084,16 @@ export async function GET(request: NextRequest) {
             FROM sync_logs
             WHERE ${buildUserScopeClause('user_id')}
           `,
-          userScopeValues
-        )
-      : db.queryOne<{ latest_sync_at: string | null }>(
-          `
+            userScopeValues
+          )
+        : db.queryOne<{ latest_sync_at: string | null }>(
+            `
             SELECT MAX(COALESCE(NULLIF(completed_at, ''), NULLIF(started_at, ''), NULLIF(created_at, ''))) AS latest_sync_at
             FROM sync_logs
             WHERE ${buildUserScopeClause('user_id')}
           `,
-          userScopeValues
-        )
+            userScopeValues
+          )
 
     const latestSyncFromLogsRow = await latestSyncFromLogsPromise
 
@@ -1063,7 +1126,7 @@ export async function GET(request: NextRequest) {
           WHERE ${buildUserScopeClause('user_id')}
             AND date >= ?
             AND date <= ?
-            ${hasCurrencyFilter ? 'AND COALESCE(currency, \'USD\') = ?' : ''}
+            ${hasCurrencyFilter ? "AND COALESCE(currency, 'USD') = ?" : ''}
           GROUP BY 2
           UNION ALL
           SELECT
@@ -1078,10 +1141,14 @@ export async function GET(request: NextRequest) {
           WHERE ${buildUserScopeClause('c.user_id')}
             AND a.report_date >= ?
             AND a.report_date <= ?
-            ${affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0 ? `AND (${
-              affiliateDomainKeywords.map((_, _i) => `o.affiliate_link LIKE ?`).join(' OR ')
-            })` : ''}
-            ${hasCurrencyFilter ? 'AND COALESCE(a.currency, \'USD\') = ?' : ''}
+            ${
+              affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0
+                ? `AND (${affiliateDomainKeywords
+                    .map((_, _i) => `o.affiliate_link LIKE ?`)
+                    .join(' OR ')})`
+                : ''
+            }
+            ${hasCurrencyFilter ? "AND COALESCE(a.currency, 'USD') = ?" : ''}
           GROUP BY 2
         `,
         hasCurrencyFilter
@@ -1120,9 +1187,7 @@ export async function GET(request: NextRequest) {
         if (row.summary_source === 'performance') {
           totals.impressions += Number(row.impressions) || 0
           totals.clicks += Number(row.clicks) || 0
-          totals.cost += hasCurrencyFilter
-            ? amount
-            : convertToBase(amount, currency)
+          totals.cost += hasCurrencyFilter ? amount : convertToBase(amount, currency)
           continue
         }
 
@@ -1188,7 +1253,7 @@ export async function GET(request: NextRequest) {
               AND report_date >= ?
               AND report_date <= ?
               AND ${unattributedFailureFilter.sql}
-              ${hasCurrencyFilter ? 'AND COALESCE(currency, \'USD\') = ?' : ''}
+              ${hasCurrencyFilter ? "AND COALESCE(currency, 'USD') = ?" : ''}
             GROUP BY 2
             UNION ALL
             SELECT
@@ -1200,7 +1265,7 @@ export async function GET(request: NextRequest) {
               AND report_date >= ?
               AND report_date <= ?
               AND ${unattributedFailureFilter.sql}
-              ${hasCurrencyFilter ? 'AND COALESCE(currency, \'USD\') = ?' : ''}
+              ${hasCurrencyFilter ? "AND COALESCE(currency, 'USD') = ?" : ''}
             GROUP BY 2
           `,
           queryParams
@@ -1237,8 +1302,8 @@ export async function GET(request: NextRequest) {
       } catch (error: any) {
         const message = String(error?.message || '')
         if (
-          /openclaw_affiliate_attribution_failures/i.test(message)
-          && /(no such table|does not exist)/i.test(message)
+          /openclaw_affiliate_attribution_failures/i.test(message) &&
+          /(no such table|does not exist)/i.test(message)
         ) {
           return {
             currentTotal: 0,
@@ -1250,12 +1315,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-
     const isFilteredByCurrency = Boolean(reportingCurrency)
     const summaryCampaignIds = new Set(
-      summaryCampaigns
-        .map((campaign) => Number(campaign.id))
-        .filter((id) => Number.isFinite(id))
+      summaryCampaigns.map((campaign) => Number(campaign.id)).filter((id) => Number.isFinite(id))
     )
     const summaryAggByCampaign = filterMapByCampaignIds(currentAggByCampaign, summaryCampaignIds)
     const summaryAttributedCommissionByCampaign = filterMapByCampaignIds(
@@ -1357,16 +1419,18 @@ export async function GET(request: NextRequest) {
         : []
     }
     const summaryCostCurrencies = summaryCostsDerived.map((row) => row.currency)
-    const commissionCurrencies = Array.from(new Set([
-      ...currentAttributedCommissionByCurrency.map((row) => normalizeCurrency(row.currency)),
-      ...currentUnattributedCommissionByCurrency.map((row) => normalizeCurrency(row.currency)),
-    ]))
-    const summaryCurrencies = Array.from(new Set([
-      ...summaryCostCurrencies,
-      ...commissionCurrencies,
-    ]))
+    const commissionCurrencies = Array.from(
+      new Set([
+        ...currentAttributedCommissionByCurrency.map((row) => normalizeCurrency(row.currency)),
+        ...currentUnattributedCommissionByCurrency.map((row) => normalizeCurrency(row.currency)),
+      ])
+    )
+    const summaryCurrencies = Array.from(
+      new Set([...summaryCostCurrencies, ...commissionCurrencies])
+    )
     const hasMixedCurrency = summaryCurrencies.length > 1
-    const currentCommissionTotal = currentAttributedCommissionTotal + currentUnattributedCommissionTotal
+    const currentCommissionTotal =
+      currentAttributedCommissionTotal + currentUnattributedCommissionTotal
     const prevCommissionTotal = prevAttributedCommissionTotal + prevUnattributedCommissionTotal
 
     const calcChange = (current: number, previous: number): number | null => {
@@ -1382,14 +1446,13 @@ export async function GET(request: NextRequest) {
       roas: null as number | null,
       roasInfinite: false,
     }
-    const hasCampaignScopeFilter = (
-      idsFilter.length > 0
-      || showDeletedParam === false
-      || Boolean(searchQuery)
-      || (statusFilter && statusFilter !== 'ALL')
-      || (needsOfferCompletionFilter && needsOfferCompletionFilter !== 'ALL')
-      || (statusCategoryFilter && statusCategoryFilter !== 'all')
-    )
+    const hasCampaignScopeFilter =
+      idsFilter.length > 0 ||
+      showDeletedParam === false ||
+      Boolean(searchQuery) ||
+      (statusFilter && statusFilter !== 'ALL') ||
+      (needsOfferCompletionFilter && needsOfferCompletionFilter !== 'ALL') ||
+      (statusCategoryFilter && statusCategoryFilter !== 'all')
     if (hasCampaignScopeFilter) {
       changes.impressions = null
       changes.clicks = null
@@ -1416,19 +1479,22 @@ export async function GET(request: NextRequest) {
       if (totalRoasInfinite) {
         changes.roasInfinite = true
       } else if (
-        !prevRoasInfinite
-        && typeof prevRoas === 'number'
-        && prevRoas > 0
-        && typeof totalRoas === 'number'
+        !prevRoasInfinite &&
+        typeof prevRoas === 'number' &&
+        prevRoas > 0 &&
+        typeof totalRoas === 'number'
       ) {
         changes.roas = roundTo2(((totalRoas - prevRoas) / prevRoas) * 100)
       }
     }
 
     const statusDistribution = {
-      enabled: summaryCampaigns.filter((c) => String(c.status || '').toUpperCase() === 'ENABLED').length,
-      paused: summaryCampaigns.filter((c) => String(c.status || '').toUpperCase() === 'PAUSED').length,
-      removed: summaryCampaigns.filter((c) => String(c.status || '').toUpperCase() === 'REMOVED').length,
+      enabled: summaryCampaigns.filter((c) => String(c.status || '').toUpperCase() === 'ENABLED')
+        .length,
+      paused: summaryCampaigns.filter((c) => String(c.status || '').toUpperCase() === 'PAUSED')
+        .length,
+      removed: summaryCampaigns.filter((c) => String(c.status || '').toUpperCase() === 'REMOVED')
+        .length,
       total: summaryCampaigns.length,
     }
 
@@ -1440,7 +1506,7 @@ export async function GET(request: NextRequest) {
       offset: pagingOffset,
       summary: {
         totalCampaigns: summaryCampaigns.length,
-        activeCampaigns: summaryCampaigns.filter(c => c.status === 'ENABLED').length,
+        activeCampaigns: summaryCampaigns.filter((c) => c.status === 'ENABLED').length,
         totalImpressions: currentTotals.impressions,
         totalClicks: currentTotals.clicks,
         totalConversions: roundTo2(currentCommissionTotal),
@@ -1451,7 +1517,10 @@ export async function GET(request: NextRequest) {
         totalRoas: roasAvailable ? totalRoas : null,
         totalRoasInfinite: roasAvailable ? totalRoasInfinite : false,
         baseCurrency: BASE_CURRENCY,
-        currency: hasMixedCurrency && !isFilteredByCurrency ? 'MIXED' : (reportingCurrency || summaryCurrencies[0] || summaryCostCurrencies[0] || 'USD'),
+        currency:
+          hasMixedCurrency && !isFilteredByCurrency
+            ? 'MIXED'
+            : reportingCurrency || summaryCurrencies[0] || summaryCostCurrencies[0] || 'USD',
         currencies: summaryCostCurrencies,
         hasMixedCurrency,
         costs: hasMixedCurrency && !isFilteredByCurrency ? summaryCostsDerived : undefined,
@@ -1463,13 +1532,13 @@ export async function GET(request: NextRequest) {
           impressions: changes.impressions,
           clicks: changes.clicks,
           conversions: changes.conversions,
-          cost: changes.cost
+          cost: changes.cost,
         },
         comparisonPeriod: {
           current: { start: startDateStr, end: endDateStr },
-          previous: { start: prevStartDateStr, end: prevEndDateStr }
-        }
-      }
+          previous: { start: prevStartDateStr, end: prevEndDateStr },
+        },
+      },
     }
 
     if (shouldWriteCache) {
@@ -1477,7 +1546,6 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(responsePayload)
-
   } catch (error: any) {
     console.error('Get campaigns performance error:', error)
     return NextResponse.json(

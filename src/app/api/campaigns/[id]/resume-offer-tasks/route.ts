@@ -3,16 +3,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { resumeOfferTasksOnCampaignEnable } from '@/lib/campaign-offer-tasks'
 
-function formatResumeErrors(
-  errors: Array<{ type?: string; error?: string }>
-): string {
+function formatResumeErrors(errors: Array<{ type?: string; error?: string }>): string {
   return errors
     .map((item) => {
       const type = String(item?.type || '').trim()
       const error = String(item?.error || '').trim()
       if (!error) return ''
-      const label =
-        type === 'clickFarm' ? '补点击' : type === 'urlSwap' ? '换链接' : '关联任务'
+      const label = type === 'clickFarm' ? '补点击' : type === 'urlSwap' ? '换链接' : '关联任务'
       return `${label}: ${error}`
     })
     .filter(Boolean)
@@ -23,7 +20,8 @@ function formatResumeErrors(
  * POST /api/campaigns/:id/resume-offer-tasks
  * 一键按默认配置恢复/新建关联 Offer 的补点击和换链接任务
  */
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 
@@ -45,16 +43,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       offer_id: number | null
       status: string | null
       is_deleted: boolean | number | null
-    }>(`
+    }>(
+      `
       SELECT id, offer_id, user_id, status, is_deleted FROM campaigns
       WHERE id = ? AND user_id = ?
-    `, [campaignId, userId])
+    `,
+      [campaignId, userId]
+    )
 
     if (!campaign) {
-      return NextResponse.json(
-        { error: '广告系列不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: '广告系列不存在或无权访问' }, { status: 404 })
     }
 
     const isDeleted = campaign.is_deleted === true || campaign.is_deleted === 1
@@ -67,13 +65,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     const offerId = campaign.offer_id
     if (!offerId) {
-      return NextResponse.json(
-        { error: '该广告系列未关联 Offer' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '该广告系列未关联 Offer' }, { status: 400 })
     }
 
-    if (String(campaign.status || '').trim().toUpperCase() !== 'ENABLED') {
+    if (
+      String(campaign.status || '')
+        .trim()
+        .toUpperCase() !== 'ENABLED'
+    ) {
       return NextResponse.json(
         { error: '广告系列未启用，请先启用广告系列后再开启关联任务' },
         { status: 400 }
@@ -99,9 +98,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     return NextResponse.json(result)
   } catch (error: any) {
     console.error('开启关联 Offer 任务失败:', error)
-    return NextResponse.json(
-      { error: error.message || '开启任务失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '开启任务失败' }, { status: 500 })
   }
 }

@@ -30,7 +30,7 @@ export async function getServiceAccountConfigRaw(userId: number, serviceAccountI
     query += ' ORDER BY created_at DESC LIMIT 1'
   }
 
-  const account = await db.queryOne(query, params) as any
+  const account = (await db.queryOne(query, params)) as any
 
   if (!account) return null
 
@@ -58,8 +58,7 @@ export async function getServiceAccountConfig(
   serviceAccountId?: string,
   resolved?: GoogleAdsCredentialOwnerResolutionInput
 ) {
-  const { ownerUserId, assignment } =
-    resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
+  const { ownerUserId, assignment } = resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
 
   if (assignment?.assignmentMode === 'shared_admin' && assignment.authType === 'oauth') {
     return null
@@ -91,16 +90,18 @@ export async function getServiceAccountConfigMetadataRaw(
     query += ' ORDER BY created_at DESC LIMIT 1'
   }
 
-  const account = await db.queryOne(query, params) as {
-    id: string
-    name: string
-    mcc_customer_id: string
-    service_account_email: string
-    project_id: string | null
-    api_access_level: string | null
-    created_at: string
-    updated_at: string
-  } | undefined
+  const account = (await db.queryOne(query, params)) as
+    | {
+        id: string
+        name: string
+        mcc_customer_id: string
+        service_account_email: string
+        project_id: string | null
+        api_access_level: string | null
+        created_at: string
+        updated_at: string
+      }
+    | undefined
 
   if (!account) {
     return null
@@ -130,8 +131,7 @@ export async function getServiceAccountConfigMetadata(
   serviceAccountId?: string,
   resolved?: GoogleAdsCredentialOwnerResolutionInput
 ) {
-  const { ownerUserId, assignment } =
-    resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
+  const { ownerUserId, assignment } = resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
 
   if (assignment?.assignmentMode === 'shared_admin' && assignment.authType === 'oauth') {
     return null
@@ -147,12 +147,15 @@ export async function listServiceAccounts(userId: number) {
   const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
   const db = await getDatabase()
   const isActiveCondition = boolCondition('is_active', true, db.type)
-  const accounts = await db.query(`
+  const accounts = await db.query(
+    `
     SELECT id, name, mcc_customer_id, service_account_email, is_active, created_at
     FROM google_ads_service_accounts
     WHERE user_id = ? AND ${isActiveCondition}
     ORDER BY created_at DESC
-  `, [ownerUserId])
+  `,
+    [ownerUserId]
+  )
 
   return accounts
 }
@@ -195,7 +198,8 @@ export async function replaceGoogleAdsServiceAccountForUser(
     ]
   )
 
-  const { invalidateGoogleAdsAuthContextForCredentialUser } = await import('./google-ads-auth-context')
+  const { invalidateGoogleAdsAuthContextForCredentialUser } =
+    await import('./google-ads-auth-context')
   await invalidateGoogleAdsAuthContextForCredentialUser(userId)
   return id
 }
@@ -206,12 +210,13 @@ export async function deleteGoogleAdsServiceAccountForUser(
   serviceAccountId: string
 ): Promise<void> {
   const db = await getDatabase()
-  await db.exec(
-    `DELETE FROM google_ads_service_accounts WHERE id = ? AND user_id = ?`,
-    [serviceAccountId, userId]
-  )
+  await db.exec(`DELETE FROM google_ads_service_accounts WHERE id = ? AND user_id = ?`, [
+    serviceAccountId,
+    userId,
+  ])
 
-  const { invalidateGoogleAdsAuthContextForCredentialUser } = await import('./google-ads-auth-context')
+  const { invalidateGoogleAdsAuthContextForCredentialUser } =
+    await import('./google-ads-auth-context')
   await invalidateGoogleAdsAuthContextForCredentialUser(userId)
 }
 
@@ -220,7 +225,8 @@ export async function deleteAllGoogleAdsServiceAccountsForUser(userId: number): 
   const db = await getDatabase()
   await db.exec(`DELETE FROM google_ads_service_accounts WHERE user_id = ?`, [userId])
 
-  const { invalidateGoogleAdsAuthContextForCredentialUser } = await import('./google-ads-auth-context')
+  const { invalidateGoogleAdsAuthContextForCredentialUser } =
+    await import('./google-ads-auth-context')
   await invalidateGoogleAdsAuthContextForCredentialUser(userId)
 }
 
@@ -234,7 +240,7 @@ export function parseServiceAccountJson(jsonContent: string) {
   return {
     clientEmail: data.client_email,
     privateKey: data.private_key,
-    projectId: data.project_id
+    projectId: data.project_id,
   }
 }
 
@@ -296,13 +302,13 @@ export async function getUnifiedGoogleAdsClient(config: {
   authContext?: GoogleAdsAuthContext
 }): Promise<any> {
   const { authConfig, credentials } = config
-  const authCtx = await resolveAuthContextForUnifiedClient(
-    authConfig.userId,
-    config.authContext
-  )
+  const authCtx = await resolveAuthContextForUnifiedClient(authConfig.userId, config.authContext)
 
   if (authConfig.authType === 'service_account') {
-    const serviceAccount = await getServiceAccountConfig(authConfig.userId, authConfig.serviceAccountId)
+    const serviceAccount = await getServiceAccountConfig(
+      authConfig.userId,
+      authConfig.serviceAccountId
+    )
     if (!serviceAccount) {
       throw new Error('Service account configuration not found')
     }
@@ -323,7 +329,7 @@ export async function getUnifiedGoogleAdsClient(config: {
           customerId: config.customerId,
           query,
         })
-      }
+      },
     }
   } else {
     if (!credentials) {
@@ -359,13 +365,13 @@ export async function getLoginCustomerId(config: {
   authContext?: GoogleAdsAuthContext
 }): Promise<string> {
   const { authConfig, oauthCredentials } = config
-  const authCtx = await resolveAuthContextForUnifiedClient(
-    authConfig.userId,
-    config.authContext
-  )
+  const authCtx = await resolveAuthContextForUnifiedClient(authConfig.userId, config.authContext)
 
   if (authConfig.authType === 'service_account') {
-    const serviceAccount = await getServiceAccountConfig(authConfig.userId, authConfig.serviceAccountId)
+    const serviceAccount = await getServiceAccountConfig(
+      authConfig.userId,
+      authConfig.serviceAccountId
+    )
     if (!serviceAccount) {
       throw new Error('Service account configuration not found')
     }

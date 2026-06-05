@@ -10,10 +10,7 @@ import { verifyAuth } from '@/lib/auth'
 import { invalidateOfferCache } from '@/lib/api-cache'
 import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -30,10 +27,10 @@ export async function POST(
     const db = await getDatabase()
 
     // 获取Offer信息
-    const offer = await db.queryOne(
+    const offer = (await db.queryOne(
       'SELECT id, brand, target_country FROM offers WHERE id = ? AND user_id = ?',
       [offerId, userId]
-    ) as { id: number; brand: string; target_country: string } | undefined
+    )) as { id: number; brand: string; target_country: string } | undefined
 
     if (!offer) {
       return NextResponse.json({ error: 'Offer不存在' }, { status: 404 })
@@ -63,15 +60,12 @@ export async function POST(
       message: '已拉黑投放',
       blacklist: {
         brand: offer.brand,
-        targetCountry: offer.target_country
-      }
+        targetCountry: offer.target_country,
+      },
     })
   } catch (error: any) {
     console.error('拉黑投放失败:', error)
-    return NextResponse.json(
-      { error: error.message || '拉黑投放失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '拉黑投放失败' }, { status: 500 })
   }
 }
 
@@ -95,10 +89,10 @@ export async function DELETE(
     const db = await getDatabase()
 
     // 获取Offer信息
-    const offer = await db.queryOne(
+    const offer = (await db.queryOne(
       'SELECT id, brand, target_country FROM offers WHERE id = ? AND user_id = ?',
       [offerId, userId]
-    ) as { id: number; brand: string; target_country: string } | undefined
+    )) as { id: number; brand: string; target_country: string } | undefined
 
     if (!offer) {
       return NextResponse.json({ error: 'Offer不存在' }, { status: 404 })
@@ -111,7 +105,8 @@ export async function DELETE(
     )
 
     // 兼容SQLite和PostgreSQL
-    const deletedCount = (result.changes !== undefined ? result.changes : (result as any).rowCount) || 0
+    const deletedCount =
+      (result.changes !== undefined ? result.changes : (result as any).rowCount) || 0
     if (deletedCount === 0) {
       return NextResponse.json({ error: '该品牌+国家组合不在黑名单中' }, { status: 404 })
     }
@@ -121,13 +116,10 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: '已取消拉黑'
+      message: '已取消拉黑',
     })
   } catch (error: any) {
     console.error('取消拉黑失败:', error)
-    return NextResponse.json(
-      { error: error.message || '取消拉黑失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '取消拉黑失败' }, { status: 500 })
   }
 }

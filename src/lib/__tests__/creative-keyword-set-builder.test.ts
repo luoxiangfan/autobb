@@ -19,7 +19,8 @@ vi.mock('../creative-keyword-context-filter', () => ({
   filterCreativeKeywordsByOfferContext: (params: any) =>
     mocks.filterCreativeKeywordsByOfferContextDetailed(params).keywords,
   filterCreativeKeywordsByOfferContextDetailed: mocks.filterCreativeKeywordsByOfferContextDetailed,
-  normalizeCreativeKeywordCandidatesForContextFilter: mocks.normalizeCreativeKeywordCandidatesForContextFilter,
+  normalizeCreativeKeywordCandidatesForContextFilter:
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter,
 }))
 
 vi.mock('../creative-keyword-selection', () => ({
@@ -78,9 +79,11 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(({ keywordsWithVolume }: any) =>
-      contextFilterResult(keywordsWithVolume)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(
+      ({ keywordsWithVolume }: any) => contextFilterResult(keywordsWithVolume)
     )
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: selectedKeywords.map((item) => item.keyword),
@@ -141,12 +144,14 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     expect(result.keywords).toEqual(['brandx x200 vacuum', 'brandx vacuum cleaner'])
     expect(result.executableKeywords).toEqual(result.keywords)
     expect(result.promptKeywords).toEqual(['brandx x200 vacuum', 'brandx vacuum cleaner'])
-    expect(result).toEqual(expect.objectContaining({
-      promptKeywords: expect.any(Array),
-      executableKeywords: expect.any(Array),
-      candidatePool: expect.any(Array),
-      audit: expect.any(Object),
-    }))
+    expect(result).toEqual(
+      expect.objectContaining({
+        promptKeywords: expect.any(Array),
+        executableKeywords: expect.any(Array),
+        candidatePool: expect.any(Array),
+        audit: expect.any(Object),
+      })
+    )
     expect(result.audit).toEqual(result.keywordSourceAudit)
     expect(result.keywordSourceAudit).toMatchObject({
       totalKeywords: 2,
@@ -223,9 +228,11 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(({ keywordsWithVolume }: any) =>
-      contextFilterResult(keywordsWithVolume)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(
+      ({ keywordsWithVolume }: any) => contextFilterResult(keywordsWithVolume)
     )
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: selectedKeywords.map((item) => item.keyword),
@@ -302,12 +309,15 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(({ keywordsWithVolume }: any) =>
-      contextFilterResult(keywordsWithVolume, {
-        contextMismatchRemovedCount: 5,
-        qualityRemovedCount: 1,
-      })
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(
+      ({ keywordsWithVolume }: any) =>
+        contextFilterResult(keywordsWithVolume, {
+          contextMismatchRemovedCount: 5,
+          qualityRemovedCount: 1,
+        })
     )
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: selectedKeywords.map((item) => item.keyword),
@@ -370,12 +380,16 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult([], {
-      forbiddenRemovedCount: 1,
-      qualityRemovedCount: 1,
-      blockedKeywordKeys: ['brandx ai vacuum'],
-    } as any))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult([], {
+        forbiddenRemovedCount: 1,
+        qualityRemovedCount: 1,
+        blockedKeywordKeys: ['brandx ai vacuum'],
+      } as any)
+    )
     mocks.selectCreativeKeywords.mockImplementation(({ keywordsWithVolume }: any) => ({
       keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
       keywordsWithVolume: keywordsWithVolume || [],
@@ -396,17 +410,19 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
         blockedByCap: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
       },
     }))
-    mocks.applyKeywordSupplementationOnce.mockImplementation(async ({ keywordsWithVolume }: any) => ({
-      keywordsWithVolume,
-      keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
-      keywordSupplementation: {
-        triggered: false,
-        beforeCount: 2,
-        afterCount: 2,
-        addedKeywords: [],
-        supplementCapApplied: false,
-      },
-    }))
+    mocks.applyKeywordSupplementationOnce.mockImplementation(
+      async ({ keywordsWithVolume }: any) => ({
+        keywordsWithVolume,
+        keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
+        keywordSupplementation: {
+          triggered: false,
+          beforeCount: 2,
+          afterCount: 2,
+          addedKeywords: [],
+          supplementCapApplied: false,
+        },
+      })
+    )
 
     const result = await buildCreativeKeywordSet({
       offer: { brand: 'BrandX' },
@@ -421,12 +437,16 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       fallbackMode: false,
     })
 
-    expect(mocks.applyKeywordSupplementationOnce).toHaveBeenCalledWith(expect.objectContaining({
-      poolCandidates: ['brandx x300 vacuum'],
-    }))
-    expect(mocks.selectCreativeKeywords).toHaveBeenCalledWith(expect.objectContaining({
-      preferredBucketKeywords: ['brandx x300 vacuum'],
-    }))
+    expect(mocks.applyKeywordSupplementationOnce).toHaveBeenCalledWith(
+      expect.objectContaining({
+        poolCandidates: ['brandx x300 vacuum'],
+      })
+    )
+    expect(mocks.selectCreativeKeywords).toHaveBeenCalledWith(
+      expect.objectContaining({
+        preferredBucketKeywords: ['brandx x300 vacuum'],
+      })
+    )
     expect(result.contextFallbackStrategy).toBe('keyword_pool')
     expect(result.keywordsWithVolume.map((item) => item.keyword)).toEqual(['brandx x300 vacuum'])
     expect(result.executableKeywords).toEqual(['brandx x300 vacuum'])
@@ -452,12 +472,11 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       rawSource: 'KEYWORD_POOL',
       sourceField: 'keyword_pool',
     }))
-    const candidatePool = [
-      ...sparseContextCandidates,
-      ...highPriorityCandidates,
-    ]
+    const candidatePool = [...sparseContextCandidates, ...highPriorityCandidates]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(() =>
       contextFilterResult(sparseContextCandidates)
     )
@@ -498,10 +517,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
 
     expect(result.contextFallbackStrategy).toBe('filtered')
     expect(result.executableKeywords.length).toBeGreaterThanOrEqual(10)
-    expect(result.executableKeywords).toEqual(expect.arrayContaining([
-      'brandx anchor demand keyword',
-      'brandx d floor 1',
-    ]))
+    expect(result.executableKeywords).toEqual(
+      expect.arrayContaining(['brandx anchor demand keyword', 'brandx d floor 1'])
+    )
     expect(result.audit.pipeline).toMatchObject({
       relaxedFilteringTriggered: true,
       relaxedFilteringAddedCount: 9,
@@ -535,9 +553,11 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(({ keywordsWithVolume }: any) =>
-      contextFilterResult(keywordsWithVolume)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(
+      ({ keywordsWithVolume }: any) => contextFilterResult(keywordsWithVolume)
     )
     mocks.selectCreativeKeywords.mockImplementation(({ keywordsWithVolume }: any) => ({
       keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
@@ -581,8 +601,8 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       brandReserve: 0,
     })
 
-    const mergedSelectedKeyword = result.keywordsWithVolume.filter((item) =>
-      item.keyword === 'anker solix everfrost 2'
+    const mergedSelectedKeyword = result.keywordsWithVolume.filter(
+      (item) => item.keyword === 'anker solix everfrost 2'
     )
     expect(mergedSelectedKeyword).toHaveLength(1)
     expect(mergedSelectedKeyword[0]).toMatchObject({
@@ -593,8 +613,8 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       sourceSubtype: 'CANONICAL_BUCKET_VIEW',
       rawSource: 'GLOBAL_KEYWORDS',
     })
-    const mergedPoolKeyword = result.candidatePool.filter((item) =>
-      item.keyword === 'anker solix everfrost 2'
+    const mergedPoolKeyword = result.candidatePool.filter(
+      (item) => item.keyword === 'anker solix everfrost 2'
     )
     expect(mergedPoolKeyword).toHaveLength(1)
     expect(mergedPoolKeyword[0]).toMatchObject({
@@ -629,7 +649,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
     mocks.filterCreativeKeywordsByOfferContextDetailed
       .mockImplementationOnce(() =>
         contextFilterResult(filteredCandidates, {
@@ -640,20 +662,22 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       .mockImplementationOnce(({ keywordsWithVolume }: any) =>
         contextFilterResult(keywordsWithVolume)
       )
-    mocks.applyKeywordSupplementationOnce.mockImplementation(async ({ keywordsWithVolume }: any) => {
-      expect(keywordsWithVolume).toEqual(filteredCandidates)
-      return {
-        keywordsWithVolume: supplementedCandidates,
-        keywords: supplementedCandidates.map((item) => item.keyword),
-        keywordSupplementation: {
-          triggered: true,
-          beforeCount: 1,
-          afterCount: 2,
-          addedKeywords: [{ keyword: 'brandx cordless vacuum', source: 'keyword_pool' }],
-          supplementCapApplied: false,
-        },
+    mocks.applyKeywordSupplementationOnce.mockImplementation(
+      async ({ keywordsWithVolume }: any) => {
+        expect(keywordsWithVolume).toEqual(filteredCandidates)
+        return {
+          keywordsWithVolume: supplementedCandidates,
+          keywords: supplementedCandidates.map((item) => item.keyword),
+          keywordSupplementation: {
+            triggered: true,
+            beforeCount: 1,
+            afterCount: 2,
+            addedKeywords: [{ keyword: 'brandx cordless vacuum', source: 'keyword_pool' }],
+            supplementCapApplied: false,
+          },
+        }
       }
-    })
+    )
     mocks.selectCreativeKeywords.mockImplementation(({ keywordsWithVolume }: any) => ({
       keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
       keywordsWithVolume: keywordsWithVolume || [],
@@ -697,11 +721,12 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       fallbackMode: false,
     })
 
-    expect(mocks.filterCreativeKeywordsByOfferContextDetailed.mock.calls.length - filterCallsBefore).toBe(2)
-    expect(result.executableKeywords).toEqual(expect.arrayContaining([
-      'brandx x200 vacuum',
-      'brandx cordless vacuum',
-    ]))
+    expect(
+      mocks.filterCreativeKeywordsByOfferContextDetailed.mock.calls.length - filterCallsBefore
+    ).toBe(2)
+    expect(result.executableKeywords).toEqual(
+      expect.arrayContaining(['brandx x200 vacuum', 'brandx cordless vacuum'])
+    )
     expect(result.executableKeywords.length).toBeGreaterThanOrEqual(2)
     expect(result.executableKeywords.length).toBeLessThanOrEqual(expectedFloor)
     expect(new Set(result.executableKeywords).size).toBe(result.executableKeywords.length)
@@ -732,7 +757,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       contractSatisfiedAfterFallback: true,
       supplementAppliedAfterFilter: true,
     })
-    expect(result.audit.pipeline.finalCandidatePoolCount).toBeGreaterThanOrEqual(result.executableKeywords.length)
+    expect(result.audit.pipeline.finalCandidatePoolCount).toBeGreaterThanOrEqual(
+      result.executableKeywords.length
+    )
   })
 
   it('reuses offer-context-filtered seed candidates without re-running initial context filter', async () => {
@@ -758,9 +785,11 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(({ keywordsWithVolume }: any) =>
-      contextFilterResult(keywordsWithVolume)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(
+      ({ keywordsWithVolume }: any) => contextFilterResult(keywordsWithVolume)
     )
     mocks.selectCreativeKeywords.mockImplementation(({ keywordsWithVolume }: any) => ({
       keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
@@ -800,11 +829,12 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       fallbackMode: false,
     })
 
-    expect(mocks.filterCreativeKeywordsByOfferContextDetailed.mock.calls.length - filterCallsBefore).toBe(0)
-    expect(result.executableKeywords).toEqual(expect.arrayContaining([
-      'novilla king size mattress',
-      'novilla memory foam mattress',
-    ]))
+    expect(
+      mocks.filterCreativeKeywordsByOfferContextDetailed.mock.calls.length - filterCallsBefore
+    ).toBe(0)
+    expect(result.executableKeywords).toEqual(
+      expect.arrayContaining(['novilla king size mattress', 'novilla memory foam mattress'])
+    )
     expect(result.executableKeywords.length).toBeGreaterThanOrEqual(2)
     expect(result.executableKeywords.length).toBeLessThanOrEqual(expectedFloor)
     expect(result.audit.contextFilterStats).toMatchObject({
@@ -849,14 +879,15 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(
-      generatedFallbackCandidates,
-      {
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult(generatedFallbackCandidates, {
         modelFamilyRemovedCount: 1,
         blockedKeywordKeys: ['novilla queen mattress'],
-      }
-    ))
+      })
+    )
     mocks.selectCreativeKeywords.mockImplementation(({ keywordsWithVolume }: any) => ({
       keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
       keywordsWithVolume: keywordsWithVolume || [],
@@ -898,16 +929,14 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       fallbackMode: false,
     })
 
-    expect(result.executableKeywords).toEqual(expect.arrayContaining([
-      'novilla king mattress',
-      'novilla memory foam mattress',
-    ]))
+    expect(result.executableKeywords).toEqual(
+      expect.arrayContaining(['novilla king mattress', 'novilla memory foam mattress'])
+    )
     expect(result.executableKeywords.length).toBeGreaterThanOrEqual(2)
     expect(result.executableKeywords.length).toBeLessThanOrEqual(expectedFloor)
-    expect(result.candidatePool.map((item) => item.keyword)).toEqual(expect.arrayContaining([
-      'novilla king mattress',
-      'novilla memory foam mattress',
-    ]))
+    expect(result.candidatePool.map((item) => item.keyword)).toEqual(
+      expect.arrayContaining(['novilla king mattress', 'novilla memory foam mattress'])
+    )
     expect(result.audit.pipeline).toMatchObject({
       finalCandidatePoolCount: result.executableKeywords.length,
       selectionFallbackTriggered: true,
@@ -944,9 +973,11 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(({ keywordsWithVolume }: any) =>
-      contextFilterResult(keywordsWithVolume)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(
+      ({ keywordsWithVolume }: any) => contextFilterResult(keywordsWithVolume)
     )
     mocks.selectCreativeKeywords.mockImplementation(({ keywordsWithVolume }: any) => ({
       keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
@@ -968,16 +999,18 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
         blockedByCap: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
       },
     }))
-    mocks.applyKeywordSupplementationOnce.mockImplementation(async ({ keywordsWithVolume }: any) => ({
-      keywordsWithVolume,
-      keywordSupplementation: {
-        triggered: false,
-        beforeCount: 1,
-        afterCount: 1,
-        addedKeywords: [],
-        supplementCapApplied: false,
-      },
-    }))
+    mocks.applyKeywordSupplementationOnce.mockImplementation(
+      async ({ keywordsWithVolume }: any) => ({
+        keywordsWithVolume,
+        keywordSupplementation: {
+          triggered: false,
+          beforeCount: 1,
+          afterCount: 1,
+          addedKeywords: [],
+          supplementCapApplied: false,
+        },
+      })
+    )
 
     const result = await buildCreativeKeywordSet({
       offer: { brand: 'BrandX' },
@@ -1052,9 +1085,11 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(({ keywordsWithVolume }: any) =>
-      contextFilterResult(keywordsWithVolume)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(
+      ({ keywordsWithVolume }: any) => contextFilterResult(keywordsWithVolume)
     )
     mocks.selectCreativeKeywords.mockImplementation(({ keywordsWithVolume }: any) => ({
       keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
@@ -1128,7 +1163,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult([]))
     mocks.selectCreativeKeywords.mockImplementation(({ keywordsWithVolume }: any) => ({
       keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
@@ -1150,17 +1187,19 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
         blockedByCap: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
       },
     }))
-    mocks.applyKeywordSupplementationOnce.mockImplementation(async ({ keywordsWithVolume }: any) => ({
-      keywordsWithVolume,
-      keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
-      keywordSupplementation: {
-        triggered: false,
-        beforeCount: 2,
-        afterCount: 2,
-        addedKeywords: [],
-        supplementCapApplied: false,
-      },
-    }))
+    mocks.applyKeywordSupplementationOnce.mockImplementation(
+      async ({ keywordsWithVolume }: any) => ({
+        keywordsWithVolume,
+        keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
+        keywordSupplementation: {
+          triggered: false,
+          beforeCount: 2,
+          afterCount: 2,
+          addedKeywords: [],
+          supplementCapApplied: false,
+        },
+      })
+    )
 
     const result = await buildCreativeKeywordSet({
       offer: { brand: 'BrandX' },
@@ -1203,8 +1242,12 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(candidates))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult(candidates)
+    )
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: [],
       keywordsWithVolume: [],
@@ -1247,13 +1290,15 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     expect(result.executableKeywords.length).toBeGreaterThan(0)
     expect(result.promptKeywords.length).toBeGreaterThan(0)
     expect(result.contextFallbackStrategy).toBe('original')
-    expect(result.candidatePool).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        keyword: 'brandx outdoor camera',
-        promptEligible: true,
-        executableEligible: true,
-      }),
-    ]))
+    expect(result.candidatePool).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          keyword: 'brandx outdoor camera',
+          promptEligible: true,
+          executableEligible: true,
+        }),
+      ])
+    )
     expect(result.audit.pipeline).toMatchObject({
       selectionFallbackTriggered: true,
       selectionFallbackSource: 'original',
@@ -1283,7 +1328,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult([]))
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: [],
@@ -1305,17 +1352,19 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
         blockedByCap: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
       },
     })
-    mocks.applyKeywordSupplementationOnce.mockImplementation(async ({ keywordsWithVolume }: any) => ({
-      keywordsWithVolume,
-      keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
-      keywordSupplementation: {
-        triggered: false,
-        beforeCount: 1,
-        afterCount: 1,
-        addedKeywords: [],
-        supplementCapApplied: false,
-      },
-    }))
+    mocks.applyKeywordSupplementationOnce.mockImplementation(
+      async ({ keywordsWithVolume }: any) => ({
+        keywordsWithVolume,
+        keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
+        keywordSupplementation: {
+          triggered: false,
+          beforeCount: 1,
+          afterCount: 1,
+          addedKeywords: [],
+          supplementCapApplied: false,
+        },
+      })
+    )
     const selectCallsBefore = mocks.selectCreativeKeywords.mock.calls.length
 
     const result = await buildCreativeKeywordSet({
@@ -1338,22 +1387,26 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     })
 
     expect(mocks.selectCreativeKeywords.mock.calls.length - selectCallsBefore).toBe(2)
-    expect(mocks.selectCreativeKeywords.mock.calls.at(selectCallsBefore)?.[0]).toEqual(expect.objectContaining({
-      keywordsWithVolume: [
-        expect.objectContaining({
-          keyword: 'brandx king mattress',
-          source: 'KEYWORD_POOL',
-          sourceType: 'CANONICAL_BUCKET_VIEW',
-        }),
-      ],
-    }))
-    expect(mocks.selectCreativeKeywords.mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({
-      keywordsWithVolume: expect.arrayContaining([
-        expect.objectContaining({
-          sourceType: 'BUILDER_NON_EMPTY_RESCUE',
-        }),
-      ]),
-    }))
+    expect(mocks.selectCreativeKeywords.mock.calls.at(selectCallsBefore)?.[0]).toEqual(
+      expect.objectContaining({
+        keywordsWithVolume: [
+          expect.objectContaining({
+            keyword: 'brandx king mattress',
+            source: 'KEYWORD_POOL',
+            sourceType: 'CANONICAL_BUCKET_VIEW',
+          }),
+        ],
+      })
+    )
+    expect(mocks.selectCreativeKeywords.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({
+        keywordsWithVolume: expect.arrayContaining([
+          expect.objectContaining({
+            sourceType: 'BUILDER_NON_EMPTY_RESCUE',
+          }),
+        ]),
+      })
+    )
     expect(result.executableKeywords.length).toBeGreaterThan(0)
     expect(result.promptKeywords.length).toBeGreaterThan(0)
     expect(result.contextFallbackStrategy).toBe('keyword_pool')
@@ -1378,11 +1431,15 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult([], {
-      forbiddenRemovedCount: 1,
-      blockedKeywordKeys: ['brandx official store'],
-    } as any))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult([], {
+        forbiddenRemovedCount: 1,
+        blockedKeywordKeys: ['brandx official store'],
+      } as any)
+    )
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: [],
       keywordsWithVolume: [],
@@ -1422,10 +1479,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       fallbackMode: false,
     })
 
-    expect(result.executableKeywords).toEqual(expect.arrayContaining([
-      'brandx',
-      'brandx outdoor camera',
-    ]))
+    expect(result.executableKeywords).toEqual(
+      expect.arrayContaining(['brandx', 'brandx outdoor camera'])
+    )
     expect(result.promptKeywords).not.toContain('brandx official store')
     expect(result.candidatePool.map((item) => item.keyword)).not.toContain('brandx official store')
   })
@@ -1440,8 +1496,12 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(englishCandidates))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult(englishCandidates)
+    )
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: [],
       keywordsWithVolume: [],
@@ -1484,16 +1544,20 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     expect(result.executableKeywords).toContain('waterdrop')
     expect(result.promptKeywords).toContain('waterdrop')
     expect(result.executableKeywords).not.toContain('waterdrop official filter x16')
-    expect(result.candidatePool.map((item) => item.keyword)).not.toContain('waterdrop official filter x16')
+    expect(result.candidatePool.map((item) => item.keyword)).not.toContain(
+      'waterdrop official filter x16'
+    )
     expect(result.executableKeywords.some((keyword) => /official/i.test(keyword))).toBe(false)
-    expect(result.candidatePool).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        keyword: 'waterdrop',
-        sourceSubtype: 'BUILDER_NON_EMPTY_RESCUE',
-        rawSource: 'DERIVED_RESCUE',
-        sourceField: 'derived_rescue',
-      }),
-    ]))
+    expect(result.candidatePool).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          keyword: 'waterdrop',
+          sourceSubtype: 'BUILDER_NON_EMPTY_RESCUE',
+          rawSource: 'DERIVED_RESCUE',
+          sourceField: 'derived_rescue',
+        }),
+      ])
+    )
   })
 
   it('creates risk alerts when context tightening is too high and output stays below floor', async () => {
@@ -1509,14 +1573,15 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       sourceType: 'CANONICAL_BUCKET_VIEW',
     }))
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(
-      [inputCandidates[0]],
-      {
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult([inputCandidates[0]], {
         contextMismatchRemovedCount: 8,
         intentTighteningRemovedCount: 1,
-      }
-    ))
+      })
+    )
 
     let selectCallCount = 0
     mocks.selectCreativeKeywords.mockImplementation(({ keywordsWithVolume }: any) => {
@@ -1591,10 +1656,12 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
 
     const newAlertCalls = mocks.createRiskAlert.mock.calls.slice(alertCallsBefore)
     const alertTypes = newAlertCalls.map((call: any[]) => call[1])
-    expect(alertTypes).toEqual(expect.arrayContaining([
-      'creative_keyword_context_intent_removal_high',
-      'creative_keyword_fallback_rescue_triggered',
-    ]))
+    expect(alertTypes).toEqual(
+      expect.arrayContaining([
+        'creative_keyword_context_intent_removal_high',
+        'creative_keyword_fallback_rescue_triggered',
+      ])
+    )
     expect(alertTypes).not.toContain('creative_keyword_count_below_floor')
   })
 
@@ -1618,8 +1685,12 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(initialSelected))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult(initialSelected)
+    )
     mocks.selectCreativeKeywords
       .mockReturnValueOnce({
         keywords: initialSelected.map((item) => item.keyword),
@@ -1683,21 +1754,24 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     })
 
     expect(mocks.selectCreativeKeywords).toHaveBeenCalledTimes(2)
-    expect(mocks.selectCreativeKeywords.mock.calls.at(1)?.[0]).toEqual(expect.objectContaining({
-      keywordsWithVolume: expect.arrayContaining([
-        expect.objectContaining({
-          sourceType: 'BUILDER_NON_EMPTY_RESCUE',
-          keyword: 'novilla king mattress 12 inch',
-        }),
-      ]),
-    }))
-    expect(result.executableKeywords).toEqual(expect.arrayContaining([
-      'novilla queen mattress',
-      'novilla king mattress 12 inch',
-    ]))
+    expect(mocks.selectCreativeKeywords.mock.calls.at(1)?.[0]).toEqual(
+      expect.objectContaining({
+        keywordsWithVolume: expect.arrayContaining([
+          expect.objectContaining({
+            sourceType: 'BUILDER_NON_EMPTY_RESCUE',
+            keyword: 'novilla king mattress 12 inch',
+          }),
+        ]),
+      })
+    )
+    expect(result.executableKeywords).toEqual(
+      expect.arrayContaining(['novilla queen mattress', 'novilla king mattress 12 inch'])
+    )
     expect(result.executableKeywords.length).toBeGreaterThanOrEqual(2)
     expect(result.executableKeywords.length).toBeLessThanOrEqual(expectedFloor)
-    expect(result.keywordSourceAudit.sourceQuotaAudit.acceptedCount).toBe(result.executableKeywords.length)
+    expect(result.keywordSourceAudit.sourceQuotaAudit.acceptedCount).toBe(
+      result.executableKeywords.length
+    )
     expect(result.keywordSourceAudit.sourceQuotaAudit.targetCount).toBeGreaterThanOrEqual(
       result.executableKeywords.length
     )
@@ -1724,8 +1798,12 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockReset()
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReset()
     mocks.selectCreativeKeywords.mockReset()
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(initialSelected))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult(initialSelected)
+    )
     mocks.selectCreativeKeywords
       .mockReturnValueOnce({
         keywords: initialSelected.map((item) => item.keyword),
@@ -1772,7 +1850,8 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       offer: {
         brand: 'Dreo',
         category: 'Portable',
-        product_name: 'DREO Portable Air Conditioners, 14000 BTU ASHRAE (10 000 BTU DOE) Smart AC Unit',
+        product_name:
+          'DREO Portable Air Conditioners, 14000 BTU ASHRAE (10 000 BTU DOE) Smart AC Unit',
         extracted_headlines: ['Quiet smart AC by Dreo'],
       },
       userId: 1,
@@ -1807,7 +1886,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReset()
     mocks.selectCreativeKeywords.mockReset()
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult([]))
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: [],
@@ -1864,7 +1945,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReset()
     mocks.selectCreativeKeywords.mockReset()
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult([]))
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: [],
@@ -1910,21 +1993,20 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     const rescueKeywords = result.candidatePool
       .filter((item) => item.sourceSubtype === 'BUILDER_NON_EMPTY_RESCUE')
       .map((item) => item.keyword)
-    const isSpecKeyword = (keyword: string) => /\b(?:\d{2,4}\s*(?:btu|db|v)|\d+db|\d+v)\b/i.test(keyword)
-    const brandedSpecKeywords = rescueKeywords.filter((keyword) =>
-      keyword.includes('dreo') && isSpecKeyword(keyword)
+    const isSpecKeyword = (keyword: string) =>
+      /\b(?:\d{2,4}\s*(?:btu|db|v)|\d+db|\d+v)\b/i.test(keyword)
+    const brandedSpecKeywords = rescueKeywords.filter(
+      (keyword) => keyword.includes('dreo') && isSpecKeyword(keyword)
     )
-    const unbrandedSpecKeywords = rescueKeywords.filter((keyword) =>
-      !keyword.includes('dreo') && isSpecKeyword(keyword)
+    const unbrandedSpecKeywords = rescueKeywords.filter(
+      (keyword) => !keyword.includes('dreo') && isSpecKeyword(keyword)
     )
 
     expect(brandedSpecKeywords.length).toBeGreaterThan(0)
     expect(unbrandedSpecKeywords).toEqual([])
-    expect(result.executableKeywords).not.toEqual(expect.arrayContaining([
-      '14000 btu',
-      '115v',
-      '45db',
-    ]))
+    expect(result.executableKeywords).not.toEqual(
+      expect.arrayContaining(['14000 btu', '115v', '45db'])
+    )
   })
 
   it('uses the shared demand-intent floor to top up underfilled product_intent output with builder rescue candidates', async () => {
@@ -1947,8 +2029,12 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(initialSelected))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult(initialSelected)
+    )
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: initialSelected.map((item) => item.keyword),
       keywordsWithVolume: initialSelected,
@@ -1969,11 +2055,13 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
         blockedByCap: { lowTrust: 0, ai: 0, aiLlmRaw: 0 },
       },
     })
-    mocks.applyKeywordSupplementationOnce.mockImplementation(async ({ keywordsWithVolume }: any) => ({
-      keywordsWithVolume,
-      keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
-      keywordSupplementation: null,
-    }))
+    mocks.applyKeywordSupplementationOnce.mockImplementation(
+      async ({ keywordsWithVolume }: any) => ({
+        keywordsWithVolume,
+        keywords: (keywordsWithVolume || []).map((item: any) => item.keyword),
+        keywordSupplementation: null,
+      })
+    )
 
     const result = await buildCreativeKeywordSet({
       offer: {
@@ -2021,8 +2109,12 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(initialSelected))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult(initialSelected)
+    )
     mocks.selectCreativeKeywords
       .mockReturnValueOnce({
         keywords: initialSelected.map((item) => item.keyword),
@@ -2084,18 +2176,19 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       brandReserve: 0,
     })
 
-    expect(mocks.selectCreativeKeywords.mock.calls.at(1)?.[0]).toEqual(expect.objectContaining({
-      keywordsWithVolume: expect.arrayContaining([
-        expect.objectContaining({
-          sourceType: 'BUILDER_NON_EMPTY_RESCUE',
-          keyword: 'eufy robot vacuum',
-        }),
-      ]),
-    }))
-    expect(result.executableKeywords).toEqual(expect.arrayContaining([
-      'eufy x10 omni',
-      'eufy robot vacuum',
-    ]))
+    expect(mocks.selectCreativeKeywords.mock.calls.at(1)?.[0]).toEqual(
+      expect.objectContaining({
+        keywordsWithVolume: expect.arrayContaining([
+          expect.objectContaining({
+            sourceType: 'BUILDER_NON_EMPTY_RESCUE',
+            keyword: 'eufy robot vacuum',
+          }),
+        ]),
+      })
+    )
+    expect(result.executableKeywords).toEqual(
+      expect.arrayContaining(['eufy x10 omni', 'eufy robot vacuum'])
+    )
     expect(result.executableKeywords).not.toContain('eufy')
   })
 
@@ -2104,7 +2197,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReset()
     mocks.selectCreativeKeywords.mockReset()
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult([]))
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: [],
@@ -2131,7 +2226,8 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       offer: {
         brand: 'HiLIFE',
         category: 'Garment Steamers',
-        product_name: 'HiLIFE Steamer for Clothes, 1100W Clothes Steamer, Fast Wrinkle Removal with Large 300ml Tank',
+        product_name:
+          'HiLIFE Steamer for Clothes, 1100W Clothes Steamer, Fast Wrinkle Removal with Large 300ml Tank',
       },
       userId: 1,
       brandName: 'HiLIFE',
@@ -2147,10 +2243,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       brandReserve: 0,
     })
 
-    expect(result.executableKeywords).toEqual(expect.arrayContaining([
-      'hilife steamer clothes',
-      'hilife 1100w clothes steamer',
-    ]))
+    expect(result.executableKeywords).toEqual(
+      expect.arrayContaining(['hilife steamer clothes', 'hilife 1100w clothes steamer'])
+    )
     expect(result.executableKeywords).not.toContain('hilife steamer')
     expect(result.audit.pipeline).toMatchObject({
       nonEmptyRescueTriggered: true,
@@ -2162,7 +2257,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReset()
     mocks.selectCreativeKeywords.mockReset()
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult([]))
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: [],
@@ -2189,7 +2286,8 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       offer: {
         brand: 'Ringconn',
         category: 'Rings',
-        product_name: "RingConn Gen 2, World’s First Smart Ring with Sleep Apnea Monitoring, No APP Subscription",
+        product_name:
+          'RingConn Gen 2, World’s First Smart Ring with Sleep Apnea Monitoring, No APP Subscription',
       },
       userId: 1,
       brandName: 'Ringconn',
@@ -2205,11 +2303,12 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       brandReserve: 0,
     })
 
-    expect(result.executableKeywords).toEqual(expect.arrayContaining([
-      'ringconn gen 2 smart ring',
-      'ringconn gen 2',
-    ]))
-    expect(result.executableKeywords.some((keyword) => /\bworld\b|\bfirst\b/.test(keyword))).toBe(false)
+    expect(result.executableKeywords).toEqual(
+      expect.arrayContaining(['ringconn gen 2 smart ring', 'ringconn gen 2'])
+    )
+    expect(result.executableKeywords.some((keyword) => /\bworld\b|\bfirst\b/.test(keyword))).toBe(
+      false
+    )
     expect(result.audit.pipeline).toMatchObject({
       nonEmptyRescueTriggered: true,
     })
@@ -2220,7 +2319,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReset()
     mocks.selectCreativeKeywords.mockReset()
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult([]))
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: [],
@@ -2247,7 +2348,8 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       offer: {
         brand: 'EU Natural',
         category: 'Supplements',
-        product_name: 'Eu Natural Urinary Harmony D-Mannose Supplement - Urinary Tract Health for Women',
+        product_name:
+          'Eu Natural Urinary Harmony D-Mannose Supplement - Urinary Tract Health for Women',
       },
       userId: 1,
       brandName: 'EU Natural',
@@ -2263,10 +2365,12 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       brandReserve: 0,
     })
 
-    expect(result.executableKeywords).toEqual(expect.arrayContaining([
-      'eu natural urinary harmony d mannose',
-      'eu natural mannose supplement',
-    ]))
+    expect(result.executableKeywords).toEqual(
+      expect.arrayContaining([
+        'eu natural urinary harmony d mannose',
+        'eu natural mannose supplement',
+      ])
+    )
     expect(result.executableKeywords).not.toContain('eu natural urinary harmony d')
   })
 
@@ -2280,7 +2384,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult([]))
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: [],
@@ -2324,9 +2430,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     expect(result.executableKeywords.length).toBeGreaterThan(0)
     expect(result.executableKeywords).not.toContain('king mattress 12 inch king')
     expect(result.executableKeywords).not.toContain('mattresses')
-    expect(result.executableKeywords).toEqual(expect.arrayContaining([
-      'novilla king mattress 12 inch',
-    ]))
+    expect(result.executableKeywords).toEqual(
+      expect.arrayContaining(['novilla king mattress 12 inch'])
+    )
   })
 
   it('backfills zero-volume selected keywords from global keyword cache', async () => {
@@ -2346,8 +2452,12 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
         search_volume: 2400,
       },
     ])
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(selectedKeywords))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult(selectedKeywords)
+    )
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: ['novilla'],
       keywordsWithVolume: selectedKeywords,
@@ -2429,12 +2539,16 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
       contextFilterResult([...primaryCandidates, ...seedCandidates] as any)
     )
     mocks.selectCreativeKeywords.mockImplementation((input: any) => {
-      const keep = Array.isArray(input?.keywordsWithVolume) ? input.keywordsWithVolume.slice(0, 2) : []
+      const keep = Array.isArray(input?.keywordsWithVolume)
+        ? input.keywordsWithVolume.slice(0, 2)
+        : []
       return {
         keywords: keep.map((item: any) => item.keyword),
         keywordsWithVolume: keep,
@@ -2480,17 +2594,13 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
 
     expect(result.executableKeywords).toHaveLength(4)
     expect(result.executableKeywords).toEqual(
-      expect.arrayContaining([
-        'brandx official',
-        'brandx air conditioner',
-      ])
+      expect.arrayContaining(['brandx official', 'brandx air conditioner'])
     )
     expect(result.audit.pipeline.finalInvariantTriggered).toBe(false)
     expect(result.audit.pipeline.nonEmptyRescueTriggered).toBe(false)
-    expect(result.executableKeywords).toEqual(expect.arrayContaining([
-      'brandx portable ac',
-      'brandx smart ac unit',
-    ]))
+    expect(result.executableKeywords).toEqual(
+      expect.arrayContaining(['brandx portable ac', 'brandx smart ac unit'])
+    )
   })
 
   it('recovers bucket A floor for mixed-language inputs using localized and neutral rescue candidates', async () => {
@@ -2518,10 +2628,16 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(weakCandidates as any))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult(weakCandidates as any)
+    )
     mocks.selectCreativeKeywords.mockImplementation((input: any) => {
-      const keep = Array.isArray(input?.keywordsWithVolume) ? input.keywordsWithVolume.slice(0, 1) : []
+      const keep = Array.isArray(input?.keywordsWithVolume)
+        ? input.keywordsWithVolume.slice(0, 1)
+        : []
       return {
         keywords: keep.map((item: any) => item.keyword),
         keywordsWithVolume: keep,
@@ -2548,11 +2664,19 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       offer: {
         brand: 'Waterdrop',
         category: 'Filtrierung für unter & über der Spüle',
-        product_name: 'Waterdrop X12 Alkalisches Mineral pH+ Umkehrosmoseanlage NSF/ANSI 58&372 Zertifiziert 1200 GPD 11-stufige Filtration Tanklos 3:1',
+        product_name:
+          'Waterdrop X12 Alkalisches Mineral pH+ Umkehrosmoseanlage NSF/ANSI 58&372 Zertifiziert 1200 GPD 11-stufige Filtration Tanklos 3:1',
         unique_selling_points: 'Portata ultra-rapida 1200 GPD con sistema tankless',
         product_highlights: 'Rubinetto digitale, filtro RO 0.0001 um, NSF/ANSI 58',
-        extracted_headlines: JSON.stringify(['Waterdrop X12: Alkalisches pH', '1200 GPD Schneller Durchfluss']),
-        extracted_keywords: JSON.stringify(['waterdrop official filter x12', 'waterdrop x12 1200 gpd', 'waterdrop alkalisches mineral']),
+        extracted_headlines: JSON.stringify([
+          'Waterdrop X12: Alkalisches pH',
+          '1200 GPD Schneller Durchfluss',
+        ]),
+        extracted_keywords: JSON.stringify([
+          'waterdrop official filter x12',
+          'waterdrop x12 1200 gpd',
+          'waterdrop alkalisches mineral',
+        ]),
         target_country: 'IT',
         target_language: 'Italian',
       },
@@ -2608,10 +2732,16 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(candidates as any))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult(candidates as any)
+    )
     mocks.selectCreativeKeywords.mockImplementation((input: any) => {
-      const keep = Array.isArray(input?.keywordsWithVolume) ? input.keywordsWithVolume.slice(0, 10) : []
+      const keep = Array.isArray(input?.keywordsWithVolume)
+        ? input.keywordsWithVolume.slice(0, 10)
+        : []
       return {
         keywords: keep.map((item: any) => item.keyword),
         keywordsWithVolume: keep,
@@ -2707,10 +2837,16 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(candidates as any))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult(candidates as any)
+    )
     mocks.selectCreativeKeywords.mockImplementation((input: any) => {
-      const keep = Array.isArray(input?.keywordsWithVolume) ? input.keywordsWithVolume.slice(0, 10) : []
+      const keep = Array.isArray(input?.keywordsWithVolume)
+        ? input.keywordsWithVolume.slice(0, 10)
+        : []
       return {
         keywords: keep.map((item: any) => item.keyword),
         keywordsWithVolume: keep,
@@ -2792,10 +2928,16 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(candidates as any))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult(candidates as any)
+    )
     mocks.selectCreativeKeywords.mockImplementation((input: any) => {
-      const keep = Array.isArray(input?.keywordsWithVolume) ? input.keywordsWithVolume.slice(0, 10) : []
+      const keep = Array.isArray(input?.keywordsWithVolume)
+        ? input.keywordsWithVolume.slice(0, 10)
+        : []
       return {
         keywords: keep.map((item: any) => item.keyword),
         keywordsWithVolume: keep,
@@ -2877,8 +3019,12 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(candidates as any))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult(candidates as any)
+    )
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: [candidates[0].keyword],
       keywordsWithVolume: [candidates[0]] as any,
@@ -2919,15 +3065,18 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       fallbackMode: false,
     })
 
-    expect(result.executableKeywords).toEqual(expect.arrayContaining([
-      'max lily trundle bed',
-      'max and lily furniture',
-      'max lily wood bed frame',
-    ]))
+    expect(result.executableKeywords).toEqual(
+      expect.arrayContaining([
+        'max lily trundle bed',
+        'max and lily furniture',
+        'max lily wood bed frame',
+      ])
+    )
     expect(result.keywordSourceAudit.pipeline.nonEmptyRescueTriggered).toBe(false)
     expect(
-      result.keywordsWithVolume.some((item) =>
-        String((item as any).sourceSubtype || '').toUpperCase() === 'BUILDER_NON_EMPTY_RESCUE'
+      result.keywordsWithVolume.some(
+        (item) =>
+          String((item as any).sourceSubtype || '').toUpperCase() === 'BUILDER_NON_EMPTY_RESCUE'
       )
     ).toBe(false)
   })
@@ -2964,8 +3113,12 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       },
     ]
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult(candidates as any))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult(candidates as any)
+    )
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: [],
       keywordsWithVolume: [],
@@ -3006,16 +3159,19 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       fallbackMode: false,
     })
 
-    expect(result.executableKeywords).toEqual(expect.arrayContaining([
-      'max lily trundle bed',
-      'max and lily furniture',
-      'max lily wood bed frame',
-    ]))
+    expect(result.executableKeywords).toEqual(
+      expect.arrayContaining([
+        'max lily trundle bed',
+        'max and lily furniture',
+        'max lily wood bed frame',
+      ])
+    )
     expect(result.keywordSourceAudit.contextFallbackStrategy).toBe('filtered')
     expect(result.keywordSourceAudit.pipeline.nonEmptyRescueTriggered).toBe(false)
     expect(
-      result.keywordsWithVolume.some((item) =>
-        String((item as any).sourceSubtype || '').toUpperCase() === 'BUILDER_NON_EMPTY_RESCUE'
+      result.keywordsWithVolume.some(
+        (item) =>
+          String((item as any).sourceSubtype || '').toUpperCase() === 'BUILDER_NON_EMPTY_RESCUE'
       )
     ).toBe(false)
   })
@@ -3050,7 +3206,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       sourceSubtype: 'BUILDER_NON_EMPTY_RESCUE',
     }
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(() =>
       contextFilterResult([selectedKeyword] as any)
     )
@@ -3104,17 +3262,23 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       brandReserve: 0,
     })
 
-    expect(result.executableKeywords).toEqual(expect.arrayContaining([
-      selectedKeyword.keyword,
-      nonRescueCandidateA.keyword,
-      nonRescueCandidateB.keyword,
-    ]))
+    expect(result.executableKeywords).toEqual(
+      expect.arrayContaining([
+        selectedKeyword.keyword,
+        nonRescueCandidateA.keyword,
+        nonRescueCandidateB.keyword,
+      ])
+    )
     expect(result.executableKeywords).not.toContain(rescueSeedCandidate.keyword)
   })
 
   it('rejects forbidden topical fragments from non-empty rescue candidates', async () => {
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(() => contextFilterResult([]))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(() =>
+      contextFilterResult([])
+    )
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: [],
       keywordsWithVolume: [],
@@ -3181,7 +3345,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     const contextRetained = initialCandidates.slice(0, 6)
     const retainedSet = new Set(contextRetained.map((item) => item.keyword))
 
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
     mocks.filterCreativeKeywordsByOfferContextDetailed.mockImplementation(() =>
       contextFilterResult(contextRetained as any, {
         contextMismatchRemovedCount: 27,
@@ -3243,12 +3409,16 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
   })
 
   it('injects ampersand brand rescue variants and rejects adjacent short numeric fragments', async () => {
-    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation((input: any[]) => input)
-    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(contextFilterResult([], {
-      keywords: [],
-      contextMismatchRemovedCount: 8,
-      intentTighteningRemovedCount: 6,
-    }))
+    mocks.normalizeCreativeKeywordCandidatesForContextFilter.mockImplementation(
+      (input: any[]) => input
+    )
+    mocks.filterCreativeKeywordsByOfferContextDetailed.mockReturnValue(
+      contextFilterResult([], {
+        keywords: [],
+        contextMismatchRemovedCount: 8,
+        intentTighteningRemovedCount: 6,
+      })
+    )
     mocks.selectCreativeKeywords.mockReturnValue({
       keywords: [],
       keywordsWithVolume: [],
@@ -3293,7 +3463,9 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
 
     expect(result.executableKeywords).toContain('max & lily')
     expect(result.executableKeywords).toContain('maxandlily')
-    expect(result.executableKeywords.some((keyword) => keyword.includes('max and lily furniture'))).toBe(true)
+    expect(
+      result.executableKeywords.some((keyword) => keyword.includes('max and lily furniture'))
+    ).toBe(true)
     expect(result.executableKeywords.some((keyword) => /\b4 2\b/.test(keyword))).toBe(false)
   })
 })

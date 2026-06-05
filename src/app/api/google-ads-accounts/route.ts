@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
-    const userId = authResult.user.userId  // Already a string
+    const userId = authResult.user.userId // Already a string
     const userRole = authResult.user.role
 
     const { searchParams } = new URL(request.url)

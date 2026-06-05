@@ -10,25 +10,33 @@ export default function GlobalError({
   return (
     <html>
       <body>
-        <div style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#f3f4f6',
-          fontFamily: 'system-ui, sans-serif'
-        }}>
+        <div
+          style={{
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#f3f4f6',
+            fontFamily: 'system-ui, sans-serif',
+          }}
+        >
           <div style={{ textAlign: 'center' }}>
-            <h1 style={{
-              fontSize: '3rem',
-              fontWeight: 'bold',
-              color: '#111827',
-              marginBottom: '1rem'
-            }}>出错了</h1>
-            <p style={{
-              color: '#6b7280',
-              marginBottom: '2rem'
-            }}>
+            <h1
+              style={{
+                fontSize: '3rem',
+                fontWeight: 'bold',
+                color: '#111827',
+                marginBottom: '1rem',
+              }}
+            >
+              出错了
+            </h1>
+            <p
+              style={{
+                color: '#6b7280',
+                marginBottom: '2rem',
+              }}
+            >
               抱歉，应用发生了错误。请稍后重试。
             </p>
             <button
@@ -40,7 +48,7 @@ export default function GlobalError({
                 borderRadius: '0.375rem',
                 border: 'none',
                 cursor: 'pointer',
-                fontWeight: '500'
+                fontWeight: '500',
               }}
             >
               重试

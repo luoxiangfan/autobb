@@ -18,11 +18,7 @@ import { Loader2, PlayCircle } from 'lucide-react'
 
 function countDedupedPositiveIds(ids?: number[]): number {
   if (!ids?.length) return 0
-  return new Set(
-    ids
-      .map((id) => Number(id))
-      .filter((id) => Number.isInteger(id) && id > 0)
-  ).size
+  return new Set(ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)).size
 }
 
 function isAbortError(error: unknown): boolean {
@@ -47,9 +43,7 @@ function batchApiPayloadMentionsUnmatched(message: unknown, error: unknown): boo
   const pieces = [message, error].filter(
     (x): x is string => typeof x === 'string' && x.trim().length > 0
   )
-  return pieces.some(
-    (text) => text.includes('未命中') || text.includes('不完全对应')
-  )
+  return pieces.some((text) => text.includes('未命中') || text.includes('不完全对应'))
 }
 
 function finiteNonNegativeInt(raw: unknown, fallback: number): number {
@@ -78,8 +72,8 @@ interface BatchTasksDialogProps {
    * 未传时仍会根据「是否存在有效 campaignIds」推断（仅兼容旧调用；新页面必须传入）。
    */
   variant?: BatchTasksDialogVariant
-  campaignIds?: number[]  // 广告系列页面使用
-  offerIds?: number[]     // Offer 页面使用
+  campaignIds?: number[] // 广告系列页面使用
+  offerIds?: number[] // Offer 页面使用
   onSuccess?: () => void
 }
 
@@ -120,9 +114,7 @@ export default function BatchTasksDialog({
   }, [variant, campaignIds])
   const selectionIdCount = useMemo(
     () =>
-      isCampaignMode
-        ? countDedupedPositiveIds(campaignIds)
-        : countDedupedPositiveIds(offerIds),
+      isCampaignMode ? countDedupedPositiveIds(campaignIds) : countDedupedPositiveIds(offerIds),
     [isCampaignMode, campaignIds, offerIds]
   )
 
@@ -211,9 +203,10 @@ export default function BatchTasksDialog({
 
       const compactErrorMessage = errors
         .slice(0, 3)
-        .map((item: { offerId?: number; type?: string; error?: string }) => (
-          `Offer ${item.offerId ?? '-'}(${item.type ?? 'unknown'}): ${item.error ?? '未知错误'}`
-        ))
+        .map(
+          (item: { offerId?: number; type?: string; error?: string }) =>
+            `Offer ${item.offerId ?? '-'}(${item.type ?? 'unknown'}): ${item.error ?? '未知错误'}`
+        )
         .join('；')
 
       const idSelectionLine =
@@ -221,19 +214,19 @@ export default function BatchTasksDialog({
           ? `已选 ${requestedIdsCount} 个广告系列（去重后 ID），实际处理 ${matchedOfferCount} 个 Offer。`
           : `已选 ${requestedIdsCount} 个 Offer ID，实际处理 ${matchedOfferCount} 个 Offer。`
 
-      const serverCoversUnmatched = batchApiPayloadMentionsUnmatched(
-        result?.message,
-        result?.error
-      )
+      const serverCoversUnmatched = batchApiPayloadMentionsUnmatched(result?.message, result?.error)
 
       if (!response.ok) {
         if (ac.signal.aborted) return
-        const fallback = errors.length > 0
-          ? `共 ${errors.length} 条失败记录（按操作项计）${byTypeParts.length > 0 ? `：${byTypeParts.join('，')}` : ''}`
-          : '操作失败'
+        const fallback =
+          errors.length > 0
+            ? `共 ${errors.length} 条失败记录（按操作项计）${byTypeParts.length > 0 ? `：${byTypeParts.join('，')}` : ''}`
+            : '操作失败'
         const unmatchedPrefixForErrorDesc =
           unmatchedIdsCount > 0 && !serverCoversUnmatched ? unmatchedHint : ''
-        const errDesc = [unmatchedPrefixForErrorDesc, idSelectionLine, compactErrorMessage].filter(Boolean).join('')
+        const errDesc = [unmatchedPrefixForErrorDesc, idSelectionLine, compactErrorMessage]
+          .filter(Boolean)
+          .join('')
         const title = firstTrimmedApiString(result?.message, result?.error, '批量开启任务失败')
         toast.error(title, {
           description: errDesc || fallback,
@@ -359,9 +352,7 @@ export default function BatchTasksDialog({
               <Label htmlFor="enableClickFarm" className="font-medium cursor-pointer flex-1">
                 <div className="flex items-center gap-2">
                   <span>🎯 开启补点击任务</span>
-                  <span className="text-xs text-gray-500">
-                    （自动访问推广链接增加点击）
-                  </span>
+                  <span className="text-xs text-gray-500">（自动访问推广链接增加点击）</span>
                 </div>
               </Label>
             </div>
@@ -376,9 +367,7 @@ export default function BatchTasksDialog({
               <Label htmlFor="enableUrlSwap" className="font-medium cursor-pointer flex-1">
                 <div className="flex items-center gap-2">
                   <span>🔗 开启换链接任务</span>
-                  <span className="text-xs text-gray-500">
-                    （自动更换推广链接）
-                  </span>
+                  <span className="text-xs text-gray-500">（自动更换推广链接）</span>
                 </div>
               </Label>
             </div>
@@ -386,17 +375,13 @@ export default function BatchTasksDialog({
 
           {selectionIdCount === 0 && (
             <Alert variant="destructive">
-              <div className="text-sm">
-                ⚠️ 关闭本窗口后回到列表重新勾选即可
-              </div>
+              <div className="text-sm">⚠️ 关闭本窗口后回到列表重新勾选即可</div>
             </Alert>
           )}
 
-          {(!enableClickFarm && !enableUrlSwap) && (
+          {!enableClickFarm && !enableUrlSwap && (
             <Alert variant="destructive">
-              <div className="text-sm">
-                ⚠️ 请至少选择一种任务类型
-              </div>
+              <div className="text-sm">⚠️ 请至少选择一种任务类型</div>
             </Alert>
           )}
 
@@ -415,18 +400,10 @@ export default function BatchTasksDialog({
           </Button>
           <Button
             onClick={handleBatchStart}
-            disabled={
-              loading
-              || (!enableClickFarm && !enableUrlSwap)
-              || selectionIdCount === 0
-            }
+            disabled={loading || (!enableClickFarm && !enableUrlSwap) || selectionIdCount === 0}
             className="bg-blue-600 hover:bg-blue-700"
             aria-busy={loading}
-            title={
-              selectionIdCount === 0
-                ? '请先在列表中勾选至少一项有效数据'
-                : undefined
-            }
+            title={selectionIdCount === 0 ? '请先在列表中勾选至少一项有效数据' : undefined}
           >
             {loading ? (
               <>

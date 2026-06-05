@@ -3,10 +3,7 @@ import { getGoogleAdsCredentials } from './google-ads-oauth'
 import { getServiceAccountConfig } from './google-ads-service-account'
 import type { GoogleAdsAuthContext } from './google-ads-auth-context'
 
-type HydratedSecretsSlice = Pick<
-  GoogleAdsAuthContext,
-  'oauthCredentials' | 'serviceAccountConfig'
->
+type HydratedSecretsSlice = Pick<GoogleAdsAuthContext, 'oauthCredentials' | 'serviceAccountConfig'>
 
 const hydratedSecretsByUser = new Map<
   number,
@@ -30,10 +27,7 @@ function rememberHydratedSecrets(
   hydratedSecretsByUser.set(userId, { generation, secrets })
 }
 
-function readHydratedSecrets(
-  userId: number,
-  generation: number
-): HydratedSecretsSlice | null {
+function readHydratedSecrets(userId: number, generation: number): HydratedSecretsSlice | null {
   const hit = hydratedSecretsByUser.get(userId)
   if (!hit || hit.generation !== generation) {
     return null
@@ -42,7 +36,9 @@ function readHydratedSecrets(
 }
 
 /** slim 缓存条目为 true；API / resolve 路径使用前须 hydrate */
-export function authContextSecretsLookStripped(ctx: Pick<GoogleAdsAuthContext, 'secretsStripped'>): boolean {
+export function authContextSecretsLookStripped(
+  ctx: Pick<GoogleAdsAuthContext, 'secretsStripped'>
+): boolean {
   return ctx.secretsStripped === true
 }
 
@@ -85,10 +81,7 @@ function computeOAuthHasRefreshToken(ctx: GoogleAdsAuthContext): boolean {
 }
 
 function computeServiceAccountConfigured(
-  ctx: Pick<
-    GoogleAdsAuthContext,
-    'serviceAccountConfigured' | 'serviceAccountConfig' | 'auth'
-  >
+  ctx: Pick<GoogleAdsAuthContext, 'serviceAccountConfigured' | 'serviceAccountConfig' | 'auth'>
 ): boolean {
   if (ctx.serviceAccountConfigured !== undefined) {
     return ctx.serviceAccountConfigured
@@ -105,17 +98,12 @@ export function oauthRefreshConfiguredFromContext(
 
 /** 是否已配置服务账号（strip metadata 或 hydrate 后均可） */
 export function serviceAccountConfiguredFromContext(
-  ctx: Pick<
-    GoogleAdsAuthContext,
-    'serviceAccountConfigured' | 'serviceAccountConfig' | 'auth'
-  >
+  ctx: Pick<GoogleAdsAuthContext, 'serviceAccountConfigured' | 'serviceAccountConfig' | 'auth'>
 ): boolean {
   return computeServiceAccountConfigured(ctx)
 }
 
-function stripOAuthCredentialsForCache(
-  credentials: GoogleAdsCredentials
-): GoogleAdsCredentials {
+function stripOAuthCredentialsForCache(credentials: GoogleAdsCredentials): GoogleAdsCredentials {
   return {
     ...credentials,
     client_secret: null as unknown as string,
@@ -154,8 +142,8 @@ export function normalizeCachedAuthContextPayload(ctx: GoogleAdsAuthContext): Go
   }
   const hasOAuthSecrets = Boolean(
     ctx.oauthCredentials?.refresh_token ||
-      ctx.oauthCredentials?.client_secret ||
-      ctx.oauthCredentials?.developer_token
+    ctx.oauthCredentials?.client_secret ||
+    ctx.oauthCredentials?.developer_token
   )
   const hasSaSecrets = Boolean(
     ctx.serviceAccountConfig?.privateKey || ctx.serviceAccountConfig?.developerToken
@@ -210,7 +198,9 @@ function mergeHydratedSecrets(
     ...ctx,
     secretsStripped: false,
     oauthHasRefreshToken: Boolean(secrets.oauthCredentials?.refresh_token),
-    serviceAccountConfigured: Boolean(secrets.serviceAccountConfig?.id || ctx.auth.serviceAccountId),
+    serviceAccountConfigured: Boolean(
+      secrets.serviceAccountConfig?.id || ctx.auth.serviceAccountId
+    ),
     oauthCredentials: secrets.oauthCredentials,
     serviceAccountConfig: secrets.serviceAccountConfig,
   }
@@ -274,7 +264,10 @@ export async function hydrateGoogleAdsAuthContextSecrets(
     rememberHydratedSecrets(ctx.userId, generation, secrets)
   }
 
-  if (oauthCredentials === ctx.oauthCredentials && serviceAccountConfig === ctx.serviceAccountConfig) {
+  if (
+    oauthCredentials === ctx.oauthCredentials &&
+    serviceAccountConfig === ctx.serviceAccountConfig
+  ) {
     return { ...ctx, secretsStripped: false }
   }
 

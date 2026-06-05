@@ -133,10 +133,7 @@ export type GoogleAdsLinkedAccountPrepareCache = {
   /** 同 (userId, linkedSa) 并发 prepare 合并 */
   prepareInflight: Map<string, Promise<GoogleAdsLinkedAccountPrepareResult>>
   /** job 内 OAuth heal bundle 短缓存（key=ownerUserId，generation 绑定） */
-  healedOAuthBundleByOwner: Map<
-    number,
-    { generation: number; bundle: OAuthGoogleAdsCallBundle }
-  >
+  healedOAuthBundleByOwner: Map<number, { generation: number; bundle: OAuthGoogleAdsCallBundle }>
 }
 
 /** validation 缓存条目：不含 authContext / apiAuth 密钥 */

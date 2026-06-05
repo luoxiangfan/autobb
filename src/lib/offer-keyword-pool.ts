@@ -41,8 +41,16 @@ import {
 import { getMinContextTokenMatchesForKeywordQualityFilter } from './keyword-context-filter'
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { isInvalidKeyword } from './keyword-invalid-filter'
-import { getBrandCoreKeywords, refreshBrandCoreKeywordCache, updateBrandCoreKeywordSearchVolumes } from './brand-core-keywords'
-import { getLanguageName, normalizeCountryCode, normalizeLanguageCode } from './language-country-codes'
+import {
+  getBrandCoreKeywords,
+  refreshBrandCoreKeywordCache,
+  updateBrandCoreKeywordSearchVolumes,
+} from './brand-core-keywords'
+import {
+  getLanguageName,
+  normalizeCountryCode,
+  normalizeLanguageCode,
+} from './language-country-codes'
 import { DEFAULTS } from './keyword-constants'
 import { classifyKeywordIntent } from './keyword-intent'
 import { parseJsonField, toDbJsonArrayField } from './json-field'
@@ -90,19 +98,57 @@ const MIN_NON_BRAND_KEYWORDS_PER_PRODUCT_BUCKET = 4
 const MIN_NON_BRAND_KEYWORDS_PER_STORE_BUCKET = 3
 const SEED_MAX_WORD_COUNT = 8
 const SEED_INFO_QUERY_PATTERNS = [
-  'meaning', 'definition', 'what is', 'wiki', 'wikipedia',
-  'how to', 'tutorial', 'guide', 'manual', 'instructions',
-  'series', 'episode', 'netflix', 'streaming',
-  'download', 'software', 'app', 'apk', 'pdf', 'ebook',
-  'gif', 'meme', 'emoji', 'sticker', 'drawing', 'image', 'images',
-  'logo', 'png', 'jpg', 'jpeg', 'svg', 'icon', 'clipart', 'wallpaper',
-  'size chart', 'size guide', 'sizing',
+  'meaning',
+  'definition',
+  'what is',
+  'wiki',
+  'wikipedia',
+  'how to',
+  'tutorial',
+  'guide',
+  'manual',
+  'instructions',
+  'series',
+  'episode',
+  'netflix',
+  'streaming',
+  'download',
+  'software',
+  'app',
+  'apk',
+  'pdf',
+  'ebook',
+  'gif',
+  'meme',
+  'emoji',
+  'sticker',
+  'drawing',
+  'image',
+  'images',
+  'logo',
+  'png',
+  'jpg',
+  'jpeg',
+  'svg',
+  'icon',
+  'clipart',
+  'wallpaper',
+  'size chart',
+  'size guide',
+  'sizing',
 ]
 
 type GeminiGenerateParams = Parameters<typeof generateContent>[0]
 type GeminiGenerateResult = Awaited<ReturnType<typeof generateContent>>
 type KeywordPoolProgressReporter = (info: {
-  phase?: 'seed-volume' | 'expand-round' | 'volume-batch' | 'service-step' | 'filter' | 'cluster' | 'save'
+  phase?:
+    | 'seed-volume'
+    | 'expand-round'
+    | 'volume-batch'
+    | 'service-step'
+    | 'filter'
+    | 'cluster'
+    | 'save'
   message: string
   current?: number
   total?: number
@@ -110,12 +156,14 @@ type KeywordPoolProgressReporter = (info: {
 
 function isGeminiTimeoutError(error: unknown): boolean {
   if (!error) return false
-  const message = typeof error === 'object' && error !== null && 'message' in error
-    ? String((error as { message?: string }).message)
-    : String(error)
-  const code = typeof error === 'object' && error !== null && 'code' in error
-    ? String((error as { code?: string }).code)
-    : ''
+  const message =
+    typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as { message?: string }).message)
+      : String(error)
+  const code =
+    typeof error === 'object' && error !== null && 'code' in error
+      ? String((error as { code?: string }).code)
+      : ''
   return message.includes('timeout') || code === 'ECONNABORTED'
 }
 
@@ -176,16 +224,18 @@ function isRetryableClusteringError(error: unknown): boolean {
     return true
   }
 
-  const code = typeof error === 'object' && error !== null && 'code' in error
-    ? String((error as { code?: string }).code || '').toUpperCase()
-    : ''
+  const code =
+    typeof error === 'object' && error !== null && 'code' in error
+      ? String((error as { code?: string }).code || '').toUpperCase()
+      : ''
   if (['ECONNABORTED', 'ETIMEDOUT', 'ECONNRESET', 'EPIPE', 'ECONNREFUSED'].includes(code)) {
     return true
   }
 
-  const message = typeof error === 'object' && error !== null && 'message' in error
-    ? String((error as { message?: string }).message || '')
-    : String(error)
+  const message =
+    typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as { message?: string }).message || '')
+      : String(error)
   return isTransientClusteringMessage(message)
 }
 
@@ -199,38 +249,42 @@ function shouldUseDeterministicClusteringFallback(error: unknown): boolean {
     }
   }
 
-  const code = typeof error === 'object' && error !== null && 'code' in error
-    ? String((error as { code?: string }).code || '').toUpperCase()
-    : ''
-  if ([
-    'ECONNABORTED',
-    'ETIMEDOUT',
-    'ECONNRESET',
-    'EPIPE',
-    'ECONNREFUSED',
-    'GEMINI_DAILY_QUOTA_EXHAUSTED',
-  ].includes(code)) {
+  const code =
+    typeof error === 'object' && error !== null && 'code' in error
+      ? String((error as { code?: string }).code || '').toUpperCase()
+      : ''
+  if (
+    [
+      'ECONNABORTED',
+      'ETIMEDOUT',
+      'ECONNRESET',
+      'EPIPE',
+      'ECONNREFUSED',
+      'GEMINI_DAILY_QUOTA_EXHAUSTED',
+    ].includes(code)
+  ) {
     return true
   }
 
-  const message = typeof error === 'object' && error !== null && 'message' in error
-    ? String((error as { message?: string }).message || '')
-    : String(error)
+  const message =
+    typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as { message?: string }).message || '')
+      : String(error)
   const lower = message.toLowerCase()
   return (
-    lower.includes('gemini api调用失败')
-    || lower.includes('resource exhausted')
-    || lower.includes('quota')
-    || lower.includes('forbidden')
-    || lower.includes('payment required')
-    || lower.includes('cloudflare')
-    || lower.includes('rate limit')
-    || lower.includes('too many requests')
-    || lower.includes('gateway timeout')
-    || lower.includes('service unavailable')
-    || lower.includes('timeout')
-    || lower.includes('overloaded')
-    || lower.includes('high demand')
+    lower.includes('gemini api调用失败') ||
+    lower.includes('resource exhausted') ||
+    lower.includes('quota') ||
+    lower.includes('forbidden') ||
+    lower.includes('payment required') ||
+    lower.includes('cloudflare') ||
+    lower.includes('rate limit') ||
+    lower.includes('too many requests') ||
+    lower.includes('gateway timeout') ||
+    lower.includes('service unavailable') ||
+    lower.includes('timeout') ||
+    lower.includes('overloaded') ||
+    lower.includes('high demand')
   )
 }
 
@@ -266,7 +320,7 @@ function buildDeterministicProductBuckets(keywords: string[]): KeywordBuckets {
       if (target.list.length > 0) continue
 
       const donor = entries
-        .filter(entry => entry.key !== target.key && entry.list.length > 1)
+        .filter((entry) => entry.key !== target.key && entry.list.length > 1)
         .sort((a, b) => b.list.length - a.list.length)[0]
       if (!donor) continue
 
@@ -282,7 +336,7 @@ function buildDeterministicProductBuckets(keywords: string[]): KeywordBuckets {
 function buildDeterministicStoreBuckets(keywords: string[]): StoreKeywordBuckets {
   const buckets = createEmptyStoreBuckets()
   const normalized = normalizeKeywordsForBuckets(keywords)
-  const allowed = new Set(normalized.map(item => item.toLowerCase()))
+  const allowed = new Set(normalized.map((item) => item.toLowerCase()))
 
   buckets.bucketS.keywords = [...normalized]
   redistributeStoreBucketsFromS(buckets, normalized)
@@ -297,9 +351,10 @@ function buildDeterministicClusteringFallback(params: {
   error: unknown
   scope: 'direct' | 'batch'
 }): KeywordBuckets | StoreKeywordBuckets {
-  const message = typeof params.error === 'object' && params.error !== null && 'message' in params.error
-    ? String((params.error as { message?: string }).message || '未知错误')
-    : String(params.error || '未知错误')
+  const message =
+    typeof params.error === 'object' && params.error !== null && 'message' in params.error
+      ? String((params.error as { message?: string }).message || '未知错误')
+      : String(params.error || '未知错误')
   const status = extractHttpStatusFromError(params.error)
   const statusText = status ? `HTTP ${status}` : '无HTTP状态'
 
@@ -329,15 +384,21 @@ async function runKeywordClustering(
     if (!isGeminiTimeoutError(error)) {
       throw error
     }
-    const message = typeof error === 'object' && error !== null && 'message' in error
-      ? String((error as { message?: string }).message)
-      : String(error)
-    console.warn(`⚠️ keyword_clustering 超时 (${KEYWORD_CLUSTERING_TIMEOUT_MS}ms)，按用户当前模型重试...`)
+    const message =
+      typeof error === 'object' && error !== null && 'message' in error
+        ? String((error as { message?: string }).message)
+        : String(error)
+    console.warn(
+      `⚠️ keyword_clustering 超时 (${KEYWORD_CLUSTERING_TIMEOUT_MS}ms)，按用户当前模型重试...`
+    )
     console.warn(`   错误: ${message}`)
-    return await generateContent({
-      ...baseParams,
-      enableAutoModelSelection: false,
-    }, userId)
+    return await generateContent(
+      {
+        ...baseParams,
+        enableAutoModelSelection: false,
+      },
+      userId
+    )
   }
 }
 
@@ -414,7 +475,7 @@ function parseKeywordClusteringJson(responseText: string): any {
 function isLikelyKeywordClusteringTruncated(response: GeminiGenerateResult): boolean {
   const outputTokens = response.usage?.outputTokens || 0
   if (outputTokens <= 0) return false
-  return outputTokens >= (KEYWORD_CLUSTERING_MAX_OUTPUT_TOKENS - KEYWORD_CLUSTERING_TRUNCATION_MARGIN)
+  return outputTokens >= KEYWORD_CLUSTERING_MAX_OUTPUT_TOKENS - KEYWORD_CLUSTERING_TRUNCATION_MARGIN
 }
 
 function splitKeywordsForRetry(keywords: string[]): [string[], string[]] {
@@ -449,9 +510,9 @@ function isGenericRetailKeyword(keyword: string): boolean {
     /\bsale\b/i,
     /\bdiscount\b/i,
     /\bdeal(s)?\b/i,
-    /\bclearance\b/i
+    /\bclearance\b/i,
   ]
-  return patterns.some(pattern => pattern.test(normalized))
+  return patterns.some((pattern) => pattern.test(normalized))
 }
 
 function getKeywordSourcePriority(source: string | undefined): number {
@@ -462,9 +523,11 @@ function getKeywordSourcePriority(source: string | undefined): number {
   return 1000 - sourceScore
 }
 
-function getKeywordSourcePriorityForPoolItem(item: Pick<PoolKeywordData, 'source'> & {
-  sourceType?: string
-}): number {
+function getKeywordSourcePriorityForPoolItem(
+  item: Pick<PoolKeywordData, 'source'> & {
+    sourceType?: string
+  }
+): number {
   const sourceScore = getKeywordSourcePriorityScoreFromInput({
     source: item.source,
     sourceType: item.sourceType,
@@ -474,7 +537,9 @@ function getKeywordSourcePriorityForPoolItem(item: Pick<PoolKeywordData, 'source
 }
 
 function normalizeMatchTypePriority(matchType: string | undefined): number {
-  const normalized = String(matchType || '').trim().toUpperCase()
+  const normalized = String(matchType || '')
+    .trim()
+    .toUpperCase()
   if (normalized === 'EXACT') return 3
   if (normalized === 'PHRASE') return 2
   if (normalized === 'BROAD') return 1
@@ -507,7 +572,8 @@ function prioritizeBucketKeywords(keywords: PoolKeywordData[]): PoolKeywordData[
     const relevanceScoreDiff = (b.relevanceScore || 0) - (a.relevanceScore || 0)
     if (relevanceScoreDiff !== 0) return relevanceScoreDiff
 
-    const genericRank = Number(isGenericRetailKeyword(a.keyword)) - Number(isGenericRetailKeyword(b.keyword))
+    const genericRank =
+      Number(isGenericRetailKeyword(a.keyword)) - Number(isGenericRetailKeyword(b.keyword))
     if (genericRank !== 0) return genericRank
 
     const volumeDiff = (b.searchVolume || 0) - (a.searchVolume || 0)
@@ -569,10 +635,7 @@ function hasSearchVolumeUnavailableFlag(
   return keywords.some((kw) => isSearchVolumeUnavailableReason(kw?.volumeUnavailableReason))
 }
 
-function hasCommercialIntentForProductRelaxedRetention(
-  keyword: string,
-  language: string
-): boolean {
+function hasCommercialIntentForProductRelaxedRetention(keyword: string, language: string): boolean {
   if (!keyword) return false
   const intent = classifyKeywordIntent(keyword, { language })
   if (intent.hardNegative) return false
@@ -616,11 +679,11 @@ export interface PoolKeywordData {
   searchVolume: number
   competition?: string
   competitionIndex?: number
-  lowTopPageBid?: number  // CPC 数据
+  lowTopPageBid?: number // CPC 数据
   highTopPageBid?: number // CPC 数据
   source: string
   matchType?: 'EXACT' | 'PHRASE' | 'BROAD'
-  isPureBrand?: boolean   // 🔥 2025-12-29 新增：标记是否为纯品牌词（豁免搜索量过滤）
+  isPureBrand?: boolean // 🔥 2025-12-29 新增：标记是否为纯品牌词（豁免搜索量过滤）
   volumeUnavailableReason?: 'DEV_TOKEN_INSUFFICIENT_ACCESS'
   relevanceScore?: number
   qualityTier?: 'HIGH' | 'MEDIUM' | 'LOW'
@@ -643,10 +706,10 @@ export interface OfferKeywordPool {
   brandKeywords: PoolKeywordData[]
 
   // 独占层：语义分桶（单品链接，内部 raw buckets）- 4个桶
-  bucketAKeywords: PoolKeywordData[]  // 品牌/商品锚点候选 (Brand Product Anchor)
-  bucketBKeywords: PoolKeywordData[]  // 商品需求场景候选 (Demand Scenario)
-  bucketCKeywords: PoolKeywordData[]  // 功能规格候选 (Feature / Spec)
-  bucketDKeywords: PoolKeywordData[]  // 商品需求扩展候选 (Demand Expansion)
+  bucketAKeywords: PoolKeywordData[] // 品牌/商品锚点候选 (Brand Product Anchor)
+  bucketBKeywords: PoolKeywordData[] // 商品需求场景候选 (Demand Scenario)
+  bucketCKeywords: PoolKeywordData[] // 功能规格候选 (Feature / Spec)
+  bucketDKeywords: PoolKeywordData[] // 商品需求扩展候选 (Demand Expansion)
 
   // 桶意图描述（单品链接）
   bucketAIntent: string
@@ -655,11 +718,11 @@ export interface OfferKeywordPool {
   bucketDIntent: string
 
   // 🆕 v4.16: 店铺链接分桶（内部 raw buckets）- 5个桶
-  storeBucketAKeywords: PoolKeywordData[]  // 品牌商品集合候选 (Brand Collection)
-  storeBucketBKeywords: PoolKeywordData[]  // 商品需求场景候选 (Demand Scenario)
-  storeBucketCKeywords: PoolKeywordData[]  // 热门商品线候选 (Hot Product Line)
-  storeBucketDKeywords: PoolKeywordData[]  // 信任服务信号候选 (Trust Service)
-  storeBucketSKeywords: PoolKeywordData[]  // 店铺全量覆盖候选 (Store Coverage)
+  storeBucketAKeywords: PoolKeywordData[] // 品牌商品集合候选 (Brand Collection)
+  storeBucketBKeywords: PoolKeywordData[] // 商品需求场景候选 (Demand Scenario)
+  storeBucketCKeywords: PoolKeywordData[] // 热门商品线候选 (Hot Product Line)
+  storeBucketDKeywords: PoolKeywordData[] // 信任服务信号候选 (Trust Service)
+  storeBucketSKeywords: PoolKeywordData[] // 店铺全量覆盖候选 (Store Coverage)
 
   // 店铺分桶意图描述
   storeBucketAIntent: string
@@ -710,7 +773,8 @@ export interface KeywordBuckets {
     description: string
     keywords: string[]
   }
-  bucketS?: {  // 🔧 可选：店铺链接专用
+  bucketS?: {
+    // 🔧 可选：店铺链接专用
     intent: string
     intentEn: string
     description: string
@@ -722,7 +786,7 @@ export interface KeywordBuckets {
     bucketBCount: number
     bucketCCount: number
     bucketDCount: number
-    bucketSCount?: number  // 🔧 可选：店铺链接专用
+    bucketSCount?: number // 🔧 可选：店铺链接专用
     balanceScore: number
   }
 }
@@ -731,26 +795,62 @@ export interface KeywordBuckets {
 // 全局核心关键词补充逻辑
 // ============================================
 
-const GLOBAL_CORE_PROMO_PRICE_PATTERNS = /\b(discount|sale|deal|coupon|promo|code|offer|clearance|price|cost|cheap|affordable|budget)\b/i
+const GLOBAL_CORE_PROMO_PRICE_PATTERNS =
+  /\b(discount|sale|deal|coupon|promo|code|offer|clearance|price|cost|cheap|affordable|budget)\b/i
 const GLOBAL_CORE_MODEL_PATTERNS = /\b(s\d+|q\d+|s7|s8|q5|q7|max|ultra|pro(?!\s*store))\b/i
 const GLOBAL_CORE_REVIEW_PATTERNS = /\b(review|rating|testimonial|feedback|comment|opinion)\b/i
 const GLOBAL_CORE_TRUST_PATTERNS =
   /\b(review|reviews|rating|ratings|testimonial|testimonials|feedback|support|customer\s*service|warranty|guarantee|refund|return|secure|security|privacy|trusted|trust)\b/i
-const GLOBAL_CORE_GEO_PATTERNS = /\b(locations?|near\s+me|delivery|shipping|local|store\s+finder)\b/i
+const GLOBAL_CORE_GEO_PATTERNS =
+  /\b(locations?|near\s+me|delivery|shipping|local|store\s+finder)\b/i
 const GLOBAL_CORE_TRANSACTIONAL_PATTERNS =
   /\b(buy|best|price|sale|deal|discount|coupon|promo|offer|shop|official|professional)\b/i
 const GLOBAL_CORE_SEARCH_VOLUME_TTL_DAYS = 30
 const GLOBAL_CORE_BRAND_PREFIX_MIN_VOLUME = 100
 
 const GLOBAL_CORE_NON_ANCHOR_TOKENS = new Set([
-  'best', 'buy', 'sale', 'deal', 'discount', 'coupon', 'promo', 'offer', 'price', 'cost', 'cheap',
-  'affordable', 'official', 'shop', 'store', 'online', 'home', 'kitchen', 'professional', 'high',
-  'speed', 'small', 'mini', 'portable', 'personal', 'top', 'new', 'quality', 'premium', 'amazon',
-  'for', 'with', 'and', 'the', 'a', 'an',
+  'best',
+  'buy',
+  'sale',
+  'deal',
+  'discount',
+  'coupon',
+  'promo',
+  'offer',
+  'price',
+  'cost',
+  'cheap',
+  'affordable',
+  'official',
+  'shop',
+  'store',
+  'online',
+  'home',
+  'kitchen',
+  'professional',
+  'high',
+  'speed',
+  'small',
+  'mini',
+  'portable',
+  'personal',
+  'top',
+  'new',
+  'quality',
+  'premium',
+  'amazon',
+  'for',
+  'with',
+  'and',
+  'the',
+  'a',
+  'an',
 ])
 
 function normalizeGlobalCoreToken(token: string): string {
-  const raw = String(token || '').toLowerCase().trim()
+  const raw = String(token || '')
+    .toLowerCase()
+    .trim()
   if (!raw) return ''
   if (raw.endsWith('ies') && raw.length > 4) return `${raw.slice(0, -3)}y`
   if (raw.endsWith('es') && raw.length > 4) return raw.slice(0, -2)
@@ -761,16 +861,12 @@ function normalizeGlobalCoreToken(token: string): string {
 function tokenizeGlobalCore(text: string): string[] {
   const normalized = normalizeGoogleAdsKeyword(text)
   if (!normalized) return []
-  return normalized
-    .split(/\s+/)
-    .map(normalizeGlobalCoreToken)
-    .filter(Boolean)
+  return normalized.split(/\s+/).map(normalizeGlobalCoreToken).filter(Boolean)
 }
 
 function buildGlobalCoreAnchorTokens(offer: Offer): Set<string> {
   const brandTokens = new Set(
-    getPureBrandKeywords(offer.brand || '')
-      .flatMap(item => tokenizeGlobalCore(item))
+    getPureBrandKeywords(offer.brand || '').flatMap((item) => tokenizeGlobalCore(item))
   )
   const categorySignals = extractCategorySignalsFromScrapedData(offer.scraped_data)
   const sourceTexts = [
@@ -793,17 +889,17 @@ function buildGlobalCoreAnchorTokens(offer: Offer): Set<string> {
 function keywordHitsGlobalCoreAnchors(keyword: string, anchorTokens: Set<string>): boolean {
   if (anchorTokens.size === 0) return true
   const tokens = tokenizeGlobalCore(keyword)
-  return tokens.some(token => anchorTokens.has(token))
+  return tokens.some((token) => anchorTokens.has(token))
 }
 
 function isHighIntentGlobalCoreKeyword(keyword: string): boolean {
   if (!keyword) return false
   if (
-    GLOBAL_CORE_TRANSACTIONAL_PATTERNS.test(keyword)
-    || GLOBAL_CORE_PROMO_PRICE_PATTERNS.test(keyword)
-    || GLOBAL_CORE_MODEL_PATTERNS.test(keyword)
-    || GLOBAL_CORE_TRUST_PATTERNS.test(keyword)
-    || GLOBAL_CORE_REVIEW_PATTERNS.test(keyword)
+    GLOBAL_CORE_TRANSACTIONAL_PATTERNS.test(keyword) ||
+    GLOBAL_CORE_PROMO_PRICE_PATTERNS.test(keyword) ||
+    GLOBAL_CORE_MODEL_PATTERNS.test(keyword) ||
+    GLOBAL_CORE_TRUST_PATTERNS.test(keyword) ||
+    GLOBAL_CORE_REVIEW_PATTERNS.test(keyword)
   ) {
     return true
   }
@@ -811,7 +907,11 @@ function isHighIntentGlobalCoreKeyword(keyword: string): boolean {
   return tokenizeGlobalCore(keyword).length >= 2
 }
 
-export function composeGlobalCoreBrandedKeyword(keyword: string, brandName: string, maxWords: number = 5): string | null {
+export function composeGlobalCoreBrandedKeyword(
+  keyword: string,
+  brandName: string,
+  maxWords: number = 5
+): string | null {
   const normalizedBrand = normalizeGoogleAdsKeyword(brandName)
   const normalizedKeyword = normalizeGoogleAdsKeyword(keyword)
   if (!normalizedBrand || !normalizedKeyword) return null
@@ -821,7 +921,7 @@ export function composeGlobalCoreBrandedKeyword(keyword: string, brandName: stri
   if (brandTokens.length === 0 || keywordTokens.length === 0) return null
 
   const remainder: string[] = []
-  for (let i = 0; i < keywordTokens.length;) {
+  for (let i = 0; i < keywordTokens.length; ) {
     let matchesBrand = true
     for (let j = 0; j < brandTokens.length; j += 1) {
       if (keywordTokens[i + j] !== brandTokens[j]) {
@@ -866,13 +966,19 @@ function adaptGlobalCoreKeywordsWithBrandPrefix(params: {
   const anchorTokens = buildGlobalCoreAnchorTokens(offer)
   const canonicalBrand = normalizeGoogleAdsKeyword(offer.brand || '')
 
-  const nonBrandCandidates = keywords.filter(item => !containsPureBrand(item.keyword, pureBrandKeywords))
+  const nonBrandCandidates = keywords.filter(
+    (item) => !containsPureBrand(item.keyword, pureBrandKeywords)
+  )
   const positiveVolumes = nonBrandCandidates
-    .map(item => Number(item.searchVolume || 0))
-    .filter(volume => volume > 0)
-  const dynamicThreshold = positiveVolumes.length > 0
-    ? Math.max(GLOBAL_CORE_BRAND_PREFIX_MIN_VOLUME, calculateSearchVolumeThreshold(positiveVolumes, GLOBAL_CORE_BRAND_PREFIX_MIN_VOLUME))
-    : Number.POSITIVE_INFINITY
+    .map((item) => Number(item.searchVolume || 0))
+    .filter((volume) => volume > 0)
+  const dynamicThreshold =
+    positiveVolumes.length > 0
+      ? Math.max(
+          GLOBAL_CORE_BRAND_PREFIX_MIN_VOLUME,
+          calculateSearchVolumeThreshold(positiveVolumes, GLOBAL_CORE_BRAND_PREFIX_MIN_VOLUME)
+        )
+      : Number.POSITIVE_INFINITY
 
   const seenNorm = new Set<string>()
   const adapted: PoolKeywordData[] = []
@@ -957,7 +1063,7 @@ function adaptGlobalCoreKeywordsWithBrandPrefix(params: {
       droppedComposeFailed,
       droppedDuplicate,
       highVolumeThreshold: Number.isFinite(dynamicThreshold) ? dynamicThreshold : -1,
-    }
+    },
   }
 }
 
@@ -972,14 +1078,13 @@ function buildExistingKeywordNormSet(lists: PoolKeywordData[][]): Set<string> {
   return set
 }
 
-export function resolveBrandCoreKeywordSourceMeta(sourceMask: string | null | undefined): Pick<
-  PoolKeywordData,
-  'source' | 'sourceType' | 'sourceSubtype' | 'rawSource' | 'derivedTags'
-> {
+export function resolveBrandCoreKeywordSourceMeta(
+  sourceMask: string | null | undefined
+): Pick<PoolKeywordData, 'source' | 'sourceType' | 'sourceSubtype' | 'rawSource' | 'derivedTags'> {
   const normalizedTokens = new Set(
     String(sourceMask || '')
       .split('|')
-      .map(token => token.trim().toLowerCase())
+      .map((token) => token.trim().toLowerCase())
       .filter(Boolean)
   )
 
@@ -1014,15 +1119,17 @@ function selectBucketForProduct(keyword: string): 'A' | 'B' | 'C' | 'D' {
 }
 
 function selectBucketForStore(keyword: string): 'A' | 'B' | 'C' | 'D' | 'S' {
-  if (GLOBAL_CORE_PROMO_PRICE_PATTERNS.test(keyword) || GLOBAL_CORE_GEO_PATTERNS.test(keyword)) return 'S'
-  if (GLOBAL_CORE_TRUST_PATTERNS.test(keyword) || GLOBAL_CORE_REVIEW_PATTERNS.test(keyword)) return 'D'
+  if (GLOBAL_CORE_PROMO_PRICE_PATTERNS.test(keyword) || GLOBAL_CORE_GEO_PATTERNS.test(keyword))
+    return 'S'
+  if (GLOBAL_CORE_TRUST_PATTERNS.test(keyword) || GLOBAL_CORE_REVIEW_PATTERNS.test(keyword))
+    return 'D'
   return 'B'
 }
 
 function pushUniqueKeyword(list: string[], keyword: string): void {
   const norm = normalizeGoogleAdsKeyword(keyword)
   if (!norm) return
-  const exists = list.some(item => normalizeGoogleAdsKeyword(item) === norm)
+  const exists = list.some((item) => normalizeGoogleAdsKeyword(item) === norm)
   if (!exists) list.push(keyword)
 }
 
@@ -1033,15 +1140,15 @@ function buildGlobalCoreQualityFilterContext(offer: Offer): {
   const pageType = resolveOfferPageType(offer)
   const categorySignals = extractCategorySignalsFromScrapedData(offer.scraped_data)
   const categoryContext = [offer.category, ...categorySignals]
-    .map(value => String(value || '').trim())
+    .map((value) => String(value || '').trim())
     .filter(Boolean)
     .join(' ')
 
   return {
     categoryContext: categoryContext || undefined,
     minContextTokenMatches: getMinContextTokenMatchesForKeywordQualityFilter({
-      pageType
-    })
+      pageType,
+    }),
   }
 }
 
@@ -1119,18 +1226,24 @@ function filterGlobalCoreKeywordsByOfferContext(params: {
   }
 
   if (
-    preFiltered.removed.length > 0
-    || strictFiltered.removed.length > 0
-    || adapted.stats.brandedFromNonBrand > 0
-    || intentTighteningRemoved > 0
+    preFiltered.removed.length > 0 ||
+    strictFiltered.removed.length > 0 ||
+    adapted.stats.brandedFromNonBrand > 0 ||
+    intentTighteningRemoved > 0
   ) {
-    const contextRemoved = strictFiltered.removed.filter(item => item.reason.includes('与商品无关')).length
-    const brandRemoved = strictFiltered.removed.filter(item => item.reason.includes('不含纯品牌词')).length
-    const preContextRemoved = preFiltered.removed.filter(item => item.reason.includes('与商品无关')).length
+    const contextRemoved = strictFiltered.removed.filter((item) =>
+      item.reason.includes('与商品无关')
+    ).length
+    const brandRemoved = strictFiltered.removed.filter((item) =>
+      item.reason.includes('不含纯品牌词')
+    ).length
+    const preContextRemoved = preFiltered.removed.filter((item) =>
+      item.reason.includes('与商品无关')
+    ).length
     console.log(
       `🧹 GLOBAL_CORE(${scope}) 过滤链路: ${keywords.length} → 预过滤${preFiltered.filtered.length} → 改写${adapted.keywords.length} → 收口${strictFiltered.filtered.length} → 意图收紧${finalFiltered.length} ` +
-      `(预过滤移除 ${preFiltered.removed.length}/上下文${preContextRemoved}; 改写 ${adapted.stats.brandedFromNonBrand} 条, 高量阈值 ${adapted.stats.highVolumeThreshold === -1 ? 'N/A' : adapted.stats.highVolumeThreshold}; ` +
-      `收口移除 ${strictFiltered.removed.length}/无品牌${brandRemoved}/上下文${contextRemoved}; 意图收紧移除 ${intentTighteningRemoved})`
+        `(预过滤移除 ${preFiltered.removed.length}/上下文${preContextRemoved}; 改写 ${adapted.stats.brandedFromNonBrand} 条, 高量阈值 ${adapted.stats.highVolumeThreshold === -1 ? 'N/A' : adapted.stats.highVolumeThreshold}; ` +
+        `收口移除 ${strictFiltered.removed.length}/无品牌${brandRemoved}/上下文${contextRemoved}; 意图收紧移除 ${intentTighteningRemoved})`
     )
   }
 
@@ -1153,7 +1266,16 @@ async function injectGlobalCoreKeywordsForProduct(params: {
   bucketDData: PoolKeywordData[]
   statistics: { totalKeywords: number; balanceScore: number }
 }> {
-  const { offer, userId, brandKeywords, bucketAData, bucketBData, bucketCData, bucketDData, statistics } = params
+  const {
+    offer,
+    userId,
+    brandKeywords,
+    bucketAData,
+    bucketBData,
+    bucketCData,
+    bucketDData,
+    statistics,
+  } = params
 
   const coreKeywords = await getBrandCoreKeywords(
     offer.brand,
@@ -1376,7 +1498,7 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
     const languageCandidates = Array.from(
       new Set(
         [languageCode, languageName, offer.target_language]
-          .map(value => String(value || '').trim())
+          .map((value) => String(value || '').trim())
           .filter(Boolean)
       )
     )
@@ -1394,7 +1516,7 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
     const db = await getDatabase()
     const placeholders = normalizedKeywords.map(() => '?').join(',')
     const languagePlaceholders = languageCandidates.map(() => '?').join(',')
-    const rows = await db.query(
+    const rows = (await db.query(
       `
       SELECT keyword, search_volume, competition_level, avg_cpc_micros, cached_at
       FROM global_keywords
@@ -1403,7 +1525,7 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
         AND language IN (${languagePlaceholders})
     `,
       [...normalizedKeywords, country, ...languageCandidates]
-    ) as Array<{
+    )) as Array<{
       keyword: string
       search_volume: number | null
       competition_level: string | null
@@ -1424,9 +1546,10 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
       if (!kw) continue
 
       const cachedAtValue = row.cached_at
-      const cachedAtMs = cachedAtValue instanceof Date
-        ? cachedAtValue.getTime()
-        : Date.parse(String(cachedAtValue || ''))
+      const cachedAtMs =
+        cachedAtValue instanceof Date
+          ? cachedAtValue.getTime()
+          : Date.parse(String(cachedAtValue || ''))
       const isFresh = Number.isFinite(cachedAtMs) && cachedAtMs >= cutoffMs
 
       if (isFresh) {
@@ -1449,7 +1572,7 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
 
     if (staleNorms.size > 0) {
       const refreshKeywords = Array.from(staleNorms)
-        .map(norm => keywordMap.get(norm)?.keyword)
+        .map((norm) => keywordMap.get(norm)?.keyword)
         .filter((kw): kw is string => Boolean(kw))
 
       const volumeResult = await getKeywordSearchVolumesForPlannerContext({
@@ -1490,12 +1613,7 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
         keywordNorm,
         searchVolume,
       }))
-      await updateBrandCoreKeywordSearchVolumes(
-        offer.brand,
-        country,
-        languageCode,
-        updates
-      )
+      await updateBrandCoreKeywordSearchVolumes(offer.brand, country, languageCode, updates)
       await refreshBrandCoreKeywordCache(offer.brand, country, languageCode)
     }
   } catch (error: any) {
@@ -1509,31 +1627,31 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
  */
 export interface StoreKeywordBuckets {
   bucketA: {
-    intent: string  // 品牌商品集合 (Brand Collection)
+    intent: string // 品牌商品集合 (Brand Collection)
     intentEn: string
     description: string
     keywords: string[]
   }
   bucketB: {
-    intent: string  // 商品需求场景 (Demand Scenario)
+    intent: string // 商品需求场景 (Demand Scenario)
     intentEn: string
     description: string
     keywords: string[]
   }
   bucketC: {
-    intent: string  // 热门商品线 (Hot Product Line)
+    intent: string // 热门商品线 (Hot Product Line)
     intentEn: string
     description: string
     keywords: string[]
   }
   bucketD: {
-    intent: string  // 信任服务信号 (Trust Service)
+    intent: string // 信任服务信号 (Trust Service)
     intentEn: string
     description: string
     keywords: string[]
   }
   bucketS: {
-    intent: string  // 店铺全量覆盖 (Store Coverage)
+    intent: string // 店铺全量覆盖 (Store Coverage)
     intentEn: string
     description: string
     keywords: string[]
@@ -1560,18 +1678,54 @@ export interface StoreKeywordBuckets {
 export type BucketType = 'A' | 'B' | 'C' | 'D' | 'S'
 
 const DEFAULT_PRODUCT_CLUSTER_BUCKETS = {
-  A: { intent: '品牌商品锚点', intentEn: 'Brand Product Anchor', description: '品牌词与商品/型号锚点明确的候选词' },
-  B: { intent: '商品需求场景', intentEn: 'Demand Scenario', description: '用户有明确商品需求或使用场景的候选词' },
-  C: { intent: '功能规格特性', intentEn: 'Feature / Spec', description: '用户关注功能、参数或规格的候选词' },
-  D: { intent: '商品需求扩展', intentEn: 'Demand Expansion', description: '用于补足商品需求覆盖的高相关候选词' },
+  A: {
+    intent: '品牌商品锚点',
+    intentEn: 'Brand Product Anchor',
+    description: '品牌词与商品/型号锚点明确的候选词',
+  },
+  B: {
+    intent: '商品需求场景',
+    intentEn: 'Demand Scenario',
+    description: '用户有明确商品需求或使用场景的候选词',
+  },
+  C: {
+    intent: '功能规格特性',
+    intentEn: 'Feature / Spec',
+    description: '用户关注功能、参数或规格的候选词',
+  },
+  D: {
+    intent: '商品需求扩展',
+    intentEn: 'Demand Expansion',
+    description: '用于补足商品需求覆盖的高相关候选词',
+  },
 } as const
 
 const DEFAULT_STORE_CLUSTER_BUCKETS = {
-  A: { intent: '品牌商品集合', intentEn: 'Brand Collection', description: '用户认可品牌，想了解品牌下的核心商品集合' },
-  B: { intent: '商品需求场景', intentEn: 'Demand Scenario', description: '用户有明确商品需求或使用场景' },
-  C: { intent: '热门商品线', intentEn: 'Hot Product Line', description: '用户想了解店铺热销商品线、系列或热门型号' },
-  D: { intent: '信任服务信号', intentEn: 'Trust Service', description: '用户关注店铺服务、保障和可信信号' },
-  S: { intent: '店铺全量覆盖', intentEn: 'Store Coverage', description: '用户想全面了解店铺商品与产品线' },
+  A: {
+    intent: '品牌商品集合',
+    intentEn: 'Brand Collection',
+    description: '用户认可品牌，想了解品牌下的核心商品集合',
+  },
+  B: {
+    intent: '商品需求场景',
+    intentEn: 'Demand Scenario',
+    description: '用户有明确商品需求或使用场景',
+  },
+  C: {
+    intent: '热门商品线',
+    intentEn: 'Hot Product Line',
+    description: '用户想了解店铺热销商品线、系列或热门型号',
+  },
+  D: {
+    intent: '信任服务信号',
+    intentEn: 'Trust Service',
+    description: '用户关注店铺服务、保障和可信信号',
+  },
+  S: {
+    intent: '店铺全量覆盖',
+    intentEn: 'Store Coverage',
+    description: '用户想全面了解店铺商品与产品线',
+  },
 } as const
 
 /**
@@ -1598,7 +1752,7 @@ export type SyntheticKeywordConfig = CoverageKeywordConfig
  * 默认商品需求 coverage 配置
  */
 export const DEFAULT_COVERAGE_KEYWORD_CONFIG: CoverageKeywordConfig = {
-  maxNonBrandKeywords: 15,  // 从各桶中选择Top15高搜索量关键词
+  maxNonBrandKeywords: 15, // 从各桶中选择Top15高搜索量关键词
   sortByVolume: true,
   minSearchVolume: 100,
 }
@@ -1656,7 +1810,9 @@ export function separateBrandKeywords(
     }
   }
 
-  console.log(`🏷️ 纯品牌词分离: ${brandKeywords.length} 个纯品牌词, ${nonBrandKeywords.length} 个非品牌词`)
+  console.log(
+    `🏷️ 纯品牌词分离: ${brandKeywords.length} 个纯品牌词, ${nonBrandKeywords.length} 个非品牌词`
+  )
   console.log(`   纯品牌词: ${brandKeywords.join(', ') || '(无)'}`)
 
   return { brandKeywords, nonBrandKeywords }
@@ -1698,7 +1854,9 @@ async function clusterBatchKeywords(
   pageType: 'product' | 'store' = 'product',
   splitDepth: number = 0
 ): Promise<KeywordBuckets | StoreKeywordBuckets> {
-  console.log(`📦 处理批次 ${batchIndex}/${totalBatches}: ${batchKeywords.length} 个关键词 (${pageType}链接)`)
+  console.log(
+    `📦 处理批次 ${batchIndex}/${totalBatches}: ${batchKeywords.length} 个关键词 (${pageType}链接)`
+  )
 
   // 1. 加载聚类 prompt
   const promptTemplate = await loadPrompt('keyword_intent_clustering')
@@ -1723,9 +1881,9 @@ async function clusterBatchKeywords(
           intent: { type: 'STRING' as const },
           intentEn: { type: 'STRING' as const },
           description: { type: 'STRING' as const },
-          keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } }
+          keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } },
         },
-        required: ['intent', 'intentEn', 'description', 'keywords']
+        required: ['intent', 'intentEn', 'description', 'keywords'],
       },
       bucketB: {
         type: 'OBJECT' as const,
@@ -1733,9 +1891,9 @@ async function clusterBatchKeywords(
           intent: { type: 'STRING' as const },
           intentEn: { type: 'STRING' as const },
           description: { type: 'STRING' as const },
-          keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } }
+          keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } },
         },
-        required: ['intent', 'intentEn', 'description', 'keywords']
+        required: ['intent', 'intentEn', 'description', 'keywords'],
       },
       bucketC: {
         type: 'OBJECT' as const,
@@ -1743,9 +1901,9 @@ async function clusterBatchKeywords(
           intent: { type: 'STRING' as const },
           intentEn: { type: 'STRING' as const },
           description: { type: 'STRING' as const },
-          keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } }
+          keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } },
         },
-        required: ['intent', 'intentEn', 'description', 'keywords']
+        required: ['intent', 'intentEn', 'description', 'keywords'],
       },
       bucketD: {
         type: 'OBJECT' as const,
@@ -1753,23 +1911,25 @@ async function clusterBatchKeywords(
           intent: { type: 'STRING' as const },
           intentEn: { type: 'STRING' as const },
           description: { type: 'STRING' as const },
-          keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } }
+          keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } },
         },
-        required: ['intent', 'intentEn', 'description', 'keywords']
+        required: ['intent', 'intentEn', 'description', 'keywords'],
       },
       // 🆕 v4.16: 店铺链接添加 bucketS
-      ...(isStore ? {
-        bucketS: {
-          type: 'OBJECT' as const,
-          properties: {
-            intent: { type: 'STRING' as const },
-            intentEn: { type: 'STRING' as const },
-            description: { type: 'STRING' as const },
-            keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } }
-          },
-          required: ['intent', 'intentEn', 'description', 'keywords']
-        }
-      } : {}),
+      ...(isStore
+        ? {
+            bucketS: {
+              type: 'OBJECT' as const,
+              properties: {
+                intent: { type: 'STRING' as const },
+                intentEn: { type: 'STRING' as const },
+                description: { type: 'STRING' as const },
+                keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } },
+              },
+              required: ['intent', 'intentEn', 'description', 'keywords'],
+            },
+          }
+        : {}),
       statistics: {
         type: 'OBJECT' as const,
         properties: {
@@ -1780,26 +1940,44 @@ async function clusterBatchKeywords(
           bucketDCount: { type: 'INTEGER' as const },
           // 🆕 v4.16: 店铺链接添加 bucketSCount
           ...(isStore ? { bucketSCount: { type: 'INTEGER' as const } } : {}),
-          balanceScore: { type: 'NUMBER' as const }
+          balanceScore: { type: 'NUMBER' as const },
         },
         required: isStore
-          ? ['totalKeywords', 'bucketACount', 'bucketBCount', 'bucketCCount', 'bucketDCount', 'bucketSCount', 'balanceScore']
-          : ['totalKeywords', 'bucketACount', 'bucketBCount', 'bucketCCount', 'bucketDCount', 'balanceScore']
-      }
+          ? [
+              'totalKeywords',
+              'bucketACount',
+              'bucketBCount',
+              'bucketCCount',
+              'bucketDCount',
+              'bucketSCount',
+              'balanceScore',
+            ]
+          : [
+              'totalKeywords',
+              'bucketACount',
+              'bucketBCount',
+              'bucketCCount',
+              'bucketDCount',
+              'balanceScore',
+            ],
+      },
     },
     required: isStore
       ? ['bucketA', 'bucketB', 'bucketC', 'bucketD', 'bucketS', 'statistics']
-      : ['bucketA', 'bucketB', 'bucketC', 'bucketD', 'statistics']
+      : ['bucketA', 'bucketB', 'bucketC', 'bucketD', 'statistics'],
   }
 
   // 4. 调用 AI（使用智能模型选择，60-90s）
-  const aiResponse = await runKeywordClustering({
-    operationType: 'keyword_clustering',
-    prompt,
-    temperature: 0.3,
-    responseSchema,
-    responseMimeType: 'application/json'
-  }, userId)
+  const aiResponse = await runKeywordClustering(
+    {
+      operationType: 'keyword_clustering',
+      prompt,
+      temperature: 0.3,
+      responseSchema,
+      responseMimeType: 'application/json',
+    },
+    userId
+  )
 
   // 5. 记录 token 使用
   if (aiResponse.usage) {
@@ -1816,7 +1994,7 @@ async function clusterBatchKeywords(
       outputTokens: aiResponse.usage.outputTokens,
       totalTokens: aiResponse.usage.totalTokens,
       cost,
-      apiType: aiResponse.apiType
+      apiType: aiResponse.apiType,
     })
   }
 
@@ -1828,14 +2006,14 @@ async function clusterBatchKeywords(
     const canSplitFurther =
       likelyTruncated &&
       splitDepth < KEYWORD_CLUSTERING_MAX_SPLIT_DEPTH &&
-      batchKeywords.length >= (KEYWORD_CLUSTERING_MIN_SPLIT_KEYWORDS * 2)
+      batchKeywords.length >= KEYWORD_CLUSTERING_MIN_SPLIT_KEYWORDS * 2
 
     if (canSplitFurther) {
       const [leftKeywords, rightKeywords] = splitKeywordsForRetry(batchKeywords)
       console.warn(
         `⚠️ 批次 ${batchIndex}/${totalBatches} 响应疑似被 token 截断 ` +
-        `(${aiResponse.usage?.outputTokens || 0}/${KEYWORD_CLUSTERING_MAX_OUTPUT_TOKENS})，` +
-        `拆分为 ${leftKeywords.length}+${rightKeywords.length} 重试`
+          `(${aiResponse.usage?.outputTokens || 0}/${KEYWORD_CLUSTERING_MAX_OUTPUT_TOKENS})，` +
+          `拆分为 ${leftKeywords.length}+${rightKeywords.length} 重试`
       )
 
       const leftResult = await clusterBatchKeywords(
@@ -1872,37 +2050,56 @@ async function clusterBatchKeywords(
   // 🆕 v4.16: 店铺链接支持5个桶
   if (isStore) {
     // 店铺链接：验证5个桶
-    if (!batchResult.bucketA || !batchResult.bucketB || !batchResult.bucketC || !batchResult.bucketD || !batchResult.bucketS) {
+    if (
+      !batchResult.bucketA ||
+      !batchResult.bucketB ||
+      !batchResult.bucketC ||
+      !batchResult.bucketD ||
+      !batchResult.bucketS
+    ) {
       console.error('❌ AI返回数据结构不完整(店铺):', batchResult)
       throw new Error('AI返回的数据结构不完整：缺少bucketA/B/C/D/S')
     }
 
-    if (!Array.isArray(batchResult.bucketA.keywords) ||
-        !Array.isArray(batchResult.bucketB.keywords) ||
-        !Array.isArray(batchResult.bucketC.keywords) ||
-        !Array.isArray(batchResult.bucketD.keywords) ||
-        !Array.isArray(batchResult.bucketS.keywords)) {
+    if (
+      !Array.isArray(batchResult.bucketA.keywords) ||
+      !Array.isArray(batchResult.bucketB.keywords) ||
+      !Array.isArray(batchResult.bucketC.keywords) ||
+      !Array.isArray(batchResult.bucketD.keywords) ||
+      !Array.isArray(batchResult.bucketS.keywords)
+    ) {
       console.error('❌ AI返回的keywords不是数组(店铺):', batchResult)
       throw new Error('AI返回的keywords不是数组')
     }
 
-    console.log(`✅ 批次 ${batchIndex} 完成 (店铺5桶): A=${batchResult.bucketA.keywords.length}, B=${batchResult.bucketB.keywords.length}, C=${batchResult.bucketC.keywords.length}, D=${batchResult.bucketD.keywords.length}, S=${batchResult.bucketS.keywords.length}`)
+    console.log(
+      `✅ 批次 ${batchIndex} 完成 (店铺5桶): A=${batchResult.bucketA.keywords.length}, B=${batchResult.bucketB.keywords.length}, C=${batchResult.bucketC.keywords.length}, D=${batchResult.bucketD.keywords.length}, S=${batchResult.bucketS.keywords.length}`
+    )
   } else {
     // 产品链接：验证4个桶
-    if (!batchResult.bucketA || !batchResult.bucketB || !batchResult.bucketC || !batchResult.bucketD) {
+    if (
+      !batchResult.bucketA ||
+      !batchResult.bucketB ||
+      !batchResult.bucketC ||
+      !batchResult.bucketD
+    ) {
       console.error('❌ AI返回数据结构不完整(产品):', batchResult)
       throw new Error('AI返回的数据结构不完整：缺少bucketA/B/C/D')
     }
 
-    if (!Array.isArray(batchResult.bucketA.keywords) ||
-        !Array.isArray(batchResult.bucketB.keywords) ||
-        !Array.isArray(batchResult.bucketC.keywords) ||
-        !Array.isArray(batchResult.bucketD.keywords)) {
+    if (
+      !Array.isArray(batchResult.bucketA.keywords) ||
+      !Array.isArray(batchResult.bucketB.keywords) ||
+      !Array.isArray(batchResult.bucketC.keywords) ||
+      !Array.isArray(batchResult.bucketD.keywords)
+    ) {
       console.error('❌ AI返回的keywords不是数组(产品):', batchResult)
       throw new Error('AI返回的keywords不是数组')
     }
 
-    console.log(`✅ 批次 ${batchIndex} 完成 (产品4桶): A=${batchResult.bucketA.keywords.length}, B=${batchResult.bucketB.keywords.length}, C=${batchResult.bucketC.keywords.length}, D=${batchResult.bucketD.keywords.length}`)
+    console.log(
+      `✅ 批次 ${batchIndex} 完成 (产品4桶): A=${batchResult.bucketA.keywords.length}, B=${batchResult.bucketB.keywords.length}, C=${batchResult.bucketC.keywords.length}, D=${batchResult.bucketD.keywords.length}`
+    )
   }
 
   return batchResult
@@ -1918,16 +2115,26 @@ function mergeBatchResults(
     bucketB: { intent: string; intentEn: string; description: string; keywords: string[] }
     bucketC: { intent: string; intentEn: string; description: string; keywords: string[] }
     bucketD: { intent: string; intentEn: string; description: string; keywords: string[] }
-    bucketS?: { intent: string; intentEn: string; description: string; keywords: string[] }  // 🔧 可选：店铺链接专用
-    statistics: { totalKeywords: number; bucketACount: number; bucketBCount: number; bucketCCount: number; bucketDCount: number; bucketSCount?: number; balanceScore: number }
+    bucketS?: { intent: string; intentEn: string; description: string; keywords: string[] } // 🔧 可选：店铺链接专用
+    statistics: {
+      totalKeywords: number
+      bucketACount: number
+      bucketBCount: number
+      bucketCCount: number
+      bucketDCount: number
+      bucketSCount?: number
+      balanceScore: number
+    }
   }>
 ): KeywordBuckets {
   // 合并所有关键词（去重）
-  const allBucketAKeywords = Array.from(new Set(batchResults.flatMap(r => r.bucketA.keywords)))
-  const allBucketBKeywords = Array.from(new Set(batchResults.flatMap(r => r.bucketB.keywords)))
-  const allBucketCKeywords = Array.from(new Set(batchResults.flatMap(r => r.bucketC.keywords)))
-  const allBucketDKeywords = Array.from(new Set(batchResults.flatMap(r => r.bucketD.keywords)))
-  const allBucketSKeywords = Array.from(new Set(batchResults.flatMap(r => r.bucketS?.keywords || [])))  // 🔧 处理可选的bucketS
+  const allBucketAKeywords = Array.from(new Set(batchResults.flatMap((r) => r.bucketA.keywords)))
+  const allBucketBKeywords = Array.from(new Set(batchResults.flatMap((r) => r.bucketB.keywords)))
+  const allBucketCKeywords = Array.from(new Set(batchResults.flatMap((r) => r.bucketC.keywords)))
+  const allBucketDKeywords = Array.from(new Set(batchResults.flatMap((r) => r.bucketD.keywords)))
+  const allBucketSKeywords = Array.from(
+    new Set(batchResults.flatMap((r) => r.bucketS?.keywords || []))
+  ) // 🔧 处理可选的bucketS
 
   // 选择最详细的意图描述（选择最长的描述）
   const bucketAIntent = batchResults.reduce((best, current) =>
@@ -1947,11 +2154,17 @@ function mergeBatchResults(
   ).bucketD
 
   // 🔧 处理bucketS（店铺链接专用）
-  const bucketSIntent = batchResults.find(r => r.bucketS)?.bucketS
+  const bucketSIntent = batchResults.find((r) => r.bucketS)?.bucketS
 
   // 计算统计数据
-  const totalKeywords = allBucketAKeywords.length + allBucketBKeywords.length + allBucketCKeywords.length + allBucketDKeywords.length + allBucketSKeywords.length
-  const averageBalanceScore = batchResults.reduce((sum, r) => sum + r.statistics.balanceScore, 0) / batchResults.length
+  const totalKeywords =
+    allBucketAKeywords.length +
+    allBucketBKeywords.length +
+    allBucketCKeywords.length +
+    allBucketDKeywords.length +
+    allBucketSKeywords.length
+  const averageBalanceScore =
+    batchResults.reduce((sum, r) => sum + r.statistics.balanceScore, 0) / batchResults.length
 
   console.log(`🔄 合并 ${batchResults.length} 个批次结果:`)
   console.log(`   桶A: ${allBucketAKeywords.length} 个关键词`)
@@ -1959,7 +2172,7 @@ function mergeBatchResults(
   console.log(`   桶C: ${allBucketCKeywords.length} 个关键词`)
   console.log(`   桶D: ${allBucketDKeywords.length} 个关键词`)
   if (allBucketSKeywords.length > 0) {
-    console.log(`   桶S: ${allBucketSKeywords.length} 个关键词`)  // 🔧 店铺链接显示bucketS
+    console.log(`   桶S: ${allBucketSKeywords.length} 个关键词`) // 🔧 店铺链接显示bucketS
   }
   console.log(`   平均均衡度: ${averageBalanceScore.toFixed(2)}`)
 
@@ -1974,8 +2187,8 @@ function mergeBatchResults(
       bucketBCount: allBucketBKeywords.length,
       bucketCCount: allBucketCKeywords.length,
       bucketDCount: allBucketDKeywords.length,
-      balanceScore: averageBalanceScore
-    }
+      balanceScore: averageBalanceScore,
+    },
   }
 
   // 🔧 添加bucketS（如果存在）
@@ -2044,17 +2257,29 @@ export async function clusterKeywordsByIntent(
 
   // 🔥 2026-02-04 优化：进一步减小批次大小，降低超时风险
   // 原因：减小单次请求处理量，提高稳定性
-  const BATCH_SIZE = 30  // 每批30个关键词（降低超时风险）
-  const needsBatching = allKeywordsForClustering.length > 40  // 从60改为40
+  const BATCH_SIZE = 30 // 每批30个关键词（降低超时风险）
+  const needsBatching = allKeywordsForClustering.length > 40 // 从60改为40
   const batchCount = needsBatching ? Math.ceil(allKeywordsForClustering.length / BATCH_SIZE) : 1
 
   if (!needsBatching) {
     // 小批量：直接处理（原逻辑）
     console.log(`📝 小批量模式：直接处理 ${allKeywordsForClustering.length} 个关键词`)
-    await progress?.({ phase: 'cluster', message: `语义聚类：小批量处理(${allKeywordsForClustering.length})` })
+    await progress?.({
+      phase: 'cluster',
+      message: `语义聚类：小批量处理(${allKeywordsForClustering.length})`,
+    })
     try {
-      const directBuckets = await clusterKeywordsDirectly(allKeywordsForClustering, brandName, category, userId, pageType)
-      filterBucketsToAllowedKeywords(directBuckets, new Set(allKeywordsForClustering.map(k => k.toLowerCase())))
+      const directBuckets = await clusterKeywordsDirectly(
+        allKeywordsForClustering,
+        brandName,
+        category,
+        userId,
+        pageType
+      )
+      filterBucketsToAllowedKeywords(
+        directBuckets,
+        new Set(allKeywordsForClustering.map((k) => k.toLowerCase()))
+      )
       return directBuckets
     } catch (error: any) {
       if (shouldUseDeterministicClusteringFallback(error)) {
@@ -2064,7 +2289,10 @@ export async function clusterKeywordsByIntent(
           error,
           scope: 'direct',
         })
-        filterBucketsToAllowedKeywords(fallbackBuckets, new Set(allKeywordsForClustering.map(k => k.toLowerCase())))
+        filterBucketsToAllowedKeywords(
+          fallbackBuckets,
+          new Set(allKeywordsForClustering.map((k) => k.toLowerCase()))
+        )
         return fallbackBuckets
       }
       throw error
@@ -2073,7 +2301,9 @@ export async function clusterKeywordsByIntent(
 
   // 大批量：分批处理（有限并发）
   const MAX_CONCURRENT_BATCHES = 3
-  console.log(`🚀 大批量模式：将 ${allKeywordsForClustering.length} 个关键词分成 ${batchCount} 个批次并发处理 (最大并发 ${MAX_CONCURRENT_BATCHES})`)
+  console.log(
+    `🚀 大批量模式：将 ${allKeywordsForClustering.length} 个关键词分成 ${batchCount} 个批次并发处理 (最大并发 ${MAX_CONCURRENT_BATCHES})`
+  )
   await progress?.({ phase: 'cluster', message: `语义聚类：分批处理(${batchCount}批)` })
 
   // 1. 分批
@@ -2089,7 +2319,7 @@ export async function clusterKeywordsByIntent(
   // 2. 🔥 2025-12-27 优化：有限并发处理以支持多用户并发
   // 原因：纯串行会影响吞吐量，过度并发又会增加超时风险
   // 优化措施：限制并发 + 增大重试次数 + 随机抖动
-  const maxRetries = 3  // 从2改为3（4次尝试）
+  const maxRetries = 3 // 从2改为3（4次尝试）
   const baseDelay = 5000
   let lastError: any
 
@@ -2108,7 +2338,7 @@ export async function clusterKeywordsByIntent(
             phase: 'cluster',
             current: completed,
             total: batchCount,
-            message: `语义聚类：开始批次 ${current + 1}/${batchCount} (${batches[current].length}个)`
+            message: `语义聚类：开始批次 ${current + 1}/${batchCount} (${batches[current].length}个)`,
           })
           batchResults[current] = await clusterBatchKeywords(
             batches[current],
@@ -2118,7 +2348,7 @@ export async function clusterKeywordsByIntent(
             current + 1,
             batchCount,
             pageType
-          ).catch(error => {
+          ).catch((error) => {
             console.error(`❌ 批次 ${current + 1} 失败:`, error.message)
             throw error
           })
@@ -2127,14 +2357,12 @@ export async function clusterKeywordsByIntent(
             phase: 'cluster',
             current: completed,
             total: batchCount,
-            message: `语义聚类：完成批次 ${current + 1}/${batchCount}`
+            message: `语义聚类：完成批次 ${current + 1}/${batchCount}`,
           })
         }
       }
 
-      const workerCount = retryCount === 0
-        ? Math.min(MAX_CONCURRENT_BATCHES, batches.length)
-        : 1
+      const workerCount = retryCount === 0 ? Math.min(MAX_CONCURRENT_BATCHES, batches.length) : 1
       if (retryCount > 0 && workerCount === 1) {
         console.warn(`⚠️ 分批聚类重试阶段降级为串行执行（第 ${retryCount + 1} 轮）`)
       }
@@ -2144,7 +2372,10 @@ export async function clusterKeywordsByIntent(
       // 3. 合并结果
       await progress?.({ phase: 'cluster', message: '语义聚类：合并批次结果' })
       const mergedBuckets = mergeBatchResults(batchResults)
-      filterBucketsToAllowedKeywords(mergedBuckets, new Set(allKeywordsForClustering.map(k => k.toLowerCase())))
+      filterBucketsToAllowedKeywords(
+        mergedBuckets,
+        new Set(allKeywordsForClustering.map((k) => k.toLowerCase()))
+      )
 
       // 4. 验证结果（店铺/单品分别处理）
       if (pageType === 'store') {
@@ -2181,13 +2412,13 @@ export async function clusterKeywordsByIntent(
       if (retryCount < maxRetries && retryable) {
         // 🔥 2025-12-27 优化：添加随机抖动，避免重试风暴
         const baseDelayMs = baseDelay * Math.pow(2, retryCount)
-        const jitter = Math.random() * 2000  // 0-2秒随机抖动
-        const delay = Math.min(baseDelayMs + jitter, 60000)  // 最多60秒
-        const errorInfo = status
-          ? `HTTP ${status}`
-          : String(error?.message || '').substring(0, 80)
-        console.warn(`⚠️ 分批聚类第 ${retryCount + 1} 次失败 (${errorInfo})，${(delay / 1000).toFixed(1)}s 后重试...`)
-        await new Promise(resolve => setTimeout(resolve, delay))
+        const jitter = Math.random() * 2000 // 0-2秒随机抖动
+        const delay = Math.min(baseDelayMs + jitter, 60000) // 最多60秒
+        const errorInfo = status ? `HTTP ${status}` : String(error?.message || '').substring(0, 80)
+        console.warn(
+          `⚠️ 分批聚类第 ${retryCount + 1} 次失败 (${errorInfo})，${(delay / 1000).toFixed(1)}s 后重试...`
+        )
+        await new Promise((resolve) => setTimeout(resolve, delay))
         continue
       }
 
@@ -2198,7 +2429,10 @@ export async function clusterKeywordsByIntent(
           error,
           scope: 'batch',
         })
-        filterBucketsToAllowedKeywords(fallbackBuckets, new Set(allKeywordsForClustering.map(k => k.toLowerCase())))
+        filterBucketsToAllowedKeywords(
+          fallbackBuckets,
+          new Set(allKeywordsForClustering.map((k) => k.toLowerCase()))
+        )
         return fallbackBuckets
       }
 
@@ -2207,7 +2441,9 @@ export async function clusterKeywordsByIntent(
     }
   }
 
-  throw new Error(`关键词AI语义分类失败（重试${maxRetries}次均失败）: ${lastError?.message || '未知错误'}`)
+  throw new Error(
+    `关键词AI语义分类失败（重试${maxRetries}次均失败）: ${lastError?.message || '未知错误'}`
+  )
 }
 
 /**
@@ -2223,7 +2459,7 @@ async function clusterKeywordsDirectly(
   pageType: 'product' | 'store' = 'product'
 ): Promise<KeywordBuckets | StoreKeywordBuckets> {
   // 🔥 2025-12-27: 增加重试次数，与分批处理保持一致
-  const maxRetries = 3  // 🔥 从2改为3（4次尝试）
+  const maxRetries = 3 // 🔥 从2改为3（4次尝试）
   const baseDelay = 5000
   let lastError: any
 
@@ -2252,9 +2488,9 @@ async function clusterKeywordsDirectly(
               intent: { type: 'STRING' as const },
               intentEn: { type: 'STRING' as const },
               description: { type: 'STRING' as const },
-              keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } }
+              keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } },
             },
-            required: ['intent', 'intentEn', 'description', 'keywords']
+            required: ['intent', 'intentEn', 'description', 'keywords'],
           },
           bucketB: {
             type: 'OBJECT' as const,
@@ -2262,9 +2498,9 @@ async function clusterKeywordsDirectly(
               intent: { type: 'STRING' as const },
               intentEn: { type: 'STRING' as const },
               description: { type: 'STRING' as const },
-              keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } }
+              keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } },
             },
-            required: ['intent', 'intentEn', 'description', 'keywords']
+            required: ['intent', 'intentEn', 'description', 'keywords'],
           },
           bucketC: {
             type: 'OBJECT' as const,
@@ -2272,9 +2508,9 @@ async function clusterKeywordsDirectly(
               intent: { type: 'STRING' as const },
               intentEn: { type: 'STRING' as const },
               description: { type: 'STRING' as const },
-              keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } }
+              keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } },
             },
-            required: ['intent', 'intentEn', 'description', 'keywords']
+            required: ['intent', 'intentEn', 'description', 'keywords'],
           },
           bucketD: {
             type: 'OBJECT' as const,
@@ -2282,23 +2518,25 @@ async function clusterKeywordsDirectly(
               intent: { type: 'STRING' as const },
               intentEn: { type: 'STRING' as const },
               description: { type: 'STRING' as const },
-              keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } }
+              keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } },
             },
-            required: ['intent', 'intentEn', 'description', 'keywords']
+            required: ['intent', 'intentEn', 'description', 'keywords'],
           },
           // 🆕 v4.16: 店铺链接添加 bucketS
-          ...(isStore ? {
-            bucketS: {
-              type: 'OBJECT' as const,
-              properties: {
-                intent: { type: 'STRING' as const },
-                intentEn: { type: 'STRING' as const },
-                description: { type: 'STRING' as const },
-                keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } }
-              },
-              required: ['intent', 'intentEn', 'description', 'keywords']
-            }
-          } : {}),
+          ...(isStore
+            ? {
+                bucketS: {
+                  type: 'OBJECT' as const,
+                  properties: {
+                    intent: { type: 'STRING' as const },
+                    intentEn: { type: 'STRING' as const },
+                    description: { type: 'STRING' as const },
+                    keywords: { type: 'ARRAY' as const, items: { type: 'STRING' as const } },
+                  },
+                  required: ['intent', 'intentEn', 'description', 'keywords'],
+                },
+              }
+            : {}),
           statistics: {
             type: 'OBJECT' as const,
             properties: {
@@ -2309,26 +2547,44 @@ async function clusterKeywordsDirectly(
               bucketDCount: { type: 'INTEGER' as const },
               // 🆕 v4.16: 店铺链接添加 bucketSCount
               ...(isStore ? { bucketSCount: { type: 'INTEGER' as const } } : {}),
-              balanceScore: { type: 'NUMBER' as const }
+              balanceScore: { type: 'NUMBER' as const },
             },
             required: isStore
-              ? ['totalKeywords', 'bucketACount', 'bucketBCount', 'bucketCCount', 'bucketDCount', 'bucketSCount', 'balanceScore']
-              : ['totalKeywords', 'bucketACount', 'bucketBCount', 'bucketCCount', 'bucketDCount', 'balanceScore']
-          }
+              ? [
+                  'totalKeywords',
+                  'bucketACount',
+                  'bucketBCount',
+                  'bucketCCount',
+                  'bucketDCount',
+                  'bucketSCount',
+                  'balanceScore',
+                ]
+              : [
+                  'totalKeywords',
+                  'bucketACount',
+                  'bucketBCount',
+                  'bucketCCount',
+                  'bucketDCount',
+                  'balanceScore',
+                ],
+          },
         },
         required: isStore
           ? ['bucketA', 'bucketB', 'bucketC', 'bucketD', 'bucketS', 'statistics']
-          : ['bucketA', 'bucketB', 'bucketC', 'bucketD', 'statistics']
+          : ['bucketA', 'bucketB', 'bucketC', 'bucketD', 'statistics'],
       }
 
       // 4. 调用 AI（使用智能模型选择）
-      const aiResponse = await runKeywordClustering({
-        operationType: 'keyword_clustering',
-        prompt,
-        temperature: 0.3,
-        responseSchema,
-        responseMimeType: 'application/json'
-      }, userId)
+      const aiResponse = await runKeywordClustering(
+        {
+          operationType: 'keyword_clustering',
+          prompt,
+          temperature: 0.3,
+          responseSchema,
+          responseMimeType: 'application/json',
+        },
+        userId
+      )
 
       // 5. 记录 token 使用
       if (aiResponse.usage) {
@@ -2345,7 +2601,7 @@ async function clusterKeywordsDirectly(
           outputTokens: aiResponse.usage.outputTokens,
           totalTokens: aiResponse.usage.totalTokens,
           cost,
-          apiType: aiResponse.apiType
+          apiType: aiResponse.apiType,
         })
       }
 
@@ -2355,15 +2611,14 @@ async function clusterKeywordsDirectly(
       } catch (parseError) {
         const likelyTruncated = isLikelyKeywordClusteringTruncated(aiResponse)
         const canSplit =
-          likelyTruncated &&
-          keywords.length >= (KEYWORD_CLUSTERING_MIN_SPLIT_KEYWORDS * 2)
+          likelyTruncated && keywords.length >= KEYWORD_CLUSTERING_MIN_SPLIT_KEYWORDS * 2
 
         if (canSplit) {
           const [leftKeywords, rightKeywords] = splitKeywordsForRetry(keywords)
           console.warn(
             `⚠️ 直接聚类响应疑似被 token 截断 ` +
-            `(${aiResponse.usage?.outputTokens || 0}/${KEYWORD_CLUSTERING_MAX_OUTPUT_TOKENS})，` +
-            `拆分为 ${leftKeywords.length}+${rightKeywords.length} 重试`
+              `(${aiResponse.usage?.outputTokens || 0}/${KEYWORD_CLUSTERING_MAX_OUTPUT_TOKENS})，` +
+              `拆分为 ${leftKeywords.length}+${rightKeywords.length} 重试`
           )
 
           const leftResult = await clusterBatchKeywords(
@@ -2387,7 +2642,9 @@ async function clusterKeywordsDirectly(
             1
           )
 
-          buckets = mergeBatchResults([leftResult, rightResult]) as KeywordBuckets | StoreKeywordBuckets
+          buckets = mergeBatchResults([leftResult, rightResult]) as
+            | KeywordBuckets
+            | StoreKeywordBuckets
         } else {
           console.error('❌ JSON解析失败:', parseError)
           console.error('   原始响应:', aiResponse.text.slice(0, 500))
@@ -2401,16 +2658,24 @@ async function clusterKeywordsDirectly(
       if (isStore) {
         // 店铺链接：验证5个桶
         const storeBuckets = buckets as StoreKeywordBuckets
-        if (!storeBuckets.bucketA || !storeBuckets.bucketB || !storeBuckets.bucketC || !storeBuckets.bucketD || !storeBuckets.bucketS) {
+        if (
+          !storeBuckets.bucketA ||
+          !storeBuckets.bucketB ||
+          !storeBuckets.bucketC ||
+          !storeBuckets.bucketD ||
+          !storeBuckets.bucketS
+        ) {
           console.error('❌ AI返回数据结构不完整(店铺):', buckets)
           throw new Error('AI返回的数据结构不完整：缺少bucketA/B/C/D/S')
         }
 
-        if (!Array.isArray(storeBuckets.bucketA.keywords) ||
-            !Array.isArray(storeBuckets.bucketB.keywords) ||
-            !Array.isArray(storeBuckets.bucketC.keywords) ||
-            !Array.isArray(storeBuckets.bucketD.keywords) ||
-            !Array.isArray(storeBuckets.bucketS.keywords)) {
+        if (
+          !Array.isArray(storeBuckets.bucketA.keywords) ||
+          !Array.isArray(storeBuckets.bucketB.keywords) ||
+          !Array.isArray(storeBuckets.bucketC.keywords) ||
+          !Array.isArray(storeBuckets.bucketD.keywords) ||
+          !Array.isArray(storeBuckets.bucketS.keywords)
+        ) {
           console.error('❌ AI返回的keywords不是数组(店铺):', buckets)
           throw new Error('AI返回的keywords不是数组')
         }
@@ -2436,15 +2701,22 @@ async function clusterKeywordsDirectly(
       } else {
         // 产品链接：验证4个桶
         const productBuckets = buckets as KeywordBuckets
-        if (!productBuckets.bucketA || !productBuckets.bucketB || !productBuckets.bucketC || !productBuckets.bucketD) {
+        if (
+          !productBuckets.bucketA ||
+          !productBuckets.bucketB ||
+          !productBuckets.bucketC ||
+          !productBuckets.bucketD
+        ) {
           console.error('❌ AI返回数据结构不完整(产品):', buckets)
           throw new Error('AI返回的数据结构不完整：缺少bucketA/B/C/D')
         }
 
-        if (!Array.isArray(productBuckets.bucketA.keywords) ||
-            !Array.isArray(productBuckets.bucketB.keywords) ||
-            !Array.isArray(productBuckets.bucketC.keywords) ||
-            !Array.isArray(productBuckets.bucketD.keywords)) {
+        if (
+          !Array.isArray(productBuckets.bucketA.keywords) ||
+          !Array.isArray(productBuckets.bucketB.keywords) ||
+          !Array.isArray(productBuckets.bucketC.keywords) ||
+          !Array.isArray(productBuckets.bucketD.keywords)
+        ) {
           console.error('❌ AI返回的keywords不是数组(产品):', buckets)
           throw new Error('AI返回的keywords不是数组')
         }
@@ -2469,14 +2741,16 @@ async function clusterKeywordsDirectly(
       if (retryCount < maxRetries && retryable) {
         // 🔥 2025-12-27 优化：添加随机抖动，避免重试风暴
         const baseDelayMs = baseDelay * Math.pow(2, retryCount)
-        const jitter = Math.random() * 2000  // 0-2秒随机抖动
-        const delay = Math.min(baseDelayMs + jitter, 60000)  // 最多60秒
+        const jitter = Math.random() * 2000 // 0-2秒随机抖动
+        const delay = Math.min(baseDelayMs + jitter, 60000) // 最多60秒
         const errorInfo = status
           ? `HTTP ${status} ${status === 504 ? '(Gateway Timeout)' : ''}`
           : String(error?.message || '').substring(0, 80)
-        console.warn(`⚠️ AI 聚类第 ${retryCount + 1} 次失败 (${errorInfo})，${(delay / 1000).toFixed(1)}s 后重试...`)
+        console.warn(
+          `⚠️ AI 聚类第 ${retryCount + 1} 次失败 (${errorInfo})，${(delay / 1000).toFixed(1)}s 后重试...`
+        )
         console.warn(`   错误: ${error.message}`)
-        await new Promise(resolve => setTimeout(resolve, delay))
+        await new Promise((resolve) => setTimeout(resolve, delay))
         continue
       }
 
@@ -2485,7 +2759,9 @@ async function clusterKeywordsDirectly(
     }
   }
 
-  throw new Error(`关键词AI语义分类失败（重试${maxRetries}次均失败）: ${lastError?.message || '未知错误'}`)
+  throw new Error(
+    `关键词AI语义分类失败（重试${maxRetries}次均失败）: ${lastError?.message || '未知错误'}`
+  )
 }
 
 /**
@@ -2497,7 +2773,14 @@ function createEmptyBuckets(): KeywordBuckets {
     bucketB: { ...DEFAULT_PRODUCT_CLUSTER_BUCKETS.B, keywords: [] },
     bucketC: { ...DEFAULT_PRODUCT_CLUSTER_BUCKETS.C, keywords: [] },
     bucketD: { ...DEFAULT_PRODUCT_CLUSTER_BUCKETS.D, keywords: [] },
-    statistics: { totalKeywords: 0, bucketACount: 0, bucketBCount: 0, bucketCCount: 0, bucketDCount: 0, balanceScore: 1.0 }
+    statistics: {
+      totalKeywords: 0,
+      bucketACount: 0,
+      bucketBCount: 0,
+      bucketCCount: 0,
+      bucketDCount: 0,
+      balanceScore: 1.0,
+    },
   }
 }
 
@@ -2511,7 +2794,15 @@ function createEmptyStoreBuckets(): StoreKeywordBuckets {
     bucketC: { ...DEFAULT_STORE_CLUSTER_BUCKETS.C, keywords: [] },
     bucketD: { ...DEFAULT_STORE_CLUSTER_BUCKETS.D, keywords: [] },
     bucketS: { ...DEFAULT_STORE_CLUSTER_BUCKETS.S, keywords: [] },
-    statistics: { totalKeywords: 0, bucketACount: 0, bucketBCount: 0, bucketCCount: 0, bucketDCount: 0, bucketSCount: 0, balanceScore: 1.0 }
+    statistics: {
+      totalKeywords: 0,
+      bucketACount: 0,
+      bucketBCount: 0,
+      bucketCCount: 0,
+      bucketDCount: 0,
+      bucketSCount: 0,
+      balanceScore: 1.0,
+    },
   }
 }
 
@@ -2528,12 +2819,12 @@ function validateBuckets(buckets: KeywordBuckets, originalKeywords: string[]): v
     ...(buckets.bucketA?.keywords || []),
     ...(buckets.bucketB?.keywords || []),
     ...(buckets.bucketC?.keywords || []),
-    ...(buckets.bucketD?.keywords || [])
+    ...(buckets.bucketD?.keywords || []),
   ]
 
   // 检查是否有遗漏
-  const missing = originalKeywords.filter(kw =>
-    !allBucketKeywords.some(bkw => bkw.toLowerCase() === kw.toLowerCase())
+  const missing = originalKeywords.filter(
+    (kw) => !allBucketKeywords.some((bkw) => bkw.toLowerCase() === kw.toLowerCase())
   )
 
   if (missing.length > 0) {
@@ -2570,12 +2861,12 @@ function validateStoreBuckets(buckets: StoreKeywordBuckets, originalKeywords: st
     ...(buckets.bucketB?.keywords || []),
     ...(buckets.bucketC?.keywords || []),
     ...(buckets.bucketD?.keywords || []),
-    ...(buckets.bucketS?.keywords || [])
+    ...(buckets.bucketS?.keywords || []),
   ]
 
   // 检查是否有遗漏
-  const missing = originalKeywords.filter(kw =>
-    !allBucketKeywords.some(bkw => bkw.toLowerCase() === kw.toLowerCase())
+  const missing = originalKeywords.filter(
+    (kw) => !allBucketKeywords.some((bkw) => bkw.toLowerCase() === kw.toLowerCase())
   )
 
   if (missing.length > 0) {
@@ -2603,17 +2894,19 @@ function validateStoreBuckets(buckets: StoreKeywordBuckets, originalKeywords: st
     buckets.bucketB?.keywords?.length || 0,
     buckets.bucketC?.keywords?.length || 0,
     buckets.bucketD?.keywords?.length || 0,
-    buckets.bucketS?.keywords?.length || 0
+    buckets.bucketS?.keywords?.length || 0,
   ]
-  const nonZeroCounts = counts.filter(c => c > 0).length
+  const nonZeroCounts = counts.filter((c) => c > 0).length
   const maxCount = Math.max(...counts)
-  const minCount = Math.min(...counts.filter(c => c > 0))
+  const minCount = Math.min(...counts.filter((c) => c > 0))
 
   // 计算均衡度：使用 AI 报告的 balanceScore 或手动计算
   const reportedBalanceScore = buckets.statistics?.balanceScore ?? calculateBalanceScore(counts)
 
   // 打印各桶分布情况，便于调试
-  console.log(`   📊 店铺桶分布: A=${counts[0]}, B=${counts[1]}, C=${counts[2]}, D=${counts[3]}, S=${counts[4]}`)
+  console.log(
+    `   📊 店铺桶分布: A=${counts[0]}, B=${counts[1]}, C=${counts[2]}, D=${counts[3]}, S=${counts[4]}`
+  )
   console.log(`   📊 有效桶数: ${nonZeroCounts}/5, 最大桶=${maxCount}, 最小非空桶=${minCount}`)
   console.log(`   📊 均衡度: ${reportedBalanceScore.toFixed(2)}`)
 
@@ -2638,8 +2931,8 @@ function calculateBalanceScore(counts: number[]): number {
   const total = counts.reduce((a, b) => a + b, 0)
   if (total === 0) return 1.0
   const avg = total / counts.length
-  const maxDiff = Math.max(...counts.map(c => Math.abs(c - avg)))
-  return Math.max(0, 1 - (maxDiff / total))
+  const maxDiff = Math.max(...counts.map((c) => Math.abs(c - avg)))
+  return Math.max(0, 1 - maxDiff / total)
 }
 
 function normalizeKeywordsForBuckets(keywords: string[]): string[] {
@@ -2694,7 +2987,7 @@ function filterBucketsToAllowedKeywords(
   allowedKeywords: Set<string>
 ): void {
   const filterList = (list?: string[]) =>
-    (list || []).filter(kw => allowedKeywords.has(String(kw || '').toLowerCase()))
+    (list || []).filter((kw) => allowedKeywords.has(String(kw || '').toLowerCase()))
 
   buckets.bucketA.keywords = filterList(buckets.bucketA.keywords)
   buckets.bucketB.keywords = filterList(buckets.bucketB.keywords)
@@ -2710,7 +3003,10 @@ function filterBucketsToAllowedKeywords(
   }
 }
 
-function redistributeStoreBucketsFromS(buckets: StoreKeywordBuckets, originalKeywords: string[]): void {
+function redistributeStoreBucketsFromS(
+  buckets: StoreKeywordBuckets,
+  originalKeywords: string[]
+): void {
   const all = normalizeKeywordsForBuckets([
     ...originalKeywords,
     ...(buckets.bucketA?.keywords || []),
@@ -2730,8 +3026,7 @@ function redistributeStoreBucketsFromS(buckets: StoreKeywordBuckets, originalKey
     /\b(best|top|popular|recommended|recommendation|features?|feature|compare|comparison|vs|alternatives?|examples?|templates?|list)\b/i
   const brandTrustPattern =
     /\b(official|authorized|authentic|download|app|signup|sign[- ]?up|login|subscribe|subscription|plan|pricing)\b/i
-  const productTypePattern =
-    /\b(ai|chatbot|assistant|companion|virtual|friend|conversation)\b/i
+  const productTypePattern = /\b(ai|chatbot|assistant|companion|virtual|friend|conversation)\b/i
 
   const assigned: Record<'A' | 'B' | 'C' | 'D', string[]> = { A: [], B: [], C: [], D: [] }
 
@@ -2797,11 +3092,12 @@ function applyStoreBucketPostProcessing(buckets: StoreKeywordBuckets): void {
   console.log(`\n🔧 应用后处理规则修正关键词分配...`)
 
   let totalMoved = 0
-  const moves: Array<{keyword: string; from: string; to: string; reason: string}> = []
+  const moves: Array<{ keyword: string; from: string; to: string; reason: string }> = []
 
   // 定义匹配规则
-  const PROMO_PRICE_PATTERNS = /\b(discount|sale|deal|coupon|promo|code|offer|clearance|price|cost|cheap|affordable|budget)\b/i
-  const MODEL_PATTERNS = /\b(s\d+|q\d+|s7|s8|q5|q7|max|ultra|pro(?!\s*store))\b/i  // 排除 "pro store"
+  const PROMO_PRICE_PATTERNS =
+    /\b(discount|sale|deal|coupon|promo|code|offer|clearance|price|cost|cheap|affordable|budget)\b/i
+  const MODEL_PATTERNS = /\b(s\d+|q\d+|s7|s8|q5|q7|max|ultra|pro(?!\s*store))\b/i // 排除 "pro store"
   const REVIEW_PATTERNS = /\b(review|rating|testimonial|feedback|comment|opinion)\b/i
   const GEO_PATTERNS = /\b(locations?|near\s+me|delivery|shipping|local|store\s+finder)\b/i
 
@@ -2913,14 +3209,14 @@ function applyStoreBucketPostProcessing(buckets: StoreKeywordBuckets): void {
     buckets.statistics.bucketBCount,
     buckets.statistics.bucketCCount,
     buckets.statistics.bucketDCount,
-    buckets.statistics.bucketSCount
+    buckets.statistics.bucketSCount,
   ]
   buckets.statistics.balanceScore = calculateBalanceScore(counts)
 
   // 输出日志
   if (totalMoved > 0) {
     console.log(`   ✅ 后处理完成：移动 ${totalMoved} 个关键词`)
-    moves.slice(0, 10).forEach(m => {
+    moves.slice(0, 10).forEach((m) => {
       console.log(`      "${m.keyword}" (${m.from} → ${m.to}: ${m.reason})`)
     })
     if (moves.length > 10) {
@@ -2966,7 +3262,10 @@ async function resolveActivePromptVersion(
 
     return activePrompt?.version || fallbackVersion
   } catch (error: any) {
-    console.warn(`[resolveActivePromptVersion] Failed to resolve active version for ${promptId}:`, error?.message || error)
+    console.warn(
+      `[resolveActivePromptVersion] Failed to resolve active version for ${promptId}:`,
+      error?.message || error
+    )
     return fallbackVersion
   }
 }
@@ -2983,13 +3282,16 @@ export async function saveKeywordPool(
   promptVersion?: string
 ): Promise<OfferKeywordPool> {
   const db = await getDatabase()
-  const resolvedPromptVersion = promptVersion || await resolveActivePromptVersion(
-    db,
-    KEYWORD_CLUSTERING_PROMPT_ID,
-    KEYWORD_CLUSTERING_PROMPT_VERSION_FALLBACK
-  )
+  const resolvedPromptVersion =
+    promptVersion ||
+    (await resolveActivePromptVersion(
+      db,
+      KEYWORD_CLUSTERING_PROMPT_ID,
+      KEYWORD_CLUSTERING_PROMPT_VERSION_FALLBACK
+    ))
 
-  const totalKeywords = brandKeywords.length +
+  const totalKeywords =
+    brandKeywords.length +
     buckets.bucketA.keywords.length +
     buckets.bucketB.keywords.length +
     buckets.bucketC.keywords.length +
@@ -3048,7 +3350,7 @@ export async function saveKeywordPool(
         model || null,
         resolvedPromptVersion,
         buckets.statistics.balanceScore,
-        offerId
+        offerId,
       ]
     )
 
@@ -3080,7 +3382,7 @@ export async function saveKeywordPool(
       totalKeywords,
       model || null,
       resolvedPromptVersion,
-      buckets.statistics.balanceScore
+      buckets.statistics.balanceScore,
     ]
   )
 
@@ -3105,7 +3407,7 @@ async function saveKeywordPoolWithData(
     statistics: { totalKeywords: number; balanceScore: number }
   },
   pageType: 'product' | 'store' = 'product',
-  storeBuckets?: StoreKeywordBuckets,  // 🆕 v4.16: 店铺桶数据（可选）
+  storeBuckets?: StoreKeywordBuckets, // 🆕 v4.16: 店铺桶数据（可选）
   storeBucketData?: {
     bucketA: PoolKeywordData[]
     bucketB: PoolKeywordData[]
@@ -3131,21 +3433,36 @@ async function saveKeywordPoolWithData(
   // 🆕 v4.16: 店铺分桶JSON（优先保存带搜索量的数据）
   const storeBucketAJson = storeBucketData
     ? serializeKeywordArrayForDb(storeBucketData.bucketA, db.type)
-    : (storeBuckets ? serializeKeywordArrayForDb(storeBuckets.bucketA.keywords, db.type) : emptyArrayJson)
+    : storeBuckets
+      ? serializeKeywordArrayForDb(storeBuckets.bucketA.keywords, db.type)
+      : emptyArrayJson
   const storeBucketBJson = storeBucketData
     ? serializeKeywordArrayForDb(storeBucketData.bucketB, db.type)
-    : (storeBuckets ? serializeKeywordArrayForDb(storeBuckets.bucketB.keywords, db.type) : emptyArrayJson)
+    : storeBuckets
+      ? serializeKeywordArrayForDb(storeBuckets.bucketB.keywords, db.type)
+      : emptyArrayJson
   const storeBucketCJson = storeBucketData
     ? serializeKeywordArrayForDb(storeBucketData.bucketC, db.type)
-    : (storeBuckets ? serializeKeywordArrayForDb(storeBuckets.bucketC.keywords, db.type) : emptyArrayJson)
+    : storeBuckets
+      ? serializeKeywordArrayForDb(storeBuckets.bucketC.keywords, db.type)
+      : emptyArrayJson
   const storeBucketDJson = storeBucketData
     ? serializeKeywordArrayForDb(storeBucketData.bucketD, db.type)
-    : (storeBuckets ? serializeKeywordArrayForDb(storeBuckets.bucketD.keywords, db.type) : emptyArrayJson)
+    : storeBuckets
+      ? serializeKeywordArrayForDb(storeBuckets.bucketD.keywords, db.type)
+      : emptyArrayJson
   const storeBucketSJson = storeBucketData
     ? serializeKeywordArrayForDb(storeBucketData.bucketS, db.type)
-    : (storeBuckets ? serializeKeywordArrayForDb(storeBuckets.bucketS.keywords, db.type) : emptyArrayJson)
+    : storeBuckets
+      ? serializeKeywordArrayForDb(storeBuckets.bucketS.keywords, db.type)
+      : emptyArrayJson
 
-  const totalKeywords = brandKeywords.length + buckets.bucketA.keywords.length + buckets.bucketB.keywords.length + buckets.bucketC.keywords.length + buckets.bucketD.keywords.length
+  const totalKeywords =
+    brandKeywords.length +
+    buckets.bucketA.keywords.length +
+    buckets.bucketB.keywords.length +
+    buckets.bucketC.keywords.length +
+    buckets.bucketD.keywords.length
 
   // 检查是否已存在
   const existing = await db.queryOne<{ id: number }>(
@@ -3187,7 +3504,7 @@ async function saveKeywordPoolWithData(
       'store_bucket_c_intent = ?',
       'store_bucket_d_intent = ?',
       'store_bucket_s_intent = ?',
-      `updated_at = ${db.type === 'postgres' ? 'NOW()' : "datetime('now')"}`
+      `updated_at = ${db.type === 'postgres' ? 'NOW()' : "datetime('now')"}`,
     ]
 
     const updateValues = [
@@ -3201,7 +3518,7 @@ async function saveKeywordPoolWithData(
       buckets.bucketC.intent,
       buckets.bucketD.intent,
       totalKeywords,
-      'gemini',  // model
+      'gemini', // model
       clusteringPromptVersion,
       buckets.statistics.balanceScore,
       pageType,
@@ -3215,7 +3532,7 @@ async function saveKeywordPoolWithData(
       storeBucketCIntent,
       storeBucketDIntent,
       storeBucketSIntent,
-      offerId
+      offerId,
     ]
 
     await db.exec(
@@ -3229,14 +3546,32 @@ async function saveKeywordPoolWithData(
 
   // 🆕 v4.16: 创建新记录（包含店铺分桶）
   const insertFields = [
-    'offer_id', 'user_id',
+    'offer_id',
+    'user_id',
     'brand_keywords',
-    'bucket_a_keywords', 'bucket_b_keywords', 'bucket_c_keywords', 'bucket_d_keywords',
-    'bucket_a_intent', 'bucket_b_intent', 'bucket_c_intent', 'bucket_d_intent',
-    'total_keywords', 'clustering_model', 'clustering_prompt_version', 'balance_score',
+    'bucket_a_keywords',
+    'bucket_b_keywords',
+    'bucket_c_keywords',
+    'bucket_d_keywords',
+    'bucket_a_intent',
+    'bucket_b_intent',
+    'bucket_c_intent',
+    'bucket_d_intent',
+    'total_keywords',
+    'clustering_model',
+    'clustering_prompt_version',
+    'balance_score',
     'link_type',
-    'store_bucket_a_keywords', 'store_bucket_b_keywords', 'store_bucket_c_keywords', 'store_bucket_d_keywords', 'store_bucket_s_keywords',
-    'store_bucket_a_intent', 'store_bucket_b_intent', 'store_bucket_c_intent', 'store_bucket_d_intent', 'store_bucket_s_intent'
+    'store_bucket_a_keywords',
+    'store_bucket_b_keywords',
+    'store_bucket_c_keywords',
+    'store_bucket_d_keywords',
+    'store_bucket_s_keywords',
+    'store_bucket_a_intent',
+    'store_bucket_b_intent',
+    'store_bucket_c_intent',
+    'store_bucket_d_intent',
+    'store_bucket_s_intent',
   ]
 
   const insertValues = [
@@ -3265,7 +3600,7 @@ async function saveKeywordPoolWithData(
     storeBucketBIntent,
     storeBucketCIntent,
     storeBucketDIntent,
-    storeBucketSIntent
+    storeBucketSIntent,
   ]
 
   const placeholders = insertFields.map(() => '?').join(', ')
@@ -3275,7 +3610,9 @@ async function saveKeywordPoolWithData(
     insertValues
   )
 
-  console.log(`✅ 关键词池已创建: Offer #${offerId}, ID #${result.lastInsertRowid} (${pageType}链接, 店铺5桶: ${storeBuckets ? '是' : '否'})`)
+  console.log(
+    `✅ 关键词池已创建: Offer #${offerId}, ID #${result.lastInsertRowid} (${pageType}链接, 店铺5桶: ${storeBuckets ? '是' : '否'})`
+  )
   return getKeywordPoolByOfferId(offerId) as Promise<OfferKeywordPool>
 }
 
@@ -3318,21 +3655,66 @@ function extractCategorySignalsFromScrapedData(scrapedData: string | null | unde
 }
 
 const STRUCTURED_MODEL_TOKEN_RE = /\b[A-Z]{1,4}[- ]?\d{2,6}[A-Z0-9-]{0,8}\b/g
-const STRUCTURED_SPEC_TOKEN_RE = /\b\d{2,5}\s?(?:gpd|btu|mah|wh|w|kw|v|psi|db|hz|khz|mhz|ghz|mm|cm|inch|in|ft|l|ml|kg|lb|lbs)\b/ig
-const STRUCTURED_CERT_TOKEN_RE = /\b(?:nsf\s*\/?\s*ansi\s*\d{1,3}|nsf\s*\d{1,3}|ansi\s*\d{1,3}|etl|ul|fcc|ce|rohs)\b/ig
+const STRUCTURED_SPEC_TOKEN_RE =
+  /\b\d{2,5}\s?(?:gpd|btu|mah|wh|w|kw|v|psi|db|hz|khz|mhz|ghz|mm|cm|inch|in|ft|l|ml|kg|lb|lbs)\b/gi
+const STRUCTURED_CERT_TOKEN_RE =
+  /\b(?:nsf\s*\/?\s*ansi\s*\d{1,3}|nsf\s*\d{1,3}|ansi\s*\d{1,3}|etl|ul|fcc|ce|rohs)\b/gi
 const STRUCTURED_PRODUCT_CORE_STOPWORDS = new Set([
-  'for', 'with', 'without', 'and', 'the', 'new', 'best', 'official', 'store',
-  'system', 'model', 'series', 'version', 'kit', 'set', 'pack',
+  'for',
+  'with',
+  'without',
+  'and',
+  'the',
+  'new',
+  'best',
+  'official',
+  'store',
+  'system',
+  'model',
+  'series',
+  'version',
+  'kit',
+  'set',
+  'pack',
 ])
 const TARGET_LANGUAGE_TRANSLATION_MAX_BATCH_SIZE = 24
 const TARGET_LANGUAGE_TRANSLATION_NEUTRAL_TOKENS = new Set([
-  'nsf', 'ansi', 'etl', 'ul', 'fcc', 'ce', 'rohs',
-  'gpd', 'btu', 'mah', 'wh', 'w', 'kw', 'v', 'psi', 'db', 'hz', 'khz', 'mhz', 'ghz',
-  'mm', 'cm', 'inch', 'in', 'ft', 'l', 'ml', 'kg', 'lb', 'lbs',
+  'nsf',
+  'ansi',
+  'etl',
+  'ul',
+  'fcc',
+  'ce',
+  'rohs',
+  'gpd',
+  'btu',
+  'mah',
+  'wh',
+  'w',
+  'kw',
+  'v',
+  'psi',
+  'db',
+  'hz',
+  'khz',
+  'mhz',
+  'ghz',
+  'mm',
+  'cm',
+  'inch',
+  'in',
+  'ft',
+  'l',
+  'ml',
+  'kg',
+  'lb',
+  'lbs',
 ])
 
 function parseBooleanFeatureFlag(value: string | undefined, fallback: boolean): boolean {
-  const normalized = String(value || '').trim().toLowerCase()
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   if (!normalized) return fallback
   if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true
   if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false
@@ -3354,9 +3736,7 @@ function buildTranslationPrompt(params: {
   keywords: string[]
 }): string {
   const reviewedInputs: InputReview[] = []
-  const numbered = params.keywords
-    .map((keyword, index) => `${index}. ${keyword}`)
-    .join('\n')
+  const numbered = params.keywords.map((keyword, index) => `${index}. ${keyword}`).join('\n')
 
   const variables = {
     targetLanguage: sanitizePromptInlineValue(
@@ -3381,9 +3761,7 @@ function buildTranslationPrompt(params: {
   })
 }
 
-function parseTranslationResponse(
-  text: string
-): Array<{ index: number; keyword: string }> {
+function parseTranslationResponse(text: string): Array<{ index: number; keyword: string }> {
   const parseRawJson = (rawText: string): any => {
     return JSON.parse(rawText)
   }
@@ -3408,15 +3786,18 @@ function parseTranslationResponse(
   }
 
   if (!parsed || typeof parsed !== 'object') return []
-  const translations = Array.isArray((parsed as any).translations) ? (parsed as any).translations : []
+  const translations = Array.isArray((parsed as any).translations)
+    ? (parsed as any).translations
+    : []
 
   return translations
     .map((item: any) => ({
       index: Number(item?.index),
       keyword: String(item?.keyword || '').trim(),
     }))
-    .filter((item: { index: number; keyword: string }) =>
-      Number.isInteger(item.index) && item.index >= 0 && item.keyword.length > 0
+    .filter(
+      (item: { index: number; keyword: string }) =>
+        Number.isInteger(item.index) && item.index >= 0 && item.keyword.length > 0
     )
 }
 
@@ -3453,8 +3834,8 @@ function shouldAttemptTranslationForKeyword(params: {
   const tokens = normalized.split(/\s+/).filter(Boolean)
   if (tokens.length === 0) return false
 
-  const hasNonNeutralToken = tokens.some((token) =>
-    !isNeutralTokenForTranslation(token, neutralTokens)
+  const hasNonNeutralToken = tokens.some(
+    (token) => !isNeutralTokenForTranslation(token, neutralTokens)
   )
   return hasNonNeutralToken
 }
@@ -3476,41 +3857,47 @@ async function translateKeywordsToTargetLanguage(params: {
   if (!targetLanguage || params.keywords.length === 0) return out
   const promptTemplate = await loadPrompt('keyword_translation_normalization')
 
-  for (const chunk of splitIntoChunks(params.keywords, TARGET_LANGUAGE_TRANSLATION_MAX_BATCH_SIZE)) {
-    const uniqueChunkKeywords = Array.from(new Set(
-      chunk.map((keyword) => String(keyword || '').trim()).filter(Boolean)
-    ))
+  for (const chunk of splitIntoChunks(
+    params.keywords,
+    TARGET_LANGUAGE_TRANSLATION_MAX_BATCH_SIZE
+  )) {
+    const uniqueChunkKeywords = Array.from(
+      new Set(chunk.map((keyword) => String(keyword || '').trim()).filter(Boolean))
+    )
     if (uniqueChunkKeywords.length === 0) continue
 
     try {
-      const aiResponse = await generateContent({
-        operationType: 'keyword_translation_normalization',
-        prompt: buildTranslationPrompt({
-          promptTemplate,
-          targetLanguage,
-          keywords: uniqueChunkKeywords,
-        }),
-        temperature: 0.1,
-        maxOutputTokens: 2048,
-        responseSchema: {
-          type: 'OBJECT',
-          properties: {
-            translations: {
-              type: 'ARRAY',
-              items: {
-                type: 'OBJECT',
-                properties: {
-                  index: { type: 'INTEGER' },
-                  keyword: { type: 'STRING' },
+      const aiResponse = await generateContent(
+        {
+          operationType: 'keyword_translation_normalization',
+          prompt: buildTranslationPrompt({
+            promptTemplate,
+            targetLanguage,
+            keywords: uniqueChunkKeywords,
+          }),
+          temperature: 0.1,
+          maxOutputTokens: 2048,
+          responseSchema: {
+            type: 'OBJECT',
+            properties: {
+              translations: {
+                type: 'ARRAY',
+                items: {
+                  type: 'OBJECT',
+                  properties: {
+                    index: { type: 'INTEGER' },
+                    keyword: { type: 'STRING' },
+                  },
+                  required: ['index', 'keyword'],
                 },
-                required: ['index', 'keyword'],
               },
             },
+            required: ['translations'],
           },
-          required: ['translations'],
+          responseMimeType: 'application/json',
         },
-        responseMimeType: 'application/json',
-      }, userId)
+        userId
+      )
 
       if (aiResponse.usage) {
         const cost = estimateTokenCost(
@@ -3571,10 +3958,12 @@ async function normalizeKeywordTermsByTargetLanguage(params: {
       pureBrandKeywords: params.pureBrandKeywords,
     })
     if (compatibility.hardReject) {
-      if (shouldAttemptTranslationForKeyword({
-        keyword: raw,
-        pureBrandKeywords: params.pureBrandKeywords,
-      })) {
+      if (
+        shouldAttemptTranslationForKeyword({
+          keyword: raw,
+          pureBrandKeywords: params.pureBrandKeywords,
+        })
+      ) {
         candidatesNeedingTranslation.push(raw)
         continue
       }
@@ -3690,11 +4079,7 @@ function extractStructuredEntitiesFromTexts(texts: string[]): {
 
     const certMatches = rawText.match(STRUCTURED_CERT_TOKEN_RE) || []
     for (const match of certMatches) {
-      const normalized = match
-        .toLowerCase()
-        .replace(/[\/]+/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
+      const normalized = match.toLowerCase().replace(/[\/]+/g, ' ').replace(/\s+/g, ' ').trim()
       if (!normalized) continue
       certTokens.add(normalized)
     }
@@ -3713,11 +4098,15 @@ function buildStructuredProductCorePhrase(offer: Offer): string {
       .flatMap((item) => normalizeGoogleAdsKeyword(item)?.split(/\s+/) || [])
       .filter(Boolean)
   )
-  const tokens = (normalizeGoogleAdsKeyword([
-    String(offer.product_name || ''),
-    String((offer as any).product_title || ''),
-    String(offer.category || ''),
-  ].join(' ')) || '')
+  const tokens = (
+    normalizeGoogleAdsKeyword(
+      [
+        String(offer.product_name || ''),
+        String((offer as any).product_title || ''),
+        String(offer.category || ''),
+      ].join(' ')
+    ) || ''
+  )
     .split(/\s+/)
     .map((item) => item.trim())
     .filter(Boolean)
@@ -3740,9 +4129,9 @@ function buildStructuredModelSpecExpansionKeywords(params: {
   const sourceTexts = collectStructuredExpansionSourceTexts(params.offer)
   const entities = extractStructuredEntitiesFromTexts(sourceTexts)
   if (
-    entities.modelTokens.length === 0
-    && entities.specTokens.length === 0
-    && entities.certTokens.length === 0
+    entities.modelTokens.length === 0 &&
+    entities.specTokens.length === 0 &&
+    entities.certTokens.length === 0
   ) {
     return []
   }
@@ -3803,13 +4192,7 @@ const STORE_PRODUCT_LINK_NAME_FIELDS = [
   'sku',
 ] as const
 
-const STORE_PRODUCT_LINK_URL_FIELDS = [
-  'url',
-  'link',
-  'href',
-  'productUrl',
-  'productLink',
-] as const
+const STORE_PRODUCT_LINK_URL_FIELDS = ['url', 'link', 'href', 'productUrl', 'productLink'] as const
 
 const STORE_PRODUCT_LINK_QUERY_NAME_KEYS = new Set([
   'name',
@@ -3895,7 +4278,7 @@ function extractStoreProductNameCandidatesFromUrl(urlLike: string): string[] {
     const parsed = new URL(trimmed)
     const pathSegments = parsed.pathname
       .split('/')
-      .map(segment => normalizeStoreProductNameCandidate(safeDecodeUriComponent(segment)))
+      .map((segment) => normalizeStoreProductNameCandidate(safeDecodeUriComponent(segment)))
       .filter(Boolean)
 
     for (let i = pathSegments.length - 1; i >= 0; i -= 1) {
@@ -3976,11 +4359,11 @@ function emptyVerifiedSourceKeywordMap(): VerifiedSourceKeywordMap {
   }
 }
 
-type VerifiedSourceNormalizationKey =
-  | keyof VerifiedSourceKeywordMap
-  | 'STRUCTURED_EXPANSION'
+type VerifiedSourceNormalizationKey = keyof VerifiedSourceKeywordMap | 'STRUCTURED_EXPANSION'
 
-type NormalizedKeywordTermsResult = Awaited<ReturnType<typeof normalizeKeywordTermsByTargetLanguage>>
+type NormalizedKeywordTermsResult = Awaited<
+  ReturnType<typeof normalizeKeywordTermsByTargetLanguage>
+>
 
 function createEmptyNormalizedKeywordTermsResult(): NormalizedKeywordTermsResult {
   return {
@@ -3990,7 +4373,10 @@ function createEmptyNormalizedKeywordTermsResult(): NormalizedKeywordTermsResult
   }
 }
 
-function createEmptyVerifiedSourceNormalizationMap(): Record<VerifiedSourceNormalizationKey, NormalizedKeywordTermsResult> {
+function createEmptyVerifiedSourceNormalizationMap(): Record<
+  VerifiedSourceNormalizationKey,
+  NormalizedKeywordTermsResult
+> {
   return {
     TITLE_EXTRACT: createEmptyNormalizedKeywordTermsResult(),
     ABOUT_EXTRACT: createEmptyNormalizedKeywordTermsResult(),
@@ -4026,8 +4412,7 @@ function sumVerifiedSourceNormalizationMetric(
   normalizedByKey: Record<VerifiedSourceNormalizationKey, NormalizedKeywordTermsResult>,
   field: 'removed' | 'translated'
 ): number {
-  return Object.values(normalizedByKey)
-    .reduce((sum, item) => sum + Number(item[field] || 0), 0)
+  return Object.values(normalizedByKey).reduce((sum, item) => sum + Number(item[field] || 0), 0)
 }
 
 async function buildVerifiedSourceKeywordData(
@@ -4039,7 +4424,7 @@ async function buildVerifiedSourceKeywordData(
   const storeProductNames = extractStoreProductNamesFromLinks(offer.store_product_links)
 
   const productFeatures = [offer.product_highlights, offer.unique_selling_points]
-    .map(value => String(value || '').trim())
+    .map((value) => String(value || '').trim())
     .filter(Boolean)
     .join('; ')
 
@@ -4109,11 +4494,15 @@ async function buildVerifiedSourceKeywordData(
           ? 'EXACT'
           : inferDefaultKeywordMatchType(keyword, pureBrandKeywords),
         relevanceScore:
-          source === 'HOT_PRODUCT_AGGREGATE' ? 0.98 :
-          source === 'PARAM_EXTRACT' ? 0.96 :
-          source === 'TITLE_EXTRACT' ? 0.94 :
-          source === 'ABOUT_EXTRACT' ? 0.92 :
-          0.9,
+          source === 'HOT_PRODUCT_AGGREGATE'
+            ? 0.98
+            : source === 'PARAM_EXTRACT'
+              ? 0.96
+              : source === 'TITLE_EXTRACT'
+                ? 0.94
+                : source === 'ABOUT_EXTRACT'
+                  ? 0.92
+                  : 0.9,
         qualityTier: 'HIGH',
       })
     }
@@ -4127,7 +4516,10 @@ async function buildVerifiedSourceKeywordData(
       [...normalizedByKey.PARAM_EXTRACT.keywords, ...normalizedByKey.STRUCTURED_EXPANSION.keywords],
       'PARAM_EXTRACT'
     ),
-    HOT_PRODUCT_AGGREGATE: createKeywordData(normalizedByKey.HOT_PRODUCT_AGGREGATE.keywords, 'HOT_PRODUCT_AGGREGATE'),
+    HOT_PRODUCT_AGGREGATE: createKeywordData(
+      normalizedByKey.HOT_PRODUCT_AGGREGATE.keywords,
+      'HOT_PRODUCT_AGGREGATE'
+    ),
     PAGE_EXTRACT: createKeywordData(normalizedByKey.PAGE_EXTRACT.keywords, 'PAGE_EXTRACT'),
   }
 
@@ -4223,12 +4615,13 @@ function normalizeParsedPoolKeywordItem(raw: unknown): PoolKeywordData | null {
   const rawSourceSubtype = String(item.sourceSubtype || '').trim()
   const numericSearchVolume = Number(item.searchVolume || 0)
   const searchVolume = Number.isFinite(numericSearchVolume) ? numericSearchVolume : 0
-  const matchType = String(item.matchType || '').trim().toUpperCase()
-  const normalizedMatchType = (
+  const matchType = String(item.matchType || '')
+    .trim()
+    .toUpperCase()
+  const normalizedMatchType =
     matchType === 'EXACT' || matchType === 'PHRASE' || matchType === 'BROAD'
-  )
-    ? matchType as 'EXACT' | 'PHRASE' | 'BROAD'
-    : 'PHRASE'
+      ? (matchType as 'EXACT' | 'PHRASE' | 'BROAD')
+      : 'PHRASE'
   const hasExplicitSourceMetadata = Boolean(rawSource || rawSourceType || rawSourceSubtype)
   if (hasExplicitSourceMetadata) {
     const source = rawSource || 'KEYWORD_POOL'
@@ -4280,7 +4673,7 @@ function parseKeywordArray(data: unknown): PoolKeywordData[] {
       keyword: kw,
       searchVolume: 0,
       source: 'LEGACY',
-      matchType: 'PHRASE'
+      matchType: 'PHRASE',
     }))
 }
 
@@ -4291,10 +4684,9 @@ function parseKeywordArray(data: unknown): PoolKeywordData[] {
 export async function getKeywordPoolByOfferId(offerId: number): Promise<OfferKeywordPool | null> {
   const db = await getDatabase()
 
-  const row = await db.queryOne<any>(
-    'SELECT * FROM offer_keyword_pools WHERE offer_id = ?',
-    [offerId]
-  )
+  const row = await db.queryOne<any>('SELECT * FROM offer_keyword_pools WHERE offer_id = ?', [
+    offerId,
+  ])
 
   if (!row) return null
 
@@ -4331,7 +4723,7 @@ export async function getKeywordPoolByOfferId(offerId: number): Promise<OfferKey
     clusteringPromptVersion: row.clustering_prompt_version,
     balanceScore: row.balance_score,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
   }
 }
 
@@ -4488,7 +4880,7 @@ export async function generateOfferKeywordPool(
               phase: 'seed-volume',
               current: info.current,
               total: info.total,
-              message: `初始关键词搜索量 ${info.current ?? 0}/${info.total ?? 0}`
+              message: `初始关键词搜索量 ${info.current ?? 0}/${info.total ?? 0}`,
             })
         : undefined
 
@@ -4506,7 +4898,7 @@ export async function generateOfferKeywordPool(
       }
       const volumes = volumeResult.volumes
 
-      initialKeywords = volumes.map(v => ({
+      initialKeywords = volumes.map((v) => ({
         keyword: v.keyword,
         searchVolume: v.avgMonthlySearches || 0,
         competition: v.competition,
@@ -4514,19 +4906,19 @@ export async function generateOfferKeywordPool(
         lowTopPageBid: v.lowTopPageBid,
         highTopPageBid: v.highTopPageBid,
         source: 'PROVIDED',
-        matchType: inferDefaultKeywordMatchType(v.keyword, pureBrandKeywordsForOffer)
+        matchType: inferDefaultKeywordMatchType(v.keyword, pureBrandKeywordsForOffer),
       }))
 
-      const withVolume = initialKeywords.filter(kw => kw.searchVolume > 0).length
+      const withVolume = initialKeywords.filter((kw) => kw.searchVolume > 0).length
       console.log(`✅ 搜索量查询完成: ${withVolume}/${allKeywords.length} 个关键词有搜索量`)
     } catch (error) {
       console.warn(`⚠️ 搜索量查询失败，使用默认值 0: ${error}`)
       // 降级处理：使用默认值
-      initialKeywords = allKeywords.map(kw => ({
+      initialKeywords = allKeywords.map((kw) => ({
         keyword: kw,
         searchVolume: 0,
         source: 'PROVIDED',
-        matchType: inferDefaultKeywordMatchType(kw, pureBrandKeywordsForOffer)
+        matchType: inferDefaultKeywordMatchType(kw, pureBrandKeywordsForOffer),
       }))
     }
   } else {
@@ -4562,7 +4954,7 @@ export async function generateOfferKeywordPool(
           if (phraseLower.includes(brand)) {
             extractedSeeds.push({
               ...kw,
-              keyword: phrase
+              keyword: phrase,
             })
           }
         }
@@ -4571,13 +4963,15 @@ export async function generateOfferKeywordPool(
   }
 
   // 应用过滤条件
-  initialKeywords = initialKeywords.filter(kw => {
+  initialKeywords = initialKeywords.filter((kw) => {
     const keyword = kw.keyword.trim()
     const wordCount = keyword.split(/\s+/).length
 
     // 过滤条件1：长度限制（与最终质量过滤对齐，≤8个单词）
     if (wordCount > SEED_MAX_WORD_COUNT) {
-      console.log(`   ⊗ 种子词长度过滤: "${keyword}" (${wordCount}个单词, 限制≤${SEED_MAX_WORD_COUNT})`)
+      console.log(
+        `   ⊗ 种子词长度过滤: "${keyword}" (${wordCount}个单词, 限制≤${SEED_MAX_WORD_COUNT})`
+      )
       return false
     }
 
@@ -4585,28 +4979,37 @@ export async function generateOfferKeywordPool(
     // 🔥 2025-12-24优化: 只过滤明确的低质量词，保留高转化词
     const invalidPatterns = [
       // 购买渠道（保留store/shop/amazon/ebay，因为这些是正常购买渠道）
-      'near me', 'official',
+      'near me',
+      'official',
       // 低转化查询类
-      'history', 'tracker', 'locator', 'review', 'compare',
+      'history',
+      'tracker',
+      'locator',
+      'review',
+      'compare',
       // 过时年份
-      '2023', '2022', '2021', 'black friday', 'prime day'
+      '2023',
+      '2022',
+      '2021',
+      'black friday',
+      'prime day',
       // ✅ 保留: 'store', 'shop', 'amazon', 'ebay' - 店铺/销售渠道词
       // ✅ 保留: 'discount', 'sale', 'deal', 'code', 'coupon' - 商品需求扩展词
       // ✅ 保留: 'price', 'cost', 'cheap', 'affordable', 'budget' - 高转化词
       // ✅ 保留: '2024', '2025' - 当前年份
     ]
     const keywordLower = keyword.toLowerCase()
-    const hasInvalidPattern = invalidPatterns.some(pattern =>
-      keywordLower.includes(pattern)
-    )
+    const hasInvalidPattern = invalidPatterns.some((pattern) => keywordLower.includes(pattern))
     if (hasInvalidPattern) {
-      const matchedPattern = invalidPatterns.find(p => keywordLower.includes(p))
+      const matchedPattern = invalidPatterns.find((p) => keywordLower.includes(p))
       console.log(`   ⊗ 种子词无效模式过滤: "${keyword}" (包含: ${matchedPattern})`)
       return false
     }
 
     // 过滤条件3：明显信息查询/素材查询词（高概率低转化）
-    const matchedInfoPattern = SEED_INFO_QUERY_PATTERNS.find(pattern => keywordLower.includes(pattern))
+    const matchedInfoPattern = SEED_INFO_QUERY_PATTERNS.find((pattern) =>
+      keywordLower.includes(pattern)
+    )
     if (matchedInfoPattern) {
       console.log(`   ⊗ 种子词信息查询过滤: "${keyword}" (包含: ${matchedInfoPattern})`)
       return false
@@ -4615,7 +5018,7 @@ export async function generateOfferKeywordPool(
     // 过滤条件4：跨平台噪音词（关键词平台与目标落地页平台不一致）
     if (offerPlatform) {
       const keywordPlatforms = detectPlatformsInKeyword(keywordLower)
-      const mismatchedPlatforms = keywordPlatforms.filter(platform => platform !== offerPlatform)
+      const mismatchedPlatforms = keywordPlatforms.filter((platform) => platform !== offerPlatform)
       if (mismatchedPlatforms.length > 0) {
         console.log(
           `   ⊗ 种子词平台冲突过滤: "${keyword}" (关键词平台: ${mismatchedPlatforms.join('/')}, 目标平台: ${offerPlatform})`
@@ -4628,9 +5031,9 @@ export async function generateOfferKeywordPool(
   })
 
   // 合并提取的短语种子词（去重）
-  const seenPhrases = new Set(initialKeywords.map(k => k.keyword.toLowerCase()))
+  const seenPhrases = new Set(initialKeywords.map((k) => k.keyword.toLowerCase()))
   let addedCount = 0
-  extractedSeeds.forEach(seed => {
+  extractedSeeds.forEach((seed) => {
     if (!seenPhrases.has(seed.keyword.toLowerCase())) {
       initialKeywords.push(seed)
       seenPhrases.add(seed.keyword.toLowerCase())
@@ -4660,8 +5063,8 @@ export async function generateOfferKeywordPool(
     offer.category || '',
     offer.target_country,
     offer.target_language || 'en',
-    authType,           // 🔥 2025-12-29 新增：认证类型
-    offer,              // 🔥 2025-12-29 新增：Offer信息（服务账号模式需要）
+    authType, // 🔥 2025-12-29 新增：认证类型
+    offer, // 🔥 2025-12-29 新增：Offer信息（服务账号模式需要）
     userId,
     customerId,
     refreshToken,
@@ -4684,12 +5087,12 @@ export async function generateOfferKeywordPool(
     expandedKeywords,
     offer.brand,
     offer.category || '',
-    offer.target_country,  // 🔧 修复(2025-12-17): 传递目标国家进行地理过滤
+    offer.target_country, // 🔧 修复(2025-12-17): 传递目标国家进行地理过滤
     offer.product_name,
     {
       allowNonBrandFromPlanner: plannerNonBrandPolicy,
       // KISS: 品牌门禁统一交给 filterKeywordQuality，预过滤阶段只做轻量裁剪
-      applyBrandGate: false
+      applyBrandGate: false,
     }
   )
 
@@ -4702,7 +5105,7 @@ export async function generateOfferKeywordPool(
   const categorySignals = extractCategorySignalsFromScrapedData(offer.scraped_data)
   const categoryContext = [offer.category, ...categorySignals].filter(Boolean).join(' ')
   const baseContextMatches = getMinContextTokenMatchesForKeywordQualityFilter({
-    pageType: pageTypeForContextFilter
+    pageType: pageTypeForContextFilter,
   })
   const effectiveContextMatches = baseContextMatches
 
@@ -4734,7 +5137,7 @@ export async function generateOfferKeywordPool(
   // 在保持上下文/语义过滤前提下，回补少量高意图非纯品牌词，避免关键词池坍缩为单词。
   if (pageTypeForContextFilter === 'product' && pureBrandKeywordsForFilter.length > 0) {
     const strictNonPureCount = finalFilteredKeywords.filter(
-      kw => !isPureBrandKeywordInternal(kw.keyword, pureBrandKeywordsForFilter)
+      (kw) => !isPureBrandKeywordInternal(kw.keyword, pureBrandKeywordsForFilter)
     ).length
 
     if (strictNonPureCount < 3) {
@@ -4754,9 +5157,7 @@ export async function generateOfferKeywordPool(
       })
 
       const existingNormSet = new Set(
-        finalFilteredKeywords
-          .map(item => normalizeGoogleAdsKeyword(item.keyword))
-          .filter(Boolean)
+        finalFilteredKeywords.map((item) => normalizeGoogleAdsKeyword(item.keyword)).filter(Boolean)
       )
 
       const relaxedSeenSet = new Set<string>()
@@ -4764,10 +5165,12 @@ export async function generateOfferKeywordPool(
         relaxedQualityFiltered.filtered
           .map((kw): PoolKeywordData | null => {
             if (isPureBrandKeywordInternal(kw.keyword, pureBrandKeywordsForFilter)) return null
-            if (!hasCommercialIntentForProductRelaxedRetention(
-              kw.keyword,
-              offer.target_language || 'en'
-            )) {
+            if (
+              !hasCommercialIntentForProductRelaxedRetention(
+                kw.keyword,
+                offer.target_language || 'en'
+              )
+            ) {
               return null
             }
 
@@ -4785,18 +5188,21 @@ export async function generateOfferKeywordPool(
               source: 'PRODUCT_RELAX_BRANDED',
               sourceType: 'PRODUCT_RELAX_BRANDED',
               sourceSubtype: 'PURE_BRAND_PREFIX_REWRITE',
-              rawSource: String(
-                (kw as any).rawSource
-                || (kw as any).sourceSubtype
-                || (kw as any).sourceType
-                || kw.source
-                || 'KEYWORD_POOL'
-              ).trim() || 'KEYWORD_POOL',
-              derivedTags: Array.from(new Set([
-                ...(((kw as any).derivedTags || []) as string[]),
-                'PRODUCT_RELAX_BRANDED',
-                'PURE_BRAND_PREFIX_REWRITE',
-              ])),
+              rawSource:
+                String(
+                  (kw as any).rawSource ||
+                    (kw as any).sourceSubtype ||
+                    (kw as any).sourceType ||
+                    kw.source ||
+                    'KEYWORD_POOL'
+                ).trim() || 'KEYWORD_POOL',
+              derivedTags: Array.from(
+                new Set([
+                  ...(((kw as any).derivedTags || []) as string[]),
+                  'PRODUCT_RELAX_BRANDED',
+                  'PURE_BRAND_PREFIX_REWRITE',
+                ])
+              ),
               matchType: 'PHRASE',
             }
           })
@@ -4810,26 +5216,29 @@ export async function generateOfferKeywordPool(
         finalFilteredKeywords = [...finalFilteredKeywords, ...rescuedKeywords]
         console.log(
           `🧩 product页放宽补齐: +${rescuedKeywords.length} 个高意图词(品牌前置改写) ` +
-          `(strict_non_pure=${strictNonPureCount}, relaxed_candidates=${relaxedCandidates.length})`
+            `(strict_non_pure=${strictNonPureCount}, relaxed_candidates=${relaxedCandidates.length})`
         )
       } else {
-        console.log(
-          `ℹ️ product页放宽补齐未命中可用词 (strict_non_pure=${strictNonPureCount})`
-        )
+        console.log(`ℹ️ product页放宽补齐未命中可用词 (strict_non_pure=${strictNonPureCount})`)
       }
     }
   }
 
   // 🔒 有真实搜索量数据时，移除非纯品牌的0搜索量关键词
-  const hasAnyVolume = finalFilteredKeywords.some(kw => kw.searchVolume > 0)
-  const volumeUnavailable = plannerDecision.volumeUnavailableFromPlanner || hasSearchVolumeUnavailableFlag(finalFilteredKeywords)
+  const hasAnyVolume = finalFilteredKeywords.some((kw) => kw.searchVolume > 0)
+  const volumeUnavailable =
+    plannerDecision.volumeUnavailableFromPlanner ||
+    hasSearchVolumeUnavailableFlag(finalFilteredKeywords)
   if (hasAnyVolume && !volumeUnavailable) {
     const beforeVolumeFilter = finalFilteredKeywords.length
-    finalFilteredKeywords = finalFilteredKeywords.filter(kw =>
-      kw.searchVolume > 0 || isPureBrandKeywordInternal(kw.keyword, pureBrandKeywordsForFilter)
+    finalFilteredKeywords = finalFilteredKeywords.filter(
+      (kw) =>
+        kw.searchVolume > 0 || isPureBrandKeywordInternal(kw.keyword, pureBrandKeywordsForFilter)
     )
     if (beforeVolumeFilter !== finalFilteredKeywords.length) {
-      console.log(`📉 搜索量过滤(保留纯品牌): ${beforeVolumeFilter} → ${finalFilteredKeywords.length}`)
+      console.log(
+        `📉 搜索量过滤(保留纯品牌): ${beforeVolumeFilter} → ${finalFilteredKeywords.length}`
+      )
     }
   } else if (hasAnyVolume && volumeUnavailable) {
     console.log('⚠️ 搜索量数据不可用（Planner 权限受限），跳过非纯品牌 0 搜索量关键词强制移除')
@@ -4845,17 +5254,16 @@ export async function generateOfferKeywordPool(
   await progress?.({ phase: 'filter', message: '关键词过滤完成' })
 
   // 5. 分离纯品牌词和非品牌词
-  const keywordStrings = finalFilteredKeywords.map(kw => kw.keyword)
-  let { brandKeywords: brandKwStrings, nonBrandKeywords: nonBrandKwStrings } = separateBrandKeywords(keywordStrings, offer.brand)
+  const keywordStrings = finalFilteredKeywords.map((kw) => kw.keyword)
+  let { brandKeywords: brandKwStrings, nonBrandKeywords: nonBrandKwStrings } =
+    separateBrandKeywords(keywordStrings, offer.brand)
 
   // ✅ 确保所有纯品牌词都被纳入（如 "dr mercola" + "mercola"）
   if (pureBrandKeywordsForFilter.length > 0) {
     const brandKwNormalized = new Set(
-      brandKwStrings
-        .map(k => normalizeGoogleAdsKeyword(k))
-        .filter(Boolean)
+      brandKwStrings.map((k) => normalizeGoogleAdsKeyword(k)).filter(Boolean)
     )
-    const missingPureBrands = pureBrandKeywordsForFilter.filter(kw => {
+    const missingPureBrands = pureBrandKeywordsForFilter.filter((kw) => {
       const normalized = normalizeGoogleAdsKeyword(kw)
       return normalized && !brandKwNormalized.has(normalized)
     })
@@ -4863,11 +5271,9 @@ export async function generateOfferKeywordPool(
     if (missingPureBrands.length > 0) {
       brandKwStrings.push(...missingPureBrands)
       const missingNormalized = new Set(
-        missingPureBrands
-          .map(k => normalizeGoogleAdsKeyword(k))
-          .filter(Boolean)
+        missingPureBrands.map((k) => normalizeGoogleAdsKeyword(k)).filter(Boolean)
       )
-      nonBrandKwStrings = nonBrandKwStrings.filter(k => {
+      nonBrandKwStrings = nonBrandKwStrings.filter((k) => {
         const normalized = normalizeGoogleAdsKeyword(k)
         return normalized ? !missingNormalized.has(normalized) : true
       })
@@ -4882,17 +5288,21 @@ export async function generateOfferKeywordPool(
     if (canonicalBrand) {
       console.warn(`⚠️ 未识别到纯品牌词，自动注入: "${canonicalBrand}"`)
       brandKwStrings = [canonicalBrand]
-      nonBrandKwStrings = nonBrandKwStrings.filter(k => normalizeGoogleAdsKeyword(k) !== canonicalBrand)
+      nonBrandKwStrings = nonBrandKwStrings.filter(
+        (k) => normalizeGoogleAdsKeyword(k) !== canonicalBrand
+      )
     }
   }
 
   // 转换回 PoolKeywordData[]
-  let brandKeywordsData = finalFilteredKeywords.filter(kw => brandKwStrings.includes(kw.keyword))
-  let nonBrandKeywordsData = finalFilteredKeywords.filter(kw => nonBrandKwStrings.includes(kw.keyword))
+  let brandKeywordsData = finalFilteredKeywords.filter((kw) => brandKwStrings.includes(kw.keyword))
+  let nonBrandKeywordsData = finalFilteredKeywords.filter((kw) =>
+    nonBrandKwStrings.includes(kw.keyword)
+  )
 
   // 如果注入的品牌词不在 finalFilteredKeywords 中，补一个最小元数据对象，保证 brand_keywords 不为空
   if (brandKeywordsData.length === 0 && brandKwStrings.length > 0) {
-    brandKeywordsData = brandKwStrings.map(keyword => ({
+    brandKeywordsData = brandKwStrings.map((keyword) => ({
       keyword,
       searchVolume: 0,
       source: 'BRAND_SEED',
@@ -4905,10 +5315,12 @@ export async function generateOfferKeywordPool(
   if (nonBrandKeywordsData.length > KEYWORD_CLUSTERING_INPUT_LIMIT) {
     const prioritized = prioritizeKeywordsForClustering(nonBrandKeywordsData)
     const capped = prioritized.slice(0, KEYWORD_CLUSTERING_INPUT_LIMIT)
-    const cappedSet = new Set(capped.map(item => item.keyword))
-    nonBrandKeywordsData = nonBrandKeywordsData.filter(item => cappedSet.has(item.keyword))
-    nonBrandKwStrings = capped.map(item => item.keyword)
-    console.log(`✂️ 聚类输入裁剪: ${prioritized.length} → ${capped.length} (Top ${KEYWORD_CLUSTERING_INPUT_LIMIT} by source+volume)`)
+    const cappedSet = new Set(capped.map((item) => item.keyword))
+    nonBrandKeywordsData = nonBrandKeywordsData.filter((item) => cappedSet.has(item.keyword))
+    nonBrandKwStrings = capped.map((item) => item.keyword)
+    console.log(
+      `✂️ 聚类输入裁剪: ${prioritized.length} → ${capped.length} (Top ${KEYWORD_CLUSTERING_INPUT_LIMIT} by source+volume)`
+    )
   }
 
   // 🔧 强化：补齐/更新纯品牌词的真实搜索量（优先使用缓存/Keyword Planner）
@@ -4920,7 +5332,7 @@ export async function generateOfferKeywordPool(
       brandKeywordMap.set(normalized, kw)
     }
 
-    const needsBrandVolume = pureBrandKeywordsForFilter.some(kw => {
+    const needsBrandVolume = pureBrandKeywordsForFilter.some((kw) => {
       const normalized = normalizeGoogleAdsKeyword(kw)
       if (!normalized) return false
       const existing = brandKeywordMap.get(normalized)
@@ -4936,7 +5348,7 @@ export async function generateOfferKeywordPool(
                 phase: 'seed-volume',
                 current: info.current,
                 total: info.total,
-                message: `品牌词搜索量 ${info.current ?? 0}/${info.total ?? 0}`
+                message: `品牌词搜索量 ${info.current ?? 0}/${info.total ?? 0}`,
               })
           : undefined
         const volumeResult = await getKeywordSearchVolumesForPlannerContext({
@@ -4953,13 +5365,12 @@ export async function generateOfferKeywordPool(
         }
         const volumes = volumeResult.volumes
 
-        volumes.forEach(vol => {
+        volumes.forEach((vol) => {
           const normalized = normalizeGoogleAdsKeyword(vol.keyword)
           if (!normalized) return
           const existing = brandKeywordMap.get(normalized)
-          const nextVolume = vol.avgMonthlySearches > 0
-            ? vol.avgMonthlySearches
-            : (existing?.searchVolume || 0)
+          const nextVolume =
+            vol.avgMonthlySearches > 0 ? vol.avgMonthlySearches : existing?.searchVolume || 0
 
           brandKeywordMap.set(normalized, {
             keyword: normalized,
@@ -5007,9 +5418,9 @@ export async function generateOfferKeywordPool(
     offer.brand,
     offer.category,
     userId,
-    offer.target_country,  // 🔥 2025-12-23 新增：传递目标国家
-    offer.target_language || 'en',  // 🔥 2025-12-23 新增：传递目标语言
-    pageType,  // 🆕 v4.16: 传递页面类型
+    offer.target_country, // 🔥 2025-12-23 新增：传递目标国家
+    offer.target_language || 'en', // 🔥 2025-12-23 新增：传递目标语言
+    pageType, // 🆕 v4.16: 传递页面类型
     progress
   )
 
@@ -5034,7 +5445,7 @@ export async function generateOfferKeywordPool(
 
     const mapAndFilterKeywords = (kwList: string[]): PoolKeywordData[] => {
       const mapped = kwList
-        .map(kw => {
+        .map((kw) => {
           const key = normalizeGoogleAdsKeyword(kw)
           return key ? nonBrandMap.get(key) : undefined
         })
@@ -5047,8 +5458,12 @@ export async function generateOfferKeywordPool(
     let storeBucketCData = mapAndFilterKeywords(storeBuckets.bucketC.keywords)
     let storeBucketDData = mapAndFilterKeywords(storeBuckets.bucketD.keywords)
     let storeBucketSData = mapAndFilterKeywords(storeBuckets.bucketS.keywords)
-    const mappedStoreCount = storeBucketAData.length + storeBucketBData.length + storeBucketCData.length +
-      storeBucketDData.length + storeBucketSData.length
+    const mappedStoreCount =
+      storeBucketAData.length +
+      storeBucketBData.length +
+      storeBucketCData.length +
+      storeBucketDData.length +
+      storeBucketSData.length
 
     const storeUsedNorms = buildExistingKeywordNormSet([
       brandKeywordsData,
@@ -5082,19 +5497,30 @@ export async function generateOfferKeywordPool(
       usedNorms: storeUsedNorms,
     })
     const verifiedStoreAdds =
-      storeBucketAData.length + storeBucketBData.length + storeBucketCData.length +
-      storeBucketDData.length + storeBucketSData.length - mappedStoreCount
+      storeBucketAData.length +
+      storeBucketBData.length +
+      storeBucketCData.length +
+      storeBucketDData.length +
+      storeBucketSData.length -
+      mappedStoreCount
 
     // 记录过滤掉的关键词数量
-    const originalCount = storeBuckets.bucketA.keywords.length + storeBuckets.bucketB.keywords.length +
-                          storeBuckets.bucketC.keywords.length + storeBuckets.bucketD.keywords.length +
-                          storeBuckets.bucketS.keywords.length
+    const originalCount =
+      storeBuckets.bucketA.keywords.length +
+      storeBuckets.bucketB.keywords.length +
+      storeBuckets.bucketC.keywords.length +
+      storeBuckets.bucketD.keywords.length +
+      storeBuckets.bucketS.keywords.length
     const filteredCount = mappedStoreCount
     if (originalCount !== filteredCount) {
-      console.log(`ℹ️ 店铺关键词映射过滤: ${originalCount} → ${filteredCount} (过滤掉 ${originalCount - filteredCount} 个无搜索量数据的关键词)`)
+      console.log(
+        `ℹ️ 店铺关键词映射过滤: ${originalCount} → ${filteredCount} (过滤掉 ${originalCount - filteredCount} 个无搜索量数据的关键词)`
+      )
     }
     if (verifiedStoreAdds > 0) {
-      console.log(`🧩 店铺真实来源补词: +${verifiedStoreAdds} (title:${verifiedSourceKeywords.TITLE_EXTRACT.length}, about:${verifiedSourceKeywords.ABOUT_EXTRACT.length}, param:${verifiedSourceKeywords.PARAM_EXTRACT.length}, hot:${verifiedSourceKeywords.HOT_PRODUCT_AGGREGATE.length}, page:${verifiedSourceKeywords.PAGE_EXTRACT.length})`)
+      console.log(
+        `🧩 店铺真实来源补词: +${verifiedStoreAdds} (title:${verifiedSourceKeywords.TITLE_EXTRACT.length}, about:${verifiedSourceKeywords.ABOUT_EXTRACT.length}, param:${verifiedSourceKeywords.PARAM_EXTRACT.length}, hot:${verifiedSourceKeywords.HOT_PRODUCT_AGGREGATE.length}, page:${verifiedSourceKeywords.PAGE_EXTRACT.length})`
+      )
     }
 
     const storeBucketMinRetainAdds = ensureMinimumBucketKeywords({
@@ -5108,9 +5534,14 @@ export async function generateOfferKeywordPool(
       reserveKeywords: nonBrandKeywordsData,
       minPerBucket: MIN_NON_BRAND_KEYWORDS_PER_STORE_BUCKET,
     })
-    const totalStoreRetainAdds = Object.values(storeBucketMinRetainAdds).reduce((sum, value) => sum + value, 0)
+    const totalStoreRetainAdds = Object.values(storeBucketMinRetainAdds).reduce(
+      (sum, value) => sum + value,
+      0
+    )
     if (totalStoreRetainAdds > 0) {
-      console.log(`🛟 店铺桶最小保留补齐: +${totalStoreRetainAdds} (A:${storeBucketMinRetainAdds.A || 0}, B:${storeBucketMinRetainAdds.B || 0}, C:${storeBucketMinRetainAdds.C || 0}, D:${storeBucketMinRetainAdds.D || 0}, S:${storeBucketMinRetainAdds.S || 0})`)
+      console.log(
+        `🛟 店铺桶最小保留补齐: +${totalStoreRetainAdds} (A:${storeBucketMinRetainAdds.A || 0}, B:${storeBucketMinRetainAdds.B || 0}, C:${storeBucketMinRetainAdds.C || 0}, D:${storeBucketMinRetainAdds.D || 0}, S:${storeBucketMinRetainAdds.S || 0})`
+      )
     }
 
     // 8. 补充品牌全局核心关键词（不破坏原流程）
@@ -5143,10 +5574,10 @@ export async function generateOfferKeywordPool(
         bucketB: { intent: storeBuckets.bucketB.intent, keywords: storeBucketBData },
         bucketC: { intent: storeBuckets.bucketC.intent, keywords: storeBucketCData },
         bucketD: { intent: storeBuckets.bucketD.intent, keywords: storeBucketDData },
-        statistics: storeBuckets.statistics
+        statistics: storeBuckets.statistics,
       },
-      pageType,  // 🆕 v4.16: 传递页面类型
-      storeBuckets,  // 🆕 v4.16: 传递店铺桶数据
+      pageType, // 🆕 v4.16: 传递页面类型
+      storeBuckets, // 🆕 v4.16: 传递店铺桶数据
       {
         bucketA: storeBucketAData,
         bucketB: storeBucketBData,
@@ -5178,7 +5609,7 @@ export async function generateOfferKeywordPool(
 
     const mapAndFilterKeywords = (kwList: string[]): PoolKeywordData[] => {
       const mapped = kwList
-        .map(kw => {
+        .map((kw) => {
           const key = normalizeGoogleAdsKeyword(kw)
           return key ? nonBrandMap.get(key) : undefined
         })
@@ -5190,7 +5621,8 @@ export async function generateOfferKeywordPool(
     let bucketBData = mapAndFilterKeywords(productBuckets.bucketB.keywords)
     let bucketCData = mapAndFilterKeywords(productBuckets.bucketC.keywords)
     let bucketDData = mapAndFilterKeywords(productBuckets.bucketD.keywords)
-    const mappedProductCount = bucketAData.length + bucketBData.length + bucketCData.length + bucketDData.length
+    const mappedProductCount =
+      bucketAData.length + bucketBData.length + bucketCData.length + bucketDData.length
 
     const productUsedNorms = buildExistingKeywordNormSet([
       brandKeywordsData,
@@ -5222,17 +5654,29 @@ export async function generateOfferKeywordPool(
       additions: verifiedSourceKeywords.PAGE_EXTRACT,
       usedNorms: productUsedNorms,
     })
-    const verifiedProductAdds = bucketAData.length + bucketBData.length + bucketCData.length + bucketDData.length - mappedProductCount
+    const verifiedProductAdds =
+      bucketAData.length +
+      bucketBData.length +
+      bucketCData.length +
+      bucketDData.length -
+      mappedProductCount
 
     // 记录过滤掉的关键词数量
-    const originalCount = productBuckets.bucketA.keywords.length + productBuckets.bucketB.keywords.length +
-                          productBuckets.bucketC.keywords.length + productBuckets.bucketD.keywords.length
+    const originalCount =
+      productBuckets.bucketA.keywords.length +
+      productBuckets.bucketB.keywords.length +
+      productBuckets.bucketC.keywords.length +
+      productBuckets.bucketD.keywords.length
     const filteredCount = mappedProductCount
     if (originalCount !== filteredCount) {
-      console.log(`ℹ️ 关键词映射过滤: ${originalCount} → ${filteredCount} (过滤掉 ${originalCount - filteredCount} 个无搜索量数据的关键词)`)
+      console.log(
+        `ℹ️ 关键词映射过滤: ${originalCount} → ${filteredCount} (过滤掉 ${originalCount - filteredCount} 个无搜索量数据的关键词)`
+      )
     }
     if (verifiedProductAdds > 0) {
-      console.log(`🧩 产品真实来源补词: +${verifiedProductAdds} (title:${verifiedSourceKeywords.TITLE_EXTRACT.length}, about:${verifiedSourceKeywords.ABOUT_EXTRACT.length}, param:${verifiedSourceKeywords.PARAM_EXTRACT.length}, hot:${verifiedSourceKeywords.HOT_PRODUCT_AGGREGATE.length}, page:${verifiedSourceKeywords.PAGE_EXTRACT.length})`)
+      console.log(
+        `🧩 产品真实来源补词: +${verifiedProductAdds} (title:${verifiedSourceKeywords.TITLE_EXTRACT.length}, about:${verifiedSourceKeywords.ABOUT_EXTRACT.length}, param:${verifiedSourceKeywords.PARAM_EXTRACT.length}, hot:${verifiedSourceKeywords.HOT_PRODUCT_AGGREGATE.length}, page:${verifiedSourceKeywords.PAGE_EXTRACT.length})`
+      )
     }
 
     const productBucketMinRetainAdds = ensureMinimumBucketKeywords({
@@ -5245,9 +5689,14 @@ export async function generateOfferKeywordPool(
       reserveKeywords: nonBrandKeywordsData,
       minPerBucket: MIN_NON_BRAND_KEYWORDS_PER_PRODUCT_BUCKET,
     })
-    const totalProductRetainAdds = Object.values(productBucketMinRetainAdds).reduce((sum, value) => sum + value, 0)
+    const totalProductRetainAdds = Object.values(productBucketMinRetainAdds).reduce(
+      (sum, value) => sum + value,
+      0
+    )
     if (totalProductRetainAdds > 0) {
-      console.log(`🛟 产品桶最小保留补齐: +${totalProductRetainAdds} (A:${productBucketMinRetainAdds.A || 0}, B:${productBucketMinRetainAdds.B || 0}, C:${productBucketMinRetainAdds.C || 0}, D:${productBucketMinRetainAdds.D || 0})`)
+      console.log(
+        `🛟 产品桶最小保留补齐: +${totalProductRetainAdds} (A:${productBucketMinRetainAdds.A || 0}, B:${productBucketMinRetainAdds.B || 0}, C:${productBucketMinRetainAdds.C || 0}, D:${productBucketMinRetainAdds.D || 0})`
+      )
     }
 
     // 8. 补充品牌全局核心关键词（不破坏原流程）
@@ -5278,9 +5727,9 @@ export async function generateOfferKeywordPool(
         bucketB: { intent: productBuckets.bucketB.intent, keywords: bucketBData },
         bucketC: { intent: productBuckets.bucketC.intent, keywords: bucketCData },
         bucketD: { intent: productBuckets.bucketD.intent, keywords: bucketDData },
-        statistics: injectedProduct.statistics
+        statistics: injectedProduct.statistics,
       },
-      pageType  // 🆕 v4.16: 传递页面类型
+      pageType // 🆕 v4.16: 传递页面类型
     )
 
     return pool
@@ -5366,7 +5815,8 @@ type PromoteKeywordsToOfferKeywordPoolResult = {
 }
 
 const PROMOTED_KEYWORD_PLATFORM_PATTERN = /\b(amazon|walmart|ebay|etsy|aliexpress|temu|shopee)\b/i
-const PROMOTED_KEYWORD_INFO_QUERY_PATTERN = /\b(what is|meaning|tutorial|guide|manual|how to|instructions?)\b/i
+const PROMOTED_KEYWORD_INFO_QUERY_PATTERN =
+  /\b(what is|meaning|tutorial|guide|manual|how to|instructions?)\b/i
 const PROMOTED_KEYWORD_COMPARE_PATTERN = /\b(review|reviews|comparison|compare|vs|versus)\b/i
 
 function normalizePromotionKeywordMatchType(
@@ -5374,7 +5824,9 @@ function normalizePromotionKeywordMatchType(
   keyword: string,
   pureBrandKeywords: string[]
 ): 'EXACT' | 'PHRASE' | 'BROAD' {
-  const normalized = String(rawMatchType || '').trim().toUpperCase()
+  const normalized = String(rawMatchType || '')
+    .trim()
+    .toUpperCase()
   if (normalized === 'EXACT' || normalized === 'PHRASE' || normalized === 'BROAD') {
     return normalized as 'EXACT' | 'PHRASE' | 'BROAD'
   }
@@ -5391,10 +5843,22 @@ export async function promoteKeywordsToOfferKeywordPool(params: {
   rawSource?: string
   reason?: string
 }): Promise<PromoteKeywordsToOfferKeywordPoolResult> {
-  const source = String(params.source || 'SEARCH_TERM').trim().toUpperCase() || 'SEARCH_TERM'
-  const sourceType = String(params.sourceType || source).trim().toUpperCase() || source
-  const sourceSubtype = String(params.sourceSubtype || sourceType).trim().toUpperCase() || sourceType
-  const rawSource = String(params.rawSource || source).trim().toUpperCase() || source
+  const source =
+    String(params.source || 'SEARCH_TERM')
+      .trim()
+      .toUpperCase() || 'SEARCH_TERM'
+  const sourceType =
+    String(params.sourceType || source)
+      .trim()
+      .toUpperCase() || source
+  const sourceSubtype =
+    String(params.sourceSubtype || sourceType)
+      .trim()
+      .toUpperCase() || sourceType
+  const rawSource =
+    String(params.rawSource || source)
+      .trim()
+      .toUpperCase() || source
 
   if (!Array.isArray(params.keywords) || params.keywords.length === 0) {
     return { promotedCount: 0, skippedCount: 0, poolCreated: false, poolUpdated: false }
@@ -5402,7 +5866,12 @@ export async function promoteKeywordsToOfferKeywordPool(params: {
 
   const offer = await findOfferById(params.offerId, params.userId)
   if (!offer) {
-    return { promotedCount: 0, skippedCount: params.keywords.length, poolCreated: false, poolUpdated: false }
+    return {
+      promotedCount: 0,
+      skippedCount: params.keywords.length,
+      poolCreated: false,
+      poolUpdated: false,
+    }
   }
 
   const pageType = resolveOfferPageType(offer)
@@ -5453,7 +5922,11 @@ export async function promoteKeywordsToOfferKeywordPool(params: {
       sourceType,
       sourceSubtype,
       rawSource,
-      matchType: normalizePromotionKeywordMatchType(item?.matchType, normalizedKeyword, pureBrandKeywords),
+      matchType: normalizePromotionKeywordMatchType(
+        item?.matchType,
+        normalizedKeyword,
+        pureBrandKeywords
+      ),
       isPureBrand: isPureBrandKeywordInternal(normalizedKeyword, pureBrandKeywords),
       derivedTags: ['STRATEGY_PROMOTED'],
     })
@@ -5511,13 +5984,33 @@ export async function promoteKeywordsToOfferKeywordPool(params: {
     const storeBucketSKeywords = mergeKeywordDataLists([bucketAdds.storeS])
 
     const storeBuckets: StoreKeywordBuckets = {
-      bucketA: { ...DEFAULT_STORE_CLUSTER_BUCKETS.A, keywords: storeBucketAKeywords.map((item) => item.keyword) },
-      bucketB: { ...DEFAULT_STORE_CLUSTER_BUCKETS.B, keywords: storeBucketBKeywords.map((item) => item.keyword) },
-      bucketC: { ...DEFAULT_STORE_CLUSTER_BUCKETS.C, keywords: storeBucketCKeywords.map((item) => item.keyword) },
-      bucketD: { ...DEFAULT_STORE_CLUSTER_BUCKETS.D, keywords: storeBucketDKeywords.map((item) => item.keyword) },
-      bucketS: { ...DEFAULT_STORE_CLUSTER_BUCKETS.S, keywords: storeBucketSKeywords.map((item) => item.keyword) },
+      bucketA: {
+        ...DEFAULT_STORE_CLUSTER_BUCKETS.A,
+        keywords: storeBucketAKeywords.map((item) => item.keyword),
+      },
+      bucketB: {
+        ...DEFAULT_STORE_CLUSTER_BUCKETS.B,
+        keywords: storeBucketBKeywords.map((item) => item.keyword),
+      },
+      bucketC: {
+        ...DEFAULT_STORE_CLUSTER_BUCKETS.C,
+        keywords: storeBucketCKeywords.map((item) => item.keyword),
+      },
+      bucketD: {
+        ...DEFAULT_STORE_CLUSTER_BUCKETS.D,
+        keywords: storeBucketDKeywords.map((item) => item.keyword),
+      },
+      bucketS: {
+        ...DEFAULT_STORE_CLUSTER_BUCKETS.S,
+        keywords: storeBucketSKeywords.map((item) => item.keyword),
+      },
       statistics: {
-        totalKeywords: storeBucketAKeywords.length + storeBucketBKeywords.length + storeBucketCKeywords.length + storeBucketDKeywords.length + storeBucketSKeywords.length,
+        totalKeywords:
+          storeBucketAKeywords.length +
+          storeBucketBKeywords.length +
+          storeBucketCKeywords.length +
+          storeBucketDKeywords.length +
+          storeBucketSKeywords.length,
         bucketACount: storeBucketAKeywords.length,
         bucketBCount: storeBucketBKeywords.length,
         bucketCCount: storeBucketCKeywords.length,
@@ -5543,8 +6036,18 @@ export async function promoteKeywordsToOfferKeywordPool(params: {
         bucketC: { intent: DEFAULT_PRODUCT_CLUSTER_BUCKETS.C.intent, keywords: bucketCKeywords },
         bucketD: { intent: DEFAULT_PRODUCT_CLUSTER_BUCKETS.D.intent, keywords: bucketDKeywords },
         statistics: {
-          totalKeywords: brandKeywords.length + bucketAKeywords.length + bucketBKeywords.length + bucketCKeywords.length + bucketDKeywords.length,
-          balanceScore: calculateBalanceScore([bucketAKeywords.length, bucketBKeywords.length, bucketCKeywords.length, bucketDKeywords.length]),
+          totalKeywords:
+            brandKeywords.length +
+            bucketAKeywords.length +
+            bucketBKeywords.length +
+            bucketCKeywords.length +
+            bucketDKeywords.length,
+          balanceScore: calculateBalanceScore([
+            bucketAKeywords.length,
+            bucketBKeywords.length,
+            bucketCKeywords.length,
+            bucketDKeywords.length,
+          ]),
         },
       },
       pageType,
@@ -5574,12 +6077,32 @@ export async function promoteKeywordsToOfferKeywordPool(params: {
   const nextBucketBKeywords = mergeKeywordDataLists([existing.bucketBKeywords, bucketAdds.productB])
   const nextBucketCKeywords = mergeKeywordDataLists([existing.bucketCKeywords, bucketAdds.productC])
   const nextBucketDKeywords = mergeKeywordDataLists([existing.bucketDKeywords, bucketAdds.productD])
-  const nextStoreBucketAKeywords = mergeKeywordDataLists([existing.storeBucketAKeywords, bucketAdds.storeA])
-  const nextStoreBucketBKeywords = mergeKeywordDataLists([existing.storeBucketBKeywords, bucketAdds.storeB])
-  const nextStoreBucketCKeywords = mergeKeywordDataLists([existing.storeBucketCKeywords, bucketAdds.storeC])
-  const nextStoreBucketDKeywords = mergeKeywordDataLists([existing.storeBucketDKeywords, bucketAdds.storeD])
-  const nextStoreBucketSKeywords = mergeKeywordDataLists([existing.storeBucketSKeywords, bucketAdds.storeS])
-  const nextTotalKeywords = nextBrandKeywords.length + nextBucketAKeywords.length + nextBucketBKeywords.length + nextBucketCKeywords.length + nextBucketDKeywords.length
+  const nextStoreBucketAKeywords = mergeKeywordDataLists([
+    existing.storeBucketAKeywords,
+    bucketAdds.storeA,
+  ])
+  const nextStoreBucketBKeywords = mergeKeywordDataLists([
+    existing.storeBucketBKeywords,
+    bucketAdds.storeB,
+  ])
+  const nextStoreBucketCKeywords = mergeKeywordDataLists([
+    existing.storeBucketCKeywords,
+    bucketAdds.storeC,
+  ])
+  const nextStoreBucketDKeywords = mergeKeywordDataLists([
+    existing.storeBucketDKeywords,
+    bucketAdds.storeD,
+  ])
+  const nextStoreBucketSKeywords = mergeKeywordDataLists([
+    existing.storeBucketSKeywords,
+    bucketAdds.storeS,
+  ])
+  const nextTotalKeywords =
+    nextBrandKeywords.length +
+    nextBucketAKeywords.length +
+    nextBucketBKeywords.length +
+    nextBucketCKeywords.length +
+    nextBucketDKeywords.length
   const nextBalanceScore = calculateBalanceScore([
     nextBucketAKeywords.length,
     nextBucketBKeywords.length,
@@ -5658,10 +6181,7 @@ async function extractKeywordsFromOffer(
     rawMatchType: unknown,
     keyword: string
   ): 'EXACT' | 'PHRASE' | 'BROAD' => {
-    const normalized =
-      typeof rawMatchType === 'string'
-        ? rawMatchType.trim().toUpperCase()
-        : ''
+    const normalized = typeof rawMatchType === 'string' ? rawMatchType.trim().toUpperCase() : ''
     if (normalized === 'EXACT' || normalized === 'PHRASE' || normalized === 'BROAD') {
       return normalized as 'EXACT' | 'PHRASE' | 'BROAD'
     }
@@ -5680,14 +6200,16 @@ async function extractKeywordsFromOffer(
     if (!normalized) return
     // 🔒 关键词质量校验（2026-01-26）：过滤无效关键词
     if (isInvalidKeyword(normalized)) {
-      console.warn(`[extractKeywordsFromOffer] ⚠️ 过滤无效关键词: "${normalized}" (source: ${source})`)
+      console.warn(
+        `[extractKeywordsFromOffer] ⚠️ 过滤无效关键词: "${normalized}" (source: ${source})`
+      )
       return
     }
     addKeywordData({
       keyword: normalized,
       searchVolume: 0,
       source,
-      matchType: inferDefaultKeywordMatchType(normalized, pureBrandKeywords)
+      matchType: inferDefaultKeywordMatchType(normalized, pureBrandKeywords),
     })
   }
 
@@ -5716,18 +6238,30 @@ async function extractKeywordsFromOffer(
         if (typeof keyword === 'string') {
           // 🔒 关键词质量校验（2026-01-26）
           if (isInvalidKeyword(keyword)) {
-            console.warn(`[extractKeywordsFromOffer] ⚠️ 过滤无效关键词: "${keyword}" (source: ${source})`)
+            console.warn(
+              `[extractKeywordsFromOffer] ⚠️ 过滤无效关键词: "${keyword}" (source: ${source})`
+            )
             continue
           }
           addKeywordData({
             keyword,
             searchVolume: Number((item as any).searchVolume || (item as any).volume || 0) || 0,
-            competition: typeof (item as any).competition === 'string' ? (item as any).competition : undefined,
-            competitionIndex: typeof (item as any).competitionIndex === 'number' ? (item as any).competitionIndex : undefined,
-            lowTopPageBid: typeof (item as any).lowTopPageBid === 'number' ? (item as any).lowTopPageBid : undefined,
-            highTopPageBid: typeof (item as any).highTopPageBid === 'number' ? (item as any).highTopPageBid : undefined,
+            competition:
+              typeof (item as any).competition === 'string' ? (item as any).competition : undefined,
+            competitionIndex:
+              typeof (item as any).competitionIndex === 'number'
+                ? (item as any).competitionIndex
+                : undefined,
+            lowTopPageBid:
+              typeof (item as any).lowTopPageBid === 'number'
+                ? (item as any).lowTopPageBid
+                : undefined,
+            highTopPageBid:
+              typeof (item as any).highTopPageBid === 'number'
+                ? (item as any).highTopPageBid
+                : undefined,
             source,
-            matchType: normalizeKeywordMatchType((item as any).matchType, keyword)
+            matchType: normalizeKeywordMatchType((item as any).matchType, keyword),
           })
         }
       }
@@ -5753,7 +6287,7 @@ async function extractKeywordsFromOffer(
             if (kwStr && !keywordMap.has(kwStr)) {
               keywordMap.set(kwStr, {
                 keyword: kwStr,
-                searchVolume: typeof kw === 'object' ? (kw.searchVolume || 0) : 0,
+                searchVolume: typeof kw === 'object' ? kw.searchVolume || 0 : 0,
                 competition: typeof kw === 'object' ? kw.competition : undefined,
                 competitionIndex: typeof kw === 'object' ? kw.competitionIndex : undefined,
                 lowTopPageBid: typeof kw === 'object' ? kw.lowTopPageBid : undefined,
@@ -5762,7 +6296,7 @@ async function extractKeywordsFromOffer(
                 matchType: normalizeKeywordMatchType(
                   typeof kw === 'object' ? kw.matchType : undefined,
                   kwStr
-                )
+                ),
               })
             }
           })
@@ -5810,14 +6344,19 @@ async function extractKeywordsFromOffer(
     // 兜底：某些页面类型（尤其店铺页/抓取降级）可能出现 ai_keywords='[]' 且 extracted_keywords=NULL
     // 这种情况下用“真实已抓取”的结构化字段构建最小种子词，避免整个创意生成流程被阻断。
     if (keywordMap.size === 0 && offer?.brand) {
-      console.warn(`[extractKeywordsFromOffer] Offer #${offerId} 无AI/提取关键词，使用兜底种子词生成 (pageType=${resolveOfferPageType(offer)})`)
+      console.warn(
+        `[extractKeywordsFromOffer] Offer #${offerId} 无AI/提取关键词，使用兜底种子词生成 (pageType=${resolveOfferPageType(offer)})`
+      )
 
       // 1) 品牌词（保证至少有一个关键词）
       addKeywordString(offer.brand, 'FALLBACK_BRAND')
 
       // 2) 产品名 / 品类（来自抓取结果）
       if (offer.product_name && offer.product_name !== offer.brand) {
-        addKeywordString(`${offer.brand} ${offer.product_name}`.slice(0, 80), 'FALLBACK_PRODUCT_NAME')
+        addKeywordString(
+          `${offer.brand} ${offer.product_name}`.slice(0, 80),
+          'FALLBACK_PRODUCT_NAME'
+        )
       }
       if (offer.category) {
         addKeywordString(`${offer.brand} ${offer.category}`.slice(0, 80), 'FALLBACK_CATEGORY')
@@ -5838,9 +6377,11 @@ async function extractKeywordsFromOffer(
 
         seedPool.allSeeds
           .slice(0, 50)
-          .forEach(seed => addKeywordString(seed, 'FALLBACK_INTENT_SEEDS'))
+          .forEach((seed) => addKeywordString(seed, 'FALLBACK_INTENT_SEEDS'))
       } catch (seedError: any) {
-        console.warn(`[extractKeywordsFromOffer] 兜底种子词构建失败: ${seedError?.message || seedError}`)
+        console.warn(
+          `[extractKeywordsFromOffer] 兜底种子词构建失败: ${seedError?.message || seedError}`
+        )
       }
     }
   }
@@ -5857,10 +6398,10 @@ async function extractKeywordsFromOffer(
       const offer = await db.queryOne<{
         target_country: string
         target_language: string | null
-      }>(
-        'SELECT target_country, target_language FROM offers WHERE id = ? AND user_id = ?',
-        [offerId, userId]
-      )
+      }>('SELECT target_country, target_language FROM offers WHERE id = ? AND user_id = ?', [
+        offerId,
+        userId,
+      ])
 
       if (offer) {
         const volumeProgress = progress
@@ -5869,14 +6410,14 @@ async function extractKeywordsFromOffer(
                 phase: 'seed-volume',
                 current: info.current,
                 total: info.total,
-                message: `初始关键词搜索量 ${info.current ?? 0}/${info.total ?? 0}`
+                message: `初始关键词搜索量 ${info.current ?? 0}/${info.total ?? 0}`,
               })
           : undefined
 
         const volumeResult = await getKeywordSearchVolumesForPlannerContext({
           userId,
           offerId,
-          keywords: keywords.map(k => k.keyword),
+          keywords: keywords.map((k) => k.keyword),
           country: offer.target_country,
           language: offer.target_language || 'en',
           plannerSession,
@@ -5888,7 +6429,7 @@ async function extractKeywordsFromOffer(
         const volumes = volumeResult.volumes
 
         // 更新搜索量
-        const volumeMap = new Map(volumes.map(v => [v.keyword.toLowerCase(), v]))
+        const volumeMap = new Map(volumes.map((v) => [v.keyword.toLowerCase(), v]))
         for (const kw of keywords) {
           const volume = volumeMap.get(kw.keyword.toLowerCase())
           if (volume) {
@@ -5900,7 +6441,7 @@ async function extractKeywordsFromOffer(
           }
         }
 
-        const withVolume = keywords.filter(k => k.searchVolume > 0).length
+        const withVolume = keywords.filter((k) => k.searchVolume > 0).length
         console.log(`✅ 搜索量查询完成: ${withVolume}/${keywords.length} 个关键词有搜索量`)
       }
     } catch (error) {
@@ -5926,7 +6467,7 @@ function normalizeKeywordItem(item: KeywordItem): PoolKeywordData | null {
       keyword,
       searchVolume: 0,
       source: 'LEGACY',
-      matchType: 'PHRASE'
+      matchType: 'PHRASE',
     }
   }
   if (!item || typeof item !== 'object') return null
@@ -5935,9 +6476,10 @@ function normalizeKeywordItem(item: KeywordItem): PoolKeywordData | null {
   return {
     ...item,
     keyword,
-    searchVolume: typeof item.searchVolume === 'number' ? item.searchVolume : Number(item.searchVolume) || 0,
+    searchVolume:
+      typeof item.searchVolume === 'number' ? item.searchVolume : Number(item.searchVolume) || 0,
     source: item.source || 'LEGACY',
-    matchType: item.matchType || 'PHRASE'
+    matchType: item.matchType || 'PHRASE',
   }
 }
 
@@ -5958,8 +6500,8 @@ function mergeKeywordDataLists(lists: Array<KeywordItem[]>): PoolKeywordData[] {
       }
 
       const priorityDiff =
-        getKeywordSourcePriorityForPoolItem(existing)
-        - getKeywordSourcePriorityForPoolItem(normalized)
+        getKeywordSourcePriorityForPoolItem(existing) -
+        getKeywordSourcePriorityForPoolItem(normalized)
       if (priorityDiff > 0) {
         merged.set(key, normalized)
         continue
@@ -5977,8 +6519,8 @@ function mergeKeywordDataLists(lists: Array<KeywordItem[]>): PoolKeywordData[] {
       }
 
       const matchTypeDiff =
-        normalizeMatchTypePriority(normalized.matchType)
-        - normalizeMatchTypePriority(existing.matchType)
+        normalizeMatchTypePriority(normalized.matchType) -
+        normalizeMatchTypePriority(existing.matchType)
       if (matchTypeDiff > 0) {
         merged.set(key, normalized)
         continue
@@ -6006,7 +6548,7 @@ function getComprehensiveKeywordsForPool(
       pool.storeBucketBKeywords,
       pool.storeBucketCKeywords,
       pool.storeBucketDKeywords,
-      pool.storeBucketSKeywords
+      pool.storeBucketSKeywords,
     ])
   }
 
@@ -6015,7 +6557,7 @@ function getComprehensiveKeywordsForPool(
     pool.bucketAKeywords,
     pool.bucketBKeywords,
     pool.bucketCKeywords,
-    pool.bucketDKeywords
+    pool.bucketDKeywords,
   ])
 }
 
@@ -6026,14 +6568,16 @@ const CANONICAL_REVIEW_COMPARE_PATTERN =
   /\b(review|reviews|rating|ratings|comparison|compare|vs|versus|ulasan|recensioni?|recensione|bewertung(?:en)?|rezension(?:en)?|rese(?:n|ñ)a(?:s)?|avis|comparaison|comparar|confronto|vergleich|testbericht)\b/i
 const CANONICAL_STORE_NAV_PATTERN =
   /\b(official store|official site|store locator|near me|customer service|contact us|help center|support center|order tracking|returns?|shipping policy|faq|login|sign in)\b/i
-const CANONICAL_PROMO_PATTERN = /\b(discount|coupon|cheap|sale|deal|offer|promo|price|cost|clearance|best price)\b/i
+const CANONICAL_PROMO_PATTERN =
+  /\b(discount|coupon|cheap|sale|deal|offer|promo|price|cost|clearance|best price)\b/i
 const CANONICAL_REPEATED_ACTION_PATTERN = /\b(buy|shop|purchase|order)\b.*\b\1\b/i
 const CANONICAL_BRAND_SLOGAN_PATTERN = /\b(a\s+cozy\s+home\s+made\s+simple|home\s+made\s+simple)\b/i
 const CANONICAL_GEO_ADMIN_PATTERN = /\b(kabupaten|kecamatan|kelurahan)\b/i
 const CANONICAL_GARBAGE_TOKEN_PATTERN = /\b(rng|openurlproduct)\b/i
 const CANONICAL_QUESTION_PREFIX_PATTERN =
   /^(?:what|why|how|when|where|who|which|is|are|do|does|did|can|could|should|would)\b/i
-const CANONICAL_SOFT_MODEL_SIZE_PATTERN = /\b(california king|cal king|king size|queen size|twin xl|twin|queen|king|full)\b/gi
+const CANONICAL_SOFT_MODEL_SIZE_PATTERN =
+  /\b(california king|cal king|king size|queen size|twin xl|twin|queen|king|full)\b/gi
 const CANONICAL_SOFT_MODEL_DIMENSION_PATTERN = /\b\d{1,3}\s*(?:inch|in)\b/gi
 const CANONICAL_SOFT_MODEL_PACK_PATTERN = /\b\d{1,2}\s*(?:pack|count|pc|piece|pieces|set)\b/gi
 const CANONICAL_SOFT_MODEL_ATTRIBUTE_PHRASES = [
@@ -6185,11 +6729,13 @@ const PRODUCT_MODEL_INTENT_WEAK_DEMAND_TOKENS = new Set([
 ])
 
 function getPoolPureBrandKeywords(pool: OfferKeywordPool): string[] {
-  return Array.from(new Set(
-    (pool.brandKeywords || [])
-      .map((item) => normalizeGoogleAdsKeyword(typeof item === 'string' ? item : item.keyword))
-      .filter((item): item is string => !!item)
-  ))
+  return Array.from(
+    new Set(
+      (pool.brandKeywords || [])
+        .map((item) => normalizeGoogleAdsKeyword(typeof item === 'string' ? item : item.keyword))
+        .filter((item): item is string => !!item)
+    )
+  )
 }
 
 function collectCanonicalSoftModelSignalTokens(normalizedKeyword: string): Set<string> {
@@ -6226,11 +6772,7 @@ function collectCanonicalSoftModelSignalTokens(normalizedKeyword: string): Set<s
 }
 
 function buildCanonicalBrandTokenSet(pureBrandKeywords: string[]): Set<string> {
-  return new Set(
-    pureBrandKeywords
-      .flatMap((item) => item.split(/\s+/))
-      .filter(Boolean)
-  )
+  return new Set(pureBrandKeywords.flatMap((item) => item.split(/\s+/)).filter(Boolean))
 }
 
 function extractCanonicalDemandTokens(keyword: string, pureBrandKeywords: string[]): string[] {
@@ -6251,7 +6793,10 @@ function hasDemandAnchorInCanonicalBucket(keyword: string, pureBrandKeywords: st
   return extractCanonicalDemandTokens(keyword, pureBrandKeywords).length > 0
 }
 
-function hasSoftModelFamilySignalInCanonicalBucket(keyword: string, pureBrandKeywords: string[]): boolean {
+function hasSoftModelFamilySignalInCanonicalBucket(
+  keyword: string,
+  pureBrandKeywords: string[]
+): boolean {
   const normalized = normalizeGoogleAdsKeyword(keyword)
   if (!normalized) return false
   if (!containsPureBrand(keyword, pureBrandKeywords)) return false
@@ -6259,31 +6804,42 @@ function hasSoftModelFamilySignalInCanonicalBucket(keyword: string, pureBrandKey
   const softSignalTokens = collectCanonicalSoftModelSignalTokens(normalized)
   if (softSignalTokens.size === 0) return false
 
-  const productCoreTokens = extractCanonicalDemandTokens(keyword, pureBrandKeywords)
-    .filter((token) => !softSignalTokens.has(token))
+  const productCoreTokens = extractCanonicalDemandTokens(keyword, pureBrandKeywords).filter(
+    (token) => !softSignalTokens.has(token)
+  )
   return productCoreTokens.length > 0
 }
 
-function getCanonicalSourceLabels(item: Pick<PoolKeywordData, 'source'> & {
-  sourceType?: string
-  sourceSubtype?: string
-  rawSource?: string
-  derivedTags?: string[]
-}): string[] {
-  return Array.from(new Set(
-    [
-      item.sourceType,
-      item.sourceSubtype,
-      item.rawSource,
-      item.source,
-      ...(Array.isArray(item.derivedTags) ? item.derivedTags : []),
-    ]
-      .map((value) => String(value || '').trim().toUpperCase())
-      .filter(Boolean)
-  ))
+function getCanonicalSourceLabels(
+  item: Pick<PoolKeywordData, 'source'> & {
+    sourceType?: string
+    sourceSubtype?: string
+    rawSource?: string
+    derivedTags?: string[]
+  }
+): string[] {
+  return Array.from(
+    new Set(
+      [
+        item.sourceType,
+        item.sourceSubtype,
+        item.rawSource,
+        item.source,
+        ...(Array.isArray(item.derivedTags) ? item.derivedTags : []),
+      ]
+        .map((value) =>
+          String(value || '')
+            .trim()
+            .toUpperCase()
+        )
+        .filter(Boolean)
+    )
+  )
 }
 
-function getModelIntentCanonicalSourceAdjustment(item: Pick<PoolKeywordData, 'source' | 'sourceType'>): number {
+function getModelIntentCanonicalSourceAdjustment(
+  item: Pick<PoolKeywordData, 'source' | 'sourceType'>
+): number {
   const labels = getCanonicalSourceLabels(item)
   let adjustment = 0
 
@@ -6312,15 +6868,19 @@ function getModelIntentCanonicalSourceAdjustment(item: Pick<PoolKeywordData, 'so
   return adjustment
 }
 
-function isHighPriorityCanonicalSource(item: Pick<
-  PoolKeywordData,
-  'source' | 'sourceType' | 'sourceSubtype' | 'rawSource' | 'derivedTags'
->): boolean {
+function isHighPriorityCanonicalSource(
+  item: Pick<
+    PoolKeywordData,
+    'source' | 'sourceType' | 'sourceSubtype' | 'rawSource' | 'derivedTags'
+  >
+): boolean {
   const labels = getCanonicalSourceLabels(item)
   return labels.some((label) => CANONICAL_FILTER_RELAXED_TOP_SOURCES.has(label))
 }
 
-function getModelIntentCanonicalVolumeAdjustment(item: Pick<PoolKeywordData, 'searchVolume'>): number {
+function getModelIntentCanonicalVolumeAdjustment(
+  item: Pick<PoolKeywordData, 'searchVolume'>
+): number {
   const volume = Number(item.searchVolume || 0)
   if (!Number.isFinite(volume) || volume <= 0) return 0
   if (volume >= 500) return 4
@@ -6339,9 +6899,11 @@ function getModelIntentCanonicalShapePenalty(keyword: string, pureBrandKeywords:
     .filter((item): item is string => Boolean(item))
 
   if (
-    containsPureBrand(keyword, pureBrandKeywords)
-    && normalizedBrandKeywords.length > 0
-    && !normalizedBrandKeywords.some((brand) => normalized === brand || normalized.startsWith(`${brand} `))
+    containsPureBrand(keyword, pureBrandKeywords) &&
+    normalizedBrandKeywords.length > 0 &&
+    !normalizedBrandKeywords.some(
+      (brand) => normalized === brand || normalized.startsWith(`${brand} `)
+    )
   ) {
     penalty += 4
   }
@@ -6356,7 +6918,11 @@ function getModelIntentCanonicalShapePenalty(keyword: string, pureBrandKeywords:
   const softSignalTokens = collectCanonicalSoftModelSignalTokens(normalized)
   const firstDemandIndex = keywordTokens.findIndex((token) => demandTokens.has(token))
   const firstSoftSignalIndex = keywordTokens.findIndex((token) => softSignalTokens.has(token))
-  if (firstDemandIndex >= 0 && firstSoftSignalIndex >= 0 && firstDemandIndex < firstSoftSignalIndex) {
+  if (
+    firstDemandIndex >= 0 &&
+    firstSoftSignalIndex >= 0 &&
+    firstDemandIndex < firstSoftSignalIndex
+  ) {
     penalty += 2
   }
 
@@ -6384,7 +6950,9 @@ function buildCanonicalUnitStrippedKey(keyword: string): string {
 }
 
 function normalizeCanonicalCommercialConceptToken(token: string): string {
-  const normalized = String(token || '').trim().toLowerCase()
+  const normalized = String(token || '')
+    .trim()
+    .toLowerCase()
   if (!normalized || /\d/.test(normalized)) return normalized
 
   if (/ies$/.test(normalized) && normalized.length > 4) {
@@ -6445,11 +7013,10 @@ function pruneCanonicalCommercialVariants(
       continue
     }
 
-    const perIntentSeenConceptKeys = (
+    const perIntentSeenConceptKeys =
       intent === 'TRANSACTIONAL' || intent === 'COMMERCIAL'
         ? seenCommercialConceptKeys
         : seenBaseConceptKeys
-    )
     if (perIntentSeenConceptKeys.has(conceptKey)) continue
     perIntentSeenConceptKeys.add(conceptKey)
     pruned.push(item)
@@ -6535,8 +7102,9 @@ function hasStoreModelIntentFamilyRescueSignal(
   const keywordTokens = normalizedKeyword.split(/\s+/).filter(Boolean)
   if (keywordTokens.length < 3) return false
 
-  const demandTokens = extractCanonicalDemandTokens(item.keyword, pureBrandKeywords)
-    .filter((token) => token.length >= 3)
+  const demandTokens = extractCanonicalDemandTokens(item.keyword, pureBrandKeywords).filter(
+    (token) => token.length >= 3
+  )
   if (demandTokens.length === 0) return false
 
   return demandTokens.some((token) => !STORE_MODEL_INTENT_WEAK_DEMAND_TOKENS.has(token))
@@ -6558,8 +7126,9 @@ function hasProductModelIntentFamilyRescueSignal(
   const keywordTokens = normalizedKeyword.split(/\s+/).filter(Boolean)
   if (keywordTokens.length < 3) return false
 
-  const demandTokens = extractCanonicalDemandTokens(item.keyword, pureBrandKeywords)
-    .filter((token) => token.length >= 3)
+  const demandTokens = extractCanonicalDemandTokens(item.keyword, pureBrandKeywords).filter(
+    (token) => token.length >= 3
+  )
   if (demandTokens.length < 2) return false
 
   return demandTokens.some((token) => !PRODUCT_MODEL_INTENT_WEAK_DEMAND_TOKENS.has(token))
@@ -6595,28 +7164,47 @@ function shouldDropCanonicalKeyword(
   const hasDemandAnchor = hasDemandAnchorInCanonicalBucket(keyword, pureBrandKeywords)
   const isPureBrand = isPureBrandPoolKeyword(item, pureBrandKeywords)
   const hasModelAnchor = hasModelAnchorEvidence({ keywords: [keyword] })
-  const hasSoftModelFamilySignal = hasSoftModelFamilySignalInCanonicalBucket(keyword, pureBrandKeywords)
-  const hasModelFamilyRescueSignal = hasLinkTypeModelIntentFamilyRescueSignal(item, pureBrandKeywords, linkType)
-  const canRelaxByHighPrioritySource = isHighPriorityCanonicalSource(item)
-    && (hasDemandAnchor || hasModelAnchor || hasSoftModelFamilySignal)
+  const hasSoftModelFamilySignal = hasSoftModelFamilySignalInCanonicalBucket(
+    keyword,
+    pureBrandKeywords
+  )
+  const hasModelFamilyRescueSignal = hasLinkTypeModelIntentFamilyRescueSignal(
+    item,
+    pureBrandKeywords,
+    linkType
+  )
+  const canRelaxByHighPrioritySource =
+    isHighPriorityCanonicalSource(item) &&
+    (hasDemandAnchor || hasModelAnchor || hasSoftModelFamilySignal)
   if (CANONICAL_GEO_ADMIN_PATTERN.test(normalizedKeyword) && !hasModelAnchor) return true
   if (
-    CANONICAL_QUESTION_PREFIX_PATTERN.test(normalizedKeyword)
-    && !hasDemandAnchor
-    && !hasModelAnchor
-    && !hasSoftModelFamilySignal
-  ) return true
+    CANONICAL_QUESTION_PREFIX_PATTERN.test(normalizedKeyword) &&
+    !hasDemandAnchor &&
+    !hasModelAnchor &&
+    !hasSoftModelFamilySignal
+  )
+    return true
 
-  if (CANONICAL_STORE_NAV_PATTERN.test(normalizedKeyword) && !hasDemandAnchor && !canRelaxByHighPrioritySource) return true
-  if (CANONICAL_PROMO_PATTERN.test(normalizedKeyword) && !hasDemandAnchor && !canRelaxByHighPrioritySource) {
+  if (
+    CANONICAL_STORE_NAV_PATTERN.test(normalizedKeyword) &&
+    !hasDemandAnchor &&
+    !canRelaxByHighPrioritySource
+  )
+    return true
+  if (
+    CANONICAL_PROMO_PATTERN.test(normalizedKeyword) &&
+    !hasDemandAnchor &&
+    !canRelaxByHighPrioritySource
+  ) {
     return true
   }
   if (
-    creativeType === 'model_intent'
-    && !hasModelAnchor
-    && !hasSoftModelFamilySignal
-    && !hasModelFamilyRescueSignal
-  ) return true
+    creativeType === 'model_intent' &&
+    !hasModelAnchor &&
+    !hasSoftModelFamilySignal &&
+    !hasModelFamilyRescueSignal
+  )
+    return true
   if (creativeType === 'model_intent' && isPureBrand) return true
   if (creativeType === 'product_intent' && hasModelAnchor && !hasDemandAnchor) return true
 
@@ -6634,8 +7222,15 @@ function scoreCanonicalKeyword(
   const hasBrand = containsPureBrand(keyword, pureBrandKeywords)
   const hasModelAnchor = hasModelAnchorEvidence({ keywords: [keyword] })
   const hasDemandAnchor = hasDemandAnchorInCanonicalBucket(keyword, pureBrandKeywords)
-  const hasSoftModelFamilySignal = hasSoftModelFamilySignalInCanonicalBucket(keyword, pureBrandKeywords)
-  const hasModelFamilyRescueSignal = hasLinkTypeModelIntentFamilyRescueSignal(item, pureBrandKeywords, linkType)
+  const hasSoftModelFamilySignal = hasSoftModelFamilySignalInCanonicalBucket(
+    keyword,
+    pureBrandKeywords
+  )
+  const hasModelFamilyRescueSignal = hasLinkTypeModelIntentFamilyRescueSignal(
+    item,
+    pureBrandKeywords,
+    linkType
+  )
   const intent = classifyKeywordIntent(keyword).intent
 
   if (creativeType === 'brand_intent') {
@@ -6682,20 +7277,21 @@ function sortCanonicalKeywords(
     (item) => !shouldDropCanonicalKeyword(item, creativeType, pureBrandKeywords, linkType)
   )
   const ranked = [...filtered].sort((a, b) => {
-    const scoreDiff = scoreCanonicalKeyword(b, creativeType, pureBrandKeywords, linkType)
-      - scoreCanonicalKeyword(a, creativeType, pureBrandKeywords, linkType)
+    const scoreDiff =
+      scoreCanonicalKeyword(b, creativeType, pureBrandKeywords, linkType) -
+      scoreCanonicalKeyword(a, creativeType, pureBrandKeywords, linkType)
     if (scoreDiff !== 0) return scoreDiff
 
     const sourceRankDiff =
-      getKeywordSourcePriorityForPoolItem(a)
-      - getKeywordSourcePriorityForPoolItem(b)
+      getKeywordSourcePriorityForPoolItem(a) - getKeywordSourcePriorityForPoolItem(b)
     if (sourceRankDiff !== 0) return sourceRankDiff
 
     const volumeDiff = (b.searchVolume || 0) - (a.searchVolume || 0)
     if (volumeDiff !== 0) return volumeDiff
 
-    const brandDiff = Number(containsPureBrand(b.keyword, pureBrandKeywords))
-      - Number(containsPureBrand(a.keyword, pureBrandKeywords))
+    const brandDiff =
+      Number(containsPureBrand(b.keyword, pureBrandKeywords)) -
+      Number(containsPureBrand(a.keyword, pureBrandKeywords))
     if (brandDiff !== 0) return brandDiff
 
     return a.keyword.length - b.keyword.length
@@ -6704,12 +7300,14 @@ function sortCanonicalKeywords(
   let finalized = ranked
 
   if (creativeType === 'product_intent') {
-    const nonPureBrand = finalized.filter((item) => !isPureBrandPoolKeyword(item, pureBrandKeywords))
+    const nonPureBrand = finalized.filter(
+      (item) => !isPureBrandPoolKeyword(item, pureBrandKeywords)
+    )
     if (nonPureBrand.length > 0) {
-      const pureBrandFallback = finalized.find((item) => isPureBrandPoolKeyword(item, pureBrandKeywords))
-      finalized = pureBrandFallback
-        ? [...nonPureBrand, pureBrandFallback]
-        : nonPureBrand
+      const pureBrandFallback = finalized.find((item) =>
+        isPureBrandPoolKeyword(item, pureBrandKeywords)
+      )
+      finalized = pureBrandFallback ? [...nonPureBrand, pureBrandFallback] : nonPureBrand
     }
   }
 
@@ -6736,8 +7334,15 @@ function getCanonicalBucketTargets(
   const hasBrand = containsPureBrand(keyword, pureBrandKeywords)
   const hasModelAnchor = hasModelAnchorEvidence({ keywords: [keyword] })
   const hasDemandAnchor = hasDemandAnchorInCanonicalBucket(keyword, pureBrandKeywords)
-  const hasSoftModelFamilySignal = hasSoftModelFamilySignalInCanonicalBucket(keyword, pureBrandKeywords)
-  const hasModelFamilyRescueSignal = hasLinkTypeModelIntentFamilyRescueSignal(item, pureBrandKeywords, linkType)
+  const hasSoftModelFamilySignal = hasSoftModelFamilySignalInCanonicalBucket(
+    keyword,
+    pureBrandKeywords
+  )
+  const hasModelFamilyRescueSignal = hasLinkTypeModelIntentFamilyRescueSignal(
+    item,
+    pureBrandKeywords,
+    linkType
+  )
   const targets: Array<'A' | 'B' | 'D'> = []
 
   if (isPureBrand || (hasBrand && (hasDemandAnchor || hasModelAnchor))) {
@@ -6759,10 +7364,13 @@ function buildCanonicalSourceFirstBucketKeywords(
   linkType: 'product' | 'store'
 ): PoolKeywordData[] {
   const pureBrandKeywords = getPoolPureBrandKeywords(pool)
-  const bucketCandidates: Record<'A' | 'B' | 'D', {
-    primary: PoolKeywordData[]
-    compatibility: PoolKeywordData[]
-  }> = {
+  const bucketCandidates: Record<
+    'A' | 'B' | 'D',
+    {
+      primary: PoolKeywordData[]
+      compatibility: PoolKeywordData[]
+    }
+  > = {
     A: { primary: [], compatibility: [] },
     B: { primary: [], compatibility: [] },
     D: { primary: [], compatibility: [] },
@@ -6772,9 +7380,7 @@ function buildCanonicalSourceFirstBucketKeywords(
     const targets = getCanonicalBucketTargets(item, pureBrandKeywords, linkType)
     if (targets.length === 0) continue
 
-    const sourceTier = isPrimaryCanonicalSource(item.source)
-      ? 'primary'
-      : 'compatibility'
+    const sourceTier = isPrimaryCanonicalSource(item.source) ? 'primary' : 'compatibility'
 
     for (const target of targets) {
       bucketCandidates[target][sourceTier].push(item)
@@ -6826,10 +7432,11 @@ function buildLegacyProjectedCanonicalBucketKeywords(
       isStore ? pool.storeBucketCKeywords : pool.bucketCKeywords,
       isStore ? pool.storeBucketSKeywords : pool.bucketDKeywords,
     ])
-    const modelAnchored = merged.filter((item) =>
-      hasModelAnchorEvidence({ keywords: [item.keyword] })
-      || hasSoftModelFamilySignalInCanonicalBucket(item.keyword, pureBrandKeywords)
-      || hasLinkTypeModelIntentFamilyRescueSignal(item, pureBrandKeywords, linkType)
+    const modelAnchored = merged.filter(
+      (item) =>
+        hasModelAnchorEvidence({ keywords: [item.keyword] }) ||
+        hasSoftModelFamilySignalInCanonicalBucket(item.keyword, pureBrandKeywords) ||
+        hasLinkTypeModelIntentFamilyRescueSignal(item, pureBrandKeywords, linkType)
     )
     return sortCanonicalKeywords(modelAnchored, 'model_intent', pureBrandKeywords, linkType)
   }
@@ -6873,11 +7480,11 @@ const OFFER_CONTEXT_FILTERED_DERIVED_TAG = 'OFFER_CONTEXT_FILTERED'
 function markOfferContextFilteredKeywords(keywords: PoolKeywordData[]): PoolKeywordData[] {
   return keywords.map((item) => {
     const existingTags = Array.isArray((item as any).derivedTags)
-      ? (item as any).derivedTags
-          .map((tag: unknown) => String(tag || '').trim())
-          .filter(Boolean)
+      ? (item as any).derivedTags.map((tag: unknown) => String(tag || '').trim()).filter(Boolean)
       : []
-    if (existingTags.some((tag: string) => tag.toUpperCase() === OFFER_CONTEXT_FILTERED_DERIVED_TAG)) {
+    if (
+      existingTags.some((tag: string) => tag.toUpperCase() === OFFER_CONTEXT_FILTERED_DERIVED_TAG)
+    ) {
       return item
     }
 
@@ -6888,23 +7495,27 @@ function markOfferContextFilteredKeywords(keywords: PoolKeywordData[]): PoolKeyw
   })
 }
 
-async function getOfferContextForCanonicalFilter(offerId: number): Promise<OfferKeywordContextForCanonicalFilter | null> {
+async function getOfferContextForCanonicalFilter(
+  offerId: number
+): Promise<OfferKeywordContextForCanonicalFilter | null> {
   const db = await getDatabase()
   return (
-    await db.queryOne<OfferKeywordContextForCanonicalFilter>(
-    `SELECT brand, page_type, category, product_name, offer_name, target_country, target_language, scraped_data, final_url, url
+    (await db.queryOne<OfferKeywordContextForCanonicalFilter>(
+      `SELECT brand, page_type, category, product_name, offer_name, target_country, target_language, scraped_data, final_url, url
      FROM offers
      WHERE id = ?`,
-    [offerId]
-    )
-  ) || null
+      [offerId]
+    )) || null
+  )
 }
 
 function buildEmptyCanonicalModelIntentFallback(params: {
   offerContext: OfferKeywordContextForCanonicalFilter
   scopeLabel: string
 }): PoolKeywordData[] {
-  const pageType = String(params.offerContext.page_type || '').trim().toLowerCase()
+  const pageType = String(params.offerContext.page_type || '')
+    .trim()
+    .toLowerCase()
   if (pageType === 'store') return []
 
   const modelFamilyContext = buildProductModelFamilyContext({
@@ -6921,30 +7532,33 @@ function buildEmptyCanonicalModelIntentFallback(params: {
   })
   if (fallbackKeywords.length === 0) return []
 
-  const normalizedModelCodes = Array.from(new Set(
-    modelFamilyContext.modelCodes
-      .map((item) => normalizeGoogleAdsKeyword(item))
-      .filter((item): item is string => Boolean(item))
-  ))
-  const structuredModelFallbackKeywords = normalizedModelCodes.length > 0
-    ? fallbackKeywords.filter((keyword) => {
-      const normalizedKeyword = normalizeGoogleAdsKeyword(keyword) || ''
-      if (!normalizedKeyword) return false
-      const keywordTokens = new Set(normalizedKeyword.split(/\s+/).filter(Boolean))
-      return normalizedModelCodes.some((code) => keywordTokens.has(code))
-    })
-    : fallbackKeywords
-
-  const effectiveFallbackKeywords = structuredModelFallbackKeywords.length > 0
-    ? structuredModelFallbackKeywords
-    : normalizedModelCodes.length > 0
-      ? []
+  const normalizedModelCodes = Array.from(
+    new Set(
+      modelFamilyContext.modelCodes
+        .map((item) => normalizeGoogleAdsKeyword(item))
+        .filter((item): item is string => Boolean(item))
+    )
+  )
+  const structuredModelFallbackKeywords =
+    normalizedModelCodes.length > 0
+      ? fallbackKeywords.filter((keyword) => {
+          const normalizedKeyword = normalizeGoogleAdsKeyword(keyword) || ''
+          if (!normalizedKeyword) return false
+          const keywordTokens = new Set(normalizedKeyword.split(/\s+/).filter(Boolean))
+          return normalizedModelCodes.some((code) => keywordTokens.has(code))
+        })
       : fallbackKeywords
+
+  const effectiveFallbackKeywords =
+    structuredModelFallbackKeywords.length > 0
+      ? structuredModelFallbackKeywords
+      : normalizedModelCodes.length > 0
+        ? []
+        : fallbackKeywords
   if (effectiveFallbackKeywords.length === 0) return []
 
-  const fallbackSource = normalizedModelCodes.length > 0
-    ? 'MODEL_ENTITY_FALLBACK'
-    : 'MODEL_FAMILY_GUARD'
+  const fallbackSource =
+    normalizedModelCodes.length > 0 ? 'MODEL_ENTITY_FALLBACK' : 'MODEL_FAMILY_GUARD'
 
   console.warn(
     `⚠️ model_intent canonical 为空，已注入 ${effectiveFallbackKeywords.length} 个${normalizedModelCodes.length > 0 ? '结构化型号' : ' soft-family'} fallback (${params.scopeLabel})`
@@ -6968,15 +7582,22 @@ function isModelFamilyGuardPoolKeyword(item: PoolKeywordData | null | undefined)
     (item as any)?.source,
     (item as any)?.sourceType,
     (item as any)?.sourceSubtype,
-  ].map((value) => String(value || '').trim().toUpperCase())
+  ].map((value) =>
+    String(value || '')
+      .trim()
+      .toUpperCase()
+  )
 
   if (sourceKeys.includes('MODEL_FAMILY_GUARD')) return true
 
-  const derivedTags = Array.isArray((item as any)?.derivedTags)
-    ? (item as any).derivedTags
-    : []
+  const derivedTags = Array.isArray((item as any)?.derivedTags) ? (item as any).derivedTags : []
 
-  return derivedTags.some((tag: unknown) => String(tag || '').trim().toUpperCase() === 'MODEL_FAMILY_GUARD')
+  return derivedTags.some(
+    (tag: unknown) =>
+      String(tag || '')
+        .trim()
+        .toUpperCase() === 'MODEL_FAMILY_GUARD'
+  )
 }
 
 function sortModelIntentRescueKeywords(
@@ -6984,13 +7605,13 @@ function sortModelIntentRescueKeywords(
   pureBrandKeywords: string[]
 ): PoolKeywordData[] {
   const ranked = [...keywords].sort((a, b) => {
-    const scoreDiff = scoreCanonicalKeyword(b, 'model_intent', pureBrandKeywords)
-      - scoreCanonicalKeyword(a, 'model_intent', pureBrandKeywords)
+    const scoreDiff =
+      scoreCanonicalKeyword(b, 'model_intent', pureBrandKeywords) -
+      scoreCanonicalKeyword(a, 'model_intent', pureBrandKeywords)
     if (scoreDiff !== 0) return scoreDiff
 
     const sourceRankDiff =
-      getKeywordSourcePriorityForPoolItem(a)
-      - getKeywordSourcePriorityForPoolItem(b)
+      getKeywordSourcePriorityForPoolItem(a) - getKeywordSourcePriorityForPoolItem(b)
     if (sourceRankDiff !== 0) return sourceRankDiff
 
     const volumeDiff = (b.searchVolume || 0) - (a.searchVolume || 0)
@@ -7035,9 +7656,11 @@ function buildCrossBucketModelIntentRescueKeywords(params: {
     .filter((item) => containsPureBrand(item.keyword, params.pureBrandKeywords))
     .filter((item) => {
       const normalized = normalizeGoogleAdsKeyword(item.keyword)
-      return Boolean(normalized)
-        && !currentKeywordKeys.has(normalized)
-        && !blockedKeywordKeySet.has(normalized)
+      return (
+        Boolean(normalized) &&
+        !currentKeywordKeys.has(normalized) &&
+        !blockedKeywordKeySet.has(normalized)
+      )
     })
     .filter((item) => {
       const normalized = normalizeGoogleAdsKeyword(item.keyword) || ''
@@ -7057,19 +7680,17 @@ function buildCrossBucketModelIntentRescueKeywords(params: {
 
   if (candidates.length === 0) return []
 
-  const filtered = filterKeywordObjectsByProductModelFamily(
-    candidates,
-    modelFamilyContext
-  ).filtered
-    .filter((item) => !isModelFamilyGuardPoolKeyword(item))
+  const filtered = filterKeywordObjectsByProductModelFamily(candidates, modelFamilyContext)
+    .filtered.filter((item) => !isModelFamilyGuardPoolKeyword(item))
     .filter((item) => !isPureBrandPoolKeyword(item, params.pureBrandKeywords))
 
   if (filtered.length === 0) return []
 
   const positiveVolumeKeywords = filtered.filter((item) => Number(item.searchVolume || 0) > 0)
-  const effectiveKeywords = positiveVolumeKeywords.length >= MODEL_INTENT_MIN_KEYWORD_FLOOR
-    ? positiveVolumeKeywords
-    : filtered
+  const effectiveKeywords =
+    positiveVolumeKeywords.length >= MODEL_INTENT_MIN_KEYWORD_FLOOR
+      ? positiveVolumeKeywords
+      : filtered
 
   return markOfferContextFilteredKeywords(
     sortModelIntentRescueKeywords(effectiveKeywords, params.pureBrandKeywords)
@@ -7086,24 +7707,31 @@ async function applyOfferContextToCanonicalKeywords(params: {
 }): Promise<PoolKeywordData[]> {
   const { offerId, keywords, creativeType, scopeLabel } = params
   if (!creativeType) return keywords
-  if (creativeType !== 'brand_intent' && creativeType !== 'model_intent' && creativeType !== 'product_intent') {
+  if (
+    creativeType !== 'brand_intent' &&
+    creativeType !== 'model_intent' &&
+    creativeType !== 'product_intent'
+  ) {
     return keywords
   }
 
   const offerContext = await getOfferContextForCanonicalFilter(offerId)
   if (!offerContext) return keywords
-  const pureBrandKeywords = Array.from(new Set(
-    (params.pureBrandKeywords || [])
-      .map((item) => normalizeGoogleAdsKeyword(item))
-      .filter((item): item is string => Boolean(item))
-  ))
-  const pageType = String(offerContext.page_type || '').trim().toLowerCase()
-  const shouldAttemptModelIntentCrossBucketRescue = (
-    creativeType === 'model_intent'
-    && pageType === 'product'
-    && Array.isArray(params.fallbackCandidates)
-    && params.fallbackCandidates.length > 0
+  const pureBrandKeywords = Array.from(
+    new Set(
+      (params.pureBrandKeywords || [])
+        .map((item) => normalizeGoogleAdsKeyword(item))
+        .filter((item): item is string => Boolean(item))
+    )
   )
+  const pageType = String(offerContext.page_type || '')
+    .trim()
+    .toLowerCase()
+  const shouldAttemptModelIntentCrossBucketRescue =
+    creativeType === 'model_intent' &&
+    pageType === 'product' &&
+    Array.isArray(params.fallbackCandidates) &&
+    params.fallbackCandidates.length > 0
   if (keywords.length === 0 && creativeType === 'model_intent') {
     if (shouldAttemptModelIntentCrossBucketRescue) {
       const rescued = buildCrossBucketModelIntentRescueKeywords({
@@ -7137,8 +7765,8 @@ async function applyOfferContextToCanonicalKeywords(params: {
   const filtered = filterResult.keywords
 
   if (
-    shouldAttemptModelIntentCrossBucketRescue
-    && (filtered.length === 0 || filtered.every((item) => isModelFamilyGuardPoolKeyword(item)))
+    shouldAttemptModelIntentCrossBucketRescue &&
+    (filtered.length === 0 || filtered.every((item) => isModelFamilyGuardPoolKeyword(item)))
   ) {
     const rescued = buildCrossBucketModelIntentRescueKeywords({
       offerContext,
@@ -7186,39 +7814,35 @@ export function getBucketInfo(
       return {
         keywords: buildCanonicalBucketKeywords(pool, 'A', linkType),
         intent: isStore ? '品牌意图' : '品牌意图',
-        intentEn: 'Brand Intent'
+        intentEn: 'Brand Intent',
       }
     case 'B':
       return {
         keywords: buildCanonicalBucketKeywords(pool, 'B', linkType),
         intent: isStore ? '热门商品型号/产品族意图' : '商品型号/产品族意图',
-        intentEn: isStore ? 'Store Model Intent' : 'Model Intent'
+        intentEn: isStore ? 'Store Model Intent' : 'Model Intent',
       }
     case 'C':
       return {
         // 🔧 向后兼容：旧版 C 桶在当前策略下等价于 B（商品型号/产品族意图）
         keywords: getBucketInfo(pool, 'B').keywords,
         intent: getBucketInfo(pool, 'B').intent,
-        intentEn: getBucketInfo(pool, 'B').intentEn
+        intentEn: getBucketInfo(pool, 'B').intentEn,
       }
     case 'S':
       // 🔧 向后兼容：旧版 S 桶在 KISS-3 类型方案中等价于 D（商品需求意图）
       return {
         keywords: buildCanonicalBucketKeywords(pool, 'D', linkType),
-        intent: isStore
-          ? '商品需求意图'
-          : '商品需求意图',
-        intentEn: 'Product Demand Intent'
+        intent: isStore ? '商品需求意图' : '商品需求意图',
+        intentEn: 'Product Demand Intent',
       }
     case 'D':
       // ✅ KISS优化：D 桶 = 商品需求意图
       // D 桶用于“全量覆盖”创意，确保包含全部合格关键词
       return {
         keywords: buildCanonicalBucketKeywords(pool, 'D', linkType),
-        intent: isStore
-          ? '商品需求意图'
-          : '商品需求意图',
-        intentEn: 'Product Demand Intent'
+        intent: isStore ? '商品需求意图' : '商品需求意图',
+        intentEn: 'Product Demand Intent',
       }
     default:
       throw new Error(`Invalid bucket type: ${bucket}`)
@@ -7262,10 +7886,10 @@ export async function getCoverageBucketKeywords(
   const pureBrandKeywords = getPoolPureBrandKeywords(pool)
 
   // 1. 收集所有品牌词（从 PoolKeywordData[] 提取）
-  const brandKeywords = pool.brandKeywords.map(kw => ({
+  const brandKeywords = pool.brandKeywords.map((kw) => ({
     keyword: typeof kw === 'string' ? kw : kw.keyword,
-    searchVolume: typeof kw === 'string' ? 0 : (kw.searchVolume || 0),
-    isBrand: true
+    searchVolume: typeof kw === 'string' ? 0 : kw.searchVolume || 0,
+    isBrand: true,
   }))
   console.log(`   品牌词: ${brandKeywords.length}个`)
 
@@ -7275,8 +7899,8 @@ export async function getCoverageBucketKeywords(
   // 3. 收集所有非纯品牌词（去重）
   const allNonBrandKeywords = new Set<string>([
     ...coverageCandidates
-      .filter(kw => !isPureBrandPoolKeyword(kw, pureBrandKeywords))
-      .map(kw => kw.keyword)
+      .filter((kw) => !isPureBrandPoolKeyword(kw, pureBrandKeywords))
+      .map((kw) => kw.keyword),
   ])
   console.log(`   非品牌词（去重后）: ${allNonBrandKeywords.size}个`)
 
@@ -7296,26 +7920,30 @@ export async function getCoverageBucketKeywords(
         country,
         language: normalizeLanguageCode(config.language || 'en'),
         userId,
-        brandName: pool.brandKeywords[0] ? (typeof pool.brandKeywords[0] === 'string' ? pool.brandKeywords[0] : pool.brandKeywords[0].keyword) : ''
+        brandName: pool.brandKeywords[0]
+          ? typeof pool.brandKeywords[0] === 'string'
+            ? pool.brandKeywords[0]
+            : pool.brandKeywords[0].keyword
+          : '',
       })
 
       // 构建搜索量映射（保留“搜索量不可用”标记）
       const volumeMap = new Map(
-        volumeData.map(v => [
+        volumeData.map((v) => [
           v.keyword.toLowerCase(),
           {
             searchVolume: v.searchVolume,
             volumeUnavailableReason: v.volumeUnavailableReason,
-          }
+          },
         ])
       )
 
       // 转换为带搜索量的格式
-      nonBrandWithVolume = Array.from(allNonBrandKeywords).map(kw => ({
+      nonBrandWithVolume = Array.from(allNonBrandKeywords).map((kw) => ({
         keyword: kw,
         searchVolume: Number(volumeMap.get(kw.toLowerCase())?.searchVolume || 0),
         volumeUnavailableReason: volumeMap.get(kw.toLowerCase())?.volumeUnavailableReason,
-        isBrand: false
+        isBrand: false,
       }))
 
       // 按搜索量降序排序
@@ -7323,11 +7951,13 @@ export async function getCoverageBucketKeywords(
 
       // 过滤低于阈值的关键词
       // 🔧 修复(2026-03-05): Explorer/权限受限返回 volumeUnavailableReason 时，跳过全部搜索量过滤
-      const hasAnyVolume = nonBrandWithVolume.some(kw => kw.searchVolume > 0)
-      const volumeUnavailable = hasSearchVolumeUnavailableFlag(nonBrandWithVolume as Array<{ volumeUnavailableReason?: unknown }>)
+      const hasAnyVolume = nonBrandWithVolume.some((kw) => kw.searchVolume > 0)
+      const volumeUnavailable = hasSearchVolumeUnavailableFlag(
+        nonBrandWithVolume as Array<{ volumeUnavailableReason?: unknown }>
+      )
       if (hasAnyVolume && !volumeUnavailable) {
         nonBrandWithVolume = nonBrandWithVolume.filter(
-          kw => kw.searchVolume >= config.minSearchVolume
+          (kw) => kw.searchVolume >= config.minSearchVolume
         )
         console.log(`   获取搜索量成功，过滤后剩余: ${nonBrandWithVolume.length}个`)
       } else if (hasAnyVolume && volumeUnavailable) {
@@ -7337,18 +7967,18 @@ export async function getCoverageBucketKeywords(
       }
     } catch (error: any) {
       console.warn(`   ⚠️ 获取搜索量失败，使用原始顺序:`, error.message)
-      nonBrandWithVolume = Array.from(allNonBrandKeywords).map(kw => ({
+      nonBrandWithVolume = Array.from(allNonBrandKeywords).map((kw) => ({
         keyword: kw,
         searchVolume: 0,
-        isBrand: false
+        isBrand: false,
       }))
     }
   } else {
     // 不需要排序，直接使用
-    nonBrandWithVolume = Array.from(allNonBrandKeywords).map(kw => ({
+    nonBrandWithVolume = Array.from(allNonBrandKeywords).map((kw) => ({
       keyword: kw,
       searchVolume: 0,
-      isBrand: false
+      isBrand: false,
     }))
   }
 
@@ -7363,7 +7993,9 @@ export async function getCoverageBucketKeywords(
   console.log(`   - 品牌词: ${brandKeywords.length}个`)
   console.log(`   - 高搜索量非品牌词: ${topNonBrandKeywords.length}个`)
   if (topNonBrandKeywords.length > 0) {
-    console.log(`   - 最高搜索量: ${topNonBrandKeywords[0]?.keyword} (${topNonBrandKeywords[0]?.searchVolume})`)
+    console.log(
+      `   - 最高搜索量: ${topNonBrandKeywords[0]?.keyword} (${topNonBrandKeywords[0]?.searchVolume})`
+    )
   }
 
   return result
@@ -7543,14 +8175,11 @@ export async function isCreativeLimitReached(offerId: number): Promise<boolean> 
  * @param keywords2 - 关键词列表 2
  * @returns 重叠率 (0-1)
  */
-export function calculateKeywordOverlapRate(
-  keywords1: string[],
-  keywords2: string[]
-): number {
+export function calculateKeywordOverlapRate(keywords1: string[], keywords2: string[]): number {
   if (keywords1.length === 0 || keywords2.length === 0) return 0
 
-  const set1 = new Set(keywords1.map(k => k.toLowerCase()))
-  const set2 = new Set(keywords2.map(k => k.toLowerCase()))
+  const set1 = new Set(keywords1.map((k) => k.toLowerCase()))
+  const set2 = new Set(keywords2.map((k) => k.toLowerCase()))
 
   let overlap = 0
   for (const kw of set1) {
@@ -7585,19 +8214,19 @@ export function determineClusteringStrategy(keywordCount: number): ClusteringStr
     return {
       bucketCount: 1,
       strategy: 'single',
-      message: '关键词太少 (<15)，只生成 1 个创意'
+      message: '关键词太少 (<15)，只生成 1 个创意',
     }
   } else if (keywordCount < 30) {
     return {
       bucketCount: 2,
       strategy: 'dual',
-      message: '关键词较少 (15-29)，生成 2 个创意'
+      message: '关键词较少 (15-29)，生成 2 个创意',
     }
   } else {
     return {
       bucketCount: 3,
       strategy: 'full',
-      message: '关键词充足 (>=30)，生成 3 个创意'
+      message: '关键词充足 (>=30)，生成 3 个创意',
     }
   }
 }
@@ -7707,11 +8336,7 @@ function buildCanonicalKeywordView(keywordPool: OfferKeywordPool) {
     B: bucketB,
     C: bucketB,
     D: bucketD,
-    ALL: mergeKeywordDataLists([
-      bucketA.keywords,
-      bucketB.keywords,
-      bucketD.keywords,
-    ]),
+    ALL: mergeKeywordDataLists([bucketA.keywords, bucketB.keywords, bucketD.keywords]),
   }
 }
 
@@ -7723,10 +8348,7 @@ function buildPureBrandSetFromPoolKeywords(keywords: PoolKeywordData[]): Set<str
   )
 }
 
-function isPoolKeywordPureBrand(
-  item: PoolKeywordData,
-  pureBrandSet: Set<string>
-): boolean {
+function isPoolKeywordPureBrand(item: PoolKeywordData, pureBrandSet: Set<string>): boolean {
   if (item.isPureBrand) return true
   const normalized = normalizeGoogleAdsKeyword(item.keyword)
   return Boolean(normalized && pureBrandSet.has(normalized))
@@ -7742,8 +8364,12 @@ function ensurePureBrandFallbackWithinLimit(params: {
   if (limit === 0) return []
   if (params.pureBrandSet.size === 0) return params.keywords.slice(0, limit)
 
-  const nonPure = params.keywords.filter((item) => !isPoolKeywordPureBrand(item, params.pureBrandSet))
-  const existingFallback = params.keywords.find((item) => isPoolKeywordPureBrand(item, params.pureBrandSet))
+  const nonPure = params.keywords.filter(
+    (item) => !isPoolKeywordPureBrand(item, params.pureBrandSet)
+  )
+  const existingFallback = params.keywords.find((item) =>
+    isPoolKeywordPureBrand(item, params.pureBrandSet)
+  )
 
   if (existingFallback) {
     const kept = nonPure.slice(0, Math.max(0, limit - 1))
@@ -7795,7 +8421,7 @@ export async function getKeywords(
     intent,
     creativeType,
     minSearchVolume = 100,
-    maxKeywords = 5000
+    maxKeywords = 5000,
   } = options
 
   // 1. 获取关键词池
@@ -7806,7 +8432,7 @@ export async function getKeywords(
     return {
       keywords: [],
       stats: { totalCount: 0 },
-      meta: { offerId }
+      meta: { offerId },
     }
   }
   const pureBrandSet = buildPureBrandSetFromPoolKeywords(keywordPool.brandKeywords)
@@ -7814,14 +8440,17 @@ export async function getKeywords(
   // 3. 使用 canonical 视图选择关键词（兼容旧 bucket / intent 参数）
   const canonicalView = buildCanonicalKeywordView(keywordPool)
   const effectiveBucket = resolveCanonicalGetKeywordsBucket(bucket, intent, creativeType)
-  let keywords = effectiveBucket === 'ALL'
-    ? [...canonicalView.ALL]
-    : [...canonicalView[effectiveBucket].keywords]
-  const effectiveCreativeType = effectiveBucket === 'ALL'
-    ? null
-    : getCreativeTypeForBucketSlot(effectiveBucket)
+  let keywords =
+    effectiveBucket === 'ALL'
+      ? [...canonicalView.ALL]
+      : [...canonicalView[effectiveBucket].keywords]
+  const effectiveCreativeType =
+    effectiveBucket === 'ALL' ? null : getCreativeTypeForBucketSlot(effectiveBucket)
   const keywordPoolLinkType = keywordPool.linkType === 'store' ? 'store' : 'product'
-  const comprehensivePoolKeywords = getComprehensiveKeywordsForPool(keywordPool, keywordPoolLinkType)
+  const comprehensivePoolKeywords = getComprehensiveKeywordsForPool(
+    keywordPool,
+    keywordPoolLinkType
+  )
   const pureBrandKeywords = getPoolPureBrandKeywords(keywordPool)
 
   if (effectiveBucket !== 'ALL' && effectiveCreativeType) {
@@ -7837,10 +8466,10 @@ export async function getKeywords(
 
   // 4. 按搜索量过滤（纯品牌词豁免）
   // 🔧 修复(2025-12-26): 服务账号模式下无法获取搜索量，跳过过滤
-  const hasAnyVolume = keywords.some(kw => kw.searchVolume > 0)
+  const hasAnyVolume = keywords.some((kw) => kw.searchVolume > 0)
   const volumeUnavailable = hasSearchVolumeUnavailableFlag(keywords)
   if (hasAnyVolume && !volumeUnavailable) {
-    keywords = keywords.filter(kw => {
+    keywords = keywords.filter((kw) => {
       const normalized = normalizeGoogleAdsKeyword(kw.keyword)
       return kw.searchVolume >= minSearchVolume || (normalized && pureBrandSet.has(normalized))
     })
@@ -7853,7 +8482,7 @@ export async function getKeywords(
   if (effectiveBucket === 'ALL' && keywordPool.brandKeywords.length > 0) {
     keywords = prioritizeBrandKeywordsFirst(
       keywords,
-      keywordPool.brandKeywords.map(kw => kw.keyword)
+      keywordPool.brandKeywords.map((kw) => kw.keyword)
     )
   }
 
@@ -7877,18 +8506,19 @@ export async function getKeywords(
       bucketBCount: canonicalView.B.keywords.length,
       bucketCCount: canonicalView.C.keywords.length,
       bucketDCount: canonicalView.D.keywords.length,
-      searchVolumeRange: keywords.length > 0
-        ? {
-            min: Math.min(...keywords.map(k => k.searchVolume)),
-            max: Math.max(...keywords.map(k => k.searchVolume))
-          }
-        : undefined
+      searchVolumeRange:
+        keywords.length > 0
+          ? {
+              min: Math.min(...keywords.map((k) => k.searchVolume)),
+              max: Math.max(...keywords.map((k) => k.searchVolume)),
+            }
+          : undefined,
     },
     meta: {
       offerId,
       createdAt: keywordPool.createdAt,
-      updatedAt: keywordPool.updatedAt
-    }
+      updatedAt: keywordPool.updatedAt,
+    },
   }
 
   // 7. 如果需要，返回桶信息
@@ -7897,11 +8527,13 @@ export async function getKeywords(
       A: { intent: canonicalView.A.intent, keywords: canonicalView.A.keywords },
       B: { intent: canonicalView.B.intent, keywords: canonicalView.B.keywords },
       C: { intent: canonicalView.C.intent, keywords: canonicalView.C.keywords },
-      D: { intent: canonicalView.D.intent, keywords: canonicalView.D.keywords }
+      D: { intent: canonicalView.D.intent, keywords: canonicalView.D.keywords },
     }
   }
 
-  console.log(`[getKeywords] 完成: offerId=${offerId}, bucket=${bucket}, effectiveBucket=${effectiveBucket}, 返回${keywords.length}个关键词`)
+  console.log(
+    `[getKeywords] 完成: offerId=${offerId}, bucket=${bucket}, effectiveBucket=${effectiveBucket}, 返回${keywords.length}个关键词`
+  )
   return result
 }
 
@@ -7925,9 +8557,8 @@ export async function getKeywordsByLinkTypeAndBucket(
     return { keywords: [], intent: '', intentEn: '' }
   }
 
-  const effectivePool = keywordPool.linkType === linkType
-    ? keywordPool
-    : { ...keywordPool, linkType }
+  const effectivePool =
+    keywordPool.linkType === linkType ? keywordPool : { ...keywordPool, linkType }
   const bucketInfo = getBucketInfo(effectivePool as OfferKeywordPool, bucket)
   const effectiveBucket = mapBucketToKissType(bucket)
   const effectiveCreativeType = getCreativeTypeForBucketSlot(effectiveBucket)

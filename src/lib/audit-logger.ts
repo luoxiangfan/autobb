@@ -173,17 +173,20 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
   try {
     const timestamp = entry.timestamp || new Date()
 
-    await db.exec(`
+    await db.exec(
+      `
       INSERT INTO audit_logs (user_id, event_type, ip_address, user_agent, details, created_at)
       VALUES (?, ?, ?, ?, ?, ?)
-    `, [
-      entry.userId || null,
-      entry.eventType,
-      entry.ipAddress,
-      entry.userAgent,
-      toDbJsonObjectField(entry.details || null, db.type, null),
-      timestamp.toISOString()
-    ])
+    `,
+      [
+        entry.userId || null,
+        entry.eventType,
+        entry.ipAddress,
+        entry.userAgent,
+        toDbJsonObjectField(entry.details || null, db.type, null),
+        timestamp.toISOString(),
+      ]
+    )
   } catch (error) {
     console.error('[AuditLogger] Failed to log audit event:', error)
     // 不抛出错误，避免影响业务流程
@@ -261,31 +264,42 @@ export async function logUserManagementAction(
     const timestamp = new Date().toISOString()
     const parsedUA = parseUserAgent(context.userAgent)
 
-    await db.exec(`
+    await db.exec(
+      `
       INSERT INTO audit_logs (
         user_id, event_type, ip_address, user_agent, details, created_at,
         operator_id, operator_username, target_user_id, target_username, status, error_message
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      context.targetUserId,
-      action,
-      context.ipAddress,
-      context.userAgent,
-      toDbJsonObjectField(details ? {
-        ...details,
-        parsedUserAgent: parsedUA,
-      } : { parsedUserAgent: parsedUA }, db.type, { parsedUserAgent: parsedUA }),
-      timestamp,
-      context.operatorId,
-      context.operatorUsername,
-      context.targetUserId,
-      context.targetUsername,
-      status,
-      errorMessage || null,
-    ])
+    `,
+      [
+        context.targetUserId,
+        action,
+        context.ipAddress,
+        context.userAgent,
+        toDbJsonObjectField(
+          details
+            ? {
+                ...details,
+                parsedUserAgent: parsedUA,
+              }
+            : { parsedUserAgent: parsedUA },
+          db.type,
+          { parsedUserAgent: parsedUA }
+        ),
+        timestamp,
+        context.operatorId,
+        context.operatorUsername,
+        context.targetUserId,
+        context.targetUsername,
+        status,
+        errorMessage || null,
+      ]
+    )
 
-    console.log(`[AuditLogger] User management action logged: ${action} by ${context.operatorUsername} on ${context.targetUsername} (${status})`)
+    console.log(
+      `[AuditLogger] User management action logged: ${action} by ${context.operatorUsername} on ${context.targetUsername} (${status})`
+    )
   } catch (error) {
     console.error('[AuditLogger] Failed to log user management action:', error)
     // 不抛出错误，避免影响业务流程
@@ -351,9 +365,7 @@ export async function logUserDisabled(
 /**
  * 快捷方法：记录用户启用
  */
-export async function logUserEnabled(
-  context: UserManagementContext
-): Promise<void> {
+export async function logUserEnabled(context: UserManagementContext): Promise<void> {
   await logUserManagementAction('user_enabled', context, {
     before: { is_active: false },
     after: { is_active: true },
@@ -439,25 +451,28 @@ export async function logLoginAttemptWithDeviceInfo(
   const parsedUA = parseUserAgent(userAgent)
 
   try {
-    await db.exec(`
+    await db.exec(
+      `
       INSERT INTO login_attempts (
         username_or_email, user_id, ip_address, user_agent, success, failure_reason, attempted_at,
         device_type, os, browser, browser_version
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      usernameOrEmail,
-      userId || null,
-      ipAddress,
-      userAgent,
-      success ? 1 : 0,
-      failureReason || null,
-      new Date().toISOString(),
-      parsedUA.deviceType,
-      parsedUA.os,
-      parsedUA.browser,
-      parsedUA.browserVersion,
-    ])
+    `,
+      [
+        usernameOrEmail,
+        userId || null,
+        ipAddress,
+        userAgent,
+        success ? 1 : 0,
+        failureReason || null,
+        new Date().toISOString(),
+        parsedUA.deviceType,
+        parsedUA.os,
+        parsedUA.browser,
+        parsedUA.browserVersion,
+      ]
+    )
   } catch (error) {
     console.error('[AuditLogger] Failed to log login attempt:', error)
   }
@@ -555,5 +570,5 @@ export async function queryUserManagementLogs(
     params.push(options.offset)
   }
 
-  return await db.query(query, params) as UserManagementLogResult[]
+  return (await db.query(query, params)) as UserManagementLogResult[]
 }

@@ -36,10 +36,7 @@ import {
 
 export { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword }
 
-const BRAND_CONNECTOR_TOKENS = new Set([
-  'and',
-  'plus',
-])
+const BRAND_CONNECTOR_TOKENS = new Set(['and', 'plus'])
 
 /**
  * 判断是否为“品牌拼接词”（无空格直接拼接）
@@ -99,7 +96,9 @@ export function shouldKeepByBrand(keyword: string, pureBrandKeywords: string[]):
   if (keywordTokens.length < 3) return false
 
   for (const brand of pureBrandKeywords) {
-    const brandTokens = normalizeGoogleAdsKeyword(brand || '').split(/\s+/).filter(Boolean)
+    const brandTokens = normalizeGoogleAdsKeyword(brand || '')
+      .split(/\s+/)
+      .filter(Boolean)
     if (brandTokens.length < 2) continue
 
     for (let start = 0; start < keywordTokens.length; start += 1) {
@@ -152,56 +151,152 @@ export function shouldUseExactMatch(keyword: string, pureBrandKeywords: string[]
  */
 const SEMANTIC_QUERY_PATTERNS = [
   // 语义查询类（meaning, definition, what is...）
-  'significato', 'meaning', 'definition', 'what is', 'cosa significa',
-  'translate', 'translation', 'traduzione',
+  'significato',
+  'meaning',
+  'definition',
+  'what is',
+  'cosa significa',
+  'translate',
+  'translation',
+  'traduzione',
 
   // 媒体/娱乐类（TV series, shows...）
-  'serie', 'series', 'tv', 'television', 'show', 'episode',
-  'stagione', 'stagioni', 'netflix', 'streaming',
+  'serie',
+  'series',
+  'tv',
+  'television',
+  'show',
+  'episode',
+  'stagione',
+  'stagioni',
+  'netflix',
+  'streaming',
 
   // 历史/百科类
-  'history', 'storia', 'wikipedia', 'wiki',
+  'history',
+  'storia',
+  'wikipedia',
+  'wiki',
 
   // 地点/地名类
-  'palace', 'hotel', 'spa', 'resort', 'restaurant',
-  'location', 'where to', 'near me',
+  'palace',
+  'hotel',
+  'spa',
+  'resort',
+  'restaurant',
+  'location',
+  'where to',
+  'near me',
 
   // 教育/教程类
-  'how to', 'tutorial', 'guide', 'manual', 'instructions',
+  'how to',
+  'tutorial',
+  'guide',
+  'manual',
+  'instructions',
 
   // 价格比较类（保留price/cost用于产品搜索，但过滤compare/review）
-  'compare', 'comparison', 'versus', 'vs ',
-  'review', 'reviews', 'rating', 'ratings',
-  'test', 'testing',  // test/testing=测试/评测，低转化意图
+  'compare',
+  'comparison',
+  'versus',
+  'vs ',
+  'review',
+  'reviews',
+  'rating',
+  'ratings',
+  'test',
+  'testing', // test/testing=测试/评测，低转化意图
 
   // 低转化意图词
-  'free', 'cheap', 'cheapest', 'discount', 'coupon', 'code',
-  'job', 'jobs', 'career', 'salary', 'employment', 'hiring',
+  'free',
+  'cheap',
+  'cheapest',
+  'discount',
+  'coupon',
+  'code',
+  'job',
+  'jobs',
+  'career',
+  'salary',
+  'employment',
+  'hiring',
 
   // 下载/软件类
-  'download', 'software', 'app', 'apk', 'pdf', 'ebook', 'digital',
+  'download',
+  'software',
+  'app',
+  'apk',
+  'pdf',
+  'ebook',
+  'digital',
 
   // 二手/维修类
-  'used', 'refurbished', 'repair', 'fix', 'broken', 'replacement',
-  'parts', 'spare parts', 'manual', 'instructions',
+  'used',
+  'refurbished',
+  'repair',
+  'fix',
+  'broken',
+  'replacement',
+  'parts',
+  'spare parts',
+  'manual',
+  'instructions',
 
   // 素材/尺寸查询类（低购买意图，且容易污染广告文案）
-  'gif', 'meme', 'emoji', 'sticker', 'drawing', 'image', 'images',
-  'logo', 'png', 'jpg', 'jpeg', 'svg', 'icon', 'clipart', 'wallpaper',
-  'size chart', 'size guide', 'sizing',
+  'gif',
+  'meme',
+  'emoji',
+  'sticker',
+  'drawing',
+  'image',
+  'images',
+  'logo',
+  'png',
+  'jpg',
+  'jpeg',
+  'svg',
+  'icon',
+  'clipart',
+  'wallpaper',
+  'size chart',
+  'size guide',
+  'sizing',
 
   // DIY/自制类
-  'diy', 'homemade', 'handmade', 'build your own', 'make your own',
+  'diy',
+  'homemade',
+  'handmade',
+  'build your own',
+  'make your own',
 
   // 竞品平台（🔥 2025-12-29 扩充：防止跨平台关键词浪费）
   // 主流电商平台
-  'ebay', 'amazon', 'walmart', 'target', 'bestbuy', 'best buy',
-  'costco', 'sams club', 'sams', 'kroger', 'walgreens',
+  'ebay',
+  'amazon',
+  'walmart',
+  'target',
+  'bestbuy',
+  'best buy',
+  'costco',
+  'sams club',
+  'sams',
+  'kroger',
+  'walgreens',
   // 国际电商平台
-  'alibaba', 'aliexpress', 'wish', 'temu', 'shein',
-  'craigslist', 'mercari', 'poshmark', 'etsy',
+  'alibaba',
+  'aliexpress',
+  'wish',
+  'temu',
+  'shein',
+  'craigslist',
+  'mercari',
+  'poshmark',
+  'etsy',
   // 品牌官网/直销平台
-  'official site', 'official website', 'direct', 'manufacturer',
+  'official site',
+  'official website',
+  'direct',
+  'manufacturer',
 ]
 
 const LOW_INTENT_SUPPORT_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
@@ -231,7 +326,15 @@ const LOW_INTENT_SUPPORT_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
  * 电商平台域名映射
  */
 const PLATFORM_DOMAINS: Record<string, string[]> = {
-  amazon: ['amazon.com', 'amazon.co.uk', 'amazon.de', 'amazon.fr', 'amazon.ca', 'amazon.jp', 'amzn.to'],
+  amazon: [
+    'amazon.com',
+    'amazon.co.uk',
+    'amazon.de',
+    'amazon.fr',
+    'amazon.ca',
+    'amazon.jp',
+    'amzn.to',
+  ],
   walmart: ['walmart.com', 'walmart.ca'],
   ebay: ['ebay.com', 'ebay.co.uk', 'ebay.de'],
   target: ['target.com'],
@@ -249,7 +352,7 @@ const PLATFORM_DOMAINS: Record<string, string[]> = {
  * 平台关键词模式（包含常见拼写错误）
  */
 const PLATFORM_KEYWORDS: Record<string, string[]> = {
-  amazon: ['amazon', 'amazone', 'amzn', 'amazn'],  // amazone是常见拼写错误
+  amazon: ['amazon', 'amazone', 'amzn', 'amazn'], // amazone是常见拼写错误
   walmart: ['walmart', 'wal mart', 'wal-mart', 'walmat'],
   ebay: ['ebay', 'e bay', 'e-bay'],
   target: ['target'],
@@ -283,7 +386,7 @@ export function extractPlatformFromUrl(url: string): string | null {
 
     // 检查每个平台的域名列表
     for (const [platform, domains] of Object.entries(PLATFORM_DOMAINS)) {
-      if (domains.some(domain => hostname.includes(domain))) {
+      if (domains.some((domain) => hostname.includes(domain))) {
         return platform
       }
     }
@@ -415,8 +518,8 @@ export function isBrandVariant(keyword: string, brandName: string): boolean {
   }
 
   // 3. 检查后缀是否以"产品词-"开头（如 "pro-bundle", "ultra-s"）
-  const hasProductWordPrefix = PRODUCT_WORD_PATTERNS.some(pattern =>
-    suffix.startsWith(pattern + '-') || suffix.startsWith(pattern + ' ')
+  const hasProductWordPrefix = PRODUCT_WORD_PATTERNS.some(
+    (pattern) => suffix.startsWith(pattern + '-') || suffix.startsWith(pattern + ' ')
   )
   if (hasProductWordPrefix) {
     return false
@@ -533,7 +636,7 @@ export function isBrandIrrelevant(keyword: string, brandName?: string): boolean 
   }
 
   // 检查是否匹配任一品牌无关模式
-  return BRAND_IRRELEVANT_PATTERNS.some(pattern => pattern.test(keyword))
+  return BRAND_IRRELEVANT_PATTERNS.some((pattern) => pattern.test(keyword))
 }
 
 /**
@@ -571,7 +674,7 @@ export function isSemanticQuery(keyword: string): boolean {
   const normalized = keyword.toLowerCase()
 
   // 检查是否匹配任一语义查询模式
-  return SEMANTIC_QUERY_PATTERNS.some(pattern => {
+  return SEMANTIC_QUERY_PATTERNS.some((pattern) => {
     // 完整词匹配或边界匹配
     const regex = new RegExp(`\\b${pattern}\\b`, 'i')
     return regex.test(normalized)
@@ -640,11 +743,7 @@ const TRAILING_BRIDGE_FRAGMENT_TOKENS = new Set([
   'or',
 ])
 
-const TRAILING_BRIDGE_ALLOWED_BIGRAMS = new Set([
-  'check in',
-  'log in',
-  'sign in',
-])
+const TRAILING_BRIDGE_ALLOWED_BIGRAMS = new Set(['check in', 'log in', 'sign in'])
 
 const SHORT_NUMERIC_SUFFIX_ALLOWED_PREV_TOKENS = new Set([
   'gen',
@@ -655,19 +754,20 @@ const SHORT_NUMERIC_SUFFIX_ALLOWED_PREV_TOKENS = new Set([
   'version',
 ])
 
-function getWeakTrailingFragmentReason(keyword: string, pureBrandKeywords: string[]): string | null {
+function getWeakTrailingFragmentReason(
+  keyword: string,
+  pureBrandKeywords: string[]
+): string | null {
   if (!keyword) return null
 
-  const brandTokens = new Set(
-    pureBrandKeywords.flatMap((brand) => normalizeRelevanceTokens(brand))
-  )
+  const brandTokens = new Set(pureBrandKeywords.flatMap((brand) => normalizeRelevanceTokens(brand)))
   const residualTokens = normalizeKeywordWords(keyword)
-    .map(token => normalizeRelevanceToken(token))
+    .map((token) => normalizeRelevanceToken(token))
     .filter(Boolean)
-    .filter(token => !brandTokens.has(token))
+    .filter((token) => !brandTokens.has(token))
 
   if (residualTokens.length === 0 || residualTokens.length > 2) return null
-  if (!residualTokens.every(token => WEAK_TRAILING_FRAGMENT_TOKENS.has(token))) return null
+  if (!residualTokens.every((token) => WEAK_TRAILING_FRAGMENT_TOKENS.has(token))) return null
 
   return `弱语义残片词: "${keyword}"`
 }
@@ -690,7 +790,9 @@ function getBrandShortNumericFragmentReason(params: {
   sourceType?: string
   pureBrandKeywords: string[]
 }): string | null {
-  const sourceType = String(params.sourceType || '').trim().toUpperCase()
+  const sourceType = String(params.sourceType || '')
+    .trim()
+    .toUpperCase()
   if (sourceType !== 'BUILDER_NON_EMPTY_RESCUE') return null
 
   const words = normalizeKeywordWords(params.keyword)
@@ -705,7 +807,9 @@ function getTrailingShortNumericFragmentReason(params: {
   keyword: string
   sourceType?: string
 }): string | null {
-  const sourceType = String(params.sourceType || '').trim().toUpperCase()
+  const sourceType = String(params.sourceType || '')
+    .trim()
+    .toUpperCase()
   if (sourceType !== 'BUILDER_NON_EMPTY_RESCUE') return null
 
   const words = normalizeKeywordWords(params.keyword)
@@ -719,7 +823,7 @@ function getTrailingShortNumericFragmentReason(params: {
 
   const hasPriorNumericAnchor = words
     .slice(0, -1)
-    .some(word => /\d/.test(word) && !/^\d{1,2}$/.test(word))
+    .some((word) => /\d/.test(word) && !/^\d{1,2}$/.test(word))
   if (!hasPriorNumericAnchor) return null
 
   return `尾部短数字残片词: "${params.keyword}"`
@@ -746,7 +850,7 @@ function getTrailingShortNumericFragmentReason(params: {
 export function filterLowIntentKeywords(keywords: string[]): string[] {
   if (!keywords || keywords.length === 0) return []
 
-  return keywords.filter(kw => {
+  return keywords.filter((kw) => {
     const lowerKw = kw.toLowerCase()
 
     // 跳过空字符串
@@ -800,7 +904,9 @@ const COUNTRY_CODE_EQUIVALENTS: Record<string, string[]> = {
 }
 
 function normalizeGeoCountryCode(value: string | undefined | null): string {
-  const normalized = String(value || '').trim().toUpperCase()
+  const normalized = String(value || '')
+    .trim()
+    .toUpperCase()
   if (!normalized) return ''
   if (normalized === 'UK') return 'GB'
   return normalized
@@ -816,7 +922,9 @@ function buildCountryAliasPattern(alias: string): RegExp {
 }
 
 function detectKeywordCountryHints(keyword: string): string[] {
-  const text = String(keyword || '').trim().toLowerCase()
+  const text = String(keyword || '')
+    .trim()
+    .toLowerCase()
   if (!text) return []
 
   const detected: string[] = []
@@ -829,10 +937,7 @@ function detectKeywordCountryHints(keyword: string): string[] {
   return detected
 }
 
-function resolveGeoMismatch(params: {
-  keyword: string
-  targetCountry?: string
-}): {
+function resolveGeoMismatch(params: { keyword: string; targetCountry?: string }): {
   mismatch: boolean
   detectedCountries: string[]
   targetCountryCode: string
@@ -901,7 +1006,7 @@ export function calculateSearchVolumeThreshold(
   }
 
   // 过滤掉0值
-  const validVolumes = searchVolumes.filter(v => v > 0)
+  const validVolumes = searchVolumes.filter((v) => v > 0)
 
   if (validVolumes.length === 0) {
     return 0
@@ -915,9 +1020,10 @@ export function calculateSearchVolumeThreshold(
 
   // 计算中位数
   const sorted = [...validVolumes].sort((a, b) => a - b)
-  const median = sorted.length % 2 === 0
-    ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
-    : sorted[Math.floor(sorted.length / 2)]
+  const median =
+    sorted.length % 2 === 0
+      ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+      : sorted[Math.floor(sorted.length / 2)]
 
   // 阈值 = 中位数的10%
   const threshold = Math.floor(median * 0.1)
@@ -939,9 +1045,9 @@ export interface KeywordQualityFilterOptions {
   productName?: string
   targetCountry?: string
   targetLanguage?: string
-  minWordCount?: number  // 最少单词数
-  maxWordCount?: number  // 最多单词数
-  productUrl?: string  // 🔥 新增：产品URL，用于平台冲突检测
+  minWordCount?: number // 最少单词数
+  maxWordCount?: number // 最多单词数
+  productUrl?: string // 🔥 新增：产品URL，用于平台冲突检测
   /**
    * 是否必须包含纯品牌词
    * @default true
@@ -981,9 +1087,41 @@ const RELEVANCE_PHRASE_NORMALIZERS: Array<{ pattern: RegExp; replacement: string
 ]
 
 const RELEVANCE_TOKEN_EQUIVALENCE_GROUPS: string[][] = [
-  ['audio', 'speaker', 'speakers', 'soundbar', 'soundbars', 'subwoofer', 'subwoofers', 'stereo', 'homeaudio', 'loudspeaker', 'loudspeakers', 'amp', 'amps', 'amplifier', 'amplifiers', 'receiver', 'receivers', 'headphone', 'headphones', 'earbud', 'earbuds'],
+  [
+    'audio',
+    'speaker',
+    'speakers',
+    'soundbar',
+    'soundbars',
+    'subwoofer',
+    'subwoofers',
+    'stereo',
+    'homeaudio',
+    'loudspeaker',
+    'loudspeakers',
+    'amp',
+    'amps',
+    'amplifier',
+    'amplifiers',
+    'receiver',
+    'receivers',
+    'headphone',
+    'headphones',
+    'earbud',
+    'earbuds',
+  ],
   ['vacuum', 'vacuums', 'robovac', 'robovacs', 'robotvacuum', 'roboticvacuum'],
-  ['charge', 'charger', 'chargers', 'charging', 'charged', 'adapter', 'adapters', 'powerbank', 'powerbanks'],
+  [
+    'charge',
+    'charger',
+    'chargers',
+    'charging',
+    'charged',
+    'adapter',
+    'adapters',
+    'powerbank',
+    'powerbanks',
+  ],
   ['camera', 'cameras', 'cam', 'cams', 'dashcam', 'dashcams', 'dashcamera', 'dashcameras'],
 ]
 
@@ -1050,12 +1188,7 @@ const GENERIC_MARKETPLACE_TAXONOMY_TOKENS = new Set([
   'see',
 ])
 
-const BROAD_CONTEXT_MATCH_TOKENS = new Set([
-  'bed',
-  'office',
-  'room',
-  'rooms',
-])
+const BROAD_CONTEXT_MATCH_TOKENS = new Set(['bed', 'office', 'room', 'rooms'])
 
 const CONTEXT_MATCH_BRIDGE_RULES: Array<{
   targetToken: string
@@ -1086,7 +1219,7 @@ function applyContextMatchBridgeRules(params: {
 
   for (const rule of CONTEXT_MATCH_BRIDGE_RULES) {
     if (!keywordTokens.includes(rule.targetToken)) continue
-    if (!usableContext.some(token => rule.contextFamily.has(token))) continue
+    if (!usableContext.some((token) => rule.contextFamily.has(token))) continue
     matchedTokenSet.add(rule.targetToken)
   }
 }
@@ -1127,7 +1260,7 @@ function normalizeRelevanceToken(token: string): string {
 function hasCommercialContextSignal(keyword: string): boolean {
   const tokens = normalizeRelevanceTokens(keyword)
   if (hasModelLikeToken(tokens)) return true
-  return tokens.some(token => COMMERCIAL_CONTEXT_SIGNAL_TOKENS.has(token))
+  return tokens.some((token) => COMMERCIAL_CONTEXT_SIGNAL_TOKENS.has(token))
 }
 
 const CONTEXT_RESTORE_BLOCKED_PATTERNS = [
@@ -1136,8 +1269,21 @@ const CONTEXT_RESTORE_BLOCKED_PATTERNS = [
 ]
 
 const TRANSACTIONAL_MATRIX_TOKENS = new Set([
-  'buy', 'purchase', 'order', 'shop', 'price', 'pricing', 'cost',
-  'deal', 'deals', 'discount', 'sale', 'offer', 'coupon', 'promo', 'store'
+  'buy',
+  'purchase',
+  'order',
+  'shop',
+  'price',
+  'pricing',
+  'cost',
+  'deal',
+  'deals',
+  'discount',
+  'sale',
+  'offer',
+  'coupon',
+  'promo',
+  'store',
 ])
 const AI_TEMPLATE_SENSITIVE_SOURCE_KEYS = new Set([
   'AI_GENERATED',
@@ -1173,7 +1319,8 @@ const AI_TEMPLATE_PHRASE_PATTERNS = [
   /\b(?:for|to)\s+every(?:one|day)\b/i,
   /\b(?:lifestyle|home)\s+(?:essential|essentials|must\s*have)\b/i,
 ]
-const AI_TEMPLATE_SAFE_SPEC_PATTERN = /\b\d+\s*(?:inch|in|oz|ml|l|pack|count|ct|pcs|piece|w|wh|mah|gb|tb|btu|doe|ashrae)\b/i
+const AI_TEMPLATE_SAFE_SPEC_PATTERN =
+  /\b\d+\s*(?:inch|in|oz|ml|l|pack|count|ct|pcs|piece|w|wh|mah|gb|tb|btu|doe|ashrae)\b/i
 
 const SOURCE_TRUST_SCORE_RULES: Array<{ pattern: RegExp; score: number }> = [
   { pattern: /^SEARCH_TERM_HIGH_PERFORMING$/i, score: 20 },
@@ -1188,7 +1335,8 @@ const SOURCE_TRUST_SCORE_RULES: Array<{ pattern: RegExp; score: number }> = [
   { pattern: /^GLOBAL_KEYWORDS$/i, score: 3 },
 ]
 
-const HIGH_PERFORMING_INFO_QUERY_PATTERN = /\b(what is|meaning|tutorial|guide|manual|how to|instructions?)\b/i
+const HIGH_PERFORMING_INFO_QUERY_PATTERN =
+  /\b(what is|meaning|tutorial|guide|manual|how to|instructions?)\b/i
 const HIGH_PERFORMING_REVIEW_COMPARE_PATTERN = /\b(review|reviews|comparison|compare|vs)\b/i
 const HIGH_PERFORMING_PLATFORM_PATTERN = /\b(amazon|walmart|ebay|etsy|aliexpress|temu)\b/i
 
@@ -1235,7 +1383,11 @@ function getHighPerformingHardBlockReason(params: {
     sourceType,
     sourceSubtype,
   } = params
-  const templateGarbageReason = getTemplateGarbageReason(keyword, { source, sourceType, sourceSubtype })
+  const templateGarbageReason = getTemplateGarbageReason(keyword, {
+    source,
+    sourceType,
+    sourceSubtype,
+  })
   if (templateGarbageReason) {
     return templateGarbageReason
   }
@@ -1272,13 +1424,19 @@ function getHighPerformingHardBlockReason(params: {
 }
 
 function shouldBlockContextRestore(keyword: string): boolean {
-  const normalized = String(keyword || '').trim().toLowerCase()
+  const normalized = String(keyword || '')
+    .trim()
+    .toLowerCase()
   if (!normalized) return false
-  return CONTEXT_RESTORE_BLOCKED_PATTERNS.some(pattern => pattern.test(normalized))
+  return CONTEXT_RESTORE_BLOCKED_PATTERNS.some((pattern) => pattern.test(normalized))
 }
 
 function normalizeKeywordWords(keyword: string): string[] {
-  const normalized = normalizeGoogleAdsKeyword(keyword) || String(keyword || '').toLowerCase().trim()
+  const normalized =
+    normalizeGoogleAdsKeyword(keyword) ||
+    String(keyword || '')
+      .toLowerCase()
+      .trim()
   if (!normalized) return []
   return normalized.split(/\s+/).filter(Boolean)
 }
@@ -1291,7 +1449,7 @@ function findRepeatedAdjacentWord(words: string[]): string | null {
 }
 
 function getTransactionalModifierHits(words: string[]): string[] {
-  return words.filter(word => TRANSACTIONAL_MATRIX_TOKENS.has(word))
+  return words.filter((word) => TRANSACTIONAL_MATRIX_TOKENS.has(word))
 }
 
 function hasAiTemplateSensitiveSource(options?: {
@@ -1300,15 +1458,17 @@ function hasAiTemplateSensitiveSource(options?: {
   sourceSubtype?: string
 }): boolean {
   if (!options) return false
-  const sourceHints = [
-    options.sourceSubtype,
-    options.sourceType,
-    options.source,
-  ]
-    .map((value) => String(value || '').trim().toUpperCase())
+  const sourceHints = [options.sourceSubtype, options.sourceType, options.source]
+    .map((value) =>
+      String(value || '')
+        .trim()
+        .toUpperCase()
+    )
     .filter(Boolean)
 
-  return sourceHints.some((hint) => hint.startsWith('AI_') || AI_TEMPLATE_SENSITIVE_SOURCE_KEYS.has(hint))
+  return sourceHints.some(
+    (hint) => hint.startsWith('AI_') || AI_TEMPLATE_SENSITIVE_SOURCE_KEYS.has(hint)
+  )
 }
 
 function getAiTemplatePhraseReason(keyword: string, words: string[]): string | null {
@@ -1322,11 +1482,14 @@ function getAiTemplatePhraseReason(keyword: string, words: string[]): string | n
   return null
 }
 
-export function getTemplateGarbageReason(keyword: string, options?: {
-  source?: string
-  sourceType?: string
-  sourceSubtype?: string
-}): string | null {
+export function getTemplateGarbageReason(
+  keyword: string,
+  options?: {
+    source?: string
+    sourceType?: string
+    sourceSubtype?: string
+  }
+): string | null {
   const words = normalizeKeywordWords(keyword)
   if (words.length === 0) return null
 
@@ -1363,22 +1526,51 @@ function normalizeRelevanceTokens(input: string): string[] {
 
   const rawTokens = normalized
     .split(/[^\p{L}\p{N}]+/u)
-    .map(t => normalizeRelevanceToken(t))
+    .map((t) => normalizeRelevanceToken(t))
     .filter(Boolean)
 
   const stop = new Set([
-    'the', 'a', 'an', 'and', 'or', 'for', 'with', 'to', 'of', 'in', 'on', 'by',
-    'official', 'store', 'shop', 'website', 'site', 'online',
-    'set', 'sets', 'pack', 'packs', 'bundle', 'bundles',
-    'size', 'sizes', 'king', 'queen', 'twin', 'full', 'xl', 'california', 'cal',
+    'the',
+    'a',
+    'an',
+    'and',
+    'or',
+    'for',
+    'with',
+    'to',
+    'of',
+    'in',
+    'on',
+    'by',
+    'official',
+    'store',
+    'shop',
+    'website',
+    'site',
+    'online',
+    'set',
+    'sets',
+    'pack',
+    'packs',
+    'bundle',
+    'bundles',
+    'size',
+    'sizes',
+    'king',
+    'queen',
+    'twin',
+    'full',
+    'xl',
+    'california',
+    'cal',
     ...GENERIC_MARKETPLACE_TAXONOMY_TOKENS,
   ])
 
   return Array.from(
     new Set(
       rawTokens
-        .filter(t => t.length >= 2) // keep short but meaningful tokens like "4k", "5g"
-        .filter(t => !stop.has(t))
+        .filter((t) => t.length >= 2) // keep short but meaningful tokens like "4k", "5g"
+        .filter((t) => !stop.has(t))
     )
   )
 }
@@ -1439,10 +1631,8 @@ function computeContextMatchDetails(params: {
     ...normalizeRelevanceTokens(safeProductName),
   ]
 
-  const brandTokens = new Set(
-    pureBrandKeywords.flatMap(b => normalizeRelevanceTokens(b))
-  )
-  const usableContext = Array.from(new Set(contextTokens)).filter(t => !brandTokens.has(t))
+  const brandTokens = new Set(pureBrandKeywords.flatMap((b) => normalizeRelevanceTokens(b)))
+  const usableContext = Array.from(new Set(contextTokens)).filter((t) => !brandTokens.has(t))
   if (usableContext.length === 0) {
     return {
       usableContext: [],
@@ -1453,14 +1643,14 @@ function computeContextMatchDetails(params: {
   }
 
   const contextSet = new Set(usableContext)
-  const matchedTokenSet = new Set(keywordTokens.filter(t => contextSet.has(t)))
+  const matchedTokenSet = new Set(keywordTokens.filter((t) => contextSet.has(t)))
   applyContextMatchBridgeRules({
     keywordTokens,
     usableContext,
     matchedTokenSet,
   })
   const matchedTokens = Array.from(matchedTokenSet)
-  const specificMatchedTokens = matchedTokens.filter(t => !BROAD_CONTEXT_MATCH_TOKENS.has(t))
+  const specificMatchedTokens = matchedTokens.filter((t) => !BROAD_CONTEXT_MATCH_TOKENS.has(t))
 
   return {
     usableContext,
@@ -1580,10 +1770,8 @@ function isRelevantToOfferContext(params: {
   ]
 
   // Remove brand tokens from context to avoid tautology ("rove ..." always matches).
-  const brandTokens = new Set(
-    pureBrandKeywords.flatMap(b => normalizeRelevanceTokens(b))
-  )
-  const usableContext = Array.from(new Set(contextTokens)).filter(t => !brandTokens.has(t))
+  const brandTokens = new Set(pureBrandKeywords.flatMap((b) => normalizeRelevanceTokens(b)))
+  const usableContext = Array.from(new Set(contextTokens)).filter((t) => !brandTokens.has(t))
 
   // If we don't have enough context to judge, don't filter to avoid false positives.
   if (usableContext.length < 3) return { ok: true, mode: 'insufficient_context', keywordTokens }
@@ -1595,8 +1783,14 @@ function isRelevantToOfferContext(params: {
     productName,
   })
 
-  if (matchCount >= minContextTokenMatches) return { ok: true, mode: 'context_match', keywordTokens }
-  return { ok: false, mode: 'context_mismatch', reason: `与商品无关: "${keyword}" (未命中品类/商品token)`, keywordTokens }
+  if (matchCount >= minContextTokenMatches)
+    return { ok: true, mode: 'context_match', keywordTokens }
+  return {
+    ok: false,
+    mode: 'context_mismatch',
+    reason: `与商品无关: "${keyword}" (未命中品类/商品token)`,
+    keywordTokens,
+  }
 }
 
 /**
@@ -1623,43 +1817,51 @@ export function filterKeywordQuality(
     maxWordCount = 8,
     mustContainBrand = false,
     allowNonBrandFromPlanner = false,
-    productUrl,  // 🔥 新增：用于平台冲突检测
+    productUrl, // 🔥 新增：用于平台冲突检测
     minContextTokenMatches = 0,
     contextMismatchMode = 'hard',
   } = options
 
   const pureBrandKeywords = getPureBrandKeywords(brandName)
-  const brandContextTokens = new Set(
-    pureBrandKeywords.flatMap(b => normalizeRelevanceTokens(b))
-  )
+  const brandContextTokens = new Set(pureBrandKeywords.flatMap((b) => normalizeRelevanceTokens(b)))
   const plannerNonBrandPolicy = normalizePlannerNonBrandPolicy(allowNonBrandFromPlanner)
   const contextSupportTokenCounts = new Map<string, number>()
   const removed: Array<{ keyword: PoolKeywordData; reason: string }> = []
   const filtered: PoolKeywordData[] = []
 
   for (const kw of keywords) {
-    const keywordData: PoolKeywordData = typeof kw === 'string'
-      ? { keyword: kw, searchVolume: 0, source: 'FILTERED' }
-      : kw
+    const keywordData: PoolKeywordData =
+      typeof kw === 'string' ? { keyword: kw, searchVolume: 0, source: 'FILTERED' } : kw
     const keyword = keywordData.keyword
-    const searchVolume = typeof keywordData.searchVolume === 'number'
-      ? keywordData.searchVolume
-      : Number(keywordData.searchVolume) || 0
+    const searchVolume =
+      typeof keywordData.searchVolume === 'number'
+        ? keywordData.searchVolume
+        : Number(keywordData.searchVolume) || 0
     const wordCount = keyword.trim().split(/\s+/).length
-    const isConcatenatedBrandWithVolume = searchVolume > 0 && isBrandConcatenation(keyword, brandName)
-    const allowPlannerNonBrand = shouldAllowPlannerNonBrandKeyword(keywordData, plannerNonBrandPolicy)
+    const isConcatenatedBrandWithVolume =
+      searchVolume > 0 && isBrandConcatenation(keyword, brandName)
+    const allowPlannerNonBrand = shouldAllowPlannerNonBrandKeyword(
+      keywordData,
+      plannerNonBrandPolicy
+    )
 
     // 🆕 高性能搜索词豁免：基于真实表现数据，跳过质量过滤
-    const isHighPerformingSearchTerm = typeof keywordData.source === 'string' && keywordData.source === 'SEARCH_TERM_HIGH_PERFORMING'
+    const isHighPerformingSearchTerm =
+      typeof keywordData.source === 'string' && keywordData.source === 'SEARCH_TERM_HIGH_PERFORMING'
 
     // 🆕 2026-03-13: 评分建议关键词豁免：基于AI评分分析识别的行业标准关键词
-    const isScoringGapKeyword = typeof keywordData.source === 'string' && keywordData.source === 'SCORING_SUGGESTION'
+    const isScoringGapKeyword =
+      typeof keywordData.source === 'string' && keywordData.source === 'SCORING_SUGGESTION'
 
     let removeReason: string | null = null
 
     // 高性能搜索词优先保留，但仍需通过硬风险门禁（防止劣化污染）
     if (isHighPerformingSearchTerm) {
-      if (mustContainBrand && !shouldKeepByBrand(keyword, pureBrandKeywords) && !isConcatenatedBrandWithVolume) {
+      if (
+        mustContainBrand &&
+        !shouldKeepByBrand(keyword, pureBrandKeywords) &&
+        !isConcatenatedBrandWithVolume
+      ) {
         removeReason = `高表现Search Term不含品牌词: "${keyword}"`
       } else {
         const hardBlockReason = getHighPerformingHardBlockReason({
@@ -1728,9 +1930,9 @@ export function filterKeywordQuality(
     })
     const geoMismatch = targetCountry
       ? resolveGeoMismatch({
-        keyword,
-        targetCountry,
-      })
+          keyword,
+          targetCountry,
+        })
       : null
 
     // A. 仅硬过滤明显模板垃圾词（重复词 / 交易词矩阵）
@@ -1740,12 +1942,21 @@ export function filterKeywordQuality(
     // 🔧 修复(2026-01-21): 过滤搜索量为0且来源为CLUSTERED的关键词
     // 这些是模板化生成的关键词，没有真实搜索量
     // 注意：isPureBrand 标记的纯品牌词豁免此过滤（品牌词可能搜索量为0但仍需保留）
-    else if (keywordData.searchVolume === 0 && keywordData.source === 'CLUSTERED' && !keywordData.isPureBrand) {
+    else if (
+      keywordData.searchVolume === 0 &&
+      keywordData.source === 'CLUSTERED' &&
+      !keywordData.isPureBrand
+    ) {
       removeReason = `无搜索量的模板化关键词: "${keyword}" (source: CLUSTERED)`
     }
     // 1. 检查是否必须包含纯品牌词（使用策略函数）
     // 🔥 2026-01-05 使用 shouldKeepByBrand 策略函数，明确用途
-    else if (mustContainBrand && !shouldKeepByBrand(keyword, pureBrandKeywords) && !isConcatenatedBrandWithVolume && !allowPlannerNonBrand) {
+    else if (
+      mustContainBrand &&
+      !shouldKeepByBrand(keyword, pureBrandKeywords) &&
+      !isConcatenatedBrandWithVolume &&
+      !allowPlannerNonBrand
+    ) {
       removeReason = `不含纯品牌词: "${keyword}"`
     }
     // 2. 检查品牌变体词
@@ -1775,7 +1986,8 @@ export function filterKeywordQuality(
       // 例如：对于Amazon URL，"anker amazon"应该被保留而不是被语义查询词过滤
       const urlPlatform = productUrl ? extractPlatformFromUrl(productUrl) : null
       const kwPlatforms = detectPlatformsInKeyword(keyword)
-      const isMatchingPlatform = urlPlatform && kwPlatforms.length > 0 && kwPlatforms.includes(urlPlatform)
+      const isMatchingPlatform =
+        urlPlatform && kwPlatforms.length > 0 && kwPlatforms.includes(urlPlatform)
 
       if (!isMatchingPlatform) {
         const pattern = getMatchedFilterPattern(keyword)
@@ -1783,8 +1995,7 @@ export function filterKeywordQuality(
           ? `语义查询词: "${keyword}" (包含: ${pattern})`
           : `语义查询词: "${keyword}"`
       }
-    }
-    else {
+    } else {
       const lowIntentSupportReason = getLowIntentSupportReason(keyword)
       if (lowIntentSupportReason) {
         removeReason = lowIntentSupportReason
@@ -1846,8 +2057,9 @@ export function filterKeywordQuality(
       if (!relevance.ok && contextMismatchMode === 'hard') {
         removeReason = relevance.reason || `与商品无关: "${keyword}"`
       } else if (relevance.mode === 'context_match' && contextMismatchMode === 'hard') {
-        const nonBrandTokens = (relevance.keywordTokens || normalizeRelevanceTokens(keyword))
-          .filter(token => !brandContextTokens.has(token))
+        const nonBrandTokens = (
+          relevance.keywordTokens || normalizeRelevanceTokens(keyword)
+        ).filter((token) => !brandContextTokens.has(token))
         for (const token of new Set(nonBrandTokens)) {
           contextSupportTokenCounts.set(token, (contextSupportTokenCounts.get(token) || 0) + 1)
         }
@@ -1880,34 +2092,45 @@ export function filterKeywordQuality(
     }
   }
 
-  if (contextMismatchMode === 'hard' && minContextTokenMatches > 0 && contextSupportTokenCounts.size > 0) {
-    const supportRestores = removed.filter(item => {
+  if (
+    contextMismatchMode === 'hard' &&
+    minContextTokenMatches > 0 &&
+    contextSupportTokenCounts.size > 0
+  ) {
+    const supportRestores = removed.filter((item) => {
       if (!item.reason.includes('与商品无关')) return false
 
       const text = typeof item.keyword === 'string' ? item.keyword : item.keyword.keyword
-      if (!shouldKeepByBrand(text, pureBrandKeywords) || isPureBrandKeyword(text, pureBrandKeywords)) return false
+      if (
+        !shouldKeepByBrand(text, pureBrandKeywords) ||
+        isPureBrandKeyword(text, pureBrandKeywords)
+      )
+        return false
       if (shouldBlockContextRestore(text)) return false
 
-      const nonBrandTokens = normalizeRelevanceTokens(text).filter(token => !brandContextTokens.has(token))
+      const nonBrandTokens = normalizeRelevanceTokens(text).filter(
+        (token) => !brandContextTokens.has(token)
+      )
       if (nonBrandTokens.length === 0 || nonBrandTokens.length > 2) return false
 
       if (nonBrandTokens.length === 1) {
         return (contextSupportTokenCounts.get(nonBrandTokens[0]) || 0) >= 2
       }
 
-      return nonBrandTokens.every(token => (contextSupportTokenCounts.get(token) || 0) >= 2)
+      return nonBrandTokens.every((token) => (contextSupportTokenCounts.get(token) || 0) >= 2)
     })
 
     supportRestores.sort((a, b) => {
-      const aVol = typeof a.keyword === 'string' ? 0 : (Number(a.keyword.searchVolume) || 0)
-      const bVol = typeof b.keyword === 'string' ? 0 : (Number(b.keyword.searchVolume) || 0)
+      const aVol = typeof a.keyword === 'string' ? 0 : Number(a.keyword.searchVolume) || 0
+      const bVol = typeof b.keyword === 'string' ? 0 : Number(b.keyword.searchVolume) || 0
       return bVol - aVol
     })
 
     for (const item of supportRestores) {
-      const restoredKeyword = typeof item.keyword === 'string'
-        ? { keyword: item.keyword, searchVolume: 0, source: 'FILTERED' }
-        : item.keyword
+      const restoredKeyword =
+        typeof item.keyword === 'string'
+          ? { keyword: item.keyword, searchVolume: 0, source: 'FILTERED' }
+          : item.keyword
       filtered.push(restoredKeyword)
 
       const index = removed.indexOf(item)
@@ -1917,46 +2140,53 @@ export function filterKeywordQuality(
 
   if (contextMismatchMode === 'hard' && minContextTokenMatches > 0) {
     let contextMismatchSafetyRestoreApplied = false
-    const keptContextCandidates = filtered.filter(item =>
-      shouldKeepByBrand(item.keyword, pureBrandKeywords) && !isPureBrandKeyword(item.keyword, pureBrandKeywords)
+    const keptContextCandidates = filtered.filter(
+      (item) =>
+        shouldKeepByBrand(item.keyword, pureBrandKeywords) &&
+        !isPureBrandKeyword(item.keyword, pureBrandKeywords)
     )
-    const contextRemovedCandidates = removed.filter(item => {
+    const contextRemovedCandidates = removed.filter((item) => {
       const text = typeof item.keyword === 'string' ? item.keyword : item.keyword.keyword
-      return item.reason.includes('与商品无关')
-        && shouldKeepByBrand(text, pureBrandKeywords)
-        && !isPureBrandKeyword(text, pureBrandKeywords)
+      return (
+        item.reason.includes('与商品无关') &&
+        shouldKeepByBrand(text, pureBrandKeywords) &&
+        !isPureBrandKeyword(text, pureBrandKeywords)
+      )
     })
 
     const totalContextCandidates = keptContextCandidates.length + contextRemovedCandidates.length
-    const removedRatio = totalContextCandidates > 0
-      ? contextRemovedCandidates.length / totalContextCandidates
-      : 0
+    const removedRatio =
+      totalContextCandidates > 0 ? contextRemovedCandidates.length / totalContextCandidates : 0
 
     // Safety net: if context gate removes almost all brand-containing candidates,
     // restore a tiny number of strongest commercial-intent terms.
     if (
-      totalContextCandidates >= 4
-      && keptContextCandidates.length === 0
-      && contextRemovedCandidates.length >= 3
-      && removedRatio >= 0.85
+      totalContextCandidates >= 4 &&
+      keptContextCandidates.length === 0 &&
+      contextRemovedCandidates.length >= 3 &&
+      removedRatio >= 0.85
     ) {
-      const restoreLimit = Math.min(2, Math.max(1, Math.floor(contextRemovedCandidates.length * 0.2)))
+      const restoreLimit = Math.min(
+        2,
+        Math.max(1, Math.floor(contextRemovedCandidates.length * 0.2))
+      )
       const restoreCandidates = contextRemovedCandidates
-        .filter(item => {
+        .filter((item) => {
           const text = typeof item.keyword === 'string' ? item.keyword : item.keyword.keyword
           return hasCommercialContextSignal(text) && !shouldBlockContextRestore(text)
         })
         .sort((a, b) => {
-          const aVol = typeof a.keyword === 'string' ? 0 : (Number(a.keyword.searchVolume) || 0)
-          const bVol = typeof b.keyword === 'string' ? 0 : (Number(b.keyword.searchVolume) || 0)
+          const aVol = typeof a.keyword === 'string' ? 0 : Number(a.keyword.searchVolume) || 0
+          const bVol = typeof b.keyword === 'string' ? 0 : Number(b.keyword.searchVolume) || 0
           return bVol - aVol
         })
         .slice(0, restoreLimit)
 
       for (const item of restoreCandidates) {
-        const restoredKeyword = typeof item.keyword === 'string'
-          ? { keyword: item.keyword, searchVolume: 0, source: 'FILTERED' }
-          : item.keyword
+        const restoredKeyword =
+          typeof item.keyword === 'string'
+            ? { keyword: item.keyword, searchVolume: 0, source: 'FILTERED' }
+            : item.keyword
         filtered.push(restoredKeyword)
 
         const index = removed.indexOf(item)
@@ -1967,26 +2197,28 @@ export function filterKeywordQuality(
       }
     }
 
-    const contextRemovedAllCandidates = removed.filter(item => item.reason.includes('与商品无关'))
-    const contextRemovedAllRatio = (
+    const contextRemovedAllCandidates = removed.filter((item) => item.reason.includes('与商品无关'))
+    const contextRemovedAllRatio =
       contextRemovedAllCandidates.length + filtered.length > 0
-        ? contextRemovedAllCandidates.length / (contextRemovedAllCandidates.length + filtered.length)
+        ? contextRemovedAllCandidates.length /
+          (contextRemovedAllCandidates.length + filtered.length)
         : 0
-    )
     if (
-      !contextMismatchSafetyRestoreApplied
-      &&
-      contextRemovedAllCandidates.length >= 3
-      && contextRemovedAllRatio >= 0.6
+      !contextMismatchSafetyRestoreApplied &&
+      contextRemovedAllCandidates.length >= 3 &&
+      contextRemovedAllRatio >= 0.6
     ) {
       const existingFilteredKeys = new Set(
-        filtered.map(item => normalizeGoogleAdsKeyword(item.keyword) || item.keyword.toLowerCase().trim())
+        filtered.map(
+          (item) => normalizeGoogleAdsKeyword(item.keyword) || item.keyword.toLowerCase().trim()
+        )
       )
       const trustedContextRestoreCandidates = contextRemovedAllCandidates
         .map((item) => {
-          const keywordData = typeof item.keyword === 'string'
-            ? { keyword: item.keyword, searchVolume: 0, source: 'FILTERED' } as PoolKeywordData
-            : item.keyword
+          const keywordData =
+            typeof item.keyword === 'string'
+              ? ({ keyword: item.keyword, searchVolume: 0, source: 'FILTERED' } as PoolKeywordData)
+              : item.keyword
           const text = keywordData.keyword
           if (shouldBlockContextRestore(text)) return null
           if (!hasCommercialContextSignal(text)) return null
@@ -2001,11 +2233,15 @@ export function filterKeywordQuality(
             sourceTrustScore,
           }
         })
-        .filter((entry): entry is {
-          item: { keyword: PoolKeywordData; reason: string }
-          keywordData: PoolKeywordData
-          sourceTrustScore: number
-        } => entry !== null)
+        .filter(
+          (
+            entry
+          ): entry is {
+            item: { keyword: PoolKeywordData; reason: string }
+            keywordData: PoolKeywordData
+            sourceTrustScore: number
+          } => entry !== null
+        )
         .sort((a, b) => {
           const trustDiff = b.sourceTrustScore - a.sourceTrustScore
           if (trustDiff !== 0) return trustDiff
@@ -2019,8 +2255,9 @@ export function filterKeywordQuality(
         Math.max(1, Math.floor(trustedContextRestoreCandidates.length * 0.3))
       )
       for (const restoreCandidate of trustedContextRestoreCandidates.slice(0, restoreLimit)) {
-        const restoreKey = normalizeGoogleAdsKeyword(restoreCandidate.keywordData.keyword)
-          || restoreCandidate.keywordData.keyword.toLowerCase().trim()
+        const restoreKey =
+          normalizeGoogleAdsKeyword(restoreCandidate.keywordData.keyword) ||
+          restoreCandidate.keywordData.keyword.toLowerCase().trim()
         if (!restoreKey || existingFilteredKeys.has(restoreKey)) continue
 
         filtered.push(restoreCandidate.keywordData)
@@ -2078,7 +2315,7 @@ export function generateFilterReport(
 
   // 显示被移除的关键词示例（最多5个）
   if (removed.length > 0) {
-    const examples = removed.slice(0, 5).map(item => {
+    const examples = removed.slice(0, 5).map((item) => {
       const keyword = typeof item.keyword === 'string' ? item.keyword : item.keyword.keyword
       return `     - "${keyword}": ${item.reason}`
     })

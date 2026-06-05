@@ -56,7 +56,7 @@ function getRelayDnsServers(): string[] {
 
   return raw
     .split(',')
-    .map(server => server.trim())
+    .map((server) => server.trim())
     .filter(Boolean)
 }
 
@@ -85,7 +85,8 @@ function createRelayHttpsAgent(endpointUrl: URL): HttpsAgent | undefined {
         }
 
         const code = String(lookupError?.code || '').toUpperCase()
-        const allowFallback = hostname === targetHostname && (code === 'ENOTFOUND' || code === 'EAI_AGAIN')
+        const allowFallback =
+          hostname === targetHostname && (code === 'ENOTFOUND' || code === 'EAI_AGAIN')
         if (!allowFallback) {
           callback(lookupError as Error, undefined as any, undefined as any)
           return
@@ -202,31 +203,33 @@ function detectDailyQuotaExhaustion(error: any): {
     String(detail?.['@type'] || '').includes('QuotaFailure')
   )
 
-  const violations = Array.isArray(quotaFailure?.violations)
-    ? quotaFailure.violations
-    : []
+  const violations = Array.isArray(quotaFailure?.violations) ? quotaFailure.violations : []
 
   const dailyViolation = violations.find((violation: any) => {
     const quotaMetric = String(violation?.quotaMetric || '').toLowerCase()
     const quotaId = String(violation?.quotaId || '').toLowerCase()
-    return quotaMetric.includes('per_day')
-      || quotaMetric.includes('per day')
-      || quotaId.includes('perday')
-      || quotaId.includes('per_day')
+    return (
+      quotaMetric.includes('per_day') ||
+      quotaMetric.includes('per day') ||
+      quotaId.includes('perday') ||
+      quotaId.includes('per_day')
+    )
   })
 
   const lowerMessage = message.toLowerCase()
-  const isDailyMessage = lowerMessage.includes('daily quota')
-    || lowerMessage.includes('per day')
-    || lowerMessage.includes('generate_requests_per_model_per_day')
+  const isDailyMessage =
+    lowerMessage.includes('daily quota') ||
+    lowerMessage.includes('per day') ||
+    lowerMessage.includes('generate_requests_per_model_per_day')
 
   const retryInfo = details.find((detail: any) =>
     String(detail?.['@type'] || '').includes('RetryInfo')
   )
 
-  const retryAfterMs = parseDurationToMs(retryInfo?.retryDelay)
-    ?? parseRetryAfterMs(error?.response?.headers)
-    ?? parseRetryDelayFromMessage(message)
+  const retryAfterMs =
+    parseDurationToMs(retryInfo?.retryDelay) ??
+    parseRetryAfterMs(error?.response?.headers) ??
+    parseRetryDelayFromMessage(message)
 
   return {
     exhausted: status === 429 && Boolean(dailyViolation || isDailyMessage),
@@ -291,9 +294,7 @@ async function openDailyQuotaBreaker(
 
 function buildDailyQuotaBreakerError(state: DailyQuotaBreakerState): Error {
   const retryAt = new Date(state.untilMs).toISOString()
-  const error = new Error(
-    `Gemini API 每日配额已耗尽，已熔断至 ${retryAt}。${state.message}`
-  )
+  const error = new Error(`Gemini API 每日配额已耗尽，已熔断至 ${retryAt}。${state.message}`)
   ;(error as any).code = 'GEMINI_DAILY_QUOTA_EXHAUSTED'
   ;(error as any).retryAfterMs = Math.max(0, state.untilMs - Date.now())
   return error
@@ -336,7 +337,12 @@ function isInvalidArgumentError(error: any): boolean {
 function buildInvalidArgumentFallbackRequest(
   requestToSend: GeminiRequest,
   safeMaxOutputTokens: number
-): { nextRequest: GeminiRequest; stage: 'clamp_tokens' | 'drop_thinking_config' | 'drop_schema' | 'drop_mime'; fromTokens?: number; toTokens?: number } | null {
+): {
+  nextRequest: GeminiRequest
+  stage: 'clamp_tokens' | 'drop_thinking_config' | 'drop_schema' | 'drop_mime'
+  fromTokens?: number
+  toTokens?: number
+} | null {
   const generationConfig = { ...(requestToSend.generationConfig || {}) }
   const maxOutputTokens = Number(generationConfig.maxOutputTokens || 0)
 
@@ -461,8 +467,8 @@ export interface GeminiRequest {
     thinkingConfig?: {
       thinkingBudget?: number
     }
-    responseMimeType?: string  // 🆕 Token优化：MIME类型
-    responseSchema?: any  // 🆕 Token优化：JSON schema
+    responseMimeType?: string // 🆕 Token优化：MIME类型
+    responseSchema?: any // 🆕 Token优化：JSON schema
   }
 }
 
@@ -503,9 +509,7 @@ export interface GeminiAxiosGenerateResult {
 function extractCandidateText(candidate: GeminiResponse['candidates'][number]): string {
   const parts = candidate?.content?.parts
   if (!parts || parts.length === 0) return ''
-  return parts
-    .map(part => (typeof part?.text === 'string' ? part.text : ''))
-    .join('')
+  return parts.map((part) => (typeof part?.text === 'string' ? part.text : '')).join('')
 }
 
 function detectRunawayStructuredOutput(
@@ -518,7 +522,9 @@ function detectRunawayStructuredOutput(
   if (outputTokens >= 20000) return true
   if (outputLength >= 100000) return true
 
-  const tail = String(partialText || '').slice(-1500).toLowerCase()
+  const tail = String(partialText || '')
+    .slice(-1500)
+    .toLowerCase()
   if (!tail) return false
 
   const repeatedPhrases = [
@@ -553,7 +559,10 @@ function detectRunawayStructuredOutput(
   return false
 }
 
-function logEmptyCandidate(response: GeminiResponse, candidate: GeminiResponse['candidates'][number]) {
+function logEmptyCandidate(
+  response: GeminiResponse,
+  candidate: GeminiResponse['candidates'][number]
+) {
   const candidateAny = candidate as any
   const responseAny = response as any
   const parts = candidateAny?.content?.parts
@@ -569,7 +578,10 @@ function logEmptyCandidate(response: GeminiResponse, candidate: GeminiResponse['
   console.error('   - parts存在:', !!parts)
   console.error('   - parts长度:', Array.isArray(parts) ? parts.length : 0)
   if (Array.isArray(parts)) {
-    console.error('   - parts字段:', parts.map(part => Object.keys(part || {})))
+    console.error(
+      '   - parts字段:',
+      parts.map((part) => Object.keys(part || {}))
+    )
   }
   const responsePreview = JSON.stringify(responseAny, null, 2)
   console.error(`   - 响应片段: ${responsePreview.substring(0, 800)}`)
@@ -608,29 +620,29 @@ function extractUsage(usage: any): GeminiAxiosGenerateResult['usage'] {
     return undefined
   }
 
-  const inputTokens = readFirstNumeric([
-    'input_tokens',
-    'prompt_tokens',
-    'inputTokens',
-    'promptTokens',
-    'promptTokenCount',
-    'inputTokenCount',
-  ]) ?? 0
+  const inputTokens =
+    readFirstNumeric([
+      'input_tokens',
+      'prompt_tokens',
+      'inputTokens',
+      'promptTokens',
+      'promptTokenCount',
+      'inputTokenCount',
+    ]) ?? 0
 
-  const outputTokens = readFirstNumeric([
-    'output_tokens',
-    'completion_tokens',
-    'outputTokens',
-    'completionTokens',
-    'candidatesTokenCount',
-    'outputTokenCount',
-  ]) ?? 0
+  const outputTokens =
+    readFirstNumeric([
+      'output_tokens',
+      'completion_tokens',
+      'outputTokens',
+      'completionTokens',
+      'candidatesTokenCount',
+      'outputTokenCount',
+    ]) ?? 0
 
-  const totalTokens = readFirstNumeric([
-    'total_tokens',
-    'totalTokens',
-    'totalTokenCount',
-  ]) ?? (inputTokens + outputTokens)
+  const totalTokens =
+    readFirstNumeric(['total_tokens', 'totalTokens', 'totalTokenCount']) ??
+    inputTokens + outputTokens
 
   if (inputTokens <= 0 && outputTokens <= 0 && totalTokens <= 0) {
     return undefined
@@ -670,13 +682,12 @@ function parseRelayResponsesObject(
   fallbackModel: string,
   streamedText: string = ''
 ): GeminiAxiosGenerateResult {
-  const root = responseData?.response && typeof responseData.response === 'object'
-    ? responseData.response
-    : responseData
+  const root =
+    responseData?.response && typeof responseData.response === 'object'
+      ? responseData.response
+      : responseData
 
-  const outputText = typeof root?.output_text === 'string'
-    ? root.output_text
-    : ''
+  const outputText = typeof root?.output_text === 'string' ? root.output_text : ''
   const outputArrayText = extractTextFromResponsesOutput(root?.output)
   const text = outputText || outputArrayText || streamedText
 
@@ -715,10 +726,10 @@ function parseRelayResponsesSSE(rawSse: string, fallbackModel: string): GeminiAx
     }
 
     const usageCandidate = extractUsage(
-      parsed?.response?.usage
-      ?? parsed?.usage
-      ?? parsed?.response?.usageMetadata
-      ?? parsed?.usageMetadata
+      parsed?.response?.usage ??
+        parsed?.usage ??
+        parsed?.response?.usageMetadata ??
+        parsed?.usageMetadata
     )
     if (usageCandidate) {
       latestUsage = usageCandidate
@@ -760,7 +771,10 @@ function parseRelayResponsesSSE(rawSse: string, fallbackModel: string): GeminiAx
   }
 }
 
-function parseRelayResponsesResponse(responseData: any, fallbackModel: string): GeminiAxiosGenerateResult {
+function parseRelayResponsesResponse(
+  responseData: any,
+  fallbackModel: string
+): GeminiAxiosGenerateResult {
   if (typeof responseData === 'string') {
     const trimmed = responseData.trim()
     if (!trimmed) {
@@ -785,16 +799,17 @@ function parseRelayResponsesResponse(responseData: any, fallbackModel: string): 
   throw new Error('Relay /v1/responses 返回了无法识别的响应格式')
 }
 
-function parseRelayResponse(
-  responseData: any,
-  fallbackModel: string
-): GeminiAxiosGenerateResult {
+function parseRelayResponse(responseData: any, fallbackModel: string): GeminiAxiosGenerateResult {
   // Anthropic-compatible messages API: content=[{type:"text",text:"..."}]
   const anthropicText = Array.isArray(responseData?.content)
     ? responseData.content
-        .map((item: any) => (item?.type === 'text' && typeof item?.text === 'string' ? item.text : ''))
+        .map((item: any) =>
+          item?.type === 'text' && typeof item?.text === 'string' ? item.text : ''
+        )
         .join('')
-    : (typeof responseData?.content === 'string' ? responseData.content : '')
+    : typeof responseData?.content === 'string'
+      ? responseData.content
+      : ''
 
   // OpenAI-compatible fallback: choices[0].message.content
   const openAIText = extractTextFromOpenAIMessageContent(
@@ -802,9 +817,12 @@ function parseRelayResponse(
   )
 
   // Generic fallback fields
-  const genericText = typeof responseData?.output_text === 'string'
-    ? responseData.output_text
-    : (typeof responseData?.text === 'string' ? responseData.text : '')
+  const genericText =
+    typeof responseData?.output_text === 'string'
+      ? responseData.output_text
+      : typeof responseData?.text === 'string'
+        ? responseData.text
+        : ''
 
   const text = anthropicText || openAIText || genericText
   if (!text) {
@@ -838,13 +856,12 @@ async function getGeminiApiKey(userId: number, provider: GeminiProvider): Promis
   if (!setting?.value) {
     throw new Error(
       `用户(ID=${userId})未配置 ${GEMINI_PROVIDERS[provider].name} 的 API 密钥。` +
-      `请在设置页面配置。`
+        `请在设置页面配置。`
     )
   }
 
   return setting.value
 }
-
 
 /**
  * 根据服务商类型获取端点 URL（纯函数）
@@ -868,8 +885,11 @@ export function getEndpointByProvider(provider: GeminiProvider): string {
  * - relay 服务商使用 Cloudflare 防护，需要浏览器特征 headers 绕过检测
  * - official 服务商不需要这些 headers（官方API不使用Cloudflare）
  */
-export async function createGeminiAxiosClient(userId: number, provider?: GeminiProvider): Promise<AxiosInstance> {
-  const geminiProvider = provider || await getGeminiProvider(userId)
+export async function createGeminiAxiosClient(
+  userId: number,
+  provider?: GeminiProvider
+): Promise<AxiosInstance> {
+  const geminiProvider = provider || (await getGeminiProvider(userId))
   const endpoint = getEndpointByProvider(geminiProvider)
   const endpointUrl = new URL(endpoint)
 
@@ -879,8 +899,9 @@ export async function createGeminiAxiosClient(userId: number, provider?: GeminiP
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    Accept: 'application/json',
+    'User-Agent':
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
   }
 
   // 🔧 relay 服务商需要额外的浏览器特征 headers 绕过 Cloudflare
@@ -935,16 +956,20 @@ async function getGeminiProvider(userId: number): Promise<GeminiProvider> {
  * @param overrideConfig.apiKey - API密钥
  * @returns 生成的文本内容
  */
-export async function generateContent(params: {
-  model?: string
-  prompt: string
-  temperature?: number
-  maxOutputTokens?: number
-  thinkingBudget?: number
-  timeoutMs?: number
-  responseSchema?: any  // 🆕 Token优化：JSON schema
-  responseMimeType?: string  // 🆕 Token优化：MIME类型
-}, userId: number, overrideConfig?: { provider: string; apiKey: string }): Promise<GeminiAxiosGenerateResult> {
+export async function generateContent(
+  params: {
+    model?: string
+    prompt: string
+    temperature?: number
+    maxOutputTokens?: number
+    thinkingBudget?: number
+    timeoutMs?: number
+    responseSchema?: any // 🆕 Token优化：JSON schema
+    responseMimeType?: string // 🆕 Token优化：MIME类型
+  },
+  userId: number,
+  overrideConfig?: { provider: string; apiKey: string }
+): Promise<GeminiAxiosGenerateResult> {
   const {
     model: requestedModel = GEMINI_ACTIVE_MODEL,
     prompt,
@@ -952,19 +977,23 @@ export async function generateContent(params: {
     maxOutputTokens = 8192,
     thinkingBudget,
     timeoutMs,
-    responseSchema,  // 🆕 Token优化：JSON schema
-    responseMimeType,  // 🆕 Token优化：MIME类型
+    responseSchema, // 🆕 Token优化：JSON schema
+    responseMimeType, // 🆕 Token优化：MIME类型
   } = params
 
   // 🔧 关键修复(2025-12-30): 支持临时配置覆盖（用于验证未保存的配置）
   // 根据用户配置获取服务商类型和对应的 API Key
-  const provider = overrideConfig ? overrideConfig.provider as GeminiProvider : await getGeminiProvider(userId)
+  const provider = overrideConfig
+    ? (overrideConfig.provider as GeminiProvider)
+    : await getGeminiProvider(userId)
   const apiKey = overrideConfig ? overrideConfig.apiKey : await getGeminiApiKey(userId, provider)
   const model = normalizeModelForProvider(requestedModel, provider)
   if (requestedModel && requestedModel !== model) {
     console.warn(`⚠️ 服务商 ${provider} 不支持模型 ${requestedModel}，自动切换为 ${model}`)
   }
-  console.log(`🌐 使用 ${GEMINI_PROVIDERS[provider].name} 服务商${overrideConfig ? '（临时配置）' : ''}`)
+  console.log(
+    `🌐 使用 ${GEMINI_PROVIDERS[provider].name} 服务商${overrideConfig ? '（临时配置）' : ''}`
+  )
 
   const activeBreaker = await getActiveDailyQuotaBreaker(userId, provider, model, apiKey)
   if (activeBreaker) {
@@ -1051,12 +1080,14 @@ export async function generateContent(params: {
     // 🔧 2026-02-01: 提高上限到65536（Gemini 3 Flash Preview 支持的最大值）
     // 原问题：gemini-3-flash-preview 可能生成36k+ tokens，超过原来的49152上限
     const MAX_OUTPUT_TOKENS_CAP = 65536
-    const MAX_TOKENS_RETRY_BUMP = 16384  // 更大的增量，减少重试次数
+    const MAX_TOKENS_RETRY_BUMP = 16384 // 更大的增量，减少重试次数
     const MAX_TOKENS_RETRY_BUFFER = 4096
     const INVALID_ARGUMENT_SAFE_MAX_OUTPUT_TOKENS = 8192
     const INVALID_ARGUMENT_MAX_FALLBACK_ATTEMPTS = 3
 
-    const runRequest = async (overrideMaxOutputTokens?: number): Promise<GeminiAxiosGenerateResult> => {
+    const runRequest = async (
+      overrideMaxOutputTokens?: number
+    ): Promise<GeminiAxiosGenerateResult> => {
       const effectiveMaxOutputTokens = overrideMaxOutputTokens ?? maxOutputTokens
 
       if (overrideMaxOutputTokens) {
@@ -1088,11 +1119,7 @@ export async function generateContent(params: {
             temperature,
           }
 
-          const relayResponse = await client.post<any>(
-            '',
-            relayPayload,
-            relayRequestConfig
-          )
+          const relayResponse = await client.post<any>('', relayPayload, relayRequestConfig)
 
           const parsedRelay = parseRelayResponse(relayResponse.data, relayModel)
           console.log(
@@ -1107,7 +1134,10 @@ export async function generateContent(params: {
         }
 
         if (useResponsesApi) {
-          const relayResponsesEndpoint = getEndpointByProvider('relay').replace(/\/messages\/?$/, '/responses')
+          const relayResponsesEndpoint = getEndpointByProvider('relay').replace(
+            /\/messages\/?$/,
+            '/responses'
+          )
           const relayPayload = {
             model,
             input: [
@@ -1127,18 +1157,14 @@ export async function generateContent(params: {
           }
 
           try {
-            const relayResponse = await client.post<string>(
-              relayResponsesEndpoint,
-              relayPayload,
-              {
-                ...relayRequestConfig,
-                responseType: 'text',
-                headers: {
-                  ...relayRequestConfig.headers,
-                  Accept: 'text/event-stream, application/json',
-                },
-              }
-            )
+            const relayResponse = await client.post<string>(relayResponsesEndpoint, relayPayload, {
+              ...relayRequestConfig,
+              responseType: 'text',
+              headers: {
+                ...relayRequestConfig.headers,
+                Accept: 'text/event-stream, application/json',
+              },
+            })
 
             const parsedRelay = parseRelayResponsesResponse(relayResponse.data, model)
             console.log(`✓ Relay /v1/responses 调用成功，返回 ${parsedRelay.text.length} 字符`)
@@ -1172,7 +1198,11 @@ export async function generateContent(params: {
         : request
 
       let response: { data: GeminiResponse } | null = null
-      for (let invalidArgAttempt = 0; invalidArgAttempt <= INVALID_ARGUMENT_MAX_FALLBACK_ATTEMPTS; invalidArgAttempt++) {
+      for (
+        let invalidArgAttempt = 0;
+        invalidArgAttempt <= INVALID_ARGUMENT_MAX_FALLBACK_ATTEMPTS;
+        invalidArgAttempt++
+      ) {
         try {
           response = await client.post<GeminiResponse>(
             `/v1beta/models/${model}:generateContent`,
@@ -1196,7 +1226,7 @@ export async function generateContent(params: {
           if (fallbackDecision.stage === 'clamp_tokens') {
             console.warn(
               `⚠️ Gemini API INVALID_ARGUMENT，自动降级 maxOutputTokens: ` +
-              `${fallbackDecision.fromTokens} → ${fallbackDecision.toTokens}`
+                `${fallbackDecision.fromTokens} → ${fallbackDecision.toTokens}`
             )
           } else if (fallbackDecision.stage === 'drop_thinking_config') {
             console.warn('⚠️ Gemini API INVALID_ARGUMENT，自动移除 thinkingConfig 后重试')
@@ -1253,12 +1283,10 @@ export async function generateContent(params: {
           const candidatesTokenCount = usage?.candidatesTokenCount || 0
           const isRunawayCandidate = detectRunawayStructuredOutput(usage, partialText)
           // Use actual output token usage as a floor for the retry to avoid under-bumping.
-          const minRetryFromUsage = candidatesTokenCount > 0
-            ? candidatesTokenCount + MAX_TOKENS_RETRY_BUFFER
-            : 0
-          const minRetryFromThoughts = thoughtsTokenCount > 0
-            ? thoughtsTokenCount + MAX_TOKENS_RETRY_BUFFER
-            : 0
+          const minRetryFromUsage =
+            candidatesTokenCount > 0 ? candidatesTokenCount + MAX_TOKENS_RETRY_BUFFER : 0
+          const minRetryFromThoughts =
+            thoughtsTokenCount > 0 ? thoughtsTokenCount + MAX_TOKENS_RETRY_BUFFER : 0
           const retryMaxOutputTokens = Math.min(
             MAX_OUTPUT_TOKENS_CAP,
             Math.max(
@@ -1272,12 +1300,20 @@ export async function generateContent(params: {
             console.warn('   - 检测到结构化输出跑飞，跳过maxOutputTokens自动放大重试')
           }
 
-          if (!isRunawayCandidate && !overrideMaxOutputTokens && retryMaxOutputTokens > effectiveMaxOutputTokens) {
-            console.warn(`   - 自动提升maxOutputTokens: ${effectiveMaxOutputTokens} → ${retryMaxOutputTokens}`)
+          if (
+            !isRunawayCandidate &&
+            !overrideMaxOutputTokens &&
+            retryMaxOutputTokens > effectiveMaxOutputTokens
+          ) {
+            console.warn(
+              `   - 自动提升maxOutputTokens: ${effectiveMaxOutputTokens} → ${retryMaxOutputTokens}`
+            )
             return await runRequest(retryMaxOutputTokens)
           }
 
-          const maxTokensError: any = new Error('Gemini API 输出达到token限制被截断。请增加maxOutputTokens参数。')
+          const maxTokensError: any = new Error(
+            'Gemini API 输出达到token限制被截断。请增加maxOutputTokens参数。'
+          )
           maxTokensError.code = 'MAX_TOKENS'
           maxTokensError.retryMaxOutputTokens = retryMaxOutputTokens
           maxTokensError.finishReason = candidate.finishReason
@@ -1294,7 +1330,9 @@ export async function generateContent(params: {
       // 提取响应文本
       const text = extractCandidateText(candidate)
       if (!text) {
-        console.error('❌ Gemini API响应异常: content.parts为空', { finishReason: candidate.finishReason })
+        console.error('❌ Gemini API响应异常: content.parts为空', {
+          finishReason: candidate.finishReason,
+        })
         logEmptyCandidate(response.data, candidate)
         throw new Error('Gemini API 返回了空响应（content.parts为空）')
       }
@@ -1304,7 +1342,8 @@ export async function generateContent(params: {
       const usage = response.data.usageMetadata
       const thoughtsTokenCount = usage?.thoughtsTokenCount || 0
       const candidatesTokenCount = usage?.candidatesTokenCount || 0
-      const charsPerToken = candidatesTokenCount > 0 ? (text.length / candidatesTokenCount).toFixed(2) : 'N/A'
+      const charsPerToken =
+        candidatesTokenCount > 0 ? (text.length / candidatesTokenCount).toFixed(2) : 'N/A'
       console.log(`📊 响应分析:`)
       console.log(`   - 文本长度: ${text.length} 字符`)
       console.log(`   - 输出tokens: ${candidatesTokenCount} (含thinking: ${thoughtsTokenCount})`)
@@ -1332,17 +1371,19 @@ export async function generateContent(params: {
         usageResult = {
           inputTokens: response.data.usageMetadata.promptTokenCount || 0,
           outputTokens: response.data.usageMetadata.candidatesTokenCount || 0,
-          totalTokens: response.data.usageMetadata.totalTokenCount || 0
+          totalTokens: response.data.usageMetadata.totalTokenCount || 0,
         }
-        console.log(`   Token使用: prompt=${usageResult.inputTokens}, ` +
-          `output=${usageResult.outputTokens}, ` +
-          `total=${usageResult.totalTokens}`)
+        console.log(
+          `   Token使用: prompt=${usageResult.inputTokens}, ` +
+            `output=${usageResult.outputTokens}, ` +
+            `total=${usageResult.totalTokens}`
+        )
       }
 
       return {
         text,
         usage: usageResult,
-        model
+        model,
       }
     }
 
@@ -1358,17 +1399,16 @@ export async function generateContent(params: {
         const dailyQuota = detectDailyQuotaExhaustion(error)
         if (dailyQuota.exhausted) {
           const breakerState: DailyQuotaBreakerState = {
-            untilMs: Date.now() + Math.max(
-              dailyQuota.retryAfterMs || DAILY_QUOTA_BREAKER_FALLBACK_MS,
-              60_000
-            ),
+            untilMs:
+              Date.now() +
+              Math.max(dailyQuota.retryAfterMs || DAILY_QUOTA_BREAKER_FALLBACK_MS, 60_000),
             message: dailyQuota.message,
             quotaMetric: dailyQuota.quotaMetric,
           }
           await openDailyQuotaBreaker(userId, provider, model, apiKey, breakerState)
           console.warn(
             `⛔ Gemini API日配额已耗尽，已熔断至 ${new Date(breakerState.untilMs).toISOString()}` +
-            `${breakerState.quotaMetric ? ` (${breakerState.quotaMetric})` : ''}`
+              `${breakerState.quotaMetric ? ` (${breakerState.quotaMetric})` : ''}`
           )
           throw buildDailyQuotaBreakerError(breakerState)
         }
@@ -1380,16 +1420,17 @@ export async function generateContent(params: {
         if (retryDecision.retryable && attempt < maxTransientRetries) {
           const baseDelayMs = 2000 * Math.pow(2, attempt - 1)
           const jitterMs = Math.floor(Math.random() * 1000)
-          const adaptiveDelayMs = retryAfterMs !== null
-            ? Math.max(baseDelayMs + jitterMs, retryAfterMs)
-            : (baseDelayMs + jitterMs)
+          const adaptiveDelayMs =
+            retryAfterMs !== null
+              ? Math.max(baseDelayMs + jitterMs, retryAfterMs)
+              : baseDelayMs + jitterMs
           const delayMs = Math.min(adaptiveDelayMs, 30000)
           const statusLabel = status ? `HTTP ${status}` : '网络错误'
           console.warn(
             `⚠️ Gemini API${retryDecision.reason}(${statusLabel})，` +
-            `${(delayMs / 1000).toFixed(1)}s 后重试 (${attempt}/${maxTransientRetries})`
+              `${(delayMs / 1000).toFixed(1)}s 后重试 (${attempt}/${maxTransientRetries})`
           )
-          await new Promise(resolve => setTimeout(resolve, delayMs))
+          await new Promise((resolve) => setTimeout(resolve, delayMs))
           continue
         }
 
@@ -1419,7 +1460,9 @@ export async function generateContent(params: {
         // 限制输出长度，避免日志过长
         const maxLength = 500
         if (dataStr.length > maxLength) {
-          console.error(`   - 响应数据（前${maxLength}字符）: ${dataStr.substring(0, maxLength)}...`)
+          console.error(
+            `   - 响应数据（前${maxLength}字符）: ${dataStr.substring(0, maxLength)}...`
+          )
         } else {
           console.error(`   - 响应数据: ${dataStr}`)
         }
@@ -1434,16 +1477,16 @@ export async function generateContent(params: {
 
     const networkCode = String(error?.code || '').toUpperCase()
     const networkMessage = String(error?.message || '')
-    const dnsFailure = networkCode === 'ENOTFOUND'
-      || networkCode === 'EAI_AGAIN'
-      || /\bENOTFOUND\b/i.test(networkMessage)
-      || /\bEAI_AGAIN\b/i.test(networkMessage)
+    const dnsFailure =
+      networkCode === 'ENOTFOUND' ||
+      networkCode === 'EAI_AGAIN' ||
+      /\bENOTFOUND\b/i.test(networkMessage) ||
+      /\bEAI_AGAIN\b/i.test(networkMessage)
     if (dnsFailure) {
       const failedHost = extractDnsTarget(networkMessage)
       const hostLabel = failedHost ? ` (${failedHost})` : ''
       throw new Error(
-        `Gemini API调用失败: DNS解析失败${hostLabel}。` +
-        `请检查服务器DNS配置后重试。`
+        `Gemini API调用失败: DNS解析失败${hostLabel}。` + `请检查服务器DNS配置后重试。`
       )
     }
 
@@ -1461,18 +1504,18 @@ export async function generateContent(params: {
       const providerName = GEMINI_PROVIDERS[provider]?.name || '当前服务商'
       throw new Error(
         `Gemini API调用失败: 403 Forbidden\n` +
-        `\n` +
-        `可能的原因：\n` +
-        `1. API Key无效或过期（${providerName}）\n` +
-        `2. ${providerName === '第三方中转' ? '中转服务的' : ''}API Key权限不足\n` +
-        `3. ${providerName === '第三方中转' ? '中转服务的Cloudflare防护拦截了请求\n' : 'IP地址被限制\n'}` +
-        `\n` +
-        `请检查：\n` +
-        `- API Key是否正确配置\n` +
-        `- API Key是否仍然有效\n` +
-        `- ${providerName === '第三方中转' ? '中转服务账户是否有足够余额\n' : '账户是否处于正常状态\n'}` +
-        `\n` +
-        `原始错误: ${error.message}`
+          `\n` +
+          `可能的原因：\n` +
+          `1. API Key无效或过期（${providerName}）\n` +
+          `2. ${providerName === '第三方中转' ? '中转服务的' : ''}API Key权限不足\n` +
+          `3. ${providerName === '第三方中转' ? '中转服务的Cloudflare防护拦截了请求\n' : 'IP地址被限制\n'}` +
+          `\n` +
+          `请检查：\n` +
+          `- API Key是否正确配置\n` +
+          `- API Key是否仍然有效\n` +
+          `- ${providerName === '第三方中转' ? '中转服务账户是否有足够余额\n' : '账户是否处于正常状态\n'}` +
+          `\n` +
+          `原始错误: ${error.message}`
       )
     }
 
@@ -1494,32 +1537,32 @@ export async function generateContent(params: {
       if (errorCode === 'BILLING_BINDING_MISSING') {
         throw new Error(
           `Gemini API调用失败: 需要绑定专属账户\n` +
-          `\n` +
-          `${providerName}配置问题：\n` +
-          `- 错误代码: BILLING_BINDING_MISSING\n` +
-          `- 服务消息: ${message}\n` +
-          `- 计费模式: ${errorData?.billing?.mode || 'payg'} (按量付费)\n` +
-          `\n` +
-          `解决方案：\n` +
-          `1. 登录中转服务平台 (https://aicode.cat)\n` +
-          `2. 前往账户设置，绑定Gemini专属账户\n` +
-          `3. 或联系服务商管理员配置账户绑定\n` +
-          `4. 配置完成后重新验证API Key\n`
+            `\n` +
+            `${providerName}配置问题：\n` +
+            `- 错误代码: BILLING_BINDING_MISSING\n` +
+            `- 服务消息: ${message}\n` +
+            `- 计费模式: ${errorData?.billing?.mode || 'payg'} (按量付费)\n` +
+            `\n` +
+            `解决方案：\n` +
+            `1. 登录中转服务平台 (https://aicode.cat)\n` +
+            `2. 前往账户设置，绑定Gemini专属账户\n` +
+            `3. 或联系服务商管理员配置账户绑定\n` +
+            `4. 配置完成后重新验证API Key\n`
         )
       }
 
       // 余额不足错误
       throw new Error(
         `Gemini API调用失败: 402 Payment Required\n` +
-        `\n` +
-        `${providerName}账户余额不足：\n` +
-        `- 当前余额: ${balance} 积分\n` +
-        `- 服务消息: ${message}\n` +
-        `\n` +
-        `解决方案：\n` +
-        `1. ${providerName === '第三方中转' ? '前往中转服务平台充值积分\n' : '检查账户配额并充值\n'}` +
-        `2. 更换其他有余额的API Key\n` +
-        `3. ${providerName === '第三方中转' ? '切换到Gemini官方API\n' : '联系服务提供商\n'}`
+          `\n` +
+          `${providerName}账户余额不足：\n` +
+          `- 当前余额: ${balance} 积分\n` +
+          `- 服务消息: ${message}\n` +
+          `\n` +
+          `解决方案：\n` +
+          `1. ${providerName === '第三方中转' ? '前往中转服务平台充值积分\n' : '检查账户配额并充值\n'}` +
+          `2. 更换其他有余额的API Key\n` +
+          `3. ${providerName === '第三方中转' ? '切换到Gemini官方API\n' : '联系服务提供商\n'}`
       )
     }
 
@@ -1536,14 +1579,16 @@ export async function generateContent(params: {
       }
 
       // 🔧 地理位置限制的友好错误提示
-      if (errorDetails.message?.includes('location is not supported') ||
-          errorDetails.status === 'FAILED_PRECONDITION') {
+      if (
+        errorDetails.message?.includes('location is not supported') ||
+        errorDetails.status === 'FAILED_PRECONDITION'
+      ) {
         throw new Error(
           `Gemini API调用失败: 当前地理位置不支持直接访问Gemini API。\n` +
-          `解决方案:\n` +
-          `1. 切换到第三方中转服务商\n` +
-          `2. 使用VPN或代理切换到支持的地区\n` +
-          `原始错误: ${errorDetails.message}`
+            `解决方案:\n` +
+            `1. 切换到第三方中转服务商\n` +
+            `2. 使用VPN或代理切换到支持的地区\n` +
+            `原始错误: ${errorDetails.message}`
         )
       }
 

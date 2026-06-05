@@ -11,32 +11,44 @@ import {
 
 describe('creative-keyword-selection', () => {
   it('uses intent-specific minimum output floors', () => {
-    expect(resolveCreativeKeywordMinimumOutputCount({
-      creativeType: 'brand_intent',
-      maxKeywords: 5,
-    })).toBe(3)
-    expect(resolveCreativeKeywordMinimumOutputCount({
-      creativeType: 'model_intent',
-      maxKeywords: 5,
-    })).toBe(4)
-    expect(resolveCreativeKeywordMinimumOutputCount({
-      creativeType: 'product_intent',
-      maxKeywords: 5,
-    })).toBe(4)
-    expect(resolveCreativeKeywordMinimumOutputCount({
-      creativeType: 'product_intent',
-      maxKeywords: 1,
-    })).toBe(1)
-    expect(resolveCreativeKeywordMinimumOutputCount({
-      creativeType: 'model_intent',
-      maxKeywords: 50,
-      bucket: 'B',
-    })).toBe(8)
-    expect(resolveCreativeKeywordMinimumOutputCount({
-      creativeType: 'product_intent',
-      maxKeywords: 50,
-      bucket: 'D',
-    })).toBe(10)
+    expect(
+      resolveCreativeKeywordMinimumOutputCount({
+        creativeType: 'brand_intent',
+        maxKeywords: 5,
+      })
+    ).toBe(3)
+    expect(
+      resolveCreativeKeywordMinimumOutputCount({
+        creativeType: 'model_intent',
+        maxKeywords: 5,
+      })
+    ).toBe(4)
+    expect(
+      resolveCreativeKeywordMinimumOutputCount({
+        creativeType: 'product_intent',
+        maxKeywords: 5,
+      })
+    ).toBe(4)
+    expect(
+      resolveCreativeKeywordMinimumOutputCount({
+        creativeType: 'product_intent',
+        maxKeywords: 1,
+      })
+    ).toBe(1)
+    expect(
+      resolveCreativeKeywordMinimumOutputCount({
+        creativeType: 'model_intent',
+        maxKeywords: 50,
+        bucket: 'B',
+      })
+    ).toBe(8)
+    expect(
+      resolveCreativeKeywordMinimumOutputCount({
+        creativeType: 'product_intent',
+        maxKeywords: 50,
+        bucket: 'D',
+      })
+    ).toBe(10)
   })
 
   it('caps total creative keywords to 50', () => {
@@ -76,7 +88,9 @@ describe('creative-keyword-selection', () => {
       brandName: 'BrandX',
     })
 
-    const brandedCount = result.keywords.filter(keyword => keyword.toLowerCase().includes('brandx')).length
+    const brandedCount = result.keywords.filter((keyword) =>
+      keyword.toLowerCase().includes('brandx')
+    ).length
     expect(brandedCount).toBeGreaterThanOrEqual(CREATIVE_BRAND_KEYWORD_RESERVE)
   })
 
@@ -98,13 +112,48 @@ describe('creative-keyword-selection', () => {
     for (const creativeType of ['brand_intent', 'product_intent'] as const) {
       const result = selectCreativeKeywords({
         keywordsWithVolume: [
-          { keyword: 'novilla', searchVolume: 9000, source: 'BRAND_SEED' as any, matchType: 'EXACT' },
-          { keyword: 'novilla queen mattress', searchVolume: 4200, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' },
-          { keyword: 'buy novilla queen mattress', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as any, matchType: 'PHRASE' },
-          { keyword: 'novilla queen mattress price', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as any, matchType: 'PHRASE' },
-          { keyword: 'purchase novilla queen mattress', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as any, matchType: 'PHRASE' },
-          { keyword: 'novilla memory foam mattress', searchVolume: 3800, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' },
-          { keyword: 'purchase novilla memory foam mattress', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as any, matchType: 'PHRASE' },
+          {
+            keyword: 'novilla',
+            searchVolume: 9000,
+            source: 'BRAND_SEED' as any,
+            matchType: 'EXACT',
+          },
+          {
+            keyword: 'novilla queen mattress',
+            searchVolume: 4200,
+            source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'buy novilla queen mattress',
+            searchVolume: 0,
+            source: 'GLOBAL_KEYWORDS' as any,
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla queen mattress price',
+            searchVolume: 0,
+            source: 'GLOBAL_KEYWORDS' as any,
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'purchase novilla queen mattress',
+            searchVolume: 0,
+            source: 'GLOBAL_KEYWORDS' as any,
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla memory foam mattress',
+            searchVolume: 3800,
+            source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'purchase novilla memory foam mattress',
+            searchVolume: 0,
+            source: 'GLOBAL_KEYWORDS' as any,
+            matchType: 'PHRASE',
+          },
         ],
         brandName: 'Novilla',
         creativeType,
@@ -124,8 +173,18 @@ describe('creative-keyword-selection', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
         { keyword: 'brandx', searchVolume: 9000, source: 'BRAND_SEED' as any, matchType: 'EXACT' },
-        { keyword: 'buy brandx topper pillow', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as any, matchType: 'PHRASE' },
-        { keyword: 'purchase brandx topper pillow', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as any, matchType: 'PHRASE' },
+        {
+          keyword: 'buy brandx topper pillow',
+          searchVolume: 0,
+          source: 'GLOBAL_KEYWORDS' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'purchase brandx topper pillow',
+          searchVolume: 0,
+          source: 'GLOBAL_KEYWORDS' as any,
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'BrandX',
       creativeType: 'product_intent',
@@ -140,17 +199,72 @@ describe('creative-keyword-selection', () => {
     for (const creativeType of ['brand_intent', 'product_intent'] as const) {
       const result = selectCreativeKeywords({
         keywordsWithVolume: [
-          { keyword: 'brandx', searchVolume: 9000, source: 'BRAND_SEED' as any, matchType: 'EXACT' },
-          { keyword: 'brandx office chair', searchVolume: 4200, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-          { keyword: 'brandx ergonomic office chair', searchVolume: 3900, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-          { keyword: 'brandx desk chair', searchVolume: 3500, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-          { keyword: 'brandx executive chair', searchVolume: 3300, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-          { keyword: 'brandx mesh office chair', searchVolume: 3100, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-          { keyword: 'brandx swivel chair', searchVolume: 2800, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-          { keyword: 'brandx computer chair', searchVolume: 2500, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-          { keyword: 'buy brandx office chair', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as any, matchType: 'PHRASE' },
-          { keyword: 'brandx office chair shop', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as any, matchType: 'PHRASE' },
-          { keyword: 'purchase brandx desk chair', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as any, matchType: 'PHRASE' },
+          {
+            keyword: 'brandx',
+            searchVolume: 9000,
+            source: 'BRAND_SEED' as any,
+            matchType: 'EXACT',
+          },
+          {
+            keyword: 'brandx office chair',
+            searchVolume: 4200,
+            source: 'KEYWORD_POOL' as any,
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'brandx ergonomic office chair',
+            searchVolume: 3900,
+            source: 'KEYWORD_POOL' as any,
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'brandx desk chair',
+            searchVolume: 3500,
+            source: 'KEYWORD_POOL' as any,
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'brandx executive chair',
+            searchVolume: 3300,
+            source: 'KEYWORD_POOL' as any,
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'brandx mesh office chair',
+            searchVolume: 3100,
+            source: 'KEYWORD_POOL' as any,
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'brandx swivel chair',
+            searchVolume: 2800,
+            source: 'KEYWORD_POOL' as any,
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'brandx computer chair',
+            searchVolume: 2500,
+            source: 'KEYWORD_POOL' as any,
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'buy brandx office chair',
+            searchVolume: 0,
+            source: 'GLOBAL_KEYWORDS' as any,
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'brandx office chair shop',
+            searchVolume: 0,
+            source: 'GLOBAL_KEYWORDS' as any,
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'purchase brandx desk chair',
+            searchVolume: 0,
+            source: 'GLOBAL_KEYWORDS' as any,
+            matchType: 'PHRASE',
+          },
         ],
         brandName: 'BrandX',
         creativeType,
@@ -169,13 +283,59 @@ describe('creative-keyword-selection', () => {
   it('drops repeated-demand and brand-trailing product-intent tails', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'eureka', searchVolume: 246000, source: 'BRAND_SEED' as any, sourceType: 'BRAND_SEED' as any, matchType: 'EXACT' },
-        { keyword: 'eureka cordless vacuum cleaner', searchVolume: 110, source: 'KEYWORD_POOL' as any, sourceType: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-        { keyword: 'eureka rapidclean cordless vacuum', searchVolume: 10, source: 'KEYWORD_POOL' as any, sourceType: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-        { keyword: 'vacuum cleaner eureka', searchVolume: 210, source: 'GLOBAL_KEYWORDS' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, sourceSubtype: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' },
-        { keyword: 'eureka cleaner vacuum cleaner', searchVolume: 10, source: 'GLOBAL_KEYWORDS' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, sourceSubtype: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' },
-        { keyword: 'Eureka RapidClean NEC280TL', searchVolume: 0, source: 'TITLE_EXTRACT' as any, sourceType: 'TITLE_EXTRACT' as any, sourceSubtype: 'TITLE_EXTRACT' as any, matchType: 'PHRASE' },
-        { keyword: 'rapidclean nec280tl', searchVolume: 0, source: 'MODEL_FAMILY_GUARD' as any, sourceType: 'MODEL_FAMILY_GUARD' as any, sourceSubtype: 'MODEL_FAMILY_GUARD' as any, matchType: 'EXACT' },
+        {
+          keyword: 'eureka',
+          searchVolume: 246000,
+          source: 'BRAND_SEED' as any,
+          sourceType: 'BRAND_SEED' as any,
+          matchType: 'EXACT',
+        },
+        {
+          keyword: 'eureka cordless vacuum cleaner',
+          searchVolume: 110,
+          source: 'KEYWORD_POOL' as any,
+          sourceType: 'KEYWORD_POOL' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'eureka rapidclean cordless vacuum',
+          searchVolume: 10,
+          source: 'KEYWORD_POOL' as any,
+          sourceType: 'KEYWORD_POOL' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'vacuum cleaner eureka',
+          searchVolume: 210,
+          source: 'GLOBAL_KEYWORDS' as any,
+          sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+          sourceSubtype: 'CANONICAL_BUCKET_VIEW' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'eureka cleaner vacuum cleaner',
+          searchVolume: 10,
+          source: 'GLOBAL_KEYWORDS' as any,
+          sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+          sourceSubtype: 'CANONICAL_BUCKET_VIEW' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'Eureka RapidClean NEC280TL',
+          searchVolume: 0,
+          source: 'TITLE_EXTRACT' as any,
+          sourceType: 'TITLE_EXTRACT' as any,
+          sourceSubtype: 'TITLE_EXTRACT' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'rapidclean nec280tl',
+          searchVolume: 0,
+          source: 'MODEL_FAMILY_GUARD' as any,
+          sourceType: 'MODEL_FAMILY_GUARD' as any,
+          sourceSubtype: 'MODEL_FAMILY_GUARD' as any,
+          matchType: 'EXACT',
+        },
       ],
       brandName: 'Eureka',
       creativeType: 'product_intent',
@@ -195,13 +355,48 @@ describe('creative-keyword-selection', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
         { keyword: 'brandx', searchVolume: 9000, source: 'BRAND_SEED' as any, matchType: 'EXACT' },
-        { keyword: 'buy brandx office chair', searchVolume: 5000, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx office chair', searchVolume: 4200, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx ergonomic office chair', searchVolume: 3900, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx desk chair', searchVolume: 3500, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx executive chair', searchVolume: 3300, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx mesh office chair', searchVolume: 3100, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx swivel chair', searchVolume: 2800, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
+        {
+          keyword: 'buy brandx office chair',
+          searchVolume: 5000,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx office chair',
+          searchVolume: 4200,
+          source: 'KEYWORD_POOL' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx ergonomic office chair',
+          searchVolume: 3900,
+          source: 'KEYWORD_POOL' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx desk chair',
+          searchVolume: 3500,
+          source: 'KEYWORD_POOL' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx executive chair',
+          searchVolume: 3300,
+          source: 'KEYWORD_POOL' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx mesh office chair',
+          searchVolume: 3100,
+          source: 'KEYWORD_POOL' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx swivel chair',
+          searchVolume: 2800,
+          source: 'KEYWORD_POOL' as any,
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'BrandX',
       creativeType: 'brand_intent',
@@ -217,10 +412,30 @@ describe('creative-keyword-selection', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
         { keyword: 'brandx', searchVolume: 9000, source: 'BRAND_SEED' as any, matchType: 'EXACT' },
-        { keyword: 'buy brandx office chair', searchVolume: 5000, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx office chair', searchVolume: 4200, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx ergonomic office chair', searchVolume: 3900, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx office chair deal', searchVolume: 1200, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' },
+        {
+          keyword: 'buy brandx office chair',
+          searchVolume: 5000,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx office chair',
+          searchVolume: 4200,
+          source: 'KEYWORD_POOL' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx ergonomic office chair',
+          searchVolume: 3900,
+          source: 'KEYWORD_POOL' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx office chair deal',
+          searchVolume: 1200,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'BrandX',
       creativeType: 'brand_intent',
@@ -237,10 +452,30 @@ describe('creative-keyword-selection', () => {
   it('keeps compound demand nouns that contain shop as a product token while still pruning action-led variants', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'sunco lighting', searchVolume: 9000, source: 'BRAND_SEED' as any, matchType: 'EXACT' },
-        { keyword: 'sunco lighting led shop lights', searchVolume: 5200, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' },
-        { keyword: 'sunco lighting led tube lights', searchVolume: 4800, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' },
-        { keyword: 'buy sunco lighting led shop lights', searchVolume: 600, source: 'GLOBAL_KEYWORDS' as any, matchType: 'PHRASE' },
+        {
+          keyword: 'sunco lighting',
+          searchVolume: 9000,
+          source: 'BRAND_SEED' as any,
+          matchType: 'EXACT',
+        },
+        {
+          keyword: 'sunco lighting led shop lights',
+          searchVolume: 5200,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'sunco lighting led tube lights',
+          searchVolume: 4800,
+          source: 'KEYWORD_POOL' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'buy sunco lighting led shop lights',
+          searchVolume: 600,
+          source: 'GLOBAL_KEYWORDS' as any,
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'Sunco Lighting',
       creativeType: 'brand_intent',
@@ -255,8 +490,18 @@ describe('creative-keyword-selection', () => {
   it('prefers higher-priority source for equal keyword', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'brandx spotlight', searchVolume: 20, source: 'AI_GENERATED', matchType: 'PHRASE' },
-        { keyword: 'brandx spotlight', searchVolume: 20, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
+        {
+          keyword: 'brandx spotlight',
+          searchVolume: 20,
+          source: 'AI_GENERATED',
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx spotlight',
+          searchVolume: 20,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'BrandX',
     })
@@ -266,11 +511,22 @@ describe('creative-keyword-selection', () => {
   })
 
   it('drops keywords exceeding global max word count', () => {
-    const tooLongKeyword = 'ninja bn401 nutri pro compact personal blender auto iq technology 1100 peak watts for frozen drinks smoothies sauces'
+    const tooLongKeyword =
+      'ninja bn401 nutri pro compact personal blender auto iq technology 1100 peak watts for frozen drinks smoothies sauces'
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: tooLongKeyword, searchVolume: 120000, source: 'KEYWORD_POOL', matchType: 'EXACT' },
-        { keyword: 'lampick hair dryer', searchVolume: 4000, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
+        {
+          keyword: tooLongKeyword,
+          searchVolume: 120000,
+          source: 'KEYWORD_POOL',
+          matchType: 'EXACT',
+        },
+        {
+          keyword: 'lampick hair dryer',
+          searchVolume: 4000,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'Lampick',
     })
@@ -278,17 +534,22 @@ describe('creative-keyword-selection', () => {
     expect(result.keywords).toContain('lampick hair dryer')
     expect(result.keywords).not.toContain(tooLongKeyword)
     expect(
-      result.keywords.every(keyword => keyword.trim().split(/\s+/).filter(Boolean).length <= CREATIVE_KEYWORD_MAX_WORDS)
+      result.keywords.every(
+        (keyword) =>
+          keyword.trim().split(/\s+/).filter(Boolean).length <= CREATIVE_KEYWORD_MAX_WORDS
+      )
     ).toBe(true)
   })
 
   it('enforces at least 10 branded keywords by synthesizing from non-brand candidates', () => {
-    const brandedSeed = [{
-      keyword: 'lampick hair dryer',
-      searchVolume: 5000,
-      source: 'KEYWORD_POOL',
-      matchType: 'PHRASE' as const,
-    }]
+    const brandedSeed = [
+      {
+        keyword: 'lampick hair dryer',
+        searchVolume: 5000,
+        source: 'KEYWORD_POOL',
+        matchType: 'PHRASE' as const,
+      },
+    ]
     const nonBrandKeywords = Array.from({ length: 30 }, (_, index) => ({
       keyword: `hair dryer ${index + 1}`,
       searchVolume: 3000 - index,
@@ -303,17 +564,32 @@ describe('creative-keyword-selection', () => {
       minBrandKeywords: 10,
     })
 
-    const brandedCount = result.keywords.filter(keyword => keyword.toLowerCase().includes('lampick')).length
+    const brandedCount = result.keywords.filter((keyword) =>
+      keyword.toLowerCase().includes('lampick')
+    ).length
     expect(brandedCount).toBeGreaterThanOrEqual(10)
     expect(
-      result.keywords.every(keyword => keyword.trim().split(/\s+/).filter(Boolean).length <= CREATIVE_KEYWORD_MAX_WORDS)
+      result.keywords.every(
+        (keyword) =>
+          keyword.trim().split(/\s+/).filter(Boolean).length <= CREATIVE_KEYWORD_MAX_WORDS
+      )
     ).toBe(true)
   })
 
   it('supports brand-only mode and emits only branded keywords', () => {
     const brandKeywords = [
-      { keyword: 'lampick hair dryer', searchVolume: 5000, source: 'KEYWORD_POOL', matchType: 'PHRASE' as const },
-      { keyword: 'lampick ionic dryer', searchVolume: 4200, source: 'KEYWORD_POOL', matchType: 'PHRASE' as const },
+      {
+        keyword: 'lampick hair dryer',
+        searchVolume: 5000,
+        source: 'KEYWORD_POOL',
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'lampick ionic dryer',
+        searchVolume: 4200,
+        source: 'KEYWORD_POOL',
+        matchType: 'PHRASE' as const,
+      },
     ]
     const nonBrandKeywords = Array.from({ length: 20 }, (_, index) => ({
       keyword: `hair dryer ${index + 1}`,
@@ -330,15 +606,30 @@ describe('creative-keyword-selection', () => {
     })
 
     expect(result.keywordsWithVolume).toHaveLength(12)
-    expect(result.keywords.every(keyword => keyword.toLowerCase().includes('lampick'))).toBe(true)
+    expect(result.keywords.every((keyword) => keyword.toLowerCase().includes('lampick'))).toBe(true)
   })
 
   it('synthesizes branded demand terms for brand_intent when only generic demand tails are available', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'security camera', searchVolume: 5200, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
-        { keyword: 'outdoor camera', searchVolume: 4100, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
-        { keyword: 'camera for home', searchVolume: 3600, source: 'SEARCH_TERM' as any, matchType: 'PHRASE' },
+        {
+          keyword: 'security camera',
+          searchVolume: 5200,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'outdoor camera',
+          searchVolume: 4100,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'camera for home',
+          searchVolume: 3600,
+          source: 'SEARCH_TERM' as any,
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'Eufy',
       creativeType: 'brand_intent',
@@ -347,16 +638,31 @@ describe('creative-keyword-selection', () => {
     })
 
     expect(result.keywords.length).toBeGreaterThan(0)
-    expect(result.keywords.every(keyword => keyword.toLowerCase().includes('eufy'))).toBe(true)
+    expect(result.keywords.every((keyword) => keyword.toLowerCase().includes('eufy'))).toBe(true)
     expect(result.keywords).toContain('eufy security camera')
   })
 
   it('keeps pure brand terms for brand_intent while still dropping promo-only noise', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'brandx', searchVolume: 9000, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx sale', searchVolume: 4200, source: 'SEARCH_TERM' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx security camera', searchVolume: 3200, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
+        {
+          keyword: 'brandx',
+          searchVolume: 9000,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx sale',
+          searchVolume: 4200,
+          source: 'SEARCH_TERM' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx security camera',
+          searchVolume: 3200,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'BrandX',
       creativeType: 'brand_intent',
@@ -388,7 +694,9 @@ describe('creative-keyword-selection', () => {
 
     const pureBrandKeywords = getPureBrandKeywords('BrandX')
     expect(result.keywordsWithVolume).toHaveLength(50)
-    expect(result.keywords.some((keyword) => isPureBrandKeyword(keyword, pureBrandKeywords))).toBe(true)
+    expect(result.keywords.some((keyword) => isPureBrandKeyword(keyword, pureBrandKeywords))).toBe(
+      true
+    )
   })
 
   it('keeps one pure brand keyword in product_intent when pure brand ranks at the tail', () => {
@@ -416,10 +724,30 @@ describe('creative-keyword-selection', () => {
   it('enforces exact match and model anchors for model_intent', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'brandx x200 vacuum', searchVolume: 5000, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
-        { keyword: 'brandx vacuum', searchVolume: 4200, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
-        { keyword: 'brandx official store', searchVolume: 4100, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
-        { keyword: 'x200 vacuum', searchVolume: 3800, source: 'SEARCH_TERM' as any, matchType: 'PHRASE' },
+        {
+          keyword: 'brandx x200 vacuum',
+          searchVolume: 5000,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx vacuum',
+          searchVolume: 4200,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx official store',
+          searchVolume: 4100,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'x200 vacuum',
+          searchVolume: 3800,
+          source: 'SEARCH_TERM' as any,
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'BrandX',
       creativeType: 'model_intent',
@@ -436,10 +764,30 @@ describe('creative-keyword-selection', () => {
   it('filters ASIN-like terms from model_intent output while keeping real model queries', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'novilla b0cjj9sb4y mattress', searchVolume: 5100, source: 'MODEL_FAMILY_GUARD' as any, matchType: 'PHRASE' },
-        { keyword: 'b0cjj9sb4y', searchVolume: 3200, source: 'MODEL_FAMILY_GUARD' as any, matchType: 'PHRASE' },
-        { keyword: 'novilla gen 2 mattress', searchVolume: 1800, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' },
-        { keyword: 'gen 2 mattress', searchVolume: 900, source: 'KEYWORD_PLANNER' as any, matchType: 'PHRASE' },
+        {
+          keyword: 'novilla b0cjj9sb4y mattress',
+          searchVolume: 5100,
+          source: 'MODEL_FAMILY_GUARD' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'b0cjj9sb4y',
+          searchVolume: 3200,
+          source: 'MODEL_FAMILY_GUARD' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'novilla gen 2 mattress',
+          searchVolume: 1800,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'gen 2 mattress',
+          searchVolume: 900,
+          source: 'KEYWORD_PLANNER' as any,
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'Novilla',
       creativeType: 'model_intent',
@@ -455,9 +803,27 @@ describe('creative-keyword-selection', () => {
   it('backfills model_intent output after ASIN pruning when extra qualified candidates exist', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'novilla b0cjj9sb4y mattress', searchVolume: 6200, source: 'MODEL_FAMILY_GUARD' as any, sourceType: 'MODEL_FAMILY_GUARD' as any, matchType: 'PHRASE' as const },
-        { keyword: 'novilla gen 2 mattress', searchVolume: 6100, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' as const },
-        { keyword: 'novilla king size mattress 12 inch', searchVolume: 6000, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' as const },
+        {
+          keyword: 'novilla b0cjj9sb4y mattress',
+          searchVolume: 6200,
+          source: 'MODEL_FAMILY_GUARD' as any,
+          sourceType: 'MODEL_FAMILY_GUARD' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'novilla gen 2 mattress',
+          searchVolume: 6100,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'novilla king size mattress 12 inch',
+          searchVolume: 6000,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE' as const,
+        },
       ],
       brandName: 'Novilla',
       creativeType: 'model_intent',
@@ -468,27 +834,45 @@ describe('creative-keyword-selection', () => {
 
     expect(result.keywords.some((keyword) => /b0[a-z0-9]{8}/i.test(keyword))).toBe(false)
     expect(result.keywordsWithVolume).toHaveLength(2)
-    expect(result.keywords).toEqual(expect.arrayContaining([
-      'novilla gen 2 mattress',
-      'novilla king size mattress 12 inch',
-    ]))
+    expect(result.keywords).toEqual(
+      expect.arrayContaining(['novilla gen 2 mattress', 'novilla king size mattress 12 inch'])
+    )
     expect(result.sourceQuotaAudit.acceptedCount).toBe(result.keywordsWithVolume.length)
-    expect(result.sourceQuotaAudit.targetCount).toBeGreaterThanOrEqual(result.keywordsWithVolume.length)
+    expect(result.sourceQuotaAudit.targetCount).toBeGreaterThanOrEqual(
+      result.keywordsWithVolume.length
+    )
   })
 
   it('keeps a small branded floor for model_intent by synthesizing branded model tails when needed', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'x200 vacuum', searchVolume: 5000, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' },
-        { keyword: 'x300 vacuum', searchVolume: 4200, source: 'KEYWORD_PLANNER' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx official store', searchVolume: 4100, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
+        {
+          keyword: 'x200 vacuum',
+          searchVolume: 5000,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'x300 vacuum',
+          searchVolume: 4200,
+          source: 'KEYWORD_PLANNER' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx official store',
+          searchVolume: 4100,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'BrandX',
       creativeType: 'model_intent',
       maxKeywords: 6,
     })
 
-    const brandedKeywords = result.keywords.filter(keyword => keyword.toLowerCase().includes('brandx'))
+    const brandedKeywords = result.keywords.filter((keyword) =>
+      keyword.toLowerCase().includes('brandx')
+    )
 
     expect(brandedKeywords.length).toBeGreaterThanOrEqual(2)
     expect(brandedKeywords).toContain('brandx x200 vacuum')
@@ -498,13 +882,56 @@ describe('creative-keyword-selection', () => {
 
   it('rejects low-volume generic preferred soft-family terms while keeping specific branded family queries in model_intent', () => {
     const keywordsWithVolume = [
-      { keyword: 'novilla', searchVolume: 9000, source: 'BRAND_SEED' as any, sourceType: 'BRAND_SEED' as any, matchType: 'EXACT' as const, isPureBrand: true },
-      { keyword: 'novilla king size mattress', searchVolume: 260, source: 'KEYWORD_POOL' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' as const },
-      { keyword: 'novilla king mattress', searchVolume: 210, source: 'KEYWORD_POOL' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' as const },
-      { keyword: 'novilla memory foam mattress', searchVolume: 320, source: 'KEYWORD_POOL' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' as const },
-      { keyword: 'novilla mattress', searchVolume: 600, source: 'KEYWORD_POOL' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' as const },
-      { keyword: 'mattresses', searchVolume: 500, source: 'KEYWORD_POOL' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' as const },
-      { keyword: 'king mattress 12 inch king', searchVolume: 500, source: 'KEYWORD_POOL' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' as const },
+      {
+        keyword: 'novilla',
+        searchVolume: 9000,
+        source: 'BRAND_SEED' as any,
+        sourceType: 'BRAND_SEED' as any,
+        matchType: 'EXACT' as const,
+        isPureBrand: true,
+      },
+      {
+        keyword: 'novilla king size mattress',
+        searchVolume: 260,
+        source: 'KEYWORD_POOL' as any,
+        sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'novilla king mattress',
+        searchVolume: 210,
+        source: 'KEYWORD_POOL' as any,
+        sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'novilla memory foam mattress',
+        searchVolume: 320,
+        source: 'KEYWORD_POOL' as any,
+        sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'novilla mattress',
+        searchVolume: 600,
+        source: 'KEYWORD_POOL' as any,
+        sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'mattresses',
+        searchVolume: 500,
+        source: 'KEYWORD_POOL' as any,
+        sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'king mattress 12 inch king',
+        searchVolume: 500,
+        source: 'KEYWORD_POOL' as any,
+        sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+        matchType: 'PHRASE' as const,
+      },
     ]
 
     const result = selectCreativeKeywords({
@@ -517,11 +944,13 @@ describe('creative-keyword-selection', () => {
       brandReserve: 0,
     })
 
-    expect(result.keywords).toEqual(expect.arrayContaining([
-      'novilla king size mattress',
-      'novilla king mattress',
-      'novilla memory foam mattress',
-    ]))
+    expect(result.keywords).toEqual(
+      expect.arrayContaining([
+        'novilla king size mattress',
+        'novilla king mattress',
+        'novilla memory foam mattress',
+      ])
+    )
     expect(result.keywords).not.toContain('novilla mattress')
     expect(result.keywords).not.toContain('mattresses')
     expect(result.keywords).not.toContain('king mattress 12 inch king')
@@ -530,17 +959,44 @@ describe('creative-keyword-selection', () => {
       'novilla king mattress',
       'novilla memory foam mattress',
     ])
-    const softFamilyItems = result.keywordsWithVolume.filter((item) => expectedSoftFamily.has(item.keyword))
+    const softFamilyItems = result.keywordsWithVolume.filter((item) =>
+      expectedSoftFamily.has(item.keyword)
+    )
     expect(softFamilyItems.length).toBeGreaterThanOrEqual(3)
     expect(softFamilyItems.every((item) => item.matchType === 'PHRASE')).toBe(true)
   })
 
   it('keeps high-volume branded single-core preferred demand terms in model_intent', () => {
     const keywordsWithVolume = [
-      { keyword: 'novilla', searchVolume: 9000, source: 'BRAND_SEED' as any, sourceType: 'BRAND_SEED' as any, matchType: 'EXACT' as const, isPureBrand: true },
-      { keyword: 'novilla mattress', searchVolume: 8100, source: 'OFFER_EXTRACTED_KEYWORDS' as any, sourceType: 'OFFER_EXTRACTED_KEYWORDS' as any, matchType: 'PHRASE' as const },
-      { keyword: 'novilla king size mattress', searchVolume: 260, source: 'KEYWORD_POOL' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' as const },
-      { keyword: 'novilla memory foam mattress', searchVolume: 320, source: 'KEYWORD_POOL' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' as const },
+      {
+        keyword: 'novilla',
+        searchVolume: 9000,
+        source: 'BRAND_SEED' as any,
+        sourceType: 'BRAND_SEED' as any,
+        matchType: 'EXACT' as const,
+        isPureBrand: true,
+      },
+      {
+        keyword: 'novilla mattress',
+        searchVolume: 8100,
+        source: 'OFFER_EXTRACTED_KEYWORDS' as any,
+        sourceType: 'OFFER_EXTRACTED_KEYWORDS' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'novilla king size mattress',
+        searchVolume: 260,
+        source: 'KEYWORD_POOL' as any,
+        sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'novilla memory foam mattress',
+        searchVolume: 320,
+        source: 'KEYWORD_POOL' as any,
+        sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+        matchType: 'PHRASE' as const,
+      },
     ]
 
     const result = selectCreativeKeywords({
@@ -553,11 +1009,13 @@ describe('creative-keyword-selection', () => {
       brandReserve: 0,
     })
 
-    expect(result.keywords).toEqual(expect.arrayContaining([
-      'novilla mattress',
-      'novilla king size mattress',
-      'novilla memory foam mattress',
-    ]))
+    expect(result.keywords).toEqual(
+      expect.arrayContaining([
+        'novilla mattress',
+        'novilla king size mattress',
+        'novilla memory foam mattress',
+      ])
+    )
     expect(result.keywords).not.toContain('novilla')
     const singleCore = result.keywordsWithVolume.find((item) => item.keyword === 'novilla mattress')
     expect(singleCore?.matchType).toBe('PHRASE')
@@ -565,12 +1023,48 @@ describe('creative-keyword-selection', () => {
 
   it('rejects title-derived model_intent fragments that only carry family markers or marketing claims', () => {
     const keywordsWithVolume = [
-      { keyword: 'ringconn gen 2 smart ring', searchVolume: 50, source: 'GLOBAL_KEYWORDS' as any, sourceType: 'GLOBAL_KEYWORDS' as any, matchType: 'PHRASE' as const },
-      { keyword: 'ringconn smart ring', searchVolume: 20, source: 'TITLE_EXTRACT' as any, sourceType: 'TITLE_EXTRACT' as any, matchType: 'PHRASE' as const },
-      { keyword: 'ringconn gen 2', searchVolume: 10, source: 'TITLE_EXTRACT' as any, sourceType: 'TITLE_EXTRACT' as any, matchType: 'PHRASE' as const },
-      { keyword: 'Ringconn Gen World’s', searchVolume: 0, source: 'TITLE_EXTRACT' as any, sourceType: 'TITLE_EXTRACT' as any, matchType: 'PHRASE' as const },
-      { keyword: 'Ringconn World’s', searchVolume: 0, source: 'TITLE_EXTRACT' as any, sourceType: 'TITLE_EXTRACT' as any, matchType: 'PHRASE' as const },
-      { keyword: 'Ringconn First', searchVolume: 0, source: 'TITLE_EXTRACT' as any, sourceType: 'TITLE_EXTRACT' as any, matchType: 'PHRASE' as const },
+      {
+        keyword: 'ringconn gen 2 smart ring',
+        searchVolume: 50,
+        source: 'GLOBAL_KEYWORDS' as any,
+        sourceType: 'GLOBAL_KEYWORDS' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'ringconn smart ring',
+        searchVolume: 20,
+        source: 'TITLE_EXTRACT' as any,
+        sourceType: 'TITLE_EXTRACT' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'ringconn gen 2',
+        searchVolume: 10,
+        source: 'TITLE_EXTRACT' as any,
+        sourceType: 'TITLE_EXTRACT' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'Ringconn Gen World’s',
+        searchVolume: 0,
+        source: 'TITLE_EXTRACT' as any,
+        sourceType: 'TITLE_EXTRACT' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'Ringconn World’s',
+        searchVolume: 0,
+        source: 'TITLE_EXTRACT' as any,
+        sourceType: 'TITLE_EXTRACT' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'Ringconn First',
+        searchVolume: 0,
+        source: 'TITLE_EXTRACT' as any,
+        sourceType: 'TITLE_EXTRACT' as any,
+        matchType: 'PHRASE' as const,
+      },
     ]
 
     const result = selectCreativeKeywords({
@@ -583,11 +1077,9 @@ describe('creative-keyword-selection', () => {
       brandReserve: 0,
     })
 
-    expect(result.keywords).toEqual(expect.arrayContaining([
-      'ringconn gen 2 smart ring',
-      'ringconn smart ring',
-      'ringconn gen 2',
-    ]))
+    expect(result.keywords).toEqual(
+      expect.arrayContaining(['ringconn gen 2 smart ring', 'ringconn smart ring', 'ringconn gen 2'])
+    )
     expect(result.keywords).not.toContain('Ringconn Gen World’s')
     expect(result.keywords).not.toContain('Ringconn World’s')
     expect(result.keywords).not.toContain('Ringconn First')
@@ -605,8 +1097,20 @@ describe('creative-keyword-selection', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
         ...hardModels,
-        { keyword: 'novilla king size mattress', searchVolume: 260, source: 'KEYWORD_POOL' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' as const },
-        { keyword: 'novilla memory foam mattress', searchVolume: 320, source: 'KEYWORD_POOL' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' as const },
+        {
+          keyword: 'novilla king size mattress',
+          searchVolume: 260,
+          source: 'KEYWORD_POOL' as any,
+          sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'novilla memory foam mattress',
+          searchVolume: 320,
+          source: 'KEYWORD_POOL' as any,
+          sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+          matchType: 'PHRASE' as const,
+        },
       ],
       brandName: 'Novilla',
       creativeType: 'model_intent',
@@ -616,18 +1120,37 @@ describe('creative-keyword-selection', () => {
     })
 
     expect(result.keywordsWithVolume).toHaveLength(10)
-    expect(result.keywords).toEqual(expect.arrayContaining([
-      'novilla king size mattress',
-      'novilla memory foam mattress',
-    ]))
+    expect(result.keywords).toEqual(
+      expect.arrayContaining(['novilla king size mattress', 'novilla memory foam mattress'])
+    )
   })
 
   it('uses bucket-specific rescue to avoid empty model_intent output when hard model anchors are absent', () => {
     const compatibilityOnlyKeywords = [
-      { keyword: 'brandx pressure relief support', searchVolume: 0, source: 'KEYWORD_POOL', matchType: 'PHRASE' as const },
-      { keyword: 'brandx cooling comfort system', searchVolume: 0, source: 'KEYWORD_POOL', matchType: 'PHRASE' as const },
-      { keyword: 'brandx sleep technology', searchVolume: 0, source: 'KEYWORD_POOL', matchType: 'PHRASE' as const },
-      { keyword: 'brandx cooling mattress', searchVolume: 0, source: 'MODEL_FAMILY_GUARD' as any, matchType: 'PHRASE' as const },
+      {
+        keyword: 'brandx pressure relief support',
+        searchVolume: 0,
+        source: 'KEYWORD_POOL',
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'brandx cooling comfort system',
+        searchVolume: 0,
+        source: 'KEYWORD_POOL',
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'brandx sleep technology',
+        searchVolume: 0,
+        source: 'KEYWORD_POOL',
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'brandx cooling mattress',
+        searchVolume: 0,
+        source: 'MODEL_FAMILY_GUARD' as any,
+        matchType: 'PHRASE' as const,
+      },
     ]
 
     const result = selectCreativeKeywords({
@@ -644,7 +1167,9 @@ describe('creative-keyword-selection', () => {
     expect(result.keywordsWithVolume).toHaveLength(1)
     expect(result.keywordsWithVolume.every((item) => item.matchType === 'PHRASE')).toBe(true)
     expect(result.keywords).toEqual(['brandx cooling mattress'])
-    expect(result.keywords.some((keyword) => !hasModelAnchorEvidence({ keywords: [keyword] }))).toBe(true)
+    expect(
+      result.keywords.some((keyword) => !hasModelAnchorEvidence({ keywords: [keyword] }))
+    ).toBe(true)
     expect(result.keywordsWithVolume[0]).toMatchObject({
       contractRole: 'required',
       familyMatchType: 'soft_family',
@@ -657,9 +1182,24 @@ describe('creative-keyword-selection', () => {
 
   it('keeps non-empty output for non-model intents when strict filtering empties the ranked pool', () => {
     const weakSignals = [
-      { keyword: 'what is vacuum cleaner', searchVolume: 1200, source: 'SEARCH_TERM' as any, matchType: 'PHRASE' as const },
-      { keyword: 'vacuum cleaner review', searchVolume: 900, source: 'SEARCH_TERM' as any, matchType: 'PHRASE' as const },
-      { keyword: 'vacuum cleaner amazon', searchVolume: 860, source: 'SEARCH_TERM' as any, matchType: 'PHRASE' as const },
+      {
+        keyword: 'what is vacuum cleaner',
+        searchVolume: 1200,
+        source: 'SEARCH_TERM' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'vacuum cleaner review',
+        searchVolume: 900,
+        source: 'SEARCH_TERM' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'vacuum cleaner amazon',
+        searchVolume: 860,
+        source: 'SEARCH_TERM' as any,
+        matchType: 'PHRASE' as const,
+      },
     ]
 
     for (const creativeType of ['brand_intent', 'model_intent', 'product_intent'] as const) {
@@ -683,10 +1223,30 @@ describe('creative-keyword-selection', () => {
   it('prefers real search-term and planner sources over lower-priority duplicates', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'brandx x200 vacuum', searchVolume: 100, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
-        { keyword: 'brandx x200 vacuum', searchVolume: 100, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx x300 vacuum', searchVolume: 100, source: 'AI_GENERATED', matchType: 'PHRASE' },
-        { keyword: 'brandx x300 vacuum', searchVolume: 100, source: 'KEYWORD_PLANNER' as any, matchType: 'PHRASE' },
+        {
+          keyword: 'brandx x200 vacuum',
+          searchVolume: 100,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx x200 vacuum',
+          searchVolume: 100,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx x300 vacuum',
+          searchVolume: 100,
+          source: 'AI_GENERATED',
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx x300 vacuum',
+          searchVolume: 100,
+          source: 'KEYWORD_PLANNER' as any,
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'BrandX',
       creativeType: 'model_intent',
@@ -725,7 +1285,9 @@ describe('creative-keyword-selection', () => {
     })
 
     expect(result.keywords).toContain('brandx robot vacuum')
-    expect(result.keywordsWithVolume.find((item) => item.keyword === 'brandx robot vacuum')).toMatchObject({
+    expect(
+      result.keywordsWithVolume.find((item) => item.keyword === 'brandx robot vacuum')
+    ).toMatchObject({
       source: 'KEYWORD_PLANNER',
       sourceSubtype: 'KEYWORD_PLANNER',
       rawSource: 'KEYWORD_PLANNER',
@@ -735,11 +1297,36 @@ describe('creative-keyword-selection', () => {
   it('drops low-quality informational and platform keywords', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'brandx', searchVolume: 5000, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' },
-        { keyword: 'what is brandx camera', searchVolume: 1200, source: 'SEARCH_TERM' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx camera review', searchVolume: 1100, source: 'SEARCH_TERM' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx amazon camera', searchVolume: 1000, source: 'SEARCH_TERM' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx security camera', searchVolume: 2200, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
+        {
+          keyword: 'brandx',
+          searchVolume: 5000,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'what is brandx camera',
+          searchVolume: 1200,
+          source: 'SEARCH_TERM' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx camera review',
+          searchVolume: 1100,
+          source: 'SEARCH_TERM' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx amazon camera',
+          searchVolume: 1000,
+          source: 'SEARCH_TERM' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx security camera',
+          searchVolume: 2200,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'BrandX',
       creativeType: 'brand_intent',
@@ -756,10 +1343,30 @@ describe('creative-keyword-selection', () => {
   it('drops repeated action and locale-noise keywords', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'brandx mattress', searchVolume: 3200, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
-        { keyword: 'buy brandx mattress buy', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx shop kabupaten bekasi', searchVolume: 0, source: 'OFFER_EXTRACTED_KEYWORDS' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx a cozy home made simple', searchVolume: 0, source: 'GLOBAL_CORE' as any, matchType: 'PHRASE' },
+        {
+          keyword: 'brandx mattress',
+          searchVolume: 3200,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'buy brandx mattress buy',
+          searchVolume: 0,
+          source: 'GLOBAL_KEYWORDS' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx shop kabupaten bekasi',
+          searchVolume: 0,
+          source: 'OFFER_EXTRACTED_KEYWORDS' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx a cozy home made simple',
+          searchVolume: 0,
+          source: 'GLOBAL_CORE' as any,
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'BrandX',
       creativeType: 'product_intent',
@@ -778,10 +1385,30 @@ describe('creative-keyword-selection', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
         { keyword: 'novilla', searchVolume: 9000, source: 'BRAND_SEED' as any, matchType: 'EXACT' },
-        { keyword: 'novilla mattresses good', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as any, matchType: 'PHRASE' },
-        { keyword: 'best novilla mattresses', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as any, matchType: 'PHRASE' },
-        { keyword: 'best novilla mattress for side sleepers', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as any, matchType: 'PHRASE' },
-        { keyword: 'novilla queen mattress', searchVolume: 3200, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' },
+        {
+          keyword: 'novilla mattresses good',
+          searchVolume: 0,
+          source: 'GLOBAL_KEYWORDS' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'best novilla mattresses',
+          searchVolume: 0,
+          source: 'GLOBAL_KEYWORDS' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'best novilla mattress for side sleepers',
+          searchVolume: 0,
+          source: 'GLOBAL_KEYWORDS' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'novilla queen mattress',
+          searchVolume: 3200,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'Novilla',
       creativeType: 'product_intent',
@@ -798,10 +1425,30 @@ describe('creative-keyword-selection', () => {
   it('drops community/question/price-tracker query noise', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'brandx vacuum cleaner', searchVolume: 3200, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
-        { keyword: 'brandx vacuum reddit', searchVolume: 1600, source: 'SEARCH_TERM' as any, matchType: 'PHRASE' },
-        { keyword: 'are brandx vacuums good', searchVolume: 1400, source: 'SEARCH_TERM' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx vacuum price tracker', searchVolume: 1200, source: 'SEARCH_TERM' as any, matchType: 'PHRASE' },
+        {
+          keyword: 'brandx vacuum cleaner',
+          searchVolume: 3200,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx vacuum reddit',
+          searchVolume: 1600,
+          source: 'SEARCH_TERM' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'are brandx vacuums good',
+          searchVolume: 1400,
+          source: 'SEARCH_TERM' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx vacuum price tracker',
+          searchVolume: 1200,
+          source: 'SEARCH_TERM' as any,
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'BrandX',
       creativeType: 'product_intent',
@@ -819,8 +1466,18 @@ describe('creative-keyword-selection', () => {
   it('drops stacked noun noise terms from weak page extraction phrases', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'ringconn smart ring price', searchVolume: 1100, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
-        { keyword: 'ringconn electronics photo wearable technology rings cost', searchVolume: 900, source: 'PAGE_EXTRACT' as any, matchType: 'PHRASE' },
+        {
+          keyword: 'ringconn smart ring price',
+          searchVolume: 1100,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'ringconn electronics photo wearable technology rings cost',
+          searchVolume: 900,
+          source: 'PAGE_EXTRACT' as any,
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'Ringconn',
       creativeType: 'product_intent',
@@ -830,14 +1487,26 @@ describe('creative-keyword-selection', () => {
     })
 
     expect(result.keywords).toContain('ringconn smart ring price')
-    expect(result.keywords).not.toContain('ringconn electronics photo wearable technology rings cost')
+    expect(result.keywords).not.toContain(
+      'ringconn electronics photo wearable technology rings cost'
+    )
   })
 
   it('deduplicates token-order permutations and keeps the better candidate', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'brandx x200 vacuum', searchVolume: 1800, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' },
-        { keyword: 'x200 brandx vacuum', searchVolume: 2500, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
+        {
+          keyword: 'brandx x200 vacuum',
+          searchVolume: 1800,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'x200 brandx vacuum',
+          searchVolume: 2500,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'BrandX',
       creativeType: 'model_intent',
@@ -851,8 +1520,18 @@ describe('creative-keyword-selection', () => {
   it('injects a pure brand keyword floor for product_intent when missing from candidates', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'brandx security camera', searchVolume: 4200, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
-        { keyword: 'brandx outdoor camera', searchVolume: 3500, source: 'SEARCH_TERM' as any, matchType: 'PHRASE' },
+        {
+          keyword: 'brandx security camera',
+          searchVolume: 4200,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx outdoor camera',
+          searchVolume: 3500,
+          source: 'SEARCH_TERM' as any,
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'BrandX',
       creativeType: 'product_intent',
@@ -866,10 +1545,30 @@ describe('creative-keyword-selection', () => {
   it('uses a light default brand reserve for product_intent and preserves multiple demand terms', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'brandx', searchVolume: 9000, source: 'SEARCH_TERM' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx security camera', searchVolume: 5200, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
-        { keyword: 'security camera for home', searchVolume: 5000, source: 'KEYWORD_PLANNER' as any, matchType: 'PHRASE' },
-        { keyword: 'outdoor security camera', searchVolume: 4800, source: 'KEYWORD_PLANNER' as any, matchType: 'PHRASE' },
+        {
+          keyword: 'brandx',
+          searchVolume: 9000,
+          source: 'SEARCH_TERM' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx security camera',
+          searchVolume: 5200,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'security camera for home',
+          searchVolume: 5000,
+          source: 'KEYWORD_PLANNER' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'outdoor security camera',
+          searchVolume: 4800,
+          source: 'KEYWORD_PLANNER' as any,
+          matchType: 'PHRASE',
+        },
       ],
       brandName: 'BrandX',
       creativeType: 'product_intent',
@@ -880,17 +1579,16 @@ describe('creative-keyword-selection', () => {
     const pureBrandCount = result.keywords.filter((keyword) =>
       isPureBrandKeyword(keyword, pureBrandKeywords)
     ).length
-    const nonPureBrandCount = result.keywords.filter((keyword) =>
-      !isPureBrandKeyword(keyword, pureBrandKeywords)
+    const nonPureBrandCount = result.keywords.filter(
+      (keyword) => !isPureBrandKeyword(keyword, pureBrandKeywords)
     ).length
 
     expect(result.keywords).toContain('brandx')
     expect(pureBrandCount).toBe(1)
     expect(nonPureBrandCount).toBeGreaterThanOrEqual(2)
-    expect(result.keywords).toEqual(expect.arrayContaining([
-      'security camera for home',
-      'outdoor security camera',
-    ]))
+    expect(result.keywords).toEqual(
+      expect.arrayContaining(['security camera for home', 'outdoor security camera'])
+    )
   })
 
   it('preserves source priority and enriches keyword audit metadata', () => {
@@ -1044,7 +1742,9 @@ describe('creative-keyword-selection', () => {
         )
       ).length
 
-    expect(countAiRaw(fallback.keywordsWithVolume)).toBeGreaterThanOrEqual(countAiRaw(normal.keywordsWithVolume))
+    expect(countAiRaw(fallback.keywordsWithVolume)).toBeGreaterThanOrEqual(
+      countAiRaw(normal.keywordsWithVolume)
+    )
     expect(countAiRaw(fallback.keywordsWithVolume)).toBeLessThanOrEqual(2)
     expect(fallback.sourceQuotaAudit.fallbackMode).toBe(true)
     expect(fallback.sourceQuotaAudit.quota.combinedLowTrustCap).toBeGreaterThan(
@@ -1138,9 +1838,27 @@ describe('creative-keyword-selection', () => {
 
   it('does not force deferred low-trust refill when candidates lack enough evidence', () => {
     const trusted = [
-      { keyword: 'robot vacuum cleaner for home', searchVolume: 5200, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' as const },
-      { keyword: 'cordless vacuum cleaner for pet hair', searchVolume: 4800, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' as const },
-      { keyword: 'smart vacuum cleaner for apartment', searchVolume: 4300, source: 'KEYWORD_PLANNER' as any, sourceType: 'KEYWORD_PLANNER' as any, matchType: 'PHRASE' as const },
+      {
+        keyword: 'robot vacuum cleaner for home',
+        searchVolume: 5200,
+        source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+        sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'cordless vacuum cleaner for pet hair',
+        searchVolume: 4800,
+        source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+        sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'smart vacuum cleaner for apartment',
+        searchVolume: 4300,
+        source: 'KEYWORD_PLANNER' as any,
+        sourceType: 'KEYWORD_PLANNER' as any,
+        matchType: 'PHRASE' as const,
+      },
     ]
     const lowTrustAi = Array.from({ length: 20 }, (_, index) => ({
       keyword: `brandx vacuum option ${index + 1}`,
@@ -1168,9 +1886,27 @@ describe('creative-keyword-selection', () => {
   it('reconciles quota audit after product_intent output rescue restores a non-empty final list', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'smart choice 1', searchVolume: 1200, source: 'AI_GENERATED' as any, sourceType: 'AI_LLM_RAW' as any, matchType: 'PHRASE' as const },
-        { keyword: 'premium choice 2', searchVolume: 1100, source: 'AI_GENERATED' as any, sourceType: 'AI_LLM_RAW' as any, matchType: 'PHRASE' as const },
-        { keyword: 'daily option 3', searchVolume: 1000, source: 'AI_GENERATED' as any, sourceType: 'AI_LLM_RAW' as any, matchType: 'PHRASE' as const },
+        {
+          keyword: 'smart choice 1',
+          searchVolume: 1200,
+          source: 'AI_GENERATED' as any,
+          sourceType: 'AI_LLM_RAW' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'premium choice 2',
+          searchVolume: 1100,
+          source: 'AI_GENERATED' as any,
+          sourceType: 'AI_LLM_RAW' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'daily option 3',
+          searchVolume: 1000,
+          source: 'AI_GENERATED' as any,
+          sourceType: 'AI_LLM_RAW' as any,
+          matchType: 'PHRASE' as const,
+        },
       ],
       creativeType: 'product_intent',
       maxKeywords: 2,
@@ -1183,7 +1919,9 @@ describe('creative-keyword-selection', () => {
     expect(result.sourceQuotaAudit.deferredCount).toBeGreaterThan(0)
     expect(result.sourceQuotaAudit.underfillBeforeRefill).toBeGreaterThan(0)
     expect(result.sourceQuotaAudit.acceptedCount).toBe(result.keywordsWithVolume.length)
-    expect(result.sourceQuotaAudit.targetCount).toBeGreaterThanOrEqual(result.keywordsWithVolume.length)
+    expect(result.sourceQuotaAudit.targetCount).toBeGreaterThanOrEqual(
+      result.keywordsWithVolume.length
+    )
     expect(result.sourceQuotaAudit.acceptedBrandCount).toBe(0)
   })
 
@@ -1233,10 +1971,13 @@ describe('creative-keyword-selection', () => {
 
     expect(result.keywords).not.toContain('brandx premium choice solution')
     expect(result.keywords).not.toContain('brandx everyday option for everyone')
-    expect(result.keywords.some((keyword) =>
-      keyword === 'brandx cordless stick vacuum for pet hair'
-      || keyword === 'brandx lightweight vacuum cleaner for apartment'
-    )).toBe(true)
+    expect(
+      result.keywords.some(
+        (keyword) =>
+          keyword === 'brandx cordless stick vacuum for pet hair' ||
+          keyword === 'brandx lightweight vacuum cleaner for apartment'
+      )
+    ).toBe(true)
   })
 
   it('keeps A/D top20 overlap within 20%-35% under mixed brand + demand corpus', () => {
@@ -1254,9 +1995,24 @@ describe('creative-keyword-selection', () => {
     }))
 
     const brandTailTokens = [
-      'alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot',
-      'golf', 'hotel', 'india', 'juliet', 'kilo', 'lima',
-      'mike', 'november', 'oscar', 'papa', 'quebec', 'romeo',
+      'alpha',
+      'bravo',
+      'charlie',
+      'delta',
+      'echo',
+      'foxtrot',
+      'golf',
+      'hotel',
+      'india',
+      'juliet',
+      'kilo',
+      'lima',
+      'mike',
+      'november',
+      'oscar',
+      'papa',
+      'quebec',
+      'romeo',
     ]
     const brandOnlyDemand = brandTailTokens.map((token, index) => ({
       keyword: `brandx vacuum collection ${token}`,
@@ -1291,7 +2047,9 @@ describe('creative-keyword-selection', () => {
     }).keywords.slice(0, 20)
 
     const brandSet = new Set(brandTop20.map((item) => item.toLowerCase().trim()))
-    const overlapCount = demandTop20.filter((item) => brandSet.has(item.toLowerCase().trim())).length
+    const overlapCount = demandTop20.filter((item) =>
+      brandSet.has(item.toLowerCase().trim())
+    ).length
     const overlapRate = overlapCount / Math.max(brandTop20.length, demandTop20.length)
 
     expect(brandTop20).toHaveLength(20)
@@ -1308,8 +2066,18 @@ describe('creative-keyword-selection', () => {
         source: 'KEYWORD_PLANNER' as any,
         matchType: 'PHRASE' as const,
       })),
-      { keyword: 'brandx', searchVolume: 6000, source: 'SEARCH_TERM' as any, matchType: 'PHRASE' as const },
-      { keyword: 'brandx official store', searchVolume: 5000, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' as const },
+      {
+        keyword: 'brandx',
+        searchVolume: 6000,
+        source: 'SEARCH_TERM' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'brandx official store',
+        searchVolume: 5000,
+        source: 'KEYWORD_POOL' as any,
+        matchType: 'PHRASE' as const,
+      },
     ]
 
     const result = selectCreativeKeywords({
@@ -1322,9 +2090,9 @@ describe('creative-keyword-selection', () => {
     })
 
     const pureBrandKeywords = getPureBrandKeywords('BrandX')
-    const pureBrandCount = result.keywords.slice(0, 20).filter((keyword) =>
-      isPureBrandKeyword(keyword, pureBrandKeywords)
-    ).length
+    const pureBrandCount = result.keywords
+      .slice(0, 20)
+      .filter((keyword) => isPureBrandKeyword(keyword, pureBrandKeywords)).length
     const pureBrandRatio = pureBrandCount / Math.max(1, result.keywords.slice(0, 20).length)
 
     expect(result.keywords.slice(0, 20)).toHaveLength(20)
@@ -1342,8 +2110,18 @@ describe('creative-keyword-selection', () => {
       }
     })
     const noise = [
-      { keyword: 'brandx vacuum', searchVolume: 6500, source: 'KEYWORD_POOL' as any, matchType: 'PHRASE' as const },
-      { keyword: 'vacuum cleaner for home', searchVolume: 6400, source: 'KEYWORD_PLANNER' as any, matchType: 'PHRASE' as const },
+      {
+        keyword: 'brandx vacuum',
+        searchVolume: 6500,
+        source: 'KEYWORD_POOL' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'vacuum cleaner for home',
+        searchVolume: 6400,
+        source: 'KEYWORD_PLANNER' as any,
+        matchType: 'PHRASE' as const,
+      },
     ]
 
     const result = selectCreativeKeywords({
@@ -1356,7 +2134,9 @@ describe('creative-keyword-selection', () => {
     })
 
     const top20 = result.keywords.slice(0, 20)
-    const modelAnchorHits = top20.filter((keyword) => hasModelAnchorEvidence({ keywords: [keyword] })).length
+    const modelAnchorHits = top20.filter((keyword) =>
+      hasModelAnchorEvidence({ keywords: [keyword] })
+    ).length
     const hitRate = modelAnchorHits / Math.max(1, top20.length)
 
     expect(top20).toHaveLength(20)
@@ -1371,12 +2151,42 @@ describe('creative-keyword-selection', () => {
     ]
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'brandx x200 vacuum', searchVolume: 4200, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' },
-        { keyword: 'x300 vacuum', searchVolume: 3900, source: 'KEYWORD_PLANNER' as any, matchType: 'PHRASE' },
-        { keyword: 'x400 vacuum', searchVolume: 3600, source: 'KEYWORD_PLANNER' as any, matchType: 'PHRASE' },
-        { keyword: 'brandx vacuum cleaner', searchVolume: 1600, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
-        { keyword: 'brandx vacuum for pet hair', searchVolume: 1500, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
-        { keyword: 'brandx cordless vacuum', searchVolume: 1400, source: 'KEYWORD_POOL', matchType: 'PHRASE' },
+        {
+          keyword: 'brandx x200 vacuum',
+          searchVolume: 4200,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'x300 vacuum',
+          searchVolume: 3900,
+          source: 'KEYWORD_PLANNER' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'x400 vacuum',
+          searchVolume: 3600,
+          source: 'KEYWORD_PLANNER' as any,
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx vacuum cleaner',
+          searchVolume: 1600,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx vacuum for pet hair',
+          searchVolume: 1500,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
+        {
+          keyword: 'brandx cordless vacuum',
+          searchVolume: 1400,
+          source: 'KEYWORD_POOL',
+          matchType: 'PHRASE',
+        },
       ],
       preferredBucketKeywords,
       brandName: 'BrandX',
@@ -1421,7 +2231,9 @@ describe('creative-keyword-selection', () => {
       brandReserve: 0,
     })
 
-    const modelHits = result.keywords.filter((keyword) => hasModelAnchorEvidence({ keywords: [keyword] })).length
+    const modelHits = result.keywords.filter((keyword) =>
+      hasModelAnchorEvidence({ keywords: [keyword] })
+    ).length
     const nonModelCount = result.keywords.length - modelHits
 
     expect(modelHits).toBeGreaterThanOrEqual(5)
@@ -1508,7 +2320,9 @@ describe('creative-keyword-selection', () => {
       'novilla queen mattress',
       'novilla 12 inch mattress',
     ])
-    const selectedSoftFamily = result.keywordsWithVolume.filter((item) => softFamilySet.has(item.keyword))
+    const selectedSoftFamily = result.keywordsWithVolume.filter((item) =>
+      softFamilySet.has(item.keyword)
+    )
     expect(selectedSoftFamily.length).toBeGreaterThanOrEqual(6)
     expect(selectedSoftFamily.every((item) => item.matchType === 'PHRASE')).toBe(true)
   })
@@ -1559,17 +2373,39 @@ describe('creative-keyword-selection', () => {
       'novilla king mattress',
       'novilla queen mattress',
     ])
-    const selectedSoftFamily = result.keywordsWithVolume.filter((item) => softFamilySet.has(item.keyword))
+    const selectedSoftFamily = result.keywordsWithVolume.filter((item) =>
+      softFamilySet.has(item.keyword)
+    )
     expect(selectedSoftFamily.length).toBeGreaterThanOrEqual(2)
     expect(selectedSoftFamily.every((item) => item.matchType === 'PHRASE')).toBe(true)
   })
 
   it('relaxes model_intent preferred bucket filtering only when strict pass severely underfills', () => {
     const strictModelAnchors = [
-      { keyword: 'brandx x200 smart ring', searchVolume: 4200, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' as const },
-      { keyword: 'brandx x300 smart ring', searchVolume: 3900, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' as const },
-      { keyword: 'x400 smart ring', searchVolume: 3600, source: 'KEYWORD_PLANNER' as any, matchType: 'PHRASE' as const },
-      { keyword: 'x500 smart ring', searchVolume: 3300, source: 'KEYWORD_PLANNER' as any, matchType: 'PHRASE' as const },
+      {
+        keyword: 'brandx x200 smart ring',
+        searchVolume: 4200,
+        source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'brandx x300 smart ring',
+        searchVolume: 3900,
+        source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'x400 smart ring',
+        searchVolume: 3600,
+        source: 'KEYWORD_PLANNER' as any,
+        matchType: 'PHRASE' as const,
+      },
+      {
+        keyword: 'x500 smart ring',
+        searchVolume: 3300,
+        source: 'KEYWORD_PLANNER' as any,
+        matchType: 'PHRASE' as const,
+      },
     ]
     const preferredFallbackOnly = [
       'smart ring sleep tracking',
@@ -1602,7 +2438,9 @@ describe('creative-keyword-selection', () => {
 
     expect(result.keywordsWithVolume).toHaveLength(10)
     expect(result.keywords).toEqual(expect.arrayContaining(preferredFallbackOnly))
-    const modelHits = result.keywords.filter((keyword) => hasModelAnchorEvidence({ keywords: [keyword] })).length
+    const modelHits = result.keywords.filter((keyword) =>
+      hasModelAnchorEvidence({ keywords: [keyword] })
+    ).length
     expect(modelHits).toBeGreaterThanOrEqual(4)
   })
 
@@ -1616,10 +2454,30 @@ describe('creative-keyword-selection', () => {
 
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'brandx x200 smart ring', searchVolume: 4200, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' as const },
-        { keyword: 'brandx x300 smart ring', searchVolume: 3900, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' as const },
-        { keyword: 'x400 smart ring', searchVolume: 3600, source: 'KEYWORD_PLANNER' as any, matchType: 'PHRASE' as const },
-        { keyword: 'x500 smart ring', searchVolume: 3300, source: 'KEYWORD_PLANNER' as any, matchType: 'PHRASE' as const },
+        {
+          keyword: 'brandx x200 smart ring',
+          searchVolume: 4200,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'brandx x300 smart ring',
+          searchVolume: 3900,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'x400 smart ring',
+          searchVolume: 3600,
+          source: 'KEYWORD_PLANNER' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'x500 smart ring',
+          searchVolume: 3300,
+          source: 'KEYWORD_PLANNER' as any,
+          matchType: 'PHRASE' as const,
+        },
         ...aiTransactional.map((keyword, index) => ({
           keyword,
           searchVolume: 0,
@@ -1650,9 +2508,27 @@ describe('creative-keyword-selection', () => {
   it('rejects weak single-tail MODEL_FAMILY_GUARD terms while keeping specific family terms in model_intent', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'novilla mattress', searchVolume: 0, source: 'MODEL_FAMILY_GUARD' as any, sourceType: 'MODEL_FAMILY_GUARD' as any, matchType: 'PHRASE' as const },
-        { keyword: 'novilla king size mattress', searchVolume: 0, source: 'MODEL_FAMILY_GUARD' as any, sourceType: 'MODEL_FAMILY_GUARD' as any, matchType: 'PHRASE' as const },
-        { keyword: 'novilla memory foam mattress', searchVolume: 0, source: 'MODEL_FAMILY_GUARD' as any, sourceType: 'MODEL_FAMILY_GUARD' as any, matchType: 'PHRASE' as const },
+        {
+          keyword: 'novilla mattress',
+          searchVolume: 0,
+          source: 'MODEL_FAMILY_GUARD' as any,
+          sourceType: 'MODEL_FAMILY_GUARD' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'novilla king size mattress',
+          searchVolume: 0,
+          source: 'MODEL_FAMILY_GUARD' as any,
+          sourceType: 'MODEL_FAMILY_GUARD' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'novilla memory foam mattress',
+          searchVolume: 0,
+          source: 'MODEL_FAMILY_GUARD' as any,
+          sourceType: 'MODEL_FAMILY_GUARD' as any,
+          matchType: 'PHRASE' as const,
+        },
       ],
       preferredBucketKeywords: [
         'novilla mattress',
@@ -1666,10 +2542,9 @@ describe('creative-keyword-selection', () => {
       brandReserve: 0,
     })
 
-    expect(result.keywords).toEqual(expect.arrayContaining([
-      'novilla king size mattress',
-      'novilla memory foam mattress',
-    ]))
+    expect(result.keywords).toEqual(
+      expect.arrayContaining(['novilla king size mattress', 'novilla memory foam mattress'])
+    )
     expect(result.keywords).not.toContain('novilla mattress')
     const keptFamily = result.keywordsWithVolume.filter((item) =>
       ['novilla king size mattress', 'novilla memory foam mattress'].includes(item.keyword)
@@ -1682,7 +2557,14 @@ describe('creative-keyword-selection', () => {
     const pureBrandKeywords = getPureBrandKeywords('Vital Proteins')
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'vital proteins', searchVolume: 0, source: 'BRAND_SEED' as any, sourceType: 'BRAND_SEED' as any, matchType: 'EXACT' as const, isPureBrand: true },
+        {
+          keyword: 'vital proteins',
+          searchVolume: 0,
+          source: 'BRAND_SEED' as any,
+          sourceType: 'BRAND_SEED' as any,
+          matchType: 'EXACT' as const,
+          isPureBrand: true,
+        },
         {
           keyword: 'vital proteins unflavored collagen powder',
           searchVolume: 0,
@@ -1702,16 +2584,36 @@ describe('creative-keyword-selection', () => {
     })
 
     expect(result.keywords.length).toBeGreaterThan(0)
-    expect(result.keywords.every((keyword) => !isPureBrandKeyword(keyword, pureBrandKeywords))).toBe(true)
+    expect(
+      result.keywords.every((keyword) => !isPureBrandKeyword(keyword, pureBrandKeywords))
+    ).toBe(true)
     expect(result.keywords.some((keyword) => /collagen powder/i.test(keyword))).toBe(true)
   })
 
   it('rejects pack plus claim soft-family fragments in model_intent', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'livfresh 3 pack better', searchVolume: 0, source: 'MODEL_FAMILY_GUARD' as any, sourceType: 'MODEL_FAMILY_GUARD' as any, matchType: 'PHRASE' as const },
-        { keyword: '3 pack better', searchVolume: 0, source: 'MODEL_FAMILY_GUARD' as any, sourceType: 'MODEL_FAMILY_GUARD' as any, matchType: 'PHRASE' as const },
-        { keyword: 'livfresh toothpaste gel', searchVolume: 0, source: 'MODEL_FAMILY_GUARD' as any, sourceType: 'MODEL_FAMILY_GUARD' as any, matchType: 'PHRASE' as const },
+        {
+          keyword: 'livfresh 3 pack better',
+          searchVolume: 0,
+          source: 'MODEL_FAMILY_GUARD' as any,
+          sourceType: 'MODEL_FAMILY_GUARD' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: '3 pack better',
+          searchVolume: 0,
+          source: 'MODEL_FAMILY_GUARD' as any,
+          sourceType: 'MODEL_FAMILY_GUARD' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'livfresh toothpaste gel',
+          searchVolume: 0,
+          source: 'MODEL_FAMILY_GUARD' as any,
+          sourceType: 'MODEL_FAMILY_GUARD' as any,
+          matchType: 'PHRASE' as const,
+        },
       ],
       brandName: 'Livfresh',
       creativeType: 'model_intent',
@@ -1728,8 +2630,20 @@ describe('creative-keyword-selection', () => {
   it('rejects url fragments and included-components title noise in model_intent', () => {
     const hilife = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'hilife https www', searchVolume: 0, source: 'MODEL_FAMILY_GUARD' as any, sourceType: 'MODEL_FAMILY_GUARD' as any, matchType: 'PHRASE' as const },
-        { keyword: 'hilife steamer', searchVolume: 0, source: 'BUILDER_NON_EMPTY_RESCUE' as any, sourceType: 'BUILDER_NON_EMPTY_RESCUE' as any, matchType: 'PHRASE' as const },
+        {
+          keyword: 'hilife https www',
+          searchVolume: 0,
+          source: 'MODEL_FAMILY_GUARD' as any,
+          sourceType: 'MODEL_FAMILY_GUARD' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'hilife steamer',
+          searchVolume: 0,
+          source: 'BUILDER_NON_EMPTY_RESCUE' as any,
+          sourceType: 'BUILDER_NON_EMPTY_RESCUE' as any,
+          matchType: 'PHRASE' as const,
+        },
       ],
       brandName: 'HiLIFE',
       creativeType: 'model_intent',
@@ -1742,8 +2656,20 @@ describe('creative-keyword-selection', () => {
 
     const freebird = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'freebird https www', searchVolume: 0, source: 'MODEL_FAMILY_GUARD' as any, sourceType: 'MODEL_FAMILY_GUARD' as any, matchType: 'PHRASE' as const },
-        { keyword: 'freebird flexseries head', searchVolume: 0, source: 'MODEL_FAMILY_GUARD' as any, sourceType: 'MODEL_FAMILY_GUARD' as any, matchType: 'PHRASE' as const },
+        {
+          keyword: 'freebird https www',
+          searchVolume: 0,
+          source: 'MODEL_FAMILY_GUARD' as any,
+          sourceType: 'MODEL_FAMILY_GUARD' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'freebird flexseries head',
+          searchVolume: 0,
+          source: 'MODEL_FAMILY_GUARD' as any,
+          sourceType: 'MODEL_FAMILY_GUARD' as any,
+          matchType: 'PHRASE' as const,
+        },
       ],
       brandName: 'Freebird',
       creativeType: 'model_intent',
@@ -1757,9 +2683,27 @@ describe('creative-keyword-selection', () => {
 
     const waterdrop = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'waterdrop x16', searchVolume: 0, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' as const },
-        { keyword: 'waterdrop x16 alkaline tankless', searchVolume: 0, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' as const },
-        { keyword: 'waterdrop included components x16 alkaline', searchVolume: 0, source: 'KEYWORD_POOL' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' as const },
+        {
+          keyword: 'waterdrop x16',
+          searchVolume: 0,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'waterdrop x16 alkaline tankless',
+          searchVolume: 0,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'waterdrop included components x16 alkaline',
+          searchVolume: 0,
+          source: 'KEYWORD_POOL' as any,
+          sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+          matchType: 'PHRASE' as const,
+        },
       ],
       brandName: 'Waterdrop',
       creativeType: 'model_intent',
@@ -1768,19 +2712,37 @@ describe('creative-keyword-selection', () => {
       brandReserve: 0,
     })
 
-    expect(waterdrop.keywords).toEqual(expect.arrayContaining([
-      'waterdrop x16',
-      'waterdrop x16 alkaline tankless',
-    ]))
+    expect(waterdrop.keywords).toEqual(
+      expect.arrayContaining(['waterdrop x16', 'waterdrop x16 alkaline tankless'])
+    )
     expect(waterdrop.keywords).not.toContain('waterdrop included components x16 alkaline')
   })
 
   it('keeps high-quality PURE_BRAND_PREFIX_REWRITE candidates in product_intent', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'novilla', searchVolume: 8000, source: 'BRAND_SEED' as any, sourceType: 'BRAND_SEED' as any, matchType: 'EXACT' as const, isPureBrand: true },
-        { keyword: 'novilla king mattress', searchVolume: 4200, source: 'KEYWORD_POOL' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' as const },
-        { keyword: 'novilla memory foam mattress', searchVolume: 3800, source: 'KEYWORD_POOL' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' as const },
+        {
+          keyword: 'novilla',
+          searchVolume: 8000,
+          source: 'BRAND_SEED' as any,
+          sourceType: 'BRAND_SEED' as any,
+          matchType: 'EXACT' as const,
+          isPureBrand: true,
+        },
+        {
+          keyword: 'novilla king mattress',
+          searchVolume: 4200,
+          source: 'KEYWORD_POOL' as any,
+          sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'novilla memory foam mattress',
+          searchVolume: 3800,
+          source: 'KEYWORD_POOL' as any,
+          sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+          matchType: 'PHRASE' as const,
+        },
         {
           keyword: 'novilla cooling mattress',
           searchVolume: 2100,
@@ -1788,7 +2750,11 @@ describe('creative-keyword-selection', () => {
           sourceType: 'PRODUCT_RELAX_BRANDED' as any,
           sourceSubtype: 'PURE_BRAND_PREFIX_REWRITE' as any,
           rawSource: 'KEYWORD_PLANNER' as any,
-          derivedTags: ['PRODUCT_RELAX_BRANDED', 'PURE_BRAND_PREFIX_REWRITE', 'PLANNER_NON_BRAND_DEMAND'],
+          derivedTags: [
+            'PRODUCT_RELAX_BRANDED',
+            'PURE_BRAND_PREFIX_REWRITE',
+            'PLANNER_NON_BRAND_DEMAND',
+          ],
           matchType: 'PHRASE' as const,
         },
       ],
@@ -1797,13 +2763,17 @@ describe('creative-keyword-selection', () => {
       maxKeywords: 6,
     })
 
-    expect(result.keywords).toEqual(expect.arrayContaining([
-      'novilla',
-      'novilla cooling mattress',
-      'novilla king mattress',
-      'novilla memory foam mattress',
-    ]))
-    const rewriteCandidate = result.keywordsWithVolume.find((item) => item.keyword === 'novilla cooling mattress')
+    expect(result.keywords).toEqual(
+      expect.arrayContaining([
+        'novilla',
+        'novilla cooling mattress',
+        'novilla king mattress',
+        'novilla memory foam mattress',
+      ])
+    )
+    const rewriteCandidate = result.keywordsWithVolume.find(
+      (item) => item.keyword === 'novilla cooling mattress'
+    )
     expect(rewriteCandidate).toMatchObject({
       source: 'PRODUCT_RELAX_BRANDED',
       sourceSubtype: 'PURE_BRAND_PREFIX_REWRITE',
@@ -1814,9 +2784,28 @@ describe('creative-keyword-selection', () => {
   it('rejects low-quality PURE_BRAND_PREFIX_REWRITE candidates in product_intent', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'brandx', searchVolume: 8000, source: 'BRAND_SEED' as any, sourceType: 'BRAND_SEED' as any, matchType: 'EXACT' as const, isPureBrand: true },
-        { keyword: 'brandx robot vacuum', searchVolume: 4200, source: 'KEYWORD_POOL' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' as const },
-        { keyword: 'brandx robot vacuum pet hair', searchVolume: 3900, source: 'KEYWORD_POOL' as any, sourceType: 'CANONICAL_BUCKET_VIEW' as any, matchType: 'PHRASE' as const },
+        {
+          keyword: 'brandx',
+          searchVolume: 8000,
+          source: 'BRAND_SEED' as any,
+          sourceType: 'BRAND_SEED' as any,
+          matchType: 'EXACT' as const,
+          isPureBrand: true,
+        },
+        {
+          keyword: 'brandx robot vacuum',
+          searchVolume: 4200,
+          source: 'KEYWORD_POOL' as any,
+          sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'brandx robot vacuum pet hair',
+          searchVolume: 3900,
+          source: 'KEYWORD_POOL' as any,
+          sourceType: 'CANONICAL_BUCKET_VIEW' as any,
+          matchType: 'PHRASE' as const,
+        },
         {
           keyword: 'brandx amazon official store',
           searchVolume: 1800,
@@ -1824,7 +2813,11 @@ describe('creative-keyword-selection', () => {
           sourceType: 'PRODUCT_RELAX_BRANDED' as any,
           sourceSubtype: 'PURE_BRAND_PREFIX_REWRITE' as any,
           rawSource: 'KEYWORD_PLANNER' as any,
-          derivedTags: ['PRODUCT_RELAX_BRANDED', 'PURE_BRAND_PREFIX_REWRITE', 'PLANNER_NON_BRAND_DEMAND'],
+          derivedTags: [
+            'PRODUCT_RELAX_BRANDED',
+            'PURE_BRAND_PREFIX_REWRITE',
+            'PLANNER_NON_BRAND_DEMAND',
+          ],
           matchType: 'PHRASE' as const,
         },
       ],
@@ -1863,7 +2856,9 @@ describe('creative-keyword-selection', () => {
     })
 
     const weakPreferredHits = result.keywords.filter((keyword) => /option/i.test(keyword)).length
-    const modelAnchorHits = result.keywords.filter((keyword) => hasModelAnchorEvidence({ keywords: [keyword] })).length
+    const modelAnchorHits = result.keywords.filter((keyword) =>
+      hasModelAnchorEvidence({ keywords: [keyword] })
+    ).length
 
     expect(weakPreferredHits).toBeLessThanOrEqual(5)
     expect(modelAnchorHits).toBeGreaterThanOrEqual(5)
@@ -1924,11 +2919,41 @@ describe('creative-keyword-selection', () => {
   it('generates compact branded variants from high-evidence non-brand demand terms', () => {
     const result = selectCreativeKeywords({
       keywordsWithVolume: [
-        { keyword: 'novilla', searchVolume: 9000, source: 'BRAND_SEED' as any, sourceType: 'BRAND_SEED' as any, matchType: 'EXACT' as const },
-        { keyword: 'queen mattress', searchVolume: 3200, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' as const },
-        { keyword: 'king size mattress', searchVolume: 3000, source: 'SEARCH_TERM_HIGH_PERFORMING' as any, sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any, matchType: 'PHRASE' as const },
-        { keyword: 'memory foam mattress', searchVolume: 2800, source: 'KEYWORD_PLANNER' as any, sourceType: 'KEYWORD_PLANNER' as any, matchType: 'PHRASE' as const },
-        { keyword: 'twin mattress', searchVolume: 2600, source: 'KEYWORD_PLANNER' as any, sourceType: 'KEYWORD_PLANNER' as any, matchType: 'PHRASE' as const },
+        {
+          keyword: 'novilla',
+          searchVolume: 9000,
+          source: 'BRAND_SEED' as any,
+          sourceType: 'BRAND_SEED' as any,
+          matchType: 'EXACT' as const,
+        },
+        {
+          keyword: 'queen mattress',
+          searchVolume: 3200,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'king size mattress',
+          searchVolume: 3000,
+          source: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          sourceType: 'SEARCH_TERM_HIGH_PERFORMING' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'memory foam mattress',
+          searchVolume: 2800,
+          source: 'KEYWORD_PLANNER' as any,
+          sourceType: 'KEYWORD_PLANNER' as any,
+          matchType: 'PHRASE' as const,
+        },
+        {
+          keyword: 'twin mattress',
+          searchVolume: 2600,
+          source: 'KEYWORD_PLANNER' as any,
+          sourceType: 'KEYWORD_PLANNER' as any,
+          matchType: 'PHRASE' as const,
+        },
       ],
       brandName: 'Novilla',
       creativeType: 'brand_intent',
@@ -1937,12 +2962,14 @@ describe('creative-keyword-selection', () => {
       brandReserve: 6,
     })
 
-    expect(result.keywords).toEqual(expect.arrayContaining([
-      'novilla queen mattress',
-      'novilla king size mattress',
-      'novilla memory foam mattress',
-      'novilla twin mattress',
-    ]))
+    expect(result.keywords).toEqual(
+      expect.arrayContaining([
+        'novilla queen mattress',
+        'novilla king size mattress',
+        'novilla memory foam mattress',
+        'novilla twin mattress',
+      ])
+    )
 
     const generated = result.keywordsWithVolume.filter((item) =>
       [
@@ -1967,8 +2994,8 @@ describe('creative-keyword-selection', () => {
     ].map((keyword, index) => ({
       keyword,
       searchVolume: 5200 - index * 120,
-      source: index % 2 === 0 ? 'HOT_PRODUCT_AGGREGATE' as any : 'GLOBAL_CORE' as any,
-      sourceType: index % 2 === 0 ? 'HOT_PRODUCT_AGGREGATE' as any : 'GLOBAL_CORE' as any,
+      source: index % 2 === 0 ? ('HOT_PRODUCT_AGGREGATE' as any) : ('GLOBAL_CORE' as any),
+      sourceType: index % 2 === 0 ? ('HOT_PRODUCT_AGGREGATE' as any) : ('GLOBAL_CORE' as any),
       matchType: 'PHRASE' as const,
     }))
     const aiNoisy = [
@@ -2009,7 +3036,9 @@ describe('creative-keyword-selection', () => {
     expect(result.sourceQuotaAudit.quota.aiCap).toBeLessThan(10)
     const finalAiCount = result.keywordsWithVolume.filter((item) =>
       ['AI_GENERATED', 'AI_LLM_RAW'].includes(
-        String(item.sourceSubtype || item.sourceType || '').trim().toUpperCase()
+        String(item.sourceSubtype || item.sourceType || '')
+          .trim()
+          .toUpperCase()
       )
     ).length
     expect(finalAiCount).toBeLessThan(result.keywordsWithVolume.length)
@@ -2069,11 +3098,15 @@ describe('creative-keyword-selection', () => {
       brandReserve: 0,
     })
 
-    const wonderOven = result.keywordsWithVolume.find((item) => item.keyword === 'our place wonder oven')
-    expect(wonderOven).toBeDefined()
-    expect(String(wonderOven?.sourceSubtype || wonderOven?.sourceType || '').trim().toUpperCase()).toBe(
-      'OFFER_EXTRACTED_KEYWORDS'
+    const wonderOven = result.keywordsWithVolume.find(
+      (item) => item.keyword === 'our place wonder oven'
     )
+    expect(wonderOven).toBeDefined()
+    expect(
+      String(wonderOven?.sourceSubtype || wonderOven?.sourceType || '')
+        .trim()
+        .toUpperCase()
+    ).toBe('OFFER_EXTRACTED_KEYWORDS')
   })
 
   it('normalizes compacted multi-word brand tokens to avoid noisy ourplace variants', () => {

@@ -117,6 +117,8 @@ describe('campaign-state-machine', () => {
 
     expect(dbFns.exec).toHaveBeenCalledTimes(1)
     const [sql] = dbFns.exec.mock.calls[0]
-    expect(sql).toContain("published_at = COALESCE(NULLIF(published_at::text, '')::timestamptz, NOW())")
+    expect(sql).toContain(
+      "published_at = COALESCE(NULLIF(published_at::text, '')::timestamptz, NOW())"
+    )
   })
 })

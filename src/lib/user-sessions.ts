@@ -12,7 +12,7 @@ import { createHash } from 'crypto'
 // Configuration
 const SESSION_DURATION_DAYS = 7
 const MAX_CONCURRENT_SESSIONS = 3
-const IP_CHANGE_WINDOW_HOURS = 1  // Flag if different IP within this window
+const IP_CHANGE_WINDOW_HOURS = 1 // Flag if different IP within this window
 
 export interface SessionInfo {
   id: number
@@ -54,13 +54,11 @@ export interface TrustedDevice {
  * Generate a simple device fingerprint from User-Agent and IP
  * Uses first 2 octets of IP for privacy (city-level granularity)
  */
-export function generateDeviceFingerprint(
-  userAgent: string,
-  ipAddress: string
-): string {
-  const ipPrefix = ipAddress.split('.').slice(0, 2).join('.')  // e.g., "192.168"
-  const normalizedUA = userAgent.toLowerCase()
-    .replace(/chrome\/[\d.]+/g, 'chrome')  // Normalize version numbers
+export function generateDeviceFingerprint(userAgent: string, ipAddress: string): string {
+  const ipPrefix = ipAddress.split('.').slice(0, 2).join('.') // e.g., "192.168"
+  const normalizedUA = userAgent
+    .toLowerCase()
+    .replace(/chrome\/[\d.]+/g, 'chrome') // Normalize version numbers
     .replace(/firefox\/[\d.]+/g, 'firefox')
     .replace(/safari\/[\d.]+/g, 'safari')
     .replace(/\s+/g, ' ')
@@ -88,19 +86,13 @@ export async function createUserSession(
   const db = await getDatabase()
   const sessionToken = generateSessionToken()
   const deviceFingerprint = generateDeviceFingerprint(userAgent, ipAddress)
-  const expiresAt = new Date(
-    Date.now() + SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000
-  ).toISOString()
+  const expiresAt = new Date(Date.now() + SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
   // Clean up expired sessions first
   await cleanupExpiredSessions(userId)
 
   // Check for suspicious patterns BEFORE creating new session
-  const sharingCheck = await checkSharingPatterns(
-    userId,
-    ipAddress,
-    deviceFingerprint
-  )
+  const sharingCheck = await checkSharingPatterns(userId, ipAddress, deviceFingerprint)
 
   // Create the session
   const insertSql = `
@@ -112,19 +104,16 @@ export async function createUserSession(
     RETURNING id
   `
 
-  const result = await db.queryOne<{ id: number }>(
-    insertSql,
-    [
-      userId,
-      sessionToken,
-      ipAddress,
-      userAgent,
-      deviceFingerprint,
-      sharingCheck.isSuspicious ? 1 : 0,
-      sharingCheck.suspiciousReason,
-      expiresAt
-    ]
-  )
+  const result = await db.queryOne<{ id: number }>(insertSql, [
+    userId,
+    sessionToken,
+    ipAddress,
+    userAgent,
+    deviceFingerprint,
+    sharingCheck.isSuspicious ? 1 : 0,
+    sharingCheck.suspiciousReason,
+    expiresAt,
+  ])
 
   if (!result) {
     throw new Error('Failed to create session')
@@ -156,7 +145,7 @@ export async function createUserSession(
         ipAddresses: alert.ipAddresses,
         deviceFingerprints: alert.deviceFingerprints,
         isResolved: false,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       })
     }
   }
@@ -173,7 +162,7 @@ export async function createUserSession(
     suspiciousReason: sharingCheck.suspiciousReason,
     createdAt: new Date().toISOString(),
     lastActivityAt: new Date().toISOString(),
-    expiresAt
+    expiresAt,
   }
 
   return { session, alerts }
@@ -214,22 +203,26 @@ async function checkSharingPatterns(
   }
 
   // Get recent sessions (within IP change window)
-  const timeCondition = db_type === 'postgres'
-    ? `created_at > CURRENT_TIMESTAMP - INTERVAL '${IP_CHANGE_WINDOW_HOURS} hours'`
-    : `created_at > datetime('now', '-${IP_CHANGE_WINDOW_HOURS} hours')`
+  const timeCondition =
+    db_type === 'postgres'
+      ? `created_at > CURRENT_TIMESTAMP - INTERVAL '${IP_CHANGE_WINDOW_HOURS} hours'`
+      : `created_at > datetime('now', '-${IP_CHANGE_WINDOW_HOURS} hours')`
 
   const recentSessions = await db.query<{
     ip_address: string
     device_fingerprint: string
     created_at: string
-  }>(`
+  }>(
+    `
     SELECT ip_address, device_fingerprint, created_at
     FROM user_sessions
     WHERE user_id = ?
       AND ${timeCondition}
       AND revoked_at IS NULL
     ORDER BY created_at DESC
-  `, [userId])
+  `,
+    [userId]
+  )
 
   if (recentSessions.length === 0) {
     // First login or all old sessions - no issue
@@ -252,7 +245,7 @@ async function checkSharingPatterns(
       severity,
       description: `Account accessed from ${ipArray.length} different IP addresses within ${IP_CHANGE_WINDOW_HOURS} hour(s): ${ipArray.join(', ')}`,
       ipAddresses: ipArray,
-      deviceFingerprints: Array.from(uniqueFingerprints)
+      deviceFingerprints: Array.from(uniqueFingerprints),
     })
   }
 
@@ -267,7 +260,7 @@ async function checkSharingPatterns(
       severity: 'warning',
       description: `New device detected. Previous device(s): ${oldFpArray.length}`,
       ipAddresses: Array.from(uniqueIps),
-      deviceFingerprints: [...oldFpArray, currentFingerprint]
+      deviceFingerprints: [...oldFpArray, currentFingerprint],
     })
   }
 
@@ -275,7 +268,7 @@ async function checkSharingPatterns(
   const isSuspicious = alerts.length > 0
   let suspiciousReason: string | null = null
   if (isSuspicious) {
-    const alertTypes = alerts.map(a => a.type).join(', ')
+    const alertTypes = alerts.map((a) => a.type).join(', ')
     suspiciousReason = `Patterns detected: ${alertTypes}`
   }
 
@@ -285,10 +278,7 @@ async function checkSharingPatterns(
 /**
  * Check if a device is trusted
  */
-async function isDeviceTrusted(
-  userId: number,
-  deviceFingerprint: string
-): Promise<boolean> {
+async function isDeviceTrusted(userId: number, deviceFingerprint: string): Promise<boolean> {
   const db = await getDatabase()
   // 注意：trusted_devices.is_active 在 PostgreSQL 和 SQLite 中都是 INTEGER 类型
   const trusted = await db.queryOne<{ id: number }>(
@@ -323,7 +313,7 @@ async function createAlert(
       severity,
       description,
       JSON.stringify(ipAddresses),
-      JSON.stringify(deviceFingerprints)
+      JSON.stringify(deviceFingerprints),
     ]
   )
   return result!.id
@@ -334,11 +324,14 @@ async function createAlert(
  */
 async function enforceMaxConcurrentSessions(userId: number): Promise<void> {
   const db = await getDatabase()
-  const sessions = await db.query<{ id: number; created_at: string }>(`
+  const sessions = await db.query<{ id: number; created_at: string }>(
+    `
     SELECT id, created_at FROM user_sessions
     WHERE user_id = ? AND is_current = 1 AND revoked_at IS NULL
     ORDER BY created_at DESC
-  `, [userId])
+  `,
+    [userId]
+  )
 
   if (sessions.length > MAX_CONCURRENT_SESSIONS) {
     // Revoke oldest sessions beyond the limit
@@ -374,24 +367,22 @@ async function cleanupExpiredSessions(userId?: number): Promise<number> {
 /**
  * Get active sessions for a user
  */
-export async function getActiveSessions(
-  userId: number
-): Promise<SessionInfo[]> {
+export async function getActiveSessions(userId: number): Promise<SessionInfo[]> {
   const db = await getDatabase()
-  return db.query<SessionInfo>(`
+  return db.query<SessionInfo>(
+    `
     SELECT * FROM user_sessions
     WHERE user_id = ? AND is_current = 1 AND revoked_at IS NULL
     ORDER BY last_activity_at DESC
-  `, [userId])
+  `,
+    [userId]
+  )
 }
 
 /**
  * Revoke a specific session
  */
-export async function revokeSession(
-  sessionToken: string,
-  userId: number
-): Promise<boolean> {
+export async function revokeSession(sessionToken: string, userId: number): Promise<boolean> {
   const db = await getDatabase()
   const result = await db.exec(
     `UPDATE user_sessions
@@ -450,10 +441,7 @@ export async function trustDevice(
 /**
  * Untrust a device
  */
-export async function untrustDevice(
-  userId: number,
-  deviceFingerprint: string
-): Promise<boolean> {
+export async function untrustDevice(userId: number, deviceFingerprint: string): Promise<boolean> {
   const db = await getDatabase()
   // 注意：trusted_devices.is_active 在 PostgreSQL 和 SQLite 中都是 INTEGER 类型
   const result = await db.exec(
@@ -467,9 +455,7 @@ export async function untrustDevice(
 /**
  * Get trusted devices for a user
  */
-export async function getTrustedDevices(
-  userId: number
-): Promise<TrustedDevice[]> {
+export async function getTrustedDevices(userId: number): Promise<TrustedDevice[]> {
   const db = await getDatabase()
   // 注意：trusted_devices.is_active 在 PostgreSQL 和 SQLite 中都是 INTEGER 类型
   return db.query<TrustedDevice>(
@@ -511,7 +497,7 @@ export async function getUserAlerts(
     created_at: string
   }>(sql, params)
 
-  return alerts.map(a => ({
+  return alerts.map((a) => ({
     id: a.id,
     userId: a.user_id,
     alertType: a.alert_type,
@@ -520,17 +506,14 @@ export async function getUserAlerts(
     ipAddresses: JSON.parse(a.ip_addresses || '[]') as string[],
     deviceFingerprints: JSON.parse(a.device_fingerprints || '[]') as string[],
     isResolved: a.is_resolved === 1,
-    createdAt: a.created_at
+    createdAt: a.created_at,
   }))
 }
 
 /**
  * Resolve an alert (admin action)
  */
-export async function resolveAlert(
-  alertId: number,
-  resolvedByUserId: number
-): Promise<boolean> {
+export async function resolveAlert(alertId: number, resolvedByUserId: number): Promise<boolean> {
   const db = await getDatabase()
   const result = await db.exec(
     `UPDATE account_sharing_alerts

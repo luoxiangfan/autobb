@@ -8,4 +8,3 @@ main().catch((error) => {
   console.error('❌ OpenClaw 配置同步失败:', error)
   process.exit(1)
 })
-

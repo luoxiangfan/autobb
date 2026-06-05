@@ -34,7 +34,8 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    prepareGoogleAdsApiCallForLinkedAccount: oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
+    prepareGoogleAdsApiCallForLinkedAccount:
+      oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
   }
 })
 
@@ -94,7 +95,7 @@ describe('GET /api/campaigns/:id/cpc', () => {
       },
     })
 
-    const res = await GET(req, { params: { id: '1972' } })
+    const res = await GET(req, { params: Promise.resolve({ id: '1972' }) })
     const data = await res.json()
 
     expect(res.status).toBe(422)
@@ -182,7 +183,7 @@ describe('GET /api/campaigns/:id/cpc', () => {
       },
     })
 
-    const res = await GET(req, { params: { id: '23575769704' } })
+    const res = await GET(req, { params: Promise.resolve({ id: '23575769704' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)

@@ -68,10 +68,12 @@ describe('campaign_backups (user_id, offer_id) unique (sqlite)', () => {
     ).run()
 
     expect(() =>
-      db.prepare(
-        `INSERT INTO campaign_backups (user_id, offer_id, campaign_data, backup_source)
+      db
+        .prepare(
+          `INSERT INTO campaign_backups (user_id, offer_id, campaign_data, backup_source)
          VALUES (1, 10, '{}', 'autoads')`
-      ).run()
+        )
+        .run()
     ).toThrow(/UNIQUE constraint failed/i)
   })
 
@@ -82,10 +84,12 @@ describe('campaign_backups (user_id, offer_id) unique (sqlite)', () => {
     ).run()
 
     expect(() =>
-      db.prepare(
-        `INSERT INTO campaign_backups (user_id, offer_id, campaign_data, backup_source, backup_version)
+      db
+        .prepare(
+          `INSERT INTO campaign_backups (user_id, offer_id, campaign_data, backup_source, backup_version)
          VALUES (1, 10, '{}', 'google_ads', 2)`
-      ).run()
+        )
+        .run()
     ).toThrow(/UNIQUE constraint failed/i)
   })
 })

@@ -81,7 +81,9 @@ const OFFERS_SERVER_SUPPORTED_SORTS = new Set([
 ])
 
 const CreateOfferModalV2 = dynamic(() => import('@/components/CreateOfferModalV2'), { ssr: false })
-const DeleteOfferConfirmDialog = dynamic(() => import('@/components/DeleteOfferConfirmDialog'), { ssr: false })
+const DeleteOfferConfirmDialog = dynamic(() => import('@/components/DeleteOfferConfirmDialog'), {
+  ssr: false,
+})
 const ClickFarmTaskModal = dynamic(() => import('@/components/ClickFarmTaskModal'), { ssr: false })
 const UrlSwapTaskModal = dynamic(() => import('@/components/UrlSwapTaskModal'), { ssr: false })
 const OffersActionDialogs = dynamic(() => import('./OffersActionDialogs'), { ssr: false })
@@ -147,8 +149,8 @@ export default function OffersClientPage({
   const [batchDeleteError, setBatchDeleteError] = useState<string | null>(null)
   const [isBatchCreativeDialogOpen, setIsBatchCreativeDialogOpen] = useState(false)
   const [batchCreatingCreatives, setBatchCreatingCreatives] = useState(false)
-  const [batchGenerationMode, setBatchGenerationMode] = useState<AdCreativeGenerationMode>(
-    () => loadStoredAdCreativeGenerationMode()
+  const [batchGenerationMode, setBatchGenerationMode] = useState<AdCreativeGenerationMode>(() =>
+    loadStoredAdCreativeGenerationMode()
   )
   const handleBatchGenerationModeChange = (mode: AdCreativeGenerationMode) => {
     setBatchGenerationMode(mode)
@@ -162,17 +164,13 @@ export default function OffersClientPage({
   const [isBatchTasksDialogOpen, setIsBatchTasksDialogOpen] = useState(false)
 
   // 分页状态 - 使用统一的usePagination Hook
-  const {
-    currentPage,
-    pageSize,
-    setPage,
-    setPageSize,
-    offset,
-    pageSizeOptions,
-  } = usePagination({ initialPageSize: 50 })
+  const { currentPage, pageSize, setPage, setPageSize, offset, pageSizeOptions } = usePagination({
+    initialPageSize: 50,
+  })
 
   const hasUnsupportedServerSort = sortBy !== '' && !OFFERS_SERVER_SUPPORTED_SORTS.has(sortBy)
-  const isServerPagingMode = offersServerPagingEnabled && !manualCompatMode && !hasUnsupportedServerSort
+  const isServerPagingMode =
+    offersServerPagingEnabled && !manualCompatMode && !hasUnsupportedServerSort
   const totalItems = isServerPagingMode ? serverTotal : filteredOffers.length
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
   const serverLimit = isServerPagingMode ? pageSize : 0
@@ -180,11 +178,12 @@ export default function OffersClientPage({
   const serverSearchQuery = isServerPagingMode ? debouncedSearchQuery.trim() : ''
   const serverCountry = isServerPagingMode && countryFilter !== 'all' ? countryFilter : ''
   const serverScrapeStatus = isServerPagingMode && statusFilter !== 'all' ? statusFilter : ''
-  const serverNeedsCompletion = isServerPagingMode && needsCompletionFilter !== 'all' ? needsCompletionFilter : ''
-  const serverHasAffiliateLink = isServerPagingMode && affiliateLinkFilter !== 'all' ? affiliateLinkFilter : ''
-  const serverSortBy = isServerPagingMode && sortBy && OFFERS_SERVER_SUPPORTED_SORTS.has(sortBy)
-    ? sortBy
-    : ''
+  const serverNeedsCompletion =
+    isServerPagingMode && needsCompletionFilter !== 'all' ? needsCompletionFilter : ''
+  const serverHasAffiliateLink =
+    isServerPagingMode && affiliateLinkFilter !== 'all' ? affiliateLinkFilter : ''
+  const serverSortBy =
+    isServerPagingMode && sortBy && OFFERS_SERVER_SUPPORTED_SORTS.has(sortBy) ? sortBy : ''
   const serverSortOrder = isServerPagingMode ? sortOrder : 'desc'
 
   useEffect(() => {
@@ -229,7 +228,9 @@ export default function OffersClientPage({
   // 补点击任务Modal
   const [isClickFarmModalOpen, setIsClickFarmModalOpen] = useState(false)
   const [selectedOfferForClickFarm, setSelectedOfferForClickFarm] = useState<Offer | null>(null)
-  const [editTaskIdForClickFarm, setEditTaskIdForClickFarm] = useState<string | number | undefined>(undefined)
+  const [editTaskIdForClickFarm, setEditTaskIdForClickFarm] = useState<string | number | undefined>(
+    undefined
+  )
   const [clickFarmLoading, setClickFarmLoading] = useState(false)
 
   // 换链接任务Modal
@@ -264,164 +265,176 @@ export default function OffersClientPage({
     router.push(`/login?redirect=${redirectUrl}`)
   }, [router])
 
-  const buildOffersListUrl = useCallback((options?: {
-    ids?: number[]
-    noCache?: boolean
-    forceCompatFullList?: boolean
-  }) => {
-    if (options?.ids && options.ids.length > 0) {
-      return `/api/offers?ids=${options.ids.join(',')}`
-    }
-
-    const params = new URLSearchParams()
-    if (options?.noCache) {
-      params.set('noCache', 'true')
-    }
-
-    const useServerPagingForRequest = isServerPagingMode && !options?.forceCompatFullList
-    if (useServerPagingForRequest) {
-      params.set('limit', String(serverLimit))
-      params.set('offset', String(serverOffset))
-
-      if (serverSearchQuery) params.set('search', serverSearchQuery)
-      if (serverCountry) params.set('targetCountry', serverCountry)
-      if (serverScrapeStatus) params.set('scrapeStatus', serverScrapeStatus)
-      if (serverNeedsCompletion) params.set('needsCompletion', serverNeedsCompletion)
-      if (serverHasAffiliateLink) params.set('hasAffiliateLink', serverHasAffiliateLink)
-
-      if (serverSortBy) {
-        params.set('sortBy', serverSortBy)
-        params.set('sortOrder', serverSortOrder)
-      }
-    }
-
-    return `/api/offers?${params.toString()}`
-  }, [
-    isServerPagingMode,
-    serverLimit,
-    serverOffset,
-    serverSearchQuery,
-    serverCountry,
-    serverScrapeStatus,
-    serverNeedsCompletion,
-    serverHasAffiliateLink,
-    serverSortBy,
-    serverSortOrder,
-  ])
-
-  const fetchOffers = useCallback(async (options?: { forceCompatFullList?: boolean; noCache?: boolean }) => {
-    const requestSeq = offersFetchSeqRef.current + 1
-    offersFetchSeqRef.current = requestSeq
-    offersFetchAbortRef.current?.abort()
-    const abortController = new AbortController()
-    offersFetchAbortRef.current = abortController
-
-    try {
-      const requestUrl = buildOffersListUrl({
-        noCache: options?.noCache,
-        forceCompatFullList: options?.forceCompatFullList,
-      })
-      const response = await fetch(requestUrl, {
-        credentials: 'include',
-        cache: 'no-store', // 禁用 Next.js 自动缓存，确保获取最新数据
-        signal: abortController.signal,
-      })
-
-      // 处理401未授权 - 跳转到登录页
-      if (response.status === 401) {
-        handleUnauthorized()
-        return
+  const buildOffersListUrl = useCallback(
+    (options?: { ids?: number[]; noCache?: boolean; forceCompatFullList?: boolean }) => {
+      if (options?.ids && options.ids.length > 0) {
+        return `/api/offers?ids=${options.ids.join(',')}`
       }
 
-      if (!response.ok) {
-        throw new Error('获取Offer列表失败')
+      const params = new URLSearchParams()
+      if (options?.noCache) {
+        params.set('noCache', 'true')
       }
 
-      const data = await response.json()
-      const compatibilityCode = typeof data?.compatibility?.code === 'string'
-        ? data.compatibility.code
-        : ''
+      const useServerPagingForRequest = isServerPagingMode && !options?.forceCompatFullList
+      if (useServerPagingForRequest) {
+        params.set('limit', String(serverLimit))
+        params.set('offset', String(serverOffset))
 
-      if (
-        compatibilityCode === 'PARTIAL_UNSUPPORTED_SORT'
-        && isServerPagingMode
-        && !options?.forceCompatFullList
-        && !manualCompatMode
-      ) {
-        const signalKey = String(data?.compatibility?.requestedSortBy || '')
-        if (compatFallbackSignalRef.current !== signalKey) {
-          compatFallbackSignalRef.current = signalKey
-          showInfo('当前排序字段暂不支持服务端模式，已自动切换到兼容全量模式。')
+        if (serverSearchQuery) params.set('search', serverSearchQuery)
+        if (serverCountry) params.set('targetCountry', serverCountry)
+        if (serverScrapeStatus) params.set('scrapeStatus', serverScrapeStatus)
+        if (serverNeedsCompletion) params.set('needsCompletion', serverNeedsCompletion)
+        if (serverHasAffiliateLink) params.set('hasAffiliateLink', serverHasAffiliateLink)
+
+        if (serverSortBy) {
+          params.set('sortBy', serverSortBy)
+          params.set('sortOrder', serverSortOrder)
         }
-        setManualCompatMode(true)
-        setPage(1)
-        return
       }
 
-      const nextOffers = Array.isArray(data.offers) ? (data.offers as Offer[]) : []
-      const nextTotal = Number.isFinite(Number(data.total)) ? Number(data.total) : nextOffers.length
+      return `/api/offers?${params.toString()}`
+    },
+    [
+      isServerPagingMode,
+      serverLimit,
+      serverOffset,
+      serverSearchQuery,
+      serverCountry,
+      serverScrapeStatus,
+      serverNeedsCompletion,
+      serverHasAffiliateLink,
+      serverSortBy,
+      serverSortOrder,
+    ]
+  )
 
-      if (requestSeq !== offersFetchSeqRef.current) {
-        return
+  const fetchOffers = useCallback(
+    async (options?: { forceCompatFullList?: boolean; noCache?: boolean }) => {
+      const requestSeq = offersFetchSeqRef.current + 1
+      offersFetchSeqRef.current = requestSeq
+      offersFetchAbortRef.current?.abort()
+      const abortController = new AbortController()
+      offersFetchAbortRef.current = abortController
+
+      try {
+        const requestUrl = buildOffersListUrl({
+          noCache: options?.noCache,
+          forceCompatFullList: options?.forceCompatFullList,
+        })
+        const response = await fetch(requestUrl, {
+          credentials: 'include',
+          cache: 'no-store', // 禁用 Next.js 自动缓存，确保获取最新数据
+          signal: abortController.signal,
+        })
+
+        // 处理401未授权 - 跳转到登录页
+        if (response.status === 401) {
+          handleUnauthorized()
+          return
+        }
+
+        if (!response.ok) {
+          throw new Error('获取Offer列表失败')
+        }
+
+        const data = await response.json()
+        const compatibilityCode =
+          typeof data?.compatibility?.code === 'string' ? data.compatibility.code : ''
+
+        if (
+          compatibilityCode === 'PARTIAL_UNSUPPORTED_SORT' &&
+          isServerPagingMode &&
+          !options?.forceCompatFullList &&
+          !manualCompatMode
+        ) {
+          const signalKey = String(data?.compatibility?.requestedSortBy || '')
+          if (compatFallbackSignalRef.current !== signalKey) {
+            compatFallbackSignalRef.current = signalKey
+            showInfo('当前排序字段暂不支持服务端模式，已自动切换到兼容全量模式。')
+          }
+          setManualCompatMode(true)
+          setPage(1)
+          return
+        }
+
+        const nextOffers = Array.isArray(data.offers) ? (data.offers as Offer[]) : []
+        const nextTotal = Number.isFinite(Number(data.total))
+          ? Number(data.total)
+          : nextOffers.length
+
+        if (requestSeq !== offersFetchSeqRef.current) {
+          return
+        }
+
+        setOffers(nextOffers)
+        setFilteredOffers(nextOffers)
+        setServerTotal(nextTotal)
+      } catch (err: any) {
+        if (err?.name === 'AbortError') {
+          return
+        }
+        setError(err.message || '获取Offer列表失败')
+      } finally {
+        if (requestSeq === offersFetchSeqRef.current) {
+          setLoading(false)
+        }
+        if (offersFetchAbortRef.current === abortController) {
+          offersFetchAbortRef.current = null
+        }
       }
+    },
+    [buildOffersListUrl, handleUnauthorized, isServerPagingMode, manualCompatMode, setPage]
+  )
 
-      setOffers(nextOffers)
-      setFilteredOffers(nextOffers)
-      setServerTotal(nextTotal)
-    } catch (err: any) {
-      if (err?.name === 'AbortError') {
-        return
+  const applyLocalOfferDeletion = useCallback(
+    (ids: number[]) => {
+      const uniqueIds = Array.from(new Set(ids))
+      if (uniqueIds.length === 0) return
+      const idSet = new Set(uniqueIds)
+
+      setOffers((prev) => prev.filter((offer) => !idSet.has(offer.id)))
+      setSelectedOfferIds((prev) => {
+        const next = new Set(prev)
+        uniqueIds.forEach((id) => next.delete(id))
+        return next
+      })
+
+      if (isServerPagingMode) {
+        setServerTotal((prev) => Math.max(0, prev - uniqueIds.length))
       }
-      setError(err.message || '获取Offer列表失败')
-    } finally {
-      if (requestSeq === offersFetchSeqRef.current) {
-        setLoading(false)
-      }
-      if (offersFetchAbortRef.current === abortController) {
-        offersFetchAbortRef.current = null
-      }
-    }
-  }, [buildOffersListUrl, handleUnauthorized, isServerPagingMode, manualCompatMode, setPage])
-
-  const applyLocalOfferDeletion = useCallback((ids: number[]) => {
-    const uniqueIds = Array.from(new Set(ids))
-    if (uniqueIds.length === 0) return
-    const idSet = new Set(uniqueIds)
-
-    setOffers((prev) => prev.filter((offer) => !idSet.has(offer.id)))
-    setSelectedOfferIds((prev) => {
-      const next = new Set(prev)
-      uniqueIds.forEach((id) => next.delete(id))
-      return next
-    })
-
-    if (isServerPagingMode) {
-      setServerTotal((prev) => Math.max(0, prev - uniqueIds.length))
-    }
-  }, [isServerPagingMode])
+    },
+    [isServerPagingMode]
+  )
 
   const applyLocalOfferUnlink = useCallback((offerId: number, accountId: number) => {
-    setOffers((prev) => prev.map((offer) => {
-      if (offer.id !== offerId) return offer
-      const nextLinkedAccounts = Array.isArray(offer.linkedAccounts)
-        ? offer.linkedAccounts.filter((account) => Number(account.accountId) !== Number(accountId))
-        : []
-      return {
-        ...offer,
-        linkedAccounts: nextLinkedAccounts,
-      }
-    }))
+    setOffers((prev) =>
+      prev.map((offer) => {
+        if (offer.id !== offerId) return offer
+        const nextLinkedAccounts = Array.isArray(offer.linkedAccounts)
+          ? offer.linkedAccounts.filter(
+              (account) => Number(account.accountId) !== Number(accountId)
+            )
+          : []
+        return {
+          ...offer,
+          linkedAccounts: nextLinkedAccounts,
+        }
+      })
+    )
   }, [])
 
   const applyLocalOfferBlacklist = useCallback((offerId: number, nextIsBlacklisted: boolean) => {
-    setOffers((prev) => prev.map((offer) => (
-      offer.id === offerId
-        ? {
-            ...offer,
-            isBlacklisted: nextIsBlacklisted,
-          }
-        : offer
-    )))
+    setOffers((prev) =>
+      prev.map((offer) =>
+        offer.id === offerId
+          ? {
+              ...offer,
+              isBlacklisted: nextIsBlacklisted,
+            }
+          : offer
+      )
+    )
   }, [])
 
   useEffect(() => {
@@ -499,7 +512,9 @@ export default function OffersClientPage({
       return false
     }
 
-    const applyIncrementalOfferUpdates = (updatedOffers: Array<Partial<Offer> & { id: number }>) => {
+    const applyIncrementalOfferUpdates = (
+      updatedOffers: Array<Partial<Offer> & { id: number }>
+    ) => {
       if (updatedOffers.length === 0) return
 
       const updatesById = new Map<number, Partial<Offer> & { id: number }>()
@@ -521,19 +536,20 @@ export default function OffersClientPage({
         const nextOffer: Offer = {
           ...offer,
           brand: typeof patch.brand === 'string' ? patch.brand : offer.brand,
-          targetCountry: typeof patch.targetCountry === 'string' ? patch.targetCountry : offer.targetCountry,
-          affiliateLink: patch.affiliateLink === undefined ? offer.affiliateLink : patch.affiliateLink,
+          targetCountry:
+            typeof patch.targetCountry === 'string' ? patch.targetCountry : offer.targetCountry,
+          affiliateLink:
+            patch.affiliateLink === undefined ? offer.affiliateLink : patch.affiliateLink,
           scrapeStatus: patch.scrapeStatus ?? offer.scrapeStatus,
           scrapeError: patch.scrapeError === undefined ? offer.scrapeError : patch.scrapeError,
         }
 
-        const changed = (
-          nextOffer.brand !== offer.brand
-          || nextOffer.targetCountry !== offer.targetCountry
-          || nextOffer.affiliateLink !== offer.affiliateLink
-          || nextOffer.scrapeStatus !== offer.scrapeStatus
-          || nextOffer.scrapeError !== offer.scrapeError
-        )
+        const changed =
+          nextOffer.brand !== offer.brand ||
+          nextOffer.targetCountry !== offer.targetCountry ||
+          nextOffer.affiliateLink !== offer.affiliateLink ||
+          nextOffer.scrapeStatus !== offer.scrapeStatus ||
+          nextOffer.scrapeError !== offer.scrapeError
 
         if (changed) {
           hasChanges = true
@@ -567,7 +583,11 @@ export default function OffersClientPage({
     const pollInterval = setInterval(async () => {
       const isIncrementalMode = offersIncrementalPollEnabled
 
-      if (isIncrementalMode && typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      if (
+        isIncrementalMode &&
+        typeof document !== 'undefined' &&
+        document.visibilityState === 'hidden'
+      ) {
         return
       }
       if (pollingRef.current) return
@@ -581,7 +601,9 @@ export default function OffersClientPage({
           if (!data) return
 
           const nextOffers = Array.isArray(data.offers) ? (data.offers as Offer[]) : []
-          const nextTotal = Number.isFinite(Number(data.total)) ? Number(data.total) : nextOffers.length
+          const nextTotal = Number.isFinite(Number(data.total))
+            ? Number(data.total)
+            : nextOffers.length
           setServerTotal(nextTotal)
           if (shouldRefreshFullOffers(nextOffers)) {
             console.log('[Polling] Updating offers list...')
@@ -594,21 +616,20 @@ export default function OffersClientPage({
         pollRoundRef.current += 1
         const incrementalIds = buildIncrementalPollIds()
         const forceFullSync = forceFullSyncRef.current
-        const shouldRunFullSync = (
-          forceFullSync
-          || incrementalIds.length === 0
-          || pollRoundRef.current % OFFERS_FULL_SYNC_EVERY_POLLS === 0
-        )
+        const shouldRunFullSync =
+          forceFullSync ||
+          incrementalIds.length === 0 ||
+          pollRoundRef.current % OFFERS_FULL_SYNC_EVERY_POLLS === 0
 
-        const pollUrl = shouldRunFullSync
-          ? listUrl
-          : buildOffersListUrl({ ids: incrementalIds })
+        const pollUrl = shouldRunFullSync ? listUrl : buildOffersListUrl({ ids: incrementalIds })
         const data = await runPollRequest(pollUrl)
         if (!data) return
 
         if (shouldRunFullSync) {
           const nextOffers = Array.isArray(data.offers) ? (data.offers as Offer[]) : []
-          const nextTotal = Number.isFinite(Number(data.total)) ? Number(data.total) : nextOffers.length
+          const nextTotal = Number.isFinite(Number(data.total))
+            ? Number(data.total)
+            : nextOffers.length
           forceFullSyncRef.current = false
           setServerTotal(nextTotal)
           if (shouldRefreshFullOffers(nextOffers)) {
@@ -718,9 +739,7 @@ export default function OffersClientPage({
       }
 
       if (typeof aVal === 'string' && typeof bVal === 'string') {
-        return effectiveSortOrder === 'asc'
-          ? aVal.localeCompare(bVal)
-          : bVal.localeCompare(aVal)
+        return effectiveSortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
       }
 
       if (typeof aVal === 'number' && typeof bVal === 'number') {
@@ -902,7 +921,7 @@ export default function OffersClientPage({
           const { response, data, id } = result.value
           if (!response.ok) {
             // HTTP错误响应（如409 Conflict）
-            const offerInfo = offers.find(o => o.id === id)?.brand || `ID:${id}`
+            const offerInfo = offers.find((o) => o.id === id)?.brand || `ID:${id}`
             errors.push(`${offerInfo}: ${data.error || '删除失败'}`)
           } else {
             successIds.push(id)
@@ -917,7 +936,9 @@ export default function OffersClientPage({
 
       if (errors.length > 0) {
         // 在对话框内显示错误，不关闭对话框
-        setBatchDeleteError(`${errors.length}/${selectedIds.length} 个Offer删除失败：\n${errors.join('\n')}`)
+        setBatchDeleteError(
+          `${errors.length}/${selectedIds.length} 个Offer删除失败：\n${errors.join('\n')}`
+        )
         return
       }
 
@@ -1058,7 +1079,7 @@ export default function OffersClientPage({
   // 全选/取消全选
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const allIds = new Set(paginatedOffers.map(o => o.id))
+      const allIds = new Set(paginatedOffers.map((o) => o.id))
       setSelectedOfferIds(allIds)
     } else {
       setSelectedOfferIds(new Set())
@@ -1127,7 +1148,9 @@ export default function OffersClientPage({
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || `${offerToBlacklist.isBlacklisted ? '取消拉黑' : '拉黑投放'}失败`)
+        throw new Error(
+          data.error || `${offerToBlacklist.isBlacklisted ? '取消拉黑' : '拉黑投放'}失败`
+        )
       }
 
       applyLocalOfferBlacklist(offerToBlacklist.id, !offerToBlacklist.isBlacklisted)
@@ -1145,13 +1168,37 @@ export default function OffersClientPage({
 
   const getScrapeStatusBadge = (status: string) => {
     const configs = {
-      pending: { label: getScrapeStatusLabel('pending'), variant: 'secondary' as const, className: 'text-gray-500' },
-      in_progress: { label: getScrapeStatusLabel('in_progress'), variant: 'default' as const, className: 'bg-blue-600' },
-      completed: { label: getScrapeStatusLabel('completed'), variant: 'outline' as const, className: 'bg-green-50 text-green-700 border-green-200' },
-      failed: { label: getScrapeStatusLabel('failed'), variant: 'destructive' as const, className: '' },
+      pending: {
+        label: getScrapeStatusLabel('pending'),
+        variant: 'secondary' as const,
+        className: 'text-gray-500',
+      },
+      in_progress: {
+        label: getScrapeStatusLabel('in_progress'),
+        variant: 'default' as const,
+        className: 'bg-blue-600',
+      },
+      completed: {
+        label: getScrapeStatusLabel('completed'),
+        variant: 'outline' as const,
+        className: 'bg-green-50 text-green-700 border-green-200',
+      },
+      failed: {
+        label: getScrapeStatusLabel('failed'),
+        variant: 'destructive' as const,
+        className: '',
+      },
     }
-    const config = configs[status as keyof typeof configs] || { label: status, variant: 'outline' as const, className: '' }
-    return <Badge variant={config.variant} className={config.className}>{config.label}</Badge>
+    const config = configs[status as keyof typeof configs] || {
+      label: status,
+      variant: 'outline' as const,
+      className: '',
+    }
+    return (
+      <Badge variant={config.variant} className={config.className}>
+        {config.label}
+      </Badge>
+    )
   }
 
   // 获取唯一国家列表
@@ -1164,11 +1211,11 @@ export default function OffersClientPage({
   }, [offers, countryFilter])
 
   const hasActiveFilters = Boolean(
-    searchQuery
-    || countryFilter !== 'all'
-    || statusFilter !== 'all'
-    || needsCompletionFilter !== 'all'
-    || affiliateLinkFilter !== 'all'
+    searchQuery ||
+    countryFilter !== 'all' ||
+    statusFilter !== 'all' ||
+    needsCompletionFilter !== 'all' ||
+    affiliateLinkFilter !== 'all'
   )
   useEffect(() => {
     if (manualCompatMode && !hasUnsupportedServerSort) {
@@ -1217,14 +1264,13 @@ export default function OffersClientPage({
     }
   }
 
-  const shouldMountActionDialogs = (
-    isUnlinkDialogOpen
-    || isDeleteDialogOpen
-    || isBatchDeleteDialogOpen
-    || isBatchCreativeDialogOpen
-    || isBatchRebuildDialogOpen
-    || isBlacklistDialogOpen
-  )
+  const shouldMountActionDialogs =
+    isUnlinkDialogOpen ||
+    isDeleteDialogOpen ||
+    isBatchDeleteDialogOpen ||
+    isBatchCreativeDialogOpen ||
+    isBatchRebuildDialogOpen ||
+    isBlacklistDialogOpen
 
   const handleUnlinkDialogOpenChange = (open: boolean) => {
     setIsUnlinkDialogOpen(open)
@@ -1290,7 +1336,7 @@ export default function OffersClientPage({
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push('/dashboard')}
-                className="flex-shrink-0"
+                className="shrink-0"
               >
                 ← 返回Dashboard
               </Button>
@@ -1309,8 +1355,10 @@ export default function OffersClientPage({
                     variant="outline"
                     size="sm"
                     onClick={() => setIsBatchCreativeDialogOpen(true)}
-                    disabled={batchCreatingCreatives || selectedOfferIds.size > MAX_BATCH_CREATIVE_OFFERS}
-                    className="flex-shrink-0"
+                    disabled={
+                      batchCreatingCreatives || selectedOfferIds.size > MAX_BATCH_CREATIVE_OFFERS
+                    }
+                    className="shrink-0"
                     title={
                       selectedOfferIds.size > MAX_BATCH_CREATIVE_OFFERS
                         ? `单次最多支持${MAX_BATCH_CREATIVE_OFFERS}个Offer`
@@ -1325,7 +1373,7 @@ export default function OffersClientPage({
                     size="sm"
                     onClick={() => setIsBatchRebuildDialogOpen(true)}
                     disabled={batchRebuilding || selectedOfferIds.size > MAX_BATCH_REBUILD_OFFERS}
-                    className="flex-shrink-0"
+                    className="shrink-0"
                     title={
                       selectedOfferIds.size > MAX_BATCH_REBUILD_OFFERS
                         ? `单次最多支持${MAX_BATCH_REBUILD_OFFERS}个Offer`
@@ -1342,7 +1390,7 @@ export default function OffersClientPage({
                       setRemoveGoogleAdsCampaignsOnDelete(false)
                       setIsBatchDeleteDialogOpen(true)
                     }}
-                    className="flex-shrink-0"
+                    className="shrink-0"
                   >
                     删除 ({selectedOfferIds.size})
                   </Button>
@@ -1358,20 +1406,13 @@ export default function OffersClientPage({
                 <PlayCircle className="w-4 h-4 mr-2" />
                 批量开启任务 ({selectedOfferIds.size})
               </Button>
-              <Button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="flex-1 sm:flex-none"
-              >
+              <Button onClick={() => setIsCreateModalOpen(true)} className="flex-1 sm:flex-none">
                 创建Offer
               </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                  >
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto">
                     更多操作
                   </Button>
                 </DropdownMenuTrigger>
@@ -1453,7 +1494,8 @@ export default function OffersClientPage({
             {hasActiveFilters && (
               <div className="mt-4 flex items-center justify-between">
                 <p className="text-body-sm text-muted-foreground">
-                  显示 {isServerPagingMode ? paginatedOffers.length : filteredOffers.length} / {totalItems} 个Offer
+                  显示 {isServerPagingMode ? paginatedOffers.length : filteredOffers.length} /{' '}
+                  {totalItems} 个Offer
                 </p>
                 <Button
                   variant="ghost"
@@ -1498,15 +1540,16 @@ export default function OffersClientPage({
                       {/* 全选checkbox */}
                       <TableHead className="w-[50px]">
                         <Checkbox
-                          checked={paginatedOffers.length > 0 && paginatedOffers.every(o => selectedOfferIds.has(o.id))}
+                          checked={
+                            paginatedOffers.length > 0 &&
+                            paginatedOffers.every((o) => selectedOfferIds.has(o.id))
+                          }
                           onCheckedChange={handleSelectAll}
                           aria-label="全选"
                         />
                       </TableHead>
                       {/* Offer ID */}
-                      <TableHead className="w-[80px] whitespace-nowrap">
-                        Offer ID
-                      </TableHead>
+                      <TableHead className="w-[80px] whitespace-nowrap">Offer ID</TableHead>
                       <SortableTableHead
                         field="offerName"
                         currentSortBy={sortBy}
@@ -1583,16 +1626,16 @@ export default function OffersClientPage({
                           <div className={offer.isBlacklisted ? 'opacity-50' : ''}>
                             <Checkbox
                               checked={selectedOfferIds.has(offer.id)}
-                              onCheckedChange={(checked) => handleSelectOffer(offer.id, checked as boolean)}
+                              onCheckedChange={(checked) =>
+                                handleSelectOffer(offer.id, checked as boolean)
+                              }
                               aria-label={`选择 ${offer.brand}`}
                             />
                           </div>
                         </TableCell>
                         {/* Offer ID */}
                         <TableCell className="font-mono text-body-sm text-gray-600">
-                          <div className={offer.isBlacklisted ? 'opacity-50' : ''}>
-                            {offer.id}
-                          </div>
+                          <div className={offer.isBlacklisted ? 'opacity-50' : ''}>{offer.id}</div>
                         </TableCell>
                         <TableCell className="font-mono">
                           <div className={offer.isBlacklisted ? 'opacity-50' : ''}>
@@ -1604,11 +1647,18 @@ export default function OffersClientPage({
                                 className="text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-2"
                               >
                                 {offer.offerName || `${offer.brand}_${offer.targetCountry}_01`}
-                                <span aria-hidden className="text-xs">↗</span>
+                                <span aria-hidden className="text-xs">
+                                  ↗
+                                </span>
                               </a>
                               {offer.isBlacklisted && (
                                 <span title="该品牌+国家组合已拉黑投放">
-                                  <span className="text-xs font-semibold text-orange-500" aria-hidden>⚠</span>
+                                  <span
+                                    className="text-xs font-semibold text-orange-500"
+                                    aria-hidden
+                                  >
+                                    ⚠
+                                  </span>
                                 </span>
                               )}
                             </div>
@@ -1618,7 +1668,10 @@ export default function OffersClientPage({
                           <div className={offer.isBlacklisted ? 'opacity-50' : ''}>
                             <div>
                               <div className="font-medium text-gray-900">{offer.brand}</div>
-                              <div className="text-body-sm text-muted-foreground truncate max-w-[200px]" title={offer.url}>
+                              <div
+                                className="text-body-sm text-muted-foreground truncate max-w-[200px]"
+                                title={offer.url}
+                              >
                                 {offer.url}
                               </div>
                             </div>
@@ -1643,12 +1696,12 @@ export default function OffersClientPage({
                           <div className={offer.isBlacklisted ? 'opacity-50' : ''}>
                             {offer.createdAt
                               ? new Date(offer.createdAt).toLocaleString('zh-CN', {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
                               : '—'}
                           </div>
                         </TableCell>
@@ -1668,7 +1721,7 @@ export default function OffersClientPage({
                                         setOfferToUnlink({
                                           offer,
                                           accountId: account.accountId,
-                                          accountName: account.customerId
+                                          accountName: account.customerId,
                                         })
                                         setRemoveGoogleAdsCampaignsOnUnlink(false)
                                         setIsUnlinkDialogOpen(true)
@@ -1676,7 +1729,9 @@ export default function OffersClientPage({
                                       className="text-gray-400 hover:text-red-600 transition-colors"
                                       title="解除关联"
                                     >
-                                      <span className="text-xs font-semibold" aria-hidden>×</span>
+                                      <span className="text-xs font-semibold" aria-hidden>
+                                        ×
+                                      </span>
                                     </button>
                                   </div>
                                 ))}
@@ -1691,20 +1746,32 @@ export default function OffersClientPage({
                             primaryAction={{
                               icon: <span className="text-[10px] font-semibold">GO</span>,
                               label: '发布广告',
-                              href: `/offers/${offer.id}/launch`,  // 🔥 2026-01-05: 使用href打开新标签页
+                              href: `/offers/${offer.id}/launch`, // 🔥 2026-01-05: 使用href打开新标签页
                               target: '_blank',
-                              disabled: offer.scrapeStatus !== 'completed' || offer.campaignId !== null,
-                              title: offer.campaignId !== null ? '该 Offer 已有关联广告系列，一个 Offer 只能发布一个广告系列' : (offer.scrapeStatus !== 'completed' ? '请等待数据抓取完成' : undefined),
+                              disabled:
+                                offer.scrapeStatus !== 'completed' || offer.campaignId !== null,
+                              title:
+                                offer.campaignId !== null
+                                  ? '该 Offer 已有关联广告系列，一个 Offer 只能发布一个广告系列'
+                                  : offer.scrapeStatus !== 'completed'
+                                    ? '请等待数据抓取完成'
+                                    : undefined,
                             }}
                             secondaryActions={[
                               {
-                                icon: <span className="text-[10px] font-semibold text-gray-500">CLK</span>,
+                                icon: (
+                                  <span className="text-[10px] font-semibold text-gray-500">
+                                    CLK
+                                  </span>
+                                ),
                                 label: '补点击任务',
                                 onClick: async () => {
                                   setClickFarmLoading(true)
                                   try {
-                                    const { resolveClickFarmTaskMode } = await import('./task-modal-helpers')
-                                    const { editTaskId, infoMessage } = await resolveClickFarmTaskMode(offer.id)
+                                    const { resolveClickFarmTaskMode } =
+                                      await import('./task-modal-helpers')
+                                    const { editTaskId, infoMessage } =
+                                      await resolveClickFarmTaskMode(offer.id)
                                     setSelectedOfferForClickFarm(offer)
                                     setEditTaskIdForClickFarm(editTaskId)
                                     if (infoMessage) {
@@ -1723,13 +1790,19 @@ export default function OffersClientPage({
                                 disabled: clickFarmLoading,
                               },
                               {
-                                icon: <span className="text-[10px] font-semibold text-gray-500">URL</span>,
+                                icon: (
+                                  <span className="text-[10px] font-semibold text-gray-500">
+                                    URL
+                                  </span>
+                                ),
                                 label: '换链接任务',
                                 onClick: async () => {
                                   setUrlSwapLoading(true)
                                   try {
-                                    const { resolveUrlSwapTaskMode } = await import('./task-modal-helpers')
-                                    const { editTaskId, infoMessage } = await resolveUrlSwapTaskMode(offer.id)
+                                    const { resolveUrlSwapTaskMode } =
+                                      await import('./task-modal-helpers')
+                                    const { editTaskId, infoMessage } =
+                                      await resolveUrlSwapTaskMode(offer.id)
                                     setSelectedOfferForUrlSwap(offer)
                                     setEditTaskIdForUrlSwap(
                                       editTaskId === undefined ? undefined : String(editTaskId)
@@ -1758,7 +1831,9 @@ export default function OffersClientPage({
                                 },
                                 disabled: blacklisting,
                                 variant: offer.isBlacklisted ? 'secondary' : 'ghost',
-                                className: offer.isBlacklisted ? 'text-green-600' : 'text-orange-600',
+                                className: offer.isBlacklisted
+                                  ? 'text-green-600'
+                                  : 'text-orange-600',
                               },
                               {
                                 icon: <span className="text-[10px] font-semibold">DEL</span>,
@@ -1863,7 +1938,9 @@ export default function OffersClientPage({
           linkedAccounts={deleteLinkedAccounts}
           accountCount={deleteAccountCount}
           campaignCount={deleteCampaignCount}
-          onConfirmDelete={(autoUnlink) => handleDeleteOffer(autoUnlink, removeGoogleAdsCampaignsOnDelete)}
+          onConfirmDelete={(autoUnlink) =>
+            handleDeleteOffer(autoUnlink, removeGoogleAdsCampaignsOnDelete)
+          }
           removeGoogleAdsCampaigns={removeGoogleAdsCampaignsOnDelete}
           onRemoveGoogleAdsCampaignsChange={setRemoveGoogleAdsCampaignsOnDelete}
           deleting={deleting}
@@ -1921,7 +1998,7 @@ export default function OffersClientPage({
         offerIds={Array.from(selectedOfferIds)}
         onSuccess={() => {
           setSelectedOfferIds(new Set())
-          fetchOffers()  // 刷新数据
+          fetchOffers() // 刷新数据
         }}
       />
     </div>

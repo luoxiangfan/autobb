@@ -127,7 +127,7 @@ describe('resolveAffiliateLinkWithHttp', () => {
       await close()
     }
 
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await new Promise((resolve) => setTimeout(resolve, 50))
     expect(openStreams).toBe(0)
   })
 
@@ -191,7 +191,8 @@ describe('resolveAffiliateLinkWithHttp', () => {
   })
 
   it('extracts embedded target URL from linkhaitao new parameter', () => {
-    const trackingUrl = 'https://www.linkhaitao.com/index.php?mod=lhdeal&track=abc&new=https%3A%2F%2Fwww.mgmresorts.com%2Fen.html'
+    const trackingUrl =
+      'https://www.linkhaitao.com/index.php?mod=lhdeal&track=abc&new=https%3A%2F%2Fwww.mgmresorts.com%2Fen.html'
     const extracted = extractEmbeddedTargetUrl(trackingUrl)
     expect(extracted).toBe('https://www.mgmresorts.com/en.html')
   })
@@ -280,7 +281,9 @@ describe('resolveAffiliateLinkWithHttp', () => {
 
       expect(result.finalUrl).toBe(target)
       expect(result.finalUrlSuffix).toBe('clickref=abc123')
-      expect(result.redirectChain.some((url) => url.includes('/landing?clickref=abc123'))).toBe(true)
+      expect(result.redirectChain.some((url) => url.includes('/landing?clickref=abc123'))).toBe(
+        true
+      )
     } finally {
       await close()
     }

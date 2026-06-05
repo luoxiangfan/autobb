@@ -22,6 +22,8 @@ describe('scrape text filters', () => {
   })
 
   it('filters nav labels from feature lists', () => {
-    expect(filterNavigationLabels([' About   Me ', "Boscov's Exclusive", 'Log Out'])).toEqual(["Boscov's Exclusive"])
+    expect(filterNavigationLabels([' About   Me ', "Boscov's Exclusive", 'Log Out'])).toEqual([
+      "Boscov's Exclusive",
+    ])
   })
 })

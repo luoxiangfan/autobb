@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
     const db = await getDatabase()
 
     // 获取用户的所有Campaigns（包含Offer和Account信息）
-    const campaigns = await db.query(`
+    const campaigns = (await db.query(
+      `
       SELECT
         c.id,
         c.google_campaign_id,
@@ -47,7 +48,9 @@ export async function GET(request: NextRequest) {
       LEFT JOIN google_ads_accounts ga ON c.google_ads_account_id = ga.id
       WHERE c.user_id = ?
       ORDER BY c.created_at DESC
-    `, [userId]) as any[]
+    `,
+      [userId]
+    )) as any[]
 
     if (format === 'csv') {
       // 生成CSV
@@ -67,7 +70,7 @@ export async function GET(request: NextRequest) {
         'offer_url',
         'google_ads_account_id',
         'created_at',
-        'updated_at'
+        'updated_at',
       ]
 
       const escapeCSV = (value: any) => {
@@ -81,9 +84,7 @@ export async function GET(request: NextRequest) {
 
       const csvLines = [
         headers.join(','),
-        ...campaigns.map(campaign =>
-          headers.map(h => escapeCSV(campaign[h])).join(',')
-        )
+        ...campaigns.map((campaign) => headers.map((h) => escapeCSV(campaign[h])).join(',')),
       ]
 
       const csvContent = csvLines.join('\n')
@@ -105,9 +106,6 @@ export async function GET(request: NextRequest) {
     }
   } catch (error: any) {
     console.error('导出Campaigns失败:', error)
-    return NextResponse.json(
-      { error: error.message || '导出失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '导出失败' }, { status: 500 })
   }
 }

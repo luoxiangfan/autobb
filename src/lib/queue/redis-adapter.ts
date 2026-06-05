@@ -7,7 +7,7 @@ import type {
   QueueStats,
   QueueStorageAdapter,
   PendingEligibilityStats,
-  RunningConcurrencySnapshot
+  RunningConcurrencySnapshot,
 } from './types'
 import { isBackgroundTaskType, isEphemeralTaskType } from './task-category'
 
@@ -42,16 +42,18 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
         lazyConnect: true,
 
         // 连接保活配置
-        keepAlive: 30000,  // 每30秒发送TCP keepalive包
-        connectTimeout: 10000,  // 连接超时10秒
+        keepAlive: 30000, // 每30秒发送TCP keepalive包
+        connectTimeout: 10000, // 连接超时10秒
 
         // 重连策略：指数退避，最大延迟10秒
         retryStrategy: (times: number) => {
           this.reconnectAttempts = times
 
           if (times > this.MAX_RECONNECT_ATTEMPTS) {
-            console.error(`❌ Redis队列重连失败，已达到最大重试次数(${this.MAX_RECONNECT_ATTEMPTS})`)
-            return null  // 停止重试
+            console.error(
+              `❌ Redis队列重连失败，已达到最大重试次数(${this.MAX_RECONNECT_ATTEMPTS})`
+            )
+            return null // 停止重试
           }
 
           const delay = Math.min(times * 200, 10000)
@@ -144,7 +146,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
       return items[1]
     `
 
-    const taskId = await this.client.eval(script, 1, queueKey, String(maxScore)) as unknown
+    const taskId = (await this.client.eval(script, 1, queueKey, String(maxScore))) as unknown
     return typeof taskId === 'string' && taskId.length > 0 ? taskId : null
   }
 
@@ -166,49 +168,34 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
     pipeline.srem(this.getKey('failed'), task.id)
 
     // 1. 存储任务详情
-    pipeline.hset(
-      this.getKey('tasks'),
-      task.id,
-      JSON.stringify(task)
-    )
+    pipeline.hset(this.getKey('tasks'), task.id, JSON.stringify(task))
 
     // 2. 添加到优先级队列（使用sorted set，分数为优先级+时间戳）
     const priorityScore = this.getPriorityScore(task)
-    pipeline.zadd(
-      this.getKey(`pending:${task.type}`),
-      priorityScore,
-      task.id
-    )
+    pipeline.zadd(this.getKey(`pending:${task.type}`), priorityScore, task.id)
 
     // 3. 添加到全局pending队列
-    pipeline.zadd(
-      this.getKey('pending:all'),
-      priorityScore,
-      task.id
-    )
+    pipeline.zadd(this.getKey('pending:all'), priorityScore, task.id)
 
     // 4. 添加到用户队列
-    pipeline.zadd(
-      this.getKey(`user:${task.userId}:pending`),
-      priorityScore,
-      task.id
-    )
+    pipeline.zadd(this.getKey(`user:${task.userId}:pending`), priorityScore, task.id)
 
     const results = await pipeline.exec()
     // ioredis pipeline.exec 不会自动 throw；这里仅记录错误，避免“静默孤儿任务”
     const failed = results?.filter(([err]) => err)
     if (failed && failed.length > 0) {
       const firstErr = failed[0][0] as Error
-      console.error('[RedisQueueAdapter] enqueue pipeline partial failure:', firstErr?.message || firstErr)
+      console.error(
+        '[RedisQueueAdapter] enqueue pipeline partial failure:',
+        firstErr?.message || firstErr
+      )
     }
   }
 
   async dequeue(type?: TaskType): Promise<Task | null> {
     if (!this.client) return null
 
-    const queueKey = type
-      ? this.getKey(`pending:${type}`)
-      : this.getKey('pending:all')
+    const queueKey = type ? this.getKey(`pending:${type}`) : this.getKey('pending:all')
 
     // notBefore 支持：仅弹出“已到可执行时间”的任务，避免未来任务被提前 dequeue
     const taskId = await this.popEligible(queueKey)
@@ -253,11 +240,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
     if (!this.client) return null
 
     // 查看最高优先级任务（不移除）
-    const result = await this.client.zrange(
-      this.getKey('pending:all'),
-      0,
-      0
-    )
+    const result = await this.client.zrange(this.getKey('pending:all'), 0, 0)
     if (!result || result.length === 0) return null
 
     const taskId = result[0]
@@ -267,11 +250,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
     return JSON.parse(taskJson)
   }
 
-  async updateTaskStatus(
-    taskId: string,
-    status: TaskStatus,
-    error?: string
-  ): Promise<void> {
+  async updateTaskStatus(taskId: string, status: TaskStatus, error?: string): Promise<void> {
     if (!this.client) throw new Error('Redis not connected')
 
     // 获取任务
@@ -336,7 +315,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
         failed: 0,
         byType: {} as Record<TaskType, number>,
         byTypeRunning: {} as Record<TaskType, number>,
-        byUser: {}
+        byUser: {},
       }
     }
 
@@ -399,10 +378,12 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
         }
         userStats[task.status]++
         if (task.status === 'completed') {
-          if (isBackgroundTaskType(task.type)) userStats.backgroundCompleted = (userStats.backgroundCompleted ?? 0) + 1
+          if (isBackgroundTaskType(task.type))
+            userStats.backgroundCompleted = (userStats.backgroundCompleted ?? 0) + 1
           else userStats.coreCompleted = (userStats.coreCompleted ?? 0) + 1
         } else if (task.status === 'failed') {
-          if (isBackgroundTaskType(task.type)) userStats.backgroundFailed = (userStats.backgroundFailed ?? 0) + 1
+          if (isBackgroundTaskType(task.type))
+            userStats.backgroundFailed = (userStats.backgroundFailed ?? 0) + 1
           else userStats.coreFailed = (userStats.coreFailed ?? 0) + 1
         }
 
@@ -422,7 +403,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
       failed: totalFailed,
       byType,
       byTypeRunning,
-      byUser
+      byUser,
     }
   }
 
@@ -521,9 +502,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
   async getPendingTasks(type?: TaskType): Promise<Task[]> {
     if (!this.client) return []
 
-    const queueKey = type
-      ? this.getKey(`pending:${type}`)
-      : this.getKey('pending:all')
+    const queueKey = type ? this.getKey(`pending:${type}`) : this.getKey('pending:all')
 
     const taskIds = await this.client.zrange(queueKey, 0, -1)
     const tasks: Task[] = []
@@ -581,16 +560,14 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
    * @param status 任务状态（'pending' 或 'running'）
    * @returns 删除的任务数量
    */
-  async deleteTasksByTypeAndStatus(
-    type: TaskType,
-    status: 'pending' | 'running'
-  ): Promise<number> {
+  async deleteTasksByTypeAndStatus(type: TaskType, status: 'pending' | 'running'): Promise<number> {
     if (!this.client) return 0
 
     // 1. 获取指定状态的所有任务ID（pending 优先从类型队列取，避免 pending:all 缺失/不一致导致漏删）
-    const taskIds = status === 'pending'
-      ? await this.client.zrange(this.getKey(`pending:${type}`), 0, -1)
-      : await this.client.smembers(this.getKey('running'))
+    const taskIds =
+      status === 'pending'
+        ? await this.client.zrange(this.getKey(`pending:${type}`), 0, -1)
+        : await this.client.smembers(this.getKey('running'))
 
     if (taskIds.length === 0) return 0
 
@@ -669,7 +646,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
         pendingCleared: 0,
         runningCleared: 0,
         userQueuesCleared: 0,
-        totalCleared: 0
+        totalCleared: 0,
       }
     }
 
@@ -737,7 +714,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
       pendingCleared: pendingTaskIds.length,
       runningCleared: runningTaskIds.length,
       userQueuesCleared: userPendingKeys.length,
-      totalCleared: allTaskIds.length
+      totalCleared: allTaskIds.length,
     }
   }
 
@@ -771,7 +748,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
       const startedAt = task.startedAt || task.createdAt
 
       // 检查是否超时
-      if (startedAt && (now - startedAt) > timeoutMs) {
+      if (startedAt && now - startedAt > timeoutMs) {
         // 任务超时，标记为失败并清理
         task.status = 'failed'
         task.error = 'Task timeout - marked as stale'
@@ -784,13 +761,15 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
         await pipeline.exec()
 
         cleanedTaskIds.push(taskId)
-        console.log(`⏰ 清理超时任务: ${taskId} (运行时间: ${Math.round((now - startedAt) / 1000 / 60)}分钟)`)
+        console.log(
+          `⏰ 清理超时任务: ${taskId} (运行时间: ${Math.round((now - startedAt) / 1000 / 60)}分钟)`
+        )
       }
     }
 
     return {
       cleanedCount: cleanedTaskIds.length,
-      cleanedTaskIds
+      cleanedTaskIds,
     }
   }
 
@@ -851,7 +830,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
 
     return {
       cleanedCount: cleanedTaskIds.length,
-      cleanedTaskIds
+      cleanedTaskIds,
     }
   }
 

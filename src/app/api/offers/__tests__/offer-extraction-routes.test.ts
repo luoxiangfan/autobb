@@ -41,8 +41,10 @@ vi.mock('@/lib/offer-extraction-task', async (importOriginal) => {
   return {
     ...actual,
     createOfferExtractionTaskForNewOffer: extractionFns.createOfferExtractionTaskForNewOffer,
-    enqueueExistingOfferExtractionAndMarkQueued: extractionFns.enqueueExistingOfferExtractionAndMarkQueued,
-    assertOfferAvailableForExtractionEnqueue: extractionFns.assertOfferAvailableForExtractionEnqueue,
+    enqueueExistingOfferExtractionAndMarkQueued:
+      extractionFns.enqueueExistingOfferExtractionAndMarkQueued,
+    assertOfferAvailableForExtractionEnqueue:
+      extractionFns.assertOfferAvailableForExtractionEnqueue,
   }
 })
 
@@ -202,7 +204,7 @@ describe('POST /api/offers/:id/rebuild', () => {
       body: '{}',
     })
 
-    const res = await postRebuild(req, { params: { id: '42' } })
+    const res = await postRebuild(req, { params: Promise.resolve({ id: '42' }) })
     expect(res.status).toBe(401)
   })
 
@@ -211,7 +213,7 @@ describe('POST /api/offers/:id/rebuild', () => {
       extraction_mode: 'bogus',
     })
 
-    const res = await postRebuild(req, { params: { id: '42' } })
+    const res = await postRebuild(req, { params: Promise.resolve({ id: '42' }) })
     const data = await res.json()
 
     expect(res.status).toBe(400)
@@ -230,7 +232,7 @@ describe('POST /api/offers/:id/rebuild', () => {
     )
 
     const req = jsonRequest('http://localhost/api/offers/42/rebuild', {})
-    const res = await postRebuild(req, { params: { id: '42' } })
+    const res = await postRebuild(req, { params: Promise.resolve({ id: '42' }) })
     const data = await res.json()
 
     expect(res.status).toBe(400)
@@ -245,7 +247,7 @@ describe('POST /api/offers/:id/rebuild', () => {
     })
 
     const req = jsonRequest('http://localhost/api/offers/42/rebuild', {})
-    const res = await postRebuild(req, { params: { id: '42' } })
+    const res = await postRebuild(req, { params: Promise.resolve({ id: '42' }) })
 
     expect(res.status).toBe(200)
     expect(extractionFns.assertOfferAvailableForExtractionEnqueue).toHaveBeenCalled()
@@ -269,7 +271,7 @@ describe('POST /api/offers/:id/rebuild', () => {
     )
 
     const req = jsonRequest('http://localhost/api/offers/42/rebuild', {})
-    const res = await postRebuild(req, { params: { id: '42' } })
+    const res = await postRebuild(req, { params: Promise.resolve({ id: '42' }) })
     const data = await res.json()
 
     expect(res.status).toBe(409)
@@ -298,7 +300,7 @@ describe('PUT /api/offers/:id', () => {
       body: JSON.stringify({ extraction_mode: 'bogus' }),
     })
 
-    const res = await putOffer(req, { params: { id: '42' } })
+    const res = await putOffer(req, { params: Promise.resolve({ id: '42' }) })
     const data = await res.json()
 
     expect(res.status).toBe(400)

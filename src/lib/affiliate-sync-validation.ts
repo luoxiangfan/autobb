@@ -27,9 +27,12 @@ function buildSnippet(text: string): string {
   return text.replace(/\s+/g, ' ').trim().slice(0, 160)
 }
 
-async function validatePartnerboostConfig(input: AffiliateSyncValidationInput): Promise<ValidationResult> {
+async function validatePartnerboostConfig(
+  input: AffiliateSyncValidationInput
+): Promise<ValidationResult> {
   const token = trimValue(input.partnerboostToken)
-  const baseUrl = trimValue(input.partnerboostBaseUrl).replace(/\/+$/, '') || DEFAULT_PARTNERBOOST_BASE_URL
+  const baseUrl =
+    trimValue(input.partnerboostBaseUrl).replace(/\/+$/, '') || DEFAULT_PARTNERBOOST_BASE_URL
 
   try {
     const response = await fetch(`${baseUrl}/api/datafeed/get_fba_products`, {
@@ -62,14 +65,20 @@ async function validatePartnerboostConfig(input: AffiliateSyncValidationInput): 
       }
     }
 
-    const payload = text ? JSON.parse(text) as {
-      status?: { code?: number | string; msg?: string }
-      data?: { list?: unknown[] | Record<string, unknown> }
-    } : {}
+    const payload = text
+      ? (JSON.parse(text) as {
+          status?: { code?: number | string; msg?: string }
+          data?: { list?: unknown[] | Record<string, unknown> }
+        })
+      : {}
     const statusCode = Number(payload.status?.code)
 
     // Log for debugging
-    console.log('[PartnerBoost validation] Response:', { statusCode, msg: payload.status?.msg, hasData: !!payload.data })
+    console.log('[PartnerBoost validation] Response:', {
+      statusCode,
+      msg: payload.status?.msg,
+      hasData: !!payload.data,
+    })
 
     if (!Number.isFinite(statusCode) || statusCode !== 0) {
       return {
@@ -82,7 +91,9 @@ async function validatePartnerboostConfig(input: AffiliateSyncValidationInput): 
     const list = payload.data?.list
     const count = Array.isArray(list)
       ? list.length
-      : (list && typeof list === 'object' ? Object.keys(list).length : 0)
+      : list && typeof list === 'object'
+        ? Object.keys(list).length
+        : 0
     return {
       platform: 'partnerboost',
       valid: true,
@@ -97,7 +108,9 @@ async function validatePartnerboostConfig(input: AffiliateSyncValidationInput): 
   }
 }
 
-async function validateYeahPromosConfig(input: AffiliateSyncValidationInput): Promise<ValidationResult> {
+async function validateYeahPromosConfig(
+  input: AffiliateSyncValidationInput
+): Promise<ValidationResult> {
   const token = trimValue(input.yeahpromosToken)
   const siteId = trimValue(input.yeahpromosSiteId)
 
@@ -126,21 +139,28 @@ async function validateYeahPromosConfig(input: AffiliateSyncValidationInput): Pr
       }
     }
 
-    const payload = text ? JSON.parse(text) as {
-      Code?: number | string
-      code?: number | string
-      Data?: unknown[]
-      data?: unknown[]
-      Msg?: string
-      msg?: string
-      status?: string
-    } : {}
+    const payload = text
+      ? (JSON.parse(text) as {
+          Code?: number | string
+          code?: number | string
+          Data?: unknown[]
+          data?: unknown[]
+          Msg?: string
+          msg?: string
+          status?: string
+        })
+      : {}
 
     const code = payload.Code ?? payload.code
     const codeNum = Number(code)
 
     // Log for debugging
-    console.log('[YeahPromos validation] Response:', { code, codeNum, msg: payload.Msg || payload.msg, status: payload.status })
+    console.log('[YeahPromos validation] Response:', {
+      code,
+      codeNum,
+      msg: payload.Msg || payload.msg,
+      status: payload.status,
+    })
 
     // Check if code exists and is not 100000 (success code)
     // If code is undefined/null, treat as success (some responses may not include code field)
@@ -177,7 +197,9 @@ async function validateYeahPromosConfig(input: AffiliateSyncValidationInput): Pr
   }
 }
 
-export async function validateAffiliateSyncConfig(input: AffiliateSyncValidationInput): Promise<AffiliateSyncValidationSummary> {
+export async function validateAffiliateSyncConfig(
+  input: AffiliateSyncValidationInput
+): Promise<AffiliateSyncValidationSummary> {
   const partnerboostToken = trimValue(input.partnerboostToken)
   const yeahpromosToken = trimValue(input.yeahpromosToken)
   const yeahpromosSiteId = trimValue(input.yeahpromosSiteId)
@@ -206,8 +228,8 @@ export async function validateAffiliateSyncConfig(input: AffiliateSyncValidation
   }
 
   const results = tasks.length > 0 ? await Promise.all(tasks) : []
-  const messages = [...issues, ...results.map(item => item.message)]
-  const valid = issues.length === 0 && results.length > 0 && results.every(item => item.valid)
+  const messages = [...issues, ...results.map((item) => item.message)]
+  const valid = issues.length === 0 && results.length > 0 && results.every((item) => item.valid)
 
   return {
     valid,

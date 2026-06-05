@@ -18,4 +18,3 @@ describe('dki-localization', () => {
     expect(getLocalizedDkiOfficialSuffix({ targetLanguage: 'Unknown-Lang' })).toBe(' Official')
   })
 })
-

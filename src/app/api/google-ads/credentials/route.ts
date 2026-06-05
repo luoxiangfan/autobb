@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth, findUserById } from '@/lib/auth'
 import { saveGoogleAdsCredentials, deleteGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import { getDatabase } from '@/lib/db'
-import {
-  assertUserCanModifyGoogleAdsAuth,
-} from '@/lib/google-ads-auth-assignment'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 import { updateApiAccessLevel } from '@/lib/google-ads-access-level-detector'
 import {
   assertNoConflictingGoogleAdsAuth,
@@ -25,10 +23,7 @@ export async function POST(request: NextRequest) {
     // 验证用户身份
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: '未授权访问' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
     }
 
     const userId = authResult.user.userId
@@ -48,15 +43,12 @@ export async function POST(request: NextRequest) {
       developer_token,
       login_customer_id,
       access_token,
-      access_token_expires_at
+      access_token_expires_at,
     } = body
 
     // 验证必需参数
     if (!client_id || !client_secret || !refresh_token || !developer_token) {
-      return NextResponse.json(
-        { error: '缺少必需参数' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '缺少必需参数' }, { status: 400 })
     }
 
     console.log(`💾 保存Google Ads凭证`)
@@ -70,14 +62,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 保存凭证
-    const credentials =     await saveGoogleAdsCredentials(authResult.user.userId, {
+    const credentials = await saveGoogleAdsCredentials(authResult.user.userId, {
       client_id,
       client_secret,
       refresh_token,
       developer_token,
       login_customer_id,
       access_token,
-      access_token_expires_at
+      access_token_expires_at,
     })
 
     console.log(`✅ Google Ads凭证已保存`)
@@ -87,17 +79,16 @@ export async function POST(request: NextRequest) {
       message: 'Google Ads凭证已保存',
       data: {
         id: credentials.id,
-        hasCredentials: true
-      }
+        hasCredentials: true,
+      },
     })
-
   } catch (error: any) {
     console.error('保存Google Ads凭证失败:', error)
 
     return NextResponse.json(
       {
         error: '保存Google Ads凭证失败',
-        message: error.message || '未知错误'
+        message: error.message || '未知错误',
       },
       { status: 500 }
     )
@@ -115,10 +106,7 @@ export async function GET(request: NextRequest) {
     // 验证用户身份
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: '未授权访问' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
     }
 
     const userId = authResult.user.userId
@@ -183,14 +171,13 @@ export async function GET(request: NextRequest) {
         authConfigWarning,
       },
     })
-
   } catch (error: any) {
     console.error('获取Google Ads凭证失败:', error)
 
     return NextResponse.json(
       {
         error: '获取Google Ads凭证失败',
-        message: error.message || '未知错误'
+        message: error.message || '未知错误',
       },
       { status: 500 }
     )
@@ -206,10 +193,7 @@ export async function DELETE(request: NextRequest) {
     // 验证用户身份
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: '未授权访问' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
     }
 
     const userId = authResult.user.userId
@@ -226,7 +210,13 @@ export async function DELETE(request: NextRequest) {
     // 2) 同步清除 Settings 页保存的 OAuth 配置（system_settings 的用户实例）
     // 注意：必须限定 user_id = ?，避免误删全局模板记录(user_id IS NULL)
     const db = await getDatabase()
-    const keysToClear = ['client_id', 'client_secret', 'developer_token', 'login_customer_id', 'use_service_account']
+    const keysToClear = [
+      'client_id',
+      'client_secret',
+      'developer_token',
+      'login_customer_id',
+      'use_service_account',
+    ]
     const placeholders = keysToClear.map(() => '?').join(', ')
     await db.exec(
       `
@@ -243,16 +233,15 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Google Ads凭证已删除'
+      message: 'Google Ads凭证已删除',
     })
-
   } catch (error: any) {
     console.error('删除Google Ads凭证失败:', error)
 
     return NextResponse.json(
       {
         error: '删除Google Ads凭证失败',
-        message: error.message || '未知错误'
+        message: error.message || '未知错误',
       },
       { status: 500 }
     )
@@ -268,10 +257,7 @@ export async function PATCH(request: NextRequest) {
     // 验证用户身份
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: '未授权访问' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
     }
 
     const userId = authResult.user.userId
@@ -295,10 +281,7 @@ export async function PATCH(request: NextRequest) {
 
     const authContext = await getGoogleAdsAuthContext(userId)
     if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-      return NextResponse.json(
-        { error: '未找到有效的Google Ads凭证配置' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: '未找到有效的Google Ads凭证配置' }, { status: 404 })
     }
 
     await updateApiAccessLevel(
@@ -314,16 +297,15 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'API访问级别已更新',
-      data: { apiAccessLevel }
+      data: { apiAccessLevel },
     })
-
   } catch (error: any) {
     console.error('更新API访问级别失败:', error)
 
     return NextResponse.json(
       {
         error: '更新API访问级别失败',
-        message: error.message || '未知错误'
+        message: error.message || '未知错误',
       },
       { status: 500 }
     )

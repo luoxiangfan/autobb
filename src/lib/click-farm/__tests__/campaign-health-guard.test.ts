@@ -46,15 +46,18 @@ describe('click-farm campaign health guard', () => {
     const db = {
       type: 'postgres',
       queryOne: vi.fn(),
-      query: vi.fn(async () => ([
+      query: vi.fn(async () => [
         { id: 'task-1', user_id: 1, offer_id: 3343, status: 'running' },
         { id: 'task-2', user_id: 2, offer_id: 998, status: 'pending' },
-      ])),
+      ]),
       exec: vi.fn(),
     }
 
     mocks.getDatabase.mockResolvedValue(db)
-    mocks.removePendingClickFarmQueueTasksByTaskIds.mockResolvedValue({ removedCount: 0, scannedCount: 0 })
+    mocks.removePendingClickFarmQueueTasksByTaskIds.mockResolvedValue({
+      removedCount: 0,
+      scannedCount: 0,
+    })
 
     const result = await pauseClickFarmTasksWithoutEnabledCampaign({ dryRun: true })
 
@@ -73,15 +76,18 @@ describe('click-farm campaign health guard', () => {
     const db = {
       type: 'postgres',
       queryOne: vi.fn(),
-      query: vi.fn(async () => ([
+      query: vi.fn(async () => [
         { id: 'task-10', user_id: 1, offer_id: 3343, status: 'running' },
         { id: 'task-11', user_id: 1, offer_id: 3343, status: 'pending' },
-      ])),
+      ]),
       exec: vi.fn(async () => ({ changes: 1 })),
     }
 
     mocks.getDatabase.mockResolvedValue(db)
-    mocks.removePendingClickFarmQueueTasksByTaskIds.mockResolvedValue({ removedCount: 3, scannedCount: 12 })
+    mocks.removePendingClickFarmQueueTasksByTaskIds.mockResolvedValue({
+      removedCount: 3,
+      scannedCount: 12,
+    })
 
     const result = await pauseClickFarmTasksWithoutEnabledCampaign({ dryRun: false })
 
@@ -93,6 +99,9 @@ describe('click-farm campaign health guard', () => {
       taskIds: ['task-10', 'task-11'],
     })
     expect(db.exec).toHaveBeenCalledTimes(2)
-    expect(mocks.removePendingClickFarmQueueTasksByTaskIds).toHaveBeenCalledWith(['task-10', 'task-11'])
+    expect(mocks.removePendingClickFarmQueueTasksByTaskIds).toHaveBeenCalledWith([
+      'task-10',
+      'task-11',
+    ])
   })
 })

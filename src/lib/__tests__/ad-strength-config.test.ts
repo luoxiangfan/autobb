@@ -19,14 +19,14 @@ describe('ad-strength-config consistency', () => {
 
     expect(totalWeight).toBeCloseTo(1, 8)
     expect(totalTargetMax).toBe(100)
-    expect(dimensions.every(item => item.rawMax > 0 && item.targetMax > 0)).toBe(true)
+    expect(dimensions.every((item) => item.rawMax > 0 && item.targetMax > 0)).toBe(true)
   })
 
   it('keeps revised weighting emphasis (relevance up, completeness down)', () => {
     expect(AD_STRENGTH_DIMENSION_CONFIG.relevance.targetMax).toBe(22)
     expect(AD_STRENGTH_DIMENSION_CONFIG.relevance.weight).toBeCloseTo(0.22, 8)
     expect(AD_STRENGTH_DIMENSION_CONFIG.completeness.targetMax).toBe(10)
-    expect(AD_STRENGTH_DIMENSION_CONFIG.completeness.weight).toBeCloseTo(0.10, 8)
+    expect(AD_STRENGTH_DIMENSION_CONFIG.completeness.weight).toBeCloseTo(0.1, 8)
   })
 
   it('keeps rating thresholds monotonic and in score range', () => {
@@ -50,7 +50,9 @@ describe('ad-strength-config consistency', () => {
   })
 
   it('keeps suggestion thresholds within configured maxima', () => {
-    const groups = Object.keys(AD_STRENGTH_SUGGESTION_THRESHOLDS) as Array<keyof typeof AD_STRENGTH_SUGGESTION_THRESHOLDS>
+    const groups = Object.keys(AD_STRENGTH_SUGGESTION_THRESHOLDS) as Array<
+      keyof typeof AD_STRENGTH_SUGGESTION_THRESHOLDS
+    >
     for (const group of groups) {
       const thresholdGroup = AD_STRENGTH_SUGGESTION_THRESHOLDS[group] as Record<string, number>
       const maxGroup = AD_STRENGTH_SUBDIMENSION_MAX[group] as Record<string, number>

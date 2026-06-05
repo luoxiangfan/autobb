@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../prompt-loader', () => ({
-  loadPrompt: vi.fn(async () => [
-    'brand={{brandName}}',
-    'category={{productCategory}}',
-    'type={{linkType}}',
-    '{{keywords}}',
-  ].join('\n')),
+  loadPrompt: vi.fn(async () =>
+    [
+      'brand={{brandName}}',
+      'category={{productCategory}}',
+      'type={{linkType}}',
+      '{{keywords}}',
+    ].join('\n')
+  ),
 }))
 
 vi.mock('../gemini', () => ({
@@ -70,12 +72,12 @@ describe('clusterKeywordsByIntent fallback', () => {
     )
 
     expect(Array.isArray(buckets.bucketS?.keywords)).toBe(true)
-    expect((buckets.bucketS?.keywords.length || 0)).toBeGreaterThanOrEqual(keywords.length)
+    expect(buckets.bucketS?.keywords.length || 0).toBeGreaterThanOrEqual(keywords.length)
     expect(
       buckets.bucketA.keywords.length +
-      buckets.bucketB.keywords.length +
-      buckets.bucketC.keywords.length +
-      buckets.bucketD.keywords.length
+        buckets.bucketB.keywords.length +
+        buckets.bucketC.keywords.length +
+        buckets.bucketD.keywords.length
     ).toBeGreaterThan(0)
   })
 })

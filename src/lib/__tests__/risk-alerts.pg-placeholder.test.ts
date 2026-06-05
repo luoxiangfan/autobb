@@ -72,14 +72,9 @@ describe('PostgreSQL placeholder type inference guards', () => {
       return undefined
     })
 
-    const id = await createRiskAlert(
-      2,
-      'link_check_failed',
-      'warning',
-      't',
-      'm',
-      { resourceId: 99 }
-    )
+    const id = await createRiskAlert(2, 'link_check_failed', 'warning', 't', 'm', {
+      resourceId: 99,
+    })
 
     expect(id).toBe(456)
     expect(selectSql).toContain('resource_id = ?')

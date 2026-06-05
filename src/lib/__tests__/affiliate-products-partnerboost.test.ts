@@ -43,7 +43,9 @@ describe('isPartnerboostRateLimited', () => {
 
 describe('isPartnerboostRateLimitError', () => {
   it('detects wrapped 429 error messages', () => {
-    const error = new Error('PartnerBoost 推广链接拉取失败 (429): {"status":{"code":1002,"msg":"Too many request"},"data":null}')
+    const error = new Error(
+      'PartnerBoost 推广链接拉取失败 (429): {"status":{"code":1002,"msg":"Too many request"},"data":null}'
+    )
     expect(__testOnly.isPartnerboostRateLimitError(error)).toBe(true)
   })
 
@@ -55,7 +57,9 @@ describe('isPartnerboostRateLimitError', () => {
 
 describe('isPartnerboostTransientError', () => {
   it('detects HTTP 5xx gateway errors', () => {
-    const error = new Error('PartnerBoost 商品拉取失败 (502): <html><title>502 Bad Gateway</title></html>')
+    const error = new Error(
+      'PartnerBoost 商品拉取失败 (502): <html><title>502 Bad Gateway</title></html>'
+    )
     expect(__testOnly.isPartnerboostTransientError(error)).toBe(true)
   })
 
@@ -99,13 +103,21 @@ describe('resolveSyncMaxPages', () => {
 
 describe('assertPartnerboostAsinRequestLimit', () => {
   it('accepts up to 50 ASINs', () => {
-    const asins = Array.from({ length: 50 }, (_, index) => `B0TEST${String(index).padStart(4, '0')}`)
+    const asins = Array.from(
+      { length: 50 },
+      (_, index) => `B0TEST${String(index).padStart(4, '0')}`
+    )
     expect(() => __testOnly.assertPartnerboostAsinRequestLimit(asins)).not.toThrow()
   })
 
   it('rejects requests over 50 ASINs', () => {
-    const asins = Array.from({ length: 51 }, (_, index) => `B0TEST${String(index).padStart(4, '0')}`)
-    expect(() => __testOnly.assertPartnerboostAsinRequestLimit(asins)).toThrow(/maximum of 50 elements/)
+    const asins = Array.from(
+      { length: 51 },
+      (_, index) => `B0TEST${String(index).padStart(4, '0')}`
+    )
+    expect(() => __testOnly.assertPartnerboostAsinRequestLimit(asins)).toThrow(
+      /maximum of 50 elements/
+    )
   })
 })
 
@@ -320,15 +332,21 @@ describe('detectAffiliateLandingPageType', () => {
   })
 
   it('returns amazon_store for amazon store url', () => {
-    expect(detectAffiliateLandingPageType({ productUrl: 'https://www.amazon.com/stores/page/ABC123' })).toBe('amazon_store')
+    expect(
+      detectAffiliateLandingPageType({ productUrl: 'https://www.amazon.com/stores/page/ABC123' })
+    ).toBe('amazon_store')
   })
 
   it('returns independent_product for product-like path', () => {
-    expect(detectAffiliateLandingPageType({ productUrl: 'https://brand.example.com/products/camera-x1' })).toBe('independent_product')
+    expect(
+      detectAffiliateLandingPageType({ productUrl: 'https://brand.example.com/products/camera-x1' })
+    ).toBe('independent_product')
   })
 
   it('returns independent_store for root path', () => {
-    expect(detectAffiliateLandingPageType({ productUrl: 'https://brand.example.com/' })).toBe('independent_store')
+    expect(detectAffiliateLandingPageType({ productUrl: 'https://brand.example.com/' })).toBe(
+      'independent_store'
+    )
   })
 
   it('returns unknown when no valid signal', () => {

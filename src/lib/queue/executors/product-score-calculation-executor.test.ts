@@ -155,18 +155,19 @@ describe('executeProductScoreCalculation', () => {
     const { executeProductScoreCalculation } = await import('./product-score-calculation-executor')
     await executeProductScoreCalculation(createTask())
 
-    expect(markProductScoreRequeueNeededMock).toHaveBeenCalledWith(1, expect.objectContaining({
-      includeSeasonalityAnalysis: true,
-      forceRecalculate: false,
-      trigger: 'manual',
-    }))
+    expect(markProductScoreRequeueNeededMock).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        includeSeasonalityAnalysis: true,
+        forceRecalculate: false,
+        trigger: 'manual',
+      })
+    )
     expect(calculateHybridProductRecommendationScoresMock).not.toHaveBeenCalled()
   })
 
   it('schedules a follow-up task when a deferred request exists', async () => {
-    dbMock.query.mockResolvedValue([
-      { id: 101 },
-    ])
+    dbMock.query.mockResolvedValue([{ id: 101 }])
     calculateHybridProductRecommendationScoresMock.mockResolvedValue({
       results: [
         {
@@ -227,7 +228,9 @@ describe('executeProductScoreCalculation', () => {
     const querySql = String(dbMock.query.mock.calls[0]?.[0] || '')
     expect(querySql).toContain("NULLIF(TRIM(COALESCE(asin, '')), '') IS NOT NULL")
     expect(querySql).toContain("TRIM(COALESCE(product_url, '')) = ''")
-    expect(querySql).toContain("COALESCE(recommendation_reasons, '') LIKE '%非Amazon落地页,信任度相对较低%'")
+    expect(querySql).toContain(
+      "COALESCE(recommendation_reasons, '') LIKE '%非Amazon落地页,信任度相对较低%'"
+    )
   })
 
   it('does not include legacy Amazon misclassification condition when force recalculation is enabled', async () => {
@@ -235,7 +238,9 @@ describe('executeProductScoreCalculation', () => {
     await executeProductScoreCalculation(createTask({ forceRecalculate: true }))
 
     const querySql = String(dbMock.query.mock.calls[0]?.[0] || '')
-    expect(querySql).not.toContain("COALESCE(recommendation_reasons, '') LIKE '%非Amazon落地页,信任度相对较低%'")
+    expect(querySql).not.toContain(
+      "COALESCE(recommendation_reasons, '') LIKE '%非Amazon落地页,信任度相对较低%'"
+    )
   })
 
   it('exits early when user paused score calculation', async () => {

@@ -15,7 +15,9 @@ export type MutateStyleUpdateOperation = {
 export function normalizeGoogleAdsApiUpdateOperations(
   operations: Array<Record<string, any> | MutateStyleUpdateOperation>
 ): Array<Record<string, any>> {
-  const normalized = operations.map((op: any) => (op && typeof op === 'object' && 'update' in op ? op.update : op))
+  const normalized = operations.map((op: any) =>
+    op && typeof op === 'object' && 'update' in op ? op.update : op
+  )
 
   for (const item of normalized) {
     const resourceName = (item as any)?.resource_name
@@ -26,4 +28,3 @@ export function normalizeGoogleAdsApiUpdateOperations(
 
   return normalized
 }
-

@@ -43,15 +43,17 @@ function pickBoolean(...values: unknown[]): boolean | null {
 }
 
 function normalizeCategory(value: unknown): CreativeTaskErrorCategory | null {
-  const normalized = String(value || '').trim().toLowerCase()
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   if (
-    normalized === 'validation'
-    || normalized === 'data'
-    || normalized === 'config'
-    || normalized === 'upstream'
-    || normalized === 'network'
-    || normalized === 'auth'
-    || normalized === 'system'
+    normalized === 'validation' ||
+    normalized === 'data' ||
+    normalized === 'config' ||
+    normalized === 'upstream' ||
+    normalized === 'network' ||
+    normalized === 'auth' ||
+    normalized === 'system'
   ) {
     return normalized
   }
@@ -61,15 +63,15 @@ function normalizeCategory(value: unknown): CreativeTaskErrorCategory | null {
 function isNetworkLikeMessage(message: string): boolean {
   const lower = message.toLowerCase()
   return (
-    lower.includes('network')
-    || lower.includes('failed to fetch')
-    || lower.includes('fetch failed')
-    || lower.includes('timeout')
-    || lower.includes('econn')
-    || lower.includes('etimedout')
-    || lower.includes('sse timeout')
-    || lower.includes('网络连接')
-    || lower.includes('连接超时')
+    lower.includes('network') ||
+    lower.includes('failed to fetch') ||
+    lower.includes('fetch failed') ||
+    lower.includes('timeout') ||
+    lower.includes('econn') ||
+    lower.includes('etimedout') ||
+    lower.includes('sse timeout') ||
+    lower.includes('网络连接') ||
+    lower.includes('连接超时')
   )
 }
 
@@ -79,7 +81,8 @@ function inferFromMessage(message: string): Omit<CreativeTaskErrorPayload, 'deta
       code: 'CREATIVE_KEYWORD_CLUSTERING_UPSTREAM_400',
       category: 'upstream',
       message,
-      userMessage: '关键词语义分类服务返回 400，可能是 AI 中转服务模型路由不兼容。请切换 Gemini 模型或检查中转配置后重试。',
+      userMessage:
+        '关键词语义分类服务返回 400，可能是 AI 中转服务模型路由不兼容。请切换 Gemini 模型或检查中转配置后重试。',
       retryable: true,
     }
   }
@@ -115,11 +118,11 @@ function inferFromMessage(message: string): Omit<CreativeTaskErrorPayload, 'deta
   }
 
   if (
-    message.includes('Google Ads API 配置')
-    || message.includes('Developer Token')
-    || message.includes('Refresh Token')
-    || message.includes('Customer ID')
-    || message.includes('MCC Customer ID')
+    message.includes('Google Ads API 配置') ||
+    message.includes('Developer Token') ||
+    message.includes('Refresh Token') ||
+    message.includes('Customer ID') ||
+    message.includes('MCC Customer ID')
   ) {
     return {
       code: 'GOOGLE_ADS_CONFIG_INCOMPLETE',
@@ -130,7 +133,11 @@ function inferFromMessage(message: string): Omit<CreativeTaskErrorPayload, 'deta
     }
   }
 
-  if (message.includes('Task not found') || message.includes('任务不存在') || message.includes('已过期')) {
+  if (
+    message.includes('Task not found') ||
+    message.includes('任务不存在') ||
+    message.includes('已过期')
+  ) {
     return {
       code: 'CREATIVE_TASK_NOT_FOUND',
       category: 'validation',
@@ -140,7 +147,11 @@ function inferFromMessage(message: string): Omit<CreativeTaskErrorPayload, 'deta
     }
   }
 
-  if (message.includes('未授权') || message.includes('Unauthorized') || message.includes('登录已过期')) {
+  if (
+    message.includes('未授权') ||
+    message.includes('Unauthorized') ||
+    message.includes('登录已过期')
+  ) {
     return {
       code: 'AUTH_REQUIRED',
       category: 'auth',
@@ -195,12 +206,20 @@ export function normalizeCreativeTaskError(
 ): CreativeTaskErrorPayload {
   if (raw instanceof Error) {
     const inferred = inferFromMessage(raw.message || fallbackMessage)
-    const errorLike = raw as Error & { code?: unknown; category?: unknown; userMessage?: unknown; retryable?: unknown; details?: unknown }
+    const errorLike = raw as Error & {
+      code?: unknown
+      category?: unknown
+      userMessage?: unknown
+      retryable?: unknown
+      details?: unknown
+    }
     return {
       code: pickString(errorLike.code, inferred.code) || inferred.code,
       category: normalizeCategory(errorLike.category) || inferred.category,
       message: pickString(raw.message, inferred.message, fallbackMessage) || fallbackMessage,
-      userMessage: pickString(errorLike.userMessage, inferred.userMessage, raw.message, fallbackMessage) || fallbackMessage,
+      userMessage:
+        pickString(errorLike.userMessage, inferred.userMessage, raw.message, fallbackMessage) ||
+        fallbackMessage,
       retryable: pickBoolean(errorLike.retryable, inferred.retryable) ?? inferred.retryable,
       details: asRecord(errorLike.details),
     }
@@ -223,31 +242,52 @@ export function normalizeCreativeTaskError(
     ) || fallbackMessage
   )
 
-  const details = asRecord(candidate?.details)
-    || asRecord(rawObject?.errorDetails)
-    || asRecord(rawObject?.details)
-    || null
+  const details =
+    asRecord(candidate?.details) ||
+    asRecord(rawObject?.errorDetails) ||
+    asRecord(rawObject?.details) ||
+    null
 
   return {
-    code: pickString(rawObject?.errorCode, candidate?.code, inferred.code) || inferred.code || DEFAULT_ERROR_CODE,
-    category: normalizeCategory(rawObject?.errorCategory) || normalizeCategory(candidate?.category) || inferred.category || DEFAULT_ERROR_CATEGORY,
-    message: pickString(candidate?.message, rawObject?.message, rawObject?.error, rawString, inferred.message, fallbackMessage) || fallbackMessage,
-    userMessage: pickString(
-      rawObject?.errorUserMessage,
-      candidate?.userMessage,
-      rawObject?.userMessage,
-      rawString,
-      inferred.userMessage,
-      candidate?.message,
-      rawObject?.message,
-      fallbackMessage
-    ) || fallbackMessage,
-    retryable: pickBoolean(rawObject?.errorRetryable, candidate?.retryable, inferred.retryable) ?? inferred.retryable,
+    code:
+      pickString(rawObject?.errorCode, candidate?.code, inferred.code) ||
+      inferred.code ||
+      DEFAULT_ERROR_CODE,
+    category:
+      normalizeCategory(rawObject?.errorCategory) ||
+      normalizeCategory(candidate?.category) ||
+      inferred.category ||
+      DEFAULT_ERROR_CATEGORY,
+    message:
+      pickString(
+        candidate?.message,
+        rawObject?.message,
+        rawObject?.error,
+        rawString,
+        inferred.message,
+        fallbackMessage
+      ) || fallbackMessage,
+    userMessage:
+      pickString(
+        rawObject?.errorUserMessage,
+        candidate?.userMessage,
+        rawObject?.userMessage,
+        rawString,
+        inferred.userMessage,
+        candidate?.message,
+        rawObject?.message,
+        fallbackMessage
+      ) || fallbackMessage,
+    retryable:
+      pickBoolean(rawObject?.errorRetryable, candidate?.retryable, inferred.retryable) ??
+      inferred.retryable,
     details,
   }
 }
 
-export function toCreativeTaskErrorResponseFields(error: CreativeTaskErrorPayload): Record<string, unknown> {
+export function toCreativeTaskErrorResponseFields(
+  error: CreativeTaskErrorPayload
+): Record<string, unknown> {
   return {
     errorCode: error.code,
     errorCategory: error.category,

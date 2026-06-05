@@ -33,14 +33,16 @@ async function getKPIs(userId: number, days: number = 30) {
   const db = await getDatabase()
 
   // 🔧 PostgreSQL兼容性：生产库中 is_deleted 可能仍是 INTEGER，需同时兼容 BOOLEAN/INTEGER
-  const notDeletedCondition = db.type === 'postgres'
-    ? "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
-    : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
+  const notDeletedCondition =
+    db.type === 'postgres'
+      ? "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
+      : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
 
   const startDateStr = resolveStartDateYmd(days)
 
   // 获取基础KPI数据
-  const result = await db.queryOne(`
+  const result = (await db.queryOne(
+    `
     SELECT
       COUNT(DISTINCT CASE WHEN c.status != 'REMOVED' THEN c.id END) as total_campaigns,
       COUNT(DISTINCT CASE WHEN c.status != 'REMOVED' THEN o.id END) as total_offers,
@@ -54,41 +56,50 @@ async function getKPIs(userId: number, days: number = 30) {
     LEFT JOIN offers o ON c.offer_id = o.id
     WHERE c.user_id = ?
       AND ${notDeletedCondition}
-  `, [startDateStr, userId]) as any
+  `,
+    [startDateStr, userId]
+  )) as any
 
   const unattributedFailureFilter = buildAffiliateUnattributedFailureFilter({
     includePendingWithinGrace: true,
     includeAllFailures: true,
   })
 
-  const attributedRow = await db.queryOne(`
+  const attributedRow = (await db.queryOne(
+    `
     SELECT COALESCE(SUM(commission_amount), 0) as total_commission
     FROM affiliate_commission_attributions
     WHERE user_id = ?
       AND report_date >= ?
-  `, [userId, startDateStr]) as any
+  `,
+    [userId, startDateStr]
+  )) as any
 
   let unattributedRow: any = { total_commission: 0 }
   try {
-    unattributedRow = await db.queryOne(`
+    unattributedRow = (await db.queryOne(
+      `
       SELECT COALESCE(SUM(commission_amount), 0) as total_commission
       FROM openclaw_affiliate_attribution_failures
       WHERE user_id = ?
         AND report_date >= ?
         AND ${unattributedFailureFilter.sql}
-    `, [userId, startDateStr, ...unattributedFailureFilter.values]) as any
+    `,
+      [userId, startDateStr, ...unattributedFailureFilter.values]
+    )) as any
   } catch (error: any) {
     const message = String(error?.message || '')
     if (
-      !/openclaw_affiliate_attribution_failures/i.test(message)
-      || !/(no such table|does not exist)/i.test(message)
+      !/openclaw_affiliate_attribution_failures/i.test(message) ||
+      !/(no such table|does not exist)/i.test(message)
     ) {
       throw error
     }
   }
 
-  const totalCommission = (Number(attributedRow?.total_commission) || 0)
-    + (Number(unattributedRow?.total_commission) || 0)
+  const totalCommission =
+    (Number(attributedRow?.total_commission) || 0) +
+    (Number(unattributedRow?.total_commission) || 0)
 
   return {
     totalCampaigns: result?.total_campaigns || 0,
@@ -100,7 +111,7 @@ async function getKPIs(userId: number, days: number = 30) {
     totalCommission,
     avgCPC: result?.avg_cpc || 0,
     avgCTR: result?.avg_ctr || 0,
-    dateRange: days
+    dateRange: days,
   }
 }
 
@@ -109,12 +120,14 @@ async function getRiskAlerts(userId: number, limit: number = 3) {
   const startDateStr = resolveStartDateYmd(7)
 
   // 🔧 PostgreSQL兼容性：生产库中 is_deleted 可能仍是 INTEGER，需同时兼容 BOOLEAN/INTEGER
-  const notDeletedCondition = db.type === 'postgres'
-    ? "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
-    : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
+  const notDeletedCondition =
+    db.type === 'postgres'
+      ? "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
+      : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
 
   // 获取最近7天的风险警报
-  const alerts = await db.query(`
+  const alerts = (await db.query(
+    `
     SELECT
       c.id as campaign_id,
       c.campaign_name as campaign_name,
@@ -145,9 +158,11 @@ async function getRiskAlerts(userId: number, limit: number = 3) {
       )
     ORDER BY cp.date DESC, cp.cost DESC
     LIMIT ?
-  `, [userId, startDateStr, limit]) as any[]
+  `,
+    [userId, startDateStr, limit]
+  )) as any[]
 
-  return alerts.map(alert => ({
+  return alerts.map((alert) => ({
     campaignId: alert.campaign_id,
     campaignName: alert.campaign_name,
     brand: alert.brand,
@@ -160,15 +175,15 @@ async function getRiskAlerts(userId: number, limit: number = 3) {
       cost: alert.cost,
       conversions: alert.conversions,
       ctr: alert.ctr,
-      cpc: alert.cpc
-    }
+      cpc: alert.cpc,
+    },
   }))
 }
 
 async function getTopOffers(userId: number, limit: number = 5) {
   const result = await listOffers(userId, {
     limit,
-    isActive: true
+    isActive: true,
   })
 
   return result.offers
@@ -201,7 +216,7 @@ export async function GET(request: NextRequest) {
       if (cached) {
         return NextResponse.json({
           ...cached,
-          cached: true
+          cached: true,
         })
       }
     }
@@ -211,14 +226,14 @@ export async function GET(request: NextRequest) {
       const [kpis, riskAlerts, topOffers] = await Promise.all([
         getKPIs(userId, days),
         getRiskAlerts(userId, 3),
-        getTopOffers(userId, 5)
+        getTopOffers(userId, 5),
       ])
 
       return {
         kpis,
         riskAlerts,
         topOffers,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       }
     }
 
@@ -229,7 +244,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       ...result,
-      cached: false
+      cached: false,
     })
   } catch (error: any) {
     console.error('获取仪表盘摘要失败:', error)

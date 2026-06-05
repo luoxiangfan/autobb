@@ -11,7 +11,10 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-const removePendingUrlSwapQueueTasksByTaskIds = vi.fn(async () => ({ removedCount: 1, scannedCount: 2 }))
+const removePendingUrlSwapQueueTasksByTaskIds = vi.fn(async () => ({
+  removedCount: 1,
+  scannedCount: 2,
+}))
 vi.mock('@/lib/url-swap/queue-cleanup', () => ({
   removePendingUrlSwapQueueTasksByTaskIds,
 }))

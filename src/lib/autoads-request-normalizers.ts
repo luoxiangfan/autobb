@@ -106,9 +106,12 @@ function normalizePublishKeywordEntries(value: unknown): unknown {
       }
 
       const normalizedEntry: PlainObject = { ...entry }
-      const textCandidate = typeof normalizedEntry.text === 'string'
-        ? normalizedEntry.text
-        : (typeof normalizedEntry.keyword === 'string' ? normalizedEntry.keyword : '')
+      const textCandidate =
+        typeof normalizedEntry.text === 'string'
+          ? normalizedEntry.text
+          : typeof normalizedEntry.keyword === 'string'
+            ? normalizedEntry.keyword
+            : ''
       const normalizedText = textCandidate.trim()
       if (!normalizedText) {
         return null
@@ -117,9 +120,10 @@ function normalizePublishKeywordEntries(value: unknown): unknown {
       normalizedEntry.text = normalizedText
       delete normalizedEntry.keyword
 
-      const normalizedMatchType = typeof normalizedEntry.matchType === 'string'
-        ? normalizedEntry.matchType.trim().toUpperCase()
-        : ''
+      const normalizedMatchType =
+        typeof normalizedEntry.matchType === 'string'
+          ? normalizedEntry.matchType.trim().toUpperCase()
+          : ''
       if (normalizedMatchType && SUPPORTED_KEYWORD_MATCH_TYPES.has(normalizedMatchType)) {
         normalizedEntry.matchType = normalizedMatchType
       }
@@ -144,9 +148,12 @@ function normalizePublishNegativeKeywords(value: unknown): unknown {
     if (typeof entry === 'string') {
       text = entry.trim()
     } else if (isPlainObject(entry)) {
-      const candidate = typeof entry.text === 'string'
-        ? entry.text
-        : (typeof entry.keyword === 'string' ? entry.keyword : '')
+      const candidate =
+        typeof entry.text === 'string'
+          ? entry.text
+          : typeof entry.keyword === 'string'
+            ? entry.keyword
+            : ''
       text = candidate.trim()
     }
 
@@ -228,7 +235,8 @@ export function normalizeCampaignPublishRequestBody(value: unknown): PlainObject
   const hasTopLevelPauseOldCampaigns =
     source.pauseOldCampaigns !== undefined || source.pause_old_campaigns !== undefined
   const hasTopLevelEnableCampaignImmediately =
-    source.enableCampaignImmediately !== undefined || source.enable_campaign_immediately !== undefined
+    source.enableCampaignImmediately !== undefined ||
+    source.enable_campaign_immediately !== undefined
   const hasTopLevelEnableSmartOptimization =
     source.enableSmartOptimization !== undefined || source.enable_smart_optimization !== undefined
 
@@ -271,7 +279,8 @@ export function normalizeCampaignPublishRequestBody(value: unknown): PlainObject
 
     // 兼容错误负载：部分调用方把这些顶层字段错误放进了 campaignConfig
     if (!hasTopLevelPauseOldCampaigns) {
-      const nestedPauseFlag = campaignConfigFlags.pauseOldCampaigns ?? campaignConfigFlags.pause_old_campaigns
+      const nestedPauseFlag =
+        campaignConfigFlags.pauseOldCampaigns ?? campaignConfigFlags.pause_old_campaigns
       if (nestedPauseFlag !== undefined) {
         normalized.pauseOldCampaigns = isTruthyFlag(nestedPauseFlag)
       }
@@ -279,7 +288,8 @@ export function normalizeCampaignPublishRequestBody(value: unknown): PlainObject
 
     if (!hasTopLevelEnableCampaignImmediately) {
       const nestedEnableFlag =
-        campaignConfigFlags.enableCampaignImmediately ?? campaignConfigFlags.enable_campaign_immediately
+        campaignConfigFlags.enableCampaignImmediately ??
+        campaignConfigFlags.enable_campaign_immediately
       if (nestedEnableFlag !== undefined) {
         normalized.enableCampaignImmediately = isTruthyFlag(nestedEnableFlag)
       }
@@ -360,9 +370,8 @@ export function normalizeClickFarmTaskRequestBody(value: unknown): PlainObject |
   })
 
   const normalizedDailyClicks = toSafeNumber(normalized.daily_click_count)
-  normalized.daily_click_count = normalizedDailyClicks && normalizedDailyClicks > 0
-    ? Math.floor(normalizedDailyClicks)
-    : 216
+  normalized.daily_click_count =
+    normalizedDailyClicks && normalizedDailyClicks > 0 ? Math.floor(normalizedDailyClicks) : 216
 
   if (!isMissingRequiredValue(normalized.start_time)) {
     normalized.start_time = String(normalized.start_time).trim()
@@ -377,9 +386,7 @@ export function normalizeClickFarmTaskRequestBody(value: unknown): PlainObject |
   }
 
   const normalizedDuration = toSafeNumber(normalized.duration_days)
-  normalized.duration_days = normalizedDuration !== undefined
-    ? Math.floor(normalizedDuration)
-    : 14
+  normalized.duration_days = normalizedDuration !== undefined ? Math.floor(normalizedDuration) : 14
 
   if (!isPlainObject(normalized.referer_config)) {
     normalized.referer_config = { type: 'none' }
@@ -432,15 +439,13 @@ export function normalizeOfferExtractRequestBody(
     aliasMap: OFFER_EXTRACT_ALIAS_MAP,
   })
 
-  normalized.target_country = pickFirstTwoLetterCountryCode(
-    normalized.target_country,
-    normalized.targetCountry,
-  ) || 'US'
+  normalized.target_country =
+    pickFirstTwoLetterCountryCode(normalized.target_country, normalized.targetCountry) || 'US'
 
   // 无 page_type 时：有店铺链接或 stores URL 则留空供 infer；仅单品语义时默认 product
   if (
-    isMissingRequiredValue(normalized.page_type)
-    && !hasNonEmptyStoreProductLinksInput(normalized.store_product_links)
+    isMissingRequiredValue(normalized.page_type) &&
+    !hasNonEmptyStoreProductLinksInput(normalized.store_product_links)
   ) {
     const affiliateForInfer = String(
       normalized.affiliate_link ?? source.affiliateLink ?? source.url ?? ''
@@ -451,12 +456,10 @@ export function normalizeOfferExtractRequestBody(
     }
   }
 
-  normalized.skipCache = normalized.skipCache !== undefined
-    ? isTruthyFlag(normalized.skipCache)
-    : false
-  normalized.skipWarmup = normalized.skipWarmup !== undefined
-    ? isTruthyFlag(normalized.skipWarmup)
-    : false
+  normalized.skipCache =
+    normalized.skipCache !== undefined ? isTruthyFlag(normalized.skipCache) : false
+  normalized.skipWarmup =
+    normalized.skipWarmup !== undefined ? isTruthyFlag(normalized.skipWarmup) : false
 
   const rawExtractionMode = normalized.extraction_mode ?? normalized.extractionMode
   delete normalized.extractionMode
@@ -509,16 +512,20 @@ export function normalizeOfferExtractRequestBody(
         legacyBareNumericMode,
       })
 
-      if (normalizedCommission.commissionType !== null) normalized.commission_type = normalizedCommission.commissionType
+      if (normalizedCommission.commissionType !== null)
+        normalized.commission_type = normalizedCommission.commissionType
       else delete normalized.commission_type
 
-      if (normalizedCommission.commissionValue !== null) normalized.commission_value = normalizedCommission.commissionValue
+      if (normalizedCommission.commissionValue !== null)
+        normalized.commission_value = normalizedCommission.commissionValue
       else delete normalized.commission_value
 
-      if (normalizedCommission.commissionCurrency !== null) normalized.commission_currency = normalizedCommission.commissionCurrency
+      if (normalizedCommission.commissionCurrency !== null)
+        normalized.commission_currency = normalizedCommission.commissionCurrency
       else delete normalized.commission_currency
 
-      if (normalizedCommission.commissionPayout !== null) normalized.commission_payout = normalizedCommission.commissionPayout
+      if (normalizedCommission.commissionPayout !== null)
+        normalized.commission_payout = normalizedCommission.commissionPayout
       else delete normalized.commission_payout
     } catch (error) {
       if (options?.strictMonetization) {

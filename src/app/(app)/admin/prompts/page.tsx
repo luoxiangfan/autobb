@@ -35,7 +35,7 @@ import {
   AlertCircle,
   ShieldCheck,
   ShieldAlert,
-  Info
+  Info,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -109,7 +109,7 @@ export default function PromptsManagementPage() {
   const [, setNewVersion] = useState('')
   const [changeNotes, setChangeNotes] = useState('')
   const [saving, setSaving] = useState(false)
-  const [predictedNextVersion, setPredictedNextVersion] = useState('')  // 预测的下一个版本号
+  const [predictedNextVersion, setPredictedNextVersion] = useState('') // 预测的下一个版本号
 
   // 列表内联编辑状态
   const [inlineEditId, setInlineEditId] = useState<number | null>(null)
@@ -175,7 +175,7 @@ export default function PromptsManagementPage() {
       const response = await fetch(`/api/admin/prompts/${promptId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ version })
+        body: JSON.stringify({ version }),
       })
 
       const result = await response.json()
@@ -212,17 +212,17 @@ export default function PromptsManagementPage() {
         new RegExp(currentVer.replace(/\./g, '\\.') + '$'),
         nextVer
       )
-      
+
       const response = await fetch(`/api/admin/prompts/${selectedPrompt.promptId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           // 不传 version，由后端自动计算
-          name: newName,  // 传入更新后的 name
+          name: newName, // 传入更新后的 name
           promptContent: editedContent,
           changeNotes: changeNotes,
-          isActive: true,  // 自动激活新版本
-        })
+          isActive: true, // 自动激活新版本
+        }),
       })
 
       const result = await response.json()
@@ -250,18 +250,18 @@ export default function PromptsManagementPage() {
   const enterEditMode = () => {
     if (!selectedPrompt) return
     setEditedContent(selectedPrompt.currentVersion.promptContent)
-    
+
     // 从所有版本中提取版本号，计算下一个版本号
-    const versions = selectedPrompt.versions.map(v => v.version)
+    const versions = selectedPrompt.versions.map((v) => v.version)
     const currentVersion = selectedPrompt.currentVersion.version
-    
+
     // 解析当前版本号
     const versionMatch = currentVersion.match(/^v?(\d+(?:\.\d+)*)/i)
     if (versionMatch) {
       const parts = versionMatch[1].split('.').map(Number)
       // 递增最后一位
       parts[parts.length - 1] += 1
-      
+
       // 处理进位
       for (let i = parts.length - 1; i >= 0; i--) {
         if (parts[i] >= 10 && i > 0) {
@@ -269,21 +269,21 @@ export default function PromptsManagementPage() {
           parts[i - 1] += 1
         }
       }
-      
+
       // 检查是否与现有版本冲突，冲突则继续递增
       let attempts = 0
       while (attempts < 100) {
         const testVersion = `v${parts.join('.')}`
-        const exists = versions.some(v => {
+        const exists = versions.some((v) => {
           const m = v.match(/^v?(\d+(?:\.\d+)*)/i)
           return m && m[1] === parts.join('.')
         })
-        
+
         if (!exists) {
           setPredictedNextVersion(testVersion)
           break
         }
-        
+
         // 递增
         parts[parts.length - 1] += 1
         for (let i = parts.length - 1; i >= 0; i--) {
@@ -294,14 +294,14 @@ export default function PromptsManagementPage() {
         }
         attempts++
       }
-      
+
       if (attempts >= 100) {
         setPredictedNextVersion(`v${Date.now()}`)
       }
     } else {
       setPredictedNextVersion('v1.0')
     }
-    
+
     setChangeNotes('')
     setEditMode(true)
   }
@@ -358,7 +358,7 @@ export default function PromptsManagementPage() {
       const response = await fetch('/api/admin/prompts/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ promptContent: content })
+        body: JSON.stringify({ promptContent: content }),
       })
 
       const result = await response.json()
@@ -408,21 +408,21 @@ export default function PromptsManagementPage() {
         }
         nextVersion = `v${parts.join('.')}`
       }
-      
+
       const newName = prompt.name.replace(
         new RegExp(prompt.version.replace(/\./g, '\\.') + '$'),
         nextVersion
       )
-      
+
       const response = await fetch(`/api/admin/prompts/${prompt.promptId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: newName,  // 传入更新后的 name
+          name: newName, // 传入更新后的 name
           promptContent: inlineEditContent,
           changeNotes: inlineChangeNotes,
           isActive: true,
-        })
+        }),
       })
 
       const result = await response.json()
@@ -451,8 +451,9 @@ export default function PromptsManagementPage() {
   }
 
   // 过滤 Prompts
-  const filteredPrompts = prompts.filter(prompt => {
-    const matchesSearch = searchQuery === '' ||
+  const filteredPrompts = prompts.filter((prompt) => {
+    const matchesSearch =
+      searchQuery === '' ||
       prompt.promptId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       prompt.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       prompt.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -464,9 +465,9 @@ export default function PromptsManagementPage() {
   })
 
   // 分类统计
-  const categoryStats = categories.map(cat => ({
+  const categoryStats = categories.map((cat) => ({
     name: cat,
-    count: prompts.filter(p => p.category === cat).length
+    count: prompts.filter((p) => p.category === cat).length,
   }))
 
   if (loading) {
@@ -486,7 +487,7 @@ export default function PromptsManagementPage() {
             <h1 className="text-3xl font-bold text-slate-900">Prompt 管理</h1>
             <p className="text-slate-600 mt-1">系统不同业务场景使用的 AI Prompt 配置与版本管理</p>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-slate-200 shadow-xs">
             <FileText className="w-5 h-5 text-indigo-600" />
             <div className="text-sm">
               <span className="font-semibold text-slate-900">{prompts.length}</span>
@@ -497,7 +498,7 @@ export default function PromptsManagementPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {categoryStats.map(stat => (
+          {categoryStats.map((stat) => (
             <Card
               key={stat.name}
               className={`p-4 cursor-pointer transition-all hover:shadow-md ${
@@ -512,9 +513,11 @@ export default function PromptsManagementPage() {
                   <p className="text-sm text-slate-600">{stat.name}</p>
                   <p className="text-2xl font-bold text-slate-900 mt-1">{stat.count}</p>
                 </div>
-                <Code2 className={`w-8 h-8 ${
-                  selectedCategory === stat.name ? 'text-indigo-600' : 'text-slate-400'
-                }`} />
+                <Code2
+                  className={`w-8 h-8 ${
+                    selectedCategory === stat.name ? 'text-indigo-600' : 'text-slate-400'
+                  }`}
+                />
               </div>
             </Card>
           ))}
@@ -550,7 +553,7 @@ export default function PromptsManagementPage() {
               <p className="text-slate-500">未找到匹配的 Prompt</p>
             </Card>
           ) : (
-            filteredPrompts.map(prompt => (
+            filteredPrompts.map((prompt) => (
               <Card key={prompt.id} className="p-6 hover:shadow-md transition-shadow">
                 <div className="space-y-4">
                   {/* Header */}
@@ -558,7 +561,10 @@ export default function PromptsManagementPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold text-slate-900">{prompt.name}</h3>
-                        <Badge variant="outline" className="text-xs font-mono bg-slate-50 text-slate-700">
+                        <Badge
+                          variant="outline"
+                          className="text-xs font-mono bg-slate-50 text-slate-700"
+                        >
                           {prompt.promptId}
                         </Badge>
                         <Badge variant="outline" className="text-xs">
@@ -577,11 +583,15 @@ export default function PromptsManagementPage() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm text-slate-500">
                         <Code2 className="w-4 h-4" />
-                        <code className="text-xs bg-slate-100 px-2 py-1 rounded">{prompt.filePath}</code>
+                        <code className="text-xs bg-slate-100 px-2 py-1 rounded">
+                          {prompt.filePath}
+                        </code>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-slate-500">
                         <span className="text-xs">函数:</span>
-                        <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono">{prompt.functionName}()</code>
+                        <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono">
+                          {prompt.functionName}()
+                        </code>
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
@@ -608,13 +618,18 @@ export default function PromptsManagementPage() {
                         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                           <div className="flex items-center gap-2 mb-2">
                             <AlertCircle className="w-4 h-4 text-amber-600" />
-                            <p className="text-sm font-medium text-amber-800">正在编辑：{prompt.name}</p>
+                            <p className="text-sm font-medium text-amber-800">
+                              正在编辑：{prompt.name}
+                            </p>
                           </div>
                           <div className="text-xs text-amber-700">
-                            当前版本：<span className="font-mono">{prompt.version}</span></div>
+                            当前版本：<span className="font-mono">{prompt.version}</span>
+                          </div>
                         </div>
                         <div>
-                          <label className="text-xs font-medium text-slate-700 mb-1 block">变更说明</label>
+                          <label className="text-xs font-medium text-slate-700 mb-1 block">
+                            变更说明
+                          </label>
                           <Input
                             value={inlineChangeNotes}
                             onChange={(e) => setInlineChangeNotes(e.target.value)}
@@ -624,7 +639,9 @@ export default function PromptsManagementPage() {
                         </div>
                         <div>
                           <div className="flex items-center justify-between mb-1">
-                            <label className="text-xs font-medium text-slate-700">Prompt 内容</label>
+                            <label className="text-xs font-medium text-slate-700">
+                              Prompt 内容
+                            </label>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -703,16 +720,16 @@ export default function PromptsManagementPage() {
                                       issue.type === 'error'
                                         ? 'bg-red-50 text-red-800 border border-red-200'
                                         : issue.type === 'warning'
-                                        ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                                        : 'bg-blue-50 text-blue-800 border border-blue-200'
+                                          ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                          : 'bg-blue-50 text-blue-800 border border-blue-200'
                                     }`}
                                   >
                                     {issue.type === 'error' ? (
-                                      <ShieldAlert className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                      <ShieldAlert className="w-3 h-3 mt-0.5 shrink-0" />
                                     ) : issue.type === 'warning' ? (
-                                      <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                      <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
                                     ) : (
-                                      <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                      <Info className="w-3 h-3 mt-0.5 shrink-0" />
                                     )}
                                     <span>{issue.message}</span>
                                   </div>
@@ -767,7 +784,9 @@ export default function PromptsManagementPage() {
                       /* 只读模式 */
                       <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                         <div className="flex items-start justify-between mb-2">
-                          <span className="text-xs font-medium text-slate-500 uppercase">Prompt 预览</span>
+                          <span className="text-xs font-medium text-slate-500 uppercase">
+                            Prompt 预览
+                          </span>
                           <button
                             onClick={() => handleCopy(prompt.promptPreview, `preview-${prompt.id}`)}
                             className="flex items-center gap-1 text-xs text-slate-500 hover:text-indigo-600 transition-colors"
@@ -870,10 +889,12 @@ export default function PromptsManagementPage() {
             <div className="flex-1">
               <p className="text-sm font-medium text-blue-900">关于 Prompt 管理</p>
               <p className="text-sm text-blue-700 mt-1">
-                此页面展示 AutoAds 系统中所有 AI 业务场景使用的 Prompt 配置。支持版本管理、使用统计和完整 Prompt 查看。
+                此页面展示 AutoAds 系统中所有 AI 业务场景使用的 Prompt
+                配置。支持版本管理、使用统计和完整 Prompt 查看。
               </p>
               <p className="text-sm text-blue-700 mt-2">
-                <strong>注意:</strong> 修改 Prompt 需要通过创建新版本的方式进行，确保历史版本可追溯和回滚。
+                <strong>注意:</strong> 修改 Prompt
+                需要通过创建新版本的方式进行，确保历史版本可追溯和回滚。
               </p>
             </div>
           </div>
@@ -881,24 +902,25 @@ export default function PromptsManagementPage() {
       </div>
 
       {/* Prompt Detail Modal */}
-      <Dialog open={detailModalOpen} onOpenChange={(open) => {
-        setDetailModalOpen(open)
-        if (!open) {
-          setEditMode(false)
-          setEditedContent('')
-          setNewVersion('')
-          setChangeNotes('')
-        }
-      }}>
+      <Dialog
+        open={detailModalOpen}
+        onOpenChange={(open) => {
+          setDetailModalOpen(open)
+          if (!open) {
+            setEditMode(false)
+            setEditedContent('')
+            setNewVersion('')
+            setChangeNotes('')
+          }
+        }}
+      >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <FileText className="w-5 h-5 text-indigo-600" />
               {selectedPrompt?.name}
             </DialogTitle>
-            <DialogDescription>
-              {selectedPrompt?.description}
-            </DialogDescription>
+            <DialogDescription>{selectedPrompt?.description}</DialogDescription>
           </DialogHeader>
 
           {selectedPrompt && (
@@ -918,7 +940,8 @@ export default function PromptsManagementPage() {
                     <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                       <AlertCircle className="w-4 h-4 text-amber-600" />
                       <p className="text-sm text-amber-800">
-                        编辑将创建新版本 <strong>{predictedNextVersion}</strong>，当前版本 <strong>{selectedPrompt.currentVersion.version}</strong> 将保留为历史版本
+                        编辑将创建新版本 <strong>{predictedNextVersion}</strong>，当前版本{' '}
+                        <strong>{selectedPrompt.currentVersion.version}</strong> 将保留为历史版本
                       </p>
                     </div>
 
@@ -928,12 +951,18 @@ export default function PromptsManagementPage() {
                         <GitBranch className="w-4 h-4 text-indigo-600" />
                         <div className="flex-1">
                           <span className="text-sm text-slate-600">新版本号：</span>
-                          <span className="text-sm font-semibold text-indigo-600 font-mono">{predictedNextVersion}</span>
-                          <span className="text-xs text-slate-500 ml-2">（自动计算，基于当前版本 {selectedPrompt.currentVersion.version}）</span>
+                          <span className="text-sm font-semibold text-indigo-600 font-mono">
+                            {predictedNextVersion}
+                          </span>
+                          <span className="text-xs text-slate-500 ml-2">
+                            （自动计算，基于当前版本 {selectedPrompt.currentVersion.version}）
+                          </span>
                         </div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-slate-700 mb-1 block">变更说明</label>
+                        <label className="text-sm font-medium text-slate-700 mb-1 block">
+                          变更说明
+                        </label>
                         <Input
                           value={changeNotes}
                           onChange={(e) => setChangeNotes(e.target.value)}
@@ -944,7 +973,9 @@ export default function PromptsManagementPage() {
 
                     {/* Prompt 内容编辑区 */}
                     <div>
-                      <label className="text-sm font-medium text-slate-700 mb-1 block">Prompt 内容</label>
+                      <label className="text-sm font-medium text-slate-700 mb-1 block">
+                        Prompt 内容
+                      </label>
                       <Textarea
                         value={editedContent}
                         onChange={(e) => setEditedContent(e.target.value)}
@@ -991,7 +1022,12 @@ export default function PromptsManagementPage() {
                       </div>
                       <div className="flex items-center gap-2 text-slate-600">
                         <Calendar className="w-4 h-4" />
-                        <span>创建时间：{new Date(selectedPrompt.currentVersion.createdAt).toLocaleString('zh-CN')}</span>
+                        <span>
+                          创建时间：
+                          {new Date(selectedPrompt.currentVersion.createdAt).toLocaleString(
+                            'zh-CN'
+                          )}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2 text-slate-600">
                         <Code2 className="w-4 h-4" />
@@ -1002,7 +1038,9 @@ export default function PromptsManagementPage() {
                     {selectedPrompt.currentVersion.changeNotes && (
                       <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <p className="text-sm font-medium text-blue-900 mb-1">版本说明</p>
-                        <p className="text-sm text-blue-700">{selectedPrompt.currentVersion.changeNotes}</p>
+                        <p className="text-sm text-blue-700">
+                          {selectedPrompt.currentVersion.changeNotes}
+                        </p>
                       </div>
                     )}
 
@@ -1021,7 +1059,12 @@ export default function PromptsManagementPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleCopy(selectedPrompt.currentVersion.promptContent, 'current-prompt')}
+                          onClick={() =>
+                            handleCopy(
+                              selectedPrompt.currentVersion.promptContent,
+                              'current-prompt'
+                            )
+                          }
                           className="h-7"
                         >
                           {copiedId === 'current-prompt' ? (
@@ -1049,20 +1092,28 @@ export default function PromptsManagementPage() {
 
               {/* Versions History Tab */}
               <TabsContent value="versions" className="space-y-3 mt-4">
-                {selectedPrompt.versions.map(version => (
-                  <Card key={version.id} className={`p-4 ${version.isActive ? 'border-indigo-500 bg-indigo-50/30' : ''}`}>
+                {selectedPrompt.versions.map((version) => (
+                  <Card
+                    key={version.id}
+                    className={`p-4 ${version.isActive ? 'border-indigo-500 bg-indigo-50/30' : ''}`}
+                  >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-semibold text-slate-900">{version.version}</span>
                           {version.isActive && (
-                            <Badge variant="default" className="text-xs">当前激活</Badge>
+                            <Badge variant="default" className="text-xs">
+                              当前激活
+                            </Badge>
                           )}
                         </div>
                         <div className="text-xs text-slate-600 space-y-1">
                           <div>创建者：{version.createdBy || '系统'}</div>
                           <div>创建时间：{new Date(version.createdAt).toLocaleString('zh-CN')}</div>
-                          <div>调用次数：{version.totalCalls.toLocaleString()} | 成本：¥{(Number(version.totalCost) || 0).toFixed(2)}</div>
+                          <div>
+                            调用次数：{version.totalCalls.toLocaleString()} | 成本：¥
+                            {(Number(version.totalCost) || 0).toFixed(2)}
+                          </div>
                         </div>
                         {version.changeNotes && (
                           <p className="text-sm text-slate-700 mt-2">{version.changeNotes}</p>
@@ -1094,7 +1145,9 @@ export default function PromptsManagementPage() {
                       <span className="text-sm">总调用次数</span>
                     </div>
                     <p className="text-2xl font-bold text-slate-900">
-                      {selectedPrompt.usageStats.reduce((sum, s) => sum + s.calls, 0).toLocaleString()}
+                      {selectedPrompt.usageStats
+                        .reduce((sum, s) => sum + s.calls, 0)
+                        .toLocaleString()}
                     </p>
                   </Card>
                   <Card className="p-4">
@@ -1103,7 +1156,9 @@ export default function PromptsManagementPage() {
                       <span className="text-sm">总 Token 消耗</span>
                     </div>
                     <p className="text-2xl font-bold text-slate-900">
-                      {selectedPrompt.usageStats.reduce((sum, s) => sum + s.tokens, 0).toLocaleString()}
+                      {selectedPrompt.usageStats
+                        .reduce((sum, s) => sum + s.tokens, 0)
+                        .toLocaleString()}
                     </p>
                   </Card>
                   <Card className="p-4">
@@ -1112,7 +1167,10 @@ export default function PromptsManagementPage() {
                       <span className="text-sm">总成本</span>
                     </div>
                     <p className="text-2xl font-bold text-slate-900">
-                      ¥{selectedPrompt.usageStats.reduce((sum, s) => sum + (Number(s.cost) || 0), 0).toFixed(2)}
+                      ¥
+                      {selectedPrompt.usageStats
+                        .reduce((sum, s) => sum + (Number(s.cost) || 0), 0)
+                        .toFixed(2)}
                     </p>
                   </Card>
                 </div>
@@ -1120,13 +1178,18 @@ export default function PromptsManagementPage() {
                 <div>
                   <h4 className="text-sm font-medium text-slate-700 mb-3">最近 30 天使用趋势</h4>
                   <div className="space-y-2">
-                    {selectedPrompt.usageStats.slice(0, 10).map(stat => (
-                      <div key={stat.date} className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded">
+                    {selectedPrompt.usageStats.slice(0, 10).map((stat) => (
+                      <div
+                        key={stat.date}
+                        className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded"
+                      >
                         <span className="text-slate-600">{stat.date}</span>
                         <div className="flex items-center gap-4 text-slate-700">
                           <span>{stat.calls} 次</span>
                           <span>{stat.tokens.toLocaleString()} tokens</span>
-                          <span className="font-medium">¥{(Number(stat.cost) || 0).toFixed(2)}</span>
+                          <span className="font-medium">
+                            ¥{(Number(stat.cost) || 0).toFixed(2)}
+                          </span>
                         </div>
                       </div>
                     ))}

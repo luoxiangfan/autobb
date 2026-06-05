@@ -13,7 +13,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { RefreshCw, CheckCircle2, XCircle, Clock, AlertCircle, Activity, Settings } from 'lucide-react'
+import {
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  AlertCircle,
+  Activity,
+  Settings,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { fetchWithRetry } from '@/lib/api-error-handler'
 
@@ -70,13 +78,17 @@ export default function SyncManagementPage() {
 
   const fetchStatus = async () => {
     try {
-      const result = await fetchWithRetry('/api/sync/status', {
-        credentials: 'include',
-      }, {
-        maxRetries: 2,
-        retryDelay: 2000,
-        retryOnErrors: ['SERVICE_UNAVAILABLE', 'HTML_RESPONSE']
-      })
+      const result = await fetchWithRetry(
+        '/api/sync/status',
+        {
+          credentials: 'include',
+        },
+        {
+          maxRetries: 2,
+          retryDelay: 2000,
+          retryOnErrors: ['SERVICE_UNAVAILABLE', 'HTML_RESPONSE'],
+        }
+      )
 
       if (result.success) {
         setStatus(result.data)
@@ -94,13 +106,17 @@ export default function SyncManagementPage() {
       } else {
         setLoading(true)
       }
-      const result = await fetchWithRetry('/api/sync/logs?limit=20', {
-        credentials: 'include',
-      }, {
-        maxRetries: 2,
-        retryDelay: 2000,
-        retryOnErrors: ['SERVICE_UNAVAILABLE', 'HTML_RESPONSE']
-      })
+      const result = await fetchWithRetry(
+        '/api/sync/logs?limit=20',
+        {
+          credentials: 'include',
+        },
+        {
+          maxRetries: 2,
+          retryDelay: 2000,
+          retryOnErrors: ['SERVICE_UNAVAILABLE', 'HTML_RESPONSE'],
+        }
+      )
 
       if (result.success) {
         setLogs(result.data.logs)
@@ -151,15 +167,33 @@ export default function SyncManagementPage() {
 
   const getStatusBadge = (logStatus: string) => {
     const configs = {
-      success: { label: '成功', variant: 'default' as const, icon: CheckCircle2, className: 'bg-green-600 hover:bg-green-700' },
+      success: {
+        label: '成功',
+        variant: 'default' as const,
+        icon: CheckCircle2,
+        className: 'bg-green-600 hover:bg-green-700',
+      },
       failed: { label: '失败', variant: 'destructive' as const, icon: XCircle, className: '' },
-      running: { label: '运行中', variant: 'secondary' as const, icon: Activity, className: 'bg-blue-100 text-blue-800' },
+      running: {
+        label: '运行中',
+        variant: 'secondary' as const,
+        icon: Activity,
+        className: 'bg-blue-100 text-blue-800',
+      },
     }
-    const config = configs[logStatus as keyof typeof configs] || { label: logStatus, variant: 'outline' as const, icon: AlertCircle, className: '' }
+    const config = configs[logStatus as keyof typeof configs] || {
+      label: logStatus,
+      variant: 'outline' as const,
+      icon: AlertCircle,
+      className: '',
+    }
     const Icon = config.icon
 
     return (
-      <Badge variant={config.variant} className={`flex items-center gap-1 w-fit ${config.className}`}>
+      <Badge
+        variant={config.variant}
+        className={`flex items-center gap-1 w-fit ${config.className}`}
+      >
         <Icon className="w-3 h-3" />
         {config.label}
       </Badge>
@@ -168,11 +202,7 @@ export default function SyncManagementPage() {
 
   const getSyncTypeBadge = (type: string) => {
     const isManual = type === 'manual'
-    return (
-      <Badge variant={isManual ? 'outline' : 'secondary'}>
-        {isManual ? '手动' : '自动'}
-      </Badge>
-    )
+    return <Badge variant={isManual ? 'outline' : 'secondary'}>{isManual ? '手动' : '自动'}</Badge>
   }
 
   const formatDuration = (ms: number) => {
@@ -188,7 +218,7 @@ export default function SyncManagementPage() {
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit'
+      second: '2-digit',
     })
   }
 
@@ -208,19 +238,11 @@ export default function SyncManagementPage() {
               )}
             </div>
             <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push('/sync/settings')}
-              >
+              <Button variant="outline" size="sm" onClick={() => router.push('/sync/settings')}>
                 <Settings className="w-4 h-4 mr-1" />
                 设置
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAutoRefresh(!autoRefresh)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setAutoRefresh(!autoRefresh)}>
                 <RefreshCw className={`w-4 h-4 mr-1 ${autoRefresh ? 'animate-spin' : ''}`} />
                 {autoRefresh ? '自动刷新' : '手动刷新'}
               </Button>
@@ -347,12 +369,8 @@ export default function SyncManagementPage() {
                         <TableCell className="font-medium">
                           {formatDateTime(log.startedAt)}
                         </TableCell>
-                        <TableCell>
-                          {getSyncTypeBadge(log.syncType)}
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(log.status)}
-                        </TableCell>
+                        <TableCell>{getSyncTypeBadge(log.syncType)}</TableCell>
+                        <TableCell>{getStatusBadge(log.status)}</TableCell>
                         <TableCell className="text-right">
                           {(log.recordCount ?? 0).toLocaleString()}
                         </TableCell>
@@ -364,7 +382,10 @@ export default function SyncManagementPage() {
                         </TableCell>
                         <TableCell>
                           {log.errorMessage ? (
-                            <span className="text-red-600 text-sm truncate max-w-xs block" title={log.errorMessage}>
+                            <span
+                              className="text-red-600 text-sm truncate max-w-xs block"
+                              title={log.errorMessage}
+                            >
                               {log.errorMessage}
                             </span>
                           ) : (

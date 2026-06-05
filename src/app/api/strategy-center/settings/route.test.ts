@@ -58,9 +58,7 @@ describe('strategy-center settings route', () => {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        updates: [
-          { key: 'feishu_target', value: 'feishu:ou_target_123' },
-        ],
+        updates: [{ key: 'feishu_target', value: 'feishu:ou_target_123' }],
       }),
     })
 
@@ -74,7 +72,11 @@ describe('strategy-center settings route', () => {
       expect.arrayContaining([
         { category: 'openclaw', key: 'feishu_target', value: 'feishu:ou_target_123' },
         { category: 'openclaw', key: 'feishu_dm_policy', value: 'allowlist' },
-        { category: 'openclaw', key: 'feishu_allow_from', value: '["ou_existing_1","ou_target_123"]' },
+        {
+          category: 'openclaw',
+          key: 'feishu_allow_from',
+          value: '["ou_existing_1","ou_target_123"]',
+        },
       ]),
       4
     )
@@ -89,9 +91,7 @@ describe('strategy-center settings route', () => {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        updates: [
-          { key: 'feishu_target', value: 'chat:oc_group_123' },
-        ],
+        updates: [{ key: 'feishu_target', value: 'chat:oc_group_123' }],
       }),
     })
 

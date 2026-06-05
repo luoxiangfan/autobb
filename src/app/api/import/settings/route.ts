@@ -7,12 +7,18 @@ import { z } from 'zod'
 // 配置导入验证Schema
 const importSettingsSchema = z.object({
   version: z.string().optional(),
-  settings: z.record(z.record(z.object({
-    value: z.union([z.string(), z.null()]),
-    dataType: z.string().optional(),
-    isSensitive: z.boolean().optional(),
-    description: z.string().optional(),
-  }))),
+  settings: z.record(
+    z.string(),
+    z.record(
+      z.string(),
+      z.object({
+        value: z.union([z.string(), z.null()]),
+        dataType: z.string().optional(),
+        isSensitive: z.boolean().optional(),
+        description: z.string().optional(),
+      })
+    )
+  ),
 })
 
 /**
@@ -24,10 +30,7 @@ export async function POST(request: NextRequest) {
     // 从中间件注入的请求头中获取用户ID
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: '请先登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
     }
     const userIdNum = authResult.user.userId
     const body = await request.json()
@@ -38,7 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: '无效的配置文件格式',
-          details: validationResult.error.errors,
+          details: validationResult.error.issues,
         },
         { status: 400 }
       )
@@ -48,10 +51,7 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase()
 
     // 不允许导入的敏感配置（安全考虑）
-    const blockedKeys = [
-      'google_ads:refresh_token',
-      'google_ads:access_token',
-    ]
+    const blockedKeys = ['google_ads:refresh_token', 'google_ads:access_token']
 
     let imported = 0
     let skipped = 0
@@ -83,41 +83,56 @@ export async function POST(request: NextRequest) {
 
         try {
           // 检查配置是否已存在
-          const existing = await db.queryOne<any>(`
+          const existing = await db.queryOne<any>(
+            `
             SELECT id, is_sensitive FROM system_settings
             WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
             ORDER BY user_id DESC LIMIT 1
-          `, [category, configKey, userIdNum])
+          `,
+            [category, configKey, userIdNum]
+          )
 
           const isSensitive = config.isSensitive || existing?.is_sensitive === 1
 
           if (existing) {
             // 更新现有配置
             if (isSensitive) {
-              await db.exec(`
+              await db.exec(
+                `
                 UPDATE system_settings
                 SET encrypted_value = ?, value = NULL, updated_at = datetime('now')
                 WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
-              `, [encrypt(config.value), category, configKey, userIdNum])
+              `,
+                [encrypt(config.value), category, configKey, userIdNum]
+              )
             } else {
-              await db.exec(`
+              await db.exec(
+                `
                 UPDATE system_settings
                 SET value = ?, updated_at = datetime('now')
                 WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
-              `, [config.value, category, configKey, userIdNum])
+              `,
+                [config.value, category, configKey, userIdNum]
+              )
             }
           } else {
             // 插入新配置（用户级别）
             if (isSensitive) {
-              await db.exec(`
+              await db.exec(
+                `
                 INSERT INTO system_settings (user_id, category, key, encrypted_value, data_type, is_sensitive, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
-              `, [userIdNum, category, configKey, encrypt(config.value), config.dataType || 'string'])
+              `,
+                [userIdNum, category, configKey, encrypt(config.value), config.dataType || 'string']
+              )
             } else {
-              await db.exec(`
+              await db.exec(
+                `
                 INSERT INTO system_settings (user_id, category, key, value, data_type, is_sensitive, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, 0, datetime('now'), datetime('now'))
-              `, [userIdNum, category, configKey, config.value, config.dataType || 'string'])
+              `,
+                [userIdNum, category, configKey, config.value, config.dataType || 'string']
+              )
             }
           }
 
@@ -140,9 +155,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('导入配置失败:', error)
-    return NextResponse.json(
-      { error: error.message || '导入失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '导入失败' }, { status: 500 })
   }
 }

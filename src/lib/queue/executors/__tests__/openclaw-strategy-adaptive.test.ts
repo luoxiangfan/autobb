@@ -10,7 +10,10 @@ import {
   scoreAsinItemForExecution,
   shouldTreatCampaignAsConflict,
 } from '@/lib/queue/executors/openclaw-strategy-executor'
-import { normalizeOpenclawStrategyConfig, type OpenclawStrategyConfig } from '@/lib/openclaw/strategy-config'
+import {
+  normalizeOpenclawStrategyConfig,
+  type OpenclawStrategyConfig,
+} from '@/lib/openclaw/strategy-config'
 
 function baseConfig(): OpenclawStrategyConfig {
   return {
@@ -163,12 +166,16 @@ describe('openclaw strategy adaptive helpers', () => {
       },
     ] as any
 
-    const ranked = rankAsinItemsForExecution(items, {
-      byAsin: new Map(),
-      byBrand: new Map(),
-    }, {
-      priorityAsins: ['preferred-1'],
-    })
+    const ranked = rankAsinItemsForExecution(
+      items,
+      {
+        byAsin: new Map(),
+        byBrand: new Map(),
+      },
+      {
+        priorityAsins: ['preferred-1'],
+      }
+    )
 
     expect(ranked[0].item.asin).toBe('PREFERRED-1')
     expect(ranked[0].isPreferred).toBe(true)
@@ -261,10 +268,7 @@ describe('openclaw strategy adaptive helpers', () => {
   })
 
   it('allocateBudgetsWithThompsonSampling 会按权重分配并受单臂上限约束', () => {
-    const randomValues = [
-      0.12, 0.31, 0.55, 0.91, 0.22, 0.44,
-      0.66, 0.18, 0.73, 0.27, 0.49, 0.88,
-    ]
+    const randomValues = [0.12, 0.31, 0.55, 0.91, 0.22, 0.44, 0.66, 0.18, 0.73, 0.27, 0.49, 0.88]
     let randomIndex = 0
     const randomFn = () => {
       const value = randomValues[randomIndex % randomValues.length]

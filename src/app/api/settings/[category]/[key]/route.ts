@@ -12,24 +12,24 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { category: string; key: string } }
+  props: { params: Promise<{ category: string; key: string }> }
 ) {
+  const params = await props.params
   try {
     const { category, key } = params
 
     const authResult = await verifyAuth(request)
-    const userIdNum = authResult.authenticated && authResult.user ? authResult.user.userId : undefined
+    const userIdNum =
+      authResult.authenticated && authResult.user ? authResult.user.userId : undefined
 
     if (category === 'affiliate_sync' && !userIdNum) {
-      return NextResponse.json(
-        { error: '获取联盟同步配置需要登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '获取联盟同步配置需要登录' }, { status: 401 })
     }
 
-    const setting = category === 'affiliate_sync' && userIdNum
-      ? await getUserOnlySetting(category, key, userIdNum)
-      : await getSetting(category, key, userIdNum)
+    const setting =
+      category === 'affiliate_sync' && userIdNum
+        ? await getUserOnlySetting(category, key, userIdNum)
+        : await getSetting(category, key, userIdNum)
 
     if (!setting) {
       return NextResponse.json(
@@ -77,13 +77,15 @@ const updateSettingSchema = z.object({
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { category: string; key: string } }
+  props: { params: Promise<{ category: string; key: string }> }
 ) {
+  const params = await props.params
   try {
     const { category, key } = params
 
     const authResult = await verifyAuth(request)
-    const userIdNum = authResult.authenticated && authResult.user ? authResult.user.userId : undefined
+    const userIdNum =
+      authResult.authenticated && authResult.user ? authResult.user.userId : undefined
 
     const body = await request.json()
 
@@ -92,8 +94,8 @@ export async function PUT(
     if (!validationResult.success) {
       return NextResponse.json(
         {
-          error: validationResult.error.errors[0].message,
-          details: validationResult.error.errors,
+          error: validationResult.error.issues[0].message,
+          details: validationResult.error.issues,
         },
         { status: 400 }
       )
@@ -102,10 +104,7 @@ export async function PUT(
     const { value } = validationResult.data
 
     if (category === 'affiliate_sync' && !userIdNum) {
-      return NextResponse.json(
-        { error: '更新联盟同步配置需要登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '更新联盟同步配置需要登录' }, { status: 401 })
     }
 
     // 更新配置

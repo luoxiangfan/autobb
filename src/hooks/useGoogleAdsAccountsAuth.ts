@@ -37,11 +37,12 @@ export function useGoogleAdsAccountsAuth(options: UseGoogleAdsAccountsAuthOption
     [applyCredentialsSnapshot]
   )
 
-  const refreshCredentialsStatus = useCallback(async (): Promise<ParsedGoogleAdsCredentialsStatus> => {
-    const parsed = await fetchGoogleAdsCredentialsStatus()
-    applyCredentialsSnapshot(parsed)
-    return parsed
-  }, [applyCredentialsSnapshot])
+  const refreshCredentialsStatus =
+    useCallback(async (): Promise<ParsedGoogleAdsCredentialsStatus> => {
+      const parsed = await fetchGoogleAdsCredentialsStatus()
+      applyCredentialsSnapshot(parsed)
+      return parsed
+    }, [applyCredentialsSnapshot])
 
   /**
    * 按轮询策略刷新凭证并返回当前快照（供本轮 accounts 请求立即使用，避免 React state 滞后）。

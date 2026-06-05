@@ -41,7 +41,12 @@ vi.mock('./offer-keyword-pool', () => ({
 
 vi.mock('./bucket-creative-generation-pipeline', () => ({
   assertPostGenerationPersistenceGate: vi.fn(),
-  formatBucketGenerationRejectedError: (result: { selectedEvaluation?: { reasons?: string[]; adStrength?: { finalScore?: number; finalRating?: string } } }) => {
+  formatBucketGenerationRejectedError: (result: {
+    selectedEvaluation?: {
+      reasons?: string[]
+      adStrength?: { finalScore?: number; finalRating?: string }
+    }
+  }) => {
     const evaluation = result.selectedEvaluation
     const score = evaluation?.adStrength?.finalScore
     const rating = evaluation?.adStrength?.finalRating

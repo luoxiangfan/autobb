@@ -71,7 +71,8 @@ async function withTracking<T>(
     if (error?.isAxiosError) {
       const status = error?.response?.status
       const pythonRequestId = error?.response?.headers?.['x-request-id']
-      const serviceDetail = stringifyDetail(error?.response?.data?.detail) || error?.message || String(error)
+      const serviceDetail =
+        stringifyDetail(error?.response?.data?.detail) || error?.message || String(error)
       const safeMessage =
         `Python Ads Service 调用失败 (${endpoint})` +
         (status ? ` [status=${status}]` : '') +
@@ -90,16 +91,16 @@ async function withTracking<T>(
     if (errorMessage.includes('only approved for use with test accounts')) {
       enhancedError = new Error(
         `❌ Developer Token 权限等级不足 (User #${userId}):\n\n` +
-        `您的 Developer Token 仅限于测试账户，但您在访问生产账户。\n\n` +
-        `⚠️ 问题: 权限等级太低\n` +
-        `✅ 解决方案:\n` +
-        `  1. 访问 https://ads.google.com/aw/apicenter\n` +
-        `  2. 找到您的 Developer Token\n` +
-        `  3. 申请升级到 "Basic" 或 "Standard" 等级\n` +
-        `  4. 等待 Google 批准（通常 1-3 个工作日）\n` +
-        `  5. 升级完成后系统会自动使用新的权限等级\n\n` +
-        `更多信息: 请查看系统诊断文档或联系支持团队。\n\n` +
-        `原始错误: ${errorMessage}`
+          `您的 Developer Token 仅限于测试账户，但您在访问生产账户。\n\n` +
+          `⚠️ 问题: 权限等级太低\n` +
+          `✅ 解决方案:\n` +
+          `  1. 访问 https://ads.google.com/aw/apicenter\n` +
+          `  2. 找到您的 Developer Token\n` +
+          `  3. 申请升级到 "Basic" 或 "Standard" 等级\n` +
+          `  4. 等待 Google 批准（通常 1-3 个工作日）\n` +
+          `  5. 升级完成后系统会自动使用新的权限等级\n\n` +
+          `更多信息: 请查看系统诊断文档或联系支持团队。\n\n` +
+          `原始错误: ${errorMessage}`
       )
     }
 
@@ -165,7 +166,7 @@ function validateDeveloperToken(token: string): { isValid: boolean; warnings: st
   if (token.length < 15) {
     warnings.push(
       '⚠️ Developer Token 长度较短（< 15 字符），可能是 Test-level token。\n' +
-      '   如果系统报告"权限等级不足"，请升级 Token 的权限等级。'
+        '   如果系统报告"权限等级不足"，请升级 Token 的权限等级。'
     )
   }
 
@@ -173,7 +174,7 @@ function validateDeveloperToken(token: string): { isValid: boolean; warnings: st
   if (/test|demo|sandbox|trial/i.test(token)) {
     warnings.push(
       '⚠️ Developer Token 名称中包含测试相关关键词，可能是 Test-level token。\n' +
-      '   如果系统报告"权限等级不足"，请升级 Token 的权限等级。'
+        '   如果系统报告"权限等级不足"，请升级 Token 的权限等级。'
     )
   }
 
@@ -183,7 +184,10 @@ function validateDeveloperToken(token: string): { isValid: boolean; warnings: st
 /**
  * 获取服务账号认证配置
  */
-async function getServiceAccountAuth(userId: number, serviceAccountId?: string): Promise<ServiceAccountAuth> {
+async function getServiceAccountAuth(
+  userId: number,
+  serviceAccountId?: string
+): Promise<ServiceAccountAuth> {
   const sa = await getServiceAccountConfig(userId, serviceAccountId)
   if (!sa) {
     throw new Error('Service account not found')
@@ -229,19 +233,30 @@ export async function getKeywordHistoricalMetricsPython(params: {
   geoTargetConstants: string[]
   requestId?: string
 }): Promise<any> {
-  return withTracking(params.userId, params.customerId, ApiOperationType.GET_KEYWORD_IDEAS, '/api/keyword-planner/historical-metrics', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    const response = await axios.post(`${PYTHON_SERVICE_URL}/api/keyword-planner/historical-metrics`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      keywords: params.keywords,
-      language: params.language,
-      geo_target_constants: params.geoTargetConstants,
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-    return response.data
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.GET_KEYWORD_IDEAS,
+    '/api/keyword-planner/historical-metrics',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      const response = await axios.post(
+        `${PYTHON_SERVICE_URL}/api/keyword-planner/historical-metrics`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          keywords: params.keywords,
+          language: params.language,
+          geo_target_constants: params.geoTargetConstants,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+      return response.data
+    }
+  )
 }
 
 /**
@@ -257,20 +272,31 @@ export async function getKeywordIdeasPython(params: {
   pageUrl?: string
   requestId?: string
 }): Promise<any> {
-  return withTracking(params.userId, params.customerId, ApiOperationType.GET_KEYWORD_IDEAS, '/api/keyword-planner/ideas', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    const response = await axios.post(`${PYTHON_SERVICE_URL}/api/keyword-planner/ideas`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      keywords: params.keywords,
-      language: params.language,
-      geo_target_constants: params.geoTargetConstants,
-      page_url: params.pageUrl,
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-    return response.data
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.GET_KEYWORD_IDEAS,
+    '/api/keyword-planner/ideas',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      const response = await axios.post(
+        `${PYTHON_SERVICE_URL}/api/keyword-planner/ideas`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          keywords: params.keywords,
+          language: params.language,
+          geo_target_constants: params.geoTargetConstants,
+          page_url: params.pageUrl,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+      return response.data
+    }
+  )
 }
 
 /**
@@ -283,17 +309,28 @@ export async function executeGAQLQueryPython(params: {
   query: string
   requestId?: string
 }): Promise<any> {
-  return withTracking(params.userId, params.customerId, ApiOperationType.SEARCH, '/api/google-ads/query', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    const response = await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/query`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      query: params.query,
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-    return response.data
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.SEARCH,
+    '/api/google-ads/query',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      const response = await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/query`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          query: params.query,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+      return response.data
+    }
+  )
 }
 
 /**
@@ -306,11 +343,15 @@ export async function listAccessibleCustomersPython(params: {
 }): Promise<string[]> {
   const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
 
-  const response = await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/list-accessible-customers`, {
-    service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-  }, {
-    headers: getPythonRequestHeaders(params.userId, params.requestId),
-  })
+  const response = await axios.post(
+    `${PYTHON_SERVICE_URL}/api/google-ads/list-accessible-customers`,
+    {
+      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+    },
+    {
+      headers: getPythonRequestHeaders(params.userId, params.requestId),
+    }
+  )
 
   return response.data.resource_names
 }
@@ -332,12 +373,16 @@ export async function getIdentityVerificationPython(params: {
     params.requestId,
     async () => {
       const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-      const response = await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/identity-verification`, {
-        service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-        customer_id: params.customerId,
-      }, {
-        headers: getPythonRequestHeaders(params.userId, params.requestId),
-      })
+      const response = await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/identity-verification`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
       return response.data
     }
   )
@@ -355,21 +400,32 @@ export async function createCampaignBudgetPython(params: {
   deliveryMethod: 'STANDARD' | 'ACCELERATED'
   requestId?: string
 }): Promise<string> {
-  return withTracking(params.userId, params.customerId, ApiOperationType.MUTATE, '/api/google-ads/campaign-budget/create', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    const response = await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/campaign-budget/create`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      name: params.name,
-      amount_micros: params.amountMicros,
-      delivery_method: params.deliveryMethod,
-      // 与 Google Ads 默认（可共享）相反：每系列专用预算
-      explicitly_shared: false,
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-    return response.data.resource_name
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.MUTATE,
+    '/api/google-ads/campaign-budget/create',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      const response = await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/campaign-budget/create`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          name: params.name,
+          amount_micros: params.amountMicros,
+          delivery_method: params.deliveryMethod,
+          // 与 Google Ads 默认（可共享）相反：每系列专用预算
+          explicitly_shared: false,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+      return response.data.resource_name
+    }
+  )
 }
 
 /**
@@ -391,26 +447,37 @@ export async function createCampaignPython(params: {
   finalUrlSuffix?: string
   requestId?: string
 }): Promise<string> {
-  return withTracking(params.userId, params.customerId, ApiOperationType.MUTATE, '/api/google-ads/campaign/create', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    const response = await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/campaign/create`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      name: params.name,
-      budget_resource_name: params.budgetResourceName,
-      status: params.status,
-      bidding_strategy_type: params.biddingStrategyType,
-      cpc_bid_ceiling_micros: params.cpcBidCeilingMicros,
-      target_country: params.targetCountry,
-      target_language: params.targetLanguage,
-      start_date: params.startDate,
-      end_date: params.endDate,
-      final_url_suffix: params.finalUrlSuffix,
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-    return response.data.resource_name
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.MUTATE,
+    '/api/google-ads/campaign/create',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      const response = await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/campaign/create`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          name: params.name,
+          budget_resource_name: params.budgetResourceName,
+          status: params.status,
+          bidding_strategy_type: params.biddingStrategyType,
+          cpc_bid_ceiling_micros: params.cpcBidCeilingMicros,
+          target_country: params.targetCountry,
+          target_language: params.targetLanguage,
+          start_date: params.startDate,
+          end_date: params.endDate,
+          final_url_suffix: params.finalUrlSuffix,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+      return response.data.resource_name
+    }
+  )
 }
 
 /**
@@ -426,20 +493,31 @@ export async function createAdGroupPython(params: {
   cpcBidMicros?: number
   requestId?: string
 }): Promise<string> {
-  return withTracking(params.userId, params.customerId, ApiOperationType.MUTATE, '/api/google-ads/ad-group/create', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    const response = await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/ad-group/create`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      campaign_resource_name: params.campaignResourceName,
-      name: params.name,
-      status: params.status,
-      cpc_bid_micros: params.cpcBidMicros,
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-    return response.data.resource_name
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.MUTATE,
+    '/api/google-ads/ad-group/create',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      const response = await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/ad-group/create`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          campaign_resource_name: params.campaignResourceName,
+          name: params.name,
+          status: params.status,
+          cpc_bid_micros: params.cpcBidMicros,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+      return response.data.resource_name
+    }
+  )
 }
 
 /**
@@ -460,25 +538,36 @@ export async function createKeywordsPython(params: {
   }>
   requestId?: string
 }): Promise<string[]> {
-  return withTracking(params.userId, params.customerId, ApiOperationType.MUTATE_BATCH, '/api/google-ads/keywords/create', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    const response = await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/keywords/create`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      ad_group_resource_name: params.adGroupResourceName,
-      keywords: params.keywords.map(kw => ({
-        text: kw.text,
-        match_type: kw.matchType,
-        status: kw.status,
-        final_url: kw.finalUrl,
-        is_negative: kw.isNegative || false,
-        negative_keyword_match_type: kw.negativeKeywordMatchType || 'EXACT',
-      })),
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-    return response.data.results.map((r: any) => r.resource_name)
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.MUTATE_BATCH,
+    '/api/google-ads/keywords/create',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      const response = await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/keywords/create`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          ad_group_resource_name: params.adGroupResourceName,
+          keywords: params.keywords.map((kw) => ({
+            text: kw.text,
+            match_type: kw.matchType,
+            status: kw.status,
+            final_url: kw.finalUrl,
+            is_negative: kw.isNegative || false,
+            negative_keyword_match_type: kw.negativeKeywordMatchType || 'EXACT',
+          })),
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+      return response.data.results.map((r: any) => r.resource_name)
+    }
+  )
 }
 
 /**
@@ -497,23 +586,34 @@ export async function createResponsiveSearchAdPython(params: {
   path2?: string
   requestId?: string
 }): Promise<string> {
-  return withTracking(params.userId, params.customerId, ApiOperationType.MUTATE, '/api/google-ads/responsive-search-ad/create', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    const response = await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/responsive-search-ad/create`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      ad_group_resource_name: params.adGroupResourceName,
-      headlines: params.headlines,
-      descriptions: params.descriptions,
-      final_urls: params.finalUrls,
-      final_url_suffix: params.finalUrlSuffix,
-      path1: params.path1,
-      path2: params.path2,
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-    return response.data.resource_name
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.MUTATE,
+    '/api/google-ads/responsive-search-ad/create',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      const response = await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/responsive-search-ad/create`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          ad_group_resource_name: params.adGroupResourceName,
+          headlines: params.headlines,
+          descriptions: params.descriptions,
+          final_urls: params.finalUrls,
+          final_url_suffix: params.finalUrlSuffix,
+          path1: params.path1,
+          path2: params.path2,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+      return response.data.resource_name
+    }
+  )
 }
 
 /**
@@ -532,17 +632,28 @@ export async function updateCampaignStatusPython(params: {
     console.warn(`⚠️ 已禁用Google Ads删除操作，改为暂停: ${params.campaignResourceName}`)
   }
 
-  return withTracking(params.userId, params.customerId, ApiOperationType.MUTATE, '/api/google-ads/campaign/update-status', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/campaign/update-status`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      campaign_resource_name: params.campaignResourceName,
-      status: effectiveStatus,
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.MUTATE,
+    '/api/google-ads/campaign/update-status',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/campaign/update-status`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          campaign_resource_name: params.campaignResourceName,
+          status: effectiveStatus,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+    }
+  )
 }
 
 /**
@@ -555,16 +666,27 @@ export async function removeCampaignPython(params: {
   campaignResourceName: string
   requestId?: string
 }): Promise<void> {
-  return withTracking(params.userId, params.customerId, ApiOperationType.MUTATE, '/api/google-ads/campaign/remove', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/campaign/remove`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      campaign_resource_name: params.campaignResourceName,
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.MUTATE,
+    '/api/google-ads/campaign/remove',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/campaign/remove`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          campaign_resource_name: params.campaignResourceName,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+    }
+  )
 }
 
 /**
@@ -578,17 +700,28 @@ export async function updateCampaignBudgetPython(params: {
   budgetAmountMicros: number
   requestId?: string
 }): Promise<void> {
-  return withTracking(params.userId, params.customerId, ApiOperationType.MUTATE, '/api/google-ads/campaign/update-budget', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/campaign/update-budget`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      campaign_resource_name: params.campaignResourceName,
-      budget_amount_micros: params.budgetAmountMicros,
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.MUTATE,
+    '/api/google-ads/campaign/update-budget',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/campaign/update-budget`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          campaign_resource_name: params.campaignResourceName,
+          budget_amount_micros: params.budgetAmountMicros,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+    }
+  )
 }
 
 /**
@@ -603,17 +736,28 @@ export async function updateCampaignFinalUrlSuffixPython(params: {
   finalUrlSuffix: string
   requestId?: string
 }): Promise<void> {
-  return withTracking(params.userId, params.customerId, ApiOperationType.MUTATE, '/api/google-ads/campaign/update-final-url-suffix', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/campaign/update-final-url-suffix`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      campaign_resource_name: params.campaignResourceName,
-      final_url_suffix: params.finalUrlSuffix,
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.MUTATE,
+    '/api/google-ads/campaign/update-final-url-suffix',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/campaign/update-final-url-suffix`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          campaign_resource_name: params.campaignResourceName,
+          final_url_suffix: params.finalUrlSuffix,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+    }
+  )
 }
 
 /**
@@ -627,18 +771,29 @@ export async function createCalloutExtensionsPython(params: {
   calloutTexts: string[]
   requestId?: string
 }): Promise<string[]> {
-  return withTracking(params.userId, params.customerId, ApiOperationType.MUTATE_BATCH, '/api/google-ads/callout-extensions/create', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    const response = await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/callout-extensions/create`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      campaign_resource_name: params.campaignResourceName,
-      callout_texts: params.calloutTexts,
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-    return response.data.asset_resource_names
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.MUTATE_BATCH,
+    '/api/google-ads/callout-extensions/create',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      const response = await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/callout-extensions/create`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          campaign_resource_name: params.campaignResourceName,
+          callout_texts: params.calloutTexts,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+      return response.data.asset_resource_names
+    }
+  )
 }
 
 /**
@@ -657,23 +812,34 @@ export async function createSitelinkExtensionsPython(params: {
   }>
   requestId?: string
 }): Promise<string[]> {
-  return withTracking(params.userId, params.customerId, ApiOperationType.MUTATE_BATCH, '/api/google-ads/sitelink-extensions/create', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    const response = await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/sitelink-extensions/create`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      campaign_resource_name: params.campaignResourceName,
-      sitelinks: params.sitelinks.map(sl => ({
-        link_text: sl.linkText,
-        final_url: sl.finalUrl,
-        description1: sl.description1,
-        description2: sl.description2,
-      })),
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-    return response.data.asset_resource_names
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.MUTATE_BATCH,
+    '/api/google-ads/sitelink-extensions/create',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      const response = await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/sitelink-extensions/create`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          campaign_resource_name: params.campaignResourceName,
+          sitelinks: params.sitelinks.map((sl) => ({
+            link_text: sl.linkText,
+            final_url: sl.finalUrl,
+            description1: sl.description1,
+            description2: sl.description2,
+          })),
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+      return response.data.asset_resource_names
+    }
+  )
 }
 
 // ==================== Conversion Goal Functions Removed ====================
@@ -697,27 +863,38 @@ export async function updateCampaignPython(params: {
   campaignResourceName: string
   // 可选更新字段
   name?: string
-  cpcBidMicros?: number  // 手动CPC出价
-  maxCpcBidMicros?: number  // Maximize Clicks 最大CPC限制
-  targetCpaMicros?: number  // 目标CPA
-  status?: 'ENABLED' | 'PAUSED'  // 状态
+  cpcBidMicros?: number // 手动CPC出价
+  maxCpcBidMicros?: number // Maximize Clicks 最大CPC限制
+  targetCpaMicros?: number // 目标CPA
+  status?: 'ENABLED' | 'PAUSED' // 状态
   requestId?: string
 }): Promise<void> {
-  return withTracking(params.userId, params.customerId, ApiOperationType.MUTATE, '/api/google-ads/campaign/update', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/campaign/update`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      campaign_resource_name: params.campaignResourceName,
-      name: params.name,
-      cpc_bid_micros: params.cpcBidMicros,
-      max_cpc_bid_micros: params.maxCpcBidMicros,
-      target_cpa_micros: params.targetCpaMicros,
-      status: params.status,
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.MUTATE,
+    '/api/google-ads/campaign/update',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/campaign/update`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          campaign_resource_name: params.campaignResourceName,
+          name: params.name,
+          cpc_bid_micros: params.cpcBidMicros,
+          max_cpc_bid_micros: params.maxCpcBidMicros,
+          target_cpa_micros: params.targetCpaMicros,
+          status: params.status,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+    }
+  )
 }
 
 /**
@@ -729,18 +906,29 @@ export async function updateAdGroupPython(params: {
   serviceAccountId?: string
   customerId: string
   adGroupResourceName: string
-  cpcBidMicros?: number  // 手动CPC出价
+  cpcBidMicros?: number // 手动CPC出价
   requestId?: string
 }): Promise<void> {
-  return withTracking(params.userId, params.customerId, ApiOperationType.MUTATE, '/api/google-ads/adgroup/update', params.requestId, async () => {
-    const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
-    await axios.post(`${PYTHON_SERVICE_URL}/api/google-ads/adgroup/update`, {
-      service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
-      customer_id: params.customerId,
-      ad_group_resource_name: params.adGroupResourceName,
-      cpc_bid_micros: params.cpcBidMicros,
-    }, {
-      headers: getPythonRequestHeaders(params.userId, params.requestId),
-    })
-  })
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.MUTATE,
+    '/api/google-ads/adgroup/update',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/adgroup/update`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          ad_group_resource_name: params.adGroupResourceName,
+          cpc_bid_micros: params.cpcBidMicros,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+    }
+  )
 }

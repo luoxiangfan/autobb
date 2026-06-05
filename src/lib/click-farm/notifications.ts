@@ -1,28 +1,27 @@
 // 补点击通知工具
 // src/lib/click-farm/notifications.ts
 
-import { getDatabase } from '@/lib/db';
-
+import { getDatabase } from '@/lib/db'
 
 /**
  * 通知类型
  */
 export type ClickFarmNotificationType =
-  | 'task_paused'      // 任务已暂停
-  | 'task_completed'   // 任务已完成
-  | 'task_resumed';    // 任务已恢复
+  | 'task_paused' // 任务已暂停
+  | 'task_completed' // 任务已完成
+  | 'task_resumed' // 任务已恢复
 
 /**
  * 创建通知记录（存储在JSON字段中，用于UI展示）
  */
 export interface ClickFarmNotification {
-  id: string;
-  type: ClickFarmNotificationType;
-  task_id: string;
-  title: string;
-  message: string;
-  created_at: string;
-  read: boolean;
+  id: string
+  type: ClickFarmNotificationType
+  task_id: string
+  title: string
+  message: string
+  created_at: string
+  read: boolean
 }
 
 /**
@@ -43,8 +42,8 @@ export async function logClickFarmEvent(
     task_id: taskId,
     title,
     message,
-    timestamp: new Date().toISOString()
-  });
+    timestamp: new Date().toISOString(),
+  })
 
   // 可选：发送到外部通知服务（邮件、Slack等）
   // await sendExternalNotification(userId, type, title, message);
@@ -65,7 +64,7 @@ export async function notifyTaskPaused(
     'task_paused',
     '补点击任务已暂停',
     `任务 ${taskId} 因 ${reason} 被暂停：${message}`
-  );
+  )
 }
 
 /**
@@ -77,7 +76,7 @@ export async function notifyTaskCompleted(
   totalClicks: number,
   successClicks: number
 ): Promise<void> {
-  const successRate = totalClicks > 0 ? ((successClicks / totalClicks) * 100).toFixed(1) : '0';
+  const successRate = totalClicks > 0 ? ((successClicks / totalClicks) * 100).toFixed(1) : '0'
 
   await logClickFarmEvent(
     userId,
@@ -85,23 +84,20 @@ export async function notifyTaskCompleted(
     'task_completed',
     '补点击任务已完成',
     `任务 ${taskId} 已完成，总计 ${totalClicks} 次点击，成功率 ${successRate}%`
-  );
+  )
 }
 
 /**
  * 任务恢复通知
  */
-export async function notifyTaskResumed(
-  userId: number,
-  taskId: string
-): Promise<void> {
+export async function notifyTaskResumed(userId: number, taskId: string): Promise<void> {
   await logClickFarmEvent(
     userId,
     taskId,
     'task_resumed',
     '补点击任务已恢复',
     `任务 ${taskId} 已恢复运行`
-  );
+  )
 }
 
 /**
@@ -109,10 +105,11 @@ export async function notifyTaskResumed(
  * 简化版本：返回需要用户关注的任务状态变化
  */
 export async function getUserNotifications(userId: number): Promise<ClickFarmNotification[]> {
-  const db = getDatabase();
+  const db = getDatabase()
 
   // 查询最近发生状态变化的任务
-  const tasks = await db.query<any>(`
+  const tasks = await db.query<any>(
+    `
     SELECT
       id,
       status,
@@ -130,9 +127,11 @@ export async function getUserNotifications(userId: number): Promise<ClickFarmNot
       )
     ORDER BY updated_at DESC
     LIMIT 10
-  `, [userId]);
+  `,
+    [userId]
+  )
 
-  return tasks.map(task => {
+  return tasks.map((task) => {
     if (task.status === 'paused') {
       return {
         id: `${task.id}-paused`,
@@ -142,7 +141,7 @@ export async function getUserNotifications(userId: number): Promise<ClickFarmNot
         message: task.pause_message || '任务已被暂停',
         created_at: task.paused_at,
         read: false,
-      };
+      }
     } else {
       return {
         id: `${task.id}-completed`,
@@ -152,7 +151,7 @@ export async function getUserNotifications(userId: number): Promise<ClickFarmNot
         message: `任务 #${task.id.slice(0, 8)} 已成功完成`,
         created_at: task.completed_at,
         read: false,
-      };
+      }
     }
-  });
+  })
 }

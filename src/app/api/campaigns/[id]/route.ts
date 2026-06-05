@@ -9,7 +9,8 @@ import { invalidateDashboardCache } from '@/lib/api-cache'
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 
@@ -50,7 +51,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
  * PUT /api/campaigns/:id
  * 更新广告系列
  */
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 
@@ -115,7 +117,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
  * DELETE /api/campaigns/:id
  * 删除广告系列（草稿软删除，已移除永久删除）
  */
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 

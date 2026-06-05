@@ -46,12 +46,16 @@ describe('settings single-key route affiliate sync isolation', () => {
     })
 
     const res = await GET(req, {
-      params: { category: 'affiliate_sync', key: 'yeahpromos_site_id' },
+      params: Promise.resolve({ category: 'affiliate_sync', key: 'yeahpromos_site_id' }),
     })
     const payload = await res.json()
 
     expect(res.status).toBe(200)
-    expect(settingsFns.getUserOnlySetting).toHaveBeenCalledWith('affiliate_sync', 'yeahpromos_site_id', 7)
+    expect(settingsFns.getUserOnlySetting).toHaveBeenCalledWith(
+      'affiliate_sync',
+      'yeahpromos_site_id',
+      7
+    )
     expect(settingsFns.getSetting).not.toHaveBeenCalled()
     expect(payload.setting.value).toBe('11282')
   })
@@ -60,7 +64,7 @@ describe('settings single-key route affiliate sync isolation', () => {
     const req = new NextRequest('http://localhost/api/settings/affiliate_sync/yeahpromos_site_id')
 
     const res = await GET(req, {
-      params: { category: 'affiliate_sync', key: 'yeahpromos_site_id' },
+      params: Promise.resolve({ category: 'affiliate_sync', key: 'yeahpromos_site_id' }),
     })
     const payload = await res.json()
 
@@ -76,7 +80,7 @@ describe('settings single-key route affiliate sync isolation', () => {
     })
 
     const res = await PUT(req, {
-      params: { category: 'affiliate_sync', key: 'yeahpromos_site_id' },
+      params: Promise.resolve({ category: 'affiliate_sync', key: 'yeahpromos_site_id' }),
     })
     const payload = await res.json()
 
@@ -96,12 +100,17 @@ describe('settings single-key route affiliate sync isolation', () => {
     })
 
     const res = await PUT(req, {
-      params: { category: 'affiliate_sync', key: 'yeahpromos_site_id' },
+      params: Promise.resolve({ category: 'affiliate_sync', key: 'yeahpromos_site_id' }),
     })
     const payload = await res.json()
 
     expect(res.status).toBe(200)
     expect(payload.success).toBe(true)
-    expect(settingsFns.updateSetting).toHaveBeenCalledWith('affiliate_sync', 'yeahpromos_site_id', '11930', 7)
+    expect(settingsFns.updateSetting).toHaveBeenCalledWith(
+      'affiliate_sync',
+      'yeahpromos_site_id',
+      '11930',
+      7
+    )
   })
 })

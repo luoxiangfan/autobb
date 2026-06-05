@@ -130,7 +130,7 @@ describe('GET /api/offers/:id/campaigns', () => {
       },
     })
 
-    const res = await GET(req, { params: { id: '777' } })
+    const res = await GET(req, { params: Promise.resolve({ id: '777' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)

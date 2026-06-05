@@ -101,13 +101,34 @@ const PRODUCT_SCORE_AI_MAX_OUTPUT_TOKENS = 1536
 const PRODUCT_SCORE_AI_RETRY_MAX_OUTPUT_TOKENS = 1536
 const PRODUCT_SCORE_SCHEMA_GUARD_CACHE_TTL_MS = 5 * 60 * 1000
 
-const productScoreSchemaGuardCache = new Map<number, { expiresAt: number; shouldFallback: boolean }>()
+const productScoreSchemaGuardCache = new Map<
+  number,
+  { expiresAt: number; shouldFallback: boolean }
+>()
 
 const SEASONALITY_VALUES = ['winter', 'summer', 'spring', 'fall', 'all-year'] as const
 const PRICE_POSITIONING_VALUES = ['luxury', 'premium', 'mid-range', 'budget'] as const
 const TARGET_AUDIENCE_VALUES = ['male', 'female', 'kids', 'elderly', 'unisex'] as const
-const USE_SCENARIO_VALUES = ['indoor', 'outdoor', 'sports', 'office', 'travel', 'daily', 'party', 'professional'] as const
-const PRODUCT_FEATURE_VALUES = ['portable', 'durable', 'fashionable', 'practical', 'innovative', 'eco-friendly', 'smart', 'luxury'] as const
+const USE_SCENARIO_VALUES = [
+  'indoor',
+  'outdoor',
+  'sports',
+  'office',
+  'travel',
+  'daily',
+  'party',
+  'professional',
+] as const
+const PRODUCT_FEATURE_VALUES = [
+  'portable',
+  'durable',
+  'fashionable',
+  'practical',
+  'innovative',
+  'eco-friendly',
+  'smart',
+  'luxury',
+] as const
 
 function normalizeCacheText(value: string | null | undefined): string {
   return String(value || '')
@@ -131,11 +152,7 @@ function buildCombinedProductAnalysisCacheKey(
 ): string {
   const normalizedAsin = normalizeCacheAsin(product.asin)
   if (normalizedAsin) {
-    return [
-      `user:${userId}`,
-      `month:${currentMonth}`,
-      `asin:${normalizedAsin}`,
-    ].join('|')
+    return [`user:${userId}`, `month:${currentMonth}`, `asin:${normalizedAsin}`].join('|')
   }
 
   return [
@@ -247,11 +264,16 @@ async function shouldBypassProductScoreAiForSchemaGuard(userId: number): Promise
   let shouldFallback = false
   try {
     const providerSetting = await getUserOnlySetting('ai', 'gemini_provider', userId)
-    const provider = String(providerSetting?.value || '').trim().toLowerCase()
+    const provider = String(providerSetting?.value || '')
+      .trim()
+      .toLowerCase()
 
     shouldFallback = provider === 'relay'
   } catch (error) {
-    console.warn(`[ProductScoreCalculation] 读取用户${userId}的AI配置失败，跳过schema防护降级判断:`, error)
+    console.warn(
+      `[ProductScoreCalculation] 读取用户${userId}的AI配置失败，跳过schema防护降级判断:`,
+      error
+    )
   }
 
   productScoreSchemaGuardCache.set(userId, {
@@ -262,7 +284,7 @@ async function shouldBypassProductScoreAiForSchemaGuard(userId: number): Promise
   if (shouldFallback) {
     console.warn(
       `[ProductScoreCalculation] 用户${userId}当前使用relay provider，` +
-      'product_score_combined_analysis 直接走兜底分析，避免无强schema约束调用'
+        'product_score_combined_analysis 直接走兜底分析，避免无强schema约束调用'
     )
   }
 
@@ -285,9 +307,7 @@ function normalizeString(value: unknown, fallback = ''): string {
 
 function normalizeStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return []
-  return value
-    .map((item) => normalizeString(item))
-    .filter(Boolean)
+  return value.map((item) => normalizeString(item)).filter(Boolean)
 }
 
 function normalizeEnumValue<T extends string>(
@@ -302,13 +322,9 @@ function normalizeEnumValue<T extends string>(
   return fallback
 }
 
-function normalizeEnumArray<T extends string>(
-  value: unknown,
-  allowed: readonly T[]
-): T[] {
+function normalizeEnumArray<T extends string>(value: unknown, allowed: readonly T[]): T[] {
   const allowedSet = new Set(allowed)
-  return normalizeStringArray(value)
-    .filter((item): item is T => allowedSet.has(item as T))
+  return normalizeStringArray(value).filter((item): item is T => allowedSet.has(item as T))
 }
 
 function normalizeMonthsUntilPeak(value: unknown): number {
@@ -372,11 +388,7 @@ function normalizeCombinedProductScoreAnalysis(raw: unknown): CombinedProductSco
 
   return {
     seasonality: {
-      seasonality: normalizeEnumValue(
-        seasonality.seasonality,
-        SEASONALITY_VALUES,
-        'all-year'
-      ),
+      seasonality: normalizeEnumValue(seasonality.seasonality, SEASONALITY_VALUES, 'all-year'),
       holidays: normalizeStringArray(seasonality.holidays),
       isPeakSeason: normalizeBoolean(seasonality.isPeakSeason),
       monthsUntilPeak: normalizeMonthsUntilPeak(seasonality.monthsUntilPeak),
@@ -392,7 +404,10 @@ function normalizeCombinedProductScoreAnalysis(raw: unknown): CombinedProductSco
       ),
       useScenario: normalizeEnumArray(productAnalysis.useScenario, USE_SCENARIO_VALUES),
       productFeatures: normalizeEnumArray(productAnalysis.productFeatures, PRODUCT_FEATURE_VALUES),
-      reasoning: normalizeString(productAnalysis.reasoning, 'No product analysis reasoning provided.'),
+      reasoning: normalizeString(
+        productAnalysis.reasoning,
+        'No product analysis reasoning provided.'
+      ),
     },
   }
 }
@@ -419,7 +434,9 @@ function parseCombinedProductScoreAnalysis(responseText: string): CombinedProduc
   }
 
   const preview = responseText.slice(0, 240).replace(/\s+/g, ' ')
-  throw new Error(`Failed to parse combined product score JSON: ${lastParseError}; preview="${preview}"`)
+  throw new Error(
+    `Failed to parse combined product score JSON: ${lastParseError}; preview="${preview}"`
+  )
 }
 
 function inferFallbackCategory(product: AffiliateProduct): string {
@@ -437,7 +454,9 @@ function inferFallbackCategory(product: AffiliateProduct): string {
   return 'other'
 }
 
-function inferFallbackPricePositioning(priceAmount: number | null): ProductAnalysis['pricePositioning'] {
+function inferFallbackPricePositioning(
+  priceAmount: number | null
+): ProductAnalysis['pricePositioning'] {
   if (!priceAmount || priceAmount <= 0) return 'mid-range'
   if (priceAmount >= 120) return 'luxury'
   if (priceAmount >= 50) return 'premium'
@@ -445,7 +464,9 @@ function inferFallbackPricePositioning(priceAmount: number | null): ProductAnaly
   return 'budget'
 }
 
-function buildFallbackCombinedProductScoreAnalysis(product: AffiliateProduct): CombinedProductScoreAnalysis {
+function buildFallbackCombinedProductScoreAnalysis(
+  product: AffiliateProduct
+): CombinedProductScoreAnalysis {
   return {
     seasonality: {
       seasonality: 'all-year',
@@ -482,11 +503,7 @@ async function recordProductScoreTokenUsage(
     return
   }
 
-  const cost = estimateTokenCost(
-    result.model,
-    result.usage.inputTokens,
-    result.usage.outputTokens
-  )
+  const cost = estimateTokenCost(result.model, result.usage.inputTokens, result.usage.outputTokens)
 
   await recordTokenUsage({
     userId,
@@ -538,8 +555,8 @@ export async function calculateProductRecommendationScore(
           seasonality: seasonalityAnalysis.seasonality,
           holidays: seasonalityAnalysis.holidays,
           isPeakSeason: seasonalityAnalysis.isPeakSeason,
-          monthsUntilPeak: seasonalityAnalysis.monthsUntilPeak
-        }
+          monthsUntilPeak: seasonalityAnalysis.monthsUntilPeak,
+        },
       }
 
       // 商品特征维度（基于AI分析）
@@ -574,10 +591,10 @@ export async function calculateProductRecommendationScore(
       commissionPotential,
       marketFit,
       seasonality,
-      productCharacteristics
+      productCharacteristics,
     },
     seasonalityAnalysis,
-    productAnalysis
+    productAnalysis,
   })
 
   return {
@@ -589,10 +606,10 @@ export async function calculateProductRecommendationScore(
       commissionPotential,
       marketFit,
       seasonality,
-      productCharacteristics
+      productCharacteristics,
     },
     seasonalityAnalysis,
-    productAnalysis
+    productAnalysis,
   }
 }
 
@@ -617,8 +634,8 @@ function calculateProductAppealScore(product: AffiliateProduct): DimensionScore 
       brandScore,
       priceAmount: product.price_amount,
       reviewCount: product.review_count,
-      brand: product.brand
-    }
+      brand: product.brand,
+    },
   }
 }
 
@@ -664,19 +681,43 @@ function calculateBrandScore(brand: string | null): number {
 
   // 知名品牌列表
   const famousBrands = [
-    'apple', 'samsung', 'sony', 'nike', 'adidas', 'microsoft',
-    'dell', 'hp', 'lenovo', 'asus', 'lg', 'panasonic', 'canon',
-    'nikon', 'bose', 'jbl', 'logitech', 'razer', 'corsair'
+    'apple',
+    'samsung',
+    'sony',
+    'nike',
+    'adidas',
+    'microsoft',
+    'dell',
+    'hp',
+    'lenovo',
+    'asus',
+    'lg',
+    'panasonic',
+    'canon',
+    'nikon',
+    'bose',
+    'jbl',
+    'logitech',
+    'razer',
+    'corsair',
   ]
 
   // 中等品牌列表
   const mediumBrands = [
-    'anker', 'aukey', 'tp-link', 'netgear', 'belkin', 'sandisk',
-    'western digital', 'seagate', 'crucial', 'kingston'
+    'anker',
+    'aukey',
+    'tp-link',
+    'netgear',
+    'belkin',
+    'sandisk',
+    'western digital',
+    'seagate',
+    'crucial',
+    'kingston',
   ]
 
-  if (famousBrands.some(b => brandLower.includes(b))) return 100
-  if (mediumBrands.some(b => brandLower.includes(b))) return 85
+  if (famousBrands.some((b) => brandLower.includes(b))) return 100
+  if (mediumBrands.some((b) => brandLower.includes(b))) return 85
 
   // 根据品牌名长度判断
   if (brand.length >= 8) return 70
@@ -703,8 +744,8 @@ function calculateCommissionPotentialScore(product: AffiliateProduct): Dimension
       rateScore,
       amountScore,
       commissionRate: product.commission_rate,
-      commissionAmount: product.commission_amount
-    }
+      commissionAmount: product.commission_amount,
+    },
   }
 }
 
@@ -761,8 +802,8 @@ function calculateMarketFitScore(product: AffiliateProduct): DimensionScore {
       geoScore,
       landingPageScore,
       blacklistScore,
-      isBlacklisted: product.is_blacklisted
-    }
+      isBlacklisted: product.is_blacklisted,
+    },
   }
 }
 
@@ -790,7 +831,7 @@ function calculateGeoCoverageScore(allowedCountriesJson: string | null): number 
 
     // 优质市场列表
     const premiumMarkets = ['US', 'UK', 'CA', 'AU', 'DE', 'FR', 'IT', 'ES']
-    const premiumCount = countries.filter(c => premiumMarkets.includes(c.toUpperCase())).length
+    const premiumCount = countries.filter((c) => premiumMarkets.includes(c.toUpperCase())).length
 
     if (premiumCount >= 5) return 100
     if (premiumCount >= 3) return 90
@@ -897,7 +938,7 @@ async function analyzeProductScoreCombined(
               isPeakSeason: { type: 'BOOLEAN' },
               monthsUntilPeak: { type: 'INTEGER', minimum: 0, maximum: 12 },
             },
-            required: ['seasonality', 'holidays', 'isPeakSeason', 'monthsUntilPeak']
+            required: ['seasonality', 'holidays', 'isPeakSeason', 'monthsUntilPeak'],
           },
           productAnalysis: {
             type: 'OBJECT',
@@ -905,22 +946,28 @@ async function analyzeProductScoreCombined(
               category: { type: 'STRING' },
               targetAudience: {
                 type: 'ARRAY',
-                items: { type: 'STRING' }
+                items: { type: 'STRING' },
               },
               pricePositioning: { type: 'STRING' },
               useScenario: {
                 type: 'ARRAY',
-                items: { type: 'STRING' }
+                items: { type: 'STRING' },
               },
               productFeatures: {
                 type: 'ARRAY',
-                items: { type: 'STRING' }
+                items: { type: 'STRING' },
               },
             },
-            required: ['category', 'targetAudience', 'pricePositioning', 'useScenario', 'productFeatures']
-          }
+            required: [
+              'category',
+              'targetAudience',
+              'pricePositioning',
+              'useScenario',
+              'productFeatures',
+            ],
+          },
         },
-        required: ['seasonality', 'productAnalysis']
+        required: ['seasonality', 'productAnalysis'],
       }
 
       const requestBase = {
@@ -936,11 +983,14 @@ async function analyzeProductScoreCombined(
       const retryPromptTemplate = await loadPrompt('product_score_combined_analysis_retry')
 
       try {
-        const firstResult = await generateContent({
-          ...requestBase,
-          prompt: buildCombinedProductScorePrompt(promptTemplate, product, currentMonth),
-          temperature: 0.1,
-        }, userId)
+        const firstResult = await generateContent(
+          {
+            ...requestBase,
+            prompt: buildCombinedProductScorePrompt(promptTemplate, product, currentMonth),
+            temperature: 0.1,
+          },
+          userId
+        )
 
         await recordProductScoreTokenUsage(userId, 'product_score_combined_analysis', firstResult)
 
@@ -957,12 +1007,22 @@ async function analyzeProductScoreCombined(
 
       if (!analysis) {
         try {
-          const retryResult = await generateContent({
-            ...requestBase,
-            maxOutputTokens: Math.min(requestBase.maxOutputTokens, PRODUCT_SCORE_AI_RETRY_MAX_OUTPUT_TOKENS),
-            prompt: buildCombinedProductScoreRetryPrompt(retryPromptTemplate, product, currentMonth),
-            temperature: 0,
-          }, userId)
+          const retryResult = await generateContent(
+            {
+              ...requestBase,
+              maxOutputTokens: Math.min(
+                requestBase.maxOutputTokens,
+                PRODUCT_SCORE_AI_RETRY_MAX_OUTPUT_TOKENS
+              ),
+              prompt: buildCombinedProductScoreRetryPrompt(
+                retryPromptTemplate,
+                product,
+                currentMonth
+              ),
+              temperature: 0,
+            },
+            userId
+          )
           await recordProductScoreTokenUsage(userId, 'product_score_combined_analysis', retryResult)
           try {
             analysis = parseCombinedProductScoreAnalysis(retryResult.text)
@@ -1101,8 +1161,8 @@ function calculateProductCharacteristicsScore(analysis: ProductAnalysis): Dimens
       productFeatures: analysis.productFeatures,
       useScenario: analysis.useScenario,
       targetAudience: analysis.targetAudience,
-      category: analysis.category
-    }
+      category: analysis.category,
+    },
   }
 }
 
@@ -1115,8 +1175,8 @@ function getDefaultProductCharacteristicsScore(): DimensionScore {
     weight: 0.05,
     weightedScore: 50 * 0.05,
     details: {
-      note: '未进行AI分析,使用默认分数'
-    }
+      note: '未进行AI分析,使用默认分数',
+    },
   }
 }
 
@@ -1131,8 +1191,8 @@ function getDefaultSeasonalityScore(): DimensionScore {
     details: {
       seasonality: 'all-year',
       isPeakSeason: false,
-      note: '未进行AI分析,使用默认分数'
-    }
+      note: '未进行AI分析,使用默认分数',
+    },
   }
 }
 
@@ -1173,28 +1233,28 @@ function generateRecommendationReasons(params: {
   if (dimensions.commissionPotential.details.commissionAmount >= 30) {
     reasons.push({
       text: `高佣金收益,单笔可赚$${dimensions.commissionPotential.details.commissionAmount.toFixed(2)}`,
-      priority: 100
+      priority: 100,
     })
   }
 
   if (dimensions.productAppeal.details.reviewCount >= 1000) {
     reasons.push({
       text: `强大的社会证明,拥有${dimensions.productAppeal.details.reviewCount.toLocaleString()}条评论`,
-      priority: 95
+      priority: 95,
     })
   }
 
   if (dimensions.commissionPotential.details.commissionRate >= 10) {
     reasons.push({
       text: `高佣金比例(${dimensions.commissionPotential.details.commissionRate}%),收益潜力大`,
-      priority: 90
+      priority: 90,
     })
   }
 
   if (dimensions.productAppeal.details.brandScore >= 100) {
     reasons.push({
       text: `知名品牌(${product.brand}),用户信任度高`,
-      priority: 85
+      priority: 85,
     })
   }
 
@@ -1202,23 +1262,26 @@ function generateRecommendationReasons(params: {
     const price = dimensions.productAppeal.details.priceAmount
     reasons.push({
       text: `价格适中($${price?.toFixed(2)}),易于转化`,
-      priority: 80
+      priority: 80,
     })
   }
 
   // 季节性正面理由
   if (seasonalityAnalysis?.isPeakSeason) {
-    const holidayText = seasonalityAnalysis.holidays.length > 0
-      ? `(${seasonalityAnalysis.holidays.join('/')})`
-      : ''
+    const holidayText =
+      seasonalityAnalysis.holidays.length > 0 ? `(${seasonalityAnalysis.holidays.join('/')})` : ''
     reasons.push({
       text: `当前正值促销旺季${holidayText},需求旺盛`,
-      priority: 88
+      priority: 88,
     })
-  } else if (seasonalityAnalysis && seasonalityAnalysis.monthsUntilPeak >= 1 && seasonalityAnalysis.monthsUntilPeak <= 2) {
+  } else if (
+    seasonalityAnalysis &&
+    seasonalityAnalysis.monthsUntilPeak >= 1 &&
+    seasonalityAnalysis.monthsUntilPeak <= 2
+  ) {
     reasons.push({
       text: `即将进入促销旺季,提前布局`,
-      priority: 75
+      priority: 75,
     })
   }
 
@@ -1226,7 +1289,7 @@ function generateRecommendationReasons(params: {
   if (dimensions.marketFit.details.geoScore >= 90) {
     reasons.push({
       text: `覆盖多个优质市场(US, UK, CA等)`,
-      priority: 70
+      priority: 70,
     })
   }
 
@@ -1234,7 +1297,7 @@ function generateRecommendationReasons(params: {
   if (dimensions.marketFit.details.landingPageScore >= 100) {
     reasons.push({
       text: `Amazon产品页,信任度和转化率高`,
-      priority: 65
+      priority: 65,
     })
   }
 
@@ -1242,25 +1305,31 @@ function generateRecommendationReasons(params: {
   if (dimensions.productCharacteristics.score >= 80) {
     reasons.push({
       text: `商品特征优秀(${dimensions.productCharacteristics.score.toFixed(0)}分),市场潜力大`,
-      priority: 73
+      priority: 73,
     })
   }
 
   // 基于AI分析的正面理由
   if (productAnalysis) {
     // 高端/奢侈品定位
-    if (productAnalysis.pricePositioning === 'luxury' || productAnalysis.pricePositioning === 'premium') {
+    if (
+      productAnalysis.pricePositioning === 'luxury' ||
+      productAnalysis.pricePositioning === 'premium'
+    ) {
       reasons.push({
         text: `${productAnalysis.pricePositioning === 'luxury' ? '奢侈品' : '高端'}定位,目标用户购买力强`,
-        priority: 72
+        priority: 72,
       })
     }
 
     // 创新/智能特点
-    if (productAnalysis.productFeatures.includes('innovative') || productAnalysis.productFeatures.includes('smart')) {
+    if (
+      productAnalysis.productFeatures.includes('innovative') ||
+      productAnalysis.productFeatures.includes('smart')
+    ) {
       reasons.push({
         text: `具有创新/智能特点,市场竞争力强`,
-        priority: 68
+        priority: 68,
       })
     }
 
@@ -1268,7 +1337,7 @@ function generateRecommendationReasons(params: {
     if (productAnalysis.useScenario.length >= 3) {
       reasons.push({
         text: `适用多个场景(${productAnalysis.useScenario.slice(0, 3).join('、')}),受众广泛`,
-        priority: 66
+        priority: 66,
       })
     }
 
@@ -1276,7 +1345,7 @@ function generateRecommendationReasons(params: {
     if (productAnalysis.productFeatures.includes('portable')) {
       reasons.push({
         text: `便携设计,适合移动使用场景`,
-        priority: 63
+        priority: 63,
       })
     }
   }
@@ -1285,21 +1354,25 @@ function generateRecommendationReasons(params: {
   if (product.is_blacklisted) {
     reasons.push({
       text: `商品已被黑名单,无法投放`,
-      priority: 200 // 最高优先级
+      priority: 200, // 最高优先级
     })
   }
 
   if (dimensions.marketFit.details.statusScore === 0) {
     reasons.push({
       text: `商品状态无效,无法投放`,
-      priority: 195
+      priority: 195,
     })
   }
 
-  if (seasonalityAnalysis && !seasonalityAnalysis.isPeakSeason && seasonalityAnalysis.monthsUntilPeak > 3) {
+  if (
+    seasonalityAnalysis &&
+    !seasonalityAnalysis.isPeakSeason &&
+    seasonalityAnalysis.monthsUntilPeak > 3
+  ) {
     reasons.push({
       text: `当前处于淡季,需求较低`,
-      priority: 190
+      priority: 190,
     })
   }
 
@@ -1307,7 +1380,7 @@ function generateRecommendationReasons(params: {
     const amount = dimensions.commissionPotential.details.commissionAmount
     reasons.push({
       text: `佣金收益较低($${amount?.toFixed(2) || '未知'}),投入产出比不佳`,
-      priority: 55
+      priority: 55,
     })
   }
 
@@ -1315,7 +1388,7 @@ function generateRecommendationReasons(params: {
     const rate = dimensions.commissionPotential.details.commissionRate
     reasons.push({
       text: `佣金比例偏低(${rate}%),收益有限`,
-      priority: 50
+      priority: 50,
     })
   }
 
@@ -1323,7 +1396,7 @@ function generateRecommendationReasons(params: {
     const count = dimensions.productAppeal.details.reviewCount || 0
     reasons.push({
       text: `评论数量较少(${count}条),社会证明不足`,
-      priority: 45
+      priority: 45,
     })
   }
 
@@ -1331,28 +1404,28 @@ function generateRecommendationReasons(params: {
     const price = dimensions.productAppeal.details.priceAmount
     reasons.push({
       text: `价格过高($${price?.toFixed(2)}),可能影响转化`,
-      priority: 40
+      priority: 40,
     })
   }
 
   if (!product.brand || product.brand.trim().length === 0) {
     reasons.push({
       text: `无品牌信息,用户信任度低`,
-      priority: 35
+      priority: 35,
     })
   }
 
   if (dimensions.marketFit.details.geoScore < 60) {
     reasons.push({
       text: `地理覆盖有限,市场受限`,
-      priority: 30
+      priority: 30,
     })
   }
 
   if (dimensions.marketFit.details.landingPageScore < 60) {
     reasons.push({
       text: `非Amazon落地页,信任度相对较低`,
-      priority: 20
+      priority: 20,
     })
   }
 
@@ -1360,33 +1433,33 @@ function generateRecommendationReasons(params: {
   if (!dimensions.productAppeal.details.priceAmount) {
     reasons.push({
       text: `价格信息缺失,需要验证`,
-      priority: 15
+      priority: 15,
     })
   }
 
-  if (!dimensions.commissionPotential.details.commissionAmount && !dimensions.commissionPotential.details.commissionRate) {
+  if (
+    !dimensions.commissionPotential.details.commissionAmount &&
+    !dimensions.commissionPotential.details.commissionRate
+  ) {
     reasons.push({
       text: `佣金详情未知,请查看平台`,
-      priority: 10
+      priority: 10,
     })
   }
 
   if (seasonalityAnalysis?.seasonality === 'all-year') {
     reasons.push({
       text: `全年通用商品,无明显季节性波动`,
-      priority: 5
+      priority: 5,
     })
   }
 
   // 按优先级排序,选择前5条
   reasons.sort((a, b) => b.priority - a.priority)
-  return reasons.slice(0, 5).map(r => r.text)
+  return reasons.slice(0, 5).map((r) => r.text)
 }
 
-function resolveHybridRerankCount(
-  totalProducts: number,
-  requestedTopK?: number
-): number {
+function resolveHybridRerankCount(totalProducts: number, requestedTopK?: number): number {
   if (totalProducts <= 0) return 0
 
   const safeTopK = Number.isFinite(requestedTopK)
@@ -1420,7 +1493,7 @@ export async function calculateHybridProductRecommendationScores(
         aiCandidates: 0,
         aiCompleted: 0,
         ruleOnly: 0,
-      }
+      },
     }
   }
 
@@ -1430,7 +1503,7 @@ export async function calculateHybridProductRecommendationScores(
       product,
       score: await calculateProductRecommendationScore(product, userId, {
         includeSeasonalityAnalysis: false,
-      })
+      }),
     }))
   )
 
@@ -1438,11 +1511,12 @@ export async function calculateHybridProductRecommendationScores(
     ? resolveHybridRerankCount(products.length, options?.aiRerankTopK)
     : 0
 
-  const aiCandidates = aiCandidateCount > 0
-    ? [...baseScores]
-        .sort((a, b) => b.score.totalScore - a.score.totalScore)
-        .slice(0, aiCandidateCount)
-    : []
+  const aiCandidates =
+    aiCandidateCount > 0
+      ? [...baseScores]
+          .sort((a, b) => b.score.totalScore - a.score.totalScore)
+          .slice(0, aiCandidateCount)
+      : []
 
   const aiScores = new Map<number, ProductRecommendationScore>()
   let aiCompleted = 0
@@ -1476,7 +1550,7 @@ export async function calculateHybridProductRecommendationScores(
       aiCandidates: aiCandidateCount,
       aiCompleted,
       ruleOnly: products.length - aiScores.size,
-    }
+    },
   }
 }
 
@@ -1490,11 +1564,13 @@ export async function batchCalculateProductScores(
     includeSeasonalityAnalysis?: boolean
     batchSize?: number
   }
-): Promise<Array<{
-  productId: number
-  score: ProductRecommendationScore | null
-  error?: string
-}>> {
+): Promise<
+  Array<{
+    productId: number
+    score: ProductRecommendationScore | null
+    error?: string
+  }>
+> {
   const results: Array<{
     productId: number
     score: ProductRecommendationScore | null
@@ -1507,14 +1583,14 @@ export async function batchCalculateProductScores(
       results.push({
         productId: product.id,
         score,
-        error: undefined
+        error: undefined,
       })
     } catch (error: any) {
       console.error(`计算商品${product.id}推荐指数失败:`, error)
       results.push({
         productId: product.id,
         score: null,
-        error: error.message
+        error: error.message,
       })
     }
   }

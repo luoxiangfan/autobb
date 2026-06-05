@@ -13,7 +13,7 @@ import {
   validateKeywordSearchVolume,
   getLanguageConstraintsSummary,
   compareLanguageConstraints,
-  getLanguageSpecificAdvice
+  getLanguageSpecificAdvice,
 } from '../language-constraints'
 
 describe('LanguageConstraints', () => {
@@ -132,7 +132,7 @@ describe('LanguageConstraints', () => {
 
     it('should include major languages', () => {
       const languages = getSupportedLanguages()
-      const codes = languages.map(l => l.languageCode)
+      const codes = languages.map((l) => l.languageCode)
       expect(codes).toContain('en')
       expect(codes).toContain('de')
       expect(codes).toContain('ja')
@@ -207,7 +207,7 @@ describe('LanguageConstraints', () => {
 
     it('should validate German keyword word count', () => {
       expect(validateKeywordWordCount('robot vacuum', 'de')).toBe(true)
-      expect(validateKeywordWordCount('robot vacuum cleaner', 'de')).toBe(true)  // 修复: 3个词，德语max=3
+      expect(validateKeywordWordCount('robot vacuum cleaner', 'de')).toBe(true) // 修复: 3个词，德语max=3
     })
 
     it('should validate Japanese keyword word count', () => {
@@ -321,19 +321,19 @@ describe('LanguageConstraints', () => {
     it('should provide advice for Japanese', () => {
       const advice = getLanguageSpecificAdvice('ja')
       expect(Array.isArray(advice)).toBe(true)
-      expect(advice.some(a => a.includes('compact'))).toBe(true)
+      expect(advice.some((a) => a.includes('compact'))).toBe(true)
     })
 
     it('should provide advice for Chinese', () => {
       const advice = getLanguageSpecificAdvice('zh')
       expect(Array.isArray(advice)).toBe(true)
-      expect(advice.some(a => a.includes('compact'))).toBe(true)
+      expect(advice.some((a) => a.includes('compact'))).toBe(true)
     })
 
     it('should provide advice for Romance languages', () => {
       const advice = getLanguageSpecificAdvice('it')
       expect(Array.isArray(advice)).toBe(true)
-      expect(advice.some(a => a.includes('verbose'))).toBe(true)
+      expect(advice.some((a) => a.includes('verbose'))).toBe(true)
     })
 
     it('should provide default advice for English', () => {

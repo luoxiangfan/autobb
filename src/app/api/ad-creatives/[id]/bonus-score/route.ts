@@ -10,10 +10,7 @@ import { getCreativePerformance } from '@/lib/bonus-score-calculator'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Verify authentication
     const authResult = await verifyAuth(request)
@@ -31,36 +28,48 @@ export async function GET(
     const db = await getDatabase()
 
     // 验证创意归属
-    const creative = await db.queryOne<any>(`
+    const creative = await db.queryOne<any>(
+      `
       SELECT id, google_campaign_id
       FROM ad_creatives
       WHERE id = ? AND user_id = ?
-    `, [adCreativeId, authResult.user.userId])
+    `,
+      [adCreativeId, authResult.user.userId]
+    )
 
     if (!creative) {
       return NextResponse.json({ error: 'Ad creative not found' }, { status: 404 })
     }
 
     // 获取创意关联账号币种（优先 campaigns.ad_creative_id，其次 google_campaign_id 关联）
-    const currencyRow = await db.queryOne<any>(`
+    const currencyRow = await db.queryOne<any>(
+      `
       SELECT COALESCE(gaa.currency, 'USD') as currency
       FROM campaigns c
       LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
       WHERE c.user_id = ? AND c.ad_creative_id = ?
       LIMIT 1
-    `, [authResult.user.userId, adCreativeId])
+    `,
+      [authResult.user.userId, adCreativeId]
+    )
 
-    const fallbackCurrencyRow = !currencyRow?.currency && creative.google_campaign_id
-      ? await db.queryOne<any>(`
+    const fallbackCurrencyRow =
+      !currencyRow?.currency && creative.google_campaign_id
+        ? await db.queryOne<any>(
+            `
           SELECT COALESCE(gaa.currency, 'USD') as currency
           FROM campaigns c
           LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
           WHERE c.user_id = ? AND c.google_campaign_id = ?
           LIMIT 1
-        `, [authResult.user.userId, creative.google_campaign_id])
-      : null
+        `,
+            [authResult.user.userId, creative.google_campaign_id]
+          )
+        : null
 
-    const currency = String((currencyRow?.currency || fallbackCurrencyRow?.currency || 'USD')).trim().toUpperCase()
+    const currency = String(currencyRow?.currency || fallbackCurrencyRow?.currency || 'USD')
+      .trim()
+      .toUpperCase()
 
     const performanceData = await getCreativePerformance(adCreativeId)
 
@@ -70,7 +79,7 @@ export async function GET(
         message: 'No performance data available yet. Bonus score requires at least 100 clicks.',
         bonusScore: 0,
         breakdown: null,
-        currency
+        currency,
       })
     }
 
@@ -83,13 +92,10 @@ export async function GET(
       industryLabel: performanceData.bonusScore.industryLabel,
       performance: performanceData.performance,
       syncDate: performanceData.syncDate,
-      currency
+      currency,
     })
   } catch (error) {
     console.error('Get bonus score error:', error)
-    return NextResponse.json(
-      { error: 'Failed to get bonus score' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to get bonus score' }, { status: 500 })
   }
 }

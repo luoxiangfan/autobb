@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,7 +27,7 @@ import {
   ArrowLeft,
   Play,
   Check,
-  Filter
+  Filter,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -54,11 +54,7 @@ export default function OptimizationTasksPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [updatingTaskId, setUpdatingTaskId] = useState<number | null>(null)
 
-  useEffect(() => {
-    fetchTasks()
-  }, [statusFilter])
-
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       setLoading(true)
       const statusParam = statusFilter !== 'all' ? `status=${statusFilter}` : ''
@@ -76,7 +72,11 @@ export default function OptimizationTasksPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [statusFilter])
+
+  useEffect(() => {
+    fetchTasks()
+  }, [fetchTasks])
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -91,7 +91,7 @@ export default function OptimizationTasksPage() {
       const response = await fetch(`/api/optimization-tasks/${taskId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus }),
       })
 
       if (response.ok) {
@@ -114,7 +114,11 @@ export default function OptimizationTasksPage() {
       case 'high':
         return <Badge variant="destructive">高优先级</Badge>
       case 'medium':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">中优先级</Badge>
+        return (
+          <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+            中优先级
+          </Badge>
+        )
       case 'low':
         return <Badge variant="outline">低优先级</Badge>
       default:
@@ -149,7 +153,7 @@ export default function OptimizationTasksPage() {
   }
 
   // 过滤任务
-  const filteredTasks = tasks.filter(task => {
+  const filteredTasks = tasks.filter((task) => {
     if (priorityFilter !== 'all' && task.priority !== priorityFilter) {
       return false
     }
@@ -159,10 +163,10 @@ export default function OptimizationTasksPage() {
   // 统计数据
   const stats = {
     total: tasks.length,
-    pending: tasks.filter(t => t.status === 'pending').length,
-    inProgress: tasks.filter(t => t.status === 'in_progress').length,
-    completed: tasks.filter(t => t.status === 'completed').length,
-    high: tasks.filter(t => t.priority === 'high').length
+    pending: tasks.filter((t) => t.status === 'pending').length,
+    inProgress: tasks.filter((t) => t.status === 'in_progress').length,
+    completed: tasks.filter((t) => t.status === 'completed').length,
+    high: tasks.filter((t) => t.priority === 'high').length,
   }
 
   if (loading) {
@@ -189,12 +193,7 @@ export default function OptimizationTasksPage() {
             <p className="text-slate-500 mt-1">查看和处理所有优化建议</p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="gap-2"
-        >
+        <Button variant="outline" onClick={handleRefresh} disabled={refreshing} className="gap-2">
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           刷新
         </Button>

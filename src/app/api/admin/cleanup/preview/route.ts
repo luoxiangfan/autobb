@@ -13,12 +13,9 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     // 验证管理员权限
-    const authResult = await verifyAuth(request) as AuthResult
+    const authResult = (await verifyAuth(request)) as AuthResult
     if (!authResult.authenticated || authResult.user?.role !== 'admin') {
-      return NextResponse.json(
-        { error: '需要管理员权限' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
     }
 
     const db = await getDatabase()
@@ -26,53 +23,54 @@ export async function GET(request: NextRequest) {
 
     // 🔧 兼容 SQLite 和 PostgreSQL
     const deletedCheck = db.type === 'sqlite' ? 'is_deleted = 1' : 'is_deleted = TRUE'
-    const dateCheck = db.type === 'sqlite'
-      ? `deleted_at < datetime('now', '-${retentionDays} days')`
-      : `deleted_at < NOW() - INTERVAL '${retentionDays} days'`
+    const dateCheck =
+      db.type === 'sqlite'
+        ? `deleted_at < datetime('now', '-${retentionDays} days')`
+        : `deleted_at < NOW() - INTERVAL '${retentionDays} days'`
 
     // 统计各表的可清理记录数
-    const scrapedProductsCount = await db.queryOne(`
+    const scrapedProductsCount = (await db.queryOne(`
       SELECT COUNT(*) as count
       FROM scraped_products
       WHERE ${deletedCheck}
         AND deleted_at IS NOT NULL
         AND ${dateCheck}
-    `) as { count: number }
+    `)) as { count: number }
 
-    const adCreativesCount = await db.queryOne(`
+    const adCreativesCount = (await db.queryOne(`
       SELECT COUNT(*) as count
       FROM ad_creatives
       WHERE ${deletedCheck}
         AND deleted_at IS NOT NULL
         AND ${dateCheck}
-    `) as { count: number }
+    `)) as { count: number }
 
-    const googleAdsAccountsCount = await db.queryOne(`
+    const googleAdsAccountsCount = (await db.queryOne(`
       SELECT COUNT(*) as count
       FROM google_ads_accounts
       WHERE ${deletedCheck}
         AND deleted_at IS NOT NULL
         AND ${dateCheck}
-    `) as { count: number }
+    `)) as { count: number }
 
     // 统计所有软删除记录（包括未到清理期的）
-    const totalScrapedProducts = await db.queryOne(`
+    const totalScrapedProducts = (await db.queryOne(`
       SELECT COUNT(*) as count
       FROM scraped_products
       WHERE ${deletedCheck}
-    `) as { count: number }
+    `)) as { count: number }
 
-    const totalAdCreatives = await db.queryOne(`
+    const totalAdCreatives = (await db.queryOne(`
       SELECT COUNT(*) as count
       FROM ad_creatives
       WHERE ${deletedCheck}
-    `) as { count: number }
+    `)) as { count: number }
 
-    const totalGoogleAdsAccounts = await db.queryOne(`
+    const totalGoogleAdsAccounts = (await db.queryOne(`
       SELECT COUNT(*) as count
       FROM google_ads_accounts
       WHERE ${deletedCheck}
-    `) as { count: number }
+    `)) as { count: number }
 
     return NextResponse.json({
       retentionDays,
@@ -80,21 +78,19 @@ export async function GET(request: NextRequest) {
         scraped_products: Number(scrapedProductsCount.count) || 0,
         ad_creatives: Number(adCreativesCount.count) || 0,
         google_ads_accounts: Number(googleAdsAccountsCount.count) || 0,
-        total: (
+        total:
           (Number(scrapedProductsCount.count) || 0) +
           (Number(adCreativesCount.count) || 0) +
-          (Number(googleAdsAccountsCount.count) || 0)
-        ),
+          (Number(googleAdsAccountsCount.count) || 0),
       },
       current: {
         scraped_products: Number(totalScrapedProducts.count) || 0,
         ad_creatives: Number(totalAdCreatives.count) || 0,
         google_ads_accounts: Number(totalGoogleAdsAccounts.count) || 0,
-        total: (
+        total:
           (Number(totalScrapedProducts.count) || 0) +
           (Number(totalAdCreatives.count) || 0) +
-          (Number(totalGoogleAdsAccounts.count) || 0)
-        ),
+          (Number(totalGoogleAdsAccounts.count) || 0),
       },
     })
   } catch (error) {

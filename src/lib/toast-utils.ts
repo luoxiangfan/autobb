@@ -73,10 +73,7 @@ export function showPromise<T>(
  * 注意：Sonner 不支持原生确认对话框，这个需要用 AlertDialog 组件
  * 这里提供一个辅助函数，返回一个 Promise
  */
-export async function showConfirm(
-  title: string,
-  description: string
-): Promise<boolean> {
+export async function showConfirm(title: string, description: string): Promise<boolean> {
   // 这个需要配合 AlertDialog 组件使用
   // 暂时返回 true，后续需要实现完整的确认对话框
   console.warn('showConfirm 需要配合 AlertDialog 组件实现')

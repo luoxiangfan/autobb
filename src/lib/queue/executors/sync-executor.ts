@@ -22,9 +22,9 @@ import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
 export interface SyncTaskData {
   userId: number
   syncType: 'manual' | 'auto'
-  googleAdsAccountId?: number  // 可选，指定特定账户
-  startDate?: string          // 可选，同步开始日期（YYYY-MM-DD）
-  endDate?: string            // 可选，同步结束日期（YYYY-MM-DD）
+  googleAdsAccountId?: number // 可选，指定特定账户
+  startDate?: string // 可选，同步开始日期（YYYY-MM-DD）
+  endDate?: string // 可选，同步结束日期（YYYY-MM-DD）
 }
 
 /**
@@ -35,7 +35,9 @@ export function createSyncExecutor(): TaskExecutor<SyncTaskData> {
     const { userId, syncType, googleAdsAccountId, startDate, endDate } = task.data
 
     console.log(`🔄 [SyncExecutor] 开始同步任务: 用户 #${userId}, 类型: ${syncType}`)
-    console.log(`   账户ID: ${googleAdsAccountId || '全部'}, 期间: ${startDate || '默认'} - ${endDate || '默认'}`)
+    console.log(
+      `   账户ID: ${googleAdsAccountId || '全部'}, 期间: ${startDate || '默认'} - ${endDate || '默认'}`
+    )
 
     try {
       await assertUserExecutionAllowed(userId, { source: `sync:${task.id}` })
@@ -44,7 +46,9 @@ export function createSyncExecutor(): TaskExecutor<SyncTaskData> {
       // 注意：现有服务会处理所有账户的同步，不需要传入特定账户ID
       const syncLog: SyncLog = await dataSyncService.syncPerformanceData(userId, syncType)
 
-      console.log(`✅ [SyncExecutor] 同步任务完成: 用户 #${userId}, 记录数: ${syncLog.recordCount}, 耗时: ${syncLog.durationMs}ms`)
+      console.log(
+        `✅ [SyncExecutor] 同步任务完成: 用户 #${userId}, 记录数: ${syncLog.recordCount}, 耗时: ${syncLog.durationMs}ms`
+      )
 
       return syncLog
     } catch (error: any) {

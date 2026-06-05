@@ -23,7 +23,7 @@ import {
   AlertCircle,
   Target,
   Zap,
-  ExternalLink
+  ExternalLink,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -75,7 +75,7 @@ export default function CompetitorsPage() {
 
   useEffect(() => {
     if (selectedOfferId && offers.length > 0) {
-      const offer = offers.find(o => o.id.toString() === selectedOfferId)
+      const offer = offers.find((o) => o.id.toString() === selectedOfferId)
       setSelectedOffer(offer || null)
     }
   }, [selectedOfferId, offers])
@@ -91,9 +91,11 @@ export default function CompetitorsPage() {
             id: offer.id,
             brand: offer.brand,
             productName: offer.offerName || offer.brand,
-            competitorAnalysis: offer.competitorAnalysis ?
-              (typeof offer.competitorAnalysis === 'string' ?
-                JSON.parse(offer.competitorAnalysis) : offer.competitorAnalysis) : null
+            competitorAnalysis: offer.competitorAnalysis
+              ? typeof offer.competitorAnalysis === 'string'
+                ? JSON.parse(offer.competitorAnalysis)
+                : offer.competitorAnalysis
+              : null,
           }))
           .filter((offer: Offer) => offer.competitorAnalysis)
 
@@ -136,12 +138,18 @@ export default function CompetitorsPage() {
 
   const getPriceAdvantageLabel = (advantage?: string) => {
     switch (advantage) {
-      case 'lowest': return '最低价'
-      case 'below_average': return '低于均价'
-      case 'average': return '均价水平'
-      case 'above_average': return '高于均价'
-      case 'premium': return '高端定价'
-      default: return advantage || '未知'
+      case 'lowest':
+        return '最低价'
+      case 'below_average':
+        return '低于均价'
+      case 'average':
+        return '均价水平'
+      case 'above_average':
+        return '高于均价'
+      case 'premium':
+        return '高端定价'
+      default:
+        return advantage || '未知'
     }
   }
 
@@ -178,7 +186,7 @@ export default function CompetitorsPage() {
                 <SelectValue placeholder="选择Offer" />
               </SelectTrigger>
               <SelectContent>
-                {offers.map(offer => (
+                {offers.map((offer) => (
                   <SelectItem key={offer.id} value={offer.id.toString()}>
                     {offer.brand}
                   </SelectItem>
@@ -186,12 +194,7 @@ export default function CompetitorsPage() {
               </SelectContent>
             </Select>
           )}
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="gap-2"
-          >
+          <Button variant="outline" onClick={handleRefresh} disabled={refreshing} className="gap-2">
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             刷新
           </Button>
@@ -230,7 +233,9 @@ export default function CompetitorsPage() {
                       <p className="text-lg font-bold text-slate-900">
                         ${analysis.pricePosition.ourPrice}
                       </p>
-                      <Badge className={getPriceAdvantageColor(analysis.pricePosition.priceAdvantage)}>
+                      <Badge
+                        className={getPriceAdvantageColor(analysis.pricePosition.priceAdvantage)}
+                      >
                         {getPriceAdvantageLabel(analysis.pricePosition.priceAdvantage)}
                       </Badge>
                     </div>
@@ -255,9 +260,13 @@ export default function CompetitorsPage() {
                         {analysis.ratingPosition.ourRating?.toFixed(1)} / 5.0
                       </p>
                       <p className="text-xs text-slate-500">
-                        {analysis.ratingPosition.ratingAdvantage === 'top_rated' ? '评分最高' :
-                         analysis.ratingPosition.ratingAdvantage === 'above_average' ? '高于均分' :
-                         analysis.ratingPosition.ratingAdvantage === 'average' ? '均分水平' : '低于均分'}
+                        {analysis.ratingPosition.ratingAdvantage === 'top_rated'
+                          ? '评分最高'
+                          : analysis.ratingPosition.ratingAdvantage === 'above_average'
+                            ? '高于均分'
+                            : analysis.ratingPosition.ratingAdvantage === 'average'
+                              ? '均分水平'
+                              : '低于均分'}
                       </p>
                     </div>
                   </div>
@@ -372,11 +381,21 @@ export default function CompetitorsPage() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">产品名称</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">品牌</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">价格</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">评分</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">评论数</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">
+                          产品名称
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">
+                          品牌
+                        </th>
+                        <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">
+                          价格
+                        </th>
+                        <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">
+                          评分
+                        </th>
+                        <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">
+                          评论数
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -398,7 +417,9 @@ export default function CompetitorsPage() {
                               <span className="text-slate-900">{competitor.name}</span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-sm text-slate-600">{competitor.brand || '-'}</td>
+                          <td className="py-3 px-4 text-sm text-slate-600">
+                            {competitor.brand || '-'}
+                          </td>
                           <td className="py-3 px-4 text-sm text-slate-600 text-right">
                             {competitor.price ? `$${competitor.price}` : '-'}
                           </td>

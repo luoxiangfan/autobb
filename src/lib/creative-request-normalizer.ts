@@ -75,11 +75,18 @@ export function normalizeSingleCreativeSelection(
     }
   }
 
-  let requestedBucket: CreativeBucketSlot | null = bucketFromCreativeType || bucketSelection.normalizedBucket
+  let requestedBucket: CreativeBucketSlot | null =
+    bucketFromCreativeType || bucketSelection.normalizedBucket
   let legacyFallbackToProduct = false
 
-  if (!bucketFromCreativeType && bucketSelection.legacyModelHint && bucketSelection.normalizedBucket === 'B') {
-    const shouldKeepModelIntent = params.resolveLegacyModelIntent ? params.resolveLegacyModelIntent() : true
+  if (
+    !bucketFromCreativeType &&
+    bucketSelection.legacyModelHint &&
+    bucketSelection.normalizedBucket === 'B'
+  ) {
+    const shouldKeepModelIntent = params.resolveLegacyModelIntent
+      ? params.resolveLegacyModelIntent()
+      : true
     if (!shouldKeepModelIntent) {
       requestedBucket = 'D'
       legacyFallbackToProduct = true

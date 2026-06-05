@@ -52,62 +52,274 @@ type ColumnStats = {
 const UPDATE_CHUNK_SIZE = 500
 
 const COLUMN_SPECS: BackfillColumnSpec[] = [
-  { table: 'account_sharing_alerts', pkColumn: 'id', column: 'metadata', expected: 'array_or_object' },
+  {
+    table: 'account_sharing_alerts',
+    pkColumn: 'id',
+    column: 'metadata',
+    expected: 'array_or_object',
+  },
 
-  { table: 'ad_creatives', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'negative_keywords_match_type', expected: 'object' },
+  {
+    table: 'ad_creatives',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'negative_keywords_match_type',
+    expected: 'object',
+  },
 
-  { table: 'affiliate_commission_attributions', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'raw_payload', expected: 'array_or_object' },
+  {
+    table: 'affiliate_commission_attributions',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'raw_payload',
+    expected: 'array_or_object',
+  },
 
   { table: 'audit_logs', pkColumn: 'id', column: 'details', expected: 'object' },
 
   { table: 'batch_tasks', pkColumn: 'id', column: 'metadata', expected: 'object' },
 
-  { table: 'click_farm_tasks', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'hourly_distribution', expected: 'array' },
-  { table: 'click_farm_tasks', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'daily_history', expected: 'array' },
+  {
+    table: 'click_farm_tasks',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'hourly_distribution',
+    expected: 'array',
+  },
+  {
+    table: 'click_farm_tasks',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'daily_history',
+    expected: 'array',
+  },
 
-  { table: 'creative_tasks', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'optimization_history', expected: 'array_or_object' },
-  { table: 'creative_tasks', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'result', expected: 'object' },
-  { table: 'creative_tasks', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'error', expected: 'object' },
+  {
+    table: 'creative_tasks',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'optimization_history',
+    expected: 'array_or_object',
+  },
+  {
+    table: 'creative_tasks',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'result',
+    expected: 'object',
+  },
+  {
+    table: 'creative_tasks',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'error',
+    expected: 'object',
+  },
 
-  { table: 'offer_keyword_pools', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'brand_keywords', expected: 'array' },
-  { table: 'offer_keyword_pools', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'bucket_a_keywords', expected: 'array' },
-  { table: 'offer_keyword_pools', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'bucket_b_keywords', expected: 'array' },
-  { table: 'offer_keyword_pools', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'bucket_c_keywords', expected: 'array' },
-  { table: 'offer_keyword_pools', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'bucket_d_keywords', expected: 'array' },
-  { table: 'offer_keyword_pools', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'store_bucket_a_keywords', expected: 'array' },
-  { table: 'offer_keyword_pools', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'store_bucket_b_keywords', expected: 'array' },
-  { table: 'offer_keyword_pools', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'store_bucket_c_keywords', expected: 'array' },
-  { table: 'offer_keyword_pools', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'store_bucket_d_keywords', expected: 'array' },
-  { table: 'offer_keyword_pools', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'store_bucket_s_keywords', expected: 'array' },
+  {
+    table: 'offer_keyword_pools',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'brand_keywords',
+    expected: 'array',
+  },
+  {
+    table: 'offer_keyword_pools',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'bucket_a_keywords',
+    expected: 'array',
+  },
+  {
+    table: 'offer_keyword_pools',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'bucket_b_keywords',
+    expected: 'array',
+  },
+  {
+    table: 'offer_keyword_pools',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'bucket_c_keywords',
+    expected: 'array',
+  },
+  {
+    table: 'offer_keyword_pools',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'bucket_d_keywords',
+    expected: 'array',
+  },
+  {
+    table: 'offer_keyword_pools',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'store_bucket_a_keywords',
+    expected: 'array',
+  },
+  {
+    table: 'offer_keyword_pools',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'store_bucket_b_keywords',
+    expected: 'array',
+  },
+  {
+    table: 'offer_keyword_pools',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'store_bucket_c_keywords',
+    expected: 'array',
+  },
+  {
+    table: 'offer_keyword_pools',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'store_bucket_d_keywords',
+    expected: 'array',
+  },
+  {
+    table: 'offer_keyword_pools',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'store_bucket_s_keywords',
+    expected: 'array',
+  },
 
-  { table: 'offer_tasks', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'result', expected: 'object' },
-  { table: 'offer_tasks', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'error', expected: 'object' },
+  {
+    table: 'offer_tasks',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'result',
+    expected: 'object',
+  },
+  {
+    table: 'offer_tasks',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'error',
+    expected: 'object',
+  },
 
-  { table: 'offers', pkColumn: 'id', offerIdColumn: 'id', column: 'ai_reviews', expected: 'array_or_object' },
-  { table: 'offers', pkColumn: 'id', offerIdColumn: 'id', column: 'ai_competitive_edges', expected: 'array_or_object' },
-  { table: 'offers', pkColumn: 'id', offerIdColumn: 'id', column: 'ai_keywords', expected: 'array' },
-  { table: 'offers', pkColumn: 'id', offerIdColumn: 'id', column: 'ai_analysis_v32', expected: 'object' },
+  {
+    table: 'offers',
+    pkColumn: 'id',
+    offerIdColumn: 'id',
+    column: 'ai_reviews',
+    expected: 'array_or_object',
+  },
+  {
+    table: 'offers',
+    pkColumn: 'id',
+    offerIdColumn: 'id',
+    column: 'ai_competitive_edges',
+    expected: 'array_or_object',
+  },
+  {
+    table: 'offers',
+    pkColumn: 'id',
+    offerIdColumn: 'id',
+    column: 'ai_keywords',
+    expected: 'array',
+  },
+  {
+    table: 'offers',
+    pkColumn: 'id',
+    offerIdColumn: 'id',
+    column: 'ai_analysis_v32',
+    expected: 'object',
+  },
 
-  { table: 'openclaw_affiliate_products', pkColumn: 'id', column: 'raw_data', expected: 'array_or_object' },
+  {
+    table: 'openclaw_affiliate_products',
+    pkColumn: 'id',
+    column: 'raw_data',
+    expected: 'array_or_object',
+  },
   { table: 'openclaw_asin_inputs', pkColumn: 'id', column: 'metadata_json', expected: 'object' },
-  { table: 'openclaw_asin_items', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'data_json', expected: 'object' },
-  { table: 'openclaw_experiment_results', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'variant_a', expected: 'array_or_object' },
-  { table: 'openclaw_experiment_results', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'variant_b', expected: 'array_or_object' },
-  { table: 'openclaw_experiment_results', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'metrics_a', expected: 'object' },
-  { table: 'openclaw_experiment_results', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'metrics_b', expected: 'object' },
+  {
+    table: 'openclaw_asin_items',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'data_json',
+    expected: 'object',
+  },
+  {
+    table: 'openclaw_experiment_results',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'variant_a',
+    expected: 'array_or_object',
+  },
+  {
+    table: 'openclaw_experiment_results',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'variant_b',
+    expected: 'array_or_object',
+  },
+  {
+    table: 'openclaw_experiment_results',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'metrics_a',
+    expected: 'object',
+  },
+  {
+    table: 'openclaw_experiment_results',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'metrics_b',
+    expected: 'object',
+  },
   { table: 'openclaw_knowledge_base', pkColumn: 'id', column: 'summary_json', expected: 'object' },
-  { table: 'openclaw_offer_scores', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'raw_data', expected: 'array_or_object' },
-  { table: 'openclaw_strategy_actions', pkColumn: 'id', column: 'request_json', expected: 'object' },
-  { table: 'openclaw_strategy_actions', pkColumn: 'id', column: 'response_json', expected: 'array_or_object' },
+  {
+    table: 'openclaw_offer_scores',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'raw_data',
+    expected: 'array_or_object',
+  },
+  {
+    table: 'openclaw_strategy_actions',
+    pkColumn: 'id',
+    column: 'request_json',
+    expected: 'object',
+  },
+  {
+    table: 'openclaw_strategy_actions',
+    pkColumn: 'id',
+    column: 'response_json',
+    expected: 'array_or_object',
+  },
   { table: 'openclaw_strategy_runs', pkColumn: 'id', column: 'config_json', expected: 'object' },
   { table: 'openclaw_strategy_runs', pkColumn: 'id', column: 'stats_json', expected: 'object' },
   { table: 'openclaw_tokens', pkColumn: 'id', column: 'scopes', expected: 'array' },
 
   { table: 'upload_records', pkColumn: 'id', column: 'metadata', expected: 'object' },
 
-  { table: 'url_swap_tasks', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'swap_history', expected: 'array' },
-  { table: 'url_swap_tasks', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'manual_final_url_suffixes', expected: 'array' },
-  { table: 'url_swap_tasks', pkColumn: 'id', offerIdColumn: 'offer_id', column: 'manual_affiliate_links', expected: 'array' },
+  {
+    table: 'url_swap_tasks',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'swap_history',
+    expected: 'array',
+  },
+  {
+    table: 'url_swap_tasks',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'manual_final_url_suffixes',
+    expected: 'array',
+  },
+  {
+    table: 'url_swap_tasks',
+    pkColumn: 'id',
+    offerIdColumn: 'offer_id',
+    column: 'manual_affiliate_links',
+    expected: 'array',
+  },
 ]
 
 function parsePositiveInt(value: string | undefined): number | undefined {
@@ -161,7 +373,8 @@ function parseArgs(argv: string[]): BackfillOptions {
       continue
     }
     if (arg === '--help' || arg === '-h') {
-      console.log(`
+      console.log(
+        `
 Usage:
   tsx scripts/backfill-jsonb-double-encoded.ts [--dry-run] [--apply] [--offer-id=N] [--table=t1,t2] [--column=c1,t2.c2] [--limit-per-column=N]
 
@@ -172,7 +385,8 @@ Options:
   --table=t1,t2             Restrict to specific tables (comma-separated)
   --column=c1,t2.c2         Restrict to columns (column name or table.column)
   --limit-per-column=N      Max rows scanned per column (default: 10000)
-      `.trim())
+      `.trim()
+      )
       process.exit(0)
     }
   }
@@ -240,11 +454,11 @@ function sanitizeJsonValue(value: unknown): unknown {
   return value
 }
 
-function buildSelectSql(spec: BackfillColumnSpec, options: BackfillOptions): { sql: string; params: any[] } {
-  const whereClauses = [
-    `${spec.column} IS NOT NULL`,
-    `jsonb_typeof(${spec.column}) = 'string'`,
-  ]
+function buildSelectSql(
+  spec: BackfillColumnSpec,
+  options: BackfillOptions
+): { sql: string; params: any[] } {
+  const whereClauses = [`${spec.column} IS NOT NULL`, `jsonb_typeof(${spec.column}) = 'string'`]
   const params: any[] = []
 
   if (options.offerId && spec.offerIdColumn) {
@@ -376,7 +590,9 @@ async function main() {
   }
 
   console.log(`[jsonb-backfill] mode=${options.dryRun ? 'DRY_RUN' : 'APPLY'}`)
-  console.log(`[jsonb-backfill] targetColumns=${specs.length}, offerId=${options.offerId ?? 'all'}, limitPerColumn=${options.limitPerColumn}`)
+  console.log(
+    `[jsonb-backfill] targetColumns=${specs.length}, offerId=${options.offerId ?? 'all'}, limitPerColumn=${options.limitPerColumn}`
+  )
 
   const allStats: ColumnStats[] = []
   for (const spec of specs) {
@@ -386,7 +602,9 @@ async function main() {
       `[jsonb-backfill] ${spec.table}.${spec.column} scanned=${stats.scanned} parseable=${stats.parseable} shapeMatched=${stats.shapeMatched} invalidJson=${stats.invalidJson} unexpectedShape=${stats.unexpectedShape} updated=${stats.updated}`
     )
     if (stats.sampleRowIds.length > 0) {
-      console.log(`[jsonb-backfill] ${spec.table}.${spec.column} sampleRowIds=${stats.sampleRowIds.join(',')}`)
+      console.log(
+        `[jsonb-backfill] ${spec.table}.${spec.column} sampleRowIds=${stats.sampleRowIds.join(',')}`
+      )
     }
   }
 

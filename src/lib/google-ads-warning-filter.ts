@@ -9,8 +9,7 @@ interface NormalizedWarning {
 function includesMetadataNoise(value: unknown): boolean {
   const text = typeof value === 'string' ? value.toLowerCase() : ''
   if (!text) return false
-  return text.includes('metadatalookupwarning')
-    || text.includes('all promises were rejected')
+  return text.includes('metadatalookupwarning') || text.includes('all promises were rejected')
 }
 
 export function shouldSuppressGoogleAdsWarningText(value: unknown): boolean {
@@ -53,9 +52,11 @@ export function normalizeProcessWarningArgs(args: unknown[]): NormalizedWarning 
 
 export function shouldSuppressGoogleAdsProcessWarning(args: unknown[]): boolean {
   const warning = normalizeProcessWarningArgs(args)
-  return includesMetadataNoise(warning.name)
-    || includesMetadataNoise(warning.code)
-    || includesMetadataNoise(warning.message)
+  return (
+    includesMetadataNoise(warning.name) ||
+    includesMetadataNoise(warning.code) ||
+    includesMetadataNoise(warning.message)
+  )
 }
 
 /**
@@ -83,14 +84,16 @@ export function installGoogleAdsWarningFilter(): void {
   if (typeof console !== 'undefined' && typeof console.warn === 'function') {
     const originalWarn = console.warn.bind(console)
     console.warn = ((...args: unknown[]) => {
-      const joined = args.map((arg) => {
-        if (typeof arg === 'string') return arg
-        try {
-          return JSON.stringify(arg)
-        } catch {
-          return String(arg)
-        }
-      }).join(' ')
+      const joined = args
+        .map((arg) => {
+          if (typeof arg === 'string') return arg
+          try {
+            return JSON.stringify(arg)
+          } catch {
+            return String(arg)
+          }
+        })
+        .join(' ')
       if (shouldSuppressGoogleAdsWarningText(joined)) return
       return Reflect.apply(originalWarn, console, args)
     }) as typeof console.warn

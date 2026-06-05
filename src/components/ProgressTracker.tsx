@@ -1,18 +1,18 @@
-'use client';
+'use client'
 
-import React from 'react';
-import { CheckCircle2, Circle, Loader2, XCircle } from 'lucide-react';
-import type { ProgressStage, ProgressStatus, ProgressEvent } from '@/types/progress';
-import { calculateProgress } from '@/types/progress';
+import React from 'react'
+import { CheckCircle2, Circle, Loader2, XCircle } from 'lucide-react'
+import type { ProgressStage, ProgressStatus, ProgressEvent } from '@/types/progress'
+import { calculateProgress } from '@/types/progress'
 
 interface ProgressTrackerProps {
-  currentStage: ProgressStage;
-  currentStatus: ProgressStatus;
-  currentMessage: string;
-  events: ProgressEvent[];
-  details?: ProgressEvent['details'];
-  currentDuration?: number; // 当前阶段的耗时（毫秒）
-  stageDurations?: Map<ProgressStage, number>; // 各阶段的完成耗时
+  currentStage: ProgressStage
+  currentStatus: ProgressStatus
+  currentMessage: string
+  events: ProgressEvent[]
+  details?: ProgressEvent['details']
+  currentDuration?: number // 当前阶段的耗时（毫秒）
+  stageDurations?: Map<ProgressStage, number> // 各阶段的完成耗时
 }
 
 const STAGE_CONFIG: Record<ProgressStage, { label: string; icon: string }> = {
@@ -26,20 +26,20 @@ const STAGE_CONFIG: Record<ProgressStage, { label: string; icon: string }> = {
   ai_analysis: { label: 'AI智能分析', icon: '🤖' },
   completed: { label: '完成', icon: '✅' },
   error: { label: '错误', icon: '❌' },
-};
+}
 
 // 阶段顺序必须与后端执行顺序一致
 const STAGE_ORDER: ProgressStage[] = [
-  'fetching_proxy',    // 1. 获取代理IP
-  'proxy_warmup',      // 2. 推广链接预热
-  'resolving_link',    // 3. 解析推广链接
-  'accessing_page',    // 4. 访问目标页面
+  'fetching_proxy', // 1. 获取代理IP
+  'proxy_warmup', // 2. 推广链接预热
+  'resolving_link', // 3. 解析推广链接
+  'accessing_page', // 4. 访问目标页面
   'scraping_products', // 5. 抓取产品数据
-  'extracting_brand',  // 6. 提取品牌信息
-  'processing_data',   // 7. 处理数据
-  'ai_analysis',       // 8. AI智能分析
-  'completed',         // 9. 完成
-];
+  'extracting_brand', // 6. 提取品牌信息
+  'processing_data', // 7. 处理数据
+  'ai_analysis', // 8. AI智能分析
+  'completed', // 9. 完成
+]
 
 export default function ProgressTracker({
   currentStage,
@@ -50,80 +50,83 @@ export default function ProgressTracker({
   currentDuration,
   stageDurations,
 }: ProgressTrackerProps) {
-  const progress = calculateProgress(currentStage, currentStatus);
+  const progress = calculateProgress(currentStage, currentStatus)
 
   // 从事件中提取各阶段完成耗时（如果没有传入stageDurations）
   const getStageDuration = (stage: ProgressStage): number | undefined => {
     // 优先使用传入的stageDurations
     if (stageDurations?.has(stage)) {
-      return stageDurations.get(stage);
+      return stageDurations.get(stage)
     }
     // 从events中查找该阶段的completed事件
     const completedEvent = events.find(
       (e) => e.stage === stage && e.status === 'completed' && e.duration !== undefined
-    );
-    return completedEvent?.duration;
-  };
+    )
+    return completedEvent?.duration
+  }
 
   // 从事件中提取代理国家不匹配警告信息
-  const getProxyMismatchInfo = (stage: ProgressStage): { targetCountry?: string; usedProxyCountry?: string } | null => {
-    if (stage !== 'fetching_proxy') return null;
+  const getProxyMismatchInfo = (
+    stage: ProgressStage
+  ): { targetCountry?: string; usedProxyCountry?: string } | null => {
+    if (stage !== 'fetching_proxy') return null
     const completedEvent = events.find(
-      (e) => e.stage === 'fetching_proxy' && e.status === 'completed' && e.details?.proxyCountryMismatch
-    );
-    if (!completedEvent?.details?.proxyCountryMismatch) return null;
+      (e) =>
+        e.stage === 'fetching_proxy' && e.status === 'completed' && e.details?.proxyCountryMismatch
+    )
+    if (!completedEvent?.details?.proxyCountryMismatch) return null
     return {
       targetCountry: completedEvent.details.targetCountry,
       usedProxyCountry: completedEvent.details.usedProxyCountry,
-    };
-  };
+    }
+  }
 
   // 格式化耗时显示
   const formatDuration = (ms: number): string => {
     if (ms < 1000) {
-      return `${ms}ms`;
+      return `${ms}ms`
     }
-    return `${(ms / 1000).toFixed(1)}s`;
-  };
+    return `${(ms / 1000).toFixed(1)}s`
+  }
 
   const getStageStatus = (stage: ProgressStage): ProgressStatus => {
-    const currentIndex = STAGE_ORDER.indexOf(currentStage);
-    const stageIndex = STAGE_ORDER.indexOf(stage);
+    const currentIndex = STAGE_ORDER.indexOf(currentStage)
+    const stageIndex = STAGE_ORDER.indexOf(stage)
 
     if (currentStage === 'error') {
       // Find the last completed stage before error
-      const lastEvent = [...events].reverse().find((e) => e.status === 'completed');
+      const lastEvent = [...events].reverse().find((e) => e.status === 'completed')
       if (lastEvent) {
-        const lastCompletedIndex = STAGE_ORDER.indexOf(lastEvent.stage);
-        if (stageIndex <= lastCompletedIndex) return 'completed';
-        if (stageIndex === lastCompletedIndex + 1) return 'error';
+        const lastCompletedIndex = STAGE_ORDER.indexOf(lastEvent.stage)
+        if (stageIndex <= lastCompletedIndex) return 'completed'
+        if (stageIndex === lastCompletedIndex + 1) return 'error'
       }
-      return 'pending';
+      return 'pending'
     }
 
-    if (stageIndex < currentIndex) return 'completed';
-    if (stageIndex === currentIndex) return currentStatus;
-    return 'pending';
-  };
+    if (stageIndex < currentIndex) return 'completed'
+    if (stageIndex === currentIndex) return currentStatus
+    return 'pending'
+  }
 
   const renderStageIcon = (stage: ProgressStage) => {
-    const status = getStageStatus(stage);
+    const status = getStageStatus(stage)
 
     switch (status) {
       case 'completed':
-        return <CheckCircle2 className="w-6 h-6 text-green-600" />;
+        return <CheckCircle2 className="w-6 h-6 text-green-600" />
       case 'in_progress':
-        return <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />;
+        return <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
       case 'error':
-        return <XCircle className="w-6 h-6 text-red-600" />;
+        return <XCircle className="w-6 h-6 text-red-600" />
       case 'pending':
       default:
-        return <Circle className="w-6 h-6 text-gray-300" />;
+        return <Circle className="w-6 h-6 text-gray-300" />
     }
-  };
+  }
 
   const renderStageDetails = (stage: ProgressStage) => {
-    if (stage !== currentStage || !details) return null;
+    if (stage !== currentStage || !details) return null
 
     return (
       <div className="ml-10 mt-2 text-sm text-gray-600 space-y-1">
@@ -163,8 +166,8 @@ export default function ProgressTracker({
           </div>
         )}
       </div>
-    );
-  };
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -186,13 +189,13 @@ export default function ProgressTracker({
       <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
         <div className="flex items-start space-x-3">
           {currentStatus === 'in_progress' && (
-            <Loader2 className="w-5 h-5 text-blue-600 animate-spin mt-0.5 flex-shrink-0" />
+            <Loader2 className="w-5 h-5 text-blue-600 animate-spin mt-0.5 shrink-0" />
           )}
           {currentStatus === 'error' && (
-            <XCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <XCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
           )}
           {currentStatus === 'completed' && currentStage === 'completed' && (
-            <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+            <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
           )}
           <div className="flex-1">
             <p className="text-sm font-medium text-gray-900">{currentMessage}</p>
@@ -222,31 +225,29 @@ export default function ProgressTracker({
       {/* Stage List */}
       <div className="space-y-3">
         {STAGE_ORDER.slice(0, -1).map((stage) => {
-          const status = getStageStatus(stage);
-          const config = STAGE_CONFIG[stage];
-          const isActive = stage === currentStage;
-          const stageDuration = getStageDuration(stage);
-          const isInProgress = status === 'in_progress';
-          const proxyMismatchInfo = getProxyMismatchInfo(stage);
+          const status = getStageStatus(stage)
+          const config = STAGE_CONFIG[stage]
+          const isActive = stage === currentStage
+          const stageDuration = getStageDuration(stage)
+          const isInProgress = status === 'in_progress'
+          const proxyMismatchInfo = getProxyMismatchInfo(stage)
 
           return (
             <div
               key={stage}
-              className={`flex items-start space-x-3 transition-all ${
-                isActive ? 'scale-105' : ''
-              }`}
+              className={`flex items-start space-x-3 transition-all ${isActive ? 'scale-105' : ''}`}
             >
-              <div className="flex-shrink-0 mt-0.5">{renderStageIcon(stage)}</div>
+              <div className="shrink-0 mt-0.5">{renderStageIcon(stage)}</div>
               <div className="flex-1 min-w-0">
                 <div
                   className={`flex items-center gap-2 text-sm font-medium ${
                     status === 'completed'
                       ? 'text-green-700'
                       : status === 'in_progress'
-                      ? 'text-blue-700'
-                      : status === 'error'
-                      ? 'text-red-700'
-                      : 'text-gray-500'
+                        ? 'text-blue-700'
+                        : status === 'error'
+                          ? 'text-red-700'
+                          : 'text-gray-500'
                   }`}
                 >
                   <span className="mr-1">{config.icon}</span>
@@ -266,14 +267,15 @@ export default function ProgressTracker({
                   {/* 代理国家不匹配警告 */}
                   {status === 'completed' && proxyMismatchInfo && (
                     <span className="text-xs text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
-                      ⚠️ 无{proxyMismatchInfo.targetCountry}代理，使用{proxyMismatchInfo.usedProxyCountry}代理
+                      ⚠️ 无{proxyMismatchInfo.targetCountry}代理，使用
+                      {proxyMismatchInfo.usedProxyCountry}代理
                     </span>
                   )}
                 </div>
                 {renderStageDetails(stage)}
               </div>
             </div>
-          );
+          )
         })}
       </div>
 
@@ -286,9 +288,7 @@ export default function ProgressTracker({
           <div className="mt-2 space-y-1 max-h-40 overflow-y-auto bg-gray-50 p-2 rounded">
             {events.map((event, idx) => (
               <div key={idx} className="text-gray-600">
-                <span className="font-mono">
-                  {new Date(event.timestamp).toLocaleTimeString()}
-                </span>{' '}
+                <span className="font-mono">{new Date(event.timestamp).toLocaleTimeString()}</span>{' '}
                 - <span className="font-medium">{event.stage}</span>:{' '}
                 <span className={event.status === 'error' ? 'text-red-600' : ''}>
                   {event.message}
@@ -299,5 +299,5 @@ export default function ProgressTracker({
         </details>
       )}
     </div>
-  );
+  )
 }

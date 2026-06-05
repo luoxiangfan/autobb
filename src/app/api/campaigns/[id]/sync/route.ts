@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { findCampaignById, updateCampaign } from '@/lib/campaigns'
 import { findGoogleAdsAccountById } from '@/lib/google-ads-accounts'
 import { createGoogleAdsCampaign } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
+import {
+  prepareGoogleAdsApiCallForLinkedAccount,
+  preparedAuthContextField,
+} from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { invalidateOfferCache } from '@/lib/api-cache'
 
@@ -11,7 +14,8 @@ import { invalidateOfferCache } from '@/lib/api-cache'
  * POST /api/campaigns/:id/sync
  * 同步广告系列到Google Ads
  */
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 
@@ -23,29 +27,17 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     const campaign = await findCampaignById(parseInt(id, 10), userId)
     if (!campaign) {
-      return NextResponse.json(
-        { error: '广告系列不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: '广告系列不存在或无权访问' }, { status: 404 })
     }
 
     if (campaign.campaignId) {
-      return NextResponse.json(
-        { error: '广告系列已同步，不能重复同步' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '广告系列已同步，不能重复同步' }, { status: 400 })
     }
 
-    const googleAdsAccount = await findGoogleAdsAccountById(
-      campaign.googleAdsAccountId,
-      userId
-    )
+    const googleAdsAccount = await findGoogleAdsAccountById(campaign.googleAdsAccountId, userId)
 
     if (!googleAdsAccount) {
-      return NextResponse.json(
-        { error: 'Google Ads账号不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Google Ads账号不存在或无权访问' }, { status: 404 })
     }
 
     const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
@@ -121,9 +113,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   } catch (error: any) {
     console.error('同步广告系列失败:', error)
 
-    return NextResponse.json(
-      { error: error.message || '同步广告系列失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '同步广告系列失败' }, { status: 500 })
   }
 }

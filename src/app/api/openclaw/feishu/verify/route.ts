@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
 import { feishuRequest, getTenantAccessToken, resolveFeishuApiBase } from '@/lib/openclaw/feishu-api'
 import { getOpenclawSettingsMap } from '@/lib/openclaw/settings'
@@ -37,7 +38,7 @@ const startSchema = z.object({
 
 const checkSchema = z.object({
   action: z.literal('check'),
-  verificationId: z.string().min(8),
+  verificationId: z.string().min(8, zErr.minChars(8)),
   debug: z.boolean().optional(),
 })
 
@@ -495,7 +496,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}))
   const parsed = requestSchema.safeParse(body || {})
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0]?.message || '请求参数不合法' }, { status: 400 })
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || '请求参数不合法' }, { status: 400 })
   }
 
   if (parsed.data.action === 'start') {

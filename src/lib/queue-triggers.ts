@@ -38,20 +38,17 @@ export async function triggerDataSync(
     syncType: options.syncType || 'manual',
     googleAdsAccountId: options.googleAdsAccountId,
     startDate: options.startDate,
-    endDate: options.endDate
+    endDate: options.endDate,
   }
 
-  const taskId = await queue.enqueue(
-    'sync',
-    taskData,
-    userId,
-    {
-      priority: options.priority || (options.syncType === 'manual' ? 'high' : 'normal'),
-      maxRetries: options.maxRetries || 3
-    }
-  )
+  const taskId = await queue.enqueue('sync', taskData, userId, {
+    priority: options.priority || (options.syncType === 'manual' ? 'high' : 'normal'),
+    maxRetries: options.maxRetries || 3,
+  })
 
-  console.log(`📥 [SyncTrigger] 同步任务已入队: ${taskId}, 用户 #${userId}, 类型: ${taskData.syncType}`)
+  console.log(
+    `📥 [SyncTrigger] 同步任务已入队: ${taskId}, 用户 #${userId}, 类型: ${taskData.syncType}`
+  )
   return taskId
 }
 
@@ -61,20 +58,13 @@ export async function triggerDataSync(
  * @param data 分析任务数据
  * @returns 任务ID
  */
-export async function triggerAIAnalysis(
-  data: AIAnalysisTaskData
-): Promise<string> {
+export async function triggerAIAnalysis(data: AIAnalysisTaskData): Promise<string> {
   const queue = getQueueManager()
 
-  const taskId = await queue.enqueue(
-    'ai-analysis',
-    data,
-    data.userId,
-    {
-      priority: 'normal',
-      maxRetries: 2
-    }
-  )
+  const taskId = await queue.enqueue('ai-analysis', data, data.userId, {
+    priority: 'normal',
+    maxRetries: 2,
+  })
 
   console.log(`📥 [AIAnalysisTrigger] AI分析任务已入队: ${taskId}, Offer #${data.offerId}`)
   return taskId
@@ -86,7 +76,9 @@ export async function triggerAIAnalysis(
  * @param data 备份任务数据
  * @returns 任务ID
  */
-export async function triggerBackup(data: BackupTaskData & { createdBy?: number }): Promise<string> {
+export async function triggerBackup(
+  data: BackupTaskData & { createdBy?: number }
+): Promise<string> {
   const queue = getQueueManager()
 
   const { createdBy, ...backupData } = data
@@ -94,10 +86,10 @@ export async function triggerBackup(data: BackupTaskData & { createdBy?: number 
   const taskId = await queue.enqueue(
     'backup',
     backupData,
-    createdBy || 0,  // 使用0作为系统任务的用户ID
+    createdBy || 0, // 使用0作为系统任务的用户ID
     {
-      priority: 'low',  // 备份通常是低优先级
-      maxRetries: 2
+      priority: 'low', // 备份通常是低优先级
+      maxRetries: 2,
     }
   )
 
@@ -114,17 +106,14 @@ export async function triggerBackup(data: BackupTaskData & { createdBy?: number 
 export async function triggerExport(data: ExportTaskData): Promise<string> {
   const queue = getQueueManager()
 
-  const taskId = await queue.enqueue(
-    'export',
-    data,
-    data.userId,
-    {
-      priority: 'normal',  // 导出通常是中优先级
-      maxRetries: 2
-    }
-  )
+  const taskId = await queue.enqueue('export', data, data.userId, {
+    priority: 'normal', // 导出通常是中优先级
+    maxRetries: 2,
+  })
 
-  console.log(`📥 [ExportTrigger] 导出任务已入队: ${taskId}, 类型: ${data.exportType}, 格式: ${data.format}`)
+  console.log(
+    `📥 [ExportTrigger] 导出任务已入队: ${taskId}, 类型: ${data.exportType}, 格式: ${data.format}`
+  )
   return taskId
 }
 
@@ -140,10 +129,10 @@ export async function triggerEmail(data: EmailTaskData): Promise<string> {
   const taskId = await queue.enqueue(
     'email',
     data,
-    0,  // 使用0作为系统任务的用户ID
+    0, // 使用0作为系统任务的用户ID
     {
       priority: data.type === 'alert' ? 'high' : 'normal',
-      maxRetries: 3
+      maxRetries: 3,
     }
   )
 
@@ -163,10 +152,10 @@ export async function triggerLinkCheck(data: LinkCheckTaskData): Promise<string>
   const taskId = await queue.enqueue(
     'link-check',
     data,
-    data.userId || 0,  // 使用0作为系统任务的用户ID
+    data.userId || 0, // 使用0作为系统任务的用户ID
     {
       priority: data.checkType === 'manual' ? 'high' : 'normal',
-      maxRetries: 2
+      maxRetries: 2,
     }
   )
 
@@ -186,10 +175,10 @@ export async function triggerCleanup(data: CleanupTaskData): Promise<string> {
   const taskId = await queue.enqueue(
     'cleanup',
     data,
-    0,  // 使用0作为系统任务的用户ID
+    0, // 使用0作为系统任务的用户ID
     {
-      priority: 'low',  // 清理任务通常是低优先级
-      maxRetries: 2
+      priority: 'low', // 清理任务通常是低优先级
+      maxRetries: 2,
     }
   )
 

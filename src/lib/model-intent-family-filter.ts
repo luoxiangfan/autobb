@@ -9,9 +9,11 @@ const MODEL_CODE_TOKEN_PATTERN = /^[a-z]{1,6}\d{2,5}[a-z]{0,2}$/i
 const MODEL_CODE_EXTRACT_PATTERN = /\b[a-z]{1,6}\d{2,5}[a-z]{0,2}\b/gi
 const NUMERIC_MODEL_CODE_TOKEN_PATTERN = /^\d{3,4}$/
 const NUMERIC_MODEL_CODE_EXTRACT_PATTERN = /\b\d{3,4}\b/g
-const SPEC_TERM_EXTRACT_PATTERN = /\b\d{1,5}\s*(?:wh|mah|w|kw|v|ah|l|liter|liters|qt|quart|quarts)\b/gi
+const SPEC_TERM_EXTRACT_PATTERN =
+  /\b\d{1,5}\s*(?:wh|mah|w|kw|v|ah|l|liter|liters|qt|quart|quarts)\b/gi
 export const MODEL_INTENT_MIN_KEYWORD_FLOOR = 3
-const SOFT_SIZE_PATTERN = /\b(california king|cal king|king size|queen size|twin xl|twin|queen|king|full)\b/gi
+const SOFT_SIZE_PATTERN =
+  /\b(california king|cal king|king size|queen size|twin xl|twin|queen|king|full)\b/gi
 const SOFT_DIMENSION_PATTERN = /\b\d{1,3}\s*(?:inch|in)\b/gi
 const SOFT_PACK_PATTERN = /\b\d{1,2}\s*(?:pack|count|pc|piece|pieces|set)\b/gi
 const SOFT_ATTRIBUTE_PHRASES = [
@@ -153,14 +155,7 @@ const MODEL_FAMILY_PHRASE_NOISE_TOKENS = new Set([
   'dp',
   'gp',
 ])
-const MODEL_FAMILY_PACK_TOKENS = new Set([
-  'pack',
-  'count',
-  'pc',
-  'piece',
-  'pieces',
-  'set',
-])
+const MODEL_FAMILY_PACK_TOKENS = new Set(['pack', 'count', 'pc', 'piece', 'pieces', 'set'])
 
 const LINE_TERM_STOPWORDS = new Set([
   'with',
@@ -361,10 +356,7 @@ function escapeRegExp(value: string): string {
 }
 
 function tokenizeNormalizedText(text: string): string[] {
-  return (normalizeGoogleAdsKeyword(text) || '')
-    .split(/\s+/)
-    .map(normalizeToken)
-    .filter(Boolean)
+  return (normalizeGoogleAdsKeyword(text) || '').split(/\s+/).map(normalizeToken).filter(Boolean)
 }
 
 function isModelFamilyNoiseToken(token: string): boolean {
@@ -383,8 +375,14 @@ function hasClaimLikeNumericCodeContext(code: string, evidenceTexts: string[]): 
   const escaped = escapeRegExp(code)
   const patterns = [
     new RegExp(`\\b${escaped}\\s*%`, 'i'),
-    new RegExp(`\\b${escaped}\\b\\s+(?:better|more|less|remove(?:s|d|ing)?|improve(?:s|d|ing)?|prevent(?:s|ed|ing)?|reduce(?:s|d|ing|tion)?|include(?:s|d|ing)?)\\b`, 'i'),
-    new RegExp(`\\b(?:better|more|less|remove(?:s|d|ing)?|improve(?:s|d|ing)?|prevent(?:s|ed|ing)?|reduce(?:s|d|ing|tion)?|include(?:s|d|ing)?)\\b(?:\\s+\\w+){0,2}\\s+\\b${escaped}\\b`, 'i'),
+    new RegExp(
+      `\\b${escaped}\\b\\s+(?:better|more|less|remove(?:s|d|ing)?|improve(?:s|d|ing)?|prevent(?:s|ed|ing)?|reduce(?:s|d|ing|tion)?|include(?:s|d|ing)?)\\b`,
+      'i'
+    ),
+    new RegExp(
+      `\\b(?:better|more|less|remove(?:s|d|ing)?|improve(?:s|d|ing)?|prevent(?:s|ed|ing)?|reduce(?:s|d|ing|tion)?|include(?:s|d|ing)?)\\b(?:\\s+\\w+){0,2}\\s+\\b${escaped}\\b`,
+      'i'
+    ),
   ]
 
   return evidenceTexts.some((text) => {
@@ -396,7 +394,10 @@ function hasClaimLikeNumericCodeContext(code: string, evidenceTexts: string[]): 
 
 function hasSpecLikeNumericCodeContext(code: string, evidenceTexts: string[]): boolean {
   const escaped = escapeRegExp(code)
-  const pattern = new RegExp(`\\b${escaped}\\b\\s*(?:gpd|btu|lm|mah|wh|w|kw|v|ah|l|liter|liters|qt|quart|quarts|inch|in|ft|oz|lb|lbs|kg|g|cup|cups)\\b`, 'i')
+  const pattern = new RegExp(
+    `\\b${escaped}\\b\\s*(?:gpd|btu|lm|mah|wh|w|kw|v|ah|l|liter|liters|qt|quart|quarts|inch|in|ft|oz|lb|lbs|kg|g|cup|cups)\\b`,
+    'i'
+  )
   return evidenceTexts.some((text) => pattern.test(normalizeGoogleAdsKeyword(text) || ''))
 }
 
@@ -406,8 +407,7 @@ function hasLeadingNumericCodeContext(params: {
   brandTokens: Set<string>
 }): boolean {
   for (const text of params.evidenceTexts.slice(0, 4)) {
-    const tokens = tokenizeNormalizedText(text)
-      .filter((token) => !params.brandTokens.has(token))
+    const tokens = tokenizeNormalizedText(text).filter((token) => !params.brandTokens.has(token))
     const index = tokens.indexOf(params.code)
     if (index >= 0 && index <= 3) return true
   }
@@ -423,18 +423,20 @@ function shouldRetainExtractedModelCode(params: {
 }): boolean {
   if (!NUMERIC_MODEL_CODE_TOKEN_PATTERN.test(params.code)) return true
   if (hasSpecLikeNumericCodeContext(params.code, params.primaryEvidenceTexts)) return true
-  if (hasLeadingNumericCodeContext({
-    code: params.code,
-    evidenceTexts: params.primaryEvidenceTexts,
-    brandTokens: params.brandTokens,
-  })) {
+  if (
+    hasLeadingNumericCodeContext({
+      code: params.code,
+      evidenceTexts: params.primaryEvidenceTexts,
+      brandTokens: params.brandTokens,
+    })
+  ) {
     return true
   }
 
-  return !hasClaimLikeNumericCodeContext(
-    params.code,
-    [...params.primaryEvidenceTexts, ...params.auxiliaryEvidenceTexts]
-  )
+  return !hasClaimLikeNumericCodeContext(params.code, [
+    ...params.primaryEvidenceTexts,
+    ...params.auxiliaryEvidenceTexts,
+  ])
 }
 
 function collectLeadingTitleProductPhrases(params: {
@@ -455,9 +457,7 @@ function collectLeadingTitleProductPhrases(params: {
     const normalized = normalizeGoogleAdsKeyword(text) || ''
     if (!normalized) continue
 
-    const leadingSegment = normalized
-      .split(/[,:;()]/)[0]
-      .trim()
+    const leadingSegment = normalized.split(/[,:;()]/)[0].trim()
     if (!leadingSegment) continue
 
     const segmentTokens = leadingSegment.split(/\s+/).filter(Boolean)
@@ -476,7 +476,8 @@ function collectLeadingTitleProductPhrases(params: {
         index += 1
         continue
       }
-      if (!started && (isModelFamilyPackToken(token) || isModelFamilyPhraseNoiseToken(token))) continue
+      if (!started && (isModelFamilyPackToken(token) || isModelFamilyPhraseNoiseToken(token)))
+        continue
       if (containsAsinLikeToken(token)) break
       if (MODEL_FAMILY_TITLE_BREAK_TOKENS.has(token)) break
       if (started && isModelFamilyPhraseNoiseToken(token)) break
@@ -503,9 +504,9 @@ function collectLeadingTitleProductPhrases(params: {
     while (collected.length > 0) {
       const lastToken = normalizeToken(collected[collected.length - 1] || '')
       if (
-        !lastToken
-        || isModelFamilyPackToken(lastToken)
-        || isModelFamilyPhraseNoiseToken(lastToken)
+        !lastToken ||
+        isModelFamilyPackToken(lastToken) ||
+        isModelFamilyPhraseNoiseToken(lastToken)
       ) {
         collected.pop()
         continue
@@ -522,7 +523,11 @@ function collectLeadingTitleProductPhrases(params: {
       .filter(Boolean)
       .filter((token) => !params.brandTokens.has(token))
     if (phraseTokens.length < 2) continue
-    if (phraseTokens.every((token) => isModelFamilyPhraseNoiseToken(token) || isModelFamilyPackToken(token))) {
+    if (
+      phraseTokens.every(
+        (token) => isModelFamilyPhraseNoiseToken(token) || isModelFamilyPackToken(token)
+      )
+    ) {
       continue
     }
 
@@ -536,56 +541,54 @@ function collectLeadingTitleProductPhrases(params: {
   return Array.from(phrases).slice(0, 4)
 }
 
-function filterFallbackSingleTerms(
-  terms: string[],
-  brandTokens: Set<string>
-): string[] {
-  return Array.from(new Set(
-    terms
-      .map((item) => normalizeGoogleAdsKeyword(item))
-      .filter((item): item is string => Boolean(item))
-  ))
-    .filter((item) => {
-      const token = normalizeToken(item)
-      if (!token || token.length < 4) return false
-      if (brandTokens.has(token)) return false
-      if (containsAsinLikeToken(token)) return false
-      if (NUMERIC_MODEL_CODE_TOKEN_PATTERN.test(token)) return false
-      if (isModelFamilyNoiseToken(token)) return false
-      return true
-    })
+function filterFallbackSingleTerms(terms: string[], brandTokens: Set<string>): string[] {
+  return Array.from(
+    new Set(
+      terms
+        .map((item) => normalizeGoogleAdsKeyword(item))
+        .filter((item): item is string => Boolean(item))
+    )
+  ).filter((item) => {
+    const token = normalizeToken(item)
+    if (!token || token.length < 4) return false
+    if (brandTokens.has(token)) return false
+    if (containsAsinLikeToken(token)) return false
+    if (NUMERIC_MODEL_CODE_TOKEN_PATTERN.test(token)) return false
+    if (isModelFamilyNoiseToken(token)) return false
+    return true
+  })
 }
 
-function filterFallbackPhrases(
-  phrases: string[],
-  brandTokens: Set<string>
-): string[] {
-  return Array.from(new Set(
-    phrases
-      .map((item) => normalizeGoogleAdsKeyword(item))
-      .filter((item): item is string => Boolean(item))
-  ))
-    .filter((item) => {
-      if (containsAsinLikeToken(item)) return false
-      const tokens = item
-        .split(/\s+/)
-        .map(normalizeToken)
-        .filter(Boolean)
-        .filter((token) => !brandTokens.has(token))
-      if (tokens.length < 2) return false
-      if (tokens.some((token) => isModelFamilyPhraseNoiseToken(token))) return false
-      if (/^\d+$/.test(tokens[tokens.length - 1] || '')) return false
-      if (
-        isModelFamilyPackToken(tokens[tokens.length - 1] || '')
-        || isModelFamilyPhraseNoiseToken(tokens[tokens.length - 1] || '')
-      ) {
-        return false
-      }
-      if (tokens.every((token) => isModelFamilyPhraseNoiseToken(token) || isModelFamilyPackToken(token))) {
-        return false
-      }
-      return true
-    })
+function filterFallbackPhrases(phrases: string[], brandTokens: Set<string>): string[] {
+  return Array.from(
+    new Set(
+      phrases
+        .map((item) => normalizeGoogleAdsKeyword(item))
+        .filter((item): item is string => Boolean(item))
+    )
+  ).filter((item) => {
+    if (containsAsinLikeToken(item)) return false
+    const tokens = item
+      .split(/\s+/)
+      .map(normalizeToken)
+      .filter(Boolean)
+      .filter((token) => !brandTokens.has(token))
+    if (tokens.length < 2) return false
+    if (tokens.some((token) => isModelFamilyPhraseNoiseToken(token))) return false
+    if (/^\d+$/.test(tokens[tokens.length - 1] || '')) return false
+    if (
+      isModelFamilyPackToken(tokens[tokens.length - 1] || '') ||
+      isModelFamilyPhraseNoiseToken(tokens[tokens.length - 1] || '')
+    ) {
+      return false
+    }
+    if (
+      tokens.every((token) => isModelFamilyPhraseNoiseToken(token) || isModelFamilyPackToken(token))
+    ) {
+      return false
+    }
+    return true
+  })
 }
 
 function isOpaqueModelIdentifierToken(token: string): boolean {
@@ -621,10 +624,11 @@ function extractModelCodesFromText(text: string): string[] {
   const normalized = modelLikeMatches
     .map(normalizeToken)
     .filter(Boolean)
-    .filter((token) =>
-      MODEL_CODE_TOKEN_PATTERN.test(token)
-      || NUMERIC_MODEL_CODE_TOKEN_PATTERN.test(token)
-      || generalizedTokenSet.has(token)
+    .filter(
+      (token) =>
+        MODEL_CODE_TOKEN_PATTERN.test(token) ||
+        NUMERIC_MODEL_CODE_TOKEN_PATTERN.test(token) ||
+        generalizedTokenSet.has(token)
     )
   return Array.from(new Set(normalized))
 }
@@ -688,11 +692,13 @@ function extractSoftAttributeTermsFromText(text: string): string[] {
 }
 
 function pruneSubsumedSoftAttributeTerms(attributeTerms: string[]): string[] {
-  const normalizedTerms = Array.from(new Set(
-    attributeTerms
-      .map((term) => normalizeGoogleAdsKeyword(term))
-      .filter((term): term is string => Boolean(term))
-  ))
+  const normalizedTerms = Array.from(
+    new Set(
+      attributeTerms
+        .map((term) => normalizeGoogleAdsKeyword(term))
+        .filter((term): term is string => Boolean(term))
+    )
+  )
   const multiTokenTerms = normalizedTerms
     .map((term) => ({
       term,
@@ -826,14 +832,10 @@ function collectProminentTitleLineTerms(params: {
       if (containsAsinLikeToken(token)) continue
       if (/^\d/.test(token)) continue
 
-      const looksProminent =
-        /[A-Z]{2,}/.test(rawToken)
-        || /[a-z][A-Z]/.test(rawToken)
+      const looksProminent = /[A-Z]{2,}/.test(rawToken) || /[a-z][A-Z]/.test(rawToken)
       const prevToken = rawTokens[index - 1] || ''
       const nextToken = rawTokens[index + 1] || ''
-      const nearNumericCue =
-        /^\d+[a-z]*$/i.test(prevToken)
-        || /^\d+[a-z]*$/i.test(nextToken)
+      const nearNumericCue = /^\d+[a-z]*$/i.test(prevToken) || /^\d+[a-z]*$/i.test(nextToken)
 
       if (!looksProminent && !nearNumericCue) continue
       lineTerms.add(token)
@@ -898,13 +900,12 @@ function collectTitleProductFamilyPhrases(params: {
   return Array.from(phrases).slice(0, 4)
 }
 
-export function buildProductModelFamilyContext(offer: ProductModelOfferLike): ProductModelFamilyContext {
+export function buildProductModelFamilyContext(
+  offer: ProductModelOfferLike
+): ProductModelFamilyContext {
   const primaryEvidenceTexts = collectPrimaryEvidenceTexts(offer)
   const auxiliaryEvidenceTexts = collectAuxiliaryEvidenceTexts(offer)
-  const evidenceTexts = Array.from(new Set([
-    ...primaryEvidenceTexts,
-    ...auxiliaryEvidenceTexts,
-  ]))
+  const evidenceTexts = Array.from(new Set([...primaryEvidenceTexts, ...auxiliaryEvidenceTexts]))
   const brandTokens = toBrandTokenSet(offer.brand)
   const primaryModelCodeSet = new Set<string>()
   const auxiliaryModelCodeSet = new Set<string>()
@@ -914,12 +915,14 @@ export function buildProductModelFamilyContext(offer: ProductModelOfferLike): Pr
   for (const text of primaryEvidenceTexts) {
     for (const code of extractModelCodesFromText(text)) {
       if (brandTokens.has(code)) continue
-      if (!shouldRetainExtractedModelCode({
-        code,
-        primaryEvidenceTexts,
-        auxiliaryEvidenceTexts,
-        brandTokens,
-      })) {
+      if (
+        !shouldRetainExtractedModelCode({
+          code,
+          primaryEvidenceTexts,
+          auxiliaryEvidenceTexts,
+          brandTokens,
+        })
+      ) {
         continue
       }
       primaryModelCodeSet.add(code)
@@ -929,12 +932,14 @@ export function buildProductModelFamilyContext(offer: ProductModelOfferLike): Pr
   for (const text of auxiliaryEvidenceTexts) {
     for (const code of extractModelCodesFromText(text)) {
       if (brandTokens.has(code)) continue
-      if (!shouldRetainExtractedModelCode({
-        code,
-        primaryEvidenceTexts,
-        auxiliaryEvidenceTexts,
-        brandTokens,
-      })) {
+      if (
+        !shouldRetainExtractedModelCode({
+          code,
+          primaryEvidenceTexts,
+          auxiliaryEvidenceTexts,
+          brandTokens,
+        })
+      ) {
         continue
       }
       auxiliaryModelCodeSet.add(code)
@@ -983,23 +988,27 @@ export function buildProductModelFamilyContext(offer: ProductModelOfferLike): Pr
     attributeTerms: prunedAttributeTerms,
     specTerms: specTermSet,
   })
-  const lineTerms = Array.from(new Set([
-    ...inferredLineTerms,
-    ...prominentTitleLineTerms,
-  ])).slice(0, 4)
-  const keepTitleLeadingSoftFamilyTerms = !(
-    modelCodeSet.size === 0
-    && lineTerms.length === 0
-    && specTermSet.size === 0
-    && productCoreTerms.length === 0
-    && prunedAttributeTerms.length === 0
-    && titleLeadingProductPhrases.length > 0
-    && titleLeadingProductPhrases.every((phrase) => (normalizeGoogleAdsKeyword(phrase) || '').split(/\s+/).filter(Boolean).length <= 2)
+  const lineTerms = Array.from(new Set([...inferredLineTerms, ...prominentTitleLineTerms])).slice(
+    0,
+    4
   )
-  const softFamilyTerms = Array.from(new Set([
-    ...buildSoftFamilyTerms(productCoreTerms, prunedAttributeTerms),
-    ...(keepTitleLeadingSoftFamilyTerms ? titleLeadingProductPhrases : []),
-  ])).slice(0, 6)
+  const keepTitleLeadingSoftFamilyTerms = !(
+    modelCodeSet.size === 0 &&
+    lineTerms.length === 0 &&
+    specTermSet.size === 0 &&
+    productCoreTerms.length === 0 &&
+    prunedAttributeTerms.length === 0 &&
+    titleLeadingProductPhrases.length > 0 &&
+    titleLeadingProductPhrases.every(
+      (phrase) => (normalizeGoogleAdsKeyword(phrase) || '').split(/\s+/).filter(Boolean).length <= 2
+    )
+  )
+  const softFamilyTerms = Array.from(
+    new Set([
+      ...buildSoftFamilyTerms(productCoreTerms, prunedAttributeTerms),
+      ...(keepTitleLeadingSoftFamilyTerms ? titleLeadingProductPhrases : []),
+    ])
+  ).slice(0, 6)
 
   return {
     brandTokens: Array.from(brandTokens),
@@ -1017,21 +1026,21 @@ function extractModelCodesFromKeyword(keyword: string): string[] {
   const normalized = normalizeGoogleAdsKeyword(keyword)
   if (!normalized) return []
 
-  const tokens = normalized
-    .split(/\s+/)
-    .map(normalizeToken)
-    .filter(Boolean)
+  const tokens = normalized.split(/\s+/).map(normalizeToken).filter(Boolean)
 
   const generalizedTokens = extractModelIdentifierTokensFromText(keyword)
     .map(normalizeToken)
     .filter(Boolean)
 
-  return Array.from(new Set(
-    [
-      ...tokens.filter((token) => MODEL_CODE_TOKEN_PATTERN.test(token) || NUMERIC_MODEL_CODE_TOKEN_PATTERN.test(token)),
+  return Array.from(
+    new Set([
+      ...tokens.filter(
+        (token) =>
+          MODEL_CODE_TOKEN_PATTERN.test(token) || NUMERIC_MODEL_CODE_TOKEN_PATTERN.test(token)
+      ),
       ...generalizedTokens,
-    ]
-  ))
+    ])
+  )
 }
 
 function keywordContainsAnyPhrase(keyword: string, phrases: string[]): boolean {
@@ -1052,7 +1061,9 @@ export function isKeywordInProductModelFamily(
   const modelCodeSet = new Set(context.modelCodes.map(normalizeToken).filter(Boolean))
   const lineTermSet = new Set(context.lineTerms.map(normalizeToken).filter(Boolean))
   const specTermSet = new Set(context.specTerms.map((item) => item.toLowerCase()).filter(Boolean))
-  const productCoreSet = new Set((context.productCoreTerms || []).map(normalizeToken).filter(Boolean))
+  const productCoreSet = new Set(
+    (context.productCoreTerms || []).map(normalizeToken).filter(Boolean)
+  )
   const softFamilyTerms = context.softFamilyTerms || []
   const attributeTerms = context.attributeTerms || []
   const contextSoftAttributeSet = new Set(
@@ -1072,15 +1083,14 @@ export function isKeywordInProductModelFamily(
     .map((item) => normalizeGoogleAdsKeyword(item))
     .filter((item): item is string => Boolean(item))
   const normalizedKeyword = normalizeGoogleAdsKeyword(keyword)
-  const keywordTokens = (normalizedKeyword || '')
-    .split(/\s+/)
-    .map(normalizeToken)
-    .filter(Boolean)
+  const keywordTokens = (normalizedKeyword || '').split(/\s+/).map(normalizeToken).filter(Boolean)
   const keywordTokenSet = new Set(keywordTokens)
-  const hasBrandTokenMatch = brandTokenSet.size > 0
-    && keywordTokens.some((token) => brandTokenSet.has(token))
+  const hasBrandTokenMatch =
+    brandTokenSet.size > 0 && keywordTokens.some((token) => brandTokenSet.has(token))
   const nonBrandKeywordTokens = keywordTokens.filter((token) => !brandTokenSet.has(token))
-  const lineMatchCount = Array.from(lineTermSet).filter((token) => keywordTokenSet.has(token)).length
+  const lineMatchCount = Array.from(lineTermSet).filter((token) =>
+    keywordTokenSet.has(token)
+  ).length
   const matchedSpecTerms = Array.from(specTermSet).filter((term) => {
     const specTokens = (normalizeGoogleAdsKeyword(term) || '')
       .split(/\s+/)
@@ -1094,20 +1104,20 @@ export function isKeywordInProductModelFamily(
   const hasAttributePhraseMatch = keywordContainsAnyPhrase(keyword, attributeTerms)
   const hasHardModelCode = modelCodeSet.size > 0
   const hasLineTermOnlySignals =
-    !hasHardModelCode
-    && lineTermSet.size > 0
-    && specTermSet.size === 0
-    && productCoreSet.size === 0
-    && softFamilyTerms.length === 0
-    && attributeTerms.length === 0
+    !hasHardModelCode &&
+    lineTermSet.size > 0 &&
+    specTermSet.size === 0 &&
+    productCoreSet.size === 0 &&
+    softFamilyTerms.length === 0 &&
+    attributeTerms.length === 0
 
   if (
-    modelCodeSet.size === 0
-    && lineTermSet.size === 0
-    && specTermSet.size === 0
-    && productCoreSet.size === 0
-    && softFamilyTerms.length === 0
-    && attributeTerms.length === 0
+    modelCodeSet.size === 0 &&
+    lineTermSet.size === 0 &&
+    specTermSet.size === 0 &&
+    productCoreSet.size === 0 &&
+    softFamilyTerms.length === 0 &&
+    attributeTerms.length === 0
   ) {
     return true
   }
@@ -1120,41 +1130,39 @@ export function isKeywordInProductModelFamily(
   }
 
   if (
-    contextSoftAttributeSet.size > 0
-    && keywordSoftAttributeTerms.some((term) => !contextSoftAttributeSet.has(term))
+    contextSoftAttributeSet.size > 0 &&
+    keywordSoftAttributeTerms.some((term) => !contextSoftAttributeSet.has(term))
   ) {
     return false
   }
 
   if (
-    contextSoftAttributeNumberTokens.size > 0
-    && keywordTokens.some((token) => /^\d{1,3}$/.test(token) && !contextSoftAttributeNumberTokens.has(token))
-  ) {
-    return false
-  }
-
-  if (
-    productCoreSet.size > 0
-    && (
-      hasSoftFamilyPhraseMatch
-      || (hasProductCoreMatch && hasAttributePhraseMatch)
+    contextSoftAttributeNumberTokens.size > 0 &&
+    keywordTokens.some(
+      (token) => /^\d{1,3}$/.test(token) && !contextSoftAttributeNumberTokens.has(token)
     )
+  ) {
+    return false
+  }
+
+  if (
+    productCoreSet.size > 0 &&
+    (hasSoftFamilyPhraseMatch || (hasProductCoreMatch && hasAttributePhraseMatch))
   ) {
     return true
   }
 
   // Keep a single branded core term (e.g. "novilla mattress") for model-intent
   // soft-family products, while still rejecting broader weak variants.
-  const hasBrandedSingleCorePhrase = (
-    !hasHardModelCode
-    && brandTokenSet.size > 0
-    && hasBrandTokenMatch
-    && nonBrandKeywordTokens.length === 1
-    && productCoreSet.has(nonBrandKeywordTokens[0])
-    && !hasAttributePhraseMatch
-    && !hasSoftFamilyPhraseMatch
-    && !hasFriendlySpecMatch
-  )
+  const hasBrandedSingleCorePhrase =
+    !hasHardModelCode &&
+    brandTokenSet.size > 0 &&
+    hasBrandTokenMatch &&
+    nonBrandKeywordTokens.length === 1 &&
+    productCoreSet.has(nonBrandKeywordTokens[0]) &&
+    !hasAttributePhraseMatch &&
+    !hasSoftFamilyPhraseMatch &&
+    !hasFriendlySpecMatch
   if (hasBrandedSingleCorePhrase) {
     return true
   }
@@ -1187,15 +1195,10 @@ export function filterKeywordObjectsByProductModelFamily<T extends { keyword: st
   }
 
   const hasHardFamilySignals =
-    context.modelCodes.length > 0
-    || context.lineTerms.length > 0
-    || context.specTerms.length > 0
+    context.modelCodes.length > 0 || context.lineTerms.length > 0 || context.specTerms.length > 0
   const hasSoftFamilySignals =
-    (context.softFamilyTerms?.length || 0) > 0
-    || (
-      (context.productCoreTerms?.length || 0) > 0
-      && (context.attributeTerms?.length || 0) > 0
-    )
+    (context.softFamilyTerms?.length || 0) > 0 ||
+    ((context.productCoreTerms?.length || 0) > 0 && (context.attributeTerms?.length || 0) > 0)
   const hasFamilySignals = hasHardFamilySignals || hasSoftFamilySignals
   if (!hasFamilySignals) {
     return { filtered: [...items], removed: [] }
@@ -1223,10 +1226,10 @@ export function buildProductModelFamilyFallbackKeywords(params: {
   const code = params.context.modelCodes[0]
   const brandTokens = toBrandTokenSet(params.brandName)
   const hasExpandedFallbackSignals =
-    Boolean(code)
-    || (params.context.lineTerms?.length || 0) >= 2
-    || (params.context.specTerms?.length || 0) > 0
-    || (params.context.productCoreTerms?.length || 0) > 0
+    Boolean(code) ||
+    (params.context.lineTerms?.length || 0) >= 2 ||
+    (params.context.specTerms?.length || 0) > 0 ||
+    (params.context.productCoreTerms?.length || 0) > 0
   const titleLeadingProductPhrases = filterFallbackPhrases(
     collectLeadingTitleProductPhrases({
       evidenceTexts: params.context.evidenceTexts,
@@ -1245,13 +1248,15 @@ export function buildProductModelFamilyFallbackKeywords(params: {
   ).slice(0, 3)
   const primaryLine = normalizedLineTerms[0]
   const hasHardModelCode = Boolean(code)
-  const combinedLinePhrase = normalizedLineTerms.length >= 2
-    ? normalizedLineTerms.slice(0, 2).join(' ')
-    : ''
-  const titleLinePhrases = filterFallbackPhrases(collectTitleProductFamilyPhrases({
-    evidenceTexts: params.context.evidenceTexts,
-    lineTerms: normalizedLineTerms,
-  }), brandTokens)
+  const combinedLinePhrase =
+    normalizedLineTerms.length >= 2 ? normalizedLineTerms.slice(0, 2).join(' ') : ''
+  const titleLinePhrases = filterFallbackPhrases(
+    collectTitleProductFamilyPhrases({
+      evidenceTexts: params.context.evidenceTexts,
+      lineTerms: normalizedLineTerms,
+    }),
+    brandTokens
+  )
   const productCoreTerms = (
     code
       ? filterFallbackSingleTerms(params.context.productCoreTerms || [], brandTokens)
@@ -1267,32 +1272,33 @@ export function buildProductModelFamilyFallbackKeywords(params: {
     [...(params.context.softFamilyTerms || []), ...titleLeadingProductPhrases],
     brandTokens
   ).slice(0, 6)
-  const fallbackLineTerms = Array.from(new Set([
-    ...normalizedLineTerms,
-    ...((normalizedLineTerms.length > 0 || hasHardModelCode) && titleLeadingProductPhrases.length === 0
-      ? params.context.evidenceTexts
-          .flatMap((text) => (normalizeGoogleAdsKeyword(text) || '').split(/\s+/))
-          .map(normalizeToken)
-          .filter(Boolean)
-          .filter((token) => token.length >= 4)
-          .filter((token) => !brandTokens.has(token))
-          .filter((token) => !LINE_TERM_STOPWORDS.has(token))
-          .filter((token) => !MODEL_FAMILY_CLAIM_NOISE_TOKENS.has(token))
-          .filter((token) => !MODEL_CODE_TOKEN_PATTERN.test(token))
-          .filter((token) => !containsAsinLikeToken(token))
-          .filter((token) => !/^\d/.test(token))
-          .filter((token) => !NUMERIC_MODEL_CODE_TOKEN_PATTERN.test(token))
-      : []),
-  ]))
+  const fallbackLineTerms = Array.from(
+    new Set([
+      ...normalizedLineTerms,
+      ...((normalizedLineTerms.length > 0 || hasHardModelCode) &&
+      titleLeadingProductPhrases.length === 0
+        ? params.context.evidenceTexts
+            .flatMap((text) => (normalizeGoogleAdsKeyword(text) || '').split(/\s+/))
+            .map(normalizeToken)
+            .filter(Boolean)
+            .filter((token) => token.length >= 4)
+            .filter((token) => !brandTokens.has(token))
+            .filter((token) => !LINE_TERM_STOPWORDS.has(token))
+            .filter((token) => !MODEL_FAMILY_CLAIM_NOISE_TOKENS.has(token))
+            .filter((token) => !MODEL_CODE_TOKEN_PATTERN.test(token))
+            .filter((token) => !containsAsinLikeToken(token))
+            .filter((token) => !/^\d/.test(token))
+            .filter((token) => !NUMERIC_MODEL_CODE_TOKEN_PATTERN.test(token))
+        : []),
+    ])
+  )
     .filter((token) => !isModelFamilyNoiseToken(token))
     .slice(0, 3)
   const specs = params.context.specTerms
     .map((item) => normalizeGoogleAdsKeyword(item))
     .filter((item): item is string => Boolean(item))
     .slice(0, 3)
-  const fallbackSpecs = hasHardModelCode
-    ? specs
-    : specs.filter(isConsumerFacingProductSpec)
+  const fallbackSpecs = hasHardModelCode ? specs : specs.filter(isConsumerFacingProductSpec)
   const fallback = new Set<string>()
 
   if (brand && code && primaryLine) fallback.add(`${brand} ${primaryLine} ${code}`.trim())
@@ -1354,7 +1360,12 @@ export function buildProductModelFamilyFallbackKeywords(params: {
 }
 
 function normalizeKeywordKey(keyword: string): string {
-  return normalizeGoogleAdsKeyword(keyword) || String(keyword || '').trim().toLowerCase()
+  return (
+    normalizeGoogleAdsKeyword(keyword) ||
+    String(keyword || '')
+      .trim()
+      .toLowerCase()
+  )
 }
 
 export function supplementModelIntentKeywordsWithFallback<T extends { keyword: string }>(params: {

@@ -1,9 +1,6 @@
 import type { CompetitorProduct } from './competitor-analyzer'
 
-export type CompetitorRelevanceMode =
-  | 'video_conferencing_camera'
-  | 'security_camera'
-  | 'generic'
+export type CompetitorRelevanceMode = 'video_conferencing_camera' | 'security_camera' | 'generic'
 
 export interface CompetitorRelevanceContext {
   mode: CompetitorRelevanceMode
@@ -13,19 +10,69 @@ export interface CompetitorRelevanceContext {
 }
 
 const STOP_WORDS = new Set([
-  'with', 'from', 'that', 'this', 'your', 'their', 'ours', 'into', 'over', 'under', 'about',
-  'the', 'and', 'for', 'are', 'was', 'were', 'you', 'all', 'our', 'its', 'via',
-  'inch', 'inches', 'pack', 'piece', 'pieces', 'new', 'model', 'works', 'compatible',
-  'smart', 'wireless', 'digital', 'professional', 'ultra', 'high', 'quality',
+  'with',
+  'from',
+  'that',
+  'this',
+  'your',
+  'their',
+  'ours',
+  'into',
+  'over',
+  'under',
+  'about',
+  'the',
+  'and',
+  'for',
+  'are',
+  'was',
+  'were',
+  'you',
+  'all',
+  'our',
+  'its',
+  'via',
+  'inch',
+  'inches',
+  'pack',
+  'piece',
+  'pieces',
+  'new',
+  'model',
+  'works',
+  'compatible',
+  'smart',
+  'wireless',
+  'digital',
+  'professional',
+  'ultra',
+  'high',
+  'quality',
 ])
 
 const ACCESSORY_KEYWORDS = [
-  'screen protector', 'protector', 'case', 'cover', 'shell', 'sleeve',
-  'stylus', 'pencil', 'pen',
-  'charger', 'charging cable', 'cable', 'adapter', 'dock',
-  'tripod', 'mount', 'stand',
-  'bag', 'backpack', 'pouch',
-  'replacement part', 'replacement',
+  'screen protector',
+  'protector',
+  'case',
+  'cover',
+  'shell',
+  'sleeve',
+  'stylus',
+  'pencil',
+  'pen',
+  'charger',
+  'charging cable',
+  'cable',
+  'adapter',
+  'dock',
+  'tripod',
+  'mount',
+  'stand',
+  'bag',
+  'backpack',
+  'pouch',
+  'replacement part',
+  'replacement',
 ]
 
 const VIDEO_CONFERENCING_MODE_TRIGGERS = [
@@ -184,11 +231,9 @@ export function isCompetitorRelevant(
 ): boolean {
   if (!context.hasContext) return true
 
-  const competitorText = normalizeText([
-    competitor.name || '',
-    competitor.brand || '',
-    ...(competitor.features || []),
-  ].join(' '))
+  const competitorText = normalizeText(
+    [competitor.name || '', competitor.brand || '', ...(competitor.features || [])].join(' ')
+  )
 
   if (!competitorText) return false
 

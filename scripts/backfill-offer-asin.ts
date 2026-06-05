@@ -3,7 +3,12 @@ import { extractAsinFromOfferUrls } from '@/lib/openclaw/offer-asin'
 
 async function main() {
   const db = await getDatabase()
-  const rows = await db.query<{ id: number; url: string | null; final_url: string | null; asin: string | null }>(
+  const rows = await db.query<{
+    id: number
+    url: string | null
+    final_url: string | null
+    asin: string | null
+  }>(
     `
       SELECT id, url, final_url, asin
       FROM offers

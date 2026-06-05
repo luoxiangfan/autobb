@@ -19,7 +19,7 @@ export interface KeywordPriorityClassification {
 
 export interface PriorityDistributionReport {
   distribution: Record<KeywordPriority, number>
-  expected: Record<KeywordPriority, [number, number]>  // [min, max]
+  expected: Record<KeywordPriority, [number, number]> // [min, max]
   isSatisfied: boolean
   missing: KeywordPriority[]
   excess: KeywordPriority[]
@@ -34,7 +34,7 @@ const PRIORITY_REQUIREMENTS: Record<KeywordPriority, [number, number]> = {
   Brand: [8, 10],
   Core: [6, 8],
   Intent: [3, 5],
-  LongTail: [3, 7]
+  LongTail: [3, 7],
 }
 
 /**
@@ -47,36 +47,47 @@ const PRIORITY_PATTERNS: Record<KeywordPriority, { keywords: string[]; patterns:
       /^[a-z]+\s+brand$/i,
       /^[a-z]+\s+official$/i,
       /^[a-z]+\s+store$/i,
-      /^[a-z]+\s+shop$/i
-    ]
+      /^[a-z]+\s+shop$/i,
+    ],
   },
   Core: {
     keywords: ['product', 'category', 'type', 'model', 'version'],
     patterns: [
-      /^[a-z]+\s+[a-z]+$/i,  // 两个单词
-      /^[a-z]+\s+[a-z]+\s+[a-z]+$/i  // 三个单词
-    ]
+      /^[a-z]+\s+[a-z]+$/i, // 两个单词
+      /^[a-z]+\s+[a-z]+\s+[a-z]+$/i, // 三个单词
+    ],
   },
   Intent: {
-    keywords: ['best', 'cheap', 'affordable', 'buy', 'price', 'sale', 'discount', 'deal', 'compare', 'vs'],
+    keywords: [
+      'best',
+      'cheap',
+      'affordable',
+      'buy',
+      'price',
+      'sale',
+      'discount',
+      'deal',
+      'compare',
+      'vs',
+    ],
     patterns: [
       /best\s+\w+/i,
       /cheap\s+\w+/i,
       /affordable\s+\w+/i,
       /\w+\s+for\s+\w+/i,
-      /\w+\s+vs\s+\w+/i
-    ]
+      /\w+\s+vs\s+\w+/i,
+    ],
   },
   LongTail: {
     keywords: ['specific', 'detailed', 'long', 'phrase', 'question'],
     patterns: [
-      /\w+\s+\w+\s+\w+\s+\w+/i,  // 4个或更多单词
+      /\w+\s+\w+\s+\w+\s+\w+/i, // 4个或更多单词
       /\w+\s+with\s+\w+/i,
       /\w+\s+for\s+\w+\s+\w+/i,
       /how\s+to\s+\w+/i,
-      /best\s+\w+\s+for\s+\w+/i
-    ]
-  }
+      /best\s+\w+\s+for\s+\w+/i,
+    ],
+  },
 }
 
 /**
@@ -101,7 +112,7 @@ export function classifyKeywordPriority(
         keyword,
         priority: 'Brand',
         confidence: 0.95,
-        reasoning: `Contains brand name: ${offer.brand}`
+        reasoning: `Contains brand name: ${offer.brand}`,
       }
     }
   }
@@ -112,16 +123,14 @@ export function classifyKeywordPriority(
     let priorityReasoning = ''
 
     // 检查关键词匹配
-    const matchedKeywords = keywords.filter(kw =>
-      lowerKeyword.includes(kw.toLowerCase())
-    )
+    const matchedKeywords = keywords.filter((kw) => lowerKeyword.includes(kw.toLowerCase()))
     if (matchedKeywords.length > 0) {
       priorityScore += matchedKeywords.length * 0.2
       priorityReasoning += `Keywords: ${matchedKeywords.join(', ')}. `
     }
 
     // 检查模式匹配
-    const matchedPatterns = patterns.filter(pattern => pattern.test(keyword))
+    const matchedPatterns = patterns.filter((pattern) => pattern.test(keyword))
     if (matchedPatterns.length > 0) {
       priorityScore += matchedPatterns.length * 0.3
       priorityReasoning += `Patterns: ${matchedPatterns.length} matched. `
@@ -153,7 +162,7 @@ export function classifyKeywordPriority(
     keyword,
     priority: bestPriority,
     confidence,
-    reasoning: reasoning || 'Default classification'
+    reasoning: reasoning || 'Default classification',
   }
 }
 
@@ -165,16 +174,14 @@ export function validatePriorityDistribution(
   keywords: Array<{ keyword: string; searchVolume?: number }>,
   offer?: Offer
 ): PriorityDistributionReport {
-  const classifications = keywords.map(kw =>
-    classifyKeywordPriority(kw.keyword, offer)
-  )
+  const classifications = keywords.map((kw) => classifyKeywordPriority(kw.keyword, offer))
 
   // 统计每个优先级的数量
   const distribution: Record<KeywordPriority, number> = {
     Brand: 0,
     Core: 0,
     Intent: 0,
-    LongTail: 0
+    LongTail: 0,
   }
 
   for (const classification of classifications) {
@@ -236,7 +243,7 @@ export function validatePriorityDistribution(
     missing,
     excess,
     recommendations,
-    details: classifications
+    details: classifications,
   }
 }
 
@@ -253,7 +260,7 @@ export function suggestKeywordsForMissingPriority(
     Brand: [],
     Core: [],
     Intent: [],
-    LongTail: []
+    LongTail: [],
   }
 
   for (const priority of missingPriorities) {
@@ -267,7 +274,7 @@ export function suggestKeywordsForMissingPriority(
           `buy ${brandName.toLowerCase()}`,
           `${brandName.toLowerCase()} online`,
           `${brandName.toLowerCase()} amazon`,
-          `${brandName.toLowerCase()} authentic`
+          `${brandName.toLowerCase()} authentic`,
         ]
         break
 
@@ -280,7 +287,7 @@ export function suggestKeywordsForMissingPriority(
           `best ${productCategory.toLowerCase()}`,
           `${productCategory.toLowerCase()} shop`,
           `${productCategory.toLowerCase()} price`,
-          `${productCategory.toLowerCase()} sale`
+          `${productCategory.toLowerCase()} sale`,
         ]
         break
 
@@ -293,7 +300,7 @@ export function suggestKeywordsForMissingPriority(
           `${productCategory} discount`,
           `${productCategory} deal`,
           `${productCategory} vs`,
-          `${productCategory} comparison`
+          `${productCategory} comparison`,
         ]
         break
 
@@ -306,7 +313,7 @@ export function suggestKeywordsForMissingPriority(
             `affordable ${productCategory} with ${productFeatures[0]}`,
             `${productCategory} ${productFeatures[0]} online`,
             `buy ${productCategory} with ${productFeatures[0]}`,
-            `${productCategory} ${productFeatures[0]} sale`
+            `${productCategory} ${productFeatures[0]} sale`,
           ]
         } else {
           suggestions.LongTail = [
@@ -316,7 +323,7 @@ export function suggestKeywordsForMissingPriority(
             `${productCategory} for small spaces`,
             `${productCategory} with warranty`,
             `${productCategory} with free shipping`,
-            `${productCategory} easy to use`
+            `${productCategory} easy to use`,
           ]
         }
         break
@@ -391,47 +398,47 @@ export function generatePriorityDistributionSummary(report: PriorityDistribution
  */
 const INTENT_SIGNALS: Record<string, number> = {
   // 高购买意图 (80-100)
-  'buy': 95,
-  'purchase': 95,
-  'order': 90,
-  'shop': 85,
-  'get': 80,
-  'need': 80,
+  buy: 95,
+  purchase: 95,
+  order: 90,
+  shop: 85,
+  get: 80,
+  need: 80,
 
   // 中等购买意图 (50-79)
-  'price': 70,
-  'cost': 70,
-  'deal': 65,
-  'discount': 60,
-  'coupon': 60,
-  'promo': 55,
-  'best': 55,
-  'top': 55,
-  'cheap': 50,
-  'affordable': 50,
-  'sale': 50,
+  price: 70,
+  cost: 70,
+  deal: 65,
+  discount: 60,
+  coupon: 60,
+  promo: 55,
+  best: 55,
+  top: 55,
+  cheap: 50,
+  affordable: 50,
+  sale: 50,
 
   // 低购买意图 (20-49)
-  'review': 35,
-  'reviews': 35,
-  'compare': 30,
-  'comparison': 30,
-  'vs': 25,
-  'versus': 25,
-  'alternative': 25,
-  'alternatives': 25,
-  'rating': 25,
-  'ratings': 25,
+  review: 35,
+  reviews: 35,
+  compare: 30,
+  comparison: 30,
+  vs: 25,
+  versus: 25,
+  alternative: 25,
+  alternatives: 25,
+  rating: 25,
+  ratings: 25,
 
   // 信息查询意图 (0-19)
   'how to': 10,
   'what is': 5,
-  'tutorial': 5,
-  'guide': 5,
-  'learn': 5,
-  'help': 5,
-  'setup': 10,
-  'install': 10
+  tutorial: 5,
+  guide: 5,
+  learn: 5,
+  help: 5,
+  setup: 10,
+  install: 10,
 }
 
 /**
@@ -452,7 +459,7 @@ const INTENT_SIGNALS: Record<string, number> = {
  */
 export function calculateIntentScore(keyword: string, brandName?: string): number {
   const kwLower = keyword.toLowerCase()
-  let maxScore = 40  // 默认中等意图
+  let maxScore = 40 // 默认中等意图
 
   // 🔥 优化(2025-12-17): 品牌词和产品词隐性购买意图识别
   // 问题：品牌词"reolink"和产品词"security camera"都被评为40分（低购买意图）
@@ -462,15 +469,25 @@ export function calculateIntentScore(keyword: string, brandName?: string): numbe
   if (brandName) {
     const brandLower = brandName.toLowerCase()
     if (kwLower.includes(brandLower)) {
-      maxScore = 75  // 品牌词基础分（高购买意图）
+      maxScore = 75 // 品牌词基础分（高购买意图）
 
       // 品牌+产品组合词（更高购买意图 85分）
       const productIndicators = [
-        'camera', 'security', 'system', 'doorbell', 'nvr', 'monitor',
-        'sensor', 'alarm', 'detector', 'device', 'kit', 'set'
+        'camera',
+        'security',
+        'system',
+        'doorbell',
+        'nvr',
+        'monitor',
+        'sensor',
+        'alarm',
+        'detector',
+        'device',
+        'kit',
+        'set',
       ]
-      if (productIndicators.some(p => kwLower.includes(p))) {
-        maxScore = 85  // 品牌+产品词（明确购买目标）
+      if (productIndicators.some((p) => kwLower.includes(p))) {
+        maxScore = 85 // 品牌+产品词（明确购买目标）
       }
     }
   }
@@ -478,11 +495,21 @@ export function calculateIntentScore(keyword: string, brandName?: string): numbe
   // 2. 通用产品名词检测（中等购买意图 55分）
   // 用户搜索具体产品，表明有购买需求，但未定品牌
   const productNouns = [
-    'camera', 'doorbell', 'system', 'monitor', 'sensor', 'alarm',
-    'detector', 'nvr', 'dvr', 'recorder', 'security', 'surveillance'
+    'camera',
+    'doorbell',
+    'system',
+    'monitor',
+    'sensor',
+    'alarm',
+    'detector',
+    'nvr',
+    'dvr',
+    'recorder',
+    'security',
+    'surveillance',
   ]
-  if (productNouns.some(p => kwLower.includes(p))) {
-    maxScore = Math.max(maxScore, 55)  // 通用产品词（中等购买意图）
+  if (productNouns.some((p) => kwLower.includes(p))) {
+    maxScore = Math.max(maxScore, 55) // 通用产品词（中等购买意图）
   }
 
   // 3. 显性购买信号词检测（原有逻辑）
@@ -511,9 +538,9 @@ export function sortKeywordsByIntent<T extends { keyword: string; searchVolume?:
 ): Array<T & { intentScore: number }> {
   const brandLower = brandName?.toLowerCase()
 
-  const keywordsWithIntent = keywords.map(kw => ({
+  const keywordsWithIntent = keywords.map((kw) => ({
     ...kw,
-    intentScore: calculateIntentScore(kw.keyword, brandName)  // 🔧 修复：传入brandName
+    intentScore: calculateIntentScore(kw.keyword, brandName), // 🔧 修复：传入brandName
   }))
 
   keywordsWithIntent.sort((a, b) => {

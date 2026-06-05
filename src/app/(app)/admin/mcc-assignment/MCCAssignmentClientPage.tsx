@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -62,6 +62,8 @@ interface MCCAssignment {
 // 🔧 用于取消未完成的请求
 let fetchAssignmentsAbortController: AbortController | null = null
 
+const CACHE_DURATION = 5 * 60 * 1000 // 5 分钟缓存
+
 export default function MCCAssignmentClientPage() {
   const [loading, setLoading] = useState(true)
   const [users, setUsers] = useState<User[]>([])
@@ -73,35 +75,130 @@ export default function MCCAssignmentClientPage() {
   const [assigning, setAssigning] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [isMccSelectOpen, setIsMccSelectOpen] = useState(false)
-  const [removingMccId, setRemovingMccId] = useState<string | null>(null)  // 🔧 删除中的 MCC ID
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)  // 🔧 删除确认对话框
-  const [mccToDelete, setMccToDelete] = useState<string | null>(null)  // 🔧 待删除的 MCC ID
-  const [allAssignments, setAllAssignments] = useState<Map<string, { userId: number, username: string }>>(new Map())  // 🔧 所有 MCC 的分配情况
-  const [transferDialogOpen, setTransferDialogOpen] = useState(false)  // 🔧 转移对话框
-  const [mccToTransfer, setMccToTransfer] = useState<{ mccId: string, fromUserId: number, fromUsername: string } | null>(null)
+  const [removingMccId, setRemovingMccId] = useState<string | null>(null) // 🔧 删除中的 MCC ID
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false) // 🔧 删除确认对话框
+  const [mccToDelete, setMccToDelete] = useState<string | null>(null) // 🔧 待删除的 MCC ID
+  const [allAssignments, setAllAssignments] = useState<
+    Map<string, { userId: number; username: string }>
+  >(new Map()) // 🔧 所有 MCC 的分配情况
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false) // 🔧 转移对话框
+  const [mccToTransfer, setMccToTransfer] = useState<{
+    mccId: string
+    fromUserId: number
+    fromUsername: string
+  } | null>(null)
   const [transferTargetUserId, setTransferTargetUserId] = useState<string>('')
   const [transferring, setTransferring] = useState(false)
-  const [selectedAssignments, setSelectedAssignments] = useState<string[]>([])  // 🔧 批量操作选中的 MCC
-  const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false)  // 🔧 批量操作对话框
+  const [selectedAssignments, setSelectedAssignments] = useState<string[]>([]) // 🔧 批量操作选中的 MCC
+  const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false) // 🔧 批量操作对话框
   const [bulkActionType, setBulkActionType] = useState<'remove' | 'transfer'>('remove')
-  const [tableSearchTerm, setTableSearchTerm] = useState('')  // 🔧 表格搜索
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')  // 🔧 防抖后的搜索词
-  const [sortBy, setSortBy] = useState<'assigned_at' | 'mcc_customer_id' | 'account_name'>('assigned_at')  // 🔧 排序
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')  // 🔧 排序方向
-  const [isRefreshing, setIsRefreshing] = useState(false)  // 🔧 刷新状态
-  const [cache, setCache] = useState<{  // 🔧 数据缓存
+  const [tableSearchTerm, setTableSearchTerm] = useState('') // 🔧 表格搜索
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('') // 🔧 防抖后的搜索词
+  const [sortBy, setSortBy] = useState<'assigned_at' | 'mcc_customer_id' | 'account_name'>(
+    'assigned_at'
+  ) // 🔧 排序
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc') // 🔧 排序方向
+  const [isRefreshing, setIsRefreshing] = useState(false) // 🔧 刷新状态
+  const [cache, setCache] = useState<{
+    // 🔧 数据缓存
     mccAccounts: MCCAccount[]
-    allAssignments: Map<string, { userId: number, username: string }>
+    allAssignments: Map<string, { userId: number; username: string }>
     timestamp: number
   } | null>(null)
-  const CACHE_DURATION = 5 * 60 * 1000 // 5 分钟缓存
+  const cacheRef = useRef(cache)
+  cacheRef.current = cache
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({
+        role: 'user',
+        status: 'active',
+        limit: '10',
+      })
+      const response = await fetch(`/api/admin/users?${params}`, {
+        credentials: 'include',
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setUsers(data.users || [])
+      }
+    } catch (error: any) {
+      console.error('获取用户列表失败:', error)
+    }
+  }, [])
+
+  const fetchMccAccounts = useCallback(async () => {
+    try {
+      const cached = cacheRef.current
+      // 🔧 检查缓存
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        setMccAccounts(cached.mccAccounts)
+        setAllAssignments(cached.allAssignments)
+        return
+      }
+
+      const response = await fetch('/api/google-ads-accounts?manager=true&activeOnly=true', {
+        credentials: 'include',
+      })
+      if (response.ok) {
+        const data = await response.json()
+        const accounts = data?.accounts || []
+        setMccAccounts(accounts)
+
+        // 🔧 更新缓存
+        setCache({
+          mccAccounts: accounts,
+          allAssignments: new Map(), // 会被 fetchAllAssignments 更新
+          timestamp: Date.now(),
+        })
+      }
+    } catch (error: any) {
+      console.error('获取 MCC 账号失败:', error)
+      toast.error('加载 MCC 账号失败', {
+        description: '请刷新页面重试',
+        duration: 5000,
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // 🔧 获取所有 MCC 的分配情况（用于显示哪些 MCC 已被其他用户绑定）
+  const fetchAllAssignments = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/user-mcc/all', {
+        credentials: 'include',
+      })
+      if (response.ok) {
+        const data = await response.json()
+        const assignmentMap = new Map<string, { userId: number; username: string }>()
+        data.assignments?.forEach((a: any) => {
+          assignmentMap.set(a.mcc_customer_id, {
+            userId: a.user_id,
+            username: a.username || `用户${a.user_id}`,
+          })
+        })
+        setAllAssignments(assignmentMap)
+
+        // 🔧 更新缓存中的分配数据
+        const cached = cacheRef.current
+        if (cached) {
+          setCache({
+            ...cached,
+            allAssignments: assignmentMap,
+          })
+        }
+      }
+    } catch (error: any) {
+      console.error('获取所有 MCC 分配失败:', error)
+    }
+  }, [])
 
   useEffect(() => {
     fetchUsers()
     fetchMccAccounts()
-    fetchAllAssignments()  // 🔧 获取所有 MCC 的分配情况
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    fetchAllAssignments() // 🔧 获取所有 MCC 的分配情况
+  }, [fetchUsers, fetchMccAccounts, fetchAllAssignments])
 
   // 🔧 搜索防抖 - 300ms
   useEffect(() => {
@@ -121,102 +218,9 @@ export default function MCCAssignmentClientPage() {
     }, 60000) // 每分钟检查一次
 
     return () => clearInterval(cleanup)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cache])
 
-  useEffect(() => {
-    if (selectedUserId) {
-      // 🔧 切换用户时先清除旧数据
-      setUserAssignments([])
-      fetchUserAssignments(selectedUserId)
-    }
-  }, [selectedUserId])
-
-  const fetchUsers = async () => {
-    try {
-      const params = new URLSearchParams({
-        role: 'user',
-        status: 'active',
-        limit: '10'
-      })
-      const response = await fetch(`/api/admin/users?${params}`, {
-        credentials: 'include',
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setUsers(data.users || [])
-      }
-    } catch (error: any) {
-      console.error('获取用户列表失败:', error)
-    }
-  }
-
-  const fetchMccAccounts = async () => {
-    try {
-      // 🔧 检查缓存
-      if (cache && Date.now() - cache.timestamp < CACHE_DURATION) {
-        setMccAccounts(cache.mccAccounts)
-        setAllAssignments(cache.allAssignments)
-        return
-      }
-
-      const response = await fetch('/api/google-ads-accounts?manager=true&activeOnly=true', {
-        credentials: 'include',
-      })
-      if (response.ok) {
-        const data = await response.json()
-        const accounts = data?.accounts || []
-        setMccAccounts(accounts)
-        
-        // 🔧 更新缓存
-        setCache({
-          mccAccounts: accounts,
-          allAssignments: new Map(), // 会被 fetchAllAssignments 更新
-          timestamp: Date.now(),
-        })
-      }
-    } catch (error: any) {
-      console.error('获取 MCC 账号失败:', error)
-      toast.error('加载 MCC 账号失败', {
-        description: '请刷新页面重试',
-        duration: 5000,
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // 🔧 获取所有 MCC 的分配情况（用于显示哪些 MCC 已被其他用户绑定）
-  const fetchAllAssignments = async () => {
-    try {
-      const response = await fetch('/api/admin/user-mcc/all', {
-        credentials: 'include',
-      })
-      if (response.ok) {
-        const data = await response.json()
-        const assignmentMap = new Map<string, { userId: number, username: string }>()
-        data.assignments?.forEach((a: any) => {
-          assignmentMap.set(a.mcc_customer_id, {
-            userId: a.user_id,
-            username: a.username || `用户${a.user_id}`,
-          })
-        })
-        setAllAssignments(assignmentMap)
-        
-        // 🔧 更新缓存中的分配数据
-        if (cache) {
-          setCache({
-            ...cache,
-            allAssignments: assignmentMap,
-          })
-        }
-      }
-    } catch (error: any) {
-      console.error('获取所有 MCC 分配失败:', error)
-    }
-  }
-
-  const fetchUserAssignments = async (userId: string) => {
+  const fetchUserAssignments = useCallback(async (userId: string) => {
     // 🔧 取消未完成的请求
     if (fetchAssignmentsAbortController) {
       fetchAssignmentsAbortController.abort()
@@ -244,26 +248,30 @@ export default function MCCAssignmentClientPage() {
         duration: 5000,
       })
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (selectedUserId) {
+      // 🔧 切换用户时先清除旧数据
+      setUserAssignments([])
+      fetchUserAssignments(selectedUserId)
+    }
+  }, [selectedUserId, fetchUserAssignments])
 
   // 🔧 刷新功能
   const handleRefresh = useCallback(async () => {
     if (isRefreshing) return
-    
+
     setIsRefreshing(true)
     try {
       // 🔧 清除缓存，强制重新加载
       setCache(null)
-      await Promise.all([
-        fetchUsers(),
-        fetchMccAccounts(),
-        fetchAllAssignments(),
-      ])
-      
+      await Promise.all([fetchUsers(), fetchMccAccounts(), fetchAllAssignments()])
+
       if (selectedUserId) {
         await fetchUserAssignments(selectedUserId)
       }
-      
+
       toast.success('刷新成功', {
         description: '数据已更新到最新',
         duration: 2000,
@@ -277,8 +285,14 @@ export default function MCCAssignmentClientPage() {
     } finally {
       setIsRefreshing(false)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRefreshing, selectedUserId])
+  }, [
+    isRefreshing,
+    selectedUserId,
+    fetchUsers,
+    fetchMccAccounts,
+    fetchAllAssignments,
+    fetchUserAssignments,
+  ])
 
   const handleAssign = async () => {
     if (!selectedUserId || selectedMccIds.length === 0) {
@@ -330,16 +344,16 @@ export default function MCCAssignmentClientPage() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-green-600" />
-              <span>成功分配 <span className="font-medium">{result.assignedCount}</span> 个 MCC 账号</span>
+              <span>
+                成功分配 <span className="font-medium">{result.assignedCount}</span> 个 MCC 账号
+              </span>
             </div>
-            <div className="text-xs text-gray-600 pl-6">
-              数据已自动刷新
-            </div>
+            <div className="text-xs text-gray-600 pl-6">数据已自动刷新</div>
           </div>
         ),
         duration: 4000,
       })
-      
+
       // 🔧 自动刷新分配列表
       fetchUserAssignments(selectedUserId)
       fetchAllAssignments()
@@ -347,12 +361,12 @@ export default function MCCAssignmentClientPage() {
       setSelectedMccIds([])
     } catch (error: any) {
       console.error('分配 MCC 失败:', error)
-      
+
       // 🔧 详细的错误说明
       let errorTitle = '分配失败'
       let errorDescription = error.message || '未知错误'
       let errorDuration = 6000
-      
+
       if (error.message?.includes('MCC 账号已被其他用户绑定')) {
         errorTitle = 'MCC 账号冲突'
         errorDescription = (
@@ -387,7 +401,7 @@ export default function MCCAssignmentClientPage() {
         errorTitle = '用户不存在'
         errorDescription = '请刷新页面后重试'
       }
-      
+
       toast.error(errorTitle, {
         description: errorDescription,
         duration: errorDuration,
@@ -426,20 +440,20 @@ export default function MCCAssignmentClientPage() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-green-600" />
-              <span>成功移除 <span className="font-medium">{result.removedCount}</span> 个 MCC 分配</span>
+              <span>
+                成功移除 <span className="font-medium">{result.removedCount}</span> 个 MCC 分配
+              </span>
             </div>
-            <div className="text-xs text-gray-600 pl-6">
-              数据已自动刷新
-            </div>
+            <div className="text-xs text-gray-600 pl-6">数据已自动刷新</div>
           </div>
         ),
         duration: 4000,
       })
-      
+
       // 🔧 自动刷新分配列表
       fetchUserAssignments(selectedUserId)
       fetchAllAssignments()
-      
+
       // 刷新分配列表
       fetchUserAssignments(selectedUserId)
       setDeleteConfirmOpen(false)
@@ -470,7 +484,8 @@ export default function MCCAssignmentClientPage() {
     setMccToTransfer({
       mccId: assignment.mcc_customer_id,
       fromUserId: assignment.assigned_to_user_id || 0,
-      fromUsername: users.find(u => u.id === assignment.assigned_to_user_id)?.username || '未知用户',
+      fromUsername:
+        users.find((u) => u.id === assignment.assigned_to_user_id)?.username || '未知用户',
     })
     setTransferTargetUserId('')
     setTransferDialogOpen(true)
@@ -507,11 +522,12 @@ export default function MCCAssignmentClientPage() {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
-                <span>成功移除 <span className="font-medium">{selectedAssignments.length}</span> 个 MCC 分配</span>
+                <span>
+                  成功移除 <span className="font-medium">{selectedAssignments.length}</span> 个 MCC
+                  分配
+                </span>
               </div>
-              <div className="text-xs text-gray-600 pl-6">
-                数据已自动刷新
-              </div>
+              <div className="text-xs text-gray-600 pl-6">数据已自动刷新</div>
             </div>
           ),
           duration: 4000,
@@ -520,7 +536,7 @@ export default function MCCAssignmentClientPage() {
 
       setSelectedAssignments([])
       setBulkActionDialogOpen(false)
-      
+
       // 🔧 自动刷新分配列表
       fetchUserAssignments(selectedUserId)
       fetchAllAssignments()
@@ -530,9 +546,7 @@ export default function MCCAssignmentClientPage() {
         description: (
           <div className="space-y-1">
             <p>{error.message || '未知错误'}</p>
-            <p className="text-xs text-gray-600">
-              💡 提示：如果问题持续，请尝试逐个移除或刷新页面
-            </p>
+            <p className="text-xs text-gray-600">💡 提示：如果问题持续，请尝试逐个移除或刷新页面</p>
           </div>
         ),
         duration: 7000,
@@ -578,13 +592,16 @@ export default function MCCAssignmentClientPage() {
         throw new Error(error.error || '转移失败')
       }
 
-      const targetUsername = users.find(u => u.id.toString() === transferTargetUserId)?.username
+      const targetUsername = users.find((u) => u.id.toString() === transferTargetUserId)?.username
       toast.success('转移成功', {
         description: (
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-green-600" />
-              <span>MCC <span className="font-mono font-medium">{mccToTransfer.mccId}</span> 已转移给 <span className="font-medium">{targetUsername}</span></span>
+              <span>
+                MCC <span className="font-mono font-medium">{mccToTransfer.mccId}</span> 已转移给{' '}
+                <span className="font-medium">{targetUsername}</span>
+              </span>
             </div>
             <div className="text-xs text-gray-600 pl-6">
               原用户已失去访问权限，目标用户已获得访问权限
@@ -593,11 +610,11 @@ export default function MCCAssignmentClientPage() {
         ),
         duration: 5000,
       })
-      
+
       setTransferDialogOpen(false)
       setMccToTransfer(null)
       setTransferTargetUserId('')
-      
+
       // 🔧 自动刷新分配列表
       if (selectedUserId) {
         fetchUserAssignments(selectedUserId)
@@ -605,13 +622,13 @@ export default function MCCAssignmentClientPage() {
       fetchAllAssignments()
     } catch (error: any) {
       console.error('转移 MCC 失败:', error)
-      
+
       // 🔧 详细的错误说明
       let errorDescription = error.message || '未知错误'
       if (error.message?.includes('目标用户不存在')) {
         errorDescription = '请刷新页面后重试'
       }
-      
+
       toast.error('转移失败', {
         description: errorDescription,
         duration: 6000,
@@ -623,23 +640,22 @@ export default function MCCAssignmentClientPage() {
 
   // 🔧 使用 useMemo 优化过滤和排序
   const filteredMccAccounts = useMemo(() => {
-    return mccAccounts.filter(mcc =>
-      mcc.accountName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      mcc.customerId.includes(searchTerm)
+    return mccAccounts.filter(
+      (mcc) =>
+        mcc.accountName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        mcc.customerId.includes(searchTerm)
     )
   }, [mccAccounts, searchTerm])
 
   // 🔧 可用 MCC = 未分配给任何用户的 MCC
   const availableMccAccounts = useMemo(() => {
-    return filteredMccAccounts.filter(
-      mcc => !allAssignments.has(mcc.customerId)
-    )
+    return filteredMccAccounts.filter((mcc) => !allAssignments.has(mcc.customerId))
   }, [filteredMccAccounts, allAssignments])
 
   // 🔧 表格数据筛选和排序（使用防抖后的搜索词 + useMemo）
   const sortedAndFilteredAssignments = useMemo(() => {
     return [...userAssignments]
-      .filter(assignment => {
+      .filter((assignment) => {
         if (!debouncedSearchTerm) return true
         const term = debouncedSearchTerm.toLowerCase()
         return (
@@ -690,8 +706,18 @@ export default function MCCAssignmentClientPage() {
                 {isRefreshing ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
                   </svg>
                 )}
                 <span className="hidden sm:inline">刷新</span>
@@ -713,7 +739,7 @@ export default function MCCAssignmentClientPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {/* 总 MCC 数 */}
-          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+          <Card className="bg-linear-to-br from-blue-50 to-indigo-50 border-blue-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -726,7 +752,7 @@ export default function MCCAssignmentClientPage() {
           </Card>
 
           {/* 已分配 MCC 数 */}
-          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+          <Card className="bg-linear-to-br from-green-50 to-emerald-50 border-green-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -739,12 +765,14 @@ export default function MCCAssignmentClientPage() {
           </Card>
 
           {/* 可用 MCC 数 */}
-          <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+          <Card className="bg-linear-to-br from-amber-50 to-orange-50 border-amber-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-amber-600 font-medium">可用 MCC</p>
-                  <p className="text-3xl font-bold text-amber-900 mt-1">{mccAccounts.length - allAssignments.size}</p>
+                  <p className="text-3xl font-bold text-amber-900 mt-1">
+                    {mccAccounts.length - allAssignments.size}
+                  </p>
                 </div>
                 <Plus className="w-12 h-12 text-amber-400 opacity-50" />
               </div>
@@ -761,9 +789,7 @@ export default function MCCAssignmentClientPage() {
                 <Users className="w-5 h-5" />
                 选择用户
               </CardTitle>
-              <CardDescription>
-                选择要分配 MCC 账号的用户
-              </CardDescription>
+              <CardDescription>选择要分配 MCC 账号的用户</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -778,7 +804,7 @@ export default function MCCAssignmentClientPage() {
                       <SelectValue placeholder="选择用户" />
                     </SelectTrigger>
                     <SelectContent>
-                      {users.map(user => (
+                      {users.map((user) => (
                         <SelectItem key={user.id} value={user.id.toString()}>
                           {user.username || user.email}
                         </SelectItem>
@@ -790,7 +816,8 @@ export default function MCCAssignmentClientPage() {
                     <Alert className="mt-4">
                       <CheckCircle2 className="w-4 h-4 text-green-600" />
                       <AlertDescription className="text-sm">
-                        已选择用户：{users.find(u => u.id.toString() === selectedUserId)?.username}
+                        已选择用户：
+                        {users.find((u) => u.id.toString() === selectedUserId)?.username}
                       </AlertDescription>
                     </Alert>
                   )}
@@ -810,7 +837,7 @@ export default function MCCAssignmentClientPage() {
                   </CardTitle>
                   <CardDescription>
                     {selectedUserId
-                      ? `用户 ${users.find(u => u.id.toString() === selectedUserId)?.username} 已分配的 MCC 账号`
+                      ? `用户 ${users.find((u) => u.id.toString() === selectedUserId)?.username} 已分配的 MCC 账号`
                       : '请先选择用户'}
                   </CardDescription>
                 </div>
@@ -830,10 +857,15 @@ export default function MCCAssignmentClientPage() {
                         stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
                       </svg>
                     </div>
-                    
+
                     {/* 排序按钮 */}
                     <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
                       <SelectTrigger className="w-[130px] h-9">
@@ -845,7 +877,7 @@ export default function MCCAssignmentClientPage() {
                         <SelectItem value="account_name">账号名称</SelectItem>
                       </SelectContent>
                     </Select>
-                    
+
                     <Button
                       variant="outline"
                       size="sm"
@@ -854,12 +886,32 @@ export default function MCCAssignmentClientPage() {
                       title={sortOrder === 'asc' ? '升序' : '降序'}
                     >
                       {sortOrder === 'asc' ? (
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 15l7-7 7 7"
+                          />
                         </svg>
                       ) : (
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
                         </svg>
                       )}
                     </Button>
@@ -870,7 +922,7 @@ export default function MCCAssignmentClientPage() {
             <CardContent>
               {loading ? (
                 <div className="space-y-3">
-                  {[1, 2, 3, 4, 5].map(i => (
+                  {[1, 2, 3, 4, 5].map((i) => (
                     <div key={i} className="h-12 bg-gray-200 rounded animate-pulse" />
                   ))}
                 </div>
@@ -884,9 +936,7 @@ export default function MCCAssignmentClientPage() {
                   <div className="bg-gray-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
                     <Building2 className="w-10 h-10 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    暂无 MCC 分配
-                  </h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">暂无 MCC 分配</h3>
                   <p className="text-gray-500 mb-6 max-w-sm mx-auto">
                     该用户还没有分配任何 MCC 账号，点击上方按钮开始分配
                   </p>
@@ -901,154 +951,164 @@ export default function MCCAssignmentClientPage() {
               ) : sortedAndFilteredAssignments.length === 0 && userAssignments.length > 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <p>没有匹配的搜索结果</p>
-                  <Button
-                    variant="link"
-                    onClick={() => setTableSearchTerm('')}
-                    className="mt-2"
-                  >
+                  <Button variant="link" onClick={() => setTableSearchTerm('')} className="mt-2">
                     清除搜索
                   </Button>
                 </div>
               ) : (
                 <>
-                <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="w-[40px]">
-                        <Checkbox
-                          checked={selectedAssignments.length === sortedAndFilteredAssignments.length && sortedAndFilteredAssignments.length > 0}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedAssignments(sortedAndFilteredAssignments.map(a => a.mcc_customer_id))
-                            } else {
-                              setSelectedAssignments([])
-                            }
-                          }}
-                        />
-                      </TableHead>
-                      <TableHead>MCC 账号</TableHead>
-                      <TableHead>账号名称</TableHead>
-                      <TableHead>分配时间</TableHead>
-                      <TableHead>分配人</TableHead>
-                      <TableHead className="w-[140px]">操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sortedAndFilteredAssignments.map(assignment => (
-                      <TableRow 
-                        key={assignment.id}
-                        className={cn(
-                          selectedAssignments.includes(assignment.mcc_customer_id) && "bg-blue-50"
-                        )}
-                      >
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedAssignments.includes(assignment.mcc_customer_id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedAssignments([...selectedAssignments, assignment.mcc_customer_id])
-                              } else {
-                                setSelectedAssignments(selectedAssignments.filter(id => id !== assignment.mcc_customer_id))
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="w-[40px]">
+                            <Checkbox
+                              checked={
+                                selectedAssignments.length ===
+                                  sortedAndFilteredAssignments.length &&
+                                sortedAndFilteredAssignments.length > 0
                               }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {assignment.mcc_customer_id}
-                        </TableCell>
-                        <TableCell>
-                          {assignment.mcc_account_name || '-'}
-                        </TableCell>
-                        <TableCell>
-                          {new Date(assignment.assigned_at).toLocaleString('zh-CN')}
-                        </TableCell>
-                        <TableCell>
-                          {assignment.assigned_by_username || '系统'}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleTransfer(assignment)}
-                              disabled={!selectedUserId || removingMccId === assignment.mcc_customer_id}
-                              className="h-8 px-2 text-xs"
-                              title="转移给其他用户"
-                            >
-                              <Users className="w-3.5 h-3.5 text-blue-600" />
-                              <span className="ml-1">转移</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => confirmDelete(assignment.mcc_customer_id)}
-                              disabled={!selectedUserId || removingMccId === assignment.mcc_customer_id}
-                              className="h-8 w-8 p-0"
-                              title="删除分配"
-                            >
-                              {removingMccId === assignment.mcc_customer_id ? (
-                                <Loader2 className="w-4 h-4 animate-spin text-red-600" />
-                              ) : (
-                                <Trash2 className="w-4 h-4 text-red-600" />
-                              )}
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                </div>
-
-                {/* 批量操作工具栏 */}
-                {selectedAssignments.length > 0 && (
-                  <div className="flex items-center justify-between mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-900">
-                        已选择 {selectedAssignments.length} 个 MCC
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setBulkActionType('remove')
-                          setBulkActionDialogOpen(true)
-                        }}
-                        className="text-xs h-8"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 mr-1 text-red-600" />
-                        批量移除
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setBulkActionType('transfer')
-                          setBulkActionDialogOpen(true)
-                        }}
-                        className="text-xs h-8"
-                        disabled={selectedAssignments.length > 1}
-                      >
-                        <Users className="w-3.5 h-3.5 mr-1 text-blue-600" />
-                        批量转移
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedAssignments([])}
-                        className="text-xs h-8"
-                      >
-                        取消选择
-                      </Button>
-                    </div>
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedAssignments(
+                                    sortedAndFilteredAssignments.map((a) => a.mcc_customer_id)
+                                  )
+                                } else {
+                                  setSelectedAssignments([])
+                                }
+                              }}
+                            />
+                          </TableHead>
+                          <TableHead>MCC 账号</TableHead>
+                          <TableHead>账号名称</TableHead>
+                          <TableHead>分配时间</TableHead>
+                          <TableHead>分配人</TableHead>
+                          <TableHead className="w-[140px]">操作</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sortedAndFilteredAssignments.map((assignment) => (
+                          <TableRow
+                            key={assignment.id}
+                            className={cn(
+                              selectedAssignments.includes(assignment.mcc_customer_id) &&
+                                'bg-blue-50'
+                            )}
+                          >
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedAssignments.includes(assignment.mcc_customer_id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedAssignments([
+                                      ...selectedAssignments,
+                                      assignment.mcc_customer_id,
+                                    ])
+                                  } else {
+                                    setSelectedAssignments(
+                                      selectedAssignments.filter(
+                                        (id) => id !== assignment.mcc_customer_id
+                                      )
+                                    )
+                                  }
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </TableCell>
+                            <TableCell className="font-mono text-sm">
+                              {assignment.mcc_customer_id}
+                            </TableCell>
+                            <TableCell>{assignment.mcc_account_name || '-'}</TableCell>
+                            <TableCell>
+                              {new Date(assignment.assigned_at).toLocaleString('zh-CN')}
+                            </TableCell>
+                            <TableCell>{assignment.assigned_by_username || '系统'}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleTransfer(assignment)}
+                                  disabled={
+                                    !selectedUserId || removingMccId === assignment.mcc_customer_id
+                                  }
+                                  className="h-8 px-2 text-xs"
+                                  title="转移给其他用户"
+                                >
+                                  <Users className="w-3.5 h-3.5 text-blue-600" />
+                                  <span className="ml-1">转移</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => confirmDelete(assignment.mcc_customer_id)}
+                                  disabled={
+                                    !selectedUserId || removingMccId === assignment.mcc_customer_id
+                                  }
+                                  className="h-8 w-8 p-0"
+                                  title="删除分配"
+                                >
+                                  {removingMccId === assignment.mcc_customer_id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin text-red-600" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4 text-red-600" />
+                                  )}
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
-                )}
-              </>
+
+                  {/* 批量操作工具栏 */}
+                  {selectedAssignments.length > 0 && (
+                    <div className="flex items-center justify-between mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-medium text-blue-900">
+                          已选择 {selectedAssignments.length} 个 MCC
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setBulkActionType('remove')
+                            setBulkActionDialogOpen(true)
+                          }}
+                          className="text-xs h-8"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 mr-1 text-red-600" />
+                          批量移除
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setBulkActionType('transfer')
+                            setBulkActionDialogOpen(true)
+                          }}
+                          className="text-xs h-8"
+                          disabled={selectedAssignments.length > 1}
+                        >
+                          <Users className="w-3.5 h-3.5 mr-1 text-blue-600" />
+                          批量转移
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedAssignments([])}
+                          className="text-xs h-8"
+                        >
+                          取消选择
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -1065,7 +1125,11 @@ export default function MCCAssignmentClientPage() {
             </DialogTitle>
             <DialogDescription className="space-y-1">
               <p>
-                为用户 <span className="font-medium text-blue-600">{users.find(u => u.id.toString() === selectedUserId)?.username}</span> 分配 MCC 账号
+                为用户{' '}
+                <span className="font-medium text-blue-600">
+                  {users.find((u) => u.id.toString() === selectedUserId)?.username}
+                </span>{' '}
+                分配 MCC 账号
               </p>
               <div className="flex items-center gap-2 text-xs bg-green-50 text-green-700 px-3 py-2 rounded-md">
                 <CheckCircle2 className="w-3.5 h-3.5" />
@@ -1077,16 +1141,18 @@ export default function MCCAssignmentClientPage() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>MCC 账号（多选）</Label>
-              
+
               {/* 自定义多选 Select - 优化样式 */}
               <div className="relative">
                 <button
                   type="button"
                   className={cn(
-                    "w-full min-h-[44px] px-4 py-2.5 border rounded-lg bg-background text-left text-sm",
-                    "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
-                    "transition-all duration-200",
-                    isMccSelectOpen ? "border-blue-500 ring-2 ring-blue-500 ring-offset-2" : "border-input hover:border-gray-400"
+                    'w-full min-h-[44px] px-4 py-2.5 border rounded-lg bg-background text-left text-sm',
+                    'focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                    'transition-all duration-200',
+                    isMccSelectOpen
+                      ? 'border-blue-500 ring-2 ring-blue-500 ring-offset-2'
+                      : 'border-input hover:border-gray-400'
                   )}
                   onClick={() => setIsMccSelectOpen(!isMccSelectOpen)}
                 >
@@ -1096,12 +1162,12 @@ export default function MCCAssignmentClientPage() {
                         <span className="text-muted-foreground">选择 MCC 账号</span>
                       ) : (
                         <div className="flex flex-wrap gap-1.5">
-                          {selectedMccIds.slice(0, 3).map(id => {
-                            const mcc = mccAccounts.find(m => m.customerId === id)
+                          {selectedMccIds.slice(0, 3).map((id) => {
+                            const mcc = mccAccounts.find((m) => m.customerId === id)
                             return (
-                              <Badge 
-                                key={id} 
-                                variant="secondary" 
+                              <Badge
+                                key={id}
+                                variant="secondary"
                                 className="text-xs bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
                               >
                                 {mcc?.accountName || id}
@@ -1109,20 +1175,19 @@ export default function MCCAssignmentClientPage() {
                             )
                           })}
                           {selectedMccIds.length > 3 && (
-                            <Badge 
-                              variant="outline" 
-                              className="text-xs bg-gray-100"
-                            >
+                            <Badge variant="outline" className="text-xs bg-gray-100">
                               +{selectedMccIds.length - 3}
                             </Badge>
                           )}
                         </div>
                       )}
                     </div>
-                    <ChevronDown className={cn(
-                      "h-4 w-4 transition-transform duration-200",
-                      isMccSelectOpen && "rotate-180"
-                    )} />
+                    <ChevronDown
+                      className={cn(
+                        'h-4 w-4 transition-transform duration-200',
+                        isMccSelectOpen && 'rotate-180'
+                      )}
+                    />
                   </div>
                 </button>
 
@@ -1131,7 +1196,7 @@ export default function MCCAssignmentClientPage() {
                   <>
                     <div className="absolute z-50 w-full mt-1 border border-gray-200 rounded-lg bg-white shadow-lg max-h-[320px] overflow-hidden">
                       {/* 搜索框 - 优化样式 */}
-                      <div className="sticky top-0 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 p-3">
+                      <div className="sticky top-0 bg-linear-to-r from-blue-50 to-indigo-50 border-b border-gray-200 p-3">
                         <div className="relative">
                           <Input
                             placeholder="🔍 搜索 MCC 账号或 ID..."
@@ -1149,8 +1214,8 @@ export default function MCCAssignmentClientPage() {
                           <div className="px-6 py-8 text-center">
                             <Building2 className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                             <p className="text-sm text-gray-500 font-medium">
-                              {searchTerm 
-                                ? '没有匹配的未分配 MCC 账号' 
+                              {searchTerm
+                                ? '没有匹配的未分配 MCC 账号'
                                 : '所有 MCC 账号都已分配给其他用户'}
                             </p>
                             {!searchTerm && (
@@ -1165,14 +1230,16 @@ export default function MCCAssignmentClientPage() {
                               <div
                                 key={mcc.id}
                                 className={cn(
-                                  "flex items-center gap-3 px-4 py-3 cursor-pointer transition-all duration-150",
+                                  'flex items-center gap-3 px-4 py-3 cursor-pointer transition-all duration-150',
                                   selectedMccIds.includes(mcc.customerId)
-                                    ? "bg-blue-50 hover:bg-blue-100"
-                                    : "hover:bg-gray-50"
+                                    ? 'bg-blue-50 hover:bg-blue-100'
+                                    : 'hover:bg-gray-50'
                                 )}
                                 onClick={() => {
                                   if (selectedMccIds.includes(mcc.customerId)) {
-                                    setSelectedMccIds(selectedMccIds.filter(id => id !== mcc.customerId))
+                                    setSelectedMccIds(
+                                      selectedMccIds.filter((id) => id !== mcc.customerId)
+                                    )
                                   } else {
                                     setSelectedMccIds([...selectedMccIds, mcc.customerId])
                                   }
@@ -1184,7 +1251,9 @@ export default function MCCAssignmentClientPage() {
                                     if (checked) {
                                       setSelectedMccIds([...selectedMccIds, mcc.customerId])
                                     } else {
-                                      setSelectedMccIds(selectedMccIds.filter(id => id !== mcc.customerId))
+                                      setSelectedMccIds(
+                                        selectedMccIds.filter((id) => id !== mcc.customerId)
+                                      )
                                     }
                                   }}
                                   onClick={(e) => e.stopPropagation()}
@@ -1206,7 +1275,7 @@ export default function MCCAssignmentClientPage() {
                                   </div>
                                 </div>
                                 {selectedMccIds.includes(mcc.customerId) && (
-                                  <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                                  <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />
                                 )}
                               </div>
                             ))}
@@ -1216,23 +1285,26 @@ export default function MCCAssignmentClientPage() {
 
                       {/* 底部统计 - 优化样式 */}
                       {availableMccAccounts.length > 0 && (
-                        <div className="sticky bottom-0 bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200 px-4 py-2">
+                        <div className="sticky bottom-0 bg-linear-to-r from-gray-50 to-gray-100 border-t border-gray-200 px-4 py-2">
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-gray-600">
-                              已选择 <span className="font-medium text-blue-600">{selectedMccIds.length}</span> 个
+                              已选择{' '}
+                              <span className="font-medium text-blue-600">
+                                {selectedMccIds.length}
+                              </span>{' '}
+                              个
                             </span>
                             <span className="text-gray-500">
-                              可用 <span className="font-medium">{availableMccAccounts.length}</span> / 总计 <span className="font-medium">{mccAccounts.length}</span>
+                              可用{' '}
+                              <span className="font-medium">{availableMccAccounts.length}</span> /
+                              总计 <span className="font-medium">{mccAccounts.length}</span>
                             </span>
                           </div>
                         </div>
                       )}
                     </div>
                     {/* 点击外部关闭 */}
-                    <div 
-                      className="fixed inset-0 z-40" 
-                      onClick={() => setIsMccSelectOpen(false)}
-                    />
+                    <div className="fixed inset-0 z-40" onClick={() => setIsMccSelectOpen(false)} />
                   </>
                 )}
               </div>
@@ -1247,12 +1319,12 @@ export default function MCCAssignmentClientPage() {
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {selectedMccIds.slice(0, 5).map(id => {
-                      const mcc = mccAccounts.find(m => m.customerId === id)
+                    {selectedMccIds.slice(0, 5).map((id) => {
+                      const mcc = mccAccounts.find((m) => m.customerId === id)
                       return (
-                        <Badge 
-                          key={id} 
-                          variant="secondary" 
+                        <Badge
+                          key={id}
+                          variant="secondary"
                           className="text-xs bg-white text-blue-700 border border-blue-200"
                         >
                           {mcc?.accountName || id}
@@ -1288,8 +1360,8 @@ export default function MCCAssignmentClientPage() {
               onClick={handleAssign}
               disabled={assigning || selectedMccIds.length === 0}
               className={cn(
-                "min-w-[140px] transition-all duration-200",
-                selectedMccIds.length > 0 && !assigning && "hover:shadow-md"
+                'min-w-[140px] transition-all duration-200',
+                selectedMccIds.length > 0 && !assigning && 'hover:shadow-md'
               )}
             >
               {assigning ? (
@@ -1316,9 +1388,7 @@ export default function MCCAssignmentClientPage() {
               <Trash2 className="w-5 h-5 text-red-600" />
               确认删除
             </DialogTitle>
-            <DialogDescription>
-              确定要删除这个 MCC 账号分配吗？此操作不可撤销。
-            </DialogDescription>
+            <DialogDescription>确定要删除这个 MCC 账号分配吗？此操作不可撤销。</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
@@ -1331,11 +1401,7 @@ export default function MCCAssignmentClientPage() {
             >
               取消
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={!!removingMccId}
-            >
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={!!removingMccId}>
               {removingMccId ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1372,12 +1438,12 @@ export default function MCCAssignmentClientPage() {
             <DialogDescription>
               {bulkActionType === 'remove' ? (
                 <>
-                  确定要移除选中的 <span className="font-medium text-blue-600">{selectedAssignments.length}</span> 个 MCC 分配吗？
+                  确定要移除选中的{' '}
+                  <span className="font-medium text-blue-600">{selectedAssignments.length}</span> 个
+                  MCC 分配吗？
                 </>
               ) : (
-                <>
-                  批量转移功能仅支持单个 MCC 操作
-                </>
+                <>批量转移功能仅支持单个 MCC 操作</>
               )}
             </DialogDescription>
           </DialogHeader>
@@ -1398,7 +1464,7 @@ export default function MCCAssignmentClientPage() {
                     <SelectValue placeholder="选择目标用户" />
                   </SelectTrigger>
                   <SelectContent>
-                    {users.map(user => (
+                    {users.map((user) => (
                       <SelectItem key={user.id} value={user.id.toString()}>
                         {user.username || user.email}
                       </SelectItem>
@@ -1460,8 +1526,8 @@ export default function MCCAssignmentClientPage() {
               转移 MCC 账号
             </DialogTitle>
             <DialogDescription>
-              将 MCC <span className="font-mono font-medium">{mccToTransfer?.mccId}</span> 从 
-              <span className="text-blue-600 font-medium"> {mccToTransfer?.fromUsername}</span> 
+              将 MCC <span className="font-mono font-medium">{mccToTransfer?.mccId}</span> 从
+              <span className="text-blue-600 font-medium"> {mccToTransfer?.fromUsername}</span>
               转移给其他用户
             </DialogDescription>
           </DialogHeader>
@@ -1475,8 +1541,8 @@ export default function MCCAssignmentClientPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {users
-                    .filter(u => u.id.toString() !== mccToTransfer?.fromUserId.toString())
-                    .map(user => (
+                    .filter((u) => u.id.toString() !== mccToTransfer?.fromUserId.toString())
+                    .map((user) => (
                       <SelectItem key={user.id} value={user.id.toString()}>
                         {user.username || user.email}
                       </SelectItem>
@@ -1486,7 +1552,10 @@ export default function MCCAssignmentClientPage() {
               {transferTargetUserId && (
                 <div className="text-xs text-green-600 flex items-center gap-1 mt-2">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  将转移给：<span className="font-medium">{users.find(u => u.id.toString() === transferTargetUserId)?.username}</span>
+                  将转移给：
+                  <span className="font-medium">
+                    {users.find((u) => u.id.toString() === transferTargetUserId)?.username}
+                  </span>
                 </div>
               )}
             </div>

@@ -28,7 +28,11 @@ function normalizeBrand(value: unknown): string | null {
 }
 
 function buildSnapshotRows(params: {
-  campaigns: Array<{ id: string; name: string; status: 'ENABLED' | 'PAUSED' | 'REMOVED' | 'UNKNOWN' }>
+  campaigns: Array<{
+    id: string
+    name: string
+    status: 'ENABLED' | 'PAUSED' | 'REMOVED' | 'UNKNOWN'
+  }>
   bucket: SnapshotRow['bucket']
   source: SnapshotRow['source']
 }): SnapshotRow[] {
@@ -42,7 +46,7 @@ function buildSnapshotRows(params: {
       status: campaign.status,
       bucket: params.bucket,
       brand,
-      brandConfidence: brand ? 'high' : (parsed.isValidNaming ? 'low' : 'none'),
+      brandConfidence: brand ? 'high' : parsed.isValidNaming ? 'low' : 'none',
       source: params.source,
     }
   })
@@ -67,8 +71,16 @@ export async function GET(request: NextRequest) {
 
     const rows: SnapshotRow[] = [
       ...buildSnapshotRows({ campaigns: snapshot.ownCampaigns, bucket: 'own', source: 'naming' }),
-      ...buildSnapshotRows({ campaigns: snapshot.manualCampaigns, bucket: 'manual', source: 'manual' }),
-      ...buildSnapshotRows({ campaigns: snapshot.otherCampaigns, bucket: 'other', source: 'naming' }),
+      ...buildSnapshotRows({
+        campaigns: snapshot.manualCampaigns,
+        bucket: 'manual',
+        source: 'manual',
+      }),
+      ...buildSnapshotRows({
+        campaigns: snapshot.otherCampaigns,
+        bucket: 'other',
+        source: 'naming',
+      }),
     ]
 
     const brandSet = new Set(

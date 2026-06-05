@@ -160,10 +160,13 @@ describe('campaign-publish-resume', () => {
       })
     ).resolves.toBe(true)
 
-    expect(mockExec).toHaveBeenCalledWith(
-      expect.stringContaining("creation_status = 'pending'"),
-      ['123456', '123456', '789012', 99, 7]
-    )
+    expect(mockExec).toHaveBeenCalledWith(expect.stringContaining("creation_status = 'pending'"), [
+      '123456',
+      '123456',
+      '789012',
+      99,
+      7,
+    ])
   })
 
   it('skips persist when no ids are provided', async () => {

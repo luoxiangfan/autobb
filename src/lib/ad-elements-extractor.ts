@@ -29,7 +29,7 @@ import type {
   EnrichedStoreProduct,
   ExtractedAdElements,
   ProductInfo,
-  CategoryThreshold
+  CategoryThreshold,
 } from './ad-elements/types'
 
 // Re-export types for backward compatibility
@@ -42,7 +42,10 @@ type ExtractedKeywordRow = {
   priority: 'HIGH' | 'MEDIUM' | 'LOW'
 }
 
-function sanitizeKeywordRows(rows: ExtractedKeywordRow[], sceneLabel: string): ExtractedKeywordRow[] {
+function sanitizeKeywordRows(
+  rows: ExtractedKeywordRow[],
+  sceneLabel: string
+): ExtractedKeywordRow[] {
   const seen = new Set<string>()
   const sanitized: ExtractedKeywordRow[] = []
   let removedInvalid = 0
@@ -199,10 +202,7 @@ function extractBrandProductName(productTitle: string, brandName: string): strin
 }
 
 function normalizeAdText(text: string): string {
-  return text
-    .replace(/\s+/g, ' ')
-    .replace(/[•·]/g, ' ')
-    .trim()
+  return text.replace(/\s+/g, ' ').replace(/[•·]/g, ' ').trim()
 }
 
 function truncateByWords(text: string, maxLength: number): string {
@@ -288,45 +288,65 @@ function extractAboutItemKeywordCandidates(
  */
 const CATEGORY_THRESHOLDS: Record<string, CategoryThreshold> = {
   // 电子产品：竞争激烈，门槛提高 50%
-  'Electronics': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.5, description: '电子产品' },
-  'Computers': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.5, description: '计算机' },
-  'Cell Phones': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.5, description: '手机' },
+  Electronics: {
+    highReviewBase: 5000,
+    mediumReviewBase: 500,
+    multiplier: 1.5,
+    description: '电子产品',
+  },
+  Computers: {
+    highReviewBase: 5000,
+    mediumReviewBase: 500,
+    multiplier: 1.5,
+    description: '计算机',
+  },
+  'Cell Phones': {
+    highReviewBase: 5000,
+    mediumReviewBase: 500,
+    multiplier: 1.5,
+    description: '手机',
+  },
 
   // 服装鞋包：评论较多，标准门槛
-  'Clothing': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '服装' },
-  'Shoes': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '鞋类' },
-  'Handbags': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '箱包' },
+  Clothing: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '服装' },
+  Shoes: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '鞋类' },
+  Handbags: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '箱包' },
 
   // 图书音乐：评论较少，门槛降低 20%
-  'Books': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.8, description: '图书' },
-  'Music': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.8, description: '音乐' },
-  'Movies': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.8, description: '影视' },
+  Books: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.8, description: '图书' },
+  Music: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.8, description: '音乐' },
+  Movies: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.8, description: '影视' },
 
   // 家居园艺：评论中等，门槛降低 10%
-  'Home': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.9, description: '家居' },
-  'Kitchen': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.9, description: '厨具' },
-  'Garden': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.9, description: '园艺' },
+  Home: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.9, description: '家居' },
+  Kitchen: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.9, description: '厨具' },
+  Garden: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.9, description: '园艺' },
 
   // 美容健康：评论较多，标准门槛
-  'Beauty': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '美容' },
-  'Health': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '健康' },
+  Beauty: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '美容' },
+  Health: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '健康' },
 
   // 玩具游戏：评论中等，门槛降低 10%
-  'Toys': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.9, description: '玩具' },
-  'Games': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.9, description: '游戏' },
+  Toys: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.9, description: '玩具' },
+  Games: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.9, description: '游戏' },
 
   // 运动户外：评论较多，标准门槛
-  'Sports': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '运动' },
-  'Outdoors': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '户外' },
+  Sports: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '运动' },
+  Outdoors: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '户外' },
 
   // 汽车配件：评论较少，门槛降低 15%
-  'Automotive': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.85, description: '汽车配件' },
+  Automotive: {
+    highReviewBase: 5000,
+    mediumReviewBase: 500,
+    multiplier: 0.85,
+    description: '汽车配件',
+  },
 
   // 工具：评论较少，门槛降低 15%
-  'Tools': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.85, description: '工具' },
+  Tools: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 0.85, description: '工具' },
 
   // 默认类目：标准门槛
-  'default': { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '默认' }
+  default: { highReviewBase: 5000, mediumReviewBase: 500, multiplier: 1.0, description: '默认' },
 }
 
 /**
@@ -409,23 +429,23 @@ function estimateBrandPopularity(
 
   if (category !== 'default') {
     console.log(`  📂 类目: ${threshold.description} (${category}) - 门槛倍数: ${multiplier}x`)
-    console.log(`     High门槛: ${highThreshold}, Medium门槛: ${mediumThreshold}/${mediumWithRatingThreshold}`)
+    console.log(
+      `     High门槛: ${highThreshold}, Medium门槛: ${mediumThreshold}/${mediumWithRatingThreshold}`
+    )
   }
 
   // 🔥 改进3: Sales Rank 缺失补偿 - 无 Sales Rank 时增加评分权重
   if (!salesRank && numRating >= 4.7) {
     // 评分 >= 4.7 视为高质量信号，评论数权重放大 50%
     numReviews *= 1.5
-    console.log(`  📊 无Sales Rank，评分${numRating}较高，评论数权重放大: ${Math.round(numReviews / 1.5)} → ${Math.round(numReviews)}`)
+    console.log(
+      `  📊 无Sales Rank，评分${numRating}较高，评论数权重放大: ${Math.round(numReviews / 1.5)} → ${Math.round(numReviews)}`
+    )
   }
 
   // 🔥 流行度评估规则（使用动态门槛）
   // High: 评论数 >= highThreshold 或 (评论数 >= 1000 且评分 >= 4.5) 或 Sales Rank <= 100
-  if (
-    numReviews >= highThreshold ||
-    (numReviews >= 1000 && numRating >= 4.5) ||
-    rankNum <= 100
-  ) {
+  if (numReviews >= highThreshold || (numReviews >= 1000 && numRating >= 4.5) || rankNum <= 100) {
     return 'high'
   }
 
@@ -452,9 +472,9 @@ function estimateBrandPopularity(
 function normalizeBrandName(brand: string): string {
   return brand
     .toLowerCase()
-    .replace(/[™®©]/g, '')  // 移除商标符号
-    .replace(/\s+/g, '')     // 移除所有空格
-    .replace(/[_-]+/g, '')   // 移除下划线和连字符
+    .replace(/[™®©]/g, '') // 移除商标符号
+    .replace(/\s+/g, '') // 移除所有空格
+    .replace(/[_-]+/g, '') // 移除下划线和连字符
     .trim()
 }
 
@@ -464,32 +484,48 @@ function normalizeBrandName(brand: string): string {
  */
 const SEMANTIC_KEYWORDS = {
   store: [
-    'store', 'shop',           // 英语
-    'geschäft', 'laden',       // 德语
-    'magasin', 'boutique',     // 法语
-    'tienda',                  // 西班牙语
-    'negozio',                 // 意大利语
-    'loja',                    // 葡萄牙语
-    'sklep',                   // 波兰语
-    'winkel'                   // 荷兰语
+    'store',
+    'shop', // 英语
+    'geschäft',
+    'laden', // 德语
+    'magasin',
+    'boutique', // 法语
+    'tienda', // 西班牙语
+    'negozio', // 意大利语
+    'loja', // 葡萄牙语
+    'sklep', // 波兰语
+    'winkel', // 荷兰语
   ],
   official: [
-    'official', 'authentic',   // 英语
-    'offiziell', 'echt',       // 德语
-    'officiel', 'authentique', // 法语
-    'oficial', 'auténtico',    // 西班牙语
-    'ufficiale', 'autentico',  // 意大利语
-    'oficial', 'autêntico',    // 葡萄牙语
-    'oficjalny'                // 波兰语
+    'official',
+    'authentic', // 英语
+    'offiziell',
+    'echt', // 德语
+    'officiel',
+    'authentique', // 法语
+    'oficial',
+    'auténtico', // 西班牙语
+    'ufficiale',
+    'autentico', // 意大利语
+    'oficial',
+    'autêntico', // 葡萄牙语
+    'oficjalny', // 波兰语
   ],
   website: [
-    'website', 'site', 'web',  // 英语
-    'webseite', 'seite',       // 德语
-    'site web', 'site',        // 法语
-    'sitio web', 'sitio',      // 西班牙语
-    'sito web', 'sito',        // 意大利语
-    'site', 'página'           // 葡萄牙语
-  ]
+    'website',
+    'site',
+    'web', // 英语
+    'webseite',
+    'seite', // 德语
+    'site web',
+    'site', // 法语
+    'sitio web',
+    'sitio', // 西班牙语
+    'sito web',
+    'sito', // 意大利语
+    'site',
+    'página', // 葡萄牙语
+  ],
 }
 
 /**
@@ -499,7 +535,7 @@ const SEMANTIC_KEYWORDS = {
  * @returns 是否包含
  */
 function containsSemanticKeyword(brandLower: string, keywords: string[]): boolean {
-  return keywords.some(keyword => brandLower.includes(keyword))
+  return keywords.some((keyword) => brandLower.includes(keyword))
 }
 
 /**
@@ -527,7 +563,9 @@ function generateDynamicBrandVariants(
   const containsWebsite = containsSemanticKeyword(brandLower, SEMANTIC_KEYWORDS.website)
 
   if (containsStore || containsOfficial || containsWebsite) {
-    console.log(`  🌐 多语言检测: store=${containsStore}, official=${containsOfficial}, website=${containsWebsite}`)
+    console.log(
+      `  🌐 多语言检测: store=${containsStore}, official=${containsOfficial}, website=${containsWebsite}`
+    )
   }
 
   console.log(`  ℹ️ 品牌流行度=${popularity}，品牌变体限制为证据安全模式（仅品牌词）`)
@@ -551,10 +589,10 @@ async function extractFromSingleProduct(
     name: product.productName || '',
     description: product.productDescription || '',
     features: product.features || [],
-    aboutThisItem: product.aboutThisItem || [],  // Amazon "About this item"
+    aboutThisItem: product.aboutThisItem || [], // Amazon "About this item"
     brand: product.brandName || brand,
     rating: product.rating,
-    reviewCount: product.reviewCount
+    reviewCount: product.reviewCount,
   }
   const pureBrandKeywords = getPureBrandKeywords(brand)
 
@@ -569,7 +607,9 @@ async function extractFromSingleProduct(
   }
 
   // 1.1.1 从 About this item / features 提取核心卖点短语
-  const aboutSource = productInfo.aboutThisItem?.length ? productInfo.aboutThisItem : productInfo.features
+  const aboutSource = productInfo.aboutThisItem?.length
+    ? productInfo.aboutThisItem
+    : productInfo.features
   const aboutKeywordCandidates = extractAboutItemKeywordCandidates(aboutSource, 12, targetLanguage)
   if (aboutKeywordCandidates.length > 0) {
     keywordCandidates.push(...aboutKeywordCandidates)
@@ -583,7 +623,7 @@ async function extractFromSingleProduct(
       brand,
       country: targetCountry,
       language: targetLanguage,
-      useProxy: true
+      useProxy: true,
     })
     console.log(`  ✓ Google下拉词: ${googleKeywords.length}个`)
   } catch (error: any) {
@@ -592,7 +632,7 @@ async function extractFromSingleProduct(
 
   // 1.3 生成品牌变体关键字 - 🔥 P3优化：动态品牌变体生成
   const productTitle = productInfo.name?.toLowerCase() || ''
-  const googleKeywordsLower = new Set(googleKeywords.map(k => k.toLowerCase()))
+  const googleKeywordsLower = new Set(googleKeywords.map((k) => k.toLowerCase()))
 
   // 🔥 P3优化：评估品牌流行度
   const brandPopularity = estimateBrandPopularity(
@@ -605,7 +645,7 @@ async function extractFromSingleProduct(
   const allBrandVariants = generateDynamicBrandVariants(brand, brandPopularity)
 
   // 🔥 P1优化：智能过滤已存在的变体
-  const brandVariants = allBrandVariants.filter(variant => {
+  const brandVariants = allBrandVariants.filter((variant) => {
     const variantLower = variant.toLowerCase()
 
     // 过滤规则1: 如果Product Title已包含该变体，跳过
@@ -625,7 +665,9 @@ async function extractFromSingleProduct(
 
   keywordCandidates.push(...googleKeywords)
   keywordCandidates.push(...brandVariants)
-  console.log(`  ✓ 品牌变体关键字: ${brandVariants.length}个（已智能过滤${allBrandVariants.length - brandVariants.length}个重复）`)
+  console.log(
+    `  ✓ 品牌变体关键字: ${brandVariants.length}个（已智能过滤${allBrandVariants.length - brandVariants.length}个重复）`
+  )
 
   // ✅ 强制补齐纯品牌词（避免被后续过滤误删）
   if (pureBrandKeywords.length > 0) {
@@ -633,7 +675,7 @@ async function extractFromSingleProduct(
     for (const token of pureBrandKeywords) {
       const tokenNorm = normalizeGoogleAdsKeyword(token)
       if (!tokenNorm) continue
-      const exists = keywordCandidates.some(kw => normalizeGoogleAdsKeyword(kw) === tokenNorm)
+      const exists = keywordCandidates.some((kw) => normalizeGoogleAdsKeyword(kw) === tokenNorm)
       if (!exists) {
         keywordCandidates.push(token)
         addedPureBrand++
@@ -648,7 +690,7 @@ async function extractFromSingleProduct(
   const keywordCountBeforeDedup = keywordCandidates.length
   const uniqueKeywordsMap = new Map<string, string>()
 
-  keywordCandidates.forEach(keyword => {
+  keywordCandidates.forEach((keyword) => {
     const keywordLower = keyword.toLowerCase()
     if (!uniqueKeywordsMap.has(keywordLower)) {
       // 保留原始大小写（通常是首次出现的版本）
@@ -660,7 +702,9 @@ async function extractFromSingleProduct(
   const duplicatesRemoved = keywordCountBeforeDedup - deduplicatedKeywords.length
 
   if (duplicatesRemoved > 0) {
-    console.log(`\n🔄 关键词去重: ${keywordCountBeforeDedup}个 → ${deduplicatedKeywords.length}个（移除${duplicatesRemoved}个重复）`)
+    console.log(
+      `\n🔄 关键词去重: ${keywordCountBeforeDedup}个 → ${deduplicatedKeywords.length}个（移除${duplicatesRemoved}个重复）`
+    )
   }
 
   // 更新keywordCandidates为去重后的列表
@@ -670,7 +714,7 @@ async function extractFromSingleProduct(
   // 🔒 强制：最终关键词必须包含纯品牌词
   if (pureBrandKeywords.length > 0) {
     const beforeBrandFilter = keywordCandidates.length
-    const brandFiltered = keywordCandidates.filter(kw => containsPureBrand(kw, pureBrandKeywords))
+    const brandFiltered = keywordCandidates.filter((kw) => containsPureBrand(kw, pureBrandKeywords))
     if (beforeBrandFilter !== brandFiltered.length) {
       console.log(`  🔒 品牌强制过滤: ${beforeBrandFilter} → ${brandFiltered.length}`)
     }
@@ -697,7 +741,7 @@ async function extractFromSingleProduct(
     }
     const volumeData = volumeResult.volumes
 
-    const aboutKeywordSet = new Set(aboutKeywordCandidates.map(k => k.toLowerCase()))
+    const aboutKeywordSet = new Set(aboutKeywordCandidates.map((k) => k.toLowerCase()))
 
     keywordsWithVolume = keywordCandidates.map((keyword, index) => {
       const volume = volumeData[index]?.avgMonthlySearches || 0
@@ -728,36 +772,41 @@ async function extractFromSingleProduct(
         keyword,
         source,
         searchVolume: volume,
-        priority
+        priority,
       }
     })
 
-    const metricsUnavailable = volumeData.some((vol: any) =>
-      vol?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
+    const metricsUnavailable = volumeData.some(
+      (vol: any) => vol?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
     )
 
     // 过滤搜索量过低的关键字（纯品牌词豁免）
     // ⚠️ 重要：不能过滤到“0个关键词”，否则后续关键词池与创意生成会被阻断
-    const hasAnyVolume = keywordsWithVolume.some(k => k.searchVolume > 0)
+    const hasAnyVolume = keywordsWithVolume.some((k) => k.searchVolume > 0)
     const filteredKeywordsCandidate = metricsUnavailable
       ? keywordsWithVolume
-      : keywordsWithVolume.filter(k =>
-          k.searchVolume >= minSearchVolume ||
-          isPureBrandKeyword(k.keyword, pureBrandKeywords)
+      : keywordsWithVolume.filter(
+          (k) =>
+            k.searchVolume >= minSearchVolume || isPureBrandKeyword(k.keyword, pureBrandKeywords)
         )
 
-    const filteredKeywords = filteredKeywordsCandidate.length > 0
-      ? filteredKeywordsCandidate
-      : keywordsWithVolume
+    const filteredKeywords =
+      filteredKeywordsCandidate.length > 0 ? filteredKeywordsCandidate : keywordsWithVolume
 
-    if (!metricsUnavailable && filteredKeywordsCandidate.length === 0 && keywordsWithVolume.length > 0) {
-      console.warn(`  ⚠️ 所有关键词搜索量均低于阈值(${minSearchVolume})，保留全部${keywordsWithVolume.length}个关键词以保证流程可用`)
+    if (
+      !metricsUnavailable &&
+      filteredKeywordsCandidate.length === 0 &&
+      keywordsWithVolume.length > 0
+    ) {
+      console.warn(
+        `  ⚠️ 所有关键词搜索量均低于阈值(${minSearchVolume})，保留全部${keywordsWithVolume.length}个关键词以保证流程可用`
+      )
     }
 
-    const volumeNote = metricsUnavailable
-      ? '，搜索量不可用'
-      : (!hasAnyVolume ? '，搜索量全为0' : '')
-    console.log(`  ✓ 过滤后剩余${filteredKeywords.length}个关键字（搜索量>=${minSearchVolume}${volumeNote}）`)
+    const volumeNote = metricsUnavailable ? '，搜索量不可用' : !hasAnyVolume ? '，搜索量全为0' : ''
+    console.log(
+      `  ✓ 过滤后剩余${filteredKeywords.length}个关键字（搜索量>=${minSearchVolume}${volumeNote}）`
+    )
 
     // 按优先级和搜索量排序
     filteredKeywords.sort((a, b) => {
@@ -771,11 +820,11 @@ async function extractFromSingleProduct(
   } catch (error: any) {
     console.error('  ❌ 搜索量查询失败:', error.message)
     // 失败时仍返回候选关键字，搜索量设为0
-    keywordsWithVolume = keywordCandidates.map(keyword => ({
+    keywordsWithVolume = keywordCandidates.map((keyword) => ({
       keyword,
       source: 'brand_variant' as const,
       searchVolume: 0,
-      priority: 'MEDIUM' as const
+      priority: 'MEDIUM' as const,
     }))
   }
 
@@ -797,7 +846,7 @@ async function extractFromSingleProduct(
   console.log('\n📝 并行生成广告标题和描述（优化耗时）...')
   const [headlines, descriptions] = await Promise.all([
     generateHeadlines(productInfo, keywordsWithVolume.slice(0, 10), targetLanguage, userId),
-    generateDescriptions(productInfo, targetLanguage, userId)
+    generateDescriptions(productInfo, targetLanguage, userId),
   ])
   console.log('✅ 标题和描述生成完成')
 
@@ -808,16 +857,18 @@ async function extractFromSingleProduct(
     sources: {
       productCount: 1,
       keywordSources: {
-        product_title: keywordsWithVolume.filter(k => k.source === 'product_title').length,
-        google_suggest: keywordsWithVolume.filter(k => k.source === 'google_suggest').length,
-        brand_variant: keywordsWithVolume.filter(k => k.source === 'brand_variant').length
+        product_title: keywordsWithVolume.filter((k) => k.source === 'product_title').length,
+        google_suggest: keywordsWithVolume.filter((k) => k.source === 'google_suggest').length,
+        brand_variant: keywordsWithVolume.filter((k) => k.source === 'brand_variant').length,
       },
-      topProducts: [{
-        name: productInfo.name,
-        rating: productInfo.rating ?? null,
-        reviewCount: productInfo.reviewCount ?? null
-      }]
-    }
+      topProducts: [
+        {
+          name: productInfo.name,
+          rating: productInfo.rating ?? null,
+          reviewCount: productInfo.reviewCount ?? null,
+        },
+      ],
+    },
   }
 }
 
@@ -837,19 +888,21 @@ async function extractFromStore(
 
   // 按热销分数排序，取前5个
   const topProducts = products
-    .filter(p => p.hotScore && p.hotScore > 0)
+    .filter((p) => p.hotScore && p.hotScore > 0)
     .sort((a, b) => (b.hotScore || 0) - (a.hotScore || 0))
     .slice(0, 5)
 
   console.log(`  → 筛选TOP 5热销商品`)
   topProducts.forEach((p, i) => {
-    console.log(`    ${i + 1}. ${p.name} (评分${p.rating}, ${p.reviewCount}评论, 热度${p.hotScore?.toFixed(2)})`)
+    console.log(
+      `    ${i + 1}. ${p.name} (评分${p.rating}, ${p.reviewCount}评论, 热度${p.hotScore?.toFixed(2)})`
+    )
   })
 
   // 1. 从每个热销商品提取"品牌名+商品名"作为关键字
   const keywordCandidates: string[] = []
 
-  topProducts.forEach(product => {
+  topProducts.forEach((product) => {
     const brandProductName = extractBrandProductName(product.name, brand)
     keywordCandidates.push(brandProductName)
   })
@@ -866,7 +919,7 @@ async function extractFromStore(
       brand,
       country: targetCountry,
       language: targetLanguage,
-      useProxy: true
+      useProxy: true,
     })
     keywordCandidates.push(...googleKeywords)
     console.log(`  ✓ Google下拉词: ${googleKeywords.length}个`)
@@ -880,7 +933,7 @@ async function extractFromStore(
     for (const token of pureBrandKeywords) {
       const tokenNorm = normalizeGoogleAdsKeyword(token)
       if (!tokenNorm) continue
-      const exists = keywordCandidates.some(kw => normalizeGoogleAdsKeyword(kw) === tokenNorm)
+      const exists = keywordCandidates.some((kw) => normalizeGoogleAdsKeyword(kw) === tokenNorm)
       if (!exists) {
         keywordCandidates.push(token)
         addedPureBrand++
@@ -894,7 +947,7 @@ async function extractFromStore(
   // 🔒 强制：最终关键词必须包含纯品牌词
   if (pureBrandKeywords.length > 0) {
     const beforeBrandFilter = keywordCandidates.length
-    const brandFiltered = keywordCandidates.filter(kw => containsPureBrand(kw, pureBrandKeywords))
+    const brandFiltered = keywordCandidates.filter((kw) => containsPureBrand(kw, pureBrandKeywords))
     if (beforeBrandFilter !== brandFiltered.length) {
       console.log(`  🔒 品牌强制过滤: ${beforeBrandFilter} → ${brandFiltered.length}`)
     }
@@ -926,7 +979,7 @@ async function extractFromStore(
 
       // 确定来源
       let source: 'product_title' | 'google_suggest' | 'brand_variant' = 'brand_variant'
-      const isFromProduct = topProducts.some(p =>
+      const isFromProduct = topProducts.some((p) =>
         keyword.includes(extractBrandProductName(p.name, brand))
       )
       if (isFromProduct) {
@@ -951,24 +1004,24 @@ async function extractFromStore(
         keyword,
         source,
         searchVolume: volume,
-        priority
+        priority,
       }
     })
 
-    const metricsUnavailable = volumeData.some((vol: any) =>
-      vol?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
+    const metricsUnavailable = volumeData.some(
+      (vol: any) => vol?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
     )
-    const hasAnyVolume = keywordsWithVolume.some(k => k.searchVolume > 0)
+    const hasAnyVolume = keywordsWithVolume.some((k) => k.searchVolume > 0)
     const filteredKeywords = metricsUnavailable
       ? keywordsWithVolume
-      : keywordsWithVolume.filter(k =>
-          k.searchVolume >= minSearchVolume ||
-          isPureBrandKeyword(k.keyword, pureBrandKeywords)
+      : keywordsWithVolume.filter(
+          (k) =>
+            k.searchVolume >= minSearchVolume || isPureBrandKeyword(k.keyword, pureBrandKeywords)
         )
-    const volumeNote = metricsUnavailable
-      ? '，搜索量不可用'
-      : (!hasAnyVolume ? '，搜索量全为0' : '')
-    console.log(`  ✓ 过滤后剩余${filteredKeywords.length}个关键字（搜索量>=${minSearchVolume}${volumeNote}）`)
+    const volumeNote = metricsUnavailable ? '，搜索量不可用' : !hasAnyVolume ? '，搜索量全为0' : ''
+    console.log(
+      `  ✓ 过滤后剩余${filteredKeywords.length}个关键字（搜索量>=${minSearchVolume}${volumeNote}）`
+    )
 
     // 排序
     filteredKeywords.sort((a, b) => {
@@ -981,11 +1034,11 @@ async function extractFromStore(
     keywordsWithVolume = filteredKeywords
   } catch (error: any) {
     console.error('  ❌ 搜索量查询失败:', error.message)
-    keywordsWithVolume = keywordCandidates.map(keyword => ({
+    keywordsWithVolume = keywordCandidates.map((keyword) => ({
       keyword,
       source: 'brand_variant' as const,
       searchVolume: 0,
-      priority: 'MEDIUM' as const
+      priority: 'MEDIUM' as const,
     }))
   }
 
@@ -1006,16 +1059,22 @@ async function extractFromStore(
   // 3. 从多个热销商品生成15个广告标题
   console.log('\n📝 从TOP 5热销商品生成15个广告标题...')
   // 🔥 传递完整的EnrichedStoreProduct数据（包含深度分析字段）
-  const headlines = await generateHeadlinesFromMultipleProducts(topProducts, keywordsWithVolume.slice(0, 10), targetLanguage, userId, brand)
+  const headlines = await generateHeadlinesFromMultipleProducts(
+    topProducts,
+    keywordsWithVolume.slice(0, 10),
+    targetLanguage,
+    userId,
+    brand
+  )
 
   // 4. 从多个热销商品生成4个广告描述
   console.log('\n📝 从TOP 5热销商品生成4个广告描述...')
   const descriptions = await generateDescriptionsFromMultipleProducts(
-    topProducts.map(p => ({
+    topProducts.map((p) => ({
       name: p.name,
       brand: brand,
       rating: p.rating,
-      reviewCount: p.reviewCount
+      reviewCount: p.reviewCount,
     })),
     targetLanguage,
     userId
@@ -1028,16 +1087,16 @@ async function extractFromStore(
     sources: {
       productCount: topProducts.length,
       keywordSources: {
-        product_title: keywordsWithVolume.filter(k => k.source === 'product_title').length,
-        google_suggest: keywordsWithVolume.filter(k => k.source === 'google_suggest').length,
-        brand_variant: keywordsWithVolume.filter(k => k.source === 'brand_variant').length
+        product_title: keywordsWithVolume.filter((k) => k.source === 'product_title').length,
+        google_suggest: keywordsWithVolume.filter((k) => k.source === 'google_suggest').length,
+        brand_variant: keywordsWithVolume.filter((k) => k.source === 'brand_variant').length,
       },
-      topProducts: topProducts.map(p => ({
+      topProducts: topProducts.map((p) => ({
         name: p.name,
         rating: p.rating,
-        reviewCount: p.reviewCount
-      }))
-    }
+        reviewCount: p.reviewCount,
+      })),
+    },
   }
 }
 /**
@@ -1056,7 +1115,9 @@ async function getHeadlinePrompt(
   // 🎨 准备模板变量
   const aboutThisItemText = product.aboutThisItem?.slice(0, 5).join('; ') || 'Not provided'
   const featuresText = product.features?.slice(0, 5).join('; ') || 'Not provided'
-  const topKeywordsText = topKeywords.map(k => `- ${k.keyword} (Search Volume: ${k.searchVolume})`).join('\n')
+  const topKeywordsText = topKeywords
+    .map((k) => `- ${k.keyword} (Search Volume: ${k.searchVolume})`)
+    .join('\n')
 
   // 🔥 Add deep analysis fields if available
   const uniqueSellingPointsText = product.uniqueSellingPoints || 'Not provided'
@@ -1083,10 +1144,14 @@ async function getHeadlinePrompt(
 
   // 🔥 v3.2新增：准备深度数据变量
   const userLanguagePatternsText = product.userLanguagePatterns?.slice(0, 6).join(', ') || ''
-  const storeAggregatedFeaturesText = product.storeDeepData?.aggregatedFeatures?.slice(0, 8).join(' | ') || ''
-  const storeUserVoicesText = product.storeDeepData?.aggregatedReviews?.slice(0, 5).join(' | ') || ''
-  const trustBadgesText = product.storeDeepData?.hotBadges?.join(', ') ||
-                          product.competitiveEdges?.badges?.join(', ') || ''
+  const storeAggregatedFeaturesText =
+    product.storeDeepData?.aggregatedFeatures?.slice(0, 8).join(' | ') || ''
+  const storeUserVoicesText =
+    product.storeDeepData?.aggregatedReviews?.slice(0, 5).join(' | ') || ''
+  const trustBadgesText =
+    product.storeDeepData?.hotBadges?.join(', ') ||
+    product.competitiveEdges?.badges?.join(', ') ||
+    ''
   const competitorFeaturesText = product.competitorFeatures?.slice(0, 8).join(' | ') || ''
   const topReviewQuotesText = product.topReviewQuotes?.slice(0, 3).join(' | ') || ''
 
@@ -1140,22 +1205,25 @@ async function generateHeadlines(
         type: 'ARRAY' as const,
         description: '15个广告标题数组，每个标题最多30字符',
         items: {
-          type: 'STRING' as const
-        }
-      }
+          type: 'STRING' as const,
+        },
+      },
     },
-    required: ['headlines']
+    required: ['headlines'],
   }
 
   try {
     // 智能模型选择：单个产品标题提取使用Flash模型（简单提取任务）
-    const response = await generateContent({
-      operationType: 'ad_headline_extraction_single',
-      prompt,
-      maxOutputTokens: 16384,  // 🔧 修复：Gemini 2.5+思考过程消耗~6K tokens，需要16384确保输出完整
-      responseSchema,  // 🆕 传递JSON schema约束
-      responseMimeType: 'application/json'  // 🆕 强制JSON输出
-    }, userId)
+    const response = await generateContent(
+      {
+        operationType: 'ad_headline_extraction_single',
+        prompt,
+        maxOutputTokens: 16384, // 🔧 修复：Gemini 2.5+思考过程消耗~6K tokens，需要16384确保输出完整
+        responseSchema, // 🆕 传递JSON schema约束
+        responseMimeType: 'application/json', // 🆕 强制JSON输出
+      },
+      userId
+    )
 
     // 记录token使用
     if (response.usage) {
@@ -1172,7 +1240,7 @@ async function generateHeadlines(
         outputTokens: response.usage.outputTokens,
         totalTokens: response.usage.totalTokens,
         cost,
-        apiType: response.apiType
+        apiType: response.apiType,
       })
     }
 
@@ -1183,9 +1251,7 @@ async function generateHeadlines(
     }
 
     // 验证数量和长度
-    const validHeadlines = parsed.headlines
-      .filter((h: string) => h && h.length <= 30)
-      .slice(0, 15)
+    const validHeadlines = parsed.headlines.filter((h: string) => h && h.length <= 30).slice(0, 15)
 
     if (validHeadlines.length < 15) {
       console.warn(`  ⚠️ AI生成的标题不足15个，当前${validHeadlines.length}个`)
@@ -1227,7 +1293,7 @@ function parsePromptJsonObject(value: unknown): Record<string, any> | null {
 function toPromptText(value: unknown, maxItems: number = 3): string | null {
   if (Array.isArray(value)) {
     const values = value
-      .map(item => String(item || '').trim())
+      .map((item) => String(item || '').trim())
       .filter(Boolean)
       .slice(0, maxItems)
     return values.length > 0 ? values.join(', ') : null
@@ -1251,51 +1317,56 @@ function buildStoreProductEvidence(
     productHighlights?: string
   }>
 ): string {
-  return products.map((product, index) => {
-    const lines = [
-      `${index + 1}. Product: ${product.name || 'Unknown Product'}`,
-      `   - Brand: ${product.brand || 'Unknown'}`,
-      `   - Rating: ${product.rating ?? 'N/A'} (${product.reviewCount ?? 'N/A'} reviews)`,
-    ]
+  return products
+    .map((product, index) => {
+      const lines = [
+        `${index + 1}. Product: ${product.name || 'Unknown Product'}`,
+        `   - Brand: ${product.brand || 'Unknown'}`,
+        `   - Rating: ${product.rating ?? 'N/A'} (${product.reviewCount ?? 'N/A'} reviews)`,
+      ]
 
-    const features = toPromptText(product.features, 3)
-    if (features) {
-      lines.push(`   - Features: ${features}`)
-    }
+      const features = toPromptText(product.features, 3)
+      if (features) {
+        lines.push(`   - Features: ${features}`)
+      }
 
-    const directSellingPoints = toPromptText(product.uniqueSellingPoints || product.productHighlights, 2)
-    if (directSellingPoints) {
-      lines.push(`   - Selling Points: ${directSellingPoints}`)
-    }
+      const directSellingPoints = toPromptText(
+        product.uniqueSellingPoints || product.productHighlights,
+        2
+      )
+      if (directSellingPoints) {
+        lines.push(`   - Selling Points: ${directSellingPoints}`)
+      }
 
-    const productInfo = parsePromptJsonObject(product.productInfo)
-    const infoSellingPoints = toPromptText(productInfo?.uniqueSellingPoints, 2)
-    if (infoSellingPoints) {
-      lines.push(`   - Verified Selling Points: ${infoSellingPoints}`)
-    }
-    const targetAudience = toPromptText(productInfo?.targetAudience, 1)
-    if (targetAudience) {
-      lines.push(`   - Target Audience: ${targetAudience}`)
-    }
+      const productInfo = parsePromptJsonObject(product.productInfo)
+      const infoSellingPoints = toPromptText(productInfo?.uniqueSellingPoints, 2)
+      if (infoSellingPoints) {
+        lines.push(`   - Verified Selling Points: ${infoSellingPoints}`)
+      }
+      const targetAudience = toPromptText(productInfo?.targetAudience, 1)
+      if (targetAudience) {
+        lines.push(`   - Target Audience: ${targetAudience}`)
+      }
 
-    const reviewAnalysis = parsePromptJsonObject(product.reviewAnalysis)
-    const customerPraise = toPromptText(reviewAnalysis?.topPositiveKeywords, 3)
-    if (customerPraise) {
-      lines.push(`   - Customer Praise: ${customerPraise}`)
-    }
-    const realUseCases = toPromptText(reviewAnalysis?.realUseCases, 2)
-    if (realUseCases) {
-      lines.push(`   - Use Cases: ${realUseCases}`)
-    }
+      const reviewAnalysis = parsePromptJsonObject(product.reviewAnalysis)
+      const customerPraise = toPromptText(reviewAnalysis?.topPositiveKeywords, 3)
+      if (customerPraise) {
+        lines.push(`   - Customer Praise: ${customerPraise}`)
+      }
+      const realUseCases = toPromptText(reviewAnalysis?.realUseCases, 2)
+      if (realUseCases) {
+        lines.push(`   - Use Cases: ${realUseCases}`)
+      }
 
-    const competitorAnalysis = parsePromptJsonObject(product.competitorAnalysis)
-    const competitiveEdge = toPromptText(competitorAnalysis?.uniqueSellingPoints, 2)
-    if (competitiveEdge) {
-      lines.push(`   - Competitive Edge: ${competitiveEdge}`)
-    }
+      const competitorAnalysis = parsePromptJsonObject(product.competitorAnalysis)
+      const competitiveEdge = toPromptText(competitorAnalysis?.uniqueSellingPoints, 2)
+      if (competitiveEdge) {
+        lines.push(`   - Competitive Edge: ${competitiveEdge}`)
+      }
 
-    return lines.join('\n')
-  }).join('\n\n')
+      return lines.join('\n')
+    })
+    .join('\n\n')
 }
 
 /**
@@ -1309,9 +1380,10 @@ async function getMultipleProductHeadlinePrompt(
 ): Promise<string> {
   const promptTemplate = await loadPrompt('ad_elements_headlines_store')
   const topProductsText = buildStoreProductEvidence(products)
-  const topKeywordsText = topKeywords.length > 0
-    ? topKeywords.map(k => `- ${k.keyword} (search volume: ${k.searchVolume})`).join('\n')
-    : '- none'
+  const topKeywordsText =
+    topKeywords.length > 0
+      ? topKeywords.map((k) => `- ${k.keyword} (search volume: ${k.searchVolume})`).join('\n')
+      : '- none'
 
   return interpolateTemplate(promptTemplate, {
     targetLanguage,
@@ -1325,13 +1397,18 @@ async function getMultipleProductHeadlinePrompt(
  * 使用AI从多个商品生成15个广告标题（店铺场景）
  */
 async function generateHeadlinesFromMultipleProducts(
-  products: EnrichedStoreProduct[],  // 🔥 Changed from ProductInfo[] to utilize deep analysis
+  products: EnrichedStoreProduct[], // 🔥 Changed from ProductInfo[] to utilize deep analysis
   topKeywords: Array<{ keyword: string; searchVolume: number }>,
   targetLanguage: string,
   userId: number,
-  brand: string  // 🔥 New parameter for brand context
+  brand: string // 🔥 New parameter for brand context
 ): Promise<string[]> {
-  const prompt = await getMultipleProductHeadlinePrompt(products, topKeywords, targetLanguage, brand)
+  const prompt = await getMultipleProductHeadlinePrompt(
+    products,
+    topKeywords,
+    targetLanguage,
+    brand
+  )
 
   // 🆕 Token优化：定义结构化JSON schema
   const responseSchema = {
@@ -1341,22 +1418,25 @@ async function generateHeadlinesFromMultipleProducts(
         type: 'ARRAY' as const,
         description: '15个广告标题数组，每个标题最多30字符',
         items: {
-          type: 'STRING' as const
-        }
-      }
+          type: 'STRING' as const,
+        },
+      },
     },
-    required: ['headlines']
+    required: ['headlines'],
   }
 
   try {
     // 智能模型选择：商店标题提取使用Flash模型（简单提取任务）
-    const response = await generateContent({
-      operationType: 'ad_headline_extraction_store',
-      prompt,
-      maxOutputTokens: 16384,  // 🔧 修复：Gemini 2.5+思考过程消耗~6K tokens，需要16384确保输出完整
-      responseSchema,  // 🆕 传递JSON schema约束
-      responseMimeType: 'application/json'  // 🆕 强制JSON输出
-    }, userId)
+    const response = await generateContent(
+      {
+        operationType: 'ad_headline_extraction_store',
+        prompt,
+        maxOutputTokens: 16384, // 🔧 修复：Gemini 2.5+思考过程消耗~6K tokens，需要16384确保输出完整
+        responseSchema, // 🆕 传递JSON schema约束
+        responseMimeType: 'application/json', // 🆕 强制JSON输出
+      },
+      userId
+    )
 
     // 记录token使用
     if (response.usage) {
@@ -1373,14 +1453,12 @@ async function generateHeadlinesFromMultipleProducts(
         outputTokens: response.usage.outputTokens,
         totalTokens: response.usage.totalTokens,
         cost,
-        apiType: response.apiType
+        apiType: response.apiType,
       })
     }
 
     const parsed = extractJsonFromResponse(response.text)
-    const validHeadlines = parsed.headlines
-      .filter((h: string) => h && h.length <= 30)
-      .slice(0, 15)
+    const validHeadlines = parsed.headlines.filter((h: string) => h && h.length <= 30).slice(0, 15)
 
     if (validHeadlines.length < 15) {
       console.warn(`  ⚠️ 标题不足，补齐到15个`)
@@ -1402,13 +1480,17 @@ async function generateHeadlinesFromMultipleProducts(
  * 🔥 Enhanced to utilize productInfo deep analysis fields
  * 🎯 P1修复: 修复变量命名不一致和添加缺失变量
  */
-async function getDescriptionPrompt(product: ProductInfo, _targetLanguage: string): Promise<string> {
+async function getDescriptionPrompt(
+  product: ProductInfo,
+  _targetLanguage: string
+): Promise<string> {
   // 📦 从数据库加载prompt模板 (版本管理)
   const promptTemplate = await loadPrompt('ad_elements_descriptions')
 
   // 🎨 准备模板变量
   const featuresText = product.features?.slice(0, 10).join('; ') || 'Not provided'
-  const sellingPointsText = product.uniqueSellingPoints || product.productHighlights || 'Not provided'
+  const sellingPointsText =
+    product.uniqueSellingPoints || product.productHighlights || 'Not provided'
 
   // 🎯 P1修复: 添加缺失的变量
   const priceText = product.pricing?.current || 'Not provided'
@@ -1429,10 +1511,14 @@ async function getDescriptionPrompt(product: ProductInfo, _targetLanguage: strin
 
   // 🔥 v3.2新增：准备深度数据变量
   const userLanguagePatternsText = product.userLanguagePatterns?.slice(0, 6).join(', ') || ''
-  const storeAggregatedFeaturesText = product.storeDeepData?.aggregatedFeatures?.slice(0, 8).join(' | ') || ''
-  const storeUserVoicesText = product.storeDeepData?.aggregatedReviews?.slice(0, 5).join(' | ') || ''
-  const trustBadgesText = product.storeDeepData?.hotBadges?.join(', ') ||
-                          product.competitiveEdges?.badges?.join(', ') || ''
+  const storeAggregatedFeaturesText =
+    product.storeDeepData?.aggregatedFeatures?.slice(0, 8).join(' | ') || ''
+  const storeUserVoicesText =
+    product.storeDeepData?.aggregatedReviews?.slice(0, 5).join(' | ') || ''
+  const trustBadgesText =
+    product.storeDeepData?.hotBadges?.join(', ') ||
+    product.competitiveEdges?.badges?.join(', ') ||
+    ''
   const competitorFeaturesText = product.competitorFeatures?.slice(0, 8).join(' | ') || ''
   const topReviewQuotesText = product.topReviewQuotes?.slice(0, 3).join(' | ') || ''
 
@@ -1460,7 +1546,6 @@ async function getDescriptionPrompt(product: ProductInfo, _targetLanguage: strin
   return prompt
 }
 
-
 /**
  * 使用AI从单个商品生成4个广告描述
  */
@@ -1479,22 +1564,25 @@ async function generateDescriptions(
         type: 'ARRAY' as const,
         description: '4个广告描述数组，每个描述最多90字符',
         items: {
-          type: 'STRING' as const
-        }
-      }
+          type: 'STRING' as const,
+        },
+      },
     },
-    required: ['descriptions']
+    required: ['descriptions'],
   }
 
   try {
     // 智能模型选择：单个产品描述提取使用Flash模型（简单提取任务）
-    const response = await generateContent({
-      operationType: 'ad_description_extraction_single',
-      prompt,
-      maxOutputTokens: 16384,  // 🔧 修复：Gemini 2.5+思考过程消耗~6K tokens，需要16384确保输出完整
-      responseSchema,  // 🆕 传递JSON schema约束
-      responseMimeType: 'application/json'  // 🆕 强制JSON输出
-    }, userId)
+    const response = await generateContent(
+      {
+        operationType: 'ad_description_extraction_single',
+        prompt,
+        maxOutputTokens: 16384, // 🔧 修复：Gemini 2.5+思考过程消耗~6K tokens，需要16384确保输出完整
+        responseSchema, // 🆕 传递JSON schema约束
+        responseMimeType: 'application/json', // 🆕 强制JSON输出
+      },
+      userId
+    )
 
     // 记录token使用
     if (response.usage) {
@@ -1511,7 +1599,7 @@ async function generateDescriptions(
         outputTokens: response.usage.outputTokens,
         totalTokens: response.usage.totalTokens,
         cost,
-        apiType: response.apiType
+        apiType: response.apiType,
       })
     }
 
@@ -1523,7 +1611,9 @@ async function generateDescriptions(
     if (validDescriptions.length < 4) {
       console.warn(`  ⚠️ 描述不足4个，补齐`)
       while (validDescriptions.length < 4) {
-        validDescriptions.push(validDescriptions[validDescriptions.length % validDescriptions.length])
+        validDescriptions.push(
+          validDescriptions[validDescriptions.length % validDescriptions.length]
+        )
       }
     }
 
@@ -1538,7 +1628,10 @@ async function generateDescriptions(
 /**
  * 生成提示词（Description生成 - 多商品店铺，Prompt版本管理）
  */
-async function getMultipleProductDescriptionPrompt(products: ProductInfo[], targetLanguage: string): Promise<string> {
+async function getMultipleProductDescriptionPrompt(
+  products: ProductInfo[],
+  targetLanguage: string
+): Promise<string> {
   const promptTemplate = await loadPrompt('ad_elements_descriptions_store')
   const topProductsText = buildStoreProductEvidence(products)
   const brand = products[0]?.brand || 'Unknown'
@@ -1568,22 +1661,25 @@ async function generateDescriptionsFromMultipleProducts(
         type: 'ARRAY' as const,
         description: '4个广告描述数组，每个描述最多90字符',
         items: {
-          type: 'STRING' as const
-        }
-      }
+          type: 'STRING' as const,
+        },
+      },
     },
-    required: ['descriptions']
+    required: ['descriptions'],
   }
 
   try {
     // 智能模型选择：商店描述提取使用Flash模型（简单提取任务）
-    const response = await generateContent({
-      operationType: 'ad_description_extraction_store',
-      prompt,
-      maxOutputTokens: 16384,  // 🔧 修复：Gemini 2.5+思考过程消耗~6K tokens，需要16384确保输出完整
-      responseSchema,  // 🆕 传递JSON schema约束
-      responseMimeType: 'application/json'  // 🆕 强制JSON输出
-    }, userId)
+    const response = await generateContent(
+      {
+        operationType: 'ad_description_extraction_store',
+        prompt,
+        maxOutputTokens: 16384, // 🔧 修复：Gemini 2.5+思考过程消耗~6K tokens，需要16384确保输出完整
+        responseSchema, // 🆕 传递JSON schema约束
+        responseMimeType: 'application/json', // 🆕 强制JSON输出
+      },
+      userId
+    )
 
     // 记录token使用
     if (response.usage) {
@@ -1600,7 +1696,7 @@ async function generateDescriptionsFromMultipleProducts(
         outputTokens: response.usage.outputTokens,
         totalTokens: response.usage.totalTokens,
         cost,
-        apiType: response.apiType
+        apiType: response.apiType,
       })
     }
 
@@ -1611,7 +1707,9 @@ async function generateDescriptionsFromMultipleProducts(
 
     if (validDescriptions.length < 4) {
       while (validDescriptions.length < 4) {
-        validDescriptions.push(validDescriptions[validDescriptions.length % validDescriptions.length])
+        validDescriptions.push(
+          validDescriptions[validDescriptions.length % validDescriptions.length]
+        )
       }
     }
 
@@ -1627,7 +1725,9 @@ async function generateDescriptionsFromMultipleProducts(
  * 降级方案：手动生成基础标题（单商品）
  */
 function normalizeFallbackCopyText(text: string, maxLength: number): string | null {
-  const normalized = String(text || '').replace(/\s+/g, ' ').trim()
+  const normalized = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim()
   if (!normalized) return null
   if (/\b(buy|shop|sale|discount|deal|coupon|promo|official|store|amazon)\b/i.test(normalized)) {
     return null
@@ -1649,7 +1749,10 @@ function dedupeFallbackCopyTexts(candidates: string[], maxLength: number): strin
   return output
 }
 
-function collectFallbackFeaturePhrases(values: Array<string | null | undefined>, limit: number): string[] {
+function collectFallbackFeaturePhrases(
+  values: Array<string | null | undefined>,
+  limit: number
+): string[] {
   const phrases: string[] = []
   for (const raw of values) {
     const normalized = normalizeGoogleAdsKeyword(raw || '')
@@ -1658,7 +1761,12 @@ function collectFallbackFeaturePhrases(values: Array<string | null | undefined>,
       .split(/\s+/)
       .filter(Boolean)
       .filter((token) => token.length >= 3 || /\d/.test(token))
-      .filter((token) => !/^(buy|shop|sale|discount|deal|official|store|review|reviews|amazon|free|shipping)$/i.test(token))
+      .filter(
+        (token) =>
+          !/^(buy|shop|sale|discount|deal|official|store|review|reviews|amazon|free|shipping)$/i.test(
+            token
+          )
+      )
       .slice(0, 4)
     if (tokens.length === 0) continue
     phrases.push(tokens.join(' '))
@@ -1697,7 +1805,7 @@ function generateFallbackHeadlines(
  * 降级方案：手动生成基础标题（多商品）
  */
 function generateFallbackHeadlinesFromMultiple(
-  products: EnrichedStoreProduct[],  // 🔥 Updated to match main function signature
+  products: EnrichedStoreProduct[], // 🔥 Updated to match main function signature
   topKeywords: Array<{ keyword: string }>
 ): string[] {
   // Extract brand from first product or enriched data
@@ -1710,13 +1818,16 @@ function generateFallbackHeadlinesFromMultiple(
   const productHeadlineSeeds = products
     .slice(0, 6)
     .map((product) => extractBrandProductName(product.name, brand))
-  const headlines = dedupeFallbackCopyTexts([
-    ...productHeadlineSeeds,
-    ...topKeywords.slice(0, 6).map((item) => item.keyword),
-    `${brand} product lineup`,
-    `${brand} product details`,
-    brand,
-  ], 30)
+  const headlines = dedupeFallbackCopyTexts(
+    [
+      ...productHeadlineSeeds,
+      ...topKeywords.slice(0, 6).map((item) => item.keyword),
+      `${brand} product lineup`,
+      `${brand} product details`,
+      brand,
+    ],
+    30
+  )
 
   if (headlines.length === 0) {
     headlines.push((brand || 'Brand').slice(0, 30))
@@ -1768,14 +1879,20 @@ function generateFallbackDescriptionsFromMultiple(products: ProductInfo[]): stri
     .join(', ')
 
   const ratedProducts = products.filter((item) => typeof item.rating === 'number')
-  const avgRating = ratedProducts.length > 0
-    ? (ratedProducts.reduce((sum, item) => sum + Number(item.rating || 0), 0) / ratedProducts.length).toFixed(1)
-    : null
+  const avgRating =
+    ratedProducts.length > 0
+      ? (
+          ratedProducts.reduce((sum, item) => sum + Number(item.rating || 0), 0) /
+          ratedProducts.length
+        ).toFixed(1)
+      : null
 
   const descriptionCandidates = [
     `${brand} includes ${products.length} listed products with structured details`,
     topNames ? `Top products: ${topNames}` : `${brand} product lineup covers multiple models`,
-    avgRating ? `${brand} average rating ${avgRating} across sampled products` : `${brand} product metadata collected`,
+    avgRating
+      ? `${brand} average rating ${avgRating} across sampled products`
+      : `${brand} product metadata collected`,
     `${brand} supports model comparison by features and compatibility`,
   ]
 
@@ -1802,8 +1919,8 @@ export async function extractAdElements(
   scraped: {
     pageType: 'product' | 'store' | 'unknown'
     product?: AmazonProductData
-    storeProducts?: (StoreProduct | EnrichedStoreProduct)[]  // 🔥 支持普通和深度产品数据
-    hasDeepData?: boolean  // 🔥 标记是否包含深度数据
+    storeProducts?: (StoreProduct | EnrichedStoreProduct)[] // 🔥 支持普通和深度产品数据
+    hasDeepData?: boolean // 🔥 标记是否包含深度数据
   },
   brand: string,
   targetCountry: string,
@@ -1834,11 +1951,15 @@ export async function extractAdElements(
       userId,
       plannerSession
     )
-  } else if (scraped.pageType === 'store' && scraped.storeProducts && scraped.storeProducts.length > 0) {
+  } else if (
+    scraped.pageType === 'store' &&
+    scraped.storeProducts &&
+    scraped.storeProducts.length > 0
+  ) {
     return await extractFromStore(
-      scraped.storeProducts.map(p => ({
+      scraped.storeProducts.map((p) => ({
         ...p,
-        price: p.price ?? null
+        price: p.price ?? null,
       })) as StoreProduct[],
       brand,
       targetCountry,
@@ -1847,6 +1968,8 @@ export async function extractAdElements(
       plannerSession
     )
   } else {
-    throw new Error(`无法提取广告元素：pageType=${scraped.pageType}, 商品数据=${scraped.product ? '有' : '无'}, 店铺商品=${scraped.storeProducts?.length || 0}个`)
+    throw new Error(
+      `无法提取广告元素：pageType=${scraped.pageType}, 商品数据=${scraped.product ? '有' : '无'}, 店铺商品=${scraped.storeProducts?.length || 0}个`
+    )
   }
 }

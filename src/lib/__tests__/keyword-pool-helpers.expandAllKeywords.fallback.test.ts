@@ -17,19 +17,19 @@ vi.mock('../google-suggestions', () => ({
   getBrandSearchSuggestions: vi.fn(async () => [
     { keyword: 'midland weather radio' },
     { keyword: 'midland emergency radio' },
-  ])
+  ]),
 }))
 
 vi.mock('../enhanced-keyword-extractor', () => ({
   extractKeywordsEnhanced: vi.fn(async () => [
-    { keyword: 'midland all hazards radio', competition: 'UNKNOWN' }
-  ])
+    { keyword: 'midland all hazards radio', competition: 'UNKNOWN' },
+  ]),
 }))
 
 vi.mock('../db', () => ({
   getDatabase: vi.fn(async () => ({
-    query: vi.fn(async () => [])
-  }))
+    query: vi.fn(async () => []),
+  })),
 }))
 
 describe('keyword-pool-helpers.expandAllKeywords (OAuth fallback)', () => {
@@ -52,7 +52,7 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth fallback)', () => {
       undefined // customerId missing
     )
 
-    expect(out.map(k => k.keyword)).toEqual(initial.map(k => k.keyword))
+    expect(out.map((k) => k.keyword)).toEqual(initial.map((k) => k.keyword))
   })
 
   it('falls back to pure brand keywords when initialKeywords is empty', async () => {
@@ -70,7 +70,7 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth fallback)', () => {
     )
 
     expect(out.length).toBeGreaterThan(0)
-    expect(out.map(k => k.keyword.toLowerCase())).toContain('midland')
+    expect(out.map((k) => k.keyword.toLowerCase())).toContain('midland')
   })
 
   it('uses PHRASE for non-pure-brand keywords in service-account fallback path', async () => {
@@ -89,18 +89,18 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth fallback)', () => {
         url: 'https://example.com',
         target_country: 'US',
         target_language: 'English',
-        status: 'pending'
+        status: 'pending',
       } as any,
       62
     )
 
-    const byKeyword = new Map(out.map(item => [item.keyword.toLowerCase(), item.matchType]))
+    const byKeyword = new Map(out.map((item) => [item.keyword.toLowerCase(), item.matchType]))
     expect(byKeyword.get('midland')).toBe('EXACT')
     expect(byKeyword.get('midland weather radio')).toBe('PHRASE')
     expect(byKeyword.get('midland emergency radio')).toBe('PHRASE')
     expect(byKeyword.get('midland all hazards radio')).toBe('PHRASE')
 
-    const nonPureBrandKeywords = out.filter(item => item.keyword.toLowerCase() !== 'midland')
+    const nonPureBrandKeywords = out.filter((item) => item.keyword.toLowerCase() !== 'midland')
     expect(nonPureBrandKeywords.length).toBeGreaterThan(0)
     for (const item of nonPureBrandKeywords) {
       expect(item.matchType).toBe('PHRASE')

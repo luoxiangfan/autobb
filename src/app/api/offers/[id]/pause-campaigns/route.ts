@@ -16,40 +16,35 @@ import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 interface RouteContext {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
-export async function POST(
-  request: NextRequest,
-  context: RouteContext
-): Promise<NextResponse> {
+export async function POST(request: NextRequest, context: RouteContext): Promise<NextResponse> {
   try {
-    const offerId = parsePositiveIntegerOfferId(context.params.id)
+    const offerId = parsePositiveIntegerOfferId((await context.params).id)
     if (!offerId) {
-      return NextResponse.json(
-        { error: '无效的Offer ID' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '无效的Offer ID' }, { status: 400 })
     }
 
     const db = await getDatabase()
 
-    const offer = await db.queryOne(`
+    const offer = (await db.queryOne(
+      `
       SELECT id, user_id, offer_name
       FROM offers
       WHERE id = ?
-    `, [offerId]) as { id: number; user_id: number; offer_name: string } | undefined
+    `,
+      [offerId]
+    )) as { id: number; user_id: number; offer_name: string } | undefined
 
     if (!offer) {
-      return NextResponse.json(
-        { error: 'Offer不存在' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Offer不存在' }, { status: 404 })
     }
 
-    const campaigns = await db.query(`
+    const campaigns = (await db.query(
+      `
       SELECT
         c.id,
         c.campaign_id,
@@ -63,7 +58,9 @@ export async function POST(
         AND c.status = 'ENABLED'
         AND c.google_campaign_id IS NOT NULL
       ORDER BY c.created_at DESC
-    `, [offerId, offer.user_id]) as Array<{
+    `,
+      [offerId, offer.user_id]
+    )) as Array<{
       id: number
       campaign_id: string | null
       campaign_name: string
@@ -77,18 +74,21 @@ export async function POST(
         success: true,
         message: '没有需要暂停的广告系列',
         pausedCount: 0,
-        campaigns: []
+        campaigns: [],
       })
     }
 
-    const campaignsByAccount = campaigns.reduce((acc, campaign) => {
-      const accountId = campaign.google_ads_account_id
-      if (!acc[accountId]) {
-        acc[accountId] = []
-      }
-      acc[accountId].push(campaign)
-      return acc
-    }, {} as Record<number, typeof campaigns>)
+    const campaignsByAccount = campaigns.reduce(
+      (acc, campaign) => {
+        const accountId = campaign.google_ads_account_id
+        if (!acc[accountId]) {
+          acc[accountId] = []
+        }
+        acc[accountId].push(campaign)
+        return acc
+      },
+      {} as Record<number, typeof campaigns>
+    )
 
     const results: Array<{
       campaignId: number
@@ -100,10 +100,7 @@ export async function POST(
     let pausedCount = 0
     let errorCount = 0
 
-    const campaignMetaByGoogleId = new Map<
-      string,
-      { id: number; campaign_name: string }
-    >()
+    const campaignMetaByGoogleId = new Map<string, { id: number; campaign_name: string }>()
     for (const campaign of campaigns) {
       campaignMetaByGoogleId.set(campaign.google_campaign_id, {
         id: campaign.id,

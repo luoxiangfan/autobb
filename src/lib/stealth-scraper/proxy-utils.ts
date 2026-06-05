@@ -20,9 +20,11 @@ export function isProxyConnectionError(error: Error): boolean {
   }
 
   // 明确的代理连接错误（保留）
-  if (msg.includes('Proxy connection ended') ||
-      msg.includes('net::ERR_PROXY') ||
-      msg.includes('ERR_TUNNEL_CONNECTION_FAILED')) {
+  if (
+    msg.includes('Proxy connection ended') ||
+    msg.includes('net::ERR_PROXY') ||
+    msg.includes('ERR_TUNNEL_CONNECTION_FAILED')
+  ) {
     return true
   }
 
@@ -32,8 +34,10 @@ export function isProxyConnectionError(error: Error): boolean {
   }
 
   // TCP连接错误（但需要包含proxy关键词才算代理问题）
-  if ((msg.includes('ECONNRESET') || msg.includes('ECONNREFUSED')) &&
-      msg.toLowerCase().includes('proxy')) {
+  if (
+    (msg.includes('ECONNRESET') || msg.includes('ECONNREFUSED')) &&
+    msg.toLowerCase().includes('proxy')
+  ) {
     return true
   }
 
@@ -46,7 +50,7 @@ export function isProxyConnectionError(error: Error): boolean {
   // Amazon检测到代理IP后会快速关闭连接，返回空响应
   // 这种情况必须立即换代理，重试同一代理必定失败
   if (msg.includes('ERR_EMPTY_RESPONSE')) {
-    return true  // 服务器拒绝 = 代理被封或被标记
+    return true // 服务器拒绝 = 代理被封或被标记
   }
 
   // 🔥 新增：page.goto超时很可能是代理IP被封禁
@@ -67,8 +71,10 @@ export function isProxyConnectionError(error: Error): boolean {
   }
 
   // 超时错误需要更明确的代理关键词
-  if (msg.includes('Timeout') &&
-      (msg.includes('proxy') || msg.includes('tunnel') || msg.includes('CONNECT'))) {
+  if (
+    msg.includes('Timeout') &&
+    (msg.includes('proxy') || msg.includes('tunnel') || msg.includes('CONNECT'))
+  ) {
     return true
   }
 
@@ -93,17 +99,21 @@ export async function withProxyRetry<T>(
   for (let proxyAttempt = 0; proxyAttempt <= maxProxyRetries; proxyAttempt++) {
     try {
       if (proxyAttempt > 0) {
-        console.log(`🔄 ${operationName} - 代理重试 ${proxyAttempt}/${maxProxyRetries}，清理连接池...`)
+        console.log(
+          `🔄 ${operationName} - 代理重试 ${proxyAttempt}/${maxProxyRetries}，清理连接池...`
+        )
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
         // 短暂延迟后重试
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        await new Promise((resolve) => setTimeout(resolve, 2000))
       }
 
       return await fn()
     } catch (error: any) {
       lastError = error
-      console.error(`❌ ${operationName} 尝试 ${proxyAttempt + 1} 失败: ${error.message?.substring(0, 100)}`)
+      console.error(
+        `❌ ${operationName} 尝试 ${proxyAttempt + 1} 失败: ${error.message?.substring(0, 100)}`
+      )
 
       // 如果是代理连接错误，尝试换新代理
       if (isProxyConnectionError(error) && proxyAttempt < maxProxyRetries) {
@@ -158,7 +168,7 @@ export async function retryWithBackoff<T>(
       const jitter = Math.random() * 1000 // Add jitter
 
       console.log(`Retry attempt ${attempt + 1}/${maxRetries}, waiting ${delay + jitter}ms...`)
-      await new Promise(resolve => setTimeout(resolve, delay + jitter))
+      await new Promise((resolve) => setTimeout(resolve, delay + jitter))
     }
   }
 

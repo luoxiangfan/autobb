@@ -5,10 +5,8 @@ import { getDatabase } from '@/lib/db'
  * GET /api/admin/prompts/[promptId]
  * 获取指定 Prompt 的完整信息和所有版本历史
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { promptId: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ promptId: string }> }) {
+  const params = await props.params
   try {
     const { promptId } = params
     const db = getDatabase()
@@ -28,10 +26,7 @@ export async function GET(
     )
 
     if (!activeVersion) {
-      return NextResponse.json(
-        { success: false, error: 'Prompt 不存在' },
-        { status: 404 }
-      )
+      return NextResponse.json({ success: false, error: 'Prompt 不存在' }, { status: 404 })
     }
 
     // 获取所有版本历史
@@ -69,7 +64,7 @@ export async function GET(
           createdAt: activeVersion.created_at,
           changeNotes: activeVersion.change_notes,
         },
-        versions: versions.map(v => ({
+        versions: versions.map((v) => ({
           id: v.id,
           version: v.version,
           promptContent: v.prompt_content,
@@ -78,18 +73,15 @@ export async function GET(
           createdAt: v.created_at,
           isActive: v.is_active === 1,
           changeNotes: v.change_notes,
-          totalCalls: 0,  // Feature offline: prompt_usage_stats table removed
-          totalCost: 0,   // Feature offline: prompt_usage_stats table removed
+          totalCalls: 0, // Feature offline: prompt_usage_stats table removed
+          totalCost: 0, // Feature offline: prompt_usage_stats table removed
         })),
-        usageStats: [],  // Feature offline: prompt_usage_stats table removed
-      }
+        usageStats: [], // Feature offline: prompt_usage_stats table removed
+      },
     })
   } catch (error: any) {
     console.error('获取 Prompt 详情失败:', error)
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }
 
@@ -99,10 +91,8 @@ export async function GET(
  * 1. 激活指定版本（当只传入 version 字段时）
  * 2. 编辑并创建新版本（当传入 promptContent 字段时）
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { promptId: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ promptId: string }> }) {
+  const params = await props.params
   try {
     const { promptId } = params
     const body = await request.json()
@@ -118,14 +108,14 @@ export async function PUT(
     if (isEditOperation) {
       // ============ 编辑并创建新版本 ============
       const {
-        version,           // 可选：自定义版本号（如 v5.0），不传则自动递增
-        promptContent,     // 编辑后的内容
-        changeNotes,       // 变更说明
-        category,          // 可选：修改分类
-        name,              // 可选：修改名称
-        description,       // 可选：修改描述
-        isActive = true,   // 是否自动激活新版本
-        userId             // 用户 ID
+        version, // 可选：自定义版本号（如 v5.0），不传则自动递增
+        promptContent, // 编辑后的内容
+        changeNotes, // 变更说明
+        category, // 可选：修改分类
+        name, // 可选：修改名称
+        description, // 可选：修改描述
+        isActive = true, // 是否自动激活新版本
+        userId, // 用户 ID
       } = body
 
       // 验证必需字段
@@ -143,10 +133,7 @@ export async function PUT(
       )
 
       if (!currentVersion) {
-        return NextResponse.json(
-          { success: false, error: 'Prompt 不存在' },
-          { status: 404 }
-        )
+        return NextResponse.json({ success: false, error: 'Prompt 不存在' }, { status: 404 })
       }
 
       // 2. 获取所有版本，用于计算下一个版本号
@@ -160,7 +147,7 @@ export async function PUT(
       if (version && version.trim()) {
         // 用户自定义版本号
         newVersion = version.trim()
-        
+
         // 验证自定义版本号是否已存在
         const existing = await db.queryOne<any>(
           'SELECT id FROM prompt_versions WHERE prompt_id = ? AND version = ?',
@@ -175,15 +162,18 @@ export async function PUT(
         }
       } else {
         // 自动递增版本号
-        newVersion = calculateNextVersion(currentVersion.version, allVersions.map((v: any) => v.version))
+        newVersion = calculateNextVersion(
+          currentVersion.version,
+          allVersions.map((v: any) => v.version)
+        )
       }
 
       // 4. 如果激活新版本，先取消其他版本的激活状态
       if (isActive) {
-        await db.exec(
-          'UPDATE prompt_versions SET is_active = ? WHERE prompt_id = ?',
-          [isActiveFalse, promptId]
-        )
+        await db.exec('UPDATE prompt_versions SET is_active = ? WHERE prompt_id = ?', [
+          isActiveFalse,
+          promptId,
+        ])
       }
 
       // 5. 插入新版本（其他版本自动成为历史版本）
@@ -206,13 +196,12 @@ export async function PUT(
           currentVersion.language,
           userId || null,
           isActive ? 1 : 0,
-          changeNotes || ''
+          changeNotes || '',
         ]
       )
 
-      const versionId = db.type === 'postgres' 
-        ? (result as any).rows?.[0]?.id 
-        : (result as any).lastInsertRowid
+      const versionId =
+        db.type === 'postgres' ? (result as any).rows?.[0]?.id : (result as any).lastInsertRowid
 
       return NextResponse.json({
         success: true,
@@ -221,18 +210,15 @@ export async function PUT(
           version: newVersion,
           previousVersion: currentVersion.version,
           isActive,
-          versionId
-        }
+          versionId,
+        },
       })
     } else {
       // ============ 激活指定版本（原有逻辑） ============
       const { version } = body
 
       if (!version) {
-        return NextResponse.json(
-          { success: false, error: '缺少版本号' },
-          { status: 400 }
-        )
+        return NextResponse.json({ success: false, error: '缺少版本号' }, { status: 400 })
       }
 
       // 检查版本是否存在
@@ -242,17 +228,14 @@ export async function PUT(
       )
 
       if (!versionExists) {
-        return NextResponse.json(
-          { success: false, error: '版本不存在' },
-          { status: 404 }
-        )
+        return NextResponse.json({ success: false, error: '版本不存在' }, { status: 404 })
       }
 
       // 取消其他版本的激活状态
-      await db.exec(
-        'UPDATE prompt_versions SET is_active = ? WHERE prompt_id = ?',
-        [isActiveFalse, promptId]
-      )
+      await db.exec('UPDATE prompt_versions SET is_active = ? WHERE prompt_id = ?', [
+        isActiveFalse,
+        promptId,
+      ])
 
       // 激活指定版本
       await db.exec(
@@ -262,15 +245,12 @@ export async function PUT(
 
       return NextResponse.json({
         success: true,
-        message: `版本 ${version} 已激活`
+        message: `版本 ${version} 已激活`,
       })
     }
   } catch (error: any) {
     console.error('操作失败:', error)
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }
 
@@ -290,15 +270,15 @@ function calculateNextVersion(currentVersion: string, existingVersions: string[]
   }
 
   const parts = versionMatch[1].split('.').map(Number)
-  
+
   // 尝试递增，直到找到未使用的版本号
   let attempts = 0
-  const maxAttempts = 100  // 防止无限循环
-  
+  const maxAttempts = 100 // 防止无限循环
+
   while (attempts < maxAttempts) {
     // 递增最后一位
     parts[parts.length - 1] += 1
-    
+
     // 处理进位（如 4.9 → 5.0）
     for (let i = parts.length - 1; i >= 0; i--) {
       if (parts[i] >= 10 && i > 0) {
@@ -306,23 +286,23 @@ function calculateNextVersion(currentVersion: string, existingVersions: string[]
         parts[i - 1] += 1
       }
     }
-    
+
     // 生成新版本号字符串
     const newVersion = `v${parts.join('.')}`
-    
+
     // 检查是否已存在
-    const exists = existingVersions.some(v => {
+    const exists = existingVersions.some((v) => {
       const match = v.match(/^v?(\d+(?:\.\d+)*)/i)
       return match && match[1] === parts.join('.')
     })
-    
+
     if (!exists) {
       return newVersion
     }
-    
+
     attempts++
   }
-  
+
   // 极端情况：尝试了 100 次都没找到，使用时间戳
   return `v${Date.now()}`
 }

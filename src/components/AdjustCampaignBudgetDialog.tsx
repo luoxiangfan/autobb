@@ -3,7 +3,14 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { showError, showSuccess } from '@/lib/toast-utils'
 
@@ -54,7 +61,10 @@ export default function AdjustCampaignBudgetDialog(props: AdjustCampaignBudgetDi
   }, [currency, normalizedCurrentBudget])
 
   const normalizedCurrentBudgetType = useMemo(
-    () => String(currentBudgetType || '').trim().toUpperCase() || DAILY_BUDGET_TYPE,
+    () =>
+      String(currentBudgetType || '')
+        .trim()
+        .toUpperCase() || DAILY_BUDGET_TYPE,
     [currentBudgetType]
   )
 
@@ -96,9 +106,8 @@ export default function AdjustCampaignBudgetDialog(props: AdjustCampaignBudgetDi
       }
 
       const nextBudgetAmount = roundTo2(Number(data?.budgetAmount ?? normalizedBudgetAmount))
-      const nextBudgetType = String(data?.budgetType || DAILY_BUDGET_TYPE).toUpperCase() === 'TOTAL'
-        ? 'TOTAL'
-        : 'DAILY'
+      const nextBudgetType =
+        String(data?.budgetType || DAILY_BUDGET_TYPE).toUpperCase() === 'TOTAL' ? 'TOTAL' : 'DAILY'
 
       await onSaved?.({
         googleCampaignId,
@@ -106,7 +115,10 @@ export default function AdjustCampaignBudgetDialog(props: AdjustCampaignBudgetDi
         budgetType: nextBudgetType,
       })
 
-      showSuccess('每日预算已更新', `${campaignName} → ${currency} ${nextBudgetAmount.toFixed(2)}/day`)
+      showSuccess(
+        '每日预算已更新',
+        `${campaignName} → ${currency} ${nextBudgetAmount.toFixed(2)}/day`
+      )
       onOpenChange(false)
     } catch (e: any) {
       showError('更新预算失败', e?.message || String(e))
@@ -120,7 +132,9 @@ export default function AdjustCampaignBudgetDialog(props: AdjustCampaignBudgetDi
       <DialogContent className="sm:max-w-xl max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>调整每日预算 - {campaignName}</DialogTitle>
-          <DialogDescription>预算将同步更新到 Google Ads，并将该广告系列预算类型设置为每日预算（DAILY）。</DialogDescription>
+          <DialogDescription>
+            预算将同步更新到 Google Ads，并将该广告系列预算类型设置为每日预算（DAILY）。
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
@@ -129,7 +143,8 @@ export default function AdjustCampaignBudgetDialog(props: AdjustCampaignBudgetDi
               当前预算: <span className="font-medium text-foreground">{currentBudgetDisplay}</span>
             </span>
             <span>
-              预算类型: <span className="font-medium text-foreground">{normalizedCurrentBudgetType}</span>
+              预算类型:{' '}
+              <span className="font-medium text-foreground">{normalizedCurrentBudgetType}</span>
             </span>
           </div>
 
@@ -190,7 +205,12 @@ export default function AdjustCampaignBudgetDialog(props: AdjustCampaignBudgetDi
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0 border-t pt-3 flex-wrap">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
             取消
           </Button>
           <Button type="button" onClick={save} disabled={saving}>

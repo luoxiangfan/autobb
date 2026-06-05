@@ -32,7 +32,10 @@ export function developerTokenLooksInvalid(developerToken: string, clientSecret:
   )
 }
 
-function settingDeveloperTokenLooksOk(settingDeveloperToken: string, clientSecret: string): boolean {
+function settingDeveloperTokenLooksOk(
+  settingDeveloperToken: string,
+  clientSecret: string
+): boolean {
   return (
     !!settingDeveloperToken &&
     settingDeveloperToken.trim() !== clientSecret.trim() &&

@@ -77,7 +77,9 @@ export async function GET(request: NextRequest) {
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days + 1)
 
-    console.log(`[Insights API] days=${days}, startDate=${formatDate(startDate)}, endDate=${formatDate(endDate)}`)
+    console.log(
+      `[Insights API] days=${days}, startDate=${formatDate(startDate)}, endDate=${formatDate(endDate)}`
+    )
 
     const db = await getDatabase()
 
@@ -102,10 +104,11 @@ export async function GET(request: NextRequest) {
       LIMIT 3
     `
 
-    const lowCtrCampaigns = await db.query(
-      lowCtrQuery,
-      [userId, formatDate(startDate), formatDate(endDate)]
-    ) as Array<{
+    const lowCtrCampaigns = (await db.query(lowCtrQuery, [
+      userId,
+      formatDate(startDate),
+      formatDate(endDate),
+    ])) as Array<{
       id: number
       campaign_name: string
       impressions: number
@@ -120,8 +123,7 @@ export async function GET(request: NextRequest) {
         priority: 'high',
         title: 'CTR过低需要优化',
         message: `Campaign "${campaign.campaign_name}" 的CTR仅为 ${campaign.ctr}%，低于行业均值（1-2%）`,
-        recommendation:
-          '建议：1) 优化广告创意文案，2) 调整关键词匹配类型，3) 提升广告质量评分',
+        recommendation: '建议：1) 优化广告创意文案，2) 调整关键词匹配类型，3) 提升广告质量评分',
         relatedCampaign: {
           id: campaign.id,
           name: campaign.campaign_name,
@@ -155,10 +157,13 @@ export async function GET(request: NextRequest) {
       LIMIT 3
     `
 
-    const highCostCampaigns = await db.query(
-      highCostQuery,
-      [days, userId, formatDate(startDate), formatDate(endDate), days]
-    ) as Array<{
+    const highCostCampaigns = (await db.query(highCostQuery, [
+      days,
+      userId,
+      formatDate(startDate),
+      formatDate(endDate),
+      days,
+    ])) as Array<{
       id: number
       campaign_name: string
       budget_amount: number
@@ -173,8 +178,7 @@ export async function GET(request: NextRequest) {
         priority: 'high',
         title: '花费超出预算',
         message: `Campaign "${campaign.campaign_name}" 实际花费已达预算的 ${campaign.spend_rate}%`,
-        recommendation:
-          '建议：1) 检查预算设置，2) 暂停低效关键词，3) 调整出价策略',
+        recommendation: '建议：1) 检查预算设置，2) 暂停低效关键词，3) 调整出价策略',
         relatedCampaign: {
           id: campaign.id,
           name: campaign.campaign_name,
@@ -207,10 +211,11 @@ export async function GET(request: NextRequest) {
       LIMIT 3
     `
 
-    const lowConversionCampaigns = await db.query(
-      lowConversionQuery,
-      [userId, formatDate(startDate), formatDate(endDate)]
-    ) as Array<{
+    const lowConversionCampaigns = (await db.query(lowConversionQuery, [
+      userId,
+      formatDate(startDate),
+      formatDate(endDate),
+    ])) as Array<{
       id: number
       campaign_name: string
       clicks: number
@@ -225,8 +230,7 @@ export async function GET(request: NextRequest) {
         priority: 'medium',
         title: '转化率偏低',
         message: `Campaign "${campaign.campaign_name}" 的转化率为 ${campaign.conversion_rate}%，低于行业基准（2-5%）`,
-        recommendation:
-          '建议：1) 优化着陆页体验，2) 检查转化追踪设置，3) 调整目标受众定位',
+        recommendation: '建议：1) 优化着陆页体验，2) 检查转化追踪设置，3) 调整目标受众定位',
         relatedCampaign: {
           id: campaign.id,
           name: campaign.campaign_name,
@@ -263,10 +267,11 @@ export async function GET(request: NextRequest) {
       LIMIT 2
     `
 
-    const topCampaigns = await db.query(
-      topPerformingQuery,
-      [userId, formatDate(startDate), formatDate(endDate)]
-    ) as Array<{
+    const topCampaigns = (await db.query(topPerformingQuery, [
+      userId,
+      formatDate(startDate),
+      formatDate(endDate),
+    ])) as Array<{
       id: number
       campaign_name: string
       impressions: number
@@ -300,8 +305,9 @@ export async function GET(request: NextRequest) {
 
     // 规则5: 检查长期未更新的Campaign
     // 使用数据库兼容的日期计算方式
-    const staleQuery = db.type === 'postgres'
-      ? `
+    const staleQuery =
+      db.type === 'postgres'
+        ? `
         SELECT
           c.id,
           c.campaign_name,
@@ -314,7 +320,7 @@ export async function GET(request: NextRequest) {
         ORDER BY days_since_update DESC
         LIMIT 2
       `
-      : `
+        : `
         SELECT
           c.id,
           c.campaign_name,
@@ -328,7 +334,7 @@ export async function GET(request: NextRequest) {
         LIMIT 2
       `
 
-    const staleCampaigns = await db.query(staleQuery, [userId]) as Array<{
+    const staleCampaigns = (await db.query(staleQuery, [userId])) as Array<{
       id: number
       campaign_name: string
       updated_at: string
@@ -342,8 +348,7 @@ export async function GET(request: NextRequest) {
         priority: 'low',
         title: '建议定期优化',
         message: `Campaign "${campaign.campaign_name}" 已 ${Math.floor(campaign.days_since_update)} 天未更新`,
-        recommendation:
-          '建议：1) 检查性能数据，2) 测试新的广告创意，3) 调整关键词和出价',
+        recommendation: '建议：1) 检查性能数据，2) 测试新的广告创意，3) 调整关键词和出价',
         relatedCampaign: {
           id: campaign.id,
           name: campaign.campaign_name,
@@ -355,8 +360,9 @@ export async function GET(request: NextRequest) {
     // 规则6: 检查每日链接检查结果
     // 获取最近24小时内的链接检查结果，只显示有问题的链接
     // 注意：PostgreSQL中 is_accessible, brand_found, content_valid 是 INTEGER 类型 (0/1)
-    const linkCheckQuery = db.type === 'postgres'
-      ? `
+    const linkCheckQuery =
+      db.type === 'postgres'
+        ? `
         SELECT
           lch.id,
           lch.offer_id,
@@ -381,7 +387,7 @@ export async function GET(request: NextRequest) {
         ORDER BY lch.checked_at DESC
         LIMIT 5
       `
-      : `
+        : `
         SELECT
           lch.id,
           lch.offer_id,
@@ -407,7 +413,7 @@ export async function GET(request: NextRequest) {
         LIMIT 5
       `
 
-    const linkCheckResults = await db.query(linkCheckQuery, [userId]) as Array<{
+    const linkCheckResults = (await db.query(linkCheckQuery, [userId])) as Array<{
       id: number
       offer_id: number
       offer_name: string
@@ -469,8 +475,9 @@ export async function GET(request: NextRequest) {
     // ==================== URL Swap 换链接任务洞察 ====================
 
     // 规则7: 检测URL Swap任务错误
-    const urlSwapErrorQuery = db.type === 'postgres'
-      ? `
+    const urlSwapErrorQuery =
+      db.type === 'postgres'
+        ? `
         SELECT
           t.id as task_id,
           t.offer_id,
@@ -487,7 +494,7 @@ export async function GET(request: NextRequest) {
         ORDER BY t.error_at DESC
         LIMIT 5
       `
-      : `
+        : `
         SELECT
           t.id as task_id,
           t.offer_id,
@@ -505,10 +512,7 @@ export async function GET(request: NextRequest) {
         LIMIT 5
       `
 
-    const urlSwapErrors = await db.query(
-      urlSwapErrorQuery,
-      [userId]
-    ) as Array<{
+    const urlSwapErrors = (await db.query(urlSwapErrorQuery, [userId])) as Array<{
       task_id: string
       offer_id: number
       error_message: string
@@ -535,8 +539,9 @@ export async function GET(request: NextRequest) {
     })
 
     // 规则8: 检测最近的URL变化（成功的换链）
-    const urlSwapChangesQuery = db.type === 'postgres'
-      ? `
+    const urlSwapChangesQuery =
+      db.type === 'postgres'
+        ? `
         SELECT
           t.id as task_id,
           t.offer_id,
@@ -555,7 +560,7 @@ export async function GET(request: NextRequest) {
         ORDER BY t.updated_at DESC
         LIMIT 3
       `
-      : `
+        : `
         SELECT
           t.id as task_id,
           t.offer_id,
@@ -575,10 +580,7 @@ export async function GET(request: NextRequest) {
         LIMIT 3
       `
 
-    const urlSwapChanges = await db.query(
-      urlSwapChangesQuery,
-      [userId]
-    ) as Array<{
+    const urlSwapChanges = (await db.query(urlSwapChangesQuery, [userId])) as Array<{
       task_id: string
       offer_id: number
       current_final_url: string
@@ -607,8 +609,9 @@ export async function GET(request: NextRequest) {
 
     // 规则9: 检测暂停的换链任务（可能需要关注）
     const urlSwapPausedCampaignFilter = excludeDisabledUrlSwapWithPausedCampaignSql(db.type)
-    const urlSwapPausedQuery = db.type === 'postgres'
-      ? `
+    const urlSwapPausedQuery =
+      db.type === 'postgres'
+        ? `
         SELECT
           t.id as task_id,
           t.offer_id,
@@ -629,7 +632,7 @@ export async function GET(request: NextRequest) {
         ORDER BY t.updated_at DESC
         LIMIT 3
       `
-      : `
+        : `
         SELECT
           t.id as task_id,
           t.offer_id,
@@ -651,10 +654,7 @@ export async function GET(request: NextRequest) {
         LIMIT 3
       `
 
-    const urlSwapPaused = await db.query(
-      urlSwapPausedQuery,
-      [userId]
-    ) as Array<{
+    const urlSwapPaused = (await db.query(urlSwapPausedQuery, [userId])) as Array<{
       task_id: string
       offer_id: number
       error_message: string | null
@@ -666,9 +666,8 @@ export async function GET(request: NextRequest) {
     }>
 
     urlSwapPaused.forEach((task) => {
-      const failureRate = task.total_swaps > 0
-        ? ((task.failed_swaps / task.total_swaps) * 100).toFixed(1)
-        : '0'
+      const failureRate =
+        task.total_swaps > 0 ? ((task.failed_swaps / task.total_swaps) * 100).toFixed(1) : '0'
 
       insights.push({
         id: `url-swap-paused-${task.task_id}`,
@@ -689,8 +688,9 @@ export async function GET(request: NextRequest) {
     })
 
     // 规则10: 检测推广链接解析失败（高优先级错误）
-    const linkResolutionErrorQuery = db.type === 'postgres'
-      ? `
+    const linkResolutionErrorQuery =
+      db.type === 'postgres'
+        ? `
         SELECT
           t.id as task_id,
           t.offer_id,
@@ -720,7 +720,7 @@ export async function GET(request: NextRequest) {
         ORDER BY t.error_at DESC
         LIMIT 5
       `
-      : `
+        : `
         SELECT
           t.id as task_id,
           t.offer_id,
@@ -751,10 +751,7 @@ export async function GET(request: NextRequest) {
         LIMIT 5
       `
 
-    const linkResolutionErrors = await db.query(
-      linkResolutionErrorQuery,
-      [userId]
-    ) as Array<{
+    const linkResolutionErrors = (await db.query(linkResolutionErrorQuery, [userId])) as Array<{
       task_id: string
       offer_id: number
       error_message: string
@@ -802,8 +799,9 @@ export async function GET(request: NextRequest) {
     })
 
     // 规则11: 检测Google Ads API调用失败（高优先级错误）
-    const googleAdsApiErrorQuery = db.type === 'postgres'
-      ? `
+    const googleAdsApiErrorQuery =
+      db.type === 'postgres'
+        ? `
         SELECT
           t.id as task_id,
           t.offer_id,
@@ -834,7 +832,7 @@ export async function GET(request: NextRequest) {
         ORDER BY t.error_at DESC
         LIMIT 5
       `
-      : `
+        : `
         SELECT
           t.id as task_id,
           t.offer_id,
@@ -866,10 +864,7 @@ export async function GET(request: NextRequest) {
         LIMIT 5
       `
 
-    const googleAdsApiErrors = await db.query(
-      googleAdsApiErrorQuery,
-      [userId]
-    ) as Array<{
+    const googleAdsApiErrors = (await db.query(googleAdsApiErrorQuery, [userId])) as Array<{
       task_id: string
       offer_id: number
       error_message: string

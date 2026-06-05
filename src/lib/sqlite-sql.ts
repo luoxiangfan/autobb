@@ -24,4 +24,3 @@ export function normalizeSqliteSql(sql: string): string {
 
   return result
 }
-

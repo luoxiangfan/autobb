@@ -8,10 +8,7 @@ import {
   type KeywordPlannerPreparedSession,
 } from '@/lib/google-ads-accounts-auth'
 import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
-import {
-  mapWithConcurrency,
-  resolveBatchEvaluateConcurrency,
-} from '@/lib/run-with-concurrency'
+import { mapWithConcurrency, resolveBatchEvaluateConcurrency } from '@/lib/run-with-concurrency'
 
 const BATCH_EVALUATE_CONCURRENCY = resolveBatchEvaluateConcurrency(
   process.env.BATCH_EVALUATE_CONCURRENCY
@@ -87,17 +84,11 @@ export async function POST(request: NextRequest) {
 
     // 验证输入
     if (!creatives || !Array.isArray(creatives) || creatives.length === 0) {
-      return NextResponse.json(
-        { error: 'creatives必须是非空数组' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'creatives必须是非空数组' }, { status: 400 })
     }
 
     if (creatives.length > 50) {
-      return NextResponse.json(
-        { error: '单次最多评估50个创意' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '单次最多评估50个创意' }, { status: 400 })
     }
 
     console.log(`📊 开始批量评估 ${creatives.length} 个创意...`)
@@ -120,54 +111,49 @@ export async function POST(request: NextRequest) {
           }
 
           // 转换为标准格式
-          const headlines: HeadlineAsset[] = creative.headlinesWithMetadata ||
+          const headlines: HeadlineAsset[] =
+            creative.headlinesWithMetadata ||
             creative.headlines.map((text: string) => ({ text, length: text.length }))
 
-          const descriptions: DescriptionAsset[] = creative.descriptionsWithMetadata ||
+          const descriptions: DescriptionAsset[] =
+            creative.descriptionsWithMetadata ||
             creative.descriptions.map((text: string) => ({ text, length: text.length }))
 
           const offerId = parsePositiveIntegerOfferId(creative.offerId)
           const evaluationOfferId =
             offerId != null && validatedOfferIds.has(offerId) ? offerId : undefined
-          const plannerSession =
-            offerId != null ? sessionByOfferId.get(offerId) : undefined
-          const skipKeywordPoolExpandLoad =
-            offerId != null && expandFailedOfferIds.has(offerId)
+          const plannerSession = offerId != null ? sessionByOfferId.get(offerId) : undefined
+          const skipKeywordPoolExpandLoad = offerId != null && expandFailedOfferIds.has(offerId)
 
           // 评估
-          const evaluation = await evaluateAdStrength(
-            headlines,
-            descriptions,
-            creative.keywords,
-            {
-              brandName: creative.brandName,
-              targetCountry: creative.targetCountry || 'US',
-              targetLanguage: creative.targetLanguage || 'en',
-              userId: userId ?? undefined,
-              offerId: evaluationOfferId,
-              plannerSession,
-              skipKeywordPoolExpandLoad,
-              sitelinks: creative.sitelinks,
-              callouts: creative.callouts,
-              keywordsWithVolume: creative.keywordsWithVolume,
-            }
-          )
+          const evaluation = await evaluateAdStrength(headlines, descriptions, creative.keywords, {
+            brandName: creative.brandName,
+            targetCountry: creative.targetCountry || 'US',
+            targetLanguage: creative.targetLanguage || 'en',
+            userId: userId ?? undefined,
+            offerId: evaluationOfferId,
+            plannerSession,
+            skipKeywordPoolExpandLoad,
+            sitelinks: creative.sitelinks,
+            callouts: creative.callouts,
+            keywordsWithVolume: creative.keywordsWithVolume,
+          })
 
           return {
             id: creative.id || `creative_${index + 1}`,
             index: index + 1,
             creative: {
               headlines: creative.headlines,
-              descriptions: creative.descriptions
+              descriptions: creative.descriptions,
             },
             evaluation: {
               rating: evaluation.rating,
               score: evaluation.overallScore,
               isExcellent: evaluation.rating === 'EXCELLENT',
               dimensions: evaluation.dimensions,
-              suggestions: evaluation.suggestions
+              suggestions: evaluation.suggestions,
             },
-            success: true
+            success: true,
           }
         } catch (error: any) {
           console.error(`评估创意 ${index + 1} 失败:`, error)
@@ -175,15 +161,15 @@ export async function POST(request: NextRequest) {
             id: creative.id || `creative_${index + 1}`,
             index: index + 1,
             success: false,
-            error: error.message
+            error: error.message,
           }
         }
       }
     )
 
     // 统计结果
-    const successCount = evaluations.filter(e => e.success).length
-    const failCount = evaluations.filter(e => !e.success).length
+    const successCount = evaluations.filter((e) => e.success).length
+    const failCount = evaluations.filter((e) => !e.success).length
 
     // 统计评级分布
     const ratingDistribution = {
@@ -191,10 +177,10 @@ export async function POST(request: NextRequest) {
       GOOD: 0,
       AVERAGE: 0,
       POOR: 0,
-      PENDING: 0
+      PENDING: 0,
     }
 
-    evaluations.forEach(e => {
+    evaluations.forEach((e) => {
       if (e.success && e.evaluation) {
         ratingDistribution[e.evaluation.rating as keyof typeof ratingDistribution]++
       }
@@ -202,7 +188,7 @@ export async function POST(request: NextRequest) {
 
     // 找到最佳创意
     const bestCreative = evaluations
-      .filter(e => e.success && e.evaluation)
+      .filter((e) => e.success && e.evaluation)
       .sort((a, b) => (b.evaluation?.score || 0) - (a.evaluation?.score || 0))[0]
 
     console.log(`✅ 批量评估完成: ${successCount}成功, ${failCount}失败`)
@@ -221,7 +207,7 @@ export async function POST(request: NextRequest) {
           allFailed: successCount === 0,
           ratingDistribution,
           averageScore: computeAverageEvaluationScore(evaluations),
-        }
+        },
       })
     } else {
       // 返回所有评估结果
@@ -236,15 +222,12 @@ export async function POST(request: NextRequest) {
           allFailed: successCount === 0,
           ratingDistribution,
           averageScore: computeAverageEvaluationScore(evaluations),
-        }
+        },
       })
     }
   } catch (error: any) {
     console.error('批量评估失败:', error)
-    return NextResponse.json(
-      { error: error.message || '批量评估失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '批量评估失败' }, { status: 500 })
   }
 }
 
@@ -268,22 +251,24 @@ export async function GET() {
           keywords: ['string[]'],
           // [NEW] 关键词搜索量数据（用于品牌关键词搜索量评分）
           keywordsWithVolume: 'optional [{ keyword, searchVolume }]',
-          offerId: 'optional positive integer or numeric string — 用于按 Offer 拉取品牌搜索量（Keyword Planner）',
+          offerId:
+            'optional positive integer or numeric string — 用于按 Offer 拉取品牌搜索量（Keyword Planner）',
           brandName: 'optional 品牌名称',
           targetCountry: 'optional 默认 US',
           targetLanguage: 'optional 默认 en',
           sitelinks: 'optional Array',
           callouts: 'optional Array[]',
           headlinesWithMetadata: 'optional HeadlineAsset[]',
-          descriptionsWithMetadata: 'optional DescriptionAsset[]'
-        }
+          descriptionsWithMetadata: 'optional DescriptionAsset[]',
+        },
       ],
-      returnBestOnly: 'boolean (default: false) - 仅返回最佳创意'
+      returnBestOnly: 'boolean (default: false) - 仅返回最佳创意',
     },
     limits: {
       maxCreatives: 50,
       rateLimit: '100 requests/hour',
-      evaluateConcurrency: 'BATCH_EVALUATE_CONCURRENCY (1-20, default 8) — 评估与按 offer 预加载 expand 共用',
+      evaluateConcurrency:
+        'BATCH_EVALUATE_CONCURRENCY (1-20, default 8) — 评估与按 offer 预加载 expand 共用',
     },
     responseFormat: {
       success: true,
@@ -297,10 +282,10 @@ export async function GET() {
             score: 92,
             isExcellent: true,
             dimensions: {},
-            suggestions: []
+            suggestions: [],
           },
-          success: true
-        }
+          success: true,
+        },
       ],
       bestCreative: {},
       summary: {
@@ -311,11 +296,11 @@ export async function GET() {
           EXCELLENT: 5,
           GOOD: 3,
           AVERAGE: 2,
-          POOR: 0
+          POOR: 0,
         },
         averageScore: 85.5,
-        allFailed: false
-      }
-    }
+        allFailed: false,
+      },
+    },
   })
 }

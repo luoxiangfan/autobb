@@ -1,16 +1,8 @@
-import { cn } from "@/lib/utils"
-import React from "react"
+import { cn } from '@/lib/utils'
+import React from 'react'
 
-function Skeleton({
-    className,
-    ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-    return (
-        <div
-            className={cn("animate-pulse rounded-md bg-muted", className)}
-            {...props}
-        />
-    )
+function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn('animate-pulse rounded-md bg-muted', className)} {...props} />
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -31,13 +23,7 @@ function TableRowSkeleton({ columns = 5 }: { columns?: number }) {
   )
 }
 
-function TableSkeleton({
-  rows = 5,
-  columns = 5,
-}: {
-  rows?: number
-  columns?: number
-}) {
+function TableSkeleton({ rows = 5, columns = 5 }: { rows?: number; columns?: number }) {
   return (
     <div className="space-y-0">
       {/* 表头 */}
@@ -74,10 +60,12 @@ function CardSkeleton({
       {title && <Skeleton className="h-6 w-1/2" />}
       {description && <Skeleton className="h-4 w-3/4" />}
       {content && <Skeleton className="h-20 w-full" />}
-      {footer && <div className="flex gap-2">
-        <Skeleton className="h-8 w-20" />
-        <Skeleton className="h-8 w-20" />
-      </div>}
+      {footer && (
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-8 w-20" />
+        </div>
+      )}
     </div>
   )
 }
@@ -87,9 +75,12 @@ function CardSkeleton({
  */
 function KPISkeleton({ count = 4 }: { count?: number }) {
   return (
-    <div className="grid gap-4" style={{
-      gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))`
-    }}>
+    <div
+      className="grid gap-4"
+      style={{
+        gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))`,
+      }}
+    >
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="rounded-xl border bg-white p-6 space-y-3">
           <div className="flex justify-between">
@@ -107,13 +98,7 @@ function KPISkeleton({ count = 4 }: { count?: number }) {
 /**
  * 列表骨架屏
  */
-function ListSkeleton({
-  items = 5,
-  avatar = true,
-}: {
-  items?: number
-  avatar?: boolean
-}) {
+function ListSkeleton({ items = 5, avatar = true }: { items?: number; avatar?: boolean }) {
   return (
     <div className="space-y-3">
       {Array.from({ length: items }).map((_, i) => (
@@ -159,17 +144,16 @@ function ChatSkeleton({ messages = 3 }: { messages?: number }) {
   return (
     <div className="space-y-4">
       {Array.from({ length: messages }).map((_, i) => (
-        <div
-          key={i}
-          className={cn(
-            "flex gap-3",
-            i % 2 === 1 && "flex-row-reverse"
-          )}
-        >
+        <div key={i} className={cn('flex gap-3', i % 2 === 1 && 'flex-row-reverse')}>
           <Skeleton className="h-8 w-8 rounded-full" />
-          <div className={cn("space-y-2", i % 2 === 1 && "items-end")}>
+          <div className={cn('space-y-2', i % 2 === 1 && 'items-end')}>
             <Skeleton className="h-4 w-32" />
-            <Skeleton className={cn("h-16 w-48 rounded-lg", i % 2 === 0 ? "rounded-tl-none" : "rounded-tr-none")} />
+            <Skeleton
+              className={cn(
+                'h-16 w-48 rounded-lg',
+                i % 2 === 0 ? 'rounded-tl-none' : 'rounded-tr-none'
+              )}
+            />
           </div>
         </div>
       ))}
@@ -195,9 +179,7 @@ function FormSkeleton({
           <Skeleton className="h-10 w-full" />
         </div>
       ))}
-      {withSubmit && (
-        <Skeleton className="h-10 w-32" />
-      )}
+      {withSubmit && <Skeleton className="h-10 w-32" />}
     </div>
   )
 }

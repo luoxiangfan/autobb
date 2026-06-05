@@ -110,9 +110,15 @@ export default function ProductsSyncInsightsSection({
                                 {run.status}
                               </Badge>
                             </div>
-                            <div className="text-muted-foreground">{getSyncRunProgressText(run)}</div>
-                            <div className="text-muted-foreground">{getSyncRunMetricsText(run)}</div>
-                            <div className="text-muted-foreground">开始时间 {getSyncRunStartedAtText(run)}</div>
+                            <div className="text-muted-foreground">
+                              {getSyncRunProgressText(run)}
+                            </div>
+                            <div className="text-muted-foreground">
+                              {getSyncRunMetricsText(run)}
+                            </div>
+                            <div className="text-muted-foreground">
+                              开始时间 {getSyncRunStartedAtText(run)}
+                            </div>
                           </div>
                         )
                       })}
@@ -177,7 +183,9 @@ export default function ProductsSyncInsightsSection({
               </div>
 
               <div className="rounded-md border">
-                <div className="border-b px-3 py-2 text-xs font-medium">每小时抓取统计（最近 12 小时）</div>
+                <div className="border-b px-3 py-2 text-xs font-medium">
+                  每小时抓取统计（最近 12 小时）
+                </div>
                 {ypSyncMonitor.hourlyStats.length === 0 ? (
                   <div className="px-3 py-3 text-xs text-muted-foreground">
                     暂无小时级抓取快照，任务运行后会自动生成。
@@ -194,14 +202,19 @@ export default function ProductsSyncInsightsSection({
                         </tr>
                       </thead>
                       <tbody>
-                        {[...ypSyncMonitor.hourlyStats].slice(-12).reverse().map((stat) => (
-                          <tr key={stat.hourBucket} className="border-t">
-                            <td className="py-1 pr-2">{formatHourBucket(stat.hourBucket)}</td>
-                            <td className="py-1 pr-2">{formatIntegerCount(stat.fetchedCount)}</td>
-                            <td className="py-1 pr-2">{formatIntegerCount(stat.cumulativeFetched)}</td>
-                            <td className="py-1">{formatIntegerCount(stat.sampleCount)}</td>
-                          </tr>
-                        ))}
+                        {[...ypSyncMonitor.hourlyStats]
+                          .slice(-12)
+                          .reverse()
+                          .map((stat) => (
+                            <tr key={stat.hourBucket} className="border-t">
+                              <td className="py-1 pr-2">{formatHourBucket(stat.hourBucket)}</td>
+                              <td className="py-1 pr-2">{formatIntegerCount(stat.fetchedCount)}</td>
+                              <td className="py-1 pr-2">
+                                {formatIntegerCount(stat.cumulativeFetched)}
+                              </td>
+                              <td className="py-1">{formatIntegerCount(stat.sampleCount)}</td>
+                            </tr>
+                          ))}
                       </tbody>
                     </table>
                   </div>

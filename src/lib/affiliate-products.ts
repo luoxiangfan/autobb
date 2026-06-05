@@ -2,9 +2,7 @@ import { createOffer, deleteOffer, findOfferById } from '@/lib/offers'
 import { getDatabase, type DatabaseAdapter } from '@/lib/db'
 import { getInsertedId, toBool } from '@/lib/db-helpers'
 import { getSetting, getUserOnlySetting } from '@/lib/settings'
-import {
-  enqueueExistingOfferExtractionAndMarkQueued,
-} from '@/lib/offer-extraction-task'
+import { enqueueExistingOfferExtractionAndMarkQueued } from '@/lib/offer-extraction-task'
 import { load as loadHtml } from 'cheerio'
 import {
   buildProductSummaryCacheHash,
@@ -312,7 +310,9 @@ export class ConfigRequiredError extends Error {
 
   constructor(platform: AffiliatePlatform, missingKeys: string[]) {
     const keyList = missingKeys.join(', ')
-    super(`${platform} 配置不完整或解密失败: ${keyList}。请检查配置是否正确，或 ENCRYPTION_KEY 是否与加密时一致`)
+    super(
+      `${platform} 配置不完整或解密失败: ${keyList}。请检查配置是否正确，或 ENCRYPTION_KEY 是否与加密时一致`
+    )
     this.name = 'ConfigRequiredError'
     this.platform = platform
     this.missingKeys = missingKeys
@@ -350,7 +350,16 @@ const MAX_PB_REQUEST_DELAY_MS = 5000
 const DEFAULT_PB_RATE_LIMIT_MAX_RETRIES = 4
 const DEFAULT_PB_RATE_LIMIT_BASE_DELAY_MS = 800
 const DEFAULT_PB_RATE_LIMIT_MAX_DELAY_MS = 12000
-const DEFAULT_PB_FULL_SYNC_COUNTRY_SEQUENCE = ['US', 'MX', 'CA', 'DE', 'UK', 'ES', 'FR', 'IT'] as const
+const DEFAULT_PB_FULL_SYNC_COUNTRY_SEQUENCE = [
+  'US',
+  'MX',
+  'CA',
+  'DE',
+  'UK',
+  'ES',
+  'FR',
+  'IT',
+] as const
 const DEFAULT_PB_STREAM_WINDOW_PAGES = 10
 const MAX_PB_STREAM_WINDOW_PAGES = 200
 const DEFAULT_YP_STREAM_WINDOW_PAGES = 3
@@ -836,7 +845,11 @@ function randomIntInRange(min: number, max: number): number {
   return normalizedMin + Math.floor(Math.random() * (normalizedMax - normalizedMin + 1))
 }
 
-function calculateExponentialBackoffDelay(attempt: number, baseDelayMs: number, maxDelayMs: number): number {
+function calculateExponentialBackoffDelay(
+  attempt: number,
+  baseDelayMs: number,
+  maxDelayMs: number
+): number {
   if (attempt <= 0) return 0
   const delay = baseDelayMs * Math.pow(2, attempt - 1)
   return Math.min(delay, maxDelayMs)
@@ -887,25 +900,29 @@ function isTransientNetworkErrorMessage(message: string): boolean {
   }
 
   // ✅ 临时网络错误 - 可重试
-  return normalized.includes('fetch failed')
-    || normalized.includes('network error')
-    || normalized.includes('socket hang up')
-    || normalized.includes('econnreset')
-    || normalized.includes('etimedout')
-    || normalized.includes('eai_again')
-    || normalized.includes('enotfound')
-    || normalized.includes('econnrefused')
-    || normalized.includes('und_err_connect_timeout')
-    || normalized.includes('bad gateway')
-    || normalized.includes('gateway timeout')
+  return (
+    normalized.includes('fetch failed') ||
+    normalized.includes('network error') ||
+    normalized.includes('socket hang up') ||
+    normalized.includes('econnreset') ||
+    normalized.includes('etimedout') ||
+    normalized.includes('eai_again') ||
+    normalized.includes('enotfound') ||
+    normalized.includes('econnrefused') ||
+    normalized.includes('und_err_connect_timeout') ||
+    normalized.includes('bad gateway') ||
+    normalized.includes('gateway timeout')
+  )
 }
 
 function isJsonParseErrorMessage(message: string): boolean {
   const normalized = message.toLowerCase()
-  return normalized.includes('unexpected end of json input')
-    || normalized.includes('is not valid json')
-    || normalized.includes('json parse')
-    || (normalized.includes('unexpected token') && normalized.includes('json'))
+  return (
+    normalized.includes('unexpected end of json input') ||
+    normalized.includes('is not valid json') ||
+    normalized.includes('json parse') ||
+    (normalized.includes('unexpected token') && normalized.includes('json'))
+  )
 }
 
 /**
@@ -947,13 +964,16 @@ function isProxyFatalError(error: unknown): boolean {
   return false
 }
 
-function isPartnerboostRateLimited(payloadStatusCode: number | null, payloadStatusMessage: string, responseStatus?: number): boolean {
+function isPartnerboostRateLimited(
+  payloadStatusCode: number | null,
+  payloadStatusMessage: string,
+  responseStatus?: number
+): boolean {
   if (responseStatus === 429) return true
   if (payloadStatusCode === 1002) return true
 
   const normalizedMessage = payloadStatusMessage.toLowerCase()
-  return normalizedMessage.includes('too many request')
-    || normalizedMessage.includes('rate limit')
+  return normalizedMessage.includes('too many request') || normalizedMessage.includes('rate limit')
 }
 
 function isPartnerboostRateLimitError(error: unknown): boolean {
@@ -974,8 +994,7 @@ function isPartnerboostRateLimitError(error: unknown): boolean {
   }
 
   const normalizedMessage = message.toLowerCase()
-  return normalizedMessage.includes('"code":1002')
-    || normalizedMessage.includes('code:1002')
+  return normalizedMessage.includes('"code":1002') || normalizedMessage.includes('code:1002')
 }
 
 function isPartnerboostTransientError(error: unknown): boolean {
@@ -1005,16 +1024,22 @@ function isPartnerboostTransientError(error: unknown): boolean {
 
 function isYeahPromosRequestTooFastMessage(message: string): boolean {
   const normalizedMessage = message.toLowerCase()
-  return normalizedMessage.includes('request too fast')
-    || normalizedMessage.includes('request too frequent')
-    || normalizedMessage.includes('please request later')
-    || normalizedMessage.includes('too frequent')
-    || normalizedMessage.includes('请求过于频繁')
-    || normalizedMessage.includes('请求太快')
-    || normalizedMessage.includes('请稍后再试')
+  return (
+    normalizedMessage.includes('request too fast') ||
+    normalizedMessage.includes('request too frequent') ||
+    normalizedMessage.includes('please request later') ||
+    normalizedMessage.includes('too frequent') ||
+    normalizedMessage.includes('请求过于频繁') ||
+    normalizedMessage.includes('请求太快') ||
+    normalizedMessage.includes('请稍后再试')
+  )
 }
 
-function isYeahPromosRateLimited(code: number | null, message: string, responseStatus?: number): boolean {
+function isYeahPromosRateLimited(
+  code: number | null,
+  message: string,
+  responseStatus?: number
+): boolean {
   if (responseStatus === 429) return true
 
   if (code !== null) {
@@ -1024,9 +1049,11 @@ function isYeahPromosRateLimited(code: number | null, message: string, responseS
   if (isYeahPromosRequestTooFastMessage(message)) return true
 
   const normalizedMessage = message.toLowerCase()
-  return normalizedMessage.includes('too many request')
-    || normalizedMessage.includes('rate limit')
-    || normalizedMessage.includes('too many requests')
+  return (
+    normalizedMessage.includes('too many request') ||
+    normalizedMessage.includes('rate limit') ||
+    normalizedMessage.includes('too many requests')
+  )
 }
 
 function isYeahPromosTransientError(error: unknown): boolean {
@@ -1094,7 +1121,9 @@ function parseCsvValues(value: string): string[] {
 }
 
 function normalizeAsin(value: unknown): string | null {
-  const normalized = String(value || '').trim().toUpperCase()
+  const normalized = String(value || '')
+    .trim()
+    .toUpperCase()
   return normalized || null
 }
 
@@ -1125,12 +1154,10 @@ export function resolvePartnerboostPromoLinks(input: {
   shortPromoLink: string | null
 } {
   const productIdLink = normalizeUrl(input.productIdLink)
-  const shortPromoLink = normalizeUrl(input.asinPartnerboostLink)
-    || (isPartnerboostShortLink(productIdLink) ? productIdLink : null)
-  const promoLink = shortPromoLink
-    || normalizeUrl(input.asinLink)
-    || productIdLink
-    || null
+  const shortPromoLink =
+    normalizeUrl(input.asinPartnerboostLink) ||
+    (isPartnerboostShortLink(productIdLink) ? productIdLink : null)
+  const promoLink = shortPromoLink || normalizeUrl(input.asinLink) || productIdLink || null
 
   return {
     promoLink,
@@ -1138,7 +1165,10 @@ export function resolvePartnerboostPromoLinks(input: {
   }
 }
 
-export function resolvePartnerboostCountryCode(value: unknown, fallback: unknown = DEFAULT_PB_COUNTRY_CODE): string {
+export function resolvePartnerboostCountryCode(
+  value: unknown,
+  fallback: unknown = DEFAULT_PB_COUNTRY_CODE
+): string {
   const primary = normalizeCountryCode(String(value || ''))
   if (primary) return primary
 
@@ -1204,18 +1234,21 @@ export function extractYeahPromosPayload(payload: YeahPromosResponse): {
   pageTotal: number | null
   pageNow: number | null
 } {
-  const nested = payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
-    ? payload.data as YeahPromosResponseData
-    : null
+  const nested =
+    payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
+      ? (payload.data as YeahPromosResponseData)
+      : null
 
   const merchants = normalizeYeahPromosMerchants(
-    payload.Data
-    ?? (Array.isArray(payload.data) ? payload.data : undefined)
-    ?? nested?.Data
-    ?? nested?.data
+    payload.Data ??
+      (Array.isArray(payload.data) ? payload.data : undefined) ??
+      nested?.Data ??
+      nested?.data
   )
 
-  const pageTotal = toNumber(payload.PageTotal ?? payload.pageTotal ?? nested?.PageTotal ?? nested?.pageTotal)
+  const pageTotal = toNumber(
+    payload.PageTotal ?? payload.pageTotal ?? nested?.PageTotal ?? nested?.pageTotal
+  )
   const pageNow = toNumber(payload.PageNow ?? payload.pageNow ?? nested?.PageNow ?? nested?.pageNow)
 
   return {
@@ -1230,18 +1263,21 @@ export function extractYeahPromosTransactionsPayload(payload: YeahPromosTransact
   pageTotal: number | null
   pageNow: number | null
 } {
-  const nested = payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
-    ? payload.data as YeahPromosTransactionsResponseData
-    : null
+  const nested =
+    payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
+      ? (payload.data as YeahPromosTransactionsResponseData)
+      : null
 
   const transactions = normalizeYeahPromosTransactions(
-    payload.Data
-    ?? (Array.isArray(payload.data) ? payload.data : undefined)
-    ?? nested?.Data
-    ?? nested?.data
+    payload.Data ??
+      (Array.isArray(payload.data) ? payload.data : undefined) ??
+      nested?.Data ??
+      nested?.data
   )
 
-  const pageTotal = toNumber(payload.PageTotal ?? payload.pageTotal ?? nested?.PageTotal ?? nested?.pageTotal)
+  const pageTotal = toNumber(
+    payload.PageTotal ?? payload.pageTotal ?? nested?.PageTotal ?? nested?.pageTotal
+  )
   const pageNow = toNumber(payload.PageNow ?? payload.pageNow ?? nested?.PageNow ?? nested?.pageNow)
 
   return {
@@ -1310,8 +1346,9 @@ function extractPartnerboostLinkId(value: unknown): string | null {
   for (const candidate of candidates) {
     try {
       const url = new URL(candidate)
-      const key = Array.from(url.searchParams.keys())
-        .find((item) => item.toLowerCase() === 'aa_adgroupid')
+      const key = Array.from(url.searchParams.keys()).find(
+        (item) => item.toLowerCase() === 'aa_adgroupid'
+      )
       if (key) {
         const value = normalizeUrl(url.searchParams.get(key))
         if (value) return value
@@ -1636,7 +1673,10 @@ function extractCurrencyUnitFromText(value: unknown): string | null {
   return null
 }
 
-function parsePartnerboostCommission(value: unknown, fallbackCurrency: string | null): {
+function parsePartnerboostCommission(
+  value: unknown,
+  fallbackCurrency: string | null
+): {
   mode: 'percent' | 'amount'
   rate: number | null
   amount: number | null
@@ -1679,7 +1719,10 @@ function parsePartnerboostCommission(value: unknown, fallbackCurrency: string | 
   }
 }
 
-export function parseYeahPromosMerchantCommission(avgPayout: unknown, payoutUnit: unknown): ParsedYeahPromosCommission {
+export function parseYeahPromosMerchantCommission(
+  avgPayout: unknown,
+  payoutUnit: unknown
+): ParsedYeahPromosCommission {
   const avgText = String(avgPayout || '').trim()
   const unitText = String(payoutUnit || '').trim()
 
@@ -1712,7 +1755,10 @@ function roundTo2(value: number): number {
   return Math.round(value * 100) / 100
 }
 
-function computeCommissionAmount(priceAmount: number | null, commissionRate: number | null): number | null {
+function computeCommissionAmount(
+  priceAmount: number | null,
+  commissionRate: number | null
+): number | null {
   if (priceAmount === null || commissionRate === null) return null
   return roundTo2(priceAmount * (commissionRate / 100))
 }
@@ -1797,7 +1843,9 @@ function resolveProxyCountryCandidates(country: string): string[] {
 }
 
 function normalizeYeahPromosMarketplace(value: unknown): string | null {
-  const text = String(value || '').trim().toLowerCase()
+  const text = String(value || '')
+    .trim()
+    .toLowerCase()
   if (!text) return null
   if (!text.startsWith('amazon.')) return null
   return text
@@ -1808,17 +1856,12 @@ function resolveYeahPromosMarketplaceCountry(marketplace: string | null): string
   return YP_MARKETPLACE_COUNTRY_MAP[marketplace] || null
 }
 
-function normalizeYeahPromosMarketplaceTemplateEntry(value: unknown): YeahPromosMarketplaceTemplate | null {
+function normalizeYeahPromosMarketplaceTemplateEntry(
+  value: unknown
+): YeahPromosMarketplaceTemplate | null {
   if (!value || typeof value !== 'object') return null
   const record = value as Record<string, unknown>
-  const rawUrl = normalizeUrl(
-    String(
-      record.url
-      ?? record.template_url
-      ?? record.templateUrl
-      ?? ''
-    )
-  )
+  const rawUrl = normalizeUrl(String(record.url ?? record.template_url ?? record.templateUrl ?? ''))
   if (!rawUrl) return null
 
   let parsedUrl: URL
@@ -1832,32 +1875,30 @@ function normalizeYeahPromosMarketplaceTemplateEntry(value: unknown): YeahPromos
   if (!/yeahpromos\.com$/i.test(parsedUrl.hostname)) return null
   if (parsedUrl.pathname !== '/index/offer/products') return null
 
-  const marketplaceFromUrl = normalizeYeahPromosMarketplace(parsedUrl.searchParams.get('market_place') || '')
+  const marketplaceFromUrl = normalizeYeahPromosMarketplace(
+    parsedUrl.searchParams.get('market_place') || ''
+  )
   const marketplace = normalizeYeahPromosMarketplace(
-    record.marketplace
-    ?? record.market_place
-    ?? record.marketPlace
-    ?? marketplaceFromUrl
-    ?? ''
+    record.marketplace ?? record.market_place ?? record.marketPlace ?? marketplaceFromUrl ?? ''
   )
   if (!marketplace) return null
 
-  const country = normalizeProxyCountryCode(String(
-    record.country
-    ?? record.country_code
-    ?? record.countryCode
-    ?? resolveYeahPromosMarketplaceCountry(marketplace)
-    ?? ''
-  ))
+  const country = normalizeProxyCountryCode(
+    String(
+      record.country ??
+        record.country_code ??
+        record.countryCode ??
+        resolveYeahPromosMarketplaceCountry(marketplace) ??
+        ''
+    )
+  )
   if (!country) return null
 
   if (!parsedUrl.searchParams.has('page')) {
     parsedUrl.searchParams.set('page', '1')
   }
 
-  const scope = normalizeYeahPromosMarketplace(
-    String(record.scope ?? marketplace)
-  ) || marketplace
+  const scope = normalizeYeahPromosMarketplace(String(record.scope ?? marketplace)) || marketplace
 
   return {
     scope,
@@ -1876,8 +1917,8 @@ function buildYeahPromosDeltaScopePlan(params: {
   activeScopes: string[]
   maxPages: number
 }): YeahPromosDeltaScopePlan {
-  const orderedTemplates = params.templates.filter((template, index, arr) =>
-    arr.findIndex((item) => item.scope === template.scope) === index
+  const orderedTemplates = params.templates.filter(
+    (template, index, arr) => arr.findIndex((item) => item.scope === template.scope) === index
   )
   if (orderedTemplates.length === 0) {
     return {
@@ -1887,7 +1928,9 @@ function buildYeahPromosDeltaScopePlan(params: {
   }
 
   const normalizedMaxPages = Math.max(1, Math.trunc(params.maxPages))
-  const templateByScope = new Map(orderedTemplates.map((template) => [template.scope, template] as const))
+  const templateByScope = new Map(
+    orderedTemplates.map((template) => [template.scope, template] as const)
+  )
   const normalizedActiveScopes = params.activeScopes
     .map((scope) => normalizeYeahPromosMarketplace(scope))
     .filter((scope): scope is string => Boolean(scope))
@@ -1895,11 +1938,16 @@ function buildYeahPromosDeltaScopePlan(params: {
     .map((scope) => templateByScope.get(scope) || null)
     .filter((template): template is YeahPromosMarketplaceTemplate => Boolean(template))
   const priorityScopeSet = new Set(priorityTemplates.map((template) => template.scope))
-  const fallbackTemplates = orderedTemplates.filter((template) => !priorityScopeSet.has(template.scope))
+  const fallbackTemplates = orderedTemplates.filter(
+    (template) => !priorityScopeSet.has(template.scope)
+  )
   const scopeBudgets = new Map<string, number>()
   let remainingPages = normalizedMaxPages
 
-  const allocatePages = (templates: YeahPromosMarketplaceTemplate[], maxPagesPerScope: number): void => {
+  const allocatePages = (
+    templates: YeahPromosMarketplaceTemplate[],
+    maxPagesPerScope: number
+  ): void => {
     if (templates.length === 0 || remainingPages <= 0) return
 
     let madeProgress = true
@@ -1927,7 +1975,9 @@ function buildYeahPromosDeltaScopePlan(params: {
   const allTemplates = [...priorityTemplates, ...fallbackTemplates]
   allocatePages(allTemplates, Number.MAX_SAFE_INTEGER)
 
-  const plannedTemplates = allTemplates.filter((template) => (scopeBudgets.get(template.scope) || 0) > 0)
+  const plannedTemplates = allTemplates.filter(
+    (template) => (scopeBudgets.get(template.scope) || 0) > 0
+  )
 
   return {
     templates: plannedTemplates,
@@ -1935,7 +1985,9 @@ function buildYeahPromosDeltaScopePlan(params: {
   }
 }
 
-function resolveYeahPromosMarketplaceTemplates(rawValue: string | null | undefined): YeahPromosMarketplaceTemplate[] {
+function resolveYeahPromosMarketplaceTemplates(
+  rawValue: string | null | undefined
+): YeahPromosMarketplaceTemplate[] {
   const raw = String(rawValue || '').trim()
   if (!raw) return cloneDefaultYeahPromosMarketplaceTemplates()
 
@@ -1955,9 +2007,7 @@ function resolveYeahPromosMarketplaceTemplates(rawValue: string | null | undefin
       items.push(normalized)
     }
 
-    return items.length > 0
-      ? items
-      : cloneDefaultYeahPromosMarketplaceTemplates()
+    return items.length > 0 ? items : cloneDefaultYeahPromosMarketplaceTemplates()
   } catch {
     return cloneDefaultYeahPromosMarketplaceTemplates()
   }
@@ -1992,7 +2042,9 @@ function applyYeahPromosTemplateSiteId(
   })
 }
 
-function parseYeahPromosProxyCountryUrlMap(rawValue: string | null | undefined): Map<string, string> {
+function parseYeahPromosProxyCountryUrlMap(
+  rawValue: string | null | undefined
+): Map<string, string> {
   const map = new Map<string, string>()
   const raw = String(rawValue || '').trim()
   if (!raw) return map
@@ -2016,7 +2068,10 @@ function parseYeahPromosProxyCountryUrlMap(rawValue: string | null | undefined):
   return map
 }
 
-function resolveYeahPromosProxyProviderUrl(countryProxyMap: Map<string, string>, country: string): string | null {
+function resolveYeahPromosProxyProviderUrl(
+  countryProxyMap: Map<string, string>,
+  country: string
+): string | null {
   const candidates = resolveProxyCountryCandidates(country)
   for (const candidate of candidates) {
     const matched = normalizeUrl(countryProxyMap.get(candidate) || '')
@@ -2025,10 +2080,10 @@ function resolveYeahPromosProxyProviderUrl(countryProxyMap: Map<string, string>,
   return null
 }
 
-function detectYeahPromosHttpIntercept(input: {
-  status: number
-  html: string
-}): { blocked: boolean; reason: string | null } {
+function detectYeahPromosHttpIntercept(input: { status: number; html: string }): {
+  blocked: boolean
+  reason: string | null
+} {
   const status = Number(input.status)
   const rawHtml = String(input.html || '')
   const html = rawHtml.toLowerCase()
@@ -2073,15 +2128,21 @@ function parseAllowedCountries(value: string | null | undefined): string[] {
 }
 
 function normalizePlatformValue(value: unknown): AffiliatePlatform | null {
-  const raw = String(value || '').trim().toLowerCase()
+  const raw = String(value || '')
+    .trim()
+    .toLowerCase()
   if (!raw) return null
   if (raw === 'yp' || raw === 'yeahpromos') return 'yeahpromos'
   if (raw === 'pb' || raw === 'partnerboost') return 'partnerboost'
   return null
 }
 
-export function normalizeAffiliateProductStatusFilter(value: unknown): AffiliateProductStatusFilter {
-  const raw = String(value || '').trim().toLowerCase()
+export function normalizeAffiliateProductStatusFilter(
+  value: unknown
+): AffiliateProductStatusFilter {
+  const raw = String(value || '')
+    .trim()
+    .toLowerCase()
   if (raw === 'active' || raw === 'invalid' || raw === 'sync_missing' || raw === 'unknown') {
     return raw
   }
@@ -2091,13 +2152,15 @@ export function normalizeAffiliateProductStatusFilter(value: unknown): Affiliate
 export function normalizeAffiliateLandingPageTypeFilter(
   value: unknown
 ): AffiliateLandingPageType | 'all' {
-  const raw = String(value || '').trim().toLowerCase()
+  const raw = String(value || '')
+    .trim()
+    .toLowerCase()
   if (
-    raw === 'amazon_product'
-    || raw === 'amazon_store'
-    || raw === 'independent_product'
-    || raw === 'independent_store'
-    || raw === 'unknown'
+    raw === 'amazon_product' ||
+    raw === 'amazon_store' ||
+    raw === 'independent_product' ||
+    raw === 'independent_store' ||
+    raw === 'unknown'
   ) {
     return raw
   }
@@ -2105,7 +2168,12 @@ export function normalizeAffiliateLandingPageTypeFilter(
 }
 
 function resolveAffiliateProductLifecycleStatus(value: unknown): AffiliateProductLifecycleStatus {
-  if (value === 'active' || value === 'invalid' || value === 'sync_missing' || value === 'unknown') {
+  if (
+    value === 'active' ||
+    value === 'invalid' ||
+    value === 'sync_missing' ||
+    value === 'unknown'
+  ) {
     return value
   }
   return 'unknown'
@@ -2124,7 +2192,9 @@ function normalizeTriStateBool(value: unknown): boolean | null {
 }
 
 function normalizeCommissionRateMode(value: unknown): AffiliateCommissionRateMode | null {
-  const raw = String(value || '').trim().toLowerCase()
+  const raw = String(value || '')
+    .trim()
+    .toLowerCase()
   if (!raw) return null
   if (raw === 'amount') return 'amount'
   if (raw === 'rate' || raw === 'percent' || raw === 'percentage') return 'percent'
@@ -2189,7 +2259,9 @@ function resolveConfirmedInvalidFromSignals(input: {
     return true
   }
 
-  const joinStatusText = String(input.joinStatus || '').trim().toLowerCase()
+  const joinStatusText = String(input.joinStatus || '')
+    .trim()
+    .toLowerCase()
   if (joinStatusText) {
     if (CONFIRMED_INVALID_STATUS_KEYWORDS.some((keyword) => joinStatusText.includes(keyword))) {
       return true
@@ -2240,9 +2312,9 @@ export function detectAffiliateLandingPageType(params: {
 
   if (isAmazonDomain) {
     if (
-      pathname.includes('/stores/')
-      || pathname.includes('/store/')
-      || pathname.includes('/storefront/')
+      pathname.includes('/stores/') ||
+      pathname.includes('/store/') ||
+      pathname.includes('/storefront/')
     ) {
       return 'amazon_store'
     }
@@ -2253,21 +2325,21 @@ export function detectAffiliateLandingPageType(params: {
   }
 
   const isIndependentProduct =
-    pathname.includes('/products/')
-    || pathname.includes('/product/')
-    || pathname.includes('/p/')
-    || pathname.includes('/item/')
+    pathname.includes('/products/') ||
+    pathname.includes('/product/') ||
+    pathname.includes('/p/') ||
+    pathname.includes('/item/')
 
   if (isIndependentProduct) {
     return 'independent_product'
   }
 
   const isIndependentStore =
-    pathname === '/'
-    || pathname === ''
-    || pathname.includes('/collections')
-    || pathname.includes('/shop')
-    || pathname.includes('/store')
+    pathname === '/' ||
+    pathname === '' ||
+    pathname.includes('/collections') ||
+    pathname.includes('/shop') ||
+    pathname.includes('/store')
 
   if (isIndependentStore) {
     return 'independent_store'
@@ -2324,11 +2396,13 @@ async function fetchPartnerboostShortPromoLinksByAsins(params: {
   targetCountry: string
 }): Promise<Map<string, string>> {
   const shortLinkByAsin = new Map<string, string>()
-  const normalizedAsins = Array.from(new Set(
-    (params.asins || [])
-      .map((asin) => normalizeAsin(asin))
-      .filter((asin): asin is string => Boolean(asin))
-  ))
+  const normalizedAsins = Array.from(
+    new Set(
+      (params.asins || [])
+        .map((asin) => normalizeAsin(asin))
+        .filter((asin): asin is string => Boolean(asin))
+    )
+  )
   if (normalizedAsins.length === 0) return shortLinkByAsin
 
   const check = await checkAffiliatePlatformConfig(params.userId, 'partnerboost')
@@ -2338,9 +2412,15 @@ async function fetchPartnerboostShortPromoLinksByAsins(params: {
   if (!token) return shortLinkByAsin
 
   const baseUrl = (check.values.partnerboost_base_url || DEFAULT_PB_BASE_URL).replace(/\/+$/, '')
-  const linkCountryCode = resolvePartnerboostCountryCode(check.values.partnerboost_link_country_code, params.targetCountry)
+  const linkCountryCode = resolvePartnerboostCountryCode(
+    check.values.partnerboost_link_country_code,
+    params.targetCountry
+  )
   const uid = check.values.partnerboost_link_uid || ''
-  const returnPartnerboostLink = parseInteger(check.values.partnerboost_link_return_partnerboost_link || '1', 1)
+  const returnPartnerboostLink = parseInteger(
+    check.values.partnerboost_link_return_partnerboost_link || '1',
+    1
+  )
   const rateLimitRetryOptions: PartnerboostRequestRateLimitOptions = {
     maxRetries: parseIntegerInRange(
       check.values.partnerboost_rate_limit_max_retries || String(DEFAULT_PB_RATE_LIMIT_MAX_RETRIES),
@@ -2349,13 +2429,15 @@ async function fetchPartnerboostShortPromoLinksByAsins(params: {
       10
     ),
     baseDelayMs: parseIntegerInRange(
-      check.values.partnerboost_rate_limit_base_delay_ms || String(DEFAULT_PB_RATE_LIMIT_BASE_DELAY_MS),
+      check.values.partnerboost_rate_limit_base_delay_ms ||
+        String(DEFAULT_PB_RATE_LIMIT_BASE_DELAY_MS),
       DEFAULT_PB_RATE_LIMIT_BASE_DELAY_MS,
       100,
       60000
     ),
     maxDelayMs: parseIntegerInRange(
-      check.values.partnerboost_rate_limit_max_delay_ms || String(DEFAULT_PB_RATE_LIMIT_MAX_DELAY_MS),
+      check.values.partnerboost_rate_limit_max_delay_ms ||
+        String(DEFAULT_PB_RATE_LIMIT_MAX_DELAY_MS),
       DEFAULT_PB_RATE_LIMIT_MAX_DELAY_MS,
       500,
       120000
@@ -2383,7 +2465,9 @@ async function fetchPartnerboostShortPromoLinksByAsins(params: {
 
     const statusCode = normalizePartnerboostStatusCode(payload.status?.code)
     if (statusCode === null) {
-      throw new Error(`PartnerBoost ASIN推广链接拉取失败: Invalid status code ${String(payload.status?.code)}`)
+      throw new Error(
+        `PartnerBoost ASIN推广链接拉取失败: Invalid status code ${String(payload.status?.code)}`
+      )
     }
     if (statusCode !== 0) {
       throw new Error(`PartnerBoost ASIN推广链接拉取失败: ${payload.status?.msg || statusCode}`)
@@ -2463,7 +2547,8 @@ async function hydratePartnerboostShortLinksForRows(params: {
   for (const row of candidates) {
     const asin = normalizeAsin(row.asin)
     if (!asin) continue
-    const preferredCountry = parseAllowedCountries(row.allowed_countries_json)[0] || DEFAULT_PB_COUNTRY_CODE
+    const preferredCountry =
+      parseAllowedCountries(row.allowed_countries_json)[0] || DEFAULT_PB_COUNTRY_CODE
     const country = resolvePartnerboostCountryCode(preferredCountry, DEFAULT_PB_COUNTRY_CODE)
     if (!countryAsinsMap.has(country)) {
       countryAsinsMap.set(country, new Set<string>())
@@ -2528,7 +2613,10 @@ function formatCommissionForOffer(product: AffiliateProduct): string | undefined
   return `${roundTo2(product.commission_rate)}%`
 }
 
-async function getUserScopedSettingMap(userId: number, keys: string[]): Promise<Record<string, string>> {
+async function getUserScopedSettingMap(
+  userId: number,
+  keys: string[]
+): Promise<Record<string, string>> {
   const values = await Promise.all(
     keys.map(async (key) => {
       const category = resolveAffiliateSettingCategory(key)
@@ -2594,45 +2682,49 @@ async function upsertUserSystemSetting(params: {
   )
 }
 
-export async function checkAffiliatePlatformConfig(userId: number, platform: AffiliatePlatform): Promise<PlatformConfigCheck> {
+export async function checkAffiliatePlatformConfig(
+  userId: number,
+  platform: AffiliatePlatform
+): Promise<PlatformConfigCheck> {
   const requiredKeys = PLATFORM_KEY_REQUIREMENTS[platform]
-  const optionalKeys = platform === 'partnerboost'
-    ? [
-        'partnerboost_base_url',
-        'partnerboost_products_page_size',
-        'partnerboost_products_page',
-        'partnerboost_products_default_filter',
-        'partnerboost_products_country_code',
-        'partnerboost_products_brand_id',
-        'partnerboost_products_sort',
-        'partnerboost_products_asins',
-        'partnerboost_products_relationship',
-        'partnerboost_products_is_original_currency',
-        'partnerboost_products_has_promo_code',
-        'partnerboost_products_has_acc',
-        'partnerboost_products_filter_sexual_wellness',
-        'partnerboost_products_link_batch_size',
-        'partnerboost_asin_link_batch_size',
-        'partnerboost_request_delay_ms',
-        'partnerboost_rate_limit_max_retries',
-        'partnerboost_rate_limit_base_delay_ms',
-        'partnerboost_rate_limit_max_delay_ms',
-        'partnerboost_link_country_code',
-        'partnerboost_link_uid',
-        'partnerboost_link_return_partnerboost_link',
-      ]
-    : [
-        'yeahpromos_start_date',
-        'yeahpromos_end_date',
-        'yeahpromos_is_amazon',
-        'yeahpromos_page',
-        'yeahpromos_limit',
-        'yeahpromos_request_delay_ms',
-        'yeahpromos_rate_limit_max_retries',
-        'yeahpromos_rate_limit_base_delay_ms',
-        'yeahpromos_rate_limit_max_delay_ms',
-        'yeahpromos_marketplace_templates_json',
-      ]
+  const optionalKeys =
+    platform === 'partnerboost'
+      ? [
+          'partnerboost_base_url',
+          'partnerboost_products_page_size',
+          'partnerboost_products_page',
+          'partnerboost_products_default_filter',
+          'partnerboost_products_country_code',
+          'partnerboost_products_brand_id',
+          'partnerboost_products_sort',
+          'partnerboost_products_asins',
+          'partnerboost_products_relationship',
+          'partnerboost_products_is_original_currency',
+          'partnerboost_products_has_promo_code',
+          'partnerboost_products_has_acc',
+          'partnerboost_products_filter_sexual_wellness',
+          'partnerboost_products_link_batch_size',
+          'partnerboost_asin_link_batch_size',
+          'partnerboost_request_delay_ms',
+          'partnerboost_rate_limit_max_retries',
+          'partnerboost_rate_limit_base_delay_ms',
+          'partnerboost_rate_limit_max_delay_ms',
+          'partnerboost_link_country_code',
+          'partnerboost_link_uid',
+          'partnerboost_link_return_partnerboost_link',
+        ]
+      : [
+          'yeahpromos_start_date',
+          'yeahpromos_end_date',
+          'yeahpromos_is_amazon',
+          'yeahpromos_page',
+          'yeahpromos_limit',
+          'yeahpromos_request_delay_ms',
+          'yeahpromos_rate_limit_max_retries',
+          'yeahpromos_rate_limit_base_delay_ms',
+          'yeahpromos_rate_limit_max_delay_ms',
+          'yeahpromos_marketplace_templates_json',
+        ]
 
   const values = await getUserScopedSettingMap(userId, [...requiredKeys, ...optionalKeys])
   const missingKeys = requiredKeys.filter((key) => !values[key])
@@ -2649,7 +2741,11 @@ function ensurePlatformConfigured(check: PlatformConfigCheck, platform: Affiliat
   throw new ConfigRequiredError(platform, check.missingKeys)
 }
 
-async function fetchJsonOrThrow<T>(url: string, init: RequestInit, errorPrefix: string): Promise<T> {
+async function fetchJsonOrThrow<T>(
+  url: string,
+  init: RequestInit,
+  errorPrefix: string
+): Promise<T> {
   const response = await fetch(url, init)
   const text = await response.text().catch(() => '')
   const snippet = text.replace(/\s+/g, ' ').trim().slice(0, 220)
@@ -2691,7 +2787,9 @@ type YeahPromosRequestRateLimitOptions = {
   maxDelayMs: number
 }
 
-async function fetchPartnerboostJsonWithRateLimitRetry<T extends { status?: { code?: number | string; msg?: string } }>(
+async function fetchPartnerboostJsonWithRateLimitRetry<
+  T extends { status?: { code?: number | string; msg?: string } },
+>(
   url: string,
   init: RequestInit,
   errorPrefix: string,
@@ -2706,12 +2804,18 @@ async function fetchPartnerboostJsonWithRateLimitRetry<T extends { status?: { co
       const payloadStatusMessage = String(payload?.status?.msg || '')
 
       if (
-        isPartnerboostRateLimited(payloadStatusCode, payloadStatusMessage, responseStatus)
-        && attempt < options.maxRetries
+        isPartnerboostRateLimited(payloadStatusCode, payloadStatusMessage, responseStatus) &&
+        attempt < options.maxRetries
       ) {
         attempt += 1
-        const delayMs = calculateExponentialBackoffDelay(attempt, options.baseDelayMs, options.maxDelayMs)
-        console.warn(`[partnerboost] rate limited(${errorPrefix}), retry ${attempt}/${options.maxRetries} after ${delayMs}ms`)
+        const delayMs = calculateExponentialBackoffDelay(
+          attempt,
+          options.baseDelayMs,
+          options.maxDelayMs
+        )
+        console.warn(
+          `[partnerboost] rate limited(${errorPrefix}), retry ${attempt}/${options.maxRetries} after ${delayMs}ms`
+        )
         await sleep(delayMs)
         continue
       }
@@ -2729,14 +2833,24 @@ async function fetchPartnerboostJsonWithRateLimitRetry<T extends { status?: { co
         throw error
       }
 
-      const isRateLimited = isPartnerboostRateLimited(payloadStatusCode, payloadStatusMessage, responseStatus)
+      const isRateLimited = isPartnerboostRateLimited(
+        payloadStatusCode,
+        payloadStatusMessage,
+        responseStatus
+      )
       const isTransient = !isRateLimited && isPartnerboostTransientError(error)
 
       if ((isRateLimited || isTransient) && attempt < options.maxRetries) {
         attempt += 1
-        const delayMs = calculateExponentialBackoffDelay(attempt, options.baseDelayMs, options.maxDelayMs)
+        const delayMs = calculateExponentialBackoffDelay(
+          attempt,
+          options.baseDelayMs,
+          options.maxDelayMs
+        )
         const retryReason = isRateLimited ? 'rate limited' : 'transient error'
-        console.warn(`[partnerboost] ${retryReason}(${errorPrefix}), retry ${attempt}/${options.maxRetries} after ${delayMs}ms`)
+        console.warn(
+          `[partnerboost] ${retryReason}(${errorPrefix}), retry ${attempt}/${options.maxRetries} after ${delayMs}ms`
+        )
         await sleep(delayMs)
         continue
       }
@@ -2781,7 +2895,9 @@ async function fetchPartnerboostDtcPromotableProductsWithMeta(input: {
 
     const statusCode = normalizePartnerboostStatusCode(payload.status?.code)
     if (statusCode === null) {
-      throw new Error(`PartnerBoost DTC 商品拉取失败: Invalid status code ${String(payload.status?.code)}`)
+      throw new Error(
+        `PartnerBoost DTC 商品拉取失败: Invalid status code ${String(payload.status?.code)}`
+      )
     }
     if (statusCode !== 0) {
       throw new Error(`PartnerBoost DTC 商品拉取失败: ${payload.status?.msg || statusCode}`)
@@ -2797,9 +2913,10 @@ async function fetchPartnerboostDtcPromotableProductsWithMeta(input: {
 
     for (const product of extracted.products) {
       const shortPromoLink = normalizeUrl(product.tracking_url_short)
-      const promoLink = shortPromoLink
-        || normalizeUrl(product.tracking_url_smart)
-        || normalizeUrl(product.tracking_url)
+      const promoLink =
+        shortPromoLink ||
+        normalizeUrl(product.tracking_url_smart) ||
+        normalizeUrl(product.tracking_url)
       if (!promoLink) continue
 
       const mid = normalizeUrl(
@@ -2856,12 +2973,14 @@ async function fetchPartnerboostDtcPromotableProductsWithMeta(input: {
   }
 }
 
-async function fetchYeahPromosJsonWithRateLimitRetry<T extends {
-  Code?: number | string
-  code?: number | string
-  message?: string
-  msg?: string
-}>(
+async function fetchYeahPromosJsonWithRateLimitRetry<
+  T extends {
+    Code?: number | string
+    code?: number | string
+    message?: string
+    msg?: string
+  },
+>(
   url: string,
   init: RequestInit,
   errorPrefix: string,
@@ -2893,7 +3012,9 @@ async function fetchYeahPromosJsonWithRateLimitRetry<T extends {
       if (isYeahPromosRateLimited(code, message, responseStatus) && attempt < options.maxRetries) {
         attempt += 1
         const delayMs = resolveRetryDelayMs(attempt, message)
-        console.warn(`[yeahpromos] rate limited(${errorPrefix}), retry ${attempt}/${options.maxRetries} after ${delayMs}ms`)
+        console.warn(
+          `[yeahpromos] rate limited(${errorPrefix}), retry ${attempt}/${options.maxRetries} after ${delayMs}ms`
+        )
         await sleep(delayMs)
         continue
       }
@@ -2917,7 +3038,9 @@ async function fetchYeahPromosJsonWithRateLimitRetry<T extends {
         attempt += 1
         const delayMs = resolveRetryDelayMs(attempt, message)
         const retryReason = isRateLimited ? 'rate limited' : 'transient error'
-        console.warn(`[yeahpromos] ${retryReason}(${errorPrefix}), retry ${attempt}/${options.maxRetries} after ${delayMs}ms`)
+        console.warn(
+          `[yeahpromos] ${retryReason}(${errorPrefix}), retry ${attempt}/${options.maxRetries} after ${delayMs}ms`
+        )
         await sleep(delayMs)
         continue
       }
@@ -2935,11 +3058,20 @@ async function fetchPartnerboostPromotableProductsWithMeta(
 
   const token = check.values.partnerboost_token
   const baseUrl = (check.values.partnerboost_base_url || DEFAULT_PB_BASE_URL).replace(/\/+$/, '')
-  const pageSize = Math.max(1, Math.min(
-    parseInteger(check.values.partnerboost_products_page_size || String(DEFAULT_PB_PRODUCTS_PAGE_SIZE), DEFAULT_PB_PRODUCTS_PAGE_SIZE),
-    200
-  ))
-  const configuredStartPage = Math.max(1, parseInteger(check.values.partnerboost_products_page || '1', 1))
+  const pageSize = Math.max(
+    1,
+    Math.min(
+      parseInteger(
+        check.values.partnerboost_products_page_size || String(DEFAULT_PB_PRODUCTS_PAGE_SIZE),
+        DEFAULT_PB_PRODUCTS_PAGE_SIZE
+      ),
+      200
+    )
+  )
+  const configuredStartPage = Math.max(
+    1,
+    parseInteger(check.values.partnerboost_products_page || '1', 1)
+  )
   const startPage = Math.max(1, parseInteger(params.startPage, configuredStartPage))
   const defaultFilter = parseInteger(check.values.partnerboost_products_default_filter || '0', 0)
   const countryCode = resolvePartnerboostCountryCode(
@@ -2949,12 +3081,19 @@ async function fetchPartnerboostPromotableProductsWithMeta(
   const brandId = (check.values.partnerboost_products_brand_id || '').trim() || null
   const sort = check.values.partnerboost_products_sort || ''
   const relationship = parseInteger(check.values.partnerboost_products_relationship || '1', 1)
-  const isOriginalCurrency = parseInteger(check.values.partnerboost_products_is_original_currency || '0', 0)
+  const isOriginalCurrency = parseInteger(
+    check.values.partnerboost_products_is_original_currency || '0',
+    0
+  )
   const hasPromoCode = parseInteger(check.values.partnerboost_products_has_promo_code || '0', 0)
   const hasAcc = parseInteger(check.values.partnerboost_products_has_acc || '0', 0)
-  const filterSexual = parseInteger(check.values.partnerboost_products_filter_sexual_wellness || '0', 0)
+  const filterSexual = parseInteger(
+    check.values.partnerboost_products_filter_sexual_wellness || '0',
+    0
+  )
   const productLinkBatchSize = parseIntegerInRange(
-    check.values.partnerboost_products_link_batch_size || String(DEFAULT_PB_PRODUCTS_LINK_BATCH_SIZE),
+    check.values.partnerboost_products_link_batch_size ||
+      String(DEFAULT_PB_PRODUCTS_LINK_BATCH_SIZE),
     DEFAULT_PB_PRODUCTS_LINK_BATCH_SIZE,
     1,
     MAX_PB_PRODUCTS_LINK_BATCH_SIZE
@@ -2979,13 +3118,15 @@ async function fetchPartnerboostPromotableProductsWithMeta(
       10
     ),
     baseDelayMs: parseIntegerInRange(
-      check.values.partnerboost_rate_limit_base_delay_ms || String(DEFAULT_PB_RATE_LIMIT_BASE_DELAY_MS),
+      check.values.partnerboost_rate_limit_base_delay_ms ||
+        String(DEFAULT_PB_RATE_LIMIT_BASE_DELAY_MS),
       DEFAULT_PB_RATE_LIMIT_BASE_DELAY_MS,
       100,
       60000
     ),
     maxDelayMs: parseIntegerInRange(
-      check.values.partnerboost_rate_limit_max_delay_ms || String(DEFAULT_PB_RATE_LIMIT_MAX_DELAY_MS),
+      check.values.partnerboost_rate_limit_max_delay_ms ||
+        String(DEFAULT_PB_RATE_LIMIT_MAX_DELAY_MS),
       DEFAULT_PB_RATE_LIMIT_MAX_DELAY_MS,
       500,
       120000
@@ -3001,7 +3142,10 @@ async function fetchPartnerboostPromotableProductsWithMeta(
     countryCode
   )
   const uid = check.values.partnerboost_link_uid || ''
-  const returnPartnerboostLink = parseInteger(check.values.partnerboost_link_return_partnerboost_link || '1', 1)
+  const returnPartnerboostLink = parseInteger(
+    check.values.partnerboost_link_return_partnerboost_link || '1',
+    1
+  )
   const isAsinTargetedSync = allAsins.length > 0
   const defaultMaxPages = isAsinTargetedSync ? 1 : null
   const maxPages = resolveSyncMaxPages(params.maxPages, defaultMaxPages, MAX_PB_SYNC_MAX_PAGES)
@@ -3054,7 +3198,9 @@ async function fetchPartnerboostPromotableProductsWithMeta(
 
     const statusCode = normalizePartnerboostStatusCode(payload.status?.code)
     if (statusCode === null) {
-      throw new Error(`PartnerBoost 商品拉取失败: Invalid status code ${String(payload.status?.code)}`)
+      throw new Error(
+        `PartnerBoost 商品拉取失败: Invalid status code ${String(payload.status?.code)}`
+      )
     }
     if (statusCode !== 0) {
       throw new Error(`PartnerBoost 商品拉取失败: ${payload.status?.msg || statusCode}`)
@@ -3097,20 +3243,20 @@ async function fetchPartnerboostPromotableProductsWithMeta(
   }
 
   if (
-    !isAsinTargetedSync
-    && maxPages !== null
-    && hasMore
-    && fetchedPages >= maxPages
-    && !params.suppressMaxPagesWarning
+    !isAsinTargetedSync &&
+    maxPages !== null &&
+    hasMore &&
+    fetchedPages >= maxPages &&
+    !params.suppressMaxPagesWarning
   ) {
-    console.warn(`[partnerboost] reached page limit (${maxPages}) while has_more=true; results may be truncated`)
+    console.warn(
+      `[partnerboost] reached page limit (${maxPages}) while has_more=true; results may be truncated`
+    )
   }
 
   await emitFetchProgress(true)
 
-  const productIds = products
-    .map((item) => String(item.product_id || '').trim())
-    .filter(Boolean)
+  const productIds = products.map((item) => String(item.product_id || '').trim()).filter(Boolean)
 
   const linkMap = new Map<string, string>()
   let rateLimitedProductLinkBatchCount = 0
@@ -3135,7 +3281,9 @@ async function fetchPartnerboostPromotableProductsWithMeta(
 
       const statusCode = normalizePartnerboostStatusCode(payload.status?.code)
       if (statusCode === null) {
-        throw new Error(`PartnerBoost 推广链接拉取失败: Invalid status code ${String(payload.status?.code)}`)
+        throw new Error(
+          `PartnerBoost 推广链接拉取失败: Invalid status code ${String(payload.status?.code)}`
+        )
       }
       if (statusCode !== 0) {
         throw new Error(`PartnerBoost 推广链接拉取失败: ${payload.status?.msg || statusCode}`)
@@ -3160,10 +3308,7 @@ async function fetchPartnerboostPromotableProductsWithMeta(
 
     const hasRemaining = index + productLinkBatchSize < productIds.length
     productLinkBatchProcessed += 1
-    if (
-      productLinkBatchProcessed % PB_LINK_HEARTBEAT_EVERY_BATCHES === 0
-      || !hasRemaining
-    ) {
+    if (productLinkBatchProcessed % PB_LINK_HEARTBEAT_EVERY_BATCHES === 0 || !hasRemaining) {
       await emitFetchProgress(true)
     }
 
@@ -3175,15 +3320,17 @@ async function fetchPartnerboostPromotableProductsWithMeta(
   const asinLinkMap = new Map<string, { link: string | null; partnerboostLink: string | null }>()
   // 优先使用 product_id 链接；仅对缺失 product_id 链接的商品补查 ASIN 链接，
   // 可显著减少 API 请求量并降低触发 429 的概率。
-  const linkLookupAsins = Array.from(new Set(
-    products
-      .filter((item) => {
-        const productId = String(item.product_id || '').trim()
-        return !productId || !linkMap.has(productId)
-      })
-      .map((item) => normalizeAsin(item.asin))
-      .filter((asin): asin is string => Boolean(asin))
-  ))
+  const linkLookupAsins = Array.from(
+    new Set(
+      products
+        .filter((item) => {
+          const productId = String(item.product_id || '').trim()
+          return !productId || !linkMap.has(productId)
+        })
+        .map((item) => normalizeAsin(item.asin))
+        .filter((asin): asin is string => Boolean(asin))
+    )
+  )
   let asinLinkBatchProcessed = 0
   for (let index = 0; index < linkLookupAsins.length; index += asinLinkBatchSize) {
     const batchAsins = linkLookupAsins.slice(index, index + asinLinkBatchSize)
@@ -3207,7 +3354,9 @@ async function fetchPartnerboostPromotableProductsWithMeta(
 
       const statusCode = normalizePartnerboostStatusCode(payload.status?.code)
       if (statusCode === null) {
-        throw new Error(`PartnerBoost ASIN推广链接拉取失败: Invalid status code ${String(payload.status?.code)}`)
+        throw new Error(
+          `PartnerBoost ASIN推广链接拉取失败: Invalid status code ${String(payload.status?.code)}`
+        )
       }
       if (statusCode !== 0) {
         throw new Error(`PartnerBoost ASIN推广链接拉取失败: ${payload.status?.msg || statusCode}`)
@@ -3235,10 +3384,7 @@ async function fetchPartnerboostPromotableProductsWithMeta(
 
     const hasRemaining = index + asinLinkBatchSize < linkLookupAsins.length
     asinLinkBatchProcessed += 1
-    if (
-      asinLinkBatchProcessed % PB_LINK_HEARTBEAT_EVERY_BATCHES === 0
-      || !hasRemaining
-    ) {
+    if (asinLinkBatchProcessed % PB_LINK_HEARTBEAT_EVERY_BATCHES === 0 || !hasRemaining) {
       await emitFetchProgress(true)
     }
 
@@ -3273,24 +3419,28 @@ async function fetchPartnerboostPromotableProductsWithMeta(
 
     const priceAmount = parsePriceAmount(item.discount_price ?? item.original_price)
     const priceCurrency = normalizeCurrencyUnit(item.currency)
-    const parsedCommission = parsePartnerboostCommission(item.acc_commission ?? item.commission, priceCurrency)
-    const commissionRate = parsedCommission.mode === 'percent' ? parsedCommission.rate : parsedCommission.amount
+    const parsedCommission = parsePartnerboostCommission(
+      item.acc_commission ?? item.commission,
+      priceCurrency
+    )
+    const commissionRate =
+      parsedCommission.mode === 'percent' ? parsedCommission.rate : parsedCommission.amount
     const allowedCountries = normalizeCountries(item.country_code)
     const reviewCount = parseReviewCount(
-      item.review_count
-      ?? item.reviewCount
-      ?? item.reviews
-      ?? item.rating_count
-      ?? item.ratings_total
+      item.review_count ??
+        item.reviewCount ??
+        item.reviews ??
+        item.rating_count ??
+        item.ratings_total
     )
     const merchantId = normalizeUrl(
       typeof item.brand_id === 'string' || typeof item.brand_id === 'number'
         ? String(item.brand_id)
         : typeof item.brandId === 'string' || typeof item.brandId === 'number'
-            ? String(item.brandId)
-            : typeof item.bid === 'string' || typeof item.bid === 'number'
-                ? String(item.bid)
-                : ''
+          ? String(item.brandId)
+          : typeof item.bid === 'string' || typeof item.bid === 'number'
+            ? String(item.bid)
+            : ''
     )
     const isDeepLink = normalizeTriStateBool((item as any).is_deeplink ?? (item as any).isDeepLink)
     const isConfirmedInvalid = resolveConfirmedInvalidFromSignals({
@@ -3317,9 +3467,10 @@ async function fetchPartnerboostPromotableProductsWithMeta(
       priceAmount,
       priceCurrency,
       commissionRate,
-      commissionAmount: parsedCommission.mode === 'amount'
-        ? parsedCommission.amount
-        : computeCommissionAmount(priceAmount, commissionRate),
+      commissionAmount:
+        parsedCommission.mode === 'amount'
+          ? parsedCommission.amount
+          : computeCommissionAmount(priceAmount, commissionRate),
       commissionRateMode: parsedCommission.mode,
       reviewCount,
       isDeepLink,
@@ -3366,31 +3517,20 @@ async function loadYeahPromosMarketplaceTemplates(params: {
   preloadedSettings?: Record<string, string>
 }): Promise<YeahPromosMarketplaceTemplate[]> {
   const preloadedValue = String(
-    params.preloadedSettings?.[YP_MARKETPLACE_TEMPLATES_SETTING_KEY]
-    || ''
+    params.preloadedSettings?.[YP_MARKETPLACE_TEMPLATES_SETTING_KEY] || ''
   ).trim()
   const templates = preloadedValue
     ? resolveYeahPromosMarketplaceTemplates(preloadedValue)
     : resolveYeahPromosMarketplaceTemplates(
-      (
-        await getSetting(
-          'openclaw',
-          YP_MARKETPLACE_TEMPLATES_SETTING_KEY,
-          params.userId
-        )
-      )?.value || ''
-    )
+        (await getSetting('openclaw', YP_MARKETPLACE_TEMPLATES_SETTING_KEY, params.userId))
+          ?.value || ''
+      )
 
   const preloadedSiteId = String(params.preloadedSettings?.yeahpromos_site_id || '').trim()
-  const resolvedSiteId = preloadedSiteId
-    || String(
-      (
-        await getSetting(
-          'affiliate_sync',
-          'yeahpromos_site_id',
-          params.userId
-        )
-      )?.value || ''
+  const resolvedSiteId =
+    preloadedSiteId ||
+    String(
+      (await getSetting('affiliate_sync', 'yeahpromos_site_id', params.userId))?.value || ''
     ).trim()
 
   return applyYeahPromosTemplateSiteId(templates, resolvedSiteId)
@@ -3408,10 +3548,13 @@ async function createYeahPromosProxyAgent(params: {
 }): Promise<HttpsProxyAgent<string>> {
   const proxy = await fetchProxyIp(params.proxyProviderUrl, 3, false)
   console.log(`[yeahpromos] proxy ${params.country} (${params.reason}): ${proxy.fullAddress}`)
-  return new HttpsProxyAgent(`http://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`, {
-    keepAlive: true,
-    timeout: 60000,
-  })
+  return new HttpsProxyAgent(
+    `http://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`,
+    {
+      keepAlive: true,
+      timeout: 60000,
+    }
+  )
 }
 
 async function fetchYeahPromosAccessProductsCount(params: {
@@ -3428,19 +3571,19 @@ async function fetchYeahPromosAccessProductsCount(params: {
 
   // 构建完整的 HTTP 头部（参考 browser-stealth.ts）
   const headers: Record<string, string> = {
-    'Cookie': params.sessionCookie,
-    'Accept': fingerprint.accept,
+    Cookie: params.sessionCookie,
+    Accept: fingerprint.accept,
     'Accept-Language': fingerprint.acceptLanguage,
     'Accept-Encoding': fingerprint.acceptEncoding!,
     'User-Agent': fingerprint.userAgent,
-    'Connection': fingerprint.connection!,
+    Connection: fingerprint.connection!,
     'Upgrade-Insecure-Requests': fingerprint.upgradeInsecureRequests!,
     'Sec-Fetch-Dest': fingerprint.secFetchDest!,
     'Sec-Fetch-Mode': fingerprint.secFetchMode!,
     'Sec-Fetch-Site': fingerprint.secFetchSite!,
     'Sec-Fetch-User': fingerprint.secFetchUser!,
     'Cache-Control': fingerprint.cacheControl!,
-    'DNT': fingerprint.dnt!,
+    DNT: fingerprint.dnt!,
   }
 
   // 只有 Chrome/Edge 才发送 Sec-CH-UA 头部
@@ -3466,9 +3609,10 @@ async function fetchYeahPromosAccessProductsCount(params: {
   }
 
   const redirectedUrl = normalizeUrl(response.request?.res?.responseUrl) || ''
-  const isLoginRedirect = redirectedUrl.includes('/index/login/login')
-    || redirectedUrl.includes('/index/index/login')
-    || /action=\"\/index\/login\/login\"/i.test(html)
+  const isLoginRedirect =
+    redirectedUrl.includes('/index/login/login') ||
+    redirectedUrl.includes('/index/index/login') ||
+    /action=\"\/index\/login\/login\"/i.test(html)
   if (isLoginRedirect) {
     return null
   }
@@ -3512,10 +3656,10 @@ function normalizeYeahPromosStoreMerchant(input: {
     typeof merchant.mid === 'string' || typeof merchant.mid === 'number'
       ? String(merchant.mid)
       : typeof merchant.id === 'string' || typeof merchant.id === 'number'
-          ? String(merchant.id)
-          : typeof merchant.advert_id === 'string' || typeof merchant.advert_id === 'number'
-              ? String(merchant.advert_id)
-              : ''
+        ? String(merchant.id)
+        : typeof merchant.advert_id === 'string' || typeof merchant.advert_id === 'number'
+          ? String(merchant.advert_id)
+          : ''
   )
   if (!merchantId) return null
 
@@ -3525,27 +3669,27 @@ function normalizeYeahPromosStoreMerchant(input: {
       : merchantId
   )
   const track = normalizeUrl(merchant.track)
-  const promoLink = normalizeYeahPromosPromoUrl(merchant.tracking_url)
-    || buildYeahPromosTrackPromoUrl(track)
+  const promoLink =
+    normalizeYeahPromosPromoUrl(merchant.tracking_url) || buildYeahPromosTrackPromoUrl(track)
   if (!promoLink) return null
 
   const parsedCommission = parseYeahPromosMerchantCommission(
     merchant.avg_payout,
     merchant.payout_unit
   )
-  const commissionRateMode: AffiliateCommissionRateMode = parsedCommission.mode === 'amount'
-    ? 'amount'
-    : 'percent'
-  const productUrl = normalizeUrl(merchant.url)
-    || normalizeUrl(merchant.site_url)
-    || buildYeahPromosAdvertContentUrl(advertId, input.siteId)
+  const commissionRateMode: AffiliateCommissionRateMode =
+    parsedCommission.mode === 'amount' ? 'amount' : 'percent'
+  const productUrl =
+    normalizeUrl(merchant.url) ||
+    normalizeUrl(merchant.site_url) ||
+    buildYeahPromosAdvertContentUrl(advertId, input.siteId)
 
   const reviewCount = parseReviewCount(
-    merchant.review_count
-    ?? merchant.reviewCount
-    ?? merchant.reviews
-    ?? merchant.rating_count
-    ?? merchant.ratings_total
+    merchant.review_count ??
+      merchant.reviewCount ??
+      merchant.reviews ??
+      merchant.rating_count ??
+      merchant.ratings_total
   )
   const isDeepLink = normalizeTriStateBool(merchant.is_deeplink)
   const isConfirmedInvalid = resolveConfirmedInvalidFromSignals({
@@ -3615,7 +3759,9 @@ async function fetchYeahPromosPromotableStores(params: {
 
     const code = normalizeYeahPromosResultCode(payload?.Code ?? payload?.code)
     if (code !== null && code !== 100000) {
-      throw new Error(`YeahPromos 店铺信息拉取失败: ${String(payload?.message || payload?.msg || code)}`)
+      throw new Error(
+        `YeahPromos 店铺信息拉取失败: ${String(payload?.message || payload?.msg || code)}`
+      )
     }
 
     const extracted = extractYeahPromosPayload(payload)
@@ -3634,9 +3780,8 @@ async function fetchYeahPromosPromotableStores(params: {
 
     const pageTotal = extracted.pageTotal
     const pageNow = extracted.pageNow ?? page
-    hasMore = pageTotal !== null
-      ? pageNow < pageTotal
-      : extracted.merchants.length >= params.pageSize
+    hasMore =
+      pageTotal !== null ? pageNow < pageTotal : extracted.merchants.length >= params.pageSize
     page += 1
 
     if (hasMore && params.requestDelayMs > 0) {
@@ -3661,7 +3806,10 @@ function extractYeahPromosPageNumberFromHref(href: string | null | undefined): n
   }
 }
 
-function resolveYeahPromosPromoIdentifiers(promoLink: string | null): { pid: string | null; track: string | null } {
+function resolveYeahPromosPromoIdentifiers(promoLink: string | null): {
+  pid: string | null
+  track: string | null
+} {
   const rawPromoLink = normalizeUrl(promoLink)
   if (!rawPromoLink) {
     return { pid: null, track: null }
@@ -3696,7 +3844,10 @@ function buildYeahPromosTrackPromoUrl(track: string | null): string | null {
   }
 }
 
-function buildYeahPromosAdvertContentUrl(advertId: string | null, siteId: string | null): string | null {
+function buildYeahPromosAdvertContentUrl(
+  advertId: string | null,
+  siteId: string | null
+): string | null {
   const normalizedAdvertId = normalizeUrl(advertId)
   const normalizedSiteId = normalizeUrl(siteId)
   if (!normalizedAdvertId || !normalizedSiteId) return null
@@ -3720,8 +3871,8 @@ function decodeHtmlEntitiesForUrl(input: string): string {
     .replace(/&#38;/g, '&')
     .replace(/&quot;/gi, '"')
     .replace(/&#34;/g, '"')
-    .replace(/&#39;/g, '\'')
-    .replace(/&#x27;/gi, '\'')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/gi, "'")
     .replace(/&#x2f;/gi, '/')
 }
 
@@ -3778,14 +3929,14 @@ function resolveYeahPromosPromoLinkFromCard(params: {
   const cardHtml = decodeHtmlEntitiesForUrl(params.cardHtml || '')
   if (!cardHtml) return null
 
-  const absoluteMatches = cardHtml.match(/https?:\/\/[^'"`\s<>]+/ig) || []
+  const absoluteMatches = cardHtml.match(/https?:\/\/[^'"`\s<>]+/gi) || []
   for (const candidate of absoluteMatches) {
     if (!YEAHPROMOS_PROMO_PATH_PATTERN.test(candidate)) continue
     const normalized = normalizeYeahPromosPromoUrl(candidate)
     if (normalized) return normalized
   }
 
-  const relativeMatches = cardHtml.match(/\/index\/index\/openurl(?:product)?\?[^'"`\s<>]+/ig) || []
+  const relativeMatches = cardHtml.match(/\/index\/index\/openurl(?:product)?\?[^'"`\s<>]+/gi) || []
   for (const candidate of relativeMatches) {
     const normalized = normalizeYeahPromosPromoUrl(candidate)
     if (normalized) return normalized
@@ -3815,27 +3966,25 @@ function parseYeahPromosProductHtmlPage(
   }
 ): YeahPromosProductPageParseResult {
   const $ = loadHtml(html)
-  const selectedMarketplaceCode = normalizeProxyCountryCode(String(
-    context?.country
-    || resolveYeahPromosMarketplaceCountry(
-      normalizeYeahPromosMarketplace(context?.marketplace || '')
+  const selectedMarketplaceCode = normalizeProxyCountryCode(
+    String(
+      context?.country ||
+        resolveYeahPromosMarketplaceCountry(
+          normalizeYeahPromosMarketplace(context?.marketplace || '')
+        ) ||
+        $('select[name="market_place"] option:selected').attr('value') ||
+        ''
     )
-    || $('select[name="market_place"] option:selected').attr('value')
-    || ''
-  ))
+  )
   const noProductsFound = /No products found/i.test($.text())
   const pageNowText = normalizeUrl($('#pageList .page-num').first().text())
   const pageNowMatch = pageNowText?.match(/Page\s+(\d+)/i)
-  const parsedPageNow = pageNowMatch?.[1]
-    ? parseInteger(pageNowMatch[1], NaN)
-    : null
+  const parsedPageNow = pageNowMatch?.[1] ? parseInteger(pageNowMatch[1], NaN) : null
 
   const nextPageHref = $('#pageList .pager li').last().find('a').attr('href')
   const parsedNextPage = extractYeahPromosPageNumberFromHref(nextPageHref)
-  const nextPage = parsedNextPage
-    && (!parsedPageNow || parsedNextPage > parsedPageNow)
-    ? parsedNextPage
-    : null
+  const nextPage =
+    parsedNextPage && (!parsedPageNow || parsedNextPage > parsedPageNow) ? parsedNextPage : null
 
   const items: NormalizedAffiliateProduct[] = []
   for (const element of $('.adv-block .adv-content').toArray()) {
@@ -3847,13 +3996,15 @@ function parseYeahPromosProductHtmlPage(
     const asin = normalizeAsin(body.find('span').first().text())
     const brand = normalizeUrl(body.find('.col-xs-7 a').first().text())
     const priceText = normalizeUrl(
-      body.find('.color-1136').first().text()
-      || body.find('.col-xs-8 [class*="color"]').first().text()
-      || body.find('.col-xs-8 .price').first().text()
-      || body.find('.col-xs-8 .adv-price').first().text()
-      || body.find('.col-xs-8 div').first().text()
+      body.find('.color-1136').first().text() ||
+        body.find('.col-xs-8 [class*="color"]').first().text() ||
+        body.find('.col-xs-8 .price').first().text() ||
+        body.find('.col-xs-8 .adv-price').first().text() ||
+        body.find('.col-xs-8 div').first().text()
     )
-    const commissionText = normalizeUrl(body.find('.row').first().find('.col-xs-4 div').first().text())
+    const commissionText = normalizeUrl(
+      body.find('.row').first().find('.col-xs-4 div').first().text()
+    )
     const ratingPanel = body.find('.rating-panel').first()
     const reviewCount = parseReviewCount(ratingPanel.text())
     const joinStatus = normalizeUrl(block.find('.status-joined').first().text())
@@ -3881,9 +4032,9 @@ function parseYeahPromosProductHtmlPage(
     if (!mid) continue
 
     const priceAmount = parsePriceAmount(priceText)
-    const priceCurrency = normalizeCurrencyUnit(
-      String(priceText || '').split(/\s+/g)[0]
-    ) || extractCurrencyUnitFromText(priceText)
+    const priceCurrency =
+      normalizeCurrencyUnit(String(priceText || '').split(/\s+/g)[0]) ||
+      extractCurrencyUnitFromText(priceText)
     const commissionRate = parsePercentage(commissionText)
     const commissionAmount = computeCommissionAmount(priceAmount, commissionRate)
     const allowedCountries = selectedMarketplaceCode ? [selectedMarketplaceCode] : []
@@ -3962,9 +4113,10 @@ async function fetchYeahPromosProductsHtmlPageWithPlaywright(params: {
     await page.goto(params.pageUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
     const html = await page.content()
     const redirectedUrl = normalizeUrl(page.url()) || ''
-    const isLoginRedirect = redirectedUrl.includes('/index/login/login')
-      || redirectedUrl.includes('/index/index/login')
-      || /action=\"\/index\/login\/login\"/i.test(html)
+    const isLoginRedirect =
+      redirectedUrl.includes('/index/login/login') ||
+      redirectedUrl.includes('/index/index/login') ||
+      /action=\"\/index\/login\/login\"/i.test(html)
     if (isLoginRedirect) {
       throw new Error('YeahPromos 登录态已失效，请先在 /products 执行 YP 登录态采集')
     }
@@ -3994,7 +4146,10 @@ async function fetchYeahPromosProductsHtmlPage(params: {
       return backoffDelayMs
     }
 
-    const minDelayForTooFastMs = Math.min(params.rateLimitRetryOptions.maxDelayMs, 5000 * retryAttempt)
+    const minDelayForTooFastMs = Math.min(
+      params.rateLimitRetryOptions.maxDelayMs,
+      5000 * retryAttempt
+    )
     return Math.max(backoffDelayMs, minDelayForTooFastMs)
   }
 
@@ -4011,19 +4166,19 @@ async function fetchYeahPromosProductsHtmlPage(params: {
 
       // 构建完整的 HTTP 头部（参考 browser-stealth.ts）
       const headers: Record<string, string> = {
-        'Cookie': params.sessionCookie,
-        'Accept': fingerprint.accept,
+        Cookie: params.sessionCookie,
+        Accept: fingerprint.accept,
         'Accept-Language': fingerprint.acceptLanguage,
         'Accept-Encoding': fingerprint.acceptEncoding!,
         'User-Agent': fingerprint.userAgent,
-        'Connection': fingerprint.connection!,
+        Connection: fingerprint.connection!,
         'Upgrade-Insecure-Requests': fingerprint.upgradeInsecureRequests!,
         'Sec-Fetch-Dest': fingerprint.secFetchDest!,
         'Sec-Fetch-Mode': fingerprint.secFetchMode!,
         'Sec-Fetch-Site': fingerprint.secFetchSite!,
         'Sec-Fetch-User': fingerprint.secFetchUser!,
         'Cache-Control': fingerprint.cacheControl!,
-        'DNT': fingerprint.dnt!,
+        DNT: fingerprint.dnt!,
       }
 
       // 只有 Chrome/Edge 才发送 Sec-CH-UA 头部
@@ -4061,9 +4216,10 @@ async function fetchYeahPromosProductsHtmlPage(params: {
     const snippet = html.replace(/\s+/g, ' ').trim().slice(0, 220)
 
     const redirectedUrl = normalizeUrl(response.request?.res?.responseUrl) || ''
-    const isLoginRedirect = redirectedUrl.includes('/index/login/login')
-      || redirectedUrl.includes('/index/index/login')
-      || /action=\"\/index\/login\/login\"/i.test(html)
+    const isLoginRedirect =
+      redirectedUrl.includes('/index/login/login') ||
+      redirectedUrl.includes('/index/index/login') ||
+      /action=\"\/index\/login\/login\"/i.test(html)
     if (isLoginRedirect) {
       throw new Error('YeahPromos 登录态已失效，请先在 /products 执行 YP 登录态采集')
     }
@@ -4074,9 +4230,8 @@ async function fetchYeahPromosProductsHtmlPage(params: {
       html,
     })
 
-    const shouldTryPlaywright = response.status === 403
-      || response.status === 429
-      || (isOk && interceptCheck.blocked)
+    const shouldTryPlaywright =
+      response.status === 403 || response.status === 429 || (isOk && interceptCheck.blocked)
     if (shouldTryPlaywright) {
       try {
         const playwrightHtml = await fetchYeahPromosProductsHtmlPageWithPlaywright({
@@ -4108,7 +4263,10 @@ async function fetchYeahPromosProductsHtmlPage(params: {
 
     if (!isOk) {
       const failureMessage = `YeahPromos 产品页拉取失败(scope=${params.template.scope}, page=${params.page}, status=${response.status}): ${snippet || '请求失败'}`
-      if (isTransientHttpStatus(response.status) && attempt < params.rateLimitRetryOptions.maxRetries) {
+      if (
+        isTransientHttpStatus(response.status) &&
+        attempt < params.rateLimitRetryOptions.maxRetries
+      ) {
         attempt += 1
         const delayMs = resolveRetryDelayMs(attempt, failureMessage)
         console.warn(
@@ -4148,9 +4306,7 @@ function resolveYeahPromosSyncSessionMinRemainingMs(params: {
   const startPage = Number(params.startPage || 0)
   const hasStartScope = String(params.startScope || '').trim().length > 0
   const isResumeWindow = startPage > 1 || hasStartScope
-  return isResumeWindow
-    ? YP_SESSION_MIN_REMAINING_MS_RESUME
-    : YP_SESSION_MIN_REMAINING_MS_INITIAL
+  return isResumeWindow ? YP_SESSION_MIN_REMAINING_MS_RESUME : YP_SESSION_MIN_REMAINING_MS_INITIAL
 }
 
 function resolveYeahPromosConsecutiveFailureStrategy(params: {
@@ -4195,9 +4351,14 @@ async function fetchYeahPromosPromotableProductsWithMeta(params: {
 
   // 导入session检查函数
   const { checkYeahPromosSessionValidForSync } = await import('@/lib/yeahpromos-session')
-  const sessionCheck = await checkYeahPromosSessionValidForSync(params.userId, minSessionRemainingMs)
+  const sessionCheck = await checkYeahPromosSessionValidForSync(
+    params.userId,
+    minSessionRemainingMs
+  )
   if (!sessionCheck.valid) {
-    const remainingMinutes = sessionCheck.remainingMs ? Math.floor(sessionCheck.remainingMs / 60000) : 0
+    const remainingMinutes = sessionCheck.remainingMs
+      ? Math.floor(sessionCheck.remainingMs / 60000)
+      : 0
     const requiredMinutes = Math.floor(minSessionRemainingMs / 60000)
     throw new Error(
       sessionCheck.isExpired
@@ -4214,13 +4375,16 @@ async function fetchYeahPromosPromotableProductsWithMeta(params: {
       })
   const countryProxyMap = await loadYeahPromosCountryProxyMap(params.userId)
 
-  const baselineTemplate = templates.find(
-    (item) => Boolean(resolveYeahPromosProxyProviderUrl(countryProxyMap, item.country))
+  const baselineTemplate = templates.find((item) =>
+    Boolean(resolveYeahPromosProxyProviderUrl(countryProxyMap, item.country))
   )
   const shouldRefreshAccessProductsBaseline = params.refreshAccessProductsBaseline ?? true
   if (shouldRefreshAccessProductsBaseline && baselineTemplate && siteId) {
     try {
-      const baselineProxyUrl = resolveYeahPromosProxyProviderUrl(countryProxyMap, baselineTemplate.country)
+      const baselineProxyUrl = resolveYeahPromosProxyProviderUrl(
+        countryProxyMap,
+        baselineTemplate.country
+      )
       if (baselineProxyUrl) {
         const proxyAgent = await createYeahPromosProxyAgent({
           proxyProviderUrl: baselineProxyUrl,
@@ -4235,7 +4399,10 @@ async function fetchYeahPromosPromotableProductsWithMeta(params: {
         })
       }
     } catch (error: any) {
-      console.warn('[yeahpromos] failed to refresh Access Products baseline:', error?.message || error)
+      console.warn(
+        '[yeahpromos] failed to refresh Access Products baseline:',
+        error?.message || error
+      )
     }
   }
 
@@ -4259,7 +4426,8 @@ async function fetchYeahPromosPromotableProductsWithMeta(params: {
       10
     ),
     baseDelayMs: parseIntegerInRange(
-      check.values.yeahpromos_rate_limit_base_delay_ms || String(DEFAULT_YP_RATE_LIMIT_BASE_DELAY_MS),
+      check.values.yeahpromos_rate_limit_base_delay_ms ||
+        String(DEFAULT_YP_RATE_LIMIT_BASE_DELAY_MS),
       DEFAULT_YP_RATE_LIMIT_BASE_DELAY_MS,
       100,
       60000
@@ -4281,12 +4449,7 @@ async function fetchYeahPromosPromotableProductsWithMeta(params: {
 
   const maxPages = resolveSyncMaxPages(params.maxPages, null, MAX_YP_SYNC_MAX_PAGES)
   const configuredStartPage = Math.max(1, parseInteger(check.values.yeahpromos_page || '1', 1))
-  const storePageSize = parseIntegerInRange(
-    check.values.yeahpromos_limit || '1000',
-    1000,
-    1,
-    1000
-  )
+  const storePageSize = parseIntegerInRange(check.values.yeahpromos_limit || '1000', 1000, 1, 1000)
   const scopePageBudgets = new Map<string, number>()
   if (params.scopePageBudgets) {
     for (const [scope, rawBudget] of Object.entries(params.scopePageBudgets)) {
@@ -4297,27 +4460,18 @@ async function fetchYeahPromosPromotableProductsWithMeta(params: {
     }
   }
   const startScope = normalizeYeahPromosMarketplace(params.startScope || '')
-  const shouldFetchStores = params.fetchStores ?? (!startScope && Math.max(
-    1,
-    parseInteger(
-      params.startPage,
-      startScope ? 1 : configuredStartPage
-    )
-  ) <= 1)
+  const shouldFetchStores =
+    params.fetchStores ??
+    (!startScope &&
+      Math.max(1, parseInteger(params.startPage, startScope ? 1 : configuredStartPage)) <= 1)
   const resolvedStartScopeIndex = startScope
     ? templates.findIndex((item) => item.scope === startScope)
     : 0
   let scopeIndex = resolvedStartScopeIndex >= 0 ? resolvedStartScopeIndex : 0
-  let page = Math.max(
-    1,
-    parseInteger(
-      params.startPage,
-      startScope ? 1 : configuredStartPage
-    )
-  )
+  let page = Math.max(1, parseInteger(params.startPage, startScope ? 1 : configuredStartPage))
   let fetchedPages = 0
   let consecutiveScopeFailureCount = 0
-  let consecutiveEmptyPagesInScope = 0  // 当前市场连续空页面计数
+  let consecutiveEmptyPagesInScope = 0 // 当前市场连续空页面计数
   const fetchedPagesByScope = new Map<string, number>()
   const fetchedItemsBeforeWindow = Math.max(0, Number(params.fetchedItemsBeforeWindow || 0) || 0)
 
@@ -4335,13 +4489,13 @@ async function fetchYeahPromosPromotableProductsWithMeta(params: {
     }
   }
 
-  while (
-    scopeIndex < templates.length
-    && (maxPages === null || fetchedPages < maxPages)
-  ) {
+  while (scopeIndex < templates.length && (maxPages === null || fetchedPages < maxPages)) {
     const currentTemplate = templates[scopeIndex]
     const currentPage = page
-    const proxyProviderUrl = resolveYeahPromosProxyProviderUrl(countryProxyMap, currentTemplate.country)
+    const proxyProviderUrl = resolveYeahPromosProxyProviderUrl(
+      countryProxyMap,
+      currentTemplate.country
+    )
 
     if (!proxyProviderUrl) {
       console.warn(
@@ -4380,10 +4534,11 @@ async function fetchYeahPromosPromotableProductsWithMeta(params: {
       }
 
       const parsedNextPage = parsed.nextPage
-      const hasNextPage = Number.isFinite(parsedNextPage as number) && (parsedNextPage as number) > currentPage
+      const hasNextPage =
+        Number.isFinite(parsedNextPage as number) && (parsedNextPage as number) > currentPage
       const scopePageBudget = scopePageBudgets.get(currentTemplate.scope)
-      const scopeBudgetReached = scopePageBudget !== undefined
-        && currentScopeFetchedPages >= scopePageBudget
+      const scopeBudgetReached =
+        scopePageBudget !== undefined && currentScopeFetchedPages >= scopePageBudget
 
       // 切换市场的条件：
       // 1. 页面明确标记没有商品且返回空列表
@@ -4423,11 +4578,13 @@ async function fetchYeahPromosPromotableProductsWithMeta(params: {
       if (consecutiveScopeFailureCount >= MAX_YP_EMPTY_PAGE_STREAK) {
         const reason = error?.message || error
 
-        if (resolveYeahPromosConsecutiveFailureStrategy({
-          skipFailedPages,
-          fetchedItemsInWindow: items.length,
-          fetchedItemsBeforeWindow,
-        }) === 'skip-page') {
+        if (
+          resolveYeahPromosConsecutiveFailureStrategy({
+            skipFailedPages,
+            fetchedItemsInWindow: items.length,
+            fetchedItemsBeforeWindow,
+          }) === 'skip-page'
+        ) {
           // 跳过当前页面，继续下一页，避免因服务器端问题导致整个同步中止
           console.warn(
             `[yeahpromos] 连续失败 ${consecutiveScopeFailureCount} 次，跳过当前页面继续同步 (scope=${currentTemplate.scope}, page=${currentPage})`
@@ -4436,9 +4593,8 @@ async function fetchYeahPromosPromotableProductsWithMeta(params: {
           consecutiveScopeFailureCount = 0
         } else {
           const noItemsFetchedYet = items.length === 0 && fetchedItemsBeforeWindow <= 0
-          const noItemsWarning = noItemsFetchedYet && skipFailedPages
-            ? '当前窗口尚未抓到任何商品，不允许静默跳页；'
-            : ''
+          const noItemsWarning =
+            noItemsFetchedYet && skipFailedPages ? '当前窗口尚未抓到任何商品，不允许静默跳页；' : ''
           // 避免静默跳过整个 scope 导致”completed 但漏抓大量页面”。
           // 连续失败达到阈值时直接抛错，让任务进入 failed 并由续跑逻辑从当前 cursor 重试。
           throw new Error(
@@ -4457,9 +4613,8 @@ async function fetchYeahPromosPromotableProductsWithMeta(params: {
     }
 
     if (hasMoreCandidates && (maxPages === null || fetchedPages < maxPages)) {
-      const jitterMs = requestDelayJitterMs > 0
-        ? randomIntInRange(-requestDelayJitterMs, requestDelayJitterMs)
-        : 0
+      const jitterMs =
+        requestDelayJitterMs > 0 ? randomIntInRange(-requestDelayJitterMs, requestDelayJitterMs) : 0
       const effectiveDelayMs = Math.max(0, requestDelayMs + jitterMs)
       if (effectiveDelayMs > 0) {
         await sleep(effectiveDelayMs)
@@ -4522,7 +4677,9 @@ async function fetchYeahPromosPromotableProducts(params: {
   return result.items
 }
 
-function dedupeNormalizedProducts(items: NormalizedAffiliateProduct[]): NormalizedAffiliateProduct[] {
+function dedupeNormalizedProducts(
+  items: NormalizedAffiliateProduct[]
+): NormalizedAffiliateProduct[] {
   const deduped = new Map<string, NormalizedAffiliateProduct>()
   for (const item of items) {
     if (!item.mid) continue
@@ -4566,15 +4723,17 @@ function dedupeNormalizedProducts(items: NormalizedAffiliateProduct[]): Normaliz
   return Array.from(deduped.values())
 }
 
-async function loadExistingMidSet(userId: number, platform: AffiliatePlatform, mids: string[]): Promise<Set<string>> {
+async function loadExistingMidSet(
+  userId: number,
+  platform: AffiliatePlatform,
+  mids: string[]
+): Promise<Set<string>> {
   if (mids.length === 0) return new Set<string>()
   const db = await getDatabase()
   const existing = new Set<string>()
-  const dedupedMids = Array.from(new Set(
-    mids
-      .map((mid) => String(mid || '').trim())
-      .filter(Boolean)
-  ))
+  const dedupedMids = Array.from(
+    new Set(mids.map((mid) => String(mid || '').trim()).filter(Boolean))
+  )
   if (dedupedMids.length === 0) return existing
 
   // 避免 PostgreSQL 参数上限（65534）与 SQLite 变量上限导致大批量同步失败。
@@ -4636,15 +4795,16 @@ async function getPartnerboostDeltaSyncSettings(userId: number): Promise<{
 async function listActivePartnerboostAsins(userId: number, activeDays: number): Promise<string[]> {
   const db = await getDatabase()
   const recentDays = Math.max(1, activeDays)
-  const isBlacklistedCondition = db.type === 'postgres'
-    ? 'p.is_blacklisted = FALSE'
-    : 'p.is_blacklisted = 0'
-  const recentUpdatedCondition = db.type === 'postgres'
-    ? `p.updated_at >= CURRENT_TIMESTAMP - INTERVAL '${recentDays} days'`
-    : `p.updated_at >= datetime('now', '-${recentDays} days')`
-  const recentReportDateCondition = db.type === 'postgres'
-    ? `report_date >= CURRENT_DATE - INTERVAL '${Math.max(0, recentDays - 1)} days'`
-    : `report_date >= date('now', '-${Math.max(0, recentDays - 1)} days')`
+  const isBlacklistedCondition =
+    db.type === 'postgres' ? 'p.is_blacklisted = FALSE' : 'p.is_blacklisted = 0'
+  const recentUpdatedCondition =
+    db.type === 'postgres'
+      ? `p.updated_at >= CURRENT_TIMESTAMP - INTERVAL '${recentDays} days'`
+      : `p.updated_at >= datetime('now', '-${recentDays} days')`
+  const recentReportDateCondition =
+    db.type === 'postgres'
+      ? `report_date >= CURRENT_DATE - INTERVAL '${Math.max(0, recentDays - 1)} days'`
+      : `report_date >= date('now', '-${Math.max(0, recentDays - 1)} days')`
 
   const rows = await db.query<{ asin: string | null }>(
     `
@@ -4775,12 +4935,12 @@ async function listActiveYeahPromosScopes(params: {
 
   const db = await getDatabase()
   const recentDays = Math.max(1, params.activeDays)
-  const isBlacklistedCondition = db.type === 'postgres'
-    ? 'p.is_blacklisted = FALSE'
-    : 'p.is_blacklisted = 0'
-  const recentSeenCondition = db.type === 'postgres'
-    ? `COALESCE(p.last_seen_at, p.last_synced_at, p.updated_at) >= CURRENT_TIMESTAMP - INTERVAL '${recentDays} days'`
-    : `COALESCE(p.last_seen_at, p.last_synced_at, p.updated_at) >= datetime('now', '-${recentDays} days')`
+  const isBlacklistedCondition =
+    db.type === 'postgres' ? 'p.is_blacklisted = FALSE' : 'p.is_blacklisted = 0'
+  const recentSeenCondition =
+    db.type === 'postgres'
+      ? `COALESCE(p.last_seen_at, p.last_synced_at, p.updated_at) >= CURRENT_TIMESTAMP - INTERVAL '${recentDays} days'`
+      : `COALESCE(p.last_seen_at, p.last_synced_at, p.updated_at) >= datetime('now', '-${recentDays} days')`
 
   const rows = await db.query<{
     allowed_countries_json: string | null
@@ -4894,8 +5054,8 @@ function getAffiliateProductsUpsertBatchSize(dbType: 'sqlite' | 'postgres'): num
 
 function resolveAffiliateProductsUpsertStatementTimeoutMs(): number {
   return parseIntegerInRange(
-    process.env.AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS
-      || String(DEFAULT_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS),
+    process.env.AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS ||
+      String(DEFAULT_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS),
     DEFAULT_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS,
     MIN_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS,
     MAX_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS
@@ -4903,7 +5063,9 @@ function resolveAffiliateProductsUpsertStatementTimeoutMs(): number {
 }
 
 function isPostgresStatementTimeoutError(error: unknown): boolean {
-  const code = String((error as any)?.code || '').trim().toUpperCase()
+  const code = String((error as any)?.code || '')
+    .trim()
+    .toUpperCase()
   if (code === '57014') return true
   const message = String((error as any)?.message || '').toLowerCase()
   return message.includes('statement timeout')
@@ -4966,9 +5128,7 @@ function buildAffiliateProductsBusinessChangedSql(params: {
   incomingAlias: string
   dbType: 'sqlite' | 'postgres'
 }): string {
-  const comparator = params.dbType === 'postgres'
-    ? 'IS DISTINCT FROM'
-    : 'IS NOT'
+  const comparator = params.dbType === 'postgres' ? 'IS DISTINCT FROM' : 'IS NOT'
 
   const fields: Array<[string, string]> = [
     ['merchant_id', 'merchant_id'],
@@ -4990,9 +5150,10 @@ function buildAffiliateProductsBusinessChangedSql(params: {
   ]
 
   return fields
-    .map(([existingColumn, incomingColumn]) => (
-      `${params.existingAlias}.${existingColumn} ${comparator} ${params.incomingAlias}.${incomingColumn}`
-    ))
+    .map(
+      ([existingColumn, incomingColumn]) =>
+        `${params.existingAlias}.${existingColumn} ${comparator} ${params.incomingAlias}.${incomingColumn}`
+    )
     .join('\n          OR ')
 }
 
@@ -5013,11 +5174,10 @@ async function upsertAffiliateProductsChunkOnConflict(params: {
     incomingAlias: 'EXCLUDED',
     dbType: params.db.type,
   })
-  const timestampDistinctComparator = params.db.type === 'postgres'
-    ? 'IS DISTINCT FROM'
-    : 'IS NOT'
+  const timestampDistinctComparator = params.db.type === 'postgres' ? 'IS DISTINCT FROM' : 'IS NOT'
 
-  await params.db.exec(`
+  await params.db.exec(
+    `
     INSERT INTO affiliate_products (
       user_id,
       platform,
@@ -5153,7 +5313,9 @@ async function upsertAffiliateProductsChunkOnConflict(params: {
     )
       OR affiliate_products.last_synced_at ${timestampDistinctComparator} EXCLUDED.last_synced_at
       OR affiliate_products.last_seen_at ${timestampDistinctComparator} EXCLUDED.last_seen_at
-  `, values)
+  `,
+    values
+  )
 }
 
 async function upsertAffiliateProductsChunkPostgresTwoPhase(params: {
@@ -5237,7 +5399,8 @@ async function upsertAffiliateProductsChunkPostgresTwoPhase(params: {
   await runAffiliateProductsPostgresUpsertWithTimeout({
     db: params.db,
     operation: async () => {
-      await params.db.exec(`
+      await params.db.exec(
+        `
         ${incomingCte}
         UPDATE affiliate_products p
         SET
@@ -5267,9 +5430,12 @@ async function upsertAffiliateProductsChunkPostgresTwoPhase(params: {
           AND (
             ${businessChangedSql}
           )
-      `, values)
+      `,
+        values
+      )
 
-      await params.db.exec(`
+      await params.db.exec(
+        `
         ${incomingCte}
         UPDATE affiliate_products p
         SET
@@ -5286,9 +5452,12 @@ async function upsertAffiliateProductsChunkPostgresTwoPhase(params: {
             p.last_synced_at IS DISTINCT FROM incoming.last_synced_at
             OR p.last_seen_at IS DISTINCT FROM incoming.last_seen_at
           )
-      `, values)
+      `,
+        values
+      )
 
-      await params.db.exec(`
+      await params.db.exec(
+        `
         ${incomingCte}
         INSERT INTO affiliate_products (
           user_id,
@@ -5453,7 +5622,9 @@ async function upsertAffiliateProductsChunkPostgresTwoPhase(params: {
         )
           OR affiliate_products.last_synced_at IS DISTINCT FROM EXCLUDED.last_synced_at
           OR affiliate_products.last_seen_at IS DISTINCT FROM EXCLUDED.last_seen_at
-      `, values)
+      `,
+        values
+      )
     },
   })
 }
@@ -5527,9 +5698,8 @@ async function upsertAffiliateProductsBatchWithAdaptiveRetry(params: {
       processedCount: batch.length,
     }
   } catch (error: any) {
-    const canSplitAndRetry = params.db.type === 'postgres'
-      && isPostgresStatementTimeoutError(error)
-      && batch.length > 1
+    const canSplitAndRetry =
+      params.db.type === 'postgres' && isPostgresStatementTimeoutError(error) && batch.length > 1
     if (!canSplitAndRetry) {
       throw error
     }
@@ -5631,10 +5801,7 @@ export async function upsertAffiliateProducts(
     createdCount += batchStats.createdCount
     updatedCount += batchStats.updatedCount
     processedCount += batchStats.processedCount
-    if (
-      processedCount - lastEmittedProcessed >= progressEvery
-      || processedCount === totalFetched
-    ) {
+    if (processedCount - lastEmittedProcessed >= progressEvery || processedCount === totalFetched) {
       lastEmittedProcessed = processedCount
       await emitProgress({
         totalFetched,
@@ -5693,16 +5860,12 @@ export function buildAffiliateProductsOrderBy(params: {
   return `${sortSql} ${direction}, p.id DESC`
 }
 
-function normalizeNumericRangeBounds(params: {
-  min?: number | null
-  max?: number | null
-}): { min: number | null; max: number | null } {
-  const min = typeof params.min === 'number' && Number.isFinite(params.min)
-    ? params.min
-    : null
-  const max = typeof params.max === 'number' && Number.isFinite(params.max)
-    ? params.max
-    : null
+function normalizeNumericRangeBounds(params: { min?: number | null; max?: number | null }): {
+  min: number | null
+  max: number | null
+} {
+  const min = typeof params.min === 'number' && Number.isFinite(params.min) ? params.min : null
+  const max = typeof params.max === 'number' && Number.isFinite(params.max) ? params.max : null
 
   if (min !== null && max !== null && min > max) {
     return { min: max, max: min }
@@ -5731,10 +5894,10 @@ function appendNumericRangeWhere(params: {
   }
 }
 
-function normalizeDateRangeBounds(params: {
-  from?: string | null
-  to?: string | null
-}): { from: string | null; to: string | null } {
+function normalizeDateRangeBounds(params: { from?: string | null; to?: string | null }): {
+  from: string | null
+  to: string | null
+} {
   const from = normalizeYmdDate(params.from)
   const to = normalizeYmdDate(params.to)
 
@@ -5791,21 +5954,17 @@ function buildAffiliateLandingTypeConditionSql(alias: string = 'p'): {
     `LOWER(COALESCE(${alias}.promo_link, ''))`,
   ]
 
-  const matchesAnyPattern = (patterns: string[]): string => (
+  const matchesAnyPattern = (patterns: string[]): string =>
     urlCandidates
       .map((urlSql) => `(${patterns.map((pattern) => `${urlSql} LIKE '${pattern}'`).join(' OR ')})`)
       .join(' OR ')
-  )
 
   const amazonStoreByUrl = `(${matchesAnyPattern([
     '%amazon.%/stores/%',
     '%amazon.%/store/%',
     '%amazon.%/storefront/%',
   ])})`
-  const amazonProductByUrl = `(${matchesAnyPattern([
-    '%amazon.%/dp/%',
-    '%amazon.%/gp/product/%',
-  ])})`
+  const amazonProductByUrl = `(${matchesAnyPattern(['%amazon.%/dp/%', '%amazon.%/gp/product/%'])})`
   const independentProductByUrl = `(${matchesAnyPattern([
     '%/products/%',
     '%/product/%',
@@ -5814,11 +5973,7 @@ function buildAffiliateLandingTypeConditionSql(alias: string = 'p'): {
     '%://%/%-p_%',
     '%://%/%.html%',
   ])})`
-  const independentStoreByUrl = `(${matchesAnyPattern([
-    '%/collections%',
-    '%/shop%',
-    '%/store%',
-  ])})`
+  const independentStoreByUrl = `(${matchesAnyPattern(['%/collections%', '%/shop%', '%/store%'])})`
 
   const amazonStore = `(NOT (${asinPresent}) AND (${amazonStoreByUrl}))`
   const amazonProduct = `((${asinPresent}) OR (NOT (${amazonStore}) AND (${amazonProductByUrl})))`
@@ -5868,8 +6023,11 @@ function isMissingTableError(error: unknown): boolean {
   return /(no such table|does not exist)/i.test(message)
 }
 
-const affiliateProductsMerchantIdColumnAvailability: Partial<Record<'sqlite' | 'postgres', boolean>> = {}
-const affiliateProductsRawJsonColumnAvailability: Partial<Record<'sqlite' | 'postgres', boolean>> = {}
+const affiliateProductsMerchantIdColumnAvailability: Partial<
+  Record<'sqlite' | 'postgres', boolean>
+> = {}
+const affiliateProductsRawJsonColumnAvailability: Partial<Record<'sqlite' | 'postgres', boolean>> =
+  {}
 
 async function hasAffiliateProductsMerchantIdColumn(db: DatabaseAdapter): Promise<boolean> {
   const cached = affiliateProductsMerchantIdColumnAvailability[db.type]
@@ -5896,7 +6054,9 @@ async function hasAffiliateProductsMerchantIdColumn(db: DatabaseAdapter): Promis
     }
 
     const rows = await db.query<{ name: string }>(`PRAGMA table_info(affiliate_products)`)
-    const exists = Array.isArray(rows) && rows.some((row) => String((row as any)?.name || '').toLowerCase() === 'merchant_id')
+    const exists =
+      Array.isArray(rows) &&
+      rows.some((row) => String((row as any)?.name || '').toLowerCase() === 'merchant_id')
     affiliateProductsMerchantIdColumnAvailability.sqlite = exists
     return exists
   } catch {
@@ -5932,7 +6092,9 @@ async function hasAffiliateProductsRawJsonColumn(
     }
 
     const rows = await db.query<{ name: string }>(`PRAGMA table_info(affiliate_products)`)
-    const exists = Array.isArray(rows) && rows.some((row) => String((row as any)?.name || '').toLowerCase() === 'raw_json')
+    const exists =
+      Array.isArray(rows) &&
+      rows.some((row) => String((row as any)?.name || '').toLowerCase() === 'raw_json')
     affiliateProductsRawJsonColumnAvailability.sqlite = exists
     return exists
   } catch {
@@ -5946,17 +6108,19 @@ function isMissingColumnError(error: unknown): boolean {
 }
 
 function isRetriableRawJsonDropError(error: unknown): boolean {
-  const code = String((error as any)?.code || '').trim().toUpperCase()
+  const code = String((error as any)?.code || '')
+    .trim()
+    .toUpperCase()
   if (code === '55P03' || code === '57014' || code === '40P01') {
     return true
   }
 
   const message = String((error as any)?.message || '').toLowerCase()
   return (
-    message.includes('lock timeout')
-    || message.includes('statement timeout')
-    || message.includes('could not obtain lock on relation')
-    || message.includes('deadlock detected')
+    message.includes('lock timeout') ||
+    message.includes('statement timeout') ||
+    message.includes('could not obtain lock on relation') ||
+    message.includes('deadlock detected')
   )
 }
 
@@ -6033,7 +6197,9 @@ function isWithinAffiliateRawJsonDropWindow(now: Date): boolean {
   return localHour >= startHour || localHour < endHour
 }
 
-async function dropAffiliateProductsRawJsonColumnWithRetry(db: DatabaseAdapter): Promise<RawJsonDropAttemptResult> {
+async function dropAffiliateProductsRawJsonColumnWithRetry(
+  db: DatabaseAdapter
+): Promise<RawJsonDropAttemptResult> {
   if (db.type !== 'postgres') {
     try {
       await db.exec(`ALTER TABLE affiliate_products DROP COLUMN raw_json`)
@@ -6057,8 +6223,12 @@ async function dropAffiliateProductsRawJsonColumnWithRetry(db: DatabaseAdapter):
           return 'lock_not_acquired' as const
         }
 
-        await db.exec(`SET LOCAL lock_timeout = '${AFFILIATE_RAW_JSON_RETIREMENT_DROP_LOCK_TIMEOUT_MS}ms'`)
-        await db.exec(`SET LOCAL statement_timeout = '${AFFILIATE_RAW_JSON_RETIREMENT_DROP_STATEMENT_TIMEOUT_MS}ms'`)
+        await db.exec(
+          `SET LOCAL lock_timeout = '${AFFILIATE_RAW_JSON_RETIREMENT_DROP_LOCK_TIMEOUT_MS}ms'`
+        )
+        await db.exec(
+          `SET LOCAL statement_timeout = '${AFFILIATE_RAW_JSON_RETIREMENT_DROP_STATEMENT_TIMEOUT_MS}ms'`
+        )
         await db.exec(`ALTER TABLE affiliate_products DROP COLUMN IF EXISTS raw_json`)
         return 'dropped' as const
       })
@@ -6069,14 +6239,16 @@ async function dropAffiliateProductsRawJsonColumnWithRetry(db: DatabaseAdapter):
         return 'already_missing'
       }
 
-      const canRetry = isRetriableRawJsonDropError(error) && attempt < AFFILIATE_RAW_JSON_RETIREMENT_DROP_MAX_ATTEMPTS
+      const canRetry =
+        isRetriableRawJsonDropError(error) &&
+        attempt < AFFILIATE_RAW_JSON_RETIREMENT_DROP_MAX_ATTEMPTS
       if (!canRetry) {
         throw error
       }
 
       const delayMs = Math.min(
         AFFILIATE_RAW_JSON_RETIREMENT_DROP_RETRY_MAX_DELAY_MS,
-        AFFILIATE_RAW_JSON_RETIREMENT_DROP_RETRY_BASE_DELAY_MS * (2 ** (attempt - 1))
+        AFFILIATE_RAW_JSON_RETIREMENT_DROP_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1)
       )
       await sleep(delayMs)
     }
@@ -6085,7 +6257,10 @@ async function dropAffiliateProductsRawJsonColumnWithRetry(db: DatabaseAdapter):
   return 'lock_not_acquired'
 }
 
-async function clearAffiliateProductsRawJsonBatch(db: DatabaseAdapter, batchSize: number): Promise<number> {
+async function clearAffiliateProductsRawJsonBatch(
+  db: DatabaseAdapter,
+  batchSize: number
+): Promise<number> {
   if (batchSize <= 0) return 0
 
   if (db.type === 'postgres') {
@@ -6129,10 +6304,10 @@ export async function runAffiliateProductsRawJsonRetirementMaintenance(options?:
   allowDropOutsideWindow?: boolean
 }): Promise<void> {
   const db = await getDatabase()
-  const now = options?.now instanceof Date
-    && Number.isFinite(options.now.getTime())
-    ? options.now
-    : new Date()
+  const now =
+    options?.now instanceof Date && Number.isFinite(options.now.getTime())
+      ? options.now
+      : new Date()
 
   type RetirementControlRow = {
     drop_after_at: string | null
@@ -6202,14 +6377,14 @@ export async function runAffiliateProductsRawJsonRetirementMaintenance(options?:
   }
 
   const dropAfterTimestamp = parseDateToTimestamp(controlRow.drop_after_at || null)
-  const dropWindowReady = options?.allowDropOutsideWindow === true
-    || isWithinAffiliateRawJsonDropWindow(now)
+  const dropWindowReady =
+    options?.allowDropOutsideWindow === true || isWithinAffiliateRawJsonDropWindow(now)
   if (
-    rawJsonColumnExists
-    && !controlRow.raw_json_drop_completed_at
-    && dropAfterTimestamp !== null
-    && now.getTime() >= dropAfterTimestamp
-    && dropWindowReady
+    rawJsonColumnExists &&
+    !controlRow.raw_json_drop_completed_at &&
+    dropAfterTimestamp !== null &&
+    now.getTime() >= dropAfterTimestamp &&
+    dropWindowReady
   ) {
     await db.exec(
       `
@@ -6261,7 +6436,10 @@ export async function runAffiliateProductsRawJsonRetirementMaintenance(options?:
         )
         controlRow.raw_json_drop_completed_at = dropCompletedAt
       } else {
-        const errorMessage = String((error as any)?.message || error || 'unknown error').slice(0, 1000)
+        const errorMessage = String((error as any)?.message || error || 'unknown error').slice(
+          0,
+          1000
+        )
         const failedAt = new Date().toISOString()
         await db.exec(
           `
@@ -6307,8 +6485,9 @@ function toSafeNonNegativeInt(value: unknown): number {
 }
 
 function resolveLifecycleStatusFromRowForList(
-  row: Pick<AffiliateProduct, 'is_confirmed_invalid' | 'last_seen_at'>
-  & { baseline_started_at?: string | null }
+  row: Pick<AffiliateProduct, 'is_confirmed_invalid' | 'last_seen_at'> & {
+    baseline_started_at?: string | null
+  }
 ): AffiliateProductLifecycleStatus {
   if (normalizeTriStateBool(row.is_confirmed_invalid) === true) {
     return 'invalid'
@@ -6327,7 +6506,10 @@ function resolveLifecycleStatusFromRowForList(
   return 'sync_missing'
 }
 
-export async function listAffiliateProducts(userId: number, options: ProductListOptions = {}): Promise<ProductListResult> {
+export async function listAffiliateProducts(
+  userId: number,
+  options: ProductListOptions = {}
+): Promise<ProductListResult> {
   const db = await getDatabase()
   const page = Math.max(1, options.page || 1)
   const pageSize = Math.min(1000, Math.max(10, options.pageSize || 20))
@@ -6340,14 +6522,16 @@ export async function listAffiliateProducts(userId: number, options: ProductList
   const sortBy = options.sortBy || 'serial'
   const sortOrder = options.sortOrder === 'asc' ? 'asc' : 'desc'
   const orderBySql = buildAffiliateProductsOrderBy({ sortBy, sortOrder })
-  const offerNotDeletedCondition = db.type === 'postgres'
-    ? '(o.is_deleted = false OR o.is_deleted IS NULL)'
-    : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
+  const offerNotDeletedCondition =
+    db.type === 'postgres'
+      ? '(o.is_deleted = false OR o.is_deleted IS NULL)'
+      : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
   const statusFilter = normalizeAffiliateProductStatusFilter(options.status)
   const landingPageTypeFilter = normalizeAffiliateLandingPageTypeFilter(options.landingPageType)
   const landingTypeSql = buildAffiliateLandingTypeConditionSql('p')
   const asinPresentConditionSql = `COALESCE(NULLIF(TRIM(p.asin), ''), NULL) IS NOT NULL`
-  const preferFastLandingTypeFilter = db.type === 'postgres' && options.preferFastLandingTypeFilter === true
+  const preferFastLandingTypeFilter =
+    db.type === 'postgres' && options.preferFastLandingTypeFilter === true
   // lightweight 汇总只用于首屏快速统计；避免在大表上执行 URL LIKE 分类导致超时。
   const lightweightProductConditionSql = asinPresentConditionSql
   const lightweightStoreConditionSql = `(p.platform = 'partnerboost' AND NOT (${asinPresentConditionSql}))`
@@ -6357,7 +6541,10 @@ export async function listAffiliateProducts(userId: number, options: ProductList
     if (!Number.isFinite(parsed) || parsed < 0) return 0
     return parsed
   }
-  const createPlatformStatsAccumulator = (): Record<AffiliatePlatform, PlatformStatsAccumulator> => ({
+  const createPlatformStatsAccumulator = (): Record<
+    AffiliatePlatform,
+    PlatformStatsAccumulator
+  > => ({
     yeahpromos: {
       total: 0,
       productCount: 0,
@@ -6392,14 +6579,17 @@ export async function listAffiliateProducts(userId: number, options: ProductList
     ...stats,
     visibleCount: resolveVisibleCount(stats),
   })
-  const finalizePlatformStats = (accumulator: Record<AffiliatePlatform, PlatformStatsAccumulator>): Record<AffiliatePlatform, PlatformProductStats> => ({
+  const finalizePlatformStats = (
+    accumulator: Record<AffiliatePlatform, PlatformStatsAccumulator>
+  ): Record<AffiliatePlatform, PlatformProductStats> => ({
     yeahpromos: toPlatformStats(accumulator.yeahpromos),
     partnerboost: toPlatformStats(accumulator.partnerboost),
   })
   const confirmedInvalidStatusSql = buildConfirmedInvalidSql()
-  const recommendationScoreFreshSql = db.type === 'postgres'
-    ? `(p.score_calculated_at >= (NOW() - INTERVAL '${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
-    : `(datetime(p.score_calculated_at) >= datetime('now', '-${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
+  const recommendationScoreFreshSql =
+    db.type === 'postgres'
+      ? `(p.score_calculated_at >= (NOW() - INTERVAL '${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
+      : `(datetime(p.score_calculated_at) >= datetime('now', '-${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
   const fullSyncBaselineCteSql = `
     WITH latest_platform_full_sync AS (
       SELECT ranked.platform, ranked.baseline_started_at
@@ -6447,9 +6637,7 @@ export async function listAffiliateProducts(userId: number, options: ProductList
 
   const midRaw = (options.mid || '').trim()
   const mid = midRaw.toLowerCase()
-  const hasMerchantIdColumn = midRaw
-    ? await hasAffiliateProductsMerchantIdColumn(db)
-    : false
+  const hasMerchantIdColumn = midRaw ? await hasAffiliateProductsMerchantIdColumn(db) : false
   if (midRaw) {
     const prefersPartnerboostMerchantExact = hasMerchantIdColumn && /^\d{5,}$/.test(midRaw)
 
@@ -6612,9 +6800,8 @@ export async function listAffiliateProducts(userId: number, options: ProductList
   }
 
   const filteredWhereSql = filteredWhereConditions.join(' AND ')
-  const productStatusSelectSql = statusFilter === 'all'
-    ? 'NULL AS product_status'
-    : `'${statusFilter}' AS product_status`
+  const productStatusSelectSql =
+    statusFilter === 'all' ? 'NULL AS product_status' : `'${statusFilter}' AS product_status`
 
   type ProductRowWithDerived = AffiliateProduct & {
     related_offer_count?: number
@@ -6630,7 +6817,7 @@ export async function listAffiliateProducts(userId: number, options: ProductList
     ? Promise.resolve([])
     : shouldScopeLinkCountsToPagedRows
       ? db.query<ProductRowWithDerived>(
-        `
+          `
           ${fullSyncBaselineCteSql},
           paged_products AS (
             SELECT
@@ -6675,10 +6862,10 @@ export async function listAffiliateProducts(userId: number, options: ProductList
           ) link_counts ON link_counts.product_id = pp.id
           ORDER BY ${orderBySqlForPagedRows}
         `,
-        [userId, ...filteredWhereParams, pageSize, offset, userId]
-      )
+          [userId, ...filteredWhereParams, pageSize, offset, userId]
+        )
       : db.query<ProductRowWithDerived>(
-        `
+          `
           ${fullSyncBaselineCteSql}
           SELECT
             p.*,
@@ -6716,8 +6903,8 @@ export async function listAffiliateProducts(userId: number, options: ProductList
           LIMIT ?
           OFFSET ?
         `,
-        [userId, userId, ...filteredWhereParams, pageSize, offset]
-      )
+          [userId, userId, ...filteredWhereParams, pageSize, offset]
+        )
   const summaryCachePayload: ProductSummaryCachePayload = {
     search,
     mid,
@@ -6783,11 +6970,13 @@ export async function listAffiliateProducts(userId: number, options: ProductList
     // lightweightSummary 下沿用已聚合的平台计数兜底，避免额外重查询。
     const inferredProductCount = Math.max(
       0,
-      platformStatsAccumulator.yeahpromos.productCount + platformStatsAccumulator.partnerboost.productCount
+      platformStatsAccumulator.yeahpromos.productCount +
+        platformStatsAccumulator.partnerboost.productCount
     )
     const inferredStoreCount = Math.max(
       0,
-      platformStatsAccumulator.yeahpromos.storeCount + platformStatsAccumulator.partnerboost.storeCount
+      platformStatsAccumulator.yeahpromos.storeCount +
+        platformStatsAccumulator.partnerboost.storeCount
     )
     return {
       productCount: inferredProductCount,
@@ -6798,8 +6987,7 @@ export async function listAffiliateProducts(userId: number, options: ProductList
 
   const cachedPlatformStats = cachedSummary?.platformStats
   const hasCachedPlatformStats = Boolean(
-    cachedPlatformStats
-    && typeof cachedPlatformStats === 'object'
+    cachedPlatformStats && typeof cachedPlatformStats === 'object'
   )
   let summaryComputationDegraded = false
 
@@ -6833,10 +7021,14 @@ export async function listAffiliateProducts(userId: number, options: ProductList
       const cachedLanding = cachedSummary.landingPageStats
       const productCount = toSafeCount(cachedLanding?.productCount)
       const storeCount = toSafeCount(cachedLanding?.storeCount)
-      const fallbackProductCount = platformStats.yeahpromos.productCount + platformStats.partnerboost.productCount
-      const fallbackStoreCount = platformStats.yeahpromos.storeCount + platformStats.partnerboost.storeCount
-      const resolvedProductCount = productCount > 0 || storeCount > 0 ? productCount : fallbackProductCount
-      const resolvedStoreCount = productCount > 0 || storeCount > 0 ? storeCount : fallbackStoreCount
+      const fallbackProductCount =
+        platformStats.yeahpromos.productCount + platformStats.partnerboost.productCount
+      const fallbackStoreCount =
+        platformStats.yeahpromos.storeCount + platformStats.partnerboost.storeCount
+      const resolvedProductCount =
+        productCount > 0 || storeCount > 0 ? productCount : fallbackProductCount
+      const resolvedStoreCount =
+        productCount > 0 || storeCount > 0 ? storeCount : fallbackStoreCount
       landingPageStats = {
         productCount: resolvedProductCount,
         storeCount: resolvedStoreCount,
@@ -6867,14 +7059,14 @@ export async function listAffiliateProducts(userId: number, options: ProductList
         blacklistedCount = Number(cachedSummary.blacklistedCount || 0)
       }
 
-    const basePlatformRows = lightweightSummary
-      ? await db.query<{
-        platform: string
-        total_count: number
-        lightweight_product_count: number
-        lightweight_store_count: number
-      }>(
-        `
+      const basePlatformRows = lightweightSummary
+        ? await db.query<{
+            platform: string
+            total_count: number
+            lightweight_product_count: number
+            lightweight_store_count: number
+          }>(
+            `
           SELECT
             p.platform AS platform,
             COUNT(*) AS total_count,
@@ -6898,15 +7090,15 @@ export async function listAffiliateProducts(userId: number, options: ProductList
           WHERE ${baseWhereSql}
           GROUP BY p.platform
         `,
-        [...whereParams]
-      )
-      : await db.query<{
-        platform: string
-        total_count: number
-        product_count: number
-        store_count: number
-      }>(
-        `
+            [...whereParams]
+          )
+        : await db.query<{
+            platform: string
+            total_count: number
+            product_count: number
+            store_count: number
+          }>(
+            `
           SELECT
             p.platform AS platform,
             COUNT(*) AS total_count,
@@ -6916,45 +7108,53 @@ export async function listAffiliateProducts(userId: number, options: ProductList
           WHERE ${baseWhereSql}
           GROUP BY p.platform
         `,
-        [...whereParams]
-      )
+            [...whereParams]
+          )
 
-    for (const row of basePlatformRows) {
-      const platformKey = normalizeAffiliatePlatform(row.platform)
-      if (!platformKey) continue
-      platformStatsAccumulator[platformKey].total = toSafeCount(row.total_count)
-      if (lightweightSummary) {
-        platformStatsAccumulator[platformKey].productCount = toSafeCount((row as any).lightweight_product_count)
-        platformStatsAccumulator[platformKey].storeCount = toSafeCount((row as any).lightweight_store_count)
-      } else {
-        platformStatsAccumulator[platformKey].productCount = toSafeCount((row as any).product_count)
-        platformStatsAccumulator[platformKey].storeCount = toSafeCount((row as any).store_count)
+      for (const row of basePlatformRows) {
+        const platformKey = normalizeAffiliatePlatform(row.platform)
+        if (!platformKey) continue
+        platformStatsAccumulator[platformKey].total = toSafeCount(row.total_count)
+        if (lightweightSummary) {
+          platformStatsAccumulator[platformKey].productCount = toSafeCount(
+            (row as any).lightweight_product_count
+          )
+          platformStatsAccumulator[platformKey].storeCount = toSafeCount(
+            (row as any).lightweight_store_count
+          )
+        } else {
+          platformStatsAccumulator[platformKey].productCount = toSafeCount(
+            (row as any).product_count
+          )
+          platformStatsAccumulator[platformKey].storeCount = toSafeCount((row as any).store_count)
+        }
       }
-    }
 
-    if (statusFilter === 'all') {
-      total = Object.values(platformStatsAccumulator).reduce((sum, item) => sum + item.total, 0)
-      platformStats = finalizePlatformStats(platformStatsAccumulator)
-      landingPageStats = lightweightSummary
-        ? resolveLightweightLandingPageStats(total)
-        : (() => {
-          const productCount = platformStats.yeahpromos.productCount + platformStats.partnerboost.productCount
-          const storeCount = platformStats.yeahpromos.storeCount + platformStats.partnerboost.storeCount
-          return {
-            productCount,
-            storeCount,
-            unknownCount: Math.max(0, total - productCount - storeCount),
-          }
-        })()
-    } else {
-      const fastVisibleRows = lightweightSummary
-        ? await db.query<{
-          platform: string
-          visible_count: number
-          lightweight_product_count: number
-          lightweight_store_count: number
-        }>(
-          `
+      if (statusFilter === 'all') {
+        total = Object.values(platformStatsAccumulator).reduce((sum, item) => sum + item.total, 0)
+        platformStats = finalizePlatformStats(platformStatsAccumulator)
+        landingPageStats = lightweightSummary
+          ? resolveLightweightLandingPageStats(total)
+          : (() => {
+              const productCount =
+                platformStats.yeahpromos.productCount + platformStats.partnerboost.productCount
+              const storeCount =
+                platformStats.yeahpromos.storeCount + platformStats.partnerboost.storeCount
+              return {
+                productCount,
+                storeCount,
+                unknownCount: Math.max(0, total - productCount - storeCount),
+              }
+            })()
+      } else {
+        const fastVisibleRows = lightweightSummary
+          ? await db.query<{
+              platform: string
+              visible_count: number
+              lightweight_product_count: number
+              lightweight_store_count: number
+            }>(
+              `
             ${fullSyncBaselineCteSql}
             SELECT
               p.platform AS platform,
@@ -6980,15 +7180,15 @@ export async function listAffiliateProducts(userId: number, options: ProductList
             WHERE ${filteredWhereSql}
             GROUP BY p.platform
           `,
-          [userId, ...filteredWhereParams]
-        )
-        : await db.query<{
-          platform: string
-          visible_count: number
-          product_count: number
-          store_count: number
-        }>(
-          `
+              [userId, ...filteredWhereParams]
+            )
+          : await db.query<{
+              platform: string
+              visible_count: number
+              product_count: number
+              store_count: number
+            }>(
+              `
             ${fullSyncBaselineCteSql}
             SELECT
               p.platform AS platform,
@@ -7000,67 +7200,75 @@ export async function listAffiliateProducts(userId: number, options: ProductList
             WHERE ${filteredWhereSql}
             GROUP BY p.platform
           `,
-          [userId, ...filteredWhereParams]
-        )
+              [userId, ...filteredWhereParams]
+            )
 
-      for (const platformKey of ['yeahpromos', 'partnerboost'] as const) {
-        platformStatsAccumulator[platformKey].productCount = 0
-        platformStatsAccumulator[platformKey].storeCount = 0
-      }
-
-      let visibleTotal = 0
-      for (const row of fastVisibleRows) {
-        const platformKey = normalizeAffiliatePlatform(row.platform)
-        if (!platformKey) continue
-        const visibleCount = toSafeCount(row.visible_count)
-        visibleTotal += visibleCount
-        if (lightweightSummary) {
-          platformStatsAccumulator[platformKey].productCount = toSafeCount((row as any).lightweight_product_count)
-          platformStatsAccumulator[platformKey].storeCount = toSafeCount((row as any).lightweight_store_count)
-        } else {
-          platformStatsAccumulator[platformKey].productCount = toSafeCount((row as any).product_count)
-          platformStatsAccumulator[platformKey].storeCount = toSafeCount((row as any).store_count)
+        for (const platformKey of ['yeahpromos', 'partnerboost'] as const) {
+          platformStatsAccumulator[platformKey].productCount = 0
+          platformStatsAccumulator[platformKey].storeCount = 0
         }
 
-        if (statusFilter === 'active') {
-          platformStatsAccumulator[platformKey].activeProductsCount = visibleCount
-          continue
-        }
-        if (statusFilter === 'invalid') {
-          platformStatsAccumulator[platformKey].invalidProductsCount = visibleCount
-          continue
-        }
-        if (statusFilter === 'sync_missing') {
-          platformStatsAccumulator[platformKey].syncMissingProductsCount = visibleCount
-          continue
-        }
-        platformStatsAccumulator[platformKey].unknownProductsCount = visibleCount
-      }
-
-      total = visibleTotal
-      if (statusFilter === 'active') {
-        activeProductsCount = visibleTotal
-      } else if (statusFilter === 'invalid') {
-        invalidProductsCount = visibleTotal
-      } else if (statusFilter === 'sync_missing') {
-        syncMissingProductsCount = visibleTotal
-      } else if (statusFilter === 'unknown') {
-        unknownProductsCount = visibleTotal
-      }
-
-      platformStats = finalizePlatformStats(platformStatsAccumulator)
-      landingPageStats = lightweightSummary
-        ? resolveLightweightLandingPageStats(total)
-        : (() => {
-          const productCount = platformStats.yeahpromos.productCount + platformStats.partnerboost.productCount
-          const storeCount = platformStats.yeahpromos.storeCount + platformStats.partnerboost.storeCount
-          return {
-            productCount,
-            storeCount,
-            unknownCount: Math.max(0, total - productCount - storeCount),
+        let visibleTotal = 0
+        for (const row of fastVisibleRows) {
+          const platformKey = normalizeAffiliatePlatform(row.platform)
+          if (!platformKey) continue
+          const visibleCount = toSafeCount(row.visible_count)
+          visibleTotal += visibleCount
+          if (lightweightSummary) {
+            platformStatsAccumulator[platformKey].productCount = toSafeCount(
+              (row as any).lightweight_product_count
+            )
+            platformStatsAccumulator[platformKey].storeCount = toSafeCount(
+              (row as any).lightweight_store_count
+            )
+          } else {
+            platformStatsAccumulator[platformKey].productCount = toSafeCount(
+              (row as any).product_count
+            )
+            platformStatsAccumulator[platformKey].storeCount = toSafeCount((row as any).store_count)
           }
-        })()
-    }
+
+          if (statusFilter === 'active') {
+            platformStatsAccumulator[platformKey].activeProductsCount = visibleCount
+            continue
+          }
+          if (statusFilter === 'invalid') {
+            platformStatsAccumulator[platformKey].invalidProductsCount = visibleCount
+            continue
+          }
+          if (statusFilter === 'sync_missing') {
+            platformStatsAccumulator[platformKey].syncMissingProductsCount = visibleCount
+            continue
+          }
+          platformStatsAccumulator[platformKey].unknownProductsCount = visibleCount
+        }
+
+        total = visibleTotal
+        if (statusFilter === 'active') {
+          activeProductsCount = visibleTotal
+        } else if (statusFilter === 'invalid') {
+          invalidProductsCount = visibleTotal
+        } else if (statusFilter === 'sync_missing') {
+          syncMissingProductsCount = visibleTotal
+        } else if (statusFilter === 'unknown') {
+          unknownProductsCount = visibleTotal
+        }
+
+        platformStats = finalizePlatformStats(platformStatsAccumulator)
+        landingPageStats = lightweightSummary
+          ? resolveLightweightLandingPageStats(total)
+          : (() => {
+              const productCount =
+                platformStats.yeahpromos.productCount + platformStats.partnerboost.productCount
+              const storeCount =
+                platformStats.yeahpromos.storeCount + platformStats.partnerboost.storeCount
+              return {
+                productCount,
+                storeCount,
+                unknownCount: Math.max(0, total - productCount - storeCount),
+              }
+            })()
+      }
 
       if (!lightweightSummary) {
         await setCachedProductSummary(userId, summaryCacheHash, {
@@ -7077,15 +7285,15 @@ export async function listAffiliateProducts(userId: number, options: ProductList
       }
     } else {
       const summaryRow = await db.queryOne<{
-      total_count: number
-      active_products_count: number
-      sync_missing_products_count: number
-      unknown_products_count: number
-      blacklisted_count: number
-      products_with_link_count: number
-      yeahpromos_count: number
-    }>(
-      `
+        total_count: number
+        active_products_count: number
+        sync_missing_products_count: number
+        unknown_products_count: number
+        blacklisted_count: number
+        products_with_link_count: number
+        yeahpromos_count: number
+      }>(
+        `
         ${fullSyncBaselineCteSql}
         SELECT
           COUNT(*) AS total_count,
@@ -7104,21 +7312,21 @@ export async function listAffiliateProducts(userId: number, options: ProductList
         LEFT JOIN latest_platform_full_sync baseline ON baseline.platform = p.platform
         WHERE ${baseWhereSql}
       `,
-      [userId, ...whereParams]
-    )
+        [userId, ...whereParams]
+      )
 
-    const platformSummaryRows = await db.query<{
-      platform: string
-      total_count: number
-      product_count: number
-      store_count: number
-      active_products_count: number
-      sync_missing_products_count: number
-      unknown_products_count: number
-      blacklisted_count: number
-      products_with_link_count: number
-    }>(
-      `
+      const platformSummaryRows = await db.query<{
+        platform: string
+        total_count: number
+        product_count: number
+        store_count: number
+        active_products_count: number
+        sync_missing_products_count: number
+        unknown_products_count: number
+        blacklisted_count: number
+        products_with_link_count: number
+      }>(
+        `
         ${fullSyncBaselineCteSql}
         SELECT
           p.platform AS platform,
@@ -7140,37 +7348,37 @@ export async function listAffiliateProducts(userId: number, options: ProductList
         WHERE ${baseWhereSql}
         GROUP BY p.platform
       `,
-      [userId, ...whereParams]
-    )
+        [userId, ...whereParams]
+      )
 
-    for (const row of platformSummaryRows) {
-      const platformKey = normalizeAffiliatePlatform(row.platform)
-      if (!platformKey) continue
-      platformStatsAccumulator[platformKey] = {
-        total: toSafeCount(row.total_count),
-        productCount: toSafeCount(row.product_count),
-        storeCount: toSafeCount(row.store_count),
-        productsWithLinkCount: toSafeCount(row.products_with_link_count),
-        activeProductsCount: toSafeCount(row.active_products_count),
-        invalidProductsCount: 0,
-        syncMissingProductsCount: toSafeCount(row.sync_missing_products_count),
-        unknownProductsCount: toSafeCount(row.unknown_products_count),
-        blacklistedCount: toSafeCount(row.blacklisted_count),
+      for (const row of platformSummaryRows) {
+        const platformKey = normalizeAffiliatePlatform(row.platform)
+        if (!platformKey) continue
+        platformStatsAccumulator[platformKey] = {
+          total: toSafeCount(row.total_count),
+          productCount: toSafeCount(row.product_count),
+          storeCount: toSafeCount(row.store_count),
+          productsWithLinkCount: toSafeCount(row.products_with_link_count),
+          activeProductsCount: toSafeCount(row.active_products_count),
+          invalidProductsCount: 0,
+          syncMissingProductsCount: toSafeCount(row.sync_missing_products_count),
+          unknownProductsCount: toSafeCount(row.unknown_products_count),
+          blacklistedCount: toSafeCount(row.blacklisted_count),
+        }
       }
-    }
 
-    let invalidActiveOverlapCount = 0
-    let invalidSyncMissingOverlapCount = 0
-    let invalidUnknownOverlapCount = 0
+      let invalidActiveOverlapCount = 0
+      let invalidSyncMissingOverlapCount = 0
+      let invalidUnknownOverlapCount = 0
 
-    if (!skipInvalidSummary) {
-      const invalidSummaryRow = await db.queryOne<{
-        invalid_products_count: number
-        invalid_active_overlap_count: number
-        invalid_sync_missing_overlap_count: number
-        invalid_unknown_overlap_count: number
-      }>(
-        `
+      if (!skipInvalidSummary) {
+        const invalidSummaryRow = await db.queryOne<{
+          invalid_products_count: number
+          invalid_active_overlap_count: number
+          invalid_sync_missing_overlap_count: number
+          invalid_unknown_overlap_count: number
+        }>(
+          `
           ${fullSyncBaselineCteSql}
           SELECT
             COUNT(*) AS invalid_products_count,
@@ -7182,17 +7390,17 @@ export async function listAffiliateProducts(userId: number, options: ProductList
           WHERE ${baseWhereSql}
             AND ${confirmedInvalidStatusSql}
         `,
-        [userId, ...whereParams]
-      )
+          [userId, ...whereParams]
+        )
 
-      const invalidSummaryByPlatformRows = await db.query<{
-        platform: string
-        invalid_products_count: number
-        invalid_active_overlap_count: number
-        invalid_sync_missing_overlap_count: number
-        invalid_unknown_overlap_count: number
-      }>(
-        `
+        const invalidSummaryByPlatformRows = await db.query<{
+          platform: string
+          invalid_products_count: number
+          invalid_active_overlap_count: number
+          invalid_sync_missing_overlap_count: number
+          invalid_unknown_overlap_count: number
+        }>(
+          `
           ${fullSyncBaselineCteSql}
           SELECT
             p.platform AS platform,
@@ -7206,63 +7414,69 @@ export async function listAffiliateProducts(userId: number, options: ProductList
             AND ${confirmedInvalidStatusSql}
           GROUP BY p.platform
         `,
-        [userId, ...whereParams]
-      )
-
-      invalidProductsCount = Number(invalidSummaryRow?.invalid_products_count || 0)
-      invalidActiveOverlapCount = Number(invalidSummaryRow?.invalid_active_overlap_count || 0)
-      invalidSyncMissingOverlapCount = Number(invalidSummaryRow?.invalid_sync_missing_overlap_count || 0)
-      invalidUnknownOverlapCount = Number(invalidSummaryRow?.invalid_unknown_overlap_count || 0)
-
-      for (const row of invalidSummaryByPlatformRows) {
-        const platformKey = normalizeAffiliatePlatform(row.platform)
-        if (!platformKey) continue
-        const invalidCount = toSafeCount(row.invalid_products_count)
-        const invalidActiveOverlap = toSafeCount(row.invalid_active_overlap_count)
-        const invalidSyncMissingOverlap = toSafeCount(row.invalid_sync_missing_overlap_count)
-        const invalidUnknownOverlap = toSafeCount(row.invalid_unknown_overlap_count)
-
-        platformStatsAccumulator[platformKey].invalidProductsCount = invalidCount
-        platformStatsAccumulator[platformKey].activeProductsCount = Math.max(
-          0,
-          platformStatsAccumulator[platformKey].activeProductsCount - invalidActiveOverlap
+          [userId, ...whereParams]
         )
-        platformStatsAccumulator[platformKey].syncMissingProductsCount = Math.max(
-          0,
-          platformStatsAccumulator[platformKey].syncMissingProductsCount - invalidSyncMissingOverlap
+
+        invalidProductsCount = Number(invalidSummaryRow?.invalid_products_count || 0)
+        invalidActiveOverlapCount = Number(invalidSummaryRow?.invalid_active_overlap_count || 0)
+        invalidSyncMissingOverlapCount = Number(
+          invalidSummaryRow?.invalid_sync_missing_overlap_count || 0
         )
-        platformStatsAccumulator[platformKey].unknownProductsCount = Math.max(
-          0,
-          platformStatsAccumulator[platformKey].unknownProductsCount - invalidUnknownOverlap
-        )
+        invalidUnknownOverlapCount = Number(invalidSummaryRow?.invalid_unknown_overlap_count || 0)
+
+        for (const row of invalidSummaryByPlatformRows) {
+          const platformKey = normalizeAffiliatePlatform(row.platform)
+          if (!platformKey) continue
+          const invalidCount = toSafeCount(row.invalid_products_count)
+          const invalidActiveOverlap = toSafeCount(row.invalid_active_overlap_count)
+          const invalidSyncMissingOverlap = toSafeCount(row.invalid_sync_missing_overlap_count)
+          const invalidUnknownOverlap = toSafeCount(row.invalid_unknown_overlap_count)
+
+          platformStatsAccumulator[platformKey].invalidProductsCount = invalidCount
+          platformStatsAccumulator[platformKey].activeProductsCount = Math.max(
+            0,
+            platformStatsAccumulator[platformKey].activeProductsCount - invalidActiveOverlap
+          )
+          platformStatsAccumulator[platformKey].syncMissingProductsCount = Math.max(
+            0,
+            platformStatsAccumulator[platformKey].syncMissingProductsCount -
+              invalidSyncMissingOverlap
+          )
+          platformStatsAccumulator[platformKey].unknownProductsCount = Math.max(
+            0,
+            platformStatsAccumulator[platformKey].unknownProductsCount - invalidUnknownOverlap
+          )
+        }
       }
-    }
 
-    const baseActiveProductsCount = Number(summaryRow?.active_products_count || 0)
-    const baseSyncMissingProductsCount = Number(summaryRow?.sync_missing_products_count || 0)
-    const baseUnknownProductsCount = Number(summaryRow?.unknown_products_count || 0)
+      const baseActiveProductsCount = Number(summaryRow?.active_products_count || 0)
+      const baseSyncMissingProductsCount = Number(summaryRow?.sync_missing_products_count || 0)
+      const baseUnknownProductsCount = Number(summaryRow?.unknown_products_count || 0)
 
-    activeProductsCount = Math.max(0, baseActiveProductsCount - invalidActiveOverlapCount)
-    syncMissingProductsCount = Math.max(0, baseSyncMissingProductsCount - invalidSyncMissingOverlapCount)
-    unknownProductsCount = Math.max(0, baseUnknownProductsCount - invalidUnknownOverlapCount)
+      activeProductsCount = Math.max(0, baseActiveProductsCount - invalidActiveOverlapCount)
+      syncMissingProductsCount = Math.max(
+        0,
+        baseSyncMissingProductsCount - invalidSyncMissingOverlapCount
+      )
+      unknownProductsCount = Math.max(0, baseUnknownProductsCount - invalidUnknownOverlapCount)
 
-    total = (() => {
-      if (statusFilter === 'all') return Number(summaryRow?.total_count || 0)
-      if (statusFilter === 'invalid') return invalidProductsCount
-      if (statusFilter === 'active') return activeProductsCount
-      if (statusFilter === 'sync_missing') return syncMissingProductsCount
-      return unknownProductsCount
-    })()
-    productsWithLinkCount = Number(summaryRow?.products_with_link_count || 0)
-    blacklistedCount = Number(summaryRow?.blacklisted_count || 0)
+      total = (() => {
+        if (statusFilter === 'all') return Number(summaryRow?.total_count || 0)
+        if (statusFilter === 'invalid') return invalidProductsCount
+        if (statusFilter === 'active') return activeProductsCount
+        if (statusFilter === 'sync_missing') return syncMissingProductsCount
+        return unknownProductsCount
+      })()
+      productsWithLinkCount = Number(summaryRow?.products_with_link_count || 0)
+      blacklistedCount = Number(summaryRow?.blacklisted_count || 0)
 
-    if (statusFilter !== 'all') {
-      const filteredLandingRows = await db.query<{
-        platform: string
-        product_count: number
-        store_count: number
-      }>(
-        `
+      if (statusFilter !== 'all') {
+        const filteredLandingRows = await db.query<{
+          platform: string
+          product_count: number
+          store_count: number
+        }>(
+          `
           ${fullSyncBaselineCteSql}
           SELECT
             p.platform AS platform,
@@ -7273,29 +7487,30 @@ export async function listAffiliateProducts(userId: number, options: ProductList
           WHERE ${filteredWhereSql}
           GROUP BY p.platform
         `,
-        [userId, ...filteredWhereParams]
-      )
+          [userId, ...filteredWhereParams]
+        )
 
-      for (const platformKey of ['yeahpromos', 'partnerboost'] as const) {
-        platformStatsAccumulator[platformKey].productCount = 0
-        platformStatsAccumulator[platformKey].storeCount = 0
+        for (const platformKey of ['yeahpromos', 'partnerboost'] as const) {
+          platformStatsAccumulator[platformKey].productCount = 0
+          platformStatsAccumulator[platformKey].storeCount = 0
+        }
+        for (const row of filteredLandingRows) {
+          const platformKey = normalizeAffiliatePlatform(row.platform)
+          if (!platformKey) continue
+          platformStatsAccumulator[platformKey].productCount = toSafeCount(row.product_count)
+          platformStatsAccumulator[platformKey].storeCount = toSafeCount(row.store_count)
+        }
       }
-      for (const row of filteredLandingRows) {
-        const platformKey = normalizeAffiliatePlatform(row.platform)
-        if (!platformKey) continue
-        platformStatsAccumulator[platformKey].productCount = toSafeCount(row.product_count)
-        platformStatsAccumulator[platformKey].storeCount = toSafeCount(row.store_count)
-      }
-    }
 
-    platformStats = finalizePlatformStats(platformStatsAccumulator)
-    const productCount = platformStats.yeahpromos.productCount + platformStats.partnerboost.productCount
-    const storeCount = platformStats.yeahpromos.storeCount + platformStats.partnerboost.storeCount
-    landingPageStats = {
-      productCount,
-      storeCount,
-      unknownCount: Math.max(0, total - productCount - storeCount),
-    }
+      platformStats = finalizePlatformStats(platformStatsAccumulator)
+      const productCount =
+        platformStats.yeahpromos.productCount + platformStats.partnerboost.productCount
+      const storeCount = platformStats.yeahpromos.storeCount + platformStats.partnerboost.storeCount
+      landingPageStats = {
+        productCount,
+        storeCount,
+        unknownCount: Math.max(0, total - productCount - storeCount),
+      }
 
       await setCachedProductSummary(userId, summaryCacheHash, {
         total,
@@ -7338,14 +7553,15 @@ export async function listAffiliateProducts(userId: number, options: ProductList
   const items = skipItems
     ? []
     : rows.map((row, index) => {
-      const rowForMapping = statusFilter === 'all'
-        ? {
-            ...row,
-            product_status: resolveLifecycleStatusFromRowForList(row),
-          }
-        : row
-      return mapAffiliateProductRow(rowForMapping, offset + index + 1)
-    })
+        const rowForMapping =
+          statusFilter === 'all'
+            ? {
+                ...row,
+                product_status: resolveLifecycleStatusFromRowForList(row),
+              }
+            : row
+        return mapAffiliateProductRow(rowForMapping, offset + index + 1)
+      })
 
   return {
     items,
@@ -7373,23 +7589,26 @@ function mapAffiliateProductRow(
   serialNumber?: number
 ): AffiliateProductListItem {
   const normalizedCommissionRateMode = normalizeCommissionRateMode(row.commission_rate_mode)
-  const hasComparableCommissionValues = row.commission_amount !== null && row.commission_rate !== null
+  const hasComparableCommissionValues =
+    row.commission_amount !== null && row.commission_rate !== null
   const looksLikeAmountModeFromValues = hasComparableCommissionValues
     ? Math.abs(Number(row.commission_amount) - Number(row.commission_rate)) < 0.000001
     : false
 
-  const commissionRateMode: 'percent' | 'amount' = normalizedCommissionRateMode
-    || (looksLikeAmountModeFromValues ? 'amount' : 'percent')
+  const commissionRateMode: 'percent' | 'amount' =
+    normalizedCommissionRateMode || (looksLikeAmountModeFromValues ? 'amount' : 'percent')
 
   const inferredCommissionCurrency = normalizeCurrencyUnit(row.price_currency)
 
-  const normalizedCommissionAmount = commissionRateMode === 'amount'
-    ? (row.commission_amount ?? row.commission_rate)
-    : row.commission_amount
+  const normalizedCommissionAmount =
+    commissionRateMode === 'amount'
+      ? (row.commission_amount ?? row.commission_rate)
+      : row.commission_amount
 
-  const normalizedCommissionRate = commissionRateMode === 'amount'
-    ? (row.commission_amount ?? row.commission_rate)
-    : row.commission_rate
+  const normalizedCommissionRate =
+    commissionRateMode === 'amount'
+      ? (row.commission_amount ?? row.commission_rate)
+      : row.commission_rate
 
   const normalizedReviewCount = row.review_count
   const isDeepLink = normalizeTriStateBool(row.is_deeplink)
@@ -7403,9 +7622,8 @@ function mapAffiliateProductRow(
   if (!Number.isFinite(normalizedId) || normalizedId <= 0) {
     throw new Error(`[affiliate-products] invalid affiliate_products.id: ${String(row.id)}`)
   }
-  const resolvedSerial = typeof serialNumber === 'number' && Number.isFinite(serialNumber)
-    ? serialNumber
-    : normalizedId
+  const resolvedSerial =
+    typeof serialNumber === 'number' && Number.isFinite(serialNumber) ? serialNumber : normalizedId
 
   const merchantId = (() => {
     if (row.platform === 'partnerboost') {
@@ -7418,9 +7636,10 @@ function mapAffiliateProductRow(
   })()
 
   const recommendationScoreCalculatedAtMs = parseDateToTimestamp(row.score_calculated_at || null)
-  const recommendationScoreIsFresh = Number.isFinite(Number(row.recommendation_score))
-    && recommendationScoreCalculatedAtMs !== null
-    && (Date.now() - recommendationScoreCalculatedAtMs <= PRODUCT_SCORE_VALIDITY_WINDOW_MS)
+  const recommendationScoreIsFresh =
+    Number.isFinite(Number(row.recommendation_score)) &&
+    recommendationScoreCalculatedAtMs !== null &&
+    Date.now() - recommendationScoreCalculatedAtMs <= PRODUCT_SCORE_VALIDITY_WINDOW_MS
 
   return {
     id: normalizedId,
@@ -7449,10 +7668,11 @@ function mapAffiliateProductRow(
     historicalOfferCount: Number(row.historical_offer_count || 0),
     relatedOfferCount: Number(row.related_offer_count || 0),
     isBlacklisted: toBool(row.is_blacklisted),
-    recommendationScore: recommendationScoreIsFresh ? (row.recommendation_score || null) : null,
-    recommendationReasons: recommendationScoreIsFresh && row.recommendation_reasons
-      ? JSON.parse(row.recommendation_reasons)
-      : null,
+    recommendationScore: recommendationScoreIsFresh ? row.recommendation_score || null : null,
+    recommendationReasons:
+      recommendationScoreIsFresh && row.recommendation_reasons
+        ? JSON.parse(row.recommendation_reasons)
+        : null,
     seasonalityScore: row.seasonality_score || null,
     productAnalysis: row.product_analysis ? JSON.parse(row.product_analysis) : null,
     lastSyncedAt: row.last_synced_at,
@@ -7493,7 +7713,10 @@ export const __testOnly = {
   resolveSyncMaxPages,
 }
 
-export async function getAffiliateProductById(userId: number, productId: number): Promise<AffiliateProduct | null> {
+export async function getAffiliateProductById(
+  userId: number,
+  productId: number
+): Promise<AffiliateProduct | null> {
   const db = await getDatabase()
   const row = await db.queryOne<AffiliateProduct>(
     `SELECT * FROM affiliate_products WHERE id = ? AND user_id = ? LIMIT 1`,
@@ -7510,21 +7733,22 @@ export async function clearAllAffiliateProducts(userId: number): Promise<{ delet
     [userId]
   )
 
-  await db.exec(
-    `DELETE FROM affiliate_products WHERE user_id = ?`,
-    [userId]
-  )
+  await db.exec(`DELETE FROM affiliate_products WHERE user_id = ?`, [userId])
 
   return {
     deletedCount: Number(totalRow?.total || 0),
   }
 }
 
-async function listActiveLinkedOfferIdsForProduct(userId: number, productId: number): Promise<number[]> {
+async function listActiveLinkedOfferIdsForProduct(
+  userId: number,
+  productId: number
+): Promise<number[]> {
   const db = await getDatabase()
-  const offerNotDeletedCondition = db.type === 'postgres'
-    ? '(o.is_deleted = false OR o.is_deleted IS NULL)'
-    : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
+  const offerNotDeletedCondition =
+    db.type === 'postgres'
+      ? '(o.is_deleted = false OR o.is_deleted IS NULL)'
+      : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
 
   const rows = await db.query<{ offer_id: number }>(
     `
@@ -7592,11 +7816,9 @@ export async function batchOfflineAffiliateProducts(params: {
   userId: number
   productIds: number[]
 }): Promise<BatchOfflineAffiliateProductsResult> {
-  const dedupedProductIds = Array.from(new Set(
-    params.productIds
-      .map((id) => Number(id))
-      .filter((id) => Number.isFinite(id) && id > 0)
-  ))
+  const dedupedProductIds = Array.from(
+    new Set(params.productIds.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0))
+  )
 
   const results: BatchOfflineAffiliateProductsResult['results'] = []
   let successCount = 0
@@ -7649,9 +7871,13 @@ export async function batchOfflineAffiliateProducts(params: {
   }
 }
 
-export async function setAffiliateProductBlacklist(userId: number, productId: number, blacklisted: boolean): Promise<AffiliateProduct | null> {
+export async function setAffiliateProductBlacklist(
+  userId: number,
+  productId: number,
+  blacklisted: boolean
+): Promise<AffiliateProduct | null> {
   const db = await getDatabase()
-  const value = db.type === 'postgres' ? blacklisted : (blacklisted ? 1 : 0)
+  const value = db.type === 'postgres' ? blacklisted : blacklisted ? 1 : 0
   const nowIso = new Date().toISOString()
 
   await db.exec(
@@ -7769,9 +7995,10 @@ export async function backfillOfferProductLinkForPublishedCampaign(params: {
     }
   }
 
-  const offerNotDeletedCondition = db.type === 'postgres'
-    ? '(is_deleted = false OR is_deleted IS NULL)'
-    : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const offerNotDeletedCondition =
+    db.type === 'postgres'
+      ? '(is_deleted = false OR is_deleted IS NULL)'
+      : '(is_deleted = 0 OR is_deleted IS NULL)'
 
   const offer = await db.queryOne<{
     id: number
@@ -7851,7 +8078,12 @@ export async function backfillOfferProductLinkForPublishedCampaign(params: {
     }
   }
 
-  if (offerUrlTokens.size === 0 && offerLinkIds.size === 0 && offerAsins.size === 0 && offerBrands.size === 0) {
+  if (
+    offerUrlTokens.size === 0 &&
+    offerLinkIds.size === 0 &&
+    offerAsins.size === 0 &&
+    offerBrands.size === 0
+  ) {
     return {
       linked: false,
       offerId: params.offerId,
@@ -7872,9 +8104,10 @@ export async function backfillOfferProductLinkForPublishedCampaign(params: {
     }
   }
 
-  const notBlacklistedCondition = db.type === 'postgres'
-    ? '(is_blacklisted = false OR is_blacklisted IS NULL)'
-    : '(is_blacklisted = 0 OR is_blacklisted IS NULL)'
+  const notBlacklistedCondition =
+    db.type === 'postgres'
+      ? '(is_blacklisted = false OR is_blacklisted IS NULL)'
+      : '(is_blacklisted = 0 OR is_blacklisted IS NULL)'
 
   const productRows = await db.query<{
     id: number
@@ -8086,10 +8319,7 @@ export async function createOfferFromAffiliateProduct(params: {
       `DELETE FROM affiliate_product_offer_links WHERE user_id = ? AND product_id = ? AND offer_id = ?`,
       [params.userId, product.id, offer.id]
     )
-    await db.exec(
-      `DELETE FROM offers WHERE id = ? AND user_id = ?`,
-      [offer.id, params.userId]
-    )
+    await db.exec(`DELETE FROM offers WHERE id = ? AND user_id = ?`, [offer.id, params.userId])
 
     throw error
   }
@@ -8102,9 +8332,21 @@ export async function batchCreateOffersFromAffiliateProducts(params: {
   total: number
   successCount: number
   failureCount: number
-  results: Array<{ productId: number; success: boolean; offerId?: number; taskId?: string; error?: string }>
+  results: Array<{
+    productId: number
+    success: boolean
+    offerId?: number
+    taskId?: string
+    error?: string
+  }>
 }> {
-  const results: Array<{ productId: number; success: boolean; offerId?: number; taskId?: string; error?: string }> = []
+  const results: Array<{
+    productId: number
+    success: boolean
+    offerId?: number
+    taskId?: string
+    error?: string
+  }> = []
   let successCount = 0
   let failureCount = 0
 
@@ -8271,7 +8513,10 @@ export async function updateAffiliateProductSyncRun(params: {
       console.log(`[affiliate-sync] Updated run #${params.runId} status to '${params.status}'`)
     }
   } catch (error: any) {
-    console.error(`[affiliate-sync] Failed to update run #${params.runId}:`, error?.message || error)
+    console.error(
+      `[affiliate-sync] Failed to update run #${params.runId}:`,
+      error?.message || error
+    )
     throw error
   }
 }
@@ -8433,21 +8678,26 @@ export async function getLatestFailedAffiliateProductSyncRun(params: {
   }
 }
 
-export async function getAffiliateProductSyncRuns(userId: number, limit: number = 20): Promise<Array<{
-  id: number
-  platform: AffiliatePlatform
-  mode: SyncMode
-  status: string
-  trigger_source: string | null
-  total_items: number
-  created_count: number
-  updated_count: number
-  failed_count: number
-  error_message: string | null
-  started_at: string | null
-  completed_at: string | null
-  created_at: string
-}>> {
+export async function getAffiliateProductSyncRuns(
+  userId: number,
+  limit: number = 20
+): Promise<
+  Array<{
+    id: number
+    platform: AffiliatePlatform
+    mode: SyncMode
+    status: string
+    trigger_source: string | null
+    total_items: number
+    created_count: number
+    updated_count: number
+    failed_count: number
+    error_message: string | null
+    started_at: string | null
+    completed_at: string | null
+    created_at: string
+  }>
+> {
   const db = await getDatabase()
   const safeLimit = Math.max(1, Math.min(limit, 100))
   return await db.query(
@@ -8560,14 +8810,19 @@ export async function getYeahPromosSyncMonitor(userId: number): Promise<YeahProm
     hourlyStats: [],
   }
 
-  const targetSetting = await getUserOnlySetting('system', AFFILIATE_YP_ACCESS_PRODUCTS_TARGET_KEY, userId)
+  const targetSetting = await getUserOnlySetting(
+    'system',
+    AFFILIATE_YP_ACCESS_PRODUCTS_TARGET_KEY,
+    userId
+  )
   const targetItemsParsed = toSafeNonNegativeInt(targetSetting?.value || null)
   const targetItems = targetItemsParsed > 0 ? targetItemsParsed : null
 
   const db = await getDatabase()
-  const activeRunFreshnessSql = db.type === 'postgres'
-    ? "COALESCE(last_heartbeat_at, updated_at, created_at) >= NOW() - INTERVAL '45 minutes'"
-    : "COALESCE(last_heartbeat_at, updated_at, created_at) >= datetime('now', '-45 minutes')"
+  const activeRunFreshnessSql =
+    db.type === 'postgres'
+      ? "COALESCE(last_heartbeat_at, updated_at, created_at) >= NOW() - INTERVAL '45 minutes'"
+      : "COALESCE(last_heartbeat_at, updated_at, created_at) >= datetime('now', '-45 minutes')"
   const latestRun = await db.queryOne<{
     id: number
     status: string
@@ -8644,7 +8899,10 @@ export async function getYeahPromosSyncMonitor(userId: number): Promise<YeahProm
   const hourlyStats: AffiliateProductSyncHourlyStat[] = []
   let previousCumulative = 0
   for (const row of rowsAsc) {
-    const cumulativeFetched = Math.max(previousCumulative, toSafeNonNegativeInt(row.max_total_items))
+    const cumulativeFetched = Math.max(
+      previousCumulative,
+      toSafeNonNegativeInt(row.max_total_items)
+    )
     const fetchedCount = Math.max(0, cumulativeFetched - previousCumulative)
     previousCumulative = cumulativeFetched
     hourlyStats.push({
@@ -8657,9 +8915,10 @@ export async function getYeahPromosSyncMonitor(userId: number): Promise<YeahProm
   }
 
   const recentStats = hourlyStats.slice(-6).filter((item) => item.fetchedCount > 0)
-  let avgItemsPerHour = recentStats.length > 0
-    ? roundTo2(recentStats.reduce((sum, item) => sum + item.fetchedCount, 0) / recentStats.length)
-    : null
+  let avgItemsPerHour =
+    recentStats.length > 0
+      ? roundTo2(recentStats.reduce((sum, item) => sum + item.fetchedCount, 0) / recentStats.length)
+      : null
 
   if ((avgItemsPerHour === null || avgItemsPerHour <= 0) && fetchedItems > 0) {
     const startedAtMs = parseDateToTimestamp(latestRun.started_at)
@@ -8671,9 +8930,7 @@ export async function getYeahPromosSyncMonitor(userId: number): Promise<YeahProm
     }
   }
 
-  const remainingItems = targetItems !== null
-    ? Math.max(0, targetItems - fetchedItems)
-    : null
+  const remainingItems = targetItems !== null ? Math.max(0, targetItems - fetchedItems) : null
 
   let etaAt: string | null = null
   if (remainingItems !== null) {
@@ -8685,9 +8942,10 @@ export async function getYeahPromosSyncMonitor(userId: number): Promise<YeahProm
     }
   }
 
-  const statsUpdatedAt = hourlyStats.length > 0
-    ? (hourlyStats[hourlyStats.length - 1].updatedAt || null)
-    : (latestRun.last_heartbeat_at || latestRun.updated_at || null)
+  const statsUpdatedAt =
+    hourlyStats.length > 0
+      ? hourlyStats[hourlyStats.length - 1].updatedAt || null
+      : latestRun.last_heartbeat_at || latestRun.updated_at || null
 
   return {
     runId,
@@ -8761,9 +9019,7 @@ async function syncPartnerboostPlatformByWindow(params: {
 
   const countrySequence = resolvePartnerboostFullSyncCountrySequence()
   const normalizedStartScope = normalizeCountryCode(String(params.startScope || ''))
-  let scopeIndex = normalizedStartScope
-    ? countrySequence.indexOf(normalizedStartScope)
-    : 0
+  let scopeIndex = normalizedStartScope ? countrySequence.indexOf(normalizedStartScope) : 0
   if (scopeIndex < 0) {
     scopeIndex = 0
   }
@@ -8788,7 +9044,10 @@ async function syncPartnerboostPlatformByWindow(params: {
         failedCount,
       })
     } catch (error: any) {
-      console.warn('[affiliate-products] PB stream onProgress callback failed:', error?.message || error)
+      console.warn(
+        '[affiliate-products] PB stream onProgress callback failed:',
+        error?.message || error
+      )
     }
   }
 
@@ -8805,7 +9064,10 @@ async function syncPartnerboostPlatformByWindow(params: {
         failedCount,
       })
     } catch (error: any) {
-      console.warn('[affiliate-products] PB stream onCheckpoint callback failed:', error?.message || error)
+      console.warn(
+        '[affiliate-products] PB stream onCheckpoint callback failed:',
+        error?.message || error
+      )
     }
   }
 
@@ -8861,14 +9123,9 @@ async function syncPartnerboostPlatformByWindow(params: {
     })
   }
 
-  const upserted = await upsertAffiliateProducts(
-    params.userId,
-    'partnerboost',
-    scopedWindowItems,
-    {
-      progressEvery: params.progressEvery,
-    }
-  )
+  const upserted = await upsertAffiliateProducts(params.userId, 'partnerboost', scopedWindowItems, {
+    progressEvery: params.progressEvery,
+  })
   totalFetched += upserted.totalFetched
   createdCount += upserted.createdCount
   updatedCount += upserted.updatedCount
@@ -8876,9 +9133,10 @@ async function syncPartnerboostPlatformByWindow(params: {
     processedBatches += 1
   }
 
-  const nextPage = fetchResult.nextPage > windowStartPage
-    ? fetchResult.nextPage
-    : windowStartPage + Math.max(1, fetchResult.fetchedPages)
+  const nextPage =
+    fetchResult.nextPage > windowStartPage
+      ? fetchResult.nextPage
+      : windowStartPage + Math.max(1, fetchResult.fetchedPages)
   const scopeHasMore = fetchResult.hasMore && fetchResult.fetchedPages > 0
 
   let hasMore = false
@@ -8955,7 +9213,10 @@ async function syncYeahPromosPlatformByWindow(params: {
         failedCount,
       })
     } catch (error: any) {
-      console.warn('[affiliate-products] YP stream onProgress callback failed:', error?.message || error)
+      console.warn(
+        '[affiliate-products] YP stream onProgress callback failed:',
+        error?.message || error
+      )
     }
   }
 
@@ -8972,7 +9233,10 @@ async function syncYeahPromosPlatformByWindow(params: {
         failedCount,
       })
     } catch (error: any) {
-      console.warn('[affiliate-products] YP stream onCheckpoint callback failed:', error?.message || error)
+      console.warn(
+        '[affiliate-products] YP stream onCheckpoint callback failed:',
+        error?.message || error
+      )
     }
   }
 
@@ -8994,14 +9258,9 @@ async function syncYeahPromosPlatformByWindow(params: {
 
   const dedupedWindowItems = dedupeNormalizedProducts(fetchResult.items)
 
-  const upserted = await upsertAffiliateProducts(
-    params.userId,
-    'yeahpromos',
-    dedupedWindowItems,
-    {
-      progressEvery: params.progressEvery,
-    }
-  )
+  const upserted = await upsertAffiliateProducts(params.userId, 'yeahpromos', dedupedWindowItems, {
+    progressEvery: params.progressEvery,
+  })
   totalFetched += upserted.totalFetched
   createdCount += upserted.createdCount
   updatedCount += upserted.updatedCount
@@ -9011,7 +9270,7 @@ async function syncYeahPromosPlatformByWindow(params: {
 
   const hasMore = fetchResult.hasMore
   cursorPage = hasMore ? Math.max(1, fetchResult.nextPage) : 0
-  cursorScope = hasMore ? (fetchResult.nextScope || null) : null
+  cursorScope = hasMore ? fetchResult.nextScope || null : null
 
   await emitProgress(totalFetched)
   await emitCheckpoint()
@@ -9058,20 +9317,24 @@ export async function syncAffiliateProducts(params: {
         failedCount: 0,
       })
     } catch (error: any) {
-      console.warn('[affiliate-products] fetch stage progress callback failed:', error?.message || error)
+      console.warn(
+        '[affiliate-products] fetch stage progress callback failed:',
+        error?.message || error
+      )
     }
   }
 
   if (params.mode === 'delta') {
-    normalizedItems = params.platform === 'partnerboost'
-      ? await fetchPartnerboostDeltaProducts({
-          userId: params.userId,
-          onFetchProgress: emitFetchProgress,
-        })
-      : await fetchYeahPromosDeltaProducts({
-          userId: params.userId,
-          onFetchProgress: emitFetchProgress,
-        })
+    normalizedItems =
+      params.platform === 'partnerboost'
+        ? await fetchPartnerboostDeltaProducts({
+            userId: params.userId,
+            onFetchProgress: emitFetchProgress,
+          })
+        : await fetchYeahPromosDeltaProducts({
+            userId: params.userId,
+            onFetchProgress: emitFetchProgress,
+          })
   } else if (params.mode === 'single') {
     if (!params.productId) {
       throw new Error('缺少商品ID')

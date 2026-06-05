@@ -16,14 +16,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import {
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  Download,
-  Upload,
-  XCircle,
-} from 'lucide-react'
+import { AlertCircle, CheckCircle2, Clock, Download, Upload, XCircle } from 'lucide-react'
 import UploadSuccessModal from '@/components/UploadSuccessModal'
 
 interface UploadRecord {
@@ -110,7 +103,7 @@ export default function BatchOfferPage() {
       setUploadResult({
         fileName: file.name,
         validCount: data.totalCount,
-        skippedCount
+        skippedCount,
       })
       setShowSuccessModal(true)
 
@@ -119,7 +112,6 @@ export default function BatchOfferPage() {
 
       // 重置文件输入
       event.target.value = ''
-
     } catch (error: any) {
       console.error('Upload error:', error)
       setUploadError(error.message || '上传失败')
@@ -174,8 +166,8 @@ export default function BatchOfferPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          reason: '用户主动取消'
-        })
+          reason: '用户主动取消',
+        }),
       })
 
       if (!response.ok) {
@@ -191,7 +183,6 @@ export default function BatchOfferPage() {
 
       // 显示成功提示
       alert(`已成功取消批量任务\n已取消: ${result.stats.cancelled} 个任务`)
-
     } catch (error: any) {
       console.error('取消批量任务失败:', error)
       alert(`取消失败: ${error.message}`)
@@ -205,35 +196,47 @@ export default function BatchOfferPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-          <Clock className="w-4 h-4 mr-1" />
-          待处理
-        </span>
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            <Clock className="w-4 h-4 mr-1" />
+            待处理
+          </span>
+        )
       case 'processing':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-          <Clock className="w-4 h-4 mr-1 animate-spin" />
-          处理中
-        </span>
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            <Clock className="w-4 h-4 mr-1 animate-spin" />
+            处理中
+          </span>
+        )
       case 'completed':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          <CheckCircle2 className="w-4 h-4 mr-1" />
-          已完成
-        </span>
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <CheckCircle2 className="w-4 h-4 mr-1" />
+            已完成
+          </span>
+        )
       case 'failed':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-          <XCircle className="w-4 h-4 mr-1" />
-          失败
-        </span>
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <XCircle className="w-4 h-4 mr-1" />
+            失败
+          </span>
+        )
       case 'partial':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-          <AlertCircle className="w-4 h-4 mr-1" />
-          部分成功
-        </span>
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            <AlertCircle className="w-4 h-4 mr-1" />
+            部分成功
+          </span>
+        )
       case 'cancelled':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-          <XCircle className="w-4 h-4 mr-1" />
-          已取消
-        </span>
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+            <XCircle className="w-4 h-4 mr-1" />
+            已取消
+          </span>
+        )
       default:
         return null
     }
@@ -247,7 +250,7 @@ export default function BatchOfferPage() {
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     })
   }
 
@@ -261,7 +264,7 @@ export default function BatchOfferPage() {
       </div>
 
       {/* 上传区域 */}
-      <div className="bg-white shadow rounded-lg p-6 mb-8">
+      <div className="bg-white shadow-sm rounded-lg p-6 mb-8">
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-lg font-medium text-gray-900">上传CSV文件</h2>
@@ -271,7 +274,7 @@ export default function BatchOfferPage() {
           </div>
           <button
             onClick={handleDownloadTemplate}
-            className="inline-flex w-fit shrink-0 items-center whitespace-nowrap rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            className="inline-flex w-fit shrink-0 items-center whitespace-nowrap rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-xs hover:bg-gray-50"
           >
             <Download className="h-5 w-5 mr-2 text-gray-500" />
             下载模板
@@ -286,9 +289,7 @@ export default function BatchOfferPage() {
                 <span className="mt-2 block text-sm font-medium text-gray-900">
                   {isUploading ? '上传中...' : '点击选择CSV文件'}
                 </span>
-                <span className="mt-1 block text-xs text-gray-500">
-                  支持UTF-8编码，最大500行
-                </span>
+                <span className="mt-1 block text-xs text-gray-500">支持UTF-8编码，最大500行</span>
               </div>
               <input
                 type="file"
@@ -315,7 +316,7 @@ export default function BatchOfferPage() {
       </div>
 
       {/* 上传文件记录 */}
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="bg-white shadow-sm rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium text-gray-900">上传文件记录</h2>
           <button
@@ -385,7 +386,7 @@ export default function BatchOfferPage() {
                       <span className="block break-all font-mono">{record.id}</span>
                     </td>
                     <td className="px-3 py-4 text-sm font-medium text-gray-900">
-                      <span className="block break-words">{record.fileName}</span>
+                      <span className="block wrap-break-word">{record.fileName}</span>
                       {record.skippedCount > 0 && (
                         <span className="ml-2 text-xs text-yellow-600">
                           (跳过{record.skippedCount}行)
@@ -401,17 +402,19 @@ export default function BatchOfferPage() {
                     <td className="hidden px-3 py-4 whitespace-nowrap text-sm text-gray-900 sm:table-cell">
                       {record.processedCount}
                       {record.failedCount > 0 && (
-                        <span className="ml-1 text-red-600">
-                          ({record.failedCount} 失败)
-                        </span>
+                        <span className="ml-1 text-red-600">({record.failedCount} 失败)</span>
                       )}
                     </td>
                     <td className="hidden px-3 py-4 whitespace-nowrap text-sm lg:table-cell">
-                      <span className={`font-semibold ${
-                        Number(record.successRate) >= 90 ? 'text-green-600' :
-                        Number(record.successRate) >= 70 ? 'text-yellow-600' :
-                        'text-red-600'
-                      }`}>
+                      <span
+                        className={`font-semibold ${
+                          Number(record.successRate) >= 90
+                            ? 'text-green-600'
+                            : Number(record.successRate) >= 70
+                              ? 'text-yellow-600'
+                              : 'text-red-600'
+                        }`}
+                      >
                         {Number(record.successRate).toFixed(1)}%
                       </span>
                     </td>
@@ -421,7 +424,9 @@ export default function BatchOfferPage() {
                     <td className="hidden px-3 py-4 whitespace-nowrap text-sm md:table-cell">
                       {(record.status === 'pending' || record.status === 'processing') && (
                         <button
-                          onClick={() => handleCancelClick({ id: record.batchId, fileName: record.fileName })}
+                          onClick={() =>
+                            handleCancelClick({ id: record.batchId, fileName: record.fileName })
+                          }
                           disabled={cancellingBatchId === record.batchId}
                           className="text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -441,13 +446,14 @@ export default function BatchOfferPage() {
       {showCancelConfirm && batchToCancel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              确认取消批量任务
-            </h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">确认取消批量任务</h3>
             <p className="text-sm text-gray-600 mb-6">
-              确定要取消 <span className="font-semibold">{batchToCancel.fileName}</span> 的批量创建任务吗？
+              确定要取消 <span className="font-semibold">{batchToCancel.fileName}</span>{' '}
+              的批量创建任务吗？
               <br />
-              <span className="text-red-600">未处理的Offer将被移除，正在处理的任务将继续完成。</span>
+              <span className="text-red-600">
+                未处理的Offer将被移除，正在处理的任务将继续完成。
+              </span>
             </p>
             <div className="flex justify-end space-x-3">
               <button

@@ -17,9 +17,7 @@ function extractClickFarmTaskId(task: Task): string | null {
   }
 
   const data = task.data as any
-  const id = type === 'click-farm'
-    ? data?.taskId
-    : data?.clickFarmTaskId
+  const id = type === 'click-farm' ? data?.taskId : data?.clickFarmTaskId
   if (id === null || id === undefined) return null
   const normalized = String(id).trim()
   return normalized || null
@@ -29,11 +27,7 @@ export async function removePendingClickFarmQueueTasksByTaskIds(
   taskIds: Array<string | number>,
   userId?: number
 ): Promise<{ removedCount: number; scannedCount: number }> {
-  const normalizedIds = new Set(
-    taskIds
-      .map((id) => String(id).trim())
-      .filter(Boolean)
-  )
+  const normalizedIds = new Set(taskIds.map((id) => String(id).trim()).filter(Boolean))
 
   if (normalizedIds.size === 0) {
     return { removedCount: 0, scannedCount: 0 }

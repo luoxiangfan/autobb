@@ -5,13 +5,15 @@ import { __testOnly } from '../offer-keyword-pool'
 
 describe('offer-keyword-pool store_product_links fallback', () => {
   it('extracts store product names from link payload', () => {
-    const names = __testOnly.extractStoreProductNamesFromLinks(JSON.stringify([
-      'https://example.com/products/eufy-x10-pro-omni-robot-vacuum?utm=ads',
-      {
-        title: 'Eufy S1 Pro Robot Vacuum',
-        productUrl: 'https://example.com/item?model=X10%20Pro%20Omni',
-      },
-    ]))
+    const names = __testOnly.extractStoreProductNamesFromLinks(
+      JSON.stringify([
+        'https://example.com/products/eufy-x10-pro-omni-robot-vacuum?utm=ads',
+        {
+          title: 'Eufy S1 Pro Robot Vacuum',
+          productUrl: 'https://example.com/item?model=X10%20Pro%20Omni',
+        },
+      ])
+    )
 
     expect(names).toContain('eufy x10 pro omni robot vacuum')
     expect(names).toContain('Eufy S1 Pro Robot Vacuum')
@@ -19,13 +21,15 @@ describe('offer-keyword-pool store_product_links fallback', () => {
   })
 
   it('filters router-noise path segments from affiliate-style store links', () => {
-    const names = __testOnly.extractStoreProductNamesFromLinks(JSON.stringify([
-      'https://yeahpromos.com/index/index/openurlproduct?track=abc&pid=998877',
-      'https://example.com/products/our-place-wonder-oven',
-      {
-        productUrl: 'https://example.com/index/openurlproduct?title=our%20place%20titanium%20pan',
-      },
-    ]))
+    const names = __testOnly.extractStoreProductNamesFromLinks(
+      JSON.stringify([
+        'https://yeahpromos.com/index/index/openurlproduct?track=abc&pid=998877',
+        'https://example.com/products/our-place-wonder-oven',
+        {
+          productUrl: 'https://example.com/index/openurlproduct?title=our%20place%20titanium%20pan',
+        },
+      ])
+    )
 
     expect(names).toContain('our place wonder oven')
     expect(names).toContain('our place titanium pan')
@@ -53,9 +57,11 @@ describe('offer-keyword-pool store_product_links fallback', () => {
     } as Offer
 
     const verified = await __testOnly.buildVerifiedSourceKeywordData(offer)
-    const hotProductKeywords = verified.HOT_PRODUCT_AGGREGATE.map(item => item.keyword.toLowerCase())
+    const hotProductKeywords = verified.HOT_PRODUCT_AGGREGATE.map((item) =>
+      item.keyword.toLowerCase()
+    )
 
-    expect(hotProductKeywords.some(keyword => keyword.includes('x10 pro'))).toBe(true)
+    expect(hotProductKeywords.some((keyword) => keyword.includes('x10 pro'))).toBe(true)
   })
 
   it('keeps explicit product page_type in keyword-pool resolution when scraped data disagrees', () => {
@@ -88,11 +94,11 @@ describe('offer-keyword-pool store_product_links fallback', () => {
     } as Offer
 
     const verified = await __testOnly.buildVerifiedSourceKeywordData(offer)
-    const paramKeywords = verified.PARAM_EXTRACT.map(item => item.keyword.toLowerCase())
+    const paramKeywords = verified.PARAM_EXTRACT.map((item) => item.keyword.toLowerCase())
 
-    expect(paramKeywords.some(keyword => keyword.includes('g3p800'))).toBe(true)
-    expect(paramKeywords.some(keyword => keyword.includes('800 gpd'))).toBe(true)
-    expect(paramKeywords.some(keyword => keyword.includes('nsf ansi 58'))).toBe(true)
+    expect(paramKeywords.some((keyword) => keyword.includes('g3p800'))).toBe(true)
+    expect(paramKeywords.some((keyword) => keyword.includes('800 gpd'))).toBe(true)
+    expect(paramKeywords.some((keyword) => keyword.includes('nsf ansi 58'))).toBe(true)
   })
 
   it('applies target-language purification while preserving neutral model/spec tokens', async () => {
@@ -113,10 +119,10 @@ describe('offer-keyword-pool store_product_links fallback', () => {
     } as Offer
 
     const verified = await __testOnly.buildVerifiedSourceKeywordData(offer)
-    const paramKeywords = verified.PARAM_EXTRACT.map(item => item.keyword.toLowerCase())
+    const paramKeywords = verified.PARAM_EXTRACT.map((item) => item.keyword.toLowerCase())
 
-    expect(paramKeywords.some(keyword => keyword.includes('x10'))).toBe(true)
-    expect(paramKeywords.some(keyword => keyword.includes('1200 gpd'))).toBe(true)
-    expect(paramKeywords.some(keyword => keyword.includes('kaufen'))).toBe(false)
+    expect(paramKeywords.some((keyword) => keyword.includes('x10'))).toBe(true)
+    expect(paramKeywords.some((keyword) => keyword.includes('1200 gpd'))).toBe(true)
+    expect(paramKeywords.some((keyword) => keyword.includes('kaufen'))).toBe(false)
   })
 })

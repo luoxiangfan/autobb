@@ -40,15 +40,10 @@ describe('evaluateStoreModelIntentReadiness', () => {
       bucket: 'B',
       linkType: 'store',
       scrapedData: {
-        products: [
-          { name: 'Eufy Robot Vacuum Cleaner' },
-          { name: 'Eufy Smart Vacuum Cleaner' },
-        ],
+        products: [{ name: 'Eufy Robot Vacuum Cleaner' }, { name: 'Eufy Smart Vacuum Cleaner' }],
       },
       brandAnalysis: {
-        hotProducts: [
-          { name: 'Eufy Home Cleaning Collection' },
-        ],
+        hotProducts: [{ name: 'Eufy Home Cleaning Collection' }],
       },
     })
 
@@ -70,9 +65,7 @@ describe('evaluateStoreModelIntentReadiness', () => {
                 specifications: {
                   Model: 'X10 Pro Omni',
                 },
-                variants: [
-                  { name: 'X10 Pro Omni Black' },
-                ],
+                variants: [{ name: 'X10 Pro Omni Black' }],
               },
             },
           ],
@@ -101,7 +94,9 @@ describe('evaluateStoreModelIntentReadiness', () => {
     expect(readiness.isReady).toBe(true)
     expect(readiness.evidenceSources).toContain('offer.store_product_links')
     expect(readiness.verifiedHotProducts.length).toBeGreaterThan(0)
-    expect(readiness.hotProductModelAnchors.some((anchor) => /x10 pro omni/i.test(anchor))).toBe(true)
+    expect(readiness.hotProductModelAnchors.some((anchor) => /x10 pro omni/i.test(anchor))).toBe(
+      true
+    )
   })
 
   it('keeps only top3 verified hot products by default', () => {

@@ -38,10 +38,9 @@ export async function recordFailedLogin(
   )
 
   // 检查是否需要禁用账户
-  const user = (await db.queryOne(
-    'SELECT failed_login_count FROM users WHERE id = ?',
-    [userId]
-  )) as { failed_login_count: number } | null
+  const user = (await db.queryOne('SELECT failed_login_count FROM users WHERE id = ?', [
+    userId,
+  ])) as { failed_login_count: number } | null
 
   if (user && user.failed_login_count >= MAX_FAILED_ATTEMPTS) {
     // 禁用账户（需要管理员手动启用）

@@ -47,9 +47,11 @@ describe('validateExistingOfferForExtraction', () => {
   })
 
   it('throws when affiliate link missing', () => {
-    expect(() => validateExistingOfferForExtraction({
-      target_country: 'US',
-    })).toThrow(OfferExtractRequestError)
+    expect(() =>
+      validateExistingOfferForExtraction({
+        target_country: 'US',
+      })
+    ).toThrow(OfferExtractRequestError)
 
     try {
       validateExistingOfferForExtraction({ target_country: 'US' })
@@ -98,11 +100,13 @@ describe('parseNewOfferExtractRequest', () => {
   })
 
   it('rejects invalid extraction_mode', () => {
-    expect(() => parseNewOfferExtractRequest({
-      affiliate_link: 'https://aff.example.com',
-      target_country: 'US',
-      extraction_mode: 'bogus',
-    })).toThrow(OfferExtractRequestError)
+    expect(() =>
+      parseNewOfferExtractRequest({
+        affiliate_link: 'https://aff.example.com',
+        target_country: 'US',
+        extraction_mode: 'bogus',
+      })
+    ).toThrow(OfferExtractRequestError)
   })
 
   it('defaults empty target_country to US via extract normalizer', () => {
@@ -142,9 +146,7 @@ describe('parseNewOfferExtractRequest', () => {
 
 describe('offerExtractApiErrorBody', () => {
   it('maps 409 to Conflict', () => {
-    expect(
-      offerExtractApiErrorBody(new OfferExtractRequestError(409, 'busy'))
-    ).toEqual({
+    expect(offerExtractApiErrorBody(new OfferExtractRequestError(409, 'busy'))).toEqual({
       status: 409,
       error: 'Conflict',
       message: 'busy',

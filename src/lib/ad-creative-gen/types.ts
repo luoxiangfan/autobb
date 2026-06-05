@@ -9,7 +9,7 @@ export type {
   GeneratedAdCreativeData,
   HeadlineAsset,
   DescriptionAsset,
-  QualityMetrics
+  QualityMetrics,
 } from '../ad-creative'
 
 export type { Offer } from '../offers'

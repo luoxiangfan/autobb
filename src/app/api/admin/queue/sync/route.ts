@@ -19,10 +19,7 @@ export const POST = withAuth(
   async (request: NextRequest, user) => {
     // 只有管理员可以访问
     if (user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Forbidden', message: '需要管理员权限' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: 'Forbidden', message: '需要管理员权限' }, { status: 403 })
     }
 
     try {
@@ -52,7 +49,7 @@ export const POST = withAuth(
           result = {
             cleanup,
             sync,
-            message: `清理 ${cleanup.cleanedCount} 个超时任务，同步 ${sync.checked} 个 batch，修复 ${sync.fixed} 个`
+            message: `清理 ${cleanup.cleanedCount} 个超时任务，同步 ${sync.checked} 个 batch，修复 ${sync.fixed} 个`,
           }
           break
 
@@ -63,14 +60,14 @@ export const POST = withAuth(
           result = {
             cleanup: defaultCleanup,
             sync: defaultSync,
-            message: `清理 ${defaultCleanup.cleanedCount} 个超时任务，同步 ${defaultSync.checked} 个 batch，修复 ${defaultSync.fixed} 个`
+            message: `清理 ${defaultCleanup.cleanedCount} 个超时任务，同步 ${defaultSync.checked} 个 batch，修复 ${defaultSync.fixed} 个`,
           }
       }
 
       return NextResponse.json({
         success: true,
         action,
-        ...result
+        ...result,
       })
     } catch (error: any) {
       console.error('❌ 队列同步失败:', error)

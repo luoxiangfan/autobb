@@ -8,7 +8,15 @@
  * 4. 生成迁移文件
  */
 
-import { TABLES, DEFAULT_SETTINGS, SCHEMA_VERSION, TABLE_COUNT, TableDef, ColumnDef, IndexDef } from './db-schema'
+import {
+  TABLES,
+  DEFAULT_SETTINGS,
+  SCHEMA_VERSION,
+  TABLE_COUNT,
+  TableDef,
+  ColumnDef,
+  IndexDef,
+} from './db-schema'
 
 // ============================================================================
 // 类型转换
@@ -56,7 +64,10 @@ function toPostgresType(type: ColumnDef['type']): string {
   }
 }
 
-function toSQLiteDefault(value: string | number | boolean | null, _type: ColumnDef['type']): string {
+function toSQLiteDefault(
+  value: string | number | boolean | null,
+  _type: ColumnDef['type']
+): string {
   if (value === null) return 'NULL'
   if (value === 'CURRENT_TIMESTAMP') return "(datetime('now'))"
   if (typeof value === 'boolean') return value ? '1' : '0'
@@ -64,7 +75,10 @@ function toSQLiteDefault(value: string | number | boolean | null, _type: ColumnD
   return `'${value}'`
 }
 
-function toPostgresDefault(value: string | number | boolean | null, _type: ColumnDef['type']): string {
+function toPostgresDefault(
+  value: string | number | boolean | null,
+  _type: ColumnDef['type']
+): string {
   if (value === null) return 'NULL'
   if (value === 'CURRENT_TIMESTAMP') return 'CURRENT_TIMESTAMP'
   if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE'
@@ -76,7 +90,10 @@ function toPostgresDefault(value: string | number | boolean | null, _type: Colum
 // SQLite SQL 生成
 // ============================================================================
 
-function resolveIndexWhereClause(idx: IndexDef, dialect: 'sqlite' | 'postgres'): string | undefined {
+function resolveIndexWhereClause(
+  idx: IndexDef,
+  dialect: 'sqlite' | 'postgres'
+): string | undefined {
   return dialect === 'postgres' ? idx.wherePostgres : idx.whereSqlite
 }
 
@@ -133,7 +150,9 @@ function generateSQLiteTable(table: TableDef): string {
   for (const col of table.columns) {
     if (col.references) {
       const onDelete = col.references.onDelete ? ` ON DELETE ${col.references.onDelete}` : ''
-      columnDefs.push(`  FOREIGN KEY (${col.name}) REFERENCES ${col.references.table}(${col.references.column})${onDelete}`)
+      columnDefs.push(
+        `  FOREIGN KEY (${col.name}) REFERENCES ${col.references.table}(${col.references.column})${onDelete}`
+      )
     }
   }
 
@@ -187,8 +206,12 @@ export function generateSQLiteSchema(): string {
     const isRequired = setting.isRequired ? 1 : 0
     const defaultValue = setting.defaultValue ? `'${setting.defaultValue}'` : 'NULL'
 
-    lines.push(`INSERT OR IGNORE INTO system_settings (user_id, category, config_key, data_type, is_sensitive, is_required, default_value, description)`)
-    lines.push(`VALUES (NULL, '${setting.category}', '${setting.key}', '${setting.dataType}', ${isSensitive}, ${isRequired}, ${defaultValue}, '${setting.description}');`)
+    lines.push(
+      `INSERT OR IGNORE INTO system_settings (user_id, category, config_key, data_type, is_sensitive, is_required, default_value, description)`
+    )
+    lines.push(
+      `VALUES (NULL, '${setting.category}', '${setting.key}', '${setting.dataType}', ${isSensitive}, ${isRequired}, ${defaultValue}, '${setting.description}');`
+    )
   }
 
   lines.push('')
@@ -245,7 +268,7 @@ function generatePostgresTable(table: TableDef): string {
   lines.push(`CREATE TABLE IF NOT EXISTS ${table.name} (`)
 
   // 检查是否有主键
-  const hasPrimaryKey = table.columns.some(col => col.primaryKey)
+  const hasPrimaryKey = table.columns.some((col) => col.primaryKey)
 
   // 列定义
   const columnDefs: string[] = []
@@ -257,7 +280,9 @@ function generatePostgresTable(table: TableDef): string {
   for (const col of table.columns) {
     if (col.references) {
       const onDelete = col.references.onDelete ? ` ON DELETE ${col.references.onDelete}` : ''
-      columnDefs.push(`  FOREIGN KEY (${col.name}) REFERENCES ${col.references.table}(${col.references.column})${onDelete}`)
+      columnDefs.push(
+        `  FOREIGN KEY (${col.name}) REFERENCES ${col.references.table}(${col.references.column})${onDelete}`
+      )
     }
   }
 
@@ -304,7 +329,9 @@ export function generatePostgresSchema(): string {
   lines.push('-- ==========================================')
   lines.push('')
 
-  lines.push('INSERT INTO system_settings (user_id, category, config_key, data_type, is_sensitive, is_required, default_value, description)')
+  lines.push(
+    'INSERT INTO system_settings (user_id, category, config_key, data_type, is_sensitive, is_required, default_value, description)'
+  )
   lines.push('VALUES')
 
   const settingLines: string[] = []
@@ -313,7 +340,9 @@ export function generatePostgresSchema(): string {
     const isRequired = setting.isRequired ? 'TRUE' : 'FALSE'
     const defaultValue = setting.defaultValue ? `'${setting.defaultValue}'` : 'NULL'
 
-    settingLines.push(`  (NULL, '${setting.category}', '${setting.key}', '${setting.dataType}', ${isSensitive}, ${isRequired}, ${defaultValue}, '${setting.description}')`)
+    settingLines.push(
+      `  (NULL, '${setting.category}', '${setting.key}', '${setting.dataType}', ${isSensitive}, ${isRequired}, ${defaultValue}, '${setting.description}')`
+    )
   }
 
   lines.push(settingLines.join(',\n'))

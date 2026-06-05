@@ -79,7 +79,11 @@ async function scrapeSupplementalProductLink(
       : resolved.finalUrl
 
     if (pageType.isAmazonProductPage) {
-      const amazonProductData = await scrapeAmazonProduct(fullTargetUrl, proxyUrl || undefined, targetCountry)
+      const amazonProductData = await scrapeAmazonProduct(
+        fullTargetUrl,
+        proxyUrl || undefined,
+        targetCountry
+      )
       result.productName = amazonProductData.productName || null
       result.productPrice = amazonProductData.productPrice || null
       result.productDescription = amazonProductData.productDescription || null
@@ -101,7 +105,12 @@ async function scrapeSupplementalProductLink(
 
     let scrapedData: import('./scraper').ScrapedProductData | null = null
     try {
-      scrapedData = await extractProductInfo(fullTargetUrl, targetCountry, proxyUrl || undefined, 30000)
+      scrapedData = await extractProductInfo(
+        fullTargetUrl,
+        targetCountry,
+        proxyUrl || undefined,
+        30000
+      )
     } catch {
       scrapedData = null
     }
@@ -149,10 +158,7 @@ async function scrapeSupplementalProductLink(
   }
 }
 
-async function runWithConcurrency<T>(
-  tasks: Array<() => Promise<T>>,
-  limit: number
-): Promise<T[]> {
+async function runWithConcurrency<T>(tasks: Array<() => Promise<T>>, limit: number): Promise<T[]> {
   const results: T[] = new Array(tasks.length)
   let cursor = 0
 

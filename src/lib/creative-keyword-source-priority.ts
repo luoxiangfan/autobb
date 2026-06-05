@@ -94,7 +94,9 @@ const LEGACY_EXACT_SOURCE_PRIORITY: Record<string, SourcePriorityRule> = {
 }
 
 function normalizeSource(source: string | undefined): string {
-  return String(source || '').trim().toUpperCase()
+  return String(source || '')
+    .trim()
+    .toUpperCase()
 }
 
 function hasKnownPriority(normalizedSource: string): boolean {
@@ -103,17 +105,11 @@ function hasKnownPriority(normalizedSource: string): boolean {
   return PREFIX_SOURCE_PRIORITY.some(({ prefix }) => normalizedSource.startsWith(prefix))
 }
 
-function shouldPreferRawCanonicalSource(input: {
-  source?: string
-  sourceType?: string
-}): boolean {
+function shouldPreferRawCanonicalSource(input: { source?: string; sourceType?: string }): boolean {
   const sourceType = normalizeSource(input.sourceType)
   const source = normalizeSource(input.source)
 
-  if (
-    sourceType !== 'KEYWORD_POOL'
-    && sourceType !== 'CANONICAL_BUCKET_VIEW'
-  ) {
+  if (sourceType !== 'KEYWORD_POOL' && sourceType !== 'CANONICAL_BUCKET_VIEW') {
     return false
   }
 
@@ -212,51 +208,50 @@ export function inferKeywordRawSource(input: {
   if (subtype.startsWith('KEYWORD_PLANNER') || subtype === 'PLANNER') return 'KEYWORD_PLANNER'
 
   if (
-    subtype === 'HOT_PRODUCT_AGGREGATE'
-    || subtype === 'OFFER_EXTRACTED_KEYWORDS'
-    || subtype === 'PARAM_EXTRACT'
-    || subtype === 'TITLE_EXTRACT'
-    || subtype === 'ABOUT_EXTRACT'
-    || subtype === 'PAGE_EXTRACT'
+    subtype === 'HOT_PRODUCT_AGGREGATE' ||
+    subtype === 'OFFER_EXTRACTED_KEYWORDS' ||
+    subtype === 'PARAM_EXTRACT' ||
+    subtype === 'TITLE_EXTRACT' ||
+    subtype === 'ABOUT_EXTRACT' ||
+    subtype === 'PAGE_EXTRACT'
   ) {
     return 'PAGE_EXTRACT'
   }
 
   if (
-    subtype.startsWith('GLOBAL_')
-    || subtype === 'SCORING_SUGGESTION'
-    || subtype === 'GOOGLE_SUGGEST'
-    || subtype === 'BRANDED_INDUSTRY_TERM'
-    || subtype === 'GAP_INDUSTRY_BRANDED'
+    subtype.startsWith('GLOBAL_') ||
+    subtype === 'SCORING_SUGGESTION' ||
+    subtype === 'GOOGLE_SUGGEST' ||
+    subtype === 'BRANDED_INDUSTRY_TERM' ||
+    subtype === 'GAP_INDUSTRY_BRANDED'
   ) {
     return 'GAP_ANALYSIS'
   }
 
-  if (subtype.startsWith('AI_') || subtype === 'KEYWORD_EXPANSION' || subtype === 'OFFER_AI_KEYWORDS') return 'AI'
-
   if (
-    subtype === 'KEYWORD_POOL'
-    || subtype === 'CANONICAL_BUCKET_VIEW'
-  ) {
+    subtype.startsWith('AI_') ||
+    subtype === 'KEYWORD_EXPANSION' ||
+    subtype === 'OFFER_AI_KEYWORDS'
+  )
+    return 'AI'
+
+  if (subtype === 'KEYWORD_POOL' || subtype === 'CANONICAL_BUCKET_VIEW') {
     return 'DERIVED_TRUSTED'
   }
 
   if (
-    subtype === 'BUILDER_NON_EMPTY_RESCUE'
-    || subtype === 'DERIVED_RESCUE'
-    || subtype === 'MODEL_FAMILY_GUARD'
-    || subtype === 'PRODUCT_RELAX_BRANDED'
-    || subtype === 'BRAND_SEED'
-    || subtype === 'CONTRACT_RESCUE'
-    || subtype === 'FINAL_INVARIANT'
+    subtype === 'BUILDER_NON_EMPTY_RESCUE' ||
+    subtype === 'DERIVED_RESCUE' ||
+    subtype === 'MODEL_FAMILY_GUARD' ||
+    subtype === 'PRODUCT_RELAX_BRANDED' ||
+    subtype === 'BRAND_SEED' ||
+    subtype === 'CONTRACT_RESCUE' ||
+    subtype === 'FINAL_INVARIANT'
   ) {
     return 'DERIVED_RESCUE'
   }
 
-  if (
-    subtype === 'LEGACY_BUCKET'
-    || subtype === 'MERGED'
-  ) {
+  if (subtype === 'LEGACY_BUCKET' || subtype === 'MERGED') {
     return 'DERIVED_SYNTHETIC'
   }
 
@@ -275,18 +270,18 @@ export function inferKeywordDerivedTags(input: {
   const maybeAddDerivedTag = (value: string | undefined) => {
     if (!value) return
     if (
-      value === 'KEYWORD_POOL'
-      || value === 'CANONICAL_BUCKET_VIEW'
-      || value === 'LEGACY_BUCKET'
-      || value === 'MERGED'
-      || value === 'BRAND_SEED'
-      || value === 'BUILDER_NON_EMPTY_RESCUE'
-      || value === 'DERIVED_RESCUE'
-      || value === 'MODEL_FAMILY_GUARD'
-      || value === 'PRODUCT_RELAX_BRANDED'
-      || value === 'CONTRACT_RESCUE'
-      || value === 'FINAL_INVARIANT'
-      || value === 'GAP_INDUSTRY_BRANDED'
+      value === 'KEYWORD_POOL' ||
+      value === 'CANONICAL_BUCKET_VIEW' ||
+      value === 'LEGACY_BUCKET' ||
+      value === 'MERGED' ||
+      value === 'BRAND_SEED' ||
+      value === 'BUILDER_NON_EMPTY_RESCUE' ||
+      value === 'DERIVED_RESCUE' ||
+      value === 'MODEL_FAMILY_GUARD' ||
+      value === 'PRODUCT_RELAX_BRANDED' ||
+      value === 'CONTRACT_RESCUE' ||
+      value === 'FINAL_INVARIANT' ||
+      value === 'GAP_INDUSTRY_BRANDED'
     ) {
       tags.add(value)
     }

@@ -9,11 +9,11 @@ export const CP_AI_FEATURE_FLAG = 'AD_STRENGTH_ENABLE_CP_AI'
 export const AD_STRENGTH_DIMENSION_CONFIG = {
   diversity: { rawMax: 20, targetMax: 18, weight: 0.18 },
   relevance: { rawMax: 20, targetMax: 22, weight: 0.22 },
-  completeness: { rawMax: 15, targetMax: 10, weight: 0.10 },
+  completeness: { rawMax: 15, targetMax: 10, weight: 0.1 },
   quality: { rawMax: 15, targetMax: 14, weight: 0.14 },
   compliance: { rawMax: 10, targetMax: 8, weight: 0.08 },
   brandSearchVolume: { rawMax: 20, targetMax: 18, weight: 0.18 },
-  competitivePositioning: { rawMax: 10, targetMax: 10, weight: 0.10 },
+  competitivePositioning: { rawMax: 10, targetMax: 10, weight: 0.1 },
 } as const
 
 export const AD_STRENGTH_RATING_THRESHOLDS = {
@@ -151,7 +151,7 @@ export function validateAdStrengthConfig(): AdStrengthConfigValidationResult {
     errors.push(`dimension targetMax sum must be 100, got ${totalTargetMax}`)
   }
 
-  if (dimensions.some(item => item.rawMax <= 0 || item.targetMax <= 0)) {
+  if (dimensions.some((item) => item.rawMax <= 0 || item.targetMax <= 0)) {
     errors.push('dimension rawMax and targetMax must be positive')
   }
 
@@ -168,8 +168,10 @@ export function validateAdStrengthConfig(): AdStrengthConfigValidationResult {
 
   if (
     !(
-      AD_STRENGTH_RELEVANCE_THRESHOLDS.targetEmbeddingRate > AD_STRENGTH_RELEVANCE_THRESHOLDS.embeddingRateTier2 &&
-      AD_STRENGTH_RELEVANCE_THRESHOLDS.embeddingRateTier2 > AD_STRENGTH_RELEVANCE_THRESHOLDS.embeddingRateTier1 &&
+      AD_STRENGTH_RELEVANCE_THRESHOLDS.targetEmbeddingRate >
+        AD_STRENGTH_RELEVANCE_THRESHOLDS.embeddingRateTier2 &&
+      AD_STRENGTH_RELEVANCE_THRESHOLDS.embeddingRateTier2 >
+        AD_STRENGTH_RELEVANCE_THRESHOLDS.embeddingRateTier1 &&
       AD_STRENGTH_RELEVANCE_THRESHOLDS.embeddingRateTier1 > 0 &&
       AD_STRENGTH_RELEVANCE_THRESHOLDS.targetEmbeddingRate <= 1
     )
@@ -180,7 +182,8 @@ export function validateAdStrengthConfig(): AdStrengthConfigValidationResult {
   if (
     !(
       AD_STRENGTH_RELEVANCE_THRESHOLDS.naturalnessDensityGood > 0 &&
-      AD_STRENGTH_RELEVANCE_THRESHOLDS.naturalnessDensityGood < AD_STRENGTH_RELEVANCE_THRESHOLDS.naturalnessDensityOk &&
+      AD_STRENGTH_RELEVANCE_THRESHOLDS.naturalnessDensityGood <
+        AD_STRENGTH_RELEVANCE_THRESHOLDS.naturalnessDensityOk &&
       AD_STRENGTH_RELEVANCE_THRESHOLDS.naturalnessDensityOk <= 1
     )
   ) {

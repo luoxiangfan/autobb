@@ -9,7 +9,11 @@ import {
 } from '@/lib/settings'
 import { invalidateProxyPoolCache } from '@/lib/offer-utils'
 import { getGeminiEndpoint, getGeminiApiKeyUrl, type GeminiProvider } from '@/lib/gemini-config'
-import { GEMINI_ACTIVE_MODEL, isDeprecatedGeminiModel, normalizeModelForProvider } from '@/lib/gemini-models'
+import {
+  GEMINI_ACTIVE_MODEL,
+  isDeprecatedGeminiModel,
+  normalizeModelForProvider,
+} from '@/lib/gemini-models'
 import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
 import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
@@ -26,7 +30,8 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     const authResult = await verifyAuth(request)
-    const userIdNum = authResult.authenticated && authResult.user ? authResult.user.userId : undefined
+    const userIdNum =
+      authResult.authenticated && authResult.user ? authResult.user.userId : undefined
 
     // 获取查询参数
     const searchParams = request.nextUrl.searchParams
@@ -47,37 +52,38 @@ export async function GET(request: NextRequest) {
     })()
 
     if (settings === null) {
-      return NextResponse.json(
-        { error: '获取联盟同步配置需要登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '获取联盟同步配置需要登录' }, { status: 401 })
     }
     const resolvedSettings = await settings
 
     // 强制联盟同步配置走用户级隔离，不读取全局兜底
-    const effectiveSettings = (!category && userIdNum)
-      ? [
-          ...resolvedSettings.filter((item) => item.category !== 'affiliate_sync'),
-          ...(await getUserOnlySettingsByCategory('affiliate_sync', userIdNum)),
-        ]
-      : resolvedSettings
+    const effectiveSettings =
+      !category && userIdNum
+        ? [
+            ...resolvedSettings.filter((item) => item.category !== 'affiliate_sync'),
+            ...(await getUserOnlySettingsByCategory('affiliate_sync', userIdNum)),
+          ]
+        : resolvedSettings
 
     // 自动迁移：将用户历史配置中的 Gemini 2.5 Pro / Flash 统一迁移到 Gemini 3 Flash Preview
     if (userIdNum) {
       const db = await getDatabase()
-      const rawGeminiModelSetting = await db.queryOne(
+      const rawGeminiModelSetting = (await db.queryOne(
         'SELECT value FROM system_settings WHERE user_id = ? AND category = ? AND key = ? LIMIT 1',
         [userIdNum, 'ai', 'gemini_model']
-      ) as { value: string | null } | undefined
+      )) as { value: string | null } | undefined
 
       if (isDeprecatedGeminiModel(rawGeminiModelSetting?.value)) {
-        await updateSettings([
-          {
-            category: 'ai',
-            key: 'gemini_model',
-            value: GEMINI_ACTIVE_MODEL,
-          },
-        ], userIdNum)
+        await updateSettings(
+          [
+            {
+              category: 'ai',
+              key: 'gemini_model',
+              value: GEMINI_ACTIVE_MODEL,
+            },
+          ],
+          userIdNum
+        )
       }
     }
 
@@ -111,14 +117,16 @@ export async function GET(request: NextRequest) {
       })
     }
 
-
     // 🔧 2025-12-29: 为 AI 分类添加动态计算字段
     if (groupedSettings['ai']) {
       // 获取 gemini_provider 值
-      const providerSetting = groupedSettings['ai'].find(s => s.key === 'gemini_provider')
+      const providerSetting = groupedSettings['ai'].find((s) => s.key === 'gemini_provider')
       const provider: GeminiProvider = providerSetting?.value === 'relay' ? 'relay' : 'official'
-      const modelSetting = groupedSettings['ai'].find(s => s.key === 'gemini_model')
-      const normalizedModel = normalizeModelForProvider(modelSetting?.value || GEMINI_ACTIVE_MODEL, provider)
+      const modelSetting = groupedSettings['ai'].find((s) => s.key === 'gemini_model')
+      const normalizedModel = normalizeModelForProvider(
+        modelSetting?.value || GEMINI_ACTIVE_MODEL,
+        provider
+      )
 
       // 添加计算字段：gemini_endpoint
       groupedSettings['ai'].push({
@@ -188,7 +196,8 @@ const updateSettingsSchema = z.object({
 export async function PUT(request: NextRequest) {
   try {
     const authResult = await verifyAuth(request)
-    const userIdNum = authResult.authenticated && authResult.user ? authResult.user.userId : undefined
+    const userIdNum =
+      authResult.authenticated && authResult.user ? authResult.user.userId : undefined
 
     const body = await request.json()
 
@@ -197,8 +206,8 @@ export async function PUT(request: NextRequest) {
     if (!validationResult.success) {
       return NextResponse.json(
         {
-          error: validationResult.error.errors[0].message,
-          details: validationResult.error.errors,
+          error: validationResult.error.issues[0].message,
+          details: validationResult.error.issues,
         },
         { status: 400 }
       )
@@ -206,22 +215,19 @@ export async function PUT(request: NextRequest) {
 
     const { updates } = validationResult.data
 
-  const hasGoogleAdsUpdate = updates.some((update) => update.category === 'google_ads')
-  if (hasGoogleAdsUpdate && userIdNum) {
-    try {
-      await assertUserCanModifyGoogleAdsAuth(userIdNum, userIdNum, authResult.user!.role)
-    } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 403 })
+    const hasGoogleAdsUpdate = updates.some((update) => update.category === 'google_ads')
+    if (hasGoogleAdsUpdate && userIdNum) {
+      try {
+        await assertUserCanModifyGoogleAdsAuth(userIdNum, userIdNum, authResult.user!.role)
+      } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 403 })
+      }
     }
-  }
 
     // 联盟同步配置必须是用户级，不允许无用户上下文写入
     const hasAffiliateSyncUpdate = updates.some((update) => update.category === 'affiliate_sync')
     if (hasAffiliateSyncUpdate && !userIdNum) {
-      return NextResponse.json(
-        { error: '更新联盟同步配置需要登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '更新联盟同步配置需要登录' }, { status: 401 })
     }
 
     for (const update of updates) {
@@ -233,26 +239,25 @@ export async function PUT(request: NextRequest) {
     }
 
     // 🔧 同步更新：AI配置变更时，按“服务商 + 模型”自动填充 gemini_endpoint
-    const hasAIUpdate = updates.some(u => u.category === 'ai')
+    const hasAIUpdate = updates.some((u) => u.category === 'ai')
     if (hasAIUpdate) {
-      const currentAISettings = userIdNum
-        ? await getSettingsByCategory('ai', userIdNum)
-        : []
+      const currentAISettings = userIdNum ? await getSettingsByCategory('ai', userIdNum) : []
       const aiSettingsMap = new Map(
-        currentAISettings.map(setting => [setting.key, setting.value || ''])
+        currentAISettings.map((setting) => [setting.key, setting.value || ''])
       )
 
-      const geminiProviderUpdate = updates.find(u => u.category === 'ai' && u.key === 'gemini_provider')
-      const geminiModelUpdate = updates.find(u => u.category === 'ai' && u.key === 'gemini_model')
+      const geminiProviderUpdate = updates.find(
+        (u) => u.category === 'ai' && u.key === 'gemini_provider'
+      )
+      const geminiModelUpdate = updates.find((u) => u.category === 'ai' && u.key === 'gemini_model')
 
-      const provider: GeminiProvider = (
-        geminiProviderUpdate?.value ||
-        aiSettingsMap.get('gemini_provider')
-      ) === 'relay' ? 'relay' : 'official'
+      const provider: GeminiProvider =
+        (geminiProviderUpdate?.value || aiSettingsMap.get('gemini_provider')) === 'relay'
+          ? 'relay'
+          : 'official'
 
-      const rawModel = geminiModelUpdate?.value ||
-        aiSettingsMap.get('gemini_model') ||
-        GEMINI_ACTIVE_MODEL
+      const rawModel =
+        geminiModelUpdate?.value || aiSettingsMap.get('gemini_model') || GEMINI_ACTIVE_MODEL
       const normalizedModel = normalizeModelForProvider(rawModel, provider)
 
       // 强制保持模型与服务商兼容
@@ -267,7 +272,9 @@ export async function PUT(request: NextRequest) {
       }
 
       const endpoint = getGeminiEndpoint(provider, normalizedModel)
-      const existingEndpointUpdate = updates.find(u => u.category === 'ai' && u.key === 'gemini_endpoint')
+      const existingEndpointUpdate = updates.find(
+        (u) => u.category === 'ai' && u.key === 'gemini_endpoint'
+      )
       if (existingEndpointUpdate) {
         existingEndpointUpdate.value = endpoint
       } else {
@@ -278,27 +285,23 @@ export async function PUT(request: NextRequest) {
         })
       }
 
-      console.log(`🔄 根据服务商(${provider})+模型(${normalizedModel})自动更新 gemini_endpoint → ${endpoint}`)
+      console.log(
+        `🔄 根据服务商(${provider})+模型(${normalizedModel})自动更新 gemini_endpoint → ${endpoint}`
+      )
     }
 
     // 🔥 2026-01-06: 保存前强制校验代理URL（避免客户端校验遗漏导致运行时失败）
-    const proxyUrlsUpdate = updates.find(u => u.category === 'proxy' && u.key === 'urls')
+    const proxyUrlsUpdate = updates.find((u) => u.category === 'proxy' && u.key === 'urls')
     if (proxyUrlsUpdate) {
       let proxyUrls: Array<{ country?: string; url?: string }>
       try {
         proxyUrls = JSON.parse(proxyUrlsUpdate.value)
       } catch (_error) {
-        return NextResponse.json(
-          { error: '代理配置JSON格式错误' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: '代理配置JSON格式错误' }, { status: 400 })
       }
 
       if (!Array.isArray(proxyUrls)) {
-        return NextResponse.json(
-          { error: '代理配置格式错误，应为数组格式' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: '代理配置格式错误，应为数组格式' }, { status: 400 })
       }
 
       const errors: string[] = []
@@ -325,10 +328,7 @@ export async function PUT(request: NextRequest) {
       }
 
       if (errors.length > 0) {
-        return NextResponse.json(
-          { error: errors.join('；') },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: errors.join('；') }, { status: 400 })
       }
     }
 
@@ -336,7 +336,7 @@ export async function PUT(request: NextRequest) {
     await updateSettings(updates, userIdNum)
 
     // 🔥 修复（2025-12-11）：如果更新了代理配置，清除代理池缓存
-    const hasProxyUpdate = updates.some(u => u.category === 'proxy')
+    const hasProxyUpdate = updates.some((u) => u.category === 'proxy')
     if (hasProxyUpdate) {
       console.log('🔄 检测到代理配置更新，清除代理池缓存')
       invalidateProxyPoolCache(userIdNum)
@@ -391,11 +391,11 @@ const AFFILIATE_SYNC_DELETE_KEYS = [
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const authResult = await verifyAuth(request);
+    const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-    const userId = authResult.user.userId;
+    const userId = authResult.user.userId
     const userIdNum = userId ? userId : undefined
     if (!userIdNum) {
       return NextResponse.json({ error: '删除配置需要登录' }, { status: 401 })
@@ -405,7 +405,7 @@ export async function DELETE(request: NextRequest) {
     const parsed = deleteSettingsSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.errors[0].message, details: parsed.error.errors },
+        { error: parsed.error.issues[0].message, details: parsed.error.issues },
         { status: 400 }
       )
     }
@@ -443,9 +443,6 @@ export async function DELETE(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('删除配置失败:', error)
-    return NextResponse.json(
-      { error: error.message || '删除配置失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '删除配置失败' }, { status: 500 })
   }
 }

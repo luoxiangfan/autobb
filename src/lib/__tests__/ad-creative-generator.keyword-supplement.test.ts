@@ -6,7 +6,8 @@ const { getKeywordPoolByOfferIdMock } = vi.hoisted(() => ({
 }))
 
 vi.mock('../offer-keyword-pool', async () => {
-  const actual = await vi.importActual<typeof import('../offer-keyword-pool')>('../offer-keyword-pool')
+  const actual =
+    await vi.importActual<typeof import('../offer-keyword-pool')>('../offer-keyword-pool')
   return {
     ...actual,
     getKeywordPoolByOfferId: getKeywordPoolByOfferIdMock,
@@ -68,7 +69,9 @@ describe('ad-creative-generator keyword supplementation', () => {
     })
 
     expect(result.keywordSupplementation.triggered).toBe(true)
-    expect(result.keywordSupplementation.afterCount).toBeGreaterThan(result.keywordSupplementation.beforeCount)
+    expect(result.keywordSupplementation.afterCount).toBeGreaterThan(
+      result.keywordSupplementation.beforeCount
+    )
   })
 
   it('triggers once when <10 but does not force-fill to 10', async () => {
@@ -113,21 +116,29 @@ describe('ad-creative-generator keyword supplementation', () => {
     expect(result.keywordSupplementation.triggered).toBe(true)
     expect(result.keywordSupplementation.addedKeywords.length).toBeGreaterThan(1)
     expect(result.keywordSupplementation.addedKeywords[0].source).toBe('keyword_pool')
-    expect(result.keywordSupplementation.addedKeywords.some(k => k.source === 'title_about')).toBe(true)
+    expect(
+      result.keywordSupplementation.addedKeywords.some((k) => k.source === 'title_about')
+    ).toBe(true)
 
-    const addedKeywordSet = new Set(result.keywordSupplementation.addedKeywords.map(k => k.keyword))
-    const supplementedEntries = result.keywordsWithVolume.filter(k => addedKeywordSet.has(k.keyword))
+    const addedKeywordSet = new Set(
+      result.keywordSupplementation.addedKeywords.map((k) => k.keyword)
+    )
+    const supplementedEntries = result.keywordsWithVolume.filter((k) =>
+      addedKeywordSet.has(k.keyword)
+    )
     expect(supplementedEntries.length).toBe(result.keywordSupplementation.addedKeywords.length)
-    expect(supplementedEntries.every(k => k.searchVolume === 0)).toBe(true)
+    expect(supplementedEntries.every((k) => k.searchVolume === 0)).toBe(true)
   })
 
   it('applies the cap only during supplementation (max total 20 when triggered)', async () => {
-    const baseKeywords: KeywordWithVolume[] = [{
-      keyword: 'brandx core product',
-      searchVolume: 1200,
-      matchType: 'PHRASE',
-      source: 'AI_GENERATED',
-    }]
+    const baseKeywords: KeywordWithVolume[] = [
+      {
+        keyword: 'brandx core product',
+        searchVolume: 1200,
+        matchType: 'PHRASE',
+        source: 'AI_GENERATED',
+      },
+    ]
     const poolCandidates = Array.from({ length: 40 }, (_, idx) => `brandx power tool ${idx + 1}`)
 
     const result = await applyKeywordSupplementationOnce({
@@ -155,11 +166,7 @@ describe('ad-creative-generator keyword supplementation', () => {
         id: 3925,
         scraped_data: {
           rawProductTitle: 'BrandX Cordless Drill Set',
-          rawAboutThisItem: [
-            'EASY CLEAN',
-            'WIDE USE',
-            'Brushless Motor with 2 Batteries',
-          ],
+          rawAboutThisItem: ['EASY CLEAN', 'WIDE USE', 'Brushless Motor with 2 Batteries'],
         },
       },
       userId: 1,
@@ -168,10 +175,12 @@ describe('ad-creative-generator keyword supplementation', () => {
       keywordsWithVolume: baseKeywords,
     })
 
-    const addedLower = result.keywordSupplementation.addedKeywords.map(k => k.keyword.toLowerCase())
+    const addedLower = result.keywordSupplementation.addedKeywords.map((k) =>
+      k.keyword.toLowerCase()
+    )
     expect(addedLower).not.toContain('easy clean')
     expect(addedLower).not.toContain('wide use')
-    expect(addedLower.some(k => k.includes('brushless') || k.includes('drill'))).toBe(true)
+    expect(addedLower.some((k) => k.includes('brushless') || k.includes('drill'))).toBe(true)
   })
 
   it('prefixes title/about supplements with brand and avoids duplicate brand tokens', async () => {
@@ -191,11 +200,15 @@ describe('ad-creative-generator keyword supplementation', () => {
       keywordsWithVolume: baseKeywords,
     })
 
-    const titleAboutAdded = result.keywordSupplementation.addedKeywords.filter(k => k.source === 'title_about')
+    const titleAboutAdded = result.keywordSupplementation.addedKeywords.filter(
+      (k) => k.source === 'title_about'
+    )
     expect(titleAboutAdded.length).toBeGreaterThan(0)
-    expect(titleAboutAdded.every(k => k.keyword.startsWith('dovoh '))).toBe(true)
-    expect(titleAboutAdded.every(k => !k.keyword.includes('dovoh dovoh'))).toBe(true)
-    expect(titleAboutAdded.every(k => k.keyword.split(/\s+/).filter(Boolean).length <= 5)).toBe(true)
+    expect(titleAboutAdded.every((k) => k.keyword.startsWith('dovoh '))).toBe(true)
+    expect(titleAboutAdded.every((k) => !k.keyword.includes('dovoh dovoh'))).toBe(true)
+    expect(titleAboutAdded.every((k) => k.keyword.split(/\s+/).filter(Boolean).length <= 5)).toBe(
+      true
+    )
   })
 
   it('drops title/about supplements when branded combination exceeds 5 words', async () => {
@@ -215,7 +228,9 @@ describe('ad-creative-generator keyword supplementation', () => {
       keywordsWithVolume: baseKeywords,
     })
 
-    const titleAboutAdded = result.keywordSupplementation.addedKeywords.filter(k => k.source === 'title_about')
+    const titleAboutAdded = result.keywordSupplementation.addedKeywords.filter(
+      (k) => k.source === 'title_about'
+    )
     expect(result.keywordSupplementation.triggered).toBe(true)
     expect(titleAboutAdded).toHaveLength(0)
     expect(result.keywordsWithVolume).toHaveLength(9)
@@ -233,7 +248,9 @@ describe('ad-creative-generator keyword supplementation', () => {
       poolCandidates: ['laser level stand'],
     })
 
-    const poolAdded = result.keywordSupplementation.addedKeywords.filter(k => k.source === 'keyword_pool')
+    const poolAdded = result.keywordSupplementation.addedKeywords.filter(
+      (k) => k.source === 'keyword_pool'
+    )
     expect(poolAdded).toHaveLength(1)
     expect(poolAdded[0].keyword).toBe('dovoh laser level stand')
     expect(poolAdded[0].keyword.startsWith('dovoh ')).toBe(true)
@@ -252,7 +269,9 @@ describe('ad-creative-generator keyword supplementation', () => {
       poolCandidates: ['best laser level on amazon'],
     })
 
-    const poolAdded = result.keywordSupplementation.addedKeywords.filter(k => k.source === 'keyword_pool')
+    const poolAdded = result.keywordSupplementation.addedKeywords.filter(
+      (k) => k.source === 'keyword_pool'
+    )
     expect(poolAdded).toHaveLength(0)
     expect(result.keywordsWithVolume).toHaveLength(9)
   })
@@ -274,8 +293,10 @@ describe('ad-creative-generator keyword supplementation', () => {
       keywordsWithVolume: baseKeywords,
     })
 
-    const titleAboutAdded = result.keywordSupplementation.addedKeywords.filter(k => k.source === 'title_about')
+    const titleAboutAdded = result.keywordSupplementation.addedKeywords.filter(
+      (k) => k.source === 'title_about'
+    )
     expect(titleAboutAdded.length).toBeGreaterThan(0)
-    expect(titleAboutAdded.every(k => !k.keyword.startsWith('unknown '))).toBe(true)
+    expect(titleAboutAdded.every((k) => !k.keyword.startsWith('unknown '))).toBe(true)
   })
 })

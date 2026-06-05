@@ -36,13 +36,11 @@ describe('prompt-loader fallback behavior', () => {
   it('falls back to latest prompt when no active version exists', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    queryOneMock
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce({
-        prompt_content: 'latest prompt content',
-        version: 'v4.48',
-        name: '广告创意生成v4.48',
-      })
+    queryOneMock.mockResolvedValueOnce(undefined).mockResolvedValueOnce({
+      prompt_content: 'latest prompt content',
+      version: 'v4.48',
+      name: '广告创意生成v4.48',
+    })
 
     const prompt = await loadPrompt('ad_creative_generation')
 
@@ -57,9 +55,7 @@ describe('prompt-loader fallback behavior', () => {
   })
 
   it('throws when both active and latest prompt are missing', async () => {
-    queryOneMock
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
+    queryOneMock.mockResolvedValueOnce(undefined).mockResolvedValueOnce(undefined)
 
     await expect(loadPrompt('ad_creative_generation')).rejects.toThrow(
       '找不到可用的Prompt版本(激活或最新): ad_creative_generation'

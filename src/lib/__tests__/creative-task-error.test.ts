@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeCreativeTaskError, toCreativeTaskErrorResponseFields } from '../creative-task-error'
+import {
+  normalizeCreativeTaskError,
+  toCreativeTaskErrorResponseFields,
+} from '../creative-task-error'
 
 describe('creative-task-error', () => {
   it('classifies keyword clustering upstream 400 correctly', () => {
@@ -49,7 +52,13 @@ describe('creative-task-error', () => {
 
   it('exports response fields for API compatibility', () => {
     const normalized = normalizeCreativeTaskError(
-      { code: 'AUTH_REQUIRED', category: 'auth', message: 'Unauthorized', userMessage: '登录已过期', retryable: false },
+      {
+        code: 'AUTH_REQUIRED',
+        category: 'auth',
+        message: 'Unauthorized',
+        userMessage: '登录已过期',
+        retryable: false,
+      },
       '任务失败'
     )
     const responseFields = toCreativeTaskErrorResponseFields(normalized)
@@ -64,7 +73,10 @@ describe('creative-task-error', () => {
   })
 
   it('maps generic network failure message to retryable network code', () => {
-    const error = normalizeCreativeTaskError('NetworkError when attempting to fetch resource.', '任务失败')
+    const error = normalizeCreativeTaskError(
+      'NetworkError when attempting to fetch resource.',
+      '任务失败'
+    )
 
     expect(error.code).toBe('CREATIVE_TASK_NETWORK_ERROR')
     expect(error.category).toBe('network')
@@ -73,7 +85,10 @@ describe('creative-task-error', () => {
   })
 
   it('maps quota reached hints to validation code', () => {
-    const error = normalizeCreativeTaskError('该Offer已生成全部3种创意类型（A/B/D），无需继续生成。', '任务失败')
+    const error = normalizeCreativeTaskError(
+      '该Offer已生成全部3种创意类型（A/B/D），无需继续生成。',
+      '任务失败'
+    )
 
     expect(error.code).toBe('CREATIVE_QUOTA_REACHED')
     expect(error.category).toBe('validation')

@@ -14,7 +14,7 @@ import {
   BookOpen,
   BarChart3,
   MessageSquare,
-  Star
+  Star,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -134,12 +134,7 @@ export default function CreativeLearningPage() {
             <p className="text-slate-500 mt-1">从历史高表现创意中学习成功特征</p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="gap-2"
-        >
+        <Button variant="outline" onClick={handleRefresh} disabled={refreshing} className="gap-2">
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           刷新
         </Button>
@@ -183,7 +178,9 @@ export default function CreativeLearningPage() {
                   </div>
                   <div>
                     <p className="text-sm text-slate-500">平均CTR</p>
-                    <p className="text-2xl font-bold text-slate-900">{data.features?.benchmarks.avgCtr}</p>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {data.features?.benchmarks.avgCtr}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -196,7 +193,9 @@ export default function CreativeLearningPage() {
                   </div>
                   <div>
                     <p className="text-sm text-slate-500">平均转化率</p>
-                    <p className="text-2xl font-bold text-slate-900">{data.features?.benchmarks.avgConversionRate}</p>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {data.features?.benchmarks.avgConversionRate}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -209,7 +208,9 @@ export default function CreativeLearningPage() {
                   </div>
                   <div>
                     <p className="text-sm text-slate-500">优化建议</p>
-                    <p className="text-2xl font-bold text-slate-900">{data.features?.recommendations.length || 0}</p>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {data.features?.recommendations.length || 0}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -224,9 +225,7 @@ export default function CreativeLearningPage() {
                   <MessageSquare className="w-5 h-5 text-blue-600" />
                   标题特征分析
                 </CardTitle>
-                <CardDescription>
-                  高表现创意的标题共同特征
-                </CardDescription>
+                <CardDescription>高表现创意的标题共同特征</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -238,15 +237,21 @@ export default function CreativeLearningPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600">使用数字</span>
-                      <span className="font-medium">{data.features?.headlines.characteristics.usesNumbers}</span>
+                      <span className="font-medium">
+                        {data.features?.headlines.characteristics.usesNumbers}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600">使用疑问句</span>
-                      <span className="font-medium">{data.features?.headlines.characteristics.usesQuestions}</span>
+                      <span className="font-medium">
+                        {data.features?.headlines.characteristics.usesQuestions}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600">包含行动词汇</span>
-                      <span className="font-medium">{data.features?.headlines.characteristics.usesAction}</span>
+                      <span className="font-medium">
+                        {data.features?.headlines.characteristics.usesAction}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -254,7 +259,9 @@ export default function CreativeLearningPage() {
                   <p className="text-sm font-medium text-slate-700 mb-2">高频词汇</p>
                   <div className="flex flex-wrap gap-2">
                     {data.features?.headlines.topWords.map((word, i) => (
-                      <Badge key={i} variant="secondary">{word}</Badge>
+                      <Badge key={i} variant="secondary">
+                        {word}
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -268,25 +275,29 @@ export default function CreativeLearningPage() {
                   <BarChart3 className="w-5 h-5 text-purple-600" />
                   描述特征分析
                 </CardTitle>
-                <CardDescription>
-                  高表现创意的描述共同特征
-                </CardDescription>
+                <CardDescription>高表现创意的描述共同特征</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-slate-700 mb-2">平均长度</p>
-                  <p className="text-lg font-semibold">{data.features?.descriptions.avgLength} 字符</p>
+                  <p className="text-lg font-semibold">
+                    {data.features?.descriptions.avgLength} 字符
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-slate-700 mb-2">特征分布</p>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600">强调好处</span>
-                      <span className="font-medium">{data.features?.descriptions.characteristics.mentionsBenefit}</span>
+                      <span className="font-medium">
+                        {data.features?.descriptions.characteristics.mentionsBenefit}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600">包含紧迫性词汇</span>
-                      <span className="font-medium">{data.features?.descriptions.characteristics.mentionsUrgency}</span>
+                      <span className="font-medium">
+                        {data.features?.descriptions.characteristics.mentionsUrgency}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -294,7 +305,9 @@ export default function CreativeLearningPage() {
                   <p className="text-sm font-medium text-slate-700 mb-2">高频词汇</p>
                   <div className="flex flex-wrap gap-2">
                     {data.features?.descriptions.topWords.map((word, i) => (
-                      <Badge key={i} variant="secondary">{word}</Badge>
+                      <Badge key={i} variant="secondary">
+                        {word}
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -309,9 +322,7 @@ export default function CreativeLearningPage() {
                 <Zap className="w-5 h-5 text-orange-600" />
                 优化建议
               </CardTitle>
-              <CardDescription>
-                基于成功创意特征的改进建议
-              </CardDescription>
+              <CardDescription>基于成功创意特征的改进建议</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 gap-4">
@@ -335,9 +346,7 @@ export default function CreativeLearningPage() {
                   <Star className="w-5 h-5 text-yellow-600" />
                   高表现创意样本
                 </CardTitle>
-                <CardDescription>
-                  表现最佳的创意示例
-                </CardDescription>
+                <CardDescription>表现最佳的创意示例</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -354,7 +363,9 @@ export default function CreativeLearningPage() {
                       </div>
                       <div className="flex gap-4 text-sm text-slate-500">
                         <span>点击: {(creative.performance?.clicks ?? 0).toLocaleString()}</span>
-                        <span>展示: {(creative.performance?.impressions ?? 0).toLocaleString()}</span>
+                        <span>
+                          展示: {(creative.performance?.impressions ?? 0).toLocaleString()}
+                        </span>
                         <span>转化: {creative.performance?.conversions ?? 0}</span>
                       </div>
                     </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import {
   listExperiments,
   createExperiment,
@@ -12,13 +13,13 @@ import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 export const dynamic = 'force-dynamic'
 
 const createSchema = z.object({
-  experiment_name: z.string().min(1).max(200),
-  experiment_type: z.string().min(1).max(50),
-  offer_id: z.number().int().optional().nullable(),
-  campaign_id: z.number().int().optional().nullable(),
+  experiment_name: z.string().min(1, zErr.required).max(200, zErr.maxChars(200)),
+  experiment_type: z.string().min(1, zErr.required).max(50, zErr.maxChars(50)),
+  offer_id: z.number().int(zErr.int).optional().nullable(),
+  campaign_id: z.number().int(zErr.int).optional().nullable(),
   variant_a: z.any().optional().nullable(),
   variant_b: z.any().optional().nullable(),
-  status: z.string().max(20).optional().default('running'),
+  status: z.string().max(20, zErr.maxChars(20)).optional().default('running'),
 })
 
 export async function GET(request: NextRequest) {
@@ -48,14 +49,14 @@ export async function GET(request: NextRequest) {
 
 const recordMetricsSchema = z.object({
   action: z.literal('record-metrics'),
-  experiment_id: z.number().int(),
+  experiment_id: z.number().int(zErr.int),
   variant: z.enum(['a', 'b']),
-  metrics: z.record(z.any()),
+  metrics: z.record(z.string(), z.any()),
 })
 
 const evaluateSchema = z.object({
   action: z.literal('evaluate'),
-  experiment_id: z.number().int(),
+  experiment_id: z.number().int(zErr.int),
 })
 
 export async function POST(request: NextRequest) {
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
     const parsed = recordMetricsSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: parsed.error.errors[0]?.message || 'Invalid request' },
+        { success: false, error: parsed.error.issues[0]?.message || 'Invalid request' },
         { status: 400 }
       )
     }
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
     const parsed = evaluateSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: parsed.error.errors[0]?.message || 'Invalid request' },
+        { success: false, error: parsed.error.issues[0]?.message || 'Invalid request' },
         { status: 400 }
       )
     }
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
   const parsed = createSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
-      { success: false, error: parsed.error.errors[0]?.message || 'Invalid request' },
+      { success: false, error: parsed.error.issues[0]?.message || 'Invalid request' },
       { status: 400 }
     )
   }

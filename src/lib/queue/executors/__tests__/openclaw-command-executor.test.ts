@@ -201,7 +201,8 @@ describe('openclaw command executor click-farm guard', () => {
             request_path: '/api/offers/extract',
             request_query_json: null,
             request_body_json: JSON.stringify({
-              affiliate_link: 'https://yeahpromos.com/index/index/openurlproduct?track=43e8d385119b639d&pid=429324',
+              affiliate_link:
+                'https://yeahpromos.com/index/index/openurlproduct?track=43e8d385119b639d&pid=429324',
               target_country: 'US',
               product_price: '$199.99',
               commission_payout: '22.5%',
@@ -321,7 +322,8 @@ describe('openclaw command executor click-farm guard', () => {
             request_path: '/api/offers/extract',
             request_query_json: null,
             request_body_json: JSON.stringify({
-              affiliate_link: 'https://yeahpromos.com/index/index/openurlproduct?track=5315fc1b0189c7a1&pid=524366',
+              affiliate_link:
+                'https://yeahpromos.com/index/index/openurlproduct?track=5315fc1b0189c7a1&pid=524366',
               target_country: 'US',
               product_price: '$169.97',
               commission_payout: '30%',
@@ -410,7 +412,9 @@ describe('openclaw command executor click-farm guard', () => {
       })
     )
 
-    const result = await executeOpenclawCommandTask(createTask('run-offer-update-country-normalize-1'))
+    const result = await executeOpenclawCommandTask(
+      createTask('run-offer-update-country-normalize-1')
+    )
     expect(result.success).toBe(true)
 
     const calledBody = mocks.fetchAutoadsAsUser.mock.calls[0][0].body
@@ -418,7 +422,8 @@ describe('openclaw command executor click-farm guard', () => {
   })
 
   it('hydrates missing offer.extract commission from feishu message context', async () => {
-    const affiliateLink = 'https://yeahpromos.com/index/index/openurlproduct?track=fc03db0d2f9009e7&pid=1044718'
+    const affiliateLink =
+      'https://yeahpromos.com/index/index/openurlproduct?track=fc03db0d2f9009e7&pid=1044718'
     const parentRequestId = 'om_x100b56df905d20a4b3dda1c847084b4'
     const db = {
       type: 'postgres',
@@ -484,7 +489,8 @@ describe('openclaw command executor click-farm guard', () => {
   })
 
   it('corrects mismatched offer.extract commission from feishu message context', async () => {
-    const affiliateLink = 'https://yeahpromos.com/index/index/openurlproduct?track=5c127e3c2c6ab88e&pid=408015'
+    const affiliateLink =
+      'https://yeahpromos.com/index/index/openurlproduct?track=5c127e3c2c6ab88e&pid=408015'
     const parentRequestId = 'om_x100b56d9b760c8a8b2675b2dc187931'
     const db = {
       type: 'postgres',
@@ -560,7 +566,8 @@ describe('openclaw command executor click-farm guard', () => {
   })
 
   it('overrides offer.extract commission with message-context value when mismatched', async () => {
-    const affiliateLink = 'https://yeahpromos.com/index/index/openurlproduct?track=ebb4d552075a7ef5&pid=732114'
+    const affiliateLink =
+      'https://yeahpromos.com/index/index/openurlproduct?track=ebb4d552075a7ef5&pid=732114'
     const parentRequestId = 'om_test_source_override_guard'
     const db = {
       type: 'postgres',
@@ -652,7 +659,8 @@ describe('openclaw command executor click-farm guard', () => {
   })
 
   it('converts amount-style offer.extract commission to message-context percentage', async () => {
-    const affiliateLink = 'https://yeahpromos.com/index/index/openurlproduct?track=3ee0ff3ca7d17921&pid=485084'
+    const affiliateLink =
+      'https://yeahpromos.com/index/index/openurlproduct?track=3ee0ff3ca7d17921&pid=485084'
     const parentRequestId = 'om_x100b55228ca8f0acc3274c1b0e0fac9'
     const db = {
       type: 'postgres',
@@ -734,7 +742,8 @@ describe('openclaw command executor click-farm guard', () => {
   })
 
   it('corrects offer.update amount-style commission from feishu message context', async () => {
-    const affiliateLink = 'https://yeahpromos.com/index/index/openurlproduct?track=5c127e3c2c6ab88e&pid=408015'
+    const affiliateLink =
+      'https://yeahpromos.com/index/index/openurlproduct?track=5c127e3c2c6ab88e&pid=408015'
     const parentRequestId = 'om_x100b56d9b760c8a8b2675b2dc187931'
     const db = {
       type: 'postgres',
@@ -793,7 +802,9 @@ describe('openclaw command executor click-farm guard', () => {
       })
     )
 
-    const result = await executeOpenclawCommandTask(createTask('run-offer-update-message-correct-1'))
+    const result = await executeOpenclawCommandTask(
+      createTask('run-offer-update-message-correct-1')
+    )
     expect(result.success).toBe(true)
 
     expect(mocks.fetchAutoadsAsUser).toHaveBeenCalledWith(
@@ -811,7 +822,8 @@ describe('openclaw command executor click-farm guard', () => {
   })
 
   it('does not auto-correct offer.extract commission from affiliate_products source', async () => {
-    const affiliateLink = 'https://yeahpromos.com/index/index/openurlproduct?track=d75ea6f3305ebf16&pid=727678'
+    const affiliateLink =
+      'https://yeahpromos.com/index/index/openurlproduct?track=d75ea6f3305ebf16&pid=727678'
     const db = {
       type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
@@ -888,7 +900,8 @@ describe('openclaw command executor click-farm guard', () => {
   })
 
   it('does not auto-correct offer.extract commission from yeahpromos track-only source match', async () => {
-    const affiliateLink = 'https://yeahpromos.com/index/index/openurlproduct?track=d7d9484735a4d807&pid=763996'
+    const affiliateLink =
+      'https://yeahpromos.com/index/index/openurlproduct?track=d7d9484735a4d807&pid=763996'
     const db = {
       type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
@@ -965,7 +978,8 @@ describe('openclaw command executor click-farm guard', () => {
   })
 
   it('does not auto-correct suspicious yeahpromos amount-derived percent by heuristic', async () => {
-    const affiliateLink = 'https://yeahpromos.com/index/index/openurlproduct?track=test-track&pid=740178'
+    const affiliateLink =
+      'https://yeahpromos.com/index/index/openurlproduct?track=test-track&pid=740178'
     const db = {
       type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
@@ -1034,7 +1048,8 @@ describe('openclaw command executor click-farm guard', () => {
   })
 
   it('does not auto-correct low-rate amount-derived percent for high-price yeahpromos offers', async () => {
-    const affiliateLink = 'https://yeahpromos.com/index/index/openurlproduct?track=3117168dd1120720&pid=435374'
+    const affiliateLink =
+      'https://yeahpromos.com/index/index/openurlproduct?track=3117168dd1120720&pid=435374'
     const db = {
       type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
@@ -1092,7 +1107,9 @@ describe('openclaw command executor click-farm guard', () => {
       })
     )
 
-    const result = await executeOpenclawCommandTask(createTask('run-offer-fix-heuristic-low-rate-1'))
+    const result = await executeOpenclawCommandTask(
+      createTask('run-offer-fix-heuristic-low-rate-1')
+    )
     expect(result.success).toBe(true)
 
     expect(mocks.fetchAutoadsAsUser).toHaveBeenCalledWith(
@@ -1123,7 +1140,8 @@ describe('openclaw command executor click-farm guard', () => {
             {
               id: 'run-offer-fix-sibling-anchor',
               request_body_json: JSON.stringify({
-                affiliate_link: 'https://yeahpromos.com/index/index/openurlproduct?track=3117168dd1120720&pid=435374',
+                affiliate_link:
+                  'https://yeahpromos.com/index/index/openurlproduct?track=3117168dd1120720&pid=435374',
                 target_country: 'US',
                 product_price: '$157.48',
                 commission_payout: '11.81%',
@@ -1148,7 +1166,8 @@ describe('openclaw command executor click-farm guard', () => {
             request_path: '/api/offers/extract',
             request_query_json: null,
             request_body_json: JSON.stringify({
-              affiliate_link: 'https://yeahpromos.com/index/index/openurlproduct?track=3117168dd1120720&pid=584359',
+              affiliate_link:
+                'https://yeahpromos.com/index/index/openurlproduct?track=3117168dd1120720&pid=584359',
               target_country: 'US',
               product_price: '$299.99',
               commission_payout: '22.5%',
@@ -1193,7 +1212,8 @@ describe('openclaw command executor click-farm guard', () => {
   })
 
   it('does not apply yeahpromos heuristic to already-standard percent values', async () => {
-    const affiliateLink = 'https://yeahpromos.com/index/index/openurlproduct?track=test-track&pid=1005965'
+    const affiliateLink =
+      'https://yeahpromos.com/index/index/openurlproduct?track=test-track&pid=1005965'
     const db = {
       type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),

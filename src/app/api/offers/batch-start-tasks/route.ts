@@ -37,47 +37,37 @@ export async function POST(request: NextRequest) {
     const { offerIds } = body as { offerIds?: unknown }
 
     if (!enableClickFarm && !enableUrlSwap) {
-      return NextResponse.json(
-        { error: '请至少选择一种任务类型' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '请至少选择一种任务类型' }, { status: 400 })
     }
 
     const normalizedOfferIds = Array.isArray(offerIds)
       ? Array.from(
-          new Set(
-            offerIds
-              .map((id) => Number(id))
-              .filter((id) => Number.isInteger(id) && id > 0)
-          )
+          new Set(offerIds.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0))
         )
       : []
 
     if (normalizedOfferIds.length === 0) {
-      return NextResponse.json(
-        { error: '请选择至少一个 Offer' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '请选择至少一个 Offer' }, { status: 400 })
     }
 
     const db = await getDatabase()
 
     // 查询 Offer 信息
     const offerIdPlaceholders = normalizedOfferIds.map(() => '?').join(',')
-    const offers = await db.query(`
+    const offers = (await db.query(
+      `
       SELECT id, target_country
       FROM offers
       WHERE id IN (${offerIdPlaceholders}) AND user_id = ? AND IS_DELETED_FALSE
-    `, [...normalizedOfferIds, userId]) as Array<{
+    `,
+      [...normalizedOfferIds, userId]
+    )) as Array<{
       id: number
       target_country: string
     }>
 
     if (offers.length === 0) {
-      return NextResponse.json(
-        { error: '未找到有效的 Offer' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: '未找到有效的 Offer' }, { status: 404 })
     }
 
     const requestedIdsCount = normalizedOfferIds.length
@@ -103,17 +93,17 @@ export async function POST(request: NextRequest) {
 
     logBatchStartTasksHttpOutcome('offers', userId, status, data)
 
-    return NextResponse.json({
-      success: result.success,
-      partialSuccess: result.partialSuccess,
-      message,
-      data,
-    }, { status })
+    return NextResponse.json(
+      {
+        success: result.success,
+        partialSuccess: result.partialSuccess,
+        message,
+        data,
+      },
+      { status }
+    )
   } catch (error: any) {
     console.error('批量开启任务失败:', error)
-    return NextResponse.json(
-      { error: error.message || '批量开启任务失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '批量开启任务失败' }, { status: 500 })
   }
 }

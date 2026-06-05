@@ -8,12 +8,16 @@
  * 3. 批量创建Offer（Worker）：batch-worker → extractOffer({batchMode: true})
  */
 
-import { resolveAffiliateLink, BATCH_MODE_RETRY_CONFIG, getProxyPool } from '@/lib/url-resolver-enhanced'
+import {
+  resolveAffiliateLink,
+  BATCH_MODE_RETRY_CONFIG,
+  getProxyPool,
+} from '@/lib/url-resolver-enhanced'
 import { extractProductInfo } from '@/lib/scraper'
 import type { ScrapedProductData } from '@/lib/scraper'
 import {
   scrapeAmazonStoreDeep,
-  scrapeIndependentStoreDeep,  // 🔥 修改：使用深度抓取版本，与Amazon Store保持一致
+  scrapeIndependentStoreDeep, // 🔥 修改：使用深度抓取版本，与Amazon Store保持一致
   scrapeAmazonProduct,
 } from '@/lib/stealth-scraper'
 import { AppError } from '@/lib/errors'
@@ -23,7 +27,10 @@ import {
   getTargetLanguage,
   normalizeBrandName,
 } from '@/lib/offer-utils'
-import { scrapeSupplementalProducts, type SupplementalProductResult } from '@/lib/offer-supplemental-products'
+import {
+  scrapeSupplementalProducts,
+  type SupplementalProductResult,
+} from '@/lib/offer-supplemental-products'
 import { warmupAffiliateLink } from '@/lib/proxy-warmup'
 import { getProxyUrlForCountry } from '@/lib/settings'
 import { fetchBrandSearchSupplement, type BrandSearchSupplement } from '@/lib/google-brand-search'
@@ -99,7 +106,7 @@ export interface ExtractOfferResult {
     productName?: string
     rawProductTitle?: string
     rawAboutThisItem?: string[]
-    productPrice?: string  // 🔥 统一字段名：price → productPrice
+    productPrice?: string // 🔥 统一字段名：price → productPrice
     productCategory?: string
     productFeatures?: string[]
     metaTitle?: string
@@ -221,20 +228,20 @@ export interface ExtractOfferResult {
       error?: string | null
     }>
 
-      // 调试信息
-      debug: {
-        scrapedDataAvailable: boolean
-        brandAutoDetected: boolean
-        isAmazonStore: boolean
-        isAmazonProductPage: boolean
-        isIndependentStore: boolean
-        pageTypeDetected?: 'store' | 'product'
-        pageTypeAdjusted?: boolean
-        productsExtracted: number
-        scrapeMethod: string
-        scrapingError?: string
-        amazonProductDataExtracted?: boolean
-        storeDataExtracted?: boolean
+    // 调试信息
+    debug: {
+      scrapedDataAvailable: boolean
+      brandAutoDetected: boolean
+      isAmazonStore: boolean
+      isAmazonProductPage: boolean
+      isIndependentStore: boolean
+      pageTypeDetected?: 'store' | 'product'
+      pageTypeAdjusted?: boolean
+      productsExtracted: number
+      scrapeMethod: string
+      scrapingError?: string
+      amazonProductDataExtracted?: boolean
+      storeDataExtracted?: boolean
       independentStoreDataExtracted?: boolean
     }
   }
@@ -288,15 +295,24 @@ function deriveBrandFromFinalUrl(finalUrl: string): string | null {
     const sld = stripped[stripped.length - 2]
     const sldIsCommonSecondLevel = new Set(['co', 'com', 'net', 'org', 'gov', 'edu'])
 
-    const label = (tld.length === 2 && sldIsCommonSecondLevel.has(sld) && stripped.length >= 3)
-      ? stripped[stripped.length - 3]
-      : sld
+    const label =
+      tld.length === 2 && sldIsCommonSecondLevel.has(sld) && stripped.length >= 3
+        ? stripped[stripped.length - 3]
+        : sld
 
     const candidate = label.replace(/[^a-z0-9-]/g, '').trim()
     if (!candidate) return null
 
     // Avoid returning hosting/platform domains as “brand”.
-    const blocked = new Set(['myshopify', 'shopify', 'wixsite', 'wordpress', 'blogspot', 'github', 'pages'])
+    const blocked = new Set([
+      'myshopify',
+      'shopify',
+      'wixsite',
+      'wordpress',
+      'blogspot',
+      'github',
+      'pages',
+    ])
     if (blocked.has(candidate)) return null
 
     return candidate
@@ -329,54 +345,78 @@ function buildCanonicalAmazonProductUrl(url: string): string | null {
 }
 
 function getAmazonProductDataQualityScore(
-  data: {
-    productName?: string | null
-    productDescription?: string | null
-    brandName?: string | null
-    features?: string[] | null
-    aboutThisItem?: string[] | null
-    imageUrls?: string[] | null
-  } | null | undefined
+  data:
+    | {
+        productName?: string | null
+        productDescription?: string | null
+        brandName?: string | null
+        features?: string[] | null
+        aboutThisItem?: string[] | null
+        imageUrls?: string[] | null
+      }
+    | null
+    | undefined
 ): number {
   if (!data) return 0
 
-  const productNameScore = typeof data.productName === 'string' && data.productName.trim().length > 0 ? 3 : 0
-  const descriptionScore = typeof data.productDescription === 'string' && data.productDescription.trim().length > 0 ? 1 : 0
-  const brandScore = typeof data.brandName === 'string'
-    && data.brandName.trim().length > 0
-    && !isLikelyInvalidBrandName(data.brandName) ? 2 : 0
+  const productNameScore =
+    typeof data.productName === 'string' && data.productName.trim().length > 0 ? 3 : 0
+  const descriptionScore =
+    typeof data.productDescription === 'string' && data.productDescription.trim().length > 0 ? 1 : 0
+  const brandScore =
+    typeof data.brandName === 'string' &&
+    data.brandName.trim().length > 0 &&
+    !isLikelyInvalidBrandName(data.brandName)
+      ? 2
+      : 0
   const featuresScore = Array.isArray(data.features)
-    ? Math.min(3, data.features.filter((item) => typeof item === 'string' && item.trim().length > 0).length)
+    ? Math.min(
+        3,
+        data.features.filter((item) => typeof item === 'string' && item.trim().length > 0).length
+      )
     : 0
   const aboutScore = Array.isArray(data.aboutThisItem)
-    ? Math.min(2, data.aboutThisItem.filter((item) => typeof item === 'string' && item.trim().length > 0).length)
+    ? Math.min(
+        2,
+        data.aboutThisItem.filter((item) => typeof item === 'string' && item.trim().length > 0)
+          .length
+      )
     : 0
-  const imageScore = Array.isArray(data.imageUrls)
-    && data.imageUrls.some((item) => typeof item === 'string' && item.trim().length > 0) ? 1 : 0
+  const imageScore =
+    Array.isArray(data.imageUrls) &&
+    data.imageUrls.some((item) => typeof item === 'string' && item.trim().length > 0)
+      ? 1
+      : 0
 
   return productNameScore + descriptionScore + brandScore + featuresScore + aboutScore + imageScore
 }
 
 function isAmazonProductDataInsufficient(
-  data: {
-    productName?: string | null
-    brandName?: string | null
-    features?: string[] | null
-    aboutThisItem?: string[] | null
-  } | null | undefined
+  data:
+    | {
+        productName?: string | null
+        brandName?: string | null
+        features?: string[] | null
+        aboutThisItem?: string[] | null
+      }
+    | null
+    | undefined
 ): boolean {
   if (!data) return true
 
   const hasProductName = typeof data.productName === 'string' && data.productName.trim().length > 0
   if (!hasProductName) return true
 
-  const hasValidBrand = typeof data.brandName === 'string'
-    && data.brandName.trim().length > 0
-    && !isLikelyInvalidBrandName(data.brandName)
-  const hasFeatures = Array.isArray(data.features)
-    && data.features.some((item) => typeof item === 'string' && item.trim().length > 0)
-  const hasAboutThisItem = Array.isArray(data.aboutThisItem)
-    && data.aboutThisItem.some((item) => typeof item === 'string' && item.trim().length > 0)
+  const hasValidBrand =
+    typeof data.brandName === 'string' &&
+    data.brandName.trim().length > 0 &&
+    !isLikelyInvalidBrandName(data.brandName)
+  const hasFeatures =
+    Array.isArray(data.features) &&
+    data.features.some((item) => typeof item === 'string' && item.trim().length > 0)
+  const hasAboutThisItem =
+    Array.isArray(data.aboutThisItem) &&
+    data.aboutThisItem.some((item) => typeof item === 'string' && item.trim().length > 0)
 
   return !hasValidBrand && !hasFeatures && !hasAboutThisItem
 }
@@ -398,28 +438,36 @@ function shouldFallbackToRenderedIndependentProduct(
 ): boolean {
   if (!data) return true
 
-  const hasBrand = typeof data.brandName === 'string'
-    && data.brandName.trim().length > 0
-    && !isLikelyInvalidBrandName(data.brandName)
+  const hasBrand =
+    typeof data.brandName === 'string' &&
+    data.brandName.trim().length > 0 &&
+    !isLikelyInvalidBrandName(data.brandName)
   const hasProductName = typeof data.productName === 'string' && data.productName.trim().length > 0
-  const hasImages = Array.isArray(data.imageUrls) && data.imageUrls.some((item) => typeof item === 'string' && item.trim().length > 0)
-  const hasFeatureContent = Array.isArray(data.productFeatures)
-    && data.productFeatures.some((item) => typeof item === 'string' && item.trim().length > 0)
+  const hasImages =
+    Array.isArray(data.imageUrls) &&
+    data.imageUrls.some((item) => typeof item === 'string' && item.trim().length > 0)
+  const hasFeatureContent =
+    Array.isArray(data.productFeatures) &&
+    data.productFeatures.some((item) => typeof item === 'string' && item.trim().length > 0)
   const hasStructuredReviews = Array.isArray(data.reviews) && data.reviews.length > 0
-  const ratingValue = typeof data.rating === 'string'
-    ? Number.parseFloat(data.rating.replace(/[^0-9.]/g, ''))
-    : Number.NaN
-  const reviewCountValue = typeof data.reviewCount === 'string'
-    ? Number.parseInt(data.reviewCount.replace(/[^0-9]/g, ''), 10)
-    : Number.NaN
+  const ratingValue =
+    typeof data.rating === 'string'
+      ? Number.parseFloat(data.rating.replace(/[^0-9.]/g, ''))
+      : Number.NaN
+  const reviewCountValue =
+    typeof data.reviewCount === 'string'
+      ? Number.parseInt(data.reviewCount.replace(/[^0-9]/g, ''), 10)
+      : Number.NaN
   const hasRatingSignal = Number.isFinite(ratingValue) && ratingValue > 0
   const hasReviewCountSignal = Number.isFinite(reviewCountValue) && reviewCountValue > 0
-  const hasReviewSignals = hasStructuredReviews
-    || hasRatingSignal
-    || hasReviewCountSignal
-    || !!(Array.isArray(data.topReviews) && data.topReviews.length > 0)
+  const hasReviewSignals =
+    hasStructuredReviews ||
+    hasRatingSignal ||
+    hasReviewCountSignal ||
+    !!(Array.isArray(data.topReviews) && data.topReviews.length > 0)
   const hasSpecifications = !!(data.specifications && Object.keys(data.specifications).length > 0)
-  const hasDescription = typeof data.productDescription === 'string' && data.productDescription.trim().length >= 80
+  const hasDescription =
+    typeof data.productDescription === 'string' && data.productDescription.trim().length >= 80
   const likelyProductDetailUrl = looksLikeIndependentProductDetailUrl(targetUrl)
 
   if (!hasProductName) return true
@@ -482,16 +530,26 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         'fetching_proxy',
         'completed',
         completedMessage,
-        proxyCountryMismatch ? {
-          proxyCountryMismatch: true,
-          targetCountry: targetCountry,
-          usedProxyCountry: proxyInfo.usedCountry || undefined,
-        } : undefined
+        proxyCountryMismatch
+          ? {
+              proxyCountryMismatch: true,
+              targetCountry: targetCountry,
+              usedProxyCountry: proxyInfo.usedCountry || undefined,
+            }
+          : undefined
       )
     } catch (error: any) {
-      const errorMessage = error instanceof AppError ? error.message : (error.message || '代理池初始化失败')
-      const errorCode = error.code || (error instanceof AppError ? error.code : 'PROXY_POOL_INIT_FAILED')
-      trackStageProgress(progressCallback, fetchingProxyStartTime, 'fetching_proxy', 'error', errorMessage)
+      const errorMessage =
+        error instanceof AppError ? error.message : error.message || '代理池初始化失败'
+      const errorCode =
+        error.code || (error instanceof AppError ? error.code : 'PROXY_POOL_INIT_FAILED')
+      trackStageProgress(
+        progressCallback,
+        fetchingProxyStartTime,
+        'fetching_proxy',
+        'error',
+        errorMessage
+      )
 
       return {
         success: false,
@@ -537,7 +595,13 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           )
         }
       } else {
-        progressCallback?.('proxy_warmup', 'in_progress', '正在后台触发推广链接预热...', undefined, 0)
+        progressCallback?.(
+          'proxy_warmup',
+          'in_progress',
+          '正在后台触发推广链接预热...',
+          undefined,
+          0
+        )
         void runWarmup().catch((error: any) => {
           console.warn('⚠️ 推广链接预热异常（后台）:', error?.message || error)
         })
@@ -575,10 +639,17 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         resolveMethod: 'direct',
         proxyUsed: null,
       }
-      trackStageProgress(progressCallback, resolvingLinkStartTime, 'resolving_link', 'completed', '推广链接解析完成（直接使用）', {
-        currentUrl: affiliateLink,
-        redirectCount: 0,
-      })
+      trackStageProgress(
+        progressCallback,
+        resolvingLinkStartTime,
+        'resolving_link',
+        'completed',
+        '推广链接解析完成（直接使用）',
+        {
+          currentUrl: affiliateLink,
+          redirectCount: 0,
+        }
+      )
     } else {
       try {
         resolvedData = await resolveAffiliateLink(affiliateLink, {
@@ -586,20 +657,35 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           userId: userId,
           skipCache: skipCache,
           // 批量处理模式：使用快速失败策略
-          ...(batchMode ? {
-            retryConfig: BATCH_MODE_RETRY_CONFIG,  // 减少重试次数（1次）
-            timeout: 3000                           // 减少超时时间（3秒）
-          } : {}),
+          ...(batchMode
+            ? {
+                retryConfig: BATCH_MODE_RETRY_CONFIG, // 减少重试次数（1次）
+                timeout: 3000, // 减少超时时间（3秒）
+              }
+            : {}),
         })
 
-        trackStageProgress(progressCallback, resolvingLinkStartTime, 'resolving_link', 'completed', '推广链接解析完成', {
-          currentUrl: resolvedData.finalUrl,
-          redirectCount: resolvedData.redirectCount,
-        })
+        trackStageProgress(
+          progressCallback,
+          resolvingLinkStartTime,
+          'resolving_link',
+          'completed',
+          '推广链接解析完成',
+          {
+            currentUrl: resolvedData.finalUrl,
+            redirectCount: resolvedData.redirectCount,
+          }
+        )
       } catch (error: any) {
         console.error('URL解析失败:', error)
         const errorMessage = error instanceof AppError ? error.message : '推广链接解析失败'
-        trackStageProgress(progressCallback, resolvingLinkStartTime, 'resolving_link', 'error', errorMessage)
+        trackStageProgress(
+          progressCallback,
+          resolvingLinkStartTime,
+          'resolving_link',
+          'error',
+          errorMessage
+        )
 
         return {
           success: false,
@@ -628,9 +714,15 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
 
     // ========== 步骤5: 访问目标页面 ==========
     const accessingPageStartTime = Date.now()
-    progressCallback?.('accessing_page', 'in_progress', '正在访问目标页面...', {
-      currentUrl: resolvedData.finalUrl,
-    }, 0)
+    progressCallback?.(
+      'accessing_page',
+      'in_progress',
+      '正在访问目标页面...',
+      {
+        currentUrl: resolvedData.finalUrl,
+      },
+      0
+    )
 
     let brandName = null
     let productDescription = null
@@ -639,7 +731,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
     let independentStoreData = null
     let amazonProductData = null
     let productCount = 0
-    let scrapingError: string | null = null  // 🔥 新增：记录抓取错误
+    let scrapingError: string | null = null // 🔥 新增：记录抓取错误
     let proxyApiUrl: string | null = null
     let brandSearchSupplement: BrandSearchSupplement | null = null
     let isIndependentStore = false
@@ -649,71 +741,83 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
     let pageTypeAdjusted = false
     let supplementalRequested = 0
     let effectivePageType: 'store' | 'product' =
-      pageTypeOverride === 'store' || pageTypeOverride === 'product'
-        ? pageTypeOverride
-        : 'product'
+      pageTypeOverride === 'store' || pageTypeOverride === 'product' ? pageTypeOverride : 'product'
 
     try {
       // 🔥 验证finalUrl有效性
-      if (!resolvedData.finalUrl || resolvedData.finalUrl === 'null/' || resolvedData.finalUrl === 'null') {
+      if (
+        !resolvedData.finalUrl ||
+        resolvedData.finalUrl === 'null/' ||
+        resolvedData.finalUrl === 'null'
+      ) {
         throw new Error('Invalid finalUrl: URL解析返回了无效的URL')
       }
 
-	      // 检测是否为独立站店铺首页
-      isIndependentStore = !isAmazonStore && !isAmazonProductPage && (() => {
-        try {
-          const urlObj = new URL(resolvedData.finalUrl)
-          const pathname = urlObj.pathname
+      // 检测是否为独立站店铺首页
+      isIndependentStore =
+        !isAmazonStore &&
+        !isAmazonProductPage &&
+        (() => {
+          try {
+            const urlObj = new URL(resolvedData.finalUrl)
+            const pathname = urlObj.pathname
 
-        // 排除明确的单品页面路径
-        const isSingleProductPage =
-          pathname.includes('/products/') ||
-          pathname.includes('/product/') ||
-          pathname.includes('/p/') ||
-          pathname.includes('/dp/') ||
-          pathname.includes('/item/')
+            // 排除明确的单品页面路径
+            const isSingleProductPage =
+              pathname.includes('/products/') ||
+              pathname.includes('/product/') ||
+              pathname.includes('/p/') ||
+              pathname.includes('/dp/') ||
+              pathname.includes('/item/')
 
-        // 店铺首页特征：根路径、collections、shop等
-        // 注意：不要用“仅1段路径”作为店铺判断（例如 /impact_special 这类落地页会被误判为 store）
-        const isStorePage =
-          pathname === '/' ||
-          pathname === '' ||
-          !!pathname.match(/^\/(collections|shop|store|category|catalogue)(\/|$)/i)
+            // 店铺首页特征：根路径、collections、shop等
+            // 注意：不要用“仅1段路径”作为店铺判断（例如 /impact_special 这类落地页会被误判为 store）
+            const isStorePage =
+              pathname === '/' ||
+              pathname === '' ||
+              !!pathname.match(/^\/(collections|shop|store|category|catalogue)(\/|$)/i)
 
-        return !isSingleProductPage && isStorePage
-        } catch (urlError) {
-          console.warn('⚠️ URL解析失败，默认判断为非独立站:', urlError)
-          return false
-        }
-      })()
+            return !isSingleProductPage && isStorePage
+          } catch (urlError) {
+            console.warn('⚠️ URL解析失败，默认判断为非独立站:', urlError)
+            return false
+          }
+        })()
 
       if (pageTypeOverride !== 'store' && pageTypeOverride !== 'product') {
-        effectivePageType = (isAmazonStore || isIndependentStore) ? 'store' : 'product'
+        effectivePageType = isAmazonStore || isIndependentStore ? 'store' : 'product'
       }
 
-        // 🔥 防御：即使后续抓取失败，也至少用主域名提供一个稳定的品牌fallback
-        // 避免被阻断/403/超时时 brandName 为空或被阻断页文本污染
-        if (!isAmazonStore && !isAmazonProductPage && !brandName) {
-          const brandFromUrlFallback = deriveBrandFromFinalUrl(resolvedData.finalUrl)
-          if (brandFromUrlFallback && !isLikelyInvalidBrandName(brandFromUrlFallback)) {
-            brandName = normalizeBrandName(brandFromUrlFallback)
-          }
+      // 🔥 防御：即使后续抓取失败，也至少用主域名提供一个稳定的品牌fallback
+      // 避免被阻断/403/超时时 brandName 为空或被阻断页文本污染
+      if (!isAmazonStore && !isAmazonProductPage && !brandName) {
+        const brandFromUrlFallback = deriveBrandFromFinalUrl(resolvedData.finalUrl)
+        if (brandFromUrlFallback && !isLikelyInvalidBrandName(brandFromUrlFallback)) {
+          brandName = normalizeBrandName(brandFromUrlFallback)
         }
+      }
 
       // 获取用户代理配置
       proxyApiUrl = (await getProxyUrlForCountry(targetCountry, userId)) || null
       if (!proxyApiUrl) {
-        trackStageProgress(progressCallback, accessingPageStartTime, 'accessing_page', 'error', `用户 ${userId} 未配置${targetCountry}国家的代理URL`)
+        trackStageProgress(
+          progressCallback,
+          accessingPageStartTime,
+          'accessing_page',
+          'error',
+          `用户 ${userId} 未配置${targetCountry}国家的代理URL`
+        )
         throw new Error(`用户 ${userId} 未配置${targetCountry}国家的代理URL`)
       }
 
-      detectedPageType = (isAmazonStore || isIndependentStore) ? 'store' : 'product'
-      const userSelectedPageType = pageTypeOverride === 'store' || pageTypeOverride === 'product'
-        ? pageTypeOverride
-        : null
+      detectedPageType = isAmazonStore || isIndependentStore ? 'store' : 'product'
+      const userSelectedPageType =
+        pageTypeOverride === 'store' || pageTypeOverride === 'product' ? pageTypeOverride : null
 
       if (userSelectedPageType && userSelectedPageType !== detectedPageType) {
-        extractionWarnings.push(`系统识别为${detectedPageType === 'store' ? '店铺' : '单品'}页面，已自动切换为${detectedPageType === 'store' ? '店铺' : '单品'}模式`)
+        extractionWarnings.push(
+          `系统识别为${detectedPageType === 'store' ? '店铺' : '单品'}页面，已自动切换为${detectedPageType === 'store' ? '店铺' : '单品'}模式`
+        )
         effectivePageType = detectedPageType
         pageTypeAdjusted = true
       }
@@ -728,10 +832,23 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
       console.log('  - URL Suffix:', resolvedData.finalUrlSuffix || '(无)')
 
       // 访问目标页面完成
-      trackStageProgress(progressCallback, accessingPageStartTime, 'accessing_page', 'completed', '目标页面访问成功', {
-        currentUrl: fullTargetUrl,
-        pageType: isAmazonStore ? 'Amazon Store' : isAmazonProductPage ? 'Amazon Product' : isIndependentStore ? '独立站首页' : '单品页面',
-      })
+      trackStageProgress(
+        progressCallback,
+        accessingPageStartTime,
+        'accessing_page',
+        'completed',
+        '目标页面访问成功',
+        {
+          currentUrl: fullTargetUrl,
+          pageType: isAmazonStore
+            ? 'Amazon Store'
+            : isAmazonProductPage
+              ? 'Amazon Product'
+              : isIndependentStore
+                ? '独立站首页'
+                : '单品页面',
+        }
+      )
 
       // ========== 步骤6: 抓取产品数据 ==========
       const scrapingProductsStartTime = Date.now()
@@ -753,25 +870,30 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         brandName = storeData.brandName || storeData.storeName
         productDescription = storeData.storeDescription
         productCount = storeData.totalProducts
-        console.log(`✅ Amazon Store深度识别成功: ${brandName}, 产品数: ${productCount}, 深度抓取: ${storeData.deepScrapeResults?.successCount || 0}/${storeData.deepScrapeResults?.totalScraped || 0}`)
+        console.log(
+          `✅ Amazon Store深度识别成功: ${brandName}, 产品数: ${productCount}, 深度抓取: ${storeData.deepScrapeResults?.successCount || 0}/${storeData.deepScrapeResults?.totalScraped || 0}`
+        )
       } else if (isAmazonProductPage) {
         const amazonMaxProxyRetries = getOfferAmazonProductMaxProxyRetries(extractionMode)
-        const skipAmazonCompetitorExtraction = shouldSkipAmazonCompetitorExtractionOnExtract(extractionMode)
+        const skipAmazonCompetitorExtraction =
+          shouldSkipAmazonCompetitorExtractionOnExtract(extractionMode)
         const canonicalAmazonProductUrl = buildCanonicalAmazonProductUrl(resolvedData.finalUrl)
-        const preferCanonicalFirst = modeProfile.preferCanonicalAmazonUrlFirst
-          && !!canonicalAmazonProductUrl
-          && canonicalAmazonProductUrl !== fullTargetUrl
+        const preferCanonicalFirst =
+          modeProfile.preferCanonicalAmazonUrlFirst &&
+          !!canonicalAmazonProductUrl &&
+          canonicalAmazonProductUrl !== fullTargetUrl
         const primaryAmazonUrl = preferCanonicalFirst ? canonicalAmazonProductUrl! : fullTargetUrl
         const secondaryAmazonUrl = preferCanonicalFirst ? fullTargetUrl : canonicalAmazonProductUrl
 
-        const scrapeAmazonOnce = (url: string) => scrapeAmazonProduct(
-          url,
-          proxyApiUrl ?? undefined,
-          targetCountry,
-          amazonMaxProxyRetries,
-          skipAmazonCompetitorExtraction,
-          amazonScrapeOptions
-        )
+        const scrapeAmazonOnce = (url: string) =>
+          scrapeAmazonProduct(
+            url,
+            proxyApiUrl ?? undefined,
+            targetCountry,
+            amazonMaxProxyRetries,
+            skipAmazonCompetitorExtraction,
+            amazonScrapeOptions
+          )
 
         console.log(
           `📦 检测到Amazon单品页面 [${extractionMode}]，优先抓取: ${preferCanonicalFirst ? 'canonical' : 'full'} URL`
@@ -780,9 +902,9 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         amazonProductData = await scrapeAmazonOnce(primaryAmazonUrl)
 
         if (
-          secondaryAmazonUrl
-          && secondaryAmazonUrl !== primaryAmazonUrl
-          && isAmazonProductDataInsufficient(amazonProductData)
+          secondaryAmazonUrl &&
+          secondaryAmazonUrl !== primaryAmazonUrl &&
+          isAmazonProductDataInsufficient(amazonProductData)
         ) {
           const primaryScore = getAmazonProductDataQualityScore(amazonProductData)
           console.warn(
@@ -824,7 +946,9 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           rawProductTitle: amazonProductData.rawProductTitle || amazonProductData.productName,
           rawAboutThisItem: Array.isArray(amazonProductData.rawAboutThisItem)
             ? amazonProductData.rawAboutThisItem
-            : (Array.isArray(amazonProductData.aboutThisItem) ? amazonProductData.aboutThisItem : []),
+            : Array.isArray(amazonProductData.aboutThisItem)
+              ? amazonProductData.aboutThisItem
+              : [],
           productDescription: amazonProductData.productDescription,
           productPrice: amazonProductData.productPrice,
           productCategory: amazonProductData.category || null,
@@ -855,7 +979,10 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         // 🔥 品牌名归一：独立站主域名更稳定，避免 “Brand + 国家/语言” 作为品牌名
         // 例：kaspersky.es 页面标题/店铺名为 “Kaspersky España”，但品牌应为 “kaspersky”
         const brandFromUrl = deriveBrandFromFinalUrl(resolvedData.finalUrl)
-        const storeName = typeof independentStoreData.storeName === 'string' ? independentStoreData.storeName.trim() : ''
+        const storeName =
+          typeof independentStoreData.storeName === 'string'
+            ? independentStoreData.storeName.trim()
+            : ''
         const storeNorm = storeName ? normalizeForCompare(storeName) : ''
         const urlNorm = brandFromUrl ? normalizeForCompare(brandFromUrl) : ''
         let brandCandidate: string | null = null
@@ -877,7 +1004,9 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         brandName = brandCandidate
         productDescription = independentStoreData.storeDescription
         productCount = independentStoreData.totalProducts
-        console.log(`✅ 独立站深度识别成功: ${brandName}, 产品数: ${productCount}, 深度抓取: ${independentStoreData.deepScrapeResults?.successCount || 0}/${independentStoreData.deepScrapeResults?.totalScraped || 0}`)
+        console.log(
+          `✅ 独立站深度识别成功: ${brandName}, 产品数: ${productCount}, 深度抓取: ${independentStoreData.deepScrapeResults?.successCount || 0}/${independentStoreData.deepScrapeResults?.totalScraped || 0}`
+        )
       } else {
         // 🔥 2025-12-24优化：独立站单品页面抓取
         // 尝试轻量级axios-cheerio抓取，如果失败则回退到Playwright渲染
@@ -899,7 +1028,10 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           scrapedData = null
         }
 
-        if (modeProfile.skipPlaywrightWhenMinimalBaseline && hasMinimalIndependentProductBaseline(scrapedData)) {
+        if (
+          modeProfile.skipPlaywrightWhenMinimalBaseline &&
+          hasMinimalIndependentProductBaseline(scrapedData)
+        ) {
           console.log('✅ 独立站轻量抓取已满足创建 Offer 基础字段，跳过 Playwright 渲染')
         }
 
@@ -908,8 +1040,11 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           : shouldFallbackToRenderedIndependentProductForOffer(scrapedData, fullTargetUrl)
 
         if (
-          !(modeProfile.skipPlaywrightWhenMinimalBaseline && hasMinimalIndependentProductBaseline(scrapedData))
-          && needsPlaywrightFallback
+          !(
+            modeProfile.skipPlaywrightWhenMinimalBaseline &&
+            hasMinimalIndependentProductBaseline(scrapedData)
+          ) &&
+          needsPlaywrightFallback
         ) {
           console.warn('⚠️ 轻量级scraper丰富度不足，尝试使用Playwright进行JavaScript渲染...')
 
@@ -921,16 +1056,19 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
               fullTargetUrl,
               proxyApiUrl,
               targetCountry,
-              2  // 代理重试次数
+              2 // 代理重试次数
             )
 
             // 使用Playwright获取的数据更新
             scrapedData = {
               productName: independentProductData.productName,
-              rawProductTitle: independentProductData.rawProductTitle || independentProductData.productName,
+              rawProductTitle:
+                independentProductData.rawProductTitle || independentProductData.productName,
               rawAboutThisItem: Array.isArray(independentProductData.rawAboutThisItem)
                 ? independentProductData.rawAboutThisItem
-                : (Array.isArray(independentProductData.features) ? independentProductData.features : []),
+                : Array.isArray(independentProductData.features)
+                  ? independentProductData.features
+                  : [],
               productDescription: independentProductData.productDescription,
               productPrice: independentProductData.productPrice,
               productCategory: independentProductData.category,
@@ -953,7 +1091,9 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
 
             console.log(`✅ Playwright渲染成功: ${independentProductData.brandName || 'Unknown'}`)
           } catch (playwrightError: any) {
-            console.warn(`⚠️ Playwright回退失败: ${playwrightError.message}, 继续使用轻量级scraper结果`)
+            console.warn(
+              `⚠️ Playwright回退失败: ${playwrightError.message}, 继续使用轻量级scraper结果`
+            )
             // 继续使用之前的scrapedData，即使数据不完整
           }
         }
@@ -978,14 +1118,26 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
 
       // 店铺模式：补充抓取最多3个单品推广链接
       const normalizedStoreLinks = Array.isArray(storeProductLinks)
-        ? Array.from(new Set(storeProductLinks.map((link) => (typeof link === 'string' ? link.trim() : '')).filter(Boolean))).slice(0, 3)
+        ? Array.from(
+            new Set(
+              storeProductLinks
+                .map((link) => (typeof link === 'string' ? link.trim() : ''))
+                .filter(Boolean)
+            )
+          ).slice(0, 3)
         : []
       supplementalRequested = normalizedStoreLinks.length
 
       if (normalizedStoreLinks.length > 0) {
-        progressCallback?.('scraping_products', 'in_progress', `正在抓取${normalizedStoreLinks.length}个单品推广链接...`, {
-          count: normalizedStoreLinks.length,
-        }, 0)
+        progressCallback?.(
+          'scraping_products',
+          'in_progress',
+          `正在抓取${normalizedStoreLinks.length}个单品推广链接...`,
+          {
+            count: normalizedStoreLinks.length,
+          },
+          0
+        )
 
         supplementalProducts = await scrapeSupplementalProducts(normalizedStoreLinks, {
           targetCountry,
@@ -994,23 +1146,38 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           maxLinks: 3,
           concurrency: 2,
           onItem: ({ index, total, link }) => {
-            progressCallback?.('scraping_products', 'in_progress', `抓取单品链接 ${index + 1}/${total}...`, {
-              index: index + 1,
-              link,
-            }, 0)
+            progressCallback?.(
+              'scraping_products',
+              'in_progress',
+              `抓取单品链接 ${index + 1}/${total}...`,
+              {
+                index: index + 1,
+                link,
+              },
+              0
+            )
           },
         })
 
         const failedCount = supplementalProducts.filter((item) => item.error).length
         if (failedCount > 0) {
-          extractionWarnings.push(`有${failedCount}个单品推广链接抓取失败，可在Offer详情中补充或调整`)
+          extractionWarnings.push(
+            `有${failedCount}个单品推广链接抓取失败，可在Offer详情中补充或调整`
+          )
         }
       }
 
       // 抓取产品数据完成
-      trackStageProgress(progressCallback, scrapingProductsStartTime, 'scraping_products', 'completed', '产品数据抓取完成', {
-        productCount: productCount || (scrapedData ? 1 : 0),
-      })
+      trackStageProgress(
+        progressCallback,
+        scrapingProductsStartTime,
+        'scraping_products',
+        'completed',
+        '产品数据抓取完成',
+        {
+          productCount: productCount || (scrapedData ? 1 : 0),
+        }
+      )
 
       // ========== 步骤7: 提取品牌信息 ==========
       const extractingBrandStartTime = Date.now()
@@ -1022,12 +1189,19 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         brandName = brandNameTrimmed
       }
 
-      trackStageProgress(progressCallback, extractingBrandStartTime, 'extracting_brand', 'completed', '品牌信息提取完成', {
-        brandName: brandName ?? undefined,
-      })
+      trackStageProgress(
+        progressCallback,
+        extractingBrandStartTime,
+        'extracting_brand',
+        'completed',
+        '品牌信息提取完成',
+        {
+          brandName: brandName ?? undefined,
+        }
+      )
     } catch (error: any) {
       // 🔥 改进：详细记录错误信息，方便诊断
-      scrapingError = `${error?.constructor?.name || 'Error'}: ${error?.message || String(error)}`  // 保存错误信息
+      scrapingError = `${error?.constructor?.name || 'Error'}: ${error?.message || String(error)}` // 保存错误信息
 
       console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
       console.error('❌ [Playwright] 品牌识别失败')
@@ -1038,7 +1212,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
       console.error('页面类型:', {
         isAmazonStore,
         isAmazonProductPage,
-        isIndependentStore: !isAmazonStore && !isAmazonProductPage
+        isIndependentStore: !isAmazonStore && !isAmazonProductPage,
       })
       console.error('堆栈跟踪:', error?.stack)
       console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
@@ -1046,9 +1220,27 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
       // 品牌识别失败不中断流程，用户可以手动填写
       // 标记当前阶段为完成（即使有错误）
       const errorTime = Date.now()
-      trackStageProgress(progressCallback, accessingPageStartTime, 'accessing_page', 'completed', '目标页面访问完成')
-      progressCallback?.('scraping_products', 'completed', `产品数据抓取失败: ${error?.message || '未知错误'}`, undefined, errorTime - accessingPageStartTime)
-      progressCallback?.('extracting_brand', 'completed', `品牌信息提取失败: ${error?.message || '未知错误'}`, undefined, 0)
+      trackStageProgress(
+        progressCallback,
+        accessingPageStartTime,
+        'accessing_page',
+        'completed',
+        '目标页面访问完成'
+      )
+      progressCallback?.(
+        'scraping_products',
+        'completed',
+        `产品数据抓取失败: ${error?.message || '未知错误'}`,
+        undefined,
+        errorTime - accessingPageStartTime
+      )
+      progressCallback?.(
+        'extracting_brand',
+        'completed',
+        `品牌信息提取失败: ${error?.message || '未知错误'}`,
+        undefined,
+        0
+      )
     }
 
     // ========== 步骤8: 处理数据 ==========
@@ -1059,7 +1251,13 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
     const brandNameTrimmed = typeof brandNameInput === 'string' ? brandNameInput.trim() : ''
     if (!isAmazonStore && !isAmazonProductPage && brandNameTrimmed && proxyApiUrl) {
       try {
-        progressCallback?.('processing_data', 'in_progress', '正在通过Google搜索补充品牌信息...', undefined, 0)
+        progressCallback?.(
+          'processing_data',
+          'in_progress',
+          '正在通过Google搜索补充品牌信息...',
+          undefined,
+          0
+        )
         brandSearchSupplement = await fetchBrandSearchSupplement({
           brandName: brandNameTrimmed,
           targetCountry,
@@ -1068,10 +1266,13 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         if (brandSearchSupplement) {
           const headlinesCount = brandSearchSupplement.extracted.headlines.length
           const descriptionsCount = brandSearchSupplement.extracted.descriptions.length
-          const errorHint = (headlinesCount === 0 && descriptionsCount === 0 && brandSearchSupplement.errors?.length)
-            ? `, errors=${brandSearchSupplement.errors.slice(0, 2).join(' | ')}`
-            : ''
-          console.log(`🔎 Google品牌词补充完成: "${brandNameTrimmed}", headlines=${headlinesCount}, descriptions=${descriptionsCount}${errorHint}`)
+          const errorHint =
+            headlinesCount === 0 && descriptionsCount === 0 && brandSearchSupplement.errors?.length
+              ? `, errors=${brandSearchSupplement.errors.slice(0, 2).join(' | ')}`
+              : ''
+          console.log(
+            `🔎 Google品牌词补充完成: "${brandNameTrimmed}", headlines=${headlinesCount}, descriptions=${descriptionsCount}${errorHint}`
+          )
         }
       } catch (serpError: any) {
         console.warn(`⚠️ Google品牌词补充失败（不影响主流程）: ${serpError?.message || serpError}`)
@@ -1085,51 +1286,81 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
       if (typeof description !== 'string' || !description.trim()) return []
       const lines = description
         .split(/[\n.;!?]+/)
-        .map(line => line.replace(/\s+/g, ' ').trim())
-        .filter(line => line.length >= 12)
+        .map((line) => line.replace(/\s+/g, ' ').trim())
+        .filter((line) => line.length >= 12)
       return Array.from(new Set(lines)).slice(0, 6)
     }
 
     const resolvedRawProductTitle =
-      (typeof scrapedData?.rawProductTitle === 'string' && scrapedData.rawProductTitle.trim())
+      typeof scrapedData?.rawProductTitle === 'string' && scrapedData.rawProductTitle.trim()
         ? scrapedData.rawProductTitle.trim()
-        : (typeof scrapedData?.productName === 'string' && scrapedData.productName.trim())
+        : typeof scrapedData?.productName === 'string' && scrapedData.productName.trim()
           ? scrapedData.productName.trim()
-          : (typeof amazonProductData?.rawProductTitle === 'string' && amazonProductData.rawProductTitle.trim())
+          : typeof amazonProductData?.rawProductTitle === 'string' &&
+              amazonProductData.rawProductTitle.trim()
             ? amazonProductData.rawProductTitle.trim()
-            : (typeof amazonProductData?.productName === 'string' && amazonProductData.productName.trim())
+            : typeof amazonProductData?.productName === 'string' &&
+                amazonProductData.productName.trim()
               ? amazonProductData.productName.trim()
               : undefined
 
     const resolvedRawAboutThisItem = (() => {
       if (Array.isArray(scrapedData?.rawAboutThisItem) && scrapedData.rawAboutThisItem.length > 0) {
         return scrapedData.rawAboutThisItem
-          .map(item => String(item || '').replace(/\s+/g, ' ').trim())
+          .map((item) =>
+            String(item || '')
+              .replace(/\s+/g, ' ')
+              .trim()
+          )
           .filter(Boolean)
           .slice(0, 8)
       }
-      if (Array.isArray(amazonProductData?.rawAboutThisItem) && amazonProductData.rawAboutThisItem.length > 0) {
+      if (
+        Array.isArray(amazonProductData?.rawAboutThisItem) &&
+        amazonProductData.rawAboutThisItem.length > 0
+      ) {
         return amazonProductData.rawAboutThisItem
-          .map(item => String(item || '').replace(/\s+/g, ' ').trim())
+          .map((item) =>
+            String(item || '')
+              .replace(/\s+/g, ' ')
+              .trim()
+          )
           .filter(Boolean)
           .slice(0, 8)
       }
-      if (Array.isArray(amazonProductData?.aboutThisItem) && amazonProductData.aboutThisItem.length > 0) {
+      if (
+        Array.isArray(amazonProductData?.aboutThisItem) &&
+        amazonProductData.aboutThisItem.length > 0
+      ) {
         return amazonProductData.aboutThisItem
-          .map(item => String(item || '').replace(/\s+/g, ' ').trim())
+          .map((item) =>
+            String(item || '')
+              .replace(/\s+/g, ' ')
+              .trim()
+          )
           .filter(Boolean)
           .slice(0, 8)
       }
       if (Array.isArray(scrapedData?.productFeatures) && scrapedData.productFeatures.length > 0) {
         return scrapedData.productFeatures
-          .map(item => String(item || '').replace(/\s+/g, ' ').trim())
+          .map((item) =>
+            String(item || '')
+              .replace(/\s+/g, ' ')
+              .trim()
+          )
           .filter(Boolean)
           .slice(0, 8)
       }
       return fallbackRawAboutFromDescription(scrapedData?.productDescription || productDescription)
     })()
 
-    trackStageProgress(progressCallback, processingDataStartTime, 'processing_data', 'completed', '数据处理完成')
+    trackStageProgress(
+      progressCallback,
+      processingDataStartTime,
+      'processing_data',
+      'completed',
+      '数据处理完成'
+    )
 
     // ========== 步骤10: 返回提取结果 ==========
     return {
@@ -1190,7 +1421,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           primeEligible: amazonProductData.primeEligible,
           asin: amazonProductData.asin,
           category: amazonProductData.category,
-          relatedAsins: amazonProductData.relatedAsins,  // 🔥 新增：竞品ASIN列表（已过滤同品牌产品）
+          relatedAsins: amazonProductData.relatedAsins, // 🔥 新增：竞品ASIN列表（已过滤同品牌产品）
         }),
 
         // Amazon Store专属数据（可选）
@@ -1213,9 +1444,9 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           storeDescription: independentStoreData.storeDescription,
           logoUrl: independentStoreData.logoUrl,
           platform: independentStoreData.platform,
-          hotInsights: independentStoreData.hotInsights,  // 🔥 新增：热销洞察
+          hotInsights: independentStoreData.hotInsights, // 🔥 新增：热销洞察
           productCategories: (independentStoreData as any).productCategories,
-          deepScrapeResults: independentStoreData.deepScrapeResults,  // 🔥 新增：深度抓取结果
+          deepScrapeResults: independentStoreData.deepScrapeResults, // 🔥 新增：深度抓取结果
         }),
 
         // 🔥 独立站增强：Google品牌词搜索补充数据
@@ -1248,16 +1479,20 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         debug: {
           scrapedDataAvailable: !!scrapedData,
           brandAutoDetected: !!brandName,
-          isAmazonStore: pageTypeByFinalUrl.isAmazonStore,  // ✅ 修复：基于URL模式判断
-          isAmazonProductPage: pageTypeByFinalUrl.isAmazonProductPage,  // ✅ 修复：基于URL模式判断
-          isIndependentStore,  // ✅ 修复：区分独立站店铺/单品
+          isAmazonStore: pageTypeByFinalUrl.isAmazonStore, // ✅ 修复：基于URL模式判断
+          isAmazonProductPage: pageTypeByFinalUrl.isAmazonProductPage, // ✅ 修复：基于URL模式判断
+          isIndependentStore, // ✅ 修复：区分独立站店铺/单品
           pageTypeDetected: detectedPageType,
           pageTypeAdjusted: pageTypeAdjusted || undefined,
           productsExtracted: productCount,
-          scrapeMethod: isAmazonStore ? 'playwright-store' :
-                        amazonProductData ? 'playwright-product' :
-                        independentStoreData ? 'playwright-independent' : 'axios-cheerio',
-          scrapingError: scrapingError || undefined,  // 🔥 新增：包含抓取错误信息
+          scrapeMethod: isAmazonStore
+            ? 'playwright-store'
+            : amazonProductData
+              ? 'playwright-product'
+              : independentStoreData
+                ? 'playwright-independent'
+                : 'axios-cheerio',
+          scrapingError: scrapingError || undefined, // 🔥 新增：包含抓取错误信息
           // 🆕 新增：数据抓取成功标志（用于诊断）
           amazonProductDataExtracted: !!amazonProductData,
           storeDataExtracted: !!storeData,

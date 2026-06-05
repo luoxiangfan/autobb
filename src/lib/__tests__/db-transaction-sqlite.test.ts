@@ -30,7 +30,9 @@ describe('SQLite async transaction semantics', () => {
 
   it('commits writes across async awaits', async () => {
     const db = getDatabase()
-    await db.exec('CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)')
+    await db.exec(
+      'CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)'
+    )
 
     await db.transaction(async () => {
       await db.exec('INSERT INTO tx_case (value) VALUES (?)', ['a'])
@@ -44,7 +46,9 @@ describe('SQLite async transaction semantics', () => {
 
   it('rolls back writes when async callback throws', async () => {
     const db = getDatabase()
-    await db.exec('CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)')
+    await db.exec(
+      'CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)'
+    )
 
     await expect(
       db.transaction(async () => {
@@ -60,7 +64,9 @@ describe('SQLite async transaction semantics', () => {
 
   it('does not allow concurrent writes to leak into active transaction', async () => {
     const db = getDatabase()
-    await db.exec('CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)')
+    await db.exec(
+      'CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)'
+    )
 
     let releaseTxWait: (() => void) | null = null
     const txWait = new Promise<void>((resolve) => {
@@ -86,9 +92,11 @@ describe('SQLite async transaction semantics', () => {
     await reachedTxWait
 
     let outsiderResolved = false
-    const outsiderPromise = db.exec('INSERT INTO tx_case (value) VALUES (?)', ['outside']).then(() => {
-      outsiderResolved = true
-    })
+    const outsiderPromise = db
+      .exec('INSERT INTO tx_case (value) VALUES (?)', ['outside'])
+      .then(() => {
+        outsiderResolved = true
+      })
 
     await Promise.resolve()
     expect(outsiderResolved).toBe(false)
@@ -104,7 +112,9 @@ describe('SQLite async transaction semantics', () => {
     closeDatabase()
     process.env.SQLITE_TX_WAIT_TIMEOUT_MS = '30'
     const db = getDatabase()
-    await db.exec('CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)')
+    await db.exec(
+      'CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)'
+    )
 
     let releaseTxWait: (() => void) | null = null
     const txWait = new Promise<void>((resolve) => {
@@ -125,9 +135,11 @@ describe('SQLite async transaction semantics', () => {
     await reachedTxWait
 
     let outsiderResolved = false
-    const outsiderPromise = db.exec('INSERT INTO tx_case (value) VALUES (?)', ['outside-timeout']).then(() => {
-      outsiderResolved = true
-    })
+    const outsiderPromise = db
+      .exec('INSERT INTO tx_case (value) VALUES (?)', ['outside-timeout'])
+      .then(() => {
+        outsiderResolved = true
+      })
 
     await new Promise((resolve) => setTimeout(resolve, 80))
     expect(outsiderResolved).toBe(false)
@@ -143,7 +155,9 @@ describe('SQLite async transaction semantics', () => {
     closeDatabase()
     process.env.SQLITE_TX_WAIT_TIMEOUT_MS = '30'
     const db = getDatabase()
-    await db.exec('CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)')
+    await db.exec(
+      'CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)'
+    )
 
     let releaseTxWait: (() => void) | null = null
     const txWait = new Promise<void>((resolve) => {
@@ -177,7 +191,9 @@ describe('SQLite async transaction semantics', () => {
     closeDatabase()
     process.env.SQLITE_TX_WAIT_TIMEOUT_MS = '200'
     const db = getDatabase()
-    await db.exec('CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)')
+    await db.exec(
+      'CREATE TABLE tx_case (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)'
+    )
 
     let releaseTxWait: (() => void) | null = null
     const txWait = new Promise<void>((resolve) => {

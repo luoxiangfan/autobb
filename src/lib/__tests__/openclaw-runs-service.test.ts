@@ -25,7 +25,8 @@ describe('openclaw runs service', () => {
   it('lists runs with user-level filter and merges confirm status', async () => {
     const queryOne = vi.fn().mockResolvedValue({ total: 2 })
     const exec = vi.fn().mockResolvedValue({ changes: 0 })
-    const query = vi.fn()
+    const query = vi
+      .fn()
       .mockResolvedValueOnce([
         {
           id: 'run-1',

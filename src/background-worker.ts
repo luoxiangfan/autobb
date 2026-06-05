@@ -15,7 +15,11 @@ import type { QueueConfig } from './lib/queue/types'
 import { getDatabase } from './lib/db'
 import { getQueueRoutingDiagnostics } from './lib/queue/queue-routing'
 import { logger } from './lib/structured-logger'
-import { setBackgroundWorkerHeartbeat, getBackgroundWorkerHeartbeatKey, getBackgroundWorkerHeartbeatTtlSeconds } from './lib/queue/background-worker-heartbeat'
+import {
+  setBackgroundWorkerHeartbeat,
+  getBackgroundWorkerHeartbeatKey,
+  getBackgroundWorkerHeartbeatTtlSeconds,
+} from './lib/queue/background-worker-heartbeat'
 import { getHeapStatistics } from 'v8'
 
 function parseBooleanEnv(value: string | null | undefined, fallback: boolean): boolean {
@@ -36,15 +40,16 @@ async function detectClickFarmStall(overdueMinutes: number): Promise<number> {
   const db = await getDatabase()
   const minutes = Math.max(1, Math.floor(overdueMinutes))
 
-  const query = db.type === 'postgres'
-    ? `
+  const query =
+    db.type === 'postgres'
+      ? `
       SELECT COUNT(*)::int AS count
       FROM click_farm_tasks
       WHERE status IN ('pending', 'running')
         AND is_deleted = FALSE
         AND next_run_at <= CURRENT_TIMESTAMP - INTERVAL '${minutes} minutes'
     `
-    : `
+      : `
       SELECT COUNT(*) AS count
       FROM click_farm_tasks
       WHERE status IN ('pending', 'running')
@@ -69,7 +74,10 @@ async function loadQueueConfigFromDB(): Promise<Partial<QueueConfig> | null> {
     const parsed = JSON.parse(row.value) as Partial<QueueConfig>
     return parsed && typeof parsed === 'object' ? parsed : null
   } catch (error) {
-    console.warn('⚠️ Background worker: failed to load queue config from DB, using defaults/env:', error)
+    console.warn(
+      '⚠️ Background worker: failed to load queue config from DB, using defaults/env:',
+      error
+    )
     return null
   }
 }
@@ -119,13 +127,13 @@ async function main() {
     }
   }
   await sendHeartbeat()
-  const heartbeatTimer = setInterval(sendHeartbeat, Math.max(1000, Math.floor((heartbeatTtl * 1000) / 3)))
+  const heartbeatTimer = setInterval(
+    sendHeartbeat,
+    Math.max(1000, Math.floor((heartbeatTtl * 1000) / 3))
+  )
   heartbeatTimer.unref?.()
 
-  const clickFarmSelfHealEnabled = parseBooleanEnv(
-    process.env.CLICK_FARM_SELF_HEAL_ENABLED,
-    true
-  )
+  const clickFarmSelfHealEnabled = parseBooleanEnv(process.env.CLICK_FARM_SELF_HEAL_ENABLED, true)
   const clickFarmSelfHealIntervalMs = parsePositiveIntEnv(
     process.env.CLICK_FARM_SELF_HEAL_INTERVAL_MS,
     5 * 60 * 1000
@@ -143,7 +151,8 @@ async function main() {
       const stalledCount = await detectClickFarmStall(clickFarmSelfHealOverdueMinutes)
       if (stalledCount <= 0) return
 
-      const { triggerAllPendingTasks } = await import('./lib/click-farm/click-farm-scheduler-trigger')
+      const { triggerAllPendingTasks } =
+        await import('./lib/click-farm/click-farm-scheduler-trigger')
       const result = await triggerAllPendingTasks()
       logger.warn('background_click_farm_self_heal_triggered', {
         source,
@@ -167,9 +176,8 @@ async function main() {
   const runInactiveSourceQueueSweep = async (source: 'startup' | 'interval') => {
     if (!inactiveQueueSweepEnabled) return
     try {
-      const { sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap } = await import(
-        './lib/queue/inactive-source-queue-sweep'
-      )
+      const { sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap } =
+        await import('./lib/queue/inactive-source-queue-sweep')
       const sweep = await sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap()
       if (sweep.clickFarmQueueRemoved > 0 || sweep.urlSwapQueueRemoved > 0) {
         logger.info('background_inactive_source_queue_sweep', { source, ...sweep })

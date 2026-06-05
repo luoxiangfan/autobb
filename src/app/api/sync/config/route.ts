@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     const db = await getDatabase()
 
     // 2. Get sync config (create default if not exists)
-    let config = await db.queryOne(
+    let config = (await db.queryOne(
       `SELECT
         id,
         user_id as userId,
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
         updated_at as updatedAt
       FROM sync_config WHERE user_id = ?`,
       [userId]
-    ) as SyncConfig | undefined
+    )) as SyncConfig | undefined
 
     if (!config) {
       // Create default config
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
 
       const configId = getInsertedId(result, db.type)
 
-      config = await db.queryOne(
+      config = (await db.queryOne(
         `SELECT
           id,
           user_id as userId,
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
           updated_at as updatedAt
         FROM sync_config WHERE id = ?`,
         [configId]
-      ) as SyncConfig
+      )) as SyncConfig
     }
 
     // 3. Convert integer booleans to actual booleans
@@ -114,10 +114,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Get sync config error:', error)
-    return NextResponse.json(
-      { error: error.message || '获取同步配置失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取同步配置失败' }, { status: 500 })
   }
 }
 
@@ -149,44 +146,20 @@ export async function PUT(request: NextRequest) {
     } = body
 
     // Validation rules
-    if (
-      typeof autoSyncEnabled !== 'boolean' &&
-      autoSyncEnabled !== undefined
-    ) {
-      return NextResponse.json(
-        { error: 'autoSyncEnabled必须是布尔值' },
-        { status: 400 }
-      )
+    if (typeof autoSyncEnabled !== 'boolean' && autoSyncEnabled !== undefined) {
+      return NextResponse.json({ error: 'autoSyncEnabled必须是布尔值' }, { status: 400 })
     }
 
-    if (
-      syncIntervalHours !== undefined &&
-      (syncIntervalHours < 1 || syncIntervalHours > 24)
-    ) {
-      return NextResponse.json(
-        { error: '同步间隔必须在1-24小时之间' },
-        { status: 400 }
-      )
+    if (syncIntervalHours !== undefined && (syncIntervalHours < 1 || syncIntervalHours > 24)) {
+      return NextResponse.json({ error: '同步间隔必须在1-24小时之间' }, { status: 400 })
     }
 
-    if (
-      maxRetryAttempts !== undefined &&
-      (maxRetryAttempts < 0 || maxRetryAttempts > 10)
-    ) {
-      return NextResponse.json(
-        { error: '重试次数必须在0-10之间' },
-        { status: 400 }
-      )
+    if (maxRetryAttempts !== undefined && (maxRetryAttempts < 0 || maxRetryAttempts > 10)) {
+      return NextResponse.json({ error: '重试次数必须在0-10之间' }, { status: 400 })
     }
 
-    if (
-      retryDelayMinutes !== undefined &&
-      (retryDelayMinutes < 5 || retryDelayMinutes > 120)
-    ) {
-      return NextResponse.json(
-        { error: '重试延迟必须在5-120分钟之间' },
-        { status: 400 }
-      )
+    if (retryDelayMinutes !== undefined && (retryDelayMinutes < 5 || retryDelayMinutes > 120)) {
+      return NextResponse.json({ error: '重试延迟必须在5-120分钟之间' }, { status: 400 })
     }
 
     const db = await getDatabase()
@@ -219,10 +192,10 @@ export async function PUT(request: NextRequest) {
       values.push(syncIntervalHours)
 
       // Recalculate next sync time if auto sync is enabled
-      const currentConfig = await db.queryOne(
+      const currentConfig = (await db.queryOne(
         'SELECT auto_sync_enabled FROM sync_config WHERE user_id = ?',
         [userId]
-      ) as { auto_sync_enabled: number } | undefined
+      )) as { auto_sync_enabled: number } | undefined
 
       if (currentConfig?.auto_sync_enabled) {
         const nextSync = new Date()
@@ -272,7 +245,7 @@ export async function PUT(request: NextRequest) {
     await db.exec(query, [...values])
 
     // 5. Get updated config
-    const updatedConfig = await db.queryOne(
+    const updatedConfig = (await db.queryOne(
       `SELECT
         id,
         user_id as userId,
@@ -290,7 +263,7 @@ export async function PUT(request: NextRequest) {
         updated_at as updatedAt
       FROM sync_config WHERE user_id = ?`,
       [userId]
-    ) as SyncConfig
+    )) as SyncConfig
 
     const formattedConfig = {
       ...updatedConfig,
@@ -306,9 +279,6 @@ export async function PUT(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Update sync config error:', error)
-    return NextResponse.json(
-      { error: error.message || '更新同步配置失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '更新同步配置失败' }, { status: 500 })
   }
 }

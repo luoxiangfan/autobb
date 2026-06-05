@@ -44,7 +44,10 @@ describe('Browser Fingerprint', () => {
 
       if (fingerprint.userAgent.includes('Chrome/') && !fingerprint.userAgent.includes('Edg/')) {
         expect(fingerprint.vendor).toBe('Google Inc.')
-      } else if (fingerprint.userAgent.includes('Safari/') && !fingerprint.userAgent.includes('Chrome/')) {
+      } else if (
+        fingerprint.userAgent.includes('Safari/') &&
+        !fingerprint.userAgent.includes('Chrome/')
+      ) {
         expect(fingerprint.vendor).toBe('Apple Computer, Inc.')
       }
     })

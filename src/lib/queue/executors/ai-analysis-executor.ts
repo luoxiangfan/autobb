@@ -51,14 +51,7 @@ export interface AIAnalysisTaskData {
  */
 export function createAIAnalysisExecutor(): TaskExecutor<AIAnalysisTaskData> {
   return async (task: Task<AIAnalysisTaskData>) => {
-    const {
-      offerId,
-      userId,
-      extractResult,
-      targetCountry,
-      targetLanguage,
-      options
-    } = task.data
+    const { offerId, userId, extractResult, targetCountry, targetLanguage, options } = task.data
 
     console.log(`🤖 [AIAnalysisExecutor] 开始分析任务: Offer #${offerId}, 用户 #${userId}`)
     console.log(`   URL: ${extractResult.finalUrl}`)
@@ -74,7 +67,7 @@ export function createAIAnalysisExecutor(): TaskExecutor<AIAnalysisTaskData> {
         offerId,
         enableReviewAnalysis: options?.enableReviewAnalysis ?? true,
         enableCompetitorAnalysis: options?.enableCompetitorAnalysis ?? true,
-        enableAdExtraction: options?.enableAdExtraction ?? true
+        enableAdExtraction: options?.enableAdExtraction ?? true,
       }
 
       // 执行AI分析

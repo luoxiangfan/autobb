@@ -48,10 +48,11 @@ describe('offer-extract regression (4 quick checks)', () => {
     })
 
     it('normalizer leaves page_type empty and resolve infers store', () => {
-      const normalized = normalizeOfferExtractRequestBody({
-        affiliate_link: 'https://www.amazon.com/stores/page/ABC',
-        target_country: 'US',
-      }) || {}
+      const normalized =
+        normalizeOfferExtractRequestBody({
+          affiliate_link: 'https://www.amazon.com/stores/page/ABC',
+          target_country: 'US',
+        }) || {}
 
       expect(normalized.page_type).toBeUndefined()
 
@@ -76,14 +77,15 @@ describe('offer-extract regression (4 quick checks)', () => {
     })
 
     it('strict normalizer keeps payout without $ prefix', () => {
-      const normalized = normalizeOfferExtractRequestBody(
-        {
-          affiliate_link: 'https://aff.example.com/track',
-          target_country: 'US',
-          commission_payout: '30',
-        },
-        { strictMonetization: true }
-      ) || {}
+      const normalized =
+        normalizeOfferExtractRequestBody(
+          {
+            affiliate_link: 'https://aff.example.com/track',
+            target_country: 'US',
+            commission_payout: '30',
+          },
+          { strictMonetization: true }
+        ) || {}
 
       expect(normalized.commission_payout).toBe('30')
     })
@@ -125,11 +127,12 @@ describe('additional regressions', () => {
   })
 
   it('invalid extraction_mode is removed from normalizer output', () => {
-    const normalized = normalizeOfferExtractRequestBody({
-      affiliate_link: 'https://aff.example.com',
-      target_country: 'US',
-      extraction_mode: 'bogus',
-    }) || {}
+    const normalized =
+      normalizeOfferExtractRequestBody({
+        affiliate_link: 'https://aff.example.com',
+        target_country: 'US',
+        extraction_mode: 'bogus',
+      }) || {}
 
     expect(normalized.extraction_mode).toBeUndefined()
   })
@@ -139,28 +142,28 @@ describe('additional regressions', () => {
       affiliate_link: 'https://www.amazon.com/stores/page/XYZ',
     })
 
-    expect(updateOffer).toHaveBeenCalledWith(
-      1,
-      10,
-      expect.objectContaining({ page_type: 'store' })
-    )
+    expect(updateOffer).toHaveBeenCalledWith(1, 10, expect.objectContaining({ page_type: 'store' }))
     expect(invalidateOfferCache).toHaveBeenCalledWith(10, 1)
   })
 
   it('strictMonetization throws on conflicting commission fields', () => {
-    expect(() => parseNewOfferExtractRequest({
-      affiliate_link: 'https://aff.example.com',
-      target_country: 'US',
-      commission_type: 'percent',
-      commission_value: '7.5',
-      commission_payout: '$7.5',
-    })).toThrow(OfferExtractRequestError)
+    expect(() =>
+      parseNewOfferExtractRequest({
+        affiliate_link: 'https://aff.example.com',
+        target_country: 'US',
+        commission_type: 'percent',
+        commission_value: '7.5',
+        commission_payout: '$7.5',
+      })
+    ).toThrow(OfferExtractRequestError)
   })
 
   it('validateExistingOfferForExtraction rejects empty target_country', () => {
-    expect(() => validateExistingOfferForExtraction({
-      affiliate_link: 'https://example.com',
-      target_country: '  ',
-    })).toThrow(OfferExtractRequestError)
+    expect(() =>
+      validateExistingOfferForExtraction({
+        affiliate_link: 'https://example.com',
+        target_country: '  ',
+      })
+    ).toThrow(OfferExtractRequestError)
   })
 })

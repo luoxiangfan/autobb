@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getCustomerWithCredentials } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
+import {
+  prepareGoogleAdsApiCallForLinkedAccount,
+  preparedAuthContextField,
+} from '@/lib/google-ads-accounts-auth'
 import { getDatabase } from '@/lib/db'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { executeGAQLQueryPython, updateCampaignPython } from '@/lib/python-ads-client'
@@ -97,10 +100,12 @@ async function mutateResources(
     // OAuth 模式：使用 google-ads-api 的 update 方法
     const updateOperations = normalizeGoogleAdsApiUpdateOperations(operations)
     const startTime = Date.now()
-    const endpoint = mutateType === 'ad_group'
-      ? '/api/google-ads/adgroup/update'
-      : '/api/google-ads/campaign/update'
-    const operationType = updateOperations.length > 1 ? ApiOperationType.MUTATE_BATCH : ApiOperationType.MUTATE
+    const endpoint =
+      mutateType === 'ad_group'
+        ? '/api/google-ads/adgroup/update'
+        : '/api/google-ads/campaign/update'
+    const operationType =
+      updateOperations.length > 1 ? ApiOperationType.MUTATE_BATCH : ApiOperationType.MUTATE
 
     try {
       switch (mutateType) {
@@ -145,10 +150,8 @@ async function mutateResources(
  *
  * - :id 必须是 Google Ads campaign id（google_campaign_id）
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id: campaignId } = params
     const requestId = request.headers.get('x-request-id') || undefined
@@ -166,7 +169,11 @@ export async function PUT(
       return NextResponse.json({ error: '无效的campaignId' }, { status: 400 })
     }
 
-    const executeOAuthGaqlWithTracking = async (customer: any, customerId: string, queryText: string): Promise<any[]> => {
+    const executeOAuthGaqlWithTracking = async (
+      customer: any,
+      customerId: string,
+      queryText: string
+    ): Promise<any[]> => {
       const startTime = Date.now()
       try {
         const rows = await customer.query(queryText)
@@ -199,15 +206,13 @@ export async function PUT(
     const { newCpc } = body
 
     if (!newCpc || newCpc <= 0) {
-      return NextResponse.json(
-        { error: '请提供有效的CPC值' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '请提供有效的CPC值' }, { status: 400 })
     }
 
     // 通过本地campaign映射找到对应的Ads账号（避免用“第一个账号”导致权限/账号不匹配）
     const db = await getDatabase()
-    const linked = await db.queryOne(`
+    const linked = (await db.queryOne(
+      `
       SELECT id as local_campaign_id, google_ads_account_id, offer_id
       FROM campaigns
       WHERE user_id = ?
@@ -216,38 +221,49 @@ export async function PUT(
         AND google_ads_account_id IS NOT NULL
       ORDER BY created_at DESC
       LIMIT 1
-    `, [numericUserId, String(campaignId)]) as { local_campaign_id?: number | string | null; google_ads_account_id: number; offer_id: number | null } | undefined
+    `,
+      [numericUserId, String(campaignId)]
+    )) as
+      | {
+          local_campaign_id?: number | string | null
+          google_ads_account_id: number
+          offer_id: number | null
+        }
+      | undefined
 
     if (!linked?.google_ads_account_id) {
       // 严格语义校验：该路由的 :id 必须是 google_campaign_id，不接受本地 campaigns.id
-      const localCampaign = await db.queryOne(`
+      const localCampaign = (await db.queryOne(
+        `
         SELECT id, campaign_id, google_campaign_id, status, is_deleted
         FROM campaigns
         WHERE user_id = ?
           AND id = ?
         LIMIT 1
-      `, [numericUserId, campaignIdNum]) as {
-        id: number
-        campaign_id: string | null
-        google_campaign_id: string | null
-        status: string | null
-        is_deleted: any
-      } | undefined
+      `,
+        [numericUserId, campaignIdNum]
+      )) as
+        | {
+            id: number
+            campaign_id: string | null
+            google_campaign_id: string | null
+            status: string | null
+            is_deleted: any
+          }
+        | undefined
 
       if (localCampaign) {
-        const isRemoved = String(localCampaign.status || '').toUpperCase() === 'REMOVED'
-          || localCampaign.is_deleted === true
-          || localCampaign.is_deleted === 1
+        const isRemoved =
+          String(localCampaign.status || '').toUpperCase() === 'REMOVED' ||
+          localCampaign.is_deleted === true ||
+          localCampaign.is_deleted === 1
         if (isRemoved) {
-          return NextResponse.json(
-            { error: '该广告系列已下线/删除，无法调整CPC' },
-            { status: 400 }
-          )
+          return NextResponse.json({ error: '该广告系列已下线/删除，无法调整CPC' }, { status: 400 })
         }
 
         const expectedGoogleCampaignId =
-          normalizeGoogleCampaignId(localCampaign.google_campaign_id)
-          || normalizeGoogleCampaignId(localCampaign.campaign_id)
+          normalizeGoogleCampaignId(localCampaign.google_campaign_id) ||
+          normalizeGoogleCampaignId(localCampaign.campaign_id)
 
         if (expectedGoogleCampaignId && expectedGoogleCampaignId !== String(campaignIdNum)) {
           return NextResponse.json(
@@ -276,11 +292,14 @@ export async function PUT(
       )
     }
 
-    const adsAccountRow = await db.queryOne(`
+    const adsAccountRow = (await db.queryOne(
+      `
       SELECT id, customer_id, parent_mcc_id, service_account_id, is_active, is_deleted
       FROM google_ads_accounts
       WHERE id = ? AND user_id = ?
-    `, [linked.google_ads_account_id, numericUserId]) as any
+    `,
+      [linked.google_ads_account_id, numericUserId]
+    )) as any
 
     const offerId = linked.offer_id
     const localCampaignIdRaw = linked.local_campaign_id
@@ -481,41 +500,41 @@ export async function PUT(
 
     // 根据认证模式选择正确的查询方法
     const campaignRawResults = useServiceAccount
-      ? await executeGAQLQueryPython({ userId: numericUserId, serviceAccountId, customerId: adsAccountRow.customer_id, query: campaignQuery, requestId })
+      ? await executeGAQLQueryPython({
+          userId: numericUserId,
+          serviceAccountId,
+          customerId: adsAccountRow.customer_id,
+          query: campaignQuery,
+          requestId,
+        })
       : await executeOAuthGaqlWithTracking(customer, adsAccountRow.customer_id, campaignQuery)
     const campaignResults = extractSearchResults(campaignRawResults)
 
     if (campaignResults.length === 0) {
-      return NextResponse.json(
-        { error: '广告系列不存在' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: '广告系列不存在' }, { status: 404 })
     }
 
     const campaign = campaignResults[0].campaign
     if (!campaign) {
-      return NextResponse.json(
-        { error: '未找到广告系列数据' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: '未找到广告系列数据' }, { status: 404 })
     }
 
-    const hasTargetSpend =
-      campaign?.target_spend?.cpc_bid_ceiling_micros !== undefined
+    const hasTargetSpend = campaign?.target_spend?.cpc_bid_ceiling_micros !== undefined
 
-    const hasManualCpc =
-      campaign?.manual_cpc?.enhanced_cpc_enabled !== undefined
+    const hasManualCpc = campaign?.manual_cpc?.enhanced_cpc_enabled !== undefined
 
     const hasTargetCpa =
       campaign?.target_cpa?.target_cpa_micros !== undefined ||
       campaign?.maximize_conversions?.target_cpa_micros !== undefined
 
     // 根据竞价策略类型更新CPC（服务账号模式下枚举可能会被序列化为数字，优先用字段存在性判断）
-    const biddingStrategyType =
-      hasTargetSpend ? 'TARGET_SPEND'
-      : hasManualCpc ? 'MANUAL_CPC'
-      : hasTargetCpa ? 'TARGET_CPA'
-      : toBiddingStrategyType(campaign.bidding_strategy_type)
+    const biddingStrategyType = hasTargetSpend
+      ? 'TARGET_SPEND'
+      : hasManualCpc
+        ? 'MANUAL_CPC'
+        : hasTargetCpa
+          ? 'TARGET_CPA'
+          : toBiddingStrategyType(campaign.bidding_strategy_type)
 
     if (biddingStrategyType === 'MANUAL_CPC') {
       // Manual CPC: 更新该广告系列下所有Ad Group的CPC
@@ -531,15 +550,18 @@ export async function PUT(
 
       // 根据认证模式选择正确的查询方法
       const adGroupRawResults = useServiceAccount
-        ? await executeGAQLQueryPython({ userId: numericUserId, serviceAccountId, customerId: adsAccountRow.customer_id, query: adGroupQuery, requestId })
+        ? await executeGAQLQueryPython({
+            userId: numericUserId,
+            serviceAccountId,
+            customerId: adsAccountRow.customer_id,
+            query: adGroupQuery,
+            requestId,
+          })
         : await executeOAuthGaqlWithTracking(customer, adsAccountRow.customer_id, adGroupQuery)
       const adGroups = extractSearchResults(adGroupRawResults)
 
       if (adGroups.length === 0) {
-        return NextResponse.json(
-          { error: '该广告系列下没有广告组' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: '该广告系列下没有广告组' }, { status: 400 })
       }
 
       // 更新每个Ad Group的CPC

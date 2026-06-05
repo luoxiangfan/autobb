@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { updateGoogleAdsCampaignBudget } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
+import {
+  prepareGoogleAdsApiCallForLinkedAccount,
+  preparedAuthContextField,
+} from '@/lib/google-ads-accounts-auth'
 import { invalidateDashboardCache, invalidateOfferCache } from '@/lib/api-cache'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 
@@ -13,7 +16,9 @@ function normalizeGoogleCampaignId(value: unknown): string | null {
 }
 
 function normalizeBudgetType(value: unknown): 'DAILY' | 'TOTAL' {
-  const text = String(value || '').trim().toUpperCase()
+  const text = String(value || '')
+    .trim()
+    .toUpperCase()
   return text === 'TOTAL' ? 'TOTAL' : 'DAILY'
 }
 
@@ -27,10 +32,8 @@ function roundTo2(value: number): number {
  *
  * - :id 必须是 Google Ads campaign id（google_campaign_id）
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const auth = await verifyAuth(request)
     if (!auth.authenticated || !auth.user) {
@@ -41,10 +44,13 @@ export async function PUT(
     const campaignIdInPath = String(params.id || '').trim()
     const googleCampaignId = normalizeGoogleCampaignId(campaignIdInPath)
     if (!googleCampaignId) {
-      return NextResponse.json({ error: '路由参数错误：:id 必须是 Google Campaign ID' }, { status: 400 })
+      return NextResponse.json(
+        { error: '路由参数错误：:id 必须是 Google Campaign ID' },
+        { status: 400 }
+      )
     }
 
-    const body = await request.json().catch(() => ({})) as {
+    const body = (await request.json().catch(() => ({}))) as {
       budgetAmount?: number
       budgetType?: 'DAILY' | 'TOTAL'
     }
@@ -56,7 +62,7 @@ export async function PUT(
     const budgetType = normalizeBudgetType(body?.budgetType)
 
     const db = await getDatabase()
-    const linked = await db.queryOne(
+    const linked = (await db.queryOne(
       `
         SELECT
           c.id AS local_campaign_id,
@@ -79,7 +85,7 @@ export async function PUT(
         LIMIT 1
       `,
       [userId, googleCampaignId]
-    ) as
+    )) as
       | {
           local_campaign_id: number
           google_ads_account_id: number
@@ -98,7 +104,7 @@ export async function PUT(
       // 语义校验：:id 不接受本地 campaign.id
       const localCampaignId = Number(campaignIdInPath)
       if (Number.isFinite(localCampaignId)) {
-        const localCampaign = await db.queryOne(
+        const localCampaign = (await db.queryOne(
           `
             SELECT id, campaign_id, google_campaign_id, status, is_deleted
             FROM campaigns
@@ -107,7 +113,7 @@ export async function PUT(
             LIMIT 1
           `,
           [userId, localCampaignId]
-        ) as
+        )) as
           | {
               id: number
               campaign_id: string | null
@@ -119,8 +125,8 @@ export async function PUT(
 
         if (localCampaign) {
           const expectedGoogleCampaignId =
-            normalizeGoogleCampaignId(localCampaign.google_campaign_id)
-            || normalizeGoogleCampaignId(localCampaign.campaign_id)
+            normalizeGoogleCampaignId(localCampaign.google_campaign_id) ||
+            normalizeGoogleCampaignId(localCampaign.campaign_id)
 
           if (expectedGoogleCampaignId && expectedGoogleCampaignId !== campaignIdInPath) {
             return NextResponse.json(
@@ -137,7 +143,10 @@ export async function PUT(
         }
       }
 
-      return NextResponse.json({ error: '未找到该广告系列对应的Ads账号或Customer ID' }, { status: 404 })
+      return NextResponse.json(
+        { error: '未找到该广告系列对应的Ads账号或Customer ID' },
+        { status: 404 }
+      )
     }
 
     const accountIsActive = linked.account_is_active === true || linked.account_is_active === 1
@@ -164,8 +173,7 @@ export async function PUT(
     const { apiAuth } = prepared
     const refreshToken = apiAuth.refreshToken
     const oauthCredentials = prepared.oauthCredentials
-    const oauthLoginCustomerId =
-      prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+    const oauthLoginCustomerId = prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
 
     await runWithLoginCustomerFallbackForAccount({
       adsAccount: {
@@ -226,9 +234,6 @@ export async function PUT(
     })
   } catch (error: any) {
     console.error('更新Campaign预算失败:', error)
-    return NextResponse.json(
-      { error: error?.message || '更新Campaign预算失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '更新Campaign预算失败' }, { status: 500 })
   }
 }

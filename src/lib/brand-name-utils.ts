@@ -35,12 +35,17 @@ const INVALID_SINGLE_TOKEN_BRANDS = new Set([
 ])
 
 const GENERIC_TITLE_FIRST_WORDS = new Set([
-  'the', 'a', 'an',
-  'new', 'best',
+  'the',
+  'a',
+  'an',
+  'new',
+  'best',
   // Often an adjective on landing pages, not a brand.
   'smart',
   // DE
-  'der', 'die', 'das',
+  'der',
+  'die',
+  'das',
 ])
 
 export function isLikelyInvalidBrandName(candidate: string | null | undefined): boolean {
@@ -71,12 +76,19 @@ export function isLikelyInvalidBrandName(candidate: string | null | undefined): 
   if (/^visiter(\s+(la|le|les))?$/i.test(trimmed)) return true
   if (/^consulter(\s+(la|le|les))?$/i.test(trimmed)) return true
   if (/^consultez(\s+(la|le|les))?$/i.test(trimmed)) return true
-  if (/^(consulter|consultez|visiter|visitez)\s+(la|le|les)\s+(boutique|magasin|store|shop)$/i.test(trimmed)) return true
+  if (
+    /^(consulter|consultez|visiter|visitez)\s+(la|le|les)\s+(boutique|magasin|store|shop)$/i.test(
+      trimmed
+    )
+  )
+    return true
 
   return false
 }
 
-export function deriveBrandFromProductTitle(productTitle: string | null | undefined): string | null {
+export function deriveBrandFromProductTitle(
+  productTitle: string | null | undefined
+): string | null {
   if (!productTitle) return null
   const title = productTitle.trim()
   if (!title) return null

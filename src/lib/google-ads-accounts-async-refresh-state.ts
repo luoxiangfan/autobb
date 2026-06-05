@@ -96,15 +96,17 @@ function deserializeState(raw: string): GoogleAdsAccountAsyncRefreshState | null
       status: parsed.status,
       startedAtMs,
       updatedAtMs,
-      errorMessage:
-        typeof parsed.errorMessage === 'string' ? parsed.errorMessage : undefined,
+      errorMessage: typeof parsed.errorMessage === 'string' ? parsed.errorMessage : undefined,
     }
   } catch {
     return null
   }
 }
 
-function isRunningStateFresh(state: GoogleAdsAccountAsyncRefreshState, nowMs = Date.now()): boolean {
+function isRunningStateFresh(
+  state: GoogleAdsAccountAsyncRefreshState,
+  nowMs = Date.now()
+): boolean {
   if (state.status !== 'running') return false
   return nowMs - state.updatedAtMs <= GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_TTL_MS
 }
@@ -113,7 +115,9 @@ export function buildGoogleAdsAccountSyncKey(params: GoogleAdsAccountSyncKeyPara
   return `${params.userId}:${params.authType}:${params.serviceAccountId || ''}`
 }
 
-async function readStateFromRedis(syncKey: string): Promise<GoogleAdsAccountAsyncRefreshState | null> {
+async function readStateFromRedis(
+  syncKey: string
+): Promise<GoogleAdsAccountAsyncRefreshState | null> {
   const client = getRedisClient()
   if (!client) return null
 
@@ -158,14 +162,14 @@ async function releaseGoogleAdsAccountAsyncRefreshLock(syncKey: string): Promise
 
 async function readStateFromDb(syncKey: string): Promise<GoogleAdsAccountAsyncRefreshState | null> {
   const db = await getDatabase()
-  const row = await db.queryOne(
+  const row = (await db.queryOne(
     `
       SELECT status, started_at, updated_at, error_message
       FROM google_ads_accounts_async_refresh_state
       WHERE sync_key = ?
     `,
     [syncKey]
-  ) as
+  )) as
     | {
         status: GoogleAdsAccountAsyncRefreshStatus
         started_at: string
@@ -264,14 +268,7 @@ async function tryAcquireLockInDb(
       WHERE google_ads_accounts_async_refresh_state.status <> 'running'
          OR google_ads_accounts_async_refresh_state.updated_at < ${staleBefore}
     `,
-    [
-      syncKey,
-      params.userId,
-      params.authType,
-      params.serviceAccountId || null,
-      startedAt,
-      updatedAt,
-    ]
+    [syncKey, params.userId, params.authType, params.serviceAccountId || null, startedAt, updatedAt]
   )
 
   return (result?.changes ?? 0) > 0

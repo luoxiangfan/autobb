@@ -210,28 +210,20 @@ export function validateCompressionQuality(
     originalText.match(/\b\w{4,}\b/g) || [] // 4字母以上的单词
   )
 
-  const compressedWords = new Set(
-    compressed.toLowerCase().match(/\b\w{4,}\b/g) || []
-  )
+  const compressedWords = new Set(compressed.toLowerCase().match(/\b\w{4,}\b/g) || [])
 
   // 关键词保留率
-  const retainedWords = Array.from(originalWords).filter((w) =>
-    compressedWords.has(w)
-  ).length
+  const retainedWords = Array.from(originalWords).filter((w) => compressedWords.has(w)).length
   const keywordRetention = retainedWords / originalWords.size
 
   // 情感分布保留率（简化：基于评分分布）
-  const originalRatings = original
-    .map((r) => parseRating(r.rating))
-    .filter((r) => r > 0)
-  const originalAvg =
-    originalRatings.reduce((a, b) => a + b, 0) / originalRatings.length
+  const originalRatings = original.map((r) => parseRating(r.rating)).filter((r) => r > 0)
+  const originalAvg = originalRatings.reduce((a, b) => a + b, 0) / originalRatings.length
 
   const compressedRatings = Array.from(compressed.matchAll(/([\d.]+)★/g))
     .map((m) => parseFloat(m[1]))
     .filter((r) => r > 0)
-  const compressedAvg =
-    compressedRatings.reduce((a, b) => a + b, 0) / compressedRatings.length
+  const compressedAvg = compressedRatings.reduce((a, b) => a + b, 0) / compressedRatings.length
 
   const sentimentPreservation = 1 - Math.abs(originalAvg - compressedAvg) / 5 // 5星制
 
@@ -282,8 +274,6 @@ export function testCompression() {
   const quality = validateCompressionQuality(sampleReviews, result.compressed)
   console.log(`\n质量指标:`)
   console.log(`关键词保留率: ${(quality.keywordRetention * 100).toFixed(1)}%`)
-  console.log(
-    `情感分布保留率: ${(quality.sentimentPreservation * 100).toFixed(1)}%`
-  )
+  console.log(`情感分布保留率: ${(quality.sentimentPreservation * 100).toFixed(1)}%`)
   console.log(`信息密度: ${quality.informationDensity.toFixed(2)}x`)
 }

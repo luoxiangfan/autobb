@@ -24,21 +24,24 @@ export async function GET(request: NextRequest) {
     const db = getDatabase()
 
     // 查询备份历史
-    const backups = await db.query(`
+    const backups = await db.query(
+      `
       SELECT * FROM backup_logs
       ORDER BY created_at DESC
       LIMIT ?
-    `, [limit])
+    `,
+      [limit]
+    )
 
     // 统计信息
-    const stats = await db.queryOne(`
+    const stats = (await db.queryOne(`
       SELECT
         COUNT(*) as total_backups,
         SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful_backups,
         SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_backups,
         SUM(CASE WHEN status = 'success' THEN file_size_bytes ELSE 0 END) as total_size_bytes
       FROM backup_logs
-    `) as any
+    `)) as any
 
     return NextResponse.json({
       success: true,
@@ -52,12 +55,8 @@ export async function GET(request: NextRequest) {
         },
       },
     })
-
   } catch (error) {
     console.error('获取备份历史失败:', error)
-    return NextResponse.json(
-      { error: '获取备份历史失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: '获取备份历史失败' }, { status: 500 })
   }
 }

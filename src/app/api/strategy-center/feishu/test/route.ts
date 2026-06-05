@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { verifyStrategyCenterSessionAuth } from '@/lib/openclaw/request-auth'
 import { getOpenclawSettingsMap } from '@/lib/openclaw/settings'
-import { feishuRequest, getTenantAccessToken, resolveFeishuApiBase } from '@/lib/openclaw/feishu-api'
+import {
+  feishuRequest,
+  getTenantAccessToken,
+  resolveFeishuApiBase,
+} from '@/lib/openclaw/feishu-api'
 
 const feishuTestSchema = z.object({
   appId: z.string().optional(),
@@ -82,7 +86,10 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}))
   const parsed = feishuTestSchema.safeParse(body || {})
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0]?.message || '请求参数不合法' }, { status: 400 })
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message || '请求参数不合法' },
+      { status: 400 }
+    )
   }
 
   const payload = parsed.data
@@ -100,13 +107,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '请先填写飞书 App Secret' }, { status: 400 })
   }
   if (!targetInput) {
-    return NextResponse.json({ error: '请先填写飞书推送目标（open_id / union_id / chat_id）' }, { status: 400 })
+    return NextResponse.json(
+      { error: '请先填写飞书推送目标（open_id / union_id / chat_id）' },
+      { status: 400 }
+    )
   }
 
   const target = parseFeishuTarget(targetInput)
   if (!target) {
     return NextResponse.json(
-      { error: '推送目标格式不正确，请使用 open_id/union_id/chat_id（如 ou_xxx / on_xxx / oc_xxx）' },
+      {
+        error: '推送目标格式不正确，请使用 open_id/union_id/chat_id（如 ou_xxx / on_xxx / oc_xxx）',
+      },
       { status: 400 }
     )
   }

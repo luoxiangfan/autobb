@@ -32,10 +32,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Get scheduler status error:', error)
-    return NextResponse.json(
-      { error: error.message || '获取调度器状态失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取调度器状态失败' }, { status: 500 })
   }
 }
 
@@ -51,16 +48,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
-    return NextResponse.json({
-      success: false,
-      error: '该接口不再支持启停调度器；请通过独立 scheduler 进程（supervisord）管理',
-      mode: 'external_scheduler_process',
-    }, { status: 409 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: '该接口不再支持启停调度器；请通过独立 scheduler 进程（supervisord）管理',
+        mode: 'external_scheduler_process',
+      },
+      { status: 409 }
+    )
   } catch (error: any) {
     console.error('Control scheduler error:', error)
-    return NextResponse.json(
-      { error: error.message || '控制调度器失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '控制调度器失败' }, { status: 500 })
   }
 }

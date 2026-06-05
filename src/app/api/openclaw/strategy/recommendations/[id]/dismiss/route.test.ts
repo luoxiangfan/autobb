@@ -29,7 +29,7 @@ describe('POST /api/openclaw/strategy/recommendations/:id/dismiss', () => {
     const req = new NextRequest('http://localhost/api/openclaw/strategy/recommendations/r1/dismiss', {
       method: 'POST',
     })
-    const res = await POST(req, { params: { id: 'r1' } })
+    const res = await POST(req, { params: Promise.resolve({ id: 'r1' }) })
 
     expect(res.status).toBe(403)
   })
@@ -47,7 +47,7 @@ describe('POST /api/openclaw/strategy/recommendations/:id/dismiss', () => {
     const req = new NextRequest('http://localhost/api/openclaw/strategy/recommendations/rec-3/dismiss', {
       method: 'POST',
     })
-    const res = await POST(req, { params: { id: 'rec-3' } })
+    const res = await POST(req, { params: Promise.resolve({ id: 'rec-3' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -70,7 +70,7 @@ describe('POST /api/openclaw/strategy/recommendations/:id/dismiss', () => {
     const req = new NextRequest('http://localhost/api/openclaw/strategy/recommendations/rec-3/dismiss', {
       method: 'POST',
     })
-    const res = await POST(req, { params: { id: 'rec-3' } })
+    const res = await POST(req, { params: Promise.resolve({ id: 'rec-3' }) })
 
     expect(res.status).toBe(409)
   })

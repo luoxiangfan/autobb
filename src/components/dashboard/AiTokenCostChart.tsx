@@ -5,7 +5,7 @@
  * 显示AI模型调用的token使用量和成本统计
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -56,15 +56,11 @@ export function AiTokenCostChart({ days = 7 }: Props) {
   const [data, setData] = useState<AiTokenData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchTokenData()
-  }, [days])
-
-  const fetchTokenData = async () => {
+  const fetchTokenData = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch(`/api/dashboard/ai-token-cost?days=${days}`, {
-        credentials: 'include'
+        credentials: 'include',
       })
 
       if (!response.ok) {
@@ -78,7 +74,11 @@ export function AiTokenCostChart({ days = 7 }: Props) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [days])
+
+  useEffect(() => {
+    fetchTokenData()
+  }, [fetchTokenData])
 
   if (loading) {
     return (
@@ -115,15 +115,17 @@ export function AiTokenCostChart({ days = 7 }: Props) {
   const centerY = size / 2
 
   // 计算模型使用占比（取最大使用的模型）
-  const topModel = today.modelUsage && today.modelUsage.length > 0
-    ? today.modelUsage.reduce((max, model) =>
-        (model.totalTokens ?? 0) > (max.totalTokens ?? 0) ? model : max
-      )
-    : null
+  const topModel =
+    today.modelUsage && today.modelUsage.length > 0
+      ? today.modelUsage.reduce((max, model) =>
+          (model.totalTokens ?? 0) > (max.totalTokens ?? 0) ? model : max
+        )
+      : null
 
-  const topModelPercent = topModel && (today.totalTokens ?? 0) > 0
-    ? ((topModel.totalTokens ?? 0) / (today.totalTokens ?? 1)) * 100
-    : 0
+  const topModelPercent =
+    topModel && (today.totalTokens ?? 0) > 0
+      ? ((topModel.totalTokens ?? 0) / (today.totalTokens ?? 1)) * 100
+      : 0
 
   const usageOffset = circumference - (topModelPercent / 100) * circumference
 
@@ -139,9 +141,19 @@ export function AiTokenCostChart({ days = 7 }: Props) {
       return { label: '高成本', variant: 'destructive' as const, icon: AlertTriangle }
     }
     if (today.totalCost > 50) {
-      return { label: '中等', variant: 'secondary' as const, icon: DollarSign, className: 'bg-orange-500 hover:bg-orange-600' }
+      return {
+        label: '中等',
+        variant: 'secondary' as const,
+        icon: DollarSign,
+        className: 'bg-orange-500 hover:bg-orange-600',
+      }
     }
-    return { label: '正常', variant: 'default' as const, icon: DollarSign, className: 'bg-green-600 hover:bg-green-700' }
+    return {
+      label: '正常',
+      variant: 'default' as const,
+      icon: DollarSign,
+      className: 'bg-green-600 hover:bg-green-700',
+    }
   }
 
   const statusBadge = getStatusBadge()
@@ -155,17 +167,12 @@ export function AiTokenCostChart({ days = 7 }: Props) {
             <Zap className="w-5 h-5 text-purple-600" />
             AI Token成本
           </CardTitle>
-          <Badge
-            variant={statusBadge.variant}
-            className={statusBadge.className}
-          >
+          <Badge variant={statusBadge.variant} className={statusBadge.className}>
             <StatusIcon className="w-3 h-3 mr-1" />
             {statusBadge.label}
           </Badge>
         </div>
-        <CardDescription className="text-xs">
-          今日AI模型调用统计
-        </CardDescription>
+        <CardDescription className="text-xs">今日AI模型调用统计</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -188,7 +195,9 @@ export function AiTokenCostChart({ days = 7 }: Props) {
                 cy={centerY}
                 r={radius}
                 fill="none"
-                stroke={today.totalCost > 100 ? '#dc2626' : today.totalCost > 50 ? '#f59e0b' : '#8b5cf6'}
+                stroke={
+                  today.totalCost > 100 ? '#dc2626' : today.totalCost > 50 ? '#f59e0b' : '#8b5cf6'
+                }
                 strokeWidth={strokeWidth}
                 strokeDasharray={circumference}
                 strokeDashoffset={usageOffset}
@@ -215,23 +224,33 @@ export function AiTokenCostChart({ days = 7 }: Props) {
           <div>
             <div className="text-xs text-gray-500">输入Token</div>
             <div className="text-lg font-semibold text-gray-900">
-              {(today.modelUsage?.reduce((sum, m) => sum + (m.inputTokens ?? 0), 0) ?? 0).toLocaleString('en-US')}
+              {(
+                today.modelUsage?.reduce((sum, m) => sum + (m.inputTokens ?? 0), 0) ?? 0
+              ).toLocaleString('en-US')}
             </div>
           </div>
           <div>
             <div className="text-xs text-gray-500">输出Token</div>
             <div className="text-lg font-semibold text-gray-900">
-              {(today.modelUsage?.reduce((sum, m) => sum + (m.outputTokens ?? 0), 0) ?? 0).toLocaleString('en-US')}
+              {(
+                today.modelUsage?.reduce((sum, m) => sum + (m.outputTokens ?? 0), 0) ?? 0
+              ).toLocaleString('en-US')}
             </div>
           </div>
         </div>
 
         {/* 建议 */}
         {recommendations && recommendations.length > 0 && (
-          <Alert className={today.totalCost > 100 ? 'bg-red-50 border-red-200' : today.totalCost > 50 ? 'bg-orange-50 border-orange-200' : 'bg-purple-50 border-purple-200'}>
-            <AlertDescription className="text-xs">
-              {recommendations[0]}
-            </AlertDescription>
+          <Alert
+            className={
+              today.totalCost > 100
+                ? 'bg-red-50 border-red-200'
+                : today.totalCost > 50
+                  ? 'bg-orange-50 border-orange-200'
+                  : 'bg-purple-50 border-purple-200'
+            }
+          >
+            <AlertDescription className="text-xs">{recommendations[0]}</AlertDescription>
           </Alert>
         )}
 
@@ -240,28 +259,30 @@ export function AiTokenCostChart({ days = 7 }: Props) {
           <div className="pt-2 border-t">
             <div className="text-xs text-gray-500 mb-2">高成本操作类型（Top 5）</div>
             <div className="space-y-1.5">
-              {today.operationUsage
-                .slice(0, 5)
-                .map((op) => {
-                  const isHighCost = op.cost > 10
-                  const opName = op.operationType
-                    .replace(/_/g, ' ')
-                    .replace(/\b\w/g, (c) => c.toUpperCase())
-                  return (
-                    <div key={op.operationType} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center flex-1 mr-2">
-                        <span className={`truncate ${isHighCost ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
-                          {opName}
-                        </span>
-                        {isHighCost && <AlertTriangle className="w-3 h-3 ml-1 text-red-500" />}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-400 text-xs">{Number(op.callCount) || 0}次</span>
-                        <span className="font-medium text-gray-900">¥{safeToFixed(Number(op.cost) || 0, 2)}</span>
-                      </div>
+              {today.operationUsage.slice(0, 5).map((op) => {
+                const isHighCost = op.cost > 10
+                const opName = op.operationType
+                  .replace(/_/g, ' ')
+                  .replace(/\b\w/g, (c) => c.toUpperCase())
+                return (
+                  <div key={op.operationType} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center flex-1 mr-2">
+                      <span
+                        className={`truncate ${isHighCost ? 'text-red-600 font-medium' : 'text-gray-600'}`}
+                      >
+                        {opName}
+                      </span>
+                      {isHighCost && <AlertTriangle className="w-3 h-3 ml-1 text-red-500" />}
                     </div>
-                  )
-                })}
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 text-xs">{Number(op.callCount) || 0}次</span>
+                      <span className="font-medium text-gray-900">
+                        ¥{safeToFixed(Number(op.cost) || 0, 2)}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
@@ -277,7 +298,9 @@ export function AiTokenCostChart({ days = 7 }: Props) {
                 .map((model) => (
                   <div key={model.model} className="flex items-center justify-between text-xs">
                     <span className="text-gray-600 truncate flex-1 mr-2">{model.model}</span>
-                    <span className="font-medium text-gray-900">¥{safeToFixed(Number(model.cost) || 0, 2)}</span>
+                    <span className="font-medium text-gray-900">
+                      ¥{safeToFixed(Number(model.cost) || 0, 2)}
+                    </span>
                   </div>
                 ))}
             </div>
@@ -295,7 +318,9 @@ export function AiTokenCostChart({ days = 7 }: Props) {
               {trend.slice(0, 3).map((item) => (
                 <div key={item.date} className="flex items-center justify-between text-xs">
                   <span className="text-gray-600">{item.date}</span>
-                  <span className="font-medium text-gray-900">¥{safeToFixed(Number(item.totalCost) || 0, 2)}</span>
+                  <span className="font-medium text-gray-900">
+                    ¥{safeToFixed(Number(item.totalCost) || 0, 2)}
+                  </span>
                 </div>
               ))}
             </div>

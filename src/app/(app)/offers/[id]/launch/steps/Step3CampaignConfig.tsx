@@ -11,20 +11,44 @@
  * 4. 移除重复的确认按钮，点击"下一步"时验证配置
  */
 
-import { useState, useEffect, useRef, type DragEvent } from 'react'
+import { useState, useEffect, useRef, useCallback, type DragEvent } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Switch } from '@/components/ui/switch'
-import { Settings, CheckCircle2, AlertCircle, Plus, X, Info, Lock, Zap, Trash2, GripVertical } from 'lucide-react'
+import {
+  Settings,
+  CheckCircle2,
+  AlertCircle,
+  Plus,
+  X,
+  Info,
+  Lock,
+  Zap,
+  Trash2,
+  GripVertical,
+} from 'lucide-react'
 import { showError, showSuccess } from '@/lib/toast-utils'
 import { generateNamingScheme } from '@/lib/naming-convention'
 import { CURRENCY_SYMBOLS, calculateMaxCPC } from '@/lib/currency'
@@ -94,14 +118,14 @@ const buildNegativeKeywordState = (
 type CampaignKeywordMatchType = 'BROAD' | 'PHRASE' | 'EXACT'
 
 const isModelIntentCreative = (creative: any): boolean => {
-  const normalizedBucket = String(
-    creative?.keywordBucket ?? creative?.keyword_bucket ?? ''
-  ).trim().toUpperCase()
+  const normalizedBucket = String(creative?.keywordBucket ?? creative?.keyword_bucket ?? '')
+    .trim()
+    .toUpperCase()
   if (normalizedBucket === 'B' || normalizedBucket === 'C') return true
 
-  const normalizedCreativeType = String(
-    creative?.creativeType ?? creative?.creative_type ?? ''
-  ).trim().toLowerCase()
+  const normalizedCreativeType = String(creative?.creativeType ?? creative?.creative_type ?? '')
+    .trim()
+    .toLowerCase()
   return normalizedCreativeType === 'model_intent' || normalizedCreativeType === 'model_focus'
 }
 
@@ -135,36 +159,38 @@ const buildInitialKeywords = (
   const rawKeywords = selectedCreative?.keywordsWithVolume || selectedCreative?.keywords || []
   const forceExactMatch = isModelIntentCreative(selectedCreative)
 
-  return rawKeywords.map((item: any, idx: number) => {
-    if (typeof item === 'string') {
-      const keywordText = String(item || '')
+  return rawKeywords
+    .map((item: any, idx: number) => {
+      if (typeof item === 'string') {
+        const keywordText = String(item || '')
+        return {
+          text: keywordText,
+          matchType: resolveCampaignKeywordMatchType({
+            keywordText,
+            brandName,
+            rawMatchType: undefined,
+            fallbackIndex: idx,
+            forceExactMatch,
+          }),
+        }
+      }
+
+      const keywordText = String(item.keyword || item.text || '')
       return {
         text: keywordText,
         matchType: resolveCampaignKeywordMatchType({
           keywordText,
           brandName,
-          rawMatchType: undefined,
+          rawMatchType: item.matchType ?? item.match_type,
           fallbackIndex: idx,
           forceExactMatch,
         }),
+        searchVolume: item.searchVolume || 0,
+        lowTopPageBid: item.lowTopPageBid || 0,
+        highTopPageBid: item.highTopPageBid || 0,
       }
-    }
-
-    const keywordText = String(item.keyword || item.text || '')
-    return {
-      text: keywordText,
-      matchType: resolveCampaignKeywordMatchType({
-        keywordText,
-        brandName,
-        rawMatchType: item.matchType ?? item.match_type,
-        fallbackIndex: idx,
-        forceExactMatch,
-      }),
-      searchVolume: item.searchVolume || 0,
-      lowTopPageBid: item.lowTopPageBid || 0,
-      highTopPageBid: item.highTopPageBid || 0,
-    }
-  }).filter((item: { text: string }) => String(item.text || '').trim().length > 0)
+    })
+    .filter((item: { text: string }) => String(item.text || '').trim().length > 0)
 }
 
 /**
@@ -221,7 +247,7 @@ const calculateDynamicCpc = (
   currency: string
 ): number | null => {
   // 过滤有效的关键词（有出价且出价>0）
-  const validKeywords = keywords.filter(kw => (kw.lowTopPageBid || 0) > 0)
+  const validKeywords = keywords.filter((kw) => (kw.lowTopPageBid || 0) > 0)
 
   if (validKeywords.length === 0) return null
 
@@ -229,7 +255,7 @@ const calculateDynamicCpc = (
   let totalWeightedBid = 0
   let totalWeight = 0
 
-  validKeywords.forEach(kw => {
+  validKeywords.forEach((kw) => {
     const bid = kw.lowTopPageBid || 0
     // 搜索量作为权重，最低权重为100（避免0搜索量的词被忽略）
     const weight = Math.max(kw.searchVolume || 0, 100)
@@ -244,8 +270,8 @@ const calculateDynamicCpc = (
 
   // 根据货币设置最低CPC
   const minCpc: Record<string, number> = {
-    USD: 0.10,
-    CNY: 0.70,
+    USD: 0.1,
+    CNY: 0.7,
     EUR: 0.09,
     GBP: 0.08,
     JPY: 15,
@@ -259,14 +285,14 @@ const calculateDynamicCpc = (
   }
 
   // 🔧 修复(2025-12-26): 四舍五入到计费单位（0.01货币单位）
-  const rawCpc = Math.max(suggestedCpc, minCpc[currency] || 0.10)
+  const rawCpc = Math.max(suggestedCpc, minCpc[currency] || 0.1)
   return Math.round(rawCpc * 100) / 100
 }
 
 interface Props {
   offer: any
   selectedCreative: any
-  selectedAccount: any  // 🔧 修复(2025-12-13): 新增selectedAccount参数，用于获取货币信息
+  selectedAccount: any // 🔧 修复(2025-12-13): 新增selectedAccount参数，用于获取货币信息
   onConfigured: (config: any) => void
   initialConfig: any | null
 }
@@ -280,7 +306,7 @@ interface CampaignConfig {
   targetLanguage: string
   biddingStrategy: string
   finalUrlSuffix: string
-  marketingObjective: 'WEB_TRAFFIC' | 'SALES' | 'LEADS' | 'STORE_VISITS'  // 🔧 新增(2025-12-24): 营销目标
+  marketingObjective: 'WEB_TRAFFIC' | 'SALES' | 'LEADS' | 'STORE_VISITS' // 🔧 新增(2025-12-24): 营销目标
 
   // Ad Group Level
   adGroupName: string
@@ -299,8 +325,8 @@ interface CampaignConfig {
 
   // Ad Level
   adName: string
-  headlines: string[]  // 必须15个
-  descriptions: string[]  // 必须4个
+  headlines: string[] // 必须15个
+  descriptions: string[] // 必须4个
   finalUrls: string[]
 
   // Extensions
@@ -308,7 +334,13 @@ interface CampaignConfig {
   sitelinks: Array<{ text: string; description: string; url: string }>
 }
 
-export default function Step3CampaignConfig({ offer, selectedCreative, selectedAccount, onConfigured, initialConfig }: Props) {
+export default function Step3CampaignConfig({
+  offer,
+  selectedCreative,
+  selectedAccount,
+  onConfigured,
+  initialConfig,
+}: Props) {
   // 🔧 修复(2025-12-13): 从selectedAccount获取货币信息
   const accountCurrency = selectedAccount?.currencyCode || 'USD'
   const currencySymbol = CURRENCY_SYMBOLS[accountCurrency] || '$'
@@ -351,7 +383,7 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
   }
 
   // 🔧 修复(2025-12-27): 提取命名生成逻辑为独立函数，避免依赖循环
-  const generateInitialNaming = () => {
+  const generateInitialNaming = useCallback(() => {
     const budgetAmount = initialConfig?.budgetAmount || getDefaultBudget(accountCurrency)
     const maxCpcBid = initialConfig?.maxCpcBid || getDefaultCPC(accountCurrency)
     const biddingStrategy = initialConfig?.biddingStrategy || 'MAXIMIZE_CLICKS'
@@ -361,21 +393,23 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
         id: offer.id,
         brand: offer.brand || 'Brand',
         offerName: offer.offerName || undefined,
-        category: offer.category || undefined
+        category: offer.category || undefined,
       },
       config: {
         targetCountry: offer.targetCountry || 'US',
         budgetAmount,
         budgetType: 'DAILY',
         biddingStrategy,
-        maxCpcBid
+        maxCpcBid,
       },
-      creative: selectedCreative ? {
-        id: selectedCreative.id,
-        theme: selectedCreative.theme || undefined
-      } : undefined
+      creative: selectedCreative
+        ? {
+            id: selectedCreative.id,
+            theme: selectedCreative.theme || undefined,
+          }
+        : undefined,
     })
-  }
+  }, [accountCurrency, initialConfig, offer, selectedCreative])
 
   const initialNaming = generateInitialNaming()
 
@@ -389,8 +423,12 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
       return {
         ...initialConfig,
         // 🔧 兼容：历史/AI不稳定输出可能生成超出Google Ads限制的数量（>15 headlines 或 >4 descriptions）
-        headlines: Array.isArray(initialConfig.headlines) ? initialConfig.headlines.slice(0, 15) : [],
-        descriptions: Array.isArray(initialConfig.descriptions) ? initialConfig.descriptions.slice(0, 4) : [],
+        headlines: Array.isArray(initialConfig.headlines)
+          ? initialConfig.headlines.slice(0, 15)
+          : [],
+        descriptions: Array.isArray(initialConfig.descriptions)
+          ? initialConfig.descriptions.slice(0, 4)
+          : [],
         negativeKeywords: negativeKeywordState.negativeKeywords,
         negativeKeywordMatchType: negativeKeywordState.negativeKeywordMatchType,
       }
@@ -404,20 +442,20 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
     return {
       // Campaign Level - 使用统一命名规范
       campaignName: initialNaming.campaignName,
-      budgetAmount: getDefaultBudget(accountCurrency),  // 🔧 修复(2025-12-13): 根据货币提供合理的默认值
-      budgetType: 'DAILY' as const,  // 固定每日预算
+      budgetAmount: getDefaultBudget(accountCurrency), // 🔧 修复(2025-12-13): 根据货币提供合理的默认值
+      budgetType: 'DAILY' as const, // 固定每日预算
       // 🔒 Target Country/Language 强制与 Offer 保持一致
       // 🔧 修复(2025-12-11): 使用驼峰命名 targetCountry（与API返回一致）
       targetCountry: offer.targetCountry || 'US',
       targetLanguage: offer.targetLanguage || 'en',
-      biddingStrategy: 'MAXIMIZE_CLICKS',  // 业务规范：网站流量营销目标
-      marketingObjective: 'WEB_TRAFFIC' as const,  // 🔧 新增(2025-12-24): 营销目标默认为网站流量
+      biddingStrategy: 'MAXIMIZE_CLICKS', // 业务规范：网站流量营销目标
+      marketingObjective: 'WEB_TRAFFIC' as const, // 🔧 新增(2025-12-24): 营销目标默认为网站流量
       // 🔧 修复(2025-12-11): API已统一返回camelCase，移除snake_case fallback
       finalUrlSuffix: selectedCreative?.finalUrlSuffix || offer.finalUrlSuffix || '',
 
       // Ad Group Level - 使用统一命名规范
       adGroupName: initialNaming.adGroupName,
-      maxCpcBid: getDefaultCPC(accountCurrency),  // 🔧 修复(2025-12-13): 根据货币提供合理的默认值
+      maxCpcBid: getDefaultCPC(accountCurrency), // 🔧 修复(2025-12-13): 根据货币提供合理的默认值
 
       // Keywords Level - 优先使用keywordsWithVolume（包含搜索量）
       // 🆕 P0-1优化：同时提取lowTopPageBid和highTopPageBid用于动态CPC计算
@@ -428,7 +466,9 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
       negativeKeywordMatchType: negativeKeywordState.negativeKeywordMatchType,
 
       // Ad Level - 使用统一命名规范
-      adName: initialNaming.adName || `RSA_${selectedCreative?.theme || 'Default'}_C${selectedCreative?.id || 0}`,
+      adName:
+        initialNaming.adName ||
+        `RSA_${selectedCreative?.theme || 'Default'}_C${selectedCreative?.id || 0}`,
       headlines: (selectedCreative?.headlines || []).slice(0, 15),
       descriptions: (selectedCreative?.descriptions || []).slice(0, 4),
       // 🔧 修复(2025-12-11): API已统一返回camelCase，移除snake_case fallback
@@ -436,7 +476,7 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
 
       // Extensions
       callouts: selectedCreative?.callouts || [],
-      sitelinks: selectedCreative?.sitelinks || []
+      sitelinks: selectedCreative?.sitelinks || [],
     }
   })
 
@@ -448,12 +488,21 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
   const [selectedKeywordIndexes, setSelectedKeywordIndexes] = useState<Set<number>>(new Set())
   const [batchMatchType, setBatchMatchType] = useState<'BROAD' | 'PHRASE' | 'EXACT'>('PHRASE')
   const [newNegativeKeyword, setNewNegativeKeyword] = useState('')
-  const [newNegativeKeywordMatchType, setNewNegativeKeywordMatchType] = useState<NegativeKeywordMatchType>('EXACT')
+  const [newNegativeKeywordMatchType, setNewNegativeKeywordMatchType] =
+    useState<NegativeKeywordMatchType>('EXACT')
   const [draggingNegativeKeyword, setDraggingNegativeKeyword] = useState<string | null>(null)
 
   // 当用户在第1步切换创意且仍停留在第3步时，按新创意重置配置。
   // 不在首次挂载时重置：从第4步返回时 useState 已通过 initialConfig 恢复用户修改。
   const trackedCreativeIdRef = useRef<number | null>(null)
+
+  const handleChange = useCallback((field: keyof CampaignConfig, value: any) => {
+    setConfig((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+    setValidationErrors([])
+  }, [])
 
   useEffect(() => {
     if (!selectedCreative) return
@@ -491,20 +540,21 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
       negativeKeywords: negativeKeywordState.negativeKeywords,
       negativeKeywordMatchType: negativeKeywordState.negativeKeywordMatchType,
 
-      adName: naming.adName || `RSA_${selectedCreative?.theme || 'Default'}_C${selectedCreative?.id || 0}`,
+      adName:
+        naming.adName ||
+        `RSA_${selectedCreative?.theme || 'Default'}_C${selectedCreative?.id || 0}`,
       headlines: (selectedCreative?.headlines || []).slice(0, 15),
       descriptions: (selectedCreative?.descriptions || []).slice(0, 4),
       finalUrls: [selectedCreative?.finalUrl || offer.finalUrl || offer.url],
 
       callouts: selectedCreative?.callouts || [],
-      sitelinks: selectedCreative?.sitelinks || []
+      sitelinks: selectedCreative?.sitelinks || [],
     })
 
     setValidationErrors([])
     setEnableDynamicCpc(false)
     setSelectedKeywordIndexes(new Set())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCreative?.id])
+  }, [accountCurrency, generateInitialNaming, offer, selectedCreative])
 
   // 🆕 P0-1优化：计算动态CPC建议值
   const suggestedCpc = calculateDynamicCpc(config.keywords, accountCurrency)
@@ -514,15 +564,7 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
     if (enableDynamicCpc && suggestedCpc !== null) {
       handleChange('maxCpcBid', suggestedCpc)
     }
-  }, [enableDynamicCpc, suggestedCpc])
-
-  const handleChange = (field: keyof CampaignConfig, value: any) => {
-    setConfig({
-      ...config,
-      [field]: value
-    })
-    setValidationErrors([])
-  }
+  }, [enableDynamicCpc, suggestedCpc, handleChange])
 
   const handleHeadlineChange = (index: number, value: string) => {
     const newHeadlines = [...config.headlines]
@@ -543,19 +585,16 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
   }
 
   const handleAddKeyword = () => {
-    handleChange('keywords', [
-      ...config.keywords,
-      { text: '', matchType: 'PHRASE' as const }
-    ])
+    handleChange('keywords', [...config.keywords, { text: '', matchType: 'PHRASE' as const }])
   }
 
   const handleRemoveKeyword = (index: number) => {
     const newKeywords = config.keywords.filter((_, i) => i !== index)
     handleChange('keywords', newKeywords)
-    setSelectedKeywordIndexes(prev => {
+    setSelectedKeywordIndexes((prev) => {
       if (prev.size === 0) return prev
       const next = new Set<number>()
-      prev.forEach(i => {
+      prev.forEach((i) => {
         if (i === index) return
         next.add(i > index ? i - 1 : i)
       })
@@ -567,7 +606,7 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
     nextNegativeKeywords: string[],
     nextNegativeKeywordMatchType: Record<string, NegativeKeywordMatchType>
   ) => {
-    setConfig(prev => ({
+    setConfig((prev) => ({
       ...prev,
       negativeKeywords: nextNegativeKeywords,
       negativeKeywordMatchType: nextNegativeKeywordMatchType,
@@ -583,7 +622,7 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
     }
 
     const existingKeyword = config.negativeKeywords.find(
-      item => item.toLowerCase() === normalizedKeyword.toLowerCase()
+      (item) => item.toLowerCase() === normalizedKeyword.toLowerCase()
     )
 
     const finalKeyword = existingKeyword || normalizedKeyword
@@ -593,7 +632,8 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
 
     const nextMatchType: Record<string, NegativeKeywordMatchType> = {}
     nextKeywords.forEach((keyword) => {
-      nextMatchType[keyword] = config.negativeKeywordMatchType[keyword] || inferNegativeKeywordMatchType(keyword)
+      nextMatchType[keyword] =
+        config.negativeKeywordMatchType[keyword] || inferNegativeKeywordMatchType(keyword)
     })
     nextMatchType[finalKeyword] = newNegativeKeywordMatchType
 
@@ -602,23 +642,28 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
   }
 
   const handleRemoveNegativeKeyword = (keywordToRemove: string) => {
-    const nextKeywords = config.negativeKeywords.filter(keyword => keyword !== keywordToRemove)
+    const nextKeywords = config.negativeKeywords.filter((keyword) => keyword !== keywordToRemove)
     const nextMatchType: Record<string, NegativeKeywordMatchType> = {}
     nextKeywords.forEach((keyword) => {
-      nextMatchType[keyword] = config.negativeKeywordMatchType[keyword] || inferNegativeKeywordMatchType(keyword)
+      nextMatchType[keyword] =
+        config.negativeKeywordMatchType[keyword] || inferNegativeKeywordMatchType(keyword)
     })
     upsertNegativeKeywordState(nextKeywords, nextMatchType)
   }
 
-  const handleMoveNegativeKeyword = (keywordToMove: string, targetMatchType: NegativeKeywordMatchType) => {
+  const handleMoveNegativeKeyword = (
+    keywordToMove: string,
+    targetMatchType: NegativeKeywordMatchType
+  ) => {
     const existingKeyword = config.negativeKeywords.find(
-      keyword => keyword.toLowerCase() === keywordToMove.toLowerCase()
+      (keyword) => keyword.toLowerCase() === keywordToMove.toLowerCase()
     )
     if (!existingKeyword) return
 
     const nextMatchType: Record<string, NegativeKeywordMatchType> = {}
     config.negativeKeywords.forEach((keyword) => {
-      nextMatchType[keyword] = config.negativeKeywordMatchType[keyword] || inferNegativeKeywordMatchType(keyword)
+      nextMatchType[keyword] =
+        config.negativeKeywordMatchType[keyword] || inferNegativeKeywordMatchType(keyword)
     })
     nextMatchType[existingKeyword] = targetMatchType
 
@@ -631,7 +676,10 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
     setDraggingNegativeKeyword(keyword)
   }
 
-  const handleNegativeKeywordDrop = (event: DragEvent<HTMLDivElement>, targetMatchType: NegativeKeywordMatchType) => {
+  const handleNegativeKeywordDrop = (
+    event: DragEvent<HTMLDivElement>,
+    targetMatchType: NegativeKeywordMatchType
+  ) => {
     event.preventDefault()
     const droppedKeyword = event.dataTransfer.getData('text/plain') || draggingNegativeKeyword
     if (!droppedKeyword) return
@@ -649,14 +697,16 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
   )
 
   config.negativeKeywords.forEach((keyword) => {
-    const matchType = config.negativeKeywordMatchType[keyword] || inferNegativeKeywordMatchType(keyword)
+    const matchType =
+      config.negativeKeywordMatchType[keyword] || inferNegativeKeywordMatchType(keyword)
     groupedNegativeKeywords[matchType].push(keyword)
   })
 
-  const parseBatchKeywords = (input: string) => input
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
+  const parseBatchKeywords = (input: string) =>
+    input
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
 
   const handleBatchKeywordDialogChange = (open: boolean) => {
     setBatchKeywordDialogOpen(open)
@@ -674,7 +724,7 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
 
     handleChange('keywords', [
       ...config.keywords,
-      ...keywords.map((text) => ({ text, matchType: 'PHRASE' as const }))
+      ...keywords.map((text) => ({ text, matchType: 'PHRASE' as const })),
     ])
     setBatchKeywordInput('')
     setBatchKeywordDialogOpen(false)
@@ -682,7 +732,7 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
   }
 
   const handleToggleKeywordSelect = (index: number, checked: boolean) => {
-    setSelectedKeywordIndexes(prev => {
+    setSelectedKeywordIndexes((prev) => {
       const next = new Set(prev)
       if (checked) {
         next.add(index)
@@ -703,11 +753,9 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
 
   const handleBatchMatchTypeApply = () => {
     if (selectedKeywordIndexes.size === 0) return
-    const newKeywords = config.keywords.map((kw, idx) => (
-      selectedKeywordIndexes.has(idx)
-        ? { ...kw, matchType: batchMatchType }
-        : kw
-    ))
+    const newKeywords = config.keywords.map((kw, idx) =>
+      selectedKeywordIndexes.has(idx) ? { ...kw, matchType: batchMatchType } : kw
+    )
     handleChange('keywords', newKeywords)
     showSuccess('批量修改成功', `已更新 ${selectedKeywordIndexes.size} 个关键词的匹配类型`)
   }
@@ -737,13 +785,14 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
   }
 
   const handleAddSitelink = () => {
-    handleChange('sitelinks', [
-      ...config.sitelinks,
-      { text: '', description: '', url: '' }
-    ])
+    handleChange('sitelinks', [...config.sitelinks, { text: '', description: '', url: '' }])
   }
 
-  const handleSitelinkChange = (index: number, field: 'text' | 'description' | 'url', value: string) => {
+  const handleSitelinkChange = (
+    index: number,
+    field: 'text' | 'description' | 'url',
+    value: string
+  ) => {
     const newSitelinks = [...config.sitelinks]
     newSitelinks[index] = { ...newSitelinks[index], [field]: value }
     handleChange('sitelinks', newSitelinks)
@@ -885,7 +934,9 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
       const needed = 15 - config.headlines.length
       const newHeadlines = [
         ...config.headlines,
-        ...Array(needed).fill('').map((_, i) => `Headline ${config.headlines.length + i + 1}`)
+        ...Array(needed)
+          .fill('')
+          .map((_, i) => `Headline ${config.headlines.length + i + 1}`),
       ]
       handleChange('headlines', newHeadlines)
     }
@@ -896,7 +947,9 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
       const needed = 4 - config.descriptions.length
       const newDescriptions = [
         ...config.descriptions,
-        ...Array(needed).fill('').map((_, i) => `Description ${config.descriptions.length + i + 1}`)
+        ...Array(needed)
+          .fill('')
+          .map((_, i) => `Description ${config.descriptions.length + i + 1}`),
       ]
       handleChange('descriptions', newDescriptions)
     }
@@ -913,9 +966,7 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
                 <Settings className="w-5 h-5 text-blue-600" />
                 配置广告系列参数
               </CardTitle>
-              <CardDescription>
-                所有参数均可修改，配置完成后点击右下角"下一步"继续
-              </CardDescription>
+              <CardDescription>所有参数均可修改，配置完成后点击右下角"下一步"继续</CardDescription>
             </div>
             <Button onClick={handleValidate} variant="outline" size="sm">
               <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -951,8 +1002,13 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
             {/* Campaign Name - 使用统一命名规范 */}
             <div className="space-y-2">
               <Label>
-                广告系列名称 (Campaign Name) <Badge variant="destructive" className="ml-1">必需</Badge>
-                <Badge variant="outline" className="ml-1">自动生成</Badge>
+                广告系列名称 (Campaign Name){' '}
+                <Badge variant="destructive" className="ml-1">
+                  必需
+                </Badge>
+                <Badge variant="outline" className="ml-1">
+                  自动生成
+                </Badge>
               </Label>
               <Input
                 value={config.campaignName}
@@ -964,8 +1020,13 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
             {/* Budget Amount + Type - 🔧 修复(2025-12-13): 使用动态货币符号 */}
             <div className="space-y-2">
               <Label>
-                预算 (Budget) <Badge variant="destructive" className="ml-1">必需</Badge>
-                <Badge className="ml-1">默认{getDefaultBudget(accountCurrency)} {accountCurrency}</Badge>
+                预算 (Budget){' '}
+                <Badge variant="destructive" className="ml-1">
+                  必需
+                </Badge>
+                <Badge className="ml-1">
+                  默认{getDefaultBudget(accountCurrency)} {accountCurrency}
+                </Badge>
               </Label>
               <div className="flex gap-2">
                 <Select
@@ -981,7 +1042,9 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
                   </SelectContent>
                 </Select>
                 <div className="relative w-[180px]">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{currencySymbol}</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    {currencySymbol}
+                  </span>
                   <Input
                     type="number"
                     value={config.budgetAmount || ''}
@@ -1047,14 +1110,18 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
               </Label>
               <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
                 <Badge variant="default" className="bg-blue-600">
-                  {config.biddingStrategy === 'MAXIMIZE_CLICKS' ? '网站流量 (Web Traffic)' :
-                   config.biddingStrategy === 'MAXIMIZE_CONVERSIONS' ? '潜在客户 (Leads)' :
-                   '手动出价 (Manual)'}
+                  {config.biddingStrategy === 'MAXIMIZE_CLICKS'
+                    ? '网站流量 (Web Traffic)'
+                    : config.biddingStrategy === 'MAXIMIZE_CONVERSIONS'
+                      ? '潜在客户 (Leads)'
+                      : '手动出价 (Manual)'}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
-                  {config.biddingStrategy === 'MAXIMIZE_CLICKS' ? '优化点击量，吸引更多访问者' :
-                   config.biddingStrategy === 'MAXIMIZE_CONVERSIONS' ? '优化转化量，获取潜在客户' :
-                   '手动控制每次点击出价'}
+                  {config.biddingStrategy === 'MAXIMIZE_CLICKS'
+                    ? '优化点击量，吸引更多访问者'
+                    : config.biddingStrategy === 'MAXIMIZE_CONVERSIONS'
+                      ? '优化转化量，获取潜在客户'
+                      : '手动控制每次点击出价'}
                 </span>
               </div>
             </div>
@@ -1062,7 +1129,8 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
             {/* Bidding Strategy */}
             <div className="space-y-2">
               <Label>
-                出价策略 (Bidding Strategy) <Badge className="ml-1">默认最大化点击量 (Maximize Clicks)</Badge>
+                出价策略 (Bidding Strategy){' '}
+                <Badge className="ml-1">默认最大化点击量 (Maximize Clicks)</Badge>
               </Label>
               <Select
                 value={config.biddingStrategy}
@@ -1074,7 +1142,9 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
                 <SelectContent>
                   <SelectItem value="MAXIMIZE_CLICKS">最大化点击量 (Maximize Clicks)</SelectItem>
                   <SelectItem value="MANUAL_CPC">手动点击出价 (Manual CPC)</SelectItem>
-                  <SelectItem value="MAXIMIZE_CONVERSIONS">最大化转化 (Maximize Conversions)</SelectItem>
+                  <SelectItem value="MAXIMIZE_CONVERSIONS">
+                    最大化转化 (Maximize Conversions)
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1082,13 +1152,18 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
             {/* Final URL Suffix - 🔒 必填 */}
             <div className="space-y-2">
               <Label>
-                最终链接后缀 (Final URL Suffix) <Badge variant="destructive" className="ml-1">必填</Badge>
+                最终链接后缀 (Final URL Suffix){' '}
+                <Badge variant="destructive" className="ml-1">
+                  必填
+                </Badge>
               </Label>
               <Input
                 value={config.finalUrlSuffix}
                 onChange={(e) => handleChange('finalUrlSuffix', e.target.value)}
                 placeholder="例如: maas=xxx&ref_=aa_maas&tag=maas&aa_campaignid=xxx"
-                className={!config.finalUrlSuffix.trim() ? 'border-red-300 focus:border-red-500' : ''}
+                className={
+                  !config.finalUrlSuffix.trim() ? 'border-red-300 focus:border-red-500' : ''
+                }
               />
               <p className="text-xs text-gray-500">
                 URL跟踪参数，用于追踪广告效果和佣金归因，通常从推广链接中自动提取
@@ -1115,8 +1190,13 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
             {/* Ad Group Name - 使用统一命名规范 */}
             <div className="space-y-2">
               <Label>
-                广告组名称 (Ad Group Name) <Badge variant="destructive" className="ml-1">必需</Badge>
-                <Badge variant="outline" className="ml-1">自动生成</Badge>
+                广告组名称 (Ad Group Name){' '}
+                <Badge variant="destructive" className="ml-1">
+                  必需
+                </Badge>
+                <Badge variant="outline" className="ml-1">
+                  自动生成
+                </Badge>
               </Label>
               <Input
                 value={config.adGroupName}
@@ -1128,11 +1208,18 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
             {/* Max CPC Bid - 🔧 修复(2025-12-13): 使用动态货币符号 */}
             <div className="space-y-2">
               <Label>
-                点击出价 (CPC Bid) <Badge variant="destructive" className="ml-1">必需</Badge>
-                <Badge className="ml-1">默认{getDefaultCPC(accountCurrency)} {accountCurrency}</Badge>
+                点击出价 (CPC Bid){' '}
+                <Badge variant="destructive" className="ml-1">
+                  必需
+                </Badge>
+                <Badge className="ml-1">
+                  默认{getDefaultCPC(accountCurrency)} {accountCurrency}
+                </Badge>
               </Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{currencySymbol}</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  {currencySymbol}
+                </span>
                 <Input
                   type="number"
                   value={config.maxCpcBid || ''}
@@ -1184,9 +1271,12 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
               {enableDynamicCpc && suggestedCpc !== null && (
                 <div className="p-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">
                   <CheckCircle2 className="inline h-4 w-4 mr-1" />
-                  <strong>动态CPC已启用</strong>: {currencySymbol}{suggestedCpc.toFixed(2)}
+                  <strong>动态CPC已启用</strong>: {currencySymbol}
+                  {suggestedCpc.toFixed(2)}
                   <span className="ml-1 text-xs text-green-600">
-                    (基于{config.keywords.filter(k => k.lowTopPageBid && k.lowTopPageBid > 0).length}个关键词的平均竞价 +20%)
+                    (基于
+                    {config.keywords.filter((k) => k.lowTopPageBid && k.lowTopPageBid > 0).length}
+                    个关键词的平均竞价 +20%)
                   </span>
                 </div>
               )}
@@ -1199,39 +1289,45 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
               )}
 
               {/* 🔧 修复(2025-12-13): 使用货币转换工具计算建议CPC */}
-              {offer.productPrice && offer.commissionPayout && (() => {
-                const targetCountry = offer.targetCountry || offer.target_country || 'US'
-                // 使用货币转换工具计算建议最大CPC
-                const cpcResult = calculateMaxCPC(
-                  offer.productPrice,
-                  offer.commissionPayout,
-                  'USD',  // 产品价格通常是USD
-                  accountCurrency,  // 转换为账号货币
-                  50,  // 假设50个点击出一单
-                  targetCountry
-                )
-
-                if (cpcResult) {
-                  const details = cpcResult.calculationDetails
-                  return (
-                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
-                      <Info className="inline h-4 w-4 mr-1" />
-                      <strong>建议CPC</strong>: {cpcResult.maxCPCFormatted}
-                      {details.commissionMode === 'percent' && details.commissionRate !== null && (
-                        <span className="ml-1 text-xs text-blue-600">
-                          (${details.productPrice} × {details.commissionRate.toFixed(2)}% ÷ {details.clicksPerSale}，假设{details.clicksPerSale}个点击出一单)
-                        </span>
-                      )}
-                      {details.commissionMode === 'amount' && (
-                        <span className="ml-1 text-xs text-blue-600">
-                          ({details.commissionAmount.toFixed(2)} {details.sourceCurrency} ÷ {details.clicksPerSale}，绝对佣金模式，假设{details.clicksPerSale}个点击出一单)
-                        </span>
-                      )}
-                    </div>
+              {offer.productPrice &&
+                offer.commissionPayout &&
+                (() => {
+                  const targetCountry = offer.targetCountry || offer.target_country || 'US'
+                  // 使用货币转换工具计算建议最大CPC
+                  const cpcResult = calculateMaxCPC(
+                    offer.productPrice,
+                    offer.commissionPayout,
+                    'USD', // 产品价格通常是USD
+                    accountCurrency, // 转换为账号货币
+                    50, // 假设50个点击出一单
+                    targetCountry
                   )
-                }
-                return null
-              })()}
+
+                  if (cpcResult) {
+                    const details = cpcResult.calculationDetails
+                    return (
+                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+                        <Info className="inline h-4 w-4 mr-1" />
+                        <strong>建议CPC</strong>: {cpcResult.maxCPCFormatted}
+                        {details.commissionMode === 'percent' &&
+                          details.commissionRate !== null && (
+                            <span className="ml-1 text-xs text-blue-600">
+                              (${details.productPrice} × {details.commissionRate.toFixed(2)}% ÷{' '}
+                              {details.clicksPerSale}，假设{details.clicksPerSale}个点击出一单)
+                            </span>
+                          )}
+                        {details.commissionMode === 'amount' && (
+                          <span className="ml-1 text-xs text-blue-600">
+                            ({details.commissionAmount.toFixed(2)} {details.sourceCurrency} ÷{' '}
+                            {details.clicksPerSale}，绝对佣金模式，假设{details.clicksPerSale}
+                            个点击出一单)
+                          </span>
+                        )}
+                      </div>
+                    )
+                  }
+                  return null
+                })()}
             </div>
           </div>
 
@@ -1241,7 +1337,10 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>
-                关键词 (Keywords) <Badge variant="destructive" className="ml-1">至少1个</Badge>
+                关键词 (Keywords){' '}
+                <Badge variant="destructive" className="ml-1">
+                  至少1个
+                </Badge>
               </Label>
               <div className="flex items-center gap-2">
                 <Button
@@ -1265,7 +1364,10 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
             <div className="flex items-center justify-between gap-3 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 overflow-x-auto">
               <div className="flex items-center gap-2">
                 <Checkbox
-                  checked={config.keywords.length > 0 && selectedKeywordIndexes.size === config.keywords.length}
+                  checked={
+                    config.keywords.length > 0 &&
+                    selectedKeywordIndexes.size === config.keywords.length
+                  }
                   onCheckedChange={(checked) => handleSelectAllKeywords(checked === true)}
                   aria-label="全选关键词"
                 />
@@ -1279,7 +1381,9 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
               <div className="flex items-center gap-2 whitespace-nowrap">
                 <Select
                   value={batchMatchType}
-                  onValueChange={(value) => setBatchMatchType(value as 'BROAD' | 'PHRASE' | 'EXACT')}
+                  onValueChange={(value) =>
+                    setBatchMatchType(value as 'BROAD' | 'PHRASE' | 'EXACT')
+                  }
                   disabled={selectedKeywordIndexes.size === 0}
                 >
                   <SelectTrigger className="w-[140px]">
@@ -1313,10 +1417,15 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
 
             <div className="space-y-2">
               {config.keywords.map((keyword, index) => (
-                <div key={index} className="grid grid-cols-[24px_1fr_140px_100px_40px] gap-2 items-center">
+                <div
+                  key={index}
+                  className="grid grid-cols-[24px_1fr_140px_100px_40px] gap-2 items-center"
+                >
                   <Checkbox
                     checked={selectedKeywordIndexes.has(index)}
-                    onCheckedChange={(checked) => handleToggleKeywordSelect(index, checked === true)}
+                    onCheckedChange={(checked) =>
+                      handleToggleKeywordSelect(index, checked === true)
+                    }
                     aria-label={`选择关键词 ${keyword.text || `#${index + 1}`}`}
                   />
                   <Input
@@ -1339,17 +1448,15 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
                   </Select>
                   {keyword.searchVolume !== undefined ? (
                     <Badge variant="secondary" className="text-xs justify-center">
-                      <span className="text-blue-600 font-semibold">{formatSearchVolume(keyword.searchVolume)}</span>
+                      <span className="text-blue-600 font-semibold">
+                        {formatSearchVolume(keyword.searchVolume)}
+                      </span>
                       <span className="ml-1 text-gray-500">搜索量</span>
                     </Badge>
                   ) : (
                     <div />
                   )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveKeyword(index)}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => handleRemoveKeyword(index)}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -1362,7 +1469,9 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
               <div className="flex items-center gap-2">
                 <Label className="flex items-center">
                   否定关键词 (Negative Keywords)
-                  <Badge variant="secondary" className="ml-1">{config.negativeKeywords.length} 个</Badge>
+                  <Badge variant="secondary" className="ml-1">
+                    {config.negativeKeywords.length} 个
+                  </Badge>
                 </Label>
               </div>
 
@@ -1382,7 +1491,9 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
                   />
                   <Select
                     value={newNegativeKeywordMatchType}
-                    onValueChange={(value) => setNewNegativeKeywordMatchType(value as NegativeKeywordMatchType)}
+                    onValueChange={(value) =>
+                      setNewNegativeKeywordMatchType(value as NegativeKeywordMatchType)
+                    }
                   >
                     <SelectTrigger className="w-[108px] shrink-0">
                       <SelectValue />
@@ -1407,7 +1518,8 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
               <div className="flex flex-wrap gap-2">
                 {NEGATIVE_KEYWORD_MATCH_TYPES.map((matchType) => (
                   <Badge key={matchType} variant="outline" className="text-xs">
-                    {NEGATIVE_KEYWORD_MATCH_TYPE_LABELS[matchType]} {groupedNegativeKeywords[matchType].length}
+                    {NEGATIVE_KEYWORD_MATCH_TYPE_LABELS[matchType]}{' '}
+                    {groupedNegativeKeywords[matchType].length}
                   </Badge>
                 ))}
               </div>
@@ -1421,7 +1533,9 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
                     onDrop={(event) => handleNegativeKeywordDrop(event, matchType)}
                   >
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs font-medium">{NEGATIVE_KEYWORD_MATCH_TYPE_LABELS[matchType]}</span>
+                      <span className="text-xs font-medium">
+                        {NEGATIVE_KEYWORD_MATCH_TYPE_LABELS[matchType]}
+                      </span>
                       <Badge variant="outline">{groupedNegativeKeywords[matchType].length}</Badge>
                     </div>
 
@@ -1432,9 +1546,11 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
                             <div
                               key={keyword}
                               draggable
-                              onDragStart={(event) => handleNegativeKeywordDragStart(event, keyword)}
+                              onDragStart={(event) =>
+                                handleNegativeKeywordDragStart(event, keyword)
+                              }
                               onDragEnd={() => setDraggingNegativeKeyword(null)}
-                              className="group inline-flex cursor-grab items-center gap-1 rounded-full border bg-white px-2 py-1 text-[11px] shadow-sm"
+                              className="group inline-flex cursor-grab items-center gap-1 rounded-full border bg-white px-2 py-1 text-[11px] shadow-xs"
                             >
                               <GripVertical className="h-3 w-3 text-gray-400" />
                               <span>{keyword}</span>
@@ -1493,7 +1609,10 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
             <Button variant="outline" onClick={() => setBatchKeywordDialogOpen(false)}>
               取消
             </Button>
-            <Button onClick={handleBatchAddKeywords} disabled={parseBatchKeywords(batchKeywordInput).length === 0}>
+            <Button
+              onClick={handleBatchAddKeywords}
+              disabled={parseBatchKeywords(batchKeywordInput).length === 0}
+            >
               批量添加
             </Button>
           </DialogFooter>
@@ -1526,8 +1645,13 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
           {/* Ad Name - 使用统一命名规范 */}
           <div className="space-y-2">
             <Label>
-              广告名称 (Ad Name) <Badge variant="destructive" className="ml-1">必需</Badge>
-              <Badge variant="outline" className="ml-1">自动生成</Badge>
+              广告名称 (Ad Name){' '}
+              <Badge variant="destructive" className="ml-1">
+                必需
+              </Badge>
+              <Badge variant="outline" className="ml-1">
+                自动生成
+              </Badge>
             </Label>
             <Input
               value={config.adName}
@@ -1540,14 +1664,19 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>
-                标题 (Headlines) <Badge variant="destructive" className="ml-1">必须15个</Badge>
+                标题 (Headlines){' '}
+                <Badge variant="destructive" className="ml-1">
+                  必须15个
+                </Badge>
                 <Badge className="ml-1">{config.headlines.length}/15</Badge>
               </Label>
             </div>
             <div className="grid md:grid-cols-2 gap-3">
               {config.headlines.map((headline, index) => (
                 <div key={index} className="space-y-1">
-                  <div className="text-xs text-gray-500">标题 {index + 1} (Headline {index + 1}) ({headline.length}/30)</div>
+                  <div className="text-xs text-gray-500">
+                    标题 {index + 1} (Headline {index + 1}) ({headline.length}/30)
+                  </div>
                   <Input
                     value={headline}
                     onChange={(e) => handleHeadlineChange(index, e.target.value)}
@@ -1563,14 +1692,19 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>
-                描述 (Descriptions) <Badge variant="destructive" className="ml-1">必须4个</Badge>
+                描述 (Descriptions){' '}
+                <Badge variant="destructive" className="ml-1">
+                  必须4个
+                </Badge>
                 <Badge className="ml-1">{config.descriptions.length}/4</Badge>
               </Label>
             </div>
             <div className="grid md:grid-cols-2 gap-3">
               {config.descriptions.map((desc, index) => (
                 <div key={index} className="space-y-1">
-                  <div className="text-xs text-gray-500">描述 {index + 1} (Description {index + 1}) ({desc.length}/90)</div>
+                  <div className="text-xs text-gray-500">
+                    描述 {index + 1} (Description {index + 1}) ({desc.length}/90)
+                  </div>
                   <Textarea
                     value={desc}
                     onChange={(e) => handleDescriptionChange(index, e.target.value)}
@@ -1586,7 +1720,10 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
           {/* Final URLs */}
           <div className="space-y-2">
             <Label>
-              最终链接 (Final URL) <Badge variant="destructive" className="ml-1">必需</Badge>
+              最终链接 (Final URL){' '}
+              <Badge variant="destructive" className="ml-1">
+                必需
+              </Badge>
             </Label>
             <Input
               value={config.finalUrls[0]}
@@ -1608,7 +1745,10 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>
-                宣传语 (Callouts) <Badge variant="destructive" className="ml-1">至少1个</Badge>
+                宣传语 (Callouts){' '}
+                <Badge variant="destructive" className="ml-1">
+                  至少1个
+                </Badge>
               </Label>
               <Button onClick={handleAddCallout} variant="outline" size="sm">
                 <Plus className="w-4 h-4 mr-1" />
@@ -1624,11 +1764,7 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
                     placeholder={`宣传语 ${index + 1} (Callout ${index + 1})`}
                     maxLength={25}
                   />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveCallout(index)}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => handleRemoveCallout(index)}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -1640,7 +1776,10 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>
-                附加链接 (Sitelinks) <Badge variant="destructive" className="ml-1">至少1个</Badge>
+                附加链接 (Sitelinks){' '}
+                <Badge variant="destructive" className="ml-1">
+                  至少1个
+                </Badge>
               </Label>
               <Button onClick={handleAddSitelink} variant="outline" size="sm">
                 <Plus className="w-4 h-4 mr-1" />
@@ -1667,11 +1806,7 @@ export default function Step3CampaignConfig({ offer, selectedCreative, selectedA
                       placeholder="链接地址 (URL)"
                       className="flex-1"
                     />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveSitelink(index)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => handleRemoveSitelink(index)}>
                       <X className="w-4 h-4" />
                     </Button>
                   </div>

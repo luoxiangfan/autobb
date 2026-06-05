@@ -45,6 +45,5 @@ export const parseAffiliateLinksText = (text: string): string[] => {
   return mergeLinkFragments(fragments)
 }
 
-export const findInvalidAffiliateLinks = (links: string[]): string[] => (
+export const findInvalidAffiliateLinks = (links: string[]): string[] =>
   links.filter((link) => !AFFILIATE_LINK_SCHEME.test(link))
-)

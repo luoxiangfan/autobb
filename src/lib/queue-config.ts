@@ -17,12 +17,15 @@ export async function getQueueConfig(userId?: number): Promise<Partial<QueueConf
 
   try {
     // 1. 读取全局配置
-    const globalSettings = await db.query(`
+    const globalSettings = (await db.query(
+      `
       SELECT config_key, config_value
       FROM system_settings
       WHERE category = 'queue'
         AND user_id IS NULL
-    `, []) as Array<{ config_key: string; config_value: string }>
+    `,
+      []
+    )) as Array<{ config_key: string; config_value: string }>
 
     for (const setting of globalSettings) {
       switch (setting.config_key) {
@@ -46,12 +49,15 @@ export async function getQueueConfig(userId?: number): Promise<Partial<QueueConf
 
     // 2. 如果提供了userId，读取用户级配置（覆盖全局配置）
     if (userId !== undefined) {
-      const userSettings = await db.query(`
+      const userSettings = (await db.query(
+        `
         SELECT config_key, config_value
         FROM system_settings
         WHERE category = 'queue'
           AND user_id = ?
-      `, [userId]) as Array<{ config_key: string; config_value: string }>
+      `,
+        [userId]
+      )) as Array<{ config_key: string; config_value: string }>
 
       for (const setting of userSettings) {
         switch (setting.config_key) {
@@ -126,10 +132,13 @@ export async function saveQueueConfig(
       await db.exec(deleteSql, deleteParams)
 
       // 2. 插入新配置
-      await db.exec(`
+      await db.exec(
+        `
         INSERT INTO system_settings (category, config_key, config_value, user_id)
         VALUES ('queue', ?, ?, ?)
-      `, [setting.key, setting.value, effectiveUserId])
+      `,
+        [setting.key, setting.value, effectiveUserId]
+      )
     }
 
     console.log(`[QueueConfig] 保存配置成功 (userId=${userId}):`, config)
@@ -147,11 +156,14 @@ export async function initializeDefaultQueueConfig(): Promise<void> {
 
   try {
     // 检查是否已有配置
-    const existing = await db.queryOne(`
+    const existing = (await db.queryOne(
+      `
       SELECT COUNT(*) as count
       FROM system_settings
       WHERE category = 'queue'
-    `, []) as { count: number }
+    `,
+      []
+    )) as { count: number }
 
     if (existing.count > 0) {
       console.log('[QueueConfig] 配置已存在，跳过初始化')
@@ -168,10 +180,13 @@ export async function initializeDefaultQueueConfig(): Promise<void> {
     ]
 
     for (const setting of defaultSettings) {
-      await db.exec(`
+      await db.exec(
+        `
         INSERT INTO system_settings (category, config_key, config_value, user_id, description)
         VALUES ('queue', ?, ?, NULL, ?)
-      `, [setting.key, setting.value, setting.description])
+      `,
+        [setting.key, setting.value, setting.description]
+      )
     }
 
     console.log('[QueueConfig] 默认配置初始化成功')

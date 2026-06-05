@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,13 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  ArrowLeft,
-  RefreshCw,
-  TrendingUp,
-  TrendingDown,
-  Calendar
-} from 'lucide-react'
+import { ArrowLeft, RefreshCw, TrendingUp, TrendingDown, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/currency'
 
@@ -52,7 +46,11 @@ export default function TrendsPage() {
   const [days, setDays] = useState('7')
   const [trends, setTrends] = useState<TrendData[]>([])
   const [summary, setSummary] = useState<TrendSummary | null>(null)
-  const [currencyInfo, setCurrencyInfo] = useState<{ currency: string; currencies: string[]; hasMixedCurrency: boolean } | null>(null)
+  const [currencyInfo, setCurrencyInfo] = useState<{
+    currency: string
+    currencies: string[]
+    hasMixedCurrency: boolean
+  } | null>(null)
   const [reportCurrency, setReportCurrency] = useState<string | null>(null)
 
   const selectedCurrency = reportCurrency || currencyInfo?.currency || summary?.currency || 'USD'
@@ -60,18 +58,7 @@ export default function TrendsPage() {
   const formatMoney = (value: number, currencyCode: string = selectedCurrency) =>
     formatCurrency(value, currencyCode)
 
-  useEffect(() => {
-    fetchTrendsData()
-  }, [days, reportCurrency])
-
-  useEffect(() => {
-    if (!currencyInfo?.currency || !Array.isArray(currencyInfo.currencies)) return
-    if (!reportCurrency || !currencyInfo.currencies.includes(reportCurrency)) {
-      setReportCurrency(currencyInfo.currency)
-    }
-  }, [currencyInfo?.currency, currencyInfo?.currencies, reportCurrency])
-
-  const fetchTrendsData = async () => {
+  const fetchTrendsData = useCallback(async () => {
     try {
       setLoading(true)
       const currencyParam = reportCurrency ? `&currency=${encodeURIComponent(reportCurrency)}` : ''
@@ -98,7 +85,18 @@ export default function TrendsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [days, reportCurrency])
+
+  useEffect(() => {
+    fetchTrendsData()
+  }, [fetchTrendsData])
+
+  useEffect(() => {
+    if (!currencyInfo?.currency || !Array.isArray(currencyInfo.currencies)) return
+    if (!reportCurrency || !currencyInfo.currencies.includes(reportCurrency)) {
+      setReportCurrency(currencyInfo.currency)
+    }
+  }, [currencyInfo?.currency, currencyInfo?.currencies, reportCurrency])
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -116,8 +114,10 @@ export default function TrendsPage() {
   // 计算趋势变化
   const calculateTrend = (data: TrendData[], key: keyof TrendData) => {
     if (data.length < 2) return { change: 0, isUp: true }
-    const recent = data.slice(-3).reduce((sum, d) => sum + (d[key] as number), 0) / Math.min(3, data.length)
-    const earlier = data.slice(0, 3).reduce((sum, d) => sum + (d[key] as number), 0) / Math.min(3, data.length)
+    const recent =
+      data.slice(-3).reduce((sum, d) => sum + (d[key] as number), 0) / Math.min(3, data.length)
+    const earlier =
+      data.slice(0, 3).reduce((sum, d) => sum + (d[key] as number), 0) / Math.min(3, data.length)
     if (earlier === 0) return { change: recent > 0 ? 100 : 0, isUp: recent > 0 }
     const change = ((recent - earlier) / earlier) * 100
     return { change: Math.abs(change), isUp: change >= 0 }
@@ -160,7 +160,9 @@ export default function TrendsPage() {
               </SelectTrigger>
               <SelectContent>
                 {availableCurrencies.map((c: string) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -177,12 +179,7 @@ export default function TrendsPage() {
               <SelectItem value="60">最近60天</SelectItem>
             </SelectContent>
           </Select>
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="gap-2"
-          >
+          <Button variant="outline" onClick={handleRefresh} disabled={refreshing} className="gap-2">
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             刷新
           </Button>
@@ -200,8 +197,14 @@ export default function TrendsPage() {
                   {formatNumber(summary?.totalImpressions || 0)}
                 </p>
               </div>
-              <div className={`flex items-center gap-1 text-sm ${impressionsTrend.isUp ? 'text-green-600' : 'text-red-600'}`}>
-                {impressionsTrend.isUp ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+              <div
+                className={`flex items-center gap-1 text-sm ${impressionsTrend.isUp ? 'text-green-600' : 'text-red-600'}`}
+              >
+                {impressionsTrend.isUp ? (
+                  <TrendingUp className="w-4 h-4" />
+                ) : (
+                  <TrendingDown className="w-4 h-4" />
+                )}
                 {impressionsTrend.change.toFixed(1)}%
               </div>
             </div>
@@ -216,8 +219,14 @@ export default function TrendsPage() {
                   {formatNumber(summary?.totalClicks || 0)}
                 </p>
               </div>
-              <div className={`flex items-center gap-1 text-sm ${clicksTrend.isUp ? 'text-green-600' : 'text-red-600'}`}>
-                {clicksTrend.isUp ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+              <div
+                className={`flex items-center gap-1 text-sm ${clicksTrend.isUp ? 'text-green-600' : 'text-red-600'}`}
+              >
+                {clicksTrend.isUp ? (
+                  <TrendingUp className="w-4 h-4" />
+                ) : (
+                  <TrendingDown className="w-4 h-4" />
+                )}
                 {clicksTrend.change.toFixed(1)}%
               </div>
             </div>
@@ -232,8 +241,14 @@ export default function TrendsPage() {
                   {(summary?.avgCTR || 0).toFixed(2)}%
                 </p>
               </div>
-              <div className={`flex items-center gap-1 text-sm ${ctrTrend.isUp ? 'text-green-600' : 'text-red-600'}`}>
-                {ctrTrend.isUp ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+              <div
+                className={`flex items-center gap-1 text-sm ${ctrTrend.isUp ? 'text-green-600' : 'text-red-600'}`}
+              >
+                {ctrTrend.isUp ? (
+                  <TrendingUp className="w-4 h-4" />
+                ) : (
+                  <TrendingDown className="w-4 h-4" />
+                )}
                 {ctrTrend.change.toFixed(1)}%
               </div>
             </div>
@@ -248,8 +263,14 @@ export default function TrendsPage() {
                   {formatMoney(summary?.avgCPC || 0)}
                 </p>
               </div>
-              <div className={`flex items-center gap-1 text-sm ${!cpcTrend.isUp ? 'text-green-600' : 'text-red-600'}`}>
-                {!cpcTrend.isUp ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
+              <div
+                className={`flex items-center gap-1 text-sm ${!cpcTrend.isUp ? 'text-green-600' : 'text-red-600'}`}
+              >
+                {!cpcTrend.isUp ? (
+                  <TrendingDown className="w-4 h-4" />
+                ) : (
+                  <TrendingUp className="w-4 h-4" />
+                )}
                 {cpcTrend.change.toFixed(1)}%
               </div>
             </div>
@@ -270,24 +291,44 @@ export default function TrendsPage() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">日期</th>
-                    <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">展示</th>
-                    <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">点击</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">
+                      展示
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">
+                      点击
+                    </th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">CTR</th>
-                    <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">花费</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">
+                      花费
+                    </th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">CPC</th>
-                    <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">转化</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">
+                      转化
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {trends.map((row, i) => (
                     <tr key={i} className="border-b last:border-0 hover:bg-slate-50">
                       <td className="py-3 px-4 text-sm text-slate-900">{row.date}</td>
-                      <td className="py-3 px-4 text-sm text-slate-600 text-right">{formatNumber(row.impressions)}</td>
-                      <td className="py-3 px-4 text-sm text-slate-600 text-right">{formatNumber(row.clicks)}</td>
-                      <td className="py-3 px-4 text-sm text-slate-600 text-right">{row.ctr.toFixed(2)}%</td>
-                      <td className="py-3 px-4 text-sm text-slate-600 text-right">{formatMoney(row.cost)}</td>
-                      <td className="py-3 px-4 text-sm text-slate-600 text-right">{formatMoney(row.cpc)}</td>
-                      <td className="py-3 px-4 text-sm text-slate-600 text-right">{row.conversions}</td>
+                      <td className="py-3 px-4 text-sm text-slate-600 text-right">
+                        {formatNumber(row.impressions)}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-slate-600 text-right">
+                        {formatNumber(row.clicks)}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-slate-600 text-right">
+                        {row.ctr.toFixed(2)}%
+                      </td>
+                      <td className="py-3 px-4 text-sm text-slate-600 text-right">
+                        {formatMoney(row.cost)}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-slate-600 text-right">
+                        {formatMoney(row.cpc)}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-slate-600 text-right">
+                        {row.conversions}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

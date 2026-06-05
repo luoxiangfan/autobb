@@ -4,10 +4,10 @@ import { createProxyAxiosClient } from './proxy-axios'
  * 解析后的URL信息
  */
 export interface ResolvedUrl {
-  finalUrl: string            // 不含查询参数的URL
-  finalUrlSuffix: string       // 查询参数部分（用于Google Ads）
-  redirectChain: string[]      // 完整的重定向链
-  redirectCount: number        // 重定向次数
+  finalUrl: string // 不含查询参数的URL
+  finalUrlSuffix: string // 查询参数部分（用于Google Ads）
+  redirectChain: string[] // 完整的重定向链
+  redirectCount: number // 重定向次数
 }
 
 /**
@@ -71,7 +71,17 @@ function isSameDomain(a: string, b: string): boolean {
   return a.endsWith(`.${b}`) || b.endsWith(`.${a}`)
 }
 
-const TRACKING_TARGET_PARAM_NAMES = ['url', 'redirect', 'target', 'destination', 'goto', 'link', 'new', 'r', 'u']
+const TRACKING_TARGET_PARAM_NAMES = [
+  'url',
+  'redirect',
+  'target',
+  'destination',
+  'goto',
+  'link',
+  'new',
+  'r',
+  'u',
+]
 
 function extractTrackingWrapperSuffix(urlObj: URL, finalHost: string): string {
   if (!urlObj.search) return ''
@@ -177,7 +187,7 @@ export async function resolveAffiliateLink(
   }
 
   const redirectChain: string[] = [affiliateLink]
-  const maxRedirects = 15  // 最多跟踪15次重定向
+  const maxRedirects = 15 // 最多跟踪15次重定向
   let currentUrl = affiliateLink
   let redirectCount = 0
 
@@ -195,15 +205,15 @@ export async function resolveAffiliateLink(
 
       try {
         const response = await axiosClient.get(currentUrl, {
-          maxRedirects: 0,  // 禁用自动重定向
+          maxRedirects: 0, // 禁用自动重定向
           validateStatus: (status) => status >= 200 && status < 400, // 接受2xx和3xx
           headers: {
             'User-Agent':
               'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.5',
             'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache',
+            Pragma: 'no-cache',
           },
           // 跟随重定向但手动处理
           beforeRedirect: (_options: any, _responseDetails: any) => {
@@ -260,7 +270,9 @@ export async function resolveAffiliateLink(
     // 分离Final URL（不含查询参数）和Final URL suffix（查询参数部分）
     const finalUrl = `${urlObj.origin}${urlObj.pathname}`
     const finalUrlSuffix = urlObj.search.substring(1) // 去掉开头的'?'
-    const fallbackSuffix = finalUrlSuffix ? '' : extractSuffixFromRedirectChain(redirectChain, finalUrl)
+    const fallbackSuffix = finalUrlSuffix
+      ? ''
+      : extractSuffixFromRedirectChain(redirectChain, finalUrl)
     const resolvedSuffix = finalUrlSuffix || fallbackSuffix
 
     console.log(`重定向完成: ${redirectCount}次重定向`)
@@ -309,7 +321,7 @@ export async function resolveAffiliateLink(
 export function extractUrlIdentifier(finalUrl: string): string {
   try {
     const urlObj = new URL(finalUrl)
-    const pathSegments = urlObj.pathname.split('/').filter(s => s.length > 0)
+    const pathSegments = urlObj.pathname.split('/').filter((s) => s.length > 0)
 
     // 返回最后一个有意义的路径段
     return pathSegments.length > 0 ? pathSegments[pathSegments.length - 1] : ''

@@ -5,7 +5,7 @@
  * 使用shadcn/ui Card, Button, Badge组件
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, CheckCircle, Info, AlertTriangle, TrendingUp, Lightbulb } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -55,11 +55,11 @@ export function InsightsCard({ days }: InsightsCardProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     try {
       const response = await fetch(`/api/dashboard/insights?days=${days}`, {
-        credentials: 'include'
+        credentials: 'include',
       })
       if (!response.ok) {
         throw new Error('获取智能洞察失败')
@@ -73,11 +73,11 @@ export function InsightsCard({ days }: InsightsCardProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [days])
 
   useEffect(() => {
     fetchData()
-  }, [days])
+  }, [fetchData])
 
   const getInsightIcon = (type: string) => {
     switch (type) {
@@ -149,11 +149,7 @@ export function InsightsCard({ days }: InsightsCardProps) {
           </Badge>
         )
       case 'low':
-        return (
-          <Badge variant="secondary">
-            低优先级
-          </Badge>
-        )
+        return <Badge variant="secondary">低优先级</Badge>
       default:
         return null
     }
@@ -183,7 +179,11 @@ export function InsightsCard({ days }: InsightsCardProps) {
           <div className="bg-red-50 border border-red-200 rounded-lg p-6">
             <div className="flex items-center gap-3">
               <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
               </svg>
               <div>
                 <p className="text-red-800 font-medium">数据加载失败</p>
@@ -264,7 +264,9 @@ export function InsightsCard({ days }: InsightsCardProps) {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <h3 className={`font-semibold text-base ${colors.title}`}>{insight.title}</h3>
+                          <h3 className={`font-semibold text-base ${colors.title}`}>
+                            {insight.title}
+                          </h3>
                           {getPriorityBadge(insight.priority)}
                         </div>
                         <p className="text-sm text-foreground/80">{insight.message}</p>
@@ -338,8 +340,11 @@ export function InsightsCard({ days }: InsightsCardProps) {
                         <div>
                           <span className="text-muted-foreground">差异: </span>
                           <span
-                            className={`font-semibold ${(insight.metrics?.change ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                              }`}
+                            className={`font-semibold ${
+                              (insight.metrics?.change ?? 0) >= 0
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                            }`}
                           >
                             {(insight.metrics?.change ?? 0) >= 0 ? '+' : ''}
                             {safeToFixed(insight.metrics?.change ?? 0, 2)}

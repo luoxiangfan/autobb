@@ -28,9 +28,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('[POST /api/products/clear] failed:', error)
-    return NextResponse.json(
-      { error: error?.message || '清空商品失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '清空商品失败' }, { status: 500 })
   }
 }

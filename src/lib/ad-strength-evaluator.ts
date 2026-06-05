@@ -13,10 +13,7 @@
  * 输出：0-100分 + POOR/AVERAGE/GOOD/EXCELLENT评级
  */
 
-import type {
-  HeadlineAsset,
-  DescriptionAsset
-} from './ad-creative'
+import type { HeadlineAsset, DescriptionAsset } from './ad-creative'
 import {
   getKeywordSearchVolumesForPlannerContext,
   loadKeywordPoolExpandCredentialsForOffer,
@@ -45,7 +42,9 @@ import {
 
 const adStrengthConfigValidation = validateAdStrengthConfig()
 if (!adStrengthConfigValidation.valid) {
-  console.warn(`[AdStrength] invalid config detected: ${adStrengthConfigValidation.errors.join('; ')}`)
+  console.warn(
+    `[AdStrength] invalid config detected: ${adStrengthConfigValidation.errors.join('; ')}`
+  )
 }
 
 /**
@@ -85,7 +84,7 @@ export interface AdStrengthEvaluation {
     }
     completeness: {
       score: number // 0-10
-      weight: 0.10
+      weight: 0.1
       details: {
         assetCount: number // 0-8.4 资产数量
         characterCompliance: number // 0-5.6 字符合规性
@@ -127,7 +126,7 @@ export interface AdStrengthEvaluation {
     }
     competitivePositioning: {
       score: number // 0-10
-      weight: 0.10
+      weight: 0.1
       details: {
         priceAdvantage: number // 0-3 价格优势量化
         uniqueMarketPosition: number // 0-3 独特市场定位
@@ -171,45 +170,320 @@ export interface AdStrengthEvaluation {
  */
 const MULTILINGUAL_CTA_WORDS: Record<string, string[]> = {
   // 英语
-  en: ['shop now', 'buy now', 'get', 'order', 'learn more', 'sign up', 'try', 'start', 'subscribe', 'download', 'join', 'discover', 'explore', 'save', 'claim'],
+  en: [
+    'shop now',
+    'buy now',
+    'get',
+    'order',
+    'learn more',
+    'sign up',
+    'try',
+    'start',
+    'subscribe',
+    'download',
+    'join',
+    'discover',
+    'explore',
+    'save',
+    'claim',
+  ],
   // 中文
-  zh: ['立即购买', '马上购买', '立即下单', '获取', '了解更多', '注册', '免费试用', '开始', '订阅', '下载', '加入', '探索', '省钱', '领取', '抢购', '点击', '立刻'],
+  zh: [
+    '立即购买',
+    '马上购买',
+    '立即下单',
+    '获取',
+    '了解更多',
+    '注册',
+    '免费试用',
+    '开始',
+    '订阅',
+    '下载',
+    '加入',
+    '探索',
+    '省钱',
+    '领取',
+    '抢购',
+    '点击',
+    '立刻',
+  ],
   // 日语
-  ja: ['今すぐ購入', '購入する', 'ご注文', '詳しく', '登録', '試す', '始める', 'ダウンロード', '参加', '発見', '探索', '節約', '申し込む', 'クリック'],
+  ja: [
+    '今すぐ購入',
+    '購入する',
+    'ご注文',
+    '詳しく',
+    '登録',
+    '試す',
+    '始める',
+    'ダウンロード',
+    '参加',
+    '発見',
+    '探索',
+    '節約',
+    '申し込む',
+    'クリック',
+  ],
   // 韩语
-  ko: ['지금 구매', '구매하기', '주문', '자세히', '가입', '시작', '다운로드', '참여', '발견', '탐색', '절약', '신청', '클릭'],
+  ko: [
+    '지금 구매',
+    '구매하기',
+    '주문',
+    '자세히',
+    '가입',
+    '시작',
+    '다운로드',
+    '참여',
+    '발견',
+    '탐색',
+    '절약',
+    '신청',
+    '클릭',
+  ],
   // 德语
-  de: ['jetzt kaufen', 'kaufen', 'bestellen', 'mehr erfahren', 'anmelden', 'testen', 'starten', 'herunterladen', 'beitreten', 'entdecken', 'sparen', 'sichern', 'holen'],
+  de: [
+    'jetzt kaufen',
+    'kaufen',
+    'bestellen',
+    'mehr erfahren',
+    'anmelden',
+    'testen',
+    'starten',
+    'herunterladen',
+    'beitreten',
+    'entdecken',
+    'sparen',
+    'sichern',
+    'holen',
+  ],
   // 法语
-  fr: ['acheter maintenant', 'acheter', 'commander', 'en savoir plus', 'inscrivez-vous', 'essayer', 'commencer', 'télécharger', 'rejoindre', 'découvrir', 'économiser', 'obtenir'],
+  fr: [
+    'acheter maintenant',
+    'acheter',
+    'commander',
+    'en savoir plus',
+    'inscrivez-vous',
+    'essayer',
+    'commencer',
+    'télécharger',
+    'rejoindre',
+    'découvrir',
+    'économiser',
+    'obtenir',
+  ],
   // 西班牙语
-  es: ['comprar ahora', 'comprar', 'pedir', 'más información', 'registrarse', 'probar', 'empezar', 'descargar', 'unirse', 'descubrir', 'ahorrar', 'obtener', 'solicitar'],
+  es: [
+    'comprar ahora',
+    'comprar',
+    'pedir',
+    'más información',
+    'registrarse',
+    'probar',
+    'empezar',
+    'descargar',
+    'unirse',
+    'descubrir',
+    'ahorrar',
+    'obtener',
+    'solicitar',
+  ],
   // 意大利语
-  it: ['acquista ora', 'acquista', 'compra', 'ordina', 'scopri di più', 'iscriviti', 'prova', 'inizia', 'scarica', 'unisciti', 'scopri', 'risparmia', 'ottieni', 'richiedi'],
+  it: [
+    'acquista ora',
+    'acquista',
+    'compra',
+    'ordina',
+    'scopri di più',
+    'iscriviti',
+    'prova',
+    'inizia',
+    'scarica',
+    'unisciti',
+    'scopri',
+    'risparmia',
+    'ottieni',
+    'richiedi',
+  ],
   // 葡萄牙语
-  pt: ['comprar agora', 'comprar', 'pedir', 'saiba mais', 'inscreva-se', 'experimentar', 'começar', 'baixar', 'participar', 'descobrir', 'economizar', 'obter'],
+  pt: [
+    'comprar agora',
+    'comprar',
+    'pedir',
+    'saiba mais',
+    'inscreva-se',
+    'experimentar',
+    'começar',
+    'baixar',
+    'participar',
+    'descobrir',
+    'economizar',
+    'obter',
+  ],
   // 荷兰语
-  nl: ['nu kopen', 'kopen', 'bestellen', 'meer informatie', 'aanmelden', 'proberen', 'starten', 'downloaden', 'deelnemen', 'ontdekken', 'besparen', 'krijgen'],
+  nl: [
+    'nu kopen',
+    'kopen',
+    'bestellen',
+    'meer informatie',
+    'aanmelden',
+    'proberen',
+    'starten',
+    'downloaden',
+    'deelnemen',
+    'ontdekken',
+    'besparen',
+    'krijgen',
+  ],
   // 瑞典语
-  sv: ['köp nu', 'köp', 'beställ', 'läs mer', 'registrera', 'prova', 'börja', 'ladda ner', 'gå med', 'upptäck', 'spara', 'hämta'],
+  sv: [
+    'köp nu',
+    'köp',
+    'beställ',
+    'läs mer',
+    'registrera',
+    'prova',
+    'börja',
+    'ladda ner',
+    'gå med',
+    'upptäck',
+    'spara',
+    'hämta',
+  ],
   // 挪威语
-  no: ['kjøp nå', 'kjøp', 'bestill', 'les mer', 'registrer', 'prøv', 'start', 'last ned', 'bli med', 'oppdag', 'spar', 'få'],
+  no: [
+    'kjøp nå',
+    'kjøp',
+    'bestill',
+    'les mer',
+    'registrer',
+    'prøv',
+    'start',
+    'last ned',
+    'bli med',
+    'oppdag',
+    'spar',
+    'få',
+  ],
   // 丹麦语
-  da: ['køb nu', 'køb', 'bestil', 'læs mere', 'tilmeld', 'prøv', 'start', 'download', 'deltag', 'opdag', 'spar', 'få'],
+  da: [
+    'køb nu',
+    'køb',
+    'bestil',
+    'læs mere',
+    'tilmeld',
+    'prøv',
+    'start',
+    'download',
+    'deltag',
+    'opdag',
+    'spar',
+    'få',
+  ],
   // 芬兰语
-  fi: ['osta nyt', 'osta', 'tilaa', 'lue lisää', 'rekisteröidy', 'kokeile', 'aloita', 'lataa', 'liity', 'löydä', 'säästä', 'hanki'],
+  fi: [
+    'osta nyt',
+    'osta',
+    'tilaa',
+    'lue lisää',
+    'rekisteröidy',
+    'kokeile',
+    'aloita',
+    'lataa',
+    'liity',
+    'löydä',
+    'säästä',
+    'hanki',
+  ],
   // 波兰语
-  pl: ['kup teraz', 'kup', 'zamów', 'dowiedz się więcej', 'zarejestruj', 'wypróbuj', 'zacznij', 'pobierz', 'dołącz', 'odkryj', 'oszczędź', 'otrzymaj'],
+  pl: [
+    'kup teraz',
+    'kup',
+    'zamów',
+    'dowiedz się więcej',
+    'zarejestruj',
+    'wypróbuj',
+    'zacznij',
+    'pobierz',
+    'dołącz',
+    'odkryj',
+    'oszczędź',
+    'otrzymaj',
+  ],
   // 俄语
-  ru: ['купить сейчас', 'купить', 'заказать', 'узнать больше', 'зарегистрироваться', 'попробовать', 'начать', 'скачать', 'присоединиться', 'открыть', 'сэкономить', 'получить'],
+  ru: [
+    'купить сейчас',
+    'купить',
+    'заказать',
+    'узнать больше',
+    'зарегистрироваться',
+    'попробовать',
+    'начать',
+    'скачать',
+    'присоединиться',
+    'открыть',
+    'сэкономить',
+    'получить',
+  ],
   // 阿拉伯语
-  ar: ['اشتري الآن', 'اشتري', 'اطلب', 'اعرف المزيد', 'سجل', 'جرب', 'ابدأ', 'حمل', 'انضم', 'اكتشف', 'وفر', 'احصل'],
+  ar: [
+    'اشتري الآن',
+    'اشتري',
+    'اطلب',
+    'اعرف المزيد',
+    'سجل',
+    'جرب',
+    'ابدأ',
+    'حمل',
+    'انضم',
+    'اكتشف',
+    'وفر',
+    'احصل',
+  ],
   // 土耳其语
-  tr: ['şimdi satın al', 'satın al', 'sipariş ver', 'daha fazla bilgi', 'kaydol', 'dene', 'başla', 'indir', 'katıl', 'keşfet', 'tasarruf et', 'al'],
+  tr: [
+    'şimdi satın al',
+    'satın al',
+    'sipariş ver',
+    'daha fazla bilgi',
+    'kaydol',
+    'dene',
+    'başla',
+    'indir',
+    'katıl',
+    'keşfet',
+    'tasarruf et',
+    'al',
+  ],
   // 越南语
-  vi: ['mua ngay', 'mua', 'đặt hàng', 'tìm hiểu thêm', 'đăng ký', 'thử', 'bắt đầu', 'tải xuống', 'tham gia', 'khám phá', 'tiết kiệm', 'nhận'],
+  vi: [
+    'mua ngay',
+    'mua',
+    'đặt hàng',
+    'tìm hiểu thêm',
+    'đăng ký',
+    'thử',
+    'bắt đầu',
+    'tải xuống',
+    'tham gia',
+    'khám phá',
+    'tiết kiệm',
+    'nhận',
+  ],
   // 泰语
-  th: ['ซื้อเลย', 'ซื้อ', 'สั่งซื้อ', 'เรียนรู้เพิ่มเติม', 'สมัคร', 'ลอง', 'เริ่มต้น', 'ดาวน์โหลด', 'เข้าร่วม', 'ค้นพบ', 'ประหยัด', 'รับ']
+  th: [
+    'ซื้อเลย',
+    'ซื้อ',
+    'สั่งซื้อ',
+    'เรียนรู้เพิ่มเติม',
+    'สมัคร',
+    'ลอง',
+    'เริ่มต้น',
+    'ดาวน์โหลด',
+    'เข้าร่วม',
+    'ค้นพบ',
+    'ประหยัด',
+    'รับ',
+  ],
 }
 
 /**
@@ -217,45 +491,334 @@ const MULTILINGUAL_CTA_WORDS: Record<string, string[]> = {
  */
 const MULTILINGUAL_URGENCY_WORDS: Record<string, string[]> = {
   // 英语
-  en: ['limited', 'today', 'now', 'hurry', 'exclusive', 'only', 'sale ends', 'last chance', 'don\'t miss', 'ending soon', 'while supplies last', 'act fast', 'urgent', 'final'],
+  en: [
+    'limited',
+    'today',
+    'now',
+    'hurry',
+    'exclusive',
+    'only',
+    'sale ends',
+    'last chance',
+    "don't miss",
+    'ending soon',
+    'while supplies last',
+    'act fast',
+    'urgent',
+    'final',
+  ],
   // 中文
-  zh: ['限时', '今天', '立即', '马上', '独家', '仅剩', '即将结束', '最后机会', '不要错过', '抢购', '限量', '紧急', '最后', '倒计时', '仅限今日', '错过不再'],
+  zh: [
+    '限时',
+    '今天',
+    '立即',
+    '马上',
+    '独家',
+    '仅剩',
+    '即将结束',
+    '最后机会',
+    '不要错过',
+    '抢购',
+    '限量',
+    '紧急',
+    '最后',
+    '倒计时',
+    '仅限今日',
+    '错过不再',
+  ],
   // 日语
-  ja: ['限定', '今日', '今すぐ', '急いで', '独占', 'のみ', 'セール終了', '最後のチャンス', 'お見逃しなく', '間もなく終了', '在庫限り', '急げ', '緊急', '最終'],
+  ja: [
+    '限定',
+    '今日',
+    '今すぐ',
+    '急いで',
+    '独占',
+    'のみ',
+    'セール終了',
+    '最後のチャンス',
+    'お見逃しなく',
+    '間もなく終了',
+    '在庫限り',
+    '急げ',
+    '緊急',
+    '最終',
+  ],
   // 韩语
-  ko: ['한정', '오늘', '지금', '서둘러', '독점', '단독', '세일 종료', '마지막 기회', '놓치지 마세요', '곧 종료', '재고 한정', '급하게', '긴급', '마지막'],
+  ko: [
+    '한정',
+    '오늘',
+    '지금',
+    '서둘러',
+    '독점',
+    '단독',
+    '세일 종료',
+    '마지막 기회',
+    '놓치지 마세요',
+    '곧 종료',
+    '재고 한정',
+    '급하게',
+    '긴급',
+    '마지막',
+  ],
   // 德语
-  de: ['begrenzt', 'heute', 'jetzt', 'schnell', 'exklusiv', 'nur', 'angebot endet', 'letzte chance', 'nicht verpassen', 'bald endend', 'solange vorrat', 'eilen', 'dringend', 'letzte'],
+  de: [
+    'begrenzt',
+    'heute',
+    'jetzt',
+    'schnell',
+    'exklusiv',
+    'nur',
+    'angebot endet',
+    'letzte chance',
+    'nicht verpassen',
+    'bald endend',
+    'solange vorrat',
+    'eilen',
+    'dringend',
+    'letzte',
+  ],
   // 法语
-  fr: ['limité', 'aujourd\'hui', 'maintenant', 'vite', 'exclusif', 'seulement', 'offre expire', 'dernière chance', 'ne manquez pas', 'bientôt terminé', 'stock limité', 'urgent', 'final'],
+  fr: [
+    'limité',
+    "aujourd'hui",
+    'maintenant',
+    'vite',
+    'exclusif',
+    'seulement',
+    'offre expire',
+    'dernière chance',
+    'ne manquez pas',
+    'bientôt terminé',
+    'stock limité',
+    'urgent',
+    'final',
+  ],
   // 西班牙语
-  es: ['limitado', 'hoy', 'ahora', 'rápido', 'exclusivo', 'solo', 'oferta termina', 'última oportunidad', 'no te pierdas', 'pronto termina', 'existencias limitadas', 'urgente', 'final'],
+  es: [
+    'limitado',
+    'hoy',
+    'ahora',
+    'rápido',
+    'exclusivo',
+    'solo',
+    'oferta termina',
+    'última oportunidad',
+    'no te pierdas',
+    'pronto termina',
+    'existencias limitadas',
+    'urgente',
+    'final',
+  ],
   // 意大利语
-  it: ['limitato', 'oggi', 'ora', 'subito', 'esclusivo', 'solo', 'offerta scade', 'ultima occasione', 'non perdere', 'tempo limitato', 'scorte limitate', 'urgente', 'ultimi', 'pochi pezzi', 'a breve'],
+  it: [
+    'limitato',
+    'oggi',
+    'ora',
+    'subito',
+    'esclusivo',
+    'solo',
+    'offerta scade',
+    'ultima occasione',
+    'non perdere',
+    'tempo limitato',
+    'scorte limitate',
+    'urgente',
+    'ultimi',
+    'pochi pezzi',
+    'a breve',
+  ],
   // 葡萄牙语
-  pt: ['limitado', 'hoje', 'agora', 'rápido', 'exclusivo', 'apenas', 'oferta termina', 'última chance', 'não perca', 'em breve', 'estoque limitado', 'urgente', 'final'],
+  pt: [
+    'limitado',
+    'hoje',
+    'agora',
+    'rápido',
+    'exclusivo',
+    'apenas',
+    'oferta termina',
+    'última chance',
+    'não perca',
+    'em breve',
+    'estoque limitado',
+    'urgente',
+    'final',
+  ],
   // 荷兰语
-  nl: ['beperkt', 'vandaag', 'nu', 'snel', 'exclusief', 'alleen', 'aanbieding eindigt', 'laatste kans', 'mis het niet', 'binnenkort eindigend', 'beperkte voorraad', 'urgent', 'laatste'],
+  nl: [
+    'beperkt',
+    'vandaag',
+    'nu',
+    'snel',
+    'exclusief',
+    'alleen',
+    'aanbieding eindigt',
+    'laatste kans',
+    'mis het niet',
+    'binnenkort eindigend',
+    'beperkte voorraad',
+    'urgent',
+    'laatste',
+  ],
   // 瑞典语
-  sv: ['begränsad', 'idag', 'nu', 'snabbt', 'exklusiv', 'endast', 'erbjudandet slutar', 'sista chansen', 'missa inte', 'snart slut', 'begränsat lager', 'brådskande', 'sista'],
+  sv: [
+    'begränsad',
+    'idag',
+    'nu',
+    'snabbt',
+    'exklusiv',
+    'endast',
+    'erbjudandet slutar',
+    'sista chansen',
+    'missa inte',
+    'snart slut',
+    'begränsat lager',
+    'brådskande',
+    'sista',
+  ],
   // 挪威语
-  no: ['begrenset', 'i dag', 'nå', 'fort', 'eksklusiv', 'kun', 'tilbudet slutter', 'siste sjanse', 'ikke gå glipp av', 'snart slutt', 'begrenset lager', 'haster', 'siste'],
+  no: [
+    'begrenset',
+    'i dag',
+    'nå',
+    'fort',
+    'eksklusiv',
+    'kun',
+    'tilbudet slutter',
+    'siste sjanse',
+    'ikke gå glipp av',
+    'snart slutt',
+    'begrenset lager',
+    'haster',
+    'siste',
+  ],
   // 丹麦语
-  da: ['begrænset', 'i dag', 'nu', 'hurtigt', 'eksklusiv', 'kun', 'tilbuddet slutter', 'sidste chance', 'gå ikke glip af', 'snart slut', 'begrænset lager', 'haster', 'sidste'],
+  da: [
+    'begrænset',
+    'i dag',
+    'nu',
+    'hurtigt',
+    'eksklusiv',
+    'kun',
+    'tilbuddet slutter',
+    'sidste chance',
+    'gå ikke glip af',
+    'snart slut',
+    'begrænset lager',
+    'haster',
+    'sidste',
+  ],
   // 芬兰语
-  fi: ['rajoitettu', 'tänään', 'nyt', 'nopeasti', 'eksklusiivinen', 'vain', 'tarjous päättyy', 'viimeinen mahdollisuus', 'älä missaa', 'pian päättyy', 'rajoitettu varasto', 'kiireellinen', 'viimeinen'],
+  fi: [
+    'rajoitettu',
+    'tänään',
+    'nyt',
+    'nopeasti',
+    'eksklusiivinen',
+    'vain',
+    'tarjous päättyy',
+    'viimeinen mahdollisuus',
+    'älä missaa',
+    'pian päättyy',
+    'rajoitettu varasto',
+    'kiireellinen',
+    'viimeinen',
+  ],
   // 波兰语
-  pl: ['ograniczone', 'dziś', 'teraz', 'szybko', 'ekskluzywne', 'tylko', 'oferta kończy się', 'ostatnia szansa', 'nie przegap', 'wkrótce kończy się', 'ograniczone zapasy', 'pilne', 'ostatni'],
+  pl: [
+    'ograniczone',
+    'dziś',
+    'teraz',
+    'szybko',
+    'ekskluzywne',
+    'tylko',
+    'oferta kończy się',
+    'ostatnia szansa',
+    'nie przegap',
+    'wkrótce kończy się',
+    'ograniczone zapasy',
+    'pilne',
+    'ostatni',
+  ],
   // 俄语
-  ru: ['ограничено', 'сегодня', 'сейчас', 'быстро', 'эксклюзивно', 'только', 'акция заканчивается', 'последний шанс', 'не пропустите', 'скоро закончится', 'ограниченный запас', 'срочно', 'последний'],
+  ru: [
+    'ограничено',
+    'сегодня',
+    'сейчас',
+    'быстро',
+    'эксклюзивно',
+    'только',
+    'акция заканчивается',
+    'последний шанс',
+    'не пропустите',
+    'скоро закончится',
+    'ограниченный запас',
+    'срочно',
+    'последний',
+  ],
   // 阿拉伯语
-  ar: ['محدود', 'اليوم', 'الآن', 'سريعا', 'حصري', 'فقط', 'العرض ينتهي', 'الفرصة الأخيرة', 'لا تفوت', 'ينتهي قريبا', 'مخزون محدود', 'عاجل', 'أخير'],
+  ar: [
+    'محدود',
+    'اليوم',
+    'الآن',
+    'سريعا',
+    'حصري',
+    'فقط',
+    'العرض ينتهي',
+    'الفرصة الأخيرة',
+    'لا تفوت',
+    'ينتهي قريبا',
+    'مخزون محدود',
+    'عاجل',
+    'أخير',
+  ],
   // 土耳其语
-  tr: ['sınırlı', 'bugün', 'şimdi', 'hızlı', 'özel', 'sadece', 'teklif bitiyor', 'son şans', 'kaçırma', 'yakında bitiyor', 'sınırlı stok', 'acil', 'son'],
+  tr: [
+    'sınırlı',
+    'bugün',
+    'şimdi',
+    'hızlı',
+    'özel',
+    'sadece',
+    'teklif bitiyor',
+    'son şans',
+    'kaçırma',
+    'yakında bitiyor',
+    'sınırlı stok',
+    'acil',
+    'son',
+  ],
   // 越南语
-  vi: ['giới hạn', 'hôm nay', 'ngay', 'nhanh', 'độc quyền', 'chỉ', 'ưu đãi kết thúc', 'cơ hội cuối', 'đừng bỏ lỡ', 'sắp kết thúc', 'số lượng có hạn', 'khẩn cấp', 'cuối cùng'],
+  vi: [
+    'giới hạn',
+    'hôm nay',
+    'ngay',
+    'nhanh',
+    'độc quyền',
+    'chỉ',
+    'ưu đãi kết thúc',
+    'cơ hội cuối',
+    'đừng bỏ lỡ',
+    'sắp kết thúc',
+    'số lượng có hạn',
+    'khẩn cấp',
+    'cuối cùng',
+  ],
   // 泰语
-  th: ['จำกัด', 'วันนี้', 'ตอนนี้', 'เร็ว', 'พิเศษ', 'เท่านั้น', 'ข้อเสนอสิ้นสุด', 'โอกาสสุดท้าย', 'อย่าพลาด', 'ใกล้หมด', 'สต็อกจำกัด', 'ด่วน', 'สุดท้าย']
+  th: [
+    'จำกัด',
+    'วันนี้',
+    'ตอนนี้',
+    'เร็ว',
+    'พิเศษ',
+    'เท่านั้น',
+    'ข้อเสนอสิ้นสุด',
+    'โอกาสสุดท้าย',
+    'อย่าพลาด',
+    'ใกล้หมด',
+    'สต็อกจำกัด',
+    'ด่วน',
+    'สุดท้าย',
+  ],
 }
 
 /**
@@ -263,16 +826,30 @@ const MULTILINGUAL_URGENCY_WORDS: Record<string, string[]> = {
  */
 const FORBIDDEN_WORDS = [
   // 绝对化词汇
-  '100%', '最佳', '第一', '保证', '必须',
-  'best in the world', 'number one', 'guaranteed',
+  '100%',
+  '最佳',
+  '第一',
+  '保证',
+  '必须',
+  'best in the world',
+  'number one',
+  'guaranteed',
 
   // 夸大表述
-  '奇迹', '魔法', '神奇', '完美',
-  'miracle', 'magic', 'perfect',
+  '奇迹',
+  '魔法',
+  '神奇',
+  '完美',
+  'miracle',
+  'magic',
+  'perfect',
 
   // 误导性词汇
-  '免费', '赠送', '白拿',
-  'free money', 'get rich quick'
+  '免费',
+  '赠送',
+  '白拿',
+  'free money',
+  'get rich quick',
 ]
 
 function isCompetitivePositioningAiEnabled(): boolean {
@@ -280,7 +857,9 @@ function isCompetitivePositioningAiEnabled(): boolean {
 }
 
 function resolveLanguageKey(language?: string): string {
-  const normalized = String(language || 'en').trim().toLowerCase()
+  const normalized = String(language || 'en')
+    .trim()
+    .toLowerCase()
   if (!normalized) return 'en'
 
   const aliasMap: Record<string, string> = {
@@ -322,7 +901,7 @@ function containsLocalizedPhrase(
   const lowerText = String(text || '').toLowerCase()
   if (!lowerText) return false
   const words = [...(dict[languageKey] || []), ...(dict.en || [])]
-  return words.some(word => lowerText.includes(word.toLowerCase()))
+  return words.some((word) => lowerText.includes(word.toLowerCase()))
 }
 
 function escapeRegex(value: string): string {
@@ -378,7 +957,7 @@ function keywordAppearsInText(
     return false
   }
 
-  return keywordTokens.every(token => textTokenSet.has(token))
+  return keywordTokens.every((token) => textTokenSet.has(token))
 }
 
 function calculateKeywordDensityByToken(text: string, keywords: string[]): number {
@@ -397,7 +976,7 @@ function calculateKeywordDensityByToken(text: string, keywords: string[]): numbe
 
   if (keywordTokenSet.size === 0) return 0
 
-  const matches = words.filter(word => {
+  const matches = words.filter((word) => {
     if (keywordTokenSet.has(word)) return true
     const stem = stemKeywordToken(word)
     return stem.length >= 4 && keywordTokenSet.has(stem)
@@ -441,14 +1020,17 @@ export async function evaluateAdStrength(
     skipKeywordPoolExpandLoad?: boolean
   }
 ): Promise<AdStrengthEvaluation> {
-
   // 1. Diversity维度 (18%)
   const diversityRaw = calculateDiversity(headlines, descriptions)
   const diversityConfig = AD_STRENGTH_DIMENSION_CONFIG.diversity
   const diversity = {
-    score: mapRawScoreToTarget(diversityRaw.score, diversityConfig.rawMax, diversityConfig.targetMax),
+    score: mapRawScoreToTarget(
+      diversityRaw.score,
+      diversityConfig.rawMax,
+      diversityConfig.targetMax
+    ),
     weight: diversityConfig.weight,
-    details: diversityRaw.details
+    details: diversityRaw.details,
   }
 
   // 2. Relevance维度 (22%)
@@ -463,18 +1045,26 @@ export async function evaluateAdStrength(
   )
   const relevanceConfig = AD_STRENGTH_DIMENSION_CONFIG.relevance
   const relevance = {
-    score: mapRawScoreToTarget(relevanceRaw.score, relevanceConfig.rawMax, relevanceConfig.targetMax),
+    score: mapRawScoreToTarget(
+      relevanceRaw.score,
+      relevanceConfig.rawMax,
+      relevanceConfig.targetMax
+    ),
     weight: relevanceConfig.weight,
-    details: relevanceRaw.details
+    details: relevanceRaw.details,
   }
 
   // 3. Completeness维度 (10%)
   const completenessRaw = calculateCompleteness(headlines, descriptions)
   const completenessConfig = AD_STRENGTH_DIMENSION_CONFIG.completeness
   const completeness = {
-    score: mapRawScoreToTarget(completenessRaw.score, completenessConfig.rawMax, completenessConfig.targetMax),
+    score: mapRawScoreToTarget(
+      completenessRaw.score,
+      completenessConfig.rawMax,
+      completenessConfig.targetMax
+    ),
     weight: completenessConfig.weight,
-    details: completenessRaw.details
+    details: completenessRaw.details,
   }
 
   // 4. Quality维度 (14%)
@@ -489,16 +1079,20 @@ export async function evaluateAdStrength(
   const quality = {
     score: mapRawScoreToTarget(qualityRaw.score, qualityConfig.rawMax, qualityConfig.targetMax),
     weight: qualityConfig.weight,
-    details: qualityRaw.details
+    details: qualityRaw.details,
   }
 
   // 5. Compliance维度 (8%)
   const complianceRaw = calculateCompliance(headlines, descriptions)
   const complianceConfig = AD_STRENGTH_DIMENSION_CONFIG.compliance
   const compliance = {
-    score: mapRawScoreToTarget(complianceRaw.score, complianceConfig.rawMax, complianceConfig.targetMax),
+    score: mapRawScoreToTarget(
+      complianceRaw.score,
+      complianceConfig.rawMax,
+      complianceConfig.targetMax
+    ),
     weight: complianceConfig.weight,
-    details: complianceRaw.details
+    details: complianceRaw.details,
   }
 
   // 6. Brand Search Volume维度 (18%) - [NEW] 融入品牌关键词搜索量
@@ -520,7 +1114,7 @@ export async function evaluateAdStrength(
       brandSearchVolumeConfig.targetMax
     ),
     weight: brandSearchVolumeConfig.weight,
-    details: brandSearchVolumeRaw.details
+    details: brandSearchVolumeRaw.details,
   }
 
   // 7. Competitive Positioning维度 (10%) - 新增
@@ -542,7 +1136,14 @@ export async function evaluateAdStrength(
   }
 
   // 计算总分（100分制）
-  const overallScore = diversity.score + relevance.score + completeness.score + quality.score + compliance.score + brandSearchVolume.score + competitivePositioning.score
+  const overallScore =
+    diversity.score +
+    relevance.score +
+    completeness.score +
+    quality.score +
+    compliance.score +
+    brandSearchVolume.score +
+    competitivePositioning.score
 
   // 确定评级
   const rating = scoreToRating(overallScore)
@@ -580,10 +1181,10 @@ export async function evaluateAdStrength(
       quality,
       compliance,
       brandSearchVolume,
-      competitivePositioning
+      competitivePositioning,
     },
     copyIntentMetrics,
-    suggestions
+    suggestions,
   }
 }
 
@@ -592,7 +1193,7 @@ export async function evaluateAdStrength(
  */
 function calculateDiversity(headlines: HeadlineAsset[], descriptions: DescriptionAsset[]) {
   // 1.1 资产类型分布 (0-8分)
-  const headlineTypes = new Set(headlines.map(h => h.type).filter(Boolean))
+  const headlineTypes = new Set(headlines.map((h) => h.type).filter(Boolean))
   let typeDistribution = Math.min(8, headlineTypes.size * 1.6) // 5种类型 * 1.6分/种
 
   // 优化：如果所有headlines都没有type属性，使用启发式规则估算多样性
@@ -600,55 +1201,63 @@ function calculateDiversity(headlines: HeadlineAsset[], descriptions: Descriptio
     console.log('⚠️ Headlines缺少type属性，使用启发式规则评估多样性')
 
     // 基于文本内容的多样性评估
-    const hasNumbers = headlines.filter(h => /\d/.test(h.text)).length
-    const hasCTA = headlines.filter(h => /shop|buy|get|order|now/i.test(h.text)).length
-    const hasUrgency = headlines.filter(h => /limited|today|only|exclusive/i.test(h.text)).length
-    const hasBrand = headlines.filter(h => h.text.length < 25).length // 短标题通常是品牌类
+    const hasNumbers = headlines.filter((h) => /\d/.test(h.text)).length
+    const hasCTA = headlines.filter((h) => /shop|buy|get|order|now/i.test(h.text)).length
+    const hasUrgency = headlines.filter((h) => /limited|today|only|exclusive/i.test(h.text)).length
+    const hasBrand = headlines.filter((h) => h.text.length < 25).length // 短标题通常是品牌类
 
     // 估算类型数量（每满足一个特征算1种类型）
-    const estimatedTypes = [hasNumbers > 0, hasCTA > 0, hasUrgency > 0, hasBrand > 3].filter(Boolean).length
+    const estimatedTypes = [hasNumbers > 0, hasCTA > 0, hasUrgency > 0, hasBrand > 3].filter(
+      Boolean
+    ).length
     typeDistribution = Math.min(8, estimatedTypes * 1.6 + 1.6) // 基础分1.6分
 
     console.log(`   估算类型数: ${estimatedTypes}, 多样性得分: ${typeDistribution}`)
   } else if (headlineTypes.size > 0) {
-    console.log(`✅ Headlines类型分布: ${Array.from(headlineTypes).join(', ')} (${headlineTypes.size}种)`)
+    console.log(
+      `✅ Headlines类型分布: ${Array.from(headlineTypes).join(', ')} (${headlineTypes.size}种)`
+    )
   }
 
   // 1.2 长度梯度分布 (0-8分)
   const lengthCategories = {
-    short: headlines.filter(h => (h.length || h.text.length) <= 20).length,
-    medium: headlines.filter(h => {
+    short: headlines.filter((h) => (h.length || h.text.length) <= 20).length,
+    medium: headlines.filter((h) => {
       const len = h.length || h.text.length
       return len > 20 && len <= 25
     }).length,
-    long: headlines.filter(h => (h.length || h.text.length) > 25).length
+    long: headlines.filter((h) => (h.length || h.text.length) > 25).length,
   }
 
-  console.log(`📏 长度分布: 短=${lengthCategories.short}, 中=${lengthCategories.medium}, 长=${lengthCategories.long}`)
+  console.log(
+    `📏 长度分布: 短=${lengthCategories.short}, 中=${lengthCategories.medium}, 长=${lengthCategories.long}`
+  )
 
   // 理想：短5 中5 长5，每个分类达标得2.67分
   const lengthScore =
-    Math.min(2.67, lengthCategories.short / 5 * 2.67) +
-    Math.min(2.67, lengthCategories.medium / 5 * 2.67) +
-    Math.min(2.66, lengthCategories.long / 5 * 2.66)
+    Math.min(2.67, (lengthCategories.short / 5) * 2.67) +
+    Math.min(2.67, (lengthCategories.medium / 5) * 2.67) +
+    Math.min(2.66, (lengthCategories.long / 5) * 2.66)
 
   // 1.3 文本独特性 (0-4分)
-  const allTexts = [...headlines.map(h => h.text), ...descriptions.map(d => d.text)]
+  const allTexts = [...headlines.map((h) => h.text), ...descriptions.map((d) => d.text)]
   const uniqueness = calculateTextUniqueness(allTexts)
   const textUniqueness = uniqueness * 4 // 0-1 转为 0-4
 
-  console.log(`🎨 文本独特性: ${(uniqueness * 100).toFixed(1)}% (得分: ${textUniqueness.toFixed(1)})`)
+  console.log(
+    `🎨 文本独特性: ${(uniqueness * 100).toFixed(1)}% (得分: ${textUniqueness.toFixed(1)})`
+  )
 
   const totalScore = typeDistribution + lengthScore + textUniqueness
 
   return {
     score: Math.min(20, Math.round(totalScore)), // 确保不超过最大值20
-    weight: 0.20 as const,
+    weight: 0.2 as const,
     details: {
       typeDistribution: Math.round(typeDistribution),
       lengthDistribution: Math.round(lengthScore),
-      textUniqueness: Math.round(textUniqueness * 10) / 10
-    }
+      textUniqueness: Math.round(textUniqueness * 10) / 10,
+    },
   }
 }
 
@@ -671,12 +1280,12 @@ function calculateRelevance(
   brandName?: string,
   category?: string
 ) {
-  const allTexts = [...headlines.map(h => h.text), ...descriptions.map(d => d.text)].join(' ')
+  const allTexts = [...headlines.map((h) => h.text), ...descriptions.map((d) => d.text)].join(' ')
   const normalizedAllTexts = normalizeForKeywordMatching(allTexts)
   const allTextTokenSet = new Set(tokenizeForKeywordMatching(allTexts))
 
   // 2.1 关键词覆盖率 (0-10分) - KISS: 词边界/词元匹配，避免子串误命中
-  const matchedKeywords = keywords.filter(kw => {
+  const matchedKeywords = keywords.filter((kw) => {
     return keywordAppearsInText(kw, normalizedAllTexts, allTextTokenSet)
   })
 
@@ -685,7 +1294,7 @@ function calculateRelevance(
 
   // 调试输出
   if (coverageRatio < 0.8) {
-    const unmatchedKeywords = keywords.filter(kw => !matchedKeywords.includes(kw))
+    const unmatchedKeywords = keywords.filter((kw) => !matchedKeywords.includes(kw))
     console.log(`⚠️ 关键词覆盖率偏低: ${(coverageRatio * 100).toFixed(0)}%`)
     console.log(`   匹配成功: ${matchedKeywords.join(', ')}`)
     console.log(`   匹配失败: ${unmatchedKeywords.join(', ')}`)
@@ -693,10 +1302,10 @@ function calculateRelevance(
 
   // 2.2 关键词嵌入率 (0-4分) - v3.3 CTR优化新增
   // 目标：8/15 headlines (53%+) 包含关键词
-  const headlinesWithKeyword = headlines.filter(h => {
+  const headlinesWithKeyword = headlines.filter((h) => {
     const normalizedHeadline = normalizeForKeywordMatching(h.text)
     const headlineTokenSet = new Set(tokenizeForKeywordMatching(h.text))
-    return keywords.some(kw => keywordAppearsInText(kw, normalizedHeadline, headlineTokenSet))
+    return keywords.some((kw) => keywordAppearsInText(kw, normalizedHeadline, headlineTokenSet))
   })
 
   const embeddingRate = headlines.length > 0 ? headlinesWithKeyword.length / headlines.length : 0
@@ -714,7 +1323,9 @@ function calculateRelevance(
     keywordEmbedding = 1
   }
 
-  console.log(`🔑 关键词嵌入率: ${headlinesWithKeyword.length}/${headlines.length} (${(embeddingRate * 100).toFixed(0)}%)`)
+  console.log(
+    `🔑 关键词嵌入率: ${headlinesWithKeyword.length}/${headlines.length} (${(embeddingRate * 100).toFixed(0)}%)`
+  )
   if (embeddingRate < targetEmbeddingRate) {
     console.log(`   ⚠️ 低于目标 ${(targetEmbeddingRate * 100).toFixed(0)}%，建议增加关键词嵌入`)
   } else {
@@ -724,9 +1335,12 @@ function calculateRelevance(
   // 2.3 关键词自然度 (0-6分)
   // 检查关键词是否自然融入（非堆砌）
   const keywordDensity = calculateKeywordDensityByToken(allTexts, keywords)
-  const naturalness = keywordDensity < AD_STRENGTH_RELEVANCE_THRESHOLDS.naturalnessDensityGood
-    ? 6
-    : (keywordDensity < AD_STRENGTH_RELEVANCE_THRESHOLDS.naturalnessDensityOk ? 4 : 2)
+  const naturalness =
+    keywordDensity < AD_STRENGTH_RELEVANCE_THRESHOLDS.naturalnessDensityGood
+      ? 6
+      : keywordDensity < AD_STRENGTH_RELEVANCE_THRESHOLDS.naturalnessDensityOk
+        ? 4
+        : 2
 
   // 2.4 单品聚焦度 (0-4分) - v4.18新增
   // 检查创意是否100%聚焦单品，排除其他品类
@@ -741,11 +1355,16 @@ function calculateRelevance(
     category
   )
 
-  const totalScore = keywordCoverage + keywordEmbedding + naturalness + productFocus.score - brandConsistencyPenalty.penalty
+  const totalScore =
+    keywordCoverage +
+    keywordEmbedding +
+    naturalness +
+    productFocus.score -
+    brandConsistencyPenalty.penalty
 
   return {
     score: Math.min(20, Math.max(0, Math.round(totalScore))), // 确保在0-20范围内
-    weight: 0.20 as const,
+    weight: 0.2 as const,
     details: {
       keywordCoverage: Math.round(keywordCoverage),
       keywordEmbedding: Math.round(keywordEmbedding), // v3.3新增
@@ -753,8 +1372,8 @@ function calculateRelevance(
       keywordNaturalness: Math.round(naturalness),
       productFocus: Math.round(productFocus.score), // v4.18新增
       brandConsistencyPenalty: brandConsistencyPenalty.penalty, // v4.19新增
-      brandConsistencyIssues: brandConsistencyPenalty.issues // v4.19新增
-    }
+      brandConsistencyIssues: brandConsistencyPenalty.issues, // v4.19新增
+    },
   }
 }
 
@@ -781,18 +1400,29 @@ function calculateBrandContentConsistency(
   const brandLower = brandName.toLowerCase().trim()
 
   // 合并所有文本
-  const allTexts = [
-    ...headlines.map(h => h.text),
-    ...descriptions.map(d => d.text)
-  ].join(' ')
+  const allTexts = [...headlines.map((h) => h.text), ...descriptions.map((d) => d.text)].join(' ')
   const allTextsLower = allTexts.toLowerCase()
 
   // 已知的其他品牌名（从历史问题案例中提取）
   const knownOtherBrands = [
-    'lilysilk', 'u-share', 'ushare', 'tommy hilfiger', 'calvin klein',
-    'gucci', 'prada', 'nike', 'adidas', 'apple', 'samsung', 'sony',
-    'lg', 'philips', 'panasonic', 'bose', 'jbl'
-  ].filter(b => !brandLower.includes(b) && !b.includes(brandLower))
+    'lilysilk',
+    'u-share',
+    'ushare',
+    'tommy hilfiger',
+    'calvin klein',
+    'gucci',
+    'prada',
+    'nike',
+    'adidas',
+    'apple',
+    'samsung',
+    'sony',
+    'lg',
+    'philips',
+    'panasonic',
+    'bose',
+    'jbl',
+  ].filter((b) => !brandLower.includes(b) && !b.includes(brandLower))
 
   // 1. 检测创意中是否提到了其他品牌
   for (const otherBrand of knownOtherBrands) {
@@ -823,14 +1453,38 @@ function calculateBrandContentConsistency(
 
   // 3. 检测类别-内容不匹配
   // 已知的电子产品品牌
-  const electronicsBrands = ['anker', 'reolink', 'eufy', 'soundcore', 'nebula', 'ecoflow', 'jackery']
+  const electronicsBrands = [
+    'anker',
+    'reolink',
+    'eufy',
+    'soundcore',
+    'nebula',
+    'ecoflow',
+    'jackery',
+  ]
 
   // 明显不相关的产品类别关键词
   const nonElectronicsKeywords = [
-    'pajama', 'sleepwear', 'silk', 'clothing', 'apparel', 'fashion',
-    'picture frame', 'photo frame', 'home decor', 'furniture',
-    'jewelry', 'cosmetics', 'beauty', 'skincare', 'perfume',
-    'mulberry', 'cashmere', 'cotton', 'linen', 'wool'
+    'pajama',
+    'sleepwear',
+    'silk',
+    'clothing',
+    'apparel',
+    'fashion',
+    'picture frame',
+    'photo frame',
+    'home decor',
+    'furniture',
+    'jewelry',
+    'cosmetics',
+    'beauty',
+    'skincare',
+    'perfume',
+    'mulberry',
+    'cashmere',
+    'cotton',
+    'linen',
+    'wool',
   ]
 
   if (electronicsBrands.includes(brandLower)) {
@@ -846,8 +1500,15 @@ function calculateBrandContentConsistency(
   if (category && electronicsBrands.includes(brandLower)) {
     const categoryLower = category.toLowerCase()
     const nonElectronicsCategories = [
-      'pajama', 'sleepwear', 'clothing', 'apparel', 'fashion',
-      'picture frame', 'photo frame', 'home decor', 'furniture'
+      'pajama',
+      'sleepwear',
+      'clothing',
+      'apparel',
+      'fashion',
+      'picture frame',
+      'photo frame',
+      'home decor',
+      'furniture',
     ]
     for (const cat of nonElectronicsCategories) {
       if (categoryLower.includes(cat)) {
@@ -861,13 +1522,13 @@ function calculateBrandContentConsistency(
   // 输出调试信息
   if (penalty > 0) {
     console.warn(`⚠️ 品牌-内容一致性检查失败:`)
-    issues.forEach(issue => console.warn(`   - ${issue}`))
+    issues.forEach((issue) => console.warn(`   - ${issue}`))
     console.warn(`   总扣分: ${penalty}`)
   }
 
   return {
     penalty: Math.min(penalty, 20), // 最多扣20分
-    issues
+    issues,
   }
 }
 
@@ -878,24 +1539,26 @@ function calculateCompleteness(headlines: HeadlineAsset[], descriptions: Descrip
   // 3.1 资产数量 (0-9分)
   const headlineCount = Math.min(15, headlines.length)
   const descriptionCount = Math.min(4, descriptions.length)
-  const assetCount = (headlineCount / 15 * 6.75) + (descriptionCount / 4 * 2.25) // Headlines占6.75分，Descriptions占2.25分
+  const assetCount = (headlineCount / 15) * 6.75 + (descriptionCount / 4) * 2.25 // Headlines占6.75分，Descriptions占2.25分
 
   // 3.2 字符合规性 (0-6分)
-  const headlineCompliance = headlines.length > 0
-    ? headlines.filter(h => {
-        const len = h.length || h.text.length
-        return len >= 10 && len <= 30
-      }).length / headlines.length
-    : 0
+  const headlineCompliance =
+    headlines.length > 0
+      ? headlines.filter((h) => {
+          const len = h.length || h.text.length
+          return len >= 10 && len <= 30
+        }).length / headlines.length
+      : 0
 
-  const descriptionCompliance = descriptions.length > 0
-    ? descriptions.filter(d => {
-        const len = d.length || d.text.length
-        return len >= 60 && len <= 90
-      }).length / descriptions.length
-    : 0
+  const descriptionCompliance =
+    descriptions.length > 0
+      ? descriptions.filter((d) => {
+          const len = d.length || d.text.length
+          return len >= 60 && len <= 90
+        }).length / descriptions.length
+      : 0
 
-  const characterCompliance = (headlineCompliance * 3.75) + (descriptionCompliance * 2.25)
+  const characterCompliance = headlineCompliance * 3.75 + descriptionCompliance * 2.25
 
   const totalScore = assetCount + characterCompliance
 
@@ -904,8 +1567,8 @@ function calculateCompleteness(headlines: HeadlineAsset[], descriptions: Descrip
     weight: 0.15 as const,
     details: {
       assetCount: Math.round(assetCount),
-      characterCompliance: Math.round(characterCompliance)
-    }
+      characterCompliance: Math.round(characterCompliance),
+    },
   }
 }
 
@@ -928,20 +1591,20 @@ function calculateQuality(
   const languageKey = resolveLanguageKey(targetLanguage)
 
   // 4.1 数字使用 (0-4分) - 降低权重，从5分改为4分
-  const headlinesWithNumbers = headlines.filter(h => h.hasNumber || /\d/.test(h.text)).length
-  const numberUsage = Math.min(4, headlinesWithNumbers / 3 * 4) // 至少3个含数字得满分
+  const headlinesWithNumbers = headlines.filter((h) => h.hasNumber || /\d/.test(h.text)).length
+  const numberUsage = Math.min(4, (headlinesWithNumbers / 3) * 4) // 至少3个含数字得满分
 
   // 4.2 CTA存在 (0-4分) - 降低权重，从5分改为4分
-  const descriptionsWithCTA = descriptions.filter(d =>
-    d.hasCTA || containsLocalizedPhrase(d.text, MULTILINGUAL_CTA_WORDS, languageKey)
+  const descriptionsWithCTA = descriptions.filter(
+    (d) => d.hasCTA || containsLocalizedPhrase(d.text, MULTILINGUAL_CTA_WORDS, languageKey)
   ).length
-  const ctaPresence = Math.min(4, descriptionsWithCTA / 2 * 4) // 至少2个含CTA得满分
+  const ctaPresence = Math.min(4, (descriptionsWithCTA / 2) * 4) // 至少2个含CTA得满分
 
   // 4.3 紧迫感表达 (0-3分) - 降低权重，从5分改为3分
-  const headlinesWithUrgency = headlines.filter(h =>
-    h.hasUrgency || containsLocalizedPhrase(h.text, MULTILINGUAL_URGENCY_WORDS, languageKey)
+  const headlinesWithUrgency = headlines.filter(
+    (h) => h.hasUrgency || containsLocalizedPhrase(h.text, MULTILINGUAL_URGENCY_WORDS, languageKey)
   ).length
-  const urgencyExpression = Math.min(3, headlinesWithUrgency / 2 * 3) // 至少2个含紧迫感得满分
+  const urgencyExpression = Math.min(3, (headlinesWithUrgency / 2) * 3) // 至少2个含紧迫感得满分
 
   // 4.4 差异化表达 (0-4分) - 新增维度
   const differentiation = calculateDifferentiation(headlines, descriptions, brandName, productData)
@@ -951,7 +1614,9 @@ function calculateQuality(
   console.log(`📊 Quality子维度:`)
   console.log(`   - 数字使用: ${numberUsage.toFixed(1)}/4 (${headlinesWithNumbers}个标题含数字)`)
   console.log(`   - CTA存在: ${ctaPresence.toFixed(1)}/4 (${descriptionsWithCTA}个描述含CTA)`)
-  console.log(`   - 紧迫感: ${urgencyExpression.toFixed(1)}/3 (${headlinesWithUrgency}个标题含紧迫感)`)
+  console.log(
+    `   - 紧迫感: ${urgencyExpression.toFixed(1)}/3 (${headlinesWithUrgency}个标题含紧迫感)`
+  )
   console.log(`   - 差异化: ${differentiation.toFixed(1)}/4`)
 
   return {
@@ -961,8 +1626,8 @@ function calculateQuality(
       numberUsage: Math.round(numberUsage * 10) / 10,
       ctaPresence: Math.round(ctaPresence * 10) / 10,
       urgencyExpression: Math.round(urgencyExpression * 10) / 10,
-      differentiation: Math.round(differentiation * 10) / 10
-    }
+      differentiation: Math.round(differentiation * 10) / 10,
+    },
   }
 }
 
@@ -977,12 +1642,15 @@ function calculateDifferentiation(
   _brandName?: string,
   _productData?: any
 ): number {
-  const allTexts = [...headlines.map(h => h.text), ...descriptions.map(d => d.text)].join(' ').toLowerCase()
+  const allTexts = [...headlines.map((h) => h.text), ...descriptions.map((d) => d.text)]
+    .join(' ')
+    .toLowerCase()
   let score = 0
 
   // 1. 技术规格提及 (+1.5分)
   // 检查是否提到具体的技术参数（4K, HD, AI, WiFi, Bluetooth, 5G, LTE等）
-  const techSpecs = /4k|8k|hd|uhd|ai|wifi|bluetooth|5g|lte|4g|poe|nvr|dvr|fps|mp|ghz|mah|watts|ip\d{2}/i
+  const techSpecs =
+    /4k|8k|hd|uhd|ai|wifi|bluetooth|5g|lte|4g|poe|nvr|dvr|fps|mp|ghz|mah|watts|ip\d{2}/i
   const hasTechSpecs = techSpecs.test(allTexts)
   if (hasTechSpecs) {
     score += 1.5
@@ -991,7 +1659,8 @@ function calculateDifferentiation(
 
   // 2. 独特功能提及 (+1.5分)
   // 检查是否提到独特的功能特性（no subscription, solar, battery, wireless, waterproof, night vision等）
-  const uniqueFeatures = /no subscription|subscription.free|solar.powered|battery.powered|wireless|waterproof|night.vision|motion.detection|two.way.audio|cloud.storage|local.storage|voice.control|smart.home/i
+  const uniqueFeatures =
+    /no subscription|subscription.free|solar.powered|battery.powered|wireless|waterproof|night.vision|motion.detection|two.way.audio|cloud.storage|local.storage|voice.control|smart.home/i
   const hasUniqueFeatures = uniqueFeatures.test(allTexts)
   if (hasUniqueFeatures) {
     score += 1.5
@@ -1005,16 +1674,16 @@ function calculateDifferentiation(
     /^shop now$/i,
     /^get yours$/i,
     /^trusted [\w\s]+$/i, // "Trusted Security Cameras"
-    /^best [\w\s]+$/i,    // "Best Quality Products"
+    /^best [\w\s]+$/i, // "Best Quality Products"
     /^high quality$/i,
     /^premium [\w\s]+$/i,
     /^top rated$/i,
-    /^official site$/i    // "Official Site"
+    /^official site$/i, // "Official Site"
   ]
 
-  const genericHeadlineCount = headlines.filter(h => {
+  const genericHeadlineCount = headlines.filter((h) => {
     const text = h.text.trim()
-    return genericPhrases.some(pattern => pattern.test(text))
+    return genericPhrases.some((pattern) => pattern.test(text))
   }).length
 
   if (genericHeadlineCount === 0) {
@@ -1055,7 +1724,7 @@ async function calculateCompetitivePositioning(
   options?: { skipAiEnhancement?: boolean }
 ): Promise<{
   score: number
-  weight: 0.10
+  weight: 0.1
   details: {
     priceAdvantage: number
     uniqueMarketPosition: number
@@ -1063,7 +1732,7 @@ async function calculateCompetitivePositioning(
     valueEmphasis: number
   }
 }> {
-  const allTexts = [...headlines.map(h => h.text), ...descriptions.map(d => d.text)].join(' ')
+  const allTexts = [...headlines.map((h) => h.text), ...descriptions.map((d) => d.text)].join(' ')
   const allTextsLower = allTexts.toLowerCase()
 
   let priceAdvantage = 0
@@ -1079,22 +1748,28 @@ async function calculateCompetitivePositioning(
 
   // 1. 价格优势量化检测 (0-3分)
   // 通用货币符号 + 数字模式（支持全球所有货币）
-  const universalCurrencyPattern = /(?:€|£|\$|¥|₹|₽|฿|₪|₩|元|円|圓|บาท|रु|руб)\s*\d+|\d+\s*(?:€|£|\$|¥|₹|₽|฿|₪|₩|元|円|圓|บาท|रु|руб)/
+  const universalCurrencyPattern =
+    /(?:€|£|\$|¥|₹|₽|฿|₪|₩|元|円|圓|บาท|रु|руб)\s*\d+|\d+\s*(?:€|£|\$|¥|₹|₽|฿|₪|₩|元|円|圓|บาท|रु|руб)/
 
   // 常见"节省"关键词（20+语言）
-  const savingsKeywords = /(?:save|risparmia|ahorra|économise?|sparen|economize|bespaar|сэкономить|節約|절약|ประหยัด|توفير|חסוך|tasarruf|spara|gem|חיסכון|tiết kiệm|menjimat|save|discount|sconto|descuento|réduction|rabatt|desconto|korting|скидка|割引|할인|ส่วนลด|خصم|הנחה|indirim|rabat|छूट|giảm giá|diskaun)/i
+  const savingsKeywords =
+    /(?:save|risparmia|ahorra|économise?|sparen|economize|bespaar|сэкономить|節約|절약|ประหยัด|توفير|חסוך|tasarruf|spara|gem|חיסכון|tiết kiệm|menjimat|save|discount|sconto|descuento|réduction|rabatt|desconto|korting|скидка|割引|할인|ส่วนลด|خصم|הנחה|indirim|rabat|छूट|giảm giá|diskaun)/i
 
   // 百分比折扣模式（如 "Save 20%", "20% off", "20% discount"）
-  const percentagePattern = /(?:save|discount|off|减|折扣|割引|할인|ส่วนลด|خصم|הנחה|indirim|छूट|giảm|diskaun)?\s*(\d{1,2})%/i
+  const percentagePattern =
+    /(?:save|discount|off|减|折扣|割引|할인|ส่วนลด|خصم|הנחה|indirim|छूट|giảm|diskaun)?\s*(\d{1,2})%/i
 
   // "No fees" / "Zero cost" 模式（明确的零成本承诺）
-  const noFeesPattern = /(?:no|zero|without|免|無|なし|없음|ไม่มี|بدون|ללא|yok|बिना|không|tanpa)\s+(?:monthly\s+)?(?:fees?|cost|charge|price|subscription|月费|费用|料金|수수료|ค่าธรรมเนียม|رسوم|עמלה|ücret|शुल्क|phí|bayaran)/i
+  const noFeesPattern =
+    /(?:no|zero|without|免|無|なし|없음|ไม่มี|بدون|ללא|yok|बिना|không|tanpa)\s+(?:monthly\s+)?(?:fees?|cost|charge|price|subscription|月费|费用|料金|수수료|ค่าธรรมเนียม|رسوم|עמלה|ücret|शुल्क|phí|bayaran)/i
 
   // "Free" 相关模式（免费福利）
-  const freePattern = /\bfree\s+(?:shipping|delivery|trial|returns?|installation|warranty|support|训练|运费|配送|试用|退货|安装|保修|サポート|無料|무료|ฟรี|مجاني|חינם|ücretsiz|मुफ़्त|miễn phí|percuma)\b/i
+  const freePattern =
+    /\bfree\s+(?:shipping|delivery|trial|returns?|installation|warranty|support|训练|运费|配送|试用|退货|安装|保修|サポート|無料|무료|ฟรี|مجاني|חינם|ücretsiz|मुफ़्त|miễn phí|percuma)\b/i
 
   // 优先检测高价值量化模式
-  const hasQuantifiedSavings = universalCurrencyPattern.test(allTexts) && savingsKeywords.test(allTextsLower)
+  const hasQuantifiedSavings =
+    universalCurrencyPattern.test(allTexts) && savingsKeywords.test(allTextsLower)
   const hasPercentageDiscount = percentagePattern.test(allTexts)
   const hasNoFees = noFeesPattern.test(allTextsLower)
   const hasFreeOffer = freePattern.test(allTextsLower)
@@ -1107,7 +1782,12 @@ async function calculateCompetitivePositioning(
   } else if (hasFreeOffer) {
     priceAdvantage = 2.5
     console.log('   ✅ 免费福利（Free offer） (+2.5分)')
-  } else if (savingsKeywords.test(allTextsLower) || /best value|affordable|budget|cheap|economic|便宜|实惠|划算|お得|저렴|ราคาถูก|رخيص|זול|ucuz|billig|goedkoop|дешевый|barato|bon marché|economico|सस्ता|rẻ|murah/i.test(allTextsLower)) {
+  } else if (
+    savingsKeywords.test(allTextsLower) ||
+    /best value|affordable|budget|cheap|economic|便宜|实惠|划算|お得|저렴|ราคาถูก|رخيص|זול|ucuz|billig|goedkoop|дешевый|barato|bon marché|economico|सस्ता|rẻ|murah/i.test(
+      allTextsLower
+    )
+  ) {
     priceAdvantage = 1.5
     console.log('   ⚠️ 价格优势非量化（通用检测） (+1.5分)')
   } else {
@@ -1116,16 +1796,20 @@ async function calculateCompetitivePositioning(
 
   // 2. 独特市场定位检测 (0-3分)
   // 常见"唯一/独特"关键词（20+语言）
-  const uniquenessKeywords = /(?:only|unique|exclusive|first|sole|unico|unica|único|única|einzig|exclusivo|exclusiva|seul|seule|единственный|唯一|独家|専用|のみ|유일|독점|เท่านั้น|พิเศษ|الوحيد|حصري|יחיד|בלעדי|sadece|एकमात्र|विशेष|duy nhất|độc quyền|eksklusif|tunggal|exclusief|eneste|unik|ainoa|μόνο|μοναδικό|jedyny|wyłączny)/i
+  const uniquenessKeywords =
+    /(?:only|unique|exclusive|first|sole|unico|unica|único|única|einzig|exclusivo|exclusiva|seul|seule|единственный|唯一|独家|専用|のみ|유일|독점|เท่านั้น|พิเศษ|الوحيد|حصري|יחיד|בלעדי|sadece|एकमात्र|विशेष|duy nhất|độc quyền|eksklusif|tunggal|exclusief|eneste|unik|ainoa|μόνο|μοναδικό|jedyny|wyłączny)/i
 
   // 常见"第一/领先"关键词
-  const leadershipKeywords = /#1|numero\s*1|number\s*one|第一|ナンバーワン|넘버원|อันดับ\s*1|رقم\s*1|מספר\s*1|1\s*numaralı|नंबर\s*1|số\s*1|nombor\s*1|primeiro|primero|erste|premier|première|первый|πρώτο|pierwszy/i
+  const leadershipKeywords =
+    /#1|numero\s*1|number\s*one|第一|ナンバーワン|넘버원|อันดับ\s*1|رقم\s*1|מספר\s*1|1\s*numaralı|नंबर\s*1|số\s*1|nombor\s*1|primeiro|primero|erste|premier|première|первый|πρώτο|pierwszy/i
 
   // "Official" 官方店铺/授权经销商
-  const officialPattern = /\bofficial\s+(?:store|shop|seller|dealer|partner|retailer|support|service|warranty)|(?:support|service)\s+official|ufficiale\s+(?:supporto|assistenza|servizio)|supporto\s+ufficiale|authorized\s+(?:dealer|seller|retailer|support|service)|官方|正規店|공식|อย่างเป็นทางการ|رسمي|רשמי|resmi|официальный|chính thức|rasmi\b/i
+  const officialPattern =
+    /\bofficial\s+(?:store|shop|seller|dealer|partner|retailer|support|service|warranty)|(?:support|service)\s+official|ufficiale\s+(?:supporto|assistenza|servizio)|supporto\s+ufficiale|authorized\s+(?:dealer|seller|retailer|support|service)|官方|正規店|공식|อย่างเป็นทางการ|رسمي|רשמי|resmi|официальный|chính thức|rasmi\b/i
 
   // 技术规格/等级标识（如 IK10, IP67, 4K, Ultra HD）
-  const technicalSpecPattern = /\b(?:IK\d{1,2}|IP\d{2}|4K|8K|[UQ]HD|Ultra\s+HD|Full\s+HD|[0-9]+MP|[0-9]+K|HDR10|Dolby|DTS|WiFi\s*[56]|5G|LTE|A\+\+|Grade\s+A|CE|FCC|UL|ISO\s*\d+|NSF\/?ANSI|ANSI\s*\d+|ASHRAE|Energy\s*Star|[0-9]{2,5}\s*BTU|[0-9]{2,5}\s*GPD|[0-9]{2,3}\s*dB)/i
+  const technicalSpecPattern =
+    /\b(?:IK\d{1,2}|IP\d{2}|4K|8K|[UQ]HD|Ultra\s+HD|Full\s+HD|[0-9]+MP|[0-9]+K|HDR10|Dolby|DTS|WiFi\s*[56]|5G|LTE|A\+\+|Grade\s+A|CE|FCC|UL|ISO\s*\d+|NSF\/?ANSI|ANSI\s*\d+|ASHRAE|Energy\s*Star|[0-9]{2,5}\s*BTU|[0-9]{2,5}\s*GPD|[0-9]{2,3}\s*dB)/i
 
   const hasUniqueness = uniquenessKeywords.test(allTexts) || leadershipKeywords.test(allTexts)
   const hasOfficialStatus = officialPattern.test(allTexts)
@@ -1138,7 +1822,11 @@ async function calculateCompetitivePositioning(
   } else if (hasTechnicalDifferentiation) {
     uniqueMarketPosition = 2.5
     console.log('   ✅ 独特市场定位（技术规格） (+2.5分)')
-  } else if (/top|best|leading|premier|superior|migliore|mejor|meilleur|beste|лучший|最好|最高|ベスト|최고|ดีที่สุด|الأفضل|הטוב|en iyi|सर्वश्रेष्ठ|tốt nhất|terbaik|beste|paras|bästa|καλύτερο|najlepszy/i.test(allTextsLower)) {
+  } else if (
+    /top|best|leading|premier|superior|migliore|mejor|meilleur|beste|лучший|最好|最高|ベスト|최고|ดีที่สุด|الأفضل|הטוב|en iyi|सर्वश्रेष्ठ|tốt nhất|terbaik|beste|paras|bästa|καλύτερο|najlepszy/i.test(
+      allTextsLower
+    )
+  ) {
     uniqueMarketPosition = 1.5
     console.log('   ⚠️ 隐含独特性（通用检测） (+1.5分)')
   } else {
@@ -1147,14 +1835,19 @@ async function calculateCompetitivePositioning(
 
   // 3. 竞品对比暗示检测 (0-2分)
   // 常见"对比/替换"关键词（20+语言）
-  const comparisonKeywords = /(?:vs|versus|compared?|comparison|replace|substitute|switch|sostituisci|rimpiazza|reemplazar|sustituir|remplacer|substituer|ersetzen|austauschen|substituir|trocar|vervangen|замени|比較|比较|取代|代替|比べる|交換|비교|교체|เปรียบเทียบ|แทนที่|مقارنة|استبدال|השווה|החלף|karşılaştır|değiştir|तुलना|बदलें|so sánh|thay thế|bandingkan|ganti|vergelijken|sammenlign|bytt|vertaa|vaihda|jämför|byt|σύγκριση|αντικατάσταση|porównaj|wymień)/i
+  const comparisonKeywords =
+    /(?:vs|versus|compared?|comparison|replace|substitute|switch|sostituisci|rimpiazza|reemplazar|sustituir|remplacer|substituer|ersetzen|austauschen|substituir|trocar|vervangen|замени|比較|比较|取代|代替|比べる|交換|비교|교체|เปรียบเทียบ|แทนที่|مقارنة|استبدال|השווה|החלף|karşılaştır|değiştir|तुलना|बदलें|so sánh|thay thế|bandingkan|ganti|vergelijken|sammenlign|bytt|vertaa|vaihda|jämför|byt|σύγκριση|αντικατάσταση|porównaj|wymień)/i
 
   const hasComparison = comparisonKeywords.test(allTextsLower)
 
   if (hasComparison) {
     competitiveComparison = 2
     console.log('   ✅ 明确竞品对比（通用检测） (+2分)')
-  } else if (/better|superior|outperform|migliore|mejor|meilleur|besser|melhor|beter|лучше|更好|优于|より良い|더 좋은|ดีกว่า|أفضل من|טוב יותר|daha iyi|बेहतर|tốt hơn|lebih baik|bedre|parempi|bättre|καλύτερο|lepszy/i.test(allTextsLower)) {
+  } else if (
+    /better|superior|outperform|migliore|mejor|meilleur|besser|melhor|beter|лучше|更好|优于|より良い|더 좋은|ดีกว่า|أفضل من|טוב יותר|daha iyi|बेहतर|tốt hơn|lebih baik|bedre|parempi|bättre|καλύτερο|lepszy/i.test(
+      allTextsLower
+    )
+  ) {
     competitiveComparison = 1
     console.log('   ⚠️ 隐含对比（通用检测） (+1分)')
   } else {
@@ -1163,14 +1856,17 @@ async function calculateCompetitivePositioning(
 
   // 4. 性价比强调检测 (0-2分)
   // 常见"性价比/价值"关键词（20+语言）
-  const valueKeywords = /(?:value\s+for\s+money|worth|bang\s+for|rapporto\s+qualità|qualità.prezzo|relación\s+calidad|calidad.precio|rapport\s+qualité|qualité.prix|preis.leistung|custo.benefício|prijs.kwaliteit|соотношение|价值|性价比|コスパ|가성비|คุ้มค่า|قيمة مقابل|ערך תמורה|fiyat performans|मूल्य के लिए|giá trị|nilai untuk wang|waarde voor|verdi for|arvo|värde för|αξία για|stosunek)/i
+  const valueKeywords =
+    /(?:value\s+for\s+money|worth|bang\s+for|rapporto\s+qualità|qualità.prezzo|relación\s+calidad|calidad.precio|rapport\s+qualité|qualité.prix|preis.leistung|custo.benefício|prijs.kwaliteit|соотношение|价值|性价比|コスパ|가성비|คุ้มค่า|قيمة مقابل|ערך תמורה|fiyat performans|मूल्य के लिए|giá trị|nilai untuk wang|waarde voor|verdi for|arvo|värde för|αξία για|stosunek)/i
 
   const hasValue = valueKeywords.test(allTextsLower)
 
   if (hasValue) {
     valueEmphasis = 2
     console.log('   ✅ 性价比强调 (+2分)')
-  } else if (/great\s+deal|special\s+offer|offerta\s+speciale|ottim[ao]\s+prezzo/i.test(allTextsLower)) {
+  } else if (
+    /great\s+deal|special\s+offer|offerta\s+speciale|ottim[ao]\s+prezzo/i.test(allTextsLower)
+  ) {
     valueEmphasis = 1
     console.log('   ⚠️ 隐含性价比 (+1分)')
   } else {
@@ -1185,17 +1881,24 @@ async function calculateCompetitivePositioning(
   // ========================================
   // 触发条件：快速检测分数 > 6分（说明有较强的竞争定位元素，值得深度分析）
   const AI_ENHANCEMENT_THRESHOLD = AD_STRENGTH_COMPETITIVE_POSITIONING_CONFIG.aiEnhancementThreshold
-  const aiEnhancementEnabled = isCompetitivePositioningAiEnabled() && options?.skipAiEnhancement !== true
+  const aiEnhancementEnabled =
+    isCompetitivePositioningAiEnabled() && options?.skipAiEnhancement !== true
 
   if (aiEnhancementEnabled && totalScore > AI_ENHANCEMENT_THRESHOLD) {
-    console.log(`   🤖 触发AI增强分析（分数${totalScore.toFixed(1)} > ${AI_ENHANCEMENT_THRESHOLD}）`)
+    console.log(
+      `   🤖 触发AI增强分析（分数${totalScore.toFixed(1)} > ${AI_ENHANCEMENT_THRESHOLD}）`
+    )
 
-    const aiEnhancedScore = await enhanceCompetitivePositioningWithAI(allTexts, {
-      priceAdvantage,
-      uniqueMarketPosition,
-      competitiveComparison,
-      valueEmphasis
-    }, userId)
+    const aiEnhancedScore = await enhanceCompetitivePositioningWithAI(
+      allTexts,
+      {
+        priceAdvantage,
+        uniqueMarketPosition,
+        competitiveComparison,
+        valueEmphasis,
+      },
+      userId
+    )
 
     if (aiEnhancedScore) {
       console.log(`   ✨ AI增强后总分: ${aiEnhancedScore.score.toFixed(1)}/10`)
@@ -1207,13 +1910,13 @@ async function calculateCompetitivePositioning(
 
   return {
     score: Math.min(10, Math.max(0, totalScore)),
-    weight: 0.10 as const,
+    weight: 0.1 as const,
     details: {
       priceAdvantage: Math.round(priceAdvantage * 10) / 10,
       uniqueMarketPosition: Math.round(uniqueMarketPosition * 10) / 10,
       competitiveComparison: Math.round(competitiveComparison * 10) / 10,
-      valueEmphasis: Math.round(valueEmphasis * 10) / 10
-    }
+      valueEmphasis: Math.round(valueEmphasis * 10) / 10,
+    },
   }
 }
 
@@ -1222,7 +1925,7 @@ async function calculateCompetitivePositioning(
 // ========================================
 interface CachedResult {
   score: number
-  weight: 0.10
+  weight: 0.1
   details: {
     priceAdvantage: number
     uniqueMarketPosition: number
@@ -1366,7 +2069,7 @@ function generateCacheKey(text: string): string {
   let hash = 0
   for (let i = 0; i < text.length; i++) {
     const char = text.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
+    hash = (hash << 5) - hash + char
     hash = hash & hash // Convert to 32bit integer
   }
   return `${REDIS_KEY_PREFIX}cp:${Math.abs(hash).toString(36)}`
@@ -1460,7 +2163,7 @@ async function enhanceCompetitivePositioningWithAI(
   userId?: number
 ): Promise<{
   score: number
-  weight: 0.10
+  weight: 0.1
   details: {
     priceAdvantage: number
     uniqueMarketPosition: number
@@ -1483,7 +2186,7 @@ async function enhanceCompetitivePositioningWithAI(
       return {
         score: cached.score,
         weight: cached.weight,
-        details: cached.details
+        details: cached.details,
       }
     }
 
@@ -1536,38 +2239,51 @@ async function enhanceCompetitivePositioningWithAI(
     // 🔧 修复：添加try-catch和降级策略
     let result
     try {
-      result = await generateContent({
-        operationType: 'ad_strength_evaluation',
-        prompt,
-        temperature: 0.3, // 低温度确保一致性
-        maxOutputTokens: 4096, // 🔧 增加token限制，避免Gemini 2.5 Pro thinking模式导致MAX_TOKENS错误（thinking tokens ~2000 + response ~500）
-        responseSchema: {
-          type: 'OBJECT',
-          properties: {
-            priceAdvantage: { type: 'NUMBER', description: 'Score 0-3' },
-            uniqueMarketPosition: { type: 'NUMBER', description: 'Score 0-3' },
-            competitiveComparison: { type: 'NUMBER', description: 'Score 0-2' },
-            valueEmphasis: { type: 'NUMBER', description: 'Score 0-2' },
-            confidence: { type: 'NUMBER', description: 'Confidence 0.0-1.0' }
+      result = await generateContent(
+        {
+          operationType: 'ad_strength_evaluation',
+          prompt,
+          temperature: 0.3, // 低温度确保一致性
+          maxOutputTokens: 4096, // 🔧 增加token限制，避免Gemini 2.5 Pro thinking模式导致MAX_TOKENS错误（thinking tokens ~2000 + response ~500）
+          responseSchema: {
+            type: 'OBJECT',
+            properties: {
+              priceAdvantage: { type: 'NUMBER', description: 'Score 0-3' },
+              uniqueMarketPosition: { type: 'NUMBER', description: 'Score 0-3' },
+              competitiveComparison: { type: 'NUMBER', description: 'Score 0-2' },
+              valueEmphasis: { type: 'NUMBER', description: 'Score 0-2' },
+              confidence: { type: 'NUMBER', description: 'Confidence 0.0-1.0' },
+            },
+            required: [
+              'priceAdvantage',
+              'uniqueMarketPosition',
+              'competitiveComparison',
+              'valueEmphasis',
+              'confidence',
+            ],
           },
-          required: ['priceAdvantage', 'uniqueMarketPosition', 'competitiveComparison', 'valueEmphasis', 'confidence']
+          responseMimeType: 'application/json',
         },
-        responseMimeType: 'application/json',
-      }, userId)
+        userId
+      )
     } catch (schemaError: any) {
       // 如果schema模式失败，降级到纯文本模式
       console.warn(`   ⚠️ JSON schema模式失败: ${schemaError.message}`)
       console.log(`   🔄 降级到纯文本模式重试...`)
 
       // 修改prompt，要求返回JSON格式但不使用schema约束
-      const fallbackPrompt = prompt + '\n\nIMPORTANT: Return ONLY valid JSON, no markdown, no extra text.'
+      const fallbackPrompt =
+        prompt + '\n\nIMPORTANT: Return ONLY valid JSON, no markdown, no extra text.'
 
-      result = await generateContent({
-        operationType: 'ad_strength_evaluation',
-        prompt: fallbackPrompt,
-        temperature: 0.3,
-        maxOutputTokens: 4096, // 🔧 增加token限制，避免Gemini 2.5 Pro thinking模式导致MAX_TOKENS错误（thinking tokens ~2000 + response ~500）
-      }, userId)
+      result = await generateContent(
+        {
+          operationType: 'ad_strength_evaluation',
+          prompt: fallbackPrompt,
+          temperature: 0.3,
+          maxOutputTokens: 4096, // 🔧 增加token限制，避免Gemini 2.5 Pro thinking模式导致MAX_TOKENS错误（thinking tokens ~2000 + response ~500）
+        },
+        userId
+      )
 
       console.log(`   ✓ 降级模式成功获取响应`)
     }
@@ -1587,7 +2303,7 @@ async function enhanceCompetitivePositioningWithAI(
         outputTokens: result.usage.outputTokens,
         totalTokens: result.usage.totalTokens,
         cost,
-        apiType: result.apiType
+        apiType: result.apiType,
       })
     }
 
@@ -1597,8 +2313,14 @@ async function enhanceCompetitivePositioningWithAI(
       aiScores = parseCompetitivePositioningAiScores(result.text)
 
       // 验证必需字段
-      const requiredFields = ['priceAdvantage', 'uniqueMarketPosition', 'competitiveComparison', 'valueEmphasis', 'confidence']
-      const missingFields = requiredFields.filter(field => !(field in aiScores))
+      const requiredFields = [
+        'priceAdvantage',
+        'uniqueMarketPosition',
+        'competitiveComparison',
+        'valueEmphasis',
+        'confidence',
+      ]
+      const missingFields = requiredFields.filter((field) => !(field in aiScores))
 
       if (missingFields.length > 0) {
         throw new Error(`AI响应缺少必需字段: ${missingFields.join(', ')}`)
@@ -1610,30 +2332,41 @@ async function enhanceCompetitivePositioningWithAI(
     }
 
     console.log(`   🤖 AI分析结果 (置信度: ${(aiScores.confidence * 100).toFixed(0)}%):`)
-    console.log(`      价格优势: ${fastDetectionScores.priceAdvantage} → ${aiScores.priceAdvantage}`)
-    console.log(`      独特定位: ${fastDetectionScores.uniqueMarketPosition} → ${aiScores.uniqueMarketPosition}`)
-    console.log(`      竞品对比: ${fastDetectionScores.competitiveComparison} → ${aiScores.competitiveComparison}`)
+    console.log(
+      `      价格优势: ${fastDetectionScores.priceAdvantage} → ${aiScores.priceAdvantage}`
+    )
+    console.log(
+      `      独特定位: ${fastDetectionScores.uniqueMarketPosition} → ${aiScores.uniqueMarketPosition}`
+    )
+    console.log(
+      `      竞品对比: ${fastDetectionScores.competitiveComparison} → ${aiScores.competitiveComparison}`
+    )
     console.log(`      性价比: ${fastDetectionScores.valueEmphasis} → ${aiScores.valueEmphasis}`)
 
     // 只有当置信度 >= 0.6 时才使用AI增强结果
     if (aiScores.confidence < 0.6) {
-      console.log(`   ⚠️ AI置信度过低 (${(aiScores.confidence * 100).toFixed(0)}%)，使用快速检测结果`)
+      console.log(
+        `   ⚠️ AI置信度过低 (${(aiScores.confidence * 100).toFixed(0)}%)，使用快速检测结果`
+      )
       return null
     }
 
-    const totalScore = aiScores.priceAdvantage + aiScores.uniqueMarketPosition +
-                      aiScores.competitiveComparison + aiScores.valueEmphasis
+    const totalScore =
+      aiScores.priceAdvantage +
+      aiScores.uniqueMarketPosition +
+      aiScores.competitiveComparison +
+      aiScores.valueEmphasis
 
     const enhancedResult = {
       score: Math.min(10, Math.max(0, totalScore)),
-      weight: 0.10 as const,
+      weight: 0.1 as const,
       details: {
         priceAdvantage: Math.round(aiScores.priceAdvantage * 10) / 10,
         uniqueMarketPosition: Math.round(aiScores.uniqueMarketPosition * 10) / 10,
         competitiveComparison: Math.round(aiScores.competitiveComparison * 10) / 10,
         valueEmphasis: Math.round(aiScores.valueEmphasis * 10) / 10,
-        aiConfidence: Math.round(aiScores.confidence * 100) / 100
-      }
+        aiConfidence: Math.round(aiScores.confidence * 100) / 100,
+      },
     }
 
     // 缓存结果（24小时）
@@ -1641,7 +2374,6 @@ async function enhanceCompetitivePositioningWithAI(
     console.log(`   💾 结果已缓存（TTL: 24小时）`)
 
     return enhancedResult
-
   } catch (error: any) {
     console.error(`   ❌ AI增强分析失败: ${error.message}`)
     console.error(`   → 降级使用快速检测结果`)
@@ -1667,7 +2399,9 @@ async function calculateBrandSearchVolume(
   plannerSession?: KeywordPlannerPreparedSession,
   skipKeywordPoolExpandLoad?: boolean
 ) {
-  const isSearchVolumeUnavailableReason = (reason: unknown): reason is 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY' =>
+  const isSearchVolumeUnavailableReason = (
+    reason: unknown
+  ): reason is 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY' =>
     reason === 'DEV_TOKEN_INSUFFICIENT_ACCESS' || reason === 'DEV_TOKEN_TEST_ONLY'
 
   const calculateUnavailableProxyScore = (
@@ -1694,14 +2428,14 @@ async function calculateBrandSearchVolume(
     console.log('⚠️ 未提供品牌名称，品牌搜索量得分为0')
     return {
       score: 0,
-      weight: 0.20 as const,
+      weight: 0.2 as const,
       details: {
         brandNameSearchVolume: 0,
         brandKeywordSearchVolume: 0,
         totalBrandSearchVolume: 0,
         volumeLevel: 'micro' as const,
-        dataSource: 'unavailable' as const
-      }
+        dataSource: 'unavailable' as const,
+      },
     }
   }
 
@@ -1713,16 +2447,20 @@ async function calculateBrandSearchVolume(
       return keywordLower.includes(normalizedBrandName) && keywordLower !== normalizedBrandName
     })
     const brandKeywordsCount = brandKeywords.length
-    const brandKeywordSearchVolume = brandKeywords.reduce((sum, kw) => sum + (kw.searchVolume || 0), 0)
+    const brandKeywordSearchVolume = brandKeywords.reduce(
+      (sum, kw) => sum + (kw.searchVolume || 0),
+      0
+    )
     const exactBrandKeywordSearchVolume = normalizedKeywordsWithVolume
       .filter((kw) => String(kw.keyword || '').toLowerCase() === normalizedBrandName)
       .reduce((sum, kw) => sum + (kw.searchVolume || 0), 0)
     const hasExactBrandKeyword = normalizedKeywordsWithVolume.some(
       (kw) => String(kw.keyword || '').toLowerCase() === normalizedBrandName
     )
-    const keywordCoverage = normalizedKeywordsWithVolume.length > 0
-      ? brandKeywordsCount / normalizedKeywordsWithVolume.length
-      : 0
+    const keywordCoverage =
+      normalizedKeywordsWithVolume.length > 0
+        ? brandKeywordsCount / normalizedKeywordsWithVolume.length
+        : 0
     const keywordVolumeUnavailable = normalizedKeywordsWithVolume.some((kw) =>
       isSearchVolumeUnavailableReason(kw.volumeUnavailableReason)
     )
@@ -1735,14 +2473,16 @@ async function calculateBrandSearchVolume(
     const exactBrandKeywordEntry = normalizedKeywordsWithVolume.find(
       (kw) => String(kw.keyword || '').toLowerCase() === normalizedBrandName
     )
-    const exactBrandVolumeMarkedUnavailable = exactBrandKeywordEntry != null
-      && isSearchVolumeUnavailableReason(exactBrandKeywordEntry.volumeUnavailableReason)
-    const canReuseExactBrandVolume =
-      hasExactBrandKeyword
-      && !exactBrandVolumeMarkedUnavailable
+    const exactBrandVolumeMarkedUnavailable =
+      exactBrandKeywordEntry != null &&
+      isSearchVolumeUnavailableReason(exactBrandKeywordEntry.volumeUnavailableReason)
+    const canReuseExactBrandVolume = hasExactBrandKeyword && !exactBrandVolumeMarkedUnavailable
 
     let resolvedPlannerSession = plannerSession
-    let plannerUnavailableReason: 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY' | undefined
+    let plannerUnavailableReason:
+      | 'DEV_TOKEN_INSUFFICIENT_ACCESS'
+      | 'DEV_TOKEN_TEST_ONLY'
+      | undefined
     let hasPlannerData = false
     let dataSource: 'keyword_planner' | 'cached' | 'database' | 'unavailable' = 'unavailable'
     let resolvedBrandNameSearchVolume = 0
@@ -1795,11 +2535,16 @@ async function calculateBrandSearchVolume(
             ]
 
         const brandVolume = volumeResults[0]
-        plannerUnavailableReason = isSearchVolumeUnavailableReason((brandVolume as any)?.volumeUnavailableReason)
-          ? (brandVolume as any).volumeUnavailableReason as 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
+        plannerUnavailableReason = isSearchVolumeUnavailableReason(
+          (brandVolume as any)?.volumeUnavailableReason
+        )
+          ? ((brandVolume as any).volumeUnavailableReason as
+              | 'DEV_TOKEN_INSUFFICIENT_ACCESS'
+              | 'DEV_TOKEN_TEST_ONLY')
           : undefined
-        hasPlannerData = typeof brandVolume?.avgMonthlySearches === 'number' && !plannerUnavailableReason
-        const brandNameSearchVolume = hasPlannerData ? (brandVolume?.avgMonthlySearches || 0) : 0
+        hasPlannerData =
+          typeof brandVolume?.avgMonthlySearches === 'number' && !plannerUnavailableReason
+        const brandNameSearchVolume = hasPlannerData ? brandVolume?.avgMonthlySearches || 0 : 0
 
         dataSource = hasPlannerData ? 'keyword_planner' : 'unavailable'
         if (hasPlannerData && brandNameSearchVolume > 0) {
@@ -1809,16 +2554,19 @@ async function calculateBrandSearchVolume(
         resolvedBrandNameSearchVolume = brandNameSearchVolume
       }
 
-      const shouldBackfillExactBrandVolume = (
+      const shouldBackfillExactBrandVolume =
         !hasPlannerData &&
-        Boolean(plannerUnavailableReason || keywordVolumeUnavailable || skipKeywordPoolExpandLoad) &&
+        Boolean(
+          plannerUnavailableReason || keywordVolumeUnavailable || skipKeywordPoolExpandLoad
+        ) &&
         exactBrandKeywordSearchVolume > 0
-      )
       if (shouldBackfillExactBrandVolume) {
         resolvedBrandNameSearchVolume = exactBrandKeywordSearchVolume
         dataSource = 'database'
         fallbackMode = 'exact_brand_keyword_backfill'
-        console.log(`♻️ Planner不可用，回填精确品牌词搜索量: ${exactBrandKeywordSearchVolume.toLocaleString()}/月`)
+        console.log(
+          `♻️ Planner不可用，回填精确品牌词搜索量: ${exactBrandKeywordSearchVolume.toLocaleString()}/月`
+        )
       }
     }
 
@@ -1845,7 +2593,7 @@ async function calculateBrandSearchVolume(
       console.log(`⚠️ 品牌搜索量不可用，使用品牌信号代理评分: ${proxyScore}分`)
       return {
         score: proxyScore,
-        weight: 0.20 as const,
+        weight: 0.2 as const,
         details: {
           brandNameSearchVolume: 0,
           brandKeywordSearchVolume: 0,
@@ -1857,7 +2605,7 @@ async function calculateBrandSearchVolume(
           plannerUnavailableReason,
           brandKeywordCount: brandKeywordsCount,
           brandKeywordCoverage: Math.round(keywordCoverage * 100) / 100,
-        }
+        },
       }
     }
 
@@ -1923,7 +2671,7 @@ async function calculateBrandSearchVolume(
 
     return {
       score,
-      weight: 0.20 as const,
+      weight: 0.2 as const,
       details: {
         brandNameSearchVolume: resolvedBrandNameSearchVolume,
         brandKeywordSearchVolume,
@@ -1935,20 +2683,20 @@ async function calculateBrandSearchVolume(
         plannerUnavailableReason,
         brandKeywordCount: brandKeywordsCount,
         brandKeywordCoverage: Math.round(keywordCoverage * 100) / 100,
-      }
+      },
     }
   } catch (error) {
     console.error(`❌ 获取品牌搜索量失败:`, error)
     return {
       score: 0,
-      weight: 0.20 as const,
+      weight: 0.2 as const,
       details: {
         brandNameSearchVolume: 0,
         brandKeywordSearchVolume: 0,
         totalBrandSearchVolume: 0,
         volumeLevel: 'micro' as const,
-        dataSource: 'unavailable' as const
-      }
+        dataSource: 'unavailable' as const,
+      },
     }
   }
 }
@@ -1957,7 +2705,7 @@ async function calculateBrandSearchVolume(
  * 5. 计算Compliance（合规性）- 10分
  */
 function calculateCompliance(headlines: HeadlineAsset[], descriptions: DescriptionAsset[]) {
-  const allTexts = [...headlines.map(h => h.text), ...descriptions.map(d => d.text)]
+  const allTexts = [...headlines.map((h) => h.text), ...descriptions.map((d) => d.text)]
 
   // 5.1 政策遵守 (0-6分)
   // 基础合规：6分，每发现1个问题扣2分
@@ -1974,8 +2722,8 @@ function calculateCompliance(headlines: HeadlineAsset[], descriptions: Descripti
   const policyAdherence = Math.max(0, 6 - policyIssues * 2)
 
   // 5.2 无垃圾词汇 (0-4分)
-  const forbiddenWordsFound = allTexts.filter(text =>
-    FORBIDDEN_WORDS.some(word => text.toLowerCase().includes(word.toLowerCase()))
+  const forbiddenWordsFound = allTexts.filter((text) =>
+    FORBIDDEN_WORDS.some((word) => text.toLowerCase().includes(word.toLowerCase()))
   ).length
 
   const noSpamWords = Math.max(0, 4 - forbiddenWordsFound)
@@ -1984,50 +2732,249 @@ function calculateCompliance(headlines: HeadlineAsset[], descriptions: Descripti
 
   return {
     score: Math.min(10, Math.round(totalScore)), // 确保不超过最大值10
-    weight: 0.10 as const,
+    weight: 0.1 as const,
     details: {
       policyAdherence: Math.round(policyAdherence),
-      noSpamWords: Math.round(noSpamWords)
-    }
+      noSpamWords: Math.round(noSpamWords),
+    },
   }
 }
 
 type CopyIntentTag = 'brand' | 'scenario' | 'solution' | 'transactional' | 'other'
 
 const COPY_INTENT_BRAND_WORDS: Record<string, string[]> = {
-  en: ['official', 'authentic', 'trusted', 'certified', 'warranty', 'support', 'guarantee', 'verified'],
-  de: ['offiziell', 'original', 'authentisch', 'vertrauenswürdig', 'zertifiziert', 'garantie', 'gewährleistung', 'support', 'geprüft'],
-  it: ['ufficiale', 'originale', 'autentico', 'affidabile', 'certificato', 'garanzia', 'assistenza', 'supporto', 'verificato'],
+  en: [
+    'official',
+    'authentic',
+    'trusted',
+    'certified',
+    'warranty',
+    'support',
+    'guarantee',
+    'verified',
+  ],
+  de: [
+    'offiziell',
+    'original',
+    'authentisch',
+    'vertrauenswürdig',
+    'zertifiziert',
+    'garantie',
+    'gewährleistung',
+    'support',
+    'geprüft',
+  ],
+  it: [
+    'ufficiale',
+    'originale',
+    'autentico',
+    'affidabile',
+    'certificato',
+    'garanzia',
+    'assistenza',
+    'supporto',
+    'verificato',
+  ],
 }
 
 const COPY_INTENT_TRANSACTIONAL_WORDS: Record<string, string[]> = {
   en: ['buy', 'shop', 'order', 'price', 'deal', 'discount', 'offer', 'save', 'get', 'quote'],
   de: ['jetzt kaufen', 'kaufen', 'bestellen', 'preis', 'angebot', 'rabatt', 'sparen', 'holen'],
-  it: ['acquista ora', 'acquista', 'compra', 'ordina', 'prezzo', 'offerta', 'sconto', 'risparmia', 'ottieni'],
+  it: [
+    'acquista ora',
+    'acquista',
+    'compra',
+    'ordina',
+    'prezzo',
+    'offerta',
+    'sconto',
+    'risparmia',
+    'ottieni',
+  ],
 }
 
 const COPY_INTENT_SCENARIO_WORDS: Record<string, string[]> = {
-  en: ['for', 'when', 'during', 'project', 'repair', 'install', 'build', 'fix', 'home', 'garden', 'yard', 'fence', 'deck', 'job', 'bedroom', 'kitchen', 'sleep', 'night', 'daily', 'everyday', 'office', 'room', 'heat', 'summer', 'strain', 'migraine'],
-  de: ['für', 'wenn', 'während', 'projekt', 'reparatur', 'install', 'bauen', 'zuhause', 'heim', 'garten', 'küche', 'schlafzimmer', 'büro', 'werkstatt', 'schlaf', 'nacht', 'alltag', 'sommer', 'hitze', 'belastung'],
-  it: ['per', 'quando', 'durante', 'progetto', 'ripar', 'install', 'casa', 'cucina', 'camera', 'ufficio', 'bagno', 'appartamento', 'sonno', 'notte', 'quotidiano', 'estate', 'caldo', 'stress'],
+  en: [
+    'for',
+    'when',
+    'during',
+    'project',
+    'repair',
+    'install',
+    'build',
+    'fix',
+    'home',
+    'garden',
+    'yard',
+    'fence',
+    'deck',
+    'job',
+    'bedroom',
+    'kitchen',
+    'sleep',
+    'night',
+    'daily',
+    'everyday',
+    'office',
+    'room',
+    'heat',
+    'summer',
+    'strain',
+    'migraine',
+  ],
+  de: [
+    'für',
+    'wenn',
+    'während',
+    'projekt',
+    'reparatur',
+    'install',
+    'bauen',
+    'zuhause',
+    'heim',
+    'garten',
+    'küche',
+    'schlafzimmer',
+    'büro',
+    'werkstatt',
+    'schlaf',
+    'nacht',
+    'alltag',
+    'sommer',
+    'hitze',
+    'belastung',
+  ],
+  it: [
+    'per',
+    'quando',
+    'durante',
+    'progetto',
+    'ripar',
+    'install',
+    'casa',
+    'cucina',
+    'camera',
+    'ufficio',
+    'bagno',
+    'appartamento',
+    'sonno',
+    'notte',
+    'quotidiano',
+    'estate',
+    'caldo',
+    'stress',
+  ],
 }
 
 const COPY_INTENT_SOLUTION_WORDS: Record<string, string[]> = {
-  en: ['solution', 'solve', 'built', 'designed', 'helps', 'easy', 'durable', 'reliable', 'heavy duty', 'powerful', 'lightweight', 'filter', 'purify', 'cooling', 'relief', 'relieve', 'relax', 'quiet', 'dehumidifier', 'dehumidify', 'alkaline', 'mineral', 'tankless', 'osmosis', 'filtration', 'memory foam', 'pressure relief', 'sleep support', 'strain relief'],
-  de: ['lösung', 'löst', 'hilft', 'einfach', 'langlebig', 'zuverlässig', 'robust', 'leistungsstark', 'filter', 'reinigt', 'kühlt', 'entfernt', 'reduziert', 'entlastung', 'beruhigt', 'leise', 'entfeuchtet', 'alkalisch', 'mineral', 'tanklos', 'umkehrosmose', 'filtration'],
-  it: ['soluzione', 'risolve', 'aiuta', 'facile', 'duraturo', 'affidabile', 'potente', 'leggero', 'filtro', 'purifica', 'raffredda', 'rimuove', 'riduce', 'sollievo', 'rilassa', 'silenzioso', 'deumidifica', 'alcalino', 'minerale', 'osmosi', 'filtrazione', 'senza serbatoio'],
+  en: [
+    'solution',
+    'solve',
+    'built',
+    'designed',
+    'helps',
+    'easy',
+    'durable',
+    'reliable',
+    'heavy duty',
+    'powerful',
+    'lightweight',
+    'filter',
+    'purify',
+    'cooling',
+    'relief',
+    'relieve',
+    'relax',
+    'quiet',
+    'dehumidifier',
+    'dehumidify',
+    'alkaline',
+    'mineral',
+    'tankless',
+    'osmosis',
+    'filtration',
+    'memory foam',
+    'pressure relief',
+    'sleep support',
+    'strain relief',
+  ],
+  de: [
+    'lösung',
+    'löst',
+    'hilft',
+    'einfach',
+    'langlebig',
+    'zuverlässig',
+    'robust',
+    'leistungsstark',
+    'filter',
+    'reinigt',
+    'kühlt',
+    'entfernt',
+    'reduziert',
+    'entlastung',
+    'beruhigt',
+    'leise',
+    'entfeuchtet',
+    'alkalisch',
+    'mineral',
+    'tanklos',
+    'umkehrosmose',
+    'filtration',
+  ],
+  it: [
+    'soluzione',
+    'risolve',
+    'aiuta',
+    'facile',
+    'duraturo',
+    'affidabile',
+    'potente',
+    'leggero',
+    'filtro',
+    'purifica',
+    'raffredda',
+    'rimuove',
+    'riduce',
+    'sollievo',
+    'rilassa',
+    'silenzioso',
+    'deumidifica',
+    'alcalino',
+    'minerale',
+    'osmosi',
+    'filtrazione',
+    'senza serbatoio',
+  ],
 }
 
 const COPY_INTENT_MODEL_SPEC_WORDS: Record<string, string[]> = {
-  en: ['model', 'series', 'version', 'generation', 'gen', 'size', 'spec', 'specs', 'inch', 'memory foam', 'king size', 'queen size', 'medium firm'],
+  en: [
+    'model',
+    'series',
+    'version',
+    'generation',
+    'gen',
+    'size',
+    'spec',
+    'specs',
+    'inch',
+    'memory foam',
+    'king size',
+    'queen size',
+    'medium firm',
+  ],
   de: ['modell', 'serie', 'version', 'generation', 'größe', 'spezifikation', 'zoll'],
   it: ['modello', 'serie', 'versione', 'generazione', 'misura', 'specifiche', 'pollici'],
 }
 
 const MODEL_ALNUM_CODE_PATTERN = /\b(?=[a-z0-9-]{3,})(?=.*[a-z])(?=.*\d)[a-z0-9-]+\b/i
-const MODEL_NUMERIC_SPEC_PATTERN = /\b\d{1,4}\s*(?:inch|in|cm|mm|gpd|btu|mah|wh|w|kw|v|ah|ft|oz|lb|lbs|kg|g|qt|quart|cup|cups|hz)\b/i
+const MODEL_NUMERIC_SPEC_PATTERN =
+  /\b\d{1,4}\s*(?:inch|in|cm|mm|gpd|btu|mah|wh|w|kw|v|ah|ft|oz|lb|lbs|kg|g|qt|quart|cup|cups|hz)\b/i
 
-function normalizeBucketTypeForCopyMetrics(bucketType?: 'A' | 'B' | 'C' | 'D' | 'S'): 'A' | 'B' | 'D' | 'UNSPECIFIED' {
+function normalizeBucketTypeForCopyMetrics(
+  bucketType?: 'A' | 'B' | 'C' | 'D' | 'S'
+): 'A' | 'B' | 'D' | 'UNSPECIFIED' {
   if (bucketType === 'A') return 'A'
   if (bucketType === 'B' || bucketType === 'C') return 'B'
   if (bucketType === 'D' || bucketType === 'S') return 'D'
@@ -2037,7 +2984,11 @@ function normalizeBucketTypeForCopyMetrics(bucketType?: 'A' | 'B' | 'C' | 'D' | 
 function normalizeCreativeTypeForCopyMetrics(
   creativeType?: CanonicalCreativeType
 ): CanonicalCreativeType | null {
-  if (creativeType === 'brand_intent' || creativeType === 'model_intent' || creativeType === 'product_intent') {
+  if (
+    creativeType === 'brand_intent' ||
+    creativeType === 'model_intent' ||
+    creativeType === 'product_intent'
+  ) {
     return creativeType
   }
   return null
@@ -2055,9 +3006,12 @@ function classifyCopyIntentTag(text: string, languageKey: string): CopyIntentTag
   const normalized = String(text || '').toLowerCase()
   if (!normalized) return 'other'
   if (containsLocalizedPhrase(normalized, COPY_INTENT_BRAND_WORDS, languageKey)) return 'brand'
-  if (containsLocalizedPhrase(normalized, COPY_INTENT_TRANSACTIONAL_WORDS, languageKey)) return 'transactional'
-  if (containsLocalizedPhrase(normalized, COPY_INTENT_SCENARIO_WORDS, languageKey)) return 'scenario'
-  if (containsLocalizedPhrase(normalized, COPY_INTENT_SOLUTION_WORDS, languageKey)) return 'solution'
+  if (containsLocalizedPhrase(normalized, COPY_INTENT_TRANSACTIONAL_WORDS, languageKey))
+    return 'transactional'
+  if (containsLocalizedPhrase(normalized, COPY_INTENT_SCENARIO_WORDS, languageKey))
+    return 'scenario'
+  if (containsLocalizedPhrase(normalized, COPY_INTENT_SOLUTION_WORDS, languageKey))
+    return 'solution'
   return 'other'
 }
 
@@ -2073,7 +3027,11 @@ function buildKeywordIntentSignals(
   const normalizedKeywords = Array.from(
     new Set(
       (keywords || [])
-        .map((keyword) => String(keyword || '').trim().toLowerCase())
+        .map((keyword) =>
+          String(keyword || '')
+            .trim()
+            .toLowerCase()
+        )
         .filter(Boolean)
     )
   )
@@ -2086,8 +3044,9 @@ function buildKeywordIntentSignals(
   }
 
   const countMatches = (dict: Record<string, string[]>) =>
-    normalizedKeywords.reduce((count, keyword) =>
-      count + (containsLocalizedPhrase(keyword, dict, languageKey) ? 1 : 0), 0
+    normalizedKeywords.reduce(
+      (count, keyword) => count + (containsLocalizedPhrase(keyword, dict, languageKey) ? 1 : 0),
+      0
     )
 
   const denominator = isEnglish ? 3 : 2
@@ -2114,9 +3073,9 @@ function calculateCopyIntentMetrics(
   const isEnglish = languageKey === 'en'
   const expectedBucket = normalizeBucketTypeForCopyMetrics(bucketType)
   const normalizedCreativeType = normalizeCreativeTypeForCopyMetrics(creativeType)
-  const texts = [...headlines.map(h => h.text), ...descriptions.map(d => d.text)]
-  const tags = texts.map(text => classifyCopyIntentTag(text, languageKey))
-  const count = (tag: CopyIntentTag) => tags.filter(t => t === tag).length
+  const texts = [...headlines.map((h) => h.text), ...descriptions.map((d) => d.text)]
+  const tags = texts.map((text) => classifyCopyIntentTag(text, languageKey))
+  const count = (tag: CopyIntentTag) => tags.filter((t) => t === tag).length
 
   const brandCount = count('brand')
   const scenarioCount = count('scenario')
@@ -2127,7 +3086,7 @@ function calculateCopyIntentMetrics(
     brandCount > 0,
     scenarioCount > 0,
     solutionCount > 0,
-    transactionalCount > 0
+    transactionalCount > 0,
   ].filter(Boolean).length
   const copyIntentCoverage = Math.round((coverageKinds / 4) * 100)
 
@@ -2138,14 +3097,24 @@ function calculateCopyIntentMetrics(
   const keywordIntentSignals = buildKeywordIntentSignals(keywords || [], languageKey, isEnglish)
   const combinedScenarioSignal = Math.max(scenarioSignal, keywordIntentSignals.scenario)
   const combinedSolutionSignal = Math.max(solutionSignal, keywordIntentSignals.solution)
-  const combinedTransactionalSignal = Math.max(transactionalSignal, keywordIntentSignals.transactional)
+  const combinedTransactionalSignal = Math.max(
+    transactionalSignal,
+    keywordIntentSignals.transactional
+  )
   const valueSignal = Math.min(
     1,
     (combinedTransactionalSignal + combinedSolutionSignal) / (isEnglish ? 3 : 2)
   )
-  const modelSpecTextCount = texts.filter((text) => hasModelSpecAnchorSignal(text, languageKey)).length
-  const modelSpecKeywordCount = (keywords || []).filter((keyword) => hasModelSpecAnchorSignal(keyword, languageKey)).length
-  const modelSpecSignal = Math.min(1, (modelSpecTextCount + modelSpecKeywordCount) / (isEnglish ? 3 : 2))
+  const modelSpecTextCount = texts.filter((text) =>
+    hasModelSpecAnchorSignal(text, languageKey)
+  ).length
+  const modelSpecKeywordCount = (keywords || []).filter((keyword) =>
+    hasModelSpecAnchorSignal(keyword, languageKey)
+  ).length
+  const modelSpecSignal = Math.min(
+    1,
+    (modelSpecTextCount + modelSpecKeywordCount) / (isEnglish ? 3 : 2)
+  )
   const modelCommercialSignal = Math.max(combinedTransactionalSignal, combinedSolutionSignal)
   const scenarioSolutionSignal = Math.min(
     1,
@@ -2160,17 +3129,15 @@ function calculateCopyIntentMetrics(
       const modelAnchorStrong = modelSpecSignal >= (isEnglish ? 0.34 : 0.3)
       if (modelAnchorStrong) {
         alignmentRaw =
-          modelSpecSignal * 55
-          + modelCommercialSignal * 25
-          + combinedScenarioSignal * 10
-          + combinedSolutionSignal * 10
+          modelSpecSignal * 55 +
+          modelCommercialSignal * 25 +
+          combinedScenarioSignal * 10 +
+          combinedSolutionSignal * 10
       } else {
-        alignmentRaw =
-          scenarioSolutionSignal * 72
-          + modelCommercialSignal * 28
+        alignmentRaw = scenarioSolutionSignal * 72 + modelCommercialSignal * 28
         if (
-          Math.max(keywordIntentSignals.scenario, keywordIntentSignals.solution) >= 0.34
-          && modelCommercialSignal >= 0.34
+          Math.max(keywordIntentSignals.scenario, keywordIntentSignals.solution) >= 0.34 &&
+          modelCommercialSignal >= 0.34
         ) {
           alignmentRaw = Math.max(alignmentRaw, 72)
         }
@@ -2189,7 +3156,7 @@ function calculateCopyIntentMetrics(
   return {
     expectedBucket,
     typeIntentAlignmentScore,
-    copyIntentCoverage
+    copyIntentCoverage,
   }
 }
 
@@ -2294,23 +3261,35 @@ function generateSuggestions(
   // large和xlarge级别无需建议，已经有足够品牌影响力
 
   // Competitive Positioning建议 (新增)
-  if (competitivePositioning.details.priceAdvantage < thresholds.competitivePositioning.priceAdvantage) {
+  if (
+    competitivePositioning.details.priceAdvantage < thresholds.competitivePositioning.priceAdvantage
+  ) {
     suggestions.push('🎯 强化价格优势：量化节省金额（如"Save €170"）提升竞争力')
   }
-  if (competitivePositioning.details.uniqueMarketPosition < thresholds.competitivePositioning.uniqueMarketPosition) {
+  if (
+    competitivePositioning.details.uniqueMarketPosition <
+    thresholds.competitivePositioning.uniqueMarketPosition
+  ) {
     suggestions.push('🎯 突出独特定位：使用"L\'unica"、"The Only"等表述建立市场差异化')
   }
-  if (competitivePositioning.details.competitiveComparison < thresholds.competitivePositioning.competitiveComparison) {
+  if (
+    competitivePositioning.details.competitiveComparison <
+    thresholds.competitivePositioning.competitiveComparison
+  ) {
     suggestions.push('🎯 暗示竞品对比：通过"Sostituisci il vecchio"等表述引导替换竞品')
   }
-  if (competitivePositioning.details.valueEmphasis < thresholds.competitivePositioning.valueEmphasis) {
+  if (
+    competitivePositioning.details.valueEmphasis < thresholds.competitivePositioning.valueEmphasis
+  ) {
     suggestions.push('🎯 强调性价比：使用"Rapporto Qualità-Prezzo"等表述增强价值感知')
   }
 
   // 非阻断：类型化文案意图建议
   if (copyIntentMetrics) {
     if (copyIntentMetrics.copyIntentCoverage < thresholds.copyIntent.coverage) {
-      suggestions.push(`🧭 提升文案意图覆盖：当前${copyIntentMetrics.copyIntentCoverage}%（建议覆盖场景/解法/转化等不同表达）`)
+      suggestions.push(
+        `🧭 提升文案意图覆盖：当前${copyIntentMetrics.copyIntentCoverage}%（建议覆盖场景/解法/转化等不同表达）`
+      )
     }
 
     if (copyIntentMetrics.typeIntentAlignmentScore < thresholds.copyIntent.alignment) {
@@ -2321,7 +3300,9 @@ function generateSuggestions(
       } else if (copyIntentMetrics.expectedBucket === 'D') {
         suggestions.push('🧭 D类型对齐不足：增强价值与行动号召表达（在证据允许范围内）')
       } else {
-        suggestions.push('🧭 文案意图对齐偏弱：建议按创意类型强化主导表达（A信任/B场景解法/D转化价值）')
+        suggestions.push(
+          '🧭 文案意图对齐偏弱：建议按创意类型强化主导表达（A信任/B场景解法/D转化价值）'
+        )
       }
     }
   }
@@ -2369,70 +3350,123 @@ function calculateProductFocus(
   descriptions: DescriptionAsset[],
   sitelinks?: Array<{ text: string; url: string; description?: string }>,
   callouts?: string[],
-  categoryWhitelist?: string[]  // 动态传入目标品类白名单
+  categoryWhitelist?: string[] // 动态传入目标品类白名单
 ): { score: number; issues: string[] } {
   const issues: string[] = []
   let problemCount = 0
 
-  const allHeadlines = headlines.map(h => h.text.toLowerCase())
-  const allDescriptions = descriptions.map(d => d.text.toLowerCase())
-  const allSitelinkTexts = (sitelinks || []).map(s => (s.text + ' ' + (s.description || '')).toLowerCase())
-  const allCallouts = (callouts || []).map(c => c.toLowerCase())
+  const allHeadlines = headlines.map((h) => h.text.toLowerCase())
+  const allDescriptions = descriptions.map((d) => d.text.toLowerCase())
+  const allSitelinkTexts = (sitelinks || []).map((s) =>
+    (s.text + ' ' + (s.description || '')).toLowerCase()
+  )
+  const allCallouts = (callouts || []).map((c) => c.toLowerCase())
   const allTexts = [...allHeadlines, ...allDescriptions, ...allSitelinkTexts, ...allCallouts]
 
   // 1. 动态生成"其他品类"列表（排除目标品类）
-  const targetCategories = (categoryWhitelist || []).map(c => c.toLowerCase())
+  const targetCategories = (categoryWhitelist || []).map((c) => c.toLowerCase())
   const allCategoryTerms = [
     // 门铃类
-    'doorbell', 'video doorbell', 'smart doorbell', 'door camera',
+    'doorbell',
+    'video doorbell',
+    'smart doorbell',
+    'door camera',
     // 吸尘器类
-    'vacuum', 'robot vacuum', 'vacuum cleaner', 'cordless vacuum', 'robot mop',
+    'vacuum',
+    'robot vacuum',
+    'vacuum cleaner',
+    'cordless vacuum',
+    'robot mop',
     // 智能锁类
-    'smart lock', 'door lock', 'fingerprint lock', 'keyless lock',
+    'smart lock',
+    'door lock',
+    'fingerprint lock',
+    'keyless lock',
     // 智能家居类
-    'smart home', 'home automation', 'smart plug', 'smart bulb', 'smart speaker',
+    'smart home',
+    'home automation',
+    'smart plug',
+    'smart bulb',
+    'smart speaker',
     // 母婴类
-    'breast pump', 'baby monitor', 'baby gear',
+    'breast pump',
+    'baby monitor',
+    'baby gear',
     // 店铺通用类（单品链接不应出现）
-    'browse our collection', 'shop all', 'browse collection', 'explore our',
-    'full lineup', 'wide range', 'our product line', 'all products'
+    'browse our collection',
+    'shop all',
+    'browse collection',
+    'explore our',
+    'full lineup',
+    'wide range',
+    'our product line',
+    'all products',
   ]
 
   // 过滤：只检查不在目标品类白名单中的品类词
-  const otherCategoryTerms = allCategoryTerms.filter(term => {
+  const otherCategoryTerms = allCategoryTerms.filter((term) => {
     // 检查term中是否包含目标品类词
-    const isTargetCategory = targetCategories.some(cat =>
-      term.toLowerCase().includes(cat) || cat.includes(term.toLowerCase())
+    const isTargetCategory = targetCategories.some(
+      (cat) => term.toLowerCase().includes(cat) || cat.includes(term.toLowerCase())
     )
-    return !isTargetCategory  // 排除目标品类，保留其他品类
+    return !isTargetCategory // 排除目标品类，保留其他品类
   })
 
   // 2. 通用店铺/品牌文案列表
   const genericStoreTerms = [
-    'browse our collection', 'shop all cameras', 'shop all products',
-    'browse collection', 'explore our full', 'our product line',
-    'all products', 'wide range', 'full lineup', 'complete lineup',
-    'smart home solutions', 'home security solutions', 'whole home',
-    'entire home', 'every room', 'all your needs', 'one stop shop',
-    'everything you need', 'full range of', 'complete range of',
-    'shop the full', 'view all products', 'see all products'
+    'browse our collection',
+    'shop all cameras',
+    'shop all products',
+    'browse collection',
+    'explore our full',
+    'our product line',
+    'all products',
+    'wide range',
+    'full lineup',
+    'complete lineup',
+    'smart home solutions',
+    'home security solutions',
+    'whole home',
+    'entire home',
+    'every room',
+    'all your needs',
+    'one stop shop',
+    'everything you need',
+    'full range of',
+    'complete range of',
+    'shop the full',
+    'view all products',
+    'see all products',
   ]
 
   // 3. 通用品牌卖点（单品不应使用）
   const genericBrandTerms = [
-    'wide product range', 'full product line', 'complete security lineup',
-    'smart home lineup', 'full line of', 'complete line of',
-    'diverse selection', 'extensive collection', 'comprehensive range',
-    'for all your', 'for every need', 'solutions for'
+    'wide product range',
+    'full product line',
+    'complete security lineup',
+    'smart home lineup',
+    'full line of',
+    'complete line of',
+    'diverse selection',
+    'extensive collection',
+    'comprehensive range',
+    'for all your',
+    'for every need',
+    'solutions for',
   ]
 
   // 4. 检查所有文本中的其他品类提及
   allTexts.forEach((text, idx) => {
-    otherCategoryTerms.forEach(term => {
+    otherCategoryTerms.forEach((term) => {
       if (text.includes(term)) {
-        const source = idx < allHeadlines.length ? 'Headline' :
-                      idx < allHeadlines.length + allDescriptions.length ? 'Description' :
-                      idx < allHeadlines.length + allDescriptions.length + allSitelinkTexts.length ? 'Sitelink' : 'Callout'
+        const source =
+          idx < allHeadlines.length
+            ? 'Headline'
+            : idx < allHeadlines.length + allDescriptions.length
+              ? 'Description'
+              : idx < allHeadlines.length + allDescriptions.length + allSitelinkTexts.length
+                ? 'Sitelink'
+                : 'Callout'
         issues.push(`${source} ${idx + 1} 包含其他品类词: "${term}"`)
         problemCount++
       }
@@ -2442,16 +3476,32 @@ function calculateProductFocus(
   // 5. 检查Headlines是否太通用（没有产品信息）
   allHeadlines.forEach((text, idx) => {
     // 检查是否太通用（没有产品信息）
-    const isTooGeneric = text.length < 15 ||
-      (!text.includes('pro') && !text.includes('max') && !text.includes('2k') &&
-       !text.includes('4k') && !text.includes('camera') && !text.includes('ring'))
+    const isTooGeneric =
+      text.length < 15 ||
+      (!text.includes('pro') &&
+        !text.includes('max') &&
+        !text.includes('2k') &&
+        !text.includes('4k') &&
+        !text.includes('camera') &&
+        !text.includes('ring'))
 
     // 获取headline类型
     const headlineType = headlines[idx]?.type || ''
 
     if (isTooGeneric && headlineType && !text.includes(headlineType)) {
       // 排除正常类型标识（如"brand", "feature"等）
-      if (!['brand', 'feature', 'promo', 'cta', 'urgency', 'social_proof', 'question', 'emotional'].includes(headlineType)) {
+      if (
+        ![
+          'brand',
+          'feature',
+          'promo',
+          'cta',
+          'urgency',
+          'social_proof',
+          'question',
+          'emotional',
+        ].includes(headlineType)
+      ) {
         issues.push(`Headline ${idx + 1} 可能太通用，缺乏产品细节`)
         problemCount += 0.5
       }
@@ -2460,7 +3510,7 @@ function calculateProductFocus(
 
   // 6. 检查Sitelinks中的通用店铺文案
   allSitelinkTexts.forEach((text, idx) => {
-    genericStoreTerms.forEach(term => {
+    genericStoreTerms.forEach((term) => {
       if (text.includes(term)) {
         issues.push(`Sitelink ${idx + 1} 包含店铺通用文案: "${term}"（单品链接应避免）`)
         problemCount++
@@ -2470,7 +3520,7 @@ function calculateProductFocus(
 
   // 7. 检查Callouts中的通用品牌文案
   allCallouts.forEach((text, idx) => {
-    genericBrandTerms.forEach(term => {
+    genericBrandTerms.forEach((term) => {
       if (text.includes(term)) {
         issues.push(`Callout ${idx + 1} 包含通用品牌文案: "${term}"（单品应突出具体功能）`)
         problemCount++
@@ -2480,7 +3530,7 @@ function calculateProductFocus(
 
   // 8. 检查Descriptions中的店铺通用文案
   allDescriptions.forEach((text, idx) => {
-    genericStoreTerms.forEach(term => {
+    genericStoreTerms.forEach((term) => {
       if (text.includes(term)) {
         issues.push(`Description ${idx + 1} 包含店铺通用文案: "${term}"（单品链接应避免）`)
         problemCount++
@@ -2497,8 +3547,8 @@ function calculateProductFocus(
   else if (problemCount >= 0.5) score = 3
 
   // 10. 额外检查：是否提到多个品类（使用动态品类列表）
-  const categoryMentions = allTexts.filter(text =>
-    allCategoryTerms.some(cat => text.includes(cat))
+  const categoryMentions = allTexts.filter((text) =>
+    allCategoryTerms.some((cat) => text.includes(cat))
   ).length
 
   if (categoryMentions > 3) {
@@ -2509,7 +3559,7 @@ function calculateProductFocus(
   // 输出调试信息
   if (score < 4) {
     console.log(`⚠️ 单品聚焦度评分: ${score}/4 (${problemCount}个问题)`)
-    issues.forEach(issue => console.log(`   - ${issue}`))
+    issues.forEach((issue) => console.log(`   - ${issue}`))
   } else {
     console.log(`✅ 单品聚焦度评分: ${score}/4 (无问题)`)
   }
@@ -2551,13 +3601,23 @@ function calculateSimilarity(text1: string, text2: string): number {
  * Jaccard 相似度 (词集合)
  */
 function calculateJaccardSimilarity(text1: string, text2: string): number {
-  const words1 = new Set(text1.toLowerCase().split(/\s+/).filter(w => w.length > 0))
-  const words2 = new Set(text2.toLowerCase().split(/\s+/).filter(w => w.length > 0))
+  const words1 = new Set(
+    text1
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length > 0)
+  )
+  const words2 = new Set(
+    text2
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length > 0)
+  )
 
   if (words1.size === 0 && words2.size === 0) return 1
   if (words1.size === 0 || words2.size === 0) return 0
 
-  const intersection = new Set([...words1].filter(word => words2.has(word)))
+  const intersection = new Set([...words1].filter((word) => words2.has(word)))
   const union = new Set([...words1, ...words2])
 
   return union.size > 0 ? intersection.size / union.size : 0
@@ -2567,8 +3627,14 @@ function calculateJaccardSimilarity(text1: string, text2: string): number {
  * Cosine 相似度 (词频向量)
  */
 function calculateCosineSimilarity(text1: string, text2: string): number {
-  const words1 = text1.toLowerCase().split(/\s+/).filter(w => w.length > 0)
-  const words2 = text2.toLowerCase().split(/\s+/).filter(w => w.length > 0)
+  const words1 = text1
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 0)
+  const words2 = text2
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 0)
 
   if (words1.length === 0 || words2.length === 0) return 0
 
@@ -2578,8 +3644,8 @@ function calculateCosineSimilarity(text1: string, text2: string): number {
 
   // 构建词频向量
   for (const word of allWords) {
-    vector1[word] = words1.filter(w => w === word).length
-    vector2[word] = words2.filter(w => w === word).length
+    vector1[word] = words1.filter((w) => w === word).length
+    vector2[word] = words2.filter((w) => w === word).length
   }
 
   // 计算点积
@@ -2645,7 +3711,7 @@ function calculateNgramSimilarity(text1: string, text2: string, n: number = 2): 
   if (ngrams1.length === 0 && ngrams2.length === 0) return 1
   if (ngrams1.length === 0 || ngrams2.length === 0) return 0
 
-  const intersection = ngrams1.filter(ng => ngrams2.includes(ng)).length
+  const intersection = ngrams1.filter((ng) => ngrams2.includes(ng)).length
   const union = new Set([...ngrams1, ...ngrams2]).size
 
   return union > 0 ? intersection / union : 0
@@ -2655,7 +3721,10 @@ function calculateNgramSimilarity(text1: string, text2: string, n: number = 2): 
  * 提取 N-gram
  */
 function getNgrams(text: string, n: number): string[] {
-  const words = text.toLowerCase().split(/\s+/).filter(w => w.length > 0)
+  const words = text
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 0)
   const ngrams: string[] = []
 
   for (let i = 0; i <= words.length - n; i++) {
@@ -2704,7 +3773,7 @@ export async function evaluateIndividualAsset(
   }
 
   // 关键词检查
-  const hasKeyword = keywords.some(kw => text.toLowerCase().includes(kw.toLowerCase()))
+  const hasKeyword = keywords.some((kw) => text.toLowerCase().includes(kw.toLowerCase()))
   if (!hasKeyword) {
     issues.push('未包含关键词')
     suggestions.push('建议融入至少1个关键词')
@@ -2712,7 +3781,9 @@ export async function evaluateIndividualAsset(
   }
 
   // 禁用词检查
-  const hasForbiddenWord = FORBIDDEN_WORDS.some(word => text.toLowerCase().includes(word.toLowerCase()))
+  const hasForbiddenWord = FORBIDDEN_WORDS.some((word) =>
+    text.toLowerCase().includes(word.toLowerCase())
+  )
   if (hasForbiddenWord) {
     issues.push('包含违规词汇')
     suggestions.push('移除绝对化或夸大表述')
@@ -2745,7 +3816,7 @@ export async function evaluateIndividualAsset(
   return {
     score: Math.max(0, score),
     issues,
-    suggestions
+    suggestions,
   }
 }
 

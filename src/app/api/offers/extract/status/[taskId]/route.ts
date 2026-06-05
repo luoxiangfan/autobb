@@ -45,7 +45,9 @@ interface OfferTask {
 }
 
 function parseBooleanQuery(value: string | null): boolean {
-  const normalized = String(value || '').trim().toLowerCase()
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   return normalized === '1' || normalized === 'true' || normalized === 'yes'
 }
 
@@ -64,19 +66,20 @@ function resolveRecommendedPollIntervalMs(task: OfferTask): number {
     return 0
   }
 
-  const stage = String(task.stage || '').trim().toLowerCase()
+  const stage = String(task.stage || '')
+    .trim()
+    .toLowerCase()
   if (task.status === 'pending') return 3000
   if (stage === 'ai_analysis') return 4000
-  if (stage === 'accessing_page' || stage === 'scraping_products' || stage === 'processing_data') return 2000
+  if (stage === 'accessing_page' || stage === 'scraping_products' || stage === 'processing_data')
+    return 2000
   return 2500
 }
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { taskId: string } }
-) {
+export async function GET(req: NextRequest, props: { params: Promise<{ taskId: string }> }) {
+  const params = await props.params
   const db = getDatabase()
   const { taskId } = params
 
@@ -84,10 +87,7 @@ export async function GET(
     // 验证用户身份
     const authResult = await verifyAuth(req)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: '请先登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
     }
     const userIdNum = authResult.user.userId
 
@@ -112,7 +112,12 @@ export async function GET(
       )
     }
 
-    if (waitForUpdate && lastUpdatedAt && task.updated_at === lastUpdatedAt && task.status === 'running') {
+    if (
+      waitForUpdate &&
+      lastUpdatedAt &&
+      task.updated_at === lastUpdatedAt &&
+      task.status === 'running'
+    ) {
       const startedAt = Date.now()
       while (Date.now() - startedAt < timeoutMs) {
         await sleep(600)
@@ -143,14 +148,13 @@ export async function GET(
       streamUrl: `/api/offers/extract/stream/${task.id}`,
       waitApplied: waitForUpdate && Boolean(lastUpdatedAt),
     })
-
   } catch (error: any) {
     console.error('Query task status failed:', error)
 
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message || '查询失败'
+        message: error.message || '查询失败',
       },
       { status: 500 }
     )

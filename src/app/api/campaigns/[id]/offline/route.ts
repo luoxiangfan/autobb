@@ -30,10 +30,8 @@ function normalizeGoogleCampaignId(value: unknown): string | null {
   return /^\d+$/.test(raw) ? raw : null
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -56,7 +54,7 @@ export async function POST(
 
     const db = await getDatabase()
 
-    const campaignRow = await db.queryOne(
+    const campaignRow = (await db.queryOne(
       `
         SELECT
           c.id,
@@ -83,7 +81,7 @@ export async function POST(
         LIMIT 1
       `,
       [campaignId, userId]
-    ) as
+    )) as
       | {
           id: number
           campaign_id: string | null
@@ -128,7 +126,10 @@ export async function POST(
       creationStatus === 'pending' || creationStatus === 'failed'
 
     if (!googleCampaignId && !canLocalOfflineWithoutGoogleCampaign) {
-      return NextResponse.json({ error: '该广告系列尚未发布到Google Ads，无法下线' }, { status: 400 })
+      return NextResponse.json(
+        { error: '该广告系列尚未发布到Google Ads，无法下线' },
+        { status: 400 }
+      )
     }
 
     let skipRemoteUpdates = false
@@ -148,10 +149,15 @@ export async function POST(
         return NextResponse.json({ error: '未找到关联的Ads账号，无法下线' }, { status: 400 })
       }
 
-      const accountIsActive = campaignRow.ads_account_active === true || campaignRow.ads_account_active === 1
-      const accountIsDeleted = campaignRow.ads_account_deleted === true || campaignRow.ads_account_deleted === 1
+      const accountIsActive =
+        campaignRow.ads_account_active === true || campaignRow.ads_account_active === 1
+      const accountIsDeleted =
+        campaignRow.ads_account_deleted === true || campaignRow.ads_account_deleted === 1
       if (!accountIsActive || accountIsDeleted) {
-        return NextResponse.json({ error: '关联的Ads账号不可用（可能已解除关联或停用）' }, { status: 400 })
+        return NextResponse.json(
+          { error: '关联的Ads账号不可用（可能已解除关联或停用）' },
+          { status: 400 }
+        )
       }
 
       const accountStatus = String(campaignRow.ads_account_status || 'UNKNOWN').toUpperCase()
@@ -334,7 +340,12 @@ export async function POST(
 
     // 可选：Offer拉黑
     let blacklistResult: { applied: boolean; reason?: string } = { applied: false }
-    if (blacklistOffer && campaignRow.offer_id && campaignRow.offer_brand && campaignRow.offer_target_country) {
+    if (
+      blacklistOffer &&
+      campaignRow.offer_id &&
+      campaignRow.offer_brand &&
+      campaignRow.offer_target_country
+    ) {
       const existing = await db.queryOne(
         'SELECT id FROM offer_blacklist WHERE user_id = ? AND brand = ? AND target_country = ?',
         [userId, campaignRow.offer_brand, campaignRow.offer_target_country]
@@ -411,91 +422,94 @@ export async function POST(
 
           if (!googleAdsSummary.skippedReason) {
             const runRemoteUpdates = async (loginCustomerId: string | undefined) => {
-                const toErrorMessage = (error: any): string =>
-                  String(error?.message || error || 'Google Ads 更新失败')
+              const toErrorMessage = (error: any): string =>
+                String(error?.message || error || 'Google Ads 更新失败')
 
-                for (const id of googleCampaignIds) {
-                  if (removeGoogleAdsCampaign) {
-                    try {
-                      if (authType === 'service_account') {
-                        const { removeCampaignPython } = await import('@/lib/python-ads-client')
-                        const resourceName = `customers/${customerIdValue}/campaigns/${id}`
-                        await removeCampaignPython({
-                          userId,
-                          serviceAccountId,
-                          customerId: customerIdValue,
-                          campaignResourceName: resourceName,
-                        })
-                      } else {
-                        await removeGoogleAdsCampaignRemote({
-                          customerId: customerIdValue,
-                          refreshToken,
-                          campaignId: id,
-                          accountId: campaignRow.google_ads_account_id!,
-                          userId,
-                          loginCustomerId,
-                          authType,
-                          serviceAccountId,
-                          credentials: oauthApiCredentials,
-                          authContext: preparedAuthContext,
-                        })
-                      }
-                      googleAdsSummary.removed += 1
-                    } catch (removeError: any) {
-                      const removeMessage = toErrorMessage(removeError)
-                      try {
-                        await updateGoogleAdsCampaignStatus({
-                          customerId: customerIdValue,
-                          refreshToken,
-                          campaignId: id,
-                          status: 'PAUSED',
-                          accountId: campaignRow.google_ads_account_id!,
-                          userId,
-                          loginCustomerId,
-                          authType,
-                          serviceAccountId,
-                          credentials: oauthApiCredentials,
-                          authContext: preparedAuthContext,
-                        })
-                        googleAdsSummary.pausedFallback += 1
-                        console.warn(
-                          `[offline] remove failed, paused as fallback: campaign=${id}, reason=${removeMessage}`
-                        )
-                      } catch (pauseError: any) {
-                        const pauseMessage = toErrorMessage(pauseError)
-                        googleAdsSummary.failed += 1
-                        googleAdsSummary.errors.push(
-                          `campaign ${id}: remove failed (${removeMessage}); pause fallback failed (${pauseMessage})`
-                        )
-                        console.error('[offline] Google Ads remove/pause fallback failed:', pauseMessage)
-                      }
-                    }
-                    continue
-                  }
-
+              for (const id of googleCampaignIds) {
+                if (removeGoogleAdsCampaign) {
                   try {
-                    await updateGoogleAdsCampaignStatus({
-                      customerId: customerIdValue,
-                      refreshToken,
-                      campaignId: id,
-                      status: 'PAUSED',
-                      accountId: campaignRow.google_ads_account_id!,
-                      userId,
-                      loginCustomerId,
-                      authType,
-                      serviceAccountId,
-                      credentials: oauthApiCredentials,
-                      authContext: preparedAuthContext,
-                    })
-                    googleAdsSummary.paused += 1
-                  } catch (err: any) {
-                    googleAdsSummary.failed += 1
-                    const message = toErrorMessage(err)
-                    googleAdsSummary.errors.push(`campaign ${id}: ${message}`)
-                    console.error('[offline] Google Ads update failed:', message)
+                    if (authType === 'service_account') {
+                      const { removeCampaignPython } = await import('@/lib/python-ads-client')
+                      const resourceName = `customers/${customerIdValue}/campaigns/${id}`
+                      await removeCampaignPython({
+                        userId,
+                        serviceAccountId,
+                        customerId: customerIdValue,
+                        campaignResourceName: resourceName,
+                      })
+                    } else {
+                      await removeGoogleAdsCampaignRemote({
+                        customerId: customerIdValue,
+                        refreshToken,
+                        campaignId: id,
+                        accountId: campaignRow.google_ads_account_id!,
+                        userId,
+                        loginCustomerId,
+                        authType,
+                        serviceAccountId,
+                        credentials: oauthApiCredentials,
+                        authContext: preparedAuthContext,
+                      })
+                    }
+                    googleAdsSummary.removed += 1
+                  } catch (removeError: any) {
+                    const removeMessage = toErrorMessage(removeError)
+                    try {
+                      await updateGoogleAdsCampaignStatus({
+                        customerId: customerIdValue,
+                        refreshToken,
+                        campaignId: id,
+                        status: 'PAUSED',
+                        accountId: campaignRow.google_ads_account_id!,
+                        userId,
+                        loginCustomerId,
+                        authType,
+                        serviceAccountId,
+                        credentials: oauthApiCredentials,
+                        authContext: preparedAuthContext,
+                      })
+                      googleAdsSummary.pausedFallback += 1
+                      console.warn(
+                        `[offline] remove failed, paused as fallback: campaign=${id}, reason=${removeMessage}`
+                      )
+                    } catch (pauseError: any) {
+                      const pauseMessage = toErrorMessage(pauseError)
+                      googleAdsSummary.failed += 1
+                      googleAdsSummary.errors.push(
+                        `campaign ${id}: remove failed (${removeMessage}); pause fallback failed (${pauseMessage})`
+                      )
+                      console.error(
+                        '[offline] Google Ads remove/pause fallback failed:',
+                        pauseMessage
+                      )
+                    }
                   }
+                  continue
+                }
+
+                try {
+                  await updateGoogleAdsCampaignStatus({
+                    customerId: customerIdValue,
+                    refreshToken,
+                    campaignId: id,
+                    status: 'PAUSED',
+                    accountId: campaignRow.google_ads_account_id!,
+                    userId,
+                    loginCustomerId,
+                    authType,
+                    serviceAccountId,
+                    credentials: oauthApiCredentials,
+                    authContext: preparedAuthContext,
+                  })
+                  googleAdsSummary.paused += 1
+                } catch (err: any) {
+                  googleAdsSummary.failed += 1
+                  const message = toErrorMessage(err)
+                  googleAdsSummary.errors.push(`campaign ${id}: ${message}`)
+                  console.error('[offline] Google Ads update failed:', message)
                 }
               }
+            }
 
             const runWithLoginFallback = () =>
               runWithLoginCustomerFallbackForAccount({
@@ -542,9 +556,6 @@ export async function POST(
     })
   } catch (error: any) {
     console.error('下线广告系列失败:', error)
-    return NextResponse.json(
-      { error: error?.message || '下线广告系列失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '下线广告系列失败' }, { status: 500 })
   }
 }

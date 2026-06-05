@@ -58,4 +58,3 @@ describe('KeywordPlanner DB cache cutoff', () => {
     expect(String(sql)).not.toContain('to_char(')
   })
 })
-

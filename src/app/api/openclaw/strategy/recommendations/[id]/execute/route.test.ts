@@ -34,7 +34,7 @@ describe('POST /api/openclaw/strategy/recommendations/:id/execute', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ confirm: false }),
     })
-    const res = await POST(req, { params: { id: 'r1' } })
+    const res = await POST(req, { params: Promise.resolve({ id: 'r1' }) })
 
     expect(res.status).toBe(400)
     expect(recommendationFns.queueStrategyRecommendationExecution).not.toHaveBeenCalled()
@@ -60,7 +60,7 @@ describe('POST /api/openclaw/strategy/recommendations/:id/execute', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ confirm: true }),
     })
-    const res = await POST(req, { params: { id: 'rec-2' } })
+    const res = await POST(req, { params: Promise.resolve({ id: 'rec-2' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -89,7 +89,7 @@ describe('POST /api/openclaw/strategy/recommendations/:id/execute', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ confirm: true }),
     })
-    const res = await POST(req, { params: { id: 'rec-2' } })
+    const res = await POST(req, { params: Promise.resolve({ id: 'rec-2' }) })
 
     expect(res.status).toBe(409)
   })
@@ -108,7 +108,7 @@ describe('POST /api/openclaw/strategy/recommendations/:id/execute', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ confirm: true }),
     })
-    const res = await POST(req, { params: { id: 'rec-2' } })
+    const res = await POST(req, { params: Promise.resolve({ id: 'rec-2' }) })
 
     expect(res.status).toBe(409)
   })

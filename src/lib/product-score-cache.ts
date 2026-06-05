@@ -40,7 +40,6 @@ function getProductScorePattern(userId: number): string {
   return `${REDIS_PREFIX_CONFIG.cache}product-score:user:${userId}:product:*`
 }
 
-
 /**
  * 缓存单个商品的推荐指数
  */
@@ -59,7 +58,7 @@ export async function cacheProductRecommendationScore(
     const key = getProductScoreKey(userId, productId)
     const data = {
       ...score,
-      cachedAt: Date.now()
+      cachedAt: Date.now(),
     }
 
     await redis.setex(key, RECOMMENDATION_SCORE_TTL_SECONDS, JSON.stringify(data))
@@ -91,7 +90,7 @@ export async function batchCacheProductRecommendationScores(
       const key = getProductScoreKey(userId, productId)
       const data = {
         ...score,
-        cachedAt: now
+        cachedAt: now,
       }
       pipeline.setex(key, RECOMMENDATION_SCORE_TTL_SECONDS, JSON.stringify(data))
     }
@@ -148,7 +147,7 @@ export async function batchGetCachedProductRecommendationScores(
       return result
     }
 
-    const keys = productIds.map(id => getProductScoreKey(userId, id))
+    const keys = productIds.map((id) => getProductScoreKey(userId, id))
     const values = await redis.mget(...keys)
 
     for (let i = 0; i < productIds.length; i++) {
@@ -163,7 +162,9 @@ export async function batchGetCachedProductRecommendationScores(
       }
     }
 
-    console.log(`[ProductScoreCache] 批量查询: ${productIds.length}个商品, 命中${result.size}个 (用户${userId})`)
+    console.log(
+      `[ProductScoreCache] 批量查询: ${productIds.length}个商品, 命中${result.size}个 (用户${userId})`
+    )
     return result
   } catch (error) {
     console.error('[ProductScoreCache] 批量读取缓存失败:', error)
@@ -205,7 +206,7 @@ export async function batchInvalidateProductRecommendationScores(
       return
     }
 
-    const keys = productIds.map(id => getProductScoreKey(userId, id))
+    const keys = productIds.map((id) => getProductScoreKey(userId, id))
     await redis.del(...keys)
     console.log(`[ProductScoreCache] 已批量清除${productIds.length}个商品的缓存 (用户${userId})`)
   } catch (error) {

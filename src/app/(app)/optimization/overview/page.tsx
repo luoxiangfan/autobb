@@ -16,7 +16,7 @@ import {
   ArrowRight,
   RefreshCw,
   Target,
-  Zap
+  Zap,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -72,7 +72,7 @@ export default function OptimizationOverviewPage() {
       const [metricsRes, tasksRes, creativesRes] = await Promise.all([
         fetch('/api/optimization/metrics'),
         fetch('/api/optimization-tasks?status=pending'),
-        fetch('/api/optimization/top-creatives?limit=5')
+        fetch('/api/optimization/top-creatives?limit=5'),
       ])
 
       if (metricsRes.ok) {
@@ -88,7 +88,7 @@ export default function OptimizationOverviewPage() {
           pendingTasks: 0,
           completedTasks: 0,
           costSavings: 0,
-          lastUpdated: new Date().toISOString()
+          lastUpdated: new Date().toISOString(),
         })
       }
 
@@ -101,7 +101,7 @@ export default function OptimizationOverviewPage() {
           description: task.reason || task.action || '',
           severity: task.priority || 'medium',
           status: task.status || 'pending',
-          createdAt: task.createdAt
+          createdAt: task.createdAt,
         }))
         setTasks(formattedTasks)
       }
@@ -178,12 +178,7 @@ export default function OptimizationOverviewPage() {
           <h1 className="text-2xl font-bold text-slate-900">优化概览</h1>
           <p className="text-slate-500 mt-1">监控广告表现，持续优化投放效果</p>
         </div>
-        <Button
-          variant="outline"
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="gap-2"
-        >
+        <Button variant="outline" onClick={handleRefresh} disabled={refreshing} className="gap-2">
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           刷新数据
         </Button>
@@ -200,7 +195,8 @@ export default function OptimizationOverviewPage() {
                 <p className="text-2xl font-bold mt-1">
                   {metrics?.ctrChange != null ? (
                     <span className={metrics.ctrChange >= 0 ? 'text-green-600' : 'text-red-600'}>
-                      {metrics.ctrChange >= 0 ? '+' : ''}{metrics.ctrChange.toFixed(2)}%
+                      {metrics.ctrChange >= 0 ? '+' : ''}
+                      {metrics.ctrChange.toFixed(2)}%
                     </span>
                   ) : (
                     <span className="text-slate-400">--</span>
@@ -208,7 +204,9 @@ export default function OptimizationOverviewPage() {
                 </p>
                 <p className="text-xs text-slate-400 mt-1">过去7天</p>
               </div>
-              <div className={`p-3 rounded-full ${metrics?.ctrChange && metrics.ctrChange >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+              <div
+                className={`p-3 rounded-full ${metrics?.ctrChange && metrics.ctrChange >= 0 ? 'bg-green-100' : 'bg-red-100'}`}
+              >
                 {metrics?.ctrChange && metrics.ctrChange >= 0 ? (
                   <TrendingUp className="w-6 h-6 text-green-600" />
                 ) : (
@@ -228,7 +226,8 @@ export default function OptimizationOverviewPage() {
                 <p className="text-2xl font-bold mt-1">
                   {metrics?.cpcChange != null ? (
                     <span className={metrics.cpcChange <= 0 ? 'text-green-600' : 'text-red-600'}>
-                      {metrics.cpcChange >= 0 ? '+' : ''}{metrics.cpcChange.toFixed(2)}%
+                      {metrics.cpcChange >= 0 ? '+' : ''}
+                      {metrics.cpcChange.toFixed(2)}%
                     </span>
                   ) : (
                     <span className="text-slate-400">--</span>
@@ -236,8 +235,12 @@ export default function OptimizationOverviewPage() {
                 </p>
                 <p className="text-xs text-slate-400 mt-1">过去7天（负值表示成本下降）</p>
               </div>
-              <div className={`p-3 rounded-full ${metrics?.cpcChange && metrics.cpcChange <= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
-                <DollarSign className={`w-6 h-6 ${metrics?.cpcChange && metrics.cpcChange <= 0 ? 'text-green-600' : 'text-red-600'}`} />
+              <div
+                className={`p-3 rounded-full ${metrics?.cpcChange && metrics.cpcChange <= 0 ? 'bg-green-100' : 'bg-red-100'}`}
+              >
+                <DollarSign
+                  className={`w-6 h-6 ${metrics?.cpcChange && metrics.cpcChange <= 0 ? 'text-green-600' : 'text-red-600'}`}
+                />
               </div>
             </div>
           </CardContent>
@@ -251,8 +254,11 @@ export default function OptimizationOverviewPage() {
                 <p className="text-sm text-slate-500 font-medium">展示量变化</p>
                 <p className="text-2xl font-bold mt-1">
                   {metrics?.impressionsChange != null ? (
-                    <span className={metrics.impressionsChange >= 0 ? 'text-green-600' : 'text-red-600'}>
-                      {metrics.impressionsChange >= 0 ? '+' : ''}{metrics.impressionsChange.toFixed(1)}%
+                    <span
+                      className={metrics.impressionsChange >= 0 ? 'text-green-600' : 'text-red-600'}
+                    >
+                      {metrics.impressionsChange >= 0 ? '+' : ''}
+                      {metrics.impressionsChange.toFixed(1)}%
                     </span>
                   ) : (
                     <span className="text-slate-400">--</span>
@@ -260,8 +266,12 @@ export default function OptimizationOverviewPage() {
                 </p>
                 <p className="text-xs text-slate-400 mt-1">过去7天</p>
               </div>
-              <div className={`p-3 rounded-full ${metrics?.impressionsChange && metrics.impressionsChange >= 0 ? 'bg-blue-100' : 'bg-red-100'}`}>
-                <Eye className={`w-6 h-6 ${metrics?.impressionsChange && metrics.impressionsChange >= 0 ? 'text-blue-600' : 'text-red-600'}`} />
+              <div
+                className={`p-3 rounded-full ${metrics?.impressionsChange && metrics.impressionsChange >= 0 ? 'bg-blue-100' : 'bg-red-100'}`}
+              >
+                <Eye
+                  className={`w-6 h-6 ${metrics?.impressionsChange && metrics.impressionsChange >= 0 ? 'text-blue-600' : 'text-red-600'}`}
+                />
               </div>
             </div>
           </CardContent>
@@ -318,16 +328,19 @@ export default function OptimizationOverviewPage() {
                     {getStatusIcon(task.status)}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-slate-900 truncate">
-                          {task.title}
-                        </p>
-                        <Badge variant="outline" className={`text-xs ${getSeverityColor(task.severity)}`}>
-                          {task.severity === 'high' ? '高' : task.severity === 'medium' ? '中' : '低'}
+                        <p className="text-sm font-medium text-slate-900 truncate">{task.title}</p>
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ${getSeverityColor(task.severity)}`}
+                        >
+                          {task.severity === 'high'
+                            ? '高'
+                            : task.severity === 'medium'
+                              ? '中'
+                              : '低'}
                         </Badge>
                       </div>
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-1">
-                        {task.description}
-                      </p>
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-1">{task.description}</p>
                     </div>
                   </div>
                 ))}
@@ -367,12 +380,17 @@ export default function OptimizationOverviewPage() {
                     key={creative.creativeId}
                     className="flex items-center gap-3 p-3 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors"
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                      index === 0 ? 'bg-yellow-100 text-yellow-700' :
-                      index === 1 ? 'bg-slate-200 text-slate-700' :
-                      index === 2 ? 'bg-orange-100 text-orange-700' :
-                      'bg-slate-100 text-slate-500'
-                    }`}>
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        index === 0
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : index === 1
+                            ? 'bg-slate-200 text-slate-700'
+                            : index === 2
+                              ? 'bg-orange-100 text-orange-700'
+                              : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
                       {index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -389,7 +407,9 @@ export default function OptimizationOverviewPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getRatingColor(creative.rating || 'poor')}`}>
+                      <div
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getRatingColor(creative.rating || 'poor')}`}
+                      >
                         <Zap className="w-3 h-3" />
                         {creative.score ?? 0}分
                       </div>

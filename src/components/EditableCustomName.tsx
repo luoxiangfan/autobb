@@ -15,7 +15,7 @@ interface EditableCustomNameProps {
 
 /**
  * 可编辑的自定义名称组件
- * 
+ *
  * 功能：
  * 1. 默认显示自定义名称（如果有），否则显示占位符
  * 2. 点击后进入编辑模式
@@ -69,62 +69,65 @@ export function EditableCustomName({
   /**
    * 保存自定义名称
    */
-  const saveCustomName = useCallback(async (value: string) => {
-    // 取消之前的请求
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
-
-    // 创建新的 AbortController
-    const abortController = new AbortController()
-    abortControllerRef.current = abortController
-
-    setIsSaving(true)
-
-    try {
-      const response = await fetch(`/api/campaigns/${campaignId}/custom-name`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          customName: value === '' ? null : value,
-        }),
-        signal: abortController.signal,
-      })
-
-      if (response.status === 401) {
-        showError('保存失败', '未授权，请重新登录')
-        // 刷新页面重新加载数据
-        setTimeout(() => {
-          window.location.reload()
-        }, 1000)
-        return
+  const saveCustomName = useCallback(
+    async (value: string) => {
+      // 取消之前的请求
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
       }
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => null)
-        throw new Error(data?.error || '网络错误')
-      }
+      // 创建新的 AbortController
+      const abortController = new AbortController()
+      abortControllerRef.current = abortController
 
-      // 保存成功
-      setSavedValue(value.trim())
-      onSaved?.(value === '' ? null : value)
-      showSuccess('保存成功', value ? `已设置自定义名称` : '已清除自定义名称')
-      setIsEditing(false)
-    } catch (error: any) {
-      // 忽略取消的请求
-      if (error.name === 'AbortError') {
-        return
-      }
+      setIsSaving(true)
 
-      showError('保存失败', error?.message || '网络错误')
-      // 恢复为已保存的值
-      setDisplayValue(savedValue.trim())
-    } finally {
-      setIsSaving(false)
-      abortControllerRef.current = null
-    }
-  }, [campaignId, savedValue, onSaved])
+      try {
+        const response = await fetch(`/api/campaigns/${campaignId}/custom-name`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            customName: value === '' ? null : value,
+          }),
+          signal: abortController.signal,
+        })
+
+        if (response.status === 401) {
+          showError('保存失败', '未授权，请重新登录')
+          // 刷新页面重新加载数据
+          setTimeout(() => {
+            window.location.reload()
+          }, 1000)
+          return
+        }
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error || '网络错误')
+        }
+
+        // 保存成功
+        setSavedValue(value.trim())
+        onSaved?.(value === '' ? null : value)
+        showSuccess('保存成功', value ? `已设置自定义名称` : '已清除自定义名称')
+        setIsEditing(false)
+      } catch (error: any) {
+        // 忽略取消的请求
+        if (error.name === 'AbortError') {
+          return
+        }
+
+        showError('保存失败', error?.message || '网络错误')
+        // 恢复为已保存的值
+        setDisplayValue(savedValue.trim())
+      } finally {
+        setIsSaving(false)
+        abortControllerRef.current = null
+      }
+    },
+    [campaignId, savedValue, onSaved]
+  )
 
   /**
    * 处理失焦保存（带防抖）
@@ -151,18 +154,21 @@ export function EditableCustomName({
   /**
    * 处理键盘事件
    */
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      // 按 Enter 保存
-      e.preventDefault()
-      handleBlur()
-    } else if (e.key === 'Escape') {
-      // 按 ESC 取消
-      e.preventDefault()
-      setDisplayValue(savedValue.trim())
-      setIsEditing(false)
-    }
-  }, [handleBlur, savedValue])
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        // 按 Enter 保存
+        e.preventDefault()
+        handleBlur()
+      } else if (e.key === 'Escape') {
+        // 按 ESC 取消
+        e.preventDefault()
+        setDisplayValue(savedValue.trim())
+        setIsEditing(false)
+      }
+    },
+    [handleBlur, savedValue]
+  )
 
   /**
    * 开始编辑
@@ -194,11 +200,7 @@ export function EditableCustomName({
 
   // 禁用状态
   if (disabled) {
-    return (
-      <div className="text-sm text-gray-400">
-        {displayValue || '-'}
-      </div>
-    )
+    return <div className="text-sm text-gray-400">{displayValue || '-'}</div>
   }
 
   // 编辑模式

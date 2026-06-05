@@ -38,9 +38,27 @@ describe('creative-keyword-context-filter intent tightening', () => {
       modelFamilyContext,
     })
 
-    expect(__testOnly.hasIntentContextAnchor({ keyword: 'anker everfrost 2 cooler', anchorTokens: required, brandName: 'Anker' })).toBe(true)
-    expect(__testOnly.hasIntentContextAnchor({ keyword: 'anker power bank 20000mah', anchorTokens: required, brandName: 'Anker' })).toBe(false)
-    expect(__testOnly.hasIntentContextAnchor({ keyword: 'anker solix c300x', anchorTokens: required, brandName: 'Anker' })).toBe(false)
+    expect(
+      __testOnly.hasIntentContextAnchor({
+        keyword: 'anker everfrost 2 cooler',
+        anchorTokens: required,
+        brandName: 'Anker',
+      })
+    ).toBe(true)
+    expect(
+      __testOnly.hasIntentContextAnchor({
+        keyword: 'anker power bank 20000mah',
+        anchorTokens: required,
+        brandName: 'Anker',
+      })
+    ).toBe(false)
+    expect(
+      __testOnly.hasIntentContextAnchor({
+        keyword: 'anker solix c300x',
+        anchorTokens: required,
+        brandName: 'Anker',
+      })
+    ).toBe(false)
   })
 
   it('applies brand/product intent-specific keep rules', () => {
@@ -56,24 +74,30 @@ describe('creative-keyword-context-filter intent tightening', () => {
       modelFamilyContext,
     })
 
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'brand_intent',
-      keyword: 'anker',
-      brandName: 'Anker',
-      anchorTokens: required,
-    })).toBe(true)
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'brand_intent',
-      keyword: 'anker power bank 20000mah',
-      brandName: 'Anker',
-      anchorTokens: required,
-    })).toBe(false)
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'product_intent',
-      keyword: 'anker everfrost outdoor cooler',
-      brandName: 'Anker',
-      anchorTokens: required,
-    })).toBe(true)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'brand_intent',
+        keyword: 'anker',
+        brandName: 'Anker',
+        anchorTokens: required,
+      })
+    ).toBe(true)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'brand_intent',
+        keyword: 'anker power bank 20000mah',
+        brandName: 'Anker',
+        anchorTokens: required,
+      })
+    ).toBe(false)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'product_intent',
+        keyword: 'anker everfrost outdoor cooler',
+        brandName: 'Anker',
+        anchorTokens: required,
+      })
+    ).toBe(true)
   })
 
   it('filters foreign product-model keywords from brand/product intent on product pages while keeping generic brand demand', () => {
@@ -85,7 +109,8 @@ describe('creative-keyword-context-filter intent tightening', () => {
     const required = __testOnly.buildIntentContextAnchorTokens({
       brandName: 'Anker',
       categoryContext: 'Generators Patio Lawn Garden Portable Power',
-      productName: 'Anker SOLIX F3800 Portable Power Station, 3840Wh, 6000W AC Output, Solar Generator',
+      productName:
+        'Anker SOLIX F3800 Portable Power Station, 3840Wh, 6000W AC Output, Solar Generator',
       modelFamilyContext,
     })
 
@@ -94,86 +119,104 @@ describe('creative-keyword-context-filter intent tightening', () => {
     expect(required.has('generator')).toBe(true)
     expect(required.has('station')).toBe(false)
 
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'brand_intent',
-      keyword: 'anker generator',
-      brandName: 'Anker',
-      anchorTokens: required,
-      pageType: 'product',
-      modelFamilyContext,
-    })).toBe(true)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'brand_intent',
+        keyword: 'anker generator',
+        brandName: 'Anker',
+        anchorTokens: required,
+        pageType: 'product',
+        modelFamilyContext,
+      })
+    ).toBe(true)
 
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'brand_intent',
-      keyword: 'anker solix f3800 price',
-      brandName: 'Anker',
-      anchorTokens: required,
-      pageType: 'product',
-      modelFamilyContext,
-    })).toBe(true)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'brand_intent',
+        keyword: 'anker solix f3800 price',
+        brandName: 'Anker',
+        anchorTokens: required,
+        pageType: 'product',
+        modelFamilyContext,
+      })
+    ).toBe(true)
 
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'brand_intent',
-      keyword: 'anker solix c300x',
-      brandName: 'Anker',
-      anchorTokens: required,
-      pageType: 'product',
-      modelFamilyContext,
-    })).toBe(false)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'brand_intent',
+        keyword: 'anker solix c300x',
+        brandName: 'Anker',
+        anchorTokens: required,
+        pageType: 'product',
+        modelFamilyContext,
+      })
+    ).toBe(false)
 
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'brand_intent',
-      keyword: 'anker 577 thunderbolt docking station',
-      brandName: 'Anker',
-      anchorTokens: required,
-      pageType: 'product',
-      modelFamilyContext,
-    })).toBe(false)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'brand_intent',
+        keyword: 'anker 577 thunderbolt docking station',
+        brandName: 'Anker',
+        anchorTokens: required,
+        pageType: 'product',
+        modelFamilyContext,
+      })
+    ).toBe(false)
 
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'brand_intent',
-      keyword: 'anker 767 solar generator',
-      brandName: 'Anker',
-      anchorTokens: required,
-      pageType: 'product',
-      modelFamilyContext,
-    })).toBe(false)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'brand_intent',
+        keyword: 'anker 767 solar generator',
+        brandName: 'Anker',
+        anchorTokens: required,
+        pageType: 'product',
+        modelFamilyContext,
+      })
+    ).toBe(false)
 
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'brand_intent',
-      keyword: 'anker solix cooler',
-      brandName: 'Anker',
-      anchorTokens: required,
-      pageType: 'product',
-      modelFamilyContext,
-    })).toBe(false)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'brand_intent',
+        keyword: 'anker solix cooler',
+        brandName: 'Anker',
+        anchorTokens: required,
+        pageType: 'product',
+        modelFamilyContext,
+      })
+    ).toBe(false)
 
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'product_intent',
-      keyword: 'anker solix c300x',
-      brandName: 'Anker',
-      anchorTokens: required,
-      pageType: 'product',
-      modelFamilyContext,
-    })).toBe(false)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'product_intent',
+        keyword: 'anker solix c300x',
+        brandName: 'Anker',
+        anchorTokens: required,
+        pageType: 'product',
+        modelFamilyContext,
+      })
+    ).toBe(false)
 
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'product_intent',
-      keyword: 'anker solix cooler',
-      brandName: 'Anker',
-      anchorTokens: required,
-      pageType: 'product',
-      modelFamilyContext,
-    })).toBe(false)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'product_intent',
+        keyword: 'anker solix cooler',
+        brandName: 'Anker',
+        anchorTokens: required,
+        pageType: 'product',
+        modelFamilyContext,
+      })
+    ).toBe(false)
 
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'product_intent',
-      keyword: 'anker 767 solar generator',
-      brandName: 'Anker',
-      anchorTokens: required,
-      pageType: 'product',
-      modelFamilyContext,
-    })).toBe(false)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'product_intent',
+        keyword: 'anker 767 solar generator',
+        brandName: 'Anker',
+        anchorTokens: required,
+        pageType: 'product',
+        modelFamilyContext,
+      })
+    ).toBe(false)
   })
 
   it('uses soft family signals as first-class anchors for model_intent tightening', () => {
@@ -198,40 +241,48 @@ describe('creative-keyword-context-filter intent tightening', () => {
     expect(required.has('memory')).toBe(true)
     expect(required.has('foam')).toBe(true)
 
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'model_intent',
-      keyword: 'novilla king mattress',
-      brandName: 'Novilla',
-      anchorTokens: required,
-      pageType: 'product',
-      modelFamilyContext,
-    })).toBe(true)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'model_intent',
+        keyword: 'novilla king mattress',
+        brandName: 'Novilla',
+        anchorTokens: required,
+        pageType: 'product',
+        modelFamilyContext,
+      })
+    ).toBe(true)
 
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'model_intent',
-      keyword: 'novilla memory foam mattress',
-      brandName: 'Novilla',
-      anchorTokens: required,
-      pageType: 'product',
-      modelFamilyContext,
-    })).toBe(true)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'model_intent',
+        keyword: 'novilla memory foam mattress',
+        brandName: 'Novilla',
+        anchorTokens: required,
+        pageType: 'product',
+        modelFamilyContext,
+      })
+    ).toBe(true)
 
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'model_intent',
-      keyword: 'novilla mattress',
-      brandName: 'Novilla',
-      anchorTokens: required,
-      pageType: 'product',
-      modelFamilyContext,
-    })).toBe(false)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'model_intent',
+        keyword: 'novilla mattress',
+        brandName: 'Novilla',
+        anchorTokens: required,
+        pageType: 'product',
+        modelFamilyContext,
+      })
+    ).toBe(false)
 
-    expect(__testOnly.shouldKeepAfterIntentTightening({
-      creativeType: 'model_intent',
-      keyword: 'novilla queen mattress',
-      brandName: 'Novilla',
-      anchorTokens: required,
-      pageType: 'product',
-      modelFamilyContext,
-    })).toBe(false)
+    expect(
+      __testOnly.shouldKeepAfterIntentTightening({
+        creativeType: 'model_intent',
+        keyword: 'novilla queen mattress',
+        brandName: 'Novilla',
+        anchorTokens: required,
+        pageType: 'product',
+        modelFamilyContext,
+      })
+    ).toBe(false)
   })
 })

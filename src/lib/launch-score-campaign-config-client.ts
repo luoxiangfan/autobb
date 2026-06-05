@@ -24,13 +24,18 @@ export function storageKeyForLaunchScoreCampaignConfig(offerId: number): string 
   return `${STORAGE_PREFIX}${offerId}`
 }
 
-export function pickLaunchScoreHashCampaignConfigFromStep3(config: {
-  budgetAmount?: number
-  maxCpcBid?: number
-  targetCountry?: string
-  targetLanguage?: string
-  keywords?: unknown[]
-} | null | undefined): LaunchScoreHashCampaignConfigClient | undefined {
+export function pickLaunchScoreHashCampaignConfigFromStep3(
+  config:
+    | {
+        budgetAmount?: number
+        maxCpcBid?: number
+        targetCountry?: string
+        targetLanguage?: string
+        keywords?: unknown[]
+      }
+    | null
+    | undefined
+): LaunchScoreHashCampaignConfigClient | undefined {
   if (!config) {
     return undefined
   }
@@ -53,11 +58,11 @@ export function pickLaunchScoreHashCampaignConfigFromStep3(config: {
   }
 
   if (
-    picked.budgetAmount == null
-    && picked.maxCpcBid == null
-    && !picked.targetCountry
-    && !picked.targetLanguage
-    && !picked.keywords?.length
+    picked.budgetAmount == null &&
+    picked.maxCpcBid == null &&
+    !picked.targetCountry &&
+    !picked.targetLanguage &&
+    !picked.keywords?.length
   ) {
     return undefined
   }
@@ -73,10 +78,7 @@ export function saveLaunchScoreCampaignConfigForOffer(
     return
   }
   try {
-    sessionStorage.setItem(
-      storageKeyForLaunchScoreCampaignConfig(offerId),
-      JSON.stringify(config)
-    )
+    sessionStorage.setItem(storageKeyForLaunchScoreCampaignConfig(offerId), JSON.stringify(config))
   } catch {
     // sessionStorage 不可用时静默降级
   }
@@ -124,12 +126,7 @@ export function parseLaunchScoreHashCampaignConfigFromSearchParamsClient(
   const targetCountry = searchParams.get('targetCountry')?.trim() || undefined
   const targetLanguage = searchParams.get('targetLanguage')?.trim() || undefined
 
-  if (
-    budgetAmount == null
-    && maxCpcBid == null
-    && !targetCountry
-    && !targetLanguage
-  ) {
+  if (budgetAmount == null && maxCpcBid == null && !targetCountry && !targetLanguage) {
     return undefined
   }
 
@@ -244,9 +241,7 @@ export function clearLaunchScoreCampaignConfigForOffer(offerId: number): void {
 }
 
 /** 稳定序列化 URL 查询中的 campaignConfig 字段（用于 React 依赖） */
-export function serializeLaunchScoreCampaignConfigQueryKey(
-  searchParams: SearchParamsLike
-): string {
+export function serializeLaunchScoreCampaignConfigQueryKey(searchParams: SearchParamsLike): string {
   return [
     searchParams.get('budgetAmount') ?? '',
     searchParams.get('maxCpcBid') ?? '',

@@ -102,21 +102,29 @@ describe('GET /api/campaigns/trends', () => {
   })
 
   it('refresh=true bypasses read cache and writes fresh trends payload', async () => {
-    const query = vi.fn(scopeThen(async (sql: string) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(cp.currency')) {
-        return [{ currency: 'USD', cost: 5 }]
-      }
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')) {
-        return [{ date: '2026-02-24', currency: 'USD', impressions: 50, clicks: 10, cost: 5 }]
-      }
-      if (sql.includes('FROM affiliate_commission_attributions')) {
-        return [{ date: '2026-02-24', currency: 'USD', commission: 3 }]
-      }
-      if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
-        return []
-      }
-      throw new Error(`unexpected sql: ${sql}`)
-    }))
+    const query = vi.fn(
+      scopeThen(async (sql: string) => {
+        if (
+          sql.includes('FROM campaign_performance') &&
+          sql.includes('GROUP BY COALESCE(cp.currency')
+        ) {
+          return [{ currency: 'USD', cost: 5 }]
+        }
+        if (
+          sql.includes('FROM campaign_performance') &&
+          sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')
+        ) {
+          return [{ date: '2026-02-24', currency: 'USD', impressions: 50, clicks: 10, cost: 5 }]
+        }
+        if (sql.includes('FROM affiliate_commission_attributions')) {
+          return [{ date: '2026-02-24', currency: 'USD', commission: 3 }]
+        }
+        if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
+          return []
+        }
+        throw new Error(`unexpected sql: ${sql}`)
+      })
+    )
 
     dbFns.getDatabase.mockResolvedValue({ query })
     campaignCacheFns.getCachedCampaignTrends.mockResolvedValue({
@@ -139,37 +147,45 @@ describe('GET /api/campaigns/trends', () => {
   })
 
   it('returns multi-currency stacked trend fields and merged commissions', async () => {
-    const query = vi.fn(scopeThen(async (sql: string) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(cp.currency')) {
-        return [
-          { currency: 'USD', cost: 10 },
-          { currency: 'CNY', cost: 20 },
-        ]
-      }
+    const query = vi.fn(
+      scopeThen(async (sql: string) => {
+        if (
+          sql.includes('FROM campaign_performance') &&
+          sql.includes('GROUP BY COALESCE(cp.currency')
+        ) {
+          return [
+            { currency: 'USD', cost: 10 },
+            { currency: 'CNY', cost: 20 },
+          ]
+        }
 
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')) {
-        return [
-          { date: '2026-02-24', currency: 'USD', impressions: 100, clicks: 20, cost: 10 },
-          { date: '2026-02-24', currency: 'CNY', impressions: 50, clicks: 5, cost: 20 },
-        ]
-      }
+        if (
+          sql.includes('FROM campaign_performance') &&
+          sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')
+        ) {
+          return [
+            { date: '2026-02-24', currency: 'USD', impressions: 100, clicks: 20, cost: 10 },
+            { date: '2026-02-24', currency: 'CNY', impressions: 50, clicks: 5, cost: 20 },
+          ]
+        }
 
-      if (sql.includes('FROM affiliate_commission_attributions')) {
-        return [
-          { date: '2026-02-24', currency: 'USD', commission: 3 },
-          { date: '2026-02-24', currency: 'CNY', commission: 4 },
-        ]
-      }
+        if (sql.includes('FROM affiliate_commission_attributions')) {
+          return [
+            { date: '2026-02-24', currency: 'USD', commission: 3 },
+            { date: '2026-02-24', currency: 'CNY', commission: 4 },
+          ]
+        }
 
-      if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
-        return [
-          { date: '2026-02-24', currency: 'USD', commission: 2 },
-          { date: '2026-02-24', currency: 'CNY', commission: 1 },
-        ]
-      }
+        if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
+          return [
+            { date: '2026-02-24', currency: 'USD', commission: 2 },
+            { date: '2026-02-24', currency: 'CNY', commission: 1 },
+          ]
+        }
 
-      throw new Error(`unexpected sql: ${sql}`)
-    }))
+        throw new Error(`unexpected sql: ${sql}`)
+      })
+    )
 
     dbFns.getDatabase.mockResolvedValue({ query })
 
@@ -182,14 +198,18 @@ describe('GET /api/campaigns/trends', () => {
     expect(data.summary?.currency).toBe('MIXED')
     expect(data.summary?.baseCurrency).toBe('USD')
     expect(data.summary?.currencies).toEqual(expect.arrayContaining(['USD', 'CNY']))
-    expect(data.summary?.costsByCurrency).toEqual(expect.arrayContaining([
-      expect.objectContaining({ currency: 'USD', amount: 10 }),
-      expect.objectContaining({ currency: 'CNY', amount: 20 }),
-    ]))
-    expect(data.summary?.commissionsByCurrency).toEqual(expect.arrayContaining([
-      expect.objectContaining({ currency: 'USD', amount: 5 }),
-      expect.objectContaining({ currency: 'CNY', amount: 5 }),
-    ]))
+    expect(data.summary?.costsByCurrency).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ currency: 'USD', amount: 10 }),
+        expect.objectContaining({ currency: 'CNY', amount: 20 }),
+      ])
+    )
+    expect(data.summary?.commissionsByCurrency).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ currency: 'USD', amount: 5 }),
+        expect.objectContaining({ currency: 'CNY', amount: 5 }),
+      ])
+    )
 
     const day24 = data.trends.find((row: any) => row.date === '2026-02-24')
     expect(day24).toBeTruthy()
@@ -202,33 +222,43 @@ describe('GET /api/campaigns/trends', () => {
   })
 
   it('includes all unattributed failures for campaign trend backend parity', async () => {
-    const query = vi.fn(scopeThen(async (sql: string, _params: unknown[] = []) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(cp.currency')) {
-        return [{ currency: 'USD', cost: 40 }]
-      }
+    const query = vi.fn(
+      scopeThen(async (sql: string, _params: unknown[] = []) => {
+        if (
+          sql.includes('FROM campaign_performance') &&
+          sql.includes('GROUP BY COALESCE(cp.currency')
+        ) {
+          return [{ currency: 'USD', cost: 40 }]
+        }
 
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')) {
-        return [{ date: '2026-02-27', currency: 'USD', impressions: 80, clicks: 8, cost: 40 }]
-      }
+        if (
+          sql.includes('FROM campaign_performance') &&
+          sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')
+        ) {
+          return [{ date: '2026-02-27', currency: 'USD', impressions: 80, clicks: 8, cost: 40 }]
+        }
 
-      if (sql.includes('FROM affiliate_commission_attributions')) {
-        return [{ date: '2026-02-27', currency: 'USD', commission: 20.23 }]
-      }
+        if (sql.includes('FROM affiliate_commission_attributions')) {
+          return [{ date: '2026-02-27', currency: 'USD', commission: 20.23 }]
+        }
 
-      if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
-        expect(sql).toContain('scoped_campaigns')
-        expect(sql).toContain('offer_campaign_counts')
-        expect(sql).not.toContain("COALESCE(reason_code, '') <> ?")
-        expect(sql).not.toContain("COALESCE(reason_code, '') NOT IN")
-        return [{ date: '2026-02-27', currency: 'USD', commission: 5.99 }]
-      }
+        if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
+          expect(sql).toContain('scoped_campaigns')
+          expect(sql).toContain('offer_campaign_counts')
+          expect(sql).not.toContain("COALESCE(reason_code, '') <> ?")
+          expect(sql).not.toContain("COALESCE(reason_code, '') NOT IN")
+          return [{ date: '2026-02-27', currency: 'USD', commission: 5.99 }]
+        }
 
-      throw new Error(`unexpected sql: ${sql}`)
-    }))
+        throw new Error(`unexpected sql: ${sql}`)
+      })
+    )
 
     dbFns.getDatabase.mockResolvedValue({ query })
 
-    const req = new NextRequest('http://localhost/api/campaigns/trends?start_date=2026-02-27&end_date=2026-02-27')
+    const req = new NextRequest(
+      'http://localhost/api/campaigns/trends?start_date=2026-02-27&end_date=2026-02-27'
+    )
     const res = await GET(req)
     const data = await res.json()
 
@@ -240,21 +270,29 @@ describe('GET /api/campaigns/trends', () => {
   })
 
   it('falls back when unattributed table is unavailable', async () => {
-    const query = vi.fn(scopeThen(async (sql: string) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(cp.currency')) {
-        return [{ currency: 'USD', cost: 5 }]
-      }
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')) {
-        return [{ date: '2026-02-24', currency: 'USD', impressions: 50, clicks: 10, cost: 5 }]
-      }
-      if (sql.includes('FROM affiliate_commission_attributions')) {
-        return [{ date: '2026-02-24', currency: 'USD', commission: 3 }]
-      }
-      if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
-        throw new Error('relation "openclaw_affiliate_attribution_failures" does not exist')
-      }
-      throw new Error(`unexpected sql: ${sql}`)
-    }))
+    const query = vi.fn(
+      scopeThen(async (sql: string) => {
+        if (
+          sql.includes('FROM campaign_performance') &&
+          sql.includes('GROUP BY COALESCE(cp.currency')
+        ) {
+          return [{ currency: 'USD', cost: 5 }]
+        }
+        if (
+          sql.includes('FROM campaign_performance') &&
+          sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')
+        ) {
+          return [{ date: '2026-02-24', currency: 'USD', impressions: 50, clicks: 10, cost: 5 }]
+        }
+        if (sql.includes('FROM affiliate_commission_attributions')) {
+          return [{ date: '2026-02-24', currency: 'USD', commission: 3 }]
+        }
+        if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
+          throw new Error('relation "openclaw_affiliate_attribution_failures" does not exist')
+        }
+        throw new Error(`unexpected sql: ${sql}`)
+      })
+    )
 
     dbFns.getDatabase.mockResolvedValue({ query })
 
@@ -269,25 +307,37 @@ describe('GET /api/campaigns/trends', () => {
   })
 
   it('keeps converted commission totals when commission currency is absent from ad cost currencies', async () => {
-    const query = vi.fn(scopeThen(async (sql: string) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(cp.currency')) {
-        return [{ currency: 'USD', cost: 42.33 }]
-      }
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')) {
-        return [{ date: '2026-03-07', currency: 'USD', impressions: 345, clicks: 39, cost: 42.33 }]
-      }
-      if (sql.includes('FROM affiliate_commission_attributions')) {
-        return [{ date: '2026-03-07', currency: 'CNY', commission: 118.02 }]
-      }
-      if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
-        return []
-      }
-      throw new Error(`unexpected sql: ${sql}`)
-    }))
+    const query = vi.fn(
+      scopeThen(async (sql: string) => {
+        if (
+          sql.includes('FROM campaign_performance') &&
+          sql.includes('GROUP BY COALESCE(cp.currency')
+        ) {
+          return [{ currency: 'USD', cost: 42.33 }]
+        }
+        if (
+          sql.includes('FROM campaign_performance') &&
+          sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')
+        ) {
+          return [
+            { date: '2026-03-07', currency: 'USD', impressions: 345, clicks: 39, cost: 42.33 },
+          ]
+        }
+        if (sql.includes('FROM affiliate_commission_attributions')) {
+          return [{ date: '2026-03-07', currency: 'CNY', commission: 118.02 }]
+        }
+        if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
+          return []
+        }
+        throw new Error(`unexpected sql: ${sql}`)
+      })
+    )
 
     dbFns.getDatabase.mockResolvedValue({ query })
 
-    const req = new NextRequest('http://localhost/api/campaigns/trends?start_date=2026-03-07&end_date=2026-03-07')
+    const req = new NextRequest(
+      'http://localhost/api/campaigns/trends?start_date=2026-03-07&end_date=2026-03-07'
+    )
     const res = await GET(req)
     const data = await res.json()
 
@@ -308,30 +358,38 @@ describe('GET /api/campaigns/trends', () => {
   })
 
   it('applies optional single-currency filter while keeping converted totals', async () => {
-    const query = vi.fn(scopeThen(async (sql: string) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(cp.currency')) {
-        return [
-          { currency: 'USD', cost: 12.5 },
-          { currency: 'CNY', cost: 8.2 },
-        ]
-      }
-      if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')) {
-        return [
-          { date: '2026-02-24', currency: 'USD', impressions: 80, clicks: 16, cost: 6.4 },
-          { date: '2026-02-24', currency: 'CNY', impressions: 40, clicks: 8, cost: 3.2 },
-        ]
-      }
-      if (sql.includes('FROM affiliate_commission_attributions')) {
-        return [
-          { date: '2026-02-24', currency: 'USD', commission: 1 },
-          { date: '2026-02-24', currency: 'CNY', commission: 2 },
-        ]
-      }
-      if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
-        return [{ date: '2026-02-24', currency: 'CNY', commission: 1 }]
-      }
-      throw new Error(`unexpected sql: ${sql}`)
-    }))
+    const query = vi.fn(
+      scopeThen(async (sql: string) => {
+        if (
+          sql.includes('FROM campaign_performance') &&
+          sql.includes('GROUP BY COALESCE(cp.currency')
+        ) {
+          return [
+            { currency: 'USD', cost: 12.5 },
+            { currency: 'CNY', cost: 8.2 },
+          ]
+        }
+        if (
+          sql.includes('FROM campaign_performance') &&
+          sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')
+        ) {
+          return [
+            { date: '2026-02-24', currency: 'USD', impressions: 80, clicks: 16, cost: 6.4 },
+            { date: '2026-02-24', currency: 'CNY', impressions: 40, clicks: 8, cost: 3.2 },
+          ]
+        }
+        if (sql.includes('FROM affiliate_commission_attributions')) {
+          return [
+            { date: '2026-02-24', currency: 'USD', commission: 1 },
+            { date: '2026-02-24', currency: 'CNY', commission: 2 },
+          ]
+        }
+        if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
+          return [{ date: '2026-02-24', currency: 'CNY', commission: 1 }]
+        }
+        throw new Error(`unexpected sql: ${sql}`)
+      })
+    )
 
     dbFns.getDatabase.mockResolvedValue({ query })
 

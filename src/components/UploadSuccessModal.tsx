@@ -25,7 +25,7 @@ export default function UploadSuccessModal({
   onClose,
   fileName,
   validCount,
-  skippedCount
+  skippedCount,
 }: UploadSuccessModalProps) {
   // 锁定背景滚动
   useEffect(() => {
@@ -44,10 +44,7 @@ export default function UploadSuccessModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* 遮罩层 */}
-      <div
-        className="fixed inset-0 bg-black bg-opacity-25 transition-opacity"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black bg-opacity-25 transition-opacity" onClick={onClose} />
 
       {/* 弹窗内容 */}
       <div className="flex min-h-full items-center justify-center p-4">
@@ -61,14 +58,12 @@ export default function UploadSuccessModal({
           </button>
 
           <div className="flex items-start">
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <CheckCircle2 className="h-12 w-12 text-green-600" />
             </div>
 
             <div className="ml-4 flex-1">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">
-                文件上传成功
-              </h3>
+              <h3 className="text-lg font-medium leading-6 text-gray-900">文件上传成功</h3>
 
               <div className="mt-4 space-y-3">
                 <div className="text-sm text-gray-600">
@@ -77,14 +72,12 @@ export default function UploadSuccessModal({
                     有效数据：<span className="font-semibold text-blue-600">{validCount}</span> 行
                   </p>
                   {skippedCount > 0 && (
-                    <p className="text-yellow-600">
-                      跳过：{skippedCount} 行（缺少必填参数）
-                    </p>
+                    <p className="text-yellow-600">跳过：{skippedCount} 行（缺少必填参数）</p>
                   )}
                 </div>
 
                 <div className="flex items-start space-x-2 rounded-lg bg-blue-50 p-3">
-                  <Clock className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <Clock className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                   <div className="text-sm text-blue-800">
                     <p className="font-medium">正在后台处理</p>
                     <p className="mt-1">
@@ -107,7 +100,7 @@ export default function UploadSuccessModal({
               <div className="mt-5 flex justify-end">
                 <button
                   type="button"
-                  className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                   onClick={onClose}
                 >
                   知道了

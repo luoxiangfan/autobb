@@ -17,10 +17,7 @@ export async function POST(request: NextRequest) {
     const { proxy_url } = body
 
     if (!proxy_url) {
-      return NextResponse.json(
-        { error: 'proxy_url参数不能为空' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'proxy_url参数不能为空' }, { status: 400 })
     }
 
     // Step 1: 格式验证

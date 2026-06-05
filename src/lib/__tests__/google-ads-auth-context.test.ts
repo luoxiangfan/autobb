@@ -369,9 +369,7 @@ describe('getGoogleAdsAuthContext', () => {
     const ctx = await getGoogleAdsAuthContext(2)
 
     expect(ctx.dualStack).toBe(true)
-    expect(ctx.oauthCredentials).toEqual(
-      expect.objectContaining({ refresh_token: 'rt-dual' })
-    )
+    expect(ctx.oauthCredentials).toEqual(expect.objectContaining({ refresh_token: 'rt-dual' }))
     expect(oauthFns.getGoogleAdsCredentials).toHaveBeenCalled()
   })
 
@@ -576,9 +574,7 @@ describe('googleAdsApiAuthValidationErrorMessage', () => {
   it('returns dual-stack warning for dual_stack reason', async () => {
     const { googleAdsApiAuthValidationErrorMessage, GOOGLE_ADS_DUAL_STACK_WARNING } =
       await import('@/lib/google-ads-auth-context')
-    expect(googleAdsApiAuthValidationErrorMessage('dual_stack')).toBe(
-      GOOGLE_ADS_DUAL_STACK_WARNING
-    )
+    expect(googleAdsApiAuthValidationErrorMessage('dual_stack')).toBe(GOOGLE_ADS_DUAL_STACK_WARNING)
   })
 })
 
@@ -690,18 +686,14 @@ describe('assertNoConflictingGoogleAdsAuth', () => {
   it('rejects oauth save when owner has active service account', async () => {
     dbFns.queryOne.mockResolvedValueOnce({ id: 'sa-1' })
 
-    await expect(assertNoConflictingGoogleAdsAuth(2, 'oauth')).rejects.toThrow(
-      '服务账号'
-    )
+    await expect(assertNoConflictingGoogleAdsAuth(2, 'oauth')).rejects.toThrow('服务账号')
   })
 
   it('rejects service account save when owner has oauth refresh token', async () => {
     dbFns.queryOne.mockResolvedValueOnce(null)
     oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValueOnce({ refresh_token: 'rt' })
 
-    await expect(assertNoConflictingGoogleAdsAuth(2, 'service_account')).rejects.toThrow(
-      'OAuth'
-    )
+    await expect(assertNoConflictingGoogleAdsAuth(2, 'service_account')).rejects.toThrow('OAuth')
   })
 
   it('allows oauth save when no service account exists', async () => {
@@ -761,60 +753,48 @@ describe('resolveGoogleAdsApiAuthType', () => {
   it('infers service_account when authType omitted and context is SA', async () => {
     const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads-auth-context')
     expect(
-      resolveGoogleAdsApiAuthType(
-        {},
-        {
-          ...defaultOAuthAuthContext,
-          auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
-          oauthCredentials: null,
-          serviceAccountConfig: { id: 'sa-1', mccCustomerId: '111', developerToken: 'tok' },
-        } as any
-      )
+      resolveGoogleAdsApiAuthType({}, {
+        ...defaultOAuthAuthContext,
+        auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+        oauthCredentials: null,
+        serviceAccountConfig: { id: 'sa-1', mccCustomerId: '111', developerToken: 'tok' },
+      } as any)
     ).toBe('service_account')
   })
 
   it('rejects explicit oauth when context is service_account', async () => {
     const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads-auth-context')
     expect(() =>
-      resolveGoogleAdsApiAuthType(
-        { authType: 'oauth' },
-        {
-          ...defaultOAuthAuthContext,
-          auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
-          oauthCredentials: null,
-          serviceAccountConfig: { id: 'sa-1' },
-        } as any
-      )
+      resolveGoogleAdsApiAuthType({ authType: 'oauth' }, {
+        ...defaultOAuthAuthContext,
+        auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+        oauthCredentials: null,
+        serviceAccountConfig: { id: 'sa-1' },
+      } as any)
     ).toThrow(/服务账号认证/)
   })
 
   it('infers oauth from credential hints when auth.authType is empty', async () => {
     const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads-auth-context')
     expect(
-      resolveGoogleAdsApiAuthType(
-        {},
-        {
-          ...defaultOAuthAuthContext,
-          auth: {},
-          oauthCredentials: { refresh_token: 'rt' },
-          serviceAccountConfig: null,
-        } as any
-      )
+      resolveGoogleAdsApiAuthType({}, {
+        ...defaultOAuthAuthContext,
+        auth: {},
+        oauthCredentials: { refresh_token: 'rt' },
+        serviceAccountConfig: null,
+      } as any)
     ).toBe('oauth')
   })
 
   it('infers service_account from credential hints when auth.authType is empty', async () => {
     const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads-auth-context')
     expect(
-      resolveGoogleAdsApiAuthType(
-        {},
-        {
-          ...defaultOAuthAuthContext,
-          auth: {},
-          oauthCredentials: null,
-          serviceAccountConfig: { id: 'sa-1', mccCustomerId: '111', developerToken: 'tok' },
-        } as any
-      )
+      resolveGoogleAdsApiAuthType({}, {
+        ...defaultOAuthAuthContext,
+        auth: {},
+        oauthCredentials: null,
+        serviceAccountConfig: { id: 'sa-1', mccCustomerId: '111', developerToken: 'tok' },
+      } as any)
     ).toBe('service_account')
   })
 })
@@ -845,28 +825,33 @@ describe('resolveGoogleAdsApiAuthFromContext', () => {
   })
 
   it('prefers linked account service account id and loads its MCC', async () => {
-    serviceAccountFns.getServiceAccountConfig.mockImplementation(async (_userId: number, id?: string) => {
-      if (id === 'sa-linked') {
-        return { id: 'sa-linked', mccCustomerId: '9998887777', developerToken: 'tok' }
+    serviceAccountFns.getServiceAccountConfig.mockImplementation(
+      async (_userId: number, id?: string) => {
+        if (id === 'sa-linked') {
+          return { id: 'sa-linked', mccCustomerId: '9998887777', developerToken: 'tok' }
+        }
+        return { id: 'sa-default', mccCustomerId: '1112223333', developerToken: 'tok' }
       }
-      return { id: 'sa-default', mccCustomerId: '1112223333', developerToken: 'tok' }
-    })
+    )
 
-    const fields = await resolveGoogleAdsApiAuthFromContext({
-      userId: 2,
-      ownerUserId: 1,
-      assignment: null,
-      isShared: false,
-      canModify: true,
-      dualStack: false,
-      auth: { authType: 'service_account', serviceAccountId: 'sa-default' },
-      oauthCredentials: null,
-      serviceAccountConfig: {
-        id: 'sa-default',
-        mccCustomerId: '1112223333',
-        developerToken: 'tok',
-      },
-    } as any, 'sa-linked')
+    const fields = await resolveGoogleAdsApiAuthFromContext(
+      {
+        userId: 2,
+        ownerUserId: 1,
+        assignment: null,
+        isShared: false,
+        canModify: true,
+        dualStack: false,
+        auth: { authType: 'service_account', serviceAccountId: 'sa-default' },
+        oauthCredentials: null,
+        serviceAccountConfig: {
+          id: 'sa-default',
+          mccCustomerId: '1112223333',
+          developerToken: 'tok',
+        },
+      } as any,
+      'sa-linked'
+    )
 
     expect(fields.serviceAccountId).toBe('sa-linked')
     expect(fields.serviceAccountMccId).toBe('9998887777')
@@ -897,10 +882,7 @@ describe('invalidateGoogleAdsAuthContextCacheForOwner', () => {
 
     await invalidateGoogleAdsAuthContextCacheForOwner(1)
 
-    expect(dbFns.query).toHaveBeenCalledWith(
-      expect.stringContaining('shared_admin_user_id'),
-      [1]
-    )
+    expect(dbFns.query).toHaveBeenCalledWith(expect.stringContaining('shared_admin_user_id'), [1])
 
     await getGoogleAdsAuthContext(1)
     await getGoogleAdsAuthContext(2)

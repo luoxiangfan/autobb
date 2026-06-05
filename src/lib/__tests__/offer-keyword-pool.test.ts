@@ -16,7 +16,7 @@ import {
   getBucketInfo,
   calculateKeywordOverlapRate,
   determineClusteringStrategy,
-  type OfferKeywordPool
+  type OfferKeywordPool,
 } from '../offer-keyword-pool'
 
 // 新增导入
@@ -26,7 +26,7 @@ import {
   isBrandIrrelevant,
   filterLowIntentKeywords,
   calculateSearchVolumeThreshold,
-  isPureBrandKeyword as isExactPureBrandKeyword  // 🔥 2026-01-05: 使用别名避免与 offer-keyword-pool.ts 中的同名函数冲突
+  isPureBrandKeyword as isExactPureBrandKeyword, // 🔥 2026-01-05: 使用别名避免与 offer-keyword-pool.ts 中的同名函数冲突
 } from '../keyword-quality-filter'
 
 // Mock 数据
@@ -36,8 +36,20 @@ const mockKeywordPool: OfferKeywordPool = {
   userId: 1,
   brandKeywords: ['eufy'],
   bucketAKeywords: ['eufy camera', 'indoor camera', 'outdoor camera', 'doorbell cam', 'eufycam'],
-  bucketBKeywords: ['home security', 'baby monitor', 'pet watching', 'garage cam', 'driveway security'],
-  bucketCKeywords: ['wireless camera', 'night vision', '2k camera', 'motion detection', 'best camera'],
+  bucketBKeywords: [
+    'home security',
+    'baby monitor',
+    'pet watching',
+    'garage cam',
+    'driveway security',
+  ],
+  bucketCKeywords: [
+    'wireless camera',
+    'night vision',
+    '2k camera',
+    'motion detection',
+    'best camera',
+  ],
   bucketDKeywords: ['eufy camera deal'],
   bucketAIntent: '品牌商品锚点',
   bucketBIntent: '商品需求场景',
@@ -59,11 +71,11 @@ const mockKeywordPool: OfferKeywordPool = {
   clusteringPromptVersion: 'v1.0',
   balanceScore: 0.95,
   createdAt: '2025-12-15T00:00:00Z',
-  updatedAt: '2025-12-15T00:00:00Z'
+  updatedAt: '2025-12-15T00:00:00Z',
 }
 
 const getKeywordTexts = (keywords: Array<{ keyword?: string } | string>) =>
-  keywords.map(kw => typeof kw === 'string' ? kw : (kw.keyword || ''))
+  keywords.map((kw) => (typeof kw === 'string' ? kw : kw.keyword || ''))
 
 describe('OfferKeywordPool', () => {
   describe('isPureBrandKeyword', () => {
@@ -113,7 +125,7 @@ describe('OfferKeywordPool', () => {
         'indoor camera',
         'eufy security',
         'home security',
-        'best camera'
+        'best camera',
       ]
 
       const result = separateBrandKeywords(keywords, 'Eufy')
@@ -135,11 +147,7 @@ describe('OfferKeywordPool', () => {
     })
 
     it('should handle keywords with no pure brand word', () => {
-      const keywords = [
-        'eufy camera',
-        'eufy security',
-        'home security'
-      ]
+      const keywords = ['eufy camera', 'eufy security', 'home security']
 
       const result = separateBrandKeywords(keywords, 'Eufy')
 
@@ -148,12 +156,7 @@ describe('OfferKeywordPool', () => {
     })
 
     it('should handle keywords with multiple pure brand words', () => {
-      const keywords = [
-        'eufy',
-        'Eufy',
-        'EUFY',
-        'eufy camera'
-      ]
+      const keywords = ['eufy', 'Eufy', 'EUFY', 'eufy camera']
 
       const result = separateBrandKeywords(keywords, 'Eufy')
 
@@ -170,8 +173,8 @@ describe('OfferKeywordPool', () => {
 
       expect(info.intent).toBe('品牌意图')
       expect(info.intentEn).toBe('Brand Intent')
-      expect(keywords).toContain('eufy')  // 品牌词
-      expect(keywords).toContain('eufy camera')  // 桶A关键词
+      expect(keywords).toContain('eufy') // 品牌词
+      expect(keywords).toContain('eufy camera') // 桶A关键词
       expect(keywords).not.toContain('indoor camera')
       expect(keywords).not.toContain('outdoor camera')
     })
@@ -220,14 +223,17 @@ describe('OfferKeywordPool', () => {
     })
 
     it('should prefer model-anchored keywords for bucket B when explicit models exist', () => {
-      const info = getBucketInfo({
-        ...mockKeywordPool,
-        brandKeywords: ['brandx'],
-        bucketAKeywords: ['brandx vacuum'],
-        bucketBKeywords: ['brandx x200 vacuum', 'x200 vacuum'],
-        bucketCKeywords: ['brandx series x100 vacuum', 'brandx vacuum accessories'],
-        bucketDKeywords: ['brandx official store'],
-      }, 'B')
+      const info = getBucketInfo(
+        {
+          ...mockKeywordPool,
+          brandKeywords: ['brandx'],
+          bucketAKeywords: ['brandx vacuum'],
+          bucketBKeywords: ['brandx x200 vacuum', 'x200 vacuum'],
+          bucketCKeywords: ['brandx series x100 vacuum', 'brandx vacuum accessories'],
+          bucketDKeywords: ['brandx official store'],
+        },
+        'B'
+      )
       const keywords = getKeywordTexts(info.keywords)
 
       expect(keywords).toContain('brandx x200 vacuum')
@@ -239,55 +245,133 @@ describe('OfferKeywordPool', () => {
     })
 
     it('should admit branded soft family/spec keywords into bucket B without generic fallback terms', () => {
-      const info = getBucketInfo({
-        ...mockKeywordPool,
-        brandKeywords: ['novilla'],
-        bucketAKeywords: [
-          { keyword: 'novilla king size mattress 12 inch', searchVolume: 50, source: 'GOOGLE_SUGGEST', matchType: 'PHRASE' },
-          { keyword: 'novilla mattress', searchVolume: 500, source: 'TITLE_EXTRACT', matchType: 'PHRASE' },
-        ],
-        bucketBKeywords: [
-          { keyword: 'novilla memory foam mattress', searchVolume: 320, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'mattresses', searchVolume: 800, source: 'KEYWORD_PLANNER', matchType: 'PHRASE' },
-        ],
-        bucketCKeywords: [
-          { keyword: 'novilla king size mattress', searchVolume: 260, source: 'TITLE_EXTRACT', matchType: 'PHRASE' },
-          { keyword: 'novilla king mattress', searchVolume: 210, source: 'TITLE_EXTRACT', matchType: 'PHRASE' },
-        ],
-        bucketDKeywords: ['novilla mattress in a box'],
-      } as any, 'B')
+      const info = getBucketInfo(
+        {
+          ...mockKeywordPool,
+          brandKeywords: ['novilla'],
+          bucketAKeywords: [
+            {
+              keyword: 'novilla king size mattress 12 inch',
+              searchVolume: 50,
+              source: 'GOOGLE_SUGGEST',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'novilla mattress',
+              searchVolume: 500,
+              source: 'TITLE_EXTRACT',
+              matchType: 'PHRASE',
+            },
+          ],
+          bucketBKeywords: [
+            {
+              keyword: 'novilla memory foam mattress',
+              searchVolume: 320,
+              source: 'OFFER_EXTRACTED_KEYWORDS',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'mattresses',
+              searchVolume: 800,
+              source: 'KEYWORD_PLANNER',
+              matchType: 'PHRASE',
+            },
+          ],
+          bucketCKeywords: [
+            {
+              keyword: 'novilla king size mattress',
+              searchVolume: 260,
+              source: 'TITLE_EXTRACT',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'novilla king mattress',
+              searchVolume: 210,
+              source: 'TITLE_EXTRACT',
+              matchType: 'PHRASE',
+            },
+          ],
+          bucketDKeywords: ['novilla mattress in a box'],
+        } as any,
+        'B'
+      )
       const keywords = getKeywordTexts(info.keywords)
 
-      expect(keywords).toEqual(expect.arrayContaining([
-        'novilla memory foam mattress',
-        'novilla king size mattress 12 inch',
-        'novilla king size mattress',
-        'novilla king mattress',
-      ]))
+      expect(keywords).toEqual(
+        expect.arrayContaining([
+          'novilla memory foam mattress',
+          'novilla king size mattress 12 inch',
+          'novilla king size mattress',
+          'novilla king mattress',
+        ])
+      )
       expect(keywords).not.toContain('mattresses')
       expect(keywords).not.toContain('novilla')
       expect(keywords).not.toContain('novilla mattress')
     })
 
     it('should rank trusted model_intent sources ahead of global rewrites and awkward keyword shapes', () => {
-      const info = getBucketInfo({
-        ...mockKeywordPool,
-        brandKeywords: ['novilla'],
-        bucketAKeywords: [
-          { keyword: 'novilla king size mattress 12 inch', searchVolume: 50, source: 'GOOGLE_SUGGEST', matchType: 'PHRASE' },
-        ],
-        bucketBKeywords: [
-          { keyword: 'novilla king size mattress', searchVolume: 590, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'novilla memory foam mattress', searchVolume: 320, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'novilla king mattress', searchVolume: 210, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'king novilla mattress', searchVolume: 0, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
-          { keyword: 'novilla mattress king size', searchVolume: 0, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
-          { keyword: 'novilla king size memory foam mattress', searchVolume: 0, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
-          { keyword: 'novilla king size mattress 12', searchVolume: 0, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
-        ],
-        bucketCKeywords: [],
-        bucketDKeywords: [],
-      } as any, 'B')
+      const info = getBucketInfo(
+        {
+          ...mockKeywordPool,
+          brandKeywords: ['novilla'],
+          bucketAKeywords: [
+            {
+              keyword: 'novilla king size mattress 12 inch',
+              searchVolume: 50,
+              source: 'GOOGLE_SUGGEST',
+              matchType: 'PHRASE',
+            },
+          ],
+          bucketBKeywords: [
+            {
+              keyword: 'novilla king size mattress',
+              searchVolume: 590,
+              source: 'OFFER_EXTRACTED_KEYWORDS',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'novilla memory foam mattress',
+              searchVolume: 320,
+              source: 'OFFER_EXTRACTED_KEYWORDS',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'novilla king mattress',
+              searchVolume: 210,
+              source: 'OFFER_EXTRACTED_KEYWORDS',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'king novilla mattress',
+              searchVolume: 0,
+              source: 'GLOBAL_CORE',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'novilla mattress king size',
+              searchVolume: 0,
+              source: 'GLOBAL_CORE',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'novilla king size memory foam mattress',
+              searchVolume: 0,
+              source: 'GLOBAL_CORE',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'novilla king size mattress 12',
+              searchVolume: 0,
+              source: 'GLOBAL_CORE',
+              matchType: 'PHRASE',
+            },
+          ],
+          bucketCKeywords: [],
+          bucketDKeywords: [],
+        } as any,
+        'B'
+      )
       const keywords = getKeywordTexts(info.keywords)
 
       expect(keywords.slice(0, 4)).toEqual([
@@ -303,16 +387,32 @@ describe('OfferKeywordPool', () => {
     })
 
     it('should build brand intent from canonical sources before legacy bucket projection', () => {
-      const info = getBucketInfo({
-        ...mockKeywordPool,
-        brandKeywords: [{ keyword: 'brandx', searchVolume: 1000, source: 'KEYWORD_PLANNER_BRAND', matchType: 'EXACT', isPureBrand: true }],
-        bucketAKeywords: [],
-        bucketBKeywords: [],
-        bucketCKeywords: [],
-        bucketDKeywords: [
-          { keyword: 'brandx cordless vacuum for pet hair', searchVolume: 500, source: 'TITLE_EXTRACT', matchType: 'PHRASE' },
-        ],
-      } as any, 'A')
+      const info = getBucketInfo(
+        {
+          ...mockKeywordPool,
+          brandKeywords: [
+            {
+              keyword: 'brandx',
+              searchVolume: 1000,
+              source: 'KEYWORD_PLANNER_BRAND',
+              matchType: 'EXACT',
+              isPureBrand: true,
+            },
+          ],
+          bucketAKeywords: [],
+          bucketBKeywords: [],
+          bucketCKeywords: [],
+          bucketDKeywords: [
+            {
+              keyword: 'brandx cordless vacuum for pet hair',
+              searchVolume: 500,
+              source: 'TITLE_EXTRACT',
+              matchType: 'PHRASE',
+            },
+          ],
+        } as any,
+        'A'
+      )
       const keywords = getKeywordTexts(info.keywords)
 
       expect(keywords).toContain('brandx')
@@ -320,14 +420,17 @@ describe('OfferKeywordPool', () => {
     })
 
     it('should filter promo-only and store-navigation keywords from bucket D without demand anchors', () => {
-      const info = getBucketInfo({
-        ...mockKeywordPool,
-        brandKeywords: ['brandx'],
-        bucketAKeywords: ['brandx vacuum'],
-        bucketBKeywords: ['brandx official store'],
-        bucketCKeywords: ['robot vacuum'],
-        bucketDKeywords: ['brandx coupon', 'brandx x200 vacuum deal', 'vacuum accessories'],
-      }, 'D')
+      const info = getBucketInfo(
+        {
+          ...mockKeywordPool,
+          brandKeywords: ['brandx'],
+          bucketAKeywords: ['brandx vacuum'],
+          bucketBKeywords: ['brandx official store'],
+          bucketCKeywords: ['robot vacuum'],
+          bucketDKeywords: ['brandx coupon', 'brandx x200 vacuum deal', 'vacuum accessories'],
+        },
+        'D'
+      )
       const keywords = getKeywordTexts(info.keywords)
 
       // canonical bucket 视图不追加纯品牌兜底词
@@ -340,19 +443,22 @@ describe('OfferKeywordPool', () => {
     })
 
     it('should filter platform, geo-admin and slogan noise from canonical bucket D while keeping branded navigation terms in the raw view', () => {
-      const info = getBucketInfo({
-        ...mockKeywordPool,
-        brandKeywords: ['novilla'],
-        bucketAKeywords: ['novilla mattress'],
-        bucketBKeywords: ['novilla shopee', 'novilla a cozy home made simple'],
-        bucketCKeywords: ['novilla shop kabupaten bekasi'],
-        bucketDKeywords: [
-          'buy novilla mattress buy',
-          'where novilla store',
-          'novilla rng',
-          'novilla memory foam mattress',
-        ],
-      }, 'D')
+      const info = getBucketInfo(
+        {
+          ...mockKeywordPool,
+          brandKeywords: ['novilla'],
+          bucketAKeywords: ['novilla mattress'],
+          bucketBKeywords: ['novilla shopee', 'novilla a cozy home made simple'],
+          bucketCKeywords: ['novilla shop kabupaten bekasi'],
+          bucketDKeywords: [
+            'buy novilla mattress buy',
+            'where novilla store',
+            'novilla rng',
+            'novilla memory foam mattress',
+          ],
+        },
+        'D'
+      )
       const keywords = getKeywordTexts(info.keywords)
 
       expect(keywords).toContain('novilla memory foam mattress')
@@ -367,21 +473,24 @@ describe('OfferKeywordPool', () => {
     })
 
     it('should filter multilingual review and support-navigation noise from canonical bucket D', () => {
-      const info = getBucketInfo({
-        ...mockKeywordPool,
-        brandKeywords: ['novilla'],
-        bucketAKeywords: ['novilla mattress'],
-        bucketBKeywords: [],
-        bucketCKeywords: [],
-        bucketDKeywords: [
-          'novilla recensioni',
-          'novilla bewertungen',
-          'novilla avis',
-          'novilla official site',
-          'novilla customer service',
-          'novilla memory foam mattress',
-        ],
-      }, 'D')
+      const info = getBucketInfo(
+        {
+          ...mockKeywordPool,
+          brandKeywords: ['novilla'],
+          bucketAKeywords: ['novilla mattress'],
+          bucketBKeywords: [],
+          bucketCKeywords: [],
+          bucketDKeywords: [
+            'novilla recensioni',
+            'novilla bewertungen',
+            'novilla avis',
+            'novilla official site',
+            'novilla customer service',
+            'novilla memory foam mattress',
+          ],
+        },
+        'D'
+      )
       const keywords = getKeywordTexts(info.keywords)
 
       expect(keywords).toContain('novilla memory foam mattress')
@@ -393,41 +502,54 @@ describe('OfferKeywordPool', () => {
     })
 
     it('should demote model-anchored demand terms behind generic product demand and drop model-only terms for bucket D', () => {
-      const info = getBucketInfo({
-        ...mockKeywordPool,
-        brandKeywords: ['brandx'],
-        bucketAKeywords: [],
-        bucketBKeywords: [],
-        bucketCKeywords: [],
-        bucketDKeywords: [
-          { keyword: 'brandx cordless vacuum', searchVolume: 500, source: 'D', matchType: 'PHRASE' },
-          { keyword: 'brandx x200 vacuum', searchVolume: 500, source: 'D', matchType: 'PHRASE' },
-          { keyword: 'brandx x200', searchVolume: 500, source: 'D', matchType: 'PHRASE' },
-        ],
-      } as any, 'D')
+      const info = getBucketInfo(
+        {
+          ...mockKeywordPool,
+          brandKeywords: ['brandx'],
+          bucketAKeywords: [],
+          bucketBKeywords: [],
+          bucketCKeywords: [],
+          bucketDKeywords: [
+            {
+              keyword: 'brandx cordless vacuum',
+              searchVolume: 500,
+              source: 'D',
+              matchType: 'PHRASE',
+            },
+            { keyword: 'brandx x200 vacuum', searchVolume: 500, source: 'D', matchType: 'PHRASE' },
+            { keyword: 'brandx x200', searchVolume: 500, source: 'D', matchType: 'PHRASE' },
+          ],
+        } as any,
+        'D'
+      )
       const keywords = getKeywordTexts(info.keywords)
 
       expect(keywords).toContain('brandx cordless vacuum')
       expect(keywords).toContain('brandx x200 vacuum')
       expect(keywords).not.toContain('brandx x200')
-      expect(keywords.indexOf('brandx cordless vacuum')).toBeLessThan(keywords.indexOf('brandx x200 vacuum'))
+      expect(keywords.indexOf('brandx cordless vacuum')).toBeLessThan(
+        keywords.indexOf('brandx x200 vacuum')
+      )
     })
 
     it('should use store hot-product model anchors for store bucket B', () => {
-      const info = getBucketInfo({
-        ...mockKeywordPool,
-        brandKeywords: ['brandx'],
-        bucketAKeywords: [],
-        bucketBKeywords: [],
-        bucketCKeywords: [],
-        bucketDKeywords: [],
-        storeBucketAKeywords: ['brandx robot vacuum'],
-        storeBucketBKeywords: ['brandx x200 vacuum', 'x200 vacuum'],
-        storeBucketCKeywords: ['brandx series x100 vacuum'],
-        storeBucketDKeywords: ['brandx official store'],
-        storeBucketSKeywords: ['brandx coupon'],
-        linkType: 'store',
-      }, 'B')
+      const info = getBucketInfo(
+        {
+          ...mockKeywordPool,
+          brandKeywords: ['brandx'],
+          bucketAKeywords: [],
+          bucketBKeywords: [],
+          bucketCKeywords: [],
+          bucketDKeywords: [],
+          storeBucketAKeywords: ['brandx robot vacuum'],
+          storeBucketBKeywords: ['brandx x200 vacuum', 'x200 vacuum'],
+          storeBucketCKeywords: ['brandx series x100 vacuum'],
+          storeBucketDKeywords: ['brandx official store'],
+          storeBucketSKeywords: ['brandx coupon'],
+          linkType: 'store',
+        },
+        'B'
+      )
       const keywords = getKeywordTexts(info.keywords)
 
       expect(info.intent).toBe('热门商品型号/产品族意图')
@@ -441,29 +563,58 @@ describe('OfferKeywordPool', () => {
     })
 
     it('should allow trusted store hot-product family terms into canonical bucket B without hard model anchors', () => {
-      const info = getBucketInfo({
-        ...mockKeywordPool,
-        brandKeywords: [
-          { keyword: 'our place', searchVolume: 900, source: 'BRAND', matchType: 'EXACT', isPureBrand: true },
-        ],
-        bucketAKeywords: [],
-        bucketBKeywords: [],
-        bucketCKeywords: [],
-        bucketDKeywords: [],
-        storeBucketAKeywords: [
-          { keyword: 'our place cookware', searchVolume: 1200, source: 'TITLE_EXTRACT', matchType: 'PHRASE' },
-        ],
-        storeBucketBKeywords: [],
-        storeBucketCKeywords: [
-          { keyword: 'our place wonder oven', searchVolume: 800, source: 'HOT_PRODUCT_AGGREGATE', matchType: 'PHRASE' },
-          { keyword: 'our place titanium pan', searchVolume: 780, source: 'HOT_PRODUCT_AGGREGATE', matchType: 'PHRASE' },
-        ],
-        storeBucketDKeywords: [
-          { keyword: 'our place official store', searchVolume: 260, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
-        ],
-        storeBucketSKeywords: [],
-        linkType: 'store',
-      } as any, 'B')
+      const info = getBucketInfo(
+        {
+          ...mockKeywordPool,
+          brandKeywords: [
+            {
+              keyword: 'our place',
+              searchVolume: 900,
+              source: 'BRAND',
+              matchType: 'EXACT',
+              isPureBrand: true,
+            },
+          ],
+          bucketAKeywords: [],
+          bucketBKeywords: [],
+          bucketCKeywords: [],
+          bucketDKeywords: [],
+          storeBucketAKeywords: [
+            {
+              keyword: 'our place cookware',
+              searchVolume: 1200,
+              source: 'TITLE_EXTRACT',
+              matchType: 'PHRASE',
+            },
+          ],
+          storeBucketBKeywords: [],
+          storeBucketCKeywords: [
+            {
+              keyword: 'our place wonder oven',
+              searchVolume: 800,
+              source: 'HOT_PRODUCT_AGGREGATE',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'our place titanium pan',
+              searchVolume: 780,
+              source: 'HOT_PRODUCT_AGGREGATE',
+              matchType: 'PHRASE',
+            },
+          ],
+          storeBucketDKeywords: [
+            {
+              keyword: 'our place official store',
+              searchVolume: 260,
+              source: 'GLOBAL_CORE',
+              matchType: 'PHRASE',
+            },
+          ],
+          storeBucketSKeywords: [],
+          linkType: 'store',
+        } as any,
+        'B'
+      )
       const keywords = getKeywordTexts(info.keywords)
 
       expect(keywords).toContain('our place wonder oven')
@@ -473,29 +624,68 @@ describe('OfferKeywordPool', () => {
     })
 
     it('should admit offer-extracted store family terms while filtering weak-size and router-noise tokens', () => {
-      const info = getBucketInfo({
-        ...mockKeywordPool,
-        brandKeywords: [
-          { keyword: 'our place', searchVolume: 900, source: 'BRAND', matchType: 'EXACT', isPureBrand: true },
-        ],
-        bucketAKeywords: [],
-        bucketBKeywords: [],
-        bucketCKeywords: [],
-        bucketDKeywords: [],
-        storeBucketAKeywords: [],
-        storeBucketBKeywords: [
-          { keyword: 'our place wonder oven', searchVolume: 0, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'our place large always pan', searchVolume: 0, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'our place always pan', searchVolume: 0, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'our place always', searchVolume: 0, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'our place large', searchVolume: 0, source: 'HOT_PRODUCT_AGGREGATE', matchType: 'PHRASE' },
-          { keyword: 'our place openurlproduct', searchVolume: 0, source: 'HOT_PRODUCT_AGGREGATE', matchType: 'PHRASE' },
-        ],
-        storeBucketCKeywords: [],
-        storeBucketDKeywords: [],
-        storeBucketSKeywords: [],
-        linkType: 'store',
-      } as any, 'B')
+      const info = getBucketInfo(
+        {
+          ...mockKeywordPool,
+          brandKeywords: [
+            {
+              keyword: 'our place',
+              searchVolume: 900,
+              source: 'BRAND',
+              matchType: 'EXACT',
+              isPureBrand: true,
+            },
+          ],
+          bucketAKeywords: [],
+          bucketBKeywords: [],
+          bucketCKeywords: [],
+          bucketDKeywords: [],
+          storeBucketAKeywords: [],
+          storeBucketBKeywords: [
+            {
+              keyword: 'our place wonder oven',
+              searchVolume: 0,
+              source: 'OFFER_EXTRACTED_KEYWORDS',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'our place large always pan',
+              searchVolume: 0,
+              source: 'OFFER_EXTRACTED_KEYWORDS',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'our place always pan',
+              searchVolume: 0,
+              source: 'OFFER_EXTRACTED_KEYWORDS',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'our place always',
+              searchVolume: 0,
+              source: 'OFFER_EXTRACTED_KEYWORDS',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'our place large',
+              searchVolume: 0,
+              source: 'HOT_PRODUCT_AGGREGATE',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'our place openurlproduct',
+              searchVolume: 0,
+              source: 'HOT_PRODUCT_AGGREGATE',
+              matchType: 'PHRASE',
+            },
+          ],
+          storeBucketCKeywords: [],
+          storeBucketDKeywords: [],
+          storeBucketSKeywords: [],
+          linkType: 'store',
+        } as any,
+        'B'
+      )
       const keywords = getKeywordTexts(info.keywords)
 
       expect(keywords).toContain('our place wonder oven')
@@ -507,27 +697,56 @@ describe('OfferKeywordPool', () => {
     })
 
     it('should admit trusted product family terms into canonical bucket B without requiring hard model anchors', () => {
-      const info = getBucketInfo({
-        ...mockKeywordPool,
-        brandKeywords: [
-          { keyword: 'our place', searchVolume: 900, source: 'BRAND', matchType: 'EXACT', isPureBrand: true },
-        ],
-        bucketAKeywords: [],
-        bucketBKeywords: [
-          { keyword: 'our place air fryer oven', searchVolume: 520, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'our place always', searchVolume: 0, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'our place openurlproduct', searchVolume: 0, source: 'HOT_PRODUCT_AGGREGATE', matchType: 'PHRASE' },
-          { keyword: 'our place official store', searchVolume: 200, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
-        ],
-        bucketCKeywords: [],
-        bucketDKeywords: [],
-        storeBucketAKeywords: [],
-        storeBucketBKeywords: [],
-        storeBucketCKeywords: [],
-        storeBucketDKeywords: [],
-        storeBucketSKeywords: [],
-        linkType: 'product',
-      } as any, 'B')
+      const info = getBucketInfo(
+        {
+          ...mockKeywordPool,
+          brandKeywords: [
+            {
+              keyword: 'our place',
+              searchVolume: 900,
+              source: 'BRAND',
+              matchType: 'EXACT',
+              isPureBrand: true,
+            },
+          ],
+          bucketAKeywords: [],
+          bucketBKeywords: [
+            {
+              keyword: 'our place air fryer oven',
+              searchVolume: 520,
+              source: 'OFFER_EXTRACTED_KEYWORDS',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'our place always',
+              searchVolume: 0,
+              source: 'OFFER_EXTRACTED_KEYWORDS',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'our place openurlproduct',
+              searchVolume: 0,
+              source: 'HOT_PRODUCT_AGGREGATE',
+              matchType: 'PHRASE',
+            },
+            {
+              keyword: 'our place official store',
+              searchVolume: 200,
+              source: 'GLOBAL_CORE',
+              matchType: 'PHRASE',
+            },
+          ],
+          bucketCKeywords: [],
+          bucketDKeywords: [],
+          storeBucketAKeywords: [],
+          storeBucketBKeywords: [],
+          storeBucketCKeywords: [],
+          storeBucketDKeywords: [],
+          storeBucketSKeywords: [],
+          linkType: 'product',
+        } as any,
+        'B'
+      )
       const keywords = getKeywordTexts(info.keywords)
 
       expect(keywords).toContain('our place air fryer oven')
@@ -594,19 +813,19 @@ describe('OfferKeywordPool', () => {
 
       // 桶A vs 桶B
       const rateAB = calculateKeywordOverlapRate(bucketA, bucketB)
-      expect(rateAB).toBeCloseTo(0.25, 2)  // 1/4 = 0.25
+      expect(rateAB).toBeCloseTo(0.25, 2) // 1/4 = 0.25
 
       // 桶A vs 桶C
       const rateAC = calculateKeywordOverlapRate(bucketA, bucketC)
-      expect(rateAC).toBeCloseTo(0.25, 2)  // 1/4 = 0.25
+      expect(rateAC).toBeCloseTo(0.25, 2) // 1/4 = 0.25
 
       // 桶B vs 桶C
       const rateBC = calculateKeywordOverlapRate(bucketB, bucketC)
-      expect(rateBC).toBeCloseTo(0.25, 2)  // 1/4 = 0.25
+      expect(rateBC).toBeCloseTo(0.25, 2) // 1/4 = 0.25
 
       // 平均重叠率应该较低（仅品牌词）
       const avgRate = (rateAB + rateAC + rateBC) / 3
-      expect(avgRate).toBeLessThan(0.5)  // 低于50%
+      expect(avgRate).toBeLessThan(0.5) // 低于50%
     })
   })
 
@@ -650,25 +869,25 @@ describe('OfferKeywordPool', () => {
 
   describe('Integration: Bucket Isolation', () => {
     it('should ensure bucket keywords are exclusive (no overlap except brand)', () => {
-      const bucketA = new Set(mockKeywordPool.bucketAKeywords.map(k => k.toLowerCase()))
-      const bucketB = new Set(mockKeywordPool.bucketBKeywords.map(k => k.toLowerCase()))
-      const bucketC = new Set(mockKeywordPool.bucketCKeywords.map(k => k.toLowerCase()))
+      const bucketA = new Set(mockKeywordPool.bucketAKeywords.map((k) => k.toLowerCase()))
+      const bucketB = new Set(mockKeywordPool.bucketBKeywords.map((k) => k.toLowerCase()))
+      const bucketC = new Set(mockKeywordPool.bucketCKeywords.map((k) => k.toLowerCase()))
 
       // 桶A和桶B不应有交集
-      const overlapAB = [...bucketA].filter(k => bucketB.has(k))
+      const overlapAB = [...bucketA].filter((k) => bucketB.has(k))
       expect(overlapAB).toHaveLength(0)
 
       // 桶A和桶C不应有交集
-      const overlapAC = [...bucketA].filter(k => bucketC.has(k))
+      const overlapAC = [...bucketA].filter((k) => bucketC.has(k))
       expect(overlapAC).toHaveLength(0)
 
       // 桶B和桶C不应有交集
-      const overlapBC = [...bucketB].filter(k => bucketC.has(k))
+      const overlapBC = [...bucketB].filter((k) => bucketC.has(k))
       expect(overlapBC).toHaveLength(0)
     })
 
     it('should have brand keywords excluded from all buckets', () => {
-      const brandKeywords = new Set(mockKeywordPool.brandKeywords.map(k => k.toLowerCase()))
+      const brandKeywords = new Set(mockKeywordPool.brandKeywords.map((k) => k.toLowerCase()))
 
       for (const kw of mockKeywordPool.bucketAKeywords) {
         expect(brandKeywords.has(kw.toLowerCase())).toBe(false)
@@ -692,7 +911,7 @@ describe('OfferKeywordPool', () => {
         'outdoor camera',
         'doorbell cam',
         'eufycam',
-        'security camera'
+        'security camera',
       ]
 
       // 品牌商品锚点词通常包含产品类型
@@ -707,7 +926,7 @@ describe('OfferKeywordPool', () => {
         'baby monitor',
         'pet watching',
         'garage monitoring',
-        'driveway security'
+        'driveway security',
       ]
 
       // 商品需求场景词通常包含使用场景
@@ -723,12 +942,14 @@ describe('OfferKeywordPool', () => {
         '2k camera',
         'motion detection',
         'best camera',
-        'solar powered'
+        'solar powered',
       ]
 
       // 需求导向词通常包含功能特性或购买意图
       for (const kw of demandKeywords) {
-        expect(kw.toLowerCase()).toMatch(/wireless|night|vision|2k|4k|motion|best|top|solar|battery/i)
+        expect(kw.toLowerCase()).toMatch(
+          /wireless|night|vision|2k|4k|motion|best|top|solar|battery/i
+        )
       }
     })
   })
@@ -865,7 +1086,9 @@ describe('OfferKeywordPool', () => {
       const pureBrandKeywords = ['wahl professional', 'wahl']
       expect(isExactPureBrandKeyword('wahl', pureBrandKeywords)).toBe(true)
       expect(isExactPureBrandKeyword('wahl professional', pureBrandKeywords)).toBe(true)
-      expect(isExactPureBrandKeyword('wahl professional hair clipper', pureBrandKeywords)).toBe(false)
+      expect(isExactPureBrandKeyword('wahl professional hair clipper', pureBrandKeywords)).toBe(
+        false
+      )
     })
 
     it('should treat dot variants as exact pure brand (Dr. Mercola)', () => {
@@ -1008,7 +1231,7 @@ describe('OfferKeywordPool', () => {
         'eufy camera amazon',
         'eufy camera ebay',
         'eufy camera aliexpress',
-        'eufy camera price'
+        'eufy camera price',
       ]
       const result = filterLowIntentKeywords(keywords)
       expect(result).not.toContain('eufy camera amazon')

@@ -90,4 +90,3 @@ describe('removePendingClickFarmQueueTasksByTaskIds', () => {
     expect(getPendingTasksBg).not.toHaveBeenCalled()
   })
 })
-

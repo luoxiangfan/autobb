@@ -1,19 +1,19 @@
-'use client';
+'use client'
 
-import { useState, useMemo, useCallback, useRef } from 'react';
-import { GripVertical } from 'lucide-react';
+import { useState, useMemo, useCallback, useRef } from 'react'
+import { GripVertical } from 'lucide-react'
 
 interface HourlyDistributionEditorProps {
   /** 24小时分布数据 (0-23时的点击数，必须是正整数) */
-  distribution: number[];
+  distribution: number[]
   /** 每日总点击数 */
-  dailyClickCount: number;
+  dailyClickCount: number
   /** 时间段，格式: "06:00-24:00" */
-  timePeriod?: string;
+  timePeriod?: string
   /** 是否处于编辑模式 */
-  isEditing?: boolean;
+  isEditing?: boolean
   /** 数据点变化回调 */
-  onChange?: (hour: number, newValue: number) => void;
+  onChange?: (hour: number, newValue: number) => void
 }
 
 /**
@@ -34,42 +34,45 @@ export default function HourlyDistributionEditor({
   isEditing = false,
   onChange,
 }: HourlyDistributionEditorProps) {
-  const [hoveredHour, setHoveredHour] = useState<number | null>(null);
-  const [draggedHour, setDraggedHour] = useState<number | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
+  const [hoveredHour, setHoveredHour] = useState<number | null>(null)
+  const [draggedHour, setDraggedHour] = useState<number | null>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
 
   // 解析时间段
   const { startHour, endHour } = useMemo(() => {
-    const [start, end] = timePeriod.split('-');
+    const [start, end] = timePeriod.split('-')
     return {
       startHour: parseInt(start.split(':')[0]),
       endHour: parseInt(end.split(':')[0]),
-    };
-  }, [timePeriod]);
+    }
+  }, [timePeriod])
 
   // 判断小时是否在活跃时段
-  const isActiveHour = useCallback((hour: number) => {
-    if (timePeriod === '00:00-24:00') return true;
-    if (startHour < endHour) {
-      return hour >= startHour && hour < endHour;
-    } else {
-      return hour >= startHour || hour < endHour;
-    }
-  }, [timePeriod, startHour, endHour]);
+  const isActiveHour = useCallback(
+    (hour: number) => {
+      if (timePeriod === '00:00-24:00') return true
+      if (startHour < endHour) {
+        return hour >= startHour && hour < endHour
+      } else {
+        return hour >= startHour || hour < endHour
+      }
+    },
+    [timePeriod, startHour, endHour]
+  )
 
   // 计算图表参数
   const { maxValue, yTicks, chartPoints, curvePath } = useMemo(() => {
-    const dataMax = Math.max(...distribution, 1);
+    const dataMax = Math.max(...distribution, 1)
     // Y轴最大值比数据最大值稍大，留出顶部空白使图表更美观
     // 向上取整到5的倍数（如 12→15, 10→10, 7→10）
-    const maxValue = Math.ceil(dataMax / 5 + 0.5) * 5;
+    const maxValue = Math.ceil(dataMax / 5 + 0.5) * 5
 
     // Y轴刻度 (0, 25%, 50%, 75%, 100%)
     // 注意：使用 ratio * 100 确保标签位置与图表点一致（0在底部，maxValue在顶部）
-    const yTicks = [0, 0.25, 0.5, 0.75, 1].map(ratio => ({
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => ({
       value: Math.round(maxValue * ratio),
       yPercent: ratio * 100,
-    }));
+    }))
 
     // 计算24个数据点的坐标 (百分比)
     // 使用 (hour / 24) 而不是 (hour / 23) 来确保宽度一致性，24个小时均匀分布
@@ -79,76 +82,85 @@ export default function HourlyDistributionEditor({
       xPercent: (hour / 24) * 100, // 0h在0%, 24h在100% (但实际只到23h约96%)
       yPercent: (1 - value / maxValue) * 100, // 值越大，y越小（SVG坐标系）
       isActive: isActiveHour(hour),
-    }));
+    }))
 
     // 生成平滑贝塞尔曲线路径（Catmull-Rom样条算法获得更自然的平滑曲线）
-    let curvePath = `M ${chartPoints[0].xPercent},${chartPoints[0].yPercent}`;
+    let curvePath = `M ${chartPoints[0].xPercent},${chartPoints[0].yPercent}`
 
     for (let i = 0; i < chartPoints.length - 1; i++) {
-      const p0 = chartPoints[Math.max(0, i - 1)];
-      const p1 = chartPoints[i];
-      const p2 = chartPoints[i + 1];
-      const p3 = chartPoints[Math.min(chartPoints.length - 1, i + 2)];
+      const p0 = chartPoints[Math.max(0, i - 1)]
+      const p1 = chartPoints[i]
+      const p2 = chartPoints[i + 1]
+      const p3 = chartPoints[Math.min(chartPoints.length - 1, i + 2)]
 
       // Catmull-Rom样条控制点计算
-      const tension = 0.5; // 张力系数 (0.5为标准Catmull-Rom)
+      const tension = 0.5 // 张力系数 (0.5为标准Catmull-Rom)
 
       // 第一个控制点
-      const cp1x = p1.xPercent + (p2.xPercent - p0.xPercent) / 6 * tension;
-      const cp1y = p1.yPercent + (p2.yPercent - p0.yPercent) / 6 * tension;
+      const cp1x = p1.xPercent + ((p2.xPercent - p0.xPercent) / 6) * tension
+      const cp1y = p1.yPercent + ((p2.yPercent - p0.yPercent) / 6) * tension
 
       // 第二个控制点
-      const cp2x = p2.xPercent - (p3.xPercent - p1.xPercent) / 6 * tension;
-      const cp2y = p2.yPercent - (p3.yPercent - p1.yPercent) / 6 * tension;
+      const cp2x = p2.xPercent - ((p3.xPercent - p1.xPercent) / 6) * tension
+      const cp2y = p2.yPercent - ((p3.yPercent - p1.yPercent) / 6) * tension
 
-      curvePath += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.xPercent},${p2.yPercent}`;
+      curvePath += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.xPercent},${p2.yPercent}`
     }
 
-    return { maxValue, yTicks, chartPoints, curvePath };
-  }, [distribution, isActiveHour]);
+    return { maxValue, yTicks, chartPoints, curvePath }
+  }, [distribution, isActiveHour])
 
   // 拖拽处理
-  const handlePointerDown = useCallback((hour: number, e: React.PointerEvent) => {
-    if (!isEditing || !onChange) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setDraggedHour(hour);
-    (e.target as Element).setPointerCapture(e.pointerId);
-  }, [isEditing, onChange]);
+  const handlePointerDown = useCallback(
+    (hour: number, e: React.PointerEvent) => {
+      if (!isEditing || !onChange) return
+      e.preventDefault()
+      e.stopPropagation()
+      setDraggedHour(hour)
+      ;(e.target as Element).setPointerCapture(e.pointerId)
+    },
+    [isEditing, onChange]
+  )
 
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (draggedHour === null || !onChange || !svgRef.current) return;
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (draggedHour === null || !onChange || !svgRef.current) return
 
-    const svg = svgRef.current;
-    const rect = svg.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-    const relativeY = Math.max(0, Math.min(1, y / rect.height));
+      const svg = svgRef.current
+      const rect = svg.getBoundingClientRect()
+      const y = e.clientY - rect.top
+      const relativeY = Math.max(0, Math.min(1, y / rect.height))
 
-    // 计算新值 (确保是正整数)
-    const newValue = Math.max(0, Math.round(maxValue * (1 - relativeY)));
-    onChange(draggedHour, newValue);
-  }, [draggedHour, maxValue, onChange]);
+      // 计算新值 (确保是正整数)
+      const newValue = Math.max(0, Math.round(maxValue * (1 - relativeY)))
+      onChange(draggedHour, newValue)
+    },
+    [draggedHour, maxValue, onChange]
+  )
 
-  const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    if (draggedHour !== null) {
-      (e.target as Element).releasePointerCapture(e.pointerId);
-      setDraggedHour(null);
-    }
-  }, [draggedHour]);
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      if (draggedHour !== null) {
+        ;(e.target as Element).releasePointerCapture(e.pointerId)
+        setDraggedHour(null)
+      }
+    },
+    [draggedHour]
+  )
 
   // 计算总点击数和活跃小时数
   const { totalClicks } = useMemo(() => {
     return {
       totalClicks: distribution.reduce((sum, val) => sum + val, 0),
-    };
-  }, [distribution]);
+    }
+  }, [distribution])
 
   if (distribution.length !== 24) {
     return (
       <div className="h-48 bg-muted/50 rounded-lg flex items-center justify-center text-muted-foreground text-sm">
         数据格式错误：需要24小时数据
       </div>
-    );
+    )
   }
 
   return (
@@ -161,7 +173,7 @@ export default function HourlyDistributionEditor({
       </div>
 
       {/* 图表容器 */}
-      <div className="relative bg-gradient-to-b from-muted/30 to-muted/10 rounded-lg p-4 border border-border/50">
+      <div className="relative bg-linear-to-b from-muted/30 to-muted/10 rounded-lg p-4 border border-border/50">
         {/* Y轴刻度 - 反转渲染顺序，使0在底部，maxValue在顶部 */}
         <div className="absolute left-0 top-4 bottom-10 w-10 flex flex-col justify-between text-right pr-2">
           {[...yTicks].reverse().map((tick, i) => (
@@ -208,7 +220,7 @@ export default function HourlyDistributionEditor({
 
             {/* X轴网格线（垂直虚线）- 对齐每个小时，使用明显颜色 */}
             {Array.from({ length: 24 }, (_, i) => i).map((hour) => {
-              const xPercent = (hour / 24) * 100;
+              const xPercent = (hour / 24) * 100
               return (
                 <line
                   key={`x-${hour}`}
@@ -221,7 +233,7 @@ export default function HourlyDistributionEditor({
                   strokeDasharray="3,3"
                   opacity="0.6"
                 />
-              );
+              )
             })}
 
             {/* 曲线 */}
@@ -236,8 +248,8 @@ export default function HourlyDistributionEditor({
 
             {/* 活跃/休息时段背景 */}
             {chartPoints.map((point, i) => {
-              if (i === 23) return null;
-              const nextPoint = chartPoints[i + 1];
+              if (i === 23) return null
+              const nextPoint = chartPoints[i + 1]
               return (
                 <rect
                   key={`bg-${i}`}
@@ -248,16 +260,16 @@ export default function HourlyDistributionEditor({
                   fill={point.isActive ? 'transparent' : 'rgba(0,0,0,0.05)'}
                   pointerEvents="none"
                 />
-              );
+              )
             })}
 
             {/* 数据点 - 默认隐藏，只在编辑模式或悬停时显示 */}
             {chartPoints.map((point) => {
-              const isHovered = hoveredHour === point.hour;
-              const isDragged = draggedHour === point.hour;
-              const showLabel = isHovered || isDragged;
+              const isHovered = hoveredHour === point.hour
+              const isDragged = draggedHour === point.hour
+              const showLabel = isHovered || isDragged
               // 只在编辑模式或悬停时显示数据点
-              const showPoint = isEditing || isHovered || isDragged;
+              const showPoint = isEditing || isHovered || isDragged
 
               return (
                 <g key={point.hour}>
@@ -288,8 +300,10 @@ export default function HourlyDistributionEditor({
                         isDragged
                           ? 'rgb(249, 115, 22)'
                           : point.isActive
-                          ? (isEditing ? 'rgb(34, 197, 94)' : 'rgb(59, 130, 246)')
-                          : 'rgb(107, 114, 128)'
+                            ? isEditing
+                              ? 'rgb(34, 197, 94)'
+                              : 'rgb(59, 130, 246)'
+                            : 'rgb(107, 114, 128)'
                       }
                       stroke="white"
                       strokeWidth="2.5"
@@ -310,8 +324,10 @@ export default function HourlyDistributionEditor({
                         isDragged
                           ? 'rgb(249, 115, 22)'
                           : point.isActive
-                          ? (isEditing ? 'rgb(34, 197, 94)' : 'rgb(59, 130, 246)')
-                          : 'rgb(156, 163, 175)'
+                            ? isEditing
+                              ? 'rgb(34, 197, 94)'
+                              : 'rgb(59, 130, 246)'
+                            : 'rgb(156, 163, 175)'
                       }
                       stroke="white"
                       strokeWidth="1"
@@ -333,25 +349,23 @@ export default function HourlyDistributionEditor({
                     />
                   )}
                 </g>
-              );
+              )
             })}
           </svg>
 
           {/* X轴：小时标签（0-23）- 🔧 修复(2025-12-30): 使用绝对定位对齐虚线 */}
           <div className="relative mt-2 h-4">
             {Array.from({ length: 24 }, (_, i) => i).map((hour) => {
-              const xPercent = (hour / 24) * 100;
+              const xPercent = (hour / 24) * 100
               return (
                 <div
                   key={hour}
                   className="absolute -translate-x-1/2"
                   style={{ left: `${xPercent}%` }}
                 >
-                  <span className="text-[10px] text-muted-foreground font-medium">
-                    {hour}
-                  </span>
+                  <span className="text-[10px] text-muted-foreground font-medium">{hour}</span>
                 </div>
-              );
+              )
             })}
           </div>
         </div>
@@ -361,9 +375,7 @@ export default function HourlyDistributionEditor({
       <div className="flex items-center justify-center gap-4 text-xs">
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-          <span className="text-muted-foreground">
-            {isEditing ? '可编辑数据点' : '活跃时段'}
-          </span>
+          <span className="text-muted-foreground">{isEditing ? '可编辑数据点' : '活跃时段'}</span>
         </div>
         {timePeriod !== '00:00-24:00' && (
           <div className="flex items-center gap-1.5">
@@ -379,5 +391,5 @@ export default function HourlyDistributionEditor({
         )}
       </div>
     </div>
-  );
+  )
 }

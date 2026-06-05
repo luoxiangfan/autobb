@@ -1,7 +1,10 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
+import {
+  prepareGoogleAdsApiCallForLinkedAccount,
+  preparedAuthContextField,
+} from '@/lib/google-ads-accounts-auth'
 import { runOAuthGaqlWithLoginCustomerFallback } from '@/lib/google-ads-oauth-gaql'
 import { getDatabase } from '@/lib/db'
 import { getRedisClient } from '@/lib/redis-client'
@@ -62,10 +65,8 @@ function toPositiveNumberOrNull(value: unknown): number | null {
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const requestId = request.headers.get('x-request-id') || undefined
     const authResult = await verifyAuth(request)
@@ -74,7 +75,11 @@ export async function GET(
     }
     const numericUserId = authResult.user.userId
 
-    const executeOAuthGaqlWithTracking = async (customer: any, customerId: string, queryText: string): Promise<any[]> => {
+    const executeOAuthGaqlWithTracking = async (
+      customer: any,
+      customerId: string,
+      queryText: string
+    ): Promise<any[]> => {
       const startTime = Date.now()
       try {
         const rows = await customer.query(queryText)
@@ -110,7 +115,8 @@ export async function GET(
 
     const db = await getDatabase()
 
-    const linked = await db.queryOne(`
+    const linked = (await db.queryOne(
+      `
       SELECT
         c.id as local_campaign_id,
         c.google_ads_account_id,
@@ -131,46 +137,56 @@ export async function GET(
         AND c.google_ads_account_id IS NOT NULL
       ORDER BY c.created_at DESC
       LIMIT 1
-    `, [numericUserId, String(campaignIdNum)]) as {
-      local_campaign_id?: number | null
-      google_ads_account_id: number
-      max_cpc: number | null
-      campaign_config: string | null
-      offer_id: number | null
-      customer_id: string | null
-      currency: string | null
-      parent_mcc_id: string | null
-      service_account_id: string | null
-      is_active: any
-      is_deleted: any
-    } | undefined
+    `,
+      [numericUserId, String(campaignIdNum)]
+    )) as
+      | {
+          local_campaign_id?: number | null
+          google_ads_account_id: number
+          max_cpc: number | null
+          campaign_config: string | null
+          offer_id: number | null
+          customer_id: string | null
+          currency: string | null
+          parent_mcc_id: string | null
+          service_account_id: string | null
+          is_active: any
+          is_deleted: any
+        }
+      | undefined
 
     if (!linked?.customer_id) {
-      const localCampaign = await db.queryOne(`
+      const localCampaign = (await db.queryOne(
+        `
         SELECT id, campaign_id, google_campaign_id, status, is_deleted
         FROM campaigns
         WHERE user_id = ?
           AND id = ?
         LIMIT 1
-      `, [numericUserId, campaignIdNum]) as {
-        id: number
-        campaign_id: string | null
-        google_campaign_id: string | null
-        status: string | null
-        is_deleted: any
-      } | undefined
+      `,
+        [numericUserId, campaignIdNum]
+      )) as
+        | {
+            id: number
+            campaign_id: string | null
+            google_campaign_id: string | null
+            status: string | null
+            is_deleted: any
+          }
+        | undefined
 
       if (localCampaign) {
-        const isRemoved = String(localCampaign.status || '').toUpperCase() === 'REMOVED'
-          || localCampaign.is_deleted === true
-          || localCampaign.is_deleted === 1
+        const isRemoved =
+          String(localCampaign.status || '').toUpperCase() === 'REMOVED' ||
+          localCampaign.is_deleted === true ||
+          localCampaign.is_deleted === 1
         if (isRemoved) {
           return NextResponse.json({ error: '该广告系列已下线/删除，无法查询CPC' }, { status: 400 })
         }
 
         const expectedGoogleCampaignId =
-          normalizeGoogleCampaignId(localCampaign.google_campaign_id)
-          || normalizeGoogleCampaignId(localCampaign.campaign_id)
+          normalizeGoogleCampaignId(localCampaign.google_campaign_id) ||
+          normalizeGoogleCampaignId(localCampaign.campaign_id)
         if (expectedGoogleCampaignId && expectedGoogleCampaignId !== String(campaignIdNum)) {
           return NextResponse.json(
             {
@@ -185,7 +201,10 @@ export async function GET(
         }
 
         if (!expectedGoogleCampaignId) {
-          return NextResponse.json({ error: '该广告系列尚未发布到Google Ads，无法查询CPC' }, { status: 400 })
+          return NextResponse.json(
+            { error: '该广告系列尚未发布到Google Ads，无法查询CPC' },
+            { status: 400 }
+          )
         }
       }
 
@@ -214,15 +233,17 @@ export async function GET(
     const useServiceAccount = apiAuth.authType === 'service_account'
     const serviceAccountId = apiAuth.serviceAccountId
     const oauthRefreshToken = useServiceAccount ? null : prepared.refreshToken || null
-    const oauthLoginCustomerId =
-      prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+    const oauthLoginCustomerId = prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
     const oauthApiCredentials = prepared.oauthCredentials
 
     if (useServiceAccount && !serviceAccountId) {
       return NextResponse.json({ error: '未找到服务账号配置' }, { status: 400 })
     }
     if (!useServiceAccount && !oauthRefreshToken) {
-      return NextResponse.json({ error: 'Google Ads OAuth未授权或已过期', needsReauth: true }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Google Ads OAuth未授权或已过期', needsReauth: true },
+        { status: 400 }
+      )
     }
 
     const currency = linked.currency || 'USD'
@@ -302,8 +323,8 @@ export async function GET(
         } else {
           const targetCpaMicros = Number(
             campaign.target_cpa?.target_cpa_micros ||
-            campaign.maximize_conversions?.target_cpa_micros ||
-            0
+              campaign.maximize_conversions?.target_cpa_micros ||
+              0
           )
           if (Number.isFinite(targetCpaMicros) && targetCpaMicros > 0) {
             currentCpc = targetCpaMicros / 1000000
@@ -369,17 +390,30 @@ export async function GET(
     if (currentCpc === null || !(currentCpc > 0)) currentCpc = configuredCpc
 
     if (biddingStrategyType === 'UNKNOWN' && configuredBiddingStrategy) {
-      biddingStrategyType = normalizeBiddingStrategyType(toBiddingStrategyType(configuredBiddingStrategy))
+      biddingStrategyType = normalizeBiddingStrategyType(
+        toBiddingStrategyType(configuredBiddingStrategy)
+      )
     }
 
     const derivedBiddingStrategyType =
-      (Number.isFinite(targetSpendMicros) && targetSpendMicros > 0) ? 'MAXIMIZE_CLICKS'
-      : (currentCpc !== null && currentCpc > 0 && biddingStrategyType === 'MANUAL_CPC') ? 'MANUAL_CPC'
-        : (biddingStrategyType === 'TARGET_CPA') ? 'TARGET_CPA'
-          : biddingStrategyType
+      Number.isFinite(targetSpendMicros) && targetSpendMicros > 0
+        ? 'MAXIMIZE_CLICKS'
+        : currentCpc !== null && currentCpc > 0 && biddingStrategyType === 'MANUAL_CPC'
+          ? 'MANUAL_CPC'
+          : biddingStrategyType === 'TARGET_CPA'
+            ? 'TARGET_CPA'
+            : biddingStrategyType
 
-    const historyCacheKey = linked.offer_id ? `cpc:history:v2:user:${numericUserId}:campaign:${campaignIdNum}` : null
-    let history: Array<{ value: number; adjustmentType: string; createdAt: string; successCount: number; failureCount: number }> = []
+    const historyCacheKey = linked.offer_id
+      ? `cpc:history:v2:user:${numericUserId}:campaign:${campaignIdNum}`
+      : null
+    let history: Array<{
+      value: number
+      adjustmentType: string
+      createdAt: string
+      successCount: number
+      failureCount: number
+    }> = []
 
     if (historyCacheKey) {
       try {
@@ -440,30 +474,33 @@ export async function GET(
 
     if (history.length === 0 && historyRows.length > 0) {
       const googleCampaignToken = String(campaignIdNum)
-      const localCampaignToken = linked.local_campaign_id !== null && linked.local_campaign_id !== undefined
-        ? String(linked.local_campaign_id)
-        : null
-      const matchedHistoryRows = historyRows
-        .filter((row: any) => {
-          if (row.campaign_id !== null && row.campaign_id !== undefined) {
-            const rowToken = String(row.campaign_id)
-            if (rowToken === googleCampaignToken) return true
-            if (localCampaignToken && rowToken === localCampaignToken) return true
-            return false
-          }
-          const ids = safeParseJson<string[]>(row.campaign_ids)
-          if (Array.isArray(ids)) {
-            const normalized = ids.map(String)
-            if (normalized.includes(googleCampaignToken)) return true
-            if (localCampaignToken && normalized.includes(localCampaignToken)) return true
-            return false
-          }
-          const raw = typeof row.campaign_ids === 'string' ? row.campaign_ids : ''
-          const tokens = raw.split(',').map((value: string) => value.trim()).filter(Boolean)
-          if (tokens.includes(googleCampaignToken)) return true
-          if (localCampaignToken && tokens.includes(localCampaignToken)) return true
+      const localCampaignToken =
+        linked.local_campaign_id !== null && linked.local_campaign_id !== undefined
+          ? String(linked.local_campaign_id)
+          : null
+      const matchedHistoryRows = historyRows.filter((row: any) => {
+        if (row.campaign_id !== null && row.campaign_id !== undefined) {
+          const rowToken = String(row.campaign_id)
+          if (rowToken === googleCampaignToken) return true
+          if (localCampaignToken && rowToken === localCampaignToken) return true
           return false
-        })
+        }
+        const ids = safeParseJson<string[]>(row.campaign_ids)
+        if (Array.isArray(ids)) {
+          const normalized = ids.map(String)
+          if (normalized.includes(googleCampaignToken)) return true
+          if (localCampaignToken && normalized.includes(localCampaignToken)) return true
+          return false
+        }
+        const raw = typeof row.campaign_ids === 'string' ? row.campaign_ids : ''
+        const tokens = raw
+          .split(',')
+          .map((value: string) => value.trim())
+          .filter(Boolean)
+        if (tokens.includes(googleCampaignToken)) return true
+        if (localCampaignToken && tokens.includes(localCampaignToken)) return true
+        return false
+      })
       // 兼容历史写法：adjustment_value 曾记录“调整后值”，这里统一转换为“调整前值”展示。
       history = matchedHistoryRows
         .map((row: any) => ({
@@ -475,7 +512,8 @@ export async function GET(
         }))
         .map((row, index, rows) => {
           const previousFromNextAdjustment = rows[index + 1]?.adjustmentValue ?? null
-          const previousFromInitialConfig = configuredCpc !== null && configuredCpc > 0 ? configuredCpc : null
+          const previousFromInitialConfig =
+            configuredCpc !== null && configuredCpc > 0 ? configuredCpc : null
           const previousValue = previousFromNextAdjustment ?? previousFromInitialConfig
           return {
             value: previousValue ?? row.adjustmentValue ?? 0,
@@ -508,7 +546,10 @@ export async function GET(
     })
   } catch (error: any) {
     console.error('获取Campaign CPC配置失败:', error)
-    return NextResponse.json({ error: error.message || '获取Campaign CPC配置失败' }, { status: 500 })
+    return NextResponse.json(
+      { error: error.message || '获取Campaign CPC配置失败' },
+      { status: 500 }
+    )
   }
 }
 const CPC_HISTORY_CACHE_TTL = 900

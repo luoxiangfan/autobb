@@ -27,10 +27,8 @@ interface CancelRequest {
   reason?: string
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { batchId: string } }
-) {
+export async function POST(req: NextRequest, props: { params: Promise<{ batchId: string }> }) {
+  const params = await props.params
   const db = getDatabase()
   const queue = getQueueManager()
 
@@ -41,10 +39,7 @@ export async function POST(
     // 1. 验证用户身份
     const authResult = await verifyAuth(req)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: '请先登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
     }
     const userIdNum = authResult.user.userId
 
@@ -57,21 +52,18 @@ export async function POST(
       total_count: number
       completed_count: number
       failed_count: number
-    }>('SELECT id, user_id, status, total_count, completed_count, failed_count FROM batch_tasks WHERE id = ?', [batchId])
+    }>(
+      'SELECT id, user_id, status, total_count, completed_count, failed_count FROM batch_tasks WHERE id = ?',
+      [batchId]
+    )
 
     if (!task) {
-      return NextResponse.json(
-        { error: 'Not found', message: '批量任务不存在' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Not found', message: '批量任务不存在' }, { status: 404 })
     }
 
     // 3. 验证权限
     if (task.user_id !== userIdNum) {
-      return NextResponse.json(
-        { error: 'Forbidden', message: '无权取消该任务' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: 'Forbidden', message: '无权取消该任务' }, { status: 403 })
     }
 
     // 4. 检查状态（只能取消pending/running状态）
@@ -80,7 +72,7 @@ export async function POST(
         {
           error: 'Invalid status',
           message: `任务状态为${task.status}，无法取消`,
-          currentStatus: task.status
+          currentStatus: task.status,
         },
         { status: 400 }
       )
@@ -89,7 +81,7 @@ export async function POST(
     // 5. 解析取消原因
     let reason = '用户主动取消'
     try {
-      const body = await req.json() as CancelRequest
+      const body = (await req.json()) as CancelRequest
       if (body.reason) {
         reason = body.reason
       }
@@ -98,7 +90,8 @@ export async function POST(
     }
 
     // 6. 更新batch_tasks状态
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE batch_tasks
       SET
         status = 'cancelled',
@@ -107,18 +100,23 @@ export async function POST(
         cancellation_reason = ?,
         updated_at = ${nowFunc}
       WHERE id = ?
-    `, [userIdNum, reason, batchId])
+    `,
+      [userIdNum, reason, batchId]
+    )
 
     console.log(`❌ 批量任务已取消: ${batchId} (原因: ${reason})`)
 
     // 7. 同步更新upload_records状态
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE upload_records
       SET
         status = 'cancelled',
         updated_at = ${nowFunc}
       WHERE batch_id = ? AND status IN ('pending', 'processing')
-    `, [batchId])
+    `,
+      [batchId]
+    )
 
     // 8. 从队列中移除未执行的子任务
     let cancelledTaskCount = 0
@@ -148,17 +146,16 @@ export async function POST(
         completed: task.completed_count,
         failed: task.failed_count,
         cancelled: remainingCount,
-        cancelledFromQueue: cancelledTaskCount
-      }
+        cancelledFromQueue: cancelledTaskCount,
+      },
     })
-
   } catch (error: any) {
     console.error('❌ 取消批量任务失败:', error)
 
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message || '取消批量任务失败'
+        message: error.message || '取消批量任务失败',
       },
       { status: 500 }
     )

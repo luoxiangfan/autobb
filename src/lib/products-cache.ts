@@ -109,7 +109,9 @@ export function buildProductSummaryCacheHash(payload: ProductSummaryCachePayload
 
 export type ProductSummaryRouteCachePayload = ProductSummaryCachePayload
 
-export function buildProductSummaryRouteCacheHash(payload: ProductSummaryRouteCachePayload): string {
+export function buildProductSummaryRouteCacheHash(
+  payload: ProductSummaryRouteCachePayload
+): string {
   return crypto.createHash('md5').update(JSON.stringify(payload)).digest('hex')
 }
 
@@ -138,23 +140,25 @@ function parseDateBound(value: unknown): string | null {
 }
 
 function normalizeLandingPageType(value: unknown): string {
-  const raw = String(value || '').trim().toLowerCase()
+  const raw = String(value || '')
+    .trim()
+    .toLowerCase()
   if (
-    raw === 'amazon_product'
-    || raw === 'amazon_store'
-    || raw === 'independent_product'
-    || raw === 'independent_store'
-    || raw === 'unknown'
+    raw === 'amazon_product' ||
+    raw === 'amazon_store' ||
+    raw === 'independent_product' ||
+    raw === 'independent_store' ||
+    raw === 'unknown'
   ) {
     return raw
   }
   return 'all'
 }
 
-function normalizeDateBounds(params: {
+function normalizeDateBounds(params: { from: string | null; to: string | null }): {
   from: string | null
   to: string | null
-}): { from: string | null; to: string | null } {
+} {
   if (params.from && params.to && params.from > params.to) {
     return { from: params.to, to: params.from }
   }
@@ -173,16 +177,19 @@ function normalizeProductListCachePayload(input: unknown): ProductListCachePaylo
   const mid = typeof obj.mid === 'string' ? obj.mid : ''
   const sortBy = typeof obj.sortBy === 'string' ? obj.sortBy : ''
   const sortOrder = typeof obj.sortOrder === 'string' ? obj.sortOrder.toLowerCase() : ''
-  const rawTargetCountry = typeof obj.targetCountry === 'string'
-    ? obj.targetCountry.trim().toUpperCase()
-    : ''
+  const rawTargetCountry =
+    typeof obj.targetCountry === 'string' ? obj.targetCountry.trim().toUpperCase() : ''
   const targetCountry = /^[A-Z]{2,3}$/.test(rawTargetCountry) ? rawTargetCountry : 'all'
   const landingPageType = normalizeLandingPageType(obj.landingPageType)
   const platform = typeof obj.platform === 'string' ? obj.platform : ''
   const statusRaw = typeof obj.status === 'string' ? obj.status.toLowerCase() : 'all'
-  const status = statusRaw === 'active' || statusRaw === 'invalid' || statusRaw === 'sync_missing' || statusRaw === 'unknown'
-    ? statusRaw
-    : 'all'
+  const status =
+    statusRaw === 'active' ||
+    statusRaw === 'invalid' ||
+    statusRaw === 'sync_missing' ||
+    statusRaw === 'unknown'
+      ? statusRaw
+      : 'all'
 
   if (!Number.isFinite(page) || page < 1) {
     return null
@@ -242,7 +249,11 @@ export async function getCachedProductList<T>(userId: number, hash: string): Pro
   }
 }
 
-export async function setCachedProductList(userId: number, hash: string, value: unknown): Promise<void> {
+export async function setCachedProductList(
+  userId: number,
+  hash: string,
+  value: unknown
+): Promise<void> {
   try {
     const redis = getRedisClient()
     const listKey = getListKey(userId, hash)
@@ -271,7 +282,11 @@ export async function getCachedProductSummary<T>(userId: number, hash: string): 
   }
 }
 
-export async function setCachedProductSummary(userId: number, hash: string, value: unknown): Promise<void> {
+export async function setCachedProductSummary(
+  userId: number,
+  hash: string,
+  value: unknown
+): Promise<void> {
   try {
     const redis = getRedisClient()
     const summaryKey = getSummaryKey(userId, hash)
@@ -289,7 +304,10 @@ export async function setCachedProductSummary(userId: number, hash: string, valu
   }
 }
 
-export async function getCachedProductSummaryRoute<T>(userId: number, hash: string): Promise<T | null> {
+export async function getCachedProductSummaryRoute<T>(
+  userId: number,
+  hash: string
+): Promise<T | null> {
   try {
     const redis = getRedisClient()
     const raw = await redis.get(getSummaryRouteKey(userId, hash))
@@ -300,7 +318,11 @@ export async function getCachedProductSummaryRoute<T>(userId: number, hash: stri
   }
 }
 
-export async function setCachedProductSummaryRoute(userId: number, hash: string, value: unknown): Promise<void> {
+export async function setCachedProductSummaryRoute(
+  userId: number,
+  hash: string,
+  value: unknown
+): Promise<void> {
   try {
     const redis = getRedisClient()
     const summaryRouteKey = getSummaryRouteKey(userId, hash)
@@ -318,7 +340,10 @@ export async function setCachedProductSummaryRoute(userId: number, hash: string,
   }
 }
 
-export async function setLatestProductListQuery(userId: number, payload: ProductListCachePayload): Promise<void> {
+export async function setLatestProductListQuery(
+  userId: number,
+  payload: ProductListCachePayload
+): Promise<void> {
   try {
     const normalized = normalizeProductListCachePayload(payload)
     if (!normalized) {
@@ -332,7 +357,9 @@ export async function setLatestProductListQuery(userId: number, payload: Product
   }
 }
 
-export async function getLatestProductListQuery(userId: number): Promise<ProductListCachePayload | null> {
+export async function getLatestProductListQuery(
+  userId: number
+): Promise<ProductListCachePayload | null> {
   try {
     const redis = getRedisClient()
     const [raw, legacyRaw] = await Promise.all([

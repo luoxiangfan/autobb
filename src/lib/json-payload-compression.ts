@@ -16,7 +16,10 @@ export function compressJsonPayloadText(jsonText: string): {
   return { payload: compressed, codec: 'gzip-base64' }
 }
 
-export function decompressJsonPayloadText(payload: string, codec: JsonPayloadCodec | string | null | undefined): string {
+export function decompressJsonPayloadText(
+  payload: string,
+  codec: JsonPayloadCodec | string | null | undefined
+): string {
   if (codec === 'gzip-base64') {
     return gunzipSync(Buffer.from(payload, 'base64')).toString('utf8')
   }
@@ -31,7 +34,10 @@ export function serializeJsonPayloadForStorage(value: unknown): {
   return compressJsonPayloadText(jsonText)
 }
 
-export function parseStoredJsonPayload(payload: unknown, codec: JsonPayloadCodec | string | null | undefined): unknown {
+export function parseStoredJsonPayload(
+  payload: unknown,
+  codec: JsonPayloadCodec | string | null | undefined
+): unknown {
   if (payload === null || payload === undefined) return null
 
   if (codec === 'gzip-base64') {

@@ -14,13 +14,17 @@ function safeParseJsonObject(value: string | null | undefined): Record<string, a
   if (!value) return null
   try {
     const parsed = JSON.parse(value)
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, any>) : null
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, any>)
+      : null
   } catch {
     return null
   }
 }
 
-function tryGetBrandOfficialSiteFromMetadata(extractionMetadata: string | null | undefined): BrandOfficialSite | null {
+function tryGetBrandOfficialSiteFromMetadata(
+  extractionMetadata: string | null | undefined
+): BrandOfficialSite | null {
   const meta = safeParseJsonObject(extractionMetadata)
   if (!meta) return null
 
@@ -34,8 +38,10 @@ function tryGetBrandOfficialSiteFromMetadata(extractionMetadata: string | null |
         url,
         origin,
         query,
-        resolvedAt: typeof direct.resolvedAt === 'string' ? direct.resolvedAt : new Date().toISOString(),
-        source: direct.source === 'google_serp' || direct.source === 'cached' ? direct.source : 'cached',
+        resolvedAt:
+          typeof direct.resolvedAt === 'string' ? direct.resolvedAt : new Date().toISOString(),
+        source:
+          direct.source === 'google_serp' || direct.source === 'cached' ? direct.source : 'cached',
       }
     }
   }
@@ -48,8 +54,14 @@ function tryGetBrandOfficialSiteFromMetadata(extractionMetadata: string | null |
       return {
         url,
         origin,
-        query: typeof meta?.brandSearchSupplement?.query === 'string' ? meta.brandSearchSupplement.query : 'unknown',
-        resolvedAt: typeof meta?.brandSearchSupplement?.searchedAt === 'string' ? meta.brandSearchSupplement.searchedAt : new Date().toISOString(),
+        query:
+          typeof meta?.brandSearchSupplement?.query === 'string'
+            ? meta.brandSearchSupplement.query
+            : 'unknown',
+        resolvedAt:
+          typeof meta?.brandSearchSupplement?.searchedAt === 'string'
+            ? meta.brandSearchSupplement.searchedAt
+            : new Date().toISOString(),
         source: 'cached',
       }
     } catch {
@@ -83,16 +95,32 @@ function normalizeTokens(input: string): string[] {
   if (!cleaned) return []
 
   const stop = new Set([
-    'the', 'a', 'an', 'and', 'or', 'for', 'with', 'to', 'of', 'in', 'on', 'by',
-    'official', 'store', 'shop', 'website', 'site', 'online',
+    'the',
+    'a',
+    'an',
+    'and',
+    'or',
+    'for',
+    'with',
+    'to',
+    'of',
+    'in',
+    'on',
+    'by',
+    'official',
+    'store',
+    'shop',
+    'website',
+    'site',
+    'online',
   ])
 
   const tokens = cleaned
     .split(' ')
-    .map(t => t.trim())
+    .map((t) => t.trim())
     .filter(Boolean)
-    .filter(t => t.length >= 3)
-    .filter(t => !stop.has(t))
+    .filter((t) => t.length >= 3)
+    .filter((t) => !stop.has(t))
 
   return Array.from(new Set(tokens))
 }
@@ -110,7 +138,7 @@ function buildBrandOfficialSiteQuery(params: {
   const hintTokens = [
     ...normalizeTokens(params.productName || ''),
     ...normalizeTokens(params.category || ''),
-  ].filter(t => !brandTokens.has(t))
+  ].filter((t) => !brandTokens.has(t))
   const hint = hintTokens.slice(0, 4).join(' ')
 
   // Prefer "brand + category" to reduce ambiguity; fall back to brand-only if no usable hint.
@@ -141,14 +169,28 @@ function buildOfficialSiteHeuristicCandidates(params: {
   const hints: string[] = []
 
   // Special-case common compound terms.
-  if ((tokenSet.has('dash') && (tokenSet.has('cam') || tokenSet.has('camera'))) || tokenSet.has('dashcam')) {
+  if (
+    (tokenSet.has('dash') && (tokenSet.has('cam') || tokenSet.has('camera'))) ||
+    tokenSet.has('dashcam')
+  ) {
     hints.push('dashcam')
   }
 
   // Fall back to a small allowlist of high-signal product words.
   const allow = [
-    'dashcam', 'camera', 'vacuum', 'robot', 'cleaner', 'security', 'doorbell',
-    'headlights', 'led', 'charger', 'tracker', 'sensor', 'monitor',
+    'dashcam',
+    'camera',
+    'vacuum',
+    'robot',
+    'cleaner',
+    'security',
+    'doorbell',
+    'headlights',
+    'led',
+    'charger',
+    'tracker',
+    'sensor',
+    'monitor',
   ]
   for (const t of tokens) {
     if (allow.includes(t)) hints.push(t)
@@ -197,7 +239,7 @@ async function readTextUpTo(response: Response, maxBytes: number): Promise<strin
     }
 
     reader.releaseLock()
-    const all = Buffer.concat(chunks.map(u => Buffer.from(u)))
+    const all = Buffer.concat(chunks.map((u) => Buffer.from(u)))
     return all.toString('utf8')
   } catch {
     return ''
@@ -230,8 +272,8 @@ async function tryResolveOfficialSiteByHeuristic(params: {
         headers: {
           // Best-effort: hint server to return small HTML
           'user-agent': 'Mozilla/5.0 (compatible; AutoAdsBot/1.0)',
-          'accept': 'text/html,application/xhtml+xml',
-          'range': 'bytes=0-65535',
+          accept: 'text/html,application/xhtml+xml',
+          range: 'bytes=0-65535',
         },
       })
 
@@ -258,7 +300,7 @@ async function tryResolveOfficialSiteByHeuristic(params: {
       // - Must mention at least one context token (e.g. "dash", "camera", "vacuum")
       if (brandKey && !html.includes(brandKey)) continue
 
-      const hasContext = Array.from(contextTokens).some(t => t && html.includes(t))
+      const hasContext = Array.from(contextTokens).some((t) => t && html.includes(t))
       if (!hasContext) continue
 
       return { url: finalUrl, origin, queryHint: candidate.queryHint }

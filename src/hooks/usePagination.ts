@@ -82,26 +82,32 @@ export function usePagination(options?: UsePaginationOptions): UsePaginationRetu
   const offset = useMemo(() => (currentPage - 1) * pageSize, [currentPage, pageSize])
 
   // 计算总页数
-  const getTotalPages = useCallback((total: number) => {
-    return Math.ceil(total / pageSize)
-  }, [pageSize])
+  const getTotalPages = useCallback(
+    (total: number) => {
+      return Math.ceil(total / pageSize)
+    },
+    [pageSize]
+  )
 
   // 是否有下一页
-  const hasNextPage = useCallback((total: number) => {
-    return currentPage < getTotalPages(total)
-  }, [currentPage, getTotalPages])
+  const hasNextPage = useCallback(
+    (total: number) => {
+      return currentPage < getTotalPages(total)
+    },
+    [currentPage, getTotalPages]
+  )
 
   // 是否有上一页
   const hasPrevPage = currentPage > 1
 
   // 下一页
   const nextPage = useCallback(() => {
-    setCurrentPage(prev => prev + 1)
+    setCurrentPage((prev) => prev + 1)
   }, [])
 
   // 上一页
   const prevPage = useCallback(() => {
-    setCurrentPage(prev => Math.max(1, prev - 1))
+    setCurrentPage((prev) => Math.max(1, prev - 1))
   }, [])
 
   return {

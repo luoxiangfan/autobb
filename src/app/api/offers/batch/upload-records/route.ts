@@ -42,10 +42,7 @@ export async function GET(req: NextRequest) {
     // 验证用户身份
     const authResult = await verifyAuth(req)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: '请先登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
     }
     const userIdNum = authResult.user.userId
 
@@ -60,13 +57,17 @@ export async function GET(req: NextRequest) {
     let whereClause = 'user_id = ?'
     const queryParams: any[] = [userIdNum]
 
-    if (statusFilter && ['pending', 'processing', 'completed', 'failed', 'partial'].includes(statusFilter)) {
+    if (
+      statusFilter &&
+      ['pending', 'processing', 'completed', 'failed', 'partial'].includes(statusFilter)
+    ) {
       whereClause += ' AND status = ?'
       queryParams.push(statusFilter)
     }
 
     // 查询上传记录（分页）
-    const records = await db.query<UploadRecord>(`
+    const records = await db.query<UploadRecord>(
+      `
       SELECT
         id,
         batch_id,
@@ -84,11 +85,13 @@ export async function GET(req: NextRequest) {
       WHERE ${whereClause}
       ORDER BY uploaded_at DESC
       LIMIT ? OFFSET ?
-    `, [...queryParams, limit, offset])
+    `,
+      [...queryParams, limit, offset]
+    )
 
     // 确保 success_rate 是数字类型（处理 SQLite/PostgreSQL 差异）
     // 同时转换为 camelCase
-    const normalizedRecords = records.map(record => ({
+    const normalizedRecords = records.map((record) => ({
       id: record.id,
       batchId: record.batch_id,
       fileName: record.file_name,
@@ -104,11 +107,14 @@ export async function GET(req: NextRequest) {
     }))
 
     // 查询总数
-    const countResult = await db.query<{ total: number }>(`
+    const countResult = await db.query<{ total: number }>(
+      `
       SELECT COUNT(*) as total
       FROM upload_records
       WHERE ${whereClause}
-    `, queryParams)
+    `,
+      queryParams
+    )
 
     const total = countResult[0]?.total || 0
     const totalPages = Math.ceil(total / limit)
@@ -121,17 +127,16 @@ export async function GET(req: NextRequest) {
         limit,
         total,
         totalPages,
-        hasMore: page < totalPages
-      }
+        hasMore: page < totalPages,
+      },
     })
-
   } catch (error: any) {
     console.error('❌ 获取上传记录失败:', error)
 
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message || '获取上传记录失败'
+        message: error.message || '获取上传记录失败',
       },
       { status: 500 }
     )

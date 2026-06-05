@@ -37,7 +37,7 @@ export interface EmailTaskResult {
   type: string
   messageId?: string
   errorMessage?: string
-  duration: number  // 发送耗时（毫秒）
+  duration: number // 发送耗时（毫秒）
 }
 
 /**
@@ -58,21 +58,17 @@ async function sendEmailViaSMTP(data: EmailTaskData): Promise<{ messageId?: stri
   console.log(`   类型: ${data.type}`)
 
   // 占位符实现：模拟发送
-  await new Promise(resolve => setTimeout(resolve, 100))
+  await new Promise((resolve) => setTimeout(resolve, 100))
 
   return {
-    messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
   }
 }
 
 /**
  * 生成邮件模板
  */
-function generateEmailTemplate(
-  type: EmailTaskData['type'],
-  subject: string,
-  body: string
-): string {
+function generateEmailTemplate(type: EmailTaskData['type'], subject: string, body: string): string {
   const baseStyles = `
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     line-height: 1.6;
@@ -157,30 +153,34 @@ export function createEmailExecutor(): TaskExecutor<EmailTaskData, EmailTaskResu
         body: htmlBody,
         type,
         from,
-        attachments
+        attachments,
       })
 
       const duration = Date.now() - startTime
 
-      console.log(`✅ [EmailExecutor] 邮件发送成功: ${to}, 消息ID=${result.messageId}, 耗时=${duration}ms`)
+      console.log(
+        `✅ [EmailExecutor] 邮件发送成功: ${to}, 消息ID=${result.messageId}, 耗时=${duration}ms`
+      )
 
       return {
         success: true,
         email: to,
         type,
         messageId: result.messageId,
-        duration
+        duration,
       }
     } catch (error: any) {
       const duration = Date.now() - startTime
-      console.error(`❌ [EmailExecutor] 邮件发送失败: ${to}, 错误=${error.message}, 耗时=${duration}ms`)
+      console.error(
+        `❌ [EmailExecutor] 邮件发送失败: ${to}, 错误=${error.message}, 耗时=${duration}ms`
+      )
 
       return {
         success: false,
         email: to,
         type,
         errorMessage: error.message,
-        duration
+        duration,
       }
     }
   }

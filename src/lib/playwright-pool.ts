@@ -20,12 +20,12 @@ import { maskProxyUrl } from './proxy/validate-url'
  * - 减少每代理实例数：5 → 2（避免同一代理过多实例）
  */
 const POOL_CONFIG = {
-  maxInstances: 8,              // 调整：从5提升到8，减少高并发等待
-  maxInstancesPerProxy: 3,      // 🔥 放宽：避免高并发场景频繁等待超时
-  maxIdleTime: 60 * 1000,       // 🔥 内存优化：从5分钟减到1分钟
-  launchTimeout: 30000,         // 启动超时30秒
-  acquireTimeout: 180000,       // 获取实例超时（短链/慢代理可能占用更久）
-  warmupCount: 1,               // 🔥 内存优化：从2减到1
+  maxInstances: 8, // 调整：从5提升到8，减少高并发等待
+  maxInstancesPerProxy: 3, // 🔥 放宽：避免高并发场景频繁等待超时
+  maxIdleTime: 60 * 1000, // 🔥 内存优化：从5分钟减到1分钟
+  launchTimeout: 30000, // 启动超时30秒
+  acquireTimeout: 180000, // 获取实例超时（短链/慢代理可能占用更久）
+  warmupCount: 1, // 🔥 内存优化：从2减到1
 }
 
 function formatProxyKeyForLog(proxyKey: string): string {
@@ -37,11 +37,11 @@ function formatProxyKeyForLog(proxyKey: string): string {
  * 浏览器实例信息
  */
 interface BrowserInstance {
-  id: string                    // 实例唯一ID
+  id: string // 实例唯一ID
   browser: Browser
   context: BrowserContext
-  contextOptions: any           // 保存context配置供复用
-  proxyKey: string              // 代理配置的唯一标识
+  contextOptions: any // 保存context配置供复用
+  proxyKey: string // 代理配置的唯一标识
   createdAt: number
   lastUsedAt: number
   inUse: boolean
@@ -52,7 +52,7 @@ interface BrowserInstance {
  */
 interface WaitingRequest {
   proxyKey: string
-  targetCountry?: string  // 🌍 增加目标国家字段
+  targetCountry?: string // 🌍 增加目标国家字段
   resolve: (result: { browser: Browser; context: BrowserContext; instanceId: string }) => void
   reject: (error: Error) => void
   timeout: NodeJS.Timeout
@@ -78,25 +78,25 @@ class PlaywrightPool {
 
   // 🌍 国家配置映射
   private static readonly COUNTRY_CONFIG: Record<string, { locale: string; timezone: string }> = {
-    'US': { locale: 'en-US', timezone: 'America/New_York' },
-    'GB': { locale: 'en-GB', timezone: 'Europe/London' },
-    'UK': { locale: 'en-GB', timezone: 'Europe/London' },
-    'DE': { locale: 'de-DE', timezone: 'Europe/Berlin' },
-    'FR': { locale: 'fr-FR', timezone: 'Europe/Paris' },
-    'IT': { locale: 'it-IT', timezone: 'Europe/Rome' },
-    'ES': { locale: 'es-ES', timezone: 'Europe/Madrid' },
-    'JP': { locale: 'ja-JP', timezone: 'Asia/Tokyo' },
-    'CA': { locale: 'en-CA', timezone: 'America/Toronto' },
-    'AU': { locale: 'en-AU', timezone: 'Australia/Sydney' },
-    'NL': { locale: 'nl-NL', timezone: 'Europe/Amsterdam' },
-    'BR': { locale: 'pt-BR', timezone: 'America/Sao_Paulo' },
-    'MX': { locale: 'es-MX', timezone: 'America/Mexico_City' },
-    'IN': { locale: 'en-IN', timezone: 'Asia/Kolkata' },
-    'PL': { locale: 'pl-PL', timezone: 'Europe/Warsaw' },
-    'SE': { locale: 'sv-SE', timezone: 'Europe/Stockholm' },
-    'BE': { locale: 'nl-BE', timezone: 'Europe/Brussels' },
-    'AT': { locale: 'de-AT', timezone: 'Europe/Vienna' },
-    'CH': { locale: 'de-CH', timezone: 'Europe/Zurich' },
+    US: { locale: 'en-US', timezone: 'America/New_York' },
+    GB: { locale: 'en-GB', timezone: 'Europe/London' },
+    UK: { locale: 'en-GB', timezone: 'Europe/London' },
+    DE: { locale: 'de-DE', timezone: 'Europe/Berlin' },
+    FR: { locale: 'fr-FR', timezone: 'Europe/Paris' },
+    IT: { locale: 'it-IT', timezone: 'Europe/Rome' },
+    ES: { locale: 'es-ES', timezone: 'Europe/Madrid' },
+    JP: { locale: 'ja-JP', timezone: 'Asia/Tokyo' },
+    CA: { locale: 'en-CA', timezone: 'America/Toronto' },
+    AU: { locale: 'en-AU', timezone: 'Australia/Sydney' },
+    NL: { locale: 'nl-NL', timezone: 'Europe/Amsterdam' },
+    BR: { locale: 'pt-BR', timezone: 'America/Sao_Paulo' },
+    MX: { locale: 'es-MX', timezone: 'America/Mexico_City' },
+    IN: { locale: 'en-IN', timezone: 'Asia/Kolkata' },
+    PL: { locale: 'pl-PL', timezone: 'Europe/Warsaw' },
+    SE: { locale: 'sv-SE', timezone: 'Europe/Stockholm' },
+    BE: { locale: 'nl-BE', timezone: 'Europe/Brussels' },
+    AT: { locale: 'de-AT', timezone: 'Europe/Vienna' },
+    CH: { locale: 'de-CH', timezone: 'Europe/Zurich' },
   }
 
   constructor() {
@@ -109,7 +109,8 @@ class PlaywrightPool {
    * P0修复: 复用实例时必须使用当前targetCountry生成新的配置
    */
   private generateContextOptions(targetCountry?: string): any {
-    const randomUserAgent = PlaywrightPool.USER_AGENTS[Math.floor(Math.random() * PlaywrightPool.USER_AGENTS.length)]
+    const randomUserAgent =
+      PlaywrightPool.USER_AGENTS[Math.floor(Math.random() * PlaywrightPool.USER_AGENTS.length)]
 
     let locale = 'en-US'
     let timezoneId = 'America/New_York'
@@ -119,7 +120,9 @@ class PlaywrightPool {
       if (config) {
         locale = config.locale
         timezoneId = config.timezone
-        console.log(`🌍 [contextOptions] 目标国家: ${targetCountry}, locale: ${locale}, timezone: ${timezoneId}`)
+        console.log(
+          `🌍 [contextOptions] 目标国家: ${targetCountry}, locale: ${locale}, timezone: ${timezoneId}`
+        )
       }
     }
 
@@ -145,29 +148,29 @@ class PlaywrightPool {
    */
   private async addStealthScripts(context: BrowserContext, targetCountry?: string): Promise<void> {
     // 🌍 根据目标国家动态生成语言配置
-    let navigatorLanguages = ['en-US', 'en']  // 默认英语
+    let navigatorLanguages = ['en-US', 'en'] // 默认英语
 
     if (targetCountry) {
       const countryLanguageMap: Record<string, string[]> = {
-        'US': ['en-US', 'en'],
-        'GB': ['en-GB', 'en'],
-        'UK': ['en-GB', 'en'],
-        'DE': ['de-DE', 'de', 'en'],
-        'FR': ['fr-FR', 'fr', 'en'],
-        'IT': ['it-IT', 'it', 'en'],
-        'ES': ['es-ES', 'es', 'en'],
-        'JP': ['ja-JP', 'ja', 'en'],
-        'CA': ['en-CA', 'en', 'fr'],
-        'AU': ['en-AU', 'en'],
-        'NL': ['nl-NL', 'nl', 'en'],
-        'BR': ['pt-BR', 'pt', 'en'],
-        'MX': ['es-MX', 'es', 'en'],
-        'IN': ['en-IN', 'en', 'hi'],
-        'PL': ['pl-PL', 'pl', 'en'],
-        'SE': ['sv-SE', 'sv', 'en'],
-        'BE': ['nl-BE', 'fr-BE', 'nl', 'fr', 'en'],
-        'AT': ['de-AT', 'de', 'en'],
-        'CH': ['de-CH', 'fr-CH', 'it-CH', 'de', 'fr', 'it', 'en'],
+        US: ['en-US', 'en'],
+        GB: ['en-GB', 'en'],
+        UK: ['en-GB', 'en'],
+        DE: ['de-DE', 'de', 'en'],
+        FR: ['fr-FR', 'fr', 'en'],
+        IT: ['it-IT', 'it', 'en'],
+        ES: ['es-ES', 'es', 'en'],
+        JP: ['ja-JP', 'ja', 'en'],
+        CA: ['en-CA', 'en', 'fr'],
+        AU: ['en-AU', 'en'],
+        NL: ['nl-NL', 'nl', 'en'],
+        BR: ['pt-BR', 'pt', 'en'],
+        MX: ['es-MX', 'es', 'en'],
+        IN: ['en-IN', 'en', 'hi'],
+        PL: ['pl-PL', 'pl', 'en'],
+        SE: ['sv-SE', 'sv', 'en'],
+        BE: ['nl-BE', 'fr-BE', 'nl', 'fr', 'en'],
+        AT: ['de-AT', 'de', 'en'],
+        CH: ['de-CH', 'fr-CH', 'it-CH', 'de', 'fr', 'it', 'en'],
       }
       navigatorLanguages = countryLanguageMap[targetCountry.toUpperCase()] || ['en-US', 'en']
     }
@@ -178,244 +181,287 @@ class PlaywrightPool {
 
     const languagesForScript = navigatorLanguages
 
-    await context.addInitScript(({ langs, hwConcurrency, devMemory }: { langs: string[], hwConcurrency: number, devMemory: number }) => {
-      // ===== 基础反检测 =====
+    await context.addInitScript(
+      ({
+        langs,
+        hwConcurrency,
+        devMemory,
+      }: {
+        langs: string[]
+        hwConcurrency: number
+        devMemory: number
+      }) => {
+        // ===== 基础反检测 =====
 
-      // Override navigator.webdriver
-      Object.defineProperty(navigator, 'webdriver', {
-        get: () => undefined,
-      })
+        // Override navigator.webdriver
+        Object.defineProperty(navigator, 'webdriver', {
+          get: () => undefined,
+        })
 
-      // 🔥 伪装Chrome运行时（关键！）
-      const win = window as any
-      win.chrome = {
-        runtime: {},
-        loadTimes: function() {},
-        csi: function() {},
-        app: {}
-      }
+        // 🔥 伪装Chrome运行时（关键！）
+        const win = window as any
+        win.chrome = {
+          runtime: {},
+          loadTimes: function () {},
+          csi: function () {},
+          app: {},
+        }
 
-      // 🔥 P0修复: 使用真实的plugins对象结构（之前是[1,2,3,4,5]是严重错误）
-      // 🔥 P0增强: 添加完整的Plugin对象属性、length、item()、namedItem()方法
-      const pluginsArray: any[] = [
-        {
-          0: { type: "application/pdf", suffixes: "pdf", description: "Portable Document Format" },
-          description: "Portable Document Format",
-          filename: "internal-pdf-viewer",
-          length: 1,
-          name: "Chrome PDF Plugin",
-          item: function(index: number) { return index === 0 ? this[0] : null; },
-        },
-        {
-          0: { type: "application/x-google-chrome-pdf", suffixes: "pdf", description: "Portable Document Format" },
-          description: "Portable Document Format",
-          filename: "internal-pdf-viewer",
-          length: 1,
-          name: "Chrome PDF Viewer",
-          item: function(index: number) { return index === 0 ? this[0] : null; },
-        },
-        {
-          0: { type: "application/x-nacl", suffixes: "", description: "Native Client Executable" },
-          1: { type: "application/x-pnacl", suffixes: "", description: "Portable Native Client Executable" },
-          description: "Native Client",
-          filename: "internal-nacl-plugin",
-          length: 2,
-          name: "Native Client",
-          item: function(index: number) {
-            if (index === 0) return this[0];
-            if (index === 1) return this[1];
-            return null;
+        // 🔥 P0修复: 使用真实的plugins对象结构（之前是[1,2,3,4,5]是严重错误）
+        // 🔥 P0增强: 添加完整的Plugin对象属性、length、item()、namedItem()方法
+        const pluginsArray: any[] = [
+          {
+            0: {
+              type: 'application/pdf',
+              suffixes: 'pdf',
+              description: 'Portable Document Format',
+            },
+            description: 'Portable Document Format',
+            filename: 'internal-pdf-viewer',
+            length: 1,
+            name: 'Chrome PDF Plugin',
+            item: function (index: number) {
+              return index === 0 ? this[0] : null
+            },
           },
-        },
-      ];
+          {
+            0: {
+              type: 'application/x-google-chrome-pdf',
+              suffixes: 'pdf',
+              description: 'Portable Document Format',
+            },
+            description: 'Portable Document Format',
+            filename: 'internal-pdf-viewer',
+            length: 1,
+            name: 'Chrome PDF Viewer',
+            item: function (index: number) {
+              return index === 0 ? this[0] : null
+            },
+          },
+          {
+            0: {
+              type: 'application/x-nacl',
+              suffixes: '',
+              description: 'Native Client Executable',
+            },
+            1: {
+              type: 'application/x-pnacl',
+              suffixes: '',
+              description: 'Portable Native Client Executable',
+            },
+            description: 'Native Client',
+            filename: 'internal-nacl-plugin',
+            length: 2,
+            name: 'Native Client',
+            item: function (index: number) {
+              if (index === 0) return this[0]
+              if (index === 1) return this[1]
+              return null
+            },
+          },
+        ]
 
-      // 添加PluginArray的length属性
-      Object.defineProperty(pluginsArray, 'length', {
-        get: () => 3,
-        configurable: true,
-      });
-
-      // 添加PluginArray的item()方法
-      Object.defineProperty(pluginsArray, 'item', {
-        value: function(index: number) {
-          return this[index] || null;
-        },
-        configurable: true,
-      });
-
-      // 添加PluginArray的namedItem()方法
-      Object.defineProperty(pluginsArray, 'namedItem', {
-        value: function(name: string) {
-          return this.find((p: any) => p.name === name) || null;
-        },
-        configurable: true,
-      });
-
-      // 添加PluginArray的refresh()方法（兼容性）
-      Object.defineProperty(pluginsArray, 'refresh', {
-        value: function() {
-          // 空实现，保持兼容性
-        },
-        configurable: true,
-      });
-
-      Object.defineProperty(navigator, 'plugins', {
-        get: () => pluginsArray,
-        configurable: true,
-      })
-
-      // 🌍 动态语言列表（根据目标国家）
-      Object.defineProperty(navigator, 'languages', {
-        get: () => langs,
-      })
-
-      // ===== 硬件参数伪装 =====
-
-      // 🔥 伪装真实屏幕分辨率和颜色深度
-      Object.defineProperty(screen, 'colorDepth', {
-        get: () => 24,
-      })
-      Object.defineProperty(screen, 'pixelDepth', {
-        get: () => 24,
-      })
-
-      // 🎲 P0优化: 随机化硬件并发数（4/8/16核）
-      Object.defineProperty(navigator, 'hardwareConcurrency', {
-        get: () => hwConcurrency,
-      })
-
-      // 🎲 P0优化: 随机化设备内存（4/8/16GB）
-      Object.defineProperty(navigator, 'deviceMemory', {
-        get: () => devMemory,
-      })
-
-      // ===== P1增强: 完善Screen对象 =====
-
-      Object.defineProperty(screen, 'width', {
-        get: () => 1920,
-      })
-      Object.defineProperty(screen, 'height', {
-        get: () => 1080,
-      })
-      Object.defineProperty(screen, 'availWidth', {
-        get: () => 1920,
-      })
-      Object.defineProperty(screen, 'availHeight', {
-        get: () => 1040,  // 减去任务栏高度
-      })
-
-      // ===== Permissions API =====
-
-      const originalQuery = window.navigator.permissions.query
-      window.navigator.permissions.query = (parameters: any) =>
-        parameters.name === 'notifications'
-          ? Promise.resolve({ state: Notification.permission } as PermissionStatus)
-          : originalQuery(parameters)
-
-      // 🔥 伪装Battery API
-      Object.defineProperty(navigator, 'getBattery', {
-        value: () => Promise.resolve({
-          charging: true,
-          chargingTime: 0,
-          dischargingTime: Infinity,
-          level: 1.0,
+        // 添加PluginArray的length属性
+        Object.defineProperty(pluginsArray, 'length', {
+          get: () => 3,
+          configurable: true,
         })
-      })
 
-      // 🔥 伪装Connection API
-      Object.defineProperty(navigator, 'connection', {
-        get: () => ({
-          effectiveType: '4g',
-          downlink: 10,
-          rtt: 50,
-          saveData: false,
+        // 添加PluginArray的item()方法
+        Object.defineProperty(pluginsArray, 'item', {
+          value: function (index: number) {
+            return this[index] || null
+          },
+          configurable: true,
         })
-      })
 
-      // ===== P1增强: 主动屏蔽WebRTC =====
+        // 添加PluginArray的namedItem()方法
+        Object.defineProperty(pluginsArray, 'namedItem', {
+          value: function (name: string) {
+            return this.find((p: any) => p.name === name) || null
+          },
+          configurable: true,
+        })
 
-      Object.defineProperty(navigator, 'mediaDevices', {
-        get: () => undefined,
-      })
+        // 添加PluginArray的refresh()方法（兼容性）
+        Object.defineProperty(pluginsArray, 'refresh', {
+          value: function () {
+            // 空实现，保持兼容性
+          },
+          configurable: true,
+        })
 
-      // ===== P0增强: Canvas指纹混淆 =====
+        Object.defineProperty(navigator, 'plugins', {
+          get: () => pluginsArray,
+          configurable: true,
+        })
 
-      const getImageData = HTMLCanvasElement.prototype.toDataURL
-      HTMLCanvasElement.prototype.toDataURL = function(type?: string) {
-        // 🎲 添加随机噪声混淆Canvas指纹
-        const context = this.getContext('2d')
-        if (context) {
-          const originalImageData = context.getImageData(0, 0, this.width, this.height)
-          // 在随机像素点添加微小噪声（人眼不可见）
-          for (let i = 0; i < originalImageData.data.length; i += Math.floor(Math.random() * 10) + 1) {
-            originalImageData.data[i] = Math.min(255, originalImageData.data[i] + Math.floor(Math.random() * 5) - 2)
-          }
-          context.putImageData(originalImageData, 0, 0)
-        }
-        return getImageData.call(this, type)
-      }
+        // 🌍 动态语言列表（根据目标国家）
+        Object.defineProperty(navigator, 'languages', {
+          get: () => langs,
+        })
 
-      // ===== P0增强: WebGL指纹混淆 =====
+        // ===== 硬件参数伪装 =====
 
-      const getParameter = WebGLRenderingContext.prototype.getParameter
-      WebGLRenderingContext.prototype.getParameter = function(parameter: number) {
-        // 🎭 伪装关键WebGL参数
-        if (parameter === 37445) {  // UNMASKED_VENDOR_WEBGL
-          return 'Intel Inc.'
-        }
-        if (parameter === 37446) {  // UNMASKED_RENDERER_WEBGL
-          return 'Intel Iris OpenGL Engine'
-        }
-        return getParameter.call(this, parameter)
-      }
+        // 🔥 伪装真实屏幕分辨率和颜色深度
+        Object.defineProperty(screen, 'colorDepth', {
+          get: () => 24,
+        })
+        Object.defineProperty(screen, 'pixelDepth', {
+          get: () => 24,
+        })
 
-      // WebGL2也需要处理
-      if (typeof WebGL2RenderingContext !== 'undefined') {
-        const getParameter2 = WebGL2RenderingContext.prototype.getParameter
-        WebGL2RenderingContext.prototype.getParameter = function(parameter: number) {
-          if (parameter === 37445) return 'Intel Inc.'
-          if (parameter === 37446) return 'Intel Iris OpenGL Engine'
-          return getParameter2.call(this, parameter)
-        }
-      }
+        // 🎲 P0优化: 随机化硬件并发数（4/8/16核）
+        Object.defineProperty(navigator, 'hardwareConcurrency', {
+          get: () => hwConcurrency,
+        })
 
-      // ===== P0增强: AudioContext指纹混淆 =====
+        // 🎲 P0优化: 随机化设备内存（4/8/16GB）
+        Object.defineProperty(navigator, 'deviceMemory', {
+          get: () => devMemory,
+        })
 
-      const AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext
-      if (AudioContext) {
-        const originalCreateAnalyser = AudioContext.prototype.createAnalyser
-        AudioContext.prototype.createAnalyser = function() {
-          const analyser = originalCreateAnalyser.call(this)
-          const originalGetFloatFrequencyData = analyser.getFloatFrequencyData
-          analyser.getFloatFrequencyData = function(array: Float32Array) {
-            originalGetFloatFrequencyData.call(this, array)
-            // 🎲 添加微小噪声混淆AudioContext指纹
-            for (let i = 0; i < array.length; i++) {
-              array[i] += (Math.random() - 0.5) * 0.0001
+        // ===== P1增强: 完善Screen对象 =====
+
+        Object.defineProperty(screen, 'width', {
+          get: () => 1920,
+        })
+        Object.defineProperty(screen, 'height', {
+          get: () => 1080,
+        })
+        Object.defineProperty(screen, 'availWidth', {
+          get: () => 1920,
+        })
+        Object.defineProperty(screen, 'availHeight', {
+          get: () => 1040, // 减去任务栏高度
+        })
+
+        // ===== Permissions API =====
+
+        const originalQuery = window.navigator.permissions.query
+        window.navigator.permissions.query = (parameters: any) =>
+          parameters.name === 'notifications'
+            ? Promise.resolve({ state: Notification.permission } as PermissionStatus)
+            : originalQuery(parameters)
+
+        // 🔥 伪装Battery API
+        Object.defineProperty(navigator, 'getBattery', {
+          value: () =>
+            Promise.resolve({
+              charging: true,
+              chargingTime: 0,
+              dischargingTime: Infinity,
+              level: 1.0,
+            }),
+        })
+
+        // 🔥 伪装Connection API
+        Object.defineProperty(navigator, 'connection', {
+          get: () => ({
+            effectiveType: '4g',
+            downlink: 10,
+            rtt: 50,
+            saveData: false,
+          }),
+        })
+
+        // ===== P1增强: 主动屏蔽WebRTC =====
+
+        Object.defineProperty(navigator, 'mediaDevices', {
+          get: () => undefined,
+        })
+
+        // ===== P0增强: Canvas指纹混淆 =====
+
+        const getImageData = HTMLCanvasElement.prototype.toDataURL
+        HTMLCanvasElement.prototype.toDataURL = function (type?: string) {
+          // 🎲 添加随机噪声混淆Canvas指纹
+          const context = this.getContext('2d')
+          if (context) {
+            const originalImageData = context.getImageData(0, 0, this.width, this.height)
+            // 在随机像素点添加微小噪声（人眼不可见）
+            for (
+              let i = 0;
+              i < originalImageData.data.length;
+              i += Math.floor(Math.random() * 10) + 1
+            ) {
+              originalImageData.data[i] = Math.min(
+                255,
+                originalImageData.data[i] + Math.floor(Math.random() * 5) - 2
+              )
             }
-            return array
+            context.putImageData(originalImageData, 0, 0)
           }
-          return analyser
+          return getImageData.call(this, type)
         }
-      }
 
-      // ===== P2增强: 其他反检测措施 =====
+        // ===== P0增强: WebGL指纹混淆 =====
 
-      // 隐藏iframe contentWindow检测
-      Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
-        get: function() {
-          const win = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'contentWindow')
-          return win ? win.get?.call(this) : null
+        const getParameter = WebGLRenderingContext.prototype.getParameter
+        WebGLRenderingContext.prototype.getParameter = function (parameter: number) {
+          // 🎭 伪装关键WebGL参数
+          if (parameter === 37445) {
+            // UNMASKED_VENDOR_WEBGL
+            return 'Intel Inc.'
+          }
+          if (parameter === 37446) {
+            // UNMASKED_RENDERER_WEBGL
+            return 'Intel Iris OpenGL Engine'
+          }
+          return getParameter.call(this, parameter)
         }
-      })
 
-      // 隐藏console.debug特征
-      void console.debug
-      console.debug = function() {
-        // 静默处理，不输出
-      }
+        // WebGL2也需要处理
+        if (typeof WebGL2RenderingContext !== 'undefined') {
+          const getParameter2 = WebGL2RenderingContext.prototype.getParameter
+          WebGL2RenderingContext.prototype.getParameter = function (parameter: number) {
+            if (parameter === 37445) return 'Intel Inc.'
+            if (parameter === 37446) return 'Intel Iris OpenGL Engine'
+            return getParameter2.call(this, parameter)
+          }
+        }
 
-    }, { langs: languagesForScript, hwConcurrency: hardwareConcurrency, devMemory: deviceMemory })
+        // ===== P0增强: AudioContext指纹混淆 =====
+
+        const AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext
+        if (AudioContext) {
+          const originalCreateAnalyser = AudioContext.prototype.createAnalyser
+          AudioContext.prototype.createAnalyser = function () {
+            const analyser = originalCreateAnalyser.call(this)
+            const originalGetFloatFrequencyData = analyser.getFloatFrequencyData
+            analyser.getFloatFrequencyData = function (array: Float32Array) {
+              originalGetFloatFrequencyData.call(this, array)
+              // 🎲 添加微小噪声混淆AudioContext指纹
+              for (let i = 0; i < array.length; i++) {
+                array[i] += (Math.random() - 0.5) * 0.0001
+              }
+              return array
+            }
+            return analyser
+          }
+        }
+
+        // ===== P2增强: 其他反检测措施 =====
+
+        // 隐藏iframe contentWindow检测
+        Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
+          get: function () {
+            const win = Object.getOwnPropertyDescriptor(
+              HTMLIFrameElement.prototype,
+              'contentWindow'
+            )
+            return win ? win.get?.call(this) : null
+          },
+        })
+
+        // 隐藏console.debug特征
+        void console.debug
+        console.debug = function () {
+          // 静默处理，不输出
+        }
+      },
+      { langs: languagesForScript, hwConcurrency: hardwareConcurrency, devMemory: deviceMemory }
+    )
   }
 
   /**
@@ -461,7 +507,7 @@ class PlaywrightPool {
     // 生成proxyKey用于实例匹配
     const proxyKey = proxyCredentials
       ? `${proxyCredentials.host}:${proxyCredentials.port}`
-      : (proxyUrl || 'no-proxy')
+      : proxyUrl || 'no-proxy'
 
     // 1. 尝试复用现有空闲实例
     const existing = this.findIdleInstance(proxyKey)
@@ -512,7 +558,13 @@ class PlaywrightPool {
 
     if (canCreateForProxy && canCreateGlobal) {
       // 直接创建新实例
-      return await this.createAndRegisterInstance(proxyUrl, proxyCredentials, targetCountry, allowCredentialsCache, userId)
+      return await this.createAndRegisterInstance(
+        proxyUrl,
+        proxyCredentials,
+        targetCountry,
+        allowCredentialsCache,
+        userId
+      )
     }
 
     // 3. 尝试清理空闲实例腾出空间
@@ -520,13 +572,25 @@ class PlaywrightPool {
       await this.cleanupIdleInstances()
 
       if (this.instances.size < POOL_CONFIG.maxInstances) {
-        return await this.createAndRegisterInstance(proxyUrl, undefined, targetCountry, allowCredentialsCache, userId)
+        return await this.createAndRegisterInstance(
+          proxyUrl,
+          undefined,
+          targetCountry,
+          allowCredentialsCache,
+          userId
+        )
       }
 
       // 清理最旧的实例
       await this.cleanupOldestInstance()
       if (this.instances.size < POOL_CONFIG.maxInstances) {
-        return await this.createAndRegisterInstance(proxyUrl, undefined, targetCountry, allowCredentialsCache, userId)
+        return await this.createAndRegisterInstance(
+          proxyUrl,
+          undefined,
+          targetCountry,
+          allowCredentialsCache,
+          userId
+        )
       }
     }
 
@@ -534,7 +598,7 @@ class PlaywrightPool {
     console.log(`⏳ 实例池已满，加入等待队列: ${formatProxyKeyForLog(proxyKey)}`)
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        const index = this.waitingQueue.findIndex(w => w.resolve === resolve)
+        const index = this.waitingQueue.findIndex((w) => w.resolve === resolve)
         if (index !== -1) {
           this.waitingQueue.splice(index, 1)
         }
@@ -543,7 +607,7 @@ class PlaywrightPool {
 
       this.waitingQueue.push({
         proxyKey,
-        targetCountry,  // 🌍 保存目标国家信息
+        targetCountry, // 🌍 保存目标国家信息
         resolve,
         reject,
         timeout,
@@ -563,11 +627,17 @@ class PlaywrightPool {
   ): Promise<{ browser: Browser; context: BrowserContext; instanceId: string }> {
     const proxyKey = proxyCredentials
       ? `${proxyCredentials.host}:${proxyCredentials.port}`
-      : (proxyUrl || 'no-proxy')
+      : proxyUrl || 'no-proxy'
     const instanceId = this.generateInstanceId()
 
     console.log(`🚀 创建新Playwright实例: ${instanceId} (${formatProxyKeyForLog(proxyKey)})`)
-    const { browser, context, contextOptions } = await this.createInstance(proxyUrl, proxyCredentials, targetCountry, allowCredentialsCache, userId)
+    const { browser, context, contextOptions } = await this.createInstance(
+      proxyUrl,
+      proxyCredentials,
+      targetCountry,
+      allowCredentialsCache,
+      userId
+    )
 
     const instance: BrowserInstance = {
       id: instanceId,
@@ -625,8 +695,9 @@ class PlaywrightPool {
    */
   async clearIdleInstances(): Promise<number> {
     let clearedCount = 0
-    const idleInstances = Array.from(this.instances.entries())
-      .filter(([_, instance]) => !instance.inUse)
+    const idleInstances = Array.from(this.instances.entries()).filter(
+      ([_, instance]) => !instance.inUse
+    )
 
     for (const [key, instance] of idleInstances) {
       try {
@@ -677,7 +748,11 @@ class PlaywrightPool {
           idleInstance.lastUsedAt = Date.now()
 
           console.log(`🔄 从队列唤醒，复用实例: ${idleInstance.id}`)
-          waiting.resolve({ browser: idleInstance.browser, context: newContext, instanceId: idleInstance.id })
+          waiting.resolve({
+            browser: idleInstance.browser,
+            context: newContext,
+            instanceId: idleInstance.id,
+          })
         } catch (error) {
           idleInstance.inUse = false
           waiting.reject(error as Error)
@@ -831,13 +906,13 @@ class PlaywrightPool {
       const leaks = this.detectLeaks()
       if (leaks.hasLeaks) {
         console.warn(`⚠️ 连接池泄露检测报告:`)
-        leaks.warnings.forEach(w => console.warn(`   - ${w}`))
+        leaks.warnings.forEach((w) => console.warn(`   - ${w}`))
 
         // 自动强制释放泄露实例
         await this.forceReleaseLeaks()
       } else if (leaks.warnings.length > 0) {
         // 即使没有泄露，也打印警告
-        leaks.warnings.forEach(w => console.warn(`⚠️ ${w}`))
+        leaks.warnings.forEach((w) => console.warn(`⚠️ ${w}`))
       }
     }, 60 * 1000)
   }
@@ -860,9 +935,7 @@ class PlaywrightPool {
 
     console.log(`关闭Playwright连接池，共${this.instances.size}个实例`)
 
-    const closePromises = Array.from(this.instances.keys()).map((key) =>
-      this.closeInstance(key)
-    )
+    const closePromises = Array.from(this.instances.keys()).map((key) => this.closeInstance(key))
 
     await Promise.all(closePromises)
 
@@ -908,8 +981,8 @@ class PlaywrightPool {
     leakedInstances: Array<{
       id: string
       proxyKey: string
-      inUseDuration: number  // 使用中的时长（秒）
-      ageSeconds: number     // 实例年龄（秒）
+      inUseDuration: number // 使用中的时长（秒）
+      ageSeconds: number // 实例年龄（秒）
     }>
     warnings: string[]
   } {
@@ -923,7 +996,7 @@ class PlaywrightPool {
     const warnings: string[] = []
 
     // 检测1: 长时间inUse的实例（超过10分钟）
-    const LEAK_THRESHOLD = 10 * 60 * 1000  // 10分钟
+    const LEAK_THRESHOLD = 10 * 60 * 1000 // 10分钟
 
     for (const [, instance] of this.instances.entries()) {
       if (instance.inUse) {
@@ -936,14 +1009,18 @@ class PlaywrightPool {
             inUseDuration: Math.floor(inUseDuration / 1000),
             ageSeconds: Math.floor((now - instance.createdAt) / 1000),
           })
-          warnings.push(`实例 ${instance.id} 已使用 ${Math.floor(inUseDuration / 60000)} 分钟，可能未正确释放`)
+          warnings.push(
+            `实例 ${instance.id} 已使用 ${Math.floor(inUseDuration / 60000)} 分钟，可能未正确释放`
+          )
         }
       }
     }
 
     // 检测2: 实例总数接近上限
     if (this.instances.size >= POOL_CONFIG.maxInstances * 0.8) {
-      warnings.push(`连接池使用率达到 ${Math.round((this.instances.size / POOL_CONFIG.maxInstances) * 100)}%，接近上限`)
+      warnings.push(
+        `连接池使用率达到 ${Math.round((this.instances.size / POOL_CONFIG.maxInstances) * 100)}%，接近上限`
+      )
     }
 
     // 检测3: 等待队列过长
@@ -971,7 +1048,7 @@ class PlaywrightPool {
     console.warn(`⚠️ 检测到 ${leaks.leakedInstances.length} 个泄露实例，强制释放...`)
 
     for (const leak of leaks.leakedInstances) {
-      const instance = Array.from(this.instances.values()).find(i => i.id === leak.id)
+      const instance = Array.from(this.instances.values()).find((i) => i.id === leak.id)
       if (instance) {
         console.warn(`⚠️ 强制释放: ${leak.id} (使用时长: ${leak.inUseDuration}秒)`)
 

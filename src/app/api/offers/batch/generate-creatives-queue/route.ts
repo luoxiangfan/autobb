@@ -13,6 +13,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue'
 import {
@@ -28,9 +29,7 @@ import {
   resolveCreativeGenerationRuntime,
 } from '@/lib/ad-creative-generation-mode'
 import { getAvailableBuckets } from '@/lib/offer-keyword-pool'
-import {
-  deriveCanonicalCreativeType,
-} from '@/lib/creative-type'
+import { deriveCanonicalCreativeType } from '@/lib/creative-type'
 import { extractModelAnchorTextsFromScrapedData } from '@/lib/model-anchor-evidence'
 import { normalizeSingleCreativeSelection } from '@/lib/creative-request-normalizer'
 
@@ -105,7 +104,10 @@ function buildBatchPartialSkipWarning(stats: BatchEnqueueStats): string | undefi
 }
 
 const requestSchema = z.object({
-  offerIds: z.array(z.number().int().positive()).min(1).max(50),
+  offerIds: z
+    .array(z.number().int(zErr.int).positive(zErr.positiveInt))
+    .min(1, zErr.minItems(1))
+    .max(50, zErr.maxItems(50)),
   bucket: z.unknown().optional(),
   creativeType: z.unknown().optional(),
   forceGenerateOnQualityGate: z.boolean().optional(),
@@ -121,10 +123,7 @@ export async function POST(request: NextRequest) {
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: '请先登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
     }
     const userIdNum = authResult.user.userId
 
@@ -151,9 +150,10 @@ export async function POST(request: NextRequest) {
     const { mode: generationMode, maxRetries: batchMaxRetries } = runtime
     const forceGenerateOnQualityGate =
       parsed.data.forceGenerateOnQualityGate ?? BATCH_FORCE_GENERATE_ON_QUALITY_GATE_DEFAULT
-    const hasExplicitCreativeType = parsed.data.creativeType !== undefined
-      && parsed.data.creativeType !== null
-      && String(parsed.data.creativeType).trim() !== ''
+    const hasExplicitCreativeType =
+      parsed.data.creativeType !== undefined &&
+      parsed.data.creativeType !== null &&
+      String(parsed.data.creativeType).trim() !== ''
     const normalizedSelection = normalizeSingleCreativeSelection({
       creativeType: parsed.data.creativeType,
       bucket: parsed.data.bucket,
@@ -168,7 +168,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Invalid creativeType',
-          message: 'creativeType 仅支持 brand_intent / model_intent / product_intent（兼容旧值：brand_focus / model_focus / brand_product）',
+          message:
+            'creativeType 仅支持 brand_intent / model_intent / product_intent（兼容旧值：brand_focus / model_focus / brand_product）',
         },
         { status: 400 }
       )
@@ -215,8 +216,7 @@ export async function POST(request: NextRequest) {
         authCache
       )
       if (!userAuth.ok) {
-        const isNotConfigured =
-          !userAuth.missingFields || userAuth.missingFields.length === 0
+        const isNotConfigured = !userAuth.missingFields || userAuth.missingFields.length === 0
         if (isNotConfigured) {
           return NextResponse.json(
             {
@@ -255,9 +255,10 @@ export async function POST(request: NextRequest) {
 
     // 1) 批量读取Offer状态（只处理当前用户且未删除）
     const placeholders = offerIds.map(() => '?').join(',')
-    const notDeletedCondition = db.type === 'postgres'
-      ? '(is_deleted = false OR is_deleted IS NULL)'
-      : '(is_deleted = 0 OR is_deleted IS NULL)'
+    const notDeletedCondition =
+      db.type === 'postgres'
+        ? '(is_deleted = false OR is_deleted IS NULL)'
+        : '(is_deleted = 0 OR is_deleted IS NULL)'
 
     const offers = await db.query<{
       id: number
@@ -280,7 +281,7 @@ export async function POST(request: NextRequest) {
        WHERE user_id = ? AND id IN (${placeholders}) AND ${notDeletedCondition}`,
       [userIdNum, ...offerIds]
     )
-    const offersById = new Map(offers.map(o => [o.id, o]))
+    const offersById = new Map(offers.map((o) => [o.id, o]))
 
     // 2) 查询是否已有 pending/running 的创意任务
     const activeTasks = await db.query<{ offer_id: number }>(
@@ -289,7 +290,7 @@ export async function POST(request: NextRequest) {
        WHERE user_id = ? AND offer_id IN (${placeholders}) AND status IN ('pending', 'running')`,
       [userIdNum, ...offerIds]
     )
-    const offersWithActiveTask = new Set(activeTasks.map(t => t.offer_id))
+    const offersWithActiveTask = new Set(activeTasks.map((t) => t.offer_id))
 
     // 3) 逐Offer入队（符合规则的才入队）
     const stats = {
@@ -303,7 +304,7 @@ export async function POST(request: NextRequest) {
         taskAlreadyRunning: 0,
         quotaFull: 0,
         googleAdsConfigIncomplete: 0,
-      }
+      },
     }
 
     const taskIds: string[] = []
@@ -357,16 +358,17 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      let requestedType: NormalizedCreativeBucket | null = requestedBucketFromCreativeType || requestedBucket
-      if (!requestedBucketFromCreativeType && bucketSelection.legacyModelHint && requestedBucket === 'B') {
+      let requestedType: NormalizedCreativeBucket | null =
+        requestedBucketFromCreativeType || requestedBucket
+      if (
+        !requestedBucketFromCreativeType &&
+        bucketSelection.legacyModelHint &&
+        requestedBucket === 'B'
+      ) {
         const scrapedModelTexts = extractModelAnchorTextsFromScrapedData(offer.scraped_data)
         const normalizedLegacyType = deriveCanonicalCreativeType({
           keywordBucket: bucketSelection.rawBucket,
-          keywords: [
-            offer.product_name,
-            offer.extracted_keywords,
-            ...scrapedModelTexts,
-          ],
+          keywords: [offer.product_name, offer.extracted_keywords, ...scrapedModelTexts],
           headlines: [offer.extracted_headlines],
           descriptions: [
             offer.brand_description,
@@ -426,7 +428,10 @@ export async function POST(request: NextRequest) {
         taskIds.push(taskId)
       } catch (error: any) {
         stats.failed++
-        console.error(`[BatchCreativeGeneration] Enqueue failed (offerId=${offerId}):`, error?.message || error)
+        console.error(
+          `[BatchCreativeGeneration] Enqueue failed (offerId=${offerId}):`,
+          error?.message || error
+        )
         // 不中断批量：尽力将任务标记为失败（若记录已插入）
         try {
           await db.exec(

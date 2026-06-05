@@ -8,7 +8,7 @@ import { verifyAuth } from '@/lib/auth'
 import {
   getUserOptimizationTasks,
   generateOptimizationTasksForUser,
-  getTaskStatistics
+  getTaskStatistics,
 } from '@/lib/optimization-tasks'
 
 /**
@@ -20,10 +20,7 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await verifyAuth(request)
     if (!auth) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // 获取查询参数
@@ -32,10 +29,7 @@ export async function GET(request: NextRequest) {
 
     // 验证status参数
     if (status && !['pending', 'in_progress', 'completed', 'dismissed'].includes(status)) {
-      return NextResponse.json(
-        { error: 'Invalid status parameter' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid status parameter' }, { status: 400 })
     }
 
     // 获取任务列表
@@ -46,15 +40,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       tasks,
-      statistics
+      statistics,
     })
-
   } catch (error) {
     console.error('Get optimization tasks error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -65,10 +55,7 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await verifyAuth(request)
     if (!auth) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // 生成任务
@@ -80,14 +67,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       generatedTasks: taskCount,
-      statistics
+      statistics,
     })
-
   } catch (error) {
     console.error('Generate optimization tasks error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

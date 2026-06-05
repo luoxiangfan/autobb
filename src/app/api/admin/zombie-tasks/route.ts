@@ -1,6 +1,9 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { detectAndFixZombieSyncTasks, getZombieTaskStats } from '@/lib/queue/affiliate-sync-zombie-detector'
+import {
+  detectAndFixZombieSyncTasks,
+  getZombieTaskStats,
+} from '@/lib/queue/affiliate-sync-zombie-detector'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,10 +29,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('[GET /api/admin/zombie-tasks] failed:', error)
-    return NextResponse.json(
-      { error: error?.message || '获取僵尸任务统计失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '获取僵尸任务统计失败' }, { status: 500 })
   }
 }
 
@@ -62,9 +62,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('[POST /api/admin/zombie-tasks] failed:', error)
-    return NextResponse.json(
-      { error: error?.message || '检测僵尸任务失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '检测僵尸任务失败' }, { status: 500 })
   }
 }

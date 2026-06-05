@@ -74,7 +74,8 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    prepareGoogleAdsApiCallForLinkedAccount: oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
+    prepareGoogleAdsApiCallForLinkedAccount:
+      oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
   }
 })
 
@@ -149,7 +150,7 @@ describe('PUT /api/campaigns/:id/update-cpc', () => {
       }),
     })
 
-    const res = await PUT(req, { params: { id: '1972' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '1972' }) })
     const data = await res.json()
 
     expect(res.status).toBe(422)
@@ -214,7 +215,7 @@ describe('PUT /api/campaigns/:id/update-cpc', () => {
       }),
     })
 
-    const res = await PUT(req, { params: { id: '23578044853' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '23578044853' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -222,12 +223,13 @@ describe('PUT /api/campaigns/:id/update-cpc', () => {
     expect(cacheFns.invalidateOfferCache).toHaveBeenCalledWith(1, 88)
     expect(cacheFns.invalidateDashboardCache).not.toHaveBeenCalled()
     expect(
-      dbFns.exec.mock.calls.some(([sql, params]) =>
-        String(sql).includes('UPDATE campaigns')
-        && Array.isArray(params)
-        && Number(params[0]) === 0.3
-        && Number(params[1]) === 1
-        && String(params[2]) === '23578044853'
+      dbFns.exec.mock.calls.some(
+        ([sql, params]) =>
+          String(sql).includes('UPDATE campaigns') &&
+          Array.isArray(params) &&
+          Number(params[0]) === 0.3 &&
+          Number(params[1]) === 1 &&
+          String(params[2]) === '23578044853'
       )
     ).toBe(true)
   })
@@ -300,7 +302,7 @@ describe('PUT /api/campaigns/:id/update-cpc', () => {
       }),
     })
 
-    const res = await PUT(req, { params: { id: '23578044853' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '23578044853' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -377,7 +379,7 @@ describe('PUT /api/campaigns/:id/update-cpc', () => {
       }),
     })
 
-    const res = await PUT(req, { params: { id: '23578044853' } })
+    const res = await PUT(req, { params: Promise.resolve({ id: '23578044853' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)

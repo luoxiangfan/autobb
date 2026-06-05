@@ -62,15 +62,10 @@ const USER_AGENT_POOL = [
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:132.0) Gecko/20100101 Firefox/132.0',
 ]
 
-
 /**
  * 语言池
  */
-const LANGUAGE_POOL = [
-  'en-US',
-  'en-GB',
-  'en',
-]
+const LANGUAGE_POOL = ['en-US', 'en-GB', 'en']
 
 /**
  * Accept-Language 池
@@ -84,7 +79,8 @@ const ACCEPT_LANGUAGE_POOL = [
 /**
  * Accept 头
  */
-const ACCEPT_HEADER = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7'
+const ACCEPT_HEADER =
+  'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7'
 
 /**
  * 从 User-Agent 中提取平台信息
@@ -149,7 +145,10 @@ export function generateRandomFingerprint(): BrowserFingerprint {
     secChUa = '"Microsoft Edge";v="131", "Chromium";v="131", "Not_A Brand";v="24"'
   } else if (userAgent.includes('Edg/130')) {
     secChUa = '"Microsoft Edge";v="130", "Chromium";v="130", "Not_A Brand";v="24"'
-  } else if (userAgent.includes('Firefox') || (userAgent.includes('Safari') && !userAgent.includes('Chrome'))) {
+  } else if (
+    userAgent.includes('Firefox') ||
+    (userAgent.includes('Safari') && !userAgent.includes('Chrome'))
+  ) {
     // Firefox 和 Safari 不发送 Sec-CH-UA
     secChUa = undefined
     secChUaPlatform = undefined

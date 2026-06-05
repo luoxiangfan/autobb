@@ -11,7 +11,10 @@
  */
 
 import { getCustomerWithCredentials } from './google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from './google-ads-accounts-auth'
+import {
+  prepareGoogleAdsApiCallForLinkedAccount,
+  preparedAuthContextField,
+} from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
 import { getDatabase } from './db'
 import type { AdStrengthRating } from './ad-strength-evaluator'
@@ -27,11 +30,11 @@ async function getGoogleAdsClient(
 ): Promise<{ customer: any; useServiceAccount: boolean; serviceAccountId?: string }> {
   const db = await getDatabase()
 
-  const account = await db.queryOne(
+  const account = (await db.queryOne(
     `SELECT id, parent_mcc_id, service_account_id FROM google_ads_accounts
      WHERE user_id = ? AND customer_id = ?`,
     [userId, customerId]
-  ) as any
+  )) as any
 
   if (!account) {
     throw new Error('未找到Google Ads账号')
@@ -76,8 +79,7 @@ async function getGoogleAdsClient(
   }
 
   const refreshToken = prepared.refreshToken
-  const oauthLoginCustomerId =
-    prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+  const oauthLoginCustomerId = prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
 
   const customer = await runWithLoginCustomerFallbackForAccount({
     adsAccount: {
@@ -207,7 +209,10 @@ export async function getAdStrength(
 ): Promise<GoogleAdStrengthResponse | null> {
   try {
     // 使用统一的客户端获取方法（支持服务账号和OAuth）
-    const { customer, useServiceAccount, serviceAccountId } = await getGoogleAdsClient(customerId, userId)
+    const { customer, useServiceAccount, serviceAccountId } = await getGoogleAdsClient(
+      customerId,
+      userId
+    )
 
     // GAQL查询：获取Ad Strength
     const query = `
@@ -225,12 +230,12 @@ export async function getAdStrength(
     const results = useServiceAccount
       ? await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query })
       : await executeOAuthQueryWithTracking({
-        userId,
-        customerId,
-        customer,
-        query,
-        operationType: ApiOperationType.REPORT,
-      })
+          userId,
+          customerId,
+          customer,
+          query,
+          operationType: ApiOperationType.REPORT,
+        })
 
     if (results.length === 0) {
       console.log('⚠️ 未找到已发布的响应式搜索广告')
@@ -254,8 +259,8 @@ export async function getAdStrength(
       adStrength: adStrength as AdStrengthRating,
       adStrengthInfo: {
         adStrength: adStrength as AdStrengthRating,
-        policyViolations: []
-      }
+        policyViolations: [],
+      },
     }
   } catch (error) {
     console.error('❌ 获取Ad Strength失败:', error)
@@ -275,7 +280,10 @@ export async function getAdStrengthRecommendations(
 ): Promise<AdStrengthRecommendation[]> {
   try {
     // 使用统一的客户端获取方法（支持服务账号和OAuth）
-    const { customer, useServiceAccount, serviceAccountId } = await getGoogleAdsClient(customerId, userId)
+    const { customer, useServiceAccount, serviceAccountId } = await getGoogleAdsClient(
+      customerId,
+      userId
+    )
 
     // GAQL查询：获取Ad Strength改进建议
     const query = `
@@ -295,12 +303,12 @@ export async function getAdStrengthRecommendations(
     const results = useServiceAccount
       ? await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query })
       : await executeOAuthQueryWithTracking({
-        userId,
-        customerId,
-        customer,
-        query,
-        operationType: ApiOperationType.REPORT,
-      })
+          userId,
+          customerId,
+          customer,
+          query,
+          operationType: ApiOperationType.REPORT,
+        })
 
     const recommendations: AdStrengthRecommendation[] = results.map((rec: any) => {
       const recData = rec.recommendation.responsive_search_ad_improve_ad_strength_recommendation
@@ -313,8 +321,8 @@ export async function getAdStrengthRecommendations(
         recommendedAdStrength: recData?.recommended_ad_strength || 'EXCELLENT',
         suggestions: {
           missingAssetTypes: [],
-          diversityIssues: []
-        }
+          diversityIssues: [],
+        },
       }
     })
 
@@ -341,7 +349,10 @@ export async function getAssetPerformance(
 ): Promise<AssetPerformanceData[]> {
   try {
     // 使用统一的客户端获取方法（支持服务账号和OAuth）
-    const { customer, useServiceAccount, serviceAccountId } = await getGoogleAdsClient(customerId, userId)
+    const { customer, useServiceAccount, serviceAccountId } = await getGoogleAdsClient(
+      customerId,
+      userId
+    )
 
     // GAQL查询：获取资产性能（Headline和Description）
     const query = `
@@ -365,12 +376,12 @@ export async function getAssetPerformance(
     const results = useServiceAccount
       ? await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query })
       : await executeOAuthQueryWithTracking({
-        userId,
-        customerId,
-        customer,
-        query,
-        operationType: ApiOperationType.REPORT,
-      })
+          userId,
+          customerId,
+          customer,
+          query,
+          operationType: ApiOperationType.REPORT,
+        })
 
     const assetPerformance: AssetPerformanceData[] = results.map((row: any) => ({
       assetId: row.asset.id.toString(),
@@ -380,7 +391,7 @@ export async function getAssetPerformance(
       enabled: true,
       impressions: parseInt(row.metrics.impressions || '0'),
       clicks: parseInt(row.metrics.clicks || '0'),
-      ctr: parseFloat(row.metrics.ctr || '0')
+      ctr: parseFloat(row.metrics.ctr || '0'),
     }))
 
     console.log(`📈 获取到 ${assetPerformance.length} 个资产的性能数据`)
@@ -426,22 +437,22 @@ export async function validateExcellentStandard(
 
     // 4. 分析资产性能
     const bestHeadlines = assetPerformance
-      .filter(a => a.assetType === 'HEADLINE' && a.performanceLabel === 'BEST')
-      .map(a => a.text)
+      .filter((a) => a.assetType === 'HEADLINE' && a.performanceLabel === 'BEST')
+      .map((a) => a.text)
       .slice(0, 5)
 
     const bestDescriptions = assetPerformance
-      .filter(a => a.assetType === 'DESCRIPTION' && a.performanceLabel === 'BEST')
-      .map(a => a.text)
+      .filter((a) => a.assetType === 'DESCRIPTION' && a.performanceLabel === 'BEST')
+      .map((a) => a.text)
       .slice(0, 2)
 
     const lowPerformingAssets = assetPerformance
-      .filter(a => a.performanceLabel === 'LOW')
-      .map(a => `${a.assetType}: ${a.text}`)
+      .filter((a) => a.performanceLabel === 'LOW')
+      .map((a) => `${a.assetType}: ${a.text}`)
 
     // 5. 生成建议摘要
-    const suggestionSummary = recommendations.map(rec =>
-      `${rec.impact}影响: 当前${rec.currentAdStrength} → 推荐${rec.recommendedAdStrength}`
+    const suggestionSummary = recommendations.map(
+      (rec) => `${rec.impact}影响: 当前${rec.currentAdStrength} → 推荐${rec.recommendedAdStrength}`
     )
 
     const isExcellent = currentStrength === 'EXCELLENT'
@@ -463,8 +474,8 @@ export async function validateExcellentStandard(
       assetPerformance: {
         bestHeadlines,
         bestDescriptions,
-        lowPerformingAssets
-      }
+        lowPerformingAssets,
+      },
     }
   } catch (error) {
     console.error('❌ 验证EXCELLENT标准失败:', error)

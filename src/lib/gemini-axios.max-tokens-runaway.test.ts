@@ -24,11 +24,13 @@ describe('gemini-axios MAX_TOKENS runaway handling', () => {
     vi.resetModules()
     createMock.mockReset().mockReturnValue({ post: postMock })
     postMock.mockReset()
-    getUserOnlySettingMock.mockReset().mockImplementation(async (_category: string, key: string) => {
-      if (key === 'gemini_provider') return { value: 'official' }
-      if (key === 'gemini_api_key') return { value: 'test-key' }
-      return null
-    })
+    getUserOnlySettingMock
+      .mockReset()
+      .mockImplementation(async (_category: string, key: string) => {
+        if (key === 'gemini_provider') return { value: 'official' }
+        if (key === 'gemini_api_key') return { value: 'test-key' }
+        return null
+      })
   })
 
   it('skips token bump retry when MAX_TOKENS output is detected as runaway', async () => {
@@ -60,10 +62,13 @@ describe('gemini-axios MAX_TOKENS runaway handling', () => {
 
     let thrown: any
     try {
-      await generateContent({
-        prompt: 'test prompt',
-        maxOutputTokens: 16384,
-      }, 1)
+      await generateContent(
+        {
+          prompt: 'test prompt',
+          maxOutputTokens: 16384,
+        },
+        1
+      )
     } catch (error) {
       thrown = error
     }

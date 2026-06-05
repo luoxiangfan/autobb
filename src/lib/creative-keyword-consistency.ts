@@ -58,7 +58,11 @@ function toTopNormalizedKeywords(keywords: string[], topN: number): string[] {
 }
 
 function normalizeSourceForCompare(value: unknown): string {
-  return String(value || '').trim().toUpperCase() || 'UNKNOWN'
+  return (
+    String(value || '')
+      .trim()
+      .toUpperCase() || 'UNKNOWN'
+  )
 }
 
 function toTopSourceRatio(input: {
@@ -142,9 +146,10 @@ export function evaluateMultiEntryTopNConsistency(input: {
     }
   }
 
-  const baselineEntry = input.baselineEntry && entryNames.includes(input.baselineEntry)
-    ? input.baselineEntry
-    : entryNames[0]
+  const baselineEntry =
+    input.baselineEntry && entryNames.includes(input.baselineEntry)
+      ? input.baselineEntry
+      : entryNames[0]
 
   const baselineKeywords = input.entryKeywords[baselineEntry] || []
   const reports: Record<string, KeywordTopNConsistencyReport> = {}
@@ -178,7 +183,10 @@ export function compareTopSourceDistributionDiff(input: {
   maxDifferenceThreshold?: number
 }): SourceDistributionDiffReport {
   const topN = Math.max(1, Math.floor(Number(input.topN) || 20))
-  const maxDifferenceThreshold = Math.max(0, Math.min(1, Number(input.maxDifferenceThreshold) || 0.1))
+  const maxDifferenceThreshold = Math.max(
+    0,
+    Math.min(1, Number(input.maxDifferenceThreshold) || 0.1)
+  )
 
   const baselineRatio = toTopSourceRatio({
     keywords: input.baselineKeywords || [],
@@ -225,7 +233,10 @@ export function evaluateMultiEntryTopSourceDistribution(input: {
   maxDifferenceThreshold?: number
 }): MultiEntrySourceDistributionReport {
   const topN = Math.max(1, Math.floor(Number(input.topN) || 20))
-  const maxDifferenceThreshold = Math.max(0, Math.min(1, Number(input.maxDifferenceThreshold) || 0.1))
+  const maxDifferenceThreshold = Math.max(
+    0,
+    Math.min(1, Number(input.maxDifferenceThreshold) || 0.1)
+  )
   const entryNames = Object.keys(input.entryKeywordsWithSource || {})
 
   if (entryNames.length === 0) {
@@ -238,9 +249,10 @@ export function evaluateMultiEntryTopSourceDistribution(input: {
     }
   }
 
-  const baselineEntry = input.baselineEntry && entryNames.includes(input.baselineEntry)
-    ? input.baselineEntry
-    : entryNames[0]
+  const baselineEntry =
+    input.baselineEntry && entryNames.includes(input.baselineEntry)
+      ? input.baselineEntry
+      : entryNames[0]
 
   const baselineKeywords = input.entryKeywordsWithSource[baselineEntry] || []
   const reports: Record<string, SourceDistributionDiffReport> = {}

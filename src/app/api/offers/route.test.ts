@@ -74,7 +74,9 @@ describe('GET /api/offers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     cacheFns.generateCacheKey.mockReturnValue('offers:user:7:default')
-    cacheFns.getOrSet.mockImplementation(async (_key: string, fn: () => Promise<unknown>) => await fn())
+    cacheFns.getOrSet.mockImplementation(
+      async (_key: string, fn: () => Promise<unknown>) => await fn()
+    )
   })
 
   it('returns 401 when user id header is missing', async () => {
@@ -183,7 +185,11 @@ describe('GET /api/offers', () => {
       sortBy: undefined,
       sortOrder: undefined,
     })
-    expect(cacheFns.getOrSet).toHaveBeenCalledWith('offers:user:7:default', expect.any(Function), 120000)
+    expect(cacheFns.getOrSet).toHaveBeenCalledWith(
+      'offers:user:7:default',
+      expect.any(Function),
+      120000
+    )
     expect(cacheFns.set).not.toHaveBeenCalled()
 
     expect(data.success).toBe(true)
@@ -258,9 +264,12 @@ describe('GET /api/offers', () => {
       total: 1,
     })
 
-    const req = new NextRequest('http://localhost/api/offers?limit=20&offset=40&scrapeStatus=in_progress&sortBy=targetCountry&sortOrder=asc', {
-      headers: { 'x-user-id': '7' },
-    })
+    const req = new NextRequest(
+      'http://localhost/api/offers?limit=20&offset=40&scrapeStatus=in_progress&sortBy=targetCountry&sortOrder=asc',
+      {
+        headers: { 'x-user-id': '7' },
+      }
+    )
     const res = await GET(req)
     const data = await res.json()
 
@@ -299,9 +308,12 @@ describe('GET /api/offers', () => {
       total: 1,
     })
 
-    const req = new NextRequest('http://localhost/api/offers?limit=10&offset=0&hasAffiliateLink=false', {
-      headers: { 'x-user-id': '7' },
-    })
+    const req = new NextRequest(
+      'http://localhost/api/offers?limit=10&offset=0&hasAffiliateLink=false',
+      {
+        headers: { 'x-user-id': '7' },
+      }
+    )
     const res = await GET(req)
     const data = await res.json()
 
@@ -327,9 +339,12 @@ describe('GET /api/offers', () => {
       total: 1,
     })
 
-    const req = new NextRequest('http://localhost/api/offers?limit=20&offset=0&sortBy=linkedAccounts&sortOrder=asc', {
-      headers: { 'x-user-id': '7' },
-    })
+    const req = new NextRequest(
+      'http://localhost/api/offers?limit=20&offset=0&sortBy=linkedAccounts&sortOrder=asc',
+      {
+        headers: { 'x-user-id': '7' },
+      }
+    )
     const res = await GET(req)
     const data = await res.json()
 

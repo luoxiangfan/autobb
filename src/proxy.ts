@@ -20,7 +20,12 @@ async function verifyTokenEdge(token: string): Promise<any | null> {
   // 🔴 检查 JWT_SECRET 是否正确加载
   if (JWT_SECRET.length === 0) {
     console.error('❌ JWT_SECRET is empty! Token verification will fail.')
-    console.error('   JWT_SECRET_RAW:', JWT_SECRET_RAW ? `${JWT_SECRET_RAW.substring(0, 10)}... (${JWT_SECRET_RAW.length} chars)` : 'UNDEFINED')
+    console.error(
+      '   JWT_SECRET_RAW:',
+      JWT_SECRET_RAW
+        ? `${JWT_SECRET_RAW.substring(0, 10)}... (${JWT_SECRET_RAW.length} chars)`
+        : 'UNDEFINED'
+    )
     return null
   }
 
@@ -41,28 +46,29 @@ async function verifyTokenEdge(token: string): Promise<any | null> {
 
 // 公开路径（无需认证） - 需求27: 除首页和登录页，其他页面都需要登录
 const publicPaths = [
-  '/',               // 营销首页
-  '/login',          // 登录页面
+  '/', // 营销首页
+  '/login', // 登录页面
   '/api/auth/login', // 登录API
   '/api/auth/google', // Google OAuth
   '/api/products/yeahpromos/session/capture', // YP 书签脚本回传登录态
-  '/api/health',     // 容器内健康检查（nginx/supervisor 启动探针）
-  '/robots.txt',     // SEO - robots.txt
-  '/sitemap.xml',    // SEO - sitemap.xml
+  '/api/health', // 容器内健康检查（nginx/supervisor 启动探针）
+  '/robots.txt', // SEO - robots.txt
+  '/sitemap.xml', // SEO - sitemap.xml
 ]
 
 // 强制修改密码时允许访问的路径
 const passwordChangeAllowedPaths = [
-  '/change-password',           // 修改密码页面
-  '/api/auth/change-password',  // 修改密码API
-  '/api/auth/logout',           // 退出登录API
-  '/api/auth/me',               // 获取用户信息API（页面需要）
+  '/change-password', // 修改密码页面
+  '/api/auth/change-password', // 修改密码API
+  '/api/auth/logout', // 退出登录API
+  '/api/auth/me', // 获取用户信息API（页面需要）
 ]
 
 // 🛡️ 第一层防御：通用危险文件扩展名拦截
 // 这些扩展名在Web根目录下不应该被公开访问，直接返回404
 // 这比黑名单更有效，因为它基于"行为模式"而非"具体文件名"
-const DANGEROUS_EXTENSIONS = /^\/?[^\/]+\.(zip|rar|tar|tgz|tar\.gz|7z|bz2|gz|sql|mdb|accdb|bak|backup|old|orig|swp|swo|tmp|temp|log|env|ini|conf|cfg|config|yml|yaml|json\.bak|xml\.bak|htaccess|htpasswd|npmrc|dockerignore|gitignore|ssh|pem|key|crt|pfx|p12)$/i
+const DANGEROUS_EXTENSIONS =
+  /^\/?[^\/]+\.(zip|rar|tar|tgz|tar\.gz|7z|bz2|gz|sql|mdb|accdb|bak|backup|old|orig|swp|swo|tmp|temp|log|env|ini|conf|cfg|config|yml|yaml|json\.bak|xml\.bak|htaccess|htpasswd|npmrc|dockerignore|gitignore|ssh|pem|key|crt|pfx|p12)$/i
 
 // 🛡️ 第二层防御：恶意请求路径模式拦截
 // 这些是自动化漏洞扫描器常见的攻击路径
@@ -75,12 +81,12 @@ const MALICIOUS_PATTERNS = [
   /^\/wp-/i,
   /^\/wordpress/i,
   // .well-known 漏洞探测（保留合法的 /.well-known/security.txt 等）
-  /^\/\.well-known\/?$/i,                    // /.well-known 或 /.well-known/
-  /^\/\.well-known\/acme-challenge/i,        // SSL证书验证路径探测
-  /^\/\.well-known\/pki-validation/i,        // PKI验证路径探测
-  /^\/\.well-knownold/i,                     // 旧版本探测
+  /^\/\.well-known\/?$/i, // /.well-known 或 /.well-known/
+  /^\/\.well-known\/acme-challenge/i, // SSL证书验证路径探测
+  /^\/\.well-known\/pki-validation/i, // PKI验证路径探测
+  /^\/\.well-knownold/i, // 旧版本探测
   // 常见漏洞路径
-  /^\/vendor\/?/i,                           // Composer vendor目录
+  /^\/vendor\/?/i, // Composer vendor目录
   /^\/cgi-bin/i,
   /^\/\.git/i,
   /^\/\.env/i,
@@ -93,32 +99,32 @@ const MALICIOUS_PATTERNS = [
   /^\/mysql/i,
   /^\/adminer/i,
   /^\/xmlrpc/i,
-  /^\/xmrlpc/i,                              // xmlrpc变种拼写
+  /^\/xmrlpc/i, // xmlrpc变种拼写
   // 常见后门/Web Shell路径
   /^\/shell/i,
   /^\/c99/i,
   /^\/r57/i,
   /^\/webshell/i,
   /^\/backdoor/i,
-  /^\/alfa/i,                                // ALFA Shell
+  /^\/alfa/i, // ALFA Shell
   /^\/ALFA/i,
-  /^\/b374k/i,                               // b374k Shell
-  /^\/wso/i,                                 // WSO Shell
+  /^\/b374k/i, // b374k Shell
+  /^\/wso/i, // WSO Shell
   // 上传目录探测（根级别目录）
-  /^\/uploads?\/?$/i,                        // /upload 或 /uploads
-  /^\/upload\//i,                            // /upload/*
-  /^\/uploads\//i,                           // /uploads/*
-  /^\/files?\/?$/i,                          // /file 或 /files
+  /^\/uploads?\/?$/i, // /upload 或 /uploads
+  /^\/upload\//i, // /upload/*
+  /^\/uploads\//i, // /uploads/*
+  /^\/files?\/?$/i, // /file 或 /files
   /^\/temp\/?$/i,
   /^\/tmp\/?$/i,
   // 备份文件和目录探测（常见的备份路径模式）
-  /^\/backup/i,                              // /backup.*, /backups/*
-  /^\/bak/i,                                 // /bak*
-  /^\/old/i,                                 // /old*
-  /^\/copy/i,                                // /copy*
-  /^\/restore/i,                             // /restore/*
-  /^\/back/i,                                // /back/*
-  /\.(bak|backup|old|orig)$/i,               // 备份文件后缀
+  /^\/backup/i, // /backup.*, /backups/*
+  /^\/bak/i, // /bak*
+  /^\/old/i, // /old*
+  /^\/copy/i, // /copy*
+  /^\/restore/i, // /restore/*
+  /^\/back/i, // /back/*
+  /\.(bak|backup|old|orig)$/i, // 备份文件后缀
   // 常见备份文件名模式
   /^\/[^\/]*backup[^\/]*\.(zip|tar|gz|tgz|rar|7z|sql)$/i,
   /^\/full_backup/i,
@@ -150,72 +156,72 @@ const MALICIOUS_PATTERNS = [
   /^\/console/i,
   /^\/manager\/?$/i,
   /^\/administrator\/?$/i,
-  /^\/admin\/?$/i,                           // 注意：不影响 /admin/queue 等合法路径
+  /^\/admin\/?$/i, // 注意：不影响 /admin/queue 等合法路径
 
   // === 以下是根据真实攻击日志新增的模式 ===
 
   // CMS相关目录探测（Joomla, Drupal等）
-  /^\/components\/?$/i,                      // Joomla组件目录
-  /^\/modules\/?$/i,                         // Drupal/Joomla模块目录
-  /^\/modules\/mod_/i,                       // Joomla模块文件上传漏洞
-  /^\/sites\/default\/files/i,              // Drupal默认文件目录
-  /^\/images\/stories/i,                     // Joomla媒体目录
-  /^\/plugins\/?$/i,                         // 插件目录探测
+  /^\/components\/?$/i, // Joomla组件目录
+  /^\/modules\/?$/i, // Drupal/Joomla模块目录
+  /^\/modules\/mod_/i, // Joomla模块文件上传漏洞
+  /^\/sites\/default\/files/i, // Drupal默认文件目录
+  /^\/images\/stories/i, // Joomla媒体目录
+  /^\/plugins\/?$/i, // 插件目录探测
 
   // 编辑器漏洞探测
-  /\/fckeditor\//i,                          // FCKEditor漏洞
-  /\/ckeditor\//i,                           // CKEditor漏洞
-  /\/kindeditor\//i,                         // KindEditor漏洞
-  /\/ueditor\//i,                            // UEditor漏洞
+  /\/fckeditor\//i, // FCKEditor漏洞
+  /\/ckeditor\//i, // CKEditor漏洞
+  /\/kindeditor\//i, // KindEditor漏洞
+  /\/ueditor\//i, // UEditor漏洞
 
   // 常见目录探测（根级别）
-  /^\/images\/?$/i,                          // /images 目录探测
-  /^\/assets\/?$/i,                          // /assets 目录探测
-  /^\/css\/?$/i,                             // /css 目录探测
-  /^\/js\/?$/i,                              // /js 目录探测
-  /^\/fonts\/?$/i,                           // /fonts 目录探测
-  /^\/include\/?$/i,                         // /include 目录探测
-  /^\/includes\/?$/i,                        // /includes 目录探测
-  /^\/template\/?$/i,                        // /template 目录探测
-  /^\/templates\/?$/i,                       // /templates 目录探测
-  /^\/public\/?$/i,                          // /public 目录探测（区分大小写）
-  /^\/Public\/?$/i,                          // /Public 目录探测
-  /^\/local\/?$/i,                           // /local 目录探测
-  /^\/system\/?$/i,                          // /system 目录探测
-  /^\/shop\/?$/i,                            // /shop 目录探测
-  /^\/site\/?$/i,                            // /site 目录探测
-  /^\/Site\/?$/i,                            // /Site 目录探测
-  /^\/php\/?$/i,                             // /php 目录探测
-  /^\/Assets\/?$/i,                          // /Assets 目录探测
+  /^\/images\/?$/i, // /images 目录探测
+  /^\/assets\/?$/i, // /assets 目录探测
+  /^\/css\/?$/i, // /css 目录探测
+  /^\/js\/?$/i, // /js 目录探测
+  /^\/fonts\/?$/i, // /fonts 目录探测
+  /^\/include\/?$/i, // /include 目录探测
+  /^\/includes\/?$/i, // /includes 目录探测
+  /^\/template\/?$/i, // /template 目录探测
+  /^\/templates\/?$/i, // /templates 目录探测
+  /^\/public\/?$/i, // /public 目录探测（区分大小写）
+  /^\/Public\/?$/i, // /Public 目录探测
+  /^\/local\/?$/i, // /local 目录探测
+  /^\/system\/?$/i, // /system 目录探测
+  /^\/shop\/?$/i, // /shop 目录探测
+  /^\/site\/?$/i, // /site 目录探测
+  /^\/Site\/?$/i, // /Site 目录探测
+  /^\/php\/?$/i, // /php 目录探测
+  /^\/Assets\/?$/i, // /Assets 目录探测
 
   // OpenCart/电商平台漏洞
-  /\/controller\/extension/i,               // OpenCart扩展目录
+  /\/controller\/extension/i, // OpenCart扩展目录
 
   // 常见漏洞文件名（不带扩展名已在.php规则中处理）
-  /^\/autoload_classmap/i,                   // PHP自动加载配置
-  /^\/function\//i,                          // 函数目录
-  /^\/index\//i,                             // index目录探测
-  /^\/mah\//i,                               // 常见后门路径
+  /^\/autoload_classmap/i, // PHP自动加载配置
+  /^\/function\//i, // 函数目录
+  /^\/index\//i, // index目录探测
+  /^\/mah\//i, // 常见后门路径
 ]
 
 // 🛡️ 合法路径白名单（优先于恶意模式检查）
 const LEGITIMATE_PATHS = [
-  /^\/admin\//,                              // /admin/queue, /admin/users 等合法管理页面
-  /^\/api\//,                                // API路由
-  /^\/settings/,                             // 设置页面
-  /^\/dashboard/,                            // 仪表盘
-  /^\/products/,                             // 商品管理
-  /^\/offers/,                               // Offer管理
-  /^\/campaigns/,                            // 广告系列
-  /^\/creatives/,                            // 创意管理
-  /^\/analytics/,                            // 数据分析
-  /^\/optimization/,                         // 优化迭代
-  /^\/strategy-center/,                      // 策略中心
-  /^\/change-password/,                      // 修改密码
+  /^\/admin\//, // /admin/queue, /admin/users 等合法管理页面
+  /^\/api\//, // API路由
+  /^\/settings/, // 设置页面
+  /^\/dashboard/, // 仪表盘
+  /^\/products/, // 商品管理
+  /^\/offers/, // Offer管理
+  /^\/campaigns/, // 广告系列
+  /^\/creatives/, // 创意管理
+  /^\/analytics/, // 数据分析
+  /^\/optimization/, // 优化迭代
+  /^\/strategy-center/, // 策略中心
+  /^\/change-password/, // 修改密码
 ]
 
-export async function middleware(request: NextRequest) {
-  const { pathname} = request.nextUrl
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl
 
   // 统一生成/透传 requestId，供日志与跨服务调用关联
   const requestId = request.headers.get('x-request-id') || crypto.randomUUID()
@@ -235,13 +241,13 @@ export async function middleware(request: NextRequest) {
 
   // 🛡️ 第二道防线：恶意路径模式拦截
   // 先检查白名单，避免误拦截合法路径
-  const isLegitimate = LEGITIMATE_PATHS.some(pattern => pattern.test(pathname))
-  if (!isLegitimate && MALICIOUS_PATTERNS.some(pattern => pattern.test(pathname))) {
+  const isLegitimate = LEGITIMATE_PATHS.some((pattern) => pattern.test(pathname))
+  if (!isLegitimate && MALICIOUS_PATTERNS.some((pattern) => pattern.test(pathname))) {
     return attachRequestId(new NextResponse(null, { status: 404 }))
   }
 
   // 检查是否是公开路径
-  const isPublicPath = publicPaths.some(path => {
+  const isPublicPath = publicPaths.some((path) => {
     if (path === '/') {
       // 首页需要精确匹配
       return pathname === '/'
@@ -257,7 +263,8 @@ export async function middleware(request: NextRequest) {
 
   // OpenClaw / Strategy Center API 允许 Bearer Token 直接透传（由路由内二次鉴权）
   const isOpenclawApiRoute = pathname === '/api/openclaw' || pathname.startsWith('/api/openclaw/')
-  const isStrategyCenterApiRoute = pathname === '/api/strategy-center' || pathname.startsWith('/api/strategy-center/')
+  const isStrategyCenterApiRoute =
+    pathname === '/api/strategy-center' || pathname.startsWith('/api/strategy-center/')
   const hasAuthorizationHeader = Boolean(request.headers.get('authorization')?.trim())
   if ((isOpenclawApiRoute || isStrategyCenterApiRoute) && hasAuthorizationHeader) {
     return attachRequestId(NextResponse.next({ request: { headers: requestHeaders } }))
@@ -269,13 +276,11 @@ export async function middleware(request: NextRequest) {
 
   // 如果没有token，重定向到登录页
   if (!token) {
-
     if (isApiRoute) {
       // API路径：返回401 JSON
-      return attachRequestId(NextResponse.json(
-        { error: '未提供认证token，请先登录' },
-        { status: 401 }
-      ))
+      return attachRequestId(
+        NextResponse.json({ error: '未提供认证token，请先登录' }, { status: 401 })
+      )
     } else {
       // 页面路径：重定向到登录页
       const loginUrl = new URL('/login', request.url)
@@ -289,10 +294,9 @@ export async function middleware(request: NextRequest) {
   if (!payload) {
     if (isApiRoute) {
       // API路径：返回401 JSON
-      return attachRequestId(NextResponse.json(
-        { error: 'Token无效或已过期，请重新登录' },
-        { status: 401 }
-      ))
+      return attachRequestId(
+        NextResponse.json({ error: 'Token无效或已过期，请重新登录' }, { status: 401 })
+      )
     } else {
       // 页面路径：重定向到登录页并清除无效cookie
       const loginUrl = new URL('/login', request.url)
@@ -308,17 +312,19 @@ export async function middleware(request: NextRequest) {
   // 🔐 强制修改密码检查
   // 如果用户需要强制修改密码，只允许访问特定路径
   if (payload.mustChangePassword === true) {
-    const isPasswordChangeAllowed = passwordChangeAllowedPaths.some(path => {
+    const isPasswordChangeAllowed = passwordChangeAllowedPaths.some((path) => {
       return pathname === path || pathname.startsWith(path + '/')
     })
 
     if (!isPasswordChangeAllowed) {
       if (isApiRoute) {
         // API路径：返回403，提示需要先修改密码
-        return attachRequestId(NextResponse.json(
-          { error: '请先修改初始密码', code: 'PASSWORD_CHANGE_REQUIRED' },
-          { status: 403 }
-        ))
+        return attachRequestId(
+          NextResponse.json(
+            { error: '请先修改初始密码', code: 'PASSWORD_CHANGE_REQUIRED' },
+            { status: 403 }
+          )
+        )
       } else {
         // 页面路径：重定向到修改密码页面
         const changePasswordUrl = new URL('/change-password', request.url)
@@ -328,11 +334,13 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  return attachRequestId(NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  }))
+  return attachRequestId(
+    NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    })
+  )
 }
 
 // 配置中间件匹配的路径

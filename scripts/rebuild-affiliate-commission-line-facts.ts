@@ -7,7 +7,9 @@ function normalizeReportDate(value: unknown): string {
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
     return value.toISOString().slice(0, 10)
   }
-  return String(value ?? '').trim().slice(0, 10)
+  return String(value ?? '')
+    .trim()
+    .slice(0, 10)
 }
 
 function parseConcurrencyArg(): number {
@@ -33,10 +35,7 @@ async function runWithConcurrency<T>(
     }
   }
 
-  const workers = Array.from(
-    { length: Math.min(concurrency, items.length) },
-    () => runWorker()
-  )
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => runWorker())
   await Promise.all(workers)
 }
 

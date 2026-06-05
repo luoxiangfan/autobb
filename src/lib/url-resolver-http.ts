@@ -27,7 +27,17 @@ function isSameDomain(a: string, b: string): boolean {
   return a.endsWith(`.${b}`) || b.endsWith(`.${a}`)
 }
 
-const TRACKING_TARGET_PARAM_NAMES = ['url', 'redirect', 'target', 'destination', 'goto', 'link', 'new', 'r', 'u']
+const TRACKING_TARGET_PARAM_NAMES = [
+  'url',
+  'redirect',
+  'target',
+  'destination',
+  'goto',
+  'link',
+  'new',
+  'r',
+  'u',
+]
 
 function extractTrackingWrapperSuffix(urlObj: URL, finalHost: string): string {
   if (!urlObj.search) return ''
@@ -113,7 +123,11 @@ function safeDestroyStream(stream: unknown): void {
   }
 }
 
-async function readStreamSnippet(stream: Readable, maxBytes: number, timeoutMs: number): Promise<string> {
+async function readStreamSnippet(
+  stream: Readable,
+  maxBytes: number,
+  timeoutMs: number
+): Promise<string> {
   return await new Promise((resolve) => {
     const chunks: Buffer[] = []
     let totalBytes = 0
@@ -185,7 +199,6 @@ async function readStreamSnippet(stream: Readable, maxBytes: number, timeoutMs: 
   })
 }
 
-
 /**
  * 使用HTTP请求解析Affiliate链接
  *
@@ -217,7 +230,7 @@ export async function resolveAffiliateLinkWithHttp(
       headers: {
         // URL解析阶段主要依赖 Location / 最终URL，使用“低摩擦”UA更稳定（部分站点对浏览器UA会卡死/触发挑战）
         'User-Agent': 'curl/8.5.0',
-        'Accept': '*/*',
+        Accept: '*/*',
         'Accept-Language': 'en-US,en;q=0.9',
       },
     }
@@ -253,8 +266,13 @@ export async function resolveAffiliateLinkWithHttp(
       const content = html.slice(0, 200_000) // 防御：避免超大HTML导致正则过慢
 
       // meta refresh: <meta http-equiv="refresh" content="0;url=https://...">
-      const metaRefresh = content.match(/<meta[^>]+http-equiv=["']?refresh["']?[^>]+content=["'][^"']*url=([^"'>\s]+)[^"']*["'][^>]*>/i)
-        || content.match(/<meta[^>]+content=["'][^"']*url=([^"'>\s]+)[^"']*["'][^>]+http-equiv=["']?refresh["']?[^>]*>/i)
+      const metaRefresh =
+        content.match(
+          /<meta[^>]+http-equiv=["']?refresh["']?[^>]+content=["'][^"']*url=([^"'>\s]+)[^"']*["'][^>]*>/i
+        ) ||
+        content.match(
+          /<meta[^>]+content=["'][^"']*url=([^"'>\s]+)[^"']*["'][^>]+http-equiv=["']?refresh["']?[^>]*>/i
+        )
       const metaUrl = metaRefresh?.[1] ? metaRefresh[1].replace(/^['"]|['"]$/g, '') : null
       if (metaUrl) {
         try {
@@ -321,7 +339,9 @@ export async function resolveAffiliateLinkWithHttp(
 
     const shouldProbeHtmlRedirect = (url: string): boolean => {
       // 仅对tracking特征明显的URL做GET探测（读取少量HTML），避免慢/大落地页导致整体超时
-      return /\/track|\/click|\/redirect|\/go|\/out|\/visit|\/link|[?&](?:url|redirect|target|destination|goto|link|new)=/i.test(url)
+      return /\/track|\/click|\/redirect|\/go|\/out|\/visit|\/link|[?&](?:url|redirect|target|destination|goto|link|new)=/i.test(
+        url
+      )
     }
 
     // 手动跟踪重定向
@@ -372,7 +392,7 @@ export async function resolveAffiliateLinkWithHttp(
           currentUrl = nextUrl
           redirectCount++
           safeDestroyStream(getResponse.data)
-          await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300))
+          await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300))
           continue
         }
 
@@ -397,7 +417,7 @@ export async function resolveAffiliateLinkWithHttp(
           redirectChain.push(htmlRedirect)
           currentUrl = htmlRedirect
           redirectCount++
-          await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300))
+          await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300))
           continue
         }
 
@@ -431,7 +451,7 @@ export async function resolveAffiliateLinkWithHttp(
         redirectCount++
 
         // 添加随机延迟模拟人类行为
-        await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300))
+        await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300))
       } else if (response.status === 200) {
         // 检查是否有meta refresh头（如yeahpromos.com）
         const refreshHeader = response.headers.refresh || response.headers.Refresh
@@ -453,7 +473,7 @@ export async function resolveAffiliateLinkWithHttp(
               console.log(`   → Meta Refresh重定向到: ${nextUrl}`)
 
               // 添加随机延迟
-              await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300))
+              await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300))
               continue
             }
           }
@@ -482,14 +502,17 @@ export async function resolveAffiliateLinkWithHttp(
                   nextUrl = `${urlObj.origin}${location}`
                 } else {
                   const urlObj = new URL(currentUrl)
-                  const basePath = urlObj.pathname.substring(0, urlObj.pathname.lastIndexOf('/') + 1)
+                  const basePath = urlObj.pathname.substring(
+                    0,
+                    urlObj.pathname.lastIndexOf('/') + 1
+                  )
                   nextUrl = `${urlObj.origin}${basePath}${location}`
                 }
                 redirectChain.push(nextUrl)
                 currentUrl = nextUrl
                 redirectCount++
                 safeDestroyStream(getResponse.data)
-                await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300))
+                await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300))
                 continue
               }
             }
@@ -500,7 +523,7 @@ export async function resolveAffiliateLinkWithHttp(
               redirectChain.push(htmlRedirect)
               currentUrl = htmlRedirect
               redirectCount++
-              await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300))
+              await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300))
               continue
             }
           } catch {
@@ -539,7 +562,9 @@ export async function resolveAffiliateLinkWithHttp(
 
     const finalUrl = `${urlObj.origin}${urlObj.pathname}`
     const finalUrlSuffix = urlObj.search.substring(1)
-    const fallbackSuffix = finalUrlSuffix ? '' : extractSuffixFromRedirectChain(redirectChain, finalUrl)
+    const fallbackSuffix = finalUrlSuffix
+      ? ''
+      : extractSuffixFromRedirectChain(redirectChain, finalUrl)
     const resolvedSuffix = finalUrlSuffix || fallbackSuffix
 
     let resolvedFinalUrl = finalUrl
@@ -556,7 +581,10 @@ export async function resolveAffiliateLinkWithHttp(
         const embeddedFinalUrl = `${embeddedUrlObj.origin}${embeddedUrlObj.pathname}`
         const embeddedFinalUrlSuffix = embeddedUrlObj.search.substring(1)
 
-        if (embeddedFinalUrl !== resolvedFinalUrl || embeddedFinalUrlSuffix !== resolvedFinalUrlSuffix) {
+        if (
+          embeddedFinalUrl !== resolvedFinalUrl ||
+          embeddedFinalUrlSuffix !== resolvedFinalUrlSuffix
+        ) {
           console.log(`   📎 HTTP解析识别到嵌入目标URL: ${embeddedFinalUrl}`)
           redirectChain.push(embeddedUrlObj.toString())
           resolvedFinalUrl = embeddedFinalUrl
@@ -571,7 +599,9 @@ export async function resolveAffiliateLinkWithHttp(
     console.log(`✅ HTTP解析完成: ${resolvedRedirectCount}次重定向`)
     console.log(`   Final URL: ${resolvedFinalUrl}`)
     if (!finalUrlSuffix && fallbackSuffix) {
-      console.log(`   Final URL Suffix(redirect): ${fallbackSuffix.substring(0, 100)}${fallbackSuffix.length > 100 ? '...' : ''}`)
+      console.log(
+        `   Final URL Suffix(redirect): ${fallbackSuffix.substring(0, 100)}${fallbackSuffix.length > 100 ? '...' : ''}`
+      )
     }
 
     return {
@@ -660,14 +690,24 @@ export function extractEmbeddedTargetUrl(url: string): string | null {
     const hostname = urlObj.hostname.toLowerCase()
 
     // 检查是否是tracking域名
-    const isTrackingDomain = trackingDomains.some(domain => hostname.includes(domain))
+    const isTrackingDomain = trackingDomains.some((domain) => hostname.includes(domain))
     if (!isTrackingDomain) {
       return null
     }
 
     // 尝试从查询参数中提取目标URL
     // 常见参数名: url, redirect, target, destination, goto, link, new
-    const targetParamNames = ['url', 'redirect', 'target', 'destination', 'goto', 'link', 'new', 'r', 'u']
+    const targetParamNames = [
+      'url',
+      'redirect',
+      'target',
+      'destination',
+      'goto',
+      'link',
+      'new',
+      'r',
+      'u',
+    ]
 
     for (const paramName of targetParamNames) {
       const targetUrl = urlObj.searchParams.get(paramName)

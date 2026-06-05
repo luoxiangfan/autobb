@@ -134,14 +134,18 @@ export default function AdminPerformancePage() {
     setError(null)
 
     try {
-      const result = await fetchWithRetry('/api/admin/performance', {
-        credentials: 'include',
-        cache: 'no-store',
-      }, {
-        maxRetries: 1,
-        retryDelay: 1000,
-        retryOnErrors: ['SERVICE_UNAVAILABLE', 'HTML_RESPONSE'],
-      })
+      const result = await fetchWithRetry(
+        '/api/admin/performance',
+        {
+          credentials: 'include',
+          cache: 'no-store',
+        },
+        {
+          maxRetries: 1,
+          retryDelay: 1000,
+          retryOnErrors: ['SERVICE_UNAVAILABLE', 'HTML_RESPONSE'],
+        }
+      )
 
       if (!result.success) {
         setError(result.userMessage || '获取性能数据失败')
@@ -175,12 +179,16 @@ export default function AdminPerformancePage() {
 
     setClearing(true)
     try {
-      const result = await fetchWithRetry('/api/admin/performance', {
-        method: 'DELETE',
-        credentials: 'include',
-      }, {
-        maxRetries: 0,
-      })
+      const result = await fetchWithRetry(
+        '/api/admin/performance',
+        {
+          method: 'DELETE',
+          credentials: 'include',
+        },
+        {
+          maxRetries: 0,
+        }
+      )
 
       if (!result.success) {
         showError('清空失败', result.userMessage || '请稍后重试')
@@ -244,9 +252,7 @@ export default function AdminPerformancePage() {
             <Gauge className="h-6 w-6 text-blue-600" />
             性能监控面板
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            最后更新：{formatTime(lastUpdatedAt)}
-          </p>
+          <p className="text-sm text-gray-500 mt-1">最后更新：{formatTime(lastUpdatedAt)}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -257,11 +263,7 @@ export default function AdminPerformancePage() {
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             刷新
           </Button>
-          <Button
-            variant="destructive"
-            onClick={() => void clearMetrics()}
-            disabled={clearing}
-          >
+          <Button variant="destructive" onClick={() => void clearMetrics()} disabled={clearing}>
             <Trash2 className="h-4 w-4 mr-2" />
             清空数据
           </Button>
@@ -293,7 +295,9 @@ export default function AdminPerformancePage() {
             </div>
             <div className="rounded-lg border bg-white p-4">
               <p className="text-sm text-gray-500">慢请求（&gt;1s）</p>
-              <p className="text-2xl font-semibold text-orange-600">{formatNumber(data.overall.slowRequests)}</p>
+              <p className="text-2xl font-semibold text-orange-600">
+                {formatNumber(data.overall.slowRequests)}
+              </p>
             </div>
             <div className="rounded-lg border bg-white p-4">
               <p className="text-sm text-gray-500">缓存有效条目</p>
@@ -330,18 +334,22 @@ export default function AdminPerformancePage() {
                   <tbody>
                     {sortedPathStats.length === 0 ? (
                       <tr>
-                        <td className="py-4 text-gray-400" colSpan={6}>暂无数据</td>
+                        <td className="py-4 text-gray-400" colSpan={6}>
+                          暂无数据
+                        </td>
                       </tr>
-                    ) : sortedPathStats.map((row) => (
-                      <tr key={row.path} className="border-b last:border-b-0">
-                        <td className="py-2 pr-3 font-mono text-xs">{row.path}</td>
-                        <td className="py-2 pr-3">{formatNumber(row.totalRequests)}</td>
-                        <td className="py-2 pr-3">{formatMs(row.avgDuration)}</td>
-                        <td className="py-2 pr-3">{formatMs(row.p95Duration)}</td>
-                        <td className="py-2 pr-3">{formatMs(row.p99Duration)}</td>
-                        <td className="py-2 pr-3">{formatMs(row.maxDuration)}</td>
-                      </tr>
-                    ))}
+                    ) : (
+                      sortedPathStats.map((row) => (
+                        <tr key={row.path} className="border-b last:border-b-0">
+                          <td className="py-2 pr-3 font-mono text-xs">{row.path}</td>
+                          <td className="py-2 pr-3">{formatNumber(row.totalRequests)}</td>
+                          <td className="py-2 pr-3">{formatMs(row.avgDuration)}</td>
+                          <td className="py-2 pr-3">{formatMs(row.p95Duration)}</td>
+                          <td className="py-2 pr-3">{formatMs(row.p99Duration)}</td>
+                          <td className="py-2 pr-3">{formatMs(row.maxDuration)}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -359,22 +367,28 @@ export default function AdminPerformancePage() {
                 </div>
                 <div className="rounded-md border p-3">
                   <p className="text-xs text-gray-500">Error</p>
-                  <p className="text-lg font-semibold">{formatNumber(data.frontendErrors.byType.error)}</p>
+                  <p className="text-lg font-semibold">
+                    {formatNumber(data.frontendErrors.byType.error)}
+                  </p>
                 </div>
                 <div className="rounded-md border p-3">
                   <p className="text-xs text-gray-500">Unhandled Rejection</p>
-                  <p className="text-lg font-semibold">{formatNumber(data.frontendErrors.byType.unhandledrejection)}</p>
+                  <p className="text-lg font-semibold">
+                    {formatNumber(data.frontendErrors.byType.unhandledrejection)}
+                  </p>
                 </div>
               </div>
               <div className="space-y-2">
                 {topErrorPaths.length === 0 ? (
                   <p className="text-sm text-gray-400">暂无路径维度错误数据</p>
-                ) : topErrorPaths.map((row) => (
-                  <div key={row.path} className="flex items-center justify-between text-sm">
-                    <span className="font-mono text-xs">{row.path}</span>
-                    <span className="font-medium">{row.count}</span>
-                  </div>
-                ))}
+                ) : (
+                  topErrorPaths.map((row) => (
+                    <div key={row.path} className="flex items-center justify-between text-sm">
+                      <span className="font-mono text-xs">{row.path}</span>
+                      <span className="font-medium">{row.count}</span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </section>
@@ -397,19 +411,25 @@ export default function AdminPerformancePage() {
                 <tbody>
                   {sortedVitalStats.length === 0 ? (
                     <tr>
-                      <td className="py-4 text-gray-400" colSpan={7}>暂无 Web Vitals 数据</td>
+                      <td className="py-4 text-gray-400" colSpan={7}>
+                        暂无 Web Vitals 数据
+                      </td>
                     </tr>
-                  ) : sortedVitalStats.map((row) => (
-                    <tr key={row.name} className="border-b last:border-b-0">
-                      <td className="py-2 pr-3 font-semibold">{row.name}</td>
-                      <td className="py-2 pr-3">{formatNumber(row.count)}</td>
-                      <td className="py-2 pr-3">{formatMs(row.p75)}</td>
-                      <td className="py-2 pr-3">{formatMs(row.p95)}</td>
-                      <td className="py-2 pr-3 text-green-700">{formatNumber(row.good)}</td>
-                      <td className="py-2 pr-3 text-yellow-700">{formatNumber(row.needsImprovement)}</td>
-                      <td className="py-2 pr-3 text-red-700">{formatNumber(row.poor)}</td>
-                    </tr>
-                  ))}
+                  ) : (
+                    sortedVitalStats.map((row) => (
+                      <tr key={row.name} className="border-b last:border-b-0">
+                        <td className="py-2 pr-3 font-semibold">{row.name}</td>
+                        <td className="py-2 pr-3">{formatNumber(row.count)}</td>
+                        <td className="py-2 pr-3">{formatMs(row.p75)}</td>
+                        <td className="py-2 pr-3">{formatMs(row.p95)}</td>
+                        <td className="py-2 pr-3 text-green-700">{formatNumber(row.good)}</td>
+                        <td className="py-2 pr-3 text-yellow-700">
+                          {formatNumber(row.needsImprovement)}
+                        </td>
+                        <td className="py-2 pr-3 text-red-700">{formatNumber(row.poor)}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -421,21 +441,28 @@ export default function AdminPerformancePage() {
               <div className="max-h-[360px] overflow-auto space-y-2">
                 {data.recentRequests.length === 0 ? (
                   <p className="text-sm text-gray-400">暂无请求数据</p>
-                ) : data.recentRequests.map((item, index) => (
-                  <div key={`${item.path}-${item.timestamp}-${index}`} className="rounded border p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs">{item.path}</span>
-                      <span className="text-xs text-gray-500">{formatTime(item.timestamp)}</span>
+                ) : (
+                  data.recentRequests.map((item, index) => (
+                    <div
+                      key={`${item.path}-${item.timestamp}-${index}`}
+                      className="rounded border p-3"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-xs">{item.path}</span>
+                        <span className="text-xs text-gray-500">{formatTime(item.timestamp)}</span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2 text-xs">
+                        <span className="px-2 py-0.5 rounded bg-gray-100">{item.method}</span>
+                        <span
+                          className={`px-2 py-0.5 rounded ${item.statusCode >= 400 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}
+                        >
+                          {item.statusCode}
+                        </span>
+                        <span>{formatMs(item.duration)}</span>
+                      </div>
                     </div>
-                    <div className="mt-1 flex items-center gap-2 text-xs">
-                      <span className="px-2 py-0.5 rounded bg-gray-100">{item.method}</span>
-                      <span className={`px-2 py-0.5 rounded ${item.statusCode >= 400 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                        {item.statusCode}
-                      </span>
-                      <span>{formatMs(item.duration)}</span>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -443,24 +470,33 @@ export default function AdminPerformancePage() {
               <h2 className="font-semibold mb-3">最近前端指标与错误</h2>
               <div className="space-y-3 max-h-[360px] overflow-auto">
                 {data.recentFrontendVitals.map((item, index) => (
-                  <div key={`${item.name}-${item.timestamp}-${index}`} className="rounded border p-3">
+                  <div
+                    key={`${item.name}-${item.timestamp}-${index}`}
+                    className="rounded border p-3"
+                  >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold">{item.name}</span>
-                        <span className={`px-2 py-0.5 rounded text-xs ${ratingBadgeClass(item.rating)}`}>
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs ${ratingBadgeClass(item.rating)}`}
+                        >
                           {item.rating || 'unknown'}
                         </span>
                       </div>
                       <span className="text-xs text-gray-500">{formatTime(item.timestamp)}</span>
                     </div>
                     <div className="mt-1 text-xs text-gray-600">
-                      path: <span className="font-mono">{item.path}</span> | value: {item.value.toFixed(2)}
+                      path: <span className="font-mono">{item.path}</span> | value:{' '}
+                      {item.value.toFixed(2)}
                     </div>
                   </div>
                 ))}
 
                 {data.recentFrontendErrors.map((item, index) => (
-                  <div key={`${item.type}-${item.timestamp}-${index}`} className="rounded border p-3 bg-amber-50/30">
+                  <div
+                    key={`${item.type}-${item.timestamp}-${index}`}
+                    className="rounded border p-3 bg-amber-50/30"
+                  >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700">
                         {item.type}
@@ -475,7 +511,8 @@ export default function AdminPerformancePage() {
                   </div>
                 ))}
 
-                {data.recentFrontendVitals.length === 0 && data.recentFrontendErrors.length === 0 ? (
+                {data.recentFrontendVitals.length === 0 &&
+                data.recentFrontendErrors.length === 0 ? (
                   <p className="text-sm text-gray-400">暂无前端指标与错误数据</p>
                 ) : null}
               </div>

@@ -102,9 +102,7 @@ describe('buildIntentAwareSeedPool', () => {
                 specifications: {
                   Model: 'X10 Pro Omni',
                 },
-                variants: [
-                  { name: 'X10 Pro Omni Black' },
-                ],
+                variants: [{ name: 'X10 Pro Omni Black' }],
               },
             },
           ],
@@ -144,16 +142,16 @@ describe('buildIntentAwareSeedPool', () => {
       }),
     })
 
-    expect(sourcePool.paramKeywords.some((keyword) => /m01035|namm10kwv12/i.test(keyword))).toBe(false)
+    expect(sourcePool.paramKeywords.some((keyword) => /m01035|namm10kwv12/i.test(keyword))).toBe(
+      false
+    )
   })
 
   it('prioritizes supplemental store product links ahead of generic store products when building hot product names', () => {
     const sourcePool = extractVerifiedKeywordSourcePool({
       brand: 'Our Place',
       category: 'Cookware',
-      storeProductNames: [
-        'https://yeahpromos.com/index/index/openurlproduct?track=abc&pid=946480',
-      ],
+      storeProductNames: ['https://yeahpromos.com/index/index/openurlproduct?track=abc&pid=946480'],
       scrapedData: JSON.stringify({
         products: [
           { name: 'Our Place Always Pan 2.0' },

@@ -14,7 +14,11 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;')
 }
 
-function buildHtmlResponse(params: { success: boolean; title: string; message: string }): NextResponse {
+function buildHtmlResponse(params: {
+  success: boolean
+  title: string
+  message: string
+}): NextResponse {
   const body = `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -58,7 +62,7 @@ async function parseCapturePayload(request: NextRequest): Promise<{
   const contentType = String(request.headers.get('content-type') || '').toLowerCase()
 
   if (contentType.includes('application/json')) {
-    const body = await request.json().catch(() => ({})) as Record<string, unknown>
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
     return {
       captureToken: String(body.capture_token || body.captureToken || '').trim(),
       cookie: String(body.cookie || '').trim(),

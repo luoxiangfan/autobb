@@ -5,7 +5,7 @@ import type {
   QueueStats,
   QueueStorageAdapter,
   PendingEligibilityStats,
-  RunningConcurrencySnapshot
+  RunningConcurrencySnapshot,
 } from './types'
 import { isBackgroundTaskType, isEphemeralTaskType } from './task-category'
 
@@ -92,8 +92,8 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
 
     // 查找第一个“已到可执行时间”的任务（如果指定类型，则同时匹配类型）
     const index = type
-      ? this.pendingQueue.findIndex((t) => t.type === type && (((t as any).notBefore ?? 0) <= now))
-      : this.pendingQueue.findIndex((t) => (((t as any).notBefore ?? 0) <= now))
+      ? this.pendingQueue.findIndex((t) => t.type === type && ((t as any).notBefore ?? 0) <= now)
+      : this.pendingQueue.findIndex((t) => ((t as any).notBefore ?? 0) <= now)
 
     if (index === -1) return null
 
@@ -115,11 +115,7 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
     return this.pendingQueue[0]
   }
 
-  async updateTaskStatus(
-    taskId: string,
-    status: TaskStatus,
-    error?: string
-  ): Promise<void> {
+  async updateTaskStatus(taskId: string, status: TaskStatus, error?: string): Promise<void> {
     if (!this.connected) {
       throw new Error('MemoryQueueAdapter: not connected')
     }
@@ -158,7 +154,7 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
         failed: 0,
         byType: {} as Record<TaskType, number>,
         byTypeRunning: {} as Record<TaskType, number>,
-        byUser: {}
+        byUser: {},
       }
     }
 
@@ -221,7 +217,7 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
       failed: totalFailed,
       byType,
       byTypeRunning,
-      byUser
+      byUser,
     }
   }
 
@@ -309,7 +305,7 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
       pendingTotal: this.pendingQueue.length,
       eligiblePending,
       delayedPending,
-      nextEligibleAt
+      nextEligibleAt,
     }
   }
 
@@ -344,10 +340,7 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
    * @param status 任务状态（'pending' 或 'running'）
    * @returns 删除的任务数量
    */
-  async deleteTasksByTypeAndStatus(
-    type: TaskType,
-    status: 'pending' | 'running'
-  ): Promise<number> {
+  async deleteTasksByTypeAndStatus(type: TaskType, status: 'pending' | 'running'): Promise<number> {
     if (!this.connected) return 0
 
     let deletedCount = 0
@@ -359,9 +352,9 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
         if (task.type === type) {
           // 从tasks Map中删除
           this.tasks.delete(task.id)
-          return false  // 不保留
+          return false // 不保留
         }
-        return true  // 保留
+        return true // 保留
       })
 
       deletedCount = originalLength - this.pendingQueue.length

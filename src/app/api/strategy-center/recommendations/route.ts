@@ -13,7 +13,9 @@ export const dynamic = 'force-dynamic'
 const STRATEGY_QUEUE_TASK_MISS_THRESHOLD = 3
 
 function parseBooleanParam(value: string | null): boolean {
-  const normalized = String(value || '').trim().toLowerCase()
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on'
 }
 
@@ -70,7 +72,8 @@ async function hydrateStrategyQueueRuntime(params: {
   const queue = getQueueManagerForTaskType('openclaw-strategy')
   await queue.initialize().catch(() => null)
   const hydratedByIndex = new Map<number, any>()
-  const runtimeUpdates: Array<{ recommendationId: string; executionResult: Record<string, any> }> = []
+  const runtimeUpdates: Array<{ recommendationId: string; executionResult: Record<string, any> }> =
+    []
 
   await Promise.all(
     candidates.map(async ({ item, index }) => {
@@ -81,9 +84,8 @@ async function hydrateStrategyQueueRuntime(params: {
       const task = await queue.getTask(queueTaskId).catch(() => null)
       if (!task) {
         const rawMissCount = Number(executionResult.queueTaskMissCount)
-        const currentMissCount = Number.isFinite(rawMissCount) && rawMissCount >= 0
-          ? Math.floor(rawMissCount)
-          : 0
+        const currentMissCount =
+          Number.isFinite(rawMissCount) && rawMissCount >= 0 ? Math.floor(rawMissCount) : 0
         const nextMissCount = currentMissCount + 1
         const exceededMissThreshold = nextMissCount >= STRATEGY_QUEUE_TASK_MISS_THRESHOLD
         const nextExecutionResult = {
@@ -93,7 +95,7 @@ async function hydrateStrategyQueueRuntime(params: {
             ? 'unknown'
             : String(executionResult.queueTaskStatus || 'pending'),
           queueTaskError: exceededMissThreshold
-            ? (executionResult.queueTaskError || '队列任务不存在或已过期，请重新执行建议')
+            ? executionResult.queueTaskError || '队列任务不存在或已过期，请重新执行建议'
             : executionResult.queueTaskError || null,
           queueUpdatedAt: new Date().toISOString(),
           queued: exceededMissThreshold ? false : true,
@@ -116,18 +118,12 @@ async function hydrateStrategyQueueRuntime(params: {
         queueTaskStatus: taskStatus || executionResult.queueTaskStatus || 'pending',
         queueTaskMissCount: 0,
         queueRetryCount:
-          typeof task.retryCount === 'number'
-            ? task.retryCount
-            : executionResult.queueRetryCount,
+          typeof task.retryCount === 'number' ? task.retryCount : executionResult.queueRetryCount,
         queueTaskError: task.error || null,
         queueTaskCreatedAt:
-          toIsoTimestampFromEpoch(task.createdAt)
-          || executionResult.queueTaskCreatedAt
-          || null,
+          toIsoTimestampFromEpoch(task.createdAt) || executionResult.queueTaskCreatedAt || null,
         queueTaskStartedAt:
-          toIsoTimestampFromEpoch(task.startedAt)
-          || executionResult.queueTaskStartedAt
-          || null,
+          toIsoTimestampFromEpoch(task.startedAt) || executionResult.queueTaskStartedAt || null,
         queueUpdatedAt: new Date().toISOString(),
         queued: taskStatus === 'pending' || taskStatus === 'running',
       }
@@ -216,10 +212,7 @@ export async function GET(request: NextRequest) {
       recommendations,
     })
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || '加载策略建议失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '加载策略建议失败' }, { status: 500 })
   }
 }
 
@@ -229,7 +222,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '策略中心功能未开启或未授权' }, { status: 403 })
   }
 
-  const body = await request.json().catch(() => ({})) as {
+  const body = (await request.json().catch(() => ({}))) as {
     date?: string
     limit?: number
   }
@@ -313,9 +306,6 @@ export async function POST(request: NextRequest) {
       reportDeliveryMode: 'queued',
     })
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || '手动触发策略分析失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '手动触发策略分析失败' }, { status: 500 })
   }
 }

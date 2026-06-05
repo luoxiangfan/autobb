@@ -42,38 +42,104 @@ export interface CreativeContent {
 const PROHIBITED_WORDS = {
   // 夸大宣传词汇
   exaggeration: [
-    '最好', '第一', '最优', '顶级', '极致', '完美', '无敌', '绝对',
-    'best', 'number one', '#1', 'top', 'ultimate', 'perfect', 'unbeatable',
-    '最强', '最大', '最快', '最便宜', '史上最', '全球第一'
+    '最好',
+    '第一',
+    '最优',
+    '顶级',
+    '极致',
+    '完美',
+    '无敌',
+    '绝对',
+    'best',
+    'number one',
+    '#1',
+    'top',
+    'ultimate',
+    'perfect',
+    'unbeatable',
+    '最强',
+    '最大',
+    '最快',
+    '最便宜',
+    '史上最',
+    '全球第一',
   ],
 
   // 绝对化词汇
   absolute: [
-    '100%', '百分百', '绝不', '必定', '一定', '保证', '确保',
-    'guaranteed', 'always', 'never', 'absolutely', 'definitely',
-    '永不', '永久', '终身', '无限'
+    '100%',
+    '百分百',
+    '绝不',
+    '必定',
+    '一定',
+    '保证',
+    '确保',
+    'guaranteed',
+    'always',
+    'never',
+    'absolutely',
+    'definitely',
+    '永不',
+    '永久',
+    '终身',
+    '无限',
   ],
 
   // 医疗健康声明
   medical: [
-    '治疗', '治愈', '疗效', '药效', '病症', '疾病', '医学',
-    'cure', 'treat', 'disease', 'medical', 'therapy', 'diagnosis',
-    '处方', '临床', '症状', '诊断', '健康保证'
+    '治疗',
+    '治愈',
+    '疗效',
+    '药效',
+    '病症',
+    '疾病',
+    '医学',
+    'cure',
+    'treat',
+    'disease',
+    'medical',
+    'therapy',
+    'diagnosis',
+    '处方',
+    '临床',
+    '症状',
+    '诊断',
+    '健康保证',
   ],
 
   // 金融承诺
   financial: [
-    '保本', '稳赚', '无风险', '必赢', '回报保证',
-    'risk-free', 'guaranteed return', 'no risk', 'profit guaranteed',
-    '零风险', '快速致富', '暴富'
+    '保本',
+    '稳赚',
+    '无风险',
+    '必赢',
+    '回报保证',
+    'risk-free',
+    'guaranteed return',
+    'no risk',
+    'profit guaranteed',
+    '零风险',
+    '快速致富',
+    '暴富',
   ],
 
   // 误导性词汇
   misleading: [
-    '免费', '白送', '不要钱', '零元', '限时', '即将结束',
-    'free', 'giveaway', 'last chance', 'limited time', 'act now',
-    '马上抢', '错过不再', '仅此一次'
-  ]
+    '免费',
+    '白送',
+    '不要钱',
+    '零元',
+    '限时',
+    '即将结束',
+    'free',
+    'giveaway',
+    'last chance',
+    'limited time',
+    'act now',
+    '马上抢',
+    '错过不再',
+    '仅此一次',
+  ],
 }
 
 /**
@@ -84,9 +150,7 @@ function checkProhibitedWords(text: string): { category: string; words: string[]
   const lowerText = text.toLowerCase()
 
   for (const [category, words] of Object.entries(PROHIBITED_WORDS)) {
-    const foundWords = words.filter(word =>
-      lowerText.includes(word.toLowerCase())
-    )
+    const foundWords = words.filter((word) => lowerText.includes(word.toLowerCase()))
 
     if (foundWords.length > 0) {
       violations.push({ category, words: foundWords })
@@ -112,7 +176,7 @@ function rule_ProhibitedWords(content: CreativeContent): ComplianceIssue[] {
         financial: 'high',
         absolute: 'medium',
         exaggeration: 'medium',
-        misleading: 'low'
+        misleading: 'low',
       }
 
       const categoryNames: Record<string, string> = {
@@ -120,7 +184,7 @@ function rule_ProhibitedWords(content: CreativeContent): ComplianceIssue[] {
         absolute: '绝对化表述',
         medical: '医疗健康声明',
         financial: '金融承诺',
-        misleading: '误导性词汇'
+        misleading: '误导性词汇',
       }
 
       issues.push({
@@ -131,7 +195,7 @@ function rule_ProhibitedWords(content: CreativeContent): ComplianceIssue[] {
         fieldIndex: index,
         message: `标题${index + 1}包含违规词汇：${words.join('、')}`,
         suggestion: `请移除或替换这些词汇，使用更客观的描述`,
-        violatingText: headline
+        violatingText: headline,
       })
     })
   })
@@ -146,7 +210,7 @@ function rule_ProhibitedWords(content: CreativeContent): ComplianceIssue[] {
         financial: 'high',
         absolute: 'medium',
         exaggeration: 'medium',
-        misleading: 'low'
+        misleading: 'low',
       }
 
       const categoryNames: Record<string, string> = {
@@ -154,7 +218,7 @@ function rule_ProhibitedWords(content: CreativeContent): ComplianceIssue[] {
         absolute: '绝对化表述',
         medical: '医疗健康声明',
         financial: '金融承诺',
-        misleading: '误导性词汇'
+        misleading: '误导性词汇',
       }
 
       issues.push({
@@ -165,7 +229,7 @@ function rule_ProhibitedWords(content: CreativeContent): ComplianceIssue[] {
         fieldIndex: index,
         message: `描述${index + 1}包含违规词汇：${words.join('、')}`,
         suggestion: `请移除或替换这些词汇，使用更客观的描述`,
-        violatingText: desc
+        violatingText: desc,
       })
     })
   })
@@ -191,9 +255,9 @@ function rule_ExcessiveCapitalization(content: CreativeContent): ComplianceIssue
         severity: 'low',
         field,
         fieldIndex: index,
-        message: `${field === 'headline' ? '标题' : '描述'}${index + 1}大写字母过多（${Math.round(upperCount / letterCount * 100)}%）`,
+        message: `${field === 'headline' ? '标题' : '描述'}${index + 1}大写字母过多（${Math.round((upperCount / letterCount) * 100)}%）`,
         suggestion: '请使用正常大小写格式，仅首字母或专有名词大写',
-        violatingText: text
+        violatingText: text,
       })
     }
   }
@@ -222,7 +286,7 @@ function rule_ExcessivePunctuation(content: CreativeContent): ComplianceIssue[] 
         fieldIndex: index,
         message: `${field === 'headline' ? '标题' : '描述'}${index + 1}包含重复标点：${repeatedPunctuation.join('、')}`,
         suggestion: '请移除重复的标点符号',
-        violatingText: text
+        violatingText: text,
       })
     }
 
@@ -237,7 +301,7 @@ function rule_ExcessivePunctuation(content: CreativeContent): ComplianceIssue[] 
         fieldIndex: index,
         message: `${field === 'headline' ? '标题' : '描述'}${index + 1}包含${exclamationCount}个感叹号`,
         suggestion: '建议最多使用1个感叹号',
-        violatingText: text
+        violatingText: text,
       })
     }
   }
@@ -266,7 +330,7 @@ function rule_ProhibitedSymbols(content: CreativeContent): ComplianceIssue[] {
         fieldIndex: index,
         message: `${field === 'headline' ? '标题' : '描述'}${index + 1}包含禁止符号：${foundSymbols.join('、')}`,
         suggestion: '请移除特殊符号，使用文字描述',
-        violatingText: text
+        violatingText: text,
       })
     }
   }
@@ -294,7 +358,7 @@ function rule_CharacterLength(content: CreativeContent): ComplianceIssue[] {
         fieldIndex: index,
         message: `标题${index + 1}长度为${headline.length}字符，超过30字符限制`,
         suggestion: `请缩短至30字符以内`,
-        violatingText: headline
+        violatingText: headline,
       })
     }
   })
@@ -310,7 +374,7 @@ function rule_CharacterLength(content: CreativeContent): ComplianceIssue[] {
         fieldIndex: index,
         message: `描述${index + 1}长度为${desc.length}字符，超过90字符限制`,
         suggestion: `请缩短至90字符以内`,
-        violatingText: desc
+        violatingText: desc,
       })
     }
   })
@@ -336,7 +400,7 @@ function rule_DuplicateContent(content: CreativeContent): ComplianceIssue[] {
         fieldIndex: index,
         message: `标题${index + 1}与其他标题重复`,
         suggestion: '请提供不同的标题内容',
-        violatingText: headline
+        violatingText: headline,
       })
     }
     headlineSet.add(headline.toLowerCase())
@@ -354,7 +418,7 @@ function rule_DuplicateContent(content: CreativeContent): ComplianceIssue[] {
         fieldIndex: index,
         message: `描述${index + 1}与其他描述重复`,
         suggestion: '请提供不同的描述内容',
-        violatingText: desc
+        violatingText: desc,
       })
     }
     descSet.add(desc.toLowerCase())
@@ -383,7 +447,7 @@ function rule_URLValidation(content: CreativeContent): ComplianceIssue[] {
           field: 'url',
           message: `着陆页URL未使用HTTPS协议`,
           suggestion: '请使用HTTPS协议以确保安全性',
-          violatingText: content.finalUrl
+          violatingText: content.finalUrl,
         })
       }
     } catch (_error) {
@@ -394,7 +458,7 @@ function rule_URLValidation(content: CreativeContent): ComplianceIssue[] {
         field: 'url',
         message: `着陆页URL格式无效`,
         suggestion: '请提供有效的URL地址',
-        violatingText: content.finalUrl
+        violatingText: content.finalUrl,
       })
     }
   }
@@ -436,7 +500,7 @@ function rule_BrandConsistency(content: CreativeContent): ComplianceIssue[] {
       severity: 'low',
       field: 'general',
       message: `广告内容中未提及品牌名称"${content.brandName}"`,
-      suggestion: '建议在至少一个标题或描述中包含品牌名称'
+      suggestion: '建议在至少一个标题或描述中包含品牌名称',
     })
   }
 
@@ -458,7 +522,7 @@ function rule_EmptyContent(content: CreativeContent): ComplianceIssue[] {
         field: 'headline',
         fieldIndex: index,
         message: `标题${index + 1}为空`,
-        suggestion: '请提供有效的标题内容'
+        suggestion: '请提供有效的标题内容',
       })
     }
   })
@@ -472,7 +536,7 @@ function rule_EmptyContent(content: CreativeContent): ComplianceIssue[] {
         field: 'description',
         fieldIndex: index,
         message: `描述${index + 1}为空`,
-        suggestion: '请提供有效的描述内容'
+        suggestion: '请提供有效的描述内容',
       })
     }
   })
@@ -491,7 +555,7 @@ function rule_AdditionalRules(content: CreativeContent): ComplianceIssue[] {
 
   content.headlines.forEach((headline, index) => {
     const lowerHeadline = headline.toLowerCase()
-    const foundWords = clickbaitWords.filter(word => lowerHeadline.includes(word.toLowerCase()))
+    const foundWords = clickbaitWords.filter((word) => lowerHeadline.includes(word.toLowerCase()))
 
     if (foundWords.length > 0) {
       issues.push({
@@ -502,7 +566,7 @@ function rule_AdditionalRules(content: CreativeContent): ComplianceIssue[] {
         fieldIndex: index,
         message: `标题${index + 1}包含点击诱导词汇：${foundWords.join('、')}`,
         suggestion: '请使用更自然的引导语',
-        violatingText: headline
+        violatingText: headline,
       })
     }
   })
@@ -520,7 +584,7 @@ function rule_AdditionalRules(content: CreativeContent): ComplianceIssue[] {
         fieldIndex: index,
         message: `标题${index + 1}的折扣表述可能不符合规范`,
         suggestion: '请使用明确的价格或百分比折扣',
-        violatingText: headline
+        violatingText: headline,
       })
     }
   })
@@ -545,18 +609,18 @@ export function checkCompliance(content: CreativeContent): ComplianceCheckResult
     rule_URLValidation,
     rule_BrandConsistency,
     rule_EmptyContent,
-    rule_AdditionalRules
+    rule_AdditionalRules,
   ]
 
-  rules.forEach(rule => {
+  rules.forEach((rule) => {
     const issues = rule(content)
     allIssues.push(...issues)
   })
 
   // 统计各严重程度数量
-  const highSeverityCount = allIssues.filter(i => i.severity === 'high').length
-  const mediumSeverityCount = allIssues.filter(i => i.severity === 'medium').length
-  const lowSeverityCount = allIssues.filter(i => i.severity === 'low').length
+  const highSeverityCount = allIssues.filter((i) => i.severity === 'high').length
+  const mediumSeverityCount = allIssues.filter((i) => i.severity === 'medium').length
+  const lowSeverityCount = allIssues.filter((i) => i.severity === 'low').length
 
   return {
     isCompliant: highSeverityCount === 0,
@@ -564,7 +628,7 @@ export function checkCompliance(content: CreativeContent): ComplianceCheckResult
     highSeverityCount,
     mediumSeverityCount,
     lowSeverityCount,
-    issues: allIssues
+    issues: allIssues,
   }
 }
 

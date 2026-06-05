@@ -20,7 +20,7 @@ export async function hasEnabledCampaignForOffer(params: {
   offerId: number
   db?: DatabaseAdapter
 }): Promise<boolean> {
-  const db = params.db || await getDatabase()
+  const db = params.db || (await getDatabase())
   const campaignNotDeleted = taskNotDeletedClause(db.type, 'c')
 
   const row = await db.queryOne(
@@ -43,15 +43,12 @@ export async function findClickFarmTasksWithoutEnabledCampaign(params: {
   limit?: number
   db?: DatabaseAdapter
 }): Promise<ClickFarmTaskCandidate[]> {
-  const db = params.db || await getDatabase()
+  const db = params.db || (await getDatabase())
   const limit = Math.max(1, Math.min(Number(params.limit || 200), 1000))
   const taskNotDeleted = taskNotDeletedClause(db.type, 't')
   const campaignNotDeleted = taskNotDeletedClause(db.type, 'c')
 
-  const whereParts = [
-    `t.status IN ('pending', 'running')`,
-    taskNotDeleted,
-  ]
+  const whereParts = [`t.status IN ('pending', 'running')`, taskNotDeleted]
   const queryParams: Array<string | number> = []
 
   if (typeof params.userId === 'number') {
@@ -93,7 +90,8 @@ export async function pauseClickFarmTasksWithoutEnabledCampaign(params?: {
 }> {
   const db = await getDatabase()
   const dryRun = params?.dryRun === true
-  const message = params?.pauseMessage || '未检测到可用Campaign，系统自动暂停，请先发布广告后重启任务'
+  const message =
+    params?.pauseMessage || '未检测到可用Campaign，系统自动暂停，请先发布广告后重启任务'
   const taskNotDeleted = taskNotDeletedClause(db.type, 'click_farm_tasks')
   const nowSql = db.type === 'postgres' ? 'CURRENT_TIMESTAMP' : "datetime('now')"
 

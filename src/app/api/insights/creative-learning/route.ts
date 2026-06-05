@@ -8,7 +8,7 @@ import { verifyAuth } from '@/lib/auth'
 import {
   queryHighPerformingCreatives,
   analyzeSuccessFeatures,
-  type SuccessFeatures
+  type SuccessFeatures,
 } from '@/lib/creative-learning'
 import { toNumber } from '@/lib/utils'
 
@@ -19,10 +19,7 @@ export async function GET(request: NextRequest) {
     // 验证用户身份
     const auth = await verifyAuth(request)
     if (!auth) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // 获取查询参数
@@ -44,7 +41,7 @@ export async function GET(request: NextRequest) {
         hasData: false,
         message: '暂无足够的高表现创意数据（需要至少5个CTR > 3%的创意）',
         features: null,
-        sampleCreatives: []
+        sampleCreatives: [],
       })
     }
 
@@ -61,8 +58,8 @@ export async function GET(request: NextRequest) {
       performance: {
         clicks: c.clicks,
         impressions: c.impressions,
-        conversions: c.conversions
-      }
+        conversions: c.conversions,
+      },
     }))
 
     return NextResponse.json({
@@ -73,16 +70,12 @@ export async function GET(request: NextRequest) {
       criteria: {
         minCtr,
         minClicks,
-        limit
-      }
+        limit,
+      },
     })
-
   } catch (error) {
     console.error('Creative learning insights error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -98,8 +91,8 @@ function formatFeatures(features: SuccessFeatures) {
       characteristics: {
         usesNumbers: `${parseFloat((toNumber(features.headlinePatterns.usesNumbers) * 100).toFixed(0))}%的标题使用数字`,
         usesQuestions: `${parseFloat((toNumber(features.headlinePatterns.usesQuestions) * 100).toFixed(0))}%的标题使用疑问句`,
-        usesAction: `${parseFloat((toNumber(features.headlinePatterns.usesAction) * 100).toFixed(0))}%的标题包含行动词汇`
-      }
+        usesAction: `${parseFloat((toNumber(features.headlinePatterns.usesAction) * 100).toFixed(0))}%的标题包含行动词汇`,
+      },
     },
     descriptions: {
       avgLength: features.descriptionPatterns.avgLength,
@@ -107,24 +100,24 @@ function formatFeatures(features: SuccessFeatures) {
       topPhrases: features.descriptionPatterns.commonPhrases.slice(0, 5),
       characteristics: {
         mentionsBenefit: `${parseFloat((toNumber(features.descriptionPatterns.mentionsBenefit) * 100).toFixed(0))}%的描述强调好处`,
-        mentionsUrgency: `${parseFloat((toNumber(features.descriptionPatterns.mentionsUrgency) * 100).toFixed(0))}%的描述包含紧迫性词汇`
-      }
+        mentionsUrgency: `${parseFloat((toNumber(features.descriptionPatterns.mentionsUrgency) * 100).toFixed(0))}%的描述包含紧迫性词汇`,
+      },
     },
     callToAction: {
       topCtas: features.ctaPatterns.commonCtas,
-      preferredPosition: features.ctaPatterns.avgPosition
+      preferredPosition: features.ctaPatterns.avgPosition,
     },
     style: {
       toneOfVoice: features.stylePatterns.toneOfVoice,
-      emotionalAppeal: features.stylePatterns.emotionalAppeal
+      emotionalAppeal: features.stylePatterns.emotionalAppeal,
     },
     benchmarks: {
       avgCtr: `${parseFloat((toNumber(features.benchmarks.avgCtr) * 100).toFixed(2))}%`,
       avgConversionRate: `${parseFloat((toNumber(features.benchmarks.avgConversionRate) * 100).toFixed(2))}%`,
       minCtr: `${parseFloat((toNumber(features.benchmarks.minCtr) * 100).toFixed(2))}%`,
-      minConversionRate: `${parseFloat((toNumber(features.benchmarks.minConversionRate) * 100).toFixed(2))}%`
+      minConversionRate: `${parseFloat((toNumber(features.benchmarks.minConversionRate) * 100).toFixed(2))}%`,
     },
-    recommendations: generateRecommendations(features)
+    recommendations: generateRecommendations(features),
   }
 }
 

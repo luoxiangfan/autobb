@@ -44,7 +44,7 @@ export function OfferExtractionModeField({
         </label>
         <select
           id={id}
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
           value={value}
           onChange={(e) => onChange(e.target.value as OfferExtractionMode)}
         >
@@ -54,10 +54,8 @@ export function OfferExtractionModeField({
             </option>
           ))}
         </select>
-        <p className={descriptionClassName}>
-          {OFFER_EXTRACTION_MODE_DESCRIPTIONS[value]}
-        </p>
-        </div>
+        <p className={descriptionClassName}>{OFFER_EXTRACTION_MODE_DESCRIPTIONS[value]}</p>
+      </div>
     )
   }
 

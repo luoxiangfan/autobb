@@ -7,7 +7,8 @@ import { invalidateDashboardCache } from '@/lib/api-cache'
  * PUT /api/campaigns/:id/status-category
  * 更新广告系列状态分类（待定/观察/合格）
  */
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 
@@ -24,7 +25,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const validStatusCategories = ['pending', 'watching', 'qualified']
     if (!statusCategory || !validStatusCategories.includes(statusCategory)) {
       return NextResponse.json(
-        { 
+        {
           error: '无效的状态值',
           message: '状态值必须是 pending、watching 或 qualified',
           validValues: validStatusCategories,

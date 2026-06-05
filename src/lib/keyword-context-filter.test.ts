@@ -12,4 +12,3 @@ describe('getMinContextTokenMatchesForKeywordQualityFilter', () => {
     expect(getMinContextTokenMatchesForKeywordQualityFilter({ pageType: null })).toBe(1)
   })
 })
-

@@ -1,6 +1,17 @@
 import { getDatabase } from './db'
-import { generateOfferName, getTargetLanguage, isOfferNameUnique, normalizeBrandName, normalizeOfferTargetCountry, validateBrandName } from './offer-utils'
-import { generatePricingJSON, initializePromotionsJSON, initializeScrapedDataJSON } from './pricing-utils'
+import {
+  generateOfferName,
+  getTargetLanguage,
+  isOfferNameUnique,
+  normalizeBrandName,
+  normalizeOfferTargetCountry,
+  validateBrandName,
+} from './offer-utils'
+import {
+  generatePricingJSON,
+  initializePromotionsJSON,
+  initializeScrapedDataJSON,
+} from './pricing-utils'
 import { compactCategoryLabel, deriveCategoryFromScrapedData } from './offer-category'
 import { deriveBrandFromProductTitle, isLikelyInvalidBrandName } from './brand-name-utils'
 import {
@@ -10,7 +21,7 @@ import {
 import {
   markUrlSwapTargetsRemovedByOfferAccount,
   markUrlSwapTargetsRemovedByOfferId,
-  pauseUrlSwapTargetsByOfferId
+  pauseUrlSwapTargetsByOfferId,
 } from './url-swap'
 import { applyCampaignTransition, applyCampaignTransitionByIds } from './campaign-state-machine'
 import { offerOccupyingCampaignIdSubquerySql } from './campaign-offer-constraint'
@@ -27,13 +38,13 @@ export interface Offer {
   user_id: number
   url: string
   brand: string
-  product_name: string | null  // 产品名称（数据库字段，之前遗漏）
+  product_name: string | null // 产品名称（数据库字段，之前遗漏）
   category: string | null
   target_country: string
   target_language: string | null
   offer_name: string | null
   affiliate_link: string | null
-  store_product_links: string | null  // 店铺模式：最多3个单品推广链接（JSON）
+  store_product_links: string | null // 店铺模式：最多3个单品推广链接（JSON）
   brand_description: string | null
   unique_selling_points: string | null
   product_highlights: string | null
@@ -53,7 +64,7 @@ export interface Offer {
   scraped_at: string | null
   // 注意：PostgreSQL 返回 boolean，SQLite 返回 number (0/1)
   is_active: number | boolean
-  industry_code: string | null  // 行业代码（数据库字段，之前遗漏）
+  industry_code: string | null // 行业代码（数据库字段，之前遗漏）
   google_ads_campaign_id: string | null
   sync_source: string | null
   needs_completion: boolean | number
@@ -62,9 +73,9 @@ export interface Offer {
   competitor_analysis: string | null
   visual_analysis: string | null
   // Intent-driven optimization: 从review_analysis自动提取的场景数据
-  user_scenarios: string | null  // JSON: [{scenario, frequency, keywords, source}]
-  pain_points: string | null     // JSON: [string]
-  user_questions: string | null  // JSON: [{question, priority, category}]
+  user_scenarios: string | null // JSON: [{scenario, frequency, keywords, source}]
+  pain_points: string | null // JSON: [string]
+  user_questions: string | null // JSON: [{question, priority, category}]
   scenario_analyzed_at: string | null
   // 需求34: 广告元素提取结果字段
   extracted_keywords: string | null
@@ -74,20 +85,20 @@ export interface Offer {
   extracted_at: string | null
   created_at: string
   updated_at: string
-  deleted_at: string | null  // 软删除时间戳（数据库字段，之前遗漏）
-  is_deleted: number  // 软删除标记（数据库字段，之前遗漏）
+  deleted_at: string | null // 软删除时间戳（数据库字段，之前遗漏）
+  is_deleted: number // 软删除标记（数据库字段，之前遗漏）
   // 增强数据字段（JSON格式存储）
   // ❌ 已删除冗余字段（2025-12-04）: pricing (与scraped_data重复)
-  promotions: string | null  // 促销信息JSON
-  scraped_data: string | null  // 原始爬虫数据（包含discount, salesRank, badge, reviews等所有字段）
+  promotions: string | null // 促销信息JSON
+  scraped_data: string | null // 原始爬虫数据（包含discount, salesRank, badge, reviews等所有字段）
   // 🎯 AI分析结果字段（数据库同步）
-  ai_keywords: string | null  // AI生成的关键词JSON（从competitor_analysis等提取）
-  ai_reviews: string | null  // AI分析的评论总结
-  ai_competitive_edges: string | null  // AI分析的竞争优势
-  ai_analysis_v32: string | null  // 新版AI分析结果JSON（v3.2架构）
-  page_type: string | null  // 页面类型：'product' | 'store'
-  extraction_mode: string | null  // 提取模式：fast | balanced | original
-  generated_buckets: string | null  // 🆕 v4.16: 已生成的创意类型列表（JSON数组）
+  ai_keywords: string | null // AI生成的关键词JSON（从competitor_analysis等提取）
+  ai_reviews: string | null // AI分析的评论总结
+  ai_competitive_edges: string | null // AI分析的竞争优势
+  ai_analysis_v32: string | null // 新版AI分析结果JSON（v3.2架构）
+  page_type: string | null // 页面类型：'product' | 'store'
+  extraction_mode: string | null // 提取模式：fast | balanced | original
+  generated_buckets: string | null // 🆕 v4.16: 已生成的创意类型列表（JSON数组）
   // P1-11: 关联的Google Ads账号信息（运行时计算字段，非数据库字段）
   // 🔧 修复(2025-12-11): snake_case → camelCase
   linked_accounts?: Array<{
@@ -148,7 +159,7 @@ export interface CreateOfferInput {
   target_country: string
   target_language?: string // 目标语言（如English, Spanish等）
   affiliate_link?: string
-  store_product_links?: string  // JSON string array
+  store_product_links?: string // JSON string array
   brand_description?: string
   unique_selling_points?: string
   product_highlights?: string
@@ -253,7 +264,10 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
     console.log('[DEBUG] targetLanguage type:', typeof targetLanguage)
   }
 
-  const normalizedProductPrice = normalizeOfferProductPriceInput(input.product_price, normalizedTargetCountry)
+  const normalizedProductPrice = normalizeOfferProductPriceInput(
+    input.product_price,
+    normalizedTargetCountry
+  )
   const normalizedCommission = normalizeOfferCommissionInput({
     targetCountry: normalizedTargetCountry,
     commissionType: input.commission_type,
@@ -284,22 +298,22 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
     input.unique_selling_points || null,
     input.product_highlights || null,
     input.target_audience || null,
-    input.final_url || null,  // 解析后的最终URL
-    input.final_url_suffix ?? null,  // URL查询参数后缀
+    input.final_url || null, // 解析后的最终URL
+    input.final_url_suffix ?? null, // URL查询参数后缀
     extractAsinFromOfferUrls(input.url, input.final_url || null),
-    offerName,  // 自动生成
-    targetLanguage,  // 自动生成
-    normalizedProductPrice || null,  // 需求28
-    normalizedCommission.commissionPayout || null,  // 需求28（兼容字段）
+    offerName, // 自动生成
+    targetLanguage, // 自动生成
+    normalizedProductPrice || null, // 需求28
+    normalizedCommission.commissionPayout || null, // 需求28（兼容字段）
     normalizedCommission.commissionType || null,
     normalizedCommission.commissionValue || null,
     normalizedCommission.commissionCurrency || null,
     // 🔥 2025-12-16修复：添加product_name字段
     input.product_name || null,
     // 自动生成的JSON字段
-    pricingJSON,      // 从product_price解析
-    promotionsJSON,   // 初始化空结构
-    scrapedDataJSON,  // 包含price信息的初始结构
+    pricingJSON, // 从product_price解析
+    promotionsJSON, // 初始化空结构
+    scrapedDataJSON, // 包含price信息的初始结构
     // AI分析结果字段
     input.review_analysis || null,
     input.competitor_analysis || null,
@@ -308,23 +322,34 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
     input.extracted_descriptions || null,
     input.extraction_metadata || null,
     // P1-3修复: 如果有任何AI分析或广告元素提取结果，记录提取时间
-    (input.review_analysis || input.competitor_analysis || input.extracted_keywords || input.extracted_headlines || input.extracted_descriptions) ? new Date().toISOString() : null,
+    input.review_analysis ||
+    input.competitor_analysis ||
+    input.extracted_keywords ||
+    input.extracted_headlines ||
+    input.extracted_descriptions
+      ? new Date().toISOString()
+      : null,
     // 🔥 页面类型标识（店铺/单品）
-    input.page_type || 'product',  // 默认为'product'
+    input.page_type || 'product', // 默认为'product'
     normalizeOfferExtractionMode(input.extraction_mode),
   ]
 
   // Debug: Check for undefined values
   if (db.type === 'postgres') {
-    const undefinedIndices = params.map((p, i) => p === undefined ? i : -1).filter(i => i !== -1)
+    const undefinedIndices = params
+      .map((p, i) => (p === undefined ? i : -1))
+      .filter((i) => i !== -1)
     if (undefinedIndices.length > 0) {
       console.error('❌ Found undefined parameters at indices:', undefinedIndices)
       console.error('Parameters:', params)
-      throw new Error(`Cannot insert with undefined values at indices: ${undefinedIndices.join(', ')}`)
+      throw new Error(
+        `Cannot insert with undefined values at indices: ${undefinedIndices.join(', ')}`
+      )
     }
   }
 
-  const result = await db.exec(`
+  const result = await db.exec(
+    `
     INSERT INTO offers (
       user_id, url, brand, category, target_country, affiliate_link, store_product_links,
       brand_description, unique_selling_points, product_highlights,
@@ -338,7 +363,9 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
       page_type,
       extraction_mode
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, params)
+  `,
+    params
+  )
 
   // 🔧 修复(2025-12-30): PostgreSQL 使用 RETURNING id，SQLite 使用 lastInsertRowid
   let insertedId: number
@@ -379,14 +406,18 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
 export async function findOfferById(id: number, userId: number): Promise<Offer | null> {
   const db = await getDatabase()
   const db_type = db.type
-  const deletedCondition = db_type === 'postgres'
-    ? "(is_deleted IS NULL OR is_deleted::text IN ('0', 'f', 'false'))"
-    : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const deletedCondition =
+    db_type === 'postgres'
+      ? "(is_deleted IS NULL OR is_deleted::text IN ('0', 'f', 'false'))"
+      : '(is_deleted = 0 OR is_deleted IS NULL)'
 
-  const offer = await db.queryOne(`
+  const offer = (await db.queryOne(
+    `
     SELECT * FROM offers
     WHERE id = ? AND user_id = ? AND ${deletedCondition}
-  `, [id, userId]) as Offer | undefined
+  `,
+    [id, userId]
+  )) as Offer | undefined
   return offer || null
 }
 
@@ -467,7 +498,14 @@ export async function listOffers(
           OR o.category ${likeOperator} ?
         )`
       )
-      params.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern)
+      params.push(
+        searchPattern,
+        searchPattern,
+        searchPattern,
+        searchPattern,
+        searchPattern,
+        searchPattern
+      )
     }
   }
 
@@ -491,7 +529,7 @@ export async function listOffers(
 
   // 获取总数
   const countQuery = `SELECT COUNT(*) as count FROM offers o WHERE ${whereClause}`
-  const { count } = await db.queryOne(countQuery, params) as { count: number }
+  const { count } = (await db.queryOne(countQuery, params)) as { count: number }
 
   // 获取列表
   const listColumns = [
@@ -526,7 +564,11 @@ export async function listOffers(
     'o.needs_completion',
   ].join(', ')
 
-  const occupyingCampaignIdSubquery = offerOccupyingCampaignIdSubquerySql(db.type, 'o.id', 'o.user_id')
+  const occupyingCampaignIdSubquery = offerOccupyingCampaignIdSubquerySql(
+    db.type,
+    'o.id',
+    'o.user_id'
+  )
   const listColumnsWithCampaign = `${listColumns}, ${occupyingCampaignIdSubquery} as campaign_id`
 
   const sortableColumnMap: Record<string, string> = {
@@ -540,9 +582,10 @@ export async function listOffers(
     updatedAt: 'o.updated_at',
   }
 
-  const sortColumn = options?.sortBy && sortableColumnMap[options.sortBy]
-    ? sortableColumnMap[options.sortBy]
-    : 'o.created_at'
+  const sortColumn =
+    options?.sortBy && sortableColumnMap[options.sortBy]
+      ? sortableColumnMap[options.sortBy]
+      : 'o.created_at'
   const sortOrder = options?.sortOrder === 'asc' ? 'ASC' : 'DESC'
   let listQuery = `SELECT ${listColumnsWithCampaign} FROM offers o WHERE ${whereClause} ORDER BY ${sortColumn} ${sortOrder}, o.id DESC`
 
@@ -554,7 +597,7 @@ export async function listOffers(
     listQuery += ` OFFSET ${options.offset}`
   }
 
-  const offers = await db.query(listQuery, params) as OfferListRow[]
+  const offers = (await db.query(listQuery, params)) as OfferListRow[]
 
   // ⚡ P0性能优化: 使用单次JOIN查询关联账号，避免N+1查询问题
   // 为每个offer查询关联的Google Ads账号信息
@@ -567,18 +610,19 @@ export async function listOffers(
 
   // 🔧 PostgreSQL兼容性修复: is_manager_account在PostgreSQL中是BOOLEAN类型
   // 使用SQL类型转换确保兼容性，而不是在参数中传递类型不匹配的值
-  const isManagerCondition = db.type === 'postgres'
-    ? "(gaa.is_manager_account IS NULL OR gaa.is_manager_account::text IN ('0', 'f', 'false'))"
-    : 'gaa.is_manager_account = 0'      // SQLite: 使用0
-  const isActiveAccountCondition = db.type === 'postgres'
-    ? "gaa.is_active::text IN ('1', 't', 'true')"
-    : 'gaa.is_active = 1'
-  const isNotDeletedAccountCondition = db.type === 'postgres'
-    ? "(gaa.is_deleted IS NULL OR gaa.is_deleted::text IN ('0', 'f', 'false'))"
-    : '(gaa.is_deleted = 0 OR gaa.is_deleted IS NULL)'
+  const isManagerCondition =
+    db.type === 'postgres'
+      ? "(gaa.is_manager_account IS NULL OR gaa.is_manager_account::text IN ('0', 'f', 'false'))"
+      : 'gaa.is_manager_account = 0' // SQLite: 使用0
+  const isActiveAccountCondition =
+    db.type === 'postgres' ? "gaa.is_active::text IN ('1', 't', 'true')" : 'gaa.is_active = 1'
+  const isNotDeletedAccountCondition =
+    db.type === 'postgres'
+      ? "(gaa.is_deleted IS NULL OR gaa.is_deleted::text IN ('0', 'f', 'false'))"
+      : '(gaa.is_deleted = 0 OR gaa.is_deleted IS NULL)'
 
   // 构建offer IDs的占位符
-  const offerIds = offers.map(o => o.id)
+  const offerIds = offers.map((o) => o.id)
   const placeholders = offerIds.map(() => '?').join(',')
 
   // 一次性查询所有offers的关联账号
@@ -601,7 +645,7 @@ export async function listOffers(
     ORDER BY c.offer_id, gaa.account_name
   `
 
-  const allLinkedAccounts = await db.query(linkedAccountsQuery, [...offerIds, userId]) as Array<{
+  const allLinkedAccounts = (await db.query(linkedAccountsQuery, [...offerIds, userId])) as Array<{
     offer_id: number
     account_id: number
     account_name: string | null
@@ -610,12 +654,15 @@ export async function listOffers(
 
   // 按offer_id分组关联账号
   // 🔧 修复(2025-12-11): snake_case → camelCase
-  const accountsByOfferId = new Map<number, Array<{
-    accountId: number
-    accountName: string | null
-    customerId: string
-    campaignCount: number
-  }>>()
+  const accountsByOfferId = new Map<
+    number,
+    Array<{
+      accountId: number
+      accountName: string | null
+      customerId: string
+      campaignCount: number
+    }>
+  >()
 
   for (const account of allLinkedAccounts) {
     if (!accountsByOfferId.has(account.offer_id)) {
@@ -625,15 +672,15 @@ export async function listOffers(
       accountId: account.account_id,
       accountName: account.account_name,
       customerId: account.customer_id,
-      campaignCount: 0
+      campaignCount: 0,
     })
   }
 
   // 合并关联账号到offers
-  const offersWithAccounts = offers.map(offer => ({
+  const offersWithAccounts = offers.map((offer) => ({
     ...offer,
     linked_accounts: accountsByOfferId.get(offer.id),
-    campaign_id: offer.campaign_id ?? null
+    campaign_id: offer.campaign_id ?? null,
   }))
 
   // 🔥 检查黑名单并标记风险
@@ -642,20 +689,22 @@ export async function listOffers(
     FROM offer_blacklist
     WHERE user_id = ?
   `
-  const blacklistRecords = await db.query(blacklistQuery, [userId]) as Array<{
+  const blacklistRecords = (await db.query(blacklistQuery, [userId])) as Array<{
     brand: string
     target_country: string
   }>
 
   // 构建黑名单Map（品牌+国家）
   const blacklistSet = new Set(
-    blacklistRecords.map(r => `${r.brand.toLowerCase()}_${r.target_country.toUpperCase()}`)
+    blacklistRecords.map((r) => `${r.brand.toLowerCase()}_${r.target_country.toUpperCase()}`)
   )
 
   // 标记每个offer是否在黑名单中
-  const offersWithBlacklist = offersWithAccounts.map(offer => ({
+  const offersWithBlacklist = offersWithAccounts.map((offer) => ({
     ...offer,
-    is_blacklisted: blacklistSet.has(`${offer.brand.toLowerCase()}_${offer.target_country.toUpperCase()}`)
+    is_blacklisted: blacklistSet.has(
+      `${offer.brand.toLowerCase()}_${offer.target_country.toUpperCase()}`
+    ),
   }))
 
   return {
@@ -667,7 +716,11 @@ export async function listOffers(
 /**
  * 更新Offer
  */
-export async function updateOffer(id: number, userId: number, input: UpdateOfferInput): Promise<Offer> {
+export async function updateOffer(
+  id: number,
+  userId: number,
+  input: UpdateOfferInput
+): Promise<Offer> {
   const db = await getDatabase()
   const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
 
@@ -688,8 +741,9 @@ export async function updateOffer(id: number, userId: number, input: UpdateOffer
   }
   const nextTargetCountry = normalizedInputTargetCountry ?? normalizedExistingTargetCountry
   const brandChanged = input.brand !== undefined && input.brand !== existing.brand
-  const targetCountryChanged = normalizedInputTargetCountry !== undefined
-    && normalizedInputTargetCountry !== normalizedExistingTargetCountry
+  const targetCountryChanged =
+    normalizedInputTargetCountry !== undefined &&
+    normalizedInputTargetCountry !== normalizedExistingTargetCountry
 
   // 需求：当用户手动修改 brand/target_country 时，同步更新“产品标识”offer_name（以及目标语言）
   // - offer_name 格式：品牌_国家_序号
@@ -707,7 +761,7 @@ export async function updateOffer(id: number, userId: number, input: UpdateOffer
     if (brandForName) {
       if (existing.offer_name) {
         const parts = existing.offer_name.split('_')
-        const sequenceNumber = parts.length >= 3 ? (parts[parts.length - 1] || '01') : '01'
+        const sequenceNumber = parts.length >= 3 ? parts[parts.length - 1] || '01' : '01'
         const proposedOfferName = `${brandForName}_${nextTargetCountry}_${sequenceNumber}`
         const isUnique = await isOfferNameUnique(proposedOfferName, userId, id)
         derivedOfferName = isUnique
@@ -719,21 +773,23 @@ export async function updateOffer(id: number, userId: number, input: UpdateOffer
     }
   }
 
-  const normalizedProductPrice = input.product_price !== undefined
-    ? normalizeOfferProductPriceInput(input.product_price, nextTargetCountry)
-    : undefined
-  const shouldNormalizeCommission = input.commission_payout !== undefined
-    || input.commission_type !== undefined
-    || input.commission_value !== undefined
-    || input.commission_currency !== undefined
+  const normalizedProductPrice =
+    input.product_price !== undefined
+      ? normalizeOfferProductPriceInput(input.product_price, nextTargetCountry)
+      : undefined
+  const shouldNormalizeCommission =
+    input.commission_payout !== undefined ||
+    input.commission_type !== undefined ||
+    input.commission_value !== undefined ||
+    input.commission_currency !== undefined
   const normalizedCommission = shouldNormalizeCommission
     ? normalizeOfferCommissionInput({
-      targetCountry: nextTargetCountry,
-      commissionType: input.commission_type,
-      commissionValue: input.commission_value,
-      commissionCurrency: input.commission_currency,
-      commissionPayout: input.commission_payout,
-    })
+        targetCountry: nextTargetCountry,
+        commissionType: input.commission_type,
+        commissionValue: input.commission_value,
+        commissionCurrency: input.commission_currency,
+        commissionPayout: input.commission_payout,
+      })
     : undefined
 
   // 构建UPDATE语句
@@ -1005,7 +1061,8 @@ export async function deleteOffer(
   // 获取关联的Ads账号和Campaign详情
   // 使用INNER JOIN确保只检查有效账号，忽略孤儿campaigns
   // ⚠️ 修复：忽略未成功发布到Google Ads的campaigns(google_campaign_id为空)
-  const linkedAccounts = (await db.query(`
+  const linkedAccounts = (await db.query(
+    `
     SELECT
       gaa.id as accountId,
       gaa.customer_id as customerId,
@@ -1022,18 +1079,20 @@ export async function deleteOffer(
       AND c.google_campaign_id IS NOT NULL
       AND c.google_campaign_id != ''
     ORDER BY gaa.account_name, c.created_at DESC
-  `, [id, userId])) as LinkedAccountDetail[]
+  `,
+    [id, userId]
+  )) as LinkedAccountDetail[]
 
   // 如果有关联且未开启自动解除，返回关联详情
   if (linkedAccounts.length > 0 && !autoUnlink) {
-    const accountCount = new Set(linkedAccounts.map(a => a.accountId)).size
+    const accountCount = new Set(linkedAccounts.map((a) => a.accountId)).size
     return {
       success: false,
       message: `该Offer关联了 ${accountCount} 个Ads账号，共 ${linkedAccounts.length} 个广告系列。请选择"解除关联并删除"或先手动解除关联。`,
       hasLinkedAccounts: true,
       linkedAccounts,
       accountCount,
-      campaignCount: linkedAccounts.length
+      campaignCount: linkedAccounts.length,
     }
   }
 
@@ -1043,7 +1102,8 @@ export async function deleteOffer(
     ? "c.status != 'REMOVED'"
     : "c.status = 'ENABLED'"
 
-  const campaignsToProcess = await db.query(`
+  const campaignsToProcess = (await db.query(
+    `
     SELECT
       c.id as campaignRowId,
       c.campaign_name as campaignName,
@@ -1056,7 +1116,9 @@ export async function deleteOffer(
       AND c.google_campaign_id IS NOT NULL
       AND c.google_campaign_id != ''
       AND c.google_ads_account_id IS NOT NULL
-  `, [id, userId]) as Array<{
+  `,
+    [id, userId]
+  )) as Array<{
     campaignRowId: number
     campaignName: string
     googleAdsAccountId: number
@@ -1064,21 +1126,22 @@ export async function deleteOffer(
   }>
 
   if (campaignsToProcess.length > 0) {
-    const {
-      getGoogleAdsAuthContext,
-      hasConfiguredGoogleAdsAuthFromContext,
-    } = await import('./google-ads-auth-context')
+    const { getGoogleAdsAuthContext, hasConfiguredGoogleAdsAuthFromContext } =
+      await import('./google-ads-auth-context')
     const authContext = await getGoogleAdsAuthContext(userId)
     const errors: Array<{ campaignRowId: number; message: string }> = []
 
     if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
       console.warn(`[offers] 用户 ${userId} Google Ads 认证未配置，跳过远端 Campaign 操作`)
     } else {
-      const campaignsByAccount = campaignsToProcess.reduce((acc, c) => {
-        if (!acc[c.googleAdsAccountId]) acc[c.googleAdsAccountId] = []
-        acc[c.googleAdsAccountId].push(c)
-        return acc
-      }, {} as Record<number, typeof campaignsToProcess>)
+      const campaignsByAccount = campaignsToProcess.reduce(
+        (acc, c) => {
+          if (!acc[c.googleAdsAccountId]) acc[c.googleAdsAccountId] = []
+          acc[c.googleAdsAccountId].push(c)
+          return acc
+        },
+        {} as Record<number, typeof campaignsToProcess>
+      )
 
       const campaignRowIdByGoogleId = new Map<string, number>()
 
@@ -1177,13 +1240,16 @@ export async function deleteOffer(
 
   // 自动解除所有关联
   if (autoUnlink && linkedAccounts.length > 0) {
-    const campaignsForUnlink = await db.query<{ id: number }>(`
+    const campaignsForUnlink = await db.query<{ id: number }>(
+      `
       SELECT id
       FROM campaigns
       WHERE offer_id = ?
         AND user_id = ?
         AND status != 'REMOVED'
-    `, [id, userId])
+    `,
+      [id, userId]
+    )
 
     const campaignIdsToUnlink = campaignsForUnlink
       .map((row) => Number(row.id))
@@ -1203,18 +1269,23 @@ export async function deleteOffer(
   // 🔥 需求：终止并软删除关联的补点击任务
   // 1. 停止所有运行中/待执行的补点击任务
   // 2. 软删除任务（保留历史统计数据）
-  const isDeletedCondition = db.type === 'postgres'
-    ? "(is_deleted IS NULL OR is_deleted::text IN ('0', 'f', 'false'))"
-    : 'is_deleted = 0'
-  const clickFarmTasks = await db.query<any>(`
+  const isDeletedCondition =
+    db.type === 'postgres'
+      ? "(is_deleted IS NULL OR is_deleted::text IN ('0', 'f', 'false'))"
+      : 'is_deleted = 0'
+  const clickFarmTasks = await db.query<any>(
+    `
     SELECT id, status
     FROM click_farm_tasks
     WHERE offer_id = ? AND user_id = ? AND ${isDeletedCondition}
-  `, [id, userId])
+  `,
+    [id, userId]
+  )
 
   if (clickFarmTasks.length > 0) {
     // 停止运行中/待执行的任务
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE click_farm_tasks
       SET status = CASE
         WHEN status IN ('running', 'pending', 'paused') THEN 'stopped'
@@ -1222,16 +1293,21 @@ export async function deleteOffer(
       END,
       updated_at = ${nowFunc}
       WHERE offer_id = ? AND user_id = ? AND ${isDeletedCondition}
-    `, [id, userId])
+    `,
+      [id, userId]
+    )
 
     // 软删除所有任务（保留历史统计数据）
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE click_farm_tasks
       SET is_deleted = ?,
           deleted_at = ${nowFunc},
           updated_at = ${nowFunc}
       WHERE offer_id = ? AND user_id = ?
-    `, [isDeletedTrue, id, userId])
+    `,
+      [isDeletedTrue, id, userId]
+    )
 
     try {
       const cfIds = clickFarmTasks.map((t: { id: unknown }) => String(t.id).trim()).filter(Boolean)
@@ -1246,15 +1322,19 @@ export async function deleteOffer(
 
   // 🔥 需求：禁用关联的URL Swap换链接任务
   // 当Offer删除后，换链接任务自动禁用（保留历史统计数据）
-  const urlSwapTasks = await db.query<any>(`
+  const urlSwapTasks = await db.query<any>(
+    `
     SELECT id, status
     FROM url_swap_tasks
     WHERE offer_id = ? AND user_id = ? AND ${isDeletedCondition}
-  `, [id, userId])
+  `,
+    [id, userId]
+  )
 
   if (urlSwapTasks.length > 0) {
     // 禁用所有启用/错误状态的任务
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE url_swap_tasks
       SET status = 'disabled',
           error_message = 'Offer已删除，任务自动禁用',
@@ -1262,7 +1342,9 @@ export async function deleteOffer(
       WHERE offer_id = ? AND user_id = ?
         AND ${isDeletedCondition}
         AND status != 'disabled'
-    `, [id, userId])
+    `,
+      [id, userId]
+    )
 
     await pauseUrlSwapTargetsByOfferId(id)
 
@@ -1283,14 +1365,17 @@ export async function deleteOffer(
   }
 
   // 软删除Offer（保留历史数据）
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE offers
     SET is_deleted = ?,
         deleted_at = ${nowFunc},
         is_active = ?,
         updated_at = ${nowFunc}
     WHERE id = ? AND user_id = ?
-  `, [isDeletedTrue, isActiveFalse, id, userId])
+  `,
+    [isDeletedTrue, isActiveFalse, id, userId]
+  )
 
   const campaignNoticeParts: string[] = []
   if (autoRemovedCampaignCount > 0) {
@@ -1307,7 +1392,7 @@ export async function deleteOffer(
       ? `Offer删除成功${campaignNotice}，已自动解除 ${linkedAccounts.length} 个广告系列的关联${clickFarmTasks.length > 0 ? `，已终止并删除 ${clickFarmTasks.length} 个补点击任务` : ''}${urlSwapTasks.length > 0 ? `，已禁用 ${urlSwapTasks.length} 个换链接任务` : ''}`
       : clickFarmTasks.length > 0 || urlSwapTasks.length > 0
         ? `Offer删除成功${campaignNotice}${clickFarmTasks.length > 0 ? `，已终止并删除 ${clickFarmTasks.length} 个补点击任务` : ''}${urlSwapTasks.length > 0 ? `，已禁用 ${urlSwapTasks.length} 个换链接任务` : ''}`
-        : 'Offer删除成功'
+        : 'Offer删除成功',
   }
 }
 
@@ -1329,14 +1414,17 @@ export async function unlinkOfferFromAccount(
   }
 
   // 将该Offer在该账号下的Campaigns标记为已移除
-  const linkedCampaignRows = await db.query<{ id: number }>(`
+  const linkedCampaignRows = await db.query<{ id: number }>(
+    `
     SELECT id
     FROM campaigns
     WHERE offer_id = ?
       AND google_ads_account_id = ?
       AND user_id = ?
       AND status != 'REMOVED'
-  `, [offerId, accountId, userId])
+  `,
+    [offerId, accountId, userId]
+  )
 
   const campaignIds = linkedCampaignRows
     .map((row) => Number(row.id))
@@ -1391,18 +1479,20 @@ export async function getIdleAdsAccounts(userId: number): Promise<any[]> {
   const db = await getDatabase()
 
   // 🔧 PostgreSQL兼容性修复: 布尔字段直接在SQL中比较
-  const isActiveCondition = db.type === 'postgres'
-    ? "gaa.is_active::text IN ('1', 't', 'true')"
-    : 'gaa.is_active = 1'
-  const isManagerCondition = db.type === 'postgres'
-    ? "(gaa.is_manager_account IS NULL OR gaa.is_manager_account::text IN ('0', 'f', 'false'))"
-    : 'gaa.is_manager_account = 0'
-  const isDeletedCondition = db.type === 'postgres'
-    ? "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
-    : 'o.is_deleted = 0'
+  const isActiveCondition =
+    db.type === 'postgres' ? "gaa.is_active::text IN ('1', 't', 'true')" : 'gaa.is_active = 1'
+  const isManagerCondition =
+    db.type === 'postgres'
+      ? "(gaa.is_manager_account IS NULL OR gaa.is_manager_account::text IN ('0', 'f', 'false'))"
+      : 'gaa.is_manager_account = 0'
+  const isDeletedCondition =
+    db.type === 'postgres'
+      ? "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
+      : 'o.is_deleted = 0'
 
   // 通过子查询判断账号是否闲置（没有活跃的Campaign关联）
-  return await db.query(`
+  return await db.query(
+    `
     SELECT gaa.*
     FROM google_ads_accounts gaa
     WHERE gaa.user_id = ?
@@ -1419,7 +1509,9 @@ export async function getIdleAdsAccounts(userId: number): Promise<any[]> {
           AND c.status != 'REMOVED'
       )
     ORDER BY gaa.updated_at DESC
-  `, [userId])
+  `,
+    [userId]
+  )
 }
 
 /**
@@ -1486,7 +1578,12 @@ export async function updateOfferScrapeStatus(
       if (!trimmed) return null
 
       const lower = trimmed.toLowerCase()
-      if (lower === 'null' || lower === 'null/' || lower === 'undefined' || lower.startsWith('chrome-error://')) {
+      if (
+        lower === 'null' ||
+        lower === 'null/' ||
+        lower === 'undefined' ||
+        lower.startsWith('chrome-error://')
+      ) {
         return null
       }
 
@@ -1500,7 +1597,9 @@ export async function updateOfferScrapeStatus(
       }
     }
 
-    const deriveFinalUrlFromInput = (inputUrl?: string | null): { finalUrl?: string; finalUrlSuffix?: string } => {
+    const deriveFinalUrlFromInput = (
+      inputUrl?: string | null
+    ): { finalUrl?: string; finalUrlSuffix?: string } => {
       if (!inputUrl) return {}
       try {
         const urlObj = new URL(inputUrl)
@@ -1520,8 +1619,12 @@ export async function updateOfferScrapeStatus(
       if (!scrapedData.scraped_data) return {}
       try {
         const parsed = JSON.parse(scrapedData.scraped_data)
-        const finalUrl = sanitizePersistableFinalUrl(typeof parsed?.finalUrl === 'string' ? parsed.finalUrl : undefined) || undefined
-        const finalUrlSuffix = finalUrl && typeof parsed?.finalUrlSuffix === 'string' ? parsed.finalUrlSuffix : undefined
+        const finalUrl =
+          sanitizePersistableFinalUrl(
+            typeof parsed?.finalUrl === 'string' ? parsed.finalUrl : undefined
+          ) || undefined
+        const finalUrlSuffix =
+          finalUrl && typeof parsed?.finalUrlSuffix === 'string' ? parsed.finalUrlSuffix : undefined
         return { finalUrl, finalUrlSuffix }
       } catch {
         return {}
@@ -1530,27 +1633,25 @@ export async function updateOfferScrapeStatus(
 
     const explicitFinalUrl = sanitizePersistableFinalUrl(scrapedData.final_url)
     const finalUrlForWrite =
-      explicitFinalUrl ??
-      derivedFromUrl.finalUrl ??
-      derivedFromScrapedData.finalUrl ??
-      null
+      explicitFinalUrl ?? derivedFromUrl.finalUrl ?? derivedFromScrapedData.finalUrl ?? null
     const urlForWrite = finalUrlForWrite ?? derivedFromUrl.finalUrl ?? null
     // 注意：不要用 URL 中推导出的空字符串覆盖已有 suffix。
     // 仅当显式传入、或在 scraped_data 中明确带出 suffix 时才允许写入空字符串。
-    const hasExplicitFinalUrlSuffix = scrapedData.final_url_suffix !== undefined && explicitFinalUrl !== null
+    const hasExplicitFinalUrlSuffix =
+      scrapedData.final_url_suffix !== undefined && explicitFinalUrl !== null
     const hasScrapedDataFinalUrlSuffix = derivedFromScrapedData.finalUrlSuffix !== undefined
-    const finalUrlSuffixForWriteRaw =
-      hasExplicitFinalUrlSuffix
-        ? (scrapedData.final_url_suffix ?? null)
-        : hasScrapedDataFinalUrlSuffix
-          ? (derivedFromScrapedData.finalUrlSuffix ?? null)
-          : (derivedFromUrl.finalUrlSuffix && derivedFromUrl.finalUrlSuffix.length > 0
-              ? derivedFromUrl.finalUrlSuffix
-              : null)
+    const finalUrlSuffixForWriteRaw = hasExplicitFinalUrlSuffix
+      ? (scrapedData.final_url_suffix ?? null)
+      : hasScrapedDataFinalUrlSuffix
+        ? (derivedFromScrapedData.finalUrlSuffix ?? null)
+        : derivedFromUrl.finalUrlSuffix && derivedFromUrl.finalUrlSuffix.length > 0
+          ? derivedFromUrl.finalUrlSuffix
+          : null
     const finalUrlSuffixForWrite = finalUrlForWrite ? finalUrlSuffixForWriteRaw : null
 
-    const derivedCategory = deriveCategoryFromScrapedData(scrapedData.scraped_data)
-      ?? (scrapedData.category ? compactCategoryLabel(scrapedData.category) : null)
+    const derivedCategory =
+      deriveCategoryFromScrapedData(scrapedData.scraped_data) ??
+      (scrapedData.category ? compactCategoryLabel(scrapedData.category) : null)
 
     const rawBrand = scrapedData.brand?.trim() || null
     const scrapedProductTitle = (() => {
@@ -1567,7 +1668,11 @@ export async function updateOfferScrapeStatus(
     const deriveBrandFromUrl = (inputUrl: string | null | undefined): string | null => {
       if (!inputUrl) return null
       try {
-        const hostname = new URL(inputUrl).hostname.trim().toLowerCase().replace(/\.+$/, '').replace(/^www\./i, '')
+        const hostname = new URL(inputUrl).hostname
+          .trim()
+          .toLowerCase()
+          .replace(/\.+$/, '')
+          .replace(/^www\./i, '')
         if (!hostname) return null
 
         const parts = hostname.split('.').filter(Boolean)
@@ -1577,11 +1682,14 @@ export async function updateOfferScrapeStatus(
         const sld = parts[parts.length - 2]
         const sldIsCommonSecondLevel = new Set(['co', 'com', 'net', 'org', 'gov', 'edu'])
 
-        const label = (tld.length === 2 && sldIsCommonSecondLevel.has(sld) && parts.length >= 3)
-          ? parts[parts.length - 3]
-          : sld
+        const label =
+          tld.length === 2 && sldIsCommonSecondLevel.has(sld) && parts.length >= 3
+            ? parts[parts.length - 3]
+            : sld
 
-        const normalized = String(label || '').replace(/[-_]+/g, ' ').trim()
+        const normalized = String(label || '')
+          .replace(/[-_]+/g, ' ')
+          .trim()
         return normalized ? normalizeBrandName(normalized) : null
       } catch {
         return null
@@ -1608,23 +1716,30 @@ export async function updateOfferScrapeStatus(
       }
     })()
 
-    const fallbackBrand = (urlHost && isMarketplaceHost(urlHost)) ? null : deriveBrandFromUrl(brandUrlCandidate || null)
+    const fallbackBrand =
+      urlHost && isMarketplaceHost(urlHost) ? null : deriveBrandFromUrl(brandUrlCandidate || null)
     const rawBrandForWrite = (() => {
       // Prefer a deterministic title-derived brand when the extracted label is missing or obviously wrong.
       if (!rawBrand || rawBrand === 'Unknown' || isLikelyInvalidBrandName(rawBrand)) {
-        if (titleDerivedBrand && validateBrandName(titleDerivedBrand).valid) return titleDerivedBrand
+        if (titleDerivedBrand && validateBrandName(titleDerivedBrand).valid)
+          return titleDerivedBrand
       }
       if (rawBrand && fallbackBrand && validateBrandName(fallbackBrand).valid) {
         const rawLower = rawBrand.toLowerCase()
         const fallbackLower = fallbackBrand.toLowerCase()
         // Prefer domain-derived brand when it’s a meaningful substring of the extracted label.
         // e.g. "Kaspersky España" -> "Kaspersky"
-        if (fallbackLower.length >= 3 && rawLower.includes(fallbackLower) && rawLower !== fallbackLower) {
+        if (
+          fallbackLower.length >= 3 &&
+          rawLower.includes(fallbackLower) &&
+          rawLower !== fallbackLower
+        ) {
           return fallbackBrand
         }
       }
 
-      if (rawBrand && validateBrandName(rawBrand).valid && !isLikelyInvalidBrandName(rawBrand)) return rawBrand
+      if (rawBrand && validateBrandName(rawBrand).valid && !isLikelyInvalidBrandName(rawBrand))
+        return rawBrand
       if (titleDerivedBrand && validateBrandName(titleDerivedBrand).valid) return titleDerivedBrand
       if (fallbackBrand && validateBrandName(fallbackBrand).valid) return fallbackBrand
       if (!rawBrand) return null
@@ -1632,21 +1747,31 @@ export async function updateOfferScrapeStatus(
       console.warn(`⚠️ 自动提取的品牌名不可靠或过长，已截断写入 offers.brand: "${truncated}"`)
       return truncated
     })()
-    const brandForWrite = rawBrandForWrite
-      ? normalizeBrandName(rawBrandForWrite).trim()
-      : null
+    const brandForWrite = rawBrandForWrite ? normalizeBrandName(rawBrandForWrite).trim() : null
 
     // 🔧 修复：当品牌名更新时，同步更新offer_name
     // 需要先查询当前的offer_name以提取序号
-    let currentOffer: { offer_name: string; target_country: string; url: string | null; final_url: string | null } | undefined
+    let currentOffer:
+      | { offer_name: string; target_country: string; url: string | null; final_url: string | null }
+      | undefined
     let newOfferName: string | null = null
 
     try {
-      currentOffer = await db.queryOne(`
+      currentOffer = (await db.queryOne(
+        `
         SELECT offer_name, target_country, url, final_url
         FROM offers
         WHERE id = ? AND user_id = ?
-      `, [id, userId]) as { offer_name: string; target_country: string; url: string | null; final_url: string | null } | undefined
+      `,
+        [id, userId]
+      )) as
+        | {
+            offer_name: string
+            target_country: string
+            url: string | null
+            final_url: string | null
+          }
+        | undefined
 
       newOfferName = currentOffer?.offer_name || null
 
@@ -1683,7 +1808,8 @@ export async function updateOfferScrapeStatus(
     // PostgreSQL offers表中没有这两个字段，导致UPDATE语句失败
     // reviews数据应该存储在 review_analysis 或 ai_reviews 字段
     // competitive_edges数据应该存储在 competitor_analysis 或 ai_competitive_edges 字段
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE offers
       SET scrape_status = ?,
           scraped_at = ${nowFunc},
@@ -1717,39 +1843,41 @@ export async function updateOfferScrapeStatus(
           ai_competitive_edges = COALESCE(?, ai_competitive_edges),
           updated_at = ${nowFunc}
       WHERE id = ? AND user_id = ?
-    `, [
-      status,
-      brandForWrite,
-      newOfferName,
-      urlForWrite,
-      finalUrlForWrite,
-      finalUrlSuffixForWrite,
-      asinForWrite,
-      scrapedData.product_name || null,
-      scrapedData.brand_description || null,
-      scrapedData.unique_selling_points || null,
-      scrapedData.product_highlights || null,
-      scrapedData.target_audience || null,
-      derivedCategory,
-      scrapedData.pricing || null,
-      scrapedData.promotions || null,
-      scrapedData.review_analysis || null,
-      scrapedData.competitor_analysis || null,
-      scrapedData.visual_analysis || null,
-      scrapedData.extracted_keywords || null,
-      scrapedData.extracted_headlines || null,
-      scrapedData.extracted_descriptions || null,
-      scrapedData.extraction_metadata || null,
-      scrapedData.extracted_at || null,
-      scrapedData.scraped_data || null,
-      scrapedData.product_categories || null,
-      scrapedData.page_type || null,
-      toDbJsonObjectField(scrapedData.ai_analysis_v32, db.type, null),
-      toDbJsonObjectField(scrapedData.ai_keywords, db.type, null),
-      toDbJsonObjectField(scrapedData.ai_competitive_edges, db.type, null),
-      id,
-      userId
-    ])
+    `,
+      [
+        status,
+        brandForWrite,
+        newOfferName,
+        urlForWrite,
+        finalUrlForWrite,
+        finalUrlSuffixForWrite,
+        asinForWrite,
+        scrapedData.product_name || null,
+        scrapedData.brand_description || null,
+        scrapedData.unique_selling_points || null,
+        scrapedData.product_highlights || null,
+        scrapedData.target_audience || null,
+        derivedCategory,
+        scrapedData.pricing || null,
+        scrapedData.promotions || null,
+        scrapedData.review_analysis || null,
+        scrapedData.competitor_analysis || null,
+        scrapedData.visual_analysis || null,
+        scrapedData.extracted_keywords || null,
+        scrapedData.extracted_headlines || null,
+        scrapedData.extracted_descriptions || null,
+        scrapedData.extraction_metadata || null,
+        scrapedData.extracted_at || null,
+        scrapedData.scraped_data || null,
+        scrapedData.product_categories || null,
+        scrapedData.page_type || null,
+        toDbJsonObjectField(scrapedData.ai_analysis_v32, db.type, null),
+        toDbJsonObjectField(scrapedData.ai_keywords, db.type, null),
+        toDbJsonObjectField(scrapedData.ai_competitive_edges, db.type, null),
+        id,
+        userId,
+      ]
+    )
   } else {
     // 🔧 修复: 为了兼容PostgreSQL，使用条件更新而不是CASE表达式
     // SQLite中scraped_at是TEXT，PostgreSQL中是TIMESTAMP，CASE会导致类型不匹配
@@ -1757,22 +1885,28 @@ export async function updateOfferScrapeStatus(
     const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
 
     if (status === 'completed') {
-      await db.exec(`
+      await db.exec(
+        `
         UPDATE offers
         SET scrape_status = ?,
             scrape_error = ?,
             scraped_at = ${nowFunc},
             updated_at = ${nowFunc}
         WHERE id = ? AND user_id = ?
-      `, [status, error || null, id, userId])
+      `,
+        [status, error || null, id, userId]
+      )
     } else {
-      await db.exec(`
+      await db.exec(
+        `
         UPDATE offers
         SET scrape_status = ?,
             scrape_error = ?,
             updated_at = ${nowFunc}
         WHERE id = ? AND user_id = ?
-      `, [status, error || null, id, userId])
+      `,
+        [status, error || null, id, userId]
+      )
     }
   }
 }
@@ -1781,10 +1915,7 @@ export async function updateOfferScrapeStatus(
  * 🆕 v4.16: 标记创意类型已生成
  * 将新生成的 bucket 添加到 generated_buckets 列表
  */
-export async function markBucketGenerated(
-  offerId: number,
-  bucket: string
-): Promise<void> {
+export async function markBucketGenerated(offerId: number, bucket: string): Promise<void> {
   const db = await getDatabase()
 
   // ✅ KISS优化：仅记录3个用户可见类型（A / B(含C) / D(含S)）
@@ -1800,33 +1931,34 @@ export async function markBucketGenerated(
   if (!normalizedBucket) return
 
   // 获取当前已生成的 bucket 列表
-  const offer = await db.queryOne(
-    'SELECT generated_buckets FROM offers WHERE id = ?',
-    [offerId]
-  ) as { generated_buckets: string | null } | undefined
+  const offer = (await db.queryOne('SELECT generated_buckets FROM offers WHERE id = ?', [
+    offerId,
+  ])) as { generated_buckets: string | null } | undefined
 
   let generatedBuckets: string[] = []
   if (offer?.generated_buckets) {
     try {
       const raw = JSON.parse(offer.generated_buckets) as string[]
-      generatedBuckets = raw
-        .map(normalize)
-        .filter((b: string | null): b is string => !!b)
+      generatedBuckets = raw.map(normalize).filter((b: string | null): b is string => !!b)
     } catch {
       generatedBuckets = []
     }
   }
 
   // 去重并只保留A/B/D
-  generatedBuckets = Array.from(new Set(generatedBuckets)).filter(b => ['A', 'B', 'D'].includes(b))
+  generatedBuckets = Array.from(new Set(generatedBuckets)).filter((b) =>
+    ['A', 'B', 'D'].includes(b)
+  )
 
   // 如果还没有这个 bucket，添加它
   if (!generatedBuckets.includes(normalizedBucket)) {
     generatedBuckets.push(normalizedBucket)
-    await db.exec(
-      'UPDATE offers SET generated_buckets = ? WHERE id = ?',
-      [JSON.stringify(generatedBuckets), offerId]
+    await db.exec('UPDATE offers SET generated_buckets = ? WHERE id = ?', [
+      JSON.stringify(generatedBuckets),
+      offerId,
+    ])
+    console.log(
+      `[markBucketGenerated] Offer ${offerId}: 已记录 bucket ${normalizedBucket}, 总计: ${generatedBuckets.length}/3`
     )
-    console.log(`[markBucketGenerated] Offer ${offerId}: 已记录 bucket ${normalizedBucket}, 总计: ${generatedBuckets.length}/3`)
   }
 }

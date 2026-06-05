@@ -42,7 +42,11 @@ function reportMetric(payload: Record<string, unknown>) {
   }).catch(() => {})
 }
 
-export default function WebVitalsReporter({ enabled, buildId, flagSnapshot }: WebVitalsReporterProps) {
+export default function WebVitalsReporter({
+  enabled,
+  buildId,
+  flagSnapshot,
+}: WebVitalsReporterProps) {
   const pathname = usePathname() || '/'
 
   useReportWebVitals((metric: WebVitalMetric) => {

@@ -40,11 +40,7 @@ export class ProxyHttpError extends ProxyError {
   constructor(statusCode: number, message?: string) {
     // 5xx 服务端错误应该重试，4xx 客户端错误不应重试
     const retryable = statusCode >= 500 && statusCode < 600
-    super(
-      message || `HTTP ${statusCode}`,
-      retryable,
-      `HTTP_${statusCode}`
-    )
+    super(message || `HTTP ${statusCode}`, retryable, `HTTP_${statusCode}`)
     this.name = 'ProxyHttpError'
     this.statusCode = statusCode
   }
@@ -59,7 +55,11 @@ export class ProxyFormatError extends ProxyError {
   actualContent: string
   expectedFormat: string
 
-  constructor(message: string, actualContent: string, expectedFormat: string = 'host:port:username:password') {
+  constructor(
+    message: string,
+    actualContent: string,
+    expectedFormat: string = 'host:port:username:password'
+  ) {
     // 格式错误标记为可重试，因为可能是API临时返回了错误消息
     super(message, true, 'FORMAT_ERROR')
     this.name = 'ProxyFormatError'
@@ -202,10 +202,7 @@ export function analyzeProxyError(error: any, responseContent?: string): ProxyEr
     lowerMessage.includes('invalid proxy') ||
     lowerMessage.includes('格式错误')
   ) {
-    return new ProxyFormatError(
-      errorMessage,
-      responseContent || errorMessage
-    )
+    return new ProxyFormatError(errorMessage, responseContent || errorMessage)
   }
 
   // 7. 健康检查错误

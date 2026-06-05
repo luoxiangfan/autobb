@@ -60,27 +60,30 @@ export default function DeleteOfferConfirmDialog({
   onConfirmDelete,
   removeGoogleAdsCampaigns,
   onRemoveGoogleAdsCampaignsChange,
-  deleting
+  deleting,
 }: Props) {
   // 按账号分组展示
-  const accountGroups = linkedAccounts.reduce((groups, account) => {
-    const key = account.accountId
-    if (!groups[key]) {
-      groups[key] = {
-        accountId: account.accountId,
-        customerId: account.customerId,
-        accountName: account.accountName,
-        campaigns: []
+  const accountGroups = linkedAccounts.reduce(
+    (groups, account) => {
+      const key = account.accountId
+      if (!groups[key]) {
+        groups[key] = {
+          accountId: account.accountId,
+          customerId: account.customerId,
+          accountName: account.accountName,
+          campaigns: [],
+        }
       }
-    }
-    groups[key].campaigns.push({
-      campaignId: account.campaignId,
-      campaignName: account.campaignName,
-      status: account.status,
-      createdAt: account.createdAt
-    })
-    return groups
-  }, {} as Record<number, any>)
+      groups[key].campaigns.push({
+        campaignId: account.campaignId,
+        campaignName: account.campaignName,
+        status: account.status,
+        createdAt: account.createdAt,
+      })
+      return groups
+    },
+    {} as Record<number, any>
+  )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -100,8 +103,13 @@ export default function DeleteOfferConfirmDialog({
           <AlertDescription className="text-orange-900">
             删除此Offer需要先解除所有关联的广告系列。您可以选择：
             <ul className="list-disc list-inside mt-2 space-y-1">
-              <li><strong>解除关联并删除</strong>：自动暂停该Offer在各关联Ads账号下已启用的广告系列（仅暂停该账号下关联的广告系列，避免继续花费），再将所有关联的广告系列标记为"已移除"，然后删除Offer</li>
-              <li><strong>取消</strong>：返回，手动在"关联Ads账号"列中逐个解除关联</li>
+              <li>
+                <strong>解除关联并删除</strong>
+                ：自动暂停该Offer在各关联Ads账号下已启用的广告系列（仅暂停该账号下关联的广告系列，避免继续花费），再将所有关联的广告系列标记为"已移除"，然后删除Offer
+              </li>
+              <li>
+                <strong>取消</strong>：返回，手动在"关联Ads账号"列中逐个解除关联
+              </li>
             </ul>
             <div className="mt-3 flex items-start gap-3 rounded-md border border-orange-200 bg-white p-3">
               <Checkbox
@@ -111,7 +119,10 @@ export default function DeleteOfferConfirmDialog({
                 className="mt-0.5"
               />
               <div className="flex-1">
-                <Label htmlFor="delete-remove-ads" className="text-sm font-medium cursor-pointer text-orange-900">
+                <Label
+                  htmlFor="delete-remove-ads"
+                  className="text-sm font-medium cursor-pointer text-orange-900"
+                >
                   同时在 Ads 账号中删除对应广告系列（不可恢复）
                 </Label>
                 <p className="text-xs text-orange-700 mt-1">
@@ -132,9 +143,7 @@ export default function DeleteOfferConfirmDialog({
                   <div className="font-medium">{group.accountName || '未命名账号'}</div>
                   <div className="text-sm text-gray-500 font-mono">{group.customerId}</div>
                 </div>
-                <div className="text-sm text-gray-500">
-                  {group.campaigns.length} 个广告系列
-                </div>
+                <div className="text-sm text-gray-500">{group.campaigns.length} 个广告系列</div>
               </div>
 
               <Table>
@@ -150,11 +159,15 @@ export default function DeleteOfferConfirmDialog({
                     <TableRow key={campaign.campaignId}>
                       <TableCell className="font-medium">{campaign.campaignName}</TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          campaign.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
-                          campaign.status === 'PAUSED' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                            campaign.status === 'ACTIVE'
+                              ? 'bg-green-100 text-green-800'
+                              : campaign.status === 'PAUSED'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
                           {campaign.status}
                         </span>
                       </TableCell>
@@ -170,11 +183,7 @@ export default function DeleteOfferConfirmDialog({
         </div>
 
         <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={deleting}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={deleting}>
             取消
           </Button>
           <Button

@@ -27,7 +27,13 @@ async function collectYeahPromosCookies() {
     let cookies = []
     try {
       cookies = await chrome.cookies.getAll(query)
-      console.log('[YP Debug] query:', JSON.stringify(query), '→ cookies:', cookies.length, cookies.map(c => `${c.name}=${c.value.slice(0, 8)}… (domain=${c.domain}, path=${c.path})`))
+      console.log(
+        '[YP Debug] query:',
+        JSON.stringify(query),
+        '→ cookies:',
+        cookies.length,
+        cookies.map((c) => `${c.name}=${c.value.slice(0, 8)}… (domain=${c.domain}, path=${c.path})`)
+      )
     } catch (err) {
       console.warn('[YP Debug] query:', JSON.stringify(query), '→ error:', err)
       cookies = []
@@ -36,7 +42,9 @@ async function collectYeahPromosCookies() {
     for (const cookie of cookies || []) {
       const name = String(cookie?.name || '').trim()
       const value = String(cookie?.value || '')
-      const domain = String(cookie?.domain || '').trim().toLowerCase()
+      const domain = String(cookie?.domain || '')
+        .trim()
+        .toLowerCase()
       const path = String(cookie?.path || '/')
       if (!name) continue
       const key = `${name}@@${value}@@${domain}@@${path}`
@@ -53,9 +61,15 @@ async function collectYeahPromosCookies() {
 async function getYeahPromosCookieHeader() {
   const cookies = await collectYeahPromosCookies()
   const header = normalizeCookieHeader(cookies)
-  console.log('[YP Debug] getYeahPromosCookieHeader → header length:', header.length, header ? '(has value)' : '(EMPTY)')
+  console.log(
+    '[YP Debug] getYeahPromosCookieHeader → header length:',
+    header.length,
+    header ? '(has value)' : '(EMPTY)'
+  )
   if (!header) {
-    throw new Error('未读取到 YeahPromos Cookie，请先在 yeahpromos.com 或 www.yeahpromos.com 完成登录。')
+    throw new Error(
+      '未读取到 YeahPromos Cookie，请先在 yeahpromos.com 或 www.yeahpromos.com 完成登录。'
+    )
   }
   return header
 }

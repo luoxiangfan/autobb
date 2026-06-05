@@ -42,10 +42,8 @@ function emptyGoogleAdsRemoteSummary(): GoogleAdsCampaignRemoteActionSummary {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 
@@ -105,10 +103,8 @@ export async function GET(
  * PUT /api/google-ads-accounts/:id
  * 更新Google Ads账号
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 
@@ -179,10 +175,8 @@ export async function PUT(
  * 可选参数 removeGoogleAdsCampaigns（query 或 JSON body，body 可无 Content-Type）：
  * 为 true 时，同步 best-effort 在 Google Ads 远端删除该账号下已同步的 Campaign，并在响应中返回结果
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     const { id } = params
 
@@ -217,10 +211,11 @@ export async function DELETE(
     const allDeletableCampaigns = shouldRemoveGoogleAdsCampaigns
       ? await listDeletableRemoteCampaignsForAccount(accountId, numericUserId)
       : []
-    const { selected: campaignsToRemove, truncated, maxCampaigns } = limitDeletableRemoteCampaigns(
-      allDeletableCampaigns,
-      remoteConfig.maxCampaigns
-    )
+    const {
+      selected: campaignsToRemove,
+      truncated,
+      maxCampaigns,
+    } = limitDeletableRemoteCampaigns(allDeletableCampaigns, remoteConfig.maxCampaigns)
 
     const adsAccountSnapshot = {
       id: existingAccount.id,
@@ -256,9 +251,13 @@ export async function DELETE(
             accountId,
             localDeleted: false,
             googleAds: googleAdsRemote,
-            warnings: buildDeleteAccountApiWarnings(shouldRemoveGoogleAdsCampaigns, googleAdsRemote, {
-              localDeleted: false,
-            }),
+            warnings: buildDeleteAccountApiWarnings(
+              shouldRemoveGoogleAdsCampaigns,
+              googleAdsRemote,
+              {
+                localDeleted: false,
+              }
+            ),
           },
         },
         { status: 500 }

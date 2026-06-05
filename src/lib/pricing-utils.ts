@@ -18,16 +18,16 @@ export interface ParsedPrice {
  * 货币符号到货币代码的映射
  */
 const CURRENCY_SYMBOLS: Record<string, string> = {
-  '$': 'USD',
+  $: 'USD',
   '€': 'EUR',
   '£': 'GBP',
   '¥': 'JPY',
   '₹': 'INR',
-  'A$': 'AUD',
-  'C$': 'CAD',
-  'CHF': 'CHF',
-  'kr': 'SEK',
-  'R$': 'BRL',
+  A$: 'AUD',
+  C$: 'CAD',
+  CHF: 'CHF',
+  kr: 'SEK',
+  R$: 'BRL',
 }
 
 /**
@@ -242,11 +242,13 @@ export function initializeScrapedDataJSON(productPrice?: string | null): string 
   const parsed = productPrice ? parseProductPrice(productPrice) : null
 
   return JSON.stringify({
-    price: parsed ? {
-      original: parsed.original,
-      current: parsed.current,
-      discount: parsed.discount?.label || null,
-    } : null,
+    price: parsed
+      ? {
+          original: parsed.original,
+          current: parsed.current,
+          discount: parsed.discount?.label || null,
+        }
+      : null,
     reviews: null,
     salesRank: null,
     badge: null,

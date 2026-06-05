@@ -39,7 +39,8 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    validateGoogleAdsConfigForCreativeGeneration: authFns.validateGoogleAdsConfigForCreativeGeneration,
+    validateGoogleAdsConfigForCreativeGeneration:
+      authFns.validateGoogleAdsConfigForCreativeGeneration,
   }
 })
 
@@ -77,7 +78,9 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
     vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('task-102')
 
     creativeTypeFns.normalizeCanonicalCreativeType.mockImplementation((value: unknown) => {
-      const normalized = String(value || '').trim().toLowerCase()
+      const normalized = String(value || '')
+        .trim()
+        .toLowerCase()
       if (!normalized) return null
       if (normalized === 'brand_focus' || normalized === 'brand_intent') return 'brand_intent'
       if (normalized === 'model_focus' || normalized === 'model_intent') return 'model_intent'
@@ -95,7 +98,9 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
     creativeTypeFns.deriveCanonicalCreativeType.mockImplementation((params: any) => {
       const normalizedType = creativeTypeFns.normalizeCanonicalCreativeType(params?.creativeType)
       if (normalizedType) return normalizedType
-      const bucket = String(params?.keywordBucket || '').trim().toUpperCase()
+      const bucket = String(params?.keywordBucket || '')
+        .trim()
+        .toUpperCase()
       if (bucket === 'A') return 'brand_intent'
       if (bucket === 'B' || bucket === 'C') return 'model_intent'
       if (bucket === 'D' || bucket === 'S') return 'product_intent'
@@ -115,9 +120,7 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
       ])
       .mockResolvedValueOnce([])
     dbFns.exec.mockResolvedValue(undefined)
-    keywordPoolFns.getAvailableBuckets
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce(['A'])
+    keywordPoolFns.getAvailableBuckets.mockResolvedValueOnce([]).mockResolvedValueOnce(['A'])
 
     const req = new NextRequest('http://localhost/api/offers/batch/generate-creatives-queue', {
       method: 'POST',
@@ -272,9 +275,7 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
 
   it('accepts legacy creativeType and maps to canonical bucket slot', async () => {
     dbFns.query
-      .mockResolvedValueOnce([
-        { id: 102, scrape_status: 'completed' },
-      ])
+      .mockResolvedValueOnce([{ id: 102, scrape_status: 'completed' }])
       .mockResolvedValueOnce([])
     dbFns.exec.mockResolvedValue(undefined)
     keywordPoolFns.getAvailableBuckets.mockResolvedValueOnce(['D'])
@@ -313,9 +314,7 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
 
   it('allows explicitly disabling quality-gate bypass for a batch request', async () => {
     dbFns.query
-      .mockResolvedValueOnce([
-        { id: 102, scrape_status: 'completed' },
-      ])
+      .mockResolvedValueOnce([{ id: 102, scrape_status: 'completed' }])
       .mockResolvedValueOnce([])
     dbFns.exec.mockResolvedValue(undefined)
     keywordPoolFns.getAvailableBuckets.mockResolvedValueOnce(['A'])
@@ -376,9 +375,7 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
 
   it('falls back legacy C bucket to D when model-anchor evidence is missing', async () => {
     dbFns.query
-      .mockResolvedValueOnce([
-        { id: 102, scrape_status: 'completed' },
-      ])
+      .mockResolvedValueOnce([{ id: 102, scrape_status: 'completed' }])
       .mockResolvedValueOnce([])
     dbFns.exec.mockResolvedValue(undefined)
     keywordPoolFns.getAvailableBuckets.mockResolvedValueOnce(['D'])
@@ -418,9 +415,7 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
 
   it('keeps canonical bucket B without legacy fallback when creativeType is omitted', async () => {
     dbFns.query
-      .mockResolvedValueOnce([
-        { id: 102, scrape_status: 'completed' },
-      ])
+      .mockResolvedValueOnce([{ id: 102, scrape_status: 'completed' }])
       .mockResolvedValueOnce([])
     dbFns.exec.mockResolvedValue(undefined)
     keywordPoolFns.getAvailableBuckets.mockResolvedValueOnce(['B'])
@@ -481,9 +476,7 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
 
   it('forwards fast generationMode with profile-capped maxRetries', async () => {
     dbFns.query
-      .mockResolvedValueOnce([
-        { id: 102, scrape_status: 'completed' },
-      ])
+      .mockResolvedValueOnce([{ id: 102, scrape_status: 'completed' }])
       .mockResolvedValueOnce([])
     dbFns.exec.mockResolvedValue(undefined)
     keywordPoolFns.getAvailableBuckets.mockResolvedValueOnce(['D'])
@@ -527,9 +520,7 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
 
   it('forwards balanced generationMode with profile-capped maxRetries', async () => {
     dbFns.query
-      .mockResolvedValueOnce([
-        { id: 102, scrape_status: 'completed' },
-      ])
+      .mockResolvedValueOnce([{ id: 102, scrape_status: 'completed' }])
       .mockResolvedValueOnce([])
     dbFns.exec.mockResolvedValue(undefined)
     keywordPoolFns.getAvailableBuckets.mockResolvedValueOnce(['D'])

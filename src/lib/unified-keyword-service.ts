@@ -20,17 +20,17 @@ import {
   resolveKeywordPlannerLinkedServiceAccountId,
   type KeywordPlannerPreparedSession,
 } from './google-ads-accounts-auth'
-import {
-  getKeywordIdeas,
-  type KeywordIdeasPreparedOAuth,
-} from './google-ads-keyword-planner'
+import { getKeywordIdeas, type KeywordIdeasPreparedOAuth } from './google-ads-keyword-planner'
 import { PLATFORMS, BRAND_PATTERNS, DEFAULTS } from './keyword-constants'
 import { getKeywordPlannerSiteFilterUrlForOffer } from './keyword-planner-site-filter'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { normalizeLanguageCode } from './language-country-codes'
 import { hasModelAnchorEvidence } from './creative-type'
-import { containsAsinLikeToken, extractModelIdentifierTokensFromText } from './model-anchor-evidence'
+import {
+  containsAsinLikeToken,
+  extractModelIdentifierTokensFromText,
+} from './model-anchor-evidence'
 
 export type KeywordPlannerSessionAuth = KeywordPlannerPreparedSession
 
@@ -89,10 +89,7 @@ async function getKeywordSearchVolumesWithPreparedAuth(
   linkedServiceAccountId?: string | null,
   onProgress?: (info: { message: string; current?: number; total?: number }) => Promise<void> | void
 ) {
-  const loaded = await prepareKeywordPlannerSessionAuth(
-    userId,
-    linkedServiceAccountId ?? null
-  )
+  const loaded = await prepareKeywordPlannerSessionAuth(userId, linkedServiceAccountId ?? null)
   if (!loaded.ok) {
     throw new Error(loaded.message)
   }
@@ -166,10 +163,10 @@ export interface WhitelistFilterResult<T> {
   competitorBrands: string[]
   /** 统计信息 */
   stats: {
-    brandKept: number      // 品牌词保留数
-    genericKept: number    // 通用词保留数
-    competitorFiltered: number  // 竞品词过滤数
-    misspellingFiltered?: number  // 🔥 新增(2025-12-16): 拼写错误过滤数
+    brandKept: number // 品牌词保留数
+    genericKept: number // 通用词保留数
+    competitorFiltered: number // 竞品词过滤数
+    misspellingFiltered?: number // 🔥 新增(2025-12-16): 拼写错误过滤数
   }
 }
 
@@ -281,7 +278,7 @@ export function generateBrandVariants(brand: string): string[] {
   if (normalizedBrand) {
     variants.add(normalizedBrand)
   }
-  pureBrandKeywords.forEach(keyword => variants.add(keyword))
+  pureBrandKeywords.forEach((keyword) => variants.add(keyword))
 
   // 带空格/不带空格变体
   if (brand.includes(' ')) {
@@ -315,7 +312,7 @@ export function generateBrandVariants(brand: string): string[] {
   // 常见拼写错误：末尾多加/少加字母
   // 不生成太多变体，保持简洁
 
-  const result = Array.from(variants).filter(v => v.length >= 2)
+  const result = Array.from(variants).filter((v) => v.length >= 2)
 
   console.log(`   🔤 品牌变体: ${result.join(', ')}`)
 
@@ -345,10 +342,43 @@ export interface IntentAwareSeedPool {
 }
 
 const KEYWORD_SOURCE_STOPWORDS = new Set([
-  'with', 'for', 'and', 'the', 'a', 'an', 'in', 'on', 'of', 'to', 'by', 'from',
-  'new', 'edition', 'pack', 'set', 'kit', 'bundle', 'feature', 'features',
-  'about', 'item', 'items', 'model', 'series', 'version', 'style', 'color',
-  'size', 'option', 'options', 'type', 'asin', 'sku', 'mpn', 'upc', 'ean',
+  'with',
+  'for',
+  'and',
+  'the',
+  'a',
+  'an',
+  'in',
+  'on',
+  'of',
+  'to',
+  'by',
+  'from',
+  'new',
+  'edition',
+  'pack',
+  'set',
+  'kit',
+  'bundle',
+  'feature',
+  'features',
+  'about',
+  'item',
+  'items',
+  'model',
+  'series',
+  'version',
+  'style',
+  'color',
+  'size',
+  'option',
+  'options',
+  'type',
+  'asin',
+  'sku',
+  'mpn',
+  'upc',
+  'ean',
 ])
 
 const MODEL_IDENTIFIER_FIELDS = [
@@ -368,7 +398,8 @@ const MODEL_IDENTIFIER_FIELDS = [
   'manufacturer_part_number',
 ] as const
 
-const MODEL_IDENTIFIER_DETAIL_KEY_PATTERN = /(item\s*model|model|sku|asin|mpn|part\s*number|manufacturer\s*part|item\s*#|style\s*#)/i
+const MODEL_IDENTIFIER_DETAIL_KEY_PATTERN =
+  /(item\s*model|model|sku|asin|mpn|part\s*number|manufacturer\s*part|item\s*#|style\s*#)/i
 
 function safeParseStructuredData(value: unknown): any | null {
   if (!value) return null
@@ -395,15 +426,12 @@ function normalizeSourceText(value: unknown): string {
 function pushUniqueText(target: string[], value: unknown, limit: number): void {
   const normalized = normalizeSourceText(value)
   if (!normalized) return
-  const exists = target.some(item => item.toLowerCase() === normalized.toLowerCase())
+  const exists = target.some((item) => item.toLowerCase() === normalized.toLowerCase())
   if (exists || target.length >= limit) return
   target.push(normalized)
 }
 
-function collectPrioritizedTextGroups(
-  groups: unknown[],
-  limit: number
-): string[] {
+function collectPrioritizedTextGroups(groups: unknown[], limit: number): string[] {
   const output: string[] = []
 
   for (const group of groups) {
@@ -436,7 +464,17 @@ function collectSimpleTextList(value: unknown, limit = 12): string[] {
       if (typeof item === 'string' || typeof item === 'number') {
         pushUniqueText(output, item, limit)
       } else if (item && typeof item === 'object') {
-        for (const key of ['text', 'name', 'title', 'label', 'value', 'keyword', 'scenario', 'theme', 'summary']) {
+        for (const key of [
+          'text',
+          'name',
+          'title',
+          'label',
+          'value',
+          'keyword',
+          'scenario',
+          'theme',
+          'summary',
+        ]) {
           pushUniqueText(output, (item as any)?.[key], limit)
           if (output.length >= limit) break
         }
@@ -504,8 +542,15 @@ function collectModelIdentifierTextList(scrapedData: any, limit = 10): string[] 
   }
 
   const technicalDetails = scrapedData?.technicalDetails
-  if (technicalDetails && typeof technicalDetails === 'object' && !Array.isArray(technicalDetails)) {
-    for (const [key, rawValue] of Object.entries(technicalDetails as Record<string, unknown>).slice(0, 20)) {
+  if (
+    technicalDetails &&
+    typeof technicalDetails === 'object' &&
+    !Array.isArray(technicalDetails)
+  ) {
+    for (const [key, rawValue] of Object.entries(technicalDetails as Record<string, unknown>).slice(
+      0,
+      20
+    )) {
       if (!MODEL_IDENTIFIER_DETAIL_KEY_PATTERN.test(key)) continue
       if (typeof rawValue === 'string' || typeof rawValue === 'number') {
         pushUniqueText(output, `${key} ${rawValue}`, limit)
@@ -657,13 +702,18 @@ function collectBrandAnalysisTexts(brandAnalysis: any): string[] {
 
 function stripSourceTextLabel(text: string): string {
   return text
-    .replace(/^(?:item\s+)?(?:model(?:\s+name|\s+number)?|series|version|style(?:\s+name)?|color|colour|brand(?:\s+name)?|name|number|sku|mpn|part\s+number|item\s+type\s+name|option|feature|features|use case|scenario|summary|theme)\s*[:\-]?\s*/i, '')
+    .replace(
+      /^(?:item\s+)?(?:model(?:\s+name|\s+number)?|series|version|style(?:\s+name)?|color|colour|brand(?:\s+name)?|name|number|sku|mpn|part\s+number|item\s+type\s+name|option|feature|features|use case|scenario|summary|theme)\s*[:\-]?\s*/i,
+      ''
+    )
     .replace(/\s+/g, ' ')
     .trim()
 }
 
 function isOpaqueStandaloneIdentifierToken(token: string): boolean {
-  const normalized = String(token || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+  const normalized = String(token || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
   if (!normalized) return false
 
   const extracted = extractModelIdentifierTokensFromText(normalized)
@@ -681,14 +731,12 @@ function isOpaqueStandaloneIdentifierPhrase(text: string, brandName: string): bo
   if (!normalized) return false
 
   const brandTokens = new Set(
-    normalizeGoogleAdsKeyword(brandName)
-      ?.split(/\s+/)
-      .filter(Boolean) || []
+    normalizeGoogleAdsKeyword(brandName)?.split(/\s+/).filter(Boolean) || []
   )
   const tokens = normalized
     .split(/\s+/)
     .filter(Boolean)
-    .filter(token => !brandTokens.has(token))
+    .filter((token) => !brandTokens.has(token))
 
   return tokens.length === 1 && isOpaqueStandaloneIdentifierToken(tokens[0])
 }
@@ -698,20 +746,18 @@ function buildBrandedPhraseSeed(text: string, brandName: string, maxTokens = 4):
   if (!normalized) return null
 
   const brandTokenSet = new Set(
-    normalizeGoogleAdsKeyword(brandName)
-      ?.split(/\s+/)
-      .filter(Boolean) || []
+    normalizeGoogleAdsKeyword(brandName)?.split(/\s+/).filter(Boolean) || []
   )
   const tokens = normalized
     .split(/\s+/)
     .filter(Boolean)
-    .filter(token => token.length >= 3 || /\d/.test(token))
-    .filter(token => !brandTokenSet.has(token))
-    .filter(token => !KEYWORD_SOURCE_STOPWORDS.has(token))
-    .filter(token => !/^\d+$/.test(token))
+    .filter((token) => token.length >= 3 || /\d/.test(token))
+    .filter((token) => !brandTokenSet.has(token))
+    .filter((token) => !KEYWORD_SOURCE_STOPWORDS.has(token))
+    .filter((token) => !/^\d+$/.test(token))
 
   if (tokens.length === 0) return null
-  if (!tokens.some(token => /[a-z]/i.test(token))) return null
+  if (!tokens.some((token) => /[a-z]/i.test(token))) return null
 
   const seed = `${brandName} ${tokens.slice(0, maxTokens).join(' ')}`.trim()
   const wordCount = seed.split(/\s+/).length
@@ -745,7 +791,7 @@ function extractSourceKeywordsFromTexts(params: {
   const seeds = new Set<string>()
 
   for (const text of params.texts) {
-    extractFeatureSeeds(text, params.brandName).forEach(seed => pushUniqueSeed(seeds, seed))
+    extractFeatureSeeds(text, params.brandName).forEach((seed) => pushUniqueSeed(seeds, seed))
 
     if (params.includeEvidencePhrases) {
       extractEvidenceScenarioSeedsFromText(text, params.brandName).forEach((scenarioSeed) => {
@@ -755,9 +801,9 @@ function extractSourceKeywordsFromTexts(params: {
 
     if (params.allowModelAnchors && hasModelAnchorEvidence({ keywords: [text] })) {
       extractProductLineSeeds(`${params.brandName} ${stripSourceTextLabel(text)}`, params.brandName)
-        .filter(seed => !isOpaqueStandaloneIdentifierPhrase(seed, params.brandName))
-        .filter(seed => hasModelAnchorEvidence({ keywords: [seed] }))
-        .forEach(seed => pushUniqueSeed(seeds, seed))
+        .filter((seed) => !isOpaqueStandaloneIdentifierPhrase(seed, params.brandName))
+        .filter((seed) => hasModelAnchorEvidence({ keywords: [seed] }))
+        .forEach((seed) => pushUniqueSeed(seeds, seed))
     }
 
     if (params.includePhraseFallback) {
@@ -786,56 +832,73 @@ export function extractVerifiedKeywordSourcePool(offer: OfferData): VerifiedKeyw
     }
   }
 
-  const titleTexts = Array.from(new Set([
-    normalizeSourceText(offer.productTitle),
-    normalizeSourceText(scrapedData?.rawProductTitle),
-    normalizeSourceText(scrapedData?.productName),
-    normalizeSourceText(scrapedData?.title),
-  ].filter(Boolean))).slice(0, 8)
+  const titleTexts = Array.from(
+    new Set(
+      [
+        normalizeSourceText(offer.productTitle),
+        normalizeSourceText(scrapedData?.rawProductTitle),
+        normalizeSourceText(scrapedData?.productName),
+        normalizeSourceText(scrapedData?.title),
+      ].filter(Boolean)
+    )
+  ).slice(0, 8)
 
-  const aboutTexts = collectPrioritizedTextGroups([
-    normalizeSourceText(offer.productFeatures),
-    collectSimpleTextList(scrapedData?.rawAboutThisItem),
-    collectSimpleTextList(scrapedData?.aboutThisItem),
-    collectSimpleTextList(scrapedData?.features),
-    collectSimpleTextList(scrapedData?.highlights),
-    collectSimpleTextList(scrapedData?.productHighlights),
-    collectProductFeatureTextList(scrapedData?.supplementalProducts),
-    collectProductFeatureTextList(scrapedData?.deepScrapeResults?.topProducts),
-    collectProductFeatureTextList(brandAnalysis?.hotProducts),
-    collectProductFeatureTextList(scrapedData?.products),
-  ], 12)
+  const aboutTexts = collectPrioritizedTextGroups(
+    [
+      normalizeSourceText(offer.productFeatures),
+      collectSimpleTextList(scrapedData?.rawAboutThisItem),
+      collectSimpleTextList(scrapedData?.aboutThisItem),
+      collectSimpleTextList(scrapedData?.features),
+      collectSimpleTextList(scrapedData?.highlights),
+      collectSimpleTextList(scrapedData?.productHighlights),
+      collectProductFeatureTextList(scrapedData?.supplementalProducts),
+      collectProductFeatureTextList(scrapedData?.deepScrapeResults?.topProducts),
+      collectProductFeatureTextList(brandAnalysis?.hotProducts),
+      collectProductFeatureTextList(scrapedData?.products),
+    ],
+    12
+  )
 
-  const paramTexts = collectPrioritizedTextGroups([
-    collectRecordTextList(scrapedData?.specifications),
-    collectRecordTextList(scrapedData?.specs),
-    collectRecordTextList(scrapedData?.attributes),
-    collectRecordTextList(scrapedData?.technicalDetails),
-    collectModelIdentifierTextList(scrapedData, 8),
-    collectVariantTextList(scrapedData?.variants),
-    collectVariantTextList(scrapedData?.productVariants),
-    collectVariantTextList(scrapedData?.options),
-    collectProductParamTextList(scrapedData?.supplementalProducts),
-    collectProductParamTextList(scrapedData?.deepScrapeResults?.topProducts),
-    collectProductParamTextList(brandAnalysis?.hotProducts),
-    collectProductParamTextList(scrapedData?.products),
-  ], 12)
+  const paramTexts = collectPrioritizedTextGroups(
+    [
+      collectRecordTextList(scrapedData?.specifications),
+      collectRecordTextList(scrapedData?.specs),
+      collectRecordTextList(scrapedData?.attributes),
+      collectRecordTextList(scrapedData?.technicalDetails),
+      collectModelIdentifierTextList(scrapedData, 8),
+      collectVariantTextList(scrapedData?.variants),
+      collectVariantTextList(scrapedData?.productVariants),
+      collectVariantTextList(scrapedData?.options),
+      collectProductParamTextList(scrapedData?.supplementalProducts),
+      collectProductParamTextList(scrapedData?.deepScrapeResults?.topProducts),
+      collectProductParamTextList(brandAnalysis?.hotProducts),
+      collectProductParamTextList(scrapedData?.products),
+    ],
+    12
+  )
 
-  const pageTexts = Array.from(new Set([
-    ...collectReviewAnalysisTexts(reviewAnalysis),
-    ...collectBrandAnalysisTexts(brandAnalysis),
-  ].filter(Boolean))).slice(0, 12)
+  const pageTexts = Array.from(
+    new Set(
+      [
+        ...collectReviewAnalysisTexts(reviewAnalysis),
+        ...collectBrandAnalysisTexts(brandAnalysis),
+      ].filter(Boolean)
+    )
+  ).slice(0, 12)
 
-  const hotProductNames = collectPrioritizedTextGroups([
-    (offer.storeProductNames || [])
-      .map(item => normalizeSourceText(item))
-      .filter(Boolean)
-      .filter(item => !isLikelyUrlText(item)),
-    collectProductNameList(scrapedData?.supplementalProducts),
-    collectProductNameList(scrapedData?.deepScrapeResults?.topProducts),
-    collectProductNameList(brandAnalysis?.hotProducts),
-    collectProductNameList(scrapedData?.products),
-  ], 10)
+  const hotProductNames = collectPrioritizedTextGroups(
+    [
+      (offer.storeProductNames || [])
+        .map((item) => normalizeSourceText(item))
+        .filter(Boolean)
+        .filter((item) => !isLikelyUrlText(item)),
+      collectProductNameList(scrapedData?.supplementalProducts),
+      collectProductNameList(scrapedData?.deepScrapeResults?.topProducts),
+      collectProductNameList(brandAnalysis?.hotProducts),
+      collectProductNameList(scrapedData?.products),
+    ],
+    10
+  )
 
   const evidenceTerms = new Set<string>()
   const titleKeywords = new Set<string>()
@@ -846,7 +909,7 @@ export function extractVerifiedKeywordSourcePool(offer: OfferData): VerifiedKeyw
       ...extractKeywordsFromProductTitle(text, brandName),
       ...extractProductLineSeeds(text, brandName),
     ]
-    extracted.forEach(seed => pushUniqueSeed(titleKeywords, seed))
+    extracted.forEach((seed) => pushUniqueSeed(titleKeywords, seed))
     addEvidenceTerms(evidenceTerms, extracted)
   }
 
@@ -871,14 +934,16 @@ export function extractVerifiedKeywordSourcePool(offer: OfferData): VerifiedKeyw
       ...extractKeywordsFromProductTitle(productName, brandName),
       ...extractProductLineSeeds(productName, brandName),
     ]
-    extracted.forEach(seed => pushUniqueSeed(hotProductKeywords, seed))
+    extracted.forEach((seed) => pushUniqueSeed(hotProductKeywords, seed))
     addEvidenceTerms(evidenceTerms, extracted)
   }
 
-  aggregateStoreProductSeeds(hotProductNames, brandName)
-    .forEach(seed => pushUniqueSeed(hotProductKeywords, seed))
-  aggregateStoreProductLineSeeds(hotProductNames, brandName, evidenceTerms)
-    .forEach(seed => pushUniqueSeed(hotProductKeywords, seed))
+  aggregateStoreProductSeeds(hotProductNames, brandName).forEach((seed) =>
+    pushUniqueSeed(hotProductKeywords, seed)
+  )
+  aggregateStoreProductLineSeeds(hotProductNames, brandName, evidenceTerms).forEach((seed) =>
+    pushUniqueSeed(hotProductKeywords, seed)
+  )
   addEvidenceTerms(evidenceTerms, hotProductKeywords)
 
   const pageKeywords = extractSourceKeywordsFromTexts({
@@ -916,7 +981,12 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
   const category = offer.category?.toLowerCase() || ''
 
   if (!brandName) {
-    return { brandOrientedSeeds: [], scenarioOrientedSeeds: [], featureOrientedSeeds: [], allSeeds: [] }
+    return {
+      brandOrientedSeeds: [],
+      scenarioOrientedSeeds: [],
+      featureOrientedSeeds: [],
+      allSeeds: [],
+    }
   }
 
   console.log('\n🎯 构建意图感知种子词池 v2.0')
@@ -932,7 +1002,7 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
 
   // A1. 品牌名变体
   const brandVariants = generateBrandVariants(brandName)
-  brandVariants.forEach(v => brandSeeds.add(v))
+  brandVariants.forEach((v) => brandSeeds.add(v))
 
   // A2. 品牌 + 品类
   if (category) {
@@ -940,18 +1010,18 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
     brandSeeds.add(`${brandName} ${categoryCore}`)
   }
 
-  verifiedSourcePool.titleKeywords.forEach(seed => brandSeeds.add(seed))
-  verifiedSourcePool.hotProductKeywords.forEach(seed => brandSeeds.add(seed))
+  verifiedSourcePool.titleKeywords.forEach((seed) => brandSeeds.add(seed))
+  verifiedSourcePool.hotProductKeywords.forEach((seed) => brandSeeds.add(seed))
   verifiedSourcePool.paramKeywords
-    .filter(seed => hasModelAnchorEvidence({ keywords: [seed] }))
-    .forEach(seed => brandSeeds.add(seed))
+    .filter((seed) => hasModelAnchorEvidence({ keywords: [seed] }))
+    .forEach((seed) => brandSeeds.add(seed))
 
   // A3. 从产品标题提取品牌+产品词
   if (offer.productTitle) {
     const titleSeeds = extractKeywordsFromProductTitle(offer.productTitle, brandName)
-    titleSeeds.forEach(s => brandSeeds.add(s))
+    titleSeeds.forEach((s) => brandSeeds.add(s))
     const productLineSeeds = extractProductLineSeeds(offer.productTitle, brandName)
-    productLineSeeds.forEach(s => brandSeeds.add(s))
+    productLineSeeds.forEach((s) => brandSeeds.add(s))
   }
 
   // A4. 从 scrapedData 提取
@@ -961,9 +1031,9 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
       const productName = scrapedData.productName || scrapedData.title
       if (productName && productName !== brandName) {
         const titleSeeds = extractKeywordsFromProductTitle(productName, brandName)
-        titleSeeds.forEach(s => brandSeeds.add(s))
+        titleSeeds.forEach((s) => brandSeeds.add(s))
         const productLineSeeds = extractProductLineSeeds(productName, brandName)
-        productLineSeeds.forEach(s => brandSeeds.add(s))
+        productLineSeeds.forEach((s) => brandSeeds.add(s))
       }
       // 店铺多商品聚合
       if (scrapedData.products && Array.isArray(scrapedData.products)) {
@@ -972,10 +1042,10 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
           .map((p: any) => p.title || p.productName || p.name)
           .filter((name: string) => name && name.length > 3)
         const storeSeeds = aggregateStoreProductSeeds(storeProductNames, brandName)
-        storeSeeds.forEach(s => brandSeeds.add(s))
+        storeSeeds.forEach((s) => brandSeeds.add(s))
         const hotProductLineSeeds = aggregateStoreProductLineSeeds(storeProductNames, brandName)
-        hotProductLineSeeds.forEach(s => brandSeeds.add(s))
-        hotProductLineSeeds.forEach(s => featureSeeds.add(s))
+        hotProductLineSeeds.forEach((s) => brandSeeds.add(s))
+        hotProductLineSeeds.forEach((s) => featureSeeds.add(s))
       }
     } catch {}
   }
@@ -993,8 +1063,9 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
   ].filter((value): value is string => Boolean(String(value || '').trim()))
 
   for (const text of scenarioEvidenceTexts) {
-    extractEvidenceScenarioSeedsFromText(text, brandName, { includeUnbranded: true })
-      .forEach(seed => scenarioSeeds.add(seed))
+    extractEvidenceScenarioSeedsFromText(text, brandName, { includeUnbranded: true }).forEach(
+      (seed) => scenarioSeeds.add(seed)
+    )
   }
 
   // B2. 最小兜底：避免场景桶完全为空
@@ -1009,12 +1080,12 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
   // C1. 仅使用证据来源词，不再拼接模板功能词
   if (offer.productFeatures) {
     const featureFromDesc = extractFeatureSeeds(offer.productFeatures, brandName)
-    featureFromDesc.forEach(s => featureSeeds.add(s))
+    featureFromDesc.forEach((s) => featureSeeds.add(s))
   }
-  verifiedSourcePool.aboutKeywords.forEach(seed => featureSeeds.add(seed))
-  verifiedSourcePool.paramKeywords.forEach(seed => featureSeeds.add(seed))
-  verifiedSourcePool.hotProductKeywords.forEach(seed => featureSeeds.add(seed))
-  verifiedSourcePool.pageKeywords.forEach(seed => featureSeeds.add(seed))
+  verifiedSourcePool.aboutKeywords.forEach((seed) => featureSeeds.add(seed))
+  verifiedSourcePool.paramKeywords.forEach((seed) => featureSeeds.add(seed))
+  verifiedSourcePool.hotProductKeywords.forEach((seed) => featureSeeds.add(seed))
+  verifiedSourcePool.pageKeywords.forEach((seed) => featureSeeds.add(seed))
   if (featureSeeds.size === 0 && category) {
     const categoryCore = String(category).split(/[\s&,]+/)[0]
     if (categoryCore) featureSeeds.add(`${brandName.toLowerCase()} ${categoryCore}`)
@@ -1024,25 +1095,25 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
   // 合并去重
   // ==========================================
   const allSeedsSet = new Set<string>()
-  brandSeeds.forEach(s => allSeedsSet.add(s.toLowerCase().trim()))
-  scenarioSeeds.forEach(s => allSeedsSet.add(s.toLowerCase().trim()))
-  featureSeeds.forEach(s => allSeedsSet.add(s.toLowerCase().trim()))
+  brandSeeds.forEach((s) => allSeedsSet.add(s.toLowerCase().trim()))
+  scenarioSeeds.forEach((s) => allSeedsSet.add(s.toLowerCase().trim()))
+  featureSeeds.forEach((s) => allSeedsSet.add(s.toLowerCase().trim()))
 
   const result: IntentAwareSeedPool = {
     brandOrientedSeeds: Array.from(brandSeeds).slice(0, 15),
     scenarioOrientedSeeds: Array.from(scenarioSeeds).slice(0, 15),
     featureOrientedSeeds: Array.from(featureSeeds).slice(0, 15),
-    allSeeds: Array.from(allSeedsSet).slice(0, 50)
+    allSeeds: Array.from(allSeedsSet).slice(0, 50),
   }
 
   // 输出统计
   console.log(`\n📊 种子词统计 (🔥 2025-12-26 扩大种子池):`)
   console.log(`   🏷️ 品牌商品锚点 (legacy 桶A): ${result.brandOrientedSeeds.length} 个`)
-  result.brandOrientedSeeds.slice(0, 5).forEach(s => console.log(`      - "${s}"`))
+  result.brandOrientedSeeds.slice(0, 5).forEach((s) => console.log(`      - "${s}"`))
   console.log(`   🏠 商品需求场景 (legacy 桶B): ${result.scenarioOrientedSeeds.length} 个`)
-  result.scenarioOrientedSeeds.slice(0, 5).forEach(s => console.log(`      - "${s}"`))
+  result.scenarioOrientedSeeds.slice(0, 5).forEach((s) => console.log(`      - "${s}"`))
   console.log(`   ⚙️ 功能规格/需求扩展 (legacy 桶C): ${result.featureOrientedSeeds.length} 个`)
-  result.featureOrientedSeeds.slice(0, 5).forEach(s => console.log(`      - "${s}"`))
+  result.featureOrientedSeeds.slice(0, 5).forEach((s) => console.log(`      - "${s}"`))
   console.log(`   📝 总计: ${result.allSeeds.length} 个去重种子词 (之前: 25)`)
 
   return result
@@ -1061,15 +1132,13 @@ function extractEvidenceScenarioSeedsFromText(
   if (!normalized) return []
 
   const brandTokens = new Set(
-    normalizeGoogleAdsKeyword(brandName)
-      ?.split(/\s+/)
-      .filter(Boolean) || []
+    normalizeGoogleAdsKeyword(brandName)?.split(/\s+/).filter(Boolean) || []
   )
 
   const seeds = new Set<string>()
   const fragments = normalized
     .split(/[;,.|/]+/)
-    .map(fragment => fragment.trim())
+    .map((fragment) => fragment.trim())
     .filter(Boolean)
 
   const pushPhrase = (phraseTokens: string[]) => {
@@ -1086,12 +1155,12 @@ function extractEvidenceScenarioSeedsFromText(
   for (const fragment of fragments) {
     const tokens = fragment
       .split(/\s+/)
-      .map(token => token.trim())
+      .map((token) => token.trim())
       .filter(Boolean)
-      .filter(token => token.length >= 3 || /\d/.test(token))
-      .filter(token => !brandTokens.has(token))
-      .filter(token => !KEYWORD_SOURCE_STOPWORDS.has(token))
-      .filter(token => !/^\d+$/.test(token))
+      .filter((token) => token.length >= 3 || /\d/.test(token))
+      .filter((token) => !brandTokens.has(token))
+      .filter((token) => !KEYWORD_SOURCE_STOPWORDS.has(token))
+      .filter((token) => !/^\d+$/.test(token))
       .slice(0, 6)
 
     pushPhrase(tokens)
@@ -1100,11 +1169,12 @@ function extractEvidenceScenarioSeedsFromText(
   if (seeds.size === 0) {
     const fallbackBranded = buildBrandedPhraseSeed(text, brandName, 4)
     if (fallbackBranded) {
-      const fallbackNormalized = normalizeGoogleAdsKeyword(fallbackBranded) || fallbackBranded.toLowerCase()
+      const fallbackNormalized =
+        normalizeGoogleAdsKeyword(fallbackBranded) || fallbackBranded.toLowerCase()
       const fallbackTokens = fallbackNormalized
         .split(/\s+/)
         .filter(Boolean)
-        .filter(token => !brandTokens.has(token))
+        .filter((token) => !brandTokens.has(token))
       pushPhrase(fallbackTokens)
     }
   }
@@ -1155,11 +1225,11 @@ async function expandWithoutKeywordPlanner(params: {
       lowTopPageBid: 0,
       highTopPageBid: 0,
       source,
-      matchType
+      matchType,
     })
   }
 
-  pureBrandKeywords.forEach(kw => addKeyword(kw, 'BRAND'))
+  pureBrandKeywords.forEach((kw) => addKeyword(kw, 'BRAND'))
 
   try {
     const { getBrandSearchSuggestions } = await import('./google-suggestions')
@@ -1172,7 +1242,7 @@ async function expandWithoutKeywordPlanner(params: {
       category: offer.category || undefined,
     })
 
-    suggestions.forEach(s => addKeyword(s.keyword, 'EXPANSION'))
+    suggestions.forEach((s) => addKeyword(s.keyword, 'EXPANSION'))
   } catch (error: any) {
     console.warn('   ⚠️ Google下拉词获取失败，跳过补充:', error.message)
   }
@@ -1199,20 +1269,23 @@ async function expandWithoutKeywordPlanner(params: {
         }
       })()
 
-      const enhanced = await extractKeywordsEnhanced({
-        productName: offer.productTitle || offer.brand,
-        brandName: offer.brand,
-        category: offer.category || '',
-        description: (scraped && (scraped.description || scraped.productDescription)) || '',
-        features,
-        useCases: [],
-        targetAudience: '',
-        competitors: [],
-        targetCountry: country,
-        targetLanguage: language,
-      }, userId)
+      const enhanced = await extractKeywordsEnhanced(
+        {
+          productName: offer.productTitle || offer.brand,
+          brandName: offer.brand,
+          category: offer.category || '',
+          description: (scraped && (scraped.description || scraped.productDescription)) || '',
+          features,
+          useCases: [],
+          targetAudience: '',
+          competitors: [],
+          targetCountry: country,
+          targetLanguage: language,
+        },
+        userId
+      )
 
-      enhanced.forEach(kw => addKeyword(kw.keyword, 'EXPANSION'))
+      enhanced.forEach((kw) => addKeyword(kw.keyword, 'EXPANSION'))
     } catch (error: any) {
       console.warn('   ⚠️ 增强提取失败，跳过补充:', error.message)
     }
@@ -1256,14 +1329,13 @@ function extractKeywordsFromProductTitle(productTitle: string, brandName: string
     .trim()
 
   // 分词并过滤
-  const words = titleWithoutBrand
-    .split(/\s+/)
-    .filter(w => {
-      const isShort = w.length < 3
-      const isSpec = /^[\d.]+[pPkKgGmMtT"']*$/.test(w) || /^\d+x\d+$/i.test(w)
-      const isCommon = /^(with|for|and|the|a|an|in|on|of|to|by|from|new|pro|plus|max|mini|lite)$/i.test(w)
-      return !isShort && !isSpec && !isCommon
-    })
+  const words = titleWithoutBrand.split(/\s+/).filter((w) => {
+    const isShort = w.length < 3
+    const isSpec = /^[\d.]+[pPkKgGmMtT"']*$/.test(w) || /^\d+x\d+$/i.test(w)
+    const isCommon =
+      /^(with|for|and|the|a|an|in|on|of|to|by|from|new|pro|plus|max|mini|lite)$/i.test(w)
+    return !isShort && !isSpec && !isCommon
+  })
 
   // 策略1: 品牌名 + 前2个核心词
   if (words.length >= 2) {
@@ -1271,9 +1343,7 @@ function extractKeywordsFromProductTitle(productTitle: string, brandName: string
   }
 
   // 策略2: 品牌名 + 单个核心产品词
-  const productTypeWords = words.filter(w =>
-    /^[A-Z][a-z]+$/.test(w) || /^[a-z]+$/.test(w)
-  )
+  const productTypeWords = words.filter((w) => /^[A-Z][a-z]+$/.test(w) || /^[a-z]+$/.test(w))
 
   for (const word of productTypeWords.slice(0, 2)) {
     const combo = `${brandName} ${word}`
@@ -1297,14 +1367,17 @@ function extractProductLineSeeds(productTitle: string, brandName: string): strin
 
   const rawTokens = titleWithoutBrand
     .split(/[\s/|,()\-–—]+/)
-    .map(token => token.trim())
+    .map((token) => token.trim())
     .filter(Boolean)
 
   const tokens = rawTokens.filter((token) => {
     if (token.length < 2) return false
     if (/^[\d.]+[pPkKgGmMtT"']*$/.test(token)) return false
     if (/^\d+x\d+$/i.test(token)) return false
-    if (/^(with|for|and|the|a|an|in|on|of|to|by|from|new|edition|pack|set|kit|bundle)$/i.test(token)) return false
+    if (
+      /^(with|for|and|the|a|an|in|on|of|to|by|from|new|edition|pack|set|kit|bundle)$/i.test(token)
+    )
+      return false
     return /[a-z]/i.test(token)
   })
 
@@ -1335,19 +1408,20 @@ function aggregateStoreProductSeeds(productNames: string[], brandName: string): 
   const phraseFrequency = new Map<string, number>()
 
   for (const productName of productNames) {
-    const nameWithoutBrand = productName
-      .replace(new RegExp(brandName, 'gi'), '')
-      .trim()
+    const nameWithoutBrand = productName.replace(new RegExp(brandName, 'gi'), '').trim()
 
-    const words = nameWithoutBrand
-      .split(/[\s\-–—,]+/)
-      .filter(w => {
-        if (w.length < 3) return false
-        if (/^[\d.]+[pPkKgGmMtThHzZ"']*$/.test(w)) return false
-        if (/^\d+x\d+$/i.test(w)) return false
-        if (/^(with|for|and|the|a|an|in|on|of|to|by|from|new|pro|plus|max|mini|lite|version|edition|series|gen|generation|pack|set|kit|bundle)$/i.test(w)) return false
-        return true
-      })
+    const words = nameWithoutBrand.split(/[\s\-–—,]+/).filter((w) => {
+      if (w.length < 3) return false
+      if (/^[\d.]+[pPkKgGmMtThHzZ"']*$/.test(w)) return false
+      if (/^\d+x\d+$/i.test(w)) return false
+      if (
+        /^(with|for|and|the|a|an|in|on|of|to|by|from|new|pro|plus|max|mini|lite|version|edition|series|gen|generation|pack|set|kit|bundle)$/i.test(
+          w
+        )
+      )
+        return false
+      return true
+    })
 
     for (const word of words) {
       const wordLower = word.toLowerCase()
@@ -1414,9 +1488,7 @@ function extractFeatureSeeds(features: string, brandName: string): string[] {
   if (!features || !brandName) return []
 
   const brandTokenSet = new Set(
-    normalizeGoogleAdsKeyword(brandName)
-      ?.split(/\s+/)
-      .filter(Boolean) || []
+    normalizeGoogleAdsKeyword(brandName)?.split(/\s+/).filter(Boolean) || []
   )
 
   const seeds = new Set<string>()
@@ -1430,10 +1502,10 @@ function extractFeatureSeeds(features: string, brandName: string): string[] {
     const tokens = feature
       .split(/\s+/)
       .filter(Boolean)
-      .filter(token => token.length >= 3 || /\d/.test(token))
-      .filter(token => !brandTokenSet.has(token))
-      .filter(token => !KEYWORD_SOURCE_STOPWORDS.has(token))
-      .filter(token => !/^\d+$/.test(token))
+      .filter((token) => token.length >= 3 || /\d/.test(token))
+      .filter((token) => !brandTokenSet.has(token))
+      .filter((token) => !KEYWORD_SOURCE_STOPWORDS.has(token))
+      .filter((token) => !/^\d+$/.test(token))
       .slice(0, 4)
 
     if (tokens.length === 0) continue
@@ -1500,9 +1572,9 @@ function generateBrandMisspellings(brandName: string): string[] {
 
   // 2. 去掉末尾字母变体 (dreame → dream)
   if (brand.length > 3) {
-    misspellings.push(brand.slice(0, -1))  // dreame → dream
-    misspellings.push(brand.slice(0, -1) + 'er')  // dreame → dreamer
-    misspellings.push(brand.slice(0, -1) + 'ers')  // dreame → dreamers
+    misspellings.push(brand.slice(0, -1)) // dreame → dream
+    misspellings.push(brand.slice(0, -1) + 'er') // dreame → dreamer
+    misspellings.push(brand.slice(0, -1) + 'ers') // dreame → dreamers
   }
 
   // 3. 常见字母替换 (a↔e, i↔y)
@@ -1511,10 +1583,10 @@ function generateBrandMisspellings(brandName: string): string[] {
     brand.replace(/a/g, 'e'),
     brand.replace(/i/g, 'y'),
     brand.replace(/y/g, 'i'),
-  ].filter(v => v !== brand)
+  ].filter((v) => v !== brand)
   misspellings.push(...variants)
 
-  return [...new Set(misspellings)]  // 去重
+  return [...new Set(misspellings)] // 去重
 }
 
 /**
@@ -1576,7 +1648,7 @@ export function filterByWhitelist<T extends { keyword: string }>(
   brandName: string
 ): WhitelistFilterResult<T> {
   const pureBrandKeywords = getPureBrandKeywords(brandName)
-  const shortBrand = pureBrandKeywords.find(kw => kw.split(/\s+/).length === 1)
+  const shortBrand = pureBrandKeywords.find((kw) => kw.split(/\s+/).length === 1)
   const normalizedBrand = normalizeGoogleAdsKeyword(brandName)
   const coreBrand = shortBrand || normalizedBrand || brandName.toLowerCase()
   const coreBrandLower = coreBrand.toLowerCase()
@@ -1584,18 +1656,21 @@ export function filterByWhitelist<T extends { keyword: string }>(
   let brandKept = 0
   let genericKept = 0
   let competitorFiltered = 0
-  let crossBrandKept = 0  // 🔥 2025-12-24: 跨品牌比较搜索保留计数
-  let misspellingFiltered = 0  // 🔥 新增：拼写错误过滤计数
+  let crossBrandKept = 0 // 🔥 2025-12-24: 跨品牌比较搜索保留计数
+  let misspellingFiltered = 0 // 🔥 新增：拼写错误过滤计数
 
   // 🆕 收集识别到的竞品品牌
   const competitorBrandsSet = new Set<string>()
 
-  const filtered = keywords.filter(kw => {
+  const filtered = keywords.filter((kw) => {
     const keywordLower = kw.keyword.toLowerCase()
 
     // 🔥 修复(2025-12-16): 先检查是否包含品牌拼写错误
     // 例如: "dreamers", "dreamer shop" 应该被过滤
-    if (containsBrandMisspelling(kw.keyword, brandName) || containsBrandMisspelling(kw.keyword, coreBrand)) {
+    if (
+      containsBrandMisspelling(kw.keyword, brandName) ||
+      containsBrandMisspelling(kw.keyword, coreBrand)
+    ) {
       misspellingFiltered++
       console.log(`   ❌ 过滤拼写错误: "${kw.keyword}" (品牌: ${brandName})`)
       return false
@@ -1613,25 +1688,29 @@ export function filterByWhitelist<T extends { keyword: string }>(
     const detectedBrand = detectBrandInKeyword(kw.keyword)
     if (detectedBrand) {
       // 🔧 2025-12-24 修复：先检查是否包含自身品牌（使用单词边界匹配）
-      const hasSelfBrandWord = containsBrandAsWord(kw.keyword, brandName) ||
-                               containsBrandAsWord(kw.keyword, coreBrand)
+      const hasSelfBrandWord =
+        containsBrandAsWord(kw.keyword, brandName) || containsBrandAsWord(kw.keyword, coreBrand)
 
       // 辅助检查：部分匹配（处理品牌变体）
-      const hasSelfBrandPartial = keywordLower.includes(coreBrandLower) ||
-                                  brandName.toLowerCase().split(' ').some(part =>
-                                    part.length >= 3 && keywordLower.includes(part.toLowerCase())
-                                  )
+      const hasSelfBrandPartial =
+        keywordLower.includes(coreBrandLower) ||
+        brandName
+          .toLowerCase()
+          .split(' ')
+          .some((part) => part.length >= 3 && keywordLower.includes(part.toLowerCase()))
 
       if (hasSelfBrandWord || hasSelfBrandPartial) {
         // 🔥 同时包含自身品牌和竞品，保留（跨品牌比较搜索有价值）
         crossBrandKept++
-        console.log(`   ✅ 保留跨品牌比较词: "${kw.keyword}" (自身: ${brandName} + 竞品: ${detectedBrand})`)
+        console.log(
+          `   ✅ 保留跨品牌比较词: "${kw.keyword}" (自身: ${brandName} + 竞品: ${detectedBrand})`
+        )
         return true
       }
 
       // 纯竞品词（不含自身品牌） → 排除
       competitorFiltered++
-      competitorBrandsSet.add(detectedBrand)  // 🆕 收集竞品品牌
+      competitorBrandsSet.add(detectedBrand) // 🆕 收集竞品品牌
       console.log(`   ❌ 过滤竞品词: "${kw.keyword}" (检测到竞品: ${detectedBrand})`)
       return false
     }
@@ -1646,9 +1725,9 @@ export function filterByWhitelist<T extends { keyword: string }>(
   console.log(`\n📋 白名单过滤结果:`)
   console.log(`   ✅ 品牌词保留: ${brandKept}`)
   console.log(`   ✅ 通用词保留: ${genericKept}`)
-  console.log(`   ✅ 跨品牌比较词保留: ${crossBrandKept}`)  // 🔥 2025-12-24 新增
+  console.log(`   ✅ 跨品牌比较词保留: ${crossBrandKept}`) // 🔥 2025-12-24 新增
   console.log(`   ❌ 竞品词过滤: ${competitorFiltered}`)
-  console.log(`   ❌ 拼写错误过滤: ${misspellingFiltered}`)  // 🔥 新增
+  console.log(`   ❌ 拼写错误过滤: ${misspellingFiltered}`) // 🔥 新增
   if (competitorBrands.length > 0) {
     console.log(`   🏷️ 识别竞品品牌: ${competitorBrands.join(', ')}`)
   }
@@ -1660,8 +1739,8 @@ export function filterByWhitelist<T extends { keyword: string }>(
       brandKept,
       genericKept,
       competitorFiltered,
-      misspellingFiltered  // 🔥 新增
-    }
+      misspellingFiltered, // 🔥 新增
+    },
   }
 }
 
@@ -1671,9 +1750,22 @@ export function filterByWhitelist<T extends { keyword: string }>(
 
 // 研究意图关键词标识（需要过滤）
 const RESEARCH_INTENT_PATTERNS = [
-  'review', 'reviews', 'vs', 'versus', 'comparison', 'compare',
-  'alternative', 'alternatives', 'how to', 'what is', 'guide',
-  'tutorial', 'reddit', 'forum', 'blog', 'article'
+  'review',
+  'reviews',
+  'vs',
+  'versus',
+  'comparison',
+  'compare',
+  'alternative',
+  'alternatives',
+  'how to',
+  'what is',
+  'guide',
+  'tutorial',
+  'reddit',
+  'forum',
+  'blog',
+  'article',
 ]
 
 /**
@@ -1692,17 +1784,19 @@ export function applySmartFilters(
   minKeywordsTarget: number = DEFAULTS.minKeywordsTarget,
   options?: { disableSearchVolumeFilter?: boolean; pureBrandKeywords?: string[] }
 ): UnifiedKeywordData[] {
-  const hasAnyVolume = keywords.some(kw => kw.searchVolume > 0)
+  const hasAnyVolume = keywords.some((kw) => kw.searchVolume > 0)
   const disableSearchVolumeFilter = options?.disableSearchVolumeFilter ?? !hasAnyVolume
   const pureBrandKeywords = options?.pureBrandKeywords || []
   const isPureBrand = (keyword: string) => isPureBrandKeyword(keyword, pureBrandKeywords)
 
   if (disableSearchVolumeFilter) {
     console.log('\n⚠️ 搜索量数据不可用，跳过搜索量阈值过滤（仅过滤研究意图词）')
-    return keywords.filter(kw => {
+    return keywords.filter((kw) => {
       if (isPureBrand(kw.keyword)) return true
       const keywordLower = kw.keyword.toLowerCase()
-      const hasResearchIntent = RESEARCH_INTENT_PATTERNS.some(pattern => keywordLower.includes(pattern))
+      const hasResearchIntent = RESEARCH_INTENT_PATTERNS.some((pattern) =>
+        keywordLower.includes(pattern)
+      )
       return !hasResearchIntent
     })
   }
@@ -1724,7 +1818,7 @@ export function applySmartFilters(
     let volumeFiltered = 0
     let intentFiltered = 0
 
-    filtered = keywords.filter(kw => {
+    filtered = keywords.filter((kw) => {
       if (isPureBrand(kw.keyword)) return true
       // 搜索量过滤
       if (kw.searchVolume < currentThreshold) {
@@ -1734,7 +1828,7 @@ export function applySmartFilters(
 
       // 研究意图过滤
       const keywordLower = kw.keyword.toLowerCase()
-      const hasResearchIntent = RESEARCH_INTENT_PATTERNS.some(pattern =>
+      const hasResearchIntent = RESEARCH_INTENT_PATTERNS.some((pattern) =>
         keywordLower.includes(pattern)
       )
 
@@ -1754,7 +1848,9 @@ export function applySmartFilters(
       console.log(`   保留关键词: ${filtered.length}`)
 
       if (attempts > 0) {
-        console.log(`   📉 阈值自适应: ${minSearchVolume} → ${currentThreshold} (第${attempts + 1}次尝试)`)
+        console.log(
+          `   📉 阈值自适应: ${minSearchVolume} → ${currentThreshold} (第${attempts + 1}次尝试)`
+        )
       }
       break
     }
@@ -1772,7 +1868,10 @@ export function applySmartFilters(
  * 简化设计：基于关键词的实际搜索量分布，只保留高中等价值的词
  * 低搜索量的词直接过滤掉，不需要逐步降低阈值
  */
-function calculateAdaptiveThresholds(keywords: UnifiedKeywordData[], initialThreshold: number): number[] {
+function calculateAdaptiveThresholds(
+  keywords: UnifiedKeywordData[],
+  initialThreshold: number
+): number[] {
   // 如果关键词为空，返回初始阈值
   if (keywords.length === 0) {
     return [initialThreshold, 1]
@@ -1780,8 +1879,8 @@ function calculateAdaptiveThresholds(keywords: UnifiedKeywordData[], initialThre
 
   // 获取所有有效的搜索量数据
   const validVolumes = keywords
-    .map(kw => kw.searchVolume)
-    .filter(vol => vol > 0)
+    .map((kw) => kw.searchVolume)
+    .filter((vol) => vol > 0)
     .sort((a, b) => b - a)
 
   if (validVolumes.length === 0) {
@@ -1793,8 +1892,8 @@ function calculateAdaptiveThresholds(keywords: UnifiedKeywordData[], initialThre
 
   // 智能阈值：保留高中等价值的词（中位数的30%以上）
   const adaptiveThreshold = Math.max(
-    Math.floor(medianVolume * 0.3),  // 中位数的30%
-    Math.floor(initialThreshold * 0.5)  // 至少是初始阈值的50%
+    Math.floor(medianVolume * 0.3), // 中位数的30%
+    Math.floor(initialThreshold * 0.5) // 至少是初始阈值的50%
   )
 
   const thresholds: number[] = [initialThreshold]
@@ -1820,7 +1919,7 @@ export function assignMatchTypes(
 ): UnifiedKeywordData[] {
   const pureBrandKeywords = getPureBrandKeywords(brandName)
 
-  return keywords.map(kw => {
+  return keywords.map((kw) => {
     // 纯品牌词 → EXACT
     if (isPureBrandKeyword(kw.keyword, pureBrandKeywords)) {
       return { ...kw, matchType: 'EXACT' as const }
@@ -1862,9 +1961,9 @@ export interface MultiRoundExpansionResult {
   competitorBrands: string[]
   /** 扩展统计 */
   stats: {
-    round1Count: number  // 品牌商品锚点
-    round2Count: number  // 商品需求场景
-    round3Count: number  // 功能规格/需求扩展
+    round1Count: number // 品牌商品锚点
+    round2Count: number // 商品需求场景
+    round3Count: number // 功能规格/需求扩展
     totalBeforeDedup: number
     totalAfterDedup: number
   }
@@ -1881,7 +1980,9 @@ export interface MultiRoundExpansionResult {
  * @param params - 扩展参数
  * @returns 按意图分类的关键词结果
  */
-export async function getMultiRoundIntentAwareKeywords(params: KeywordServiceParams): Promise<MultiRoundExpansionResult> {
+export async function getMultiRoundIntentAwareKeywords(
+  params: KeywordServiceParams
+): Promise<MultiRoundExpansionResult> {
   const {
     offer,
     country,
@@ -1894,8 +1995,8 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
     linkedServiceAccountId,
     serviceAccountId,
     plannerSession,
-    minSearchVolume = 100,  // 多轮扩展使用较低阈值
-    maxKeywords = 500
+    minSearchVolume = 100, // 多轮扩展使用较低阈值
+    maxKeywords = 500,
   } = params
 
   console.log('\n' + '='.repeat(60))
@@ -1941,7 +2042,9 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
     }
 
     console.log(`\n📍 Round ${roundNum}: ${roundName}`)
-    console.log(`   种子词: ${roundSeeds.slice(0, 5).join(', ')}${roundSeeds.length > 5 ? '...' : ''}`)
+    console.log(
+      `   种子词: ${roundSeeds.slice(0, 5).join(', ')}${roundSeeds.length > 5 ? '...' : ''}`
+    )
 
     const roundKeywords: UnifiedKeywordData[] = []
 
@@ -1951,41 +2054,41 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
       } else if (!ideasAuth) {
         console.warn(`   ⚠️ 跳过 ${roundName} Keyword Planner: session auth unavailable`)
       } else {
-      try {
-        const keywordIdeas = await getKeywordIdeas({
-          customerId,
-          seedKeywords: roundSeeds,
-          pageUrl: getKeywordPlannerSiteFilterUrlForOffer({
-            final_url: (offer as any).final_url || (offer as any).finalUrl || null,
-            url: offer.url,
-            extraction_metadata: (offer as any).extraction_metadata || null,
-          }),
-          targetCountry: country,
-          targetLanguage: language,
-          accountId,
-          userId,
-          authType: ideasAuth.authType,
-          serviceAccountId: ideasAuth.serviceAccountId,
-          preparedOAuth: ideasAuth.preparedOAuth,
-        })
-
-        console.log(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个建议`)
-
-        keywordIdeas.forEach(idea => {
-          roundKeywords.push({
-            keyword: idea.text,
-            searchVolume: idea.avgMonthlySearches || 0,
-            competition: idea.competition || 'UNKNOWN',
-            competitionIndex: idea.competitionIndex || 0,
-            lowTopPageBid: (idea.lowTopOfPageBidMicros || 0) / 1_000_000,
-            highTopPageBid: (idea.highTopOfPageBidMicros || 0) / 1_000_000,
-            source: 'EXPANSION',
-            matchType: 'PHRASE'
+        try {
+          const keywordIdeas = await getKeywordIdeas({
+            customerId,
+            seedKeywords: roundSeeds,
+            pageUrl: getKeywordPlannerSiteFilterUrlForOffer({
+              final_url: (offer as any).final_url || (offer as any).finalUrl || null,
+              url: offer.url,
+              extraction_metadata: (offer as any).extraction_metadata || null,
+            }),
+            targetCountry: country,
+            targetLanguage: language,
+            accountId,
+            userId,
+            authType: ideasAuth.authType,
+            serviceAccountId: ideasAuth.serviceAccountId,
+            preparedOAuth: ideasAuth.preparedOAuth,
           })
-        })
-      } catch (error: any) {
-        console.error(`   ❌ ${roundName} 扩展失败:`, error.message)
-      }
+
+          console.log(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个建议`)
+
+          keywordIdeas.forEach((idea) => {
+            roundKeywords.push({
+              keyword: idea.text,
+              searchVolume: idea.avgMonthlySearches || 0,
+              competition: idea.competition || 'UNKNOWN',
+              competitionIndex: idea.competitionIndex || 0,
+              lowTopPageBid: (idea.lowTopOfPageBidMicros || 0) / 1_000_000,
+              highTopPageBid: (idea.highTopOfPageBidMicros || 0) / 1_000_000,
+              source: 'EXPANSION',
+              matchType: 'PHRASE',
+            })
+          })
+        } catch (error: any) {
+          console.error(`   ❌ ${roundName} 扩展失败:`, error.message)
+        }
       }
     }
 
@@ -2022,7 +2125,7 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
 
   // 添加到 keywordMap（自动去重）
   const addToMap = (keywords: UnifiedKeywordData[], source: string) => {
-    keywords.forEach(kw => {
+    keywords.forEach((kw) => {
       const canonical = normalizeGoogleAdsKeyword(kw.keyword)
       if (!canonical) return
       if (!keywordMap.has(canonical)) {
@@ -2046,7 +2149,7 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
   let allKeywords = Array.from(keywordMap.values())
   const whitelistResult = filterByWhitelist(allKeywords, offer.brand)
   allKeywords = whitelistResult.filtered as UnifiedKeywordData[]
-  whitelistResult.competitorBrands.forEach(b => competitorBrandsSet.add(b))
+  whitelistResult.competitorBrands.forEach((b) => competitorBrandsSet.add(b))
 
   // 🔥 2026-01-02: 移除品类过滤 - 避免误杀有效关键词
   // 依赖Google Ads自动优化机制（质量得分、智能出价）淘汰不相关关键词
@@ -2054,14 +2157,16 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
 
   if (pureBrandKeywords.length > 0) {
     const beforeBrandFilter = allKeywords.length
-    allKeywords = allKeywords.filter(kw => containsPureBrand(kw.keyword, pureBrandKeywords))
+    allKeywords = allKeywords.filter((kw) => containsPureBrand(kw.keyword, pureBrandKeywords))
     console.log(`   🔒 品牌强制过滤: ${beforeBrandFilter} → ${allKeywords.length}`)
   }
 
   // 7. 按搜索量降序排序（关键修复：先排序再截取）
   console.log('\n📍 Step 7: 按搜索量降序排序')
   allKeywords.sort((a, b) => b.searchVolume - a.searchVolume)
-  console.log(`   📊 排序后搜索量范围: ${allKeywords[allKeywords.length - 1]?.searchVolume || 0} - ${allKeywords[0]?.searchVolume || 0}`)
+  console.log(
+    `   📊 排序后搜索量范围: ${allKeywords[allKeywords.length - 1]?.searchVolume || 0} - ${allKeywords[0]?.searchVolume || 0}`
+  )
 
   // 8. 获取精确搜索量（对搜索量最高的前1000个关键词）
   console.log('\n📍 Step 8: 获取精确搜索量（前1000个）')
@@ -2072,21 +2177,21 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
       throw new Error(plannerAuth && !plannerAuth.ok ? plannerAuth.message : 'userId is required')
     }
     const volumes = await getKeywordSearchVolumesWithSessionAuth(
-      allKeywords.slice(0, 1000).map(kw => kw.keyword),
+      allKeywords.slice(0, 1000).map((kw) => kw.keyword),
       country,
       language,
       userId,
       volumeSession
     )
 
-    disableSearchVolumeFilter = volumes.some((vol: any) =>
-      vol?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
+    disableSearchVolumeFilter = volumes.some(
+      (vol: any) => vol?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
     )
     if (volumes.length > 0 && !disableSearchVolumeFilter) {
       metricsAvailable = true
     }
 
-    volumes.forEach(vol => {
+    volumes.forEach((vol) => {
       const canonical = normalizeGoogleAdsKeyword(vol.keyword)
       if (!canonical) return
       // 更新 keywordMap 中的搜索量
@@ -2113,7 +2218,10 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
 
   // 9. 智能过滤 + 匹配类型分配
   console.log('\n📍 Step 9: 智能过滤')
-  allKeywords = applySmartFilters(allKeywords, minSearchVolume, 30, { disableSearchVolumeFilter, pureBrandKeywords })
+  allKeywords = applySmartFilters(allKeywords, minSearchVolume, 30, {
+    disableSearchVolumeFilter,
+    pureBrandKeywords,
+  })
   allKeywords = assignMatchTypes(allKeywords, offer.brand)
 
   // 10. 再次按搜索量排序（确保最终排序正确）
@@ -2132,8 +2240,28 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
     }
 
     // 功能规格：包含功能/规格词
-    const featurePatterns = ['wireless', 'night vision', '4k', '2k', '1080p', 'solar', 'battery', 'motion', 'detection', 'audio', 'storage', 'waterproof', 'ptz', 'hd', 'best', 'top', 'cheap', 'affordable', 'budget']
-    if (featurePatterns.some(p => kwLower.includes(p))) {
+    const featurePatterns = [
+      'wireless',
+      'night vision',
+      '4k',
+      '2k',
+      '1080p',
+      'solar',
+      'battery',
+      'motion',
+      'detection',
+      'audio',
+      'storage',
+      'waterproof',
+      'ptz',
+      'hd',
+      'best',
+      'top',
+      'cheap',
+      'affordable',
+      'budget',
+    ]
+    if (featurePatterns.some((p) => kwLower.includes(p))) {
       return 'feature'
     }
 
@@ -2141,9 +2269,9 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
     return 'scenario'
   }
 
-  const brandOrientedKeywords = allKeywords.filter(kw => classifyByIntent(kw) === 'brand')
-  const scenarioOrientedKeywords = allKeywords.filter(kw => classifyByIntent(kw) === 'scenario')
-  const featureOrientedKeywords = allKeywords.filter(kw => classifyByIntent(kw) === 'feature')
+  const brandOrientedKeywords = allKeywords.filter((kw) => classifyByIntent(kw) === 'brand')
+  const scenarioOrientedKeywords = allKeywords.filter((kw) => classifyByIntent(kw) === 'scenario')
+  const featureOrientedKeywords = allKeywords.filter((kw) => classifyByIntent(kw) === 'feature')
 
   // 输出统计
   console.log('\n' + '='.repeat(60))
@@ -2175,8 +2303,8 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
       round2Count,
       round3Count,
       totalBeforeDedup,
-      totalAfterDedup: allKeywords.length
-    }
+      totalAfterDedup: allKeywords.length,
+    },
   }
 }
 
@@ -2194,7 +2322,9 @@ export async function getMultiRoundIntentAwareKeywords(params: KeywordServicePar
  * `loadKeywordPoolExpandCredentialsForOffer` 的 `plannerSession`，避免重复 prepare/heal。
  * 生产入口：Launch 创意生成 / 发布流程（`getUnifiedKeywordData` 由 offer-keyword-pool 与发布链路调用）。
  */
-export async function getUnifiedKeywordData(params: KeywordServiceParams): Promise<UnifiedKeywordResult> {
+export async function getUnifiedKeywordData(
+  params: KeywordServiceParams
+): Promise<UnifiedKeywordResult> {
   const {
     offer,
     country,
@@ -2208,7 +2338,7 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
     serviceAccountId,
     plannerSession,
     minSearchVolume = 500,
-    maxKeywords = 500
+    maxKeywords = 500,
   } = params
 
   console.log('\n' + '='.repeat(60))
@@ -2247,7 +2377,7 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
   // ==========================================
   console.log('\n📍 Step 1: 构建智能种子词池')
   const smartSeeds = buildSmartSeedPool(offer)
-  const brandRelatedSeeds = smartSeeds.filter(seed => containsPureBrand(seed, pureBrandKeywords))
+  const brandRelatedSeeds = smartSeeds.filter((seed) => containsPureBrand(seed, pureBrandKeywords))
   const seedKeywordsForPlanner = Array.from(new Set([...pureBrandKeywords, ...brandRelatedSeeds]))
 
   if (smartSeeds.length === 0) {
@@ -2266,40 +2396,40 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
     } else if (!ideasAuth) {
       console.warn('   ⚠️ 跳过 Keyword Planner 查询: session auth unavailable')
     } else {
-    try {
-      const keywordIdeas = await getKeywordIdeas({
-        customerId,
-        seedKeywords: seedKeywordsForPlanner,
-        targetCountry: country,
-        targetLanguage: language,
-        accountId,
-        userId,
-        authType: ideasAuth.authType,
-        serviceAccountId: ideasAuth.serviceAccountId,
-        preparedOAuth: ideasAuth.preparedOAuth,
-      })
-
-      console.log(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个关键词建议`)
-      keywordPlannerAvailable = keywordIdeas.length > 0
-
-      // 转换为统一格式
-      keywordIdeas.forEach(idea => {
-        const canonical = normalizeGoogleAdsKeyword(idea.text)
-        if (!canonical) return
-        addToKeywordMap({
-          keyword: idea.text,
-          searchVolume: idea.avgMonthlySearches || 0,
-          competition: idea.competition || 'UNKNOWN',
-          competitionIndex: idea.competitionIndex || 0,
-          lowTopPageBid: (idea.lowTopOfPageBidMicros || 0) / 1_000_000,
-          highTopPageBid: (idea.highTopOfPageBidMicros || 0) / 1_000_000,
-          source: 'EXPANSION',
-          matchType: 'PHRASE'
+      try {
+        const keywordIdeas = await getKeywordIdeas({
+          customerId,
+          seedKeywords: seedKeywordsForPlanner,
+          targetCountry: country,
+          targetLanguage: language,
+          accountId,
+          userId,
+          authType: ideasAuth.authType,
+          serviceAccountId: ideasAuth.serviceAccountId,
+          preparedOAuth: ideasAuth.preparedOAuth,
         })
-      })
-    } catch (error: any) {
-      console.error(`   ❌ Keyword Planner 查询失败:`, error.message)
-    }
+
+        console.log(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个关键词建议`)
+        keywordPlannerAvailable = keywordIdeas.length > 0
+
+        // 转换为统一格式
+        keywordIdeas.forEach((idea) => {
+          const canonical = normalizeGoogleAdsKeyword(idea.text)
+          if (!canonical) return
+          addToKeywordMap({
+            keyword: idea.text,
+            searchVolume: idea.avgMonthlySearches || 0,
+            competition: idea.competition || 'UNKNOWN',
+            competitionIndex: idea.competitionIndex || 0,
+            lowTopPageBid: (idea.lowTopOfPageBidMicros || 0) / 1_000_000,
+            highTopPageBid: (idea.highTopOfPageBidMicros || 0) / 1_000_000,
+            source: 'EXPANSION',
+            matchType: 'PHRASE',
+          })
+        })
+      } catch (error: any) {
+        console.error(`   ❌ Keyword Planner 查询失败:`, error.message)
+      }
     }
   } else {
     console.log('   ⚠️ 缺少 Google Ads 凭证，跳过 Keyword Planner 查询')
@@ -2310,10 +2440,10 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
       offer,
       country,
       language,
-      userId
+      userId,
     })
 
-    fallbackKeywords.forEach(kw => addToKeywordMap(kw))
+    fallbackKeywords.forEach((kw) => addToKeywordMap(kw))
   }
 
   // 添加种子词本身（确保品牌词被包含）
@@ -2331,7 +2461,7 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
       lowTopPageBid: 0,
       highTopPageBid: 0,
       source: 'BRAND',
-      matchType
+      matchType,
     })
   }
 
@@ -2345,7 +2475,9 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
 
   console.log(`   📊 Keyword Planner返回 ${allKeywords.length} 个关键词`)
   if (allKeywords.length > 0) {
-    console.log(`   📊 排序后搜索量范围: ${allKeywords[allKeywords.length - 1]?.searchVolume || 0} - ${allKeywords[0]?.searchVolume || 0}`)
+    console.log(
+      `   📊 排序后搜索量范围: ${allKeywords[allKeywords.length - 1]?.searchVolume || 0} - ${allKeywords[0]?.searchVolume || 0}`
+    )
   }
 
   // ==========================================
@@ -2353,7 +2485,7 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
   // ==========================================
   console.log('\n📍 Step 2.6: 获取精确搜索量（前1000个）')
 
-  const topKeywordsForVolume = allKeywords.slice(0, 1000).map(kw => kw.keyword)
+  const topKeywordsForVolume = allKeywords.slice(0, 1000).map((kw) => kw.keyword)
 
   try {
     if (!volumeSession) {
@@ -2367,12 +2499,12 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
       volumeSession
     )
 
-    disableSearchVolumeFilter = volumes.some((vol: any) =>
-      vol?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
+    disableSearchVolumeFilter = volumes.some(
+      (vol: any) => vol?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
     )
 
     // 更新搜索量（只更新前1000个）
-    volumes.forEach(vol => {
+    volumes.forEach((vol) => {
       const canonical = normalizeGoogleAdsKeyword(vol.keyword)
       if (!canonical) return
       const existing = keywordMap.get(canonical)
@@ -2398,11 +2530,9 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
   }
 
   const topKeywordSet = new Set(
-    topKeywordsForVolume
-      .map(kw => normalizeGoogleAdsKeyword(kw))
-      .filter(Boolean)
+    topKeywordsForVolume.map((kw) => normalizeGoogleAdsKeyword(kw)).filter(Boolean)
   )
-  const brandSeedToQuery = pureBrandKeywords.filter(kw => {
+  const brandSeedToQuery = pureBrandKeywords.filter((kw) => {
     const canonical = normalizeGoogleAdsKeyword(kw)
     return canonical && !topKeywordSet.has(canonical)
   })
@@ -2417,16 +2547,16 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
         volumeSession
       )
 
-      if (volumes.some((vol: any) =>
-        vol?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
-      )) {
+      if (
+        volumes.some((vol: any) => vol?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS')
+      ) {
         disableSearchVolumeFilter = true
       }
       if (volumes.length > 0 && !disableSearchVolumeFilter) {
         keywordPlannerMetricsAvailable = true
       }
 
-      volumes.forEach(vol => {
+      volumes.forEach((vol) => {
         const canonical = normalizeGoogleAdsKeyword(vol.keyword)
         if (!canonical) return
         const existing = keywordMap.get(canonical)
@@ -2467,14 +2597,16 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
   })
 
   // 统计品牌词数量
-  const brandKeywordCount = allKeywords.filter(kw =>
+  const brandKeywordCount = allKeywords.filter((kw) =>
     containsPureBrand(kw.keyword, pureBrandKeywords)
   ).length
 
   console.log(`   总关键词数: ${allKeywords.length}`)
   console.log(`   🏷️ 品牌词数量: ${brandKeywordCount}`)
   if (allKeywords.length > 0) {
-    console.log(`   搜索量范围: ${allKeywords[allKeywords.length - 1].searchVolume} - ${allKeywords[0].searchVolume}`)
+    console.log(
+      `   搜索量范围: ${allKeywords[allKeywords.length - 1].searchVolume} - ${allKeywords[0].searchVolume}`
+    )
   }
 
   // ==========================================
@@ -2493,7 +2625,7 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
 
   if (pureBrandKeywords.length > 0) {
     const beforeBrandFilter = allKeywords.length
-    allKeywords = allKeywords.filter(kw => containsPureBrand(kw.keyword, pureBrandKeywords))
+    allKeywords = allKeywords.filter((kw) => containsPureBrand(kw.keyword, pureBrandKeywords))
     console.log(`   🔒 品牌强制过滤: ${beforeBrandFilter} → ${allKeywords.length}`)
   }
 
@@ -2506,7 +2638,10 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
   // ==========================================
   console.log('\n📍 Step 5: 智能过滤')
 
-  allKeywords = applySmartFilters(allKeywords, minSearchVolume, DEFAULTS.minKeywordsTarget, { disableSearchVolumeFilter, pureBrandKeywords })
+  allKeywords = applySmartFilters(allKeywords, minSearchVolume, DEFAULTS.minKeywordsTarget, {
+    disableSearchVolumeFilter,
+    pureBrandKeywords,
+  })
 
   // ==========================================
   // Step 6: 智能匹配类型分配
@@ -2528,14 +2663,19 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
   // 打印 Top 10
   console.log('\n📊 Top 10 关键词:')
   finalKeywords.slice(0, 10).forEach((kw, i) => {
-    console.log(`   ${i + 1}. "${kw.keyword}" (${kw.searchVolume.toLocaleString()}/月, ${kw.matchType})`)
+    console.log(
+      `   ${i + 1}. "${kw.keyword}" (${kw.searchVolume.toLocaleString()}/月, ${kw.matchType})`
+    )
   })
 
   // 统计匹配类型分布
-  const matchTypeCounts = finalKeywords.reduce((acc, kw) => {
-    acc[kw.matchType] = (acc[kw.matchType] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+  const matchTypeCounts = finalKeywords.reduce(
+    (acc, kw) => {
+      acc[kw.matchType] = (acc[kw.matchType] || 0) + 1
+      return acc
+    },
+    {} as Record<string, number>
+  )
 
   console.log('\n📊 匹配类型分布:')
   Object.entries(matchTypeCounts).forEach(([type, count]) => {
@@ -2545,14 +2685,14 @@ export async function getUnifiedKeywordData(params: KeywordServiceParams): Promi
   // 🆕 P0-2优化：输出识别到的竞品品牌
   if (competitorBrands.length > 0) {
     console.log(`\n🏷️ 识别竞品品牌 (${competitorBrands.length}个，可用作否定关键词):`)
-    competitorBrands.forEach(brand => {
+    competitorBrands.forEach((brand) => {
       console.log(`   - ${brand}`)
     })
   }
 
   return {
     keywords: finalKeywords,
-    competitorBrands
+    competitorBrands,
   }
 }
 
@@ -2580,10 +2720,9 @@ export async function getKeywordVolumesForExisting(params: {
   brandName?: string
   serviceAccountId?: string
   offerId?: number
-  enableExpansion?: boolean  // 已废弃，忽略
+  enableExpansion?: boolean // 已废弃，忽略
 }): Promise<UnifiedKeywordData[]> {
-  const { baseKeywords, country, language, userId, brandName, serviceAccountId, offerId } =
-    params
+  const { baseKeywords, country, language, userId, brandName, serviceAccountId, offerId } = params
 
   if (!baseKeywords || baseKeywords.length === 0) {
     return []
@@ -2612,17 +2751,20 @@ export async function getKeywordVolumesForExisting(params: {
     // 转换为 UnifiedKeywordData 格式
     const pureBrandKeywords = brandName ? getPureBrandKeywords(brandName) : []
 
-    const results: UnifiedKeywordData[] = volumes.map(vol => {
+    const results: UnifiedKeywordData[] = volumes.map((vol) => {
       // 智能分配匹配类型
       let matchType: 'EXACT' | 'PHRASE' | 'BROAD' = 'PHRASE'
       if (pureBrandKeywords.length > 0 && isPureBrandKeyword(vol.keyword, pureBrandKeywords)) {
-        matchType = 'EXACT'  // 纯品牌词用精准匹配
-      } else if (pureBrandKeywords.length > 0 && containsPureBrand(vol.keyword, pureBrandKeywords)) {
-        matchType = 'PHRASE'  // 品牌相关词用词组匹配
+        matchType = 'EXACT' // 纯品牌词用精准匹配
+      } else if (
+        pureBrandKeywords.length > 0 &&
+        containsPureBrand(vol.keyword, pureBrandKeywords)
+      ) {
+        matchType = 'PHRASE' // 品牌相关词用词组匹配
       } else if (vol.keyword.split(/\s+/).length <= 3) {
-        matchType = 'PHRASE'  // 短词用词组匹配
+        matchType = 'PHRASE' // 短词用词组匹配
       } else {
-        matchType = 'PHRASE'  // 长尾词默认词组匹配，避免兜底放量
+        matchType = 'PHRASE' // 长尾词默认词组匹配，避免兜底放量
       }
 
       return {
@@ -2644,7 +2786,7 @@ export async function getKeywordVolumesForExisting(params: {
   } catch (error: any) {
     console.error('❌ 获取关键词搜索量失败:', error.message)
     // 返回带默认搜索量的结果
-    return baseKeywords.map(kw => ({
+    return baseKeywords.map((kw) => ({
       keyword: kw,
       searchVolume: 0,
       competition: 'UNKNOWN',
@@ -2714,7 +2856,7 @@ export async function expandKeywordsWithSeeds(params: {
     plannerSession: preloadedPlannerSession,
     minSearchVolume = 500,
     maxKeywords = 100,
-    onProgress
+    onProgress,
   } = params
 
   console.log(`认证方式: ${authType}`)
@@ -2730,24 +2872,21 @@ export async function expandKeywordsWithSeeds(params: {
 
   if (brandName && brandName.includes(' ')) {
     const pureBrandKeywords = getPureBrandKeywords(brandName)
-    const shortBrand = pureBrandKeywords.find(kw => kw.split(/\s+/).length === 1)
+    const shortBrand = pureBrandKeywords.find((kw) => kw.split(/\s+/).length === 1)
 
     if (shortBrand) {
       const brandWords = normalizeGoogleAdsKeyword(brandName).split(/\s+/).filter(Boolean)
       const firstWord = brandWords[0]
       const shortLower = shortBrand.toLowerCase()
 
-      const additionalSeeds = [
-        shortBrand,
-        `${shortLower} products`
-      ]
+      const additionalSeeds = [shortBrand, `${shortLower} products`]
 
       if (firstWord && firstWord === shortLower && brandWords.length > 1) {
         additionalSeeds.push(`${shortLower} ${brandWords.slice(1).join(' ')}`)
       }
 
       for (const seed of additionalSeeds) {
-        if (!finalSeedKeywords.some(s => s.toLowerCase() === seed.toLowerCase())) {
+        if (!finalSeedKeywords.some((s) => s.toLowerCase() === seed.toLowerCase())) {
           finalSeedKeywords.push(seed)
           console.log(`   + 短品牌词种子: "${seed}"`)
         }
@@ -2762,7 +2901,7 @@ export async function expandKeywordsWithSeeds(params: {
 
   const keywordMap = new Map<string, UnifiedKeywordData>()
   const plannerAuth = preloadedPlannerSession
-    ? ({ ok: true as const, session: preloadedPlannerSession })
+    ? { ok: true as const, session: preloadedPlannerSession }
     : await prepareKeywordPlannerSessionForServiceParams(userId, {
         offerId,
         linkedServiceAccountId,
@@ -2780,37 +2919,37 @@ export async function expandKeywordsWithSeeds(params: {
       } else if (!ideasAuth) {
         console.warn('   ⚠️ 跳过 Keyword Planner 扩展: session auth unavailable')
       } else {
-      const keywordIdeas = await getKeywordIdeas({
-        customerId,
-        seedKeywords: finalSeedKeywords,  // 使用增强后的种子词
-        pageUrl,
-        targetCountry: country,
-        targetLanguage: language,
-        userId,
-        accountId,
-        authType: ideasAuth.authType,
-        serviceAccountId: ideasAuth.serviceAccountId,
-        preparedOAuth: ideasAuth.preparedOAuth,
-      })
+        const keywordIdeas = await getKeywordIdeas({
+          customerId,
+          seedKeywords: finalSeedKeywords, // 使用增强后的种子词
+          pageUrl,
+          targetCountry: country,
+          targetLanguage: language,
+          userId,
+          accountId,
+          authType: ideasAuth.authType,
+          serviceAccountId: ideasAuth.serviceAccountId,
+          preparedOAuth: ideasAuth.preparedOAuth,
+        })
 
-      console.log(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个关键词建议`)
+        console.log(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个关键词建议`)
 
-      keywordIdeas.forEach(idea => {
-        const canonical = normalizeGoogleAdsKeyword(idea.text)
-        if (!canonical) return
-        if (!keywordMap.has(canonical)) {
-          keywordMap.set(canonical, {
-            keyword: idea.text,
-            searchVolume: idea.avgMonthlySearches || 0,
-            competition: idea.competition || 'UNKNOWN',
-            competitionIndex: idea.competitionIndex || 0,
-            lowTopPageBid: (idea.lowTopOfPageBidMicros || 0) / 1_000_000,
-            highTopPageBid: (idea.highTopOfPageBidMicros || 0) / 1_000_000,
-            source: 'EXPANSION',
-            matchType: 'PHRASE'
-          })
-        }
-      })
+        keywordIdeas.forEach((idea) => {
+          const canonical = normalizeGoogleAdsKeyword(idea.text)
+          if (!canonical) return
+          if (!keywordMap.has(canonical)) {
+            keywordMap.set(canonical, {
+              keyword: idea.text,
+              searchVolume: idea.avgMonthlySearches || 0,
+              competition: idea.competition || 'UNKNOWN',
+              competitionIndex: idea.competitionIndex || 0,
+              lowTopPageBid: (idea.lowTopOfPageBidMicros || 0) / 1_000_000,
+              highTopPageBid: (idea.highTopOfPageBidMicros || 0) / 1_000_000,
+              source: 'EXPANSION',
+              matchType: 'PHRASE',
+            })
+          }
+        })
       }
     }
 
@@ -2820,7 +2959,9 @@ export async function expandKeywordsWithSeeds(params: {
 
     console.log(`   📊 扩展关键词排序: ${results.length} 个`)
     if (results.length > 0) {
-      console.log(`   📊 搜索量范围: ${results[results.length - 1]?.searchVolume || 0} - ${results[0]?.searchVolume || 0}`)
+      console.log(
+        `   📊 搜索量范围: ${results[results.length - 1]?.searchVolume || 0} - ${results[0]?.searchVolume || 0}`
+      )
     }
 
     // 3. 获取精确搜索量（分批查询所有关键词）
@@ -2837,18 +2978,20 @@ export async function expandKeywordsWithSeeds(params: {
       const totalOuterBatches = Math.ceil(results.length / BATCH_SIZE)
       for (let i = 0; i < results.length; i += BATCH_SIZE) {
         const batch = results.slice(i, i + BATCH_SIZE)
-        const batchKeywords = batch.map(kw => kw.keyword)
+        const batchKeywords = batch.map((kw) => kw.keyword)
 
         const outerBatchIndex = Math.floor(i / BATCH_SIZE) + 1
         try {
           await onProgress?.({
             message: `精确搜索量批次 ${outerBatchIndex}/${totalOuterBatches}`,
             current: outerBatchIndex,
-            total: totalOuterBatches
+            total: totalOuterBatches,
           })
         } catch {}
 
-        console.log(`   📊 查询批次 ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(totalKeywords / BATCH_SIZE)}: ${batchKeywords.length} 个关键词`)
+        console.log(
+          `   📊 查询批次 ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(totalKeywords / BATCH_SIZE)}: ${batchKeywords.length} 个关键词`
+        )
 
         try {
           if (!volumeSession) {
@@ -2867,24 +3010,26 @@ export async function expandKeywordsWithSeeds(params: {
                   onProgress({
                     message: `精确搜索量 ${outerBatchIndex}/${totalOuterBatches} · ${info.message}`,
                     current: info.current,
-                    total: info.total
+                    total: info.total,
                   })
               : undefined
           )
 
-          if (volumes.some((vol: any) =>
-            vol?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
-          )) {
+          if (
+            volumes.some(
+              (vol: any) => vol?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
+            )
+          ) {
             disableSearchVolumeFilter = true
           }
 
-          volumes.forEach(vol => {
-          const canonical = normalizeGoogleAdsKeyword(vol.keyword)
-          if (!canonical) return
-          const existing = keywordMap.get(canonical)
-          if (existing) {
-            // 🔧 修复(2026-01-22): 标记为已验证
-            verifiedKeywords.add(canonical)
+          volumes.forEach((vol) => {
+            const canonical = normalizeGoogleAdsKeyword(vol.keyword)
+            if (!canonical) return
+            const existing = keywordMap.get(canonical)
+            if (existing) {
+              // 🔧 修复(2026-01-22): 标记为已验证
+              verifiedKeywords.add(canonical)
               keywordMap.set(canonical, {
                 ...existing,
                 searchVolume: vol.avgMonthlySearches,
@@ -2896,7 +3041,10 @@ export async function expandKeywordsWithSeeds(params: {
             }
           })
         } catch (batchError: any) {
-          console.warn(`   ⚠️ 批次 ${Math.floor(i / BATCH_SIZE) + 1} 查询失败，继续处理下一批:`, batchError.message)
+          console.warn(
+            `   ⚠️ 批次 ${Math.floor(i / BATCH_SIZE) + 1} 查询失败，继续处理下一批:`,
+            batchError.message
+          )
         }
       }
 
@@ -2910,13 +3058,15 @@ export async function expandKeywordsWithSeeds(params: {
           if (!verifiedKeywords.has(canonical) && kw.searchVolume > 0) {
             keywordMap.set(canonical, {
               ...kw,
-              searchVolume: 0,  // 重置为 0，因为没有真实搜索量数据
+              searchVolume: 0, // 重置为 0，因为没有真实搜索量数据
             })
             unverifiedCount++
           }
         }
         if (unverifiedCount > 0) {
-          console.log(`   ⚠️ 重置了 ${unverifiedCount} 个未验证关键词的搜索量（Keyword Ideas 估算值 → 0）`)
+          console.log(
+            `   ⚠️ 重置了 ${unverifiedCount} 个未验证关键词的搜索量（Keyword Ideas 估算值 → 0）`
+          )
         }
       }
 
@@ -2935,12 +3085,14 @@ export async function expandKeywordsWithSeeds(params: {
     // 搜索量过滤
     // 🔧 修复(2025-12-26): 搜索量不可用（服务账号 / developer token 无 Basic access）时跳过过滤
     if (disableSearchVolumeFilter) {
-      console.log('⚠️ 搜索量数据不可用（可能是服务账号或 developer token 无 Basic/Standard access），跳过搜索量过滤')
+      console.log(
+        '⚠️ 搜索量数据不可用（可能是服务账号或 developer token 无 Basic/Standard access），跳过搜索量过滤'
+      )
     } else {
       const pureBrandKeywords = brandName ? getPureBrandKeywords(brandName) : []
-      const hasAnyVolume = results.some(kw => kw.searchVolume > 0)
+      const hasAnyVolume = results.some((kw) => kw.searchVolume > 0)
       if (hasAnyVolume) {
-        results = results.filter(kw => {
+        results = results.filter((kw) => {
           if (pureBrandKeywords.length > 0 && isPureBrandKeyword(kw.keyword, pureBrandKeywords)) {
             return true
           }
@@ -3006,10 +3158,10 @@ export function extractGenericHighValueKeywords(
   const allBrands = [brandName, ...competitorBrands]
   const beforeBrandFilter = allKeywords.length
 
-  let genericKeywords = allKeywords.filter(kw => {
+  let genericKeywords = allKeywords.filter((kw) => {
     const kwLower = kw.keyword.toLowerCase()
     // 检查是否含有任何品牌名（使用单词边界匹配）
-    return !allBrands.some(brand => {
+    return !allBrands.some((brand) => {
       const brandPattern = new RegExp(`\\b${escapeRegex(brand.toLowerCase())}\\b`, 'i')
       return brandPattern.test(kwLower)
     })
@@ -3024,9 +3176,9 @@ export function extractGenericHighValueKeywords(
 
   const beforeVolumeFilter = genericKeywords.length
   // 🔧 修复(2025-12-26): 如果所有关键词搜索量都为0（服务账号模式），跳过搜索量过滤
-  const hasAnyVolume = genericKeywords.some(kw => kw.searchVolume > 0)
+  const hasAnyVolume = genericKeywords.some((kw) => kw.searchVolume > 0)
   if (hasAnyVolume) {
-    genericKeywords = genericKeywords.filter(kw => kw.searchVolume > 10000)
+    genericKeywords = genericKeywords.filter((kw) => kw.searchVolume > 10000)
   } else {
     console.log('   ⚠️ 所有关键词搜索量为0（可能是服务账号模式），跳过搜索量过滤')
   }
@@ -3044,17 +3196,39 @@ export function extractGenericHighValueKeywords(
   console.log(`\n📌 步骤3: 排除低购买意图词`)
 
   const RESEARCH_INTENT_PATTERNS = [
-    'review', 'reviews', 'rating', 'vs', 'versus', 'comparison', 'compare',
-    'alternative', 'alternatives', 'how to', 'what is', 'guide', 'tutorial',
-    'reddit', 'forum', 'blog', 'article', 'repair', 'troubleshoot',
-    'corporation', 'company', 'official website', 'headquarters', 'about us',
-    'contact', 'customer service', 'support'
+    'review',
+    'reviews',
+    'rating',
+    'vs',
+    'versus',
+    'comparison',
+    'compare',
+    'alternative',
+    'alternatives',
+    'how to',
+    'what is',
+    'guide',
+    'tutorial',
+    'reddit',
+    'forum',
+    'blog',
+    'article',
+    'repair',
+    'troubleshoot',
+    'corporation',
+    'company',
+    'official website',
+    'headquarters',
+    'about us',
+    'contact',
+    'customer service',
+    'support',
   ]
 
   const beforeIntentFilter = genericKeywords.length
-  genericKeywords = genericKeywords.filter(kw => {
+  genericKeywords = genericKeywords.filter((kw) => {
     const kwLower = kw.keyword.toLowerCase()
-    return !RESEARCH_INTENT_PATTERNS.some(pattern => kwLower.includes(pattern))
+    return !RESEARCH_INTENT_PATTERNS.some((pattern) => kwLower.includes(pattern))
   })
 
   const intentFiltered = beforeIntentFilter - genericKeywords.length

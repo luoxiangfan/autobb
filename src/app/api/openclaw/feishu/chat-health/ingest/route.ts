@@ -11,7 +11,7 @@ import { parseFeishuAccountUserId } from '@/lib/openclaw/feishu-accounts'
 import { resolveOpenclawUserFromBinding } from '@/lib/openclaw/bindings'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
 
-const ingestSchema = z.record(z.any())
+const ingestSchema = z.record(z.string(), z.any())
 
 type RawIngestPayload = z.infer<typeof ingestSchema>
 type IngestPayload = {
@@ -497,7 +497,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json(
       {
-        error: parsed.error.errors[0]?.message || 'Invalid payload',
+        error: parsed.error.issues[0]?.message || 'Invalid payload',
       },
       { status: 400 }
     )

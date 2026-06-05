@@ -12,9 +12,10 @@ const trustHandler: AuthenticatedHandler = async (request, user) => {
   const { deviceName } = body
 
   // 获取当前设备的指纹
-  const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-                    request.headers.get('x-real-ip') ||
-                    'unknown'
+  const ipAddress =
+    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
   const userAgent = request.headers.get('user-agent') || 'unknown'
 
   const deviceFingerprint = generateDeviceFingerprint(userAgent, ipAddress)
@@ -42,10 +43,7 @@ const untrustHandler: AuthenticatedHandler = async (request, user) => {
   const { deviceFingerprint } = body
 
   if (!deviceFingerprint) {
-    return NextResponse.json(
-      { error: '请提供 deviceFingerprint' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: '请提供 deviceFingerprint' }, { status: 400 })
   }
 
   const success = await untrustDevice(user.userId, deviceFingerprint)
@@ -57,10 +55,7 @@ const untrustHandler: AuthenticatedHandler = async (request, user) => {
     })
   }
 
-  return NextResponse.json(
-    { error: '设备不存在或已被取消信任' },
-    { status: 404 }
-  )
+  return NextResponse.json({ error: '设备不存在或已被取消信任' }, { status: 404 })
 }
 
 export const POST = withAuth(trustHandler)

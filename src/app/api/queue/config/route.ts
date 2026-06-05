@@ -11,6 +11,7 @@ import { getQueueManager } from '@/lib/queue'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 
 const GLOBAL_CONCURRENCY_MAX = 1000
 const PER_USER_CONCURRENCY_MAX = 1000
@@ -23,8 +24,8 @@ const RETRY_DELAY_MAX_MS = 60000
 
 // 默认队列配置
 const DEFAULT_QUEUE_CONFIG = {
-  globalConcurrency: 999,  // 🔥 全局并发提升至999（补点击需求）
-  perUserConcurrency: 999,  // 🔥 单用户并发提升至999（补点击需求）
+  globalConcurrency: 999, // 🔥 全局并发提升至999（补点击需求）
+  perUserConcurrency: 999, // 🔥 单用户并发提升至999（补点击需求）
   perTypeConcurrency: {
     'ai-analysis': 2,
     sync: 1,
@@ -35,13 +36,13 @@ const DEFAULT_QUEUE_CONFIG = {
     cleanup: 1,
     'offer-extraction': 2,
     'batch-offer-creation': 1,
-    'ad-creative': 3,  // 创意生成任务（允许多用户同时生成）
-    'campaign-publish': 2,  // 广告系列发布并发限制
+    'ad-creative': 3, // 创意生成任务（允许多用户同时生成）
+    'campaign-publish': 2, // 广告系列发布并发限制
     'click-farm-trigger': 4, // 补点击触发任务（控制面）
     'click-farm-batch': 6, // 补点击批次分发任务（滚动派发）
-    'click-farm': 50,  // 补点击任务并发限制（默认保守，避免小规格容器资源耗尽；可在管理台调整）
-    'url-swap': 3,  // 换链接任务并发限制（避免Playwright池争用导致获取实例超时）
-    'openclaw-strategy': 2,  // OpenClaw 策略任务并发限制
+    'click-farm': 50, // 补点击任务并发限制（默认保守，避免小规格容器资源耗尽；可在管理台调整）
+    'url-swap': 3, // 换链接任务并发限制（避免Playwright池争用导致获取实例超时）
+    'openclaw-strategy': 2, // OpenClaw 策略任务并发限制
     'affiliate-product-sync': 2, // 联盟商品同步任务并发限制
     'openclaw-command': 3, // OpenClaw 指令执行任务并发限制
     'openclaw-affiliate-sync': 2, // OpenClaw 联盟佣金快照同步任务并发限制
@@ -149,22 +150,60 @@ function normalizeQueueConfig(input: any): typeof DEFAULT_QUEUE_CONFIG {
   return merged
 }
 
-// 统一队列配置验证Schema
-const queueConfigSchema = z.object({
-  globalConcurrency: z.number().min(1).max(GLOBAL_CONCURRENCY_MAX).optional(),  // 🔥 提升上限至1000（支持补点击999并发）
-  perUserConcurrency: z.number().min(1).max(PER_USER_CONCURRENCY_MAX).optional(),  // 🔥 提升上限至1000（支持补点击999并发）
-  perTypeConcurrency: z.record(z.number().min(1).max(PER_TYPE_CONCURRENCY_MAX)).optional(),  // 🔥 提升上限至1000（支持补点击999并发）
-  maxQueueSize: z.number().min(10).max(MAX_QUEUE_SIZE_MAX).optional(),
-  // 兼容历史超限值：先裁剪再验证，避免“修改其它字段时被旧 taskTimeout 阻塞”
-  taskTimeout: z.preprocess(
-    (value) => (typeof value === 'number' && Number.isFinite(value)
+const taskTimeoutSchema = z
+  .union([z.number(), z.undefined()])
+  .transform((value) =>
+    typeof value === 'number' && Number.isFinite(value)
       ? Math.min(value, TASK_TIMEOUT_MAX_MS)
-      : value),
-    z.number().min(TASK_TIMEOUT_MIN_MS).max(TASK_TIMEOUT_MAX_MS).optional()
-  ),
-  defaultMaxRetries: z.number().min(0).max(DEFAULT_MAX_RETRIES_MAX).optional(),
-  retryDelay: z.number().min(1000).max(RETRY_DELAY_MAX_MS).optional(),
-}).passthrough()  // 🔥 允许额外字段（如 enablePriority, storageType 等前端状态字段）
+      : value
+  )
+  .pipe(
+    z
+      .number()
+      .min(TASK_TIMEOUT_MIN_MS, zErr.minNumber(TASK_TIMEOUT_MIN_MS))
+      .max(TASK_TIMEOUT_MAX_MS, zErr.maxNumber(TASK_TIMEOUT_MAX_MS))
+      .optional()
+  )
+
+// 统一队列配置验证Schema
+const queueConfigSchema = z.looseObject({
+  globalConcurrency: z
+    .number()
+    .min(1, zErr.minNumber(1))
+    .max(GLOBAL_CONCURRENCY_MAX, zErr.maxNumber(GLOBAL_CONCURRENCY_MAX))
+    .optional(), // 🔥 提升上限至1000（支持补点击999并发）
+  perUserConcurrency: z
+    .number()
+    .min(1, zErr.minNumber(1))
+    .max(PER_USER_CONCURRENCY_MAX, zErr.maxNumber(PER_USER_CONCURRENCY_MAX))
+    .optional(), // 🔥 提升上限至1000（支持补点击999并发）
+  perTypeConcurrency: z
+    .record(
+      z.string(),
+      z
+        .number()
+        .min(1, zErr.minNumber(1))
+        .max(PER_TYPE_CONCURRENCY_MAX, zErr.maxNumber(PER_TYPE_CONCURRENCY_MAX))
+    )
+    .optional(), // 🔥 提升上限至1000（支持补点击999并发）
+  maxQueueSize: z
+    .number()
+    .min(10, zErr.minNumber(10))
+    .max(MAX_QUEUE_SIZE_MAX, zErr.maxNumber(MAX_QUEUE_SIZE_MAX))
+    .optional(),
+  // 兼容历史超限值：先裁剪再验证，避免“修改其它字段时被旧 taskTimeout 阻塞”
+  taskTimeout: taskTimeoutSchema,
+  defaultMaxRetries: z
+    .number()
+    .min(0, zErr.minNumber(0))
+    .max(DEFAULT_MAX_RETRIES_MAX, zErr.maxNumber(DEFAULT_MAX_RETRIES_MAX))
+    .optional(),
+  retryDelay: z
+    .number()
+    .min(1000, zErr.minNumber(1000))
+    .max(RETRY_DELAY_MAX_MS, zErr.maxNumber(RETRY_DELAY_MAX_MS))
+    .optional(),
+}) // 🔥 允许额外字段（如 enablePriority, storageType 等前端状态字段）
 
 function getRuntimeQueueConfig(): typeof DEFAULT_QUEUE_CONFIG {
   const queueManager = getQueueManager()
@@ -217,20 +256,26 @@ async function saveQueueConfigToDB(config: typeof DEFAULT_QUEUE_CONFIG): Promise
 
   if (existing) {
     // 更新现有配置
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE system_settings
       SET value = ?, updated_at = datetime('now')
       WHERE category = 'queue' AND key = 'config' AND user_id IS NULL
-    `, [configJson])
+    `,
+      [configJson]
+    )
   } else {
     // 插入新配置
-    await db.exec(`
+    await db.exec(
+      `
       INSERT INTO system_settings (
         user_id, category, key, value, data_type, is_sensitive, is_required, description
       ) VALUES (
         NULL, 'queue', 'config', ?, 'json', FALSE, FALSE, '统一队列系统配置'
       )
-    `, [configJson])
+    `,
+      [configJson]
+    )
   }
 }
 
@@ -275,15 +320,12 @@ export async function GET(request: NextRequest) {
         redisConnected: !!process.env.REDIS_URL,
         // 🔥 新增：标识配置来源
         configSource: dbConfig ? 'database' : 'runtime',
-        knownTaskTypes: ALL_TASK_TYPES
-      }
+        knownTaskTypes: ALL_TASK_TYPES,
+      },
     })
   } catch (error: any) {
     console.error('[UnifiedQueueConfig] 获取配置失败:', error)
-    return NextResponse.json(
-      { error: error.message || '获取配置失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取配置失败' }, { status: 500 })
   }
 }
 
@@ -305,7 +347,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         {
           error: '权限不足',
-          message: '只有管理员可以修改系统队列配置'
+          message: '只有管理员可以修改系统队列配置',
         },
         { status: 403 }
       )
@@ -319,10 +361,10 @@ export async function PUT(request: NextRequest) {
     if (!validationResult.success) {
       console.error('[UnifiedQueueConfig] 配置验证失败:', {
         body,
-        errors: validationResult.error.errors
+        errors: validationResult.error.issues,
       })
       return NextResponse.json(
-        { error: '配置格式错误', details: validationResult.error.errors },
+        { error: '配置格式错误', details: validationResult.error.issues },
         { status: 400 }
       )
     }
@@ -338,8 +380,8 @@ export async function PUT(request: NextRequest) {
       // 确保 perTypeConcurrency 也正确合并
       perTypeConcurrency: {
         ...existingConfig.perTypeConcurrency,
-        ...(newConfig.perTypeConcurrency || {})
-      }
+        ...(newConfig.perTypeConcurrency || {}),
+      },
     }
 
     // 🔥 保存到数据库（持久化）
@@ -350,7 +392,10 @@ export async function PUT(request: NextRequest) {
     const queueManager = getQueueManager()
     queueManager.updateConfig(normalizedConfig)
 
-    console.log(`[UnifiedQueueConfig] 管理员 ${auth.user.email} (ID: ${auth.user.userId}) 更新了队列配置:`, newConfig)
+    console.log(
+      `[UnifiedQueueConfig] 管理员 ${auth.user.email} (ID: ${auth.user.userId}) 更新了队列配置:`,
+      newConfig
+    )
 
     return NextResponse.json({
       success: true,
@@ -359,9 +404,6 @@ export async function PUT(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('[UnifiedQueueConfig] 更新配置失败:', error)
-    return NextResponse.json(
-      { error: error.message || '更新配置失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '更新配置失败' }, { status: 500 })
   }
 }

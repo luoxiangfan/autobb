@@ -20,9 +20,7 @@ export function normalizeBrandKey(brand: string): string {
   if (!brand || typeof brand !== 'string') return ''
   const trimmed = brand.trim().toLowerCase()
   if (!trimmed) return ''
-  return trimmed
-    .normalize('NFKD')
-    .replace(/[^\p{L}\p{N}]+/gu, '')
+  return trimmed.normalize('NFKD').replace(/[^\p{L}\p{N}]+/gu, '')
 }
 
 export function buildBrandCoreCacheKey(
@@ -80,7 +78,7 @@ export async function getBrandCoreKeywordsByKey(
   if (cached) return cached
 
   const db = await getDatabase()
-  const rows = await db.query(
+  const rows = (await db.query(
     `
     SELECT
       keyword_norm,
@@ -95,7 +93,7 @@ export async function getBrandCoreKeywordsByKey(
     ORDER BY clicks_total DESC, impressions_total DESC, keyword_norm ASC
   `,
     [normalizedBrandKey, normalizedCountry, normalizedLanguage]
-  ) as Array<{
+  )) as Array<{
     keyword_norm: string
     keyword_display: string | null
     search_volume: number | null
@@ -105,7 +103,7 @@ export async function getBrandCoreKeywordsByKey(
     last_seen_at: string | null
   }>
 
-  const keywords: BrandCoreKeyword[] = rows.map(row => ({
+  const keywords: BrandCoreKeyword[] = rows.map((row) => ({
     keywordNorm: row.keyword_norm,
     keywordDisplay: row.keyword_display,
     searchVolume: Number(row.search_volume || 0),
@@ -140,7 +138,7 @@ export async function refreshBrandCoreKeywordCache(
   const normalizedLanguage = normalizeLanguageCode(language || 'en')
 
   const db = await getDatabase()
-  const rows = await db.query(
+  const rows = (await db.query(
     `
     SELECT
       keyword_norm,
@@ -155,7 +153,7 @@ export async function refreshBrandCoreKeywordCache(
     ORDER BY clicks_total DESC, impressions_total DESC, keyword_norm ASC
   `,
     [normalizedBrandKey, normalizedCountry, normalizedLanguage]
-  ) as Array<{
+  )) as Array<{
     keyword_norm: string
     keyword_display: string | null
     search_volume: number | null
@@ -165,7 +163,7 @@ export async function refreshBrandCoreKeywordCache(
     last_seen_at: string | null
   }>
 
-  const keywords: BrandCoreKeyword[] = rows.map(row => ({
+  const keywords: BrandCoreKeyword[] = rows.map((row) => ({
     keywordNorm: row.keyword_norm,
     keywordDisplay: row.keyword_display,
     searchVolume: Number(row.search_volume || 0),
@@ -206,9 +204,14 @@ export async function updateBrandCoreKeywordSearchVolumes(
         SET search_volume = ?, updated_at = ${updatedAt}
         WHERE brand_key = ? AND target_country = ? AND target_language = ? AND keyword_norm = ?
       `,
-        [update.searchVolume, normalizedBrandKey, normalizedCountry, normalizedLanguage, keywordNorm]
+        [
+          update.searchVolume,
+          normalizedBrandKey,
+          normalizedCountry,
+          normalizedLanguage,
+          keywordNorm,
+        ]
       )
     }
   })
 }
-

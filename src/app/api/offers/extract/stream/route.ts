@@ -54,10 +54,10 @@ export async function POST(req: NextRequest) {
     // 1. 验证用户身份
     const authResult = await verifyAuth(req)
     if (!authResult.authenticated || !authResult.user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized', message: '请先登录' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ error: 'Unauthorized', message: '请先登录' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
     const userIdNum = authResult.user.userId
 
@@ -76,10 +76,10 @@ export async function POST(req: NextRequest) {
       parsed = parseNewOfferExtractRequest(rawBody)
     } catch (error: unknown) {
       if (error instanceof OfferExtractRequestError) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid request', message: error.message }),
-          { status: error.status, headers: { 'Content-Type': 'application/json' } }
-        )
+        return new Response(JSON.stringify({ error: 'Invalid request', message: error.message }), {
+          status: error.status,
+          headers: { 'Content-Type': 'application/json' },
+        })
       }
       throw error
     }
@@ -138,8 +138,8 @@ export async function POST(req: NextRequest) {
                 data: {
                   message: 'Task not found',
                   stage: 'error',
-                  details: {}
-                }
+                  details: {},
+                },
               })
               clearInterval(pollInterval)
               controller.close()
@@ -157,20 +157,21 @@ export async function POST(req: NextRequest) {
                 const result = parseJsonField<Record<string, any>>(task.result, {})
                 sendSSE({
                   type: 'complete',
-                  data: result
+                  data: result,
                 })
               } else {
                 const parsedError = parseJsonField<any>(task.error, null)
-                const error = parsedError && typeof parsedError === 'object'
-                  ? parsedError
-                  : { message: task.message || '任务失败' }
+                const error =
+                  parsedError && typeof parsedError === 'object'
+                    ? parsedError
+                    : { message: task.message || '任务失败' }
                 sendSSE({
                   type: 'error',
                   data: {
                     message: error.message || '任务失败',
                     stage: 'error',
-                    details: error
-                  }
+                    details: error,
+                  },
                 })
               }
 
@@ -201,8 +202,8 @@ export async function POST(req: NextRequest) {
                   status,
                   message: task.message || '处理中...',
                   timestamp: Date.now(),
-                  details: {}
-                }
+                  details: {},
+                },
               })
             }
           } catch (error: any) {
@@ -212,8 +213,8 @@ export async function POST(req: NextRequest) {
               data: {
                 message: error.message,
                 stage: 'error',
-                details: { stack: error.stack }
-              }
+                details: { stack: error.stack },
+              },
             })
             clearInterval(pollInterval)
             controller.close()
@@ -241,46 +242,45 @@ export async function POST(req: NextRequest) {
               data: {
                 message: 'SSE timeout - task may still be running',
                 stage: 'error',
-                details: {}
-              }
+                details: {},
+              },
             })
             controller.close()
             isClosed = true
           }
         }, 900000) // 15分钟 = 900000ms
-      }
+      },
     })
 
     return new Response(stream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        Connection: 'keep-alive',
       },
     })
-
   } catch (error: unknown) {
     console.error('SSE initialization error:', error)
 
     const apiError = offerExtractApiErrorBody(error, 'Invalid request')
     if (apiError) {
-      return new Response(
-        JSON.stringify({ error: apiError.error, message: apiError.message }),
-        { status: apiError.status, headers: { 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ error: apiError.error, message: apiError.message }), {
+        status: apiError.status,
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
 
     const message = error instanceof Error ? error.message : '创建提取任务失败'
     if (message.includes('队列已满')) {
-      return new Response(
-        JSON.stringify({ error: '系统繁忙', message: '系统繁忙，请稍后重试' }),
-        { status: 503, headers: { 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ error: '系统繁忙', message: '系统繁忙，请稍后重试' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
 
-    return new Response(
-      JSON.stringify({ error: 'Internal server error', message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ error: 'Internal server error', message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 }

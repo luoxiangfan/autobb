@@ -3,6 +3,7 @@
  */
 
 import { z } from 'zod'
+import { zErr } from '@/lib/zod-errors'
 import { compactCategoryLabel } from '@/lib/offer-category'
 import { findOfferById, updateOffer, type Offer } from '@/lib/offers'
 import {
@@ -19,40 +20,40 @@ import {
   resolveExtractionModeInput,
 } from '@/lib/offer-extraction-mode'
 
-const INVALID_EXTRACTION_MODE_MESSAGE = '无效的提取模式，可选：fast、balanced、original'
-
-const extractionModeSchema = z.preprocess(
-  (val) => (val == null || val === '' ? undefined : val),
-  z
-    .union([z.string(), z.undefined()])
-    .optional()
-    .superRefine((val, ctx) => {
-      if (val === undefined) return
-      if (resolveExtractionModeInput(val) === null) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: INVALID_EXTRACTION_MODE_MESSAGE,
-        })
-      }
-    })
-    .transform((val) => {
-      if (val === undefined) return undefined
-      return resolveExtractionModeInput(val)!
-    })
-)
+const extractionModeSchema = z
+  .union([z.string(), z.undefined(), z.null(), z.literal('')])
+  .transform((val): string | undefined => (val == null || val === '' ? undefined : val))
+  .pipe(
+    z
+      .string()
+      .optional()
+      .superRefine((val, ctx) => {
+        if (val === undefined) return
+        if (resolveExtractionModeInput(val) === null) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: zErr.invalidExtractionMode.error,
+          })
+        }
+      })
+      .transform((val) => {
+        if (val === undefined) return undefined
+        return resolveExtractionModeInput(val)!
+      })
+  )
 
 export const updateOfferBodySchema = z.object({
-  url: z.string().url('无效的URL格式').optional(),
-  brand: z.string().min(1, '品牌名称不能为空').optional(),
+  url: z.url(zErr.invalidUrl).optional(),
+  brand: z.string().min(1, zErr.brandRequired).optional(),
   category: z.string().optional(),
-  target_country: z.string().min(2, '目标国家代码至少2个字符').optional(),
-  affiliate_link: z.string().url('无效的联盟链接格式').optional(),
+  target_country: z.string().min(2, zErr.targetCountryMin).optional(),
+  affiliate_link: z.url(zErr.invalidAffiliateUrl).optional(),
   brand_description: z.string().optional(),
   unique_selling_points: z.string().optional(),
   product_highlights: z.string().optional(),
   target_audience: z.string().optional(),
   page_type: z.enum(['store', 'product']).optional(),
-  store_product_links: z.array(z.string().url('无效的URL格式')).max(3).optional(),
+  store_product_links: z.array(z.url(zErr.invalidUrl)).max(3, zErr.maxItems(3)).optional(),
   product_price: z.string().optional(),
   commission_payout: z.string().optional(),
   commission_type: z.enum(['percent', 'amount']).optional(),
@@ -64,11 +65,25 @@ export const updateOfferBodySchema = z.object({
 })
 
 const OFFER_UPDATE_KEYS = new Set([
-  'url', 'brand', 'category', 'target_country', 'affiliate_link',
-  'brand_description', 'unique_selling_points', 'product_highlights', 'target_audience',
-  'page_type', 'store_product_links', 'product_price', 'commission_payout',
-  'commission_type', 'commission_value', 'commission_currency', 'is_active',
-  'extraction_mode', 'extractionMode',
+  'url',
+  'brand',
+  'category',
+  'target_country',
+  'affiliate_link',
+  'brand_description',
+  'unique_selling_points',
+  'product_highlights',
+  'target_audience',
+  'page_type',
+  'store_product_links',
+  'product_price',
+  'commission_payout',
+  'commission_type',
+  'commission_value',
+  'commission_currency',
+  'is_active',
+  'extraction_mode',
+  'extractionMode',
 ])
 
 /** 从 rebuild 请求体中剥离 Offer 更新字段 */
@@ -99,11 +114,7 @@ export function resolveStoreProductLinksForUpdate(
   }
   if (pageType === 'store' && linksInput !== undefined) {
     const normalized = Array.from(
-      new Set(
-        linksInput
-          .map((link) => link.trim())
-          .filter(Boolean)
-      )
+      new Set(linksInput.map((link) => link.trim()).filter(Boolean))
     ).slice(0, 3)
     return normalized.length > 0 ? JSON.stringify(normalized) : null
   }
@@ -159,7 +170,7 @@ export async function applyOfferUpdateFromBody(
   const validationResult = updateOfferBodySchema.safeParse(picked)
   if (!validationResult.success) {
     return {
-      error: validationResult.error.errors[0]?.message || '请求参数无效',
+      error: validationResult.error.issues[0]?.message || '请求参数无效',
       status: 400,
     }
   }
@@ -184,8 +195,8 @@ export async function applyOfferUpdateFromBody(
 
   let pageType = data.page_type
   if (
-    pageType === undefined
-    && (data.store_product_links !== undefined || data.affiliate_link !== undefined)
+    pageType === undefined &&
+    (data.store_product_links !== undefined || data.affiliate_link !== undefined)
   ) {
     let affiliateForInfer = data.affiliate_link
     if (!affiliateForInfer) {
@@ -206,10 +217,11 @@ export async function applyOfferUpdateFromBody(
     data.store_product_links
   )
 
-  const hasCommissionInput = data.commission_payout !== undefined
-    || data.commission_type !== undefined
-    || data.commission_value !== undefined
-    || data.commission_currency !== undefined
+  const hasCommissionInput =
+    data.commission_payout !== undefined ||
+    data.commission_type !== undefined ||
+    data.commission_value !== undefined ||
+    data.commission_currency !== undefined
 
   let normalizedCommission: ReturnType<typeof normalizeOfferCommissionInput> | null = null
   if (hasCommissionInput) {
@@ -251,10 +263,18 @@ export async function applyOfferUpdateFromBody(
     product_highlights: data.product_highlights,
     target_audience: data.target_audience,
     product_price: data.product_price,
-    commission_payout: hasCommissionInput ? (normalizedCommission?.commissionPayout || undefined) : undefined,
-    commission_type: hasCommissionInput ? (normalizedCommission?.commissionType || undefined) : undefined,
-    commission_value: hasCommissionInput ? (normalizedCommission?.commissionValue || undefined) : undefined,
-    commission_currency: hasCommissionInput ? (normalizedCommission?.commissionCurrency || undefined) : undefined,
+    commission_payout: hasCommissionInput
+      ? normalizedCommission?.commissionPayout || undefined
+      : undefined,
+    commission_type: hasCommissionInput
+      ? normalizedCommission?.commissionType || undefined
+      : undefined,
+    commission_value: hasCommissionInput
+      ? normalizedCommission?.commissionValue || undefined
+      : undefined,
+    commission_currency: hasCommissionInput
+      ? normalizedCommission?.commissionCurrency || undefined
+      : undefined,
     page_type: pageType,
     is_active: data.is_active,
     extraction_mode: data.extraction_mode ?? data.extractionMode,

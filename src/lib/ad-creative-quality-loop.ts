@@ -1,8 +1,5 @@
 import type { DescriptionAsset, GeneratedAdCreativeData, HeadlineAsset } from './ad-creative'
-import {
-  evaluateCreativeAdStrength,
-  type ComprehensiveAdStrengthResult
-} from './scoring'
+import { evaluateCreativeAdStrength, type ComprehensiveAdStrengthResult } from './scoring'
 import {
   AD_CREATIVE_MAX_AUTO_RETRIES,
   AD_CREATIVE_REQUIRED_MIN_SCORE,
@@ -11,17 +8,20 @@ import {
   evaluateRsaQualityGate,
   inferRetryFailureType,
   type RetryFailureType,
-  type RsaQualityGateDecision
+  type RsaQualityGateDecision,
 } from './rsa-quality-gate'
 import {
   evaluateCreativeRuleGate,
   type CreativeRuleContext,
   type CreativeRuleContextInput,
-  type CreativeRuleGateDecision
+  type CreativeRuleGateDecision,
 } from './ad-creative-rule-gate'
 import type { CanonicalCreativeType } from './creative-type'
 
-export { AD_CREATIVE_MAX_AUTO_RETRIES, AD_CREATIVE_REQUIRED_MIN_SCORE } from './ad-creative-quality-constants'
+export {
+  AD_CREATIVE_MAX_AUTO_RETRIES,
+  AD_CREATIVE_REQUIRED_MIN_SCORE,
+} from './ad-creative-quality-constants'
 
 export interface CreativeAttemptEvaluation {
   adStrength: ComprehensiveAdStrengthResult
@@ -88,31 +88,33 @@ function ensureCreativeMetadata(creative: GeneratedAdCreativeData): {
   headlinesWithMetadata: HeadlineAsset[]
   descriptionsWithMetadata: DescriptionAsset[]
 } {
-  const headlinesWithMetadata = creative.headlinesWithMetadata && creative.headlinesWithMetadata.length > 0
-    ? creative.headlinesWithMetadata.map((item, index) => ({
-      ...item,
-      text: creative.headlines[index] ?? item.text,
-      length: (creative.headlines[index] ?? item.text).length
-    }))
-    : (creative.headlines || []).map(text => ({
-      text,
-      length: text.length
-    }))
+  const headlinesWithMetadata =
+    creative.headlinesWithMetadata && creative.headlinesWithMetadata.length > 0
+      ? creative.headlinesWithMetadata.map((item, index) => ({
+          ...item,
+          text: creative.headlines[index] ?? item.text,
+          length: (creative.headlines[index] ?? item.text).length,
+        }))
+      : (creative.headlines || []).map((text) => ({
+          text,
+          length: text.length,
+        }))
 
-  const descriptionsWithMetadata = creative.descriptionsWithMetadata && creative.descriptionsWithMetadata.length > 0
-    ? creative.descriptionsWithMetadata.map((item, index) => ({
-      ...item,
-      text: creative.descriptions[index] ?? item.text,
-      length: (creative.descriptions[index] ?? item.text).length
-    }))
-    : (creative.descriptions || []).map(text => ({
-      text,
-      length: text.length
-    }))
+  const descriptionsWithMetadata =
+    creative.descriptionsWithMetadata && creative.descriptionsWithMetadata.length > 0
+      ? creative.descriptionsWithMetadata.map((item, index) => ({
+          ...item,
+          text: creative.descriptions[index] ?? item.text,
+          length: (creative.descriptions[index] ?? item.text).length,
+        }))
+      : (creative.descriptions || []).map((text) => ({
+          text,
+          length: text.length,
+        }))
 
   return {
     headlinesWithMetadata,
-    descriptionsWithMetadata
+    descriptionsWithMetadata,
   }
 }
 
@@ -136,7 +138,8 @@ function isCandidateBetter<TCreative extends GeneratedAdCreativeData>(
   if (current.evaluation.passed === best.evaluation.passed) {
     if (current.evaluation.rsaGate.passed && !best.evaluation.rsaGate.passed) return true
     if (current.evaluation.rsaGate.passed === best.evaluation.rsaGate.passed) {
-      if (current.evaluation.adStrength.finalScore > best.evaluation.adStrength.finalScore) return true
+      if (current.evaluation.adStrength.finalScore > best.evaluation.adStrength.finalScore)
+        return true
     }
   }
   return false
@@ -189,7 +192,7 @@ export async function evaluateCreativeForQuality(
     ruleGate,
     passed,
     failureType,
-    reasons
+    reasons,
   }
 }
 
@@ -225,7 +228,7 @@ export async function runCreativeGenerationQualityLoop<TCreative extends Generat
         rulePassed: evaluation.ruleGate.passed,
         failureType: evaluation.failureType,
         reasons: evaluation.reasons,
-        suggestions: evaluation.adStrength.combinedSuggestions || []
+        suggestions: evaluation.adStrength.combinedSuggestions || [],
       })
 
       if (evaluation.passed) {
@@ -247,12 +250,12 @@ export async function runCreativeGenerationQualityLoop<TCreative extends Generat
         failureType: 'format_fail',
         reasons: [message],
         suggestions: [],
-        error: message
+        error: message,
       })
     }
 
     if (attempts < maxAttempts && callbacks.delayMs && callbacks.delayMs > 0) {
-      await new Promise(resolve => setTimeout(resolve, callbacks.delayMs))
+      await new Promise((resolve) => setTimeout(resolve, callbacks.delayMs))
     }
   }
 
@@ -267,6 +270,6 @@ export async function runCreativeGenerationQualityLoop<TCreative extends Generat
     accepted,
     selectedCreative: bestCandidate.creative,
     selectedEvaluation: bestCandidate.evaluation,
-    history
+    history,
   }
 }

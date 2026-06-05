@@ -67,4 +67,3 @@ export function getLocalizedDkiOfficialSuffix(options?: DkiLocaleOptions): strin
   const languageCode = resolveDkiLanguageCode(options)
   return DKI_OFFICIAL_SUFFIX_BY_LANGUAGE[languageCode] || DKI_OFFICIAL_SUFFIX_BY_LANGUAGE.en
 }
-

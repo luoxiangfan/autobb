@@ -27,7 +27,11 @@ function parseBooleanEnv(rawValue: string | undefined, defaultValue: boolean): b
   return defaultValue
 }
 
-function parseNonNegativeIntEnv(rawValue: string | undefined, defaultValue: number, minValue: number = 0): number {
+function parseNonNegativeIntEnv(
+  rawValue: string | undefined,
+  defaultValue: number,
+  minValue: number = 0
+): number {
   if (rawValue === undefined) return defaultValue
 
   const parsed = Number.parseInt(rawValue, 10)
@@ -60,8 +64,8 @@ export class CampaignPausedTaskScheduler {
 
   private readonly CHECK_INTERVAL_MS = parseNonNegativeIntEnv(
     process.env.QUEUE_CAMPAIGN_PAUSED_CHECK_INTERVAL_MS,
-    30 * 60 * 1000,  // 默认 30 分钟
-    1_000            // 最低 1 秒，避免 0 导致忙循环
+    30 * 60 * 1000, // 默认 30 分钟
+    1_000 // 最低 1 秒，避免 0 导致忙循环
   )
   private readonly RUN_ON_START = parseBooleanEnv(
     process.env.QUEUE_CAMPAIGN_PAUSED_RUN_ON_START,
@@ -69,7 +73,7 @@ export class CampaignPausedTaskScheduler {
   )
   private readonly STARTUP_DELAY_MS = parseNonNegativeIntEnv(
     process.env.QUEUE_CAMPAIGN_PAUSED_STARTUP_DELAY_MS,
-    15_000  // 默认 15 秒延迟，避免冷启动竞争
+    15_000 // 默认 15 秒延迟，避免冷启动竞争
   )
 
   /**
@@ -104,7 +108,9 @@ export class CampaignPausedTaskScheduler {
       this.checkAndPauseTasks()
     }, this.CHECK_INTERVAL_MS)
 
-    console.log(`✅ 广告系列暂停任务检测调度器已启动 (检测间隔：${this.CHECK_INTERVAL_MS / 1000 / 60}分钟)`)
+    console.log(
+      `✅ 广告系列暂停任务检测调度器已启动 (检测间隔：${this.CHECK_INTERVAL_MS / 1000 / 60}分钟)`
+    )
   }
 
   /**
@@ -177,8 +183,8 @@ export class CampaignPausedTaskScheduler {
       for (const userResult of result.details) {
         console.log(
           `  ✓ 用户 ${userResult.userId}: 处理 ${userResult.offerIds.length} 个 offer, ` +
-          `成功 ${userResult.offersSucceeded}，失败 ${userResult.offersFailed}，` +
-          `暂停 ${userResult.clickFarmTasksPaused} 个补点击任务，禁用 ${userResult.urlSwapTasksDisabled} 个换链接任务`
+            `成功 ${userResult.offersSucceeded}，失败 ${userResult.offersFailed}，` +
+            `暂停 ${userResult.clickFarmTasksPaused} 个补点击任务，禁用 ${userResult.urlSwapTasksDisabled} 个换链接任务`
         )
       }
 

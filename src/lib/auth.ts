@@ -3,11 +3,7 @@ import { getDatabase } from './db'
 import { hashPassword, verifyPassword } from './crypto'
 import { generateToken, verifyToken } from './jwt'
 import { getInsertedId } from './db-helpers'
-import {
-  recordFailedLogin,
-  resetFailedAttempts,
-  logLoginAttempt,
-} from './auth-security'
+import { recordFailedLogin, resetFailedAttempts, logLoginAttempt } from './auth-security'
 
 export interface User {
   id: number
@@ -84,7 +80,10 @@ export async function findUserByUsername(username: string): Promise<User | null>
  */
 export async function findUserByUsernameOrEmail(usernameOrEmail: string): Promise<User | null> {
   const db = await getDatabase()
-  const user = await db.queryOne<User>('SELECT * FROM users WHERE username = ? OR email = ?', [usernameOrEmail, usernameOrEmail])
+  const user = await db.queryOne<User>('SELECT * FROM users WHERE username = ? OR email = ?', [
+    usernameOrEmail,
+    usernameOrEmail,
+  ])
   return user || null
 }
 
@@ -110,8 +109,34 @@ export async function findUserById(id: number): Promise<User | null> {
  * 生成唯一的动物用户名 (8-12位)
  */
 export async function generateUniqueUsername(): Promise<string> {
-  const animals = ['panda', 'tiger', 'lion', 'eagle', 'shark', 'wolf', 'bear', 'hawk', 'fox', 'owl', 'deer', 'cat', 'dog', 'fish']
-  const adjectives = ['fast', 'brave', 'wise', 'calm', 'wild', 'cool', 'kind', 'bold', 'epic', 'rare']
+  const animals = [
+    'panda',
+    'tiger',
+    'lion',
+    'eagle',
+    'shark',
+    'wolf',
+    'bear',
+    'hawk',
+    'fox',
+    'owl',
+    'deer',
+    'cat',
+    'dog',
+    'fish',
+  ]
+  const adjectives = [
+    'fast',
+    'brave',
+    'wise',
+    'calm',
+    'wild',
+    'cool',
+    'kind',
+    'bold',
+    'epic',
+    'rare',
+  ]
 
   let username = ''
   let isUnique = false
@@ -120,7 +145,9 @@ export async function generateUniqueUsername(): Promise<string> {
   while (!isUnique) {
     const animal = animals[Math.floor(Math.random() * animals.length)]
     const adjective = adjectives[Math.floor(Math.random() * adjectives.length)]
-    const num = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
+    const num = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, '0')
 
     // 组合: adj + animal + num (e.g., wiseowl123)
     // 确保长度在 8-12 之间
@@ -163,40 +190,40 @@ export async function createUser(input: CreateUserInput): Promise<User> {
   }
 
   // 如果没有提供用户名，自动生成
-  const username = input.username || await generateUniqueUsername()
+  const username = input.username || (await generateUniqueUsername())
   const role = input.role || 'user'
   const shouldEnableOpenclaw = role === 'admin'
   const shouldEnableProducts = role === 'admin'
   const shouldEnableStrategyCenter = role === 'admin'
-  const openclawEnabledValue = db.type === 'postgres'
-    ? shouldEnableOpenclaw
-    : (shouldEnableOpenclaw ? 1 : 0)
-  const productManagementEnabledValue = db.type === 'postgres'
-    ? shouldEnableProducts
-    : (shouldEnableProducts ? 1 : 0)
-  const strategyCenterEnabledValue = db.type === 'postgres'
-    ? shouldEnableStrategyCenter
-    : (shouldEnableStrategyCenter ? 1 : 0)
+  const openclawEnabledValue =
+    db.type === 'postgres' ? shouldEnableOpenclaw : shouldEnableOpenclaw ? 1 : 0
+  const productManagementEnabledValue =
+    db.type === 'postgres' ? shouldEnableProducts : shouldEnableProducts ? 1 : 0
+  const strategyCenterEnabledValue =
+    db.type === 'postgres' ? shouldEnableStrategyCenter : shouldEnableStrategyCenter ? 1 : 0
 
-  const result = await db.exec(`
+  const result = await db.exec(
+    `
     INSERT INTO users (
       username, email, password_hash, display_name, google_id, profile_picture, role, package_type, package_expires_at, must_change_password, openclaw_enabled, product_management_enabled, strategy_center_enabled
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [
-    username,
-    input.email || null, // email 可以为 null
-    passwordHash,
-    input.displayName || null,
-    input.googleId || null,
-    input.profilePicture || null,
-    role,
-    input.packageType || 'trial',
-    input.packageExpiresAt || null,
-    input.mustChangePassword !== undefined ? input.mustChangePassword : 1,
-    openclawEnabledValue,
-    productManagementEnabledValue,
-    strategyCenterEnabledValue,
-  ])
+  `,
+    [
+      username,
+      input.email || null, // email 可以为 null
+      passwordHash,
+      input.displayName || null,
+      input.googleId || null,
+      input.profilePicture || null,
+      role,
+      input.packageType || 'trial',
+      input.packageExpiresAt || null,
+      input.mustChangePassword !== undefined ? input.mustChangePassword : 1,
+      openclawEnabledValue,
+      productManagementEnabledValue,
+      strategyCenterEnabledValue,
+    ]
+  )
 
   // 从INSERT结果中提取ID（兼容PostgreSQL和SQLite）
   const insertedId = getInsertedId(result, db.type)
@@ -215,7 +242,7 @@ export async function createUser(input: CreateUserInput): Promise<User> {
 export async function updateLastLogin(userId: number): Promise<void> {
   const db = await getDatabase()
   const db_type = db.type
-  const nowFunc = db_type === 'postgres' ? 'NOW()' : 'datetime(\'now\')'
+  const nowFunc = db_type === 'postgres' ? 'NOW()' : "datetime('now')"
   await db.exec(`UPDATE users SET last_login_at = ${nowFunc} WHERE id = ?`, [userId])
 }
 
@@ -299,7 +326,7 @@ export async function loginWithPassword(
       displayName: user.display_name,
       role: user.role,
       packageType: user.package_type,
-      packageExpiresAt: user.package_expires_at
+      packageExpiresAt: user.package_expires_at,
     },
     mustChangePassword,
   }
@@ -324,12 +351,15 @@ export async function loginWithGoogle(googleProfile: {
       // 绑定Google ID到现有账户
       const db = await getDatabase()
       const db_type = db.type
-      const nowFunc = db_type === 'postgres' ? 'NOW()' : 'datetime(\'now\')'
-      await db.exec(`
+      const nowFunc = db_type === 'postgres' ? 'NOW()' : "datetime('now')"
+      await db.exec(
+        `
         UPDATE users
         SET google_id = ?, profile_picture = ?, updated_at = ${nowFunc}
         WHERE id = ?
-      `, [googleProfile.id, googleProfile.picture || null, existingUser.id])
+      `,
+        [googleProfile.id, googleProfile.picture || null, existingUser.id]
+      )
 
       user = await findUserById(existingUser.id)
     } else {
@@ -339,7 +369,7 @@ export async function loginWithGoogle(googleProfile: {
         googleId: googleProfile.id,
         displayName: googleProfile.name,
         profilePicture: googleProfile.picture,
-        mustChangePassword: 0 // Google login doesn't need password change
+        mustChangePassword: 0, // Google login doesn't need password change
       })
     }
   }
@@ -384,7 +414,7 @@ export async function loginWithGoogle(googleProfile: {
       displayName: user.display_name,
       role: user.role,
       packageType: user.package_type,
-      packageExpiresAt: user.package_expires_at
+      packageExpiresAt: user.package_expires_at,
     },
     mustChangePassword,
   }
@@ -542,34 +572,31 @@ export function withAuth(
     requireAdmin?: boolean
   }
 ) {
-  return async (request: NextRequest, context?: { params?: Record<string, string> }): Promise<Response> => {
+  return async (
+    request: NextRequest,
+    routeContext?: { params?: Promise<Record<string, string>> }
+  ): Promise<Response> => {
     const { NextResponse } = await import('next/server')
 
     const authResult = await verifyAuth(request)
 
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: authResult.error || '未授权' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
 
     // 检查管理员权限
     if (options?.requireAdmin && authResult.user.role !== 'admin') {
-      return NextResponse.json(
-        { error: '需要管理员权限' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
     }
+
+    const resolvedParams = routeContext?.params ? await routeContext.params : undefined
+    const context = resolvedParams ? { params: resolvedParams } : undefined
 
     try {
       return await handler(request, authResult.user, context)
     } catch (error: any) {
       console.error('API处理错误:', error)
-      return NextResponse.json(
-        { error: error.message || '服务器内部错误' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: error.message || '服务器内部错误' }, { status: 500 })
     }
   }
 }

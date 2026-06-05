@@ -1,6 +1,10 @@
 import { Browser, BrowserContext, Page } from 'playwright'
 import { getPlaywrightPool } from './playwright-pool'
-import { smartWaitForLoad, assessPageComplexity, recordWaitOptimization } from './smart-wait-strategy'
+import {
+  smartWaitForLoad,
+  assessPageComplexity,
+  recordWaitOptimization,
+} from './smart-wait-strategy'
 import { isProxyConnectionError } from './stealth-scraper'
 
 /**
@@ -30,7 +34,17 @@ function isSameDomain(a: string, b: string): boolean {
   return a.endsWith(`.${b}`) || b.endsWith(`.${a}`)
 }
 
-const TRACKING_TARGET_PARAM_NAMES = ['url', 'redirect', 'target', 'destination', 'goto', 'link', 'new', 'r', 'u']
+const TRACKING_TARGET_PARAM_NAMES = [
+  'url',
+  'redirect',
+  'target',
+  'destination',
+  'goto',
+  'link',
+  'new',
+  'r',
+  'u',
+]
 
 function extractTrackingWrapperSuffix(urlObj: URL, finalHost: string): string {
   if (!urlObj.search) return ''
@@ -122,7 +136,8 @@ async function configureStealthPage(page: Page): Promise<void> {
   // Set enhanced headers
   await page.setExtraHTTPHeaders({
     'User-Agent': userAgent,
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+    Accept:
+      'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
     'Accept-Language': 'en-US,en;q=0.9',
     'Upgrade-Insecure-Requests': '1',
     'Sec-Fetch-Dest': 'document',
@@ -170,7 +185,7 @@ async function configureStealthPage(page: Page): Promise<void> {
  */
 function randomDelay(min: number = 500, max: number = 1500): Promise<void> {
   const delay = Math.floor(Math.random() * (max - min + 1)) + min
-  return new Promise(resolve => setTimeout(resolve, delay))
+  return new Promise((resolve) => setTimeout(resolve, delay))
 }
 
 /**
@@ -189,7 +204,11 @@ export interface PlaywrightResolvedUrl {
  * 从连接池获取浏览器上下文（复用实例，减少启动时间）
  * P0优化: 集成代理IP池预热缓存
  */
-async function getBrowserFromPool(proxyUrl?: string, targetCountry?: string, userId?: number): Promise<{ browser: Browser; context: BrowserContext; instanceId: string; fromPool: boolean }> {
+async function getBrowserFromPool(
+  proxyUrl?: string,
+  targetCountry?: string,
+  userId?: number
+): Promise<{ browser: Browser; context: BrowserContext; instanceId: string; fromPool: boolean }> {
   return getBrowserFromPoolWithProxyRefresh(proxyUrl, targetCountry, userId, false)
 }
 
@@ -200,7 +219,9 @@ async function getBrowserFromPoolWithProxyRefresh(
   forceRefreshProxy = false
 ): Promise<{ browser: Browser; context: BrowserContext; instanceId: string; fromPool: boolean }> {
   // 🔥 P0优化: 如果有targetCountry，尝试从代理池获取预热的代理（节省3-5s）
-  let proxyCredentials: { host: string; port: number; username: string; password: string } | undefined
+  let proxyCredentials:
+    | { host: string; port: number; username: string; password: string }
+    | undefined
 
   if (targetCountry && !proxyUrl) {
     try {
@@ -215,7 +236,9 @@ async function getBrowserFromPoolWithProxyRefresh(
           username: cachedProxy.username,
           password: cachedProxy.password,
         }
-        console.log(`🔥 [代理池] Cache HIT: ${cachedProxy.host}:${cachedProxy.port} (${targetCountry})`)
+        console.log(
+          `🔥 [代理池] Cache HIT: ${cachedProxy.host}:${cachedProxy.port} (${targetCountry})`
+        )
       }
     } catch (error: any) {
       console.warn(`⚠️ 代理池获取失败，使用默认代理: ${error.message}`)
@@ -226,9 +249,13 @@ async function getBrowserFromPoolWithProxyRefresh(
     try {
       const { getProxyIp } = await import('./proxy/fetch-proxy-ip')
       proxyCredentials = await getProxyIp(proxyUrl, true, userId)
-      console.log(`🔁 [Playwright] 重试阶段强制刷新代理IP: ${proxyCredentials.host}:${proxyCredentials.port}`)
+      console.log(
+        `🔁 [Playwright] 重试阶段强制刷新代理IP: ${proxyCredentials.host}:${proxyCredentials.port}`
+      )
     } catch (error: any) {
-      console.warn(`⚠️ [Playwright] 强制刷新代理IP失败，回退到原有获取逻辑: ${error?.message || error}`)
+      console.warn(
+        `⚠️ [Playwright] 强制刷新代理IP失败，回退到原有获取逻辑: ${error?.message || error}`
+      )
       proxyCredentials = undefined
     }
   }
@@ -321,13 +348,15 @@ export async function resolveAffiliateLinkWithPlaywright(
 
     // 使用智能等待策略评估页面复杂度
     const complexity = assessPageComplexity(affiliateLink)
-    console.log(`页面复杂度: ${complexity.complexity}, 推荐timeout: ${complexity.recommendedTimeout}ms`)
+    console.log(
+      `页面复杂度: ${complexity.complexity}, 推荐timeout: ${complexity.recommendedTimeout}ms`
+    )
 
     const gotoStartTime = Date.now()
 
     // 基础导航（使用domcontentloaded而不是networkidle，更快）
     const response = await page.goto(affiliateLink, {
-      waitUntil: 'domcontentloaded',  // 更快的等待策略
+      waitUntil: 'domcontentloaded', // 更快的等待策略
       timeout: complexity.recommendedTimeout,
     })
 
@@ -347,18 +376,21 @@ export async function resolveAffiliateLinkWithPlaywright(
     }
 
     // 只有在非4xx情况下才做额外“页面稳定”等待，避免403/404等错误页浪费等待时间
-    const smartWait = statusCode < 400
-      ? await smartWaitForLoad(page, affiliateLink, {
-        maxWaitTime: waitTime > 0 ? waitTime : complexity.recommendedWaitTime,
-      })
-      : { waited: 0, signals: ['http_error_skip_wait'] }
+    const smartWait =
+      statusCode < 400
+        ? await smartWaitForLoad(page, affiliateLink, {
+            maxWaitTime: waitTime > 0 ? waitTime : complexity.recommendedWaitTime,
+          })
+        : { waited: 0, signals: ['http_error_skip_wait'] }
 
     if (statusCode < 400) {
       // Simulate human behavior: scrolling and reading
       await randomDelay(800, 1500)
-      await page.evaluate(() => {
-        window.scrollBy(0, Math.random() * 500)
-      }).catch(() => {})
+      await page
+        .evaluate(() => {
+          window.scrollBy(0, Math.random() * 500)
+        })
+        .catch(() => {})
       await randomDelay(500, 1000)
     }
 
@@ -394,7 +426,7 @@ export async function resolveAffiliateLinkWithPlaywright(
     }
 
     // 记录优化效果（相比固定等待networkidle + waitTime）
-    const traditionalWaitTime = 60000  // 传统方式固定60秒
+    const traditionalWaitTime = 60000 // 传统方式固定60秒
     recordWaitOptimization(traditionalWaitTime, totalWaitTime)
 
     // 获取最终URL
@@ -407,14 +439,18 @@ export async function resolveAffiliateLinkWithPlaywright(
       console.error(`   - page.url(): ${finalFullUrl}`)
       console.error(`   - response.status: ${statusCode}`)
       console.error(`   - redirectChain: ${redirectChain.join(' → ')}`)
-      throw new Error(`Playwright解析失败: 页面导航后URL无效 (${finalFullUrl})，可能是推广链接失效或被拦截`)
+      throw new Error(
+        `Playwright解析失败: 页面导航后URL无效 (${finalFullUrl})，可能是推广链接失效或被拦截`
+      )
     }
 
     // 分离Final URL和Final URL suffix
     const urlObj = new URL(finalFullUrl)
     const finalUrl = `${urlObj.origin}${urlObj.pathname}`
     const finalUrlSuffix = urlObj.search.substring(1)
-    const fallbackSuffix = finalUrlSuffix ? '' : extractSuffixFromRedirectChain(redirectChain, finalUrl)
+    const fallbackSuffix = finalUrlSuffix
+      ? ''
+      : extractSuffixFromRedirectChain(redirectChain, finalUrl)
     const resolvedSuffix = finalUrlSuffix || fallbackSuffix
 
     const redirectCount = redirectChain.length - 1
@@ -422,7 +458,9 @@ export async function resolveAffiliateLinkWithPlaywright(
     console.log(`Playwright解析完成: ${redirectCount}次重定向`)
     console.log(`Final URL: ${finalUrl}`)
     if (!finalUrlSuffix && fallbackSuffix) {
-      console.log(`Final URL Suffix(redirect): ${fallbackSuffix.substring(0, 100)}${fallbackSuffix.length > 100 ? '...' : ''}`)
+      console.log(
+        `Final URL Suffix(redirect): ${fallbackSuffix.substring(0, 100)}${fallbackSuffix.length > 100 ? '...' : ''}`
+      )
     }
 
     return {
@@ -444,7 +482,7 @@ export async function resolveAffiliateLinkWithPlaywright(
         console.log(`🗑️ 销毁失败的Playwright实例: ${instanceId}`)
         const pool = getPlaywrightPool()
         await pool.invalidate(instanceId)
-        fromPool = false  // 标记为已销毁，避免finally块再次处理
+        fromPool = false // 标记为已销毁，避免finally块再次处理
       }
 
       throw new Error(`Playwright解析失败（代理连接问题，建议重试）: ${error.message}`)
@@ -494,8 +532,7 @@ export async function verifyBrandInFinalUrl(
     // 提取页面文本
     const pageText = await page.evaluate(() => document.body.innerText)
     const pageTitle = await page.title()
-    const metaDescription =
-      (await page.getAttribute('meta[name="description"]', 'content')) || ''
+    const metaDescription = (await page.getAttribute('meta[name="description"]', 'content')) || ''
 
     // 品牌匹配检测
     const brandLower = expectedBrand.toLowerCase()

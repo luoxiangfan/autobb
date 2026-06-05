@@ -12,9 +12,7 @@ import type { Task } from '@/lib/queue/types'
 import { getDatabase } from '@/lib/db'
 import { nowFunc } from '@/lib/db-helpers'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
-import {
-  calculateHybridProductRecommendationScores,
-} from '@/lib/product-recommendation-scoring'
+import { calculateHybridProductRecommendationScores } from '@/lib/product-recommendation-scoring'
 import type { AffiliateProduct } from '@/lib/affiliate-products'
 import {
   batchGetCachedProductRecommendationScores,
@@ -118,7 +116,8 @@ function isCachedScoreReusable(
     return cachedScore.inputFingerprint === inputFingerprint
   }
 
-  const cacheCalculatedAtMs = parseTimestampMs(cachedScore.scoreCalculatedAt) ?? cachedScore.cachedAt
+  const cacheCalculatedAtMs =
+    parseTimestampMs(cachedScore.scoreCalculatedAt) ?? cachedScore.cachedAt
   if (!Number.isFinite(cacheCalculatedAtMs)) return false
 
   const lastSyncedAtMs = parseTimestampMs(product.last_synced_at as unknown)
@@ -142,20 +141,30 @@ export async function executeProductScoreCalculation(
     allowWhenPaused = false,
     batchSize = 100,
     includeSeasonalityAnalysis = true,
-    trigger = 'manual'
+    trigger = 'manual',
   } = task.data
-  const aiRerankTopK = trigger === 'manual'
-    ? parsePositiveIntEnv('PRODUCT_SCORE_AI_RERANK_TOP_K_MANUAL', PRODUCT_SCORE_AI_RERANK_TOP_K_MANUAL_DEFAULT)
-    : parsePositiveIntEnv('PRODUCT_SCORE_AI_RERANK_TOP_K_BACKGROUND', PRODUCT_SCORE_AI_RERANK_TOP_K_BACKGROUND_DEFAULT)
+  const aiRerankTopK =
+    trigger === 'manual'
+      ? parsePositiveIntEnv(
+          'PRODUCT_SCORE_AI_RERANK_TOP_K_MANUAL',
+          PRODUCT_SCORE_AI_RERANK_TOP_K_MANUAL_DEFAULT
+        )
+      : parsePositiveIntEnv(
+          'PRODUCT_SCORE_AI_RERANK_TOP_K_BACKGROUND',
+          PRODUCT_SCORE_AI_RERANK_TOP_K_BACKGROUND_DEFAULT
+        )
 
   console.log(`[ProductScoreCalculation] 开始执行任务 ${task.id}`)
-  console.log(`[ProductScoreCalculation] 用户: ${userId}, 触发: ${trigger}, 批次大小: ${batchSize}, aiRerankTopK: ${aiRerankTopK}`)
+  console.log(
+    `[ProductScoreCalculation] 用户: ${userId}, 触发: ${trigger}, 批次大小: ${batchSize}, aiRerankTopK: ${aiRerankTopK}`
+  )
 
   const db = await getDatabase()
   const startTime = Date.now()
   const nowSql = nowFunc(db.type)
   const queue = await getQueueManagerForTaskType('product-score-calculation')
-  const lockTtlMs = Math.max(queue.getConfig().taskTimeout || 900000, 15 * 60 * 1000) + 5 * 60 * 1000
+  const lockTtlMs =
+    Math.max(queue.getConfig().taskTimeout || 900000, 15 * 60 * 1000) + 5 * 60 * 1000
   const executionMutex = await acquireProductScoreExecutionMutex(userId, task.id, lockTtlMs)
 
   if (!executionMutex.acquired) {
@@ -172,20 +181,22 @@ export async function executeProductScoreCalculation(
     return
   }
 
-  const refreshTimer = setInterval(() => {
-    executionMutex.refresh().catch((error) => {
-      console.warn(
-        `[ProductScoreCalculation] 刷新用户${userId}互斥锁失败:`,
-        error
-      )
-    })
-  }, Math.max(30_000, Math.floor(lockTtlMs / 3)))
+  const refreshTimer = setInterval(
+    () => {
+      executionMutex.refresh().catch((error) => {
+        console.warn(`[ProductScoreCalculation] 刷新用户${userId}互斥锁失败:`, error)
+      })
+    },
+    Math.max(30_000, Math.floor(lockTtlMs / 3))
+  )
   refreshTimer.unref?.()
 
   try {
     const paused = await isProductScoreCalculationPaused(userId)
     if (paused && !allowWhenPaused) {
-      console.log(`[ProductScoreCalculation] 用户${userId}已暂停推荐指数计算，任务 ${task.id} 直接结束`)
+      console.log(
+        `[ProductScoreCalculation] 用户${userId}已暂停推荐指数计算，任务 ${task.id} 直接结束`
+      )
       return
     }
 
@@ -281,23 +292,25 @@ export async function executeProductScoreCalculation(
       }
 
       if (productsToCalculate.length > 0) {
-        hybridResults = await calculateHybridProductRecommendationScores(productsToCalculate, userId, {
-          includeSeasonalityAnalysis,
-          aiRerankTopK,
-        })
+        hybridResults = await calculateHybridProductRecommendationScores(
+          productsToCalculate,
+          userId,
+          {
+            includeSeasonalityAnalysis,
+            aiRerankTopK,
+          }
+        )
 
         console.log(
           `[ProductScoreCalculation] 混合精排完成: 规则粗排 ${hybridResults.summary.totalProducts}, ` +
-          `AI候选 ${hybridResults.summary.aiCandidates}, AI完成 ${hybridResults.summary.aiCompleted}, ` +
-          `规则直出 ${hybridResults.summary.ruleOnly}`
+            `AI候选 ${hybridResults.summary.aiCandidates}, AI完成 ${hybridResults.summary.aiCompleted}, ` +
+            `规则直出 ${hybridResults.summary.ruleOnly}`
         )
       } else {
         console.log('[ProductScoreCalculation] 当前批次全部命中缓存，无需触发AI精排')
       }
 
-      const resultByProductId = new Map(
-        hybridResults.results.map((item) => [item.productId, item])
-      )
+      const resultByProductId = new Map(hybridResults.results.map((item) => [item.productId, item]))
 
       for (const product of products) {
         const cached = cachedScores.get(product.id)
@@ -345,7 +358,10 @@ export async function executeProductScoreCalculation(
               id: product.id,
               error: error.message,
             })
-            console.error(`[ProductScoreCalculation] ❌ 商品${product.id}缓存回填失败:`, error.message)
+            console.error(
+              `[ProductScoreCalculation] ❌ 商品${product.id}缓存回填失败:`,
+              error.message
+            )
           }
           continue
         }
@@ -383,7 +399,7 @@ export async function executeProductScoreCalculation(
               score.seasonalityAnalysis?.score || null,
               score.seasonalityAnalysis ? JSON.stringify(score.seasonalityAnalysis) : null,
               score.productAnalysis ? JSON.stringify(score.productAnalysis) : null,
-              product.id
+              product.id,
             ]
           )
 
@@ -394,21 +410,21 @@ export async function executeProductScoreCalculation(
             productAnalysis: score.productAnalysis || null,
             scoreCalculatedAt: now,
             inputFingerprint,
-            cachedAt: Date.now()
-          }).catch(err => {
+            cachedAt: Date.now(),
+          }).catch((err) => {
             console.warn(`[ProductScoreCalculation] 缓存商品${product.id}失败:`, err)
           })
 
           successCount++
           console.log(
             `[ProductScoreCalculation] ✅ 商品${product.id}: ${score.starRating}星 (${score.totalScore.toFixed(1)}分)` +
-            `${result.usedAI ? ' [AI精排]' : ' [规则粗排]'}`
+              `${result.usedAI ? ' [AI精排]' : ' [规则粗排]'}`
           )
         } catch (error: any) {
           failedCount++
           failedProducts.push({
             id: product.id,
-            error: error.message
+            error: error.message,
           })
           console.error(`[ProductScoreCalculation] ❌ 商品${product.id}计算失败:`, error.message)
         }
@@ -426,10 +442,8 @@ export async function executeProductScoreCalculation(
     }
 
     // 续跑机制：无指定 productIds 且非 force 模式下，按批次持续推进，直到清空待计算集合
-    const shouldScheduleContinuation = !productIds
-      && !forceRecalculate
-      && products.length >= batchSize
-      && successCount > 0
+    const shouldScheduleContinuation =
+      !productIds && !forceRecalculate && products.length >= batchSize && successCount > 0
 
     const deferredRequest = await consumeProductScoreRequeueRequest(userId)
     const followUpAllowWhenPaused = allowWhenPaused || Boolean(deferredRequest?.allowWhenPaused)
@@ -442,9 +456,7 @@ export async function executeProductScoreCalculation(
       try {
         const existingTask = await findExistingProductScoreTask(queue, userId, task.id)
         if (existingTask && existingTask.status === 'pending') {
-          console.log(
-            `[ProductScoreCalculation] 已存在后续任务 ${existingTask.id}，跳过重复续跑`
-          )
+          console.log(`[ProductScoreCalculation] 已存在后续任务 ${existingTask.id}，跳过重复续跑`)
         } else {
           const nextTaskId = await queue.enqueue(
             'product-score-calculation',
@@ -485,10 +497,7 @@ export async function executeProductScoreCalculation(
   } finally {
     clearInterval(refreshTimer)
     await executionMutex.release().catch((error) => {
-      console.warn(
-        `[ProductScoreCalculation] 释放用户${userId}互斥锁失败:`,
-        error
-      )
+      console.warn(`[ProductScoreCalculation] 释放用户${userId}互斥锁失败:`, error)
     })
   }
 }

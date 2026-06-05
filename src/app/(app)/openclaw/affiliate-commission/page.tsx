@@ -270,56 +270,53 @@ export default function AffiliateCommissionReportPage() {
     }
   }, [affiliateFilter, commissionAffiliates])
 
+  const loadDateBounds = useCallback(async () => {
+    setBoundsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      params.set('meta', 'bounds')
+      params.set('platform', affiliateFilter)
+      if (isAdmin && selectedUserFilters.length > 0) {
+        params.set('userIds', selectedUserFilters.join(','))
+      }
+
+      const response = await fetch(
+        `/api/openclaw/affiliate-commission-report?${params.toString()}`,
+        { credentials: 'include' }
+      )
+      const payload = await response.json() as BoundsPayload & { error?: string }
+      if (!response.ok) {
+        throw new Error(payload.error || '加载可选日期范围失败')
+      }
+
+      const nextBounds = payload.dateBounds
+      setDateBounds(nextBounds)
+
+      if (!nextBounds.minDate || !nextBounds.maxDate) {
+        setDateRange(undefined)
+        dateRangeInitializedRef.current = true
+        return
+      }
+
+      setDateRange((current) => {
+        if (!dateRangeInitializedRef.current) {
+          dateRangeInitializedRef.current = true
+          return buildInitialDateRange(nextBounds)
+        }
+        return clampRangeToBounds(current, nextBounds)
+      })
+    } catch (error: any) {
+      showError('加载日期范围失败', error?.message || '无法获取数据日期范围')
+      setDateBounds(null)
+    } finally {
+      setBoundsLoading(false)
+    }
+  }, [affiliateFilter, isAdmin, selectedUserFilters])
+
   useEffect(() => {
     if (!accessResolved) return
-
-    const loadDateBounds = async () => {
-      setBoundsLoading(true)
-      try {
-        const params = new URLSearchParams()
-        params.set('meta', 'bounds')
-        params.set('platform', affiliateFilter)
-        if (isAdmin && selectedUserFilters.length > 0) {
-          params.set('userIds', selectedUserFilters.join(','))
-        }
-
-        const response = await fetch(
-          `/api/openclaw/affiliate-commission-report?${params.toString()}`,
-          { credentials: 'include' }
-        )
-        const payload = await response.json() as BoundsPayload & { error?: string }
-        if (!response.ok) {
-          throw new Error(payload.error || '加载可选日期范围失败')
-        }
-
-        const nextBounds = payload.dateBounds
-        setDateBounds(nextBounds)
-
-        if (!nextBounds.minDate || !nextBounds.maxDate) {
-          setDateRange(undefined)
-          dateRangeInitializedRef.current = true
-          return
-        }
-
-        setDateRange((current) => {
-          if (!dateRangeInitializedRef.current) {
-            dateRangeInitializedRef.current = true
-            return buildInitialDateRange(nextBounds)
-          }
-          return clampRangeToBounds(current, nextBounds)
-        })
-      } catch (error: any) {
-        showError('加载日期范围失败', error?.message || '无法获取数据日期范围')
-        setDateBounds(null)
-      } finally {
-        setBoundsLoading(false)
-      }
-    }
-
     void loadDateBounds()
-    // Reload bounds only when user scope changes; platform switches reuse report.dateBounds.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- affiliateFilter intentionally omitted to avoid duplicate report requests on platform switch
-  }, [accessResolved, boundsUserScopeKey])
+  }, [accessResolved, boundsUserScopeKey, loadDateBounds])
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams()
@@ -497,7 +494,7 @@ export default function AffiliateCommissionReportPage() {
           </div>
           <Button
             variant="outline"
-            className="shrink-0 bg-white shadow-sm"
+            className="shrink-0 bg-white shadow-xs"
             onClick={() => void loadReport()}
             disabled={loading}
           >
@@ -506,11 +503,11 @@ export default function AffiliateCommissionReportPage() {
           </Button>
         </div>
 
-        <Card className="overflow-hidden border-violet-200/70 bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 shadow-sm">
+        <Card className="overflow-hidden border-violet-200/70 bg-linear-to-br from-violet-50 via-purple-50 to-fuchsia-50 shadow-xs">
           <CardContent className="p-5 sm:p-6">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-4">
-                <div className="rounded-2xl bg-white/80 p-3 shadow-sm ring-1 ring-violet-100">
+                <div className="rounded-2xl bg-white/80 p-3 shadow-xs ring-1 ring-violet-100">
                   <Coins className="h-6 w-6 text-violet-600" />
                 </div>
                 <div className="space-y-2">
@@ -558,7 +555,7 @@ export default function AffiliateCommissionReportPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 shadow-sm">
+        <Card className="border-slate-200/80 shadow-xs">
           <CardHeader className="pb-4">
             <CardTitle className="text-base">筛选与视图</CardTitle>
             <CardDescription>
@@ -738,7 +735,7 @@ export default function AffiliateCommissionReportPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 shadow-sm">
+        <Card className="border-slate-200/80 shadow-xs">
           <CardHeader className="pb-4">
             <div>
               <CardTitle className="flex items-center gap-2 text-base">

@@ -17,7 +17,7 @@ const MARKETPLACE_HOST_PATTERNS: RegExp[] = [
 
 function isMarketplaceHostname(hostname: string): boolean {
   const h = (hostname || '').toLowerCase()
-  return MARKETPLACE_HOST_PATTERNS.some(re => re.test(h))
+  return MARKETPLACE_HOST_PATTERNS.some((re) => re.test(h))
 }
 
 function normalizeUrlCandidate(inputUrl: string): string {
@@ -27,7 +27,9 @@ function normalizeUrlCandidate(inputUrl: string): string {
   return `https://${trimmed}`
 }
 
-export function getKeywordPlannerSiteFilterUrl(inputUrl: string | undefined | null): string | undefined {
+export function getKeywordPlannerSiteFilterUrl(
+  inputUrl: string | undefined | null
+): string | undefined {
   if (!inputUrl) return undefined
 
   try {
@@ -48,7 +50,9 @@ function safeParseJsonObject(value: string | null | undefined): Record<string, a
   if (!value) return null
   try {
     const parsed = JSON.parse(value)
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, any>) : null
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, any>)
+      : null
   } catch {
     return null
   }
@@ -66,15 +70,17 @@ export function getKeywordPlannerSiteFilterUrlForOffer(offer: {
   if (direct) return direct
 
   const meta = safeParseJsonObject(offer?.extraction_metadata)
-  const origin = typeof meta?.brandOfficialSite?.origin === 'string' ? meta.brandOfficialSite.origin.trim() : ''
+  const origin =
+    typeof meta?.brandOfficialSite?.origin === 'string' ? meta.brandOfficialSite.origin.trim() : ''
   if (origin) {
     const parsed = getKeywordPlannerSiteFilterUrl(origin)
     if (parsed) return parsed
   }
 
-  const officialUrl = typeof meta?.brandSearchSupplement?.officialSite?.url === 'string'
-    ? meta.brandSearchSupplement.officialSite.url.trim()
-    : ''
+  const officialUrl =
+    typeof meta?.brandSearchSupplement?.officialSite?.url === 'string'
+      ? meta.brandSearchSupplement.officialSite.url.trim()
+      : ''
   if (officialUrl) return getKeywordPlannerSiteFilterUrl(officialUrl)
 
   return undefined

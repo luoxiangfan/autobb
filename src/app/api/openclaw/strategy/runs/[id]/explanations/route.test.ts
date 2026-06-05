@@ -79,7 +79,7 @@ describe('GET /api/openclaw/strategy/runs/:id/explanations', () => {
     authFns.resolveOpenclawRequestUser.mockResolvedValue(null)
 
     const req = new NextRequest('http://localhost/api/openclaw/strategy/runs/run-123/explanations')
-    const res = await GET(req, { params: { id: 'run-123' } })
+    const res = await GET(req, { params: Promise.resolve({ id: 'run-123' }) })
 
     expect(res.status).toBe(403)
   })
@@ -88,14 +88,14 @@ describe('GET /api/openclaw/strategy/runs/:id/explanations', () => {
     dbFns.queryOne.mockResolvedValue(null)
 
     const req = new NextRequest('http://localhost/api/openclaw/strategy/runs/run-404/explanations')
-    const res = await GET(req, { params: { id: 'run-404' } })
+    const res = await GET(req, { params: Promise.resolve({ id: 'run-404' }) })
 
     expect(res.status).toBe(404)
   })
 
   it('returns structured explanations for the strategy run', async () => {
     const req = new NextRequest('http://localhost/api/openclaw/strategy/runs/run-123/explanations')
-    const res = await GET(req, { params: { id: 'run-123' } })
+    const res = await GET(req, { params: Promise.resolve({ id: 'run-123' }) })
     const payload = await res.json()
 
     expect(res.status).toBe(200)

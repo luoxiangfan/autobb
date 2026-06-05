@@ -23,7 +23,9 @@ export const GET = withAuth(
       const offset = parseInt(searchParams.get('offset') || '0', 10)
 
       // 获取用户信息
-      const targetUser = await db.queryOne('SELECT username, email FROM users WHERE id = ?', [userId]) as { username: string; email: string } | undefined
+      const targetUser = (await db.queryOne('SELECT username, email FROM users WHERE id = ?', [
+        userId,
+      ])) as { username: string; email: string } | undefined
 
       if (!targetUser) {
         return NextResponse.json({ error: '用户不存在' }, { status: 404 })
@@ -32,7 +34,8 @@ export const GET = withAuth(
       // 查询登录尝试记录（使用username或email匹配，包含设备信息）
       // P1修复：添加 success 条件来获取所有记录（成功和失败）
       // 之前缺少这个条件可能导致某些数据库行为不一致
-      const loginAttempts = await db.query(`
+      const loginAttempts = (await db.query(
+        `
         SELECT
           id,
           username_or_email,
@@ -49,17 +52,23 @@ export const GET = withAuth(
         WHERE username_or_email IN (?, ?)
         ORDER BY attempted_at DESC
         LIMIT ? OFFSET ?
-      `, [targetUser.username, targetUser.email || targetUser.username, limit, offset]) as any[]
+      `,
+        [targetUser.username, targetUser.email || targetUser.username, limit, offset]
+      )) as any[]
 
       // 获取总记录数
-      const totalResult = await db.queryOne(`
+      const totalResult = (await db.queryOne(
+        `
         SELECT COUNT(*) as total
         FROM login_attempts
         WHERE username_or_email IN (?, ?)
-      `, [targetUser.username, targetUser.email || targetUser.username]) as { total: number }
+      `,
+        [targetUser.username, targetUser.email || targetUser.username]
+      )) as { total: number }
 
       // 获取审计日志中的登录成功记录
-      const auditLogs = await db.query(`
+      const auditLogs = (await db.query(
+        `
         SELECT
           id,
           event_type,
@@ -72,16 +81,22 @@ export const GET = withAuth(
           AND event_type IN ('login_success', 'login_failed', 'account_locked')
         ORDER BY created_at DESC
         LIMIT ? OFFSET ?
-      `, [userId, limit, offset]) as any[]
+      `,
+        [userId, limit, offset]
+      )) as any[]
 
       // P1修复：确保 success 是布尔值类型，处理不同数据库返回的类型差异
       // SQLite可能返回整数/字符串，PostgreSQL可能返回布尔值
       const normalizedRecords = [
-        ...loginAttempts.map(record => ({
+        ...loginAttempts.map((record) => ({
           type: 'login_attempt',
           id: record.id,
           // 使用双重检查确保正确识别成功记录
-          success: record.success === 1 || record.success === true || record.success === '1' || record.success === 'true',
+          success:
+            record.success === 1 ||
+            record.success === true ||
+            record.success === '1' ||
+            record.success === 'true',
           ipAddress: record.ip_address,
           userAgent: record.user_agent,
           failureReason: record.failure_reason,
@@ -91,7 +106,7 @@ export const GET = withAuth(
           browser: record.browser,
           browserVersion: record.browser_version,
         })),
-        ...auditLogs.map(log => ({
+        ...auditLogs.map((log) => ({
           type: 'audit_log',
           id: log.id,
           eventType: log.event_type,
@@ -99,7 +114,7 @@ export const GET = withAuth(
           userAgent: log.user_agent,
           details: parseJsonField(log.details, null),
           timestamp: log.created_at,
-        }))
+        })),
       ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
       return NextResponse.json({
@@ -113,14 +128,11 @@ export const GET = withAuth(
           total: totalResult.total,
           limit,
           offset,
-        }
+        },
       })
     } catch (error: any) {
       console.error('获取登录历史失败:', error)
-      return NextResponse.json(
-        { error: error.message || '获取登录历史失败' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: error.message || '获取登录历史失败' }, { status: 500 })
     }
   },
   { requireAdmin: true }

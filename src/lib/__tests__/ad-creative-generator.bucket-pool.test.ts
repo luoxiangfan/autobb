@@ -50,8 +50,8 @@ describe('resolveCreativeBucketPoolKeywords', () => {
   it('maps legacy bucket C to canonical model-intent keywords', () => {
     const pool = createPool()
 
-    const bucketB = resolveCreativeBucketPoolKeywords(pool, 'B', 'A').map(item => item.keyword)
-    const bucketC = resolveCreativeBucketPoolKeywords(pool, 'C', 'A').map(item => item.keyword)
+    const bucketB = resolveCreativeBucketPoolKeywords(pool, 'B', 'A').map((item) => item.keyword)
+    const bucketC = resolveCreativeBucketPoolKeywords(pool, 'C', 'A').map((item) => item.keyword)
 
     expect(bucketC).toEqual(bucketB)
     expect(bucketB).toContain('acme x10 vacuum')
@@ -61,8 +61,8 @@ describe('resolveCreativeBucketPoolKeywords', () => {
   it('maps legacy bucket S to canonical product-intent coverage keywords', () => {
     const pool = createPool()
 
-    const bucketD = resolveCreativeBucketPoolKeywords(pool, 'D', 'A').map(item => item.keyword)
-    const bucketS = resolveCreativeBucketPoolKeywords(pool, 'S', 'A').map(item => item.keyword)
+    const bucketD = resolveCreativeBucketPoolKeywords(pool, 'D', 'A').map((item) => item.keyword)
+    const bucketS = resolveCreativeBucketPoolKeywords(pool, 'S', 'A').map((item) => item.keyword)
 
     expect(bucketS).toEqual(bucketD)
     expect(bucketD).toContain('acme vacuum deals')
@@ -71,8 +71,8 @@ describe('resolveCreativeBucketPoolKeywords', () => {
   it('uses the provided fallback bucket when no bucket is specified', () => {
     const pool = createPool()
 
-    const fallbackA = resolveCreativeBucketPoolKeywords(pool, null, 'A').map(item => item.keyword)
-    const fallbackD = resolveCreativeBucketPoolKeywords(pool, null, 'D').map(item => item.keyword)
+    const fallbackA = resolveCreativeBucketPoolKeywords(pool, null, 'A').map((item) => item.keyword)
+    const fallbackD = resolveCreativeBucketPoolKeywords(pool, null, 'D').map((item) => item.keyword)
 
     expect(fallbackA).toContain('acme robot vacuum')
     expect(fallbackD).toContain('acme vacuum deals')
@@ -90,8 +90,12 @@ describe('resolveCreativeBucketPoolKeywords', () => {
       storeBucketSKeywords: [kw('acme vacuum deals')],
     })
 
-    const brandKeywords = resolveCreativeBucketPoolKeywords(pool, 'A', 'A').map(item => item.keyword)
-    const productKeywords = resolveCreativeBucketPoolKeywords(pool, 'D', 'A').map(item => item.keyword)
+    const brandKeywords = resolveCreativeBucketPoolKeywords(pool, 'A', 'A').map(
+      (item) => item.keyword
+    )
+    const productKeywords = resolveCreativeBucketPoolKeywords(pool, 'D', 'A').map(
+      (item) => item.keyword
+    )
 
     expect(brandKeywords).toContain('acme robot vacuum collection')
     expect(brandKeywords).toContain('acme x10 pro omni')

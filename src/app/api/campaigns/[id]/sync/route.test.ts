@@ -105,7 +105,7 @@ describe('POST /api/campaigns/:id/sync', () => {
       method: 'POST',
     })
 
-    const res = await POST(req, { params: { id: '19' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '19' }) })
     expect(res.status).toBe(401)
   })
 
@@ -115,7 +115,7 @@ describe('POST /api/campaigns/:id/sync', () => {
       headers: { 'x-user-id': '7' },
     })
 
-    const res = await POST(req, { params: { id: '19' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '19' }) })
     expect(res.status).toBe(200)
     expect(adsFns.createGoogleAdsCampaign).toHaveBeenCalledWith(
       expect.objectContaining({ refreshToken: 'shared-refresh-token' })
@@ -133,7 +133,7 @@ describe('POST /api/campaigns/:id/sync', () => {
       headers: { 'x-user-id': '7' },
     })
 
-    const res = await POST(req, { params: { id: '19' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '19' }) })
     expect(res.status).toBe(400)
     expect(adsFns.createGoogleAdsCampaign).not.toHaveBeenCalled()
   })
@@ -146,7 +146,7 @@ describe('POST /api/campaigns/:id/sync', () => {
       },
     })
 
-    const res = await POST(req, { params: { id: '19' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '19' }) })
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -165,7 +165,7 @@ describe('POST /api/campaigns/:id/sync', () => {
       },
     })
 
-    const res = await POST(req, { params: { id: '19' } })
+    const res = await POST(req, { params: Promise.resolve({ id: '19' }) })
     const data = await res.json()
 
     expect(res.status).toBe(500)

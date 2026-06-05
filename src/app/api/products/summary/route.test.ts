@@ -200,9 +200,12 @@ describe('GET /api/products/summary', () => {
     dbFns.queryOne.mockReset()
     dbFns.queryOne.mockResolvedValueOnce({ last_score_calculated_at: '2026-04-01T00:00:00.000Z' })
 
-    const req = new NextRequest('http://localhost/api/products/summary?recommendationScoreMax=0.5', {
-      headers: { 'x-user-id': '7' },
-    })
+    const req = new NextRequest(
+      'http://localhost/api/products/summary?recommendationScoreMax=0.5',
+      {
+        headers: { 'x-user-id': '7' },
+      }
+    )
     const res = await GET(req)
     const data = await res.json()
 

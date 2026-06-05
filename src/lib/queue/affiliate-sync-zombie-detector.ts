@@ -52,10 +52,12 @@ function coerceHoursOrNull(value: unknown): number | null {
 /**
  * 检测并修复僵尸同步任务
  */
-export async function detectAndFixZombieSyncTasks(options: {
-  autoFix?: boolean
-  dryRun?: boolean
-} = {}): Promise<ZombieTaskDetectionResult> {
+export async function detectAndFixZombieSyncTasks(
+  options: {
+    autoFix?: boolean
+    dryRun?: boolean
+  } = {}
+): Promise<ZombieTaskDetectionResult> {
   const { autoFix = false, dryRun = false } = options
   const db = await getDatabase()
   const zombieTasks: ZombieTaskDetectionResult['zombieTasks'] = []
@@ -117,9 +119,8 @@ export async function detectAndFixZombieSyncTasks(options: {
       const hoursRunning = coerceHours(task.hours_running)
       const hoursSinceHeartbeat = coerceHoursOrNull(task.hours_since_heartbeat)
       const processedItems = task.created_count + task.updated_count
-      const completionRate = task.total_items > 0
-        ? (processedItems / task.total_items * 100).toFixed(2)
-        : '0.00'
+      const completionRate =
+        task.total_items > 0 ? ((processedItems / task.total_items) * 100).toFixed(2) : '0.00'
 
       // 判断僵尸原因
       let reason = ''
@@ -129,11 +130,13 @@ export async function detectAndFixZombieSyncTasks(options: {
       if (task.status === 'queued' && task.started_at) {
         reason = `状态机错误：已开始运行但状态仍为queued（运行${hoursRunning.toFixed(1)}小时）`
         // 如果已处理超过95%，标记为完成；否则标记为失败
-        shouldMarkAsCompleted = processedItems > 0 && (processedItems / Math.max(task.total_items, 1)) >= 0.95
+        shouldMarkAsCompleted =
+          processedItems > 0 && processedItems / Math.max(task.total_items, 1) >= 0.95
         shouldMarkAsFailed = !shouldMarkAsCompleted
       } else if (hoursRunning > MAX_RUNNING_HOURS) {
         reason = `运行超时：已运行${hoursRunning.toFixed(1)}小时（完成度${completionRate}%）`
-        shouldMarkAsCompleted = processedItems > 0 && (processedItems / Math.max(task.total_items, 1)) >= 0.95
+        shouldMarkAsCompleted =
+          processedItems > 0 && processedItems / Math.max(task.total_items, 1) >= 0.95
         shouldMarkAsFailed = !shouldMarkAsCompleted
       } else if (hoursSinceHeartbeat != null && hoursSinceHeartbeat > MAX_HEARTBEAT_GAP_HOURS) {
         reason = `心跳超时：最后心跳距今${hoursSinceHeartbeat.toFixed(1)}小时（完成度${completionRate}%）`
@@ -273,9 +276,7 @@ export async function getZombieTaskStats(): Promise<{
 
     if (row.oldest_hours !== null) {
       const oldest = coerceHours(row.oldest_hours)
-      oldestZombieHours = oldestZombieHours === null
-        ? oldest
-        : Math.max(oldestZombieHours, oldest)
+      oldestZombieHours = oldestZombieHours === null ? oldest : Math.max(oldestZombieHours, oldest)
     }
   }
 

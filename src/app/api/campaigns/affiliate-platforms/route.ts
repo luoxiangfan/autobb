@@ -79,10 +79,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('获取联盟平台列表失败:', error)
-    return NextResponse.json(
-      { error: error.message || '获取联盟平台列表失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取联盟平台列表失败' }, { status: 500 })
   }
 }
 

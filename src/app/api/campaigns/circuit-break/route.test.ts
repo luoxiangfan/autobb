@@ -40,7 +40,8 @@ vi.mock('@/lib/openclaw/action-logs', () => ({
 }))
 
 vi.mock('@/lib/campaign-state-machine', () => ({
-  applyCampaignTransitionByGoogleCampaignIds: transitionFns.applyCampaignTransitionByGoogleCampaignIds,
+  applyCampaignTransitionByGoogleCampaignIds:
+    transitionFns.applyCampaignTransitionByGoogleCampaignIds,
 }))
 
 vi.mock('@/lib/api-cache', () => ({
@@ -124,7 +125,11 @@ describe('POST /api/campaigns/circuit-break', () => {
     const req = new NextRequest('http://localhost/api/campaigns/circuit-break', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ accountId: 9, reason: 'daily_spend_cap', source: 'openclaw-strategy' }),
+      body: JSON.stringify({
+        accountId: 9,
+        reason: 'daily_spend_cap',
+        source: 'openclaw-strategy',
+      }),
     })
 
     const res = await POST(req)

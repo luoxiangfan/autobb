@@ -31,11 +31,7 @@ function toCountMap(value: unknown): Record<string, number> {
   for (const [rawKey, rawValue] of Object.entries(value as Record<string, any>)) {
     const key = String(rawKey || '').trim()
     if (!key) continue
-    const count = Number(
-      typeof rawValue === 'number'
-        ? rawValue
-        : (rawValue as any)?.count
-    )
+    const count = Number(typeof rawValue === 'number' ? rawValue : (rawValue as any)?.count)
     if (!Number.isFinite(count) || count <= 0) continue
     result[key] = Math.floor(count)
   }
@@ -70,7 +66,9 @@ function toRatioMetric(value: unknown): { count: number; ratio: number } {
   }
 }
 
-function toTopFilterReasonsFromQuotaAudit(sourceQuotaAudit: Record<string, any>): Array<{ reason: string; count: number }> {
+function toTopFilterReasonsFromQuotaAudit(
+  sourceQuotaAudit: Record<string, any>
+): Array<{ reason: string; count: number }> {
   const lowTrust = toSafeNumber((sourceQuotaAudit.blockedByCap as any)?.lowTrust)
   const ai = toSafeNumber((sourceQuotaAudit.blockedByCap as any)?.ai)
   const aiLlmRaw = toSafeNumber((sourceQuotaAudit.blockedByCap as any)?.aiLlmRaw)
@@ -88,28 +86,33 @@ export function summarizeKeywordSourceAudit(
   audit: KeywordSourceAuditLike,
   keywordSupplementation?: KeywordSupplementationLike
 ): Record<string, any> {
-  const sourceQuotaAudit = (
-    audit?.sourceQuotaAudit && typeof audit.sourceQuotaAudit === 'object' && !Array.isArray(audit.sourceQuotaAudit)
-      ? audit.sourceQuotaAudit as Record<string, any>
+  const sourceQuotaAudit =
+    audit?.sourceQuotaAudit &&
+    typeof audit.sourceQuotaAudit === 'object' &&
+    !Array.isArray(audit.sourceQuotaAudit)
+      ? (audit.sourceQuotaAudit as Record<string, any>)
       : {}
-  )
-  const contextFilterStats = (
-    audit?.contextFilterStats && typeof audit.contextFilterStats === 'object' && !Array.isArray(audit.contextFilterStats)
-      ? audit.contextFilterStats as Record<string, any>
+  const contextFilterStats =
+    audit?.contextFilterStats &&
+    typeof audit.contextFilterStats === 'object' &&
+    !Array.isArray(audit.contextFilterStats)
+      ? (audit.contextFilterStats as Record<string, any>)
       : {}
-  )
-  const selectionMetrics = (
-    audit?.selectionMetrics && typeof audit.selectionMetrics === 'object' && !Array.isArray(audit.selectionMetrics)
-      ? audit.selectionMetrics as Record<string, any>
+  const selectionMetrics =
+    audit?.selectionMetrics &&
+    typeof audit.selectionMetrics === 'object' &&
+    !Array.isArray(audit.selectionMetrics)
+      ? (audit.selectionMetrics as Record<string, any>)
       : {}
-  )
   const addedKeywords = Array.isArray(keywordSupplementation?.addedKeywords)
     ? keywordSupplementation?.addedKeywords
     : []
   const removedByContextMismatch = toSafeNumber(contextFilterStats.removedByContextMismatch)
   const removedByIntentTightening = toSafeNumber(contextFilterStats.removedByIntentTightening)
   const initialCandidateCount = toSafeNumber((audit?.pipeline as any)?.initialCandidateCount)
-  const postSupplementCandidateCount = toSafeNumber((audit?.pipeline as any)?.postSupplementCandidateCount)
+  const postSupplementCandidateCount = toSafeNumber(
+    (audit?.pipeline as any)?.postSupplementCandidateCount
+  )
   const contextIntentTighteningDenominator = Math.max(
     1,
     initialCandidateCount,
@@ -120,9 +123,13 @@ export function summarizeKeywordSourceAudit(
     1,
     contextIntentTighteningRemovalCount / contextIntentTighteningDenominator
   )
-  const selectionFallbackTriggered = toSafeBoolean((audit?.pipeline as any)?.selectionFallbackTriggered)
+  const selectionFallbackTriggered = toSafeBoolean(
+    (audit?.pipeline as any)?.selectionFallbackTriggered
+  )
   const nonEmptyRescueTriggered = toSafeBoolean((audit?.pipeline as any)?.nonEmptyRescueTriggered)
-  const relaxedFilteringTriggered = toSafeBoolean((audit?.pipeline as any)?.relaxedFilteringTriggered)
+  const relaxedFilteringTriggered = toSafeBoolean(
+    (audit?.pipeline as any)?.relaxedFilteringTriggered
+  )
 
   return {
     totalKeywords: toSafeNumber(audit?.totalKeywords),
@@ -166,23 +173,45 @@ export function summarizeKeywordSourceAudit(
     },
     pipeline: {
       initialCandidateCount,
-      initialContextFilteredCount: toSafeNumber((audit?.pipeline as any)?.initialContextFilteredCount),
+      initialContextFilteredCount: toSafeNumber(
+        (audit?.pipeline as any)?.initialContextFilteredCount
+      ),
       postSupplementCandidateCount,
-      postSupplementContextFilteredCount: toSafeNumber((audit?.pipeline as any)?.postSupplementContextFilteredCount),
+      postSupplementContextFilteredCount: toSafeNumber(
+        (audit?.pipeline as any)?.postSupplementContextFilteredCount
+      ),
       finalCandidatePoolCount: toSafeNumber((audit?.pipeline as any)?.finalCandidatePoolCount),
       selectionFallbackTriggered,
-      selectionFallbackSource: String((audit?.pipeline as any)?.selectionFallbackSource || 'unknown'),
-      selectionFallbackReason: String((audit?.pipeline as any)?.selectionFallbackReason || 'unknown'),
-      contractSatisfiedAfterFallback: toSafeBoolean((audit?.pipeline as any)?.contractSatisfiedAfterFallback),
+      selectionFallbackSource: String(
+        (audit?.pipeline as any)?.selectionFallbackSource || 'unknown'
+      ),
+      selectionFallbackReason: String(
+        (audit?.pipeline as any)?.selectionFallbackReason || 'unknown'
+      ),
+      contractSatisfiedAfterFallback: toSafeBoolean(
+        (audit?.pipeline as any)?.contractSatisfiedAfterFallback
+      ),
       finalInvariantTriggered: toSafeBoolean((audit?.pipeline as any)?.finalInvariantTriggered),
-      finalInvariantCandidateCount: toSafeNumber((audit?.pipeline as any)?.finalInvariantCandidateCount),
+      finalInvariantCandidateCount: toSafeNumber(
+        (audit?.pipeline as any)?.finalInvariantCandidateCount
+      ),
       nonEmptyRescueTriggered,
-      nonEmptyRescueCandidateCount: toSafeNumber((audit?.pipeline as any)?.nonEmptyRescueCandidateCount),
+      nonEmptyRescueCandidateCount: toSafeNumber(
+        (audit?.pipeline as any)?.nonEmptyRescueCandidateCount
+      ),
       relaxedFilteringTriggered,
-      relaxedFilteringAddedCount: toSafeNumber((audit?.pipeline as any)?.relaxedFilteringAddedCount),
-      relaxedFilteringTargetCount: toSafeNumber((audit?.pipeline as any)?.relaxedFilteringTargetCount),
-      relaxedFilteringPostFilterRatio: toSafeNumber((audit?.pipeline as any)?.relaxedFilteringPostFilterRatio),
-      supplementAppliedAfterFilter: toSafeBoolean((audit?.pipeline as any)?.supplementAppliedAfterFilter),
+      relaxedFilteringAddedCount: toSafeNumber(
+        (audit?.pipeline as any)?.relaxedFilteringAddedCount
+      ),
+      relaxedFilteringTargetCount: toSafeNumber(
+        (audit?.pipeline as any)?.relaxedFilteringTargetCount
+      ),
+      relaxedFilteringPostFilterRatio: toSafeNumber(
+        (audit?.pipeline as any)?.relaxedFilteringPostFilterRatio
+      ),
+      supplementAppliedAfterFilter: toSafeBoolean(
+        (audit?.pipeline as any)?.supplementAppliedAfterFilter
+      ),
     },
     alertSignals: {
       contextIntentTighteningRemovalCount,
@@ -213,7 +242,9 @@ export function logKeywordSourceAudit(params: {
   creativeType?: string | null
   bucket?: string | null
 }): void {
-  const enabledFlag = String(process.env.CREATIVE_KEYWORD_AUDIT_LOG_ENABLED || '1').trim().toLowerCase()
+  const enabledFlag = String(process.env.CREATIVE_KEYWORD_AUDIT_LOG_ENABLED || '1')
+    .trim()
+    .toLowerCase()
   const enabled = !['0', 'false', 'off', 'no'].includes(enabledFlag)
   if (!enabled) return
 

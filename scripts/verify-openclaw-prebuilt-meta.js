@@ -90,7 +90,9 @@ if (sourceCommitFromGit && !COMMIT_SHA_RE.test(sourceCommitFromGit)) {
 }
 
 if (sourceCommitFromGit && sourceCommitFromPin && sourceCommitFromGit !== sourceCommitFromPin) {
-  fail(`openclaw commit pin 与 git HEAD 不一致: pin=${sourceCommitFromPin}, git=${sourceCommitFromGit}`)
+  fail(
+    `openclaw commit pin 与 git HEAD 不一致: pin=${sourceCommitFromPin}, git=${sourceCommitFromGit}`
+  )
 }
 
 const resolvedSourceCommit = sourceCommitFromGit || sourceCommitFromPin
