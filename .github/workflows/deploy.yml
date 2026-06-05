@@ -5,11 +5,12 @@ on:
       - main
     tags:
       - 'v*.*.*' # 匹配版本标签，如 v3.0.0；tag 推送不评估 paths（GitHub 规则）
-    # 仅改根目录 AGENTS.md / CLAUDE.md 时不触发 main 推送（整路径匹配，不含子目录同名文件）
+    # 仅改根目录 AGENTS.md / CLAUDE.md / README.md 时不触发 main 推送（整路径匹配，不含子目录同名文件）
     paths:
       - '**'
       - '!AGENTS.md'
       - '!CLAUDE.md'
+      - '!README.md'
   workflow_dispatch:
 
 concurrency:

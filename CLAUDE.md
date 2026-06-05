@@ -8,12 +8,56 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Technology Stack
 
-- **Frontend**: Next.js 14+ (App Router), React, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes, Node.js
-- **Database**: SQLite (local dev), PostgreSQL (production); migrations in `migrations/` and `pg-migrations/`
-- **Auth**: Supabase Auth (Google OAuth); Google Ads OAuth or service account (mutually exclusive — see `AGENTS.md`)
-- **AI**: Database-driven versioned prompts; Claude / Gemini integrations
-- **Testing**: Vitest
+### Frontend
+
+- **Language**: TypeScript 6
+- **Framework**: Next.js 16 (App Router), React 19
+- **Styling**: Tailwind CSS 4, Radix UI, shadcn/ui components
+- **Data fetching**: SWR
+- **Charts / feedback**: Recharts, Sonner, Lucide React
+- **Validation**: Zod
+
+### Backend
+
+- **Runtime**: Node.js 24+
+- **API**: Next.js API Routes
+- **Database**: SQLite (local) / PostgreSQL (production), `DatabaseAdapter` dual-stack abstraction
+- **Data access**: Raw SQL — better-sqlite3 + postgres.js
+- **Queue / cache**: Redis (ioredis), unified task scheduler (Web / Background Worker split optional)
+- **Scheduling**: node-cron + Scheduler process
+- **Auth**: Google OAuth 2.0 + JWT (jose / jsonwebtoken), bcrypt password hashing
+- **Validation**: Zod
+
+### Google Ads
+
+- **SDK**: google-ads-api
+- **Auth**: OAuth 2.0 or service account (mutually exclusive — see `AGENTS.md`)
+- **Service account mode**: Optional Python Ads Service (`PYTHON_ADS_SERVICE_URL`)
+
+### AI
+
+- **Primary engine**: Google Gemini (direct API / Vertex AI / Relay, with automatic fallback)
+- **Prompts**: Database-versioned prompts (`prompt_versions` table)
+- **Uses**: Creative generation, Offer analysis, Launch Score, OpenClaw intent parsing
+
+### Data collection
+
+- **Browser automation**: Playwright (Amazon / Google scraping, connection pool)
+- **HTML parsing**: Cheerio
+- **Proxy**: https-proxy-agent
+
+### Agents & integrations
+
+- **OpenClaw**: Gateway WebSocket, command execution, strategy recommendations, Feishu integration
+- **Affiliate platforms**: YP / PB product and commission APIs
+
+### Tooling
+
+- **Testing**: Vitest, Testing Library, jsdom
+- **Code quality**: ESLint 9, Prettier, lint-staged
+- **Scripts**: tsx, esbuild
+- **Deployment**: Docker single container — Nginx + Supervisord managing Next.js / Scheduler / OpenClaw
+- **CI/CD**: GitHub Actions → GHCR, optional Cloud Run
 
 ## Development Commands
 
